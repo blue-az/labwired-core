@@ -109,15 +109,17 @@ fn decode_slli() {
 
 #[test]
 fn decode_srli() {
-    // SRLI ar, at, shamt : op2=0x4, op1=0x1, r=ar, s=0, t=at
-    // ISA RM §8 SRLI: shamt = t directly (4-bit, 0..15).
-    let w = rrr(0x4, 0x1, 3, 0, 7);
+    // SRLI ar, at, shamt: op0=0, op1=1, op2=4, r=ar, s=shamt, t=at.
+    // HW-oracle (xtensa-esp32s3-elf-as):
+    //   srli a3, a4, 5 → 0x413540 (ar=3, at=4, shamt=5)
+    let w = rrr(0x4, 0x1, /*ar=*/3, /*s=shamt=*/5, /*t=at=*/4);
     match decode(w) {
         Instruction::Srli { ar, at, shamt } => {
             assert_eq!(ar, 3);
-            assert_eq!(at, 7);
-            // ISA RM: shamt = t directly for SRLI.
-            assert_eq!(shamt, 7);
+            assert_eq!(at, 4);
+            assert_eq!(shamt, 5,
+                "shamt comes from `s` field per HW assembler; an earlier draft \
+                 read shamt from `t` and mis-decoded esp-hal's PRID-shift logic");
         }
         other => panic!("expected Srli, got {:?}", other),
     }

@@ -242,9 +242,20 @@ fn decode_qrst(w: u32) -> Instruction {
                 let shamt = ((op2 & 0x1) << 4) | t;
                 Instruction::Srai { ar: r, at: t, shamt }
             },
-            // SRLI: 4-bit shift amount; direct from t field (0..15).
-            // ISA RM §8: shamt = t.
-            0x4 => Instruction::Srli { ar: r, at: t, shamt: t },
+            // SRLI: 4-bit shift amount in `s` field (bits[11:8]); source register
+            // in `t` field (bits[7:4]). HW-oracle (xtensa-esp32s3-elf-as):
+            //   srli a8, a8, 13 → 0x418D80: t=8 (at), s=D=13 (shamt), r=8 (ar)
+            //   srli a3, a4, 5  → 0x413540: t=4, s=5, r=3
+            //   srli a5, a6, 0  → 0x415060: t=6, s=0, r=5
+            // Earlier draft of this decoder (and the matching xtensa_exec
+            // unit test) had `shamt = t = at`, treating the shift amount as
+            // colocated with the source register. That worked for hand-
+            // crafted tests but mis-decoded esp-hal's `(prid >> 13) & 1`
+            // CPU-discrimination check inside `__level_1_interrupt`, which
+            // crosses CPU0/CPU1 paths and routed every interrupt status
+            // read to the CPU1 INTR_STATUS bank — the alarm source IDs were
+            // stale (Plan 3 Task 10 case study).
+            0x4 => Instruction::Srli { ar: r, at: t, shamt: s },
             0x8 => Instruction::Src { ar: r, as_: s, at: t },
             0x9 => Instruction::Srl { ar: r, at: t },
             0xA => Instruction::Sll { ar: r, as_: s },

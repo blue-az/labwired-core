@@ -73,12 +73,13 @@ fn enc_slli(ar: u32, as_: u32, shamt: u32) -> u32 {
 
 /// Encode SRLI ar, at, shamt (0..=15).
 ///
-/// ISA encoding: op2=0x4, t=shamt.  The `t` field doubles as both the source
-/// register number and the shift amount, so `at == shamt` is required.
-/// Caller must place the value to shift in register `shamt`.
-fn enc_srli(ar: u32, shamt: u32) -> u32 {
-    // at == shamt: the source register IS the shift count (ISA encoding constraint)
-    rrr(0x4, 0x1, ar, 0, shamt)
+/// ISA encoding (verified via xtensa-esp32s3-elf-as):
+///   op0=0, op1=1, op2=4, r=ar, s=shamt, t=at
+/// `s` carries the 4-bit shift amount; `t` is the source register. (An
+/// earlier draft had `t = shamt = at` — a hand-crafted shortcut that mis-
+/// decoded real-firmware SRLI uses where `at != shamt`.)
+fn enc_srli(ar: u32, at: u32, shamt: u32) -> u32 {
+    rrr(0x4, 0x1, ar, shamt, at)
 }
 
 /// Encode SRAI ar, at, shamt (0..=31).
@@ -674,10 +675,10 @@ fn test_exec_slli() {
     assert_eq!(cpu.get_register(4), 56, "SLLI 7 << 3 = 56");
 }
 
-/// SRLI a4, at, shamt: unsigned right shift by literal.
-/// ISA encoding constraint: the source register number equals shamt (same t field).
-/// We use shamt=4 → source register is a4. Load 0x80 into a4, SRLI a5, a4, 4 → 8.
-/// But wait: enc_srli(ar=5, shamt=4) puts source as a4 (t=4).
+/// SRLI ar, at, shamt: unsigned right shift by literal.
+///
+/// ISA encoding: op0=0, op1=1, op2=4, r=ar, s=shamt, t=at. Source and shift
+/// amount live in independent fields, contrary to earlier draft assumptions.
 #[test]
 fn test_exec_srli() {
     let mut cpu = XtensaLx7::new();
@@ -685,15 +686,38 @@ fn test_exec_srli() {
     cpu.reset(&mut bus).unwrap();
     cpu.set_pc(TEST_PC);
 
-    // shamt=4 → source register = a4 (ISA constraint: t field = shamt = at).
+    // a4 holds the value; shamt=4 (independent of source register).
     cpu.set_register(4, 0x80u32); // a4 = 0x80
     write_insns(&mut bus, TEST_PC as u64, &[
-        enc_srli(5, 4),      // SRLI a5, a4, 4 → 0x80 >> 4 = 8
+        enc_srli(5, 4, 4),   // SRLI a5, a4, 4 → 0x80 >> 4 = 8
         st0(4, 0, 0),
     ]);
 
     run_until_error(&mut cpu, &mut bus);
     assert_eq!(cpu.get_register(5), 8, "SRLI 0x80 >> 4 = 8");
+}
+
+/// SRLI with source register != shamt — confirms the corrected decoder
+/// reads `s` as shamt and `t` as at independently. esp-hal's
+/// `(prid >> 13) & 1` decoded `srli a8, a8, 13` (at=8, shamt=13) and
+/// previously crashed because the simulator used shamt=8 instead.
+#[test]
+fn test_exec_srli_shamt_independent_of_at() {
+    let mut cpu = XtensaLx7::new();
+    let mut bus = SystemBus::new();
+    cpu.reset(&mut bus).unwrap();
+    cpu.set_pc(TEST_PC);
+
+    // a8 = 0xCDCD (matches the simulator's PRID reset value).
+    cpu.set_register(8, 0xCDCDu32);
+    write_insns(&mut bus, TEST_PC as u64, &[
+        enc_srli(8, 8, 13),  // SRLI a8, a8, 13 → 0xCDCD >> 13 = 6
+        st0(4, 0, 0),
+    ]);
+
+    run_until_error(&mut cpu, &mut bus);
+    assert_eq!(cpu.get_register(8), 6,
+        "SRLI a8, a8, 13: 0xCDCD >> 13 = 6 (shamt comes from `s` field, not `t`)");
 }
 
 /// SRAI positive: arithmetic right shift, no sign extension.
