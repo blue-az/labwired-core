@@ -158,6 +158,27 @@ pub fn fast_boot(
     cpu.set_pc(entry);
     cpu.set_sp(stack);
 
+    // Synthesise the PS state that real silicon's ROM bootloader leaves the
+    // application in before jumping to `Reset`. On hardware, `Reset` runs
+    // with PS = { WOE=1, EXCM=0, INTLEVEL=0 } (windowed ABI active, no
+    // outstanding exception, all interrupts unmasked at the PS level).
+    //
+    // The XtensaLx7::reset default is the post-power-on state PS=0x1F
+    // (EXCM=1, INTLEVEL=15) — what OpenOCD `reset halt` reports on a real
+    // S3-Zero, but not what the firmware Reset routine expects. esp-hal's
+    // Reset stub does not lower INTLEVEL (it relies on the ROM bootloader
+    // having done so), so without this fixup `critical_section::with`
+    // saves PS=0x1F on entry and restores PS=0x1F on exit, leaving all
+    // interrupts permanently masked. Plan 2 hello-world (no IRQs needed)
+    // was unaffected; Plan 3 blinky's SYSTIMER alarm never gets dispatched.
+    //
+    // INTLEVEL must be 0 for level-1 interrupts to fire; SYSTIMER_TARGET0
+    // at Priority::Priority1 binds to CPU interrupt slot 1 (level 1 in our
+    // IRQ_LEVELS table), so INTLEVEL=1 would mask it.
+    //
+    // Set WOE=1 (bit 18) → 0x4_0000.
+    cpu.ps = crate::cpu::xtensa_regs::Ps::from_raw(1 << 18);
+
     Ok(BootSummary {
         entry,
         stack,

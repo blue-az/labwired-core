@@ -59,7 +59,7 @@ fn intmatrix_alarm_full_irq_chain() {
     const VECBASE_VALUE: u32 = ISR_PC - 0x300;
     const SYSTIMER_BASE: u32 = 0x6002_3000;
     const INTMATRIX_BASE: u32 = 0x600C_2000;
-    const SYSTIMER_TARGET0_SOURCE: u32 = 79;
+    const SYSTIMER_TARGET0_SOURCE: u32 = 57;
     // Slot 12 is level 1 in IRQ_LEVELS (table in xtensa_lx7.rs); level 1
     // dispatches to VECBASE+0x300 where we plant the ISR.
     const CPU_IRQ_SLOT: u8 = 12;
@@ -99,12 +99,19 @@ fn intmatrix_alarm_full_irq_chain() {
     let intmatrix_off = INTMATRIX_BASE + SYSTIMER_TARGET0_SOURCE * 4;
     bus.write_u32(intmatrix_off as u64, CPU_IRQ_SLOT as u32).unwrap();
 
-    // Configure SYSTIMER ALARM0: target=20 SYSTIMER ticks (~100 CPU cycles
-    // at 80MHz CPU / 16MHz SYSTIMER), enabled (bit 31), INT_ENA bit 0 set.
-    bus.write_u32((SYSTIMER_BASE + 0x1C) as u64, 0).unwrap(); // TARGET0_HI
-    bus.write_u32((SYSTIMER_BASE + 0x20) as u64, 20).unwrap(); // TARGET0_LO
-    bus.write_u32((SYSTIMER_BASE + 0x34) as u64, 1u32 << 31).unwrap(); // CONF: enable
-    bus.write_u32((SYSTIMER_BASE + 0x64) as u64, 1).unwrap(); // INT_ENA bit 0
+    // Configure SYSTIMER ALARM0 — TRM-correct sequence (TARGET_CONF has no
+    // enable bit; enable lives in SYSTIMER_CONF.target0_work_en at bit 24,
+    // commit handshake via COMP0_LOAD bit 0):
+    //   target = 20 SYSTIMER ticks (~100 CPU cycles at 80MHz CPU / 16MHz SYSTIMER)
+    bus.write_u32((SYSTIMER_BASE + 0x1C) as u64, 0).unwrap();   // pending TARGET0_HI
+    bus.write_u32((SYSTIMER_BASE + 0x20) as u64, 20).unwrap();  // pending TARGET0_LO
+    bus.write_u32((SYSTIMER_BASE + 0x34) as u64, 0).unwrap();   // TARGET0_CONF: target mode, UNIT0
+    bus.write_u32((SYSTIMER_BASE + 0x50) as u64, 1).unwrap();   // COMP0_LOAD: commit
+    // SYSTIMER_CONF: keep clk_en + unit0/1 work-en defaults (bits 31/30/29),
+    // additionally set target0_work_en (bit 24).
+    let conf = bus.read_u32(SYSTIMER_BASE as u64).unwrap();
+    bus.write_u32(SYSTIMER_BASE as u64, conf | (1u32 << 24)).unwrap();
+    bus.write_u32((SYSTIMER_BASE + 0x64) as u64, 1).unwrap();   // INT_ENA bit 0
 
     // Configure CPU INTENABLE for the bound slot.
     cpu.sr.write(INTENABLE, 1u32 << CPU_IRQ_SLOT);

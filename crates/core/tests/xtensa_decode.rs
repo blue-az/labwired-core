@@ -1041,38 +1041,58 @@ fn test_decode_retw_n() {
     assert_eq!(decode_narrow(hw), Instruction::Retw);
 }
 
-// ── F5: S32E / L32E decoder tests (HW-oracle verified) ───────────────────────
+// ── F5: S32E / L32E decoder tests (HW-oracle verified, Plan 3 Task 10 fix) ───
 //
-// HW-oracle (xtensa-esp32s3-elf-as + objdump, esp-15.2.0_20250920):
-//   s32e a3, a4, -16 → bytes 49 c4 30 → 24-bit word 0x30C449
-//   s32e a3, a4, -64 → bytes 49 04 30 → 24-bit word 0x300449
-//   l32e a3, a4, -16 → bytes 09 c4 30 → 24-bit word 0x30C409
-//   l32e a3, a4, -64 → bytes 09 04 30 → 24-bit word 0x300409
+// HW-oracle (xtensa-esp32s3-elf-as + xtensa-esp32s3-elf-objdump,
+// esp-15.2.0_20250920):
+//   s32e a3, a4, -16 → memory bytes 30 C4 49 → LE u32 0x49C430
+//                      objdump display "49c430" (bytes in reverse mem order)
+//   s32e a0, a1, -12 → memory bytes 00 D1 49 → LE u32 0x49D100
+//   l32e a3, a4, -16 → memory bytes 30 C4 09 → LE u32 0x09C430
 //
-// Field layout (op0=9):
-//   bits[23:20]=at, bits[15:12]=imm4, bits[11:8]=as_, bits[7:4]=subop(4=S32E/0=L32E)
-//   imm_byte = imm4 * 4 - 64   (range -64..-4)
+// Field layout (op0=0, op1=9 → LSC4 group):
+//   bits[3:0]   = op0 = 0
+//   bits[7:4]   = at
+//   bits[11:8]  = as_
+//   bits[15:12] = imm4 (imm_byte = imm4*4 - 64, range -64..-4)
+//   bits[19:16] = op1 = 9
+//   bits[23:20] = op2 (4 = S32E, 0 = L32E)
 //   The `imm` field stores the byte offset as two's-complement u32.
+//
+// (An earlier draft used op0=9 with field positions swapped — that decoded
+// hand-crafted test inputs but rejected real-firmware S32E. See Plan 3
+// case study notes alongside docs/case_study_esp32s3_plan2.md.)
 
-/// S32E a3, a4, -16 — HW-oracle exact bytes.
-/// `s32e a3, a4, -16` → 0x30C449. imm4=12 → imm_byte = 12*4-64 = -16 = 0xFFFF_FFF0.
+/// S32E a3, a4, -16 — real assembler bytes.
 #[test]
 fn test_decode_s32e() {
-    let w = 0x30C449u32;
+    let w = 0x49C430u32;
     assert_eq!(
         decode(w),
         Instruction::S32e { at: 3, as_: 4, imm: (-16i32) as u32 }
     );
 }
 
-/// L32E a3, a4, -16 — HW-oracle exact bytes.
-/// `l32e a3, a4, -16` → 0x30C409. Same imm as S32E case; subop=0 selects L32E.
+/// L32E a3, a4, -16 — real assembler bytes.
 #[test]
 fn test_decode_l32e() {
-    let w = 0x30C409u32;
+    let w = 0x09C430u32;
     assert_eq!(
         decode(w),
         Instruction::L32e { at: 3, as_: 4, imm: (-16i32) as u32 }
+    );
+}
+
+/// S32E a0, a1, -12 — the exact word emitted by esp-hal's
+/// __default_naked_exception spill at PC 0x40379049 in the blinky firmware.
+/// This is the test that would have caught the op0-routing bug if we had
+/// run the firmware end-to-end during Plan 3 Task 5.
+#[test]
+fn test_decode_s32e_a0_a1_negative_12_real_firmware() {
+    let w = 0x49D100u32;
+    assert_eq!(
+        decode(w),
+        Instruction::S32e { at: 0, as_: 1, imm: (-12i32) as u32 }
     );
 }
 

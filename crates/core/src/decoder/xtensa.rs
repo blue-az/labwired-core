@@ -157,21 +157,13 @@ pub fn decode(word: u32) -> Instruction {
         0x5 => decode_calln(w),
         0x6 => decode_si(w),
         0x7 => decode_b(w),
-        // op0=0x9 — S32E / L32E: windowed exception store/load.
-        //
-        // HW-oracle (xtensa-esp32s3-elf-as + objdump, esp-15.2.0_20250920):
-        //   s32e a3, a4, -16 → 0x30C449: bits[7:4]=4(S32E), bits[11:8]=4(as_=a4),
-        //                                bits[15:12]=12(imm4), bits[23:20]=3(at=a3)
-        //   l32e a3, a4, -16 → 0x30C409: bits[7:4]=0(L32E), same fields
-        //
-        // Field layout for op0=9:
-        //   bits[23:20] = at  (value / destination register)
-        //   bits[19:16] = 0   (constant opcode marker; always 0 in observed encodings)
-        //   bits[15:12] = imm4 (raw 4-bit, maps to byte offset via imm_byte = imm4*4 - 64)
-        //   bits[11:8]  = as_ (base register)
-        //   bits[7:4]   = subop: 0=L32E, 4=S32E
-        //   bits[3:0]   = op0 = 9
-        0x9 => decode_s32e_l32e(w),
+        // op0=0x9 is a 2-byte NARROW S32I.N (Code Density), never reached as
+        // a wide instruction here — the dispatcher in xtensa_lx7::step routes
+        // length-2 to xtensa_narrow::decode_narrow before calling us. Earlier
+        // drafts mistakenly routed op0=0x9 here to a fake S32E/L32E decoder
+        // that worked only on hand-crafted test inputs (see Plan 3 Task 10
+        // case study). Real S32E/L32E live in QRST op1=9 and are decoded
+        // there.
         _ => Instruction::Unknown(w),
     }
 }
@@ -345,7 +337,43 @@ fn decode_qrst(w: u32) -> Instruction {
             let bits  = op2 + 1;
             Instruction::Extui { ar: r, at: t, shift, bits }
         }
-        // op1 = 0x6..=0xF — fill in later tasks.
+        // op1 = 0x9 — LSC4 group: S32E / L32E (windowed exception store/load).
+        //
+        // HW-oracle (xtensa-esp32s3-elf-as + objdump, esp-15.2.0_20250920):
+        //   s32e a3, a4, -16 → bytes 30 C4 49 → LE u32 0x49C430:
+        //     op0=0, op1=9 (bits[19:16]), op2=4 (bits[23:20]) → S32E
+        //     at = bits[7:4] = 3, as_ = bits[11:8] = 4, imm4 = bits[15:12] = 12
+        //     imm_byte = 12*4 - 64 = -16  ✓
+        //   s32e a0, a1, -12 → bytes 00 D1 49 → LE u32 0x49D100:
+        //     op2=4 → S32E; at=0, as_=1, imm4=13 → imm_byte = -12  ✓
+        //   l32e a3, a4, -16 → bytes 30 C4 09 → LE u32 0x09C430: op2=0 → L32E
+        //
+        // Field layout for op0=0, op1=9:
+        //   bits[3:0]   = op0 = 0
+        //   bits[7:4]   = at (value / destination register)
+        //   bits[11:8]  = as_ (base register)
+        //   bits[15:12] = imm4 (range 0..15; imm_byte = imm4*4 - 64, range -64..-4)
+        //   bits[19:16] = op1 = 9
+        //   bits[23:20] = op2: 0 = L32E, 4 = S32E
+        //
+        // Earlier drafts dispatched these via a top-level `op0 == 9` arm with
+        // swapped field positions — that worked only on hand-crafted test
+        // inputs and missed real-firmware S32E (e.g. esp-hal's
+        // __default_naked_exception spill at PC 0x40379049). The real
+        // assembler emits op0=0, so the QRST routing is canonical.
+        0x9 => {
+            // imm_byte = imm4 * 4 - 64  (range -64..-4), stored as two's-complement u32.
+            let imm4 = ((w >> 12) & 0xF) as u32;
+            let imm = imm4.wrapping_mul(4).wrapping_sub(64);
+            let at = t;       // bits[7:4]
+            let as_ = s;      // bits[11:8]
+            match op2 {
+                0x0 => Instruction::L32e { at, as_, imm },
+                0x4 => Instruction::S32e { at, as_, imm },
+                _ => Instruction::Unknown(w),
+            }
+        }
+        // op1 = 0x6..=0x8, 0xA..=0xF — fill in as needed.
         _ => Instruction::Unknown(w),
     }
 }
@@ -483,32 +511,8 @@ fn decode_lsai(w: u32) -> Instruction {
     }
 }
 
-/// S32E / L32E decoder (op0=0x9): windowed exception store/load.
-///
-/// Field layout (HW-oracle verified):
-///   bits[23:20] = at  (register to store / load destination)
-///   bits[19:16] = 0   (opcode constant)
-///   bits[15:12] = imm4 (raw 4-bit; imm_byte = imm4 * 4 - 64, range -64..-4)
-///   bits[11:8]  = as_ (base address register)
-///   bits[7:4]   = subop: 0x4 = S32E, 0x0 = L32E
-///   bits[3:0]   = op0 = 9
-///
-/// The `imm` field in the Instruction variant stores the pre-computed signed
-/// byte offset as a u32 (two's-complement), so the executor can use
-/// `as_.wrapping_add(imm)` directly.
-fn decode_s32e_l32e(w: u32) -> Instruction {
-    let at   = ((w >> 20) & 0xF) as u8;
-    let imm4 = (w >> 12) & 0xF;
-    let as_  = ((w >> 8)  & 0xF) as u8;
-    let subop = ((w >> 4)  & 0xF) as u8;
-    // imm_byte = imm4 * 4 - 64  (range -64..-4), stored as two's-complement u32.
-    let imm = imm4.wrapping_mul(4).wrapping_sub(64);
-    match subop {
-        0x0 => Instruction::L32e { at, as_, imm },
-        0x4 => Instruction::S32e { at, as_, imm },
-        _ => Instruction::Unknown(w),
-    }
-}
+// (decode_s32e_l32e removed — S32E/L32E are decoded inline in QRST/op1=9
+//  at the canonical bit positions verified against real esp-hal firmware.)
 
 /// Sign-extend an 8-bit value in a u32 to i32, range [-128, 127].
 #[inline]
@@ -529,10 +533,24 @@ fn sext8(v: u32) -> i32 {
 ///   - MIN/MAX/MINU/MAXU: r=ar, s=as_, op2=at, op1=0, t=subop(4,5,6,7)
 ///   - SEXT/CLAMPS:       r=ar, s=as_, op2=sa-7 (raw immediate, 0..=15), op1=0, t=subop(2,3)
 fn decode_lsci(w: u32) -> Instruction {
+    let op1 = ((w >> 16) & 0xF) as u8;
     let op2 = ((w >> 20) & 0xF) as u8;
     let r   = ((w >> 12) & 0xF) as u8;
     let s   = ((w >> 8)  & 0xF) as u8;
     let t   = ((w >> 4)  & 0xF) as u8;
+
+    // SEXT/CLAMPS/MIN/MAX/MINU/MAXU all share op1=0. FP coprocessor loads
+    // (LSI/LSIU/SSI/SSIU/LSX/SSX/LSXU/SSXU) live in op0=3 with op1 != 0 (the
+    // op1 field encodes which 8-bit immediate scaling and which load/store
+    // direction). They overlap with SEXT/CLAMPS on the `t` discriminator
+    // (e.g. lsi f2, a1, 160 = 0x280123 has t=2, which would mis-decode as
+    // SEXT if we ignore op1). esp-hal's `restore_context` issues `lsi f0..f15`
+    // unconditionally, so without the op1 gate we'd clobber a0 mid-restore
+    // and the level-1 ISR would `ret` to garbage. Plan 3 Task 10 case study.
+    if op1 != 0 {
+        // Treat all op1!=0 LSCI variants as Nop (FP coprocessor not modeled).
+        return Instruction::Nop;
+    }
 
     match t {
         // SEXT ar, as_, sa: sign-extend as_ from bit position sa (7..=22).
@@ -549,7 +567,7 @@ fn decode_lsci(w: u32) -> Instruction {
         0x6 => Instruction::Minu   { ar: r, as_: s, at: op2 },
         // MAXU ar, as_, at: ar = unsigned max(as_, at).
         0x7 => Instruction::Maxu   { ar: r, as_: s, at: op2 },
-        _ => Instruction::Unknown(w),
+        _ => Instruction::Nop,
     }
 }
 fn decode_mac16(w: u32) -> Instruction { Instruction::Unknown(w) }

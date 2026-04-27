@@ -735,15 +735,16 @@ mod plan3_tests {
     #[test]
     fn pending_cpu_irqs_aggregates_from_systimer_alarm_via_intmatrix() {
         let mut bus = SystemBus::new();
-        // Register intmatrix and bind SYSTIMER_TARGET0 (source 79) to CPU IRQ 15.
+        // Register intmatrix and bind SYSTIMER_TARGET0 (source 57) to CPU IRQ 15.
         let mut matrix = Esp32s3IntMatrix::new();
-        // Source 79 at offset 79*4 = 316 = 0x13C, write IRQ 15.
-        matrix.write(79 * 4, 15).unwrap();
+        // Source 57 at offset 57*4 = 0xE4, write IRQ 15.
+        matrix.write(57 * 4, 15).unwrap();
         bus.add_peripheral("intmatrix", 0x600C_2000, 0x800, None, Box::new(matrix));
 
-        // Register SYSTIMER and configure ALARM0: target=5, enabled, INT_ENA bit 0.
+        // Register SYSTIMER and arm ALARM0 — TRM-correct sequence:
+        //   pending TARGET0 = 5, COMP0_LOAD commit, CONF.target0_work_en, INT_ENA bit 0.
         let mut systimer = Systimer::new(80_000_000);
-        // Set TARGET0_LO at 0x20, TARGET0_HI at 0x1C (TRM offsets).
+        // Pending TARGET0_LO at 0x20 = 5; TARGET0_HI at 0x1C = 0.
         systimer.write(0x20, 5).unwrap();
         systimer.write(0x21, 0).unwrap();
         systimer.write(0x22, 0).unwrap();
@@ -752,11 +753,16 @@ mod plan3_tests {
         systimer.write(0x1D, 0).unwrap();
         systimer.write(0x1E, 0).unwrap();
         systimer.write(0x1F, 0).unwrap();
-        // TARGET0_CONF at 0x34: bit 31 = enable, bit 30 = auto-reload (off).
+        // TARGET0_CONF at 0x34: target mode (no period_mode), unit_sel=0.
         systimer.write(0x34, 0).unwrap();
         systimer.write(0x35, 0).unwrap();
         systimer.write(0x36, 0).unwrap();
-        systimer.write(0x37, 0x80).unwrap();
+        systimer.write(0x37, 0).unwrap();
+        // COMP0_LOAD at 0x50 bit 0 = commit pending target.
+        systimer.write(0x50, 1).unwrap();
+        // SYSTIMER_CONF at 0x00: keep clk_en + unit work-en defaults (0xE000_0000),
+        // additionally set target0_work_en (bit 24) → byte 3 |= 0x01.
+        systimer.write(0x03, 0xE1).unwrap();
         // INT_ENA at 0x64: bit 0 set.
         systimer.write(0x64, 1).unwrap();
         bus.add_peripheral("systimer", 0x6002_3000, 0x100, None, Box::new(systimer));

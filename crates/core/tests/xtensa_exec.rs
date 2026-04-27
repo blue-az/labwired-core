@@ -3703,30 +3703,36 @@ fn test_exec_retw_no_underflow_when_destination_frame_set() {
     assert!(!cpu.ps.excm(), "No-UF: PS.EXCM should remain clear (no UF exception)");
 }
 
-// ── F5: S32E / L32E exec tests ────────────────────────────────────────────────
+// ── F5: S32E / L32E exec tests (Plan 3 Task 10 fix) ──────────────────────────
 //
 // HW-oracle encoding (xtensa-esp32s3-elf-as + objdump, esp-15.2.0_20250920):
-//   s32e a3, a4, -16 → 0x30C449  s32e a3, a4, -64 → 0x300449
-//   l32e a3, a4, -16 → 0x30C409  l32e a3, a4, -64 → 0x300409
+//   s32e a3, a4, -16 → memory bytes 30 C4 49 → LE u32 0x49C430
+//   s32e a3, a4, -64 → memory bytes 30 04 49 → LE u32 0x49 0430
+//   l32e a3, a4, -16 → memory bytes 30 C4 09 → LE u32 0x09C430
+//   s32e a0, a1, -12 → memory bytes 00 D1 49 → LE u32 0x49D100  (real esp-hal firmware)
 //
-// Encoding (op0=9):
-//   bits[23:20]=at, bits[15:12]=imm4, bits[11:8]=as_, bits[7:4]=subop(4=S32E/0=L32E)
-//   imm_byte = imm4 * 4 - 64
+// Encoding (op0=0, op1=9 → LSC4 group):
+//   bits[3:0]   = op0 = 0
+//   bits[7:4]   = at
+//   bits[11:8]  = as_
+//   bits[15:12] = imm4 (imm_byte = imm4*4 - 64, range -64..-4)
+//   bits[19:16] = op1 = 9
+//   bits[23:20] = op2 (4 = S32E, 0 = L32E)
 //
 // These instructions are gated on PS.EXCM=1.  When PS.EXCM=0 they raise
 // IllegalInstruction (EXCCAUSE=0, ExceptionRaised{cause:0}).
 
-/// Encode S32E at, as_, imm_byte  (op0=9, subop=4).
+/// Encode S32E at, as_, imm_byte (op0=0, op1=9, op2=4).
 /// imm_byte must be in -64..-4 (multiples of 4).
 fn enc_s32e(at: u32, as_: u32, imm_byte: i32) -> u32 {
     let imm4 = ((imm_byte + 64) / 4) as u32;
-    (at << 20) | (imm4 << 12) | (as_ << 8) | (0x4 << 4) | 0x9
+    (0x4 << 20) | (9 << 16) | (imm4 << 12) | (as_ << 8) | (at << 4)
 }
 
-/// Encode L32E at, as_, imm_byte  (op0=9, subop=0).
+/// Encode L32E at, as_, imm_byte (op0=0, op1=9, op2=0).
 fn enc_l32e(at: u32, as_: u32, imm_byte: i32) -> u32 {
     let imm4 = ((imm_byte + 64) / 4) as u32;
-    (at << 20) | (imm4 << 12) | (as_ << 8) | 0x9
+    (9 << 16) | (imm4 << 12) | (as_ << 8) | (at << 4)
 }
 
 /// S32E inside exception context (PS.EXCM=1): should write to memory.
@@ -3811,10 +3817,9 @@ fn test_exec_s32e_negative_offset() {
     assert_eq!(stored, 0xABCD_1234, "S32E with imm=-64 should write to as_-64");
 }
 
-/// HW-oracle byte verification: s32e a3, a4, -16 → 0x30C449.
+/// HW-oracle byte verification: s32e a3, a4, -16 → memory bytes 30 C4 49.
 #[test]
 fn test_exec_s32e_hw_oracle_bytes() {
-    // Use the exact HW-oracle word; verify it decodes and executes correctly.
     let mut cpu = XtensaLx7::new();
     let mut bus = SystemBus::new();
     cpu.reset(&mut bus).unwrap();
@@ -3825,17 +3830,17 @@ fn test_exec_s32e_hw_oracle_bytes() {
     cpu.set_register(4, base);
     cpu.set_register(3, 0x1111_2222);
 
-    // Write HW-oracle bytes directly: 0x30C449 in LE = 0x49, 0xC4, 0x30.
-    bus.write_u8(TEST_PC as u64,     0x49).unwrap();
+    // Memory bytes (lowest addr first) for `s32e a3, a4, -16`.
+    bus.write_u8(TEST_PC as u64,     0x30).unwrap();
     bus.write_u8(TEST_PC as u64 + 1, 0xC4).unwrap();
-    bus.write_u8(TEST_PC as u64 + 2, 0x30).unwrap();
+    bus.write_u8(TEST_PC as u64 + 2, 0x49).unwrap();
     cpu.step(&mut bus, &[]).unwrap();
 
     let stored = bus.read_u32((base - 16) as u64).unwrap();
     assert_eq!(stored, 0x1111_2222, "HW-oracle s32e a3,a4,-16 should store a3 at a4-16");
 }
 
-/// HW-oracle byte verification: l32e a3, a4, -16 → 0x30C409.
+/// HW-oracle byte verification: l32e a3, a4, -16 → memory bytes 30 C4 09.
 #[test]
 fn test_exec_l32e_hw_oracle_bytes() {
     let mut cpu = XtensaLx7::new();
@@ -3848,13 +3853,38 @@ fn test_exec_l32e_hw_oracle_bytes() {
     bus.write_u32((base - 16) as u64, 0xFEED_FACE).unwrap();
     cpu.set_register(4, base);
 
-    // Write HW-oracle bytes: 0x30C409 in LE = 0x09, 0xC4, 0x30.
-    bus.write_u8(TEST_PC as u64,     0x09).unwrap();
+    bus.write_u8(TEST_PC as u64,     0x30).unwrap();
     bus.write_u8(TEST_PC as u64 + 1, 0xC4).unwrap();
-    bus.write_u8(TEST_PC as u64 + 2, 0x30).unwrap();
+    bus.write_u8(TEST_PC as u64 + 2, 0x09).unwrap();
     cpu.step(&mut bus, &[]).unwrap();
 
     assert_eq!(cpu.get_register(3), 0xFEED_FACE, "HW-oracle l32e a3,a4,-16 should load into a3");
+}
+
+/// Real-firmware byte verification: s32e a0, a1, -12 → memory bytes 00 D1 49.
+/// This is what esp-hal's __default_naked_exception spills at offset +9 of
+/// its prologue.  Plan 3 Task 10 firmware run faulted here before the op0
+/// routing fix.
+#[test]
+fn test_exec_s32e_a0_a1_negative_12_real_firmware() {
+    let mut cpu = XtensaLx7::new();
+    let mut bus = SystemBus::new();
+    cpu.reset(&mut bus).unwrap();
+    cpu.set_pc(TEST_PC);
+    assert!(cpu.ps.excm());
+
+    let base: u32 = 0x2000_0080;
+    cpu.set_register(1, base);
+    cpu.set_register(0, 0xC0FFEE00);
+
+    bus.write_u8(TEST_PC as u64,     0x00).unwrap();
+    bus.write_u8(TEST_PC as u64 + 1, 0xD1).unwrap();
+    bus.write_u8(TEST_PC as u64 + 2, 0x49).unwrap();
+    cpu.step(&mut bus, &[]).unwrap();
+
+    let stored = bus.read_u32((base - 12) as u64).unwrap();
+    assert_eq!(stored, 0xC0FFEE00, "real-firmware s32e a0,a1,-12 should store a0 at a1-12");
+    assert_eq!(cpu.pc, TEST_PC + 3);
 }
 
 /// Regression test: s32i.n + QRST must NOT be mis-decoded as L32E outside EXCM.

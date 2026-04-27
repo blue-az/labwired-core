@@ -1266,7 +1266,19 @@ impl XtensaLx7 {
             // privilege checks (PS.RING) are not enforced here because all
             // firmware we simulate runs in ring 0.
             Rsr { at, sr } => {
-                let v = self.read_sr(sr);
+                let mut v = self.read_sr(sr);
+                // INTERRUPT (SR 226) is a hardware-aggregated view of pending
+                // interrupts. In our model, peripheral source IDs route
+                // through the bus's `pending_cpu_irqs` aggregator and never
+                // touch the SR-file `INTERRUPT` slot directly. esp-hal's
+                // `__level_1_interrupt` reads INTERRUPT to find which
+                // peripheral source fired, so we must OR the bus-side bits
+                // in here, otherwise the firmware sees INTERRUPT=0 and
+                // never dispatches to the user ISR (Plan 3 Task 10 case
+                // study).
+                if sr == INTERRUPT {
+                    v |= bus.pending_cpu_irqs();
+                }
                 self.regs.write_logical(at, v);
                 self.pc = self.pc.wrapping_add(len);
             }
@@ -1515,49 +1527,24 @@ impl Cpu for XtensaLx7 {
         let b0 = bus.read_u8(pc as u64)?;
         let len = xtensa_length::instruction_length(b0);
 
-        // S32E/L32E exception: these are 24-bit wide instructions whose op0 field
-        // (bits[3:0] of the 24-bit word, i.e. byte0's low nibble) equals 0x9 — the
-        // same value used by the narrow S32I.N density instruction. They cannot be
-        // distinguished from narrow instructions by byte0 alone.
+        // S32E/L32E are 3-byte wide instructions with op0=0 (QRST), op1=9
+        // (LSC4), op2=4/0 — decoded by the standard wide path and dispatched
+        // through QRST. No special predecode needed; byte0 low nibble = 0
+        // (op0=0), so the length predecoder correctly returns 3.
         //
-        // CRITICAL: S32E/L32E are architecturally only valid inside exception
-        // context (PS.EXCM=1). Outside EXCM, op0=0x9 must be treated as narrow
-        // S32I.N, NOT as the start of a 3-byte wide instruction. Without this
-        // gate, s32i.n a0, a1, 0 (bytes 0x09, 0x10) followed by any QRST op
-        // (byte0 ending in 0x0, e.g. ADD, OR, MOVI, NOP) would speculatively
-        // read byte2 and falsely match the L32E pattern, corrupting the PC
-        // advance from 2 to 3.
-        //
-        // Encoding invariants (HW-oracle verified):
-        //   S32E: byte0 bits[7:4] = 0x4 (subop), byte0 bits[3:0] = 0x9 (op0)
-        //   L32E: byte0 bits[7:4] = 0x0 (subop), byte0 bits[3:0] = 0x9 (op0)
-        //   byte2 bits[3:0] = 0x0 (op1 field is always 0 for both)
-        //
-        // We read all 3 bytes speculatively when byte0 matches, check byte2's
-        // low nibble, and route to the wide decoder when confirmed.
-        let is_s32e_or_l32e = if self.ps.excm() && len == 2 && (b0 & 0x0F) == 0x9 {
-            // Speculatively read byte2.  Bus reads are non-destructive so this
-            // is safe even if the instruction turns out to be 2-byte narrow.
-            let b2 = bus.read_u8(pc as u64 + 2)?;
-            let subop = (b0 >> 4) & 0xF;
-            // subop=4 → S32E, subop=0 → L32E; byte2 low nibble must be 0 (op1=0).
-            (subop == 4 || subop == 0) && (b2 & 0x0F) == 0
-        } else {
-            false
-        };
+        // (An earlier draft routed S32E via op0=9, requiring a special
+        // EXCM-gated predecode here. That decoder agreed with hand-crafted
+        // test inputs but rejected real esp-hal firmware. See Plan 3 Task 10
+        // case study.)
 
-        let ins = if is_s32e_or_l32e {
-            let w = bus.read_u32(pc as u64)?;
-            xtensa::decode(w)
-        } else if len == 2 {
+        let ins = if len == 2 {
             let hw = bus.read_u16(pc as u64)?;
             xtensa_narrow::decode_narrow(hw)
         } else {
             let w = bus.read_u32(pc as u64)?;
             xtensa::decode(w)
         };
-        let effective_len = if is_s32e_or_l32e { 3 } else { len };
-        self.execute(ins, bus, effective_len)
+        self.execute(ins, bus, len)
     }
 
     fn set_pc(&mut self, val: u32) {
