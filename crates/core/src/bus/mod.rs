@@ -463,9 +463,30 @@ impl SystemBus {
         // so their source IDs route to None here; ESP32-S3 buses have nvic=None,
         // so the legacy NVIC path treats source IDs as core exceptions only —
         // typically they're > 16 in practice but harmless either way).
-        for source_id in explicit_source_ids {
+        let mut intr_status = [0u32; 4];
+        for &source_id in &explicit_source_ids {
             if let Some(slot) = self.route_irq_source_to_cpu_irq(source_id) {
                 self.pending_cpu_irqs |= 1u32 << slot;
+            }
+            // Mirror into PRO_INTR_STATUS_REG_n bitmap so that esp-hal's
+            // __level_1_interrupt can discover which source asserted by
+            // reading 0x600C_218C..0x600C_219C.
+            let reg = (source_id / 32) as usize;
+            let bit = source_id & 31;
+            if reg < intr_status.len() {
+                intr_status[reg] |= 1u32 << bit;
+            }
+        }
+        // Push the live source-assertion bitmap into the intmatrix peripheral.
+        // No-op for buses without an intmatrix registered.
+        for p in self.peripherals.iter_mut() {
+            if let Some(any) = p.dev.as_any_mut() {
+                if let Some(matrix) = any
+                    .downcast_mut::<crate::peripherals::esp32s3::intmatrix::Esp32s3IntMatrix>()
+                {
+                    matrix.set_pending_sources(intr_status);
+                    break;
+                }
             }
         }
 
