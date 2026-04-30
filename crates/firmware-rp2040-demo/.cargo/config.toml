@@ -1,2 +1,6 @@
 [build]
 target = "thumbv6m-none-eabi"
+
+# cortex-m-rt 0.7.x doesn't auto-emit rustc-link-arg=-Tlink.x; provide it here.
+[target.thumbv6m-none-eabi]
+rustflags = ["-C", "link-arg=-Tlink.x"]
