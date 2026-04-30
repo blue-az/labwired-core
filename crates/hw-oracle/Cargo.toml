@@ -1,0 +1,24 @@
+[package]
+name = "labwired-hw-oracle"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "HW oracle harness: JTAG-driven cross-validation against physical boards."
+
+[dependencies]
+labwired-hw-oracle-macros = { path = "../hw-oracle-macros" }
+labwired-core = { path = "../core" }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+libc = { workspace = true }
+goblin = { workspace = true }
+# serialport pulls libudev-sys on Linux which needs libudev-dev system
+# package — not present on CI's hosted runners. The crate is only used by
+# the HW flash/detect path (gated by the `hw-oracle` feature), so make the
+# dep itself optional and activate it through the feature.
+serialport = { workspace = true, optional = true }
+
+[features]
+default = []
+hw-oracle = ["dep:serialport"]  # gates _hw and _diff runners; CI enables on self-hosted runner
