@@ -28,7 +28,9 @@ members = [
     "crates/svd-ingestor",
     "examples/arm-cortex-m0",
     "examples/riscv-virt",
-    "examples/demo-blinky", "crates/codegen",
+    "examples/demo-blinky",
+    "examples/adxl345-sensor-lab",
+    "crates/codegen",
     "crates/python", "crates/wasm",
 ]
 exclude = ["crates/firmware-hal-test"]
@@ -118,6 +120,11 @@ debug = true
 opt-level = "s"
 
 [profile.release.package.firmware-esp32c3-demo]
+codegen-units = 1
+debug = true
+opt-level = "s"
+
+[profile.release.package.adxl345-sensor-lab]
 codegen-units = 1
 debug = true
 opt-level = "s"
