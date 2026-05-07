@@ -13,6 +13,12 @@ pub trait I2cDevice: Send {
     fn write(&mut self, data: u8);
     fn start(&mut self) {}
     fn stop(&mut self) {}
+    fn as_any(&self) -> Option<&dyn std::any::Any> {
+        None
+    }
+    fn as_any_mut(&mut self) -> Option<&mut dyn std::any::Any> {
+        None
+    }
 }
 
 /// STM32F1 compatible I2C peripheral (Master mode only)

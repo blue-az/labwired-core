@@ -334,6 +334,116 @@ impl WasmSimulator {
         Ok(())
     }
 
+    /// Set the simulated X/Y/Z sample on an ADXL345 attached to an I2C peripheral.
+    /// Looks up the binding in `board_io` by id; the binding must have
+    /// `device_type: "adxl345"`.
+    #[wasm_bindgen]
+    pub fn set_i2c_sensor_sample(
+        &mut self,
+        device_id: &str,
+        x: i16,
+        y: i16,
+        z: i16,
+    ) -> Result<(), JsValue> {
+        let binding = self
+            .board_io
+            .iter()
+            .find(|b| b.id == device_id && b.device_type.as_deref() == Some("adxl345"))
+            .cloned()
+            .ok_or_else(|| {
+                JsValue::from_str(&format!("No ADXL345 board_io binding '{}'", device_id))
+            })?;
+
+        let machine = self.machine.as_mut().unwrap();
+        let idx = machine
+            .bus
+            .find_peripheral_index_by_name(&binding.peripheral)
+            .ok_or_else(|| {
+                JsValue::from_str(&format!(
+                    "I2C peripheral '{}' not found",
+                    binding.peripheral
+                ))
+            })?;
+        let any = machine.bus.peripherals[idx]
+            .dev
+            .as_any_mut()
+            .ok_or_else(|| JsValue::from_str("I2C peripheral does not support downcasting"))?;
+        let i2c = any
+            .downcast_mut::<labwired_core::peripherals::i2c::I2c>()
+            .ok_or_else(|| {
+                JsValue::from_str(&format!(
+                    "Peripheral '{}' is not an I2C controller",
+                    binding.peripheral
+                ))
+            })?;
+
+        let address = binding.i2c_address.unwrap_or(0x53);
+        for device in &mut i2c.attached_devices {
+            let mut device = device.borrow_mut();
+            if device.address() != address {
+                continue;
+            }
+            if let Some(sensor) = device
+                .as_any_mut()
+                .and_then(|any| any.downcast_mut::<labwired_core::peripherals::components::Adxl345>())
+            {
+                sensor.set_sample(x, y, z);
+                return Ok(());
+            }
+        }
+
+        Err(JsValue::from_str(&format!(
+            "ADXL345 device at address 0x{:02x} not found on '{}'",
+            address, binding.peripheral
+        )))
+    }
+
+    /// Read back the current X/Y/Z sample from each ADXL345 declared in `board_io`.
+    /// Returns `[{ id, kind: "adxl345", x, y, z }, ...]` as a JSON array.
+    #[wasm_bindgen]
+    pub fn get_i2c_sensor_states(&self) -> JsValue {
+        let machine = self.machine.as_ref().unwrap();
+        let mut states: Vec<serde_json::Value> = Vec::new();
+
+        for binding in &self.board_io {
+            if binding.device_type.as_deref() != Some("adxl345") {
+                continue;
+            }
+            let Some(idx) = machine.bus.find_peripheral_index_by_name(&binding.peripheral) else {
+                continue;
+            };
+            let Some(any) = machine.bus.peripherals[idx].dev.as_any() else {
+                continue;
+            };
+            let Some(i2c) = any.downcast_ref::<labwired_core::peripherals::i2c::I2c>() else {
+                continue;
+            };
+            let address = binding.i2c_address.unwrap_or(0x53);
+            for device in &i2c.attached_devices {
+                let device = device.borrow();
+                if device.address() != address {
+                    continue;
+                }
+                if let Some(sensor) = device
+                    .as_any()
+                    .and_then(|any| any.downcast_ref::<labwired_core::peripherals::components::Adxl345>())
+                {
+                    let (x, y, z) = sensor.sample();
+                    states.push(serde_json::json!({
+                        "id": binding.id,
+                        "kind": "adxl345",
+                        "x": x,
+                        "y": y,
+                        "z": z,
+                    }));
+                    break;
+                }
+            }
+        }
+
+        serde_wasm_bindgen::to_value(&states).unwrap_or(JsValue::NULL)
+    }
+
     /// Drain UART TX output bytes accumulated since the last call.
     #[wasm_bindgen]
     pub fn drain_uart_output(&self) -> Vec<u8> {
