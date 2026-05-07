@@ -84,8 +84,8 @@ pub struct SystemBus {
     /// dual-core simulation. Cloned to the rom-thunk dispatch surface and
     /// to `SystemStub` so all three (write-watcher, thunk, runner) see
     /// the same state.
-    pub core_controller:
-        Option<std::sync::Arc<std::sync::Mutex<crate::system::core_controller::CoreController>>>,
+    pub(crate) core_controller:
+        Option<Arc<Mutex<crate::system::core_controller::CoreController>>>,
     peripheral_ranges: Vec<PeripheralRange>,
     peripheral_hint: Cell<Option<usize>>,
 }
@@ -453,7 +453,7 @@ impl SystemBus {
     /// ESP32-S3 simulation.
     pub fn set_core_controller(
         &mut self,
-        ctrl: std::sync::Arc<std::sync::Mutex<crate::system::core_controller::CoreController>>,
+        ctrl: Arc<Mutex<crate::system::core_controller::CoreController>>,
     ) {
         self.core_controller = Some(ctrl);
     }
@@ -1419,7 +1419,7 @@ impl crate::Bus for SystemBus {
 
     fn core_controller(
         &self,
-    ) -> Option<std::sync::Arc<std::sync::Mutex<crate::system::core_controller::CoreController>>>
+    ) -> Option<Arc<Mutex<crate::system::core_controller::CoreController>>>
     {
         self.core_controller.clone()
     }
@@ -1682,6 +1682,10 @@ mod tests {
         bus.set_core_controller(handle.clone());
 
         let got = bus.core_controller().expect("bus now exposes controller");
+        assert!(
+            Arc::ptr_eq(&got, &handle),
+            "core_controller() must clone the Arc, not wrap a new one",
+        );
         got.lock().unwrap().set_entry(0xDEAD_BEEF);
         assert_eq!(handle.lock().unwrap().entry(), Some(0xDEAD_BEEF));
     }
