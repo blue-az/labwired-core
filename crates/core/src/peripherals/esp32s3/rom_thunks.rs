@@ -192,9 +192,23 @@ pub fn rom_config_instruction_cache_mode(cpu: &mut XtensaLx7, _bus: &mut dyn Bus
     Ok(())
 }
 
-/// `ets_set_appcpu_boot_addr(addr: u32) -> u32` — NOP, returns 0
-/// (cpu1 is not modelled in Plan 2).
-pub fn ets_set_appcpu_boot_addr(cpu: &mut XtensaLx7, _bus: &mut dyn Bus) -> SimResult<()> {
+/// `ets_set_appcpu_boot_addr(addr: u32) -> u32` — captures `addr` into the
+/// shared `CoreController` so that the dual-core runner can release APP_CPU
+/// once SYSTEM gates open. Returns 0 (success) like the BROM symbol.
+pub fn ets_set_appcpu_boot_addr(cpu: &mut XtensaLx7, bus: &mut dyn Bus) -> SimResult<()> {
+    // C-ABI first arg lives at a[CALLINC*4 + 2] in the callee's frame.
+    let n = cpu.ps.callinc() * 4;
+    let addr = cpu.regs.read_logical(n + 2);
+
+    if let Some(ctrl) = bus.core_controller() {
+        ctrl.lock().unwrap().set_entry(addr);
+    } else {
+        tracing::trace!(
+            "ets_set_appcpu_boot_addr: addr=0x{addr:08x} but no CoreController wired \
+             (single-core configuration?); ignoring."
+        );
+    }
+
     RomThunkBank::return_with(cpu, 0);
     Ok(())
 }
@@ -463,5 +477,42 @@ mod tests {
             }
             other => panic!("expected NotImplemented, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn ets_set_appcpu_boot_addr_captures_entry_into_controller() {
+        use crate::bus::SystemBus;
+        use crate::system::core_controller::CoreController;
+        use std::sync::{Arc, Mutex};
+
+        let mut cpu = XtensaLx7::new();
+        let mut bus = SystemBus::new();
+        let ctrl = Arc::new(Mutex::new(CoreController::new()));
+        bus.set_core_controller(ctrl.clone());
+
+        // Simulate post-CALL4 frame: callinc=1, a6 (= a[1*4 + 2]) holds the entry.
+        cpu.ps = crate::cpu::xtensa_regs::Ps::from_raw(0x1_001F); // CALLINC=1 in bits 16-17
+        cpu.regs.write_logical(4, 0x4080_1000); // saved a0 (return PC encoding)
+        cpu.regs.write_logical(6, 0x4080_2468); // a2 of callee = entry
+
+        super::ets_set_appcpu_boot_addr(&mut cpu, &mut bus).unwrap();
+
+        assert_eq!(
+            ctrl.lock().unwrap().entry(),
+            Some(0x4080_2468),
+            "thunk must capture entry into shared controller"
+        );
+    }
+
+    #[test]
+    fn ets_set_appcpu_boot_addr_no_controller_is_safe_nop() {
+        // Without a controller wired, the thunk must still return cleanly
+        // (preserves single-core back-compat for non-S3 wiring paths).
+        let mut cpu = XtensaLx7::new();
+        let mut bus = crate::bus::SystemBus::new();
+        cpu.ps = crate::cpu::xtensa_regs::Ps::from_raw(0x1_001F);
+        cpu.regs.write_logical(4, 0x4080_1000);
+        cpu.regs.write_logical(6, 0x4080_2468);
+        super::ets_set_appcpu_boot_addr(&mut cpu, &mut bus).unwrap();
     }
 }
