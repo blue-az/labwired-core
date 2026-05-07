@@ -269,6 +269,16 @@ pub trait Bus {
         None
     }
 
+    /// Plan 5: APP_CPU bringup controller, when the bus is wired for an
+    /// ESP32-S3 dual-core simulation. Default returns None; only
+    /// `SystemBus::set_core_controller(...)` populates it.
+    fn core_controller(
+        &self,
+    ) -> Option<std::sync::Arc<std::sync::Mutex<crate::system::core_controller::CoreController>>>
+    {
+        None
+    }
+
     fn read_u16(&self, addr: u64) -> SimResult<u16> {
         let b0 = self.read_u8(addr)? as u16;
         let b1 = self.read_u8(addr + 1)? as u16;

@@ -79,6 +79,13 @@ pub struct SystemBus {
     /// peripheral `explicit_irqs` source IDs routed through the registered
     /// intmatrix peripheral. Cleared per slot via `clear_cpu_irq_pending`.
     pub pending_cpu_irqs: u32,
+    /// Plan 5: optional shared APP_CPU bringup controller. Populated by
+    /// `configure_xtensa_esp32s3` when the bus is wired for ESP32-S3
+    /// dual-core simulation. Cloned to the rom-thunk dispatch surface and
+    /// to `SystemStub` so all three (write-watcher, thunk, runner) see
+    /// the same state.
+    pub core_controller:
+        Option<std::sync::Arc<std::sync::Mutex<crate::system::core_controller::CoreController>>>,
     peripheral_ranges: Vec<PeripheralRange>,
     peripheral_hint: Cell<Option<usize>>,
 }
@@ -342,6 +349,7 @@ impl SystemBus {
             config: crate::SimulationConfig::default(),
             bit_band_enabled: true,
             pending_cpu_irqs: 0,
+            core_controller: None,
             peripheral_ranges: Vec::new(),
             peripheral_hint: Cell::new(None),
         };
@@ -364,6 +372,7 @@ impl SystemBus {
             config: crate::SimulationConfig::default(),
             bit_band_enabled: false,
             pending_cpu_irqs: 0,
+            core_controller: None,
             peripheral_ranges: Vec::new(),
             peripheral_hint: Cell::new(None),
         };
@@ -440,6 +449,15 @@ impl SystemBus {
         None
     }
 
+    /// Plan 5: install the shared APP_CPU bringup controller for dual-core
+    /// ESP32-S3 simulation.
+    pub fn set_core_controller(
+        &mut self,
+        ctrl: std::sync::Arc<std::sync::Mutex<crate::system::core_controller::CoreController>>,
+    ) {
+        self.core_controller = Some(ctrl);
+    }
+
     /// Attach a UART TX capture sink to any UART peripherals on this bus.
     ///
     /// When `echo_stdout` is false, UART writes will no longer be printed to stdout.
@@ -484,6 +502,7 @@ impl SystemBus {
             config: crate::SimulationConfig::default(),
             bit_band_enabled: matches!(chip.arch, labwired_config::Arch::Arm),
             pending_cpu_irqs: 0,
+            core_controller: None,
             peripheral_ranges: Vec::new(),
             peripheral_hint: Cell::new(None),
         };
@@ -1397,6 +1416,13 @@ impl crate::Bus for SystemBus {
     fn clear_cpu_irq_pending(&mut self, slot: u8) {
         self.pending_cpu_irqs &= !(1u32 << slot);
     }
+
+    fn core_controller(
+        &self,
+    ) -> Option<std::sync::Arc<std::sync::Mutex<crate::system::core_controller::CoreController>>>
+    {
+        self.core_controller.clone()
+    }
 }
 
 #[cfg(test)]
@@ -1515,6 +1541,7 @@ mod tests {
             config: crate::SimulationConfig::default(),
             bit_band_enabled: true,
             pending_cpu_irqs: 0,
+            core_controller: None,
             peripheral_ranges: Vec::new(),
             peripheral_hint: Cell::new(None),
         };
@@ -1559,6 +1586,7 @@ mod tests {
             config: crate::SimulationConfig::default(),
             bit_band_enabled: true,
             pending_cpu_irqs: 0,
+            core_controller: None,
             peripheral_ranges: Vec::new(),
             peripheral_hint: Cell::new(None),
         };
@@ -1606,6 +1634,7 @@ mod tests {
             config: crate::SimulationConfig::default(),
             bit_band_enabled: true,
             pending_cpu_irqs: 0,
+            core_controller: None,
             peripheral_ranges: Vec::new(),
             peripheral_hint: Cell::new(None),
         };
@@ -1639,5 +1668,21 @@ mod tests {
             "DST should hold the SRC byte after mem-to-mem copy"
         );
         assert!(interrupts.contains(&16), "TCIE should pend NVIC IRQ 16");
+    }
+
+    #[test]
+    fn core_controller_default_none_and_setter_round_trips() {
+        use crate::system::core_controller::CoreController;
+        use std::sync::{Arc, Mutex};
+
+        let mut bus = SystemBus::new();
+        assert!(bus.core_controller().is_none(), "fresh bus has no controller");
+
+        let handle = Arc::new(Mutex::new(CoreController::new()));
+        bus.set_core_controller(handle.clone());
+
+        let got = bus.core_controller().expect("bus now exposes controller");
+        got.lock().unwrap().set_entry(0xDEAD_BEEF);
+        assert_eq!(handle.lock().unwrap().entry(), Some(0xDEAD_BEEF));
     }
 }
