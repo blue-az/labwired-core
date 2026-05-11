@@ -611,7 +611,35 @@ impl SystemBus {
                 | "efm32ggi2ccontroller" => {
                     let layout: crate::peripherals::i2c::I2cRegisterLayout =
                         Self::parse_profile_or_default(p_cfg, "I2C")?;
-                    Box::new(crate::peripherals::i2c::I2c::new_with_layout(layout))
+                    let mut i2c = crate::peripherals::i2c::I2c::new_with_layout(layout);
+                    for ext in &manifest.external_devices {
+                        if ext.connection != p_cfg.id {
+                            continue;
+                        }
+                        match crate::peripherals::components::build_i2c_device(
+                            &ext.r#type,
+                            &ext.config,
+                        ) {
+                            Some(device) => {
+                                tracing::info!(
+                                    "i2c attach: '{}' (type={}) -> '{}'",
+                                    ext.id,
+                                    ext.r#type,
+                                    p_cfg.id
+                                );
+                                i2c.attach(device);
+                            }
+                            None => {
+                                tracing::warn!(
+                                    "i2c attach skipped: unknown device type '{}' for external id '{}' on bus '{}'",
+                                    ext.r#type,
+                                    ext.id,
+                                    p_cfg.id
+                                );
+                            }
+                        }
+                    }
+                    Box::new(i2c)
                 }
                 "spi" | "stm32spi" => Box::new(crate::peripherals::spi::Spi::new()),
                 "pwr" => Box::new(crate::peripherals::pwr::Pwr::new()),
@@ -764,18 +792,6 @@ impl SystemBus {
                     Box::new(crate::peripherals::stub::StubPeripheral::new(0x00))
                 }
             };
-
-            let dev = dev;
-            // Stubbing out peripherals with external devices is deprecated.
-            // For now, we keep the original peripheral.
-            /*
-            for ext in &_manifest.external_devices {
-                if ext.connection == p_cfg.id {
-                    tracing::info!("Stubbing {} on {}", ext.id, p_cfg.id);
-                    dev = Box::new(crate::peripherals::stub::StubPeripheral::new(0x42));
-                }
-            }
-            */
 
             // Map peripheral window size + IRQ from descriptor when provided.
             // Defaults keep older descriptors working.

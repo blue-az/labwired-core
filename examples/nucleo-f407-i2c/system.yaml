@@ -1,0 +1,31 @@
+# LabWired - NUCLEO-F407 I²C onboarding system
+#
+# Hardware-oracle anchor for the STM32 I²C lane. AHT20 (humidity/temp,
+# command-stream protocol with BUSY-poll) and BMP280 (pressure/temp,
+# register-bank protocol) share the same I²C1 bus — two devices = real
+# address arbitration; two protocol shapes = full state-machine coverage.
+#
+# F407 is the substrate because hardware is on the bench. F401 follows
+# as a yaml delta once this path is silicon-verified against the F407
+# oracle capture.
+
+name: "nucleo-f407-i2c"
+chip: "../../configs/chips/stm32f407.yaml"
+external_devices:
+  - id: "aht20"
+    type: "aht20"
+    connection: "i2c1"
+    config:
+      i2c_address: 0x38
+  - id: "bmp280"
+    type: "bmp280"
+    connection: "i2c1"
+    config:
+      i2c_address: 0x76
+board_io:
+  - id: "led_pa5"
+    kind: "led"
+    peripheral: "gpioa"
+    pin: 5
+    signal: "output"
+    active_high: true
