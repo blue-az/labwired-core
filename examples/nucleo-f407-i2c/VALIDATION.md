@@ -86,28 +86,42 @@ surfaced and the simulator commit that closed it. Empty rounds mean
 
 ### Round 1 — UART smoke (`nucleo_f407_smoke`)
 
-**Pending hardware capture.** Simulator currently produces:
+**Capture attempted 2026-05-11.** Hardware: STM32F407 board, standalone
+ST-LINK V2 (USB ID `0483:3748`). OpenOCD program/verify succeeded.
 
-```
-F407 SMOKE
-DEV=10070413
-MUL=369D0368
-DONE
-```
+**Divergence #1 — DBGMCU REV_ID** (closed).
+OpenOCD reported `device id = 0x10016413` from the silicon. The chip
+yaml placeholder was `0x10070413` (REV_ID `0x1007`). Real silicon is
+REV_ID `0x1001` ("Rev 1", the most common revision for F407V/Z/IG).
+Updated `configs/chips/stm32f407.yaml::dbgmcu.config.idcode` to
+`0x10016413` and the survival expected_uart_output to
+`DEV=10016413`. Sim test passes.
 
-Likely divergence candidates worth attention when silicon lands:
+**UART capture itself: blocked by hardware setup.** The ST-LINK V2
+attached is the standalone debugger probe — it provides SWD only, no
+USB-CDC Virtual COM Port. (Nucleo-F407 boards have ST-LINK V2-**1**
+with USB ID `0483:374b`, which exposes the USB-CDC bridge to USART2.)
+The visible `/dev/ttyACM*` device on this host turned out to be an
+ESP32-S3 from a different project.
 
-- **DBGMCU REV_ID.** The yaml placeholder is `0x1007`. Real silicon
-  for STM32F407VGT6 reports REV_ID per the marking; the capture pins
-  it. Update `configs/chips/stm32f407.yaml::dbgmcu.config.idcode`.
+To complete the smoke capture (Round 1 follow-up), need one of:
+- **USB-UART cable** wired to PA2 (TX) / PA3 (RX) / GND. Then
+  re-attempt the `cat /dev/ttyACM* > hw_traces/nucleo_f407_smoke.txt`
+  step with the cable's tty.
+- **Switch to a Nucleo-F407** board (has ST-LINK V2-1 with USB-CDC).
+- **SWO trace via openocd** as an alternative — would require
+  rewriting the smoke firmware to emit via ITM port 0 instead of
+  USART2, then capturing through `openocd -c "tpiu config internal ...".
+
+Other things worth re-checking once the line is up:
 - **RCC bring-up timing.** The smoke firmware doesn't touch the PLL,
   so silicon stays on HSI 16 MHz like the simulator. If a future
   round adds a clock-tree exercise the BRR computation needs to be
   re-derived for the new SYSCLK.
 - **F4 USART_SR vs L4 USART_ISR.** This firmware uses the classic
-  F4 layout (SR/DR at offsets 0/4). If silicon UART output is
-  silent or garbled, check that the chip yaml's USART2 type
-  dispatches the V1 register layout (not V2).
+  F4 layout (SR/DR at offsets 0/4). If silicon UART output is silent
+  or garbled, check that the chip yaml's USART2 type dispatches the
+  V1 register layout (not V2).
 
 ### Round 2 — I²C state machine (`nucleo_f407_i2c`)
 
