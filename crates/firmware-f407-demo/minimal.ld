@@ -17,21 +17,21 @@ SECTIONS
   .vector_table 0x08000000 :
   {
     LONG(0x20020000);            /*  0 — Initial SP (top of 128 KB SRAM) */
-    LONG(Reset + 1);             /*  1 — Reset */
-    LONG(default_handler + 1);   /*  2 — NMI */
-    LONG(default_handler + 1);   /*  3 — HardFault */
-    LONG(default_handler + 1);   /*  4 — MemManage */
-    LONG(default_handler + 1);   /*  5 — BusFault */
-    LONG(default_handler + 1);   /*  6 — UsageFault */
+    LONG(Reset);                 /*  1 — Reset (symbol already has thumb bit) */
+    LONG(default_handler);   /*  2 — NMI */
+    LONG(default_handler);   /*  3 — HardFault */
+    LONG(default_handler);   /*  4 — MemManage */
+    LONG(default_handler);   /*  5 — BusFault */
+    LONG(default_handler);   /*  6 — UsageFault */
     LONG(0);                     /*  7 — reserved */
     LONG(0);                     /*  8 — reserved */
     LONG(0);                     /*  9 — reserved */
     LONG(0);                     /* 10 — reserved */
-    LONG(default_handler + 1);   /* 11 — SVCall */
-    LONG(default_handler + 1);   /* 12 — DebugMonitor */
+    LONG(default_handler);   /* 11 — SVCall */
+    LONG(default_handler);   /* 12 — DebugMonitor */
     LONG(0);                     /* 13 — reserved */
-    LONG(default_handler + 1);   /* 14 — PendSV */
-    LONG(default_handler + 1);   /* 15 — SysTick */
+    LONG(default_handler);   /* 14 — PendSV */
+    LONG(default_handler);   /* 15 — SysTick */
   } > FLASH
 
   .text :
