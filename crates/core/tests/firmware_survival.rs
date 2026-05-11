@@ -598,8 +598,10 @@ DONE\r\n",
         // sim↔silicon divergence to investigate. Iterate by capturing,
         // diffing, fixing the simulator, and re-running.
         //
-        // DEV=10070413: F4 DBGMCU IDCODE (DEV_ID 0x413, placeholder
-        // REV_ID 0x1007 — real silicon will pin REV_ID exactly).
+        // DEV=10016413: F4 DBGMCU IDCODE (DEV_ID 0x413, REV_ID 0x1001).
+        // Confirmed by openocd `device id` readout from the user's
+        // STM32F407 silicon — see examples/nucleo-f407-i2c/VALIDATION.md
+        // Round 1.
         // MUL=369D0368: 0x12345678 * 3 (low 32 bits) — Thumb-2 MUL.W
         // check that pins the decoder.
         name: "nucleo_f407_smoke",
@@ -609,7 +611,7 @@ DONE\r\n",
         system: "nucleo-f407",
         fixture: "nucleo-f407-smoke.elf",
         valid_pc_ranges: &[(0x0800_0000, 0x080F_FFFF), (0x2000_0000, 0x2001_FFFF)],
-        expected_uart_output: b"F407 SMOKE\r\nDEV=10070413\r\nMUL=369D0368\r\nDONE\r\n",
+        expected_uart_output: b"F407 SMOKE\r\nDEV=10016413\r\nMUL=369D0368\r\nDONE\r\n",
     },
 ];
 
