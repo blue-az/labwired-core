@@ -150,12 +150,12 @@ fn i2c1_init() {
     // GPIOB clock + I²C1 clock.
     rmw32(RCC_AHB1ENR, 1 << 1); // GPIOBEN
     rmw32(RCC_APB1ENR, 1 << 21); // I2C1EN
-    // PB6 SCL, PB7 SDA → AF4 (I²C1), open-drain, internal pull-up.
-    // Discovery boards have no external pull-ups on PB6/PB7, so without
-    // PUPDR=01 (pull-up) the lines float and the I²C peripheral latches
-    // SR2.BUSY at boot — every subsequent START fails silently. Surfaced
-    // by Round 2 capture: silicon showed SR2=0x02 (BUSY) from the very
-    // first register read, SR1 stayed 0 across the whole transaction.
+                                 // PB6 SCL, PB7 SDA → AF4 (I²C1), open-drain, internal pull-up.
+                                 // Discovery boards have no external pull-ups on PB6/PB7, so without
+                                 // PUPDR=01 (pull-up) the lines float and the I²C peripheral latches
+                                 // SR2.BUSY at boot — every subsequent START fails silently. Surfaced
+                                 // by Round 2 capture: silicon showed SR2=0x02 (BUSY) from the very
+                                 // first register read, SR1 stayed 0 across the whole transaction.
     rmw32_mask(GPIOB_MODER, 0x3 << 12, 0x2 << 12);
     rmw32_mask(GPIOB_MODER, 0x3 << 14, 0x2 << 14);
     rmw32(GPIOB_OTYPER, (1 << 6) | (1 << 7));

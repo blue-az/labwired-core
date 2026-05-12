@@ -180,7 +180,11 @@ mod tests {
         // First read after restart should return BUSY|CAL.
         d.start();
         let s = d.read();
-        assert_eq!(s & STATUS_BUSY, STATUS_BUSY, "BUSY must be set right after trigger");
+        assert_eq!(
+            s & STATUS_BUSY,
+            STATUS_BUSY,
+            "BUSY must be set right after trigger"
+        );
     }
 
     #[test]
@@ -233,6 +237,9 @@ mod tests {
         let bytes: Vec<u8> = (0..7).map(|_| d.read()).collect();
         assert_eq!(bytes[0] & STATUS_BUSY, 0);
         assert_eq!(bytes[1], 0x80);
-        assert_eq!(bytes[6], crc8(&[bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5]]));
+        assert_eq!(
+            bytes[6],
+            crc8(&[bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5]])
+        );
     }
 }

@@ -67,7 +67,11 @@ pub struct Bmp280 {
 
 impl Bmp280 {
     pub fn new(address: u8) -> Self {
-        let addr = if address == 0 { BMP280_ADDR_DEFAULT } else { address };
+        let addr = if address == 0 {
+            BMP280_ADDR_DEFAULT
+        } else {
+            address
+        };
         Self {
             address: addr,
             pointer: 0,

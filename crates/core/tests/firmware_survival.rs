@@ -993,8 +993,7 @@ fn test_nucleo_f407_i2c_survival() {
     // diffed against silicon.
     let case = &SURVIVAL_CASES[23];
     let firmware = fixtures().join(case.fixture);
-    let (pc, uart) =
-        run_cortex_m_firmware(case.chip, case.system, firmware, SURVIVAL_CYCLES * 2);
+    let (pc, uart) = run_cortex_m_firmware(case.chip, case.system, firmware, SURVIVAL_CYCLES * 2);
     assert_pc_in_range(pc, SURVIVAL_CYCLES * 2, case.valid_pc_ranges);
     eprintln!("--- F407 I2C SIM UART ---");
     eprintln!("{}", String::from_utf8_lossy(&uart));

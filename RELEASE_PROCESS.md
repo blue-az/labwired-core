@@ -30,7 +30,7 @@ This document outlines the standardized process for releasing new versions of La
 
 ### Changelog
 - [ ] **Update `CHANGELOG.md`**:
-  - Rename the `[Unreleased]` section header to the new version and date (e.g., `## [0.12.0] - 2026-02-15`).
+  - Rename the `[Unreleased]` section header to the new version and date (e.g., `## [X.Y.Z] - YYYY-MM-DD`).
   - Create a new empty `## [Unreleased]` section at the top.
   - Ensure all significant changes from `git log` are captured.
   - Group changes by `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`.
@@ -38,12 +38,12 @@ This document outlines the standardized process for releasing new versions of La
 ## 2. Release Candidate (RC) verification
 - [ ] **Create Release Branch**:
   ```bash
-  git checkout -b release/v0.12.0
+  git checkout -b release/vX.Y.Z
   ```
 - [ ] **Commit Version & Changelog**:
   ```bash
   git add Cargo.toml Cargo.lock CHANGELOG.md
-  git commit -m "chore: bump version to 0.12.0"
+  git commit -m "chore: bump version to X.Y.Z"
   ```
 - [ ] **Push & Open PR**:
   - Push the branch and open a PR to `main`.
@@ -56,13 +56,13 @@ This document outlines the standardized process for releasing new versions of La
   - After the PR is merged to `main`, tag the commit:
     ```bash
     git checkout main && git pull
-    git tag -a v0.12.0 -m "Release v0.12.0"
-    git push origin v0.12.0
+    git tag -a vX.Y.Z -m "Release vX.Y.Z"
+    git push origin vX.Y.Z
     ```
 - [ ] **Draft Release on GitHub**:
   - Go to [Releases > Draft a new release](https://github.com/w1ne/labwired-core/releases/new).
-  - **Tag**: Select `v0.12.0`.
-  - **Title**: `v0.12.0: <Key Highlight/Theme>`
+  - **Tag**: Select `vX.Y.Z`.
+  - **Title**: `vX.Y.Z: <Key Highlight/Theme>`
   - **Description**: Copy contents from `.github/RELEASE_TEMPLATE.md` and fill it in with details from `CHANGELOG.md`.
 
 ### Artifacts (Manual Step until CI is fully automated)

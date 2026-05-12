@@ -57,10 +57,7 @@ pub enum TraceEvent {
     /// via explicit ticks. The oracle capture must inject explicit
     /// `tick` markers between operations that depend on state-machine
     /// progress (e.g. after START is set, before SB is expected high).
-    Tick {
-        count: u32,
-        note: Option<String>,
-    },
+    Tick { count: u32, note: Option<String> },
 }
 
 fn default_mask() -> u32 {
@@ -106,9 +103,8 @@ impl OracleTrace {
             match ev {
                 TraceEvent::Write { offset, value, .. } => {
                     let addr = self.metadata.i2c_base as u64 + *offset as u64;
-                    bus.write_u32(addr, *value).map_err(|e| {
-                        format!("step {step}: write to 0x{addr:08X} failed: {e:?}")
-                    })?;
+                    bus.write_u32(addr, *value)
+                        .map_err(|e| format!("step {step}: write to 0x{addr:08X} failed: {e:?}"))?;
                 }
                 TraceEvent::Read {
                     offset,
@@ -117,9 +113,9 @@ impl OracleTrace {
                     note,
                 } => {
                     let addr = self.metadata.i2c_base as u64 + *offset as u64;
-                    let got = bus.read_u32(addr).map_err(|e| {
-                        format!("step {step}: read 0x{addr:08X} failed: {e:?}")
-                    })?;
+                    let got = bus
+                        .read_u32(addr)
+                        .map_err(|e| format!("step {step}: read 0x{addr:08X} failed: {e:?}"))?;
                     if (got & mask) != (expected & mask) {
                         return Err(format!(
                             "step {step}: read 0x{addr:08X}: expected 0x{expected:08X} & 0x{mask:08X}, got 0x{got:08X} ({})",
@@ -254,16 +250,15 @@ fn aht20_bmp280_chip_id_handshake_matches_silicon() {
 
 // ── End-to-end firmware-driven test ───────────────────────────────────
 
-const F407_FIRMWARE_ELF: &str =
-    "../../target/thumbv7em-none-eabi/release/nucleo-f407-i2c";
+const F407_FIRMWARE_ELF: &str = "../../target/thumbv7em-none-eabi/release/nucleo-f407-i2c";
 
 fn ensure_f407_firmware_built() -> PathBuf {
     let elf = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(F407_FIRMWARE_ELF);
     if elf.exists() {
         return elf;
     }
-    let example_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../examples/nucleo-f407-i2c");
+    let example_dir =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/nucleo-f407-i2c");
     let status = Command::new("cargo")
         .arg("build")
         .arg("--release")
@@ -357,9 +352,18 @@ fn firmware_drives_aht20_and_bmp280_through_simulator() {
     // Diagnostic dump on failure.
     if !led_was_high {
         eprintln!("max ODR seen during run: 0x{:04x}", max_odr_seen);
-        eprintln!("  PA5 (LED, success)   set: {}", max_odr_seen & (1 << 5) != 0);
-        eprintln!("  PA6 (AHT20 ok diag)  set: {}", max_odr_seen & (1 << 6) != 0);
-        eprintln!("  PA7 (BMP280 ok diag) set: {}", max_odr_seen & (1 << 7) != 0);
+        eprintln!(
+            "  PA5 (LED, success)   set: {}",
+            max_odr_seen & (1 << 5) != 0
+        );
+        eprintln!(
+            "  PA6 (AHT20 ok diag)  set: {}",
+            max_odr_seen & (1 << 6) != 0
+        );
+        eprintln!(
+            "  PA7 (BMP280 ok diag) set: {}",
+            max_odr_seen & (1 << 7) != 0
+        );
         // Dump i2c1 peripheral state via downcast.
         let i2c_entry = machine
             .bus

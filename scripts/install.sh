@@ -3,7 +3,7 @@
 # Usage: curl -fsSL https://labwired.com/install.sh | sh
 #
 # Options (set via env vars):
-#   LABWIRED_VERSION=latest          - specific version tag, e.g. "v0.12.0"
+#   LABWIRED_VERSION=latest          - specific version tag, e.g. "v0.14.0"
 #   LABWIRED_INSTALL_DIR=~/.local/bin - install directory
 #   LABWIRED_NO_MODIFY_PATH=1        - skip adding to PATH in shell rc
 #   LABWIRED_FROM_SOURCE=1           - skip prebuilt, always build from source

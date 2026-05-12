@@ -49,18 +49,22 @@ fn test_chip_config_validation() {
 /// path is silicon-verified.
 #[test]
 fn test_stm32f407_chip_loads() {
-    let chip_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../configs/chips/stm32f407.yaml");
+    let chip_path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../configs/chips/stm32f407.yaml");
 
     let chip = ChipDescriptor::from_file(&chip_path).expect("F407 chip yaml failed to parse");
 
     assert_eq!(chip.name, "stm32f407vgt6");
     assert!(
-        chip.peripherals.iter().any(|p| p.id == "i2c1" && p.base_address == 0x40005400),
+        chip.peripherals
+            .iter()
+            .any(|p| p.id == "i2c1" && p.base_address == 0x40005400),
         "F407 must declare i2c1 at 0x40005400"
     );
     assert!(
-        chip.peripherals.iter().any(|p| p.id == "gpioa" && p.base_address == 0x40020000),
+        chip.peripherals
+            .iter()
+            .any(|p| p.id == "gpioa" && p.base_address == 0x40020000),
         "F407 must declare gpioa at 0x40020000"
     );
 }
@@ -74,14 +78,14 @@ fn test_stm32f407_chip_loads() {
 /// `crates/core/src/bus/mod.rs` and demo-blinky's claim was aspirational.
 #[test]
 fn test_external_device_attaches_to_i2c() {
-    let system_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../examples/demo-blinky/system.yaml");
+    let system_path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/demo-blinky/system.yaml");
     let manifest = SystemManifest::from_file(&system_path).expect("load demo-blinky manifest");
     let chip_path = system_path.parent().unwrap().join(&manifest.chip);
     let chip = ChipDescriptor::from_file(&chip_path).expect("load chip");
 
-    let bus = labwired_core::bus::SystemBus::from_config(&chip, &manifest)
-        .expect("Failed to build bus");
+    let bus =
+        labwired_core::bus::SystemBus::from_config(&chip, &manifest).expect("Failed to build bus");
 
     let i2c_entry = bus
         .peripherals

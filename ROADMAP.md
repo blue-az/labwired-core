@@ -2,12 +2,12 @@
 
 This roadmap outlines the planned evolution of LabWired Core as we move towards a production-ready ecosystem for professional firmware simulation.
 
-## 🟢 v0.12.0: Foundation & Documentation (Current)
-- **Documentation Overhaul**: Complete restructuring with MkDocs/Material, new guides, and process docs.
-- **Multi-Architecture**: Initial ARM Cortex-M and RISC-V RV32I support.
-- **Declarative Peripherals**: YAML-based chip and system definitions.
-- **CI Test Runner**: Deterministic headless execution with JSON/JUnit reports.
-- **Interactive Debugging**: DAP (VS Code) and GDB RSP integration.
+## 🟢 v0.14.0: Hardware-Validated Multi-Architecture Coverage (Current)
+- **Hardware-Validated Parity**: STM32H563, STM32L476, and STM32F407 validation lanes with committed traces and oracle fixtures.
+- **Multi-Architecture**: ARM Cortex-M, RISC-V RV32I/RV32A, and ESP32-S3 Xtensa LX7 execution paths.
+- **Expanded Peripheral Coverage**: STM32 L4/F4 peripherals, ESP32-S3 GPIO/SYSTIMER/I2C support, and virtual I2C components.
+- **CI Test Runner**: Deterministic headless execution with JSON/JUnit reports, trace fingerprints, and catalog validation metadata.
+- **Interactive Debugging**: DAP (VS Code) and GDB RSP integration with conditional/data breakpoints and improved evaluation.
 
 ## 🟡 v0.2.0: Ecosystem & Stability (Q1 2026)
 - **Advanced SVD Ingestion**: Robust generation of register maps from standard CMSIS-SVD files.

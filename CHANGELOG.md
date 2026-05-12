@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-05-12
+
 ### Added
+- **ESP32-S3 / Xtensa LX7 Support**: Added the Xtensa LX7 CPU backend, ESP32-S3 boot path, GPIO, interrupt matrix, SYSTIMER, ROM thunk, flash XIP, USB serial/JTAG, and I2C/TMP102 support.
+- **Hardware Oracle Harness**: Ported the hardware-oracle capture/replay harness to the core repo, including OpenOCD/GDB capture tooling and fixture-backed oracle tests.
+- **Hardware-Validated STM32L476 Coverage**: Added the NUCLEO-L476RG board package, modern STM32L4 peripherals, CubeMX-style HAL firmware coverage, and hardware trace fixtures.
+- **Hardware-Validated STM32F407 I2C Coverage**: Added STM32F407 board configs, firmware, oracle captures, survival traces, and I2C sensor coverage for AHT20/BMP280 flows.
+- **Expanded Peripheral Models**: Added or extended STM32L4/L4-style peripherals including PWR, FLASH, RNG, CRC, timers, RTC, watchdogs, DAC, EXTI, DMA, SDMMC, FMC, TSC, COMP, bxCAN, SAI, USB OTG, and QSPI.
+- **ISA and Snapshot Coverage**: Added ARM Thumb-2 instructions, RISC-V atomics, async IRQ fixes, snapshot schema validation, ESP32-C3 survival coverage, and an ISA coverage matrix.
 - **Trace-Level Determinism Proof**: Extended `determinism.rs` to compare `trace.json` SHA-256 hashes across 5 runs; added as `determinism-proof` CI gate.
 - **Deterministic Trace Serialization**: Switched `InstructionTrace.register_delta` from `HashMap` to `BTreeMap` for stable JSON key ordering.
 - **Auto-Generated Compatibility Matrix**: `scripts/generate_compat_matrix.py` enumerates chip configs and smoke test coverage; output uploaded as CI artifact.
@@ -15,6 +23,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Data Breakpoints**: `supportsDataBreakpoints` DAP capability; triggers on memory writes to watched addresses via `MemoryTracker`.
 - **Enhanced Evaluate Handler**: DAP `evaluate` supports `*(0xADDR)` memory dereference and `Rn +/- offset` register arithmetic.
 - **Improved Disassembly**: Thumb-2 32-bit instruction decoding in DAP disassemble handler; `decode_thumb_32` re-exported from decoder module; source line correlation via DWARF symbols.
+
+### Changed
+- **Release Version**: Workspace version updated to `0.14.0` across workspace-managed crates.
+- **Documentation Structure**: Consolidated architecture docs, removed stale root-level junk and orphan changelog files, corrected stale `core/...` subpath prefixes, and refreshed README positioning around hardware-validated parity.
+- **Catalog Metadata**: Refreshed onboarding target pass-rate metadata and board coverage tables for modeled chips.
+- **Build Profile**: Enabled thin LTO for release builds.
+
+### Fixed
+- **I2C Fidelity**: Closed STM32 I2C state-machine gaps exposed by F407 firmware and added runtime-attached AHT20/BMP280 component support.
+- **Cortex-M Fidelity**: Fixed DBGMCU IDCODE behavior, vector-table handling, semihosting breakpoints, bit-band gating by architecture, and multiple Thumb-2 decode/execute gaps surfaced by hardware traces.
+- **DAP Robustness**: Capped `readMemory` requests and made board I/O matching exhaustive.
+- **CI and Fixture Stability**: Repaired workspace CI issues, RP2040 firmware configuration, nightly test failures, and firmware survival tests.
 
 ## [0.13.0] - 2026-03-20
 

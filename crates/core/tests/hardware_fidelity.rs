@@ -1,3 +1,4 @@
+use labwired_core::peripherals::components::Mpu6050;
 use labwired_core::peripherals::i2c::I2c;
 use labwired_core::peripherals::pio::Pio;
 use labwired_core::peripherals::spi::Spi;
@@ -106,12 +107,14 @@ fn test_spi_fidelity_in_machine() {
 #[test]
 fn test_i2c_fidelity_in_machine() {
     let mut bus = SystemBus::new();
+    let mut i2c = I2c::new();
+    i2c.attach(Box::new(Mpu6050::new(0x50)));
     bus.peripherals.push(PeripheralEntry {
         name: "I2C1".to_string(),
         base: 0x40005400,
         size: 0x400,
         irq: None,
-        dev: Box::new(I2c::new()),
+        dev: Box::new(i2c),
         ticks_remaining: 0,
     });
     bus.refresh_peripheral_index();

@@ -225,10 +225,7 @@ impl I2c {
                     // notify the device, clear MSL/BUSY in SR2, but leave
                     // SR1 alone so any latched RXNE/BTF stays readable
                     // until firmware consumes DR.
-                    if matches!(
-                        self.state,
-                        I2cState::DataPending | I2cState::AddressPending
-                    ) {
+                    if matches!(self.state, I2cState::DataPending | I2cState::AddressPending) {
                         self.stop_requested = true;
                     } else {
                         self.cr1 &= !0x0200;
@@ -399,8 +396,8 @@ impl crate::Peripheral for I2c {
                         // subsequent polls see stale ADDR/TXE/BTF and
                         // exit prematurely on the next address-send.
                         self.sr1 = 0x0001; // Only SB set
-                        // Hardware auto-clears the START request bit after
-                        // the start condition has been generated.
+                                           // Hardware auto-clears the START request bit after
+                                           // the start condition has been generated.
                         self.cr1 &= !0x0100;
                         self.state = I2cState::Idle;
                         // device.start() is deferred to AddressPending —
@@ -421,11 +418,11 @@ impl crate::Peripheral for I2c {
                         // depends on this.
                         if self.current_target.is_none() {
                             self.sr1 |= 0x0400; // AF
-                            // Per silicon: after a NACK the bus stays
-                            // in master mode with BUSY set until firmware
-                            // generates STOP. Round 2 capture showed
-                            // SR2=0x03 on real F407 after AF; sim was
-                            // leaving SR2=0.
+                                                // Per silicon: after a NACK the bus stays
+                                                // in master mode with BUSY set until firmware
+                                                // generates STOP. Round 2 capture showed
+                                                // SR2=0x03 on real F407 after AF; sim was
+                                                // leaving SR2=0.
                             self.sr2 |= 0x0001; // MSL
                             self.sr2 |= 0x0002; // BUSY
                             self.state = I2cState::Idle;
