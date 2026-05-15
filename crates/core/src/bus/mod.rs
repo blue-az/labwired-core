@@ -740,6 +740,50 @@ impl SystemBus {
                         _ => i2c.attach(Box::new(crate::peripherals::components::Adxl345::new(address))),
                     }
                 }
+                "neo6m-gps" => {
+                    // UART stream device path
+                    let idx = bus
+                        .find_peripheral_index_by_name(&ext.connection)
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "External device '{}' type '{}' references missing connection '{}'",
+                                ext.id,
+                                ext.r#type,
+                                ext.connection
+                            )
+                        })?;
+
+                    let any = bus.peripherals[idx].dev.as_any_mut().ok_or_else(|| {
+                        anyhow::anyhow!(
+                            "External device '{}' type '{}' connection '{}' cannot be downcast",
+                            ext.id,
+                            ext.r#type,
+                            ext.connection
+                        )
+                    })?;
+
+                    let uart = any
+                        .downcast_mut::<crate::peripherals::uart::Uart>()
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "External device '{}' type '{}' connection '{}' is not a UART peripheral",
+                                ext.id,
+                                ext.r#type,
+                                ext.connection
+                            )
+                        })?;
+
+                    let mut gps = crate::peripherals::components::Neo6mGps::new();
+
+                    // Optionally read initial position from config
+                    if let Some(lat) = ext.config.get("lat_deg").and_then(|v| v.as_f64()) {
+                        if let Some(lon) = ext.config.get("lon_deg").and_then(|v| v.as_f64()) {
+                            gps.set_position(lat, lon);
+                        }
+                    }
+
+                    uart.attach_stream(Box::new(gps));
+                }
                 "max31855" => {
                     // SPI device path
                     let cs_pin = Self::max31855_cs_pin(ext);
