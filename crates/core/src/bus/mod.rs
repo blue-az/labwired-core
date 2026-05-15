@@ -820,6 +820,56 @@ impl SystemBus {
 
                     spi.attach(Box::new(crate::peripherals::components::Max31855::new(cs_pin)));
                 }
+                "ntc-thermistor" => {
+                    // Analog source path: NTC connects directly to an ADC channel.
+                    // Read channel + initial temperature from config.
+                    let channel = ext
+                        .config
+                        .get("channel")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0) as u8;
+                    let initial_temp_c = ext
+                        .config
+                        .get("initial_temperature_c")
+                        .and_then(|v| v.as_f64())
+                        .unwrap_or(25.0) as f32;
+
+                    // Find the ADC peripheral by the connection name.
+                    let idx = bus
+                        .find_peripheral_index_by_name(&ext.connection)
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "External device '{}' type '{}' references missing connection '{}'",
+                                ext.id,
+                                ext.r#type,
+                                ext.connection
+                            )
+                        })?;
+
+                    let any = bus.peripherals[idx].dev.as_any_mut().ok_or_else(|| {
+                        anyhow::anyhow!(
+                            "External device '{}' type '{}' connection '{}' cannot be downcast",
+                            ext.id,
+                            ext.r#type,
+                            ext.connection
+                        )
+                    })?;
+
+                    let adc = any
+                        .downcast_mut::<crate::peripherals::adc::Adc>()
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "External device '{}' type '{}' connection '{}' is not an ADC peripheral",
+                                ext.id,
+                                ext.r#type,
+                                ext.connection
+                            )
+                        })?;
+
+                    // Seed the ADC channel with the initial temperature's voltage.
+                    let ntc = crate::peripherals::components::NtcThermistor::new(channel, initial_temp_c);
+                    adc.set_channel_input(channel, ntc.divider_output_mv());
+                }
                 _ => {
                     tracing::warn!(
                         "Unsupported external device '{}' type '{}' on connection '{}'; skipping",
