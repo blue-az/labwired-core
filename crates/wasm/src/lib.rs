@@ -840,6 +840,160 @@ impl WasmSimulator {
         )))
     }
 
+    /// Set the simulated position on a NEO-6M GPS module attached to a UART peripheral.
+    ///
+    /// `device_id` must match a `board_io` binding with `device_type: "neo6m-gps"`.
+    #[wasm_bindgen]
+    pub fn set_gps_position(
+        &mut self,
+        device_id: &str,
+        lat: f64,
+        lon: f64,
+    ) -> Result<(), JsValue> {
+        let binding = self
+            .board_io
+            .iter()
+            .find(|b| b.id == device_id && b.device_type.as_deref() == Some("neo6m-gps"))
+            .cloned()
+            .ok_or_else(|| {
+                JsValue::from_str(&format!("No neo6m-gps board_io binding '{}'", device_id))
+            })?;
+
+        let machine = self.machine.as_mut().unwrap();
+        let idx = machine
+            .bus
+            .find_peripheral_index_by_name(&binding.peripheral)
+            .ok_or_else(|| {
+                JsValue::from_str(&format!(
+                    "UART peripheral '{}' not found",
+                    binding.peripheral
+                ))
+            })?;
+        let any = machine.bus.peripherals[idx]
+            .dev
+            .as_any_mut()
+            .ok_or_else(|| JsValue::from_str("UART peripheral does not support downcasting"))?;
+        let uart = any
+            .downcast_mut::<labwired_core::peripherals::uart::Uart>()
+            .ok_or_else(|| {
+                JsValue::from_str(&format!(
+                    "Peripheral '{}' is not a UART controller",
+                    binding.peripheral
+                ))
+            })?;
+
+        for stream in &mut uart.attached_streams {
+            if let Some(gps) = stream
+                .as_any_mut()
+                .and_then(|a| a.downcast_mut::<labwired_core::peripherals::components::Neo6mGps>())
+            {
+                gps.set_position(lat, lon);
+                return Ok(());
+            }
+        }
+
+        Err(JsValue::from_str(&format!(
+            "Neo6mGps not found on UART '{}'",
+            binding.peripheral
+        )))
+    }
+
+    /// Enable or disable the GPS fix on a NEO-6M module.
+    #[wasm_bindgen]
+    pub fn set_gps_fix(&mut self, device_id: &str, active: bool) -> Result<(), JsValue> {
+        let binding = self
+            .board_io
+            .iter()
+            .find(|b| b.id == device_id && b.device_type.as_deref() == Some("neo6m-gps"))
+            .cloned()
+            .ok_or_else(|| {
+                JsValue::from_str(&format!("No neo6m-gps board_io binding '{}'", device_id))
+            })?;
+
+        let machine = self.machine.as_mut().unwrap();
+        let idx = machine
+            .bus
+            .find_peripheral_index_by_name(&binding.peripheral)
+            .ok_or_else(|| {
+                JsValue::from_str(&format!(
+                    "UART peripheral '{}' not found",
+                    binding.peripheral
+                ))
+            })?;
+        let any = machine.bus.peripherals[idx]
+            .dev
+            .as_any_mut()
+            .ok_or_else(|| JsValue::from_str("UART peripheral does not support downcasting"))?;
+        let uart = any
+            .downcast_mut::<labwired_core::peripherals::uart::Uart>()
+            .ok_or_else(|| {
+                JsValue::from_str(&format!(
+                    "Peripheral '{}' is not a UART controller",
+                    binding.peripheral
+                ))
+            })?;
+
+        for stream in &mut uart.attached_streams {
+            if let Some(gps) = stream
+                .as_any_mut()
+                .and_then(|a| a.downcast_mut::<labwired_core::peripherals::components::Neo6mGps>())
+            {
+                gps.set_fix(active);
+                return Ok(());
+            }
+        }
+
+        Err(JsValue::from_str(&format!(
+            "Neo6mGps not found on UART '{}'",
+            binding.peripheral
+        )))
+    }
+
+    /// Read back the current state of all NEO-6M GPS devices declared in `board_io`.
+    /// Returns `[{ id, kind: "neo6m-gps", lat, lon, has_fix }]`.
+    #[wasm_bindgen]
+    pub fn get_uart_device_states(&self) -> JsValue {
+        let machine = self.machine.as_ref().unwrap();
+        let mut states: Vec<serde_json::Value> = Vec::new();
+
+        for binding in &self.board_io {
+            let device_type = match binding.device_type.as_deref() {
+                Some(t) if t == "neo6m-gps" => t,
+                _ => continue,
+            };
+            let Some(idx) = machine.bus.find_peripheral_index_by_name(&binding.peripheral) else {
+                continue;
+            };
+            let Some(any) = machine.bus.peripherals[idx].dev.as_any() else {
+                continue;
+            };
+            let Some(uart) = any.downcast_ref::<labwired_core::peripherals::uart::Uart>() else {
+                continue;
+            };
+
+            if device_type == "neo6m-gps" {
+                for stream in &uart.attached_streams {
+                    if let Some(gps) = stream
+                        .as_any()
+                        .and_then(|a| a.downcast_ref::<labwired_core::peripherals::components::Neo6mGps>())
+                    {
+                        let (lat, lon) = gps.position();
+                        states.push(serde_json::json!({
+                            "id": binding.id,
+                            "kind": "neo6m-gps",
+                            "lat": lat,
+                            "lon": lon,
+                            "has_fix": gps.has_fix(),
+                        }));
+                        break;
+                    }
+                }
+            }
+        }
+
+        serde_wasm_bindgen::to_value(&states).unwrap_or(JsValue::NULL)
+    }
+
     /// List all peripherals: [{ name, base_address }]
     #[wasm_bindgen]
     pub fn get_peripheral_list(&self) -> JsValue {
