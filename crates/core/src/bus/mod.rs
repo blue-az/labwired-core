@@ -224,6 +224,36 @@ impl SystemBus {
         Ok(address as u8)
     }
 
+    fn bme280_i2c_address(ext: &ExternalDevice) -> anyhow::Result<u8> {
+        let Some(value) = ext.config.get("i2c_address") else {
+            return Ok(0x76);
+        };
+
+        let Some(address) = value.as_u64() else {
+            return Err(anyhow::anyhow!(
+                "External device '{}' type '{}' on connection '{}' has invalid i2c_address '{}'",
+                ext.id,
+                ext.r#type,
+                ext.connection,
+                serde_yaml::to_string(value)
+                    .unwrap_or_else(|_| "<unprintable>".to_string())
+                    .trim()
+            ));
+        };
+
+        if address > 0x7f {
+            return Err(anyhow::anyhow!(
+                "External device '{}' type '{}' on connection '{}' has out-of-range 7-bit i2c_address 0x{:x}",
+                ext.id,
+                ext.r#type,
+                ext.connection,
+                address
+            ));
+        }
+
+        Ok(address as u8)
+    }
+
     fn is_peripheral_addr(p: &PeripheralEntry, addr: u64) -> bool {
         addr >= p.base && addr < p.base + p.size
     }
@@ -625,7 +655,7 @@ impl SystemBus {
         }
 
         for ext in &manifest.external_devices {
-            if ext.r#type != "adxl345" && ext.r#type != "mpu6050" {
+            if ext.r#type != "adxl345" && ext.r#type != "mpu6050" && ext.r#type != "bme280" {
                 tracing::warn!(
                     "Unsupported external device '{}' type '{}' on connection '{}'; skipping",
                     ext.id,
@@ -635,10 +665,10 @@ impl SystemBus {
                 continue;
             }
 
-            let address = if ext.r#type == "mpu6050" {
-                Self::mpu6050_i2c_address(ext)?
-            } else {
-                Self::adxl345_i2c_address(ext)?
+            let address = match ext.r#type.as_str() {
+                "mpu6050" => Self::mpu6050_i2c_address(ext)?,
+                "bme280" => Self::bme280_i2c_address(ext)?,
+                _ => Self::adxl345_i2c_address(ext)?,
             };
             let idx = bus
                 .find_peripheral_index_by_name(&ext.connection)
@@ -671,14 +701,10 @@ impl SystemBus {
                     )
                 })?;
 
-            if ext.r#type == "mpu6050" {
-                i2c.attach(Box::new(crate::peripherals::components::Mpu6050::new(
-                    address,
-                )));
-            } else {
-                i2c.attach(Box::new(crate::peripherals::components::Adxl345::new(
-                    address,
-                )));
+            match ext.r#type.as_str() {
+                "mpu6050" => i2c.attach(Box::new(crate::peripherals::components::Mpu6050::new(address))),
+                "bme280" => i2c.attach(Box::new(crate::peripherals::components::Bme280::new(address))),
+                _ => i2c.attach(Box::new(crate::peripherals::components::Adxl345::new(address))),
             }
         }
 
