@@ -868,6 +868,63 @@ impl WasmSimulator {
         )))
     }
 
+    /// Return the ILI9341 RGB565 framebuffer for the device identified by `device_id`.
+    ///
+    /// `device_id` must match a `board_io` binding with `device_type: "ili9341"`.
+    /// Returns a 153,600-byte `Uint8Array` (240×320 pixels × 2 bytes, row-major, big-endian RGB565).
+    /// Returns a JS error if the device is not found.
+    #[wasm_bindgen]
+    pub fn get_ili9341_framebuffer(&self, device_id: &str) -> Result<Box<[u8]>, JsValue> {
+        let machine = self.machine.as_ref().unwrap();
+
+        let binding = self
+            .board_io
+            .iter()
+            .find(|b| b.id == device_id && b.device_type.as_deref() == Some("ili9341"))
+            .ok_or_else(|| {
+                JsValue::from_str(&format!("No ili9341 board_io binding '{}'", device_id))
+            })?;
+
+        let idx = machine
+            .bus
+            .find_peripheral_index_by_name(&binding.peripheral)
+            .ok_or_else(|| {
+                JsValue::from_str(&format!(
+                    "SPI peripheral '{}' not found",
+                    binding.peripheral
+                ))
+            })?;
+
+        let any = machine.bus.peripherals[idx]
+            .dev
+            .as_any()
+            .ok_or_else(|| JsValue::from_str("Peripheral does not support downcasting"))?;
+
+        let spi = any
+            .downcast_ref::<labwired_core::peripherals::spi::Spi>()
+            .ok_or_else(|| {
+                JsValue::from_str(&format!(
+                    "Peripheral '{}' is not an SPI controller",
+                    binding.peripheral
+                ))
+            })?;
+
+        for device in &spi.attached_devices {
+            if let Some(tft) = device
+                .as_any()
+                .and_then(|a| a.downcast_ref::<labwired_core::peripherals::components::Ili9341>())
+            {
+                let fb = tft.framebuffer().to_vec().into_boxed_slice();
+                return Ok(fb);
+            }
+        }
+
+        Err(JsValue::from_str(&format!(
+            "ILI9341 device not found on SPI peripheral '{}'",
+            binding.peripheral
+        )))
+    }
+
     /// Read back the current state of each SPI sensor declared in `board_io`.
     /// Returns `[{ id, kind: "max31855", tc_c, internal_c }, ...]`.
     #[wasm_bindgen]

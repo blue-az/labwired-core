@@ -36,6 +36,7 @@ members = [
     "examples/ssd1306-hello-lab",
     "examples/neo6m-gps-lab",
     "examples/ntc-thermistor-lab",
+    "examples/ili9341-tft-lab",
     "crates/codegen",
     "crates/python", "crates/wasm",
 ]

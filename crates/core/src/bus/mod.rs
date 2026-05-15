@@ -262,6 +262,14 @@ impl SystemBus {
             .to_string()
     }
 
+    fn ili9341_cs_pin(ext: &ExternalDevice) -> String {
+        ext.config
+            .get("cs_pin")
+            .and_then(|v| v.as_str())
+            .unwrap_or("PA4")
+            .to_string()
+    }
+
     fn ssd1306_i2c_address(ext: &ExternalDevice) -> anyhow::Result<u8> {
         let Some(value) = ext.config.get("i2c_address") else {
             return Ok(0x3C);
@@ -694,6 +702,42 @@ impl SystemBus {
 
         for ext in &manifest.external_devices {
             match ext.r#type.as_str() {
+                "ili9341" => {
+                    // SPI device path
+                    let cs_pin = Self::ili9341_cs_pin(ext);
+                    let idx = bus
+                        .find_peripheral_index_by_name(&ext.connection)
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "External device '{}' type '{}' references missing connection '{}'",
+                                ext.id,
+                                ext.r#type,
+                                ext.connection
+                            )
+                        })?;
+
+                    let any = bus.peripherals[idx].dev.as_any_mut().ok_or_else(|| {
+                        anyhow::anyhow!(
+                            "External device '{}' type '{}' connection '{}' cannot be downcast",
+                            ext.id,
+                            ext.r#type,
+                            ext.connection
+                        )
+                    })?;
+
+                    let spi = any
+                        .downcast_mut::<crate::peripherals::spi::Spi>()
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "External device '{}' type '{}' connection '{}' is not an SPI peripheral",
+                                ext.id,
+                                ext.r#type,
+                                ext.connection
+                            )
+                        })?;
+
+                    spi.attach(Box::new(crate::peripherals::components::Ili9341::new(cs_pin)));
+                }
                 "adxl345" | "mpu6050" | "bme280" | "oled-ssd1306" => {
                     // I2C device path
                     let address = match ext.r#type.as_str() {
