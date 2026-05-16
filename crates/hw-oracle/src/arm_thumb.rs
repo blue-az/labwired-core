@@ -34,15 +34,25 @@ use std::path::PathBuf;
 /// Start of the STM32 flash window — where firmware is loaded.
 pub const PROG_BASE: u32 = 0x0800_0000;
 
-/// Start of the STM32 SRAM window.
+/// SRAM address where oracle programs are loaded on real STM32 silicon.
+/// 32 KiB into SRAM — past the data window at [`DATA_BASE`], leaves
+/// room for the stack to grow down from the top of SRAM.
+pub const PROG_BASE_HW: u32 = 0x2000_8000;
+
+/// Start of the STM32 SRAM window — used for both sim and HW data
+/// (STR/LDR target).  The 16 KiB from `DATA_BASE..DATA_BASE+0x4000`
+/// is reserved as the data window in both runners.
 pub const DATA_BASE: u32 = 0x2000_0000;
 
 /// Scratch window size.  64 KiB is comfortably larger than any oracle
 /// program; STM32F401CDU6 has 384 KiB of flash and 96 KiB of SRAM.
 pub const ORACLE_MEM_SIZE: usize = 64 * 1024;
 
-/// Initial stack pointer — top of the data window, 8-byte aligned.
-pub const INIT_SP: u32 = DATA_BASE + (ORACLE_MEM_SIZE as u32) - 8;
+/// Initial stack pointer — top of the F4 SRAM window (96 KiB at
+/// 0x2000_0000-0x2001_8000), 8-byte aligned.  Stack grows downward from
+/// here; in the current oracle bank no test pushes anything substantial,
+/// so collisions with the HW program at 0x2000_8000 are not a concern.
+pub const INIT_SP: u32 = 0x2001_7FF8;
 
 /// `B .` — 16-bit Thumb branch-to-self.  Used as the program terminator.
 const B_SELF: u16 = 0xE7FE;
@@ -559,6 +569,12 @@ fn capture_sim_state(case: &ThumbOracleCase) -> ThumbOracleState {
     cpu.reset(&mut bus).unwrap();
     cpu.set_pc(entry_pc);
     cpu.sp = INIT_SP;
+    // Match real Cortex-M post-reset convention: per ARMv7-M ARM B1.4.3,
+    // LR is set to 0xFFFFFFFF after reset (treated as the EXC_RETURN
+    // sentinel in handler mode).  The CortexM::reset path zeroes LR by
+    // default; the oracle harness aligns it with silicon so `_diff`
+    // runners don't trip on this purely-architectural cosmetic difference.
+    cpu.lr = 0xFFFF_FFFF;
 
     // Apply setup.  CortexM exposes r0..r12 as separate `pub` fields
     // rather than an array, so we dispatch by index.
@@ -622,32 +638,213 @@ pub fn run_sim(case: ThumbOracleCase) {
     (case.expect)(&end_state);
 }
 
-/// Execute `case` against a physical STM32 board via SWD / OpenOCD.
+/// Capture HW end state by executing `case` on a physical STM32 board
+/// via OpenOCD over ST-Link SWD.
 ///
-/// Gated behind the `hw-oracle-stm32` feature; currently stubbed.  The
-/// existing `openocd` module's `OpenOcd::spawn_with_args` constructor
-/// takes arbitrary args, so wiring this up means:
-///
-/// * OpenOCD config: `interface/stlink.cfg` + `target/stm32f4x.cfg`
-///   (or `nucleo_f401re.cfg`, etc., per target board).
-/// * SWD-attached board.
-/// * Memory-write/read primitives via `OpenOcd::mem_write`/`mem_read`
-///   (already exist on the S3 side; protocol is identical for SWD).
+/// Procedure:
+///   1. Spawn OpenOCD with `interface/stlink.cfg` + `target/stm32f4x.cfg`.
+///   2. `reset halt` — bring the CPU to a known stopped state.
+///   3. Write program bytes into SRAM at [`PROG_BASE_HW`] (4-byte chunks).
+///   4. Compute the terminator address (= PROG_BASE_HW + program_len − 2;
+///      `from_bytes()`/`halfwords()`/`t2_words()` always append the
+///      `B .` halfword as the last 2 bytes).
+///   5. Set a hardware breakpoint at the terminator address via the
+///      OpenOCD `bp` TCL command (Cortex-M's FPB unit gives us 6
+///      breakpoints; we only need 1).
+///   6. Apply setup: write r0..r12 / sp / lr, then memory.  SP is also
+///      set to [`INIT_SP`] (top of SRAM) so the program has a valid
+///      stack even if it never touches one.
+///   7. `reg pc PROG_BASE_HW | 1` — Thumb bit set so the CPU executes
+///      in Thumb mode (Cortex-M is always Thumb, but the bit is part
+///      of the ISA mode encoding and PC writes that clear it cause
+///      INVSTATE).
+///   8. `resume` — execution runs from PROG_BASE_HW through the program
+///      and halts at the breakpoint.
+///   9. `wait_until_halted` (5-second budget — even pathological tests
+///      finish well under MAX_STEPS cycles at silicon speed).
+///  10. Snapshot end state: read r0..r12, sp, lr, pc, then re-read the
+///      memory addresses the caller cares about.
+///  11. Remove the breakpoint and shutdown OpenOCD.
 #[cfg(feature = "hw-oracle-stm32")]
-pub fn run_hw(_case: ThumbOracleCase) {
-    unimplemented!(
-        "thumb oracle hw runner: STM32 SWD support pending. \
-         OpenOcd::spawn_with_args(&[\"-f\", \"interface/stlink.cfg\", \
-         \"-f\", \"target/stm32f4x.cfg\"]) is the entry point; see \
-         capture_hw_state in lib.rs (S3 side) for the pattern to mirror."
+fn capture_hw_state(case: &ThumbOracleCase) -> ThumbOracleState {
+    use crate::openocd::OpenOcd;
+    use std::time::Duration;
+
+    // 1. Spawn OpenOCD against the attached ST-Link.
+    let mut oc = OpenOcd::spawn_stm32f4()
+        .expect("run_hw: failed to spawn OpenOCD for STM32F4 — is the board attached?");
+
+    // 2. Reset + halt the CPU.
+    oc.reset_halt().expect("run_hw: reset_halt failed");
+    oc.halt().expect("run_hw: halt after reset_halt failed");
+
+    // 3. Determine program bytes.  Only Asm programs are supported via
+    // this slice — ELF loading on HW would require resolving multiple
+    // PT_LOAD segments to specific RAM addresses, which is a follow-up.
+    let bytes: &[u8] = match &case.program {
+        ThumbProgram::Asm(b) => b.as_slice(),
+        ThumbProgram::Elf(_) => panic!(
+            "run_hw: ELF programs not yet supported for STM32 HW oracle. \
+             Use halfwords/t2_words/from_bytes-built cases."
+        ),
+    };
+    assert!(
+        bytes.len() >= 2 && bytes.len() % 2 == 0,
+        "run_hw: program must be a non-empty halfword sequence"
     );
+
+    // Write program to SRAM in 32-bit chunks.  If the program length is
+    // odd in halfwords (i.e. byte length % 4 == 2), pad the final word
+    // with a NOP so we always write whole words.  The B-self terminator
+    // is the last halfword and gets the breakpoint, so trailing pad
+    // bytes never execute.
+    let mut words: Vec<u32> = Vec::with_capacity((bytes.len() + 3) / 4);
+    let mut i = 0;
+    while i + 4 <= bytes.len() {
+        words.push(u32::from_le_bytes([
+            bytes[i],
+            bytes[i + 1],
+            bytes[i + 2],
+            bytes[i + 3],
+        ]));
+        i += 4;
+    }
+    if i < bytes.len() {
+        // 2 trailing bytes — pad with 0xBF00 NOP in the upper halfword.
+        let lo = u16::from_le_bytes([bytes[i], bytes[i + 1]]) as u32;
+        words.push(lo | 0xBF00_0000);
+    }
+    oc.write_memory(PROG_BASE_HW, &words)
+        .expect("run_hw: write_memory(program) failed");
+
+    // 4. Terminator address — last 2 bytes of the program.  Cortex-M
+    // hardware breakpoints take the *halfword-aligned* instruction
+    // address with the Thumb bit cleared.
+    let terminator_addr = PROG_BASE_HW + (bytes.len() as u32) - 2;
+
+    // 5. Hardware breakpoint via OpenOCD TCL.  Format: `bp <addr> 2 hw`
+    // for a 2-byte (Thumb-1) HW breakpoint.  Returns "breakpoint set …"
+    // or an error string.
+    let bp_resp = oc
+        .tcl(&format!("bp 0x{terminator_addr:08X} 2 hw"))
+        .expect("run_hw: bp TCL command failed");
+    assert!(
+        !bp_resp.contains("Error"),
+        "run_hw: setting breakpoint failed: {bp_resp}"
+    );
+
+    // 6. Apply setup state.
+    let mut init_state = ThumbOracleState::default();
+    (case.setup)(&mut init_state);
+    // Default SP — overridden if setup wrote "sp".
+    oc.write_register("sp", INIT_SP)
+        .expect("run_hw: write sp failed");
+    for (name, &val) in &init_state.regs {
+        if parse_r_name(name).is_some() {
+            // OpenOCD accepts r0..r15 / sp / lr / pc as register names.
+            oc.write_register(name, val)
+                .unwrap_or_else(|e| panic!("run_hw: write reg {name} failed: {e:?}"));
+        }
+    }
+    for (&addr, &val) in &init_state.mem {
+        oc.write_memory(addr, &[val])
+            .unwrap_or_else(|e| panic!("run_hw: setup write_memory(0x{addr:08X}) failed: {e:?}"));
+    }
+
+    // 7. PC = PROG_BASE_HW with Thumb bit set.
+    oc.write_register("pc", PROG_BASE_HW | 1)
+        .expect("run_hw: write pc failed");
+
+    // 8. Resume execution.
+    oc.resume().expect("run_hw: resume failed");
+
+    // 9. Wait for the breakpoint to fire.
+    oc.wait_until_halted(Duration::from_secs(5))
+        .expect("run_hw: program did not halt within 5s — runaway?");
+
+    // 10. Snapshot end state.
+    let mut end = ThumbOracleState::default();
+    for i in 0..13u8 {
+        let v = oc
+            .read_register(&format!("r{i}"))
+            .unwrap_or_else(|e| panic!("run_hw: read reg r{i} failed: {e:?}"));
+        end.regs.insert(format!("r{i}"), v);
+    }
+    end.regs
+        .insert("sp".to_string(), oc.read_register("sp").unwrap());
+    end.regs
+        .insert("lr".to_string(), oc.read_register("lr").unwrap());
+    let final_pc = oc.read_register("pc").unwrap();
+    end.regs.insert("pc".to_string(), final_pc);
+    end.pc = final_pc;
+
+    let mut addrs: Vec<u32> = init_state.mem.keys().copied().collect();
+    addrs.extend_from_slice(&case.mem_capture_addrs);
+    addrs.sort_unstable();
+    addrs.dedup();
+    for addr in addrs {
+        let val = oc
+            .read_memory(addr, 1)
+            .unwrap_or_else(|e| panic!("run_hw: end read_memory(0x{addr:08X}) failed: {e:?}"));
+        end.mem.insert(addr, val[0]);
+    }
+
+    // 11. Remove breakpoint + shutdown.
+    let _ = oc.tcl(&format!("rbp 0x{terminator_addr:08X}"));
+    let _ = oc.shutdown();
+    end
 }
 
+/// Execute `case` against a physical STM32 board via SWD / OpenOCD and
+/// run the expect closure on the HW end state.
+#[cfg(feature = "hw-oracle-stm32")]
+pub fn run_hw(case: ThumbOracleCase) {
+    let end = capture_hw_state(&case);
+    (case.expect)(&end);
+}
+
+/// Run `case` in both the simulator and on real silicon, diff the end
+/// states.  Mirrors the S3 `run_diff` shape.
 #[cfg(feature = "hw-oracle-stm32")]
 pub fn run_diff(case: ThumbOracleCase) {
+    // Capture sim first (no hardware contention).
     let sim_end = capture_sim_state(&case);
-    run_hw(case);
-    let _ = sim_end;
+    let hw_end = capture_hw_state(&case);
+
+    // Diff every captured register.
+    for name in [
+        "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "r12", "sp",
+        "lr",
+    ] {
+        let sim_v = sim_end.read_reg(name);
+        let hw_v = hw_end.read_reg(name);
+        assert_eq!(
+            sim_v, hw_v,
+            "diff: register {name}: sim 0x{sim_v:08X} vs hw 0x{hw_v:08X}"
+        );
+    }
+    // Don't diff PC — sim halts at the B-self instruction address, HW
+    // halts one halfword *into* it because the FPB unit fires before
+    // the instruction executes; the absolute addresses differ anyway
+    // since sim uses PROG_BASE and HW uses PROG_BASE_HW.
+
+    // Diff every memory address the case captured.
+    let mut addrs: Vec<u32> = case.mem_capture_addrs.clone();
+    addrs.sort_unstable();
+    addrs.dedup();
+    for addr in addrs {
+        let sim_v = sim_end.read_mem(addr);
+        let hw_v = hw_end.read_mem(addr);
+        assert_eq!(
+            sim_v, hw_v,
+            "diff: mem[0x{addr:08X}]: sim 0x{sim_v:08X} vs hw 0x{hw_v:08X}"
+        );
+    }
+
+    // After cross-validation, also assert the case's own expectations on
+    // the HW side — catches cases where sim and HW agree but BOTH drift
+    // from the spec.
+    (case.expect)(&hw_end);
 }
 
 #[cfg(test)]

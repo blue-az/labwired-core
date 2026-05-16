@@ -56,6 +56,26 @@ impl OpenOcd {
         ])
     }
 
+    /// Spawn OpenOCD configured for STM32F4 over ST-Link SWD.
+    ///
+    /// Equivalent to:
+    /// ```text
+    /// openocd -f interface/stlink.cfg -f target/stm32f4x.cfg
+    /// ```
+    ///
+    /// Works for any STM32F4-family board with an ST-Link/V2 (or V2-1
+    /// embedded on a Nucleo).  Probed against a board reporting
+    /// `DBGMCU IDCODE = 0x10016433` (STM32F401x family) — same chip the
+    /// `arm_thumb` oracle bank targets.
+    pub fn spawn_stm32f4() -> Result<Self> {
+        Self::spawn_with_args(&[
+            "-f",
+            "interface/stlink.cfg",
+            "-f",
+            "target/stm32f4x.cfg",
+        ])
+    }
+
     /// Spawn OpenOCD with explicit `-f` config arguments, plus `init`.
     ///
     /// The caller passes the raw arguments that appear after `openocd`, e.g.
