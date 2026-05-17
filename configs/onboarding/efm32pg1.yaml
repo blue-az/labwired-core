@@ -15,6 +15,6 @@ validation:
     system_manifest: true
     chip_descriptor: true
     simulation: true
-  timestamp_utc: '2026-05-10T00:16:00.545275+00:00'
-  run_url: https://github.com/w1ne/labwired-core/actions/runs/25615288757/attempts/1
+  timestamp_utc: '2026-05-17T00:17:37.294473+00:00'
+  run_url: https://github.com/w1ne/labwired-core/actions/runs/25976655350/attempts/1
   artifacts_url: https://github.com/w1ne/labwired-core/blob/main/docs/boards/efm32pg1.md
