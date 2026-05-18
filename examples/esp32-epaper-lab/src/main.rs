@@ -28,6 +28,12 @@
 
 use esp_backtrace as _;
 
+// ESP-IDF app image descriptor — required by espflash 4.x to validate
+// the flashed image. The macro emits a tagged section the 2nd-stage
+// bootloader (and `espflash flash`) reads to identify the app. Doesn't
+// affect sim behaviour; pure metadata.
+esp_bootloader_esp_idf::esp_app_desc!();
+
 // STATUS — sim-side WIP:
 //   * Firmware builds cleanly for `xtensa-esp32-none-elf` (espflash-ready).
 //   * In the LabWired sim, esp-hal's Reset → __pre_init → esp32_init chain
@@ -56,8 +62,10 @@ const GPIO_FUNC_IN_SEL_CFG_BASE:  u64 = 0x3FF4_4130;
 const IO_MUX_BASE: u64 = 0x3FF4_9000;
 // Per-pin offsets: indirected through a fixed mapping. See ESP32 TRM
 // Table 4-2. We only need the pins on the e-paper path.
+// Per ESP32 TRM Table 4-1 — IO_MUX register offsets are per-pin and irregular,
+// not GPIO-index aligned.
 const IO_MUX_GPIO4_REG:  *mut u32 = 0x3FF4_9048 as *mut u32; // BUSY
-const IO_MUX_GPIO5_REG:  *mut u32 = 0x3FF4_9068 as *mut u32; // CS
+const IO_MUX_GPIO5_REG:  *mut u32 = 0x3FF4_906C as *mut u32; // CS
 const IO_MUX_GPIO16_REG: *mut u32 = 0x3FF4_904C as *mut u32; // RST
 const IO_MUX_GPIO17_REG: *mut u32 = 0x3FF4_9050 as *mut u32; // DC
 const IO_MUX_GPIO18_REG: *mut u32 = 0x3FF4_9070 as *mut u32; // SCK
@@ -65,10 +73,12 @@ const IO_MUX_GPIO23_REG: *mut u32 = 0x3FF4_908C as *mut u32; // MOSI
 
 // SPI3 (VSPI) at 0x3FF6_5000.
 const SPI3_CMD_REG:        *mut u32 = 0x3FF6_5000 as *mut u32;
+const SPI3_CLOCK_REG:      *mut u32 = 0x3FF6_5018 as *mut u32;
 const SPI3_USER_REG:       *mut u32 = 0x3FF6_5020 as *mut u32;
 #[allow(dead_code)]
 const SPI3_USER2_REG:      *mut u32 = 0x3FF6_5028 as *mut u32;
 const SPI3_MOSI_DLEN_REG:  *mut u32 = 0x3FF6_502C as *mut u32;
+const SPI3_PIN_REG:        *mut u32 = 0x3FF6_5034 as *mut u32;
 const SPI3_W0_REG:         *mut u32 = 0x3FF6_5080 as *mut u32;
 
 // DPORT — peripheral clock-gate / reset (TRM §3.1.3).
@@ -110,10 +120,18 @@ fn busy_high() -> bool {
     unsafe { (core::ptr::read_volatile(GPIO_IN_REG) & BUSY_MASK) != 0 }
 }
 
+/// Busy-wait `nops` (each ≈ 1 CPU cycle at the configured clock).
+/// At the esp-hal default of 80 MHz CPU, 80_000 ≈ 1 ms.
 fn delay(cycles: u32) {
     for _ in 0..cycles {
         unsafe { core::arch::asm!("nop") };
     }
+}
+
+/// 20 ms reset hold per SSD1680 datasheet.
+#[inline]
+fn delay_20ms() {
+    delay(1_600_000);
 }
 
 /// Bounded BUSY wait — sim never raises BUSY, real silicon takes ~15 s.
@@ -192,11 +210,11 @@ fn ep_cmd_data(cmd: u8, data: &[u8]) {
 
 fn ep_hw_reset() {
     rst_high();
-    delay(200_000);
+    delay_20ms();
     rst_low();
-    delay(200_000);
+    delay_20ms();
     rst_high();
-    delay(200_000);
+    delay_20ms();
     wait_idle();
 }
 
@@ -287,38 +305,63 @@ const IO_MUX_FUN_DRV_2: u32 = 0b10 << 10; // medium drive
 
 fn configure_pins() {
     unsafe {
-        // CS / RST / DC — GPIO matrix function (FUN_SEL=2), driven by OUT register.
+        esp_println::println!("[lab]  · io_mux CS/RST/DC");
         core::ptr::write_volatile(IO_MUX_GPIO5_REG,  io_mux_fun_sel(2) | IO_MUX_FUN_DRV_2);
         core::ptr::write_volatile(IO_MUX_GPIO16_REG, io_mux_fun_sel(2) | IO_MUX_FUN_DRV_2);
         core::ptr::write_volatile(IO_MUX_GPIO17_REG, io_mux_fun_sel(2) | IO_MUX_FUN_DRV_2);
-        // BUSY — GPIO input.
+
+        esp_println::println!("[lab]  · io_mux BUSY");
         core::ptr::write_volatile(IO_MUX_GPIO4_REG, io_mux_fun_sel(2) | IO_MUX_FUN_IE);
 
-        // SCK / MOSI — GPIO matrix function so we can route VSPI signals via
-        // GPIO_FUNCn_OUT_SEL_CFG_REG (much simpler than figuring out the
-        // exact IO_MUX function index per pin).
+        esp_println::println!("[lab]  · io_mux SCK/MOSI");
         core::ptr::write_volatile(IO_MUX_GPIO18_REG, io_mux_fun_sel(2) | IO_MUX_FUN_DRV_2);
         core::ptr::write_volatile(IO_MUX_GPIO23_REG, io_mux_fun_sel(2) | IO_MUX_FUN_DRV_2);
 
-        // Route VSPI CLK output → GPIO18 via the GPIO matrix.
+        esp_println::println!("[lab]  · gpio matrix VSPI routing");
         let out_sel18 = (GPIO_FUNC_OUT_SEL_CFG_BASE + 18 * 4) as *mut u32;
         core::ptr::write_volatile(out_sel18, VSPICLK_OUT_IDX);
-        // Route VSPI MOSI output → GPIO23.
         let out_sel23 = (GPIO_FUNC_OUT_SEL_CFG_BASE + 23 * 4) as *mut u32;
         core::ptr::write_volatile(out_sel23, VSPID_OUT_IDX);
 
-        // Enable GPIO5/16/17/18/23 as outputs.
+        esp_println::println!("[lab]  · gpio enable outputs");
         core::ptr::write_volatile(
             GPIO_ENABLE_W1TS_REG,
             CS_MASK | RST_MASK | DC_MASK | SCK_MASK | MOSI_MASK,
         );
-        // GPIO4 stays as input.
 
-        // Initial output state: CS/RST high (deassert), DC high, others low.
+        esp_println::println!("[lab]  · initial out state");
         core::ptr::write_volatile(GPIO_OUT_W1TS_REG, CS_MASK | RST_MASK | DC_MASK);
     }
-    let _ = GPIO_FUNC_IN_SEL_CFG_BASE; // Silence dead-code warning for the unused base.
+    let _ = GPIO_FUNC_IN_SEL_CFG_BASE;
     let _ = IO_MUX_BASE;
+}
+
+/// Disable the RTC watchdog and the two timer-group task watchdogs.
+///
+/// Each WDT block is protected by a write-key register: write the magic
+/// key first, write the disable bits, then write a non-key value to
+/// re-lock. Real silicon and our sim's `RtcCntlStub` round-trip writes
+/// either way; this just keeps the firmware self-sufficient (no esp-hal
+/// runtime dependency for the boot path).
+fn disable_watchdogs() {
+    unsafe {
+        // RTC_CNTL_WDTWPROTECT_REG at 0x3FF480A4, key = 0x50D83AA1.
+        // RTC_CNTL_WDTCONFIG0_REG at 0x3FF4808C — clear EN (bit 31).
+        core::ptr::write_volatile(0x3FF4_80A4 as *mut u32, 0x50D8_3AA1);
+        core::ptr::write_volatile(0x3FF4_808C as *mut u32, 0);
+        core::ptr::write_volatile(0x3FF4_80A4 as *mut u32, 0);
+
+        // TIMG0_WDTWPROTECT_REG at 0x3FF5_F064, key = 0x50D83AA1.
+        // TIMG0_WDTCONFIG0_REG at 0x3FF5_F048 — clear EN (bit 31).
+        core::ptr::write_volatile(0x3FF5_F064 as *mut u32, 0x50D8_3AA1);
+        core::ptr::write_volatile(0x3FF5_F048 as *mut u32, 0);
+        core::ptr::write_volatile(0x3FF5_F064 as *mut u32, 0);
+
+        // TIMG1_WDTWPROTECT_REG at 0x3FF6_0064.
+        core::ptr::write_volatile(0x3FF6_0064 as *mut u32, 0x50D8_3AA1);
+        core::ptr::write_volatile(0x3FF6_0048 as *mut u32, 0);
+        core::ptr::write_volatile(0x3FF6_0064 as *mut u32, 0);
+    }
 }
 
 fn enable_spi3_clock() {
@@ -331,26 +374,76 @@ fn enable_spi3_clock() {
     }
 }
 
+/// Program SPI3 for SSD1680: mode 0 (CPOL=0/CPHA=0), MSB-first, ~2 MHz.
+///
+/// SPI_CLOCK_REG fields (TRM §7.7.2):
+///   CLKCNT_L[5:0]   low cycles  - 1
+///   CLKCNT_H[11:6]  high cycles - 1
+///   CLKCNT_N[17:12] total cycles - 1   (period = N+1 APB cycles)
+///   CLKDIV_PRE[30:18] pre-divider - 1
+///   CLK_EQU_SYSCLK[31] 1 → bypass divider, use APB direct
+///
+/// For 80 MHz APB / 40 = 2 MHz: PRE=0 (1), N=39 (period 40), L=19, H=20.
+const fn spi_clock_div_2mhz() -> u32 {
+    let n = 39;            // 0-39 → period of 40 APB cycles
+    let l = 19;            // low half of cycle
+    let h = 20;            // high half (l + h + 2 = n + 1 — slight rounding ok)
+    let pre = 0;
+    (pre << 18) | (n << 12) | (h << 6) | l
+}
+
+fn configure_spi3() {
+    unsafe {
+        // Clock divider: 2 MHz. SSD1680 max is 20 MHz; we're being
+        // conservative to tolerate longer breadboard jumper wires.
+        core::ptr::write_volatile(SPI3_CLOCK_REG, spi_clock_div_2mhz());
+        // SPI_PIN_REG: clear CK_IDLE_EDGE (bit 29) so SCK is low when idle
+        // (CPOL=0 — matches SSD1680 mode 0).
+        core::ptr::write_volatile(SPI3_PIN_REG, 0);
+        // USER: USR_MOSI (bit 27) enables MOSI phase. Bit 7 (CK_OUT_EDGE)
+        // = 0 so MOSI is launched on the falling edge before SCK rises
+        // (= CPHA=0). Bit 25 (USR_DUMMY) cleared.
+        core::ptr::write_volatile(SPI3_USER_REG, 1 << 27);
+        // USER2: no command phase (cleared).
+        core::ptr::write_volatile(SPI3_USER2_REG, 0);
+    }
+}
+
 // ----- Boot ---------------------------------------------------------------
 
 #[esp_hal::main]
 fn main() -> ! {
-    // Note: deliberately skipping `esp_hal::init()` here. The full init
-    // path touches DPORT clock-mux, IO_MUX defaults, RTC voltage rails,
-    // and cache-MMU configuration — most of that is unmodeled in the
-    // LabWired ESP32-classic sim today. Real hardware reaches main with
-    // those already configured by the 2nd-stage bootloader, so the
-    // firmware only needs to enable SPI3's clock and configure the
-    // pins it actually uses.
+    esp_println::println!("[lab] boot");
+
+    // Directly disable the RTC + task watchdogs by poking the register
+    // banks ourselves — same effect as `esp_hal::init(...)` but without
+    // the ROM-call cascade (memset/ets_delay_us/etc) that the sim only
+    // models partially. Keeps the same ELF working in both sim and on
+    // real silicon.
+    disable_watchdogs();
+    esp_println::println!("[lab] watchdogs disabled");
+
     enable_spi3_clock();
+    esp_println::println!("[lab] spi3 clock on");
+
+    configure_spi3();
+    esp_println::println!("[lab] spi3 configured (~2 MHz, mode 0)");
+
     configure_pins();
+    esp_println::println!("[lab] pins configured");
 
     ep_init();
-    ep_stream_plane(0x24, black_plane_byte);
-    ep_stream_plane(0x26, red_plane_byte);
-    ep_refresh();
+    esp_println::println!("[lab] panel init done");
 
-    // Done — sit forever. The panel holds the image without power.
+    ep_stream_plane(0x24, black_plane_byte);
+    esp_println::println!("[lab] black plane streamed");
+
+    ep_stream_plane(0x26, red_plane_byte);
+    esp_println::println!("[lab] red plane streamed");
+
+    ep_refresh();
+    esp_println::println!("[lab] refresh done");
+
     loop {
         unsafe { core::arch::asm!("waiti 0") };
     }

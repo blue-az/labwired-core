@@ -12,9 +12,10 @@ description = "ESP32-WROOM-32 + SSD1680 tri-color 2.9\" e-paper. Same ELF runs i
 # bus model: every byte we send is observable in the sim's Esp32Spi /
 # Esp32Gpio peripherals without needing to model the entire esp-hal stack.
 [dependencies]
-esp-hal       = { version = "1.1", features = ["esp32", "unstable"] }
-esp-backtrace = { version = "0.19", features = ["esp32", "panic-handler", "println"] }
-esp-println   = { version = "0.17", default-features = false, features = ["esp32", "uart", "critical-section"] }
+esp-hal                  = { version = "1.1", features = ["esp32", "unstable"] }
+esp-backtrace            = { version = "0.19", features = ["esp32", "panic-handler", "println"] }
+esp-println              = { version = "0.17", default-features = false, features = ["esp32", "uart", "critical-section"] }
+esp-bootloader-esp-idf   = { version = "0.5", features = ["esp32"] }
 
 [profile.dev.package.xtensa-lx-rt]
 opt-level = "z"

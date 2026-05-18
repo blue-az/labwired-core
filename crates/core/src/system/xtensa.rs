@@ -177,6 +177,14 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
     rom_bank.register(0x4000_c2c8, rom_thunks::rom_memcpy);
     rom_bank.register(0x4000_c3c0, rom_thunks::rom_memmove);
     rom_bank.register(0x4000_c44c, rom_thunks::rom_memset);
+    // BROM helpers esp-hal's `esp32_init` calls via a jump table. We don't
+    // model the per-pin defaults they apply — returning 0 is safe because
+    // our sim doesn't enforce IO_MUX pre-state.
+    rom_bank.register(0x4000_8534, rom_thunks::nop_return_zero); // ets_delay_us
+    rom_bank.register(0x4000_8550, rom_thunks::nop_return_zero); // ets_update_cpu_frequency
+    rom_bank.register(0x4000_9200, rom_thunks::nop_return_zero); // (unnamed esp32_init helper)
+    rom_bank.register(0x4000_4348, rom_thunks::nop_return_zero); // rom_i2c_writeReg vicinity
+    rom_bank.register(0x4000_41a4, rom_thunks::nop_return_zero); // rom_i2c_writeReg
     bus.add_peripheral(
         "rom",
         0x4000_0000,
@@ -238,6 +246,55 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
         0x1000,
         None,
         Box::new(crate::peripherals::esp32s3::system_stub::SystemStub::new()),
+    );
+
+    // RTC_CNTL (TRM §31). esp_hal::init touches WDTCONFIG / WDTWPROTECT
+    // registers here to disable the RTC watchdog. The S3 RtcCntlStub
+    // round-trips writes and seeds PLL_LOCK as locked — same model fits
+    // ESP32-classic since the firmware only reads back what it wrote.
+    bus.add_peripheral(
+        "rtc_cntl",
+        0x3FF4_8000,
+        0x1000,
+        None,
+        Box::new(crate::peripherals::esp32s3::system_stub::RtcCntlStub::new()),
+    );
+
+    // TIMG0 (timer group 0). esp_hal::init pokes the WDT regs here to
+    // disable the task watchdog. Round-trip stub is sufficient.
+    bus.add_peripheral(
+        "timg0",
+        0x3FF5_F000,
+        0x1000,
+        None,
+        Box::new(crate::peripherals::esp32s3::system_stub::SystemStub::new()),
+    );
+
+    // TIMG1 — same shape as TIMG0.
+    bus.add_peripheral(
+        "timg1",
+        0x3FF6_0000,
+        0x1000,
+        None,
+        Box::new(crate::peripherals::esp32s3::system_stub::SystemStub::new()),
+    );
+
+    // EFUSE — esp-hal reads MAC / chip-revision bits during init.
+    bus.add_peripheral(
+        "efuse",
+        0x3FF5_A000,
+        0x1000,
+        None,
+        Box::new(crate::peripherals::esp32s3::system_stub::EfuseStub::new()),
+    );
+
+    // APB_CTRL — clock source select etc. Read/write stub.
+    bus.add_peripheral(
+        "apb_ctrl",
+        0x3FF6_6000,
+        0x1000,
+        None,
+        Box::new(crate::peripherals::esp32s3::system_stub::SystemStub::with_unwritten_ones()),
     );
 
     XtensaLx7::new()
