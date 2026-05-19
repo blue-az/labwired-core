@@ -1283,9 +1283,16 @@ impl XtensaLx7 {
             // for now we follow the E2 div-by-zero pattern and return
             // Err(ExceptionRaised { cause: 0 }).
 
-            // S32E at, as_, imm: store at to [as_ + imm], PS.EXCM-gated.
+            // S32E at, as_, imm: store at to [as_ + imm], privileged.
+            //
+            // The Xtensa LX ISA RM specifies S32E/L32E as privileged window-
+            // spill helpers: legal when PS.EXCM=1 OR PS.RING=0 (kernel mode).
+            // ESP-IDF's `_xt_lowint1` interrupt prologue runs with EXCM=0
+            // (explicit PS write to 0x40021) but RING=0, then uses S32E to
+            // mirror caller-save registers into the spill area below SP.
+            // An EXCM-only check incorrectly faulted that path.
             S32e { at, as_, imm } => {
-                if !self.ps.excm() {
+                if !self.ps.excm() && self.ps.ring() != 0 {
                     return self.raise_general_exception(0);
                 }
                 let ea = self.regs.read_logical(as_).wrapping_add(imm) as u64;
@@ -1293,9 +1300,10 @@ impl XtensaLx7 {
                 self.pc = self.pc.wrapping_add(len);
             }
 
-            // L32E at, as_, imm: load [as_ + imm] into at, PS.EXCM-gated.
+            // L32E at, as_, imm: load [as_ + imm] into at, privileged.
+            // Same EXCM=1 OR RING=0 gate as S32E.
             L32e { at, as_, imm } => {
-                if !self.ps.excm() {
+                if !self.ps.excm() && self.ps.ring() != 0 {
                     return self.raise_general_exception(0);
                 }
                 let ea = self.regs.read_logical(as_).wrapping_add(imm) as u64;

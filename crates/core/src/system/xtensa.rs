@@ -249,17 +249,20 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
     rom_bank.register(0x4000_ca84, rom_thunks::rom_divdi3);    // __divdi3
     rom_bank.register(0x4000_cd4c, rom_thunks::rom_moddi3);    // __moddi3
     rom_bank.register(0x4000_cff8, rom_thunks::rom_udivdi3);   // __udivdi3
+    rom_bank.register(0x4000_d280, rom_thunks::rom_umoddi3);   // __umoddi3
     rom_bank.register(0x4000_c7e8, rom_thunks::rom_clzsi2);    // __clzsi2
     rom_bank.register(0x4000_c7f0, rom_thunks::rom_ctzsi2);    // __ctzsi2
     // SPI flash / eFuse helpers — used by Arduino-ESP32's flash init.
     rom_bank.register(0x4000_8658, rom_thunks::nop_return_zero);
-    // _xtos_set_intlevel(level) -> prev. Returns 0 (= "ints were enabled").
-    // Our sim doesn't dispatch interrupts during these boot paths.
-    rom_bank.register(0x4000_bfdc, rom_thunks::nop_return_zero);
+    // _xtos_set_intlevel(level) -> prev. Sets PS.INTLEVEL to `level`,
+    // returns the previous value. FreeRTOS critical-section exit relies
+    // on this to drop INTLEVEL back so pending IRQs (timer tick, FROM_CPU
+    // crosscore IPI) can be delivered.
+    rom_bank.register(0x4000_bfdc, rom_thunks::xtos_set_intlevel);
     // Interrupt-matrix + APP_CPU setup helpers (ESP32-classic BROM).
     // We don't model the second core or the interrupt matrix in this sim,
     // so noop-return is safe.
-    rom_bank.register(0x4000_681c, rom_thunks::nop_return_zero); // intr_matrix_set / esp_rom_route_intr_matrix
+    rom_bank.register(0x4000_681c, rom_thunks::esp_rom_route_intr_matrix); // intr_matrix_set / esp_rom_route_intr_matrix
     rom_bank.register(0x4000_689c, rom_thunks::nop_return_zero); // ets_set_appcpu_boot_addr
 
     // ESP-IDF partition-table verification uses ROM MD5. Stubbing all three
