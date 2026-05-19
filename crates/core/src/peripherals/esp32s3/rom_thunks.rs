@@ -218,11 +218,67 @@ pub fn ets_set_appcpu_boot_addr(cpu: &mut XtensaLx7, _bus: &mut dyn Bus) -> SimR
     Ok(())
 }
 
+/// `_xtos_set_intlevel(intlevel) -> prev` — BROM helper that sets the
+/// CPU's PS.INTLEVEL field via `rsil`-equivalent. Returns the previous
+/// INTLEVEL. FreeRTOS-on-Xtensa critical-section exit calls this with the
+/// caller's saved INTLEVEL to restore interrupt unmasking.
+///
+/// We previously stubbed this as a no-op which silently kept INTLEVEL
+/// pinned high — fine while no interrupts were modeled, fatal once
+/// FreeRTOS started gating the FROM_CPU IPI behind a level-3 critical
+/// section. Without this thunk doing anything, the IPI bit remains
+/// pending forever and ipc_task never yields.
+pub fn xtos_set_intlevel(cpu: &mut XtensaLx7, _bus: &mut dyn Bus) -> SimResult<()> {
+    let n = cpu.ps.callinc() * 4;
+    let new_level = (cpu.regs.read_logical(n + 2) & 0xF) as u8;
+    let prev_level = cpu.ps.intlevel();
+    cpu.ps.set_intlevel(new_level);
+    RomThunkBank::return_with(cpu, prev_level as u32);
+    Ok(())
+}
+
+/// `esp_rom_route_intr_matrix(cpu, src, intnum)` — write the intmatrix
+/// mapping register so the source-id → CPU-internal-int routing reflects
+/// what ESP-IDF programmed. ESP32-classic layout:
+///   DPORT_PRO_MAC_INTR_MAP_REG = 0x3FF0_0104 (source 0 for PRO_CPU)
+///   DPORT_APP_MAC_INTR_MAP_REG = 0x3FF0_0208 (source 0 for APP_CPU)
+/// Each source consumes 4 bytes; the 5-bit `intnum` selects which CPU
+/// internal interrupt the source's edge raises on the target CPU.
+///
+/// We need this to actually take effect (no longer a no-op stub) because
+/// the test-level cross-core IPI bridge reads back PRO_FROM_CPU_INTR0_MAP
+/// at 0x3FF0_0164 to know which INTERRUPT bit to raise on each FROM_CPU
+/// trigger write.
+pub fn esp_rom_route_intr_matrix(cpu: &mut XtensaLx7, bus: &mut dyn Bus) -> SimResult<()> {
+    let n = cpu.ps.callinc() * 4;
+    let core = cpu.regs.read_logical(n + 2);
+    let src = cpu.regs.read_logical(n + 3);
+    let intnum = cpu.regs.read_logical(n + 4) & 0x1F;
+    let base: u32 = if core == 0 { 0x3FF0_0104 } else { 0x3FF0_0208 };
+    let addr = base.wrapping_add(src.wrapping_mul(4));
+    tracing::trace!(
+        "esp_rom_route_intr_matrix: cpu={} src={} intnum={} addr=0x{:08x}",
+        core, src, intnum, addr
+    );
+    let _ = bus.write_u32(addr as u64, intnum);
+    RomThunkBank::return_with(cpu, 0);
+    Ok(())
+}
+
 /// Generic NOP thunk that returns 0. Useful for ROM functions whose
 /// behaviour we don't model but whose return value the caller needs to
 /// pass through (e.g. cache config, frequency update, busy-wait).
 pub fn nop_return_zero(cpu: &mut XtensaLx7, _bus: &mut dyn Bus) -> SimResult<()> {
     RomThunkBank::return_with(cpu, 0);
+    Ok(())
+}
+
+/// Generic thunk that returns a fixed dummy pointer (0x3F40_0100, inside
+/// the flash dcache window we populate with the app-image header). Used
+/// for functions that must return a non-NULL "found it" pointer to avoid
+/// upstream NULL-assert panics, but whose contents we don't actually use.
+pub fn nop_return_fake_ptr(cpu: &mut XtensaLx7, _bus: &mut dyn Bus) -> SimResult<()> {
+    RomThunkBank::return_with(cpu, 0x3F40_0100);
     Ok(())
 }
 

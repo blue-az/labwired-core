@@ -111,6 +111,21 @@ fn agentdeck_firmware_drives_panel_in_sim() {
     // Stub to no-op so boot continues past these soft failures.
     machine.bus.install_flash_thunk(0x4008_bbd0, rom_thunks::nop_return_zero)
         .expect("install _esp_error_check_failed thunk");
+    // Arduino-ESP32's setCpuFrequencyMhz(240) in app_main re-runs the clock
+    // prescaler math, hitting the same divider>=2 assertion we worked around
+    // for esp_timer_init. APB clock readout isn't fully wired so the inlined
+    // prescale computation underflows. No-op the public API since we don't
+    // model variable CPU clocks anyway.
+    machine.bus.install_flash_thunk(0x400e_99dc, rom_thunks::nop_return_zero)
+        .expect("install setCpuFrequencyMhz thunk");
+    // initArduino calls esp_ota_get_running_partition, which iterates the
+    // partition table to find the currently-executing partition. We don't
+    // model the partition table — make it return a non-NULL dummy pointer
+    // so the `it != NULL` assertion passes. The downstream code mostly uses
+    // this for logging the running partition name; the dummy pointer
+    // points into our partition-header fake at 0x3F400000.
+    machine.bus.install_flash_thunk(0x400e_ae18, rom_thunks::nop_return_fake_ptr)
+        .expect("install esp_ota_get_running_partition thunk");
     // Fake the app image header at 0x3F400000 (start of flash dcache view).
     // On real silicon, the 2nd-stage bootloader places this header before
     // the app's first segment. esp_image_header_t (24 bytes):
@@ -145,6 +160,21 @@ fn agentdeck_firmware_drives_panel_in_sim() {
     let mut pc_trail: [u32; 64] = [0; 64];
     let mut trail_idx = 0usize;
     let mut samples: Vec<(u64, u32)> = Vec::new();
+
+    // Cross-core IPI bridge state. ESP-IDF's `esp_crosscore_int_send_yield`
+    // writes 1 to DPORT_CPU_INTR_FROM_CPU_n_REG (0x3FF0_00DC/_00E0) to raise
+    // FROM_CPU_INTRn on the target CPU. Real silicon routes this through the
+    // intmatrix (DPORT_PRO_FROM_CPU_INTRn_MAP_REG at 0x3FF0_0224/_0228) to a
+    // CPU internal interrupt bit. We snoop DPORT each step:
+    //   - PRO_FROM_CPU_INTR0/1_MAP captures the bit assignment
+    //   - CPU_INTR_FROM_CPU_0/1 trigger writes raise that bit on PRO_CPU
+    let mut from_cpu_bit0: Option<u8> = None;
+    let mut from_cpu_bit1: Option<u8> = None;
+    let mut last_from_cpu0_val: u32 = 0;
+    let mut last_from_cpu1_val: u32 = 0;
+    let mut ipi_fired = 0u32;
+    let mut prev_intlevel: u32 = 0;
+    let mut intlevel_drop_with_pending: u32 = 0;
     for _ in 0..MAX_STEPS {
         step_count += 1;
         if step_count % 10_000 == 0 {
@@ -223,9 +253,14 @@ fn agentdeck_firmware_drives_panel_in_sim() {
             (0x400819ba, "ipc_task blocking on NotifyTake"),
             (0x4008eeb8, "ulTaskGenericNotifyTake entry"),
             (0x400ed360, "esp_ipc_isr_init entry"),
+            (0x400ed9a8, "esp_crosscore_int_init entry"),
+            (0x400eef04, "esp_intr_alloc entry"),
+            (0x40082378, "esp_crosscore_int_send_yield entry"),
+            (0x400ed384, "esp_ipc_isr_port_init entry"),
+            (0x400822cc, "esp_crosscore_isr fires"),
         ] {
             if machine.cpu.get_pc() == pc {
-                static mut HITS: [bool; 24] = [false; 24];
+                static mut HITS: [bool; 29] = [false; 29];
                 let idx = match pc {
                     0x4008ce2c => 0, 0x4008d244 => 1, 0x4008d260 => 2,
                     0x4008d272 => 3, 0x4008d278 => 4, 0x4008d28b => 5,
@@ -235,10 +270,12 @@ fn agentdeck_firmware_drives_panel_in_sim() {
                     0x4008ce04 => 15, 0x4008ce07 => 16, 0x4008ce09 => 17,
                     0x4008197c => 18, 0x4008e858 => 19, 0x4008cf3d => 20,
                     0x400819ba => 21, 0x4008eeb8 => 22, 0x400ed360 => 23,
-                    _ => 24,
+                    0x400ed9a8 => 24, 0x400eef04 => 25, 0x40082378 => 26,
+                    0x400ed384 => 27, 0x400822cc => 28,
+                    _ => 29,
                 };
                 unsafe {
-                    if idx < 24 && !HITS[idx] {
+                    if idx < 29 && !HITS[idx] {
                         HITS[idx] = true;
                         let a0 = machine.cpu.get_register(0);
                         let a1 = machine.cpu.get_register(1);
@@ -345,6 +382,83 @@ fn agentdeck_firmware_drives_panel_in_sim() {
             let e = read_string(expr_addr, &machine.bus);
             eprintln!("[agentdeck-sim] __assert_func: file=\"{f}\" line={line} fn=\"{n}\" expr=\"{e}\" (step {step_count})");
         }
+        // Cross-core IPI snoop. Sample DPORT mapping + trigger regs each step
+        // and synthesize the matching INTERRUPT edge when a trigger fires.
+        // Skip the first ~60k steps (boot/ROM phase doesn't touch these regs)
+        // to keep the per-step cost zero during the heavy boot path.
+        if step_count >= 60_000 {
+            // Re-read intmatrix mapping every step. The BROM init sweeps all
+            // sources to a "default-discard" bit (6) early, then ESP-IDF's
+            // esp_intr_alloc rewrites specific sources to their real slots
+            // later. Locking in the first non-zero read is wrong because we'd
+            // capture the sweep value instead of the actual allocation.
+            // DPORT_PRO_CPU_INTR_FROM_CPU_0_MAP_REG = 0x3FF0_0164
+            // DPORT_PRO_CPU_INTR_FROM_CPU_1_MAP_REG = 0x3FF0_0168
+            if let Ok(v) = machine.bus.read_u32(0x3FF0_0164) {
+                let bit = (v & 0x1F) as u8;
+                if v != 0 && bit < 32 && from_cpu_bit0 != Some(bit) {
+                    let prev = from_cpu_bit0;
+                    from_cpu_bit0 = Some(bit);
+                    eprintln!("[agentdeck-sim] FROM_CPU_INTR0 mapped to CPU int bit {bit} (was {prev:?}) @step {step_count}");
+                }
+            }
+            if let Ok(v) = machine.bus.read_u32(0x3FF0_0168) {
+                let bit = (v & 0x1F) as u8;
+                if v != 0 && bit < 32 && from_cpu_bit1 != Some(bit) {
+                    let prev = from_cpu_bit1;
+                    from_cpu_bit1 = Some(bit);
+                    eprintln!("[agentdeck-sim] FROM_CPU_INTR1 mapped to CPU int bit {bit} (was {prev:?}) @step {step_count}");
+                }
+            }
+            // Trigger detect for FROM_CPU_INTR0 (PRO->PRO/APP yield signal).
+            if let Ok(v0) = machine.bus.read_u32(0x3FF0_00DC) {
+                if v0 != 0 && v0 != last_from_cpu0_val {
+                    if let Some(bit) = from_cpu_bit0 {
+                        machine.cpu.sr.raise_interrupt_bits(1u32 << bit);
+                        ipi_fired += 1;
+                        if ipi_fired <= 5 || ipi_fired % 100 == 0 {
+                            let intenable = machine.cpu.sr.read(228); // INTENABLE
+                            let interrupt = machine.cpu.sr.read(226); // INTERRUPT
+                            let ps = machine.cpu.ps.as_raw();
+                            eprintln!("[agentdeck-sim] IPI fire #{ipi_fired}: FROM_CPU_INTR0 → raise bit {bit} @step {step_count} pc=0x{:08x} PS=0x{:08x} INTENABLE=0x{:08x} INTERRUPT=0x{:08x}", machine.cpu.get_pc(), ps, intenable, interrupt);
+                        }
+                    } else if ipi_fired == 0 {
+                        eprintln!("[agentdeck-sim] FROM_CPU_INTR0 triggered but no map assignment seen @step {step_count}");
+                    }
+                    // Clear the trigger reg so it re-edges on next write.
+                    let _ = machine.bus.write_u32(0x3FF0_00DC, 0);
+                }
+                last_from_cpu0_val = 0;
+            }
+            if let Ok(v1) = machine.bus.read_u32(0x3FF0_00E0) {
+                if v1 != 0 && v1 != last_from_cpu1_val {
+                    if let Some(bit) = from_cpu_bit1 {
+                        machine.cpu.sr.raise_interrupt_bits(1u32 << bit);
+                        ipi_fired += 1;
+                        if ipi_fired <= 5 || ipi_fired % 100 == 0 {
+                            eprintln!("[agentdeck-sim] IPI fire #{ipi_fired}: FROM_CPU_INTR1 → raise bit {bit} @step {step_count} pc=0x{:08x}", machine.cpu.get_pc());
+                        }
+                    }
+                    let _ = machine.bus.write_u32(0x3FF0_00E0, 0);
+                }
+                last_from_cpu1_val = 0;
+            }
+        }
+
+        // Trace INTLEVEL transitions when INTERRUPT bit 6 is pending.
+        if step_count >= 69000 && step_count < 71000 {
+            let ps = machine.cpu.ps.as_raw();
+            let intlevel = ps & 0xF;
+            let interrupt = machine.cpu.sr.read(226);
+            if intlevel != prev_intlevel {
+                intlevel_drop_with_pending += 1;
+                if intlevel_drop_with_pending <= 40 {
+                    eprintln!("[agentdeck-sim] INTLEVEL {prev_intlevel}→{intlevel} (bit6={}) @step {step_count} pc=0x{:08x} PS=0x{ps:08x}", if interrupt & 0x40 != 0 { "PEND" } else { "clr" }, machine.cpu.get_pc());
+                }
+            }
+            prev_intlevel = intlevel;
+        }
+
         if let Err(e) = machine.step() {
             eprintln!(
                 "[agentdeck-sim] CPU error after {step_count} steps: \
