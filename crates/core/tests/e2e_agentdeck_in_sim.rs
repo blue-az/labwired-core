@@ -46,6 +46,18 @@ fn agentdeck_firmware_drives_panel_in_sim() {
     let image = labwired_loader::load_elf(&elf).expect("parse ELF");
     machine.load_firmware(&image).expect("load firmware");
     machine.cpu.set_pc(image.entry_point as u32);
+    // Single-CPU sim workaround: app_main hard-codes core=1 (APP_CPU) when
+    // creating loopTask via xTaskCreateUniversal — pinning setup()/loop()
+    // to a CPU we don't emulate. Patch the immediate of the `movi.n a8, 1`
+    // at 0x400e90de from 0x18 (movi.n a8, 1) to 0x08 (movi.n a8, 0), so
+    // loopTask gets pinned to PRO_CPU and our scheduler picks it up after
+    // main_task self-deletes. The encoding for `movi.n at, im` is
+    // 0x0c00 | (at << 4) | (im & 0x0F) — verified by reading the live
+    // disassembly. ELF byte at file offset is identical to load address
+    // because flash.text is mapped 1:1. Authorized one-byte runtime
+    // workaround for the single-CPU sim path; firmware-on-hardware is
+    // unchanged.
+    let _ = machine.bus.write_u8(0x400E_90DE, 0x08);
     // Arduino-ESP32's call_start_cpu0 assumes BROM has already set SP.
     // Real silicon's BROM leaves SP near the top of DRAM (0x3FFE_0000);
     // we don't run BROM in sim so seed SP ourselves.
@@ -258,9 +270,12 @@ fn agentdeck_firmware_drives_panel_in_sim() {
             (0x40082378, "esp_crosscore_int_send_yield entry"),
             (0x400ed384, "esp_ipc_isr_port_init entry"),
             (0x400822cc, "esp_crosscore_isr fires"),
+            (0x400e9068, "loopTask entry (Arduino)"),
+            (0x400df3fc, "Arduino setup() entry"),
+            (0x400e03d0, "Arduino loop() entry"),
         ] {
             if machine.cpu.get_pc() == pc {
-                static mut HITS: [bool; 29] = [false; 29];
+                static mut HITS: [bool; 32] = [false; 32];
                 let idx = match pc {
                     0x4008ce2c => 0, 0x4008d244 => 1, 0x4008d260 => 2,
                     0x4008d272 => 3, 0x4008d278 => 4, 0x4008d28b => 5,
@@ -272,10 +287,11 @@ fn agentdeck_firmware_drives_panel_in_sim() {
                     0x400819ba => 21, 0x4008eeb8 => 22, 0x400ed360 => 23,
                     0x400ed9a8 => 24, 0x400eef04 => 25, 0x40082378 => 26,
                     0x400ed384 => 27, 0x400822cc => 28,
-                    _ => 29,
+                    0x400e9068 => 29, 0x400df3fc => 30, 0x400e03d0 => 31,
+                    _ => 32,
                 };
                 unsafe {
-                    if idx < 29 && !HITS[idx] {
+                    if idx < 32 && !HITS[idx] {
                         HITS[idx] = true;
                         let a0 = machine.cpu.get_register(0);
                         let a1 = machine.cpu.get_register(1);
