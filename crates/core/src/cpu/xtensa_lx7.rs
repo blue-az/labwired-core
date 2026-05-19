@@ -1742,6 +1742,20 @@ impl Cpu for XtensaLx7 {
         //   3. highest_pending_level > PS.INTLEVEL
         //
         // Note: INTENABLE defaults to 0 at reset, so existing tests are unaffected.
+        // Advance CCOUNT one cycle per executed instruction (rough but
+        // monotonic). When CCOUNT crosses CCOMPARE0, raise the timer-0
+        // interrupt (bit 6 in INTERRUPT SR = ESP32 internal timer 0, level 1).
+        // FreeRTOS-on-Xtensa uses this as its tick source via `_xt_int6`.
+        use crate::cpu::xtensa_sr::{CCOMPARE0, CCOUNT, INTERRUPT};
+        let ccount_before = self.sr.read(CCOUNT);
+        let ccount_after = ccount_before.wrapping_add(1);
+        self.sr.write(CCOUNT, ccount_after);
+        let ccompare0 = self.sr.read(CCOMPARE0);
+        if ccompare0 != 0 && ccount_before < ccompare0 && ccount_after >= ccompare0 {
+            // Edge-triggered: raise pending bit 6 in INTERRUPT.
+            self.sr.write(INTERRUPT, self.sr.read(INTERRUPT) | (1 << 6));
+        }
+
         if !self.ps.excm() {
             if let Some(irq_level) = self.pending_irq_level(bus) {
                 if irq_level > self.ps.intlevel() {
