@@ -60,6 +60,12 @@ fn agentdeck_firmware_drives_panel_in_sim() {
     // must be equal AND not -1/-2, encoding (freq_mhz << 1). For 40 MHz
     // XTAL → value = 0x0050_0050.
     let _ = machine.bus.write_u32(0x3FF4_80B0, 0x0050_0050);
+    // DIAGNOSTIC: zero out the reserved_regions table in flash so
+    // soc_get_available_memory_regions doesn't filter out everything.
+    // If this changes count from 1 to >1, the issue is the reserved data.
+    for i in 0..0x70u64 {
+        let _ = machine.bus.write_u8(0x3F45B6DC + i, 0);
+    }
     // Fake the app image header at 0x3F400000 (start of flash dcache view).
     // On real silicon, the 2nd-stage bootloader places this header before
     // the app's first segment. esp_image_header_t (24 bytes):
@@ -106,6 +112,13 @@ fn agentdeck_firmware_drives_panel_in_sim() {
         }
         // Diagnostic: catch __assert_func entry and print its args
         // (filename, line, function, expr).
+        // Trace heap_caps_init entry + region count after soc_get_*.
+        if machine.cpu.get_pc() == 0x400ee3e2 {
+            // a10 = return of soc_get_available_memory_regions (count)
+            // a6 = same (mov.n a6, a10)
+            let count = machine.cpu.get_register(10);
+            eprintln!("[agentdeck-sim] soc_get_available_memory_regions returned count={count} (step {step_count})");
+        }
         // Trace the spin-loop at 0x400ed12d once to learn where a7 points.
         if machine.cpu.get_pc() == 0x400ed12d && step_count > 1_000_000 && step_count < 1_000_100 {
             eprintln!("[agentdeck-sim] spin@400ed12d: a7=0x{:08x} a6=0x{:08x} sp=0x{:08x}",

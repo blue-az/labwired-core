@@ -118,15 +118,7 @@ impl Peripheral for RtcCntlStub {
     fn read(&self, offset: u64) -> SimResult<u8> {
         let word_off = offset & !3;
         let byte_off = (offset & 3) * 8;
-        let mut word = self.words.get(&word_off).copied().unwrap_or(0);
-        // ESP32-classic RTC_CNTL_TIME_UPDATE_REG at offset 0x0C — Arduino-
-        // ESP32's `rtc_time_get` writes bit 31 (TIME_UPDATE) and polls
-        // bit 30 (TIME_VALID). On real silicon, the RTC asserts TIME_VALID
-        // within a few RTC cycles. Auto-set it on read so the poll exits
-        // on the first iteration.
-        if word_off == 0x0C {
-            word |= 1 << 30;
-        }
+        let word = self.words.get(&word_off).copied().unwrap_or(0);
         Ok(((word >> byte_off) & 0xFF) as u8)
     }
     fn write(&mut self, offset: u64, value: u8) -> SimResult<()> {
@@ -135,6 +127,29 @@ impl Peripheral for RtcCntlStub {
         let entry = self.words.entry(word_off).or_insert(0);
         *entry &= !(0xFFu32 << byte_off);
         *entry |= (value as u32) << byte_off;
+        // RTC_CNTL_TIME_UPDATE_REG (offset 0x0C). Per TRM §31.3: firmware
+        // writes bit 31 (TIME_UPDATE) to ask the RTC controller to
+        // snapshot its 48-bit counter into RTC_CNTL_TIME0_REG (0x10) /
+        // RTC_CNTL_TIME1_REG (0x14). Real silicon clears bit 31 and
+        // sets bit 30 (TIME_VALID) ~3 RTC cycles later. We model the
+        // same handshake atomically: when TIME_UPDATE is written we
+        // clear it, set TIME_VALID, and bump a virtual counter so
+        // back-to-back `rtc_time_get` calls observe monotonically-
+        // increasing timestamps.
+        if word_off == 0x0C {
+            let cur = *entry;
+            if cur & (1 << 31) != 0 {
+                self.words.insert(0x0C, (cur & !(1 << 31)) | (1 << 30));
+                let t0 = self.words.get(&0x10).copied().unwrap_or(0);
+                let t1 = self.words.get(&0x14).copied().unwrap_or(0);
+                let combined = ((t1 as u64) << 32) | (t0 as u64);
+                // Bump by ~1024 ticks (~7 ms at 150 kHz RTC). Arbitrary
+                // but consistent so the firmware sees forward progress.
+                let next = combined.wrapping_add(1024);
+                self.words.insert(0x10, (next & 0xFFFF_FFFF) as u32);
+                self.words.insert(0x14, (next >> 32) as u32);
+            }
+        }
         Ok(())
     }
     fn as_any(&self) -> Option<&dyn std::any::Any> {
@@ -142,15 +157,31 @@ impl Peripheral for RtcCntlStub {
     }
 }
 
-/// ESP32-classic TIMG (Timer Group) stub. Round-trips writes like
-/// `SystemStub` but auto-asserts `RTC_CALI_RDY` (bit 15 of RTCCALICFG
-/// at offset 0x68) when read, plus a non-zero cycle count in
-/// RTCCALICFG1 at 0x6C, so `rtc_clk_wait_for_slow_cycle` and
-/// `rtc_clk_cal_internal` complete in one polling iteration.
+/// ESP32-classic TIMG (Timer Group) — models the RTC clock-calibration
+/// state machine that esp-idf's `rtc_clk_wait_for_slow_cycle` and
+/// `rtc_clk_cal_internal` rely on.
 ///
-/// Reference: ESP32 TRM §16 (Timer Group). The watchdog regs
-/// (WDTCONFIG0..WDTWPROTECT at 0x48..0x64) work as plain round-trip
-/// — esp-hal pokes them once to disable the WDT.
+/// Reference: ESP32 TRM §16 Timer Group, plus §31.4 RTC clock cal.
+///
+/// Real silicon behavior modeled here:
+///   * Firmware writes `RTC_CALI_START` (bit 31 of RTCCALICFG at 0x68)
+///     together with the count of clock periods to measure (`RTC_CALI_MAX`
+///     in bits[29:13]) and the clock source selector.
+///   * Hardware clocks the calibration ratio for ~MAX cycles, then sets
+///     `RTC_CALI_RDY` (bit 15 of RTCCALICFG) and writes the measured
+///     result into `RTC_CALI_VALUE` field of RTCCALICFG1 (bits[31:7]).
+///   * Firmware busy-polls RTC_CALI_RDY (or the deprecated bit 15 in
+///     RTCCALICFG1 at 0x6C) and reads back the value.
+///
+/// We don't have a free-running RTC clock to count for real, but the
+/// firmware only needs the RDY bit and a self-consistent value to make
+/// forward progress. So: on every write to RTCCALICFG with START=1, we
+/// SET RDY=1 immediately and stash a result derived from MAX so the
+/// downstream `result_in_us = RTC_CLK_PERIOD * MAX / 8` arithmetic
+/// produces a sane CPU frequency calculation.
+///
+/// Watchdog regs (WDTCONFIG0..WDTWPROTECT at 0x48..0x64) keep round-trip
+/// behavior — esp-hal pokes them once to disable the WDT.
 #[derive(Debug, Default)]
 pub struct TimgStub {
     words: HashMap<u64, u32>,
@@ -160,21 +191,44 @@ impl TimgStub {
     pub fn new() -> Self {
         Self { words: HashMap::new() }
     }
+
+    const RTCCALICFG_OFFSET: u64 = 0x68;
+    const RTCCALICFG1_OFFSET: u64 = 0x6C;
+    const RTC_CALI_START_BIT: u32 = 1 << 31;
+    const RTC_CALI_RDY_BIT: u32 = 1 << 15;
+
+    /// Run the RTC calibration state machine — called whenever bits
+    /// flip in RTCCALICFG.
+    fn maybe_complete_calibration(&mut self) {
+        let cfg = self.words.get(&Self::RTCCALICFG_OFFSET).copied().unwrap_or(0);
+        if cfg & Self::RTC_CALI_START_BIT == 0 {
+            return;
+        }
+        // RTC_CALI_MAX is bits[29:13] of RTCCALICFG — number of clock periods
+        // to count. Clamp to a sane non-zero default if firmware passes 0.
+        let max = ((cfg >> 13) & 0x1FFFF).max(1);
+        // Mark RDY in RTCCALICFG.
+        self.words.insert(
+            Self::RTCCALICFG_OFFSET,
+            cfg | Self::RTC_CALI_RDY_BIT,
+        );
+        // RTCCALICFG1: bit 0 = RDY (legacy), bits[31:7] = VALUE.
+        // VALUE = number of APB clock cycles in `max` periods of the
+        // calibration clock. For RTC_SLOW_CLK ≈ 150 kHz and APB ≈ 80 MHz,
+        // ratio ≈ 533 cycles per RTC period. So VALUE ≈ max * 533.
+        let value = max.wrapping_mul(533) & 0x01FF_FFFF; // 25 bits
+        self.words.insert(
+            Self::RTCCALICFG1_OFFSET,
+            (value << 7) | 1, // bit 0 = RDY (legacy field)
+        );
+    }
 }
 
 impl Peripheral for TimgStub {
     fn read(&self, offset: u64) -> SimResult<u8> {
         let word_off = offset & !3;
         let byte_off = (offset & 3) * 8;
-        let mut word = self.words.get(&word_off).copied().unwrap_or(0);
-        match word_off {
-            // RTCCALICFG at 0x68 — RDY at bit 15 (firmware spins until set).
-            0x68 => word |= 1 << 15,
-            // RTCCALICFG1 at 0x6C — bit 0 = RDY, bits[31:7] = cycle count.
-            // Report 0x1000 cycles ≈ a plausible calibration result.
-            0x6C => word |= (0x1000 << 7) | 1,
-            _ => {}
-        }
+        let word = self.words.get(&word_off).copied().unwrap_or(0);
         Ok(((word >> byte_off) & 0xFF) as u8)
     }
     fn write(&mut self, offset: u64, value: u8) -> SimResult<()> {
@@ -183,6 +237,9 @@ impl Peripheral for TimgStub {
         let entry = self.words.entry(word_off).or_insert(0);
         *entry &= !(0xFFu32 << byte_off);
         *entry |= (value as u32) << byte_off;
+        if word_off == Self::RTCCALICFG_OFFSET {
+            self.maybe_complete_calibration();
+        }
         Ok(())
     }
     fn as_any(&self) -> Option<&dyn std::any::Any> { Some(self) }
