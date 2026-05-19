@@ -264,6 +264,11 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
     // so noop-return is safe.
     rom_bank.register(0x4000_681c, rom_thunks::esp_rom_route_intr_matrix); // intr_matrix_set / esp_rom_route_intr_matrix
     rom_bank.register(0x4000_689c, rom_thunks::nop_return_zero); // ets_set_appcpu_boot_addr
+    // GPIO matrix routing helpers — used by Arduino's spiAttach{SCK,MOSI,MISO}
+    // and HardwareSerial pin attach. We don't model the GPIO matrix; signals
+    // routed via SPI3 controller flow directly to attached SPI devices.
+    rom_bank.register(0x4000_9f0c, rom_thunks::nop_return_zero); // gpio_matrix_out
+    rom_bank.register(0x4000_9edc, rom_thunks::nop_return_zero); // gpio_matrix_in
 
     // ESP-IDF partition-table verification uses ROM MD5. Stubbing all three
     // entry points as no-ops makes verify_data_checksum() compute a zero

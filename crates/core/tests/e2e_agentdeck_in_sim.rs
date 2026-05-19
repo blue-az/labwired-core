@@ -138,6 +138,25 @@ fn agentdeck_firmware_drives_panel_in_sim() {
     // points into our partition-header fake at 0x3F400000.
     machine.bus.install_flash_thunk(0x400e_ae18, rom_thunks::nop_return_fake_ptr)
         .expect("install esp_ota_get_running_partition thunk");
+    // HardwareSerial::begin acquires Serial0's per-instance Mutex via
+    // xQueueSemaphoreTake(portMAX_DELAY). Our sim's mutex state for that
+    // semaphore comes up "locked" — likely because the global ctor that
+    // creates it interacts with our heap thunks in ways that leave the
+    // semaphore handle valid but its inner state taken. Without a UART
+    // peripheral model the serial output is moot anyway, so stub the
+    // member function to no-op. setup() can then proceed past it to the
+    // calls we actually care about (Display::begin → GxEPD2 → SSD1680).
+    machine.bus.install_flash_thunk(0x400e_2280, rom_thunks::nop_return_zero)
+        .expect("install HardwareSerial::begin thunk");
+    // Arduino's delay() wraps vTaskDelay, which puts the calling task on
+    // the kernel's delayed list and yields. Empirically the task gets
+    // added correctly but never wakes — our delayed-list wake path or
+    // the kernel's tick-count comparison isn't lining up for this code
+    // path. We don't actually need timing precision for the panel goal,
+    // and the panel driver doesn't depend on delay() returning at a
+    // specific time, so stub it to no-op.
+    machine.bus.install_flash_thunk(0x400e_5c28, rom_thunks::nop_return_zero)
+        .expect("install Arduino delay() thunk");
     // Fake the app image header at 0x3F400000 (start of flash dcache view).
     // On real silicon, the 2nd-stage bootloader places this header before
     // the app's first segment. esp_image_header_t (24 bytes):
@@ -273,9 +292,16 @@ fn agentdeck_firmware_drives_panel_in_sim() {
             (0x400e9068, "loopTask entry (Arduino)"),
             (0x400df3fc, "Arduino setup() entry"),
             (0x400e03d0, "Arduino loop() entry"),
+            (0x400e5c28, "Arduino delay()"),
+            (0x400e2280, "HardwareSerial::begin()"),
+            (0x400df421, "setup: after digitalWrite"),
+            (0x400df44a, "setup: after Serial.begin"),
+            (0x400df452, "setup: after delay(50)"),
+            (0x400df45a, "setup: at Serial.println"),
+            (0x400df463, "setup: at getEfuseMac"),
         ] {
             if machine.cpu.get_pc() == pc {
-                static mut HITS: [bool; 32] = [false; 32];
+                static mut HITS: [bool; 39] = [false; 39];
                 let idx = match pc {
                     0x4008ce2c => 0, 0x4008d244 => 1, 0x4008d260 => 2,
                     0x4008d272 => 3, 0x4008d278 => 4, 0x4008d28b => 5,
@@ -288,10 +314,13 @@ fn agentdeck_firmware_drives_panel_in_sim() {
                     0x400ed9a8 => 24, 0x400eef04 => 25, 0x40082378 => 26,
                     0x400ed384 => 27, 0x400822cc => 28,
                     0x400e9068 => 29, 0x400df3fc => 30, 0x400e03d0 => 31,
-                    _ => 32,
+                    0x400e5c28 => 32, 0x400e2280 => 33,
+                    0x400df421 => 34, 0x400df44a => 35, 0x400df452 => 36,
+                    0x400df45a => 37, 0x400df463 => 38,
+                    _ => 39,
                 };
                 unsafe {
-                    if idx < 32 && !HITS[idx] {
+                    if idx < 39 && !HITS[idx] {
                         HITS[idx] = true;
                         let a0 = machine.cpu.get_register(0);
                         let a1 = machine.cpu.get_register(1);
