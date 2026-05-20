@@ -47,30 +47,24 @@ fn movs_imm() -> ThumbOracleCase {
 // ── 2. ADDS Rd, Rn, Rm ────────────────────────────────────────────────────────
 #[thumb_oracle_test]
 fn adds_reg_basic() -> ThumbOracleCase {
-    ThumbOracleCase::halfwords(&[
-        movs_imm8(0, 0x11),
-        movs_imm8(1, 0x22),
-        adds_reg(2, 0, 1),
-    ])
-    .expect(|st| {
-        st.assert_reg("r0", 0x11);
-        st.assert_reg("r1", 0x22);
-        st.assert_reg("r2", 0x33);
-    })
+    ThumbOracleCase::halfwords(&[movs_imm8(0, 0x11), movs_imm8(1, 0x22), adds_reg(2, 0, 1)]).expect(
+        |st| {
+            st.assert_reg("r0", 0x11);
+            st.assert_reg("r1", 0x22);
+            st.assert_reg("r2", 0x33);
+        },
+    )
 }
 
 // ── 3. SUBS Rd, Rn, Rm (signed wrap) ──────────────────────────────────────────
 #[thumb_oracle_test]
 fn subs_reg_wrap() -> ThumbOracleCase {
-    ThumbOracleCase::halfwords(&[
-        movs_imm8(0, 5),
-        movs_imm8(1, 7),
-        subs_reg(2, 0, 1),
-    ])
-    .expect(|st| {
-        // 5 - 7 = -2 = 0xFFFFFFFE
-        st.assert_reg("r2", 0xFFFF_FFFE);
-    })
+    ThumbOracleCase::halfwords(&[movs_imm8(0, 5), movs_imm8(1, 7), subs_reg(2, 0, 1)]).expect(
+        |st| {
+            // 5 - 7 = -2 = 0xFFFFFFFE
+            st.assert_reg("r2", 0xFFFF_FFFE);
+        },
+    )
 }
 
 // ── 4. ADDS Rd, Rn, #imm3 + ADDS Rd, Rd, #imm8 ────────────────────────────────
@@ -78,8 +72,8 @@ fn subs_reg_wrap() -> ThumbOracleCase {
 fn adds_immediates() -> ThumbOracleCase {
     ThumbOracleCase::halfwords(&[
         movs_imm8(0, 100),
-        adds_imm3(1, 0, 7),  // r1 = r0 + 7 = 107
-        adds_imm8(0, 0x80),  // r0 = r0 + 0x80 = 100 + 128 = 228
+        adds_imm3(1, 0, 7), // r1 = r0 + 7 = 107
+        adds_imm8(0, 0x80), // r0 = r0 + 0x80 = 100 + 128 = 228
     ])
     .expect(|st| {
         st.assert_reg("r0", 228);
@@ -144,9 +138,9 @@ fn asrs_negative() -> ThumbOracleCase {
     // r1 = LSLS by 0 (copy); ASRS r2, r1, #1 → r2 = 0xC0000000 (sign-extended).
     ThumbOracleCase::halfwords(&[
         movs_imm8(0, 0x80),
-        lsls_imm(0, 0, 24),  // r0 = 0x8000_0000
-        asrs_imm(1, 0, 1),    // r1 = (i32)(0x80000000) >> 1 = 0xC0000000
-        asrs_imm(2, 0, 31),   // r2 = (i32)(0x80000000) >> 31 = 0xFFFFFFFF
+        lsls_imm(0, 0, 24), // r0 = 0x8000_0000
+        asrs_imm(1, 0, 1),  // r1 = (i32)(0x80000000) >> 1 = 0xC0000000
+        asrs_imm(2, 0, 31), // r2 = (i32)(0x80000000) >> 31 = 0xFFFFFFFF
     ])
     .expect(|st| {
         st.assert_reg("r0", 0x8000_0000);
@@ -212,8 +206,8 @@ fn str_ldr_roundtrip() -> ThumbOracleCase {
         movs_imm8(1, 0x20),
         lsls_imm(1, 1, 24),
         movs_imm8(2, 0x7A),
-        str_imm5(2, 1, 0),  // mem[r1] = r2
-        ldr_imm5(3, 1, 0),  // r3 = mem[r1]
+        str_imm5(2, 1, 0), // mem[r1] = r2
+        ldr_imm5(3, 1, 0), // r3 = mem[r1]
     ])
     .capture_mem(&[addr])
     .expect(|st| {

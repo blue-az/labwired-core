@@ -500,10 +500,26 @@ pub enum Instruction {
         offset: i32,
     },
     // Conditional moves (op0=0, op1=3, op2=8..=B). All take 3 registers.
-    Moveqz { ar: u8, as_: u8, at: u8 },
-    Movnez { ar: u8, as_: u8, at: u8 },
-    Movltz { ar: u8, as_: u8, at: u8 },
-    Movgez { ar: u8, as_: u8, at: u8 },
+    Moveqz {
+        ar: u8,
+        as_: u8,
+        at: u8,
+    },
+    Movnez {
+        ar: u8,
+        as_: u8,
+        at: u8,
+    },
+    Movltz {
+        ar: u8,
+        as_: u8,
+        at: u8,
+    },
+    Movgez {
+        ar: u8,
+        as_: u8,
+        at: u8,
+    },
     // -- Misc --
     Nop,
     Break {
@@ -882,10 +898,26 @@ fn decode_qrst(w: u32) -> Instruction {
                 // MOVNEZ ar, as, at: if at != 0 then ar = as.
                 // MOVLTZ ar, as, at: if (i32) at  < 0 then ar = as.
                 // MOVGEZ ar, as, at: if (i32) at >= 0 then ar = as.
-                0x8 => Instruction::Moveqz { ar: r, as_: s, at: t },
-                0x9 => Instruction::Movnez { ar: r, as_: s, at: t },
-                0xA => Instruction::Movltz { ar: r, as_: s, at: t },
-                0xB => Instruction::Movgez { ar: r, as_: s, at: t },
+                0x8 => Instruction::Moveqz {
+                    ar: r,
+                    as_: s,
+                    at: t,
+                },
+                0x9 => Instruction::Movnez {
+                    ar: r,
+                    as_: s,
+                    at: t,
+                },
+                0xA => Instruction::Movltz {
+                    ar: r,
+                    as_: s,
+                    at: t,
+                },
+                0xB => Instruction::Movgez {
+                    ar: r,
+                    as_: s,
+                    at: t,
+                },
                 0xE => {
                     let ur = ((s as u16) << 4) | (t as u16);
                     Instruction::Rur { ar: r, ur }
@@ -1483,8 +1515,8 @@ fn decode_si(w: u32) -> Instruction {
                     let imm8 = (w >> 16) & 0xFF;
                     let offset = imm8 as i32 + 4;
                     match r {
-                        8  => Instruction::Loop    { as_: s, offset },
-                        9  => Instruction::Loopnez { as_: s, offset },
+                        8 => Instruction::Loop { as_: s, offset },
+                        9 => Instruction::Loopnez { as_: s, offset },
                         10 => Instruction::Loopgtz { as_: s, offset },
                         _ => Instruction::Unknown(w),
                     }
@@ -1692,7 +1724,17 @@ impl Instruction {
             Rur { ar, .. } => ar,
             // Loop / misc
             Loop { as_, .. } | Loopnez { as_, .. } | Loopgtz { as_, .. } => as_,
-            Nop | Break { .. } | Syscall | Waiti { .. } | Ill | Memw | Extw | Isync | Rsync | Esync | Dsync => 0,
+            Nop
+            | Break { .. }
+            | Syscall
+            | Waiti { .. }
+            | Ill
+            | Memw
+            | Extw
+            | Isync
+            | Rsync
+            | Esync
+            | Dsync => 0,
             Moveqz { ar, as_, at }
             | Movnez { ar, as_, at }
             | Movltz { ar, as_, at }

@@ -23,14 +23,14 @@ use panic_halt as _;
 
 // ----- Register addresses -------------------------------------------------
 
-const RCC_APB2ENR: *mut u32  = 0x4002_1018 as *mut u32;
-const GPIOA_CRL:   *mut u32  = 0x4001_0800 as *mut u32;
-const GPIOA_BSRR:  *mut u32  = 0x4001_0810 as *mut u32;
-const GPIOA_BRR:   *mut u32  = 0x4001_0814 as *mut u32;
-const SPI1_CR1:    *mut u16  = 0x4001_3000 as *mut u16;
-const SPI1_SR:     *const u16 = 0x4001_3008 as *const u16;
-const SPI1_DR:     *mut u16  = 0x4001_300C as *mut u16;
-const UART1_DR:    *mut u8   = (0x4001_3800 + 0x04) as *mut u8;
+const RCC_APB2ENR: *mut u32 = 0x4002_1018 as *mut u32;
+const GPIOA_CRL: *mut u32 = 0x4001_0800 as *mut u32;
+const GPIOA_BSRR: *mut u32 = 0x4001_0810 as *mut u32;
+const GPIOA_BRR: *mut u32 = 0x4001_0814 as *mut u32;
+const SPI1_CR1: *mut u16 = 0x4001_3000 as *mut u16;
+const SPI1_SR: *const u16 = 0x4001_3008 as *const u16;
+const SPI1_DR: *mut u16 = 0x4001_300C as *mut u16;
+const UART1_DR: *mut u8 = (0x4001_3800 + 0x04) as *mut u8;
 
 // ----- UART helpers -------------------------------------------------------
 
@@ -51,20 +51,28 @@ fn spi_write(byte: u8) {
     // Wait until TXE (bit 1)
     for _ in 0..2048 {
         let sr = unsafe { core::ptr::read_volatile(SPI1_SR) };
-        if sr & 0x0002 != 0 { break; }
+        if sr & 0x0002 != 0 {
+            break;
+        }
     }
     unsafe { core::ptr::write_volatile(SPI1_DR, byte as u16) };
     // Wait until RXNE (bit 0) so we don't over-fill the TX FIFO
     for _ in 0..2048 {
         let sr = unsafe { core::ptr::read_volatile(SPI1_SR) };
-        if sr & 0x0001 != 0 { break; }
+        if sr & 0x0001 != 0 {
+            break;
+        }
     }
     // Drain RX
     let _ = unsafe { core::ptr::read_volatile(SPI1_DR) };
 }
 
-fn cs_low()  { unsafe { core::ptr::write_volatile(GPIOA_BRR,  1 << 4) } }
-fn cs_high() { unsafe { core::ptr::write_volatile(GPIOA_BSRR, 1 << 4) } }
+fn cs_low() {
+    unsafe { core::ptr::write_volatile(GPIOA_BRR, 1 << 4) }
+}
+fn cs_high() {
+    unsafe { core::ptr::write_volatile(GPIOA_BSRR, 1 << 4) }
+}
 
 // ----- ILI9341 protocol ---------------------------------------------------
 //
@@ -128,11 +136,15 @@ fn tft_init() {
     // Software reset
     tft_cmd(0x01);
     // Small delay after reset
-    for _ in 0..50_000 { cortex_m::asm::nop(); }
+    for _ in 0..50_000 {
+        cortex_m::asm::nop();
+    }
 
     // Sleep out
     tft_cmd(0x11);
-    for _ in 0..50_000 { cortex_m::asm::nop(); }
+    for _ in 0..50_000 {
+        cortex_m::asm::nop();
+    }
 
     // COLMOD: 16 bits/pixel (RGB565 = 0x55)
     tft_cmd1(0x3A, 0x55);
@@ -145,14 +157,14 @@ fn tft_init() {
 //
 // Colours approximate the standard EBU 75% colour bar order:
 //   White | Yellow | Cyan | Green | Magenta | Red | Blue | Black
-const WHITE:   u16 = 0xFFFF;
-const YELLOW:  u16 = 0xFFE0;
-const CYAN:    u16 = 0x07FF;
-const GREEN:   u16 = 0x07E0;
+const WHITE: u16 = 0xFFFF;
+const YELLOW: u16 = 0xFFE0;
+const CYAN: u16 = 0x07FF;
+const GREEN: u16 = 0x07E0;
 const MAGENTA: u16 = 0xF81F;
-const RED:     u16 = 0xF800;
-const BLUE:    u16 = 0x001F;
-const BLACK:   u16 = 0x0000;
+const RED: u16 = 0xF800;
+const BLUE: u16 = 0x001F;
+const BLACK: u16 = 0x0000;
 
 /// Draw a 240×16 horizontal band of 8 equal vertical colour bars (30 px each).
 /// Each bar is 30 columns wide: bar 0 = col 0..29, bar 1 = col 30..59, etc.

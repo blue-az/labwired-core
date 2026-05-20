@@ -92,7 +92,14 @@ impl Mpu6050 {
     }
 
     pub fn sample(&self) -> (i16, i16, i16, i16, i16, i16) {
-        (self.accel_x, self.accel_y, self.accel_z, self.gyro_x, self.gyro_y, self.gyro_z)
+        (
+            self.accel_x,
+            self.accel_y,
+            self.accel_z,
+            self.gyro_x,
+            self.gyro_y,
+            self.gyro_z,
+        )
     }
 
     pub fn simulate_motion(&mut self) {

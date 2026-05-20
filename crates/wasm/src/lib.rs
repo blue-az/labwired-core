@@ -1,4 +1,6 @@
-use labwired_config::{Arch, BoardIoBinding, BoardIoKind, BoardIoSignal, ChipDescriptor, SystemManifest};
+use labwired_config::{
+    Arch, BoardIoBinding, BoardIoKind, BoardIoSignal, ChipDescriptor, SystemManifest,
+};
 use labwired_core::bus::SystemBus;
 // CortexM and XtensaLx7 are used via Box<dyn Cpu>; the concrete types are
 // only constructed inside the configure_* fns and immediately boxed.
@@ -102,7 +104,9 @@ impl WasmSimulator {
             .map_err(|e| JsValue::from_str(&format!("Chip YAML error: {}", e)))?;
 
         match chip.arch {
-            Arch::Arm | Arch::RiscV | Arch::Unknown => Self::new_from_config_arm(&chip, &manifest, firmware),
+            Arch::Arm | Arch::RiscV | Arch::Unknown => {
+                Self::new_from_config_arm(&chip, &manifest, firmware)
+            }
             Arch::Xtensa => Self::new_from_config_xtensa_esp32(&manifest, firmware),
         }
     }
@@ -210,16 +214,13 @@ impl WasmSimulator {
                                 ext.connection
                             )
                         })?;
-                    let any = bus.peripherals[idx]
-                        .dev
-                        .as_any_mut()
-                        .ok_or_else(|| {
-                            anyhow::anyhow!(
-                                "External device '{}' connection '{}' cannot be downcast",
-                                ext.id,
-                                ext.connection
-                            )
-                        })?;
+                    let any = bus.peripherals[idx].dev.as_any_mut().ok_or_else(|| {
+                        anyhow::anyhow!(
+                            "External device '{}' connection '{}' cannot be downcast",
+                            ext.id,
+                            ext.connection
+                        )
+                    })?;
                     let spi = any
                         .downcast_mut::<labwired_core::peripherals::esp32::spi::Esp32Spi>()
                         .ok_or_else(|| {
@@ -250,7 +251,11 @@ impl WasmSimulator {
     }
 
     /// Read the output state of a board_io binding using peripheral snapshot.
-    fn read_board_io_state(&self, machine: &Machine<Box<dyn Cpu>>, binding: &BoardIoBinding) -> bool {
+    fn read_board_io_state(
+        &self,
+        machine: &Machine<Box<dyn Cpu>>,
+        binding: &BoardIoBinding,
+    ) -> bool {
         let idx = match machine
             .bus
             .find_peripheral_index_by_name(&binding.peripheral)
@@ -475,10 +480,9 @@ impl WasmSimulator {
             if device.address() != address {
                 continue;
             }
-            if let Some(sensor) = device
-                .as_any_mut()
-                .and_then(|any| any.downcast_mut::<labwired_core::peripherals::components::Adxl345>())
-            {
+            if let Some(sensor) = device.as_any_mut().and_then(|any| {
+                any.downcast_mut::<labwired_core::peripherals::components::Adxl345>()
+            }) {
                 sensor.set_sample(x, y, z);
                 return Ok(());
             }
@@ -540,10 +544,9 @@ impl WasmSimulator {
             if device.address() != address {
                 continue;
             }
-            if let Some(sensor) = device
-                .as_any_mut()
-                .and_then(|any| any.downcast_mut::<labwired_core::peripherals::components::Mpu6050>())
-            {
+            if let Some(sensor) = device.as_any_mut().and_then(|any| {
+                any.downcast_mut::<labwired_core::peripherals::components::Mpu6050>()
+            }) {
                 sensor.set_sample(ax, ay, az, gx, gy, gz);
                 return Ok(());
             }
@@ -568,7 +571,10 @@ impl WasmSimulator {
                 Some(t) if t == "adxl345" || t == "mpu6050" || t == "bme280" => t,
                 _ => continue,
             };
-            let Some(idx) = machine.bus.find_peripheral_index_by_name(&binding.peripheral) else {
+            let Some(idx) = machine
+                .bus
+                .find_peripheral_index_by_name(&binding.peripheral)
+            else {
                 continue;
             };
             let Some(any) = machine.bus.peripherals[idx].dev.as_any() else {
@@ -585,10 +591,9 @@ impl WasmSimulator {
                     if device.address() != address {
                         continue;
                     }
-                    if let Some(sensor) = device
-                        .as_any()
-                        .and_then(|any| any.downcast_ref::<labwired_core::peripherals::components::Adxl345>())
-                    {
+                    if let Some(sensor) = device.as_any().and_then(|any| {
+                        any.downcast_ref::<labwired_core::peripherals::components::Adxl345>()
+                    }) {
                         let (x, y, z) = sensor.sample();
                         states.push(serde_json::json!({
                             "id": binding.id,
@@ -607,10 +612,9 @@ impl WasmSimulator {
                     if device.address() != address {
                         continue;
                     }
-                    if let Some(sensor) = device
-                        .as_any()
-                        .and_then(|any| any.downcast_ref::<labwired_core::peripherals::components::Mpu6050>())
-                    {
+                    if let Some(sensor) = device.as_any().and_then(|any| {
+                        any.downcast_ref::<labwired_core::peripherals::components::Mpu6050>()
+                    }) {
                         let (ax, ay, az, gx, gy, gz) = sensor.sample();
                         states.push(serde_json::json!({
                             "id": binding.id,
@@ -635,7 +639,9 @@ impl WasmSimulator {
                     }
                     if device
                         .as_any()
-                        .and_then(|any| any.downcast_ref::<labwired_core::peripherals::components::Bme280>())
+                        .and_then(|any| {
+                            any.downcast_ref::<labwired_core::peripherals::components::Bme280>()
+                        })
                         .is_some()
                     {
                         states.push(serde_json::json!({
@@ -774,14 +780,12 @@ impl WasmSimulator {
             .dev
             .as_any_mut()
             .ok_or_else(|| JsValue::from_str("ADC peripheral does not support downcasting"))?;
-        let adc = any
-            .downcast_mut::<Adc>()
-            .ok_or_else(|| {
-                JsValue::from_str(&format!(
-                    "Peripheral '{}' is not an ADC",
-                    binding.peripheral
-                ))
-            })?;
+        let adc = any.downcast_mut::<Adc>().ok_or_else(|| {
+            JsValue::from_str(&format!(
+                "Peripheral '{}' is not an ADC",
+                binding.peripheral
+            ))
+        })?;
 
         adc.set_channel_input(channel, mv);
         Ok(())
@@ -804,7 +808,10 @@ impl WasmSimulator {
                 Some(t) if t == "ntc-thermistor" => t,
                 _ => continue,
             };
-            let Some(idx) = machine.bus.find_peripheral_index_by_name(&binding.peripheral) else {
+            let Some(idx) = machine
+                .bus
+                .find_peripheral_index_by_name(&binding.peripheral)
+            else {
                 continue;
             };
             let Some(any) = machine.bus.peripherals[idx].dev.as_any() else {
@@ -904,10 +911,7 @@ impl WasmSimulator {
             .iter()
             .find(|b| b.id == device_id && b.device_type.as_deref() == Some("oled-ssd1306"))
             .ok_or_else(|| {
-                JsValue::from_str(&format!(
-                    "No oled-ssd1306 board_io binding '{}'",
-                    device_id
-                ))
+                JsValue::from_str(&format!("No oled-ssd1306 board_io binding '{}'", device_id))
             })?;
 
         let idx = machine
@@ -940,10 +944,9 @@ impl WasmSimulator {
             if device.address() != address {
                 continue;
             }
-            if let Some(oled) = device
-                .as_any()
-                .and_then(|any| any.downcast_ref::<labwired_core::peripherals::components::Ssd1306>())
-            {
+            if let Some(oled) = device.as_any().and_then(|any| {
+                any.downcast_ref::<labwired_core::peripherals::components::Ssd1306>()
+            }) {
                 let fb = oled.framebuffer().to_vec().into_boxed_slice();
                 return Ok(fb);
             }
@@ -1059,28 +1062,27 @@ impl WasmSimulator {
         // The SSD1680 panel attaches to either the generic STM32-shape Spi
         // peripheral or the Esp32Spi controller (same SpiDevice trait,
         // different controller models). Try both downcasts.
-        let panel_bytes = if let Some(spi) =
-            any.downcast_ref::<labwired_core::peripherals::spi::Spi>()
-        {
-            spi.attached_devices.iter().find_map(|dev| {
-                dev.as_any().and_then(|a| {
+        let panel_bytes =
+            if let Some(spi) = any.downcast_ref::<labwired_core::peripherals::spi::Spi>() {
+                spi.attached_devices.iter().find_map(|dev| {
+                    dev.as_any().and_then(|a| {
                     a.downcast_ref::<labwired_core::peripherals::components::Ssd1680Tricolor290>()
                 }).map(|panel| (panel.black_plane().to_vec(), panel.red_plane().to_vec()))
-            })
-        } else if let Some(spi) =
-            any.downcast_ref::<labwired_core::peripherals::esp32::spi::Esp32Spi>()
-        {
-            spi.attached_devices.iter().find_map(|dev| {
-                dev.as_any().and_then(|a| {
+                })
+            } else if let Some(spi) =
+                any.downcast_ref::<labwired_core::peripherals::esp32::spi::Esp32Spi>()
+            {
+                spi.attached_devices.iter().find_map(|dev| {
+                    dev.as_any().and_then(|a| {
                     a.downcast_ref::<labwired_core::peripherals::components::Ssd1680Tricolor290>()
                 }).map(|panel| (panel.black_plane().to_vec(), panel.red_plane().to_vec()))
-            })
-        } else {
-            return Err(JsValue::from_str(&format!(
-                "Peripheral '{}' is not an SPI controller",
-                binding.peripheral
-            )));
-        };
+                })
+            } else {
+                return Err(JsValue::from_str(&format!(
+                    "Peripheral '{}' is not an SPI controller",
+                    binding.peripheral
+                )));
+            };
 
         let (black, red) = panel_bytes.ok_or_else(|| {
             JsValue::from_str(&format!(
@@ -1121,7 +1123,10 @@ impl WasmSimulator {
             .bus
             .find_peripheral_index_by_name(&binding.peripheral)
             .ok_or_else(|| {
-                JsValue::from_str(&format!("SPI peripheral '{}' not found", binding.peripheral))
+                JsValue::from_str(&format!(
+                    "SPI peripheral '{}' not found",
+                    binding.peripheral
+                ))
             })?;
 
         let any = machine.bus.peripherals[idx]
@@ -1129,9 +1134,7 @@ impl WasmSimulator {
             .as_any()
             .ok_or_else(|| JsValue::from_str("Peripheral does not support downcasting"))?;
 
-        let gen = if let Some(spi) =
-            any.downcast_ref::<labwired_core::peripherals::spi::Spi>()
-        {
+        let gen = if let Some(spi) = any.downcast_ref::<labwired_core::peripherals::spi::Spi>() {
             spi.attached_devices.iter().find_map(|dev| {
                 dev.as_any().and_then(|a| {
                     a.downcast_ref::<labwired_core::peripherals::components::Ssd1680Tricolor290>()
@@ -1171,7 +1174,10 @@ impl WasmSimulator {
                 Some(t) if t == "max31855" => t,
                 _ => continue,
             };
-            let Some(idx) = machine.bus.find_peripheral_index_by_name(&binding.peripheral) else {
+            let Some(idx) = machine
+                .bus
+                .find_peripheral_index_by_name(&binding.peripheral)
+            else {
                 continue;
             };
             let Some(any) = machine.bus.peripherals[idx].dev.as_any() else {
@@ -1183,10 +1189,9 @@ impl WasmSimulator {
 
             if device_type == "max31855" {
                 for device in &spi.attached_devices {
-                    if let Some(sensor) = device
-                        .as_any()
-                        .and_then(|a| a.downcast_ref::<labwired_core::peripherals::components::Max31855>())
-                    {
+                    if let Some(sensor) = device.as_any().and_then(|a| {
+                        a.downcast_ref::<labwired_core::peripherals::components::Max31855>()
+                    }) {
                         let (tc_c, internal_c) = sensor.temperature();
                         states.push(serde_json::json!({
                             "id": binding.id,
@@ -1263,12 +1268,7 @@ impl WasmSimulator {
     ///
     /// `device_id` must match a `board_io` binding with `device_type: "neo6m-gps"`.
     #[wasm_bindgen]
-    pub fn set_gps_position(
-        &mut self,
-        device_id: &str,
-        lat: f64,
-        lon: f64,
-    ) -> Result<(), JsValue> {
+    pub fn set_gps_position(&mut self, device_id: &str, lat: f64, lon: f64) -> Result<(), JsValue> {
         let binding = self
             .board_io
             .iter()
@@ -1380,7 +1380,10 @@ impl WasmSimulator {
                 Some(t) if t == "neo6m-gps" => t,
                 _ => continue,
             };
-            let Some(idx) = machine.bus.find_peripheral_index_by_name(&binding.peripheral) else {
+            let Some(idx) = machine
+                .bus
+                .find_peripheral_index_by_name(&binding.peripheral)
+            else {
                 continue;
             };
             let Some(any) = machine.bus.peripherals[idx].dev.as_any() else {
@@ -1392,10 +1395,9 @@ impl WasmSimulator {
 
             if device_type == "neo6m-gps" {
                 for stream in &uart.attached_streams {
-                    if let Some(gps) = stream
-                        .as_any()
-                        .and_then(|a| a.downcast_ref::<labwired_core::peripherals::components::Neo6mGps>())
-                    {
+                    if let Some(gps) = stream.as_any().and_then(|a| {
+                        a.downcast_ref::<labwired_core::peripherals::components::Neo6mGps>()
+                    }) {
                         let (lat, lon) = gps.position();
                         states.push(serde_json::json!({
                             "id": binding.id,
@@ -1448,7 +1450,10 @@ impl WasmSimulator {
     #[wasm_bindgen]
     pub fn apply_agentdeck_quirks(&mut self) -> Result<(), JsValue> {
         use labwired_core::peripherals::esp32s3::rom_thunks;
-        let machine = self.machine.as_mut().ok_or_else(|| JsValue::from_str("no machine"))?;
+        let machine = self
+            .machine
+            .as_mut()
+            .ok_or_else(|| JsValue::from_str("no machine"))?;
 
         // Seed SP — call_start_cpu0 expects BROM to have placed SP near top
         // of DRAM (0x3FFE_0000). We skip BROM, so do it ourselves.
@@ -1470,10 +1475,30 @@ impl WasmSimulator {
         // Fake esp_image_header_t at 0x3F40_0000 (24 bytes), entry = AgentDeck.
         let entry = 0x40081bf0_u32;
         let header: [u8; 24] = [
-            0xE9, 0x01, 0x00, 0x00,
-            (entry & 0xFF) as u8, ((entry >> 8) & 0xFF) as u8,
-            ((entry >> 16) & 0xFF) as u8, ((entry >> 24) & 0xFF) as u8,
-            0xEE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0xE9,
+            0x01,
+            0x00,
+            0x00,
+            (entry & 0xFF) as u8,
+            ((entry >> 8) & 0xFF) as u8,
+            ((entry >> 16) & 0xFF) as u8,
+            ((entry >> 24) & 0xFF) as u8,
+            0xEE,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
         ];
         for (i, &b) in header.iter().enumerate() {
             let _ = machine.bus.write_u8(0x3F40_0000 + i as u64, b);
@@ -1488,22 +1513,26 @@ impl WasmSimulator {
             (0x4008_2a70, rom_thunks::esp_idf_heap_caps_calloc),
             (0x4008_25dc, rom_thunks::esp_idf_heap_caps_free),
             (0x4008_29f0, rom_thunks::esp_idf_heap_caps_realloc),
-            (0x4012_9034, rom_thunks::nop_return_zero),  // esp_timer_init
-            (0x4008_17dc, rom_thunks::nop_return_zero),  // spi_flash_disable_...
-            (0x4008_188c, rom_thunks::nop_return_zero),  // spi_flash_enable_...
-            (0x4008_3384, rom_thunks::nop_return_zero),  // __retarget_lock_init_recursive
-            (0x4008_339c, rom_thunks::nop_return_zero),  // __retarget_lock_close_recursive
-            (0x4008_33b0, rom_thunks::nop_return_zero),  // __retarget_lock_acquire_recursive
-            (0x4008_33cc, rom_thunks::nop_return_zero),  // __retarget_lock_release_recursive
-            (0x4008_bbd0, rom_thunks::nop_return_zero),  // _esp_error_check_failed
-            (0x400e_99dc, rom_thunks::nop_return_zero),  // setCpuFrequencyMhz
+            (0x4012_9034, rom_thunks::nop_return_zero), // esp_timer_init
+            (0x4008_17dc, rom_thunks::nop_return_zero), // spi_flash_disable_...
+            (0x4008_188c, rom_thunks::nop_return_zero), // spi_flash_enable_...
+            (0x4008_3384, rom_thunks::nop_return_zero), // __retarget_lock_init_recursive
+            (0x4008_339c, rom_thunks::nop_return_zero), // __retarget_lock_close_recursive
+            (0x4008_33b0, rom_thunks::nop_return_zero), // __retarget_lock_acquire_recursive
+            (0x4008_33cc, rom_thunks::nop_return_zero), // __retarget_lock_release_recursive
+            (0x4008_bbd0, rom_thunks::nop_return_zero), // _esp_error_check_failed
+            (0x400e_99dc, rom_thunks::nop_return_zero), // setCpuFrequencyMhz
             (0x400e_ae18, rom_thunks::nop_return_fake_ptr), // esp_ota_get_running_partition
-            (0x400e_2280, rom_thunks::nop_return_zero),  // HardwareSerial::begin
-            (0x400e_5c28, rom_thunks::nop_return_zero),  // Arduino delay()
-            (0x400d_de98, rom_thunks::nop_return_zero),  // WifiWsLink::begin
+            (0x400e_2280, rom_thunks::nop_return_zero), // HardwareSerial::begin
+            (0x400e_5c28, rom_thunks::nop_return_zero), // Arduino delay()
+            (0x400d_de98, rom_thunks::nop_return_zero), // WifiWsLink::begin
+            (0x400d_dccc, rom_thunks::nop_return_zero), // WifiWsLink::loop
+            (0x400e_0034, rom_thunks::nop_return_zero), // anon-ns sendHello
         ];
         for &(pc, f) in thunks {
-            machine.bus.install_flash_thunk(pc, f)
+            machine
+                .bus
+                .install_flash_thunk(pc, f)
                 .map_err(|e| JsValue::from_str(&format!("install thunk @{pc:#x}: {e}")))?;
         }
 
@@ -1515,7 +1544,10 @@ impl WasmSimulator {
     /// — firmware boot code revisits these and we need them to stay 1.
     #[wasm_bindgen]
     pub fn keep_alive_esp32_dual_core(&mut self) {
-        let machine = match self.machine.as_mut() { Some(m) => m, None => return };
+        let machine = match self.machine.as_mut() {
+            Some(m) => m,
+            None => return,
+        };
         let _ = machine.bus.write_u8(0x3FFC_6F04, 0x01);
         let _ = machine.bus.write_u8(0x3FFC_6F01, 0x01);
         let _ = machine.bus.write_u8(0x3FFC_6F02, 0x01);
@@ -1581,7 +1613,9 @@ impl WasmSimulator {
                     let _ = machine.bus.write_u8(0x3FFC_7190, 0x01);
                 }
             }
-            self.machine().step().map_err(|e| JsValue::from_str(&format!("Step Error: {e}")))?;
+            self.machine()
+                .step()
+                .map_err(|e| JsValue::from_str(&format!("Step Error: {e}")))?;
         }
         Ok(())
     }

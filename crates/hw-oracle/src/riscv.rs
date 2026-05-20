@@ -285,8 +285,14 @@ pub fn enc_b(opcode: u32, funct3: u32, rs1: u32, rs2: u32, offset: i32) -> u32 {
     let b11 = (imm >> 11) & 0x1;
     let b10_5 = (imm >> 5) & 0x3F;
     let b4_1 = (imm >> 1) & 0xF;
-    (b12 << 31) | (b10_5 << 25) | (rs2 << 20) | (rs1 << 15) | (funct3 << 12) | (b4_1 << 8)
-        | (b11 << 7) | opcode
+    (b12 << 31)
+        | (b10_5 << 25)
+        | (rs2 << 20)
+        | (rs1 << 15)
+        | (funct3 << 12)
+        | (b4_1 << 8)
+        | (b11 << 7)
+        | opcode
 }
 
 /// U-type: `imm[31:12] rd opcode`.  `imm` is the full 32-bit value; the
@@ -569,9 +575,9 @@ fn capture_sim_state(case: &RiscVOracleCase) -> RiscVOracleState {
     addrs.sort_unstable();
     addrs.dedup();
     for addr in addrs {
-        let val = bus.read_u32(addr as u64).unwrap_or_else(|e| {
-            panic!("riscv oracle: end read_u32(0x{addr:08X}) failed: {e:?}")
-        });
+        let val = bus
+            .read_u32(addr as u64)
+            .unwrap_or_else(|e| panic!("riscv oracle: end read_u32(0x{addr:08X}) failed: {e:?}"));
         end.mem.insert(addr, val);
     }
     end

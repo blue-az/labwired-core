@@ -45,12 +45,7 @@ fn addi_imm12() -> RiscVOracleCase {
 // ── 2. ADD: x12 = x10 + x11 ───────────────────────────────────────────────────
 #[riscv_oracle_test]
 fn add_reg() -> RiscVOracleCase {
-    RiscVOracleCase::words(&[
-        addi(10, 0, 0x11),
-        addi(11, 0, 0x22),
-        add(12, 10, 11),
-    ])
-    .expect(|st| {
+    RiscVOracleCase::words(&[addi(10, 0, 0x11), addi(11, 0, 0x22), add(12, 10, 11)]).expect(|st| {
         st.assert_reg("x10", 0x11);
         st.assert_reg("x11", 0x22);
         st.assert_reg("x12", 0x33);
@@ -60,12 +55,7 @@ fn add_reg() -> RiscVOracleCase {
 // ── 3. SUB: x12 = x10 - x11 (signed wrap) ─────────────────────────────────────
 #[riscv_oracle_test]
 fn sub_reg_wrap() -> RiscVOracleCase {
-    RiscVOracleCase::words(&[
-        addi(10, 0, 5),
-        addi(11, 0, 7),
-        sub(12, 10, 11),
-    ])
-    .expect(|st| {
+    RiscVOracleCase::words(&[addi(10, 0, 5), addi(11, 0, 7), sub(12, 10, 11)]).expect(|st| {
         // 5 - 7 = -2 = 0xFFFFFFFE
         st.assert_reg("x12", 0xFFFF_FFFE);
     })
@@ -75,10 +65,10 @@ fn sub_reg_wrap() -> RiscVOracleCase {
 #[riscv_oracle_test]
 fn logical_imm() -> RiscVOracleCase {
     RiscVOracleCase::words(&[
-        addi(10, 0, 0x0F0),     // x10 = 0x0F0
-        andi(11, 10, 0x0FF),    // x11 = x10 & 0x0FF = 0x0F0
-        ori(12, 10, 0x00F),     // x12 = x10 | 0x00F = 0x0FF
-        xori(13, 10, 0x0FF),    // x13 = x10 ^ 0x0FF = 0x00F
+        addi(10, 0, 0x0F0),  // x10 = 0x0F0
+        andi(11, 10, 0x0FF), // x11 = x10 & 0x0FF = 0x0F0
+        ori(12, 10, 0x00F),  // x12 = x10 | 0x00F = 0x0FF
+        xori(13, 10, 0x0FF), // x13 = x10 ^ 0x0FF = 0x00F
     ])
     .expect(|st| {
         st.assert_reg("x11", 0x0F0);
@@ -110,9 +100,9 @@ fn shifts_immediate() -> RiscVOracleCase {
     RiscVOracleCase::words(&[
         // x10 = 0xFFFF_FF80 (negative)
         addi(10, 0, -128),
-        slli(11, 10, 4),  // logical left shift
-        srli(12, 10, 4),  // logical right (zero-fill)
-        srai(13, 10, 4),  // arithmetic right (sign-extend)
+        slli(11, 10, 4), // logical left shift
+        srli(12, 10, 4), // logical right (zero-fill)
+        srai(13, 10, 4), // arithmetic right (sign-extend)
     ])
     .expect(|st| {
         st.assert_reg("x10", 0xFFFF_FF80);
@@ -128,10 +118,10 @@ fn shifts_register() -> RiscVOracleCase {
     RiscVOracleCase::words(&[
         addi(10, 0, 1),
         addi(11, 0, 31),
-        sll(12, 10, 11),  // 1 << 31 = 0x8000_0000
+        sll(12, 10, 11), // 1 << 31 = 0x8000_0000
         addi(13, 0, -1),
-        srl(14, 13, 11),  // 0xFFFFFFFF >> 31 = 1
-        sra(15, 13, 11),  // 0xFFFFFFFF >>> 31 = 0xFFFFFFFF
+        srl(14, 13, 11), // 0xFFFFFFFF >> 31 = 1
+        sra(15, 13, 11), // 0xFFFFFFFF >>> 31 = 0xFFFFFFFF
     ])
     .expect(|st| {
         st.assert_reg("x12", 0x8000_0000);
@@ -163,10 +153,10 @@ fn sw_lw_roundtrip() -> RiscVOracleCase {
     // bits are 0, so LUI alone is fine.
     let addr = DATA_BASE;
     RiscVOracleCase::words(&[
-        lui(10, addr),              // x10 = DATA_BASE
-        addi(11, 0, 0x7BC),         // x11 = 0x7BC (12-bit signed range)
-        sw(11, 10, 0),              // mem[x10+0] = x11
-        lw(12, 10, 0),              // x12 = mem[x10+0]
+        lui(10, addr),      // x10 = DATA_BASE
+        addi(11, 0, 0x7BC), // x11 = 0x7BC (12-bit signed range)
+        sw(11, 10, 0),      // mem[x10+0] = x11
+        lw(12, 10, 0),      // x12 = mem[x10+0]
     ])
     .capture_mem(&[addr])
     .expect(|st| {
@@ -185,9 +175,9 @@ fn beq_taken() -> RiscVOracleCase {
     RiscVOracleCase::words(&[
         addi(10, 0, 1),
         addi(11, 0, 1),
-        beq(10, 11, 8),         // taken → branch to +8 from this insn
-        addi(12, 0, 0x123),     // ← skipped
-        addi(12, 0, 0x456),     // ← lands here
+        beq(10, 11, 8),     // taken → branch to +8 from this insn
+        addi(12, 0, 0x123), // ← skipped
+        addi(12, 0, 0x456), // ← lands here
     ])
     .expect(|st| {
         st.assert_reg("x12", 0x456);
@@ -201,9 +191,9 @@ fn bne_not_taken() -> RiscVOracleCase {
     RiscVOracleCase::words(&[
         addi(10, 0, 7),
         addi(11, 0, 7),
-        bne(10, 11, 8),         // not taken; fall through
-        addi(12, 0, 0x123),     // executes (12-bit imm: fits)
-        addi(12, 12, 0x010),    // x12 = 0x133
+        bne(10, 11, 8),      // not taken; fall through
+        addi(12, 0, 0x123),  // executes (12-bit imm: fits)
+        addi(12, 12, 0x010), // x12 = 0x133
     ])
     .expect(|st| {
         st.assert_reg("x12", 0x133);
@@ -219,9 +209,9 @@ fn jal_link_register() -> RiscVOracleCase {
     // = PROG_BASE + 8.
     RiscVOracleCase::words(&[
         addi(10, 0, 1),
-        jal(1, 8),              // jump over the next two insns
-        addi(12, 0, 0x123),     // skipped
-        addi(12, 0, 0x456),     // lands here
+        jal(1, 8),          // jump over the next two insns
+        addi(12, 0, 0x123), // skipped
+        addi(12, 0, 0x456), // lands here
     ])
     .expect(|st| {
         st.assert_reg("x1", PROG_BASE + 8);
@@ -232,25 +222,22 @@ fn jal_link_register() -> RiscVOracleCase {
 // ── 13. MUL: x12 = x10 * x11 ──────────────────────────────────────────────────
 #[riscv_oracle_test]
 fn mul_basic() -> RiscVOracleCase {
-    RiscVOracleCase::words(&[
-        addi(10, 0, 0x100),
-        addi(11, 0, 0x101),
-        mul(12, 10, 11),
-    ])
-    .expect(|st| {
-        // 0x100 * 0x101 = 0x10100
-        st.assert_reg("x12", 0x1_0100);
-    })
+    RiscVOracleCase::words(&[addi(10, 0, 0x100), addi(11, 0, 0x101), mul(12, 10, 11)]).expect(
+        |st| {
+            // 0x100 * 0x101 = 0x10100
+            st.assert_reg("x12", 0x1_0100);
+        },
+    )
 }
 
 // ── 14. DIV: signed division with negative dividend ───────────────────────────
 #[riscv_oracle_test]
 fn div_signed_negative() -> RiscVOracleCase {
     RiscVOracleCase::words(&[
-        addi(10, 0, -100),      // dividend = -100
-        addi(11, 0, 7),         // divisor  = 7
-        div(12, 10, 11),        // -100 / 7 = -14 (truncates toward zero)
-        rem(13, 10, 11),        // -100 % 7 = -2
+        addi(10, 0, -100), // dividend = -100
+        addi(11, 0, 7),    // divisor  = 7
+        div(12, 10, 11),   // -100 / 7 = -14 (truncates toward zero)
+        rem(13, 10, 11),   // -100 % 7 = -2
     ])
     .expect(|st| {
         st.assert_reg("x12", (-14_i32) as u32);
@@ -265,8 +252,8 @@ fn x0_hardwired_zero() -> RiscVOracleCase {
     // setup closure attempt to clobber x0; the end state must still
     // see x0 == 0.
     RiscVOracleCase::words(&[
-        addi(0, 0, 0x7FF),      // tries to set x0 = 0x7FF; must be ignored
-        add(10, 0, 0),          // x10 = x0 + x0 = 0
+        addi(0, 0, 0x7FF), // tries to set x0 = 0x7FF; must be ignored
+        add(10, 0, 0),     // x10 = x0 + x0 = 0
     ])
     .setup(|st| {
         st.write_reg("x0", 0xDEAD_BEEF); // also ignored by run_sim

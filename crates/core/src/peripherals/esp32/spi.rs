@@ -244,15 +244,25 @@ mod tests {
         cs_high: u32,
     }
     impl SpiDevice for Recorder {
-        fn cs_select(&mut self) { self.cs_low += 1; }
-        fn cs_release(&mut self) { self.cs_high += 1; }
+        fn cs_select(&mut self) {
+            self.cs_low += 1;
+        }
+        fn cs_release(&mut self) {
+            self.cs_high += 1;
+        }
         fn transfer(&mut self, mosi: u8) -> u8 {
             self.bytes.push(mosi);
             0
         }
-        fn cs_pin(&self) -> &str { "GPIO5" }
-        fn as_any(&self) -> Option<&dyn std::any::Any> { Some(self) }
-        fn as_any_mut(&mut self) -> Option<&mut dyn std::any::Any> { Some(self) }
+        fn cs_pin(&self) -> &str {
+            "GPIO5"
+        }
+        fn as_any(&self) -> Option<&dyn std::any::Any> {
+            Some(self)
+        }
+        fn as_any_mut(&mut self) -> Option<&mut dyn std::any::Any> {
+            Some(self)
+        }
     }
 
     fn write32(spi: &mut Esp32Spi, off: u64, value: u32) {
@@ -293,7 +303,7 @@ mod tests {
         spi.attach(Box::new(Recorder::default()));
 
         // Stream 5 bytes: 0x12, 0x34, 0x56, 0x78, 0x9A.
-        write32(&mut spi, FIFO_START, 0x78_56_34_12);  // bytes 0..3
+        write32(&mut spi, FIFO_START, 0x78_56_34_12); // bytes 0..3
         write32(&mut spi, FIFO_START + 4, 0x0000_009A); // byte 4
 
         write32(&mut spi, REG_USER, USER_USR_MOSI_BIT);

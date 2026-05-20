@@ -1920,7 +1920,12 @@ fn run_test(args: TestArgs) -> ExitCode {
 
     if let Some(ref key) = api_key_opt {
         match api_client::validate_key(key) {
-            api_client::ValidateOutcome::Valid { workspace_id, plan, cycles_quota, cycles_used_mtd } => {
+            api_client::ValidateOutcome::Valid {
+                workspace_id,
+                plan,
+                cycles_quota,
+                cycles_used_mtd,
+            } => {
                 info!(
                     "LabWired Pro — workspace={} plan={} cycles_used={}/{} this month",
                     workspace_id, plan, cycles_used_mtd, cycles_quota
@@ -1941,7 +1946,10 @@ fn run_test(args: TestArgs) -> ExitCode {
             api_client::ValidateOutcome::NetworkError(e) => {
                 // Network errors are non-fatal — fall through to run in free-tier mode
                 // to avoid blocking CI when the API is temporarily unreachable.
-                tracing::warn!("LabWired API unreachable ({}); continuing in free-tier mode", e);
+                tracing::warn!(
+                    "LabWired API unreachable ({}); continuing in free-tier mode",
+                    e
+                );
             }
         }
     }

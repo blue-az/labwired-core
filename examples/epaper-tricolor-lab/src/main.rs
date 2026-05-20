@@ -29,26 +29,26 @@ use panic_halt as _;
 
 // ----- Register addresses -------------------------------------------------
 
-const RCC_APB2ENR: *mut u32   = 0x4002_1018 as *mut u32;
-const GPIOA_CRL:   *mut u32   = 0x4001_0800 as *mut u32;
-const GPIOA_CRH:   *mut u32   = 0x4001_0804 as *mut u32;
-const GPIOA_BSRR:  *mut u32   = 0x4001_0810 as *mut u32;
-const GPIOA_BRR:   *mut u32   = 0x4001_0814 as *mut u32;
-const GPIOB_CRL:   *mut u32   = 0x4001_0C00 as *mut u32;
-const GPIOB_BSRR:  *mut u32   = 0x4001_0C10 as *mut u32;
-const GPIOB_BRR:   *mut u32   = 0x4001_0C14 as *mut u32;
-const GPIOC_CRL:   *mut u32   = 0x4001_1000 as *mut u32;
-const GPIOC_IDR:   *const u32 = 0x4001_1008 as *const u32;
-const SPI1_CR1:    *mut u16   = 0x4001_3000 as *mut u16;
-const SPI1_SR:     *const u16 = 0x4001_3008 as *const u16;
-const SPI1_DR:     *mut u16   = 0x4001_300C as *mut u16;
+const RCC_APB2ENR: *mut u32 = 0x4002_1018 as *mut u32;
+const GPIOA_CRL: *mut u32 = 0x4001_0800 as *mut u32;
+const GPIOA_CRH: *mut u32 = 0x4001_0804 as *mut u32;
+const GPIOA_BSRR: *mut u32 = 0x4001_0810 as *mut u32;
+const GPIOA_BRR: *mut u32 = 0x4001_0814 as *mut u32;
+const GPIOB_CRL: *mut u32 = 0x4001_0C00 as *mut u32;
+const GPIOB_BSRR: *mut u32 = 0x4001_0C10 as *mut u32;
+const GPIOB_BRR: *mut u32 = 0x4001_0C14 as *mut u32;
+const GPIOC_CRL: *mut u32 = 0x4001_1000 as *mut u32;
+const GPIOC_IDR: *const u32 = 0x4001_1008 as *const u32;
+const SPI1_CR1: *mut u16 = 0x4001_3000 as *mut u16;
+const SPI1_SR: *const u16 = 0x4001_3008 as *const u16;
+const SPI1_DR: *mut u16 = 0x4001_300C as *mut u16;
 
 // ----- Pin masks ----------------------------------------------------------
 
-const CS_MASK:   u32 = 1 << 4;  // PA4
-const RST_MASK:  u32 = 1 << 9;  // PA9
-const DC_MASK:   u32 = 1 << 0;  // PB0
-const BUSY_MASK: u32 = 1 << 7;  // PC7
+const CS_MASK: u32 = 1 << 4; // PA4
+const RST_MASK: u32 = 1 << 9; // PA9
+const DC_MASK: u32 = 1 << 0; // PB0
+const BUSY_MASK: u32 = 1 << 7; // PC7
 
 // ----- Panel geometry -----------------------------------------------------
 
@@ -58,12 +58,30 @@ const WIDTH_BYTES: u16 = WIDTH / 8;
 
 // ----- GPIO helpers -------------------------------------------------------
 
-#[inline(always)] fn cs_low()  { unsafe { core::ptr::write_volatile(GPIOA_BRR,  CS_MASK)  } }
-#[inline(always)] fn cs_high() { unsafe { core::ptr::write_volatile(GPIOA_BSRR, CS_MASK)  } }
-#[inline(always)] fn dc_low()  { unsafe { core::ptr::write_volatile(GPIOB_BRR,  DC_MASK)  } }
-#[inline(always)] fn dc_high() { unsafe { core::ptr::write_volatile(GPIOB_BSRR, DC_MASK)  } }
-#[inline(always)] fn rst_low() { unsafe { core::ptr::write_volatile(GPIOA_BRR,  RST_MASK) } }
-#[inline(always)] fn rst_high(){ unsafe { core::ptr::write_volatile(GPIOA_BSRR, RST_MASK) } }
+#[inline(always)]
+fn cs_low() {
+    unsafe { core::ptr::write_volatile(GPIOA_BRR, CS_MASK) }
+}
+#[inline(always)]
+fn cs_high() {
+    unsafe { core::ptr::write_volatile(GPIOA_BSRR, CS_MASK) }
+}
+#[inline(always)]
+fn dc_low() {
+    unsafe { core::ptr::write_volatile(GPIOB_BRR, DC_MASK) }
+}
+#[inline(always)]
+fn dc_high() {
+    unsafe { core::ptr::write_volatile(GPIOB_BSRR, DC_MASK) }
+}
+#[inline(always)]
+fn rst_low() {
+    unsafe { core::ptr::write_volatile(GPIOA_BRR, RST_MASK) }
+}
+#[inline(always)]
+fn rst_high() {
+    unsafe { core::ptr::write_volatile(GPIOA_BSRR, RST_MASK) }
+}
 
 #[inline(always)]
 fn busy_high() -> bool {
@@ -96,7 +114,9 @@ fn spi_write(byte: u8) {
     // the simulator (which doesn't drive MISO without a slave).
     for _ in 0..4096 {
         let sr = unsafe { core::ptr::read_volatile(SPI1_SR) };
-        if sr & 0x0002 != 0 { break; }
+        if sr & 0x0002 != 0 {
+            break;
+        }
     }
     unsafe { core::ptr::write_volatile(SPI1_DR, byte as u16) };
 }
@@ -107,7 +127,9 @@ fn spi_flush() {
     for _ in 0..4096 {
         let sr = unsafe { core::ptr::read_volatile(SPI1_SR) };
         // BSY clear AND TXE set → shift register idle.
-        if sr & 0x0080 == 0 && sr & 0x0002 != 0 { break; }
+        if sr & 0x0080 == 0 && sr & 0x0002 != 0 {
+            break;
+        }
     }
 }
 
@@ -158,16 +180,24 @@ fn ep_init() {
     wait_idle();
 
     ep_cmd_data(0x01, &[0x27, 0x01, 0x00]); // Driver output control
-    ep_cmd_data(0x11, &[0x03]);             // Data entry mode (X+/Y+, X-major)
-    ep_cmd_data(0x3C, &[0x05]);             // Border waveform
-    ep_cmd_data(0x18, &[0x80]);             // Temp sensor select
-    ep_cmd_data(0x21, &[0x00, 0x80]);       // Display update ctrl 1
+    ep_cmd_data(0x11, &[0x03]); // Data entry mode (X+/Y+, X-major)
+    ep_cmd_data(0x3C, &[0x05]); // Border waveform
+    ep_cmd_data(0x18, &[0x80]); // Temp sensor select
+    ep_cmd_data(0x21, &[0x00, 0x80]); // Display update ctrl 1
 
     // Window: full panel
-    ep_cmd_data(0x44, &[0x00, (WIDTH_BYTES - 1) as u8]);                          // RAM-X 0..15 (bytes)
-    ep_cmd_data(0x45, &[0x00, 0x00, ((HEIGHT - 1) & 0xFF) as u8, ((HEIGHT - 1) >> 8) as u8]); // RAM-Y 0..295
-    ep_cmd_data(0x4E, &[0x00]);             // RAM-X counter = 0
-    ep_cmd_data(0x4F, &[0x00, 0x00]);       // RAM-Y counter = 0
+    ep_cmd_data(0x44, &[0x00, (WIDTH_BYTES - 1) as u8]); // RAM-X 0..15 (bytes)
+    ep_cmd_data(
+        0x45,
+        &[
+            0x00,
+            0x00,
+            ((HEIGHT - 1) & 0xFF) as u8,
+            ((HEIGHT - 1) >> 8) as u8,
+        ],
+    ); // RAM-Y 0..295
+    ep_cmd_data(0x4E, &[0x00]); // RAM-X counter = 0
+    ep_cmd_data(0x4F, &[0x00, 0x00]); // RAM-Y counter = 0
 }
 
 /// Stream a full-screen plane (4736 bytes) using `byte_for_row()` for each row.
@@ -198,7 +228,7 @@ fn ep_stream_plane<F: Fn(u16) -> u8>(cmd: u8, byte_for_row: F) {
 /// Trigger a full refresh and wait for the panel to finish.
 fn ep_refresh() {
     ep_cmd_data(0x22, &[0xF7]); // Sequence: load LUT + display
-    ep_cmd(0x20);               // Master activation
+    ep_cmd(0x20); // Master activation
     wait_idle();
 }
 
@@ -218,14 +248,14 @@ fn ep_refresh() {
 fn black_plane_byte(row: u16) -> u8 {
     match row {
         99..=197 => 0x00, // black band: ink everywhere
-        _        => 0xFF, // white & red bands: no black ink
+        _ => 0xFF,        // white & red bands: no black ink
     }
 }
 
 fn red_plane_byte(row: u16) -> u8 {
     match row {
         198..=295 => 0x00, // red band: red ink
-        _         => 0xFF, // white & black bands: no red ink
+        _ => 0xFF,         // white & black bands: no red ink
     }
 }
 

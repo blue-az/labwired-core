@@ -38,7 +38,7 @@ impl Max31855 {
         Self {
             cs_pin: cs_pin.into(),
             // Defaults: 25.0 °C thermocouple, 22.0 °C internal, no fault
-            tc_temp_q14: 100,     // 25.0 × 4
+            tc_temp_q14: 100,       // 25.0 × 4
             internal_temp_q12: 352, // 22.0 × 16
             fault: false,
             byte_index: 0,
@@ -127,7 +127,11 @@ mod tests {
         let word = ((b0 as u32) << 24) | ((b1 as u32) << 16) | ((b2 as u32) << 8) | (b3 as u32);
 
         let expected: u32 = (100u32 << 18) | (352u32 << 4);
-        assert_eq!(word, expected, "word=0x{:08X} expected=0x{:08X}", word, expected);
+        assert_eq!(
+            word, expected,
+            "word=0x{:08X} expected=0x{:08X}",
+            word, expected
+        );
     }
 
     #[test]

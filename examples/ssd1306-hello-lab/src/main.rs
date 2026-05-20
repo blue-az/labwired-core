@@ -80,22 +80,22 @@ fn oled_cmd2(cmd: u8, p1: u8, p2: u8) {
 
 /// Standard SSD1306 initialisation sequence.
 fn oled_init() {
-    oled_cmd(0xAE);       // display off
+    oled_cmd(0xAE); // display off
     oled_cmd1(0xD5, 0x80); // clock div / osc freq
     oled_cmd1(0xA8, 0x3F); // multiplex ratio 64
     oled_cmd1(0xD3, 0x00); // display offset 0
-    oled_cmd(0x40);        // start line 0
+    oled_cmd(0x40); // start line 0
     oled_cmd1(0x8D, 0x14); // charge pump on
     oled_cmd1(0x20, 0x00); // horizontal addressing mode
-    oled_cmd(0xA1);        // segment remap (col 127 = SEG0)
-    oled_cmd(0xC8);        // COM scan direction reversed
+    oled_cmd(0xA1); // segment remap (col 127 = SEG0)
+    oled_cmd(0xC8); // COM scan direction reversed
     oled_cmd1(0xDA, 0x12); // COM pins hardware config
     oled_cmd1(0x81, 0xCF); // contrast
     oled_cmd1(0xD9, 0xF1); // pre-charge period
     oled_cmd1(0xDB, 0x40); // VCOMH deselect level
-    oled_cmd(0xA4);        // display from RAM (not all-on)
-    oled_cmd(0xA6);        // normal (non-inverted) display
-    oled_cmd(0xAF);        // display on
+    oled_cmd(0xA4); // display from RAM (not all-on)
+    oled_cmd(0xA6); // normal (non-inverted) display
+    oled_cmd(0xAF); // display on
 }
 
 /// Fill the entire 128×64 framebuffer with the given page byte (sent as data).

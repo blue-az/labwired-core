@@ -189,7 +189,9 @@ pub struct TimgStub {
 
 impl TimgStub {
     pub fn new() -> Self {
-        Self { words: HashMap::new() }
+        Self {
+            words: HashMap::new(),
+        }
     }
 
     const RTCCALICFG_OFFSET: u64 = 0x68;
@@ -200,7 +202,11 @@ impl TimgStub {
     /// Run the RTC calibration state machine — called whenever bits
     /// flip in RTCCALICFG.
     fn maybe_complete_calibration(&mut self) {
-        let cfg = self.words.get(&Self::RTCCALICFG_OFFSET).copied().unwrap_or(0);
+        let cfg = self
+            .words
+            .get(&Self::RTCCALICFG_OFFSET)
+            .copied()
+            .unwrap_or(0);
         if cfg & Self::RTC_CALI_START_BIT == 0 {
             return;
         }
@@ -208,10 +214,8 @@ impl TimgStub {
         // to count. Clamp to a sane non-zero default if firmware passes 0.
         let max = ((cfg >> 13) & 0x1FFFF).max(1);
         // Mark RDY in RTCCALICFG.
-        self.words.insert(
-            Self::RTCCALICFG_OFFSET,
-            cfg | Self::RTC_CALI_RDY_BIT,
-        );
+        self.words
+            .insert(Self::RTCCALICFG_OFFSET, cfg | Self::RTC_CALI_RDY_BIT);
         // RTCCALICFG1: bit 0 = RDY (legacy), bits[31:7] = VALUE.
         // VALUE = number of APB clock cycles in `max` periods of the
         // calibration clock. For RTC_SLOW_CLK ≈ 150 kHz and APB ≈ 80 MHz,
@@ -242,7 +246,9 @@ impl Peripheral for TimgStub {
         }
         Ok(())
     }
-    fn as_any(&self) -> Option<&dyn std::any::Any> { Some(self) }
+    fn as_any(&self) -> Option<&dyn std::any::Any> {
+        Some(self)
+    }
 }
 
 /// EFUSE peripheral stub.  Returns canned MAC + chip-rev for the fields

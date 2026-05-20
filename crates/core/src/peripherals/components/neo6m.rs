@@ -124,9 +124,17 @@ fn degrees_to_nmea(deg: f64, is_latitude: bool) -> (f64, char) {
     let minutes = (abs - degrees) * 60.0;
     let dm = degrees * 100.0 + minutes;
     let hemi = if is_latitude {
-        if deg >= 0.0 { 'N' } else { 'S' }
+        if deg >= 0.0 {
+            'N'
+        } else {
+            'S'
+        }
     } else {
-        if deg >= 0.0 { 'E' } else { 'W' }
+        if deg >= 0.0 {
+            'E'
+        } else {
+            'W'
+        }
     };
     (dm, hemi)
 }
@@ -237,6 +245,9 @@ mod tests {
         gps.sentence_index = 1; // RMC
         gps.enqueue_next_sentence();
         let sentence: String = gps.out_queue.iter().map(|&b| b as char).collect();
-        assert!(sentence.contains(",V,"), "void fix must show 'V' in RMC status field");
+        assert!(
+            sentence.contains(",V,"),
+            "void fix must show 'V' in RMC status field"
+        );
     }
 }

@@ -20,9 +20,8 @@ use std::path::PathBuf;
 #[test]
 #[ignore = "loads ~22 MB AgentDeck firmware ELF; only meaningful when the AgentDeck repo is checked out alongside labwired."]
 fn agentdeck_firmware_drives_panel_in_sim() {
-    let elf = PathBuf::from(
-        "/home/andrii/Projects/AgentDeck/firmware/.pio/build/wroom32u/firmware.elf",
-    );
+    let elf =
+        PathBuf::from("/home/andrii/Projects/AgentDeck/firmware/.pio/build/wroom32u/firmware.elf");
     if !elf.exists() {
         eprintln!("[skip] AgentDeck firmware ELF unavailable at {elf:?}");
         return;
@@ -78,58 +77,86 @@ fn agentdeck_firmware_drives_panel_in_sim() {
     // the static heap allocator), so we replace the heap-caps API surface
     // with a bump allocator over a fixed 64 KiB pool in SRAM2.
     use labwired_core::peripherals::esp32s3::rom_thunks;
-    machine.bus.install_flash_thunk(0x400e_e3b0, rom_thunks::esp_idf_heap_caps_init)
+    machine
+        .bus
+        .install_flash_thunk(0x400e_e3b0, rom_thunks::esp_idf_heap_caps_init)
         .expect("install heap_caps_init thunk");
-    machine.bus.install_flash_thunk(0x4008_2904, rom_thunks::esp_idf_heap_caps_malloc)
+    machine
+        .bus
+        .install_flash_thunk(0x4008_2904, rom_thunks::esp_idf_heap_caps_malloc)
         .expect("install heap_caps_malloc thunk");
-    machine.bus.install_flash_thunk(0x4008_2a70, rom_thunks::esp_idf_heap_caps_calloc)
+    machine
+        .bus
+        .install_flash_thunk(0x4008_2a70, rom_thunks::esp_idf_heap_caps_calloc)
         .expect("install heap_caps_calloc thunk");
-    machine.bus.install_flash_thunk(0x4008_25dc, rom_thunks::esp_idf_heap_caps_free)
+    machine
+        .bus
+        .install_flash_thunk(0x4008_25dc, rom_thunks::esp_idf_heap_caps_free)
         .expect("install heap_caps_free thunk");
-    machine.bus.install_flash_thunk(0x4008_29f0, rom_thunks::esp_idf_heap_caps_realloc)
+    machine
+        .bus
+        .install_flash_thunk(0x4008_29f0, rom_thunks::esp_idf_heap_caps_realloc)
         .expect("install heap_caps_realloc thunk");
     // esp_timer_init computes a divider for the LACT timer (1MHz tick from
     // APB clock). The HAL asserts divider >= 2; our APB clock readout path
     // isn't fully wired and the inlined math underflows. Stub the whole
     // init to return 0 (ESP_OK) — software timers won't work, but boot
     // continues past the FreeRTOS scheduler-start path.
-    machine.bus.install_flash_thunk(0x4012_9034, rom_thunks::nop_return_zero)
+    machine
+        .bus
+        .install_flash_thunk(0x4012_9034, rom_thunks::nop_return_zero)
         .expect("install esp_timer_init thunk");
     // spi_flash_disable/enable_interrupts_caches_and_other_cpu take the
     // s_flash_op_mutex which isn't initialized until esp_flash_app_init
     // runs later in boot. The sim doesn't need to disable interrupts or
     // suspend caches around flash ops — flash is just LinearMemory we
     // can touch directly — so no-op the mutex-locking wrappers.
-    machine.bus.install_flash_thunk(0x4008_17dc, rom_thunks::nop_return_zero)
+    machine
+        .bus
+        .install_flash_thunk(0x4008_17dc, rom_thunks::nop_return_zero)
         .expect("install spi_flash_disable_... thunk");
-    machine.bus.install_flash_thunk(0x4008_188c, rom_thunks::nop_return_zero)
+    machine
+        .bus
+        .install_flash_thunk(0x4008_188c, rom_thunks::nop_return_zero)
         .expect("install spi_flash_enable_... thunk");
     // newlib `__retarget_lock_acquire_recursive` and friends assert that
     // the lock pointer is non-NULL — but a number of newlib locks aren't
     // initialized in our boot path (we haven't wired esp_libc's lock-init
     // chain end-to-end). For a single-threaded sim, the locks are
     // unnecessary; stub all four lock entry points as no-ops.
-    machine.bus.install_flash_thunk(0x4008_3384, rom_thunks::nop_return_zero)  // __retarget_lock_init_recursive
+    machine
+        .bus
+        .install_flash_thunk(0x4008_3384, rom_thunks::nop_return_zero) // __retarget_lock_init_recursive
         .expect("install lock_init_recursive thunk");
-    machine.bus.install_flash_thunk(0x4008_339c, rom_thunks::nop_return_zero)  // __retarget_lock_close_recursive
+    machine
+        .bus
+        .install_flash_thunk(0x4008_339c, rom_thunks::nop_return_zero) // __retarget_lock_close_recursive
         .expect("install lock_close_recursive thunk");
-    machine.bus.install_flash_thunk(0x4008_33b0, rom_thunks::nop_return_zero)  // __retarget_lock_acquire_recursive
+    machine
+        .bus
+        .install_flash_thunk(0x4008_33b0, rom_thunks::nop_return_zero) // __retarget_lock_acquire_recursive
         .expect("install lock_acquire_recursive thunk");
-    machine.bus.install_flash_thunk(0x4008_33cc, rom_thunks::nop_return_zero)  // __retarget_lock_release_recursive
+    machine
+        .bus
+        .install_flash_thunk(0x4008_33cc, rom_thunks::nop_return_zero) // __retarget_lock_release_recursive
         .expect("install lock_release_recursive thunk");
     // ESP_ERROR_CHECK macros call _esp_error_check_failed on non-zero return
     // values, which aborts. Our subsystem stubs return 0 (ESP_OK) so this
     // shouldn't fire from our own stubs, but firmware code paths may still
     // trigger it on real ESP-IDF function returns we don't fully model.
     // Stub to no-op so boot continues past these soft failures.
-    machine.bus.install_flash_thunk(0x4008_bbd0, rom_thunks::nop_return_zero)
+    machine
+        .bus
+        .install_flash_thunk(0x4008_bbd0, rom_thunks::nop_return_zero)
         .expect("install _esp_error_check_failed thunk");
     // Arduino-ESP32's setCpuFrequencyMhz(240) in app_main re-runs the clock
     // prescaler math, hitting the same divider>=2 assertion we worked around
     // for esp_timer_init. APB clock readout isn't fully wired so the inlined
     // prescale computation underflows. No-op the public API since we don't
     // model variable CPU clocks anyway.
-    machine.bus.install_flash_thunk(0x400e_99dc, rom_thunks::nop_return_zero)
+    machine
+        .bus
+        .install_flash_thunk(0x400e_99dc, rom_thunks::nop_return_zero)
         .expect("install setCpuFrequencyMhz thunk");
     // initArduino calls esp_ota_get_running_partition, which iterates the
     // partition table to find the currently-executing partition. We don't
@@ -137,7 +164,9 @@ fn agentdeck_firmware_drives_panel_in_sim() {
     // so the `it != NULL` assertion passes. The downstream code mostly uses
     // this for logging the running partition name; the dummy pointer
     // points into our partition-header fake at 0x3F400000.
-    machine.bus.install_flash_thunk(0x400e_ae18, rom_thunks::nop_return_fake_ptr)
+    machine
+        .bus
+        .install_flash_thunk(0x400e_ae18, rom_thunks::nop_return_fake_ptr)
         .expect("install esp_ota_get_running_partition thunk");
     // HardwareSerial::begin acquires Serial0's per-instance Mutex via
     // xQueueSemaphoreTake(portMAX_DELAY). Our sim's mutex state for that
@@ -147,7 +176,9 @@ fn agentdeck_firmware_drives_panel_in_sim() {
     // peripheral model the serial output is moot anyway, so stub the
     // member function to no-op. setup() can then proceed past it to the
     // calls we actually care about (Display::begin → GxEPD2 → SSD1680).
-    machine.bus.install_flash_thunk(0x400e_2280, rom_thunks::nop_return_zero)
+    machine
+        .bus
+        .install_flash_thunk(0x400e_2280, rom_thunks::nop_return_zero)
         .expect("install HardwareSerial::begin thunk");
     // Arduino's delay() wraps vTaskDelay, which puts the calling task on
     // the kernel's delayed list and yields. Empirically the task gets
@@ -156,21 +187,27 @@ fn agentdeck_firmware_drives_panel_in_sim() {
     // path. We don't actually need timing precision for the panel goal,
     // and the panel driver doesn't depend on delay() returning at a
     // specific time, so stub it to no-op.
-    machine.bus.install_flash_thunk(0x400e_5c28, rom_thunks::nop_return_zero)
+    machine
+        .bus
+        .install_flash_thunk(0x400e_5c28, rom_thunks::nop_return_zero)
         .expect("install Arduino delay() thunk");
     // WifiWsLink::begin pulls in the entire ESP-IDF WiFi + lwip stack,
     // which calls sys_arch_mbox_fetch on uninitialized mailboxes in our
     // sim (we don't model the WiFi driver tasks). Stubbing lets setup()
     // proceed past the network init into the rest of the panel-relevant
     // code (input handler, USB link, eventual loop()).
-    machine.bus.install_flash_thunk(0x400d_de98, rom_thunks::nop_return_zero)
+    machine
+        .bus
+        .install_flash_thunk(0x400d_de98, rom_thunks::nop_return_zero)
         .expect("install WifiWsLink::begin thunk");
     // WifiWsLink::loop calls ws_.loop() on the WebSocketsClient, which
     // walks uninitialised TCP/lwIP state when ::begin was stubbed. That
     // burns infinite cycles in ArduinoJson string-pool lookups and
     // prevents loop() from ever reaching the `g_dirty` render check.
     // Stub the loop too so the WiFi path is a true no-op.
-    machine.bus.install_flash_thunk(0x400d_dccc, rom_thunks::nop_return_zero)
+    machine
+        .bus
+        .install_flash_thunk(0x400d_dccc, rom_thunks::nop_return_zero)
         .expect("install WifiWsLink::loop thunk");
     // sendHello (anonymous namespace) walks ArduinoJson serialization, which
     // calls into ObjectData::getMember and StringPool repeatedly. With our
@@ -178,7 +215,9 @@ fn agentdeck_firmware_drives_panel_in_sim() {
     // serializer keeps re-traversing the JSON tree forever. Skip sendHello —
     // there's no real daemon to handshake with anyway. The boot-time render
     // (set by `g_dirty = true` at end of setup()) still fires.
-    machine.bus.install_flash_thunk(0x400e_0034, rom_thunks::nop_return_zero)
+    machine
+        .bus
+        .install_flash_thunk(0x400e_0034, rom_thunks::nop_return_zero)
         .expect("install sendHello thunk");
     // Fake the app image header at 0x3F400000 (start of flash dcache view).
     // On real silicon, the 2nd-stage bootloader places this header before
@@ -188,14 +227,30 @@ fn agentdeck_firmware_drives_panel_in_sim() {
     //   chip_id=0 (ESP32), min_chip_rev=0, reserved=[0;8], hash_appended=0
     let entry = 0x40081bf0_u32; // matches AgentDeck ELF entry
     let header: [u8; 24] = [
-        0xE9, 0x01, 0x00, 0x00,
-        (entry & 0xFF) as u8, ((entry >> 8) & 0xFF) as u8,
-        ((entry >> 16) & 0xFF) as u8, ((entry >> 24) & 0xFF) as u8,
-        0xEE, 0, 0, 0,
-        0, 0, // chip_id = 0 (ESP32)
-        0,    // min_chip_rev
-        0, 0, 0, 0, 0, 0, 0, 0, // reserved
-        0,    // hash_appended
+        0xE9,
+        0x01,
+        0x00,
+        0x00,
+        (entry & 0xFF) as u8,
+        ((entry >> 8) & 0xFF) as u8,
+        ((entry >> 16) & 0xFF) as u8,
+        ((entry >> 24) & 0xFF) as u8,
+        0xEE,
+        0,
+        0,
+        0,
+        0,
+        0, // chip_id = 0 (ESP32)
+        0, // min_chip_rev
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0, // reserved
+        0, // hash_appended
     ];
     for (i, &b) in header.iter().enumerate() {
         let _ = machine.bus.write_u8(0x3F40_0000 + i as u64, b);
@@ -231,7 +286,7 @@ fn agentdeck_firmware_drives_panel_in_sim() {
     let mut intlevel_drop_with_pending: u32 = 0;
     for _ in 0..MAX_STEPS {
         step_count += 1;
-        if step_count % 10_000 == 0 {
+        if step_count.is_multiple_of(10_000) {
             // s_cpu_up[1] — APP_CPU is "running" so start_other_core exits.
             let _ = machine.bus.write_u8(0x3FFC_6F04, 0x01);
             // s_cpu_inited[0..=1] — both CPUs have completed init so the
@@ -276,10 +331,15 @@ fn agentdeck_firmware_drives_panel_in_sim() {
             if machine.cpu.get_pc() == pc {
                 static mut COUNTS: [u32; 21] = [0; 21];
                 let idx = match pc {
-                    0x4008d260 => 0, 0x4008d2c4 => 1, 0x4008de44 => 2,
-                    0x4008dbc4 => 3, 0x4008d4f0 => 4,
-                    0x40083a10 => 5, 0x40083c98 => 6,
-                    0x40080340 => 7, 0x40080300 => 8,
+                    0x4008d260 => 0,
+                    0x4008d2c4 => 1,
+                    0x4008de44 => 2,
+                    0x4008dbc4 => 3,
+                    0x4008d4f0 => 4,
+                    0x40083a10 => 5,
+                    0x40083c98 => 6,
+                    0x40080340 => 7,
+                    0x40080300 => 8,
                     0x400e03d0 => 9,
                     0x400e180c => 10,
                     0x400e16f0 => 11,
@@ -298,7 +358,7 @@ fn agentdeck_firmware_drives_panel_in_sim() {
                     if idx < 21 {
                         COUNTS[idx] += 1;
                         let c = COUNTS[idx];
-                        if c <= 3 || c % 100 == 0 {
+                        if c <= 3 || c.is_multiple_of(100) {
                             eprintln!("[agentdeck-sim] {name} #{c} @step {step_count}");
                         }
                     }
@@ -352,21 +412,47 @@ fn agentdeck_firmware_drives_panel_in_sim() {
             if machine.cpu.get_pc() == pc {
                 static mut HITS: [bool; 41] = [false; 41];
                 let idx = match pc {
-                    0x4008ce2c => 0, 0x4008d244 => 1, 0x4008d260 => 2,
-                    0x4008d272 => 3, 0x4008d278 => 4, 0x4008d28b => 5,
-                    0x4008d2ba => 6, 0x400e90c0 => 7, 0x401943fc => 8,
-                    0x4008d2bd => 9, 0x4008d2c0 => 10, 0x4008d2c2 => 11,
-                    0x40083aac => 12, 0x40083abd => 13, 0x40083ab1 => 14,
-                    0x4008ce04 => 15, 0x4008ce07 => 16, 0x4008ce09 => 17,
-                    0x4008197c => 18, 0x4008e858 => 19, 0x4008cf3d => 20,
-                    0x400819ba => 21, 0x4008eeb8 => 22, 0x400ed360 => 23,
-                    0x400ed9a8 => 24, 0x400eef04 => 25, 0x40082378 => 26,
-                    0x400ed384 => 27, 0x400822cc => 28,
-                    0x400e9068 => 29, 0x400df3fc => 30, 0x400e03d0 => 31,
-                    0x400e5c28 => 32, 0x400e2280 => 33,
-                    0x400df421 => 34, 0x400df44a => 35, 0x400df452 => 36,
-                    0x400df45a => 37, 0x400df463 => 38,
-                    0x400e1674 => 39, 0x400dcf34 => 40,
+                    0x4008ce2c => 0,
+                    0x4008d244 => 1,
+                    0x4008d260 => 2,
+                    0x4008d272 => 3,
+                    0x4008d278 => 4,
+                    0x4008d28b => 5,
+                    0x4008d2ba => 6,
+                    0x400e90c0 => 7,
+                    0x401943fc => 8,
+                    0x4008d2bd => 9,
+                    0x4008d2c0 => 10,
+                    0x4008d2c2 => 11,
+                    0x40083aac => 12,
+                    0x40083abd => 13,
+                    0x40083ab1 => 14,
+                    0x4008ce04 => 15,
+                    0x4008ce07 => 16,
+                    0x4008ce09 => 17,
+                    0x4008197c => 18,
+                    0x4008e858 => 19,
+                    0x4008cf3d => 20,
+                    0x400819ba => 21,
+                    0x4008eeb8 => 22,
+                    0x400ed360 => 23,
+                    0x400ed9a8 => 24,
+                    0x400eef04 => 25,
+                    0x40082378 => 26,
+                    0x400ed384 => 27,
+                    0x400822cc => 28,
+                    0x400e9068 => 29,
+                    0x400df3fc => 30,
+                    0x400e03d0 => 31,
+                    0x400e5c28 => 32,
+                    0x400e2280 => 33,
+                    0x400df421 => 34,
+                    0x400df44a => 35,
+                    0x400df452 => 36,
+                    0x400df45a => 37,
+                    0x400df463 => 38,
+                    0x400e1674 => 39,
+                    0x400dcf34 => 40,
                     _ => 41,
                 };
                 unsafe {
@@ -384,7 +470,8 @@ fn agentdeck_firmware_drives_panel_in_sim() {
                             if sp != 0 {
                                 let mut row = String::new();
                                 for off in (0..=40).step_by(4) {
-                                    let v = machine.bus.read_u32(sp as u64 + off).unwrap_or(0xDEADBEEF);
+                                    let v =
+                                        machine.bus.read_u32(sp as u64 + off).unwrap_or(0xDEADBEEF);
                                     row.push_str(&format!("[+{off}]={v:#010x} "));
                                 }
                                 eprintln!("[agentdeck-sim]   frame@{sp:#x}: {row}");
@@ -405,7 +492,8 @@ fn agentdeck_firmware_drives_panel_in_sim() {
         }
         // Trace the spin-loop at 0x400ed12d once to learn where a7 points.
         if machine.cpu.get_pc() == 0x400ed12d && step_count > 1_000_000 && step_count < 1_000_100 {
-            eprintln!("[agentdeck-sim] spin@400ed12d: a7=0x{:08x} a6=0x{:08x} sp=0x{:08x}",
+            eprintln!(
+                "[agentdeck-sim] spin@400ed12d: a7=0x{:08x} a6=0x{:08x} sp=0x{:08x}",
                 machine.cpu.get_register(7),
                 machine.cpu.get_register(6),
                 machine.cpu.get_register(1),
@@ -427,11 +515,13 @@ fn agentdeck_firmware_drives_panel_in_sim() {
         // (the call chain leading to the abort).
         if machine.cpu.get_pc() == 0x40091f60 {
             let caller_a0 = machine.cpu.get_register(0);
-            eprintln!("[agentdeck-sim] abort() entry at step {step_count}. caller_a0=0x{caller_a0:08x}");
+            eprintln!(
+                "[agentdeck-sim] abort() entry at step {step_count}. caller_a0=0x{caller_a0:08x}"
+            );
             eprintln!("  last 8 PCs leading here:");
             for i in 0..8 {
                 let off = ((trail_idx + 64) - 1 - i) % 64;
-                eprintln!("    -{:>2}: 0x{:08x}", i+1, pc_trail[off]);
+                eprintln!("    -{:>2}: 0x{:08x}", i + 1, pc_trail[off]);
             }
         }
         if machine.cpu.get_pc() == 0x4008bc54 {
@@ -439,7 +529,9 @@ fn agentdeck_firmware_drives_panel_in_sim() {
                 let mut out = String::new();
                 for i in 0..256u32 {
                     let b = bus.read_u8(addr.wrapping_add(i) as u64).unwrap_or(0);
-                    if b == 0 { break; }
+                    if b == 0 {
+                        break;
+                    }
                     out.push(b as char);
                 }
                 out
@@ -455,7 +547,9 @@ fn agentdeck_firmware_drives_panel_in_sim() {
                 let mut out = String::new();
                 for i in 0..128u32 {
                     let b = bus.read_u8(addr.wrapping_add(i) as u64).unwrap_or(0);
-                    if b == 0 { break; }
+                    if b == 0 {
+                        break;
+                    }
                     out.push(b as char);
                 }
                 out
@@ -466,7 +560,7 @@ fn agentdeck_firmware_drives_panel_in_sim() {
             eprintln!("  last 8 PCs leading here:");
             for i in 0..8 {
                 let off = ((trail_idx + 64) - 1 - i) % 64;
-                eprintln!("    -{:>2}: 0x{:08x}", i+1, pc_trail[off]);
+                eprintln!("    -{:>2}: 0x{:08x}", i + 1, pc_trail[off]);
             }
             let f_addr = machine.cpu.get_register(10);
             let line = machine.cpu.get_register(11);
@@ -511,7 +605,7 @@ fn agentdeck_firmware_drives_panel_in_sim() {
                     if let Some(bit) = from_cpu_bit0 {
                         machine.cpu.sr.raise_interrupt_bits(1u32 << bit);
                         ipi_fired += 1;
-                        if ipi_fired <= 5 || ipi_fired % 100 == 0 {
+                        if ipi_fired <= 5 || ipi_fired.is_multiple_of(100) {
                             let intenable = machine.cpu.sr.read(228); // INTENABLE
                             let interrupt = machine.cpu.sr.read(226); // INTERRUPT
                             let ps = machine.cpu.ps.as_raw();
@@ -530,7 +624,7 @@ fn agentdeck_firmware_drives_panel_in_sim() {
                     if let Some(bit) = from_cpu_bit1 {
                         machine.cpu.sr.raise_interrupt_bits(1u32 << bit);
                         ipi_fired += 1;
-                        if ipi_fired <= 5 || ipi_fired % 100 == 0 {
+                        if ipi_fired <= 5 || ipi_fired.is_multiple_of(100) {
                             eprintln!("[agentdeck-sim] IPI fire #{ipi_fired}: FROM_CPU_INTR1 → raise bit {bit} @step {step_count} pc=0x{:08x}", machine.cpu.get_pc());
                         }
                     }
@@ -541,7 +635,7 @@ fn agentdeck_firmware_drives_panel_in_sim() {
         }
 
         // Trace INTLEVEL transitions when INTERRUPT bit 6 is pending.
-        if step_count >= 69000 && step_count < 71000 {
+        if (69000..71000).contains(&step_count) {
             let ps = machine.cpu.ps.as_raw();
             let intlevel = ps & 0xF;
             let interrupt = machine.cpu.sr.read(226);
@@ -570,7 +664,7 @@ fn agentdeck_firmware_drives_panel_in_sim() {
         let pc = machine.cpu.get_pc();
         pc_trail[trail_idx] = pc;
         trail_idx = (trail_idx + 1) % 64;
-        if step_count % SAMPLE_EVERY == 0 {
+        if step_count.is_multiple_of(SAMPLE_EVERY) {
             samples.push((step_count, pc));
         }
         if pc == last_pc {
@@ -596,7 +690,10 @@ fn agentdeck_firmware_drives_panel_in_sim() {
     let panel = spi
         .attached_devices
         .iter()
-        .find_map(|d| d.as_any().and_then(|a| a.downcast_ref::<Ssd1680Tricolor290>()))
+        .find_map(|d| {
+            d.as_any()
+                .and_then(|a| a.downcast_ref::<Ssd1680Tricolor290>())
+        })
         .expect("panel attached");
 
     eprintln!(
@@ -613,7 +710,10 @@ fn agentdeck_firmware_drives_panel_in_sim() {
     let head_n = cap.len().min(80);
     if head_n > 0 {
         let head_hex: Vec<String> = cap[..head_n].iter().map(|b| format!("{b:02x}")).collect();
-        eprintln!("[agentdeck-sim] first {head_n} SPI bytes: {}", head_hex.join(" "));
+        eprintln!(
+            "[agentdeck-sim] first {head_n} SPI bytes: {}",
+            head_hex.join(" ")
+        );
     }
     if cap.len() > 160 {
         let tail = &cap[cap.len() - 80..];
@@ -664,6 +764,9 @@ fn agentdeck_firmware_drives_panel_in_sim() {
     if let Err(e) = std::fs::write(&out_path, &ppm) {
         eprintln!("[agentdeck-sim] failed to write panel PPM: {e}");
     } else {
-        eprintln!("[agentdeck-sim] panel image written to {}", out_path.display());
+        eprintln!(
+            "[agentdeck-sim] panel image written to {}",
+            out_path.display()
+        );
     }
 }

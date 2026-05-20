@@ -11,12 +11,12 @@ const RCC_APB2ENR: *mut u32 = 0x4002_1018 as *mut u32;
 // GPIO A (PA4 = CS, PA5 = SCK, PA6 = MISO, PA7 = MOSI)
 const GPIOA_CRL: *mut u32 = 0x4001_0800 as *mut u32;
 const GPIOA_BSRR: *mut u32 = 0x4001_0810 as *mut u32;
-const GPIOA_BRR:  *mut u32 = 0x4001_0814 as *mut u32;
+const GPIOA_BRR: *mut u32 = 0x4001_0814 as *mut u32;
 
 // SPI1 (base 0x4001_3000)
-const SPI1_CR1:  *mut u16 = 0x4001_3000 as *mut u16;
-const SPI1_SR:   *const u16 = 0x4001_3008 as *const u16;
-const SPI1_DR:   *mut u16 = 0x4001_300C as *mut u16;
+const SPI1_CR1: *mut u16 = 0x4001_3000 as *mut u16;
+const SPI1_SR: *const u16 = 0x4001_3008 as *const u16;
+const SPI1_DR: *mut u16 = 0x4001_300C as *mut u16;
 
 // UART1 DR — for debug output
 const UART1_DR: *mut u8 = (0x4001_3800 + 0x04) as *mut u8;

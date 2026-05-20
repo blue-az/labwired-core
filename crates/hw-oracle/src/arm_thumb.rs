@@ -298,19 +298,28 @@ pub fn muls(rd: u8, rm: u8) -> u16 {
 
 /// `LSLS Rd, Rm, #imm5` — T1.  imm5 is 0..31.
 pub fn lsls_imm(rd: u8, rm: u8, imm5: u8) -> u16 {
-    assert!(rd < 8 && rm < 8 && imm5 < 32, "LSLS imm5 fields out of range");
+    assert!(
+        rd < 8 && rm < 8 && imm5 < 32,
+        "LSLS imm5 fields out of range"
+    );
     0x0000 | ((imm5 as u16) << 6) | ((rm as u16) << 3) | (rd as u16)
 }
 
 /// `LSRS Rd, Rm, #imm5` — T1.  Encoding uses imm5=0 to mean shift-32.
 pub fn lsrs_imm(rd: u8, rm: u8, imm5: u8) -> u16 {
-    assert!(rd < 8 && rm < 8 && imm5 < 32, "LSRS imm5 fields out of range");
+    assert!(
+        rd < 8 && rm < 8 && imm5 < 32,
+        "LSRS imm5 fields out of range"
+    );
     0x0800 | ((imm5 as u16) << 6) | ((rm as u16) << 3) | (rd as u16)
 }
 
 /// `ASRS Rd, Rm, #imm5` — T1.
 pub fn asrs_imm(rd: u8, rm: u8, imm5: u8) -> u16 {
-    assert!(rd < 8 && rm < 8 && imm5 < 32, "ASRS imm5 fields out of range");
+    assert!(
+        rd < 8 && rm < 8 && imm5 < 32,
+        "ASRS imm5 fields out of range"
+    );
     0x1000 | ((imm5 as u16) << 6) | ((rm as u16) << 3) | (rd as u16)
 }
 
@@ -322,13 +331,19 @@ pub fn cmp_reg(rn: u8, rm: u8) -> u16 {
 
 /// `STR Rt, [Rn, #imm5*4]` — T1.  imm5 is 0..31; offset is imm5*4 bytes.
 pub fn str_imm5(rt: u8, rn: u8, imm5: u8) -> u16 {
-    assert!(rt < 8 && rn < 8 && imm5 < 32, "STR imm5 fields out of range");
+    assert!(
+        rt < 8 && rn < 8 && imm5 < 32,
+        "STR imm5 fields out of range"
+    );
     0x6000 | ((imm5 as u16) << 6) | ((rn as u16) << 3) | (rt as u16)
 }
 
 /// `LDR Rt, [Rn, #imm5*4]` — T1.
 pub fn ldr_imm5(rt: u8, rn: u8, imm5: u8) -> u16 {
-    assert!(rt < 8 && rn < 8 && imm5 < 32, "LDR imm5 fields out of range");
+    assert!(
+        rt < 8 && rn < 8 && imm5 < 32,
+        "LDR imm5 fields out of range"
+    );
     0x6800 | ((imm5 as u16) << 6) | ((rn as u16) << 3) | (rt as u16)
 }
 
@@ -392,7 +407,10 @@ pub fn movw_imm16(rd: u8, imm16: u16) -> u32 {
 
 /// `UDIV Rd, Rn, Rm` — T1 encoding (ARMv7-M unsigned divide).
 pub fn udiv(rd: u8, rn: u8, rm: u8) -> u32 {
-    assert!(rd <= 12 && rn <= 12 && rm <= 12, "UDIV Rd/Rn/Rm must be r0..r12");
+    assert!(
+        rd <= 12 && rn <= 12 && rm <= 12,
+        "UDIV Rd/Rn/Rm must be r0..r12"
+    );
     let hi = 0b1111_1011_1011_0000u32 | (rn as u32);
     let lo = 0b1111_0000_1111_0000u32 | ((rd as u32) << 8) | (rm as u32);
     (hi << 16) | lo
@@ -400,7 +418,10 @@ pub fn udiv(rd: u8, rn: u8, rm: u8) -> u32 {
 
 /// `SDIV Rd, Rn, Rm` — T1 encoding.
 pub fn sdiv(rd: u8, rn: u8, rm: u8) -> u32 {
-    assert!(rd <= 12 && rn <= 12 && rm <= 12, "SDIV Rd/Rn/Rm must be r0..r12");
+    assert!(
+        rd <= 12 && rn <= 12 && rm <= 12,
+        "SDIV Rd/Rn/Rm must be r0..r12"
+    );
     let hi = 0b1111_1011_1001_0000u32 | (rn as u32);
     let lo = 0b1111_0000_1111_0000u32 | ((rd as u32) << 8) | (rm as u32);
     (hi << 16) | lo
@@ -632,9 +653,8 @@ fn capture_sim_state(case: &ThumbOracleCase) -> ThumbOracleState {
     addrs.sort_unstable();
     addrs.dedup();
     for addr in addrs {
-        let val = labwired_core::Bus::read_u32(&bus, addr as u64).unwrap_or_else(|e| {
-            panic!("thumb oracle: end read_u32(0x{addr:08X}) failed: {e:?}")
-        });
+        let val = labwired_core::Bus::read_u32(&bus, addr as u64)
+            .unwrap_or_else(|e| panic!("thumb oracle: end read_u32(0x{addr:08X}) failed: {e:?}"));
         end.mem.insert(addr, val);
     }
     end
@@ -839,8 +859,7 @@ pub fn run_diff(case: ThumbOracleCase) {
 
     // Diff every captured register.
     for name in [
-        "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "r12", "sp",
-        "lr",
+        "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "r12", "sp", "lr",
     ] {
         let sim_v = sim_end.read_reg(name);
         let hw_v = hw_end.read_reg(name);

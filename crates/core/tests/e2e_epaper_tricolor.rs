@@ -104,7 +104,10 @@ fn firmware_drives_panel_to_three_band_pattern() {
     let panel = spi
         .attached_devices
         .iter()
-        .find_map(|d| d.as_any().and_then(|a| a.downcast_ref::<Ssd1680Tricolor290>()))
+        .find_map(|d| {
+            d.as_any()
+                .and_then(|a| a.downcast_ref::<Ssd1680Tricolor290>())
+        })
         .expect("SSD1680 panel attached to spi1");
 
     assert!(

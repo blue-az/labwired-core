@@ -258,7 +258,10 @@ pub fn esp_rom_route_intr_matrix(cpu: &mut XtensaLx7, bus: &mut dyn Bus) -> SimR
     let addr = base.wrapping_add(src.wrapping_mul(4));
     tracing::trace!(
         "esp_rom_route_intr_matrix: cpu={} src={} intnum={} addr=0x{:08x}",
-        core, src, intnum, addr
+        core,
+        src,
+        intnum,
+        addr
     );
     let _ = bus.write_u32(addr as u64, intnum);
     RomThunkBank::return_with(cpu, 0);
@@ -417,7 +420,6 @@ pub fn rom_umoddi3(cpu: &mut XtensaLx7, _bus: &mut dyn Bus) -> SimResult<()> {
     return_u64(cpu, r);
     Ok(())
 }
-
 
 /// `esp_crc8(const uint8_t *p, uint32_t len) -> uint8_t` — ESP32 BROM CRC-8
 /// used to validate the factory MAC against ESP_EFUSE_MAC_CRC. Algorithm is

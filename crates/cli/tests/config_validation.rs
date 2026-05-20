@@ -141,7 +141,7 @@ fn test_external_device_attaches_to_i2c() {
         "demo-blinky declares one external_devices entry on i2c1 (tmp102)"
     );
     assert_eq!(
-        i2c.attached_devices[0].address(),
+        i2c.attached_devices[0].borrow().address(),
         0x48,
         "tmp102 attaches at default address 0x48"
     );
@@ -177,7 +177,11 @@ fn test_nucleo_f407_i2c_attaches_aht20_and_bmp280() {
         .downcast_ref::<I2c>()
         .expect("i2c1 peripheral must be the I2c type");
 
-    let addresses: Vec<u8> = i2c.attached_devices.iter().map(|d| d.address()).collect();
+    let addresses: Vec<u8> = i2c
+        .attached_devices
+        .iter()
+        .map(|d| d.borrow().address())
+        .collect();
     assert_eq!(addresses.len(), 2, "AHT20 + BMP280 = 2 devices on i2c1");
     assert!(addresses.contains(&0x38), "AHT20 at 0x38 missing");
     assert!(addresses.contains(&0x76), "BMP280 at 0x76 missing");

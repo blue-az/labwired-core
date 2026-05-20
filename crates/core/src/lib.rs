@@ -187,19 +187,45 @@ impl Cpu for Box<dyn Cpu> {
     ) -> SimResult<u32> {
         (**self).step_batch(bus, observers, config, max_count)
     }
-    fn set_pc(&mut self, val: u32) { (**self).set_pc(val) }
-    fn get_pc(&self) -> u32 { (**self).get_pc() }
-    fn set_sp(&mut self, val: u32) { (**self).set_sp(val) }
-    fn set_exception_pending(&mut self, n: u32) { (**self).set_exception_pending(n) }
-    fn get_register(&self, id: u8) -> u32 { (**self).get_register(id) }
-    fn set_register(&mut self, id: u8, val: u32) { (**self).set_register(id, val) }
-    fn snapshot(&self) -> snapshot::CpuSnapshot { (**self).snapshot() }
-    fn apply_snapshot(&mut self, s: &snapshot::CpuSnapshot) { (**self).apply_snapshot(s) }
-    fn get_register_names(&self) -> Vec<String> { (**self).get_register_names() }
-    fn index_of_register(&self, name: &str) -> Option<u8> { (**self).index_of_register(name) }
-    fn inject_fault(&mut self, target: &str) -> SimResult<()> { (**self).inject_fault(target) }
-    fn get_energy_consumption(&self) -> f64 { (**self).get_energy_consumption() }
-    fn raise_interrupt_bits(&mut self, mask: u32) { (**self).raise_interrupt_bits(mask) }
+    fn set_pc(&mut self, val: u32) {
+        (**self).set_pc(val)
+    }
+    fn get_pc(&self) -> u32 {
+        (**self).get_pc()
+    }
+    fn set_sp(&mut self, val: u32) {
+        (**self).set_sp(val)
+    }
+    fn set_exception_pending(&mut self, n: u32) {
+        (**self).set_exception_pending(n)
+    }
+    fn get_register(&self, id: u8) -> u32 {
+        (**self).get_register(id)
+    }
+    fn set_register(&mut self, id: u8, val: u32) {
+        (**self).set_register(id, val)
+    }
+    fn snapshot(&self) -> snapshot::CpuSnapshot {
+        (**self).snapshot()
+    }
+    fn apply_snapshot(&mut self, s: &snapshot::CpuSnapshot) {
+        (**self).apply_snapshot(s)
+    }
+    fn get_register_names(&self) -> Vec<String> {
+        (**self).get_register_names()
+    }
+    fn index_of_register(&self, name: &str) -> Option<u8> {
+        (**self).index_of_register(name)
+    }
+    fn inject_fault(&mut self, target: &str) -> SimResult<()> {
+        (**self).inject_fault(target)
+    }
+    fn get_energy_consumption(&self) -> f64 {
+        (**self).get_energy_consumption()
+    }
+    fn raise_interrupt_bits(&mut self, mask: u32) {
+        (**self).raise_interrupt_bits(mask)
+    }
 }
 
 /// Trait representing a memory-mapped peripheral

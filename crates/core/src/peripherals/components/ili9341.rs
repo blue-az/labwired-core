@@ -427,7 +427,7 @@ mod tests {
         // Set a 2-column × 2-row window
         send_cmd_params(&mut dev, 0x2A, &[0x00, 0x00, 0x00, 0x01]); // col 0..1
         send_cmd_params(&mut dev, 0x2B, &[0x00, 0x00, 0x00, 0x01]); // row 0..1
-        // Write 4 pixels (fills the 2×2 window)
+                                                                    // Write 4 pixels (fills the 2×2 window)
         dev.cs_select();
         dev.transfer(0x2C);
         for _ in 0..4 {

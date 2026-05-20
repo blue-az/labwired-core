@@ -261,7 +261,7 @@ impl Peripheral for Adc {
                 // Use injected channel value if available; otherwise increment DR for
                 // visual feedback (no external source connected).
                 // SQR3 bits [4:0] hold the first sequence channel number.
-                let sqr3_ch = (self.cr2 >> 0) & 0x1F; // fallback; real SQR3 is at 0x34 but not modeled
+                let sqr3_ch = self.cr2 & 0x1F; // fallback; real SQR3 is at 0x34 but not modeled
                 let ch = sqr3_ch as usize;
                 if ch < self.channel_inputs.len() && self.channel_inputs[ch] != 0xFFFF {
                     self.dr = self.channel_inputs[ch] as u32;

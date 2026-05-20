@@ -207,11 +207,9 @@ impl Ssd1680Tricolor290 {
 
     fn handle_params_complete(&mut self, cmd: u8, params: &[u8; 4]) {
         match cmd {
-            0x10 => {
-                if params[0] & 0x01 != 0 {
-                    self.hibernating = true;
-                    self.power_on = false;
-                }
+            0x10 if params[0] & 0x01 != 0 => {
+                self.hibernating = true;
+                self.power_on = false;
             }
             0x22 => {
                 // 0xF8 = power-on-only (GxEPD2 _PowerOn), 0x83 = power-off
@@ -434,8 +432,14 @@ mod tests {
         dev.transfer(0x20);
         dev.cs_release();
 
-        assert!(dev.black_plane().iter().all(|&b| b == 0xFF), "black plane all-white");
-        assert!(dev.red_plane().iter().all(|&b| b == 0x00), "red plane all-red on wire");
+        assert!(
+            dev.black_plane().iter().all(|&b| b == 0xFF),
+            "black plane all-white"
+        );
+        assert!(
+            dev.red_plane().iter().all(|&b| b == 0x00),
+            "red plane all-red on wire"
+        );
         assert!(dev.refresh_pending, "0x20 must arm refresh");
         assert_eq!(dev.refresh_generation, 1);
     }
@@ -455,7 +459,10 @@ mod tests {
         // Next byte: should be parsed as command, not pixel.
         dev.transfer(0x12); // SWRESET
         dev.cs_release();
-        assert!(dev.reset_seen, "byte after full stream should be parsed as command");
+        assert!(
+            dev.reset_seen,
+            "byte after full stream should be parsed as command"
+        );
     }
 
     #[test]
@@ -485,7 +492,11 @@ mod tests {
         for row in 0..16 {
             assert_eq!(dev.black_plane()[row * WIDTH_BYTES], 0x55);
             assert_eq!(dev.black_plane()[row * WIDTH_BYTES + 1], 0x55);
-            assert_eq!(dev.black_plane()[row * WIDTH_BYTES + 2], 0xFF, "outside window");
+            assert_eq!(
+                dev.black_plane()[row * WIDTH_BYTES + 2],
+                0xFF,
+                "outside window"
+            );
         }
     }
 

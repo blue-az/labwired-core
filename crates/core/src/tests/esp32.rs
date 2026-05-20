@@ -56,12 +56,12 @@ fn esp32_system_builder_wires_documented_regions() {
     // read.  Bus::read_u8 returns Ok for any address inside a registered
     // peripheral and an error for unmapped addresses.
     for (name, addr) in [
-        ("IRAM",         0x4008_0000),
-        ("DRAM",         0x3FFB_0000),
-        ("ROM",          0x4000_0000),
+        ("IRAM", 0x4008_0000),
+        ("DRAM", 0x3FFB_0000),
+        ("ROM", 0x4000_0000),
         ("flash_icache", 0x400D_0000),
         ("flash_dcache", 0x3F40_0000),
-        ("UART0",        0x3FF4_0000),
+        ("UART0", 0x3FF4_0000),
     ] {
         bus.read_u8(addr)
             .unwrap_or_else(|e| panic!("{name} @ 0x{addr:08X} unreachable: {e:?}"));

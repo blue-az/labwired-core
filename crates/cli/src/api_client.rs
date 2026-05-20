@@ -9,8 +9,7 @@ use tracing::warn;
 
 /// Base URL for the LabWired API. Override with LABWIRED_API_BASE for testing.
 fn api_base() -> String {
-    std::env::var("LABWIRED_API_BASE")
-        .unwrap_or_else(|_| "https://api.labwired.com".to_string())
+    std::env::var("LABWIRED_API_BASE").unwrap_or_else(|_| "https://api.labwired.com".to_string())
 }
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -135,7 +134,10 @@ pub fn record_run(
             if status == 429 {
                 warn!("LabWired API: monthly cycle quota exceeded (run still completed locally)");
             } else if status != 200 {
-                warn!("LabWired API: run record returned unexpected status {}", status);
+                warn!(
+                    "LabWired API: run record returned unexpected status {}",
+                    status
+                );
             }
         }
         Err(e) => {

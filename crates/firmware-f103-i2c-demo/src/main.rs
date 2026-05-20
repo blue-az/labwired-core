@@ -29,30 +29,30 @@ use core::ptr::{read_volatile, write_volatile};
 
 // ── Register addresses ────────────────────────────────────────────────────────
 
-const RCC_BASE:   u32 = 0x4002_1000;
+const RCC_BASE: u32 = 0x4002_1000;
 const RCC_APB2ENR: u32 = RCC_BASE + 0x18;
 const RCC_APB1ENR: u32 = RCC_BASE + 0x1C;
 
 const GPIOA_BASE: u32 = 0x4001_0800;
-const GPIOA_CRL:  u32 = GPIOA_BASE + 0x00;
+const GPIOA_CRL: u32 = GPIOA_BASE + 0x00;
 
 const GPIOB_BASE: u32 = 0x4001_0C00;
-const GPIOB_CRL:  u32 = GPIOB_BASE + 0x00; /* PB6 (SCL) and PB7 (SDA) live here */
+const GPIOB_CRL: u32 = GPIOB_BASE + 0x00; /* PB6 (SCL) and PB7 (SDA) live here */
 
 const USART2_BASE: u32 = 0x4000_4400;
-const USART2_SR:   u32 = USART2_BASE + 0x00;
-const USART2_DR:   u32 = USART2_BASE + 0x04;
-const USART2_BRR:  u32 = USART2_BASE + 0x08;
-const USART2_CR1:  u32 = USART2_BASE + 0x0C;
+const USART2_SR: u32 = USART2_BASE + 0x00;
+const USART2_DR: u32 = USART2_BASE + 0x04;
+const USART2_BRR: u32 = USART2_BASE + 0x08;
+const USART2_CR1: u32 = USART2_BASE + 0x0C;
 
-const I2C1_BASE:  u32 = 0x4000_5400;
-const I2C1_CR1:   u32 = I2C1_BASE + 0x00;
-const I2C1_CR2:   u32 = I2C1_BASE + 0x04;
-const I2C1_OAR1:  u32 = I2C1_BASE + 0x08;
-const I2C1_DR:    u32 = I2C1_BASE + 0x10;
-const I2C1_SR1:   u32 = I2C1_BASE + 0x14;
-const I2C1_SR2:   u32 = I2C1_BASE + 0x18;
-const I2C1_CCR:   u32 = I2C1_BASE + 0x1C;
+const I2C1_BASE: u32 = 0x4000_5400;
+const I2C1_CR1: u32 = I2C1_BASE + 0x00;
+const I2C1_CR2: u32 = I2C1_BASE + 0x04;
+const I2C1_OAR1: u32 = I2C1_BASE + 0x08;
+const I2C1_DR: u32 = I2C1_BASE + 0x10;
+const I2C1_SR1: u32 = I2C1_BASE + 0x14;
+const I2C1_SR2: u32 = I2C1_BASE + 0x18;
+const I2C1_CCR: u32 = I2C1_BASE + 0x1C;
 const I2C1_TRISE: u32 = I2C1_BASE + 0x20;
 
 // ── Entry ─────────────────────────────────────────────────────────────────────
@@ -160,13 +160,15 @@ unsafe fn i2c1_init() {
 
 fn print_state(tag: &[u8]) {
     putline(tag);
-    print_reg(b"CR1=",   unsafe { read_volatile(I2C1_CR1   as *const u32) });
-    print_reg(b"CR2=",   unsafe { read_volatile(I2C1_CR2   as *const u32) });
-    print_reg(b"CCR=",   unsafe { read_volatile(I2C1_CCR   as *const u32) });
-    print_reg(b"TRISE=", unsafe { read_volatile(I2C1_TRISE as *const u32) });
-    print_reg(b"OAR1=",  unsafe { read_volatile(I2C1_OAR1  as *const u32) });
-    print_reg(b"SR1=",   unsafe { read_volatile(I2C1_SR1   as *const u32) });
-    print_reg(b"SR2=",   unsafe { read_volatile(I2C1_SR2   as *const u32) });
+    print_reg(b"CR1=", unsafe { read_volatile(I2C1_CR1 as *const u32) });
+    print_reg(b"CR2=", unsafe { read_volatile(I2C1_CR2 as *const u32) });
+    print_reg(b"CCR=", unsafe { read_volatile(I2C1_CCR as *const u32) });
+    print_reg(b"TRISE=", unsafe {
+        read_volatile(I2C1_TRISE as *const u32)
+    });
+    print_reg(b"OAR1=", unsafe { read_volatile(I2C1_OAR1 as *const u32) });
+    print_reg(b"SR1=", unsafe { read_volatile(I2C1_SR1 as *const u32) });
+    print_reg(b"SR2=", unsafe { read_volatile(I2C1_SR2 as *const u32) });
 }
 
 fn print_reg(label: &[u8], v: u32) {
@@ -174,7 +176,11 @@ fn print_reg(label: &[u8], v: u32) {
     let mut buf = [0u8; 8];
     for i in 0..8 {
         let nib = ((v >> ((7 - i) * 4)) & 0xF) as u8;
-        buf[i] = if nib < 10 { b'0' + nib } else { b'A' + nib - 10 };
+        buf[i] = if nib < 10 {
+            b'0' + nib
+        } else {
+            b'A' + nib - 10
+        };
     }
     putbytes(&buf);
     putbyte(b'\n');

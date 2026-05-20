@@ -198,7 +198,7 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
     rom_bank.register(0x4000_81d4, rom_thunks::rtc_get_reset_reason);
     rom_bank.register(0x4000_2a40, rom_thunks::nop_return_zero); // Cache_Read_Disable
     rom_bank.register(0x4000_29ac, rom_thunks::nop_return_zero); // Cache_Read_Enable
-    // libc-equivalents the firmware links against ROM copies of:
+                                                                 // libc-equivalents the firmware links against ROM copies of:
     rom_bank.register(0x4000_c260, rom_thunks::rom_memcmp);
     rom_bank.register(0x4000_c2c8, rom_thunks::rom_memcpy);
     rom_bank.register(0x4000_c3c0, rom_thunks::rom_memmove);
@@ -208,8 +208,8 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
     // our sim doesn't enforce IO_MUX pre-state.
     rom_bank.register(0x4000_8534, rom_thunks::nop_return_zero); // ets_delay_us
     rom_bank.register(0x4000_8550, rom_thunks::nop_return_zero); // ets_update_cpu_frequency
-    // ets_get_cpu_frequency() — returns CPU freq in MHz. We don't model
-    // clock-tree changes so return the post-init default of 240 MHz.
+                                                                 // ets_get_cpu_frequency() — returns CPU freq in MHz. We don't model
+                                                                 // clock-tree changes so return the post-init default of 240 MHz.
     rom_bank.register(0x4000_855c, rom_thunks::rom_cpu_freq_240mhz);
     // ets_get_detected_xtal_freq() — returns XTAL freq in MHz. Return
     // 40 (matches the RTC_APB_FREQ_REG fake we pre-write in the test).
@@ -222,38 +222,38 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
     rom_bank.register(0x4000_9200, rom_thunks::nop_return_zero); // (unnamed esp32_init helper)
     rom_bank.register(0x4000_4348, rom_thunks::nop_return_zero); // rom_i2c_writeReg vicinity
     rom_bank.register(0x4000_41a4, rom_thunks::nop_return_zero); // rom_i2c_writeReg
-    // Cache control — esp-hal pokes these during boot. We don't model
-    // flash cache state so all four are no-ops.
+                                                                 // Cache control — esp-hal pokes these during boot. We don't model
+                                                                 // flash cache state so all four are no-ops.
     rom_bank.register(0x4000_9a14, rom_thunks::nop_return_zero); // Cache_Flush_rom
     rom_bank.register(0x4000_9a84, rom_thunks::nop_return_zero); // Cache_Read_Enable_rom
     rom_bank.register(0x4000_9ab8, rom_thunks::nop_return_zero); // Cache_Read_Disable_rom
     rom_bank.register(0x4000_95e0, rom_thunks::nop_return_zero); // cache_flash_mmu_set_rom
     rom_bank.register(0x4000_97f4, rom_thunks::nop_return_zero); // cache_sram_mmu_set_rom
-    // GPIO ROM helpers — Arduino-ESP32 uses these to set up VSPI pins.
-    // No-op in sim (our Esp32Gpio/Esp32Spi peripherals accept signals
-    // directly without IO_MUX-state enforcement).
+                                                                 // GPIO ROM helpers — Arduino-ESP32 uses these to set up VSPI pins.
+                                                                 // No-op in sim (our Esp32Gpio/Esp32Spi peripherals accept signals
+                                                                 // directly without IO_MUX-state enforcement).
     rom_bank.register(0x4000_9edc, rom_thunks::nop_return_zero); // esp_rom_gpio_connect_in_signal
     rom_bank.register(0x4000_9fdc, rom_thunks::nop_return_zero); // esp_rom_gpio_pad_select_gpio
-    // MMU / cache setup helpers — discovered iteratively while booting
-    // the AgentDeck Arduino-ESP32 binary in sim. All no-ops because the
-    // sim's flash XIP peripheral is a flat RamPeripheral, no MMU model.
+                                                                 // MMU / cache setup helpers — discovered iteratively while booting
+                                                                 // the AgentDeck Arduino-ESP32 binary in sim. All no-ops because the
+                                                                 // sim's flash XIP peripheral is a flat RamPeripheral, no MMU model.
     rom_bank.register(0x4000_95a4, rom_thunks::nop_return_zero); // mmu_init
-    // libgcc helpers — Arduino-ESP32 links against ROM copies for
-    // hot paths (flash header parsing reads big-endian values).
-    rom_bank.register(0x4006_4ae0, rom_thunks::rom_bswapsi2);    // __bswapsi2
-    rom_bank.register(0x4006_4b08, rom_thunks::rom_bswapdi2);    // __bswapdi2
-    // libgcc 64-bit math helpers (in BROM at 0x4000c8xx).
-    rom_bank.register(0x4000_c818, rom_thunks::rom_ashldi3);   // __ashldi3
-    rom_bank.register(0x4000_c830, rom_thunks::rom_ashrdi3);   // __ashrdi3
-    rom_bank.register(0x4000_c84c, rom_thunks::rom_lshrdi3);   // __lshrdi3
-    rom_bank.register(0x4000_ca84, rom_thunks::rom_divdi3);    // __divdi3
-    rom_bank.register(0x4000_cd4c, rom_thunks::rom_moddi3);    // __moddi3
-    rom_bank.register(0x4000_cff8, rom_thunks::rom_udivdi3);   // __udivdi3
-    rom_bank.register(0x4000_d280, rom_thunks::rom_umoddi3);   // __umoddi3
-    rom_bank.register(0x4000_c7e8, rom_thunks::rom_clzsi2);    // __clzsi2
-    rom_bank.register(0x4000_c7f0, rom_thunks::rom_ctzsi2);    // __ctzsi2
-    // esp_crc8 — used by get_efuse_factory_mac to validate the MAC blob
-    // against the stored CRC byte. Dallas/Maxim 1-Wire CRC-8 algorithm.
+                                                                 // libgcc helpers — Arduino-ESP32 links against ROM copies for
+                                                                 // hot paths (flash header parsing reads big-endian values).
+    rom_bank.register(0x4006_4ae0, rom_thunks::rom_bswapsi2); // __bswapsi2
+    rom_bank.register(0x4006_4b08, rom_thunks::rom_bswapdi2); // __bswapdi2
+                                                              // libgcc 64-bit math helpers (in BROM at 0x4000c8xx).
+    rom_bank.register(0x4000_c818, rom_thunks::rom_ashldi3); // __ashldi3
+    rom_bank.register(0x4000_c830, rom_thunks::rom_ashrdi3); // __ashrdi3
+    rom_bank.register(0x4000_c84c, rom_thunks::rom_lshrdi3); // __lshrdi3
+    rom_bank.register(0x4000_ca84, rom_thunks::rom_divdi3); // __divdi3
+    rom_bank.register(0x4000_cd4c, rom_thunks::rom_moddi3); // __moddi3
+    rom_bank.register(0x4000_cff8, rom_thunks::rom_udivdi3); // __udivdi3
+    rom_bank.register(0x4000_d280, rom_thunks::rom_umoddi3); // __umoddi3
+    rom_bank.register(0x4000_c7e8, rom_thunks::rom_clzsi2); // __clzsi2
+    rom_bank.register(0x4000_c7f0, rom_thunks::rom_ctzsi2); // __ctzsi2
+                                                            // esp_crc8 — used by get_efuse_factory_mac to validate the MAC blob
+                                                            // against the stored CRC byte. Dallas/Maxim 1-Wire CRC-8 algorithm.
     rom_bank.register(0x4005_d144, rom_thunks::rom_esp_crc8);
     // SPI flash / eFuse helpers — used by Arduino-ESP32's flash init.
     rom_bank.register(0x4000_8658, rom_thunks::nop_return_zero);
@@ -267,12 +267,12 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
     // so noop-return is safe.
     rom_bank.register(0x4000_681c, rom_thunks::esp_rom_route_intr_matrix); // intr_matrix_set / esp_rom_route_intr_matrix
     rom_bank.register(0x4000_689c, rom_thunks::nop_return_zero); // ets_set_appcpu_boot_addr
-    // GPIO matrix routing helpers — used by Arduino's spiAttach{SCK,MOSI,MISO}
-    // and HardwareSerial pin attach. We don't model the GPIO matrix; signals
-    // routed via SPI3 controller flow directly to attached SPI devices.
-    // gpio_matrix_in (0x4000_9edc) is the same BROM entry already registered
-    // above as esp_rom_gpio_connect_in_signal — just two ABI-compatible names
-    // for the same function. Only register the new alias (gpio_matrix_out).
+                                                                 // GPIO matrix routing helpers — used by Arduino's spiAttach{SCK,MOSI,MISO}
+                                                                 // and HardwareSerial pin attach. We don't model the GPIO matrix; signals
+                                                                 // routed via SPI3 controller flow directly to attached SPI devices.
+                                                                 // gpio_matrix_in (0x4000_9edc) is the same BROM entry already registered
+                                                                 // above as esp_rom_gpio_connect_in_signal — just two ABI-compatible names
+                                                                 // for the same function. Only register the new alias (gpio_matrix_out).
     rom_bank.register(0x4000_9f0c, rom_thunks::nop_return_zero); // gpio_matrix_out
 
     // ESP-IDF partition-table verification uses ROM MD5. Stubbing all three
@@ -283,21 +283,9 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
     rom_bank.register(0x4005_da7c, rom_thunks::nop_return_zero); // esp_rom_md5_init
     rom_bank.register(0x4005_da9c, rom_thunks::nop_return_zero); // esp_rom_md5_update
     rom_bank.register(0x4005_db1c, rom_thunks::nop_return_zero); // esp_rom_md5_final
-    bus.add_peripheral(
-        "rom",
-        0x4000_0000,
-        0x70000,
-        None,
-        Box::new(rom_bank),
-    );
+    bus.add_peripheral("rom", 0x4000_0000, 0x70000, None, Box::new(rom_bank));
     // UART0 — STM32F1 layout for now (see caveat above).
-    bus.add_peripheral(
-        "uart0",
-        0x3FF4_0000,
-        0x100,
-        None,
-        Box::new(Uart::new()),
-    );
+    bus.add_peripheral("uart0", 0x3FF4_0000, 0x100, None, Box::new(Uart::new()));
 
     // SPI0 / SPI1 — flash SPI controllers used by the BROM during boot.
     // Sim doesn't model the flash MMU, but Arduino-ESP32's
@@ -436,19 +424,19 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
     // any specific peripheral semantics.
     for (name, base) in [
         ("sdio_host", 0x3FF4_A000u64),
-        ("rtcio",     0x3FF4_8400),  // sub-range of RTC_CNTL window, leave 4 KiB span
-        ("sar_adc",   0x3FF4_C000),
-        ("i2s0",      0x3FF4_F000),
-        ("uart1",     0x3FF5_0000),
-        ("i2c0",      0x3FF5_3000),
-        ("uhci0",     0x3FF5_4000),
-        ("i2s1",      0x3FF6_D000),
-        ("uart2",     0x3FF6_E000),
-        ("pwm0",      0x3FF5_E000),
-        ("ledc",      0x3FF5_9000),
-        ("ledc2",     0x3FF6_8000),
-        ("rmt",       0x3FF5_6000),
-        ("pcnt",      0x3FF5_7000),
+        ("rtcio", 0x3FF4_8400), // sub-range of RTC_CNTL window, leave 4 KiB span
+        ("sar_adc", 0x3FF4_C000),
+        ("i2s0", 0x3FF4_F000),
+        ("uart1", 0x3FF5_0000),
+        ("i2c0", 0x3FF5_3000),
+        ("uhci0", 0x3FF5_4000),
+        ("i2s1", 0x3FF6_D000),
+        ("uart2", 0x3FF6_E000),
+        ("pwm0", 0x3FF5_E000),
+        ("ledc", 0x3FF5_9000),
+        ("ledc2", 0x3FF6_8000),
+        ("rmt", 0x3FF5_6000),
+        ("pcnt", 0x3FF5_7000),
     ] {
         bus.add_peripheral(
             name,

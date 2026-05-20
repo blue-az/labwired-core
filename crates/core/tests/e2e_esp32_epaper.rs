@@ -19,8 +19,9 @@ use std::path::PathBuf;
 use std::process::Command;
 
 fn firmware_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../examples/esp32-epaper-lab/target/xtensa-esp32-none-elf/release/esp32-epaper-lab")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(
+        "../../examples/esp32-epaper-lab/target/xtensa-esp32-none-elf/release/esp32-epaper-lab",
+    )
 }
 
 fn ensure_firmware_built() -> PathBuf {
@@ -38,8 +39,7 @@ fn ensure_firmware_built() -> PathBuf {
         let _ = Command::new("cargo")
             .args(["build", "--release"])
             .current_dir(
-                PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                    .join("../../examples/esp32-epaper-lab"),
+                PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/esp32-epaper-lab"),
             )
             .status();
     }
@@ -66,9 +66,7 @@ fn firmware_drives_panel_to_three_band_pattern() {
         .dev
         .as_any_mut()
         .expect("spi3 supports downcast");
-    let spi = any
-        .downcast_mut::<Esp32Spi>()
-        .expect("spi3 is Esp32Spi");
+    let spi = any.downcast_mut::<Esp32Spi>().expect("spi3 is Esp32Spi");
     spi.attach(Box::new(Ssd1680Tricolor290::new("GPIO5")));
 
     bus.refresh_peripheral_index();
@@ -127,7 +125,10 @@ fn firmware_drives_panel_to_three_band_pattern() {
     let panel = spi
         .attached_devices
         .iter()
-        .find_map(|d| d.as_any().and_then(|a| a.downcast_ref::<Ssd1680Tricolor290>()))
+        .find_map(|d| {
+            d.as_any()
+                .and_then(|a| a.downcast_ref::<Ssd1680Tricolor290>())
+        })
         .expect("SSD1680 attached to spi3");
 
     assert!(

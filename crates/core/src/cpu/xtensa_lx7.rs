@@ -82,6 +82,7 @@ const EXCCAUSE_LEVEL1_INTERRUPT: u8 = 4;
 
 /// XCHAL_EXCM_LEVEL: PS.EXCM blocks delivery of interrupts at levels <= this.
 /// Verified from core-isa.h: XCHAL_EXCM_LEVEL = 3.
+#[allow(dead_code, reason = "reserved for level-gated interrupt arbitration")]
 const EXCM_LEVEL: u8 = 3;
 
 pub struct XtensaLx7 {
@@ -199,7 +200,12 @@ impl XtensaLx7 {
         // here just causes a double-fault (the handler's `l32e a0, a1, -12`
         // reads uninitialized stack with a1=0 on freshly-created task
         // frames). Leaving WOE+EXCM check gated to `false` skips the vector.
-        if false && self.ps.woe() && !self.ps.excm() && !matches!(ins, Entry { .. }) {
+        // F5 per-instruction window-overflow check intentionally disabled
+        // — see Plan 3 case study and the design comment above. Kept here
+        // (#[cfg(any())] gated) for future reference if we ever revisit the
+        // canonical OF-vector firmware handler path.
+        #[cfg(any())]
+        if self.ps.woe() && !self.ps.excm() && !matches!(ins, Entry { .. }) {
             let max_reg = ins.max_logical_reg();
             if max_reg >= 4 {
                 let w = (max_reg / 4) as u32; // slots ahead that need to be free
@@ -990,8 +996,10 @@ impl XtensaLx7 {
                 let val = self.regs.read_logical(as_);
                 let cond = (val >> bit) & 1 == 1;
                 if std::env::var_os("LABWIRED_TRACE_BBSI").is_some() && self.pc == 0x400ed00d {
-                    eprintln!("[trace] BBSI at pc=0x{:08x} as_=a{} val=0x{:08x} bit={} cond={}",
-                        self.pc, as_, val, bit, cond);
+                    eprintln!(
+                        "[trace] BBSI at pc=0x{:08x} as_=a{} val=0x{:08x} bit={} cond={}",
+                        self.pc, as_, val, bit, cond
+                    );
                 }
                 self.branch(offset, len, cond);
             }
@@ -1765,7 +1773,7 @@ impl Cpu for XtensaLx7 {
         // monotonic). When CCOUNT crosses CCOMPARE0, raise the timer-0
         // interrupt (bit 6 in INTERRUPT SR = ESP32 internal timer 0, level 1).
         // FreeRTOS-on-Xtensa uses this as its tick source via `_xt_int6`.
-        use crate::cpu::xtensa_sr::{CCOMPARE0, CCOUNT, INTENABLE, INTERRUPT};
+        use crate::cpu::xtensa_sr::{CCOMPARE0, CCOUNT};
         let ccount_before = self.sr.read(CCOUNT);
         let ccount_after = ccount_before.wrapping_add(1);
         self.sr.write(CCOUNT, ccount_after);

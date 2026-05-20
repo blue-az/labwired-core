@@ -24,7 +24,7 @@ pub struct NtcThermistor {
     /// Current temperature in °C.
     temperature_c: f32,
     /// Calibration constants.
-    r0_ohm: f32,         // 10 000.0
+    r0_ohm: f32, // 10 000.0
     t0_k: f32,           // 298.15
     beta: f32,           // 3950.0
     r_pulldown_ohm: f32, // 10 000.0
@@ -99,7 +99,10 @@ mod tests {
         let ntc = NtcThermistor::new(0, 25.0);
         // At 25 °C, R_ntc = R0 = 10 kΩ; divider is exactly V_ref/2 = 1650 mV.
         let mv = ntc.divider_output_mv();
-        assert!((mv as i32 - 1650).abs() <= 1, "expected ~1650 mV at 25°C, got {mv}");
+        assert!(
+            (mv as i32 - 1650).abs() <= 1,
+            "expected ~1650 mV at 25°C, got {mv}"
+        );
     }
 
     #[test]
@@ -115,6 +118,9 @@ mod tests {
         let ntc = NtcThermistor::new(0, 25.0);
         let count = ntc.adc_count();
         // ~4095/2 = 2047 at midpoint
-        assert!((count as i32 - 2047).abs() <= 2, "expected ~2047 at 25°C, got {count}");
+        assert!(
+            (count as i32 - 2047).abs() <= 2,
+            "expected ~2047 at 25°C, got {count}"
+        );
     }
 }

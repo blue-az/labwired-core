@@ -17,8 +17,8 @@ const UART2_BASE: u32 = 0x4000_4400;
 const UART2_SR: *const u32 = (UART2_BASE + 0x00) as *const u32;
 const UART2_DR: *mut u32 = (UART2_BASE + 0x04) as *mut u32;
 
-const SR_EOC: u32 = 1 << 1;   // End of conversion
-const SR_TXE: u32 = 1 << 7;   // UART TX empty
+const SR_EOC: u32 = 1 << 1; // End of conversion
+const SR_TXE: u32 = 1 << 7; // UART TX empty
 
 fn uart2_byte(byte: u8) {
     unsafe {

@@ -1035,7 +1035,9 @@ impl SystemBus {
                             )
                         })?;
 
-                    spi.attach(Box::new(crate::peripherals::components::Ili9341::new(cs_pin)));
+                    spi.attach(Box::new(crate::peripherals::components::Ili9341::new(
+                        cs_pin,
+                    )));
                 }
                 "adxl345" | "mpu6050" | "bme280" | "oled-ssd1306" => {
                     // I2C device path
@@ -1077,10 +1079,18 @@ impl SystemBus {
                         })?;
 
                     match ext.r#type.as_str() {
-                        "mpu6050" => i2c.attach(Box::new(crate::peripherals::components::Mpu6050::new(address))),
-                        "bme280" => i2c.attach(Box::new(crate::peripherals::components::Bme280::new(address))),
-                        "oled-ssd1306" => i2c.attach(Box::new(crate::peripherals::components::Ssd1306::new(address))),
-                        _ => i2c.attach(Box::new(crate::peripherals::components::Adxl345::new(address))),
+                        "mpu6050" => i2c.attach(Box::new(
+                            crate::peripherals::components::Mpu6050::new(address),
+                        )),
+                        "bme280" => i2c.attach(Box::new(
+                            crate::peripherals::components::Bme280::new(address),
+                        )),
+                        "oled-ssd1306" => i2c.attach(Box::new(
+                            crate::peripherals::components::Ssd1306::new(address),
+                        )),
+                        _ => i2c.attach(Box::new(crate::peripherals::components::Adxl345::new(
+                            address,
+                        ))),
                     }
                 }
                 "neo6m-gps" => {
@@ -1161,7 +1171,9 @@ impl SystemBus {
                             )
                         })?;
 
-                    spi.attach(Box::new(crate::peripherals::components::Max31855::new(cs_pin)));
+                    spi.attach(Box::new(crate::peripherals::components::Max31855::new(
+                        cs_pin,
+                    )));
                 }
                 "ssd1680_tricolor_290" | "epd-2in9-tricolor" => {
                     // SPI device path — Waveshare 2.9" tri-color e-paper.
@@ -1197,7 +1209,9 @@ impl SystemBus {
                             )
                         })?;
 
-                    spi.attach(Box::new(crate::peripherals::components::Ssd1680Tricolor290::new(cs_pin)));
+                    spi.attach(Box::new(
+                        crate::peripherals::components::Ssd1680Tricolor290::new(cs_pin),
+                    ));
                 }
                 "ntc-thermistor" => {
                     // Analog source path: NTC connects directly to an ADC channel.
@@ -1246,7 +1260,8 @@ impl SystemBus {
                         })?;
 
                     // Seed the ADC channel with the initial temperature's voltage.
-                    let ntc = crate::peripherals::components::NtcThermistor::new(channel, initial_temp_c);
+                    let ntc =
+                        crate::peripherals::components::NtcThermistor::new(channel, initial_temp_c);
                     adc.set_channel_input(channel, ntc.divider_output_mv());
                 }
                 _ => {
