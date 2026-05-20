@@ -36,9 +36,10 @@ fn agentdeck_firmware_drives_panel_in_sim() {
         .find_peripheral_index_by_name("spi3")
         .expect("spi3 registered");
     let any = bus.peripherals[spi3_idx].dev.as_any_mut().unwrap();
-    any.downcast_mut::<Esp32Spi>()
-        .unwrap()
-        .attach(Box::new(Ssd1680Tricolor290::new("GPIO5")));
+    let spi3 = any.downcast_mut::<Esp32Spi>().unwrap();
+    spi3.attach(Box::new(Ssd1680Tricolor290::new("GPIO5")));
+    // Capture every byte on the wire so we can diagnose missing panel state.
+    spi3.enable_byte_capture(256);
 
     bus.refresh_peripheral_index();
     let mut machine = Machine::new(cpu, bus);
@@ -244,18 +245,42 @@ fn agentdeck_firmware_drives_panel_in_sim() {
             (0x40083c98, "_xt_lowint1"),
             (0x40080340, "_UserExceptionVector"),
             (0x40080300, "_KernelExceptionVector"),
+            (0x400e03d0, "Arduino loop()"),
+            (0x400e180c, "Display::render"),
+            (0x400e16f0, "GxEPD2_3C::nextPage"),
+            (0x400dd0b4, "GxEPD2_EPD::_writeCommand"),
+            (0x400dd114, "GxEPD2_EPD::_writeData"),
+            (0x400dd8d8, "GxEPD2_290_C90c::_Update_Full"),
+            (0x400d5f20, "SPIClass::begin"),
+            (0x400d60cc, "SPIClass::beginTransaction"),
+            (0x400d6148, "SPIClass::transfer(u8)"),
+            (0x400e14e8, "UsbSerialLink::loop"),
+            (0x400ddccc, "WifiWsLink::loop"),
+            (0x400de7f4, "Input::loop"),
         ] {
             if machine.cpu.get_pc() == pc {
-                static mut COUNTS: [u32; 9] = [0; 9];
+                static mut COUNTS: [u32; 21] = [0; 21];
                 let idx = match pc {
                     0x4008d260 => 0, 0x4008d2c4 => 1, 0x4008de44 => 2,
                     0x4008dbc4 => 3, 0x4008d4f0 => 4,
                     0x40083a10 => 5, 0x40083c98 => 6,
                     0x40080340 => 7, 0x40080300 => 8,
-                    _ => 9,
+                    0x400e03d0 => 9,
+                    0x400e180c => 10,
+                    0x400e16f0 => 11,
+                    0x400dd0b4 => 12,
+                    0x400dd114 => 13,
+                    0x400dd8d8 => 14,
+                    0x400d5f20 => 15,
+                    0x400d60cc => 16,
+                    0x400d6148 => 17,
+                    0x400e14e8 => 18,
+                    0x400ddccc => 19,
+                    0x400de7f4 => 20,
+                    _ => 21,
                 };
                 unsafe {
-                    if idx < 9 {
+                    if idx < 21 {
                         COUNTS[idx] += 1;
                         let c = COUNTS[idx];
                         if c <= 3 || c % 100 == 0 {
@@ -564,6 +589,22 @@ fn agentdeck_firmware_drives_panel_in_sim() {
         panel.refresh_generation(),
         panel.power_on()
     );
+    eprintln!(
+        "[agentdeck-sim] SPI3 transactions={} captured_bytes_len={}",
+        spi.transactions(),
+        spi.captured_bytes().len(),
+    );
+    let cap = spi.captured_bytes();
+    let head_n = cap.len().min(80);
+    if head_n > 0 {
+        let head_hex: Vec<String> = cap[..head_n].iter().map(|b| format!("{b:02x}")).collect();
+        eprintln!("[agentdeck-sim] first {head_n} SPI bytes: {}", head_hex.join(" "));
+    }
+    if cap.len() > 160 {
+        let tail = &cap[cap.len() - 80..];
+        let tail_hex: Vec<String> = tail.iter().map(|b| format!("{b:02x}")).collect();
+        eprintln!("[agentdeck-sim] last 80 SPI bytes: {}", tail_hex.join(" "));
+    }
     // Count non-trivial pixels (anything that's not the all-white reset state).
     let black = panel.black_plane();
     let non_white_black = black.iter().filter(|&&b| b != 0xFF).count();
@@ -575,4 +616,39 @@ fn agentdeck_firmware_drives_panel_in_sim() {
         black.len(),
         red.len()
     );
+
+    // Render the panel as a PPM so a human can visually verify the splash.
+    // Native portrait: 128w × 296h; black plane bit-packed MSB-first, 16 bytes per row.
+    let (w, h) = panel.dimensions();
+    let stride = w / 8;
+    let mut ppm = format!("P6\n{w} {h}\n255\n").into_bytes();
+    for y in 0..h {
+        for x in 0..w {
+            let byte = y * stride + x / 8;
+            let bit = 7 - (x % 8);
+            let black_bit = (black[byte] >> bit) & 1;
+            let red_bit = (red[byte] >> bit) & 1;
+            // GxEPD2 inverts the source bitmap before sending 0x26, so source's
+            // "no red" (0xFF) becomes 0x00 on the wire. Treat wire red_bit==1
+            // as the actual "render red" intent.
+            let (r, g, b) = if red_bit == 1 {
+                (220u8, 30u8, 40u8)
+            } else if black_bit == 0 {
+                (0u8, 0u8, 0u8)
+            } else {
+                (245u8, 245u8, 240u8)
+            };
+            ppm.extend_from_slice(&[r, g, b]);
+        }
+    }
+    let out_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../target/agentdeck_panel.ppm");
+    if let Some(parent) = out_path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    if let Err(e) = std::fs::write(&out_path, &ppm) {
+        eprintln!("[agentdeck-sim] failed to write panel PPM: {e}");
+    } else {
+        eprintln!("[agentdeck-sim] panel image written to {}", out_path.display());
+    }
 }
