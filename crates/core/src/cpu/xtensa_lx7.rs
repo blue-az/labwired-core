@@ -1846,6 +1846,10 @@ impl Cpu for XtensaLx7 {
         // Phase G implements interrupt dispatch; for Plan 1 this is a no-op.
     }
 
+    fn raise_interrupt_bits(&mut self, mask: u32) {
+        self.sr.raise_interrupt_bits(mask);
+    }
+
     fn get_register(&self, id: u8) -> u32 {
         if id < 16 {
             self.regs.read_logical(id)

@@ -155,6 +155,12 @@ pub trait Cpu: Send {
     fn get_energy_consumption(&self) -> f64 {
         0.0
     }
+
+    /// Set bits in the pending-interrupt register. Default no-op; Xtensa
+    /// implementations latch the bits into INTERRUPT (SR id 226) so a
+    /// cross-core IPI bridge in the host runtime can synthesise edges
+    /// without owning the SR file directly.
+    fn raise_interrupt_bits(&mut self, _mask: u32) {}
 }
 
 // Forwarding impl so `Machine<Box<dyn Cpu>>` is valid — used by the WASM
@@ -193,6 +199,7 @@ impl Cpu for Box<dyn Cpu> {
     fn index_of_register(&self, name: &str) -> Option<u8> { (**self).index_of_register(name) }
     fn inject_fault(&mut self, target: &str) -> SimResult<()> { (**self).inject_fault(target) }
     fn get_energy_consumption(&self) -> f64 { (**self).get_energy_consumption() }
+    fn raise_interrupt_bits(&mut self, mask: u32) { (**self).raise_interrupt_bits(mask) }
 }
 
 /// Trait representing a memory-mapped peripheral

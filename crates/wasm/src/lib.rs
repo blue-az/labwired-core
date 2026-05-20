@@ -19,6 +19,18 @@ use wasm_bindgen::prelude::*;
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 
+/// Per-instance state for the ESP32-classic cross-core IPI bridge that lets
+/// dual-core ESP-IDF firmware run on our single-CPU sim. Real silicon routes
+/// FROM_CPU_INTR0/1 through DPORT's intmatrix to a CPU internal interrupt
+/// bit; we sample the mapping each step and synthesise the edge on PRO_CPU.
+#[derive(Default)]
+struct Esp32IpiBridge {
+    from_cpu_bit0: Option<u8>,
+    from_cpu_bit1: Option<u8>,
+    last_from_cpu0_val: u32,
+    last_from_cpu1_val: u32,
+}
+
 #[wasm_bindgen]
 pub struct WasmSimulator {
     machine: Option<Machine<Box<dyn Cpu>>>,
@@ -27,6 +39,10 @@ pub struct WasmSimulator {
     uart_rx_bufs: Vec<Arc<Mutex<VecDeque<u8>>>>,
     #[allow(dead_code)]
     arch: Arch,
+    /// Set by `apply_agentdeck_quirks` / `enable_esp32_dual_core_emulation`.
+    /// When `Some`, `step_with_esp32_aids` runs the IPI bridge + dual-core
+    /// handshake keep-alives each cycle.
+    esp32_ipi: Option<Esp32IpiBridge>,
 }
 
 #[wasm_bindgen]
@@ -60,6 +76,7 @@ impl WasmSimulator {
             uart_sink,
             uart_rx_bufs,
             arch: Arch::Arm,
+            esp32_ipi: None,
         })
     }
 
@@ -120,6 +137,7 @@ impl WasmSimulator {
             uart_sink,
             uart_rx_bufs,
             arch: Arch::Arm,
+            esp32_ipi: None,
         })
     }
 
@@ -163,6 +181,7 @@ impl WasmSimulator {
             uart_sink,
             uart_rx_bufs,
             arch: Arch::Xtensa,
+            esp32_ipi: None,
         })
     }
 
@@ -1410,6 +1429,161 @@ impl WasmSimulator {
             })
             .collect();
         serde_wasm_bindgen::to_value(&list).unwrap_or(JsValue::NULL)
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    //  AgentDeck-in-sim glue. Call after constructing the WasmSimulator with
+    //  an ESP32-classic manifest + AgentDeck firmware ELF. Bakes in:
+    //    * Memory pre-fakes (partition header, RTC freq probe, dual-core
+    //      handshake bytes, ROM data region).
+    //    * Flash thunks for the ESP-IDF + Arduino-ESP32 functions whose real
+    //      behavior our sim can't model (heap_caps_*, esp_timer_init, locks,
+    //      setCpuFrequencyMhz, esp_ota_get_running_partition, HardwareSerial,
+    //      delay, WifiWsLink::begin, gpio_matrix_in/out, etc).
+    //    * One-byte runtime patch at 0x400E_90DE so loopTask gets pinned
+    //      to PRO_CPU instead of the APP_CPU we don't emulate.
+    //    * Enables the IPI bridge state so `step_with_esp32_aids` raises
+    //      INTERRUPT bits when firmware writes DPORT_CPU_INTR_FROM_CPU.
+    // ──────────────────────────────────────────────────────────────────────
+    #[wasm_bindgen]
+    pub fn apply_agentdeck_quirks(&mut self) -> Result<(), JsValue> {
+        use labwired_core::peripherals::esp32s3::rom_thunks;
+        let machine = self.machine.as_mut().ok_or_else(|| JsValue::from_str("no machine"))?;
+
+        // Seed SP — call_start_cpu0 expects BROM to have placed SP near top
+        // of DRAM (0x3FFE_0000). We skip BROM, so do it ourselves.
+        machine.cpu.set_sp(0x3FFE_0000);
+        // Force loopTask onto PRO_CPU.
+        let _ = machine.bus.write_u8(0x400E_90DE, 0x08);
+
+        // Dual-core handshake fakes (single-CPU sim).
+        let _ = machine.bus.write_u8(0x3FFC_6F04, 0x01); // s_cpu_up[1]
+        let _ = machine.bus.write_u8(0x3FFC_6F01, 0x01); // s_cpu_inited[0]
+        let _ = machine.bus.write_u8(0x3FFC_6F02, 0x01); // s_cpu_inited[1]
+        let _ = machine.bus.write_u8(0x3FFC_6FFD, 0x01); // s_system_inited[0]
+        let _ = machine.bus.write_u8(0x3FFC_6FFE, 0x01); // s_system_inited[1]
+        let _ = machine.bus.write_u8(0x3FFC_7190, 0x01); // s_other_cpu_startup_done
+
+        // RTC XTAL-freq probe = 40 MHz (high/low halves equal, shifted-1).
+        let _ = machine.bus.write_u32(0x3FF4_80B0, 0x0050_0050);
+
+        // Fake esp_image_header_t at 0x3F40_0000 (24 bytes), entry = AgentDeck.
+        let entry = 0x40081bf0_u32;
+        let header: [u8; 24] = [
+            0xE9, 0x01, 0x00, 0x00,
+            (entry & 0xFF) as u8, ((entry >> 8) & 0xFF) as u8,
+            ((entry >> 16) & 0xFF) as u8, ((entry >> 24) & 0xFF) as u8,
+            0xEE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ];
+        for (i, &b) in header.iter().enumerate() {
+            let _ = machine.bus.write_u8(0x3F40_0000 + i as u64, b);
+        }
+
+        // Flash thunks. Addresses are AgentDeck-firmware-specific (PC of the
+        // function in the ELF) — see crates/core/tests/e2e_agentdeck_in_sim.rs
+        // for the same list with detailed per-thunk rationale.
+        let thunks: &[(u32, rom_thunks::RomThunkFn)] = &[
+            (0x400e_e3b0, rom_thunks::esp_idf_heap_caps_init),
+            (0x4008_2904, rom_thunks::esp_idf_heap_caps_malloc),
+            (0x4008_2a70, rom_thunks::esp_idf_heap_caps_calloc),
+            (0x4008_25dc, rom_thunks::esp_idf_heap_caps_free),
+            (0x4008_29f0, rom_thunks::esp_idf_heap_caps_realloc),
+            (0x4012_9034, rom_thunks::nop_return_zero),  // esp_timer_init
+            (0x4008_17dc, rom_thunks::nop_return_zero),  // spi_flash_disable_...
+            (0x4008_188c, rom_thunks::nop_return_zero),  // spi_flash_enable_...
+            (0x4008_3384, rom_thunks::nop_return_zero),  // __retarget_lock_init_recursive
+            (0x4008_339c, rom_thunks::nop_return_zero),  // __retarget_lock_close_recursive
+            (0x4008_33b0, rom_thunks::nop_return_zero),  // __retarget_lock_acquire_recursive
+            (0x4008_33cc, rom_thunks::nop_return_zero),  // __retarget_lock_release_recursive
+            (0x4008_bbd0, rom_thunks::nop_return_zero),  // _esp_error_check_failed
+            (0x400e_99dc, rom_thunks::nop_return_zero),  // setCpuFrequencyMhz
+            (0x400e_ae18, rom_thunks::nop_return_fake_ptr), // esp_ota_get_running_partition
+            (0x400e_2280, rom_thunks::nop_return_zero),  // HardwareSerial::begin
+            (0x400e_5c28, rom_thunks::nop_return_zero),  // Arduino delay()
+            (0x400d_de98, rom_thunks::nop_return_zero),  // WifiWsLink::begin
+        ];
+        for &(pc, f) in thunks {
+            machine.bus.install_flash_thunk(pc, f)
+                .map_err(|e| JsValue::from_str(&format!("install thunk @{pc:#x}: {e}")))?;
+        }
+
+        self.esp32_ipi = Some(Esp32IpiBridge::default());
+        Ok(())
+    }
+
+    /// Re-write the dual-core handshake bytes. Call every ~10k steps from JS
+    /// — firmware boot code revisits these and we need them to stay 1.
+    #[wasm_bindgen]
+    pub fn keep_alive_esp32_dual_core(&mut self) {
+        let machine = match self.machine.as_mut() { Some(m) => m, None => return };
+        let _ = machine.bus.write_u8(0x3FFC_6F04, 0x01);
+        let _ = machine.bus.write_u8(0x3FFC_6F01, 0x01);
+        let _ = machine.bus.write_u8(0x3FFC_6F02, 0x01);
+        let _ = machine.bus.write_u8(0x3FFC_6FFD, 0x01);
+        let _ = machine.bus.write_u8(0x3FFC_6FFE, 0x01);
+        let _ = machine.bus.write_u8(0x3FFC_7190, 0x01);
+    }
+
+    /// Step `cycles` cycles with the ESP32-classic IPI bridge active. Each
+    /// cycle samples the DPORT FROM_CPU intmatrix mapping and trigger
+    /// registers, raises the corresponding INTERRUPT bit, and clears the
+    /// trigger so the next write re-edges. The dual-core handshake bytes
+    /// are re-applied every 10k cycles (matching the e2e test cadence).
+    /// Falls back to plain `step` if `apply_agentdeck_quirks` hasn't been
+    /// called yet.
+    #[wasm_bindgen]
+    pub fn step_with_esp32_aids(&mut self, cycles: u32) -> Result<(), JsValue> {
+        if self.esp32_ipi.is_none() {
+            return self.step(cycles);
+        }
+        for i in 0..cycles {
+            {
+                let machine = self.machine.as_mut().unwrap();
+                let bridge = self.esp32_ipi.as_mut().unwrap();
+                if let Ok(v) = machine.bus.read_u32(0x3FF0_0164) {
+                    let bit = (v & 0x1F) as u8;
+                    if v != 0 && bit < 32 {
+                        bridge.from_cpu_bit0 = Some(bit);
+                    }
+                }
+                if let Ok(v) = machine.bus.read_u32(0x3FF0_0168) {
+                    let bit = (v & 0x1F) as u8;
+                    if v != 0 && bit < 32 {
+                        bridge.from_cpu_bit1 = Some(bit);
+                    }
+                }
+                if let Ok(v0) = machine.bus.read_u32(0x3FF0_00DC) {
+                    if v0 != 0 && v0 != bridge.last_from_cpu0_val {
+                        if let Some(bit) = bridge.from_cpu_bit0 {
+                            machine.cpu.raise_interrupt_bits(1u32 << bit);
+                        }
+                        let _ = machine.bus.write_u32(0x3FF0_00DC, 0);
+                    }
+                    bridge.last_from_cpu0_val = 0;
+                }
+                if let Ok(v1) = machine.bus.read_u32(0x3FF0_00E0) {
+                    if v1 != 0 && v1 != bridge.last_from_cpu1_val {
+                        if let Some(bit) = bridge.from_cpu_bit1 {
+                            machine.cpu.raise_interrupt_bits(1u32 << bit);
+                        }
+                        let _ = machine.bus.write_u32(0x3FF0_00E0, 0);
+                    }
+                    bridge.last_from_cpu1_val = 0;
+                }
+                // Dual-core handshake keep-alive. Cheap (~6 byte writes
+                // per 10k cycles) and matches the e2e test cadence.
+                if i % 10_000 == 0 {
+                    let _ = machine.bus.write_u8(0x3FFC_6F04, 0x01);
+                    let _ = machine.bus.write_u8(0x3FFC_6F01, 0x01);
+                    let _ = machine.bus.write_u8(0x3FFC_6F02, 0x01);
+                    let _ = machine.bus.write_u8(0x3FFC_6FFD, 0x01);
+                    let _ = machine.bus.write_u8(0x3FFC_6FFE, 0x01);
+                    let _ = machine.bus.write_u8(0x3FFC_7190, 0x01);
+                }
+            }
+            self.machine().step().map_err(|e| JsValue::from_str(&format!("Step Error: {e}")))?;
+        }
+        Ok(())
     }
 }
 
