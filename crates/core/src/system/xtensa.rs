@@ -252,6 +252,9 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
     rom_bank.register(0x4000_d280, rom_thunks::rom_umoddi3);   // __umoddi3
     rom_bank.register(0x4000_c7e8, rom_thunks::rom_clzsi2);    // __clzsi2
     rom_bank.register(0x4000_c7f0, rom_thunks::rom_ctzsi2);    // __ctzsi2
+    // esp_crc8 — used by get_efuse_factory_mac to validate the MAC blob
+    // against the stored CRC byte. Dallas/Maxim 1-Wire CRC-8 algorithm.
+    rom_bank.register(0x4005_d144, rom_thunks::rom_esp_crc8);
     // SPI flash / eFuse helpers — used by Arduino-ESP32's flash init.
     rom_bank.register(0x4000_8658, rom_thunks::nop_return_zero);
     // _xtos_set_intlevel(level) -> prev. Sets PS.INTLEVEL to `level`,

@@ -419,6 +419,32 @@ pub fn rom_umoddi3(cpu: &mut XtensaLx7, _bus: &mut dyn Bus) -> SimResult<()> {
 }
 
 
+/// `esp_crc8(const uint8_t *p, uint32_t len) -> uint8_t` — ESP32 BROM CRC-8
+/// used to validate the factory MAC against ESP_EFUSE_MAC_CRC. Algorithm is
+/// Dallas/Maxim 1-Wire CRC-8 (polynomial 0x31, reflected 0x8C, init=0).
+/// In our sim the EFUSE blob is zero-init, so CRC of [0,0,0,0,0,0] = 0 and
+/// the stored CRC byte is also 0 — the validity check passes and
+/// get_efuse_factory_mac returns success.
+pub fn rom_esp_crc8(cpu: &mut XtensaLx7, bus: &mut dyn Bus) -> SimResult<()> {
+    let n = cpu.ps.callinc() * 4;
+    let p = cpu.regs.read_logical(n + 2);
+    let len = cpu.regs.read_logical(n + 3);
+    let mut crc: u8 = 0;
+    for i in 0..len {
+        let byte = bus.read_u8(p.wrapping_add(i) as u64).unwrap_or(0);
+        crc ^= byte;
+        for _ in 0..8 {
+            if crc & 1 != 0 {
+                crc = (crc >> 1) ^ 0x8C;
+            } else {
+                crc >>= 1;
+            }
+        }
+    }
+    RomThunkBank::return_with(cpu, crc as u32);
+    Ok(())
+}
+
 /// `__clzsi2(u32) -> i32` — leading zero count for u32.
 pub fn rom_clzsi2(cpu: &mut XtensaLx7, _bus: &mut dyn Bus) -> SimResult<()> {
     let n = cpu.ps.callinc() * 4;
