@@ -350,10 +350,17 @@ fn read_u64_args(cpu: &XtensaLx7, lo: u8, hi: u8) -> u64 {
 }
 
 /// Helper: write a 64-bit return value to `a[n+2]:a[n+3]` and jump back.
+///
+/// `return_with` pops the windowed-call shadow spill AFTER setting the
+/// return value — and that pop range covers logical offsets n+2..n+5
+/// (the callee's a2-a5). Anything we write to n+3 BEFORE return_with
+/// would be clobbered by the shadow pop. So we write n+3 AFTER
+/// return_with has finished its bookkeeping; that's the only window
+/// where the high half stays intact through to the caller's view.
 fn return_u64(cpu: &mut XtensaLx7, v: u64) {
     let n = cpu.ps.callinc() * 4;
-    cpu.regs.write_logical(n + 3, (v >> 32) as u32);
     RomThunkBank::return_with(cpu, v as u32);
+    cpu.regs.write_logical(n + 3, (v >> 32) as u32);
 }
 
 /// `__ashldi3(u64 v, i32 count) -> u64` — left shift.
@@ -585,9 +592,12 @@ pub fn rom_udivdi3(cpu: &mut XtensaLx7, _bus: &mut dyn Bus) -> SimResult<()> {
     let num = (num_hi << 32) | num_lo;
     let den = (den_hi << 32) | den_lo;
     let q: u64 = num.checked_div(den).unwrap_or(u64::MAX);
-    // Write low half to a[n+2] (the C-ABI primary return) and high half to a[n+3].
-    cpu.regs.write_logical(n + 3, (q >> 32) as u32);
+    // Order matters: `return_with` pops the windowed-call shadow spill
+    // which covers logical n+2..n+5. A write to n+3 BEFORE the pop would
+    // be clobbered. Write the low half via return_with first (it re-writes
+    // n+2 after the pop), then write the high half directly.
     RomThunkBank::return_with(cpu, q as u32);
+    cpu.regs.write_logical(n + 3, (q >> 32) as u32);
     Ok(())
 }
 
