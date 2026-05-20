@@ -403,13 +403,31 @@ pub fn rom_moddi3(cpu: &mut XtensaLx7, _bus: &mut dyn Bus) -> SimResult<()> {
 }
 
 /// `__umoddi3(u64, u64) -> u64`.
+///
+/// ESP32 BROM quirk: the real BROM implementation shares code with
+/// `__udivmoddi4` and ALSO leaves the quotient in caller's `a4:a5` on
+/// return — newlib printf's integer-formatting inner loop relies on this
+/// to skip a separate `__udivdi3` call per digit. We replicate the side
+/// effect, writing caller's logical a4:a5 *after* `return_with` pops the
+/// shadow slots so the values survive the windowed-return restore.
 pub fn rom_umoddi3(cpu: &mut XtensaLx7, _bus: &mut dyn Bus) -> SimResult<()> {
-    let n = read_u64_args(cpu, 2, 3);
-    let d = read_u64_args(cpu, 4, 5);
+    let n_args = cpu.ps.callinc() * 4;
+    let num_lo = cpu.regs.read_logical(n_args + 2) as u64;
+    let num_hi = cpu.regs.read_logical(n_args + 3) as u64;
+    let den_lo = cpu.regs.read_logical(n_args + 4) as u64;
+    let den_hi = cpu.regs.read_logical(n_args + 5) as u64;
+    let n = (num_hi << 32) | num_lo;
+    let d = (den_hi << 32) | den_lo;
     let r = n.checked_rem(d).unwrap_or(0);
+    let q = n.checked_div(d).unwrap_or(0);
     return_u64(cpu, r);
+    // After return_with has unwound the windowed-call shadow, we're back in
+    // the caller's window. Write the quotient into a4:a5 the firmware sees.
+    cpu.regs.write_logical(4, q as u32);
+    cpu.regs.write_logical(5, (q >> 32) as u32);
     Ok(())
 }
+
 
 /// `__clzsi2(u32) -> i32` — leading zero count for u32.
 pub fn rom_clzsi2(cpu: &mut XtensaLx7, _bus: &mut dyn Bus) -> SimResult<()> {
