@@ -1,0 +1,28 @@
+# AgentDeck production hardware reference manifest.
+#
+# Pin map matches `firmware/src/pins.h` on the physical AgentDeck device:
+#   BUSY = GPIO4
+#   RST  = GPIO16
+#   DC   = GPIO17
+#   CS   = GPIO5
+#   SCK  = GPIO18
+#   MOSI = GPIO23
+#
+# Kept in sync with `examples/esp32-epaper-lab/system.yaml` manually — bump
+# both when the wiring ever needs to change.
+name: "agentdeck"
+chip: "../chips/esp32.yaml"
+external_devices:
+  - id: "epaper"
+    type: "ssd1680_tricolor_290"
+    connection: "spi3"
+    config:
+      cs_pin: "GPIO5"
+board_io:
+  - id: "epaper"
+    kind: "spi_device"
+    peripheral: "spi3"
+    pin: 5
+    signal: "input"
+    active_high: true
+    device_type: "ssd1680_tricolor_290"

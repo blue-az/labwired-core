@@ -41,7 +41,7 @@ pub struct WasmSimulator {
     uart_rx_bufs: Vec<Arc<Mutex<VecDeque<u8>>>>,
     #[allow(dead_code)]
     arch: Arch,
-    /// Set by `apply_agentdeck_quirks` / `enable_esp32_dual_core_emulation`.
+    /// Set by `install_esp32_arduino_quirks` / `enable_esp32_dual_core_emulation`.
     /// When `Some`, `step_with_esp32_aids` runs the IPI bridge + dual-core
     /// handshake keep-alives each cycle.
     esp32_ipi: Option<Esp32IpiBridge>,
@@ -1434,8 +1434,9 @@ impl WasmSimulator {
     }
 
     // ──────────────────────────────────────────────────────────────────────
-    //  AgentDeck-in-sim glue. Call after constructing the WasmSimulator with
-    //  an ESP32-classic manifest + AgentDeck firmware ELF. Bakes in:
+    //  Arduino-ESP32 bootstrap glue. Call after constructing the WasmSimulator
+    //  with an ESP32-classic manifest + an Arduino-ESP32 firmware ELF (e.g.
+    //  AgentDeck). Bakes in:
     //    * Memory pre-fakes (partition header, RTC freq probe, dual-core
     //      handshake bytes, ROM data region).
     //    * Flash thunks for the ESP-IDF + Arduino-ESP32 functions whose real
@@ -1448,7 +1449,7 @@ impl WasmSimulator {
     //      INTERRUPT bits when firmware writes DPORT_CPU_INTR_FROM_CPU.
     // ──────────────────────────────────────────────────────────────────────
     #[wasm_bindgen]
-    pub fn apply_agentdeck_quirks(&mut self) -> Result<(), JsValue> {
+    pub fn install_esp32_arduino_quirks(&mut self) -> Result<(), JsValue> {
         use labwired_core::peripherals::esp32s3::rom_thunks;
         let machine = self
             .machine
@@ -1540,6 +1541,21 @@ impl WasmSimulator {
         Ok(())
     }
 
+    // DEPRECATED: renamed to install_esp32_arduino_quirks for clarity.
+    // The concern is Arduino-ESP32 firmware bootstrap (heap-caps thunks,
+    // dual-core handshake fakery, sendHello stub, WifiWsLink::loop stub,
+    // esp_crc8 thunk, etc.), not a specific customer product. Kept as a
+    // thin wrapper so the standalone /agentdeck.html page (and any other
+    // pre-rename caller) keeps working.
+    #[wasm_bindgen]
+    #[deprecated(
+        note = "Renamed to install_esp32_arduino_quirks — the bootstrap is generic Arduino-ESP32 glue, not AgentDeck-specific."
+    )]
+    pub fn apply_agentdeck_quirks(&mut self) -> Result<(), JsValue> {
+        #[allow(deprecated)]
+        self.install_esp32_arduino_quirks()
+    }
+
     /// Re-write the dual-core handshake bytes. Call every ~10k steps from JS
     /// — firmware boot code revisits these and we need them to stay 1.
     #[wasm_bindgen]
@@ -1561,8 +1577,8 @@ impl WasmSimulator {
     /// registers, raises the corresponding INTERRUPT bit, and clears the
     /// trigger so the next write re-edges. The dual-core handshake bytes
     /// are re-applied every 10k cycles (matching the e2e test cadence).
-    /// Falls back to plain `step` if `apply_agentdeck_quirks` hasn't been
-    /// called yet.
+    /// Falls back to plain `step` if `install_esp32_arduino_quirks` hasn't
+    /// been called yet.
     #[wasm_bindgen]
     pub fn step_with_esp32_aids(&mut self, cycles: u32) -> Result<(), JsValue> {
         if self.esp32_ipi.is_none() {
