@@ -19,6 +19,7 @@ pub mod network;
 pub mod peripherals;
 pub mod physics;
 pub mod signals;
+pub mod runtime_snapshot;
 pub mod snapshot;
 pub mod system;
 pub mod trace;
@@ -145,6 +146,23 @@ pub trait Cpu: Send {
     fn set_register(&mut self, id: u8, val: u32);
     fn snapshot(&self) -> snapshot::CpuSnapshot;
     fn apply_snapshot(&mut self, snapshot: &snapshot::CpuSnapshot);
+
+    /// Full mid-flight CPU state for binary runtime snapshots. Returns the
+    /// arch tag + an opaque blob the matching CPU type knows how to parse.
+    /// Default panics — every concrete `Cpu` impl must override.
+    fn runtime_snapshot(&self) -> (runtime_snapshot::CpuKind, Vec<u8>) {
+        unimplemented!("runtime_snapshot not implemented for this Cpu")
+    }
+
+    /// Apply a previously-taken runtime snapshot. Default no-op so
+    /// stub/test CPUs don't need to override.
+    fn apply_runtime_snapshot(
+        &mut self,
+        _kind: runtime_snapshot::CpuKind,
+        _bytes: &[u8],
+    ) -> SimResult<()> {
+        Ok(())
+    }
     fn get_register_names(&self) -> Vec<String>;
     fn index_of_register(&self, name: &str) -> Option<u8>;
 
@@ -210,6 +228,16 @@ impl Cpu for Box<dyn Cpu> {
     }
     fn apply_snapshot(&mut self, s: &snapshot::CpuSnapshot) {
         (**self).apply_snapshot(s)
+    }
+    fn runtime_snapshot(&self) -> (runtime_snapshot::CpuKind, Vec<u8>) {
+        (**self).runtime_snapshot()
+    }
+    fn apply_runtime_snapshot(
+        &mut self,
+        kind: runtime_snapshot::CpuKind,
+        bytes: &[u8],
+    ) -> SimResult<()> {
+        (**self).apply_runtime_snapshot(kind, bytes)
     }
     fn get_register_names(&self) -> Vec<String> {
         (**self).get_register_names()
@@ -282,6 +310,26 @@ pub trait Peripheral: std::fmt::Debug + Send {
         serde_json::Value::Null
     }
     fn restore(&mut self, _state: serde_json::Value) -> SimResult<()> {
+        Ok(())
+    }
+
+    /// Binary mid-flight runtime snapshot — captures whatever state this
+    /// peripheral needs for resume. Default is an empty blob: stateless
+    /// peripherals can ignore it. Override for RAM regions, framebuffer-
+    /// holding panels, sparse register banks, etc.
+    ///
+    /// Distinct from [`Self::snapshot`], which produces a JSON value for
+    /// the determinism gates and human-inspectable replay tools — those
+    /// can't carry the megabyte of RAM contents we need for instant
+    /// resume.
+    fn runtime_snapshot(&self) -> Vec<u8> {
+        Vec::new()
+    }
+
+    /// Restore from a previously-taken `runtime_snapshot()`. Default is
+    /// a no-op: peripherals that don't override `runtime_snapshot`
+    /// don't need to override this either.
+    fn restore_runtime_snapshot(&mut self, _bytes: &[u8]) -> SimResult<()> {
         Ok(())
     }
 }
@@ -437,6 +485,56 @@ impl<C: Cpu> Machine<C> {
             total_cycles: 0,
             config: SimulationConfig::default(),
         }
+    }
+
+    /// Take a binary mid-flight runtime snapshot of the entire machine —
+    /// CPU + every peripheral that overrides `runtime_snapshot()`. The
+    /// returned blob feeds straight into [`Self::apply_runtime_snapshot`]
+    /// on a freshly-constructed `Machine` with the same firmware loaded
+    /// and the same bus topology.
+    ///
+    /// Distinct from [`Self::snapshot`] (which produces a JSON value for
+    /// the determinism gates) — this one is binary, captures everything
+    /// needed for resume (full SR file, shadow stacks, RAM regions, etc.)
+    /// and is what the playground uses to ship pre-warmed boot snapshots
+    /// alongside firmware ELFs.
+    pub fn take_runtime_snapshot(&self) -> runtime_snapshot::MachineRuntimeSnapshot {
+        let (cpu_kind, cpu_data) = self.cpu.runtime_snapshot();
+        let peripherals: Vec<(String, Vec<u8>)> = self
+            .bus
+            .peripherals
+            .iter()
+            .map(|entry| (entry.name.clone(), entry.dev.runtime_snapshot()))
+            .collect();
+        runtime_snapshot::MachineRuntimeSnapshot::new(cpu_kind, cpu_data, peripherals)
+    }
+
+    /// Restore from a previously-taken runtime snapshot. Bus topology
+    /// must match (same peripherals registered under the same names) —
+    /// peripherals not present in the snapshot keep their current state,
+    /// peripherals named in the snapshot but missing on the bus return
+    /// `MissingPeripheral` so the caller can fail loudly instead of
+    /// silently dropping state.
+    pub fn apply_runtime_snapshot(
+        &mut self,
+        snap: &runtime_snapshot::MachineRuntimeSnapshot,
+    ) -> SimResult<()> {
+        self.cpu
+            .apply_runtime_snapshot(snap.cpu_kind, &snap.cpu_data)?;
+        for (name, blob) in &snap.peripherals {
+            let entry = self
+                .bus
+                .peripherals
+                .iter_mut()
+                .find(|e| &e.name == name)
+                .ok_or_else(|| {
+                    SimulationError::NotImplemented(format!(
+                        "apply_runtime_snapshot: peripheral '{name}' not on bus"
+                    ))
+                })?;
+            entry.dev.restore_runtime_snapshot(blob)?;
+        }
+        Ok(())
     }
 }
 

@@ -30,6 +30,15 @@ pub trait SpiDevice: Send {
     fn as_any_mut(&mut self) -> Option<&mut dyn Any> {
         None
     }
+    /// Binary mid-flight snapshot for runtime resume. Default empty;
+    /// override for stateful devices (e-paper panels with framebuffers,
+    /// thermocouples with cached temperatures, etc.).
+    fn runtime_snapshot(&self) -> Vec<u8> {
+        Vec::new()
+    }
+    fn restore_runtime_snapshot(&mut self, _bytes: &[u8]) -> crate::SimResult<()> {
+        Ok(())
+    }
 }
 
 /// STM32F1 compatible SPI peripheral

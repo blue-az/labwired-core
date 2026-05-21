@@ -106,6 +106,32 @@ impl ArFile {
         self.phys[phys_idx & 63] = v;
     }
 
+    /// Borrow the full 64-entry physical AR file — used by runtime
+    /// snapshot to capture the state any windowed call may have rotated
+    /// out of the visible logical view.
+    pub fn phys_slice(&self) -> &[u32; 64] {
+        &self.phys
+    }
+
+    /// Replace the full physical AR file — used by runtime snapshot
+    /// restore. Caller is responsible for setting `window_base` /
+    /// `window_start` consistently.
+    pub fn set_phys(&mut self, phys: [u32; 64]) {
+        self.phys = phys;
+    }
+
+    /// Borrow the per-WB shadow-spill stacks. 16 slots; each is a stack
+    /// of saved 4-register frames pushed by `push_shadow`.
+    pub fn shadow_stacks(&self) -> &[Vec<[u32; 4]>; 16] {
+        &self.shadow
+    }
+
+    /// Replace the per-WB shadow-spill stacks. Caller must ensure the
+    /// outer length stays 16.
+    pub fn set_shadow_stacks(&mut self, shadow: [Vec<[u32; 4]>; 16]) {
+        self.shadow = shadow;
+    }
+
     #[inline]
     fn logical_to_physical(&self, logical: u8) -> usize {
         ((self.window_base as usize * 4) + logical as usize) & 63

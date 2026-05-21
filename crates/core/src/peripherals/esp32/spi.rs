@@ -219,6 +219,65 @@ impl Peripheral for Esp32Spi {
         })
     }
 
+    /// Runtime snapshot — controller registers plus per-attached-device
+    /// blobs. Device blobs are keyed by CS pin so the restorer can match
+    /// them up regardless of attach order.
+    fn runtime_snapshot(&self) -> Vec<u8> {
+        #[derive(serde::Serialize, serde::Deserialize)]
+        struct Snap {
+            cmd: u32,
+            user: u32,
+            mosi_dlen: u32,
+            captured_bytes: Vec<u8>,
+            transactions: u64,
+            // (cs_pin, opaque device snapshot bytes)
+            devices: Vec<(String, Vec<u8>)>,
+        }
+        let snap = Snap {
+            cmd: self.cmd,
+            user: self.user,
+            mosi_dlen: self.mosi_dlen,
+            captured_bytes: self.captured_bytes.clone(),
+            transactions: self.transactions,
+            devices: self
+                .attached_devices
+                .iter()
+                .map(|d| (d.cs_pin().to_string(), d.runtime_snapshot()))
+                .collect(),
+        };
+        bincode::serialize(&snap).expect("bincode serialize Esp32Spi")
+    }
+
+    fn restore_runtime_snapshot(&mut self, bytes: &[u8]) -> SimResult<()> {
+        #[derive(serde::Serialize, serde::Deserialize)]
+        struct Snap {
+            cmd: u32,
+            user: u32,
+            mosi_dlen: u32,
+            captured_bytes: Vec<u8>,
+            transactions: u64,
+            devices: Vec<(String, Vec<u8>)>,
+        }
+        let snap: Snap = bincode::deserialize(bytes).map_err(|e| {
+            crate::SimulationError::NotImplemented(format!("Esp32Spi snapshot decode: {e}"))
+        })?;
+        self.cmd = snap.cmd;
+        self.user = snap.user;
+        self.mosi_dlen = snap.mosi_dlen;
+        self.captured_bytes = snap.captured_bytes;
+        self.transactions = snap.transactions;
+        for (cs_pin, blob) in snap.devices {
+            if let Some(dev) = self
+                .attached_devices
+                .iter_mut()
+                .find(|d| d.cs_pin() == cs_pin)
+            {
+                dev.restore_runtime_snapshot(&blob)?;
+            }
+        }
+        Ok(())
+    }
+
     fn tick(&mut self) -> PeripheralTickResult {
         PeripheralTickResult::default()
     }

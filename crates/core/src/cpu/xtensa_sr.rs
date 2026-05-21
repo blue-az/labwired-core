@@ -191,6 +191,19 @@ impl XtensaSrFile {
         self.storage[sr_id as usize] = v;
     }
 
+    /// Borrow the full SR storage. Used by runtime snapshot to capture
+    /// every special register (CCOUNT, CCOMPARE*, INTENABLE, INTERRUPT,
+    /// EPC*, EXCSAVE*, VECBASE, …) in one shot.
+    pub fn raw_storage(&self) -> &[u32; 256] {
+        &self.storage
+    }
+
+    /// Replace the full SR storage from a previously-taken snapshot.
+    /// Caller guarantees the slice is exactly 256 entries long.
+    pub fn set_raw_storage(&mut self, storage: [u32; 256]) {
+        self.storage = storage;
+    }
+
     /// Engine-facing: raise pending bits in the INTERRUPT SR. Bypasses
     /// the WSR-ignores-INTERRUPT rule because the engine is simulating
     /// the hardware-latched interrupt edge, not a software write.

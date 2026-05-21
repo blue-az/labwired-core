@@ -19,7 +19,7 @@ const PLANE_BYTES: usize = WIDTH_BYTES * HEIGHT;
 /// GPIO pin in real silicon; the simulator avoids needing a GPIO observer
 /// by deriving expected byte counts from the command set itself — the same
 /// trick used by the ILI9341 model.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
 enum ProtoState {
     Idle,
     AwaitingParams {
@@ -290,9 +290,85 @@ enum PlaneKind {
     Red,
 }
 
+/// Wire-format snapshot. Captures everything we need to resume rendering
+/// from a pre-warmed boot — both planes, the protocol state machine, the
+/// power/refresh flags, and the RAM-window counters.
+#[derive(serde::Serialize, serde::Deserialize)]
+struct Ssd1680Snap {
+    cs_pin: String,
+    hibernating: bool,
+    power_on: bool,
+    refresh_pending: bool,
+    reset_seen: bool,
+    col_start_bytes: u8,
+    col_end_bytes: u8,
+    row_start: u16,
+    row_end: u16,
+    cur_col_bytes: u8,
+    cur_row: u16,
+    black_plane: Vec<u8>,
+    red_plane: Vec<u8>,
+    refresh_generation: u32,
+    state: ProtoState,
+}
+
 impl SpiDevice for Ssd1680Tricolor290 {
     fn cs_pin(&self) -> &str {
         &self.cs_pin
+    }
+
+    fn runtime_snapshot(&self) -> Vec<u8> {
+        let snap = Ssd1680Snap {
+            cs_pin: self.cs_pin.clone(),
+            hibernating: self.hibernating,
+            power_on: self.power_on,
+            refresh_pending: self.refresh_pending,
+            reset_seen: self.reset_seen,
+            col_start_bytes: self.col_start_bytes,
+            col_end_bytes: self.col_end_bytes,
+            row_start: self.row_start,
+            row_end: self.row_end,
+            cur_col_bytes: self.cur_col_bytes,
+            cur_row: self.cur_row,
+            black_plane: self.black_plane.clone(),
+            red_plane: self.red_plane.clone(),
+            refresh_generation: self.refresh_generation,
+            state: self.state,
+        };
+        bincode::serialize(&snap).expect("bincode serialize Ssd1680Snap")
+    }
+
+    fn restore_runtime_snapshot(&mut self, bytes: &[u8]) -> crate::SimResult<()> {
+        let snap: Ssd1680Snap = bincode::deserialize(bytes).map_err(|e| {
+            crate::SimulationError::NotImplemented(format!("Ssd1680 snapshot decode: {e}"))
+        })?;
+        self.cs_pin = snap.cs_pin;
+        self.hibernating = snap.hibernating;
+        self.power_on = snap.power_on;
+        self.refresh_pending = snap.refresh_pending;
+        self.reset_seen = snap.reset_seen;
+        self.col_start_bytes = snap.col_start_bytes;
+        self.col_end_bytes = snap.col_end_bytes;
+        self.row_start = snap.row_start;
+        self.row_end = snap.row_end;
+        self.cur_col_bytes = snap.cur_col_bytes;
+        self.cur_row = snap.cur_row;
+        if snap.black_plane.len() != self.black_plane.len()
+            || snap.red_plane.len() != self.red_plane.len()
+        {
+            return Err(crate::SimulationError::NotImplemented(format!(
+                "Ssd1680 snapshot plane size mismatch: black {} vs {}, red {} vs {}",
+                snap.black_plane.len(),
+                self.black_plane.len(),
+                snap.red_plane.len(),
+                self.red_plane.len()
+            )));
+        }
+        self.black_plane = snap.black_plane;
+        self.red_plane = snap.red_plane;
+        self.refresh_generation = snap.refresh_generation;
+        self.state = snap.state;
+        Ok(())
     }
 
     fn cs_select(&mut self) {

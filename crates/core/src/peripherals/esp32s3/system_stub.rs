@@ -83,6 +83,35 @@ impl Peripheral for SystemStub {
     fn as_any(&self) -> Option<&dyn std::any::Any> {
         Some(self)
     }
+
+    /// Dump the sparse word map + the unwritten-read sentinel. Compact:
+    /// only addresses the firmware actually wrote to get serialized.
+    fn runtime_snapshot(&self) -> Vec<u8> {
+        #[derive(serde::Serialize, serde::Deserialize)]
+        struct Snap {
+            words: Vec<(u64, u32)>,
+            unwritten_read: u32,
+        }
+        let snap = Snap {
+            words: self.words.iter().map(|(k, v)| (*k, *v)).collect(),
+            unwritten_read: self.unwritten_read,
+        };
+        bincode::serialize(&snap).expect("bincode serialize SystemStub")
+    }
+
+    fn restore_runtime_snapshot(&mut self, bytes: &[u8]) -> SimResult<()> {
+        #[derive(serde::Serialize, serde::Deserialize)]
+        struct Snap {
+            words: Vec<(u64, u32)>,
+            unwritten_read: u32,
+        }
+        let snap: Snap = bincode::deserialize(bytes).map_err(|e| {
+            crate::SimulationError::NotImplemented(format!("SystemStub snapshot decode: {e}"))
+        })?;
+        self.words = snap.words.into_iter().collect();
+        self.unwritten_read = snap.unwritten_read;
+        Ok(())
+    }
 }
 
 /// RTC / PMU / IO_MUX / RTC_IO / APB_CTRL peripheral stub. Round-trips
@@ -114,12 +143,33 @@ impl RtcCntlStub {
     }
 }
 
+impl RtcCntlStub {
+    /// Bincode-serialize the sparse word map for runtime snapshots.
+    fn snapshot_words(&self) -> Vec<u8> {
+        let words: Vec<(u64, u32)> = self.words.iter().map(|(k, v)| (*k, *v)).collect();
+        bincode::serialize(&words).expect("bincode serialize RtcCntlStub words")
+    }
+    fn restore_words(&mut self, bytes: &[u8]) -> SimResult<()> {
+        let words: Vec<(u64, u32)> = bincode::deserialize(bytes).map_err(|e| {
+            crate::SimulationError::NotImplemented(format!("RtcCntlStub snapshot decode: {e}"))
+        })?;
+        self.words = words.into_iter().collect();
+        Ok(())
+    }
+}
+
 impl Peripheral for RtcCntlStub {
     fn read(&self, offset: u64) -> SimResult<u8> {
         let word_off = offset & !3;
         let byte_off = (offset & 3) * 8;
         let word = self.words.get(&word_off).copied().unwrap_or(0);
         Ok(((word >> byte_off) & 0xFF) as u8)
+    }
+    fn runtime_snapshot(&self) -> Vec<u8> {
+        self.snapshot_words()
+    }
+    fn restore_runtime_snapshot(&mut self, bytes: &[u8]) -> SimResult<()> {
+        self.restore_words(bytes)
     }
     fn write(&mut self, offset: u64, value: u8) -> SimResult<()> {
         let word_off = offset & !3;
@@ -234,6 +284,17 @@ impl Peripheral for TimgStub {
         let byte_off = (offset & 3) * 8;
         let word = self.words.get(&word_off).copied().unwrap_or(0);
         Ok(((word >> byte_off) & 0xFF) as u8)
+    }
+    fn runtime_snapshot(&self) -> Vec<u8> {
+        let words: Vec<(u64, u32)> = self.words.iter().map(|(k, v)| (*k, *v)).collect();
+        bincode::serialize(&words).expect("bincode serialize TimgStub")
+    }
+    fn restore_runtime_snapshot(&mut self, bytes: &[u8]) -> SimResult<()> {
+        let words: Vec<(u64, u32)> = bincode::deserialize(bytes).map_err(|e| {
+            crate::SimulationError::NotImplemented(format!("TimgStub snapshot decode: {e}"))
+        })?;
+        self.words = words.into_iter().collect();
+        Ok(())
     }
     fn write(&mut self, offset: u64, value: u8) -> SimResult<()> {
         let word_off = offset & !3;

@@ -1896,6 +1896,79 @@ impl Cpu for XtensaLx7 {
         }
     }
 
+    fn runtime_snapshot(
+        &self,
+    ) -> (
+        crate::runtime_snapshot::CpuKind,
+        Vec<u8>,
+    ) {
+        use crate::runtime_snapshot::XtensaLx7RuntimeSnapshot;
+        let snap = XtensaLx7RuntimeSnapshot {
+            pc: self.pc,
+            ps_raw: self.ps.as_raw(),
+            phys: self.regs.phys_slice().to_vec(),
+            window_base: self.regs.windowbase(),
+            window_start: self.regs.windowstart(),
+            shadow: self.regs.shadow_stacks().iter().cloned().collect(),
+            sr: self.sr.raw_storage().to_vec(),
+        };
+        let bytes = bincode::serialize(&snap).expect("bincode serialize XtensaLx7RuntimeSnapshot");
+        (crate::runtime_snapshot::CpuKind::XtensaLx7, bytes)
+    }
+
+    fn apply_runtime_snapshot(
+        &mut self,
+        kind: crate::runtime_snapshot::CpuKind,
+        bytes: &[u8],
+    ) -> SimResult<()> {
+        use crate::runtime_snapshot::{CpuKind, XtensaLx7RuntimeSnapshot};
+        if kind != CpuKind::XtensaLx7 {
+            return Err(SimulationError::NotImplemented(format!(
+                "apply_runtime_snapshot: kind {kind:?} given to XtensaLx7"
+            )));
+        }
+        let snap: XtensaLx7RuntimeSnapshot = bincode::deserialize(bytes)
+            .map_err(|e| SimulationError::NotImplemented(format!("XtensaLx7 snapshot decode: {e}")))?;
+        if snap.phys.len() != 64 {
+            return Err(SimulationError::NotImplemented(
+                "XtensaLx7 snapshot phys must be 64 entries".into(),
+            ));
+        }
+        if snap.sr.len() != 256 {
+            return Err(SimulationError::NotImplemented(
+                "XtensaLx7 snapshot sr must be 256 entries".into(),
+            ));
+        }
+        if snap.shadow.len() != 16 {
+            return Err(SimulationError::NotImplemented(
+                "XtensaLx7 snapshot shadow must be 16 slots".into(),
+            ));
+        }
+        self.pc = snap.pc;
+        self.ps = Ps::from_raw(snap.ps_raw);
+        // Restore order: phys + WB/WS BEFORE shadow stacks so anything that
+        // peeks at logical regs during the rest of the call sees coherent
+        // state. shadow_stacks::set takes a fixed-size array — collect.
+        let mut phys = [0u32; 64];
+        phys.copy_from_slice(&snap.phys);
+        self.regs.set_phys(phys);
+        self.regs.set_windowbase(snap.window_base);
+        self.regs.set_windowstart(snap.window_start);
+        // Convert Vec<Vec<[u32;4]>> back to [Vec<[u32;4]>; 16].
+        let shadow: [Vec<[u32; 4]>; 16] = {
+            let mut arr: [Vec<[u32; 4]>; 16] = Default::default();
+            for (i, stack) in snap.shadow.into_iter().enumerate().take(16) {
+                arr[i] = stack;
+            }
+            arr
+        };
+        self.regs.set_shadow_stacks(shadow);
+        let mut sr = [0u32; 256];
+        sr.copy_from_slice(&snap.sr);
+        self.sr.set_raw_storage(sr);
+        Ok(())
+    }
+
     fn get_register_names(&self) -> Vec<String> {
         (0..16).map(|i| format!("a{}", i)).collect()
     }

@@ -780,6 +780,26 @@ impl crate::Peripheral for RamPeripheral {
         }
         Ok(())
     }
+
+    /// Dump the backing buffer verbatim. Snapshot stays compact (a 200 KiB
+    /// DRAM round-trips as 200 KiB on disk — bincode adds an 8-byte length
+    /// prefix and that's it).
+    fn runtime_snapshot(&self) -> Vec<u8> {
+        self.data.borrow().clone()
+    }
+
+    fn restore_runtime_snapshot(&mut self, bytes: &[u8]) -> crate::SimResult<()> {
+        let mut d = self.data.borrow_mut();
+        if bytes.len() != d.len() {
+            return Err(crate::SimulationError::NotImplemented(format!(
+                "RamPeripheral runtime snapshot size mismatch: expected {} bytes, got {}",
+                d.len(),
+                bytes.len()
+            )));
+        }
+        d.copy_from_slice(bytes);
+        Ok(())
+    }
 }
 
 #[cfg(test)]
