@@ -21,6 +21,116 @@ pub fn load_elf(path: &Path) -> Result<ProgramImage> {
     load_elf_bytes(&buffer)
 }
 
+/// Resolve a single function symbol's address from an ELF binary.
+///
+/// Used to auto-discover Arduino-ESP32 thunk PCs (heap_caps_init,
+/// esp_timer_init, esp_ota_get_running_partition, ...) without baking
+/// per-firmware constants into either the CLI snapshot-capture path
+/// or the WASM `install_esp32_arduino_quirks` bootstrap. Returns `None`
+/// when the ELF is stripped of symbols (in which case the caller falls
+/// back to a hardcoded profile).
+///
+/// Skips the gimli/DWARF dance that [`SymbolProvider::new`] does — we
+/// only need name→address resolution from the regular symbol table,
+/// which works on `--strip-debug`-stripped binaries too.
+pub fn resolve_symbol_in_elf(buffer: &[u8], name: &str) -> Option<u32> {
+    use object::{Object, ObjectSymbol};
+    let object = object::File::parse(buffer).ok()?;
+    for sym in object.symbols() {
+        if let Ok(n) = sym.name() {
+            if n == name && sym.address() > 0 {
+                return Some(sym.address() as u32);
+            }
+        }
+    }
+    None
+}
+
+/// Extract every Arduino-ESP32 / ESP-IDF / Arduino-core symbol the LabWired
+/// sim cares about for an Arduino-ESP32 firmware. Includes:
+///   * flash-thunk targets (heap_caps_*, esp_timer_init, locks, …),
+///   * dual-core handshake bytes (`s_cpu_up`, `s_cpu_inited`, `s_system_inited`,
+///     `s_other_cpu_startup_done`) that the single-CPU sim has to pre-write,
+///   * optional bootstrap markers (`loopTask`, `app_main`).
+///
+/// Returns the addresses present in this firmware; the caller treats absent
+/// entries as "use my hardcoded fallback" or "no patch needed." Works on
+/// `--strip-debug`-stripped binaries — only requires the regular symbol
+/// table, not DWARF.
+pub fn extract_arduino_esp32_thunks(buffer: &[u8]) -> HashMap<&'static str, u32> {
+    use object::{Object, ObjectSymbol};
+    const KNOWN: &[&str] = &[
+        // ── Flash thunks — heap caps suite (bump allocator). ────────────────
+        "heap_caps_init",
+        "heap_caps_malloc",
+        "heap_caps_calloc",
+        "heap_caps_free",
+        "heap_caps_realloc",
+        // ── Flash thunks — no-op stubs. ─────────────────────────────────────
+        "esp_timer_init",
+        "spi_flash_disable_interrupts_caches_and_other_cpu",
+        "spi_flash_enable_interrupts_caches_and_other_cpu",
+        "__retarget_lock_init_recursive",
+        "__retarget_lock_close_recursive",
+        "__retarget_lock_acquire_recursive",
+        "__retarget_lock_release_recursive",
+        "_esp_error_check_failed",
+        "setCpuFrequencyMhz",
+        "esp_ota_get_running_partition", // fake non-null ptr
+        "HardwareSerial::begin(unsigned long, unsigned int, signed char, signed char, bool, unsigned long, unsigned char)",
+        "delay",
+        // ── Dual-core handshake bytes (in .bss). ────────────────────────────
+        // `call_start_cpu0` busy-waits until various handshake bytes
+        // become non-zero. Single-CPU sim has to pre-write 0x01 to each
+        // of these. Resolving the .bss symbol gives the per-firmware
+        // base address.
+        "s_resume_cores",
+        "s_cpu_up",
+        "s_cpu_inited",
+        "s_system_inited",
+        "s_other_cpu_startup_done",
+        // ── Optional markers. ────────────────────────────────────────────────
+        "app_main",
+        "loopTask",
+        // ── Panic / abort path — stubbed to no-op so the firmware doesn't
+        //    deadlock at BREAK 1,15 when one of the upstream init
+        //    functions has nothing to model in sim.
+        "panic_abort",
+        // ── ESP-IDF clock/efuse/cache init — sim has no real silicon
+        //    behind these, stubbing them out lets call_start_cpu0 fall
+        //    through to esp_startup_start_app.
+        "esp_clk_init",
+        "esp_perip_clk_init",
+        "core_intr_matrix_clear",
+        "esp_efuse_check_errors",
+        "esp_dport_access_stall_other_cpu_start",
+        "esp_dport_access_stall_other_cpu_end",
+        "esp_cpu_unstall",
+        "bootloader_flash_update_id",
+        "bootloader_init_mem",
+        "esp_mspi_pin_init",
+        "spi_flash_init_chip_state",
+        "esp_chip_info",
+        "esp_log_timestamp",
+    ];
+    let mut out = HashMap::new();
+    let Ok(object) = object::File::parse(buffer) else {
+        return out;
+    };
+    for sym in object.symbols() {
+        if let Ok(name) = sym.name() {
+            if sym.address() > 0 {
+                for k in KNOWN {
+                    if *k == name {
+                        out.insert(*k, sym.address() as u32);
+                    }
+                }
+            }
+        }
+    }
+    out
+}
+
 pub fn load_elf_bytes(buffer: &[u8]) -> Result<ProgramImage> {
     let elf = Elf::parse(buffer).context("Failed to parse ELF binary")?;
 

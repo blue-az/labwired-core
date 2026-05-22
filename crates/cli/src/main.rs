@@ -853,11 +853,11 @@ fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
     use labwired_core::peripherals::esp32s3::rom_thunks;
     use labwired_core::system::xtensa::configure_xtensa_esp32;
     use labwired_core::{Machine, SimulationError};
-    use labwired_loader::load_elf_bytes;
+    use labwired_loader::{extract_arduino_esp32_thunks, load_elf_bytes};
 
-    if args.profile != "agentdeck" {
+    if args.profile != "agentdeck" && args.profile != "arduino-esp32" {
         eprintln!(
-            "error: unknown profile '{p}' — supported: 'agentdeck'",
+            "error: unknown profile '{p}' — supported: 'agentdeck' (AgentDeck firmware, hardcoded thunk PCs), 'arduino-esp32' (any Arduino-ESP32 ELF with symbols intact, auto-discovers thunk PCs)",
             p = args.profile
         );
         return ExitCode::from(EXIT_CONFIG_ERROR);
@@ -916,43 +916,134 @@ fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
     // Skip BROM and jump straight to the ELF's app entry — same as WASM.
     machine.cpu.set_pc(program_image.entry_point as u32);
 
+    // Resolve every Arduino-ESP32 symbol we know how to patch / thunk.
+    // Empty for AgentDeck (stripped) — those fall back to hardcoded PCs.
+    let symbol_addrs = extract_arduino_esp32_thunks(&elf_bytes);
+    let resolve_data = |sym: &str, fallback: u32| -> u32 {
+        symbol_addrs.get(sym).copied().unwrap_or(fallback)
+    };
+
     // Arduino-ESP32 bootstrap — keep in sync with
     // `wasm/src/lib.rs::install_esp32_arduino_quirks` and the e2e test.
-    // Each thunk PC is firmware-specific (resolved from the ELF symbol
-    // table — see e2e_agentdeck_in_sim for per-thunk rationale).
-    let _ = machine.bus.write_u8(0x400E_90DE, 0x08); // loopTask -> PRO_CPU
     machine.cpu.set_sp(0x3FFE_0000);
-    let _ = machine.bus.write_u8(0x3FFC_6F04, 0x01);
-    let _ = machine.bus.write_u8(0x3FFC_6F01, 0x01);
-    let _ = machine.bus.write_u8(0x3FFC_6F02, 0x01);
-    let _ = machine.bus.write_u8(0x3FFC_6FFD, 0x01);
-    let _ = machine.bus.write_u8(0x3FFC_6FFE, 0x01);
-    let _ = machine.bus.write_u8(0x3FFC_7190, 0x01);
+    // Handshake-byte pre-paint. Two paths:
+    //   * `agentdeck` profile — use the exact byte addresses the original
+    //     install_esp32_arduino_quirks wrote, byte-for-byte. AgentDeck's
+    //     ELF is stripped, so symbol auto-discovery returns nothing.
+    //   * `arduino-esp32` profile — resolve s_resume_cores / s_cpu_up /
+    //     s_cpu_inited / s_system_inited / s_other_cpu_startup_done from
+    //     the ELF symbol table and write 0x01 to both bytes of each.
+    let (s_resume_cores, s_cpu_up, s_cpu_inited, s_system_inited, s_other_cpu_startup_done);
+    if args.profile == "agentdeck" {
+        s_resume_cores = 0;
+        s_cpu_up = 0;
+        s_cpu_inited = 0;
+        s_system_inited = 0;
+        s_other_cpu_startup_done = 0;
+        let _ = machine.bus.write_u8(0x3FFC_6F04, 0x01); // s_cpu_up[1]
+        let _ = machine.bus.write_u8(0x3FFC_6F01, 0x01); // s_cpu_inited[0]
+        let _ = machine.bus.write_u8(0x3FFC_6F02, 0x01); // s_cpu_inited[1]
+        let _ = machine.bus.write_u8(0x3FFC_6FFD, 0x01); // s_system_inited[0]
+        let _ = machine.bus.write_u8(0x3FFC_6FFE, 0x01); // s_system_inited[1]
+        let _ = machine.bus.write_u8(0x3FFC_7190, 0x01); // s_other_cpu_startup_done
+        let _ = machine.bus.write_u8(0x400E_90DE, 0x08); // loopTask -> PRO_CPU
+    } else {
+        s_resume_cores = resolve_data("s_resume_cores", 0);
+        s_cpu_up = resolve_data("s_cpu_up", 0);
+        s_cpu_inited = resolve_data("s_cpu_inited", 0);
+        s_system_inited = resolve_data("s_system_inited", 0);
+        s_other_cpu_startup_done = resolve_data("s_other_cpu_startup_done", 0);
+        if s_resume_cores != 0 {
+            let _ = machine.bus.write_u8(s_resume_cores as u64, 0x01);
+        }
+        if s_cpu_up != 0 {
+            let _ = machine.bus.write_u8(s_cpu_up as u64, 0x01);
+            let _ = machine.bus.write_u8(s_cpu_up as u64 + 1, 0x01);
+        }
+        if s_cpu_inited != 0 {
+            let _ = machine.bus.write_u8(s_cpu_inited as u64, 0x01);
+            let _ = machine.bus.write_u8(s_cpu_inited as u64 + 1, 0x01);
+        }
+        if s_system_inited != 0 {
+            let _ = machine.bus.write_u8(s_system_inited as u64, 0x01);
+            let _ = machine.bus.write_u8(s_system_inited as u64 + 1, 0x01);
+        }
+        if s_other_cpu_startup_done != 0 {
+            let _ = machine.bus.write_u8(s_other_cpu_startup_done as u64, 0x01);
+        }
+    }
+    // RTC XTAL-freq probe = 40 MHz.
     let _ = machine.bus.write_u32(0x3FF4_80B0, 0x0050_0050);
 
-    let thunks: &[(u32, rom_thunks::RomThunkFn)] = &[
-        (0x400e_e3b0, rom_thunks::esp_idf_heap_caps_init),
-        (0x4008_2904, rom_thunks::esp_idf_heap_caps_malloc),
-        (0x4008_2a70, rom_thunks::esp_idf_heap_caps_calloc),
-        (0x4008_25dc, rom_thunks::esp_idf_heap_caps_free),
-        (0x4008_29f0, rom_thunks::esp_idf_heap_caps_realloc),
-        (0x4012_9034, rom_thunks::nop_return_zero),
-        (0x4008_17dc, rom_thunks::nop_return_zero),
-        (0x4008_188c, rom_thunks::nop_return_zero),
-        (0x4008_3384, rom_thunks::nop_return_zero),
-        (0x4008_339c, rom_thunks::nop_return_zero),
-        (0x4008_33b0, rom_thunks::nop_return_zero),
-        (0x4008_33cc, rom_thunks::nop_return_zero),
-        (0x4008_bbd0, rom_thunks::nop_return_zero),
-        (0x400e_99dc, rom_thunks::nop_return_zero),
-        (0x400e_ae18, rom_thunks::nop_return_fake_ptr),
-        (0x400e_2280, rom_thunks::nop_return_zero),
-        (0x400e_5c28, rom_thunks::nop_return_zero),
-        (0x400d_de98, rom_thunks::nop_return_zero),
-        (0x400d_dccc, rom_thunks::nop_return_zero),
-        (0x400e_0034, rom_thunks::nop_return_zero),
+    // Build the thunk address list. Each entry maps a flash PC to a
+    // sim-side rom_thunks function. For unstripped ELFs we use the
+    // already-parsed symbol map above; AgentDeck's fully stripped ELF
+    // falls back to the hand-curated address list.
+    let resolve = |sym: &str, fallback: u32| -> u32 {
+        symbol_addrs.get(sym).copied().unwrap_or(fallback)
+    };
+    let mut thunks: Vec<(u32, rom_thunks::RomThunkFn)> = vec![
+        (resolve("heap_caps_init", 0x400e_e3b0), rom_thunks::esp_idf_heap_caps_init),
+        (resolve("heap_caps_malloc", 0x4008_2904), rom_thunks::esp_idf_heap_caps_malloc),
+        (resolve("heap_caps_calloc", 0x4008_2a70), rom_thunks::esp_idf_heap_caps_calloc),
+        (resolve("heap_caps_free", 0x4008_25dc), rom_thunks::esp_idf_heap_caps_free),
+        (resolve("heap_caps_realloc", 0x4008_29f0), rom_thunks::esp_idf_heap_caps_realloc),
+        (resolve("esp_timer_init", 0x4012_9034), rom_thunks::nop_return_zero),
+        (resolve("spi_flash_disable_interrupts_caches_and_other_cpu", 0x4008_17dc), rom_thunks::nop_return_zero),
+        (resolve("spi_flash_enable_interrupts_caches_and_other_cpu", 0x4008_188c), rom_thunks::nop_return_zero),
+        (resolve("__retarget_lock_init_recursive", 0x4008_3384), rom_thunks::nop_return_zero),
+        (resolve("__retarget_lock_close_recursive", 0x4008_339c), rom_thunks::nop_return_zero),
+        (resolve("__retarget_lock_acquire_recursive", 0x4008_33b0), rom_thunks::nop_return_zero),
+        (resolve("__retarget_lock_release_recursive", 0x4008_33cc), rom_thunks::nop_return_zero),
+        (resolve("_esp_error_check_failed", 0x4008_bbd0), rom_thunks::nop_return_zero),
+        (resolve("setCpuFrequencyMhz", 0x400e_99dc), rom_thunks::nop_return_zero),
+        (resolve("esp_ota_get_running_partition", 0x400e_ae18), rom_thunks::nop_return_fake_ptr),
+        (resolve("delay", 0x400e_5c28), rom_thunks::nop_return_zero),
     ];
-    for &(pc, f) in thunks {
+    // HardwareSerial::begin only exists when the sketch called Serial.begin().
+    if let Some(&pc) = symbol_addrs.get("HardwareSerial::begin(unsigned long, unsigned int, signed char, signed char, bool, unsigned long, unsigned char)") {
+        thunks.push((pc, rom_thunks::nop_return_zero));
+    } else if args.profile == "agentdeck" {
+        thunks.push((0x400e_2280, rom_thunks::nop_return_zero));
+    }
+    // ESP-IDF clock/efuse/cache/dport bring-up — the sim has no silicon
+    // behind these so we stub them to return-0. Only installed when the
+    // symbol is present in the ELF (Arduino-ESP32 profile).
+    for sym in &[
+        "panic_abort",
+        "esp_clk_init",
+        "esp_perip_clk_init",
+        "core_intr_matrix_clear",
+        "esp_efuse_check_errors",
+        "esp_dport_access_stall_other_cpu_start",
+        "esp_dport_access_stall_other_cpu_end",
+        "esp_cpu_unstall",
+        "bootloader_flash_update_id",
+        "bootloader_init_mem",
+        "esp_mspi_pin_init",
+        "spi_flash_init_chip_state",
+        "esp_chip_info",
+        "esp_log_timestamp",
+    ] {
+        if let Some(&pc) = symbol_addrs.get(*sym) {
+            thunks.push((pc, rom_thunks::nop_return_zero));
+        }
+    }
+    // AgentDeck-only WiFi + sendHello thunks. Only install for that profile
+    // — sketches without those symbols wouldn't trip them anyway.
+    if args.profile == "agentdeck" {
+        thunks.extend_from_slice(&[
+            (0x400d_de98, rom_thunks::nop_return_zero), // WifiWsLink::begin
+            (0x400d_dccc, rom_thunks::nop_return_zero), // WifiWsLink::loop
+            (0x400e_0034, rom_thunks::nop_return_zero), // anon-ns sendHello
+        ]);
+    }
+    eprintln!(
+        "labwired-cli snapshot: installing {} thunks ({} resolved from ELF symbols)",
+        thunks.len(),
+        symbol_addrs.len(),
+    );
+    for &(pc, f) in &thunks {
         if let Err(e) = machine.bus.install_flash_thunk(pc, f) {
             eprintln!("error: install_flash_thunk @ {:#x}: {e}", pc);
             return ExitCode::from(EXIT_RUNTIME_ERROR);
@@ -1037,13 +1128,39 @@ fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
             }
             last_from_cpu1_val = 0;
         }
+        // Re-stamp the dual-core handshake bytes every 10k cycles so
+        // start_other_core / do_other_cpu_settings keep seeing them as
+        // "up." AgentDeck path: byte-for-byte mirror of the original
+        // install_esp32_arduino_quirks. Auto-discovery path: write to
+        // each resolved symbol's [0]+[1] slots.
         if i % 10_000 == 0 {
-            let _ = machine.bus.write_u8(0x3FFC_6F04, 0x01);
-            let _ = machine.bus.write_u8(0x3FFC_6F01, 0x01);
-            let _ = machine.bus.write_u8(0x3FFC_6F02, 0x01);
-            let _ = machine.bus.write_u8(0x3FFC_6FFD, 0x01);
-            let _ = machine.bus.write_u8(0x3FFC_6FFE, 0x01);
-            let _ = machine.bus.write_u8(0x3FFC_7190, 0x01);
+            if args.profile == "agentdeck" {
+                let _ = machine.bus.write_u8(0x3FFC_6F04, 0x01);
+                let _ = machine.bus.write_u8(0x3FFC_6F01, 0x01);
+                let _ = machine.bus.write_u8(0x3FFC_6F02, 0x01);
+                let _ = machine.bus.write_u8(0x3FFC_6FFD, 0x01);
+                let _ = machine.bus.write_u8(0x3FFC_6FFE, 0x01);
+                let _ = machine.bus.write_u8(0x3FFC_7190, 0x01);
+            } else {
+                if s_resume_cores != 0 {
+                    let _ = machine.bus.write_u8(s_resume_cores as u64, 0x01);
+                }
+                if s_cpu_up != 0 {
+                    let _ = machine.bus.write_u8(s_cpu_up as u64, 0x01);
+                    let _ = machine.bus.write_u8(s_cpu_up as u64 + 1, 0x01);
+                }
+                if s_cpu_inited != 0 {
+                    let _ = machine.bus.write_u8(s_cpu_inited as u64, 0x01);
+                    let _ = machine.bus.write_u8(s_cpu_inited as u64 + 1, 0x01);
+                }
+                if s_system_inited != 0 {
+                    let _ = machine.bus.write_u8(s_system_inited as u64, 0x01);
+                    let _ = machine.bus.write_u8(s_system_inited as u64 + 1, 0x01);
+                }
+                if s_other_cpu_startup_done != 0 {
+                    let _ = machine.bus.write_u8(s_other_cpu_startup_done as u64, 0x01);
+                }
+            }
         }
         match machine.cpu.step(&mut machine.bus, &observers, &config) {
             Ok(()) => {}
