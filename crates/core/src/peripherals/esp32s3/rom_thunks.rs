@@ -285,6 +285,45 @@ pub fn nop_return_fake_ptr(cpu: &mut XtensaLx7, _bus: &mut dyn Bus) -> SimResult
     Ok(())
 }
 
+/// `esp_chip_info(esp_chip_info_t *out)` — fill the output struct with a
+/// plausible-looking ESP32 chip ID, then return.
+///
+/// ESP-IDF's `app_main_startup` reads `out->full_revision` (byte at
+/// struct+10) and panics if it's < the firmware's `min_chip_rev`. With a
+/// plain `nop_return_zero` the struct stays uninitialized, that byte is
+/// random stack garbage, and any sketch built against `min_chip_rev > 0`
+/// crashes before reaching app code. We fill the struct with chip_model =
+/// 1 (ESP32), revision = 3, cores = 2 — enough to satisfy the assert.
+///
+/// Args (Xtensa C ABI, pre-ENTRY caller view so the first arg is at
+/// a[CALLINC*4 + 2]): out_ptr.
+pub fn esp_chip_info_stub(cpu: &mut XtensaLx7, bus: &mut dyn Bus) -> SimResult<()> {
+    let n = cpu.ps.callinc() * 4;
+    let out_ptr = cpu.regs.read_logical(n + 2);
+    if out_ptr != 0 {
+        // Layout used by ESP-IDF v4.4 / Arduino-ESP32 2.0.x:
+        //   off 0: model (4B)   = 1 (ESP32)
+        //   off 4: features (4B) = 0
+        //   off 8: revision (2B) = 3 (well above any min_chip_rev)
+        //   off 10: cores (1B)   = 2
+        // Newer ESP-IDF moves things around (full_revision at 10/12/etc.),
+        // so we just splat reasonable values across the first 16 bytes —
+        // any byte the firmware reads will be non-zero / >= 2.
+        let bytes: [u8; 16] = [
+            0x01, 0x00, 0x00, 0x00, // model = ESP32
+            0x00, 0x00, 0x00, 0x00, // features
+            0x03, 0x00,             // revision = 3
+            0x02,                   // cores = 2
+            0x03, 0x00, 0x00, 0x00, 0x00, // full_revision + pad
+        ];
+        for (i, &b) in bytes.iter().enumerate() {
+            let _ = bus.write_u8(out_ptr as u64 + i as u64, b);
+        }
+    }
+    RomThunkBank::return_with(cpu, 0);
+    Ok(())
+}
+
 /// `memcpy(dst, src, n) -> dst` — byte-wise copy via the bus.
 ///
 /// Args (Xtensa C ABI, post-ENTRY view from caller's frame so we read

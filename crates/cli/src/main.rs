@@ -1022,12 +1022,17 @@ fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
         "bootloader_init_mem",
         "esp_mspi_pin_init",
         "spi_flash_init_chip_state",
-        "esp_chip_info",
         "esp_log_timestamp",
     ] {
         if let Some(&pc) = symbol_addrs.get(*sym) {
             thunks.push((pc, rom_thunks::nop_return_zero));
         }
+    }
+    // esp_chip_info needs more than nop — has to fill the output struct
+    // with a plausible revision so the firmware's chip_revision >= min
+    // assert passes.
+    if let Some(&pc) = symbol_addrs.get("esp_chip_info") {
+        thunks.push((pc, rom_thunks::esp_chip_info_stub));
     }
     // AgentDeck-only WiFi + sendHello thunks. Only install for that profile
     // — sketches without those symbols wouldn't trip them anyway.
