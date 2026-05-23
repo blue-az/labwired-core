@@ -83,6 +83,22 @@ pub fn extract_arduino_esp32_thunks(buffer: &[u8]) -> HashMap<&'static str, u32>
         "xQueueTakeMutexRecursive",
         "xQueueCreateMutex",
         "xQueueCreateMutexStatic",
+        // xQueueCreateMutex returns NULL (stubbed), so SPIClass and friends
+        // end up storing NULL as their internal mutex. We force these to
+        // return pdTRUE so the call path proceeds; real silicon would only
+        // reach this on a held mutex anyway in the single-task render flow.
+        "xQueueSemaphoreTake",
+        // SPIClass::endTransaction calls xQueueGenericSend (the give side
+        // of xSemaphoreGive) on the same NULL mutex. Force success too.
+        "xQueueGenericSend",
+        // esp_ipc_init creates the per-core IPC task which spin-blocks on
+        // an empty semaphore. With our take-returns-pdTRUE stub above,
+        // that "block" becomes a tight loop — never yielding, never
+        // letting loopTask run. Stub esp_ipc_init out and skip the IPC
+        // task altogether; cross-core IPC isn't needed on the
+        // single-CPU render path.
+        "esp_ipc_init",
+        "esp_ipc_isr_init",
         "_esp_error_check_failed",
         "setCpuFrequencyMhz",
         "esp_ota_get_running_partition", // fake non-null ptr
@@ -230,6 +246,13 @@ pub fn extract_arduino_esp32_thunks(buffer: &[u8]) -> HashMap<&'static str, u32>
         "esp_log_impl_lock",
         "esp_log_impl_lock_timeout",
         "esp_log_impl_unlock",
+        // Backs `xTaskGetCurrentTaskHandle()` — per-core array of TCB
+        // pointers. Address is firmware-dependent; resolving the symbol
+        // lets the thunk return a real handle so `vTaskDelete(NULL)`
+        // (used by Arduino-ESP32's main_task self-delete) doesn't pass
+        // NULL into prvDeleteTLS.
+        "pxCurrentTCB",
+        "xTaskGetCurrentTaskHandle",
         "esp_log_write",
         "esp_log_buffer_hex_internal",
         "esp_log_buffer_char_internal",

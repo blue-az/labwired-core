@@ -324,6 +324,62 @@ pub fn abort_halt(cpu: &mut XtensaLx7, _bus: &mut dyn Bus) -> SimResult<()> {
     Ok(())
 }
 
+/// `xQueueCreateMutexStatic(uint8_t ucQueueType, StaticQueue_t *pxStaticQueue)
+/// -> QueueHandle_t` — on real silicon the returned handle IS the static
+/// buffer (an identity cast). Returning 0 makes `esp_newlib_locks_init`'s
+/// "got the static handle back" assertion fire. We echo arg 1 (the
+/// caller-allocated buffer pointer).
+pub fn x_queue_create_mutex_static_echo(cpu: &mut XtensaLx7, _bus: &mut dyn Bus) -> SimResult<()> {
+    let n = cpu.ps.callinc() * 4;
+    let static_buf = cpu.regs.read_logical(n + 3);
+    RomThunkBank::return_with(cpu, static_buf);
+    Ok(())
+}
+
+/// `xTaskGetCurrentTaskHandle() -> TaskHandle_t` — returns `pxCurrentTCB[core]`.
+///
+/// The previous nop_return_zero stub broke `vTaskDelete(NULL)`: vTaskDelete
+/// looks up the current task via this getter when called with a NULL arg,
+/// then passes it to prvDeleteTLS/prvDeleteTCB which assert non-NULL.
+/// Arduino-ESP32's main_task self-deletes after app_main returns, tripping
+/// this path right after the scheduler starts.
+///
+/// `pxCurrentTCB` is a per-core array at a firmware-specific address; the
+/// auto-discovered symbol resolves on the Arduino-ESP32 profile. Without
+/// the symbol (AgentDeck profile, stripped ELF), we fall back to returning
+/// 0 to preserve the previous behaviour.
+pub fn x_task_get_current_task_handle(cpu: &mut XtensaLx7, bus: &mut dyn Bus) -> SimResult<()> {
+    let core_id = (cpu.sr.read(crate::cpu::xtensa_sr::PRID) >> 13) & 1;
+    let pxcurrenttcb_addr = PX_CURRENT_TCB_ADDR.with(|s| s.get()).unwrap_or(0);
+    let handle = if pxcurrenttcb_addr != 0 {
+        bus.read_u32(pxcurrenttcb_addr as u64 + (core_id as u64 * 4))
+            .unwrap_or(0)
+    } else {
+        0
+    };
+    RomThunkBank::return_with(cpu, handle);
+    Ok(())
+}
+
+thread_local! {
+    /// Set by the cli once the `pxCurrentTCB` symbol is resolved from the
+    /// firmware ELF. Read by [`x_task_get_current_task_handle`].
+    pub static PX_CURRENT_TCB_ADDR: std::cell::Cell<Option<u32>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// Stub for queue/semaphore APIs whose real impl asserts `pxQueue != NULL`.
+/// We return `pdTRUE` (1) to signal "operation succeeded" without touching
+/// any queue state. Used for SPIClass / wire-library calls into
+/// `xQueueSemaphoreTake` / `xQueueSemaphoreGive` on a mutex that our stubbed
+/// `xQueueCreateMutex` returned NULL for. Real silicon would dereference
+/// pxQueue and crash too — this fakes a recursive-mutex held-by-current
+/// state, which is fine for the single-CPU sim render path.
+pub fn return_pd_true(cpu: &mut XtensaLx7, _bus: &mut dyn Bus) -> SimResult<()> {
+    RomThunkBank::return_with(cpu, 1);
+    Ok(())
+}
+
 /// Debug thunk for `vListInsert(List_t *pxList, ListItem_t *pxNewListItem)`.
 /// Dumps the list state for the first few calls, then returns without
 /// performing the insertion. Used to diagnose infinite-loop bugs in the

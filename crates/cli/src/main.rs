@@ -1109,7 +1109,8 @@ fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
         "_fwrite_r",
         "esp_panic_handler",
         "esp_panic_handler_reconfigure_wdts",
-        "xTaskGetCurrentTaskHandle",
+        // xTaskGetCurrentTaskHandle gets a proper thunk below — returning
+        // 0 breaks vTaskDelete(NULL) by passing NULL into prvDeleteTLS.
         "pthread_key_create",
         "pthread_setspecific",
         "pthread_getspecific",
@@ -1174,13 +1175,21 @@ fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
         "esp_log_impl_lock",
         "esp_log_impl_lock_timeout",
         "esp_log_impl_unlock",
+        // esp_ipc_init/isr_init create the IPC task per core. Its
+        // semaphore-wait turns into a tight loop in the sim (xQueueSemaphoreTake
+        // is stubbed to pdTRUE), starving loopTask. Stub the init so the
+        // task is never created — cross-core IPC isn't used on the
+        // single-CPU render path.
+        "esp_ipc_init",
+        "esp_ipc_isr_init",
         // FreeRTOS recursive mutexes used by newlib stdio locks — same
         // null-queue assertion problem. Stub since sim is effectively
-        // single-threaded on the panel-render path.
+        // single-threaded on the panel-render path. xQueueCreateMutexStatic
+        // gets a separate echo_arg0 thunk below (callers assert the returned
+        // handle equals the static buffer they passed in).
         "xQueueGiveMutexRecursive",
         "xQueueTakeMutexRecursive",
         "xQueueCreateMutex",
-        "xQueueCreateMutexStatic",
         "__sfvwrite_r",
         "__swsetup_r",
         "__sflush_r",
@@ -1232,6 +1241,32 @@ fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
     // timer ISR re-fires every CCOUNT cycle, pinning CPU 0 in the tick hook.
     if let Some(&pc) = symbol_addrs.get("esp_clk_cpu_freq") {
         thunks.push((pc, rom_thunks::esp_clk_cpu_freq_240mhz));
+    }
+    // xQueueCreateMutexStatic returns the caller's static buffer as the
+    // handle. Callers (esp_newlib_locks_init in particular) assert that the
+    // returned handle equals the buffer they passed in — a nop_return_zero
+    // stub fails that check.
+    if let Some(&pc) = symbol_addrs.get("xQueueCreateMutexStatic") {
+        thunks.push((pc, rom_thunks::x_queue_create_mutex_static_echo));
+    }
+    // pxCurrentTCB symbol → feed into the rom_thunks side so the
+    // xTaskGetCurrentTaskHandle thunk can read it. Arduino-ESP32's
+    // main_task self-deletes after app_main returns via vTaskDelete(NULL),
+    // which depends on this getter.
+    if let Some(&addr) = symbol_addrs.get("pxCurrentTCB") {
+        rom_thunks::PX_CURRENT_TCB_ADDR.with(|s| s.set(Some(addr)));
+    }
+    if let Some(&pc) = symbol_addrs.get("xTaskGetCurrentTaskHandle") {
+        thunks.push((pc, rom_thunks::x_task_get_current_task_handle));
+    }
+    // xQueueSemaphoreTake on the NULL mutex returned by our stubbed
+    // xQueueCreateMutex would assert. Force pdTRUE so SPIClass /
+    // beginTransaction etc. proceed as if they got the lock.
+    if let Some(&pc) = symbol_addrs.get("xQueueSemaphoreTake") {
+        thunks.push((pc, rom_thunks::return_pd_true));
+    }
+    if let Some(&pc) = symbol_addrs.get("xQueueGenericSend") {
+        thunks.push((pc, rom_thunks::return_pd_true));
     }
     // Optional debug: install vListInsert short-circuit thunk that dumps
     // list state for first 20 calls. Used to diagnose SMP race issues in
