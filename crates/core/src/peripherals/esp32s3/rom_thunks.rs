@@ -295,6 +295,35 @@ pub fn nop_return_zero(cpu: &mut XtensaLx7, _bus: &mut dyn Bus) -> SimResult<()>
     Ok(())
 }
 
+/// Thunk for `__assert_func` / `panic_abort` / `abort` — functions that
+/// real-silicon C convention treats as `noreturn`. Stubbing them as
+/// nop_return_zero would silently return into the caller, which on the
+/// FreeRTOS xQueue assertion paths produces a tight loop:
+/// `assert → return → check failed cond → jump back to assert`.
+///
+/// Instead, halt the calling CPU and print the assertion arguments so the
+/// operator sees what blew up.  The caller never re-runs, so the loop
+/// breaks.  The OTHER CPU (if dual-core) keeps running.
+pub fn abort_halt(cpu: &mut XtensaLx7, _bus: &mut dyn Bus) -> SimResult<()> {
+    use core::sync::atomic::{AtomicU32, Ordering};
+    static FIRST_PRINT: AtomicU32 = AtomicU32::new(0);
+    if FIRST_PRINT.fetch_add(1, Ordering::Relaxed) < 5 {
+        let n = cpu.ps.callinc() * 4;
+        let core_id = (cpu.sr.read(crate::cpu::xtensa_sr::PRID) >> 13) & 1;
+        eprintln!(
+            "[abort_halt] core={core_id} pc=0x{:08x} a0=0x{:08x} a10=0x{:08x} a11=0x{:08x} a12=0x{:08x} a13=0x{:08x}",
+            cpu.pc,
+            cpu.regs.read_logical(0),
+            cpu.regs.read_logical(n + 2),
+            cpu.regs.read_logical(n + 3),
+            cpu.regs.read_logical(n + 4),
+            cpu.regs.read_logical(n + 5)
+        );
+    }
+    cpu.halted = true;
+    Ok(())
+}
+
 /// Debug thunk for `vListInsert(List_t *pxList, ListItem_t *pxNewListItem)`.
 /// Dumps the list state for the first few calls, then returns without
 /// performing the insertion. Used to diagnose infinite-loop bugs in the
@@ -681,6 +710,17 @@ pub fn esp_idf_heap_caps_realloc(cpu: &mut XtensaLx7, _bus: &mut dyn Bus) -> Sim
 /// `ets_get_cpu_frequency() -> u32` — returns 240 (MHz).
 pub fn rom_cpu_freq_240mhz(cpu: &mut XtensaLx7, _bus: &mut dyn Bus) -> SimResult<()> {
     RomThunkBank::return_with(cpu, 240);
+    Ok(())
+}
+
+/// `esp_clk_cpu_freq() -> u32` — returns 240_000_000 (Hz).
+///
+/// FreeRTOS's `_frxt_tick_timer_init` uses this to compute
+/// `_xt_tick_divisor = cpu_freq / configTICK_RATE_HZ`. Without it (or with
+/// the stubbed esp_clk_init returning 0), the divisor is 0 and the timer
+/// ISR can never advance CCOMPARE0 — every CCOUNT cycle re-fires the tick.
+pub fn esp_clk_cpu_freq_240mhz(cpu: &mut XtensaLx7, _bus: &mut dyn Bus) -> SimResult<()> {
+    RomThunkBank::return_with(cpu, 240_000_000);
     Ok(())
 }
 

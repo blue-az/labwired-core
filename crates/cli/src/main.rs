@@ -1071,16 +1071,26 @@ fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
     } else if args.profile == "agentdeck" {
         thunks.push((0x400e_2280, rom_thunks::nop_return_zero));
     }
-    // ESP-IDF clock/efuse/cache/dport bring-up — the sim has no silicon
-    // behind these so we stub them to return-0. Only installed when the
-    // symbol is present in the ELF (Arduino-ESP32 profile).
+    // Real-silicon noreturn functions — abort_halt prints diagnostics and
+    // halts the CPU instead of returning. Without this, stubbing them as
+    // nop_return_zero creates tight `assert → return → re-check → assert`
+    // loops in xQueueGenericSend's parameter-validation path.
     for sym in &[
         "panic_abort",
-        "__assert_func",   // newlib: catches double-fault on assert during reent init
+        "__assert_func",
         "abort",
         "__assert",
         "__cxa_pure_virtual",
         "__cxa_throw",
+    ] {
+        if let Some(&pc) = symbol_addrs.get(*sym) {
+            thunks.push((pc, rom_thunks::abort_halt));
+        }
+    }
+    // ESP-IDF clock/efuse/cache/dport bring-up — the sim has no silicon
+    // behind these so we stub them to return-0. Only installed when the
+    // symbol is present in the ELF (Arduino-ESP32 profile).
+    for sym in &[
         // newlib stdio init — sketch doesn't use stdio on render path
         "__sinit",
         "__sfp",
@@ -1158,6 +1168,19 @@ fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
         "esp_log_buffer_hex_internal",
         "esp_log_buffer_char_internal",
         "esp_log_buffer_hexdump_internal",
+        // log mutex (esp_log_impl_lock/unlock) — sim doesn't model the log
+        // mutex queue, and the real impl calls xQueueGenericSend on an
+        // uninitialized queue, tripping a NULL-pcHead assertion.
+        "esp_log_impl_lock",
+        "esp_log_impl_lock_timeout",
+        "esp_log_impl_unlock",
+        // FreeRTOS recursive mutexes used by newlib stdio locks — same
+        // null-queue assertion problem. Stub since sim is effectively
+        // single-threaded on the panel-render path.
+        "xQueueGiveMutexRecursive",
+        "xQueueTakeMutexRecursive",
+        "xQueueCreateMutex",
+        "xQueueCreateMutexStatic",
         "__sfvwrite_r",
         "__swsetup_r",
         "__sflush_r",
@@ -1203,6 +1226,12 @@ fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
     // timeout helpers) spin forever.
     if let Some(&pc) = symbol_addrs.get("esp_timer_impl_get_counter_reg") {
         thunks.push((pc, rom_thunks::monotonic_counter_32));
+    }
+    // esp_clk_cpu_freq() — FreeRTOS divides CPU freq by tick rate to set
+    // _xt_tick_divisor; without a meaningful value, divisor is 0 and the
+    // timer ISR re-fires every CCOUNT cycle, pinning CPU 0 in the tick hook.
+    if let Some(&pc) = symbol_addrs.get("esp_clk_cpu_freq") {
+        thunks.push((pc, rom_thunks::esp_clk_cpu_freq_240mhz));
     }
     // Optional debug: install vListInsert short-circuit thunk that dumps
     // list state for first 20 calls. Used to diagnose SMP race issues in
@@ -1421,6 +1450,14 @@ fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
                     "    cpu0 pxList=0x{px_list:08x} num={} idx=0x{:08x} end.val=0x{:08x} end.next=0x{:08x} end.prev=0x{:08x}",
                     r(0), r(4), r(8), r(12), r(16)
                 );
+                if let Some(cpu1) = machine.cpu_secondary.as_ref() {
+                    let px_list1 = cpu1.get_register(2);
+                    let r1 = |off: u32| machine.bus.read_u32((px_list1 + off) as u64).unwrap_or(0xDEAD);
+                    eprintln!(
+                        "    cpu1 pxList=0x{px_list1:08x} num={} idx=0x{:08x} end.val=0x{:08x} end.next=0x{:08x} end.prev=0x{:08x}",
+                        r1(0), r1(4), r1(8), r1(12), r1(16)
+                    );
+                }
                 let mut iter = r(12);
                 let end_addr = px_list + 8;
                 for hop in 0..6 {
