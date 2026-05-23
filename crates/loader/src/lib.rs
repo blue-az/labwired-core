@@ -99,32 +99,16 @@ pub fn extract_arduino_esp32_thunks(buffer: &[u8]) -> HashMap<&'static str, u32>
         // single-CPU render path.
         "esp_ipc_init",
         "esp_ipc_isr_init",
-        // Arduino Print/Stream/HardwareSerial — sketch doesn't depend on
-        // serial output reaching real bytes; stubbing all of these as
-        // nop_return_zero lets setup() reach drawPage() without spinning
-        // in uartAvailable polling or Print::println string formatting.
-        "_ZN5Print7printlnEv",
-        "_ZN5Print7printlnEPKc",
-        "_ZN5Print7printlnEmi",
-        "_ZN5Print5printEPKc",
-        "_ZN5Print5printEmi",
-        "_ZN5Print11printNumberEmh",
-        "_ZN5Print5writeEPKc",
-        "_ZN5Print5writeEPKhj",
-        "_ZN5Print5writeEh",
-        "_ZN5Print5flushEv",
-        "_ZN5Print17availableForWriteEv",
+        // HardwareSerial-only stubs — leave Print/Stream alone so virtual
+        // dispatch through Print::print → Adafruit_GFX::write → drawPixel
+        // (the display.print path) keeps working. The original spin was
+        // in HardwareSerial::write's buffer-available wait, not in Print.
         "_ZN14HardwareSerial5writeEh",
         "_ZN14HardwareSerial5writeEPKhj",
         "_ZN14HardwareSerial9availableEv",
         "_ZN14HardwareSerial5flushEv",
         "_ZN14HardwareSerial9readBytesEPcj",
         "_ZN14HardwareSerial9readBytesEPhj",
-        "_ZN6Stream9readBytesEPhj",
-        "_ZN6Stream9readBytesEPcj",
-        "_ZN6Stream10readStringEv",
-        "_ZN6Stream9timedReadEv",
-        "_ZN6Stream10getTimeoutEv",
         "uartAvailable",
         "uartAvailableForWrite",
         "uartWrite",
