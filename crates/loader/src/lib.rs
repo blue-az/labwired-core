@@ -844,8 +844,12 @@ mod tests {
             .line_map
             .insert(("main.rs".to_string(), 117), 0xDEAD_BEEF);
 
+        // The lookup uses an absolute path that includes the workspace
+        // ancestor — we only care that the suffix `crates/...` matches
+        // the registered key. Use an arbitrary absolute prefix so this
+        // test doesn't bake in any specific developer's home directory.
         let resolved = provider.location_to_pc_nearest(
-            "/home/andrii/Projects/labwired/core/crates/firmware-h563-io-demo/src/main.rs",
+            "/workspace/labwired/core/crates/firmware-h563-io-demo/src/main.rs",
             120,
         );
         assert_eq!(resolved, Some((0x0800_00FC, 125)));

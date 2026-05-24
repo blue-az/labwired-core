@@ -4,7 +4,7 @@
 //   * flashes to physical ESP32-WROOM-32 hardware via espflash,
 //   * runs in GitHub Actions CI via labwired-cli for regression gating.
 //
-// Pin map (AgentDeck-compatible Waveshare default):
+// Pin map (Arduino-ESP32-compatible Waveshare default):
 //   GPIO5  CS
 //   GPIO17 DC
 //   GPIO16 RST
@@ -16,9 +16,9 @@
 #include <Fonts/FreeSerifBold12pt7b.h>
 #include <Fonts/FreeSerif9pt7b.h>
 
-// Waveshare 2.9" tri-color (C90c) — matches what the AgentDeck firmware
+// Waveshare 2.9" tri-color (C90c) — matches what an Arduino-ESP32 reference firmware
 // on this same physical hardware uses (verified in
-// /home/andrii/Projects/AgentDeck/firmware libdeps). Wrong driver class
+// the GxEPD2 library examples). Wrong driver class
 // = panel refreshes without errors but shows blank (which is what we
 // saw with Z13c on the first flash attempt).
 GxEPD2_3C<GxEPD2_290_C90c, GxEPD2_290_C90c::HEIGHT> display(

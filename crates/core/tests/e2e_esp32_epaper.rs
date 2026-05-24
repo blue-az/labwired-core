@@ -7,7 +7,7 @@
 // verify the SSD1680 panel received the expected three-band pattern.
 //
 // This is the side-by-side fidelity check that justifies "same ELF on
-// chip and in sim" for the AgentDeck-style ESP32 + tri-color e-paper
+// chip and in sim" for the Arduino-ESP32-style ESP32 + tri-color e-paper
 // hardware target.
 
 use labwired_core::bus::SystemBus;

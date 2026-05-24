@@ -18,7 +18,7 @@
 //! so the two protocols can't share a single panel model. Use this one
 //! when the firmware is GxEPD2_290_Z13c / C90c (labwired-ereader); use
 //! [`super::ssd1680_tricolor_290::Ssd1680Tricolor290`] for SSD1680-class
-//! firmware (AgentDeck).
+//! firmware (the reference firmware).
 //!
 //! ## Cmd / Data routing
 //!

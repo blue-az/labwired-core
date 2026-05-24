@@ -1,6 +1,6 @@
 # LabWired Core
 
-Deterministic firmware simulator for ARM Cortex-M and RISC-V — with hardware-validated parity.
+Deterministic firmware simulator for ARM Cortex-M, RISC-V, and Xtensa (ESP32 / ESP32-S3) — the same ELF runs on hardware and in the simulator.
 
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://labwired.com/docs/)
 
@@ -8,14 +8,14 @@ Deterministic firmware simulator for ARM Cortex-M and RISC-V — with hardware-v
 
 Most firmware simulators let you boot a binary and stop there. LabWired goes further:
 
-- **Hardware-validated parity.** A real NUCLEO-H563ZI board is captured step-by-step via OpenOCD+GDB and diffed against the simulator running the same ELF. The committed report — [`determinism_report_h563.json`](examples/nucleo-h563zi/golden-reference/determinism_report_h563.json) — records `status: PASS` over 50 compared steps. The full pipeline is documented in [`docs/golden_reference.md`](docs/golden_reference.md).
+- **Hardware-validated reset + UART parity.** A real NUCLEO-H563ZI board is captured via OpenOCD+GDB and diffed against the simulator running the same firmware ELF. The committed report — [`determinism_report_h563.json`](examples/nucleo-h563zi/golden-reference/determinism_report_h563.json) — documents the verified scope (post-reset architectural alignment + UART byte parity over the smoke run) and explicitly notes what isn't verified (step-by-step PC sequence past reset — OpenOCD's sampling can't resolve every executed instruction on real silicon). For deeper byte-parity evidence under continuous execution, see the NUCLEO-L476RG survival traces (`firmware-l476-demo/`).
 - **Deterministic by construction.** Same firmware → same trace, byte-for-byte, across runs and machines. Trace SHA-256 hashes are CI-gated.
 - **Production-grade debug.** GDB Remote Serial Protocol stub *and* a native VS Code Debug Adapter Protocol server — breakpoints, register inspect, expression evaluation, all without hardware.
 - **Configurable fidelity.** Cycle-accurate when correctness matters; high-MIPS host execution when iteration speed matters. See [`docs/architecture.md`](docs/architecture.md) for the perf gates.
 
 ## Featured demo: NUCLEO-H563ZI
 
-Same firmware ELF runs on a real STM32H563ZI Nucleo and on the simulator. UART output matches. Instruction PCs match. The proof is committed alongside the firmware that produced it: [`examples/nucleo-h563zi/`](examples/nucleo-h563zi/).
+Same firmware ELF runs on a real STM32H563ZI Nucleo and on the simulator. UART output matches. Reset-state architectural alignment verified. The captured artifacts (HW trace, sim trace, sim run result, UART log, determinism report) are committed alongside the firmware that produced them: [`examples/nucleo-h563zi/`](examples/nucleo-h563zi/).
 
 ## What this repo owns
 

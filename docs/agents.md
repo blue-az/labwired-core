@@ -20,7 +20,7 @@ Start your learning and reference with these key files:
 
 ## 3) Standard Development Commands
 
-Run all of these commands from the `core` root directory (i.e. `/home/andrii/Projects/labwired/core`).
+Run all of these commands from the `core` root directory (the directory containing `Cargo.toml` and `crates/`).
 
 **Building and Testing:**
 ```bash

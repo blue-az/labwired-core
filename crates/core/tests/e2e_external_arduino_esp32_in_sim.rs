@@ -2,13 +2,14 @@
 // Copyright (C) 2026 Andrii Shylenko
 // SPDX-License-Identifier: MIT
 //
-// Stress test: load the AgentDeck firmware ELF (Arduino-ESP32 + GxEPD2)
-// into our ESP32-classic sim and see how far it gets.
+// Stress test: load an external Arduino-ESP32 + GxEPD2 firmware ELF into
+// our ESP32-classic sim and assert that the SSD1680 panel model receives
+// the expected byte stream and refresh sequence.
 //
-// AgentDeck is real production firmware that the user verified paints the
-// physical e-paper panel. Same wiring, same chip — so if our sim's ESP32
-// emulation is complete enough, the panel-state assertion at the end
-// should see the SSD1680 receive a non-zero refresh.
+// The ELF path is taken from the LABWIRED_EXTERNAL_ARDUINO_ESP32_ELF env
+// var; if the var isn't set or the file isn't readable the test reports
+// "skipped" rather than failing — this test only runs when the operator
+// has built a reference firmware locally and pointed the var at it.
 
 use labwired_core::bus::SystemBus;
 use labwired_core::peripherals::components::Ssd1680Tricolor290;
@@ -22,16 +23,20 @@ use std::path::PathBuf;
 /// (or, less often, a genuine improvement). Tolerances allow ±0.5% on the
 /// SPI transaction count and ±10 bytes on the black-plane bitmap to absorb
 /// benign ordering noise (e.g. tick alignment) without missing real changes.
-const AGENTDECK_BASELINE_SPI3_TXNS: u32 = 19031;
-const AGENTDECK_BASELINE_BLACK_NONFF: usize = 782;
+const EXTERNAL_BASELINE_SPI3_TXNS: u32 = 19031;
+const EXTERNAL_BASELINE_BLACK_NONFF: usize = 782;
 
 #[test]
-#[ignore = "loads ~22 MB AgentDeck firmware ELF; only meaningful when the AgentDeck repo is checked out alongside labwired. Run with `cargo test -- --ignored agentdeck_firmware_drives_panel_in_sim`."]
-fn agentdeck_firmware_drives_panel_in_sim() {
-    let elf =
-        PathBuf::from("/home/andrii/Projects/AgentDeck/firmware/.pio/build/wroom32u/firmware.elf");
+#[ignore = "loads a large external Arduino-ESP32 firmware ELF; only runs when LABWIRED_EXTERNAL_ARDUINO_ESP32_ELF is set. Run with `cargo test -- --ignored external_arduino_esp32_firmware_drives_panel_in_sim`."]
+fn external_arduino_esp32_firmware_drives_panel_in_sim() {
+    let elf = std::env::var("LABWIRED_EXTERNAL_ARDUINO_ESP32_ELF")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from("/tmp/external-arduino-esp32.elf"));
     if !elf.exists() {
-        eprintln!("[skip] AgentDeck firmware ELF unavailable at {elf:?}");
+        eprintln!(
+            "[skip] external Arduino-ESP32 firmware ELF unavailable at {elf:?}; \
+             set LABWIRED_EXTERNAL_ARDUINO_ESP32_ELF to a valid ELF path to enable"
+        );
         return;
     }
 
@@ -233,7 +238,7 @@ fn agentdeck_firmware_drives_panel_in_sim() {
     //   magic=0xE9, segment_count=1, spi_mode=0, spi_speed_size=0,
     //   entry_addr=<elf entry>, wp_pin=0xEE, spi_pin_drv=[0,0,0],
     //   chip_id=0 (ESP32), min_chip_rev=0, reserved=[0;8], hash_appended=0
-    let entry = 0x40081bf0_u32; // matches AgentDeck ELF entry
+    let entry = 0x40081bf0_u32; // matches the external Arduino-ESP32 ELF entry
     let header: [u8; 24] = [
         0xE9,
         0x01,
@@ -367,7 +372,7 @@ fn agentdeck_firmware_drives_panel_in_sim() {
                         COUNTS[idx] += 1;
                         let c = COUNTS[idx];
                         if c <= 3 || c.is_multiple_of(100) {
-                            eprintln!("[agentdeck-sim] {name} #{c} @step {step_count}");
+                            eprintln!("[arduino-esp32-sim] {name} #{c} @step {step_count}");
                         }
                     }
                 }
@@ -470,7 +475,7 @@ fn agentdeck_firmware_drives_panel_in_sim() {
                         let a1 = machine.cpu.get_register(1);
                         let a2 = machine.cpu.get_register(2);
                         let a3 = machine.cpu.get_register(3);
-                        eprintln!("[agentdeck-sim] {label} @step {step_count} a0=0x{a0:08x} a1=0x{a1:08x} a2=0x{a2:08x} a3=0x{a3:08x}");
+                        eprintln!("[arduino-esp32-sim] {label} @step {step_count} a0=0x{a0:08x} a1=0x{a1:08x} a2=0x{a2:08x} a3=0x{a3:08x}");
                         if pc == 0x40083aac || pc == 0x4008d260 {
                             // At _xt_user_exit entry or _frxt_dispatch start — peek
                             // at the full saved frame.
@@ -482,7 +487,7 @@ fn agentdeck_firmware_drives_panel_in_sim() {
                                         machine.bus.read_u32(sp as u64 + off).unwrap_or(0xDEADBEEF);
                                     row.push_str(&format!("[+{off}]={v:#010x} "));
                                 }
-                                eprintln!("[agentdeck-sim]   frame@{sp:#x}: {row}");
+                                eprintln!("[arduino-esp32-sim]   frame@{sp:#x}: {row}");
                             }
                         }
                     }
@@ -496,12 +501,12 @@ fn agentdeck_firmware_drives_panel_in_sim() {
             // a10 = return of soc_get_available_memory_regions (count)
             // a6 = same (mov.n a6, a10)
             let count = machine.cpu.get_register(10);
-            eprintln!("[agentdeck-sim] soc_get_available_memory_regions returned count={count} (step {step_count})");
+            eprintln!("[arduino-esp32-sim] soc_get_available_memory_regions returned count={count} (step {step_count})");
         }
         // Trace the spin-loop at 0x400ed12d once to learn where a7 points.
         if machine.cpu.get_pc() == 0x400ed12d && step_count > 1_000_000 && step_count < 1_000_100 {
             eprintln!(
-                "[agentdeck-sim] spin@400ed12d: a7=0x{:08x} a6=0x{:08x} sp=0x{:08x}",
+                "[arduino-esp32-sim] spin@400ed12d: a7=0x{:08x} a6=0x{:08x} sp=0x{:08x}",
                 machine.cpu.get_register(7),
                 machine.cpu.get_register(6),
                 machine.cpu.get_register(1),
@@ -516,7 +521,7 @@ fn agentdeck_firmware_drives_panel_in_sim() {
             let features = machine.bus.read_u32(sp as u64 + 28).unwrap_or(0);
             let revision = machine.bus.read_u16(sp as u64 + 32).unwrap_or(0);
             eprintln!(
-                "[agentdeck-sim] esp_chip_info returned: model={model} features=0x{features:08x} revision={revision} cores={cores}"
+                "[arduino-esp32-sim] esp_chip_info returned: model={model} features=0x{features:08x} revision={revision} cores={cores}"
             );
         }
         // Trap on abort() entry — dump the 8 PCs immediately before it
@@ -524,7 +529,7 @@ fn agentdeck_firmware_drives_panel_in_sim() {
         if machine.cpu.get_pc() == 0x40091f60 {
             let caller_a0 = machine.cpu.get_register(0);
             eprintln!(
-                "[agentdeck-sim] abort() entry at step {step_count}. caller_a0=0x{caller_a0:08x}"
+                "[arduino-esp32-sim] abort() entry at step {step_count}. caller_a0=0x{caller_a0:08x}"
             );
             eprintln!("  last 8 PCs leading here:");
             for i in 0..8 {
@@ -546,7 +551,7 @@ fn agentdeck_firmware_drives_panel_in_sim() {
             };
             let msg_addr = machine.cpu.get_register(2);
             let msg = read_string(msg_addr, &machine.bus);
-            eprintln!("[agentdeck-sim] esp_system_abort: \"{msg}\" (step {step_count})");
+            eprintln!("[arduino-esp32-sim] esp_system_abort: \"{msg}\" (step {step_count})");
         }
         if machine.cpu.get_pc() == 0x40091fe4 {
             // Inside the caller's window, args are a10..a13.
@@ -564,7 +569,7 @@ fn agentdeck_firmware_drives_panel_in_sim() {
             };
             // Also dump caller PC and the 8 PCs before this __assert_func entry.
             let caller_a0 = machine.cpu.get_register(0);
-            eprintln!("[agentdeck-sim] __assert_func entry caller_a0=0x{caller_a0:08x}");
+            eprintln!("[arduino-esp32-sim] __assert_func entry caller_a0=0x{caller_a0:08x}");
             eprintln!("  last 8 PCs leading here:");
             for i in 0..8 {
                 let off = ((trail_idx + 64) - 1 - i) % 64;
@@ -577,7 +582,7 @@ fn agentdeck_firmware_drives_panel_in_sim() {
             let f = read_string(f_addr, &machine.bus);
             let n = read_string(fn_addr, &machine.bus);
             let e = read_string(expr_addr, &machine.bus);
-            eprintln!("[agentdeck-sim] __assert_func: file=\"{f}\" line={line} fn=\"{n}\" expr=\"{e}\" (step {step_count})");
+            eprintln!("[arduino-esp32-sim] __assert_func: file=\"{f}\" line={line} fn=\"{n}\" expr=\"{e}\" (step {step_count})");
         }
         // Cross-core IPI snoop. Sample DPORT mapping + trigger regs each step
         // and synthesize the matching INTERRUPT edge when a trigger fires.
@@ -596,7 +601,7 @@ fn agentdeck_firmware_drives_panel_in_sim() {
                 if v != 0 && bit < 32 && from_cpu_bit0 != Some(bit) {
                     let prev = from_cpu_bit0;
                     from_cpu_bit0 = Some(bit);
-                    eprintln!("[agentdeck-sim] FROM_CPU_INTR0 mapped to CPU int bit {bit} (was {prev:?}) @step {step_count}");
+                    eprintln!("[arduino-esp32-sim] FROM_CPU_INTR0 mapped to CPU int bit {bit} (was {prev:?}) @step {step_count}");
                 }
             }
             if let Ok(v) = machine.bus.read_u32(0x3FF0_0168) {
@@ -604,7 +609,7 @@ fn agentdeck_firmware_drives_panel_in_sim() {
                 if v != 0 && bit < 32 && from_cpu_bit1 != Some(bit) {
                     let prev = from_cpu_bit1;
                     from_cpu_bit1 = Some(bit);
-                    eprintln!("[agentdeck-sim] FROM_CPU_INTR1 mapped to CPU int bit {bit} (was {prev:?}) @step {step_count}");
+                    eprintln!("[arduino-esp32-sim] FROM_CPU_INTR1 mapped to CPU int bit {bit} (was {prev:?}) @step {step_count}");
                 }
             }
             // Trigger detect for FROM_CPU_INTR0 (PRO->PRO/APP yield signal).
@@ -617,10 +622,10 @@ fn agentdeck_firmware_drives_panel_in_sim() {
                             let intenable = machine.cpu.sr.read(228); // INTENABLE
                             let interrupt = machine.cpu.sr.read(226); // INTERRUPT
                             let ps = machine.cpu.ps.as_raw();
-                            eprintln!("[agentdeck-sim] IPI fire #{ipi_fired}: FROM_CPU_INTR0 → raise bit {bit} @step {step_count} pc=0x{:08x} PS=0x{:08x} INTENABLE=0x{:08x} INTERRUPT=0x{:08x}", machine.cpu.get_pc(), ps, intenable, interrupt);
+                            eprintln!("[arduino-esp32-sim] IPI fire #{ipi_fired}: FROM_CPU_INTR0 → raise bit {bit} @step {step_count} pc=0x{:08x} PS=0x{:08x} INTENABLE=0x{:08x} INTERRUPT=0x{:08x}", machine.cpu.get_pc(), ps, intenable, interrupt);
                         }
                     } else if ipi_fired == 0 {
-                        eprintln!("[agentdeck-sim] FROM_CPU_INTR0 triggered but no map assignment seen @step {step_count}");
+                        eprintln!("[arduino-esp32-sim] FROM_CPU_INTR0 triggered but no map assignment seen @step {step_count}");
                     }
                     // Clear the trigger reg so it re-edges on next write.
                     let _ = machine.bus.write_u32(0x3FF0_00DC, 0);
@@ -633,7 +638,7 @@ fn agentdeck_firmware_drives_panel_in_sim() {
                         machine.cpu.sr.raise_interrupt_bits(1u32 << bit);
                         ipi_fired += 1;
                         if ipi_fired <= 5 || ipi_fired.is_multiple_of(100) {
-                            eprintln!("[agentdeck-sim] IPI fire #{ipi_fired}: FROM_CPU_INTR1 → raise bit {bit} @step {step_count} pc=0x{:08x}", machine.cpu.get_pc());
+                            eprintln!("[arduino-esp32-sim] IPI fire #{ipi_fired}: FROM_CPU_INTR1 → raise bit {bit} @step {step_count} pc=0x{:08x}", machine.cpu.get_pc());
                         }
                     }
                     let _ = machine.bus.write_u32(0x3FF0_00E0, 0);
@@ -650,7 +655,7 @@ fn agentdeck_firmware_drives_panel_in_sim() {
             if intlevel != prev_intlevel {
                 intlevel_drop_with_pending += 1;
                 if intlevel_drop_with_pending <= 40 {
-                    eprintln!("[agentdeck-sim] INTLEVEL {prev_intlevel}→{intlevel} (bit6={}) @step {step_count} pc=0x{:08x} PS=0x{ps:08x}", if interrupt & 0x40 != 0 { "PEND" } else { "clr" }, machine.cpu.get_pc());
+                    eprintln!("[arduino-esp32-sim] INTLEVEL {prev_intlevel}→{intlevel} (bit6={}) @step {step_count} pc=0x{:08x} PS=0x{ps:08x}", if interrupt & 0x40 != 0 { "PEND" } else { "clr" }, machine.cpu.get_pc());
                 }
             }
             prev_intlevel = intlevel;
@@ -658,11 +663,11 @@ fn agentdeck_firmware_drives_panel_in_sim() {
 
         if let Err(e) = machine.step() {
             eprintln!(
-                "[agentdeck-sim] CPU error after {step_count} steps: \
+                "[arduino-esp32-sim] CPU error after {step_count} steps: \
                  last_pc=0x{last_pc:08x} current_pc=0x{:08x} — {e}",
                 machine.cpu.get_pc()
             );
-            eprintln!("[agentdeck-sim] last 64 PCs (most-recent first):");
+            eprintln!("[arduino-esp32-sim] last 64 PCs (most-recent first):");
             for i in 0..64 {
                 let idx = (trail_idx + 63 - i) % 64;
                 eprintln!("    #{i:2}: 0x{:08x}", pc_trail[idx]);
@@ -678,7 +683,7 @@ fn agentdeck_firmware_drives_panel_in_sim() {
         if pc == last_pc {
             wfi_streak += 1;
             if wfi_streak > 100_000 {
-                eprintln!("[agentdeck-sim] halt detected at pc=0x{pc:08x}");
+                eprintln!("[arduino-esp32-sim] halt detected at pc=0x{pc:08x}");
                 break;
             }
         } else {
@@ -686,7 +691,7 @@ fn agentdeck_firmware_drives_panel_in_sim() {
             last_pc = pc;
         }
     }
-    eprintln!("[agentdeck-sim] last 10 PC samples:");
+    eprintln!("[arduino-esp32-sim] last 10 PC samples:");
     for &(s, p) in samples.iter().rev().take(10) {
         eprintln!("    step {s:>10}: pc=0x{p:08x}");
     }
@@ -705,12 +710,12 @@ fn agentdeck_firmware_drives_panel_in_sim() {
         .expect("panel attached");
 
     eprintln!(
-        "[agentdeck-sim] panel state: refresh_generation={}, power_on={}",
+        "[arduino-esp32-sim] panel state: refresh_generation={}, power_on={}",
         panel.refresh_generation(),
         panel.power_on()
     );
     eprintln!(
-        "[agentdeck-sim] SPI3 transactions={} captured_bytes_len={}",
+        "[arduino-esp32-sim] SPI3 transactions={} captured_bytes_len={}",
         spi.transactions(),
         spi.captured_bytes().len(),
     );
@@ -719,14 +724,17 @@ fn agentdeck_firmware_drives_panel_in_sim() {
     if head_n > 0 {
         let head_hex: Vec<String> = cap[..head_n].iter().map(|b| format!("{b:02x}")).collect();
         eprintln!(
-            "[agentdeck-sim] first {head_n} SPI bytes: {}",
+            "[arduino-esp32-sim] first {head_n} SPI bytes: {}",
             head_hex.join(" ")
         );
     }
     if cap.len() > 160 {
         let tail = &cap[cap.len() - 80..];
         let tail_hex: Vec<String> = tail.iter().map(|b| format!("{b:02x}")).collect();
-        eprintln!("[agentdeck-sim] last 80 SPI bytes: {}", tail_hex.join(" "));
+        eprintln!(
+            "[arduino-esp32-sim] last 80 SPI bytes: {}",
+            tail_hex.join(" ")
+        );
     }
     // Count non-trivial pixels (anything that's not the all-white reset state).
     let black = panel.black_plane();
@@ -734,7 +742,7 @@ fn agentdeck_firmware_drives_panel_in_sim() {
     let red = panel.red_plane();
     let non_white_red = red.iter().filter(|&&b| b != 0xFF).count();
     eprintln!(
-        "[agentdeck-sim] black plane non-FF bytes: {non_white_black}/{}, \
+        "[arduino-esp32-sim] black plane non-FF bytes: {non_white_black}/{}, \
          red plane non-FF bytes: {non_white_red}/{}",
         black.len(),
         red.len()
@@ -765,33 +773,33 @@ fn agentdeck_firmware_drives_panel_in_sim() {
         }
     }
     let out_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../target/agentdeck_panel.ppm");
+        .join("../../target/arduino-esp32_panel.ppm");
     if let Some(parent) = out_path.parent() {
         let _ = std::fs::create_dir_all(parent);
     }
     if let Err(e) = std::fs::write(&out_path, &ppm) {
-        eprintln!("[agentdeck-sim] failed to write panel PPM: {e}");
+        eprintln!("[arduino-esp32-sim] failed to write panel PPM: {e}");
     } else {
         eprintln!(
-            "[agentdeck-sim] panel image written to {}",
+            "[arduino-esp32-sim] panel image written to {}",
             out_path.display()
         );
     }
 
     // Regression bounds. Fires only when the ignored test is invoked
-    // explicitly with the AgentDeck firmware ELF available — locks in the
+    // explicitly with the external Arduino-ESP32 firmware ELF available — locks in the
     // sim's known-good byte signature against silent drift.
     let txns = spi.transactions() as i64;
-    let baseline_txns = AGENTDECK_BASELINE_SPI3_TXNS as i64;
+    let baseline_txns = EXTERNAL_BASELINE_SPI3_TXNS as i64;
     let txn_tolerance = (baseline_txns / 200).max(50); // ±0.5% or ±50 txns
     assert!(
         (baseline_txns - txn_tolerance..=baseline_txns + txn_tolerance).contains(&txns),
-        "AgentDeck SPI3 transaction count drift: got {txns}, baseline {baseline_txns} (±{txn_tolerance})"
+        "External Arduino-ESP32 SPI3 transaction count drift: got {txns}, baseline {baseline_txns} (±{txn_tolerance})"
     );
-    let baseline_black = AGENTDECK_BASELINE_BLACK_NONFF as i64;
+    let baseline_black = EXTERNAL_BASELINE_BLACK_NONFF as i64;
     let black_signed = non_white_black as i64;
     assert!(
         (baseline_black - 10..=baseline_black + 10).contains(&black_signed),
-        "AgentDeck black-plane non-FF byte count drift: got {non_white_black}, baseline {baseline_black} (±10)"
+        "External Arduino-ESP32 black-plane non-FF byte count drift: got {non_white_black}, baseline {baseline_black} (±10)"
     );
 }

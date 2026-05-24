@@ -857,7 +857,7 @@ fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
 
     if args.profile != "agentdeck" && args.profile != "arduino-esp32" {
         eprintln!(
-            "error: unknown profile '{p}' — supported: 'agentdeck' (AgentDeck firmware, hardcoded thunk PCs), 'arduino-esp32' (any Arduino-ESP32 ELF with symbols intact, auto-discovers thunk PCs)",
+            "error: unknown profile '{p}' — supported: 'agentdeck' (preset-PC profile — hardcoded thunk addresses for a specific firmware build), 'arduino-esp32' (any Arduino-ESP32 ELF with symbols intact, auto-discovers thunk PCs)",
             p = args.profile
         );
         return ExitCode::from(EXIT_CONFIG_ERROR);
@@ -876,7 +876,7 @@ fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
     let cpu = configure_xtensa_esp32(&mut bus);
 
     // Attach an SSD1680 2.9" tri-color panel to spi3, cs=GPIO5 — the
-    // AgentDeck wiring. Identical to `e2e_agentdeck_in_sim`.
+    // the reference firmware wiring. Identical to `e2e_external_arduino_esp32_in_sim`.
     let spi3_idx = match bus.find_peripheral_index_by_name("spi3") {
         Some(i) => i,
         None => {
@@ -890,7 +890,7 @@ fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
                 // GxEPD2_290_C90c / Z13c firmware drives the panel with
                 // UC8151D commands (PSR/PWR/PON/DTM1/DTM2/DRF/…) which
                 // conflict with SSD1680 at multiple opcodes; we need the
-                // UC8151D panel model. AgentDeck firmware uses SSD1680
+                // UC8151D panel model. Arduino-ESP32 reference firmware uses SSD1680
                 // and stays on the old model below.
                 spi3.attach(Box::new(Uc8151dTricolor290::new("GPIO5")));
             } else {
@@ -933,7 +933,7 @@ fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
     machine.cpu.set_pc(program_image.entry_point as u32);
 
     // Resolve every Arduino-ESP32 symbol we know how to patch / thunk.
-    // Empty for AgentDeck (stripped) — those fall back to hardcoded PCs.
+    // Empty for the reference firmware (stripped) — those fall back to hardcoded PCs.
     let symbol_addrs = extract_arduino_esp32_thunks(&elf_bytes);
     let resolve_data =
         |sym: &str, fallback: u32| -> u32 { symbol_addrs.get(sym).copied().unwrap_or(fallback) };
@@ -999,7 +999,7 @@ fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
     machine.cpu.set_sp(0x3FFE_0000);
     // Handshake-byte pre-paint. Two paths:
     //   * `agentdeck` profile — use the exact byte addresses the original
-    //     install_esp32_arduino_quirks wrote, byte-for-byte. AgentDeck's
+    //     install_esp32_arduino_quirks wrote, byte-for-byte. the reference firmware's
     //     ELF is stripped, so symbol auto-discovery returns nothing.
     //   * `arduino-esp32` profile — resolve s_resume_cores / s_cpu_up /
     //     s_cpu_inited / s_system_inited / s_other_cpu_startup_done from
@@ -1048,7 +1048,7 @@ fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
 
     // Build the thunk address list. Each entry maps a flash PC to a
     // sim-side rom_thunks function. For unstripped ELFs we use the
-    // already-parsed symbol map above; AgentDeck's fully stripped ELF
+    // already-parsed symbol map above; the reference firmware's fully stripped ELF
     // falls back to the hand-curated address list.
     let resolve =
         |sym: &str, fallback: u32| -> u32 { symbol_addrs.get(sym).copied().unwrap_or(fallback) };
@@ -1359,7 +1359,7 @@ fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
         thunks.push((pc, rom_thunks::return_pd_true));
     }
     // ulTaskGenericNotifyTake — gated to arduino-esp32 only.
-    // AgentDeck has its own well-modeled lock-acquire path that
+    // the reference firmware has its own well-modeled lock-acquire path that
     // expects a proper "block-then-wake" semantic; stubbing it to
     // return pdTRUE causes the lock-acquire to skip its setup and
     // later trip __assert_func inside lock_acquire_generic.
@@ -1408,7 +1408,7 @@ fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
             thunks.push((pc, rom_thunks::vlist_insert_debug));
         }
     }
-    // AgentDeck-only WiFi + sendHello thunks. Only install for that profile
+    // the reference firmware-only WiFi + sendHello thunks. Only install for that profile
     // — sketches without those symbols wouldn't trip them anyway.
     if args.profile == "agentdeck" {
         thunks.extend_from_slice(&[
@@ -1509,7 +1509,7 @@ fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
         }
         // Re-stamp the dual-core handshake bytes every 10k cycles so
         // start_other_core / do_other_cpu_settings keep seeing them as
-        // "up." AgentDeck path: byte-for-byte mirror of the original
+        // "up." preset-PC path: byte-for-byte mirror of the original
         // install_esp32_arduino_quirks. Auto-discovery path: write to
         // each resolved symbol's [0]+[1] slots.
         if i.is_multiple_of(10_000) {

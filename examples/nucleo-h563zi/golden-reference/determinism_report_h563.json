@@ -1,27 +1,37 @@
 {
-  "timestamp": "Mon Mar  2 12:20:00 2026",
-  "target": "NUCLEO-H563ZI (Cortex-M33)",
-  "firmware": "firmware-h563-demo (v0.1.0)",
-  "verification_tool": "AetherDebugger (probe-rs base)",
-  "steps_compared": 50,
-  "status": "PASS",
-  "notes": "Verified perfect determinism from Reset+0x2 (0x0800000A). Initial reset vector points to 0x08000008 (push {r7, lr}). LabWired and Hardware both reach 0x0800000A in the same architectural state (SP=0x200A0000). First architectural step (mov r7, sp) results in PC=0x0800000C and R7=SP on both platforms.",
-  "results": [
+  "timestamp": "2026-05-24 16:42:28 UTC",
+  "target": "NUCLEO-H563ZI (STM32H563ZI / Cortex-M33)",
+  "firmware": "firmware-h563-demo",
+  "firmware_sha256": "99606ebc483dab806b05c83dbeb9bd3761b376a403e79fbe0cec43ad46e9ce55",
+  "verification_tool": "labwired-hw-oracle (OpenOCD + GDB on physical NUCLEO-H563ZI)",
+  "method": "Capture the firmware's behavior on both physical silicon and in the sim. Compare (a) the post-reset architectural state, (b) the UART byte stream emitted during the verified run window.",
+  "scope": "This artifact verifies *narrow* parity \u2014 initial architectural alignment and UART output \u2014 for a small smoke firmware. It is NOT a claim of instruction-by-instruction parity across the full firmware lifetime. OpenOCD's sample-based capture cannot resolve every executed instruction on real silicon, so a step-by-step PC compare past the reset state would be a false signal.",
+  "verified": [
     {
-      "step": 0,
-      "hw_pc": "0x0800000A",
-      "sim_pc": "0x0800000A",
-      "match": true
+      "claim": "Reset vector dispatches to the same PC on hw and sim",
+      "hw_initial_pc": "0x08000008",
+      "sim_initial_pc": "0x0800000A",
+      "hw_pc_after_push": "(no match found in HW trace)",
+      "match": false
     },
     {
-      "step": 1,
-      "hw_pc": "0x0800000C",
-      "sim_pc": "0x0800000C",
+      "claim": "UART output byte stream over the verified run window",
+      "hw_uart_output": "OK",
+      "sim_uart_output": "OK",
       "match": true
     }
   ],
-  "checksum_verification": {
-    "firmware_sha256": "81f1... (verified)",
-    "trace_match": "COMPATIBLE"
-  }
+  "not_verified": [
+    "Step-by-step PC sequence past the reset state \u2014 OpenOCD samples are not synchronous with the CPU's instruction pipeline.",
+    "Peripheral behavior beyond the I/O exercised by this smoke firmware (UART3 + GPIO + RCC + SysTick). See `docs/boards/stm32h563.md` for the full peripheral coverage matrix."
+  ],
+  "broader_evidence": "For deeper byte-parity evidence under continuous-execution conditions, see `firmware-l476-demo/` survival traces (`firmware_survival.rs`) which run 5 rounds of full UART byte capture against a NUCLEO-L476RG.",
+  "raw_data": {
+    "hw_trace": "hw_trace.json (3,900 lines; OpenOCD register samples)",
+    "sim_trace": "sim_trace.json (578 lines; sim instruction trace, 50 steps)",
+    "sim_uart": "uart.log",
+    "sim_run_result": "result.json (status=pass)",
+    "ci_artifact": "junit.xml"
+  },
+  "regeneration": "Capture artifacts via the hw-oracle harness on a NUCLEO-H563ZI attached to the build machine, then re-run this script."
 }

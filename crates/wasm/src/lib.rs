@@ -1437,7 +1437,7 @@ impl WasmSimulator {
     // ──────────────────────────────────────────────────────────────────────
     //  Arduino-ESP32 bootstrap glue. Call after constructing the WasmSimulator
     //  with an ESP32-classic manifest + an Arduino-ESP32 firmware ELF (e.g.
-    //  AgentDeck). Bakes in:
+    //  the reference firmware). Bakes in:
     //    * Memory pre-fakes (partition header, RTC freq probe, dual-core
     //      handshake bytes, ROM data region).
     //    * Flash thunks for the ESP-IDF + Arduino-ESP32 functions whose real
@@ -1474,7 +1474,7 @@ impl WasmSimulator {
         // RTC XTAL-freq probe = 40 MHz (high/low halves equal, shifted-1).
         let _ = machine.bus.write_u32(0x3FF4_80B0, 0x0050_0050);
 
-        // Fake esp_image_header_t at 0x3F40_0000 (24 bytes), entry = AgentDeck.
+        // Fake esp_image_header_t at 0x3F40_0000 (24 bytes), entry = the reference firmware.
         let entry = 0x40081bf0_u32;
         let header: [u8; 24] = [
             0xE9,
@@ -1506,8 +1506,8 @@ impl WasmSimulator {
             let _ = machine.bus.write_u8(0x3F40_0000 + i as u64, b);
         }
 
-        // Flash thunks. Addresses are AgentDeck-firmware-specific (PC of the
-        // function in the ELF) — see crates/core/tests/e2e_agentdeck_in_sim.rs
+        // Flash thunks. Addresses are the reference firmware-firmware-specific (PC of the
+        // function in the ELF) — see crates/core/tests/e2e_external_arduino_esp32_in_sim.rs
         // for the same list with detailed per-thunk rationale.
         let thunks: &[(u32, rom_thunks::RomThunkFn)] = &[
             (0x400e_e3b0, rom_thunks::esp_idf_heap_caps_init),
@@ -1571,7 +1571,7 @@ impl WasmSimulator {
 
         // Attach the UC8151D panel to spi3. The default configure step
         // doesn't attach any panel; this is the panel-class-specific bit
-        // that the AgentDeck quirks installer covered with SSD1680.
+        // that the the reference firmware quirks installer covered with SSD1680.
         if let Some(spi3_idx) = machine.bus.find_peripheral_index_by_name("spi3") {
             if let Some(any) = machine.bus.peripherals[spi3_idx].dev.as_any_mut() {
                 if let Some(spi3) = any.downcast_mut::<Esp32Spi>() {
@@ -1827,12 +1827,12 @@ impl WasmSimulator {
     // The concern is Arduino-ESP32 firmware bootstrap (heap-caps thunks,
     // dual-core handshake fakery, sendHello stub, WifiWsLink::loop stub,
     // esp_crc8 thunk, etc.), not a specific customer product. Kept as a
-    // thin wrapper so the standalone /agentdeck.html page (and any other
+    // thin wrapper so the standalone /playground page (and any other
     // pre-rename caller) keeps working.
     #[wasm_bindgen]
     #[allow(deprecated)]
     #[deprecated(
-        note = "Renamed to install_esp32_arduino_quirks — the bootstrap is generic Arduino-ESP32 glue, not AgentDeck-specific."
+        note = "Renamed to install_esp32_arduino_quirks — the bootstrap is generic Arduino-ESP32 glue, not firmware-specific."
     )]
     pub fn apply_agentdeck_quirks(&mut self) -> Result<(), JsValue> {
         #[allow(deprecated)]

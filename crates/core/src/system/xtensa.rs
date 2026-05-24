@@ -235,7 +235,7 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
     rom_bank.register(0x4000_9edc, rom_thunks::nop_return_zero); // esp_rom_gpio_connect_in_signal
     rom_bank.register(0x4000_9fdc, rom_thunks::nop_return_zero); // esp_rom_gpio_pad_select_gpio
                                                                  // MMU / cache setup helpers — discovered iteratively while booting
-                                                                 // the AgentDeck Arduino-ESP32 binary in sim. All no-ops because the
+                                                                 // the the reference firmware Arduino-ESP32 binary in sim. All no-ops because the
                                                                  // sim's flash XIP peripheral is a flat RamPeripheral, no MMU model.
     rom_bank.register(0x4000_95a4, rom_thunks::nop_return_zero); // mmu_init
                                                                  // libgcc helpers — Arduino-ESP32 links against ROM copies for

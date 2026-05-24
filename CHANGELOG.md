@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Runtime Snapshot Subsystem**: `Machine::with_secondary_cpu`, `Machine::{take,apply}_runtime_snapshot`, CLI `snapshot capture` subcommand, WASM `apply_runtime_snapshot(bytes)` + `take_runtime_snapshot()`. Cold-boot collapses from 30 s to ~0.5 s in the playground.
 - **Arduino-ESP32 / FreeRTOS Bring-Up Thunks** (`crates/core/src/peripherals/esp32s3/rom_thunks.rs`): `abort_halt`, `esp_clk_cpu_freq_240mhz`, `x_queue_create_mutex_static_echo`, `x_task_get_current_task_handle`, `return_pd_true`, `spi_start_bus_fake`, `spi_class_begin_transaction` (lazy `spi_t` init with `USR_MOSI` auto-enable), `xQueueGiveMutexRecursive`, `esp_log_impl_lock`, recursive-mutex create stubs, `esp_ipc_init`/`esp_ipc_isr_init` no-ops.
 - **Loader Auto-Discovery**: `extract_arduino_esp32_thunks` + `resolve_symbol_in_elf` resolve HardwareSerial / SPI / mutex / log-lock / IPC-init symbols by name from the ELF's `.symtab`, so installed thunks gate strictly on symbol presence (stripped ELFs that don't import the symbol are untouched).
-- **AgentDeck Boot Snapshot Pipeline**: Captured post-paint state blob; playground replays the snapshot in ~0.5 s.
+- **Boot Snapshot Pipeline**: Capture a post-paint state blob from any heavy ESP32 firmware via `labwired snapshot capture` and replay it in the playground in ~0.5 s.
 - **Unified Demo Registry**: `BoardConfig`-driven `fetch-demo-firmware.sh` and per-board snapshot blobs.
 - **Dual-Core PxList Diagnostic Dump**: CLI flag dumps the kernel ready/delayed list state on both cores for diagnosing scheduler regressions.
 
@@ -26,9 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`return_pd_true` Visibility**: Now emits a one-time `tracing::warn!` on first call so the stub's activation is loud in logs — future regressions where a take *should* block will be visible instead of silently succeeding.
 
 ### Fixed
-- **IPC-Task Spin / Scheduler-Tick Starvation**: Combined fix from `WSR.INTSET` raising `SOFTWARE0` and `CCOMPARE0` ack-and-rearm; AgentDeck and reader sketch both progress past `xQueueSemaphoreTake` into `app_main` / `setup()`.
+- **IPC-Task Spin / Scheduler-Tick Starvation**: Combined fix from `WSR.INTSET` raising `SOFTWARE0` and `CCOMPARE0` ack-and-rearm; Arduino-ESP32 firmware now progresses past `xQueueSemaphoreTake` into `app_main` / `setup()`.
 - **`esp_newlib_locks_init` Assertion Failure**: `xQueueCreateMutexStatic` returning 0 now echoes the static-buffer argument so the lock pointer is non-NULL.
-- **GxEPD2 / SSD1680 SPI Writes Reach the Panel**: `SPIClass::beginTransaction` lazy init enables `USER_REG.USR_MOSI` (bit 27) when the sketch never calls `SPI.begin()` explicitly — reader sketch black-plane bytes 0 → 1,429 non-FF (29% glyph coverage) across 3 full refresh cycles, 19,039 SPI3 transactions.
+- **GxEPD2 / SSD1680 SPI Writes Reach the Panel**: `SPIClass::beginTransaction` lazy init enables `USER_REG.USR_MOSI` (bit 27) when the sketch never calls `SPI.begin()` explicitly; combined with the GxEPD2 cmd/data thunks and the UC8151D panel model, an Arduino-ESP32 GxEPD2 sketch now paints the tri-color e-paper panel in sim.
 - **`Print::print` / `Print::write` Dispatch**: Restored real virtual dispatch so `display.print("text")` flows `Print → Adafruit_GFX::write → drawChar → drawPixel`; only `HardwareSerial::write` and the `uart*` helpers stay stubbed.
 - **Dead Inherent Watchpoint Removed**: `SystemBus::write_u32/write_u16` inherent watchpoint from #93 never fired (bus dispatch goes through trait impl) — code path removed.
 - **`mkdocs.yml` Drift**: `repo_url` typo (`libwired-core` → `labwired-core`); nav entries pointing at nonexistent `SUPPORTED_DEVICES.md`, `verification_audit.md`, `development/git_flow.md` corrected or removed.
