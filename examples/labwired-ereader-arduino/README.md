@@ -3,7 +3,7 @@
 Working firmware for the LabWired e-reader demo board.
 
 ## Hardware
-- ESP32-WROOM-32 (any module — AgentDeck unit verified)
+- ESP32-WROOM-32 (any module — verified on physical hardware)
 - Waveshare 2.9" tri-color e-paper (**C90c driver IC**)
 
 Wiring (Arduino-ESP32 default VSPI pins):
@@ -32,8 +32,8 @@ espflash flash --port /dev/ttyUSB0 --baud 460800 \
 
 ## Gotcha: driver-class selection
 The 2.9" tri-color Waveshare panels look identical externally but use
-different driver ICs. **C90c** is the one on the AgentDeck hardware
-(verified against /home/andrii/Projects/AgentDeck/firmware libdeps).
+different driver ICs. **C90c** is the one on the the reference firmware hardware
+(verified against the GxEPD2 library examples).
 Picking `Z13c` instead makes the library report all refresh stages
 "succeeded" in microseconds (BUSY pin returns instantly because the
 wrong init left the panel in a no-op state) — panel goes blank.

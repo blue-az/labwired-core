@@ -122,7 +122,7 @@ pub fn decode_narrow(halfword: u16) -> Instruction {
 /// for the specific MOVI.N test inputs in its HW-oracle comments. Real
 /// firmware uses BEQZ.N encodings (e.g. 0x079c) where bits[11:8]=0x7
 /// gives `s & 0x8 == 0`, mis-routing it to MOVI.N. Discovered when
-/// AgentDeck firmware's memset jumped to a wrong offset.
+/// Arduino-ESP32 reference firmware's memset jumped to a wrong offset.
 fn decode_narrow_c(hw: u16, r: u8, _s: u8, t: u8) -> Instruction {
     // Field naming note: the narrow extractor uses LOCAL field names that
     // DON'T match the wide decoder's positions. In this file:

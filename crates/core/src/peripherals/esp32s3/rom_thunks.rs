@@ -550,7 +550,7 @@ pub fn x_queue_create_mutex_static_echo(cpu: &mut XtensaLx7, _bus: &mut dyn Bus)
 ///
 /// `pxCurrentTCB` is a per-core array at a firmware-specific address; the
 /// auto-discovered symbol resolves on the Arduino-ESP32 profile. Without
-/// the symbol (AgentDeck profile, stripped ELF), we fall back to returning
+/// the symbol (preset-PC profile, stripped ELF), we fall back to returning
 /// 0 to preserve the previous behaviour.
 pub fn x_task_get_current_task_handle(cpu: &mut XtensaLx7, bus: &mut dyn Bus) -> SimResult<()> {
     let core_id = (cpu.sr.read(crate::cpu::xtensa_sr::PRID) >> 13) & 1;

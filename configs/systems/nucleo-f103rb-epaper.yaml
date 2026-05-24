@@ -6,7 +6,7 @@
 #
 # NUCLEO-F103RB + Waveshare 2.9" tri-color e-paper (SSD1680 / GDEM029C90).
 #
-# Wiring assumed (matches AgentDeck schematic ported to F103 Arduino headers):
+# Wiring assumed (matches the reference firmware schematic ported to F103 Arduino headers):
 #   SPI1.SCK  -> PA5  (D13)  -> CLK
 #   SPI1.MOSI -> PA7  (D11)  -> DIN
 #   GPIO      -> PA4  (D10)  -> CS

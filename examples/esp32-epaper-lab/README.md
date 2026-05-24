@@ -7,10 +7,10 @@ inside the LabWired simulator.
 ## What it does
 Draws three full-width horizontal bands — WHITE / BLACK / RED — and triggers
 one full panel refresh. The byte sequence on the wire mirrors what the
-AgentDeck firmware (`GxEPD2_290_C90c`) and the LabWired STM32 e-paper lab emit,
+Arduino-ESP32 reference firmware (`GxEPD2_290_C90c`) and the LabWired STM32 e-paper lab emit,
 so the simulator's SSD1680 model decodes all three paths identically.
 
-## Pin mapping (Waveshare default, AgentDeck-compatible)
+## Pin mapping (Waveshare default, Arduino-ESP32-compatible)
 
 | Signal | ESP32 GPIO | Notes                       |
 |--------|------------|-----------------------------|
@@ -52,7 +52,7 @@ labwired run \
 
 The simulator wires the SSD1680 to the modeled VSPI controller per
 `system.yaml`. Captured SPI byte stream is byte-for-byte compatible with the
-AgentDeck path and the STM32 epaper-tricolor-lab.
+preset-PC path and the STM32 epaper-tricolor-lab.
 
 ## Flash to real hardware
 

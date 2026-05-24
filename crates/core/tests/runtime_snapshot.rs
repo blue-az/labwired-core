@@ -4,8 +4,8 @@
 //
 // Focused round-trip tests for the binary runtime snapshot infrastructure.
 // Validates the foundation (CPU + RamPeripheral + SystemStub + SSD1680
-// snapshot/restore) without needing the AgentDeck firmware in the loop —
-// the heavy end-to-end resume test lives in `e2e_agentdeck_in_sim.rs`.
+// snapshot/restore) without needing an Arduino-ESP32 reference firmware in the loop —
+// the heavy end-to-end resume test lives in `e2e_external_arduino_esp32_in_sim.rs`.
 
 use labwired_core::bus::SystemBus;
 use labwired_core::peripherals::components::Ssd1680Tricolor290;
@@ -185,7 +185,7 @@ fn machine_runtime_snapshot_roundtrips_through_serialization() {
     assert_eq!(machine.bus.read_u32(0x3FFB_0200).unwrap(), 0xDEAD_BEEF);
 }
 
-/// Verifies that the offline-captured AgentDeck snapshot file produced by
+/// Verifies that the offline-captured the reference firmware snapshot file produced by
 /// `labwired-cli snapshot capture` decodes cleanly and restores onto a
 /// freshly-built machine with the panel in its post-paint state.
 ///
@@ -205,7 +205,7 @@ fn agentdeck_snapshot_file_restores_post_paint_panel() {
     let bytes = std::fs::read(&snap_path).expect("read snapshot file");
     let snap = MachineRuntimeSnapshot::from_bytes(&bytes).expect("decode snapshot");
 
-    // Build a fresh machine matching the AgentDeck topology.
+    // Build a fresh machine matching the the reference firmware topology.
     let mut bus = SystemBus::new();
     let cpu = configure_xtensa_esp32(&mut bus);
     let spi3_idx = bus

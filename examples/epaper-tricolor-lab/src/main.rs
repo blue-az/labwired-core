@@ -172,7 +172,7 @@ fn ep_hw_reset() {
     wait_idle();
 }
 
-/// Mirrors GxEPD2_290_C90c::_InitDisplay() — the byte sequence the AgentDeck
+/// Mirrors GxEPD2_290_C90c::_InitDisplay() — the byte sequence the the reference firmware
 /// firmware emits during boot. Window is set to the full 128x296 panel.
 fn ep_init() {
     ep_hw_reset();

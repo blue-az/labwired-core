@@ -8,7 +8,7 @@
 //! by `scripts/gen-ereader-bitmap.py`). Same firmware ELF runs unmodified
 //! in the LabWired simulator and on physical ESP32 hardware via espflash.
 //!
-//! Pin mapping (Waveshare default, AgentDeck-compatible):
+//! Pin mapping (Waveshare default, Arduino-ESP32-compatible):
 //!   GPIO5  — CS                     GPIO output push-pull
 //!   GPIO18 — SCK    (VSPI signal)   IO_MUX function 1
 //!   GPIO23 — MOSI   (VSPI signal)   IO_MUX function 1

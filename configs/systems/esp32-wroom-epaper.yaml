@@ -1,6 +1,7 @@
-# AgentDeck production hardware reference manifest.
+# ESP32-WROOM-32 + Waveshare 2.9" tri-color e-paper system manifest.
 #
-# Pin map matches `firmware/src/pins.h` on the physical AgentDeck device:
+# Standard Arduino-ESP32 SPI3 / VSPI wiring used by the GxEPD2 reference
+# constructors:
 #   BUSY = GPIO4
 #   RST  = GPIO16
 #   DC   = GPIO17
@@ -10,7 +11,7 @@
 #
 # Kept in sync with `examples/esp32-epaper-lab/system.yaml` manually — bump
 # both when the wiring ever needs to change.
-name: "agentdeck"
+name: "esp32-wroom-epaper"
 chip: "../chips/esp32.yaml"
 external_devices:
   - id: "epaper"
