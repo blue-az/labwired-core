@@ -1542,6 +1542,287 @@ impl WasmSimulator {
         Ok(())
     }
 
+    /// Auto-discovery counterpart to [`Self::install_esp32_arduino_quirks`].
+    ///
+    /// Mirrors the CLI's `arduino-esp32` snapshot-capture profile —
+    /// resolves Arduino-ESP32 thunk PCs from the ELF symbol table instead
+    /// of hand-curated hardcoded addresses. Works for any GxEPD2-class
+    /// sketch (labwired-ereader, future user sketches) without needing
+    /// to know its binary layout in advance.
+    ///
+    /// Caller must pass the same ELF bytes that were loaded via
+    /// `load_firmware`. The thunks are installed as flash patches over
+    /// the resolved PCs; calling this without the matching ELF is a no-op
+    /// (symbols don't resolve → no thunks installed).
+    ///
+    /// Also attaches a `Uc8151dTricolor290` panel to spi3 (the SSD1680
+    /// panel attached by default doesn't decode UC8151D opcodes
+    /// `0x00 PSR` / `0x04 PON` / `0x10 DTM1` / `0x12 DRF` / `0x13 DTM2`
+    /// that GxEPD2_290_C90c / Z13c emits).
+    #[wasm_bindgen]
+    pub fn install_arduino_esp32_quirks(&mut self, elf_bytes: &[u8]) -> Result<(), JsValue> {
+        use labwired_core::peripherals::components::Uc8151dTricolor290;
+        use labwired_core::peripherals::esp32::spi::Esp32Spi;
+        use labwired_core::peripherals::esp32s3::rom_thunks;
+        let machine = self
+            .machine
+            .as_mut()
+            .ok_or_else(|| JsValue::from_str("no machine"))?;
+
+        // Attach the UC8151D panel to spi3. The default configure step
+        // doesn't attach any panel; this is the panel-class-specific bit
+        // that the AgentDeck quirks installer covered with SSD1680.
+        if let Some(spi3_idx) = machine.bus.find_peripheral_index_by_name("spi3") {
+            if let Some(any) = machine.bus.peripherals[spi3_idx].dev.as_any_mut() {
+                if let Some(spi3) = any.downcast_mut::<Esp32Spi>() {
+                    spi3.attach(Box::new(Uc8151dTricolor290::new("GPIO5")));
+                }
+            }
+        }
+
+        // Seed SP — call_start_cpu0 expects BROM to have placed SP near
+        // top of DRAM. We skip BROM.
+        machine.cpu.set_sp(0x3FFE_0000);
+        // RTC XTAL-freq probe = 40 MHz.
+        let _ = machine.bus.write_u32(0x3FF4_80B0, 0x0050_0050);
+
+        let symbol_addrs = labwired_loader::extract_arduino_esp32_thunks(elf_bytes);
+
+        // Dual-core handshake bytes — resolved per firmware.
+        for sym in &[
+            "s_resume_cores",
+            "s_cpu_up",
+            "s_cpu_inited",
+            "s_system_inited",
+        ] {
+            if let Some(&addr) = symbol_addrs.get(*sym) {
+                let _ = machine.bus.write_u8(addr as u64, 0x01);
+                let _ = machine.bus.write_u8(addr as u64 + 1, 0x01);
+            }
+        }
+        if let Some(&addr) = symbol_addrs.get("s_other_cpu_startup_done") {
+            let _ = machine.bus.write_u8(addr as u64, 0x01);
+        }
+
+        // loopTask xCoreID patch — flip the `1` to `0` so loopTask runs
+        // on PRO_CPU (until full SMP is wired). Scans first 64 bytes of
+        // app_main for the `e9 01 0c 0d` sequence and swaps it.
+        if let Some(&app_main_addr) = symbol_addrs.get("app_main") {
+            const SCAN_BYTES: u32 = 64;
+            let mut window = Vec::with_capacity(SCAN_BYTES as usize);
+            for off in 0..SCAN_BYTES {
+                match machine.bus.read_u8((app_main_addr + off) as u64) {
+                    Ok(b) => window.push(b),
+                    Err(_) => break,
+                }
+            }
+            let target = [0xE9_u8, 0x01, 0x0C, 0x0D];
+            let swap = [0x0C_u8, 0x0D, 0xD9, 0x01];
+            if let Some((i, _)) = window.windows(4).enumerate().find(|(_, w)| *w == target) {
+                let patch_addr = (app_main_addr + i as u32) as u64;
+                for (j, b) in swap.iter().enumerate() {
+                    let _ = machine.bus.write_u8(patch_addr + j as u64, *b);
+                }
+            }
+        }
+
+        // pxCurrentTCB pointer seed for xTaskGetCurrentTaskHandle thunk.
+        if let Some(&addr) = symbol_addrs.get("pxCurrentTCB") {
+            rom_thunks::PX_CURRENT_TCB_ADDR.with(|s| s.set(Some(addr)));
+        }
+
+        // Build the thunk list — by-symbol lookups, skip when symbol
+        // missing (sketch doesn't import that function).
+        let mut thunks: Vec<(u32, rom_thunks::RomThunkFn)> = Vec::new();
+        let push_named = |list: &mut Vec<(u32, rom_thunks::RomThunkFn)>,
+                          sym: &str,
+                          f: rom_thunks::RomThunkFn| {
+            if let Some(&pc) = symbol_addrs.get(sym) {
+                list.push((pc, f));
+            }
+        };
+
+        push_named(
+            &mut thunks,
+            "heap_caps_init",
+            rom_thunks::esp_idf_heap_caps_init,
+        );
+        push_named(
+            &mut thunks,
+            "heap_caps_malloc",
+            rom_thunks::esp_idf_heap_caps_malloc,
+        );
+        push_named(
+            &mut thunks,
+            "heap_caps_calloc",
+            rom_thunks::esp_idf_heap_caps_calloc,
+        );
+        push_named(
+            &mut thunks,
+            "heap_caps_free",
+            rom_thunks::esp_idf_heap_caps_free,
+        );
+        push_named(
+            &mut thunks,
+            "heap_caps_realloc",
+            rom_thunks::esp_idf_heap_caps_realloc,
+        );
+
+        // No-op stubs for ESP-IDF / Arduino-ESP32 init paths we don't model.
+        for sym in &[
+            "esp_timer_init",
+            "spi_flash_disable_interrupts_caches_and_other_cpu",
+            "spi_flash_enable_interrupts_caches_and_other_cpu",
+            "__retarget_lock_init_recursive",
+            "__retarget_lock_close_recursive",
+            "__retarget_lock_acquire_recursive",
+            "__retarget_lock_release_recursive",
+            "_esp_error_check_failed",
+            "setCpuFrequencyMhz",
+            "delay",
+            "xQueueGiveMutexRecursive",
+            "xQueueTakeMutexRecursive",
+            "xQueueCreateMutex",
+            "esp_ipc_init",
+            "esp_ipc_isr_init",
+            "esp_log_impl_lock",
+            "esp_log_impl_lock_timeout",
+            "esp_log_impl_unlock",
+            "esp_panic_handler",
+            "esp_panic_handler_reconfigure_wdts",
+            "pthread_key_create",
+            "pthread_setspecific",
+            "pthread_getspecific",
+            "esp_pthread_init",
+            "esp_task_wdt_reset",
+            "esp_task_wdt_init",
+            "esp_task_wdt_add",
+            "esp_task_wdt_delete",
+            "esp_clk_init",
+            "esp_perip_clk_init",
+            "core_intr_matrix_clear",
+            "esp_efuse_check_errors",
+            "esp_dport_access_stall_other_cpu_start",
+            "esp_dport_access_stall_other_cpu_end",
+            "esp_cpu_unstall",
+            "bootloader_flash_update_id",
+            "bootloader_init_mem",
+            "esp_mspi_pin_init",
+            "spi_flash_init_chip_state",
+            "esp_log_timestamp",
+            "esp_log_early_timestamp",
+            "esp_log_writev",
+            "esp_random",
+            "esp_fill_random",
+            "_ZN14HardwareSerial5writeEh",
+            "_ZN14HardwareSerial5writeEPKhj",
+            "_ZN14HardwareSerial9availableEv",
+            "_ZN14HardwareSerial5flushEv",
+            "_ZN14HardwareSerial9readBytesEPcj",
+            "_ZN14HardwareSerial9readBytesEPhj",
+            "uartAvailable",
+            "uartAvailableForWrite",
+            "uartWrite",
+            "uartWriteBuf",
+            "_Z14serialEventRunv",
+            "vListInsert",
+        ] {
+            push_named(&mut thunks, sym, rom_thunks::nop_return_zero);
+        }
+
+        // Functions that need real returns / args.
+        push_named(
+            &mut thunks,
+            "esp_ota_get_running_partition",
+            rom_thunks::nop_return_fake_ptr,
+        );
+        push_named(&mut thunks, "esp_chip_info", rom_thunks::esp_chip_info_stub);
+        push_named(
+            &mut thunks,
+            "__getreent",
+            rom_thunks::getreent_dram_fake_ptr,
+        );
+        push_named(
+            &mut thunks,
+            "esp_timer_impl_get_counter_reg",
+            rom_thunks::monotonic_counter_32,
+        );
+        push_named(
+            &mut thunks,
+            "esp_clk_cpu_freq",
+            rom_thunks::esp_clk_cpu_freq_240mhz,
+        );
+        push_named(
+            &mut thunks,
+            "xQueueCreateMutexStatic",
+            rom_thunks::x_queue_create_mutex_static_echo,
+        );
+        push_named(
+            &mut thunks,
+            "xTaskGetCurrentTaskHandle",
+            rom_thunks::x_task_get_current_task_handle,
+        );
+        push_named(
+            &mut thunks,
+            "xQueueSemaphoreTake",
+            rom_thunks::return_pd_true,
+        );
+        push_named(&mut thunks, "xQueueGenericSend", rom_thunks::return_pd_true);
+        push_named(
+            &mut thunks,
+            "ulTaskGenericNotifyTake",
+            rom_thunks::return_pd_true,
+        );
+        push_named(&mut thunks, "spiStartBus", rom_thunks::spi_start_bus_fake);
+        push_named(
+            &mut thunks,
+            "_ZN8SPIClass16beginTransactionE11SPISettings",
+            rom_thunks::spi_class_begin_transaction,
+        );
+
+        // GxEPD2 cmd/data routing — bypasses Arduino-ESP32's SPI library
+        // entirely. Bytes go straight to the attached UC8151D panel.
+        push_named(
+            &mut thunks,
+            "_ZN10GxEPD2_EPD13_writeCommandEh",
+            rom_thunks::gxepd_write_command,
+        );
+        push_named(
+            &mut thunks,
+            "_ZN10GxEPD2_EPD10_writeDataEh",
+            rom_thunks::gxepd_write_data,
+        );
+
+        // xthal_window_spill — semantic spill via shadow stack.
+        for sym in &["xthal_window_spill_nw", "xthal_window_spill"] {
+            push_named(&mut thunks, sym, rom_thunks::xthal_window_spill_thunk);
+        }
+
+        // Real-silicon noreturn — abort_halt prints diagnostics and
+        // halts the CPU rather than returning, to avoid tight
+        // assert→return loops.
+        for sym in &[
+            "panic_abort",
+            "__assert_func",
+            "abort",
+            "__assert",
+            "__cxa_pure_virtual",
+            "__cxa_throw",
+        ] {
+            push_named(&mut thunks, sym, rom_thunks::abort_halt);
+        }
+
+        for (pc, f) in thunks {
+            machine
+                .bus
+                .install_flash_thunk(pc, f)
+                .map_err(|e| JsValue::from_str(&format!("install thunk @{pc:#x}: {e}")))?;
+        }
+
+        self.esp32_ipi = Some(Esp32IpiBridge::default());
+        Ok(())
+    }
+
     // DEPRECATED: renamed to install_esp32_arduino_quirks for clarity.
     // The concern is Arduino-ESP32 firmware bootstrap (heap-caps thunks,
     // dual-core handshake fakery, sendHello stub, WifiWsLink::loop stub,
