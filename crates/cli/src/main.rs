@@ -1304,6 +1304,18 @@ fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
     if let Some(&pc) = symbol_addrs.get("esp_clk_cpu_freq") {
         thunks.push((pc, rom_thunks::esp_clk_cpu_freq_240mhz));
     }
+    // Xtensa HAL register-window-file spill. The HAL impl walks WS bits
+    // and spills each live slot's a0..a3 to its stack save area — but
+    // our sim's transparent shadow-spill on CALL{n} leaves WS=1 on
+    // displaced slots while the AR file has the callee's data, so the
+    // HAL walk reads garbage (callee's a1 is often 0 → store to
+    // 0xfffffff0 traps). The custom thunk emulates the spill using
+    // shadow-stack snapshots when available.
+    for sym in &["xthal_window_spill_nw", "xthal_window_spill"] {
+        if let Some(&pc) = symbol_addrs.get(*sym) {
+            thunks.push((pc, rom_thunks::xthal_window_spill_thunk));
+        }
+    }
     // xQueueCreateMutexStatic returns the caller's static buffer as the
     // handle. Callers (esp_newlib_locks_init in particular) assert that the
     // returned handle equals the buffer they passed in — a nop_return_zero
@@ -1328,6 +1340,9 @@ fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
         thunks.push((pc, rom_thunks::return_pd_true));
     }
     if let Some(&pc) = symbol_addrs.get("xQueueGenericSend") {
+        thunks.push((pc, rom_thunks::return_pd_true));
+    }
+    if let Some(&pc) = symbol_addrs.get("ulTaskGenericNotifyTake") {
         thunks.push((pc, rom_thunks::return_pd_true));
     }
     if let Some(&pc) = symbol_addrs.get("spiStartBus") {

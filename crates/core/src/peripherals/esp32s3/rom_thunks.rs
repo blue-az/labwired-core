@@ -295,6 +295,65 @@ pub fn nop_return_zero(cpu: &mut XtensaLx7, _bus: &mut dyn Bus) -> SimResult<()>
     Ok(())
 }
 
+/// Custom thunk for `xthal_window_spill_nw` / `xthal_window_spill`.
+///
+/// The Xtensa HAL routine walks the AR file and for each live AR slot
+/// (WS[slot]=1) writes the slot's a0..a3 to its stack save area at
+/// *(slot.a1 - 16 .. slot.a1 - 4). The sim's transparent shadow-spill on
+/// `CALL{n}` saves displaced slot values to a per-WB shadow stack but
+/// leaves the WS bit set — so when the firmware-side spill walks WS, it
+/// sees the displaced slot as live and reads CALLEE's a0..a3 / a1 from
+/// the physical AR file (which the callee has likely clobbered with its
+/// own locals; in particular slot.a1 is often 0, making the spill store
+/// to `0 - 16 = 0xfffffff0` and trap).
+///
+/// This thunk does the spill semantically using the sim's knowledge:
+/// for each WS=1 slot, if a shadow snapshot exists for that slot the
+/// pre-displacement [a0, a1, a2, a3] is used; otherwise the physical AR
+/// values. If `a1` is 0 we skip (no save area to write to — happens for
+/// the top-of-stack initial frame).
+///
+/// Returns via plain RET.N semantics (PC ← a0), matching the function's
+/// terminal `0x0d 0xf0`. We ignore PS.CALLINC because some firmware code
+/// paths reach this routine via `j` (jump) rather than CALL{n}, leaving
+/// CALLINC stale from an unrelated outer frame.
+pub fn xthal_window_spill_thunk(cpu: &mut XtensaLx7, bus: &mut dyn Bus) -> SimResult<()> {
+    let ws = cpu.regs.windowstart();
+    let shadows = cpu.regs.shadow_stacks().clone();
+    for slot in 0..16u8 {
+        if (ws >> slot) & 1 == 0 {
+            continue;
+        }
+        let base = (slot as usize) * 4;
+        let (a0, a1, a2, a3) = if let Some(snap) = shadows[slot as usize].last() {
+            (snap[0], snap[1], snap[2], snap[3])
+        } else {
+            (
+                cpu.regs.physical(base),
+                cpu.regs.physical(base + 1),
+                cpu.regs.physical(base + 2),
+                cpu.regs.physical(base + 3),
+            )
+        };
+        // Only spill when a1 looks like a plausible ESP32 stack pointer
+        // — DRAM/IRAM/SRAM data view (0x3FF8_0000..0x4000_0000). Skipping
+        // bogus slots is safer than letting bus.write_u32 underflow into
+        // the address-space wrap (which trips RamPeripheral's debug
+        // index-bounds panic before its u64-add-overflow check fires).
+        if !(0x3FF8_0000..0x4000_0000).contains(&a1) || a1 < 16 {
+            continue;
+        }
+        let sp = a1 as u64;
+        let _ = bus.write_u32(sp - 16, a0);
+        let _ = bus.write_u32(sp - 12, a1);
+        let _ = bus.write_u32(sp - 8, a2);
+        let _ = bus.write_u32(sp - 4, a3);
+    }
+    // Plain RET.N: PC ← a0. We bypass PS.CALLINC routing entirely.
+    cpu.pc = cpu.regs.read_logical(0);
+    Ok(())
+}
+
 /// Thunk for `__assert_func` / `panic_abort` / `abort` — functions that
 /// real-silicon C convention treats as `noreturn`. Stubbing them as
 /// nop_return_zero would silently return into the caller, which on the

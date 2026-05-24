@@ -88,6 +88,12 @@ pub fn extract_arduino_esp32_thunks(buffer: &[u8]) -> HashMap<&'static str, u32>
         // return pdTRUE so the call path proceeds; real silicon would only
         // reach this on a held mutex anyway in the single-task render flow.
         "xQueueSemaphoreTake",
+        // Arduino-ESP32's loopTask wraps `ulTaskGenericNotifyTake(pdTRUE,
+        // portMAX_DELAY)` around setup()/loop() to coordinate with the
+        // wdt-feed timer. In single-task sim there's nobody to notify it,
+        // so the take blocks forever. Stub to return non-zero so
+        // setup()/loop() actually run.
+        "ulTaskGenericNotifyTake",
         // SPIClass::endTransaction calls xQueueGenericSend (the give side
         // of xSemaphoreGive) on the same NULL mutex. Force success too.
         "xQueueGenericSend",
@@ -252,6 +258,17 @@ pub fn extract_arduino_esp32_thunks(buffer: &[u8]) -> HashMap<&'static str, u32>
         // `port_IntStackTop`. The cli reads this symbol and seeds a1
         // before unhalting cpu_secondary.
         "port_IntStackTop",
+        // Xtensa HAL register-window-file spill. Called explicitly by
+        // setjmp / exception unwinding / GxEPD2 internals. The "_nw"
+        // variant uses a non-standard CALL0 ABI (a0 = return address) and
+        // walks the AR file storing each slot's a0..a3 to *(slot.sp - 16)
+        // ... -4. If any live slot has sp = 0 (e.g. a freshly-pushed
+        // shadow frame the firmware hasn't yet primed), the store
+        // dereferences 0 - 16 = 0xfffffff0 and traps. The sim already does
+        // shadow-spill on CALL{n}, so the explicit HAL spill is redundant
+        // for the panel-render path — stub to a return-zero no-op.
+        "xthal_window_spill_nw",
+        "xthal_window_spill",
         "vListInsert",
         // app_main — start of patching window for the loopTask xCoreID
         // arg-clobber. We scan ~64 bytes forward looking for the
