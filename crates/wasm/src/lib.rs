@@ -31,6 +31,14 @@ struct Esp32IpiBridge {
     from_cpu_bit1: Option<u8>,
     last_from_cpu0_val: u32,
     last_from_cpu1_val: u32,
+    /// Per-firmware dual-core handshake byte addresses, resolved from the
+    /// firmware ELF's symbol table by `install_arduino_esp32_quirks`. The
+    /// keep-alive in `step_with_esp32_aids` re-writes 0x01 to each of these
+    /// every 10 000 cycles so the firmware's `.bss` zero-init can't wipe
+    /// them between the install and the spin-wait check. Empty when the
+    /// hardcoded reference-firmware keep-alive is in use (the old
+    /// `install_esp32_arduino_quirks` path).
+    handshake_bytes: Vec<u32>,
 }
 
 #[wasm_bindgen]
@@ -1697,7 +1705,11 @@ impl WasmSimulator {
 
         let symbol_addrs = labwired_loader::extract_arduino_esp32_thunks(elf_bytes);
 
-        // Dual-core handshake bytes — resolved per firmware.
+        // Dual-core handshake bytes — resolved per firmware. Recorded for
+        // the keep-alive in step_with_esp32_aids so the firmware's `.bss`
+        // zero-init (which runs after this install but before the spin-wait
+        // check in call_start_cpu0) can't wipe them.
+        let mut handshake_bytes: Vec<u32> = Vec::new();
         for sym in &[
             "s_resume_cores",
             "s_cpu_up",
@@ -1707,10 +1719,13 @@ impl WasmSimulator {
             if let Some(&addr) = symbol_addrs.get(*sym) {
                 let _ = machine.bus.write_u8(addr as u64, 0x01);
                 let _ = machine.bus.write_u8(addr as u64 + 1, 0x01);
+                handshake_bytes.push(addr);
+                handshake_bytes.push(addr + 1);
             }
         }
         if let Some(&addr) = symbol_addrs.get("s_other_cpu_startup_done") {
             let _ = machine.bus.write_u8(addr as u64, 0x01);
+            handshake_bytes.push(addr);
         }
 
         // loopTask xCoreID patch — flip the `1` to `0` so loopTask runs
@@ -1791,7 +1806,6 @@ impl WasmSimulator {
             "delay",
             "xQueueGiveMutexRecursive",
             "xQueueTakeMutexRecursive",
-            "xQueueCreateMutex",
             "esp_ipc_init",
             "esp_ipc_isr_init",
             "esp_log_impl_lock",
@@ -1799,9 +1813,25 @@ impl WasmSimulator {
             "esp_log_impl_unlock",
             "esp_panic_handler",
             "esp_panic_handler_reconfigure_wdts",
+            "__assert_func",
+            "__assert",
+            "abort",
             "pthread_key_create",
             "pthread_setspecific",
             "pthread_getspecific",
+            "pthread_mutex_init",
+            "pthread_mutex_lock",
+            "pthread_mutex_unlock",
+            "_lock_acquire",
+            "_lock_acquire_recursive",
+            "_lock_release",
+            "_lock_release_recursive",
+            "_lock_init",
+            "_lock_init_recursive",
+            "_lock_close",
+            "_lock_close_recursive",
+            "_lock_try_acquire",
+            "_lock_try_acquire_recursive",
             "esp_pthread_init",
             "esp_task_wdt_reset",
             "esp_task_wdt_init",
@@ -1810,6 +1840,21 @@ impl WasmSimulator {
             "esp_clk_init",
             "esp_perip_clk_init",
             "core_intr_matrix_clear",
+            "esp_flash_init",
+            "esp_flash_init_default_chip",
+            "esp_flash_init_main",
+            "esp_flash_app_init",
+            "esp_flash_app_enable_os_functions",
+            "esp_flash_app_disable_protect",
+            "esp_flash_app_disable_os_functions",
+            "esp_flash_read_chip_id",
+            "esp_flash_chip_driver_initialized",
+            "do_core_init",
+            "do_secondary_init",
+            "esp_startup_start_app",
+            "esp_partition_main_flash_region_safe",
+            "spi_flash_init",
+            "spi_flash_init_chip_state",
             "esp_efuse_check_errors",
             "esp_dport_access_stall_other_cpu_start",
             "esp_dport_access_stall_other_cpu_end",
@@ -1845,6 +1890,32 @@ impl WasmSimulator {
             "esp_ota_get_running_partition",
             rom_thunks::nop_return_fake_ptr,
         );
+        // Return a non-NULL fake handle so callers' `assert(mutex != NULL)`
+        // passes. Mutex semantics aren't modeled — the firmware will treat
+        // the returned pointer as opaque and pass it to xSemaphoreTake/Give
+        // which are already stubbed to "success".
+        for sym in &[
+            "xQueueCreateMutex",
+            "xQueueCreateMutexStatic",
+            "xQueueGenericCreate",
+            "xSemaphoreCreateMutex",
+            "xSemaphoreCreateBinary",
+            "xSemaphoreCreateCounting",
+            "xQueueCreateCountingSemaphore",
+            "xEventGroupCreate",
+        ] {
+            push_named(&mut thunks, sym, rom_thunks::nop_return_fake_ptr);
+        }
+        // Stub spi_flash_init_lock — the real impl creates a mutex via
+        // xSemaphoreCreateMutex and asserts non-NULL; we don't need real
+        // flash-op locking in the single-task sim.
+        for sym in &[
+            "spi_flash_init_lock",
+            "spi_flash_op_lock",
+            "spi_flash_op_unlock",
+        ] {
+            push_named(&mut thunks, sym, rom_thunks::nop_return_zero);
+        }
         push_named(&mut thunks, "esp_chip_info", rom_thunks::esp_chip_info_stub);
         push_named(
             &mut thunks,
@@ -1928,7 +1999,10 @@ impl WasmSimulator {
                 .map_err(|e| JsValue::from_str(&format!("install thunk @{pc:#x}: {e}")))?;
         }
 
-        self.esp32_ipi = Some(Esp32IpiBridge::default());
+        self.esp32_ipi = Some(Esp32IpiBridge {
+            handshake_bytes,
+            ..Esp32IpiBridge::default()
+        });
         Ok(())
     }
 
@@ -2046,15 +2120,26 @@ impl WasmSimulator {
                     }
                     bridge.last_from_cpu1_val = 0;
                 }
-                // Dual-core handshake keep-alive. Cheap (~6 byte writes
-                // per 10k cycles) and matches the e2e test cadence.
+                // Dual-core handshake keep-alive. Re-asserts the handshake
+                // bytes every 10k cycles so .bss zero-init can't wipe them
+                // before the spin-wait check in call_start_cpu0. Uses the
+                // per-firmware addresses resolved by autodiscover when
+                // available; falls back to the hardcoded reference-firmware
+                // addresses for the legacy install_esp32_arduino_quirks
+                // path.
                 if i % 10_000 == 0 {
-                    let _ = machine.bus.write_u8(0x3FFC_6F04, 0x01);
-                    let _ = machine.bus.write_u8(0x3FFC_6F01, 0x01);
-                    let _ = machine.bus.write_u8(0x3FFC_6F02, 0x01);
-                    let _ = machine.bus.write_u8(0x3FFC_6FFD, 0x01);
-                    let _ = machine.bus.write_u8(0x3FFC_6FFE, 0x01);
-                    let _ = machine.bus.write_u8(0x3FFC_7190, 0x01);
+                    if !bridge.handshake_bytes.is_empty() {
+                        for &addr in &bridge.handshake_bytes {
+                            let _ = machine.bus.write_u8(addr as u64, 0x01);
+                        }
+                    } else {
+                        let _ = machine.bus.write_u8(0x3FFC_6F04, 0x01);
+                        let _ = machine.bus.write_u8(0x3FFC_6F01, 0x01);
+                        let _ = machine.bus.write_u8(0x3FFC_6F02, 0x01);
+                        let _ = machine.bus.write_u8(0x3FFC_6FFD, 0x01);
+                        let _ = machine.bus.write_u8(0x3FFC_6FFE, 0x01);
+                        let _ = machine.bus.write_u8(0x3FFC_7190, 0x01);
+                    }
                 }
             }
             self.machine()
