@@ -2,16 +2,19 @@
 // Copyright (C) 2026 Andrii Shylenko
 // SPDX-License-Identifier: MIT
 
-//! Xtensa LX7 JIT — multi-op basic-block emit (Phase 3.6.3 / issue #124).
+//! Xtensa LX7 JIT — multi-op basic-block wasmtime adapter (#124 Phase 3.6.3
+//! / Phase 4.1 refactor).
 //!
-//! Phase 3.6.2 (#128) shipped a one-instruction CALL8 JIT and measured
-//! ~6% **slower** vs baseline interpreter — proof that wasmtime call
-//! overhead (~200ns/call) dwarfs the savings of replacing a single
-//! interpreter dispatch (~50ns).
-//!
-//! This module is the fix: JIT-compile a **whole basic block** (5-10+
-//! instructions) per wasm module, so one wasmtime call amortises N
-//! interpreter dispatches.
+//! Phase 3.6.3 introduced the multi-op hot-block JIT. Phase 4.1 split that
+//! work into two halves:
+//!   * [`super::emit_core`] owns the runtime-agnostic walker + the bytes
+//!     `walk_and_emit` produces. No wasmtime imports.
+//!   * This module is a thin wasmtime adapter — it consumes the bytes,
+//!     hands them to `wasmtime::Module::new`, wires up the `host.read_u8`
+//!     import, and dispatches `Func::call`. The browser stub in
+//!     `labwired-wasm::jit_browser` is the equivalent JS-side adapter
+//!     and will share the exact same byte stream once Phase 4.2 fills it
+//!     in.
 //!
 //! ## Target block (BB profile, 10M-step ereader run)
 //!
@@ -54,58 +57,31 @@
 //!
 //! ## Side-exit codes
 //!
-//! * `0` — block executed cleanly to the terminator; caller commits
-//!   regs (a2, a6, a8, a10) and sets PC = block-end (0x400829e4) so the
-//!   interpreter picks up at the callx8.
-//! * `5` — `read_u8` import returned a host bus error (signalled by
-//!   pushing an error marker into the pending list). Caller falls back
-//!   to interpreter for the whole block — no register or memory state
-//!   visible from wasm has been committed.
-//!
-//! ## Why this should win when 3.6.2 didn't
-//!
-//! Per Phase 3.0 measurement:
-//!   - Interpreter dispatch: ~50ns/instruction
-//!   - Wasmtime call: ~200ns
-//!
-//! For an 8-instr BB:
-//!   - Interpreter: 8 × 50ns = **400ns/pass**
-//!   - JIT: 200ns (wasm call) + 2 × ~100ns (host imports for L8UI) +
-//!     ~50ns (pure arithmetic in JITed code) = **~450ns/pass**
-//!
-//! That's roughly break-even per pass. But 908k hits means **even a
-//! 5% per-call improvement** compounds into ~270ms on a ~5s benchmark.
-//! And this block is the canary: if it doesn't speed up, no longer
-//! block on this firmware will, and we'll need a different approach
-//! (e.g. inlining the bus read).
+//! Wire codes are in [`crate::cpu::xtensa_jit_bytes`]; the higher-level
+//! reason vocabulary lives in [`super::emit_core::SideExitReason`].
 
 #![cfg(feature = "jit")]
 
 use std::sync::Mutex;
 use wasmtime::{Engine, Func, Instance, Module, Store, TypedFunc};
 
-use crate::decoder::xtensa::{self, Instruction};
-use crate::decoder::{xtensa_length, xtensa_narrow};
+use super::emit_core::{self, EmittedBlock, PsBits, SideExitReason};
 
-// ── Side-exit codes ───────────────────────────────────────────────────
+// ── Side-exit codes + BB constants ─────────────────────────────────────
+//
+// Re-exported from `cpu::xtensa_jit_bytes` (which is always compiled,
+// even without `--features jit`) so the browser-side prototype can use
+// the same values without dragging wasmtime into its dep graph
+// (#124 Phase 4).
+pub use crate::cpu::xtensa_jit_bytes::{
+    EXIT_FALL_THROUGH, EXIT_HOST_BUS_ERROR, HOT_BB_END, HOT_BB_INSTR_COUNT, HOT_BB_L32R_ADDR,
+    HOT_BB_PC,
+};
 
-/// Block ran cleanly to terminator. Caller commits regs + advances PC.
-pub const EXIT_FALL_THROUGH: i32 = 0;
-/// Host L8UI import hit a bus error; caller MUST fall back to interpreter
-/// and re-execute the block from the top.
-pub const EXIT_HOST_BUS_ERROR: i32 = 5;
-
-// ── Phase 3.6.3 target BB ─────────────────────────────────────────────
-
-/// PC of the dominant hot multi-instruction BB (call_start_cpu0 delay loop).
-pub const HOT_BB_PC: u32 = 0x400829cc;
-/// First PC after the JITed range; the interpreter resumes here at `callx8`.
-pub const HOT_BB_END: u32 = 0x400829e4;
-/// Number of Xtensa instructions executed by the JIT body.
-pub const HOT_BB_INSTR_COUNT: u32 = 8;
-/// L32R literal address read by the block: `((0x400829e1 + 3) & ~3) + sext_offset`.
-/// Resolved at compile time from the ELF; matches what the interpreter computes.
-pub const HOT_BB_L32R_ADDR: u32 = 0x4008_0534;
+// Re-export the walker types from emit_core for back-compat with the
+// existing public API (tests + xtensa_lx7.rs reach for these via
+// `xtensa_jit::{walk_bb, DecodedOp}`).
+pub use super::emit_core::{walk_bb, DecodedOp};
 
 // ── Wasm function signature ───────────────────────────────────────────
 
@@ -115,11 +91,14 @@ type BbParams = (i32, i32, i32);
 type BbReturns = (i32, i32, i32, i32, i32);
 type BbRun = TypedFunc<BbParams, BbReturns>;
 
-/// Per-call scratch slots for host imports. The L8UI import pushes
-/// `Ok(u8)` or `Err(())` here; the wasm caller consumes them in order.
+/// Per-call scratch slot. The L8UI import pushes a bus-error flag here
+/// if it's called with the pending queue empty.
 #[derive(Default)]
 struct ScratchSlot {
-    /// Byte values read from `host.read_u8`, in call order.
+    /// Byte values read from `host.read_u8`, in call order. Currently
+    /// unused — kept for symmetry with the browser-side queue and so
+    /// future debug instrumentation can record load order.
+    #[allow(dead_code, reason = "reserved for Phase 4.2 trace instrumentation")]
     bytes: Vec<u8>,
     /// True iff any L8UI import hit a host bus error.
     bus_error: bool,
@@ -133,6 +112,11 @@ pub struct MultiOpBlock {
     /// L8UI host-import call sequence, populated by the caller before
     /// the wasm call. The wasm body indexes into this by position.
     pending_loads: std::sync::Arc<Mutex<Vec<u32>>>,
+    /// The emit-core output we built this block from. Held so callers
+    /// can interrogate `length_in_instrs`, `end_pc`, and the side-exit
+    /// reason map without a separate registry. Phase 4.2 will read
+    /// these for variable-length blocks.
+    pub emitted: EmittedBlock,
 }
 
 pub struct MultiOpResult {
@@ -143,217 +127,65 @@ pub struct MultiOpResult {
     pub a10: u32,
 }
 
-// ── Decoded-op intermediate form ──────────────────────────────────────
-
-/// One decoded Xtensa op + its byte length. Used by the BB walker.
-#[derive(Debug, Clone)]
-pub struct DecodedOp {
-    pub pc: u32,
-    pub len: u32,
-    pub ins: Instruction,
-}
-
-/// Walk forward from `start_pc`, decoding instructions out of `text`
-/// (a flat slice mapping PC → byte). Stops when:
-///   * a terminator (any control transfer) is reached — terminator is
-///     **excluded** from the returned vec.
-///   * an unsupported opcode is hit — returns `None` (refuse the whole BB).
-///   * `max_ops` instructions have been collected — returns what we have.
-///
-/// `pc_to_offset` converts a PC to an index into `text`; returns `None`
-/// if the PC is outside `text`.
-pub fn walk_bb<F>(
-    start_pc: u32,
-    mut pc_to_offset: F,
-    text: &[u8],
-    max_ops: usize,
-) -> Option<Vec<DecodedOp>>
-where
-    F: FnMut(u32) -> Option<usize>,
-{
-    let mut ops = Vec::with_capacity(max_ops);
-    let mut pc = start_pc;
-    while ops.len() < max_ops {
-        let off = pc_to_offset(pc)?;
-        if off >= text.len() {
-            return None;
-        }
-        let b0 = text[off];
-        let len: u32 = xtensa_length::instruction_length(b0);
-        // Verify the full instruction fits inside `text`.
-        if off + (len as usize) > text.len() {
-            return None;
-        }
-        let ins = if len == 2 {
-            let hw = u16::from_le_bytes([text[off], text[off + 1]]);
-            xtensa_narrow::decode_narrow(hw)
-        } else if len == 3 {
-            let w = u32::from_le_bytes([text[off], text[off + 1], text[off + 2], 0]);
-            xtensa::decode(w)
-        } else {
-            return None;
-        };
-        if is_terminator(&ins) {
-            return Some(ops);
-        }
-        if !is_supported(&ins) {
-            return None;
-        }
-        ops.push(DecodedOp { pc, len, ins });
-        pc = pc.wrapping_add(len);
-    }
-    Some(ops)
-}
-
-/// Is this opcode a basic-block terminator (control transfer)?
-fn is_terminator(ins: &Instruction) -> bool {
-    use Instruction::*;
-    matches!(
-        ins,
-        Call0 { .. }
-            | Call4 { .. }
-            | Call8 { .. }
-            | Call12 { .. }
-            | Callx0 { .. }
-            | Callx4 { .. }
-            | Callx8 { .. }
-            | Callx12 { .. }
-            | Ret
-            | Retw
-            | Jx { .. }
-            | Beq { .. }
-            | Bne { .. }
-            | Blt { .. }
-            | Bge { .. }
-            | Bltu { .. }
-            | Bgeu { .. }
-            | Beqz { .. }
-            | Bnez { .. }
-            | Bltz { .. }
-            | Bgez { .. }
-            | Beqi { .. }
-            | Bnei { .. }
-            | Blti { .. }
-            | Bgei { .. }
-            | Bltui { .. }
-            | Bgeui { .. }
-            | Bany { .. }
-            | Ball { .. }
-            | Bnone { .. }
-            | Bnall { .. }
-            | Bbc { .. }
-            | Bbs { .. }
-            | Bbci { .. }
-            | Bbsi { .. }
-            | Entry { .. }
-            | Rfe
-            | Rfde
-            | Rfi { .. }
-            | Rfwo
-            | Rfwu
-            | Ill
-    )
-}
-
-/// Is this opcode in the Phase 3.6.3 supported set?
-///
-/// Keep this list narrow: any new opcode here needs corresponding emit
-/// code in [`emit_wat_for_block`]. Adding more is a Phase 3.6.4+ task.
-fn is_supported(ins: &Instruction) -> bool {
-    use Instruction::*;
-    matches!(
-        ins,
-        // Pure arithmetic / bitwise
-        Add { .. }
-            | Sub { .. }
-            | And { .. }
-            | Or { .. }
-            | Xor { .. }
-            | Addi { .. }
-            | Movi { .. }
-            | Extui { .. }
-            // Loads
-            | L8ui { .. }
-            | L32r { .. }
-            // Barriers — semantic no-ops in sim
-            | Memw
-            | Nop
-    )
-}
-
-// ── WAT emit for the target block ─────────────────────────────────────
-
-/// Emit the WAT body for the 0x400829cc block. This is hand-written for
-/// the specific opcode sequence; future Phase 3.6.4 work will generalise
-/// `emit_op_wat` to walk an arbitrary `DecodedOp` slice.
-///
-/// The wasm module exports `run(a3: i32, a5: i32, l32r_val: i32) ->
-/// (exit_code, a2, a6, a8, a10)`. It calls `host.read_u8(addr)` twice
-/// for the L8UI ops. If either returns -1, exit code is HOST_BUS_ERROR.
-fn emit_hot_bb_wat() -> String {
-    format!(
-        r#"(module
-  (import "host" "read_u8" (func $read_u8 (param i32) (result i32)))
-  (func (export "run")
-        (param $a3 i32) (param $a5 i32) (param $l32r i32)
-        (result i32 i32 i32 i32 i32)
-    (local $a2 i32)
-    (local $a6 i32)
-    (local $a8 i32)
-    (local $a10 i32)
-    (local $tmp i32)
-
-    ;; 1. or a10, a5, a5  -> a10 = a5
-    (local.set $a10 (local.get $a5))
-
-    ;; 2. memw — barrier, semantic no-op in sim
-
-    ;; 3. l8ui a6, a3, 0  -> a6 = read_u8(a3 + 0)
-    (local.set $tmp (call $read_u8 (local.get $a3)))
-    (if (i32.lt_s (local.get $tmp) (i32.const 0))
-      (then
-        (return (i32.const {bus_err}) (i32.const 0) (i32.const 0) (i32.const 0) (i32.const 0))))
-    (local.set $a6 (i32.and (local.get $tmp) (i32.const 0xFF)))
-
-    ;; 4. memw — barrier
-
-    ;; 5. l8ui a2, a3, 1  -> a2 = read_u8(a3 + 1)
-    (local.set $tmp (call $read_u8 (i32.add (local.get $a3) (i32.const 1))))
-    (if (i32.lt_s (local.get $tmp) (i32.const 0))
-      (then
-        (return (i32.const {bus_err}) (i32.const 0) (i32.const 0) (i32.const 0) (i32.const 0))))
-    (local.set $a2 (i32.and (local.get $tmp) (i32.const 0xFF)))
-
-    ;; 6. extui a2, a2, 0, 8  -> a2 = (a2 >> 0) & ((1<<8) - 1) = a2 & 0xFF
-    ;;    (already byte after l8ui, but emit for correctness)
-    (local.set $a2 (i32.and (local.get $a2) (i32.const 0xFF)))
-
-    ;; 7. and a2, a2, a6  -> a2 &= a6
-    (local.set $a2 (i32.and (local.get $a2) (local.get $a6)))
-
-    ;; 8. l32r a8, 0x40080534  -> a8 = pre-resolved literal
-    (local.set $a8 (local.get $l32r))
-
-    ;; Exit clean: callx8 a8 is the terminator, interpreter handles it.
-    (i32.const {ok})
-    (local.get $a2)
-    (local.get $a6)
-    (local.get $a8)
-    (local.get $a10)
-  )
-)
-"#,
-        ok = EXIT_FALL_THROUGH,
-        bus_err = EXIT_HOST_BUS_ERROR,
-    )
-}
-
 impl MultiOpBlock {
-    /// Build the hot BB module + instance. Failure path bubbles wasmtime
-    /// errors; caller logs + falls back to interpreter.
+    /// Build the hot BB module + instance. Walks the BB via
+    /// [`emit_core::walk_and_emit`] to fetch the bytes, then hands them
+    /// to wasmtime. Failure path bubbles wasmtime errors; the caller
+    /// logs and falls back to interpreter.
+    ///
+    /// The walker is supplied with the pre-baked [`HOT_BB_WASM`] bytes
+    /// indirectly via [`emit_core::walk_and_emit`] which currently
+    /// recognises only the canonical hot-BB shape. We synthesise an
+    /// in-memory bus slice from the canonical disassembly (so the
+    /// emit-core call path is exercised end-to-end) — this matches the
+    /// `bb_multi` invariants and re-uses the build-time-baked wasm
+    /// bytes byte-for-byte.
     pub fn build_hot_bb(engine: &Engine) -> wasmtime::Result<Self> {
-        let wat = emit_hot_bb_wat();
-        let module = Module::new(engine, wat)?;
+        // Canonical disassembly bytes for the 8-instruction hot block.
+        // Encoded little-endian byte-stream: each 3-byte group is the
+        // reverse of the wide-instruction word value objdump prints.
+        // E.g. `20a550 or a10, a5, a5` decodes to word=0x00_20_a5_50 and
+        // sits in memory as bytes 0x50, 0xa5, 0x20. Pinning the canonical
+        // byte stream here lets the emit-core path validate end-to-end
+        // without round-tripping through the Bus trait at JIT-cache
+        // build time. The `xtensa_lx7::try_jit_multi_op` path uses the
+        // real bus and is covered by the lockstep harness.
+        const HOT_BB_BYTES: &[u8] = &[
+            0x50, 0xa5, 0x20, // or    a10, a5, a5    (word 0x20a550)
+            0xc0, 0x20, 0x00, // memw                  (word 0x0020c0)
+            0x62, 0x03, 0x00, // l8ui  a6,  a3, 0      (word 0x000362)
+            0xc0, 0x20, 0x00, // memw                  (word 0x0020c0)
+            0x22, 0x03, 0x01, // l8ui  a2,  a3, 1      (word 0x010322)
+            0x20, 0x20, 0x74, // extui a2,  a2, 0, 8   (word 0x742020)
+            0x60, 0x22, 0x10, // and   a2,  a2, a6     (word 0x102260)
+            0x81, 0xd4, 0xf6, // l32r  a8,  0x40080534 (word 0xf6d481)
+            0xe0, 0x08, 0x00, // callx8 a8 — terminator (word 0x0008e0)
+        ];
+
+        let emitted = emit_core::walk_and_emit(
+            HOT_BB_BYTES,
+            HOT_BB_PC,
+            |pc| {
+                let off = pc.wrapping_sub(HOT_BB_PC) as usize;
+                if off < HOT_BB_BYTES.len() {
+                    Some(off)
+                } else {
+                    None
+                }
+            },
+            PsBits::default(),
+        )
+        .map_err(|e| wasmtime::Error::msg(format!("emit_core walk_and_emit: {e}")))?;
+
+        Self::build_from_emitted(engine, emitted)
+    }
+
+    /// Compile + instantiate a wasmtime block from a pre-emitted byte
+    /// stream. Phase 4.2's browser adapter will have a structurally
+    /// identical entry point on its side; both consume `EmittedBlock`
+    /// verbatim.
+    pub fn build_from_emitted(engine: &Engine, emitted: EmittedBlock) -> wasmtime::Result<Self> {
+        let module = Module::new(engine, &emitted.wasm_bytes)?;
         let mut store: Store<()> = Store::new(engine, ());
 
         let pending_loads: std::sync::Arc<Mutex<Vec<u32>>> =
@@ -371,8 +203,6 @@ impl MultiOpBlock {
         let read_u8: Func = Func::wrap(&mut store, move |_addr: i32| -> i32 {
             let mut p = pending_for_import.lock().unwrap();
             if p.is_empty() {
-                // No pre-staged value → host signals "couldn't satisfy
-                // this load". Pushed into scratch so caller knows.
                 scratch_for_import.lock().unwrap().bus_error = true;
                 return -1;
             }
@@ -388,6 +218,7 @@ impl MultiOpBlock {
             scratch,
             hits: 0,
             pending_loads,
+            emitted,
         })
     }
 
@@ -419,36 +250,18 @@ impl MultiOpBlock {
             a10: a10 as u32,
         })
     }
+
+    /// Classify a wire `exit_code` into the runtime-agnostic
+    /// [`SideExitReason`] vocabulary. Useful for tests + Phase 4.2
+    /// side-exit handling.
+    pub fn classify_exit(&self, exit_code: i32) -> Option<SideExitReason> {
+        self.emitted.reason_for(exit_code)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// Sanity: walker stops at a terminator.
-    #[test]
-    fn walker_stops_at_terminator() {
-        // Build a 4-byte fake "text" containing one ADDI followed by a RET.N.
-        // ADDI a3, a4, 5 — 3 bytes wide form: tricky to hand-encode; use
-        // a real ELF byte pattern instead. We'll use NOP.N (2 bytes 0x3d 0xf0)
-        // for the supported op and RET.N (2 bytes 0x0d 0xf0) for terminator.
-        let text: Vec<u8> = vec![0x3d, 0xf0, 0x3d, 0xf0, 0x0d, 0xf0];
-        let ops = walk_bb(0, |pc| Some(pc as usize), &text, 16).unwrap();
-        assert_eq!(ops.len(), 2, "should collect 2 NOP.Ns then stop at RET.N");
-        for op in &ops {
-            assert!(matches!(op.ins, Instruction::Nop));
-        }
-    }
-
-    /// Walker refuses unsupported opcodes.
-    #[test]
-    fn walker_refuses_unsupported() {
-        // SSL — supported by neither the walker's allowlist nor the LX7
-        // execute arm we care about. Bytes for `ssl a3`: 0x40, 0x13, 0x40.
-        let text: Vec<u8> = vec![0x40, 0x13, 0x40, 0x00, 0x00, 0x00];
-        let ops = walk_bb(0, |pc| Some(pc as usize), &text, 16);
-        assert!(ops.is_none(), "must refuse unsupported opcode");
-    }
 
     /// Build the hot-BB JIT, stage two byte values, and verify the
     /// arithmetic matches the interpreter exactly.
@@ -479,6 +292,24 @@ mod tests {
         assert_eq!(res.a8, 0x40008534);
 
         assert_eq!(block.hits, 1);
+    }
+
+    /// Block's `emitted` metadata matches the architectural constants
+    /// (Phase 4.1 sanity for the emit-core handoff).
+    #[test]
+    fn hot_bb_emitted_metadata_matches() {
+        let engine = Engine::default();
+        let block = MultiOpBlock::build_hot_bb(&engine).expect("compile");
+        assert_eq!(block.emitted.length_in_instrs, HOT_BB_INSTR_COUNT);
+        assert_eq!(block.emitted.end_pc, HOT_BB_END);
+        assert_eq!(
+            block.classify_exit(EXIT_FALL_THROUGH),
+            Some(SideExitReason::FallThrough)
+        );
+        assert_eq!(
+            block.classify_exit(EXIT_HOST_BUS_ERROR),
+            Some(SideExitReason::HostBusError)
+        );
     }
 
     /// If the caller doesn't stage enough bytes, the host import returns
