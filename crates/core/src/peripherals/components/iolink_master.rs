@@ -104,14 +104,24 @@ pub struct IolinkMaster {
     /// Accumulated device-response bytes from the firmware TX path.
     #[serde(skip)]
     rx_accum: Vec<u8>,
-    /// Response length expected for the in-flight request (0 = not awaiting).
+    /// Response length expected for the in-flight request; gating is via `awaiting`.
     expected_resp: usize,
     /// True once a request is fully sent and we are waiting for its response.
     awaiting: bool,
+    /// Microseconds spent waiting for the in-flight response (resync on timeout).
+    #[serde(skip)]
+    wait_us: u32,
     /// Latest valid process-data input bytes received from the device.
     latest_pd: Vec<u8>,
+    /// Latches true on the first valid frame and is intentionally sticky: it
+    /// keeps the last good PD and is not reset on a later bad frame.
     pub pd_valid: bool,
 }
+
+/// If a device response does not complete within this window, the master
+/// re-synchronises by restarting the startup handshake. Generous: cyclic
+/// responses normally complete within a few ~1 ms ticks.
+const RESYNC_TIMEOUT_US: u32 = 100_000;
 
 impl IolinkMaster {
     pub fn new(pd_in_len: usize, od_len: usize, com: IolinkComSpeed) -> Self {
@@ -124,6 +134,7 @@ impl IolinkMaster {
             rx_accum: Vec::new(),
             expected_resp: 0,
             awaiting: false,
+            wait_us: 0,
             latest_pd: vec![0u8; pd_in_len.max(1)],
             pd_valid: false,
         };
@@ -175,6 +186,14 @@ impl IolinkMaster {
         self.awaiting = false;
     }
 
+    fn resync(&mut self) {
+        self.tx_queue.clear();
+        self.rx_accum.clear();
+        self.awaiting = false;
+        self.wait_us = 0;
+        self.queue_startup();
+    }
+
     /// Called when a full response has been received; advance the state machine.
     fn handle_response(&mut self) {
         match self.link_state {
@@ -196,13 +215,21 @@ impl IolinkMaster {
 }
 
 impl UartStreamDevice for IolinkMaster {
-    fn poll(&mut self, _elapsed_us: u32) -> Option<u8> {
-        if self.awaiting || self.tx_queue.is_empty() {
+    fn poll(&mut self, elapsed_us: u32) -> Option<u8> {
+        if self.awaiting {
+            self.wait_us = self.wait_us.saturating_add(elapsed_us);
+            if self.wait_us >= RESYNC_TIMEOUT_US {
+                self.resync();
+            }
+            return None;
+        }
+        if self.tx_queue.is_empty() {
             return None;
         }
         let byte = self.tx_queue.pop_front();
         if self.tx_queue.is_empty() && self.expected_resp > 0 {
             self.awaiting = true;
+            self.wait_us = 0;
         }
         byte
     }
@@ -257,6 +284,34 @@ mod tests {
         assert!(resp.checksum_ok);
         assert!(resp.pd_valid);
         assert_eq!(resp.pd, vec![0xA5]);
+    }
+
+    #[test]
+    fn decode_operate_handles_two_byte_pd() {
+        // pd_in_len=2, od_len=1 → [status, pd0, pd1, od, ck]
+        let mut frame = vec![0x20u8, 0xAA, 0xBB, 0x00];
+        let ck = crc6(&frame);
+        frame.push(ck);
+        let resp = decode_operate(&frame, 2, 1);
+        assert!(resp.checksum_ok);
+        assert!(resp.pd_valid);
+        assert_eq!(resp.pd, vec![0xAA, 0xBB]);
+    }
+
+    #[test]
+    fn master_resyncs_after_response_timeout() {
+        let mut m = IolinkMaster::new(1, 1, IolinkComSpeed::Com2);
+        // Drain the initial startup request; master then awaits a response.
+        while m.poll(1000).is_some() {}
+        // Long silence (no on_tx_byte) → one over-budget poll triggers resync.
+        assert_eq!(m.poll(RESYNC_TIMEOUT_US), None);
+        // The master re-emits the full startup handshake.
+        let mut again = Vec::new();
+        while let Some(b) = m.poll(1000) {
+            again.push(b);
+        }
+        assert_eq!(again, vec![0x55, 0x00, 0x24]);
+        assert_eq!(m.link_state, IolinkLinkState::Startup);
     }
 
     #[test]
@@ -327,7 +382,10 @@ mod tests {
         let mut acked_preop = false;
         let mut answered_operate = false;
 
-        for _ in 0..200 {
+        // 50 ticks = 50 ms simulated, ample for the ~12-tick handshake and well
+        // under the master's 100 ms response-timeout (which would otherwise resync
+        // the link back to Startup once the one-shot device goes silent).
+        for _ in 0..50 {
             // 1) advance UART one tick → master.poll pushes a request byte into RX
             let _ = Peripheral::tick(&mut uart);
 
