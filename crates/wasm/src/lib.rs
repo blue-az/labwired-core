@@ -172,8 +172,8 @@ impl WasmSimulator {
 
     /// ESP32-classic (Xtensa LX6) bus setup. `configure_xtensa_esp32` adds
     /// IRAM / DRAM / flash XIP / ROM / UART0; external device attach
-    /// (SSD1680 e-paper etc) is handled inline below since this code path
-    /// doesn't go through `SystemBus::from_config`.
+    /// (SSD1680 e-paper etc) is handled by the core helper since this code
+    /// path doesn't go through `SystemBus::from_config`.
     fn new_from_config_xtensa_esp32(
         manifest: &SystemManifest,
         firmware: &[u8],
@@ -185,7 +185,7 @@ impl WasmSimulator {
         bus.attach_uart_tx_sink(uart_sink.clone(), false);
         let uart_rx_bufs = bus.attach_uart_rx_source();
 
-        Self::attach_esp32_external_devices(&mut bus, manifest)
+        labwired_core::system::xtensa::attach_esp32_external_devices(&mut bus, manifest)
             .map_err(|e| JsValue::from_str(&format!("ESP32 external_devices: {:#}", e)))?;
         bus.refresh_peripheral_index();
 
@@ -214,63 +214,6 @@ impl WasmSimulator {
             jit_browser_enabled: false,
             jit_browser_cache: None,
         })
-    }
-
-    /// Attach external devices declared in `manifest.external_devices` to the
-    /// ESP32 bus. Currently supports `ssd1680_tricolor_290`; other types are
-    /// logged and skipped (so a future labs adding I²C sensors don't crash).
-    fn attach_esp32_external_devices(
-        bus: &mut SystemBus,
-        manifest: &SystemManifest,
-    ) -> anyhow::Result<()> {
-        for ext in &manifest.external_devices {
-            match ext.r#type.as_str() {
-                "ssd1680_tricolor_290" | "epd-2in9-tricolor" => {
-                    let cs_pin = ext
-                        .config
-                        .get("cs_pin")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("GPIO5")
-                        .to_string();
-                    let idx = bus
-                        .find_peripheral_index_by_name(&ext.connection)
-                        .ok_or_else(|| {
-                            anyhow::anyhow!(
-                                "External device '{}' references missing connection '{}'",
-                                ext.id,
-                                ext.connection
-                            )
-                        })?;
-                    let any = bus.peripherals[idx].dev.as_any_mut().ok_or_else(|| {
-                        anyhow::anyhow!(
-                            "External device '{}' connection '{}' cannot be downcast",
-                            ext.id,
-                            ext.connection
-                        )
-                    })?;
-                    let spi = any
-                        .downcast_mut::<labwired_core::peripherals::esp32::spi::Esp32Spi>()
-                        .ok_or_else(|| {
-                            anyhow::anyhow!(
-                                "External device '{}' connection '{}' is not an ESP32 SPI peripheral",
-                                ext.id,
-                                ext.connection
-                            )
-                        })?;
-                    spi.attach(Box::new(
-                        labwired_core::peripherals::components::Ssd1680Tricolor290::new(cs_pin),
-                    ));
-                }
-                other => {
-                    tracing::warn!(
-                        "ESP32 external_devices: unsupported type '{}' on '{}'; skipping",
-                        other,
-                        ext.id
-                    );
-                }
-            }
-        }
-        Ok(())
     }
 
     fn machine(&mut self) -> &mut Machine<Box<dyn Cpu>> {
@@ -416,6 +359,24 @@ impl WasmSimulator {
         }
 
         serde_wasm_bindgen::to_value(&states).unwrap_or(JsValue::NULL)
+    }
+
+    /// Set the distance (cm) reported by an HC-SR04 ultrasonic sensor — the
+    /// host-controlled "hand position" that drives gesture control. Clamped to
+    /// the sensor's 2–400 cm range.
+    #[wasm_bindgen]
+    pub fn set_hcsr04_distance(&mut self, id: &str, distance_cm: f32) -> Result<(), JsValue> {
+        let machine = self
+            .machine
+            .as_mut()
+            .ok_or_else(|| JsValue::from_str("simulator not initialized"))?;
+        for sensor in machine.bus.hcsr04.iter_mut() {
+            if sensor.id == id {
+                sensor.set_distance_cm(distance_cm);
+                return Ok(());
+            }
+        }
+        Err(JsValue::from_str(&format!("No HC-SR04 sensor '{}'", id)))
     }
 
     /// Set an input board_io binding (e.g. button press).
@@ -1051,6 +1012,60 @@ impl WasmSimulator {
 
         Err(JsValue::from_str(&format!(
             "ILI9341 device not found on SPI peripheral '{}'",
+            binding.peripheral
+        )))
+    }
+
+    /// Return the PCD8544 (Nokia 5110) framebuffer for the device identified
+    /// by `device_id`.
+    ///
+    /// `device_id` must match a `board_io` binding with `device_type:
+    /// "pcd8544"`. Returns 504 bytes: 84 columns × 6 banks, bank-major. Pixel
+    /// (x, y) is bit `(y % 8)` of byte `[(y / 8) * 84 + x]` (1 = on/dark).
+    #[wasm_bindgen]
+    pub fn get_pcd8544_framebuffer(&self, device_id: &str) -> Result<Box<[u8]>, JsValue> {
+        let machine = self.machine.as_ref().unwrap();
+
+        let binding = self
+            .board_io
+            .iter()
+            .find(|b| b.id == device_id && b.device_type.as_deref() == Some("pcd8544"))
+            .ok_or_else(|| {
+                JsValue::from_str(&format!("No pcd8544 board_io binding '{}'", device_id))
+            })?;
+
+        let idx = machine
+            .bus
+            .find_peripheral_index_by_name(&binding.peripheral)
+            .ok_or_else(|| {
+                JsValue::from_str(&format!("SPI peripheral '{}' not found", binding.peripheral))
+            })?;
+
+        let any = machine.bus.peripherals[idx]
+            .dev
+            .as_any()
+            .ok_or_else(|| JsValue::from_str("Peripheral does not support downcasting"))?;
+
+        let spi = any
+            .downcast_ref::<labwired_core::peripherals::spi::Spi>()
+            .ok_or_else(|| {
+                JsValue::from_str(&format!(
+                    "Peripheral '{}' is not an SPI controller",
+                    binding.peripheral
+                ))
+            })?;
+
+        for device in &spi.attached_devices {
+            if let Some(lcd) = device
+                .as_any()
+                .and_then(|a| a.downcast_ref::<labwired_core::peripherals::components::Pcd8544>())
+            {
+                return Ok(lcd.framebuffer().to_vec().into_boxed_slice());
+            }
+        }
+
+        Err(JsValue::from_str(&format!(
+            "PCD8544 device not found on SPI peripheral '{}'",
             binding.peripheral
         )))
     }

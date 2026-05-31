@@ -25,6 +25,35 @@ pub trait SpiDevice: Send {
     /// CS pin label this device is wired to (e.g. "PA4" or numeric pin ID). Used by the bus
     /// dispatcher to pick which device responds when the firmware drives a particular CS line.
     fn cs_pin(&self) -> &str;
+    /// Data/Command (D/C) pin label this device observes, if any (e.g. "PB6").
+    ///
+    /// Displays like the Nokia 5110 (PCD8544) distinguish command bytes from
+    /// pixel-data bytes by the level of a dedicated GPIO line rather than by
+    /// byte semantics. When this returns `Some(pin)`, the bus latches that
+    /// pin's current output level into the device via [`set_dc_level`] after
+    /// each MMIO write, so the value is current by the time the firmware
+    /// writes the SPI data register. Default `None` → the bus does no latching
+    /// and the device infers framing from the protocol (ILI9341 / SSD1680).
+    ///
+    /// [`set_dc_level`]: SpiDevice::set_dc_level
+    fn dc_pin(&self) -> Option<&str> {
+        None
+    }
+    /// Latched level of the [`dc_pin`](SpiDevice::dc_pin) at transfer time,
+    /// pushed by the bus. No-op for devices that do not observe a D/C line.
+    fn set_dc_level(&mut self, _level: bool) {}
+    /// Resolved `(ODR address, bit)` of the D/C line. The bus computes this
+    /// once at install time (from [`dc_pin`](SpiDevice::dc_pin)) and records it
+    /// via [`set_dc_source`]; thereafter the bus reads that GPIO output bit
+    /// just before each transfer and pushes the level via [`set_dc_level`].
+    /// Default `None` → no D/C latching.
+    ///
+    /// [`set_dc_source`]: SpiDevice::set_dc_source
+    fn dc_source(&self) -> Option<(u64, u8)> {
+        None
+    }
+    /// Bus-side setter recording the resolved D/C `(ODR address, bit)`.
+    fn set_dc_source(&mut self, _odr_addr: u64, _bit: u8) {}
     fn as_any(&self) -> Option<&dyn Any> {
         None
     }
@@ -47,6 +76,12 @@ pub trait SpiDevice: Send {
 pub enum SpiRegisterLayout {
     #[default]
     Stm32,
+    /// STM32 families with a TX/RX FIFO + CR2.DS data-size field (L4/F7/H5/
+    /// G4/…). Identical register layout to `Stm32`, but a **16-bit DR write at
+    /// DS≤8 packs two frames** (RM0351 §40.4.9 data packing) — modelled so
+    /// firmware that wrongly uses a 16-bit DR access at 8-bit data size
+    /// mis-renders in the sim exactly as it does on silicon.
+    Stm32Fifo,
     Nrf52Spim,
 }
 
@@ -56,10 +91,11 @@ impl FromStr for SpiRegisterLayout {
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         let v = value.trim().to_ascii_lowercase();
         match v.as_str() {
-            "stm32" | "stm32f1" | "stm32v2" => Ok(Self::Stm32),
+            "stm32" | "stm32f1" | "stm32f4" | "stm32v2" => Ok(Self::Stm32),
+            "stm32_fifo" | "stm32l4" | "stm32f7" | "stm32h5" | "stm32g4" => Ok(Self::Stm32Fifo),
             "nrf52" | "nrf52_spim" | "nrf_spim" | "nordic" => Ok(Self::Nrf52Spim),
             _ => Err(format!(
-                "unsupported SPI register layout '{}'; supported: stm32, nrf52",
+                "unsupported SPI register layout '{}'; supported: stm32, stm32_fifo, nrf52",
                 value
             )),
         }
@@ -189,7 +225,20 @@ impl Spi {
             0x00 => {
                 self.cr1 = value;
             }
-            0x04 => self.cr2 = value,
+            0x04 => {
+                // STM32L4/F7/H5 SPI CR2: DS[3:0] (bits 11:8) select the data
+                // frame size. Values below 0b0011 are reserved and the
+                // hardware forces them to 0b0111 (8-bit). Verified on
+                // NUCLEO-L476RG over SWD: writing CR2=0x0000 reads back
+                // 0x0700. Model the clamp so a CR2 readback matches silicon
+                // bit-for-bit (l476_mmio_diff parity sweep).
+                let ds = (value >> 8) & 0xF;
+                self.cr2 = if ds < 0b0011 {
+                    (value & !0x0F00) | (0b0111 << 8)
+                } else {
+                    value
+                };
+            }
             0x08 => {
                 // SR is mostly read-only; allow clearing OVR if modelled.
                 self.sr = value & 0xFFBF;
@@ -335,7 +384,17 @@ impl crate::Peripheral for Spi {
         // upper byte is discarded by silicon. For 16-bit DFF this would need
         // a 16-cycle transfer; not modeled, low byte only is fine for now.
         if offset == 0x0C {
-            self.write_reg(0x0C, value);
+            let ds = (self.cr2 >> 8) & 0xF;
+            if matches!(self.layout, SpiRegisterLayout::Stm32Fifo) && ds <= 0b0111 {
+                // FIFO data packing (RM0351 §40.4.9): a 16-bit DR access with
+                // DS≤8 enqueues TWO data frames (low byte, then high byte).
+                // Reproduces the silicon behaviour that bit firmware using a
+                // 16-bit DR write at 8-bit data size (spurious byte per write).
+                self.write_reg(0x0C, value & 0xFF);
+                self.write_reg(0x0C, (value >> 8) & 0xFF);
+            } else {
+                self.write_reg(0x0C, value);
+            }
             return Ok(());
         }
         // Other registers: byte-split is fine (no transfer side-effects).
@@ -394,8 +453,70 @@ impl crate::Peripheral for Spi {
 
 #[cfg(test)]
 mod tests {
-    use super::Spi;
+    use super::{Spi, SpiDevice, SpiRegisterLayout};
     use crate::Peripheral;
+
+    /// SPI slave that records every byte it receives.
+    struct Capture {
+        rx: Vec<u8>,
+    }
+    impl SpiDevice for Capture {
+        fn transfer(&mut self, mosi: u8) -> u8 {
+            self.rx.push(mosi);
+            0
+        }
+        fn cs_pin(&self) -> &str {
+            ""
+        }
+        fn as_any(&self) -> Option<&dyn std::any::Any> {
+            Some(self)
+        }
+        fn as_any_mut(&mut self) -> Option<&mut dyn std::any::Any> {
+            Some(self)
+        }
+    }
+
+    fn captured(spi: &Spi) -> Vec<u8> {
+        spi.attached_devices[0]
+            .as_any()
+            .unwrap()
+            .downcast_ref::<Capture>()
+            .unwrap()
+            .rx
+            .clone()
+    }
+
+    /// FIFO-family SPI: a 16-bit DR write at DS=8 packs TWO frames — the
+    /// silicon behaviour that broke the real Nokia 5110 panel.
+    #[test]
+    fn fifo_packs_u16_dr_write_into_two_frames() {
+        let mut spi = Spi::new_with_layout(SpiRegisterLayout::Stm32Fifo);
+        spi.attach(Box::new(Capture { rx: Vec::new() }));
+        spi.write(0x00, 0x40).unwrap(); // CR1: SPE
+        spi.write_u16(0x0C, 0x00AB).unwrap(); // 16-bit DR write, DS=8 (reset 0x0700)
+        assert_eq!(captured(&spi), vec![0xAB, 0x00], "DS≤8 + 16-bit DR ⇒ 2 frames");
+    }
+
+    /// The correct 8-bit DR access sends exactly one frame, even on FIFO parts.
+    #[test]
+    fn fifo_u8_dr_write_is_one_frame() {
+        let mut spi = Spi::new_with_layout(SpiRegisterLayout::Stm32Fifo);
+        spi.attach(Box::new(Capture { rx: Vec::new() }));
+        spi.write(0x00, 0x40).unwrap();
+        spi.write(0x0C, 0xAB).unwrap(); // 8-bit DR write
+        assert_eq!(captured(&spi), vec![0xAB], "8-bit DR ⇒ 1 frame");
+    }
+
+    /// Non-FIFO STM32 (F1/F4) does NOT pack: a 16-bit DR write is one frame,
+    /// so the F103 ILI9341 lab (which writes DR as u16) is unaffected.
+    #[test]
+    fn plain_stm32_does_not_pack() {
+        let mut spi = Spi::new_with_layout(SpiRegisterLayout::Stm32);
+        spi.attach(Box::new(Capture { rx: Vec::new() }));
+        spi.write(0x00, 0x40).unwrap();
+        spi.write_u16(0x0C, 0x00AB).unwrap();
+        assert_eq!(captured(&spi), vec![0xAB], "non-FIFO ⇒ 1 frame");
+    }
 
     #[test]
     fn test_spi_transfer_timing() {

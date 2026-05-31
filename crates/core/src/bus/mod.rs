@@ -184,6 +184,10 @@ pub struct SystemBus {
     /// Read only under the `event-scheduler` feature; flag-off the walk always
     /// runs, so the shipped build is unchanged.
     pub legacy_walk_disabled: bool,
+    /// HC-SR04 ultrasonic sensors wired to GPIO TRIG/ECHO pins. Serviced once
+    /// per peripheral-tick: the bus reads each sensor's TRIG output level and
+    /// drives the computed ECHO input level. Empty by default → zero cost.
+    pub hcsr04: Vec<crate::peripherals::hc_sr04::HcSr04>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -474,6 +478,142 @@ impl SystemBus {
             .to_string()
     }
 
+    fn pcd8544_cs_pin(ext: &ExternalDevice) -> String {
+        ext.config
+            .get("cs_pin")
+            .and_then(|v| v.as_str())
+            .unwrap_or("PB6")
+            .to_string()
+    }
+
+    fn pcd8544_dc_pin(ext: &ExternalDevice) -> String {
+        ext.config
+            .get("dc_pin")
+            .and_then(|v| v.as_str())
+            .unwrap_or("PC7")
+            .to_string()
+    }
+
+    /// Parse an STM32 pin label like "PC7" into `("gpioc", 7)`.
+    fn parse_stm32_pin(pin: &str) -> Option<(String, u8)> {
+        let s = pin.trim();
+        let bytes = s.as_bytes();
+        if bytes.len() < 3 || !bytes[0].eq_ignore_ascii_case(&b'P') {
+            return None;
+        }
+        let port = (bytes[1] as char).to_ascii_lowercase();
+        if !port.is_ascii_alphabetic() {
+            return None;
+        }
+        let num: u8 = s[2..].parse().ok()?;
+        if num > 15 {
+            return None;
+        }
+        Some((format!("gpio{port}"), num))
+    }
+
+    /// Resolve an STM32 pin label to its `(ODR address, bit)` so a display's
+    /// D/C line can be sampled directly from the driving GPIO's output register.
+    fn resolve_pin_odr(bus: &SystemBus, pin: &str) -> Option<(u64, u8)> {
+        let (port_name, bit) = Self::parse_stm32_pin(pin)?;
+        let idx = bus.find_peripheral_index_by_name(&port_name)?;
+        let base = bus.peripherals[idx].base;
+        let odr_off = bus.peripherals[idx]
+            .dev
+            .as_any()
+            .and_then(|a| a.downcast_ref::<crate::peripherals::gpio::GpioPort>())
+            .map(|g| g.odr_offset())?;
+        Some((base + odr_off, bit))
+    }
+
+    /// Resolve an STM32 pin label to its `(IDR address, bit)` so a sensor can
+    /// drive an MCU input line (e.g. the HC-SR04 ECHO pin).
+    fn resolve_pin_idr(bus: &SystemBus, pin: &str) -> Option<(u64, u8)> {
+        let (port_name, bit) = Self::parse_stm32_pin(pin)?;
+        let idx = bus.find_peripheral_index_by_name(&port_name)?;
+        let base = bus.peripherals[idx].base;
+        let idr_off = bus.peripherals[idx]
+            .dev
+            .as_any()
+            .and_then(|a| a.downcast_ref::<crate::peripherals::gpio::GpioPort>())
+            .map(|g| g.idr_offset())?;
+        Some((base + idr_off, bit))
+    }
+
+    /// Service all HC-SR04 sensors for one tick: read each sensor's TRIG
+    /// output level, advance its echo window, and drive the resulting ECHO
+    /// input level. No-op when no sensors are wired.
+    pub(crate) fn service_hcsr04(&mut self) {
+        if self.hcsr04.is_empty() {
+            return;
+        }
+        let now = self.current_cycle;
+        for i in 0..self.hcsr04.len() {
+            let trig_addr = self.hcsr04[i].trig_odr_addr;
+            let trig_bit = self.hcsr04[i].trig_bit;
+            let trig_high = self
+                .read_u32(trig_addr)
+                .map(|v| (v >> trig_bit) & 1 != 0)
+                .unwrap_or(false);
+            let echo_high = self.hcsr04[i].service(trig_high, now);
+            let echo_addr = self.hcsr04[i].echo_idr_addr;
+            let echo_bit = self.hcsr04[i].echo_bit;
+            let idr = self.read_u32(echo_addr).unwrap_or(0);
+            let new_idr = if echo_high {
+                idr | (1 << echo_bit)
+            } else {
+                idr & !(1 << echo_bit)
+            };
+            if new_idr != idr {
+                let _ = self.write_u32(echo_addr, new_idr);
+            }
+        }
+    }
+
+    /// Before an SPI transfer, refresh the D/C level of any attached
+    /// display that observes a D/C GPIO line (e.g. the PCD8544 Nokia 5110)
+    /// by reading the driving GPIO's output bit. No-op for non-SPI writes and
+    /// for SPI peripherals with no D/C-observing device (one cheap downcast).
+    fn maybe_latch_dc(&mut self, idx: usize) {
+        // Phase 1: collect (attached_index, odr_addr, bit) — immutable borrow.
+        let sources: Vec<(usize, u64, u8)> = {
+            let Some(any) = self.peripherals[idx].dev.as_any() else {
+                return;
+            };
+            let Some(spi) = any.downcast_ref::<crate::peripherals::spi::Spi>() else {
+                return;
+            };
+            spi.attached_devices
+                .iter()
+                .enumerate()
+                .filter_map(|(i, d)| d.dc_source().map(|(a, b)| (i, a, b)))
+                .collect()
+        };
+        if sources.is_empty() {
+            return;
+        }
+        // Phase 2: sample the GPIO output bits via the bus.
+        let levels: Vec<(usize, bool)> = sources
+            .iter()
+            .map(|&(i, addr, bit)| {
+                let lvl = crate::Bus::read_u32(self, addr)
+                    .map(|v| (v >> bit) & 1 != 0)
+                    .unwrap_or(false);
+                (i, lvl)
+            })
+            .collect();
+        // Phase 3: push the latched levels into the devices — mutable borrow.
+        if let Some(any) = self.peripherals[idx].dev.as_any_mut() {
+            if let Some(spi) = any.downcast_mut::<crate::peripherals::spi::Spi>() {
+                for (i, lvl) in levels {
+                    if let Some(d) = spi.attached_devices.get_mut(i) {
+                        d.set_dc_level(lvl);
+                    }
+                }
+            }
+        }
+    }
+
     fn ssd1306_i2c_address(ext: &ExternalDevice) -> anyhow::Result<u8> {
         let Some(value) = ext.config.get("i2c_address") else {
             return Ok(0x3C);
@@ -624,6 +764,7 @@ impl SystemBus {
             current_cycle: 0,
             pending_schedule: Vec::new(),
             legacy_walk_disabled: false,
+            hcsr04: Vec::new(),
         };
         bus.rebuild_peripheral_ranges();
         bus
@@ -651,6 +792,7 @@ impl SystemBus {
             current_cycle: 0,
             pending_schedule: Vec::new(),
             legacy_walk_disabled: false,
+            hcsr04: Vec::new(),
         };
         bus.rebuild_peripheral_ranges();
         bus
@@ -809,6 +951,7 @@ impl SystemBus {
             current_cycle: 0,
             pending_schedule: Vec::new(),
             legacy_walk_disabled: false,
+            hcsr04: Vec::new(),
         };
 
         let mut merged_peripherals = chip.peripherals.clone();
@@ -1460,6 +1603,106 @@ impl SystemBus {
                         crate::peripherals::components::Ssd1680Tricolor290::new(cs_pin),
                     ));
                 }
+                "pcd8544" | "nokia-5110" => {
+                    // SPI device path — Nokia 5110 (PCD8544) monochrome LCD.
+                    // Distinguishes command vs data by a D/C GPIO line, which
+                    // we resolve to a concrete ODR address up front.
+                    let cs_pin = Self::pcd8544_cs_pin(ext);
+                    let dc_pin = Self::pcd8544_dc_pin(ext);
+                    let dc_src = Self::resolve_pin_odr(&bus, &dc_pin);
+
+                    let idx = bus
+                        .find_peripheral_index_by_name(&ext.connection)
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "External device '{}' type '{}' references missing connection '{}'",
+                                ext.id,
+                                ext.r#type,
+                                ext.connection
+                            )
+                        })?;
+
+                    let any = bus.peripherals[idx].dev.as_any_mut().ok_or_else(|| {
+                        anyhow::anyhow!(
+                            "External device '{}' type '{}' connection '{}' cannot be downcast",
+                            ext.id,
+                            ext.r#type,
+                            ext.connection
+                        )
+                    })?;
+
+                    let spi = any
+                        .downcast_mut::<crate::peripherals::spi::Spi>()
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "External device '{}' type '{}' connection '{}' is not an SPI peripheral",
+                                ext.id,
+                                ext.r#type,
+                                ext.connection
+                            )
+                        })?;
+
+                    let mut dev = crate::peripherals::components::Pcd8544::new(cs_pin, dc_pin);
+                    if let Some((odr_addr, bit)) = dc_src {
+                        crate::peripherals::spi::SpiDevice::set_dc_source(&mut dev, odr_addr, bit);
+                    }
+                    spi.attach(Box::new(dev));
+                }
+                "hc-sr04" | "hcsr04" => {
+                    // GPIO-wired ultrasonic sensor — no SPI/I2C connection. The
+                    // bus services it each tick: reads TRIG (an MCU output) and
+                    // drives ECHO (an MCU input) with a distance-proportional
+                    // pulse. `distance_cm` is the host-controlled "hand position".
+                    let trig = ext
+                        .config
+                        .get("trig_pin")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("PA8")
+                        .to_string();
+                    let echo = ext
+                        .config
+                        .get("echo_pin")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("PA9")
+                        .to_string();
+                    let distance_cm = ext
+                        .config
+                        .get("distance_cm")
+                        .and_then(|v| v.as_f64())
+                        .unwrap_or(50.0) as f32;
+                    let cpu_hz = ext
+                        .config
+                        .get("cpu_hz")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(80_000_000);
+
+                    let (trig_addr, trig_bit) =
+                        Self::resolve_pin_odr(&bus, &trig).ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "HC-SR04 '{}' trig_pin '{}' could not be resolved to a GPIO",
+                                ext.id,
+                                trig
+                            )
+                        })?;
+                    let (echo_addr, echo_bit) =
+                        Self::resolve_pin_idr(&bus, &echo).ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "HC-SR04 '{}' echo_pin '{}' could not be resolved to a GPIO",
+                                ext.id,
+                                echo
+                            )
+                        })?;
+
+                    bus.hcsr04.push(crate::peripherals::hc_sr04::HcSr04::new(
+                        ext.id.clone(),
+                        trig_addr,
+                        trig_bit,
+                        echo_addr,
+                        echo_bit,
+                        cpu_hz,
+                        distance_cm,
+                    ));
+                }
                 "ntc-thermistor" => {
                     // Analog source path: NTC connects directly to an ADC channel.
                     // Read channel + initial temperature from config.
@@ -1585,6 +1828,7 @@ impl SystemBus {
         if let Some(idx) = self.find_peripheral_index(addr) {
             #[cfg(feature = "event-scheduler")]
             self.sync_scheduler_peripheral(idx);
+            self.maybe_latch_dc(idx);
             let p = &mut self.peripherals[idx];
             p.ticks_remaining = 0;
             let r = p.dev.write_u32(addr - p.base, value);
@@ -1636,6 +1880,7 @@ impl SystemBus {
         if let Some(idx) = self.find_peripheral_index(addr) {
             #[cfg(feature = "event-scheduler")]
             self.sync_scheduler_peripheral(idx);
+            self.maybe_latch_dc(idx);
             let p = &mut self.peripherals[idx];
             p.ticks_remaining = 0;
             let r = p.dev.write_u16(addr - p.base, value);
@@ -1840,6 +2085,10 @@ impl SystemBus {
                 p.dev.observe_gpio_change(&changes);
             }
         }
+
+        // HC-SR04 service pass: read each sensor's TRIG output level and drive
+        // the computed ECHO input level. Empty list → skipped entirely.
+        self.service_hcsr04();
 
         (
             interrupts,
@@ -2048,6 +2297,7 @@ impl crate::Bus for SystemBus {
             if let Some(idx) = self.find_peripheral_index(addr) {
                 #[cfg(feature = "event-scheduler")]
                 self.sync_scheduler_peripheral(idx);
+                self.maybe_latch_dc(idx);
                 let p = &mut self.peripherals[idx];
                 let r = p.dev.write(addr - p.base, value);
                 #[cfg(feature = "event-scheduler")]
@@ -2136,6 +2386,7 @@ impl crate::Bus for SystemBus {
         if let Some(idx) = self.find_peripheral_index(addr) {
             #[cfg(feature = "event-scheduler")]
             self.sync_scheduler_peripheral(idx);
+            self.maybe_latch_dc(idx);
             let p = &mut self.peripherals[idx];
             p.ticks_remaining = 0;
             let r = p.dev.write_u16(addr - p.base, value);
@@ -2174,6 +2425,7 @@ impl crate::Bus for SystemBus {
         if let Some(idx) = self.find_peripheral_index(addr) {
             #[cfg(feature = "event-scheduler")]
             self.sync_scheduler_peripheral(idx);
+            self.maybe_latch_dc(idx);
             let p = &mut self.peripherals[idx];
             p.ticks_remaining = 0;
             let r = p.dev.write_u32(addr - p.base, value);
@@ -2616,6 +2868,7 @@ mod tests {
             current_cycle: 0,
             pending_schedule: Vec::new(),
             legacy_walk_disabled: false,
+            hcsr04: Vec::new(),
         };
 
         bus.flash.write_u8(0x0800_0000, 0x12);
@@ -2667,6 +2920,7 @@ mod tests {
             current_cycle: 0,
             pending_schedule: Vec::new(),
             legacy_walk_disabled: false,
+            hcsr04: Vec::new(),
         };
 
         bus.rebuild_peripheral_ranges();
@@ -2720,6 +2974,7 @@ mod tests {
             current_cycle: 0,
             pending_schedule: Vec::new(),
             legacy_walk_disabled: false,
+            hcsr04: Vec::new(),
         };
         bus.rebuild_peripheral_ranges();
 
