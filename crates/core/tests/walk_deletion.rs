@@ -19,9 +19,9 @@ fn root(rel: &str) -> PathBuf {
 /// reach the bus.
 #[test]
 fn nokia_walk_deleted_flag_reaches_bus() {
-    let chip = ChipDescriptor::from_file(&root("configs/chips/stm32l476.yaml"))
+    let chip = ChipDescriptor::from_file(root("configs/chips/stm32l476.yaml"))
         .expect("load stm32l476 chip");
-    let manifest = SystemManifest::from_file(&root("examples/nokia5110-invaders-lab/system.yaml"))
+    let manifest = SystemManifest::from_file(root("examples/nokia5110-invaders-lab/system.yaml"))
         .expect("load nokia manifest");
     assert!(
         manifest.walk_deleted,
