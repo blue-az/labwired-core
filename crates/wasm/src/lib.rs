@@ -1598,6 +1598,94 @@ impl WasmSimulator {
     }
 
     // ──────────────────────────────────────────────────────────────────────
+    //  IO-Link DI demo: 74HC165 input toggling + IO-Link master readout.
+    //  These find the device by iterating the bus (the shifter/master are
+    //  `external_devices`, not `board_io` bindings), which suits the single
+    //  shifter + single master of the AL2205-style demo.
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// Set all 8 digital inputs of the 74HC165 shift register at once
+    /// (bit `i` = channel `i`). Returns an error if no shifter is wired.
+    #[wasm_bindgen]
+    pub fn set_sn74hc165_inputs(&mut self, value: u8) -> Result<(), JsValue> {
+        let machine = self.machine.as_mut().unwrap();
+        for p in &mut machine.bus.peripherals {
+            let Some(any) = p.dev.as_any_mut() else {
+                continue;
+            };
+            let Some(spi) = any.downcast_mut::<labwired_core::peripherals::spi::Spi>() else {
+                continue;
+            };
+            for device in &mut spi.attached_devices {
+                if let Some(sr) = device.as_any_mut().and_then(|a| {
+                    a.downcast_mut::<labwired_core::peripherals::components::Sn74hc165>()
+                }) {
+                    sr.set_inputs(value);
+                    return Ok(());
+                }
+            }
+        }
+        Err(JsValue::from_str("no 74HC165 shift register attached"))
+    }
+
+    /// Toggle a single 74HC165 input channel (0..=7) high or low.
+    #[wasm_bindgen]
+    pub fn set_sn74hc165_channel(&mut self, channel: u8, high: bool) -> Result<(), JsValue> {
+        let machine = self.machine.as_mut().unwrap();
+        for p in &mut machine.bus.peripherals {
+            let Some(any) = p.dev.as_any_mut() else {
+                continue;
+            };
+            let Some(spi) = any.downcast_mut::<labwired_core::peripherals::spi::Spi>() else {
+                continue;
+            };
+            for device in &mut spi.attached_devices {
+                if let Some(sr) = device.as_any_mut().and_then(|a| {
+                    a.downcast_mut::<labwired_core::peripherals::components::Sn74hc165>()
+                }) {
+                    sr.set_channel(channel, high);
+                    return Ok(());
+                }
+            }
+        }
+        Err(JsValue::from_str("no 74HC165 shift register attached"))
+    }
+
+    /// Read the IO-Link master peer's live state: `{ link_state, pd_valid,
+    /// input_byte }`. Returns `null` if no master is wired.
+    #[wasm_bindgen]
+    pub fn get_iolink_master_state(&self) -> JsValue {
+        use labwired_core::peripherals::components::{IolinkLinkState, IolinkMaster};
+        let machine = self.machine.as_ref().unwrap();
+        for p in &machine.bus.peripherals {
+            let Some(any) = p.dev.as_any() else {
+                continue;
+            };
+            let Some(uart) = any.downcast_ref::<labwired_core::peripherals::uart::Uart>() else {
+                continue;
+            };
+            for stream in &uart.attached_streams {
+                if let Some(m) = stream
+                    .as_any()
+                    .and_then(|a| a.downcast_ref::<IolinkMaster>())
+                {
+                    let link = match m.link_state {
+                        IolinkLinkState::Startup => "startup",
+                        IolinkLinkState::Operate => "operate",
+                    };
+                    let v = serde_json::json!({
+                        "link_state": link,
+                        "pd_valid": m.pd_valid,
+                        "input_byte": m.input_byte(),
+                    });
+                    return serde_wasm_bindgen::to_value(&v).unwrap_or(JsValue::NULL);
+                }
+            }
+        }
+        JsValue::NULL
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
     //  Arduino-ESP32 bootstrap glue. Call after constructing the WasmSimulator
     //  with an ESP32-classic manifest + an Arduino-ESP32 firmware ELF (e.g.
     //  the reference firmware). Bakes in:
