@@ -1718,20 +1718,21 @@ impl WasmSimulator {
     pub fn iolink_trace_snapshot(&self) -> JsValue {
         use labwired_core::peripherals::components::IolinkMaster;
         let Some(machine) = self.machine.as_ref() else {
-            return serde_wasm_bindgen::to_value(
-                &Vec::<labwired_core::peripherals::components::IolinkXfer>::new(),
-            )
+            return serde_wasm_bindgen::to_value(&Vec::<
+                labwired_core::peripherals::components::IolinkXfer,
+            >::new())
             .unwrap_or(JsValue::NULL);
         };
         for p in &machine.bus.peripherals {
             let Some(any) = p.dev.as_any() else { continue };
-            let Some(uart) =
-                any.downcast_ref::<labwired_core::peripherals::uart::Uart>()
-            else {
+            let Some(uart) = any.downcast_ref::<labwired_core::peripherals::uart::Uart>() else {
                 continue;
             };
             for stream in &uart.attached_streams {
-                if let Some(m) = stream.as_any().and_then(|a| a.downcast_ref::<IolinkMaster>()) {
+                if let Some(m) = stream
+                    .as_any()
+                    .and_then(|a| a.downcast_ref::<IolinkMaster>())
+                {
                     let trace = m.trace_snapshot();
                     return serde_wasm_bindgen::to_value(&trace).unwrap_or(JsValue::NULL);
                 }
@@ -1747,16 +1748,21 @@ impl WasmSimulator {
     #[wasm_bindgen]
     pub fn iolink_trace_clear(&mut self) {
         use labwired_core::peripherals::components::IolinkMaster;
-        let Some(machine) = self.machine.as_mut() else { return };
+        let Some(machine) = self.machine.as_mut() else {
+            return;
+        };
         for p in &mut machine.bus.peripherals {
-            let Some(any) = p.dev.as_any_mut() else { continue };
-            let Some(uart) =
-                any.downcast_mut::<labwired_core::peripherals::uart::Uart>()
-            else {
+            let Some(any) = p.dev.as_any_mut() else {
+                continue;
+            };
+            let Some(uart) = any.downcast_mut::<labwired_core::peripherals::uart::Uart>() else {
                 continue;
             };
             for stream in &mut uart.attached_streams {
-                if let Some(m) = stream.as_any_mut().and_then(|a| a.downcast_mut::<IolinkMaster>()) {
+                if let Some(m) = stream
+                    .as_any_mut()
+                    .and_then(|a| a.downcast_mut::<IolinkMaster>())
+                {
                     m.trace_clear();
                     return;
                 }
