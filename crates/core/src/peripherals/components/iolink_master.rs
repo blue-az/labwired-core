@@ -87,6 +87,50 @@ pub enum IolinkLinkState {
     Operate,
 }
 
+/// Which frame in the startup/cyclic schedule a trace record came from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum IolinkFrameKind {
+    WakeUp,
+    Idle,
+    OperateReq,
+    Cyclic,
+}
+
+/// One captured master↔device exchange, decoded where the master already
+/// builds requests and parses responses. Serialized to JS as a plain object.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct IolinkXfer {
+    pub seq: u32,
+    pub kind: IolinkFrameKind,
+    pub com: IolinkComSpeed,
+    pub pd_out: Vec<u8>,
+    pub pd_in: Vec<u8>,
+    pub od: u8,
+    /// `None` for non-cyclic frames (no decodable OPERATE response).
+    pub ck_ok: Option<bool>,
+    pub pd_valid: Option<bool>,
+    pub link_state: IolinkLinkState,
+    pub raw_master: Vec<u8>,
+    pub raw_device: Vec<u8>,
+}
+
+/// In-flight frame: request bytes known at queue time; the device response
+/// accumulates until the next frame is queued, then it's finalized.
+#[derive(Debug, Clone)]
+struct PendingXfer {
+    seq: u32,
+    kind: IolinkFrameKind,
+    pd_out: Vec<u8>,
+    link_state: IolinkLinkState,
+    raw_master: Vec<u8>,
+    raw_device: Vec<u8>,
+}
+
+/// Max trace records retained (oldest dropped).
+#[allow(dead_code)]
+const TRACE_CAP: usize = 256;
+
 /// Ticks the master waits (one `poll` per UART tick) between frames. The
 /// simulated device executes far slower than the UART advances, so frames are
 /// paced generously to guarantee the device has fully processed (and replied
@@ -160,6 +204,35 @@ impl IolinkMaster {
 
     fn operate_response_len(&self) -> usize {
         1 + self.pd_in_len + self.od_len + 1
+    }
+
+    /// Turn a completed in-flight frame into a trace record, decoding the
+    /// device response only for cyclic (OPERATE) frames.
+    fn finalize_xfer(&self, p: PendingXfer) -> IolinkXfer {
+        let (pd_in, ck_ok, pd_valid) = if matches!(p.kind, IolinkFrameKind::Cyclic) {
+            let n = self.operate_response_len();
+            if p.raw_device.len() >= n {
+                let r = decode_operate(&p.raw_device[..n], self.pd_in_len, self.od_len);
+                (r.pd, Some(r.checksum_ok), Some(r.pd_valid))
+            } else {
+                (Vec::new(), Some(false), Some(false))
+            }
+        } else {
+            (Vec::new(), None, None)
+        };
+        IolinkXfer {
+            seq: p.seq,
+            kind: p.kind,
+            com: self.com,
+            pd_out: p.pd_out,
+            pd_in,
+            od: 0x00,
+            ck_ok,
+            pd_valid,
+            link_state: p.link_state,
+            raw_master: p.raw_master,
+            raw_device: p.raw_device,
+        }
     }
 
     /// Queue the next frame in the startup/cyclic schedule and advance `step`.
@@ -282,6 +355,43 @@ mod tests {
         assert!(resp.checksum_ok);
         assert!(resp.pd_valid);
         assert_eq!(resp.pd, vec![0xA5]);
+    }
+
+    #[test]
+    fn finalize_cyclic_decodes_response_and_marks_ck() {
+        let m = IolinkMaster::new(1, 1, IolinkComSpeed::Com2);
+        let resp = [0x20u8, 0xA5, 0x00, crc6(&[0x20, 0xA5, 0x00])];
+        let p = PendingXfer {
+            seq: 7,
+            kind: IolinkFrameKind::Cyclic,
+            pd_out: vec![],
+            link_state: IolinkLinkState::Operate,
+            raw_master: encode_type1_cycle(&[]),
+            raw_device: resp.to_vec(),
+        };
+        let x = m.finalize_xfer(p);
+        assert_eq!(x.seq, 7);
+        assert_eq!(x.kind, IolinkFrameKind::Cyclic);
+        assert_eq!(x.pd_in, vec![0xA5]);
+        assert_eq!(x.ck_ok, Some(true));
+        assert_eq!(x.pd_valid, Some(true));
+    }
+
+    #[test]
+    fn finalize_startup_frame_has_no_crc_verdict() {
+        let m = IolinkMaster::new(1, 1, IolinkComSpeed::Com2);
+        let p = PendingXfer {
+            seq: 0,
+            kind: IolinkFrameKind::WakeUp,
+            pd_out: vec![],
+            link_state: IolinkLinkState::Startup,
+            raw_master: vec![0x55],
+            raw_device: vec![],
+        };
+        let x = m.finalize_xfer(p);
+        assert_eq!(x.ck_ok, None);
+        assert_eq!(x.pd_valid, None);
+        assert!(x.pd_in.is_empty());
     }
 
     #[test]
