@@ -1007,6 +1007,9 @@ fn gpio_offsets_for_peripheral(
             idr_offset: GPIO_V2_IDR_OFFSET,
             odr_offset: GPIO_V2_ODR_OFFSET,
         }),
+        // nRF52 GPIO register layout isn't mapped for DAP board-IO bindings;
+        // skip it gracefully (callers use `?`, so None drops the binding).
+        labwired_core::peripherals::gpio::GpioRegisterLayout::Nrf52 => None,
     }
 }
 
@@ -1094,6 +1097,7 @@ mod tests {
         };
 
         let manifest = labwired_config::SystemManifest {
+            walk_deleted: false,
             schema_version: "1.0".to_string(),
             name: "test-system".to_string(),
             chip: "test-chip".to_string(),
@@ -1144,6 +1148,7 @@ mod tests {
         };
 
         let manifest = labwired_config::SystemManifest {
+            walk_deleted: false,
             schema_version: "1.0".to_string(),
             name: "test-system".to_string(),
             chip: "test-chip".to_string(),
@@ -1207,6 +1212,7 @@ mod tests {
         };
 
         let manifest = labwired_config::SystemManifest {
+            walk_deleted: false,
             schema_version: "1.0".to_string(),
             name: "test-system".to_string(),
             chip: "test-chip".to_string(),

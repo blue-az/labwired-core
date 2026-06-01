@@ -1240,6 +1240,7 @@ mod tests {
             serde_yaml::Value::String("GPIO5".to_string()),
         );
         let manifest = SystemManifest {
+            walk_deleted: false,
             schema_version: "1.0".to_string(),
             name: "test-esp32-epaper".to_string(),
             chip: "esp32.yaml".to_string(),
@@ -1300,9 +1301,9 @@ mod tests {
     #[test]
     fn attach_esp32_external_devices_errors_on_missing_connection() {
         use labwired_config::{ExternalDevice, SystemManifest};
-        use std::collections::HashMap;
 
         let manifest = SystemManifest {
+            walk_deleted: false,
             schema_version: "1.0".to_string(),
             name: "test".to_string(),
             chip: "esp32.yaml".to_string(),
