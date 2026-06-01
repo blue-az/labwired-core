@@ -3,5 +3,13 @@
 # 74HC165 input shifter are attached in M3/M4.
 name: "al2205-iolink-dido"
 chip: "../../configs/chips/stm32l476.yaml"
-external_devices: []
+external_devices:
+  # Native IO-Link master peer driving the device firmware over USART2.
+  - id: "iolink_master"
+    type: "iolink-master"
+    connection: "uart2"
+    config:
+      pd_in_len: 1
+      m_seq_type: 1
+      com: "COM2"
 board_io: []

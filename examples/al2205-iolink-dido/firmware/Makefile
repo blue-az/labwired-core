@@ -3,7 +3,7 @@
 CC      := arm-none-eabi-gcc
 IOLINKI_DIR ?= ../../../third_party/iolinki
 
-CFLAGS  := -mcpu=cortex-m4 -mthumb -mfloat-abi=soft -ffreestanding -Os -g3 \
+CFLAGS  := -mcpu=cortex-m4 -mthumb -mfloat-abi=soft -ffreestanding -O0 -g3 \
            -Wall -Wextra -ffunction-sections -fdata-sections \
            -I$(IOLINKI_DIR)/include -I.
 LDFLAGS := -mcpu=cortex-m4 -mthumb -mfloat-abi=soft -nostartfiles \
