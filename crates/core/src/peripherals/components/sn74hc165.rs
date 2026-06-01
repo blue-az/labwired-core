@@ -9,11 +9,10 @@ use std::any::Any;
 
 /// Simulated 74HC165 8-bit parallel-in / serial-out shift register.
 ///
-/// Used as a digital-input expander: 8 parallel input channels are captured on
-/// the SH/LD (load) pulse, then clocked out serially MSB-first (QH = channel 7).
-/// In this model the SPI chip-select line is wired to the SH/LD line: asserting
-/// CS performs the parallel load, and each SPI byte transfer clocks the 8 latched
-/// bits onto MISO.
+/// Used as a digital-input expander: 8 parallel input channels are clocked out
+/// serially MSB-first (QH = channel 7). The SH/LD (load) pulse is not separately
+/// modeled on the STM32 SPI bus (which never drives CS callbacks), so the live
+/// inputs are sampled at clock-out time inside `transfer`.
 #[derive(Debug, serde::Serialize)]
 pub struct Sn74hc165 {
     /// SH/LD line, wired to the GPIO used as SPI chip-select for this device.
@@ -68,7 +67,10 @@ impl SpiDevice for Sn74hc165 {
     fn cs_release(&mut self) {}
 
     fn transfer(&mut self, _mosi: u8) -> u8 {
-        // Clock out the 8 latched bits MSB-first (QH = bit 7 = channel 7).
+        // The STM32 SPI bus does not drive CS callbacks, and the SH/LD load
+        // pulse is not separately modeled, so capture the live inputs at
+        // clock-out time. Clocks out the 8 bits MSB-first (QH = bit 7 = channel 7).
+        self.latched = self.inputs;
         self.latched
     }
 
@@ -91,17 +93,19 @@ mod tests {
         let mut d = Sn74hc165::new("PA4");
         d.set_inputs(0xA5);
         d.cs_select(); // SH/LD pulse → parallel load
-        // 74HC165 clocks out QH..QA MSB-first; SPI reads MSB-first → byte == inputs
+                       // 74HC165 clocks out QH..QA MSB-first; SPI reads MSB-first → byte == inputs
         assert_eq!(d.transfer(0x00), 0xA5);
     }
 
     #[test]
-    fn latches_at_load_not_live() {
+    fn transfer_reflects_live_inputs_without_cs_select() {
+        // Runtime guard: the STM32 SPI bus never calls cs_select, so transfer
+        // alone must return the current inputs.
         let mut d = Sn74hc165::new("PA4");
-        d.set_inputs(0x0F);
-        d.cs_select();
-        d.set_inputs(0xFF); // change AFTER load must not affect the latched value
-        assert_eq!(d.transfer(0x00), 0x0F);
+        d.set_inputs(0xA5);
+        assert_eq!(d.transfer(0x00), 0xA5);
+        d.set_inputs(0x3C);
+        assert_eq!(d.transfer(0x00), 0x3C);
     }
 
     #[test]
