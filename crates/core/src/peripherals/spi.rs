@@ -411,19 +411,19 @@ impl crate::Peripheral for Spi {
                 self.transfer_in_progress = false;
                 self.sr &= !0x0080; // Clear BSY
                 self.sr |= 0x0002; // Set TXE
-                if self.loopback {
-                    // Internal loopback: MOSI → MISO. Mirrors the data the
-                    // firmware just wrote back into the RX path so a
-                    // unit test (or "single-board echo" integration) sees
-                    // RXNE go high with the byte it transmitted.
+                if self.loopback || !self.attached_devices.is_empty() {
+                    // A wired slave (attached `SpiDevice`) drives its response
+                    // onto MISO — `transfer_buffer` already holds the byte it
+                    // returned from `transfer()` in `write_reg`. Internal
+                    // loopback mirrors MOSI back the same way. Either way the
+                    // firmware sees RXNE go high with the received byte.
                     self.dr = self.transfer_buffer as u16;
                     self.sr |= 0x0001; // RXNE
                 }
-                // Without loopback we deliberately do NOT auto-set RXNE
-                // or auto-fill DR: real STM32 silicon with no slave wired
-                // (or no MISO pin AF'd) doesn't drive anything onto MISO.
-                // Production smoke tests therefore see SR=0x0002 / DR=0
-                // after a write — matching NUCLEO-L476RG silicon.
+                // With no slave wired and no loopback we deliberately do NOT
+                // auto-set RXNE or auto-fill DR: real STM32 silicon with no
+                // MISO driver leaves SR=0x0002 / DR=0 after a write — matching
+                // NUCLEO-L476RG silicon.
                 if (self.cr2 & (1 << 7)) != 0 {
                     // TXEIE
                     irq = true;

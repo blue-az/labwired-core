@@ -9,6 +9,32 @@
 #include "phy_labwired.h"
 #include "debug_uart.h"
 #include <string.h>
+#include <stdint.h>
+
+/* SPI1 (stm32_fifo layout) reads the 74HC165 digital-input shift register:
+ * one transfer clocks out the 8 input channels as a byte on MISO. */
+#define SPI1_BASE 0x40013000u
+#define SREG(o) (*(volatile uint32_t *)(SPI1_BASE + (o)))
+#define SPI_CR1 SREG(0x00u)
+#define SPI_SR SREG(0x08u)
+#define SPI_DR SREG(0x0Cu)
+#define CR1_MSTR (1u << 2)
+#define CR1_SPE (1u << 6)
+#define SR_RXNE (1u << 0)
+
+static void spi1_init(void) {
+    SPI_CR1 = CR1_SPE | CR1_MSTR; /* master, enabled, fastest baud */
+}
+
+static uint8_t spi1_read_byte(void) {
+    SPI_DR = 0x00u; /* dummy write triggers the transfer */
+    for (uint32_t i = 0; i < 100000u; i++) {
+        if (SPI_SR & SR_RXNE) {
+            return (uint8_t)SPI_DR;
+        }
+    }
+    return 0u; /* bounded: never hang the IO-Link loop */
+}
 
 int main(void) {
     dbg_uart_init();
@@ -31,11 +57,14 @@ int main(void) {
         }
     }
     iolink_set_timing_enforcement(false);
+    spi1_init();
     dbg_puts("IOLINK INIT OK\r\n");
 
-    uint8_t pd = 0x00;
     iolink_dll_state_t last = (iolink_dll_state_t)0xFF;
     for (;;) {
+        /* Read the 8 digital inputs from the 74HC165 and publish them as the
+         * IO-Link process data the master cyclically reads. */
+        uint8_t pd = spi1_read_byte();
         iolink_pd_input_update(&pd, 1, true);
         iolink_process();
         /* Deliberately do NOT advance g_iolink_ticks_ms: the CPU loops far
@@ -52,7 +81,8 @@ int main(void) {
             dbg_puts("STATE=");
             dbg_hex8((unsigned char)s);
             if (s == IOLINK_DLL_STATE_OPERATE) {
-                dbg_puts(" OPERATE");
+                dbg_puts(" OPERATE PD=");
+                dbg_hex8(pd);
             }
             dbg_puts("\r\n");
         }

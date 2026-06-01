@@ -12,4 +12,13 @@ external_devices:
       pd_in_len: 1
       m_seq_type: 1
       com: "COM2"
+  # 74HC165 digital-input shift register: 8 input channels read over SPI1.
+  - id: "di_shifter"
+    type: "sn74hc165"
+    connection: "spi1"
+    config:
+      cs_pin: "PA4"
+      # Headless demo stimulus: preset the 8 input channels (0xA5 = 1010_0101).
+      # The UI (Plan 3) will toggle these live instead.
+      inputs: 165
 board_io: []
