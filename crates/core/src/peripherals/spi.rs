@@ -486,7 +486,12 @@ impl crate::Peripheral for Spi {
         self.sr &= !0x0080; // Clear BSY
         self.sr |= 0x0002; // Set TXE
         let mut res = crate::sched::EventResult::default();
-        if self.loopback {
+        // Match the legacy tick() completion: an attached slave drove its byte
+        // onto MISO (already in `transfer_buffer`), and loopback mirrors MOSI —
+        // either way the byte must land in the RX path. (The migration dropped
+        // the `!attached_devices.is_empty()` case, breaking SPI slave reads
+        // like the 74HC165 → empty IO-Link process data.)
+        if self.loopback || !self.attached_devices.is_empty() {
             self.dr = self.transfer_buffer as u16;
             self.sr |= 0x0001; // RXNE
         }
