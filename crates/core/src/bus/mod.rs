@@ -463,6 +463,44 @@ impl SystemBus {
             .to_string()
     }
 
+    fn sn74hc165_cs_pin(ext: &ExternalDevice) -> String {
+        ext.config
+            .get("cs_pin")
+            .and_then(|v| v.as_str())
+            .unwrap_or("PA4")
+            .to_string()
+    }
+
+    fn iolink_master_config(
+        ext: &ExternalDevice,
+    ) -> (usize, usize, crate::peripherals::components::IolinkComSpeed) {
+        use crate::peripherals::components::IolinkComSpeed;
+        let pd_in_len = ext
+            .config
+            .get("pd_in_len")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(1) as usize;
+        let m_seq_type = ext
+            .config
+            .get("m_seq_type")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(1);
+        let od_len = if m_seq_type >= 4 { 2 } else { 1 };
+        let com = match ext
+            .config
+            .get("com")
+            .and_then(|v| v.as_str())
+            .unwrap_or("COM2")
+            .to_ascii_uppercase()
+            .as_str()
+        {
+            "COM1" => IolinkComSpeed::Com1,
+            "COM3" => IolinkComSpeed::Com3,
+            _ => IolinkComSpeed::Com2,
+        };
+        (pd_in_len, od_len, com)
+    }
+
     fn ili9341_cs_pin(ext: &ExternalDevice) -> String {
         ext.config
             .get("cs_pin")
@@ -1574,6 +1612,44 @@ impl SystemBus {
 
                     uart.attach_stream(Box::new(gps));
                 }
+                "iolink-master" => {
+                    // UART stream device path
+                    let idx = bus
+                        .find_peripheral_index_by_name(&ext.connection)
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "External device '{}' type '{}' references missing connection '{}'",
+                                ext.id,
+                                ext.r#type,
+                                ext.connection
+                            )
+                        })?;
+
+                    let any = bus.peripherals[idx].dev.as_any_mut().ok_or_else(|| {
+                        anyhow::anyhow!(
+                            "External device '{}' type '{}' connection '{}' cannot be downcast",
+                            ext.id,
+                            ext.r#type,
+                            ext.connection
+                        )
+                    })?;
+
+                    let uart = any
+                        .downcast_mut::<crate::peripherals::uart::Uart>()
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "External device '{}' type '{}' connection '{}' is not a UART peripheral",
+                                ext.id,
+                                ext.r#type,
+                                ext.connection
+                            )
+                        })?;
+
+                    let (pd_in_len, od_len, com) = Self::iolink_master_config(ext);
+                    uart.attach_stream(Box::new(
+                        crate::peripherals::components::IolinkMaster::new(pd_in_len, od_len, com),
+                    ));
+                }
                 "max31855" => {
                     // SPI device path
                     let cs_pin = Self::max31855_cs_pin(ext);
@@ -1611,6 +1687,48 @@ impl SystemBus {
                     spi.attach(Box::new(crate::peripherals::components::Max31855::new(
                         cs_pin,
                     )));
+                }
+                "sn74hc165" => {
+                    // SPI device path
+                    let cs_pin = Self::sn74hc165_cs_pin(ext);
+                    let idx = bus
+                        .find_peripheral_index_by_name(&ext.connection)
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "External device '{}' type '{}' references missing connection '{}'",
+                                ext.id,
+                                ext.r#type,
+                                ext.connection
+                            )
+                        })?;
+
+                    let any = bus.peripherals[idx].dev.as_any_mut().ok_or_else(|| {
+                        anyhow::anyhow!(
+                            "External device '{}' type '{}' connection '{}' cannot be downcast",
+                            ext.id,
+                            ext.r#type,
+                            ext.connection
+                        )
+                    })?;
+
+                    let spi = any
+                        .downcast_mut::<crate::peripherals::spi::Spi>()
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "External device '{}' type '{}' connection '{}' is not an SPI peripheral",
+                                ext.id,
+                                ext.r#type,
+                                ext.connection
+                            )
+                        })?;
+
+                    let mut shifter = crate::peripherals::components::Sn74hc165::new(cs_pin);
+                    // Optional preset of the 8 input channels (test/demo stimulus
+                    // before the UI can toggle them live).
+                    if let Some(v) = ext.config.get("inputs").and_then(|v| v.as_u64()) {
+                        shifter.set_inputs(v as u8);
+                    }
+                    spi.attach(Box::new(shifter));
                 }
                 "ssd1680_tricolor_290" | "epd-2in9-tricolor" => {
                     // SPI device path — Waveshare 2.9" tri-color e-paper.
