@@ -87,41 +87,49 @@ pub enum IolinkLinkState {
     Operate,
 }
 
+/// Ticks the master waits (one `poll` per UART tick) between frames. The
+/// simulated device executes far slower than the UART advances, so frames are
+/// paced generously to guarantee the device has fully processed (and replied
+/// to) one frame before the next arrives — this is what keeps the device's
+/// byte framing aligned. Tunable; sized for the `-O0` demo firmware.
+const FRAME_GAP_TICKS: u32 = 6000;
+
+/// Number of IDLE frames sent before the OPERATE transition. The device needs
+/// one valid frame to leave AWAITING_COMM for PREOPERATE; a few repeats absorb
+/// any byte the wake-up detection consumed.
+const IDLE_FRAMES: u32 = 4;
+
 /// Native IO-Link master peer. Attaches to the firmware's UART as a
-/// `UartStreamDevice`: `poll` drives the master's request bytes onto the
-/// firmware RX path, `on_tx_byte` receives the device's response bytes from the
-/// firmware TX path. Runs a minimal cyclic master (wake-up → IDLE → OPERATE
-/// transition → cyclic Type 1 requests) ported from the reference virtual master.
+/// `UartStreamDevice`: `poll` drives the master's request bytes onto the firmware
+/// RX path, `on_tx_byte` receives the device's response bytes from the firmware
+/// TX path.
+///
+/// Drives a **deterministic, tick-paced** startup schedule rather than reacting
+/// to response timing: wake-up (once) → several IDLE frames (→ PREOPERATE) → the
+/// OPERATE transition (→ ESTAB_COM) → cyclic Type 1 requests (→ OPERATE). Process
+/// data input is captured from the cyclic responses.
 #[derive(Debug, serde::Serialize)]
 pub struct IolinkMaster {
     pd_in_len: usize,
     od_len: usize,
     com: IolinkComSpeed,
     pub link_state: IolinkLinkState,
-    /// Bytes still to send onto the firmware RX path.
+    /// Bytes still to send onto the firmware RX path (one frame at a time).
     #[serde(skip)]
     tx_queue: VecDeque<u8>,
-    /// Accumulated device-response bytes from the firmware TX path.
+    /// Device-response bytes accumulated since the current frame was queued.
     #[serde(skip)]
     rx_accum: Vec<u8>,
-    /// Response length expected for the in-flight request; gating is via `awaiting`.
-    expected_resp: usize,
-    /// True once a request is fully sent and we are waiting for its response.
-    awaiting: bool,
-    /// Microseconds spent waiting for the in-flight response (resync on timeout).
+    /// Schedule position (0 = wake-up, then IDLEs, transition, cyclic Type 1).
+    step: u32,
+    /// UART ticks elapsed since the current frame finished sending.
     #[serde(skip)]
-    wait_us: u32,
+    gap_ticks: u32,
     /// Latest valid process-data input bytes received from the device.
     latest_pd: Vec<u8>,
-    /// Latches true on the first valid frame and is intentionally sticky: it
-    /// keeps the last good PD and is not reset on a later bad frame.
+    /// Latches true on the first valid cyclic frame and is intentionally sticky.
     pub pd_valid: bool,
 }
-
-/// If a device response does not complete within this window, the master
-/// re-synchronises by restarting the startup handshake. Generous: cyclic
-/// responses normally complete within a few ~1 ms ticks.
-const RESYNC_TIMEOUT_US: u32 = 100_000;
 
 impl IolinkMaster {
     pub fn new(pd_in_len: usize, od_len: usize, com: IolinkComSpeed) -> Self {
@@ -132,13 +140,12 @@ impl IolinkMaster {
             link_state: IolinkLinkState::Startup,
             tx_queue: VecDeque::new(),
             rx_accum: Vec::new(),
-            expected_resp: 0,
-            awaiting: false,
-            wait_us: 0,
+            step: 0,
+            gap_ticks: 0,
             latest_pd: vec![0u8; pd_in_len.max(1)],
             pd_valid: false,
         };
-        m.queue_startup();
+        m.queue_next_frame(); // queue the wake-up immediately
         m
     }
 
@@ -155,92 +162,64 @@ impl IolinkMaster {
         1 + self.pd_in_len + self.od_len + 1
     }
 
-    fn queue_startup(&mut self) {
-        self.tx_queue.push_back(0x55); // wake-up
-        for b in encode_type0(0x00) {
-            self.tx_queue.push_back(b); // Type 0 IDLE
-        }
-        self.expected_resp = 2;
-        self.awaiting = false;
-        self.link_state = IolinkLinkState::Startup;
-    }
-
-    fn queue_first_operate(&mut self) {
-        // Fire-and-forget OPERATE transition (no response), then first cyclic request.
-        for b in encode_type0(0x0F) {
-            self.tx_queue.push_back(b);
-        }
-        for b in encode_type1_cycle(&[]) {
-            self.tx_queue.push_back(b);
-        }
-        self.expected_resp = self.operate_response_len();
-        self.awaiting = false;
-        self.link_state = IolinkLinkState::Operate;
-    }
-
-    fn queue_next_operate(&mut self) {
-        for b in encode_type1_cycle(&[]) {
-            self.tx_queue.push_back(b);
-        }
-        self.expected_resp = self.operate_response_len();
-        self.awaiting = false;
-    }
-
-    fn resync(&mut self) {
-        self.tx_queue.clear();
+    /// Queue the next frame in the startup/cyclic schedule and advance `step`.
+    fn queue_next_frame(&mut self) {
         self.rx_accum.clear();
-        self.awaiting = false;
-        self.wait_us = 0;
-        self.queue_startup();
-    }
-
-    /// Called when a full response has been received; advance the state machine.
-    fn handle_response(&mut self) {
-        match self.link_state {
-            IolinkLinkState::Startup => {
-                // PREOPERATE acknowledged → move to OPERATE.
-                self.queue_first_operate();
+        let idle_end = 1 + IDLE_FRAMES; // steps [1..=IDLE_FRAMES] are IDLE
+        if self.step == 0 {
+            self.tx_queue.push_back(0x55); // wake-up pulse (once)
+        } else if self.step < idle_end {
+            for b in encode_type0(0x00) {
+                self.tx_queue.push_back(b); // Type 0 IDLE → PREOPERATE
             }
-            IolinkLinkState::Operate => {
-                let resp = decode_operate(&self.rx_accum, self.pd_in_len, self.od_len);
-                if resp.checksum_ok && resp.pd_valid {
-                    self.latest_pd = resp.pd;
-                    self.pd_valid = true;
-                }
-                self.queue_next_operate();
+        } else if self.step == idle_end {
+            for b in encode_type0(0x0F) {
+                self.tx_queue.push_back(b); // OPERATE transition (MC=0x0F) → ESTAB_COM
             }
+        } else {
+            for b in encode_type1_cycle(&[]) {
+                self.tx_queue.push_back(b); // cyclic Type 1 → OPERATE + process data
+            }
+            self.link_state = IolinkLinkState::Operate;
         }
-        self.rx_accum.clear();
+        // Hold `step` at the first cyclic index so it keeps repeating Type 1.
+        if self.step <= idle_end {
+            self.step += 1;
+        }
     }
 }
 
 impl UartStreamDevice for IolinkMaster {
-    fn poll(&mut self, elapsed_us: u32) -> Option<u8> {
-        if self.awaiting {
-            self.wait_us = self.wait_us.saturating_add(elapsed_us);
-            if self.wait_us >= RESYNC_TIMEOUT_US {
-                self.resync();
-            }
+    fn poll(&mut self, _elapsed_us: u32) -> Option<u8> {
+        if let Some(byte) = self.tx_queue.pop_front() {
+            return Some(byte);
+        }
+        // Frame fully sent: wait the inter-frame gap, then queue the next one.
+        self.gap_ticks = self.gap_ticks.saturating_add(1);
+        if self.gap_ticks < FRAME_GAP_TICKS {
             return None;
         }
-        if self.tx_queue.is_empty() {
-            return None;
-        }
-        let byte = self.tx_queue.pop_front();
-        if self.tx_queue.is_empty() && self.expected_resp > 0 {
-            self.awaiting = true;
-            self.wait_us = 0;
-        }
-        byte
+        self.gap_ticks = 0;
+        self.queue_next_frame();
+        self.tx_queue.pop_front()
     }
 
     fn on_tx_byte(&mut self, byte: u8) {
-        if !self.awaiting {
-            return;
+        // Accumulate the device's reply to the current frame. Once a cyclic
+        // (OPERATE) response is complete, decode and latch the process data.
+        if self.rx_accum.len() < 64 {
+            self.rx_accum.push(byte);
         }
-        self.rx_accum.push(byte);
-        if self.rx_accum.len() >= self.expected_resp {
-            self.handle_response();
+        if self.link_state == IolinkLinkState::Operate
+            && self.rx_accum.len() >= self.operate_response_len()
+        {
+            let n = self.operate_response_len();
+            let resp = decode_operate(&self.rx_accum[..n], self.pd_in_len, self.od_len);
+            if resp.checksum_ok && resp.pd_valid {
+                self.latest_pd = resp.pd;
+                self.pd_valid = true;
+            }
+            self.rx_accum.clear();
         }
     }
 
@@ -256,6 +235,27 @@ impl UartStreamDevice for IolinkMaster {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Pump ticks and return the bytes of exactly the next frame: skip any
+    /// leading inter-frame gap, collect the frame's bytes, stop at the next gap.
+    fn drain(m: &mut IolinkMaster) -> Vec<u8> {
+        let mut out = Vec::new();
+        let mut started = false;
+        for _ in 0..(FRAME_GAP_TICKS * 2 + 16) {
+            match m.poll(1000) {
+                Some(b) => {
+                    out.push(b);
+                    started = true;
+                }
+                None => {
+                    if started {
+                        break;
+                    }
+                }
+            }
+        }
+        out
+    }
 
     #[test]
     fn crc6_matches_iolink_vectors() {
@@ -273,13 +273,11 @@ mod tests {
 
     #[test]
     fn encodes_type1_di_cycle_with_no_output_pd() {
-        // DI hub: pd_out_len = 0, od_len = 1 → [MC, CKT, OD, CK]
         assert_eq!(encode_type1_cycle(&[]), vec![0x00, 0x00, 0x00, 0x09]);
     }
 
     #[test]
     fn decodes_operate_response_and_extracts_pd() {
-        // [status=0x20 (PD valid), PD=0xA5, OD=0x00, CK=0x0D]
         let resp = decode_operate(&[0x20, 0xA5, 0x00, 0x0D], 1, 1);
         assert!(resp.checksum_ok);
         assert!(resp.pd_valid);
@@ -288,7 +286,6 @@ mod tests {
 
     #[test]
     fn decode_operate_handles_two_byte_pd() {
-        // pd_in_len=2, od_len=1 → [status, pd0, pd1, od, ck]
         let mut frame = vec![0x20u8, 0xAA, 0xBB, 0x00];
         let ck = crc6(&frame);
         frame.push(ck);
@@ -299,125 +296,40 @@ mod tests {
     }
 
     #[test]
-    fn master_resyncs_after_response_timeout() {
+    fn schedule_walks_wakeup_idle_transition_then_cyclic_type1() {
         let mut m = IolinkMaster::new(1, 1, IolinkComSpeed::Com2);
-        // Drain the initial startup request; master then awaits a response.
-        while m.poll(1000).is_some() {}
-        // Long silence (no on_tx_byte) → one over-budget poll triggers resync.
-        assert_eq!(m.poll(RESYNC_TIMEOUT_US), None);
-        // The master re-emits the full startup handshake.
-        let mut again = Vec::new();
-        while let Some(b) = m.poll(1000) {
-            again.push(b);
-        }
-        assert_eq!(again, vec![0x55, 0x00, 0x24]);
+
+        // Step 0: wake-up pulse.
+        assert_eq!(drain(&mut m), vec![0x55]);
         assert_eq!(m.link_state, IolinkLinkState::Startup);
+
+        // Steps 1..=IDLE_FRAMES: IDLE frames (→ PREOPERATE on the device).
+        for _ in 0..IDLE_FRAMES {
+            assert_eq!(drain(&mut m), vec![0x00, 0x24]);
+        }
+        assert_eq!(m.link_state, IolinkLinkState::Startup);
+
+        // Next: the OPERATE transition (MC=0x0F).
+        assert_eq!(drain(&mut m), vec![0x0F, 0x0D]);
+
+        // Then cyclic Type 1 requests, repeating forever.
+        assert_eq!(drain(&mut m), vec![0x00, 0x00, 0x00, 0x09]);
+        assert_eq!(m.link_state, IolinkLinkState::Operate);
+        assert_eq!(drain(&mut m), vec![0x00, 0x00, 0x00, 0x09]);
     }
 
     #[test]
-    fn drives_startup_then_cyclic_operate_and_captures_pd() {
-        // DI hub: pd_in_len = 1, od_len = 1, COM2.
+    fn captures_process_data_from_cyclic_response() {
         let mut m = IolinkMaster::new(1, 1, IolinkComSpeed::Com2);
-
-        // Startup: master emits wake-up + Type 0 IDLE, then awaits a 2-byte response.
-        let mut req = Vec::new();
-        while let Some(b) = m.poll(1000) {
-            req.push(b);
+        // Advance the schedule to the cyclic (OPERATE) phase.
+        while m.link_state != IolinkLinkState::Operate {
+            drain(&mut m);
         }
-        assert_eq!(req, vec![0x55, 0x00, 0x24]);
-        assert_eq!(m.link_state, IolinkLinkState::Startup);
-
-        // Device acknowledges with any 2-byte PREOPERATE response.
-        m.on_tx_byte(0x00);
-        m.on_tx_byte(0x24);
-
-        // Master fires OPERATE transition then the first cyclic request.
-        let mut req2 = Vec::new();
-        while let Some(b) = m.poll(1000) {
-            req2.push(b);
-        }
-        assert_eq!(req2, vec![0x0F, 0x0D, 0x00, 0x00, 0x00, 0x09]);
-        assert_eq!(m.link_state, IolinkLinkState::Operate);
-
-        // Device responds with PD = 0xA5, valid.
+        // Device replies to the cyclic request with PD = 0xA5, valid.
         for b in [0x20u8, 0xA5, 0x00, 0x0D] {
             m.on_tx_byte(b);
         }
         assert_eq!(m.input_byte(), 0xA5);
         assert!(m.pd_valid);
-
-        // Next cyclic request is queued.
-        let mut req3 = Vec::new();
-        while let Some(b) = m.poll(1000) {
-            req3.push(b);
-        }
-        assert_eq!(req3, vec![0x00, 0x00, 0x00, 0x09]);
-    }
-
-    #[test]
-    fn master_reaches_operate_through_real_uart() {
-        use crate::peripherals::uart::Uart;
-        use crate::Peripheral;
-
-        let mut uart = Uart::new(); // Stm32F1
-        uart.set_sink(None, false);
-        uart.attach_stream(Box::new(IolinkMaster::new(1, 1, IolinkComSpeed::Com2)));
-
-        // Helper: simulate firmware transmitting a byte (Stm32F1 DR alias = 0x00).
-        fn fw_tx(uart: &mut Uart, b: u8) {
-            uart.write(0x00, b).unwrap();
-        }
-        // Helper: simulate firmware reading one RX byte if available.
-        fn fw_rx(uart: &mut Uart) -> Option<u8> {
-            // status offset 0x00 for F1; RXNE = bit 5
-            let status = Peripheral::read(uart, 0x00).unwrap();
-            if status & (1 << 5) != 0 {
-                Some(Peripheral::read(uart, 0x04).unwrap())
-            } else {
-                None
-            }
-        }
-
-        let mut master_request = Vec::new();
-        let mut acked_preop = false;
-        let mut answered_operate = false;
-
-        // 50 ticks = 50 ms simulated, ample for the ~12-tick handshake and well
-        // under the master's 100 ms response-timeout (which would otherwise resync
-        // the link back to Startup once the one-shot device goes silent).
-        for _ in 0..50 {
-            // 1) advance UART one tick → master.poll pushes a request byte into RX
-            let _ = Peripheral::tick(&mut uart);
-
-            // 2) firmware drains any RX byte and records the master's request
-            while let Some(b) = fw_rx(&mut uart) {
-                master_request.push(b);
-            }
-
-            // 3) fake firmware/device logic: respond once each request completes
-            if !acked_preop && master_request == vec![0x55, 0x00, 0x24] {
-                fw_tx(&mut uart, 0x00);
-                fw_tx(&mut uart, 0x24);
-                acked_preop = true;
-                master_request.clear();
-            } else if acked_preop
-                && !answered_operate
-                && master_request == vec![0x0F, 0x0D, 0x00, 0x00, 0x00, 0x09]
-            {
-                for b in [0x20u8, 0xA5, 0x00, 0x0D] {
-                    fw_tx(&mut uart, b);
-                }
-                answered_operate = true;
-            }
-        }
-
-        let master = uart.attached_streams[0]
-            .as_any()
-            .unwrap()
-            .downcast_ref::<IolinkMaster>()
-            .unwrap();
-        assert_eq!(master.link_state, IolinkLinkState::Operate);
-        assert_eq!(master.input_byte(), 0xA5);
-        assert!(master.pd_valid);
     }
 }

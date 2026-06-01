@@ -5,7 +5,8 @@ inputs:
   system: "./system.yaml"
   firmware: "./firmware/al2205_dido.elf"
 limits:
-  max_steps: 500000
+  max_steps: 20000000
 assertions:
   - uart_contains: "AL2205 BOOT"
   - uart_contains: "IOLINK INIT OK"
+  - uart_contains: "OPERATE"
