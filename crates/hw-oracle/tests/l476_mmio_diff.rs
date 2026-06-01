@@ -323,7 +323,9 @@ const PARITY_REGS: &[ParityReg] = &[
     ParityReg {
         label: "SPI1 CR2",
         addr: SPI1_BASE + 0x04,
-        mask: 0x0000_7FFF,
+        // DS[11:8] is forced to >= 8-bit (0b0111) by hardware (RM0351 §40.6.2),
+        // so it isn't a clean write==read field — exclude it from the sweep.
+        mask: 0x0000_70FF,
     },
     ParityReg {
         label: "SPI2 CR1",
@@ -333,7 +335,7 @@ const PARITY_REGS: &[ParityReg] = &[
     ParityReg {
         label: "SPI2 CR2",
         addr: SPI2_BASE + 0x04,
-        mask: 0x0000_7FFF,
+        mask: 0x0000_70FF, // DS[11:8] hardware-forced to >= 8-bit (RM0351)
     },
     ParityReg {
         label: "SPI3 CR1",
@@ -343,7 +345,7 @@ const PARITY_REGS: &[ParityReg] = &[
     ParityReg {
         label: "SPI3 CR2",
         addr: SPI3_BASE + 0x04,
-        mask: 0x0000_7FFF,
+        mask: 0x0000_70FF, // DS[11:8] hardware-forced to >= 8-bit (RM0351)
     },
     // TIM2 (32-bit GP timer) data registers. CEN is never set, so CNT is
     // stable; CCMR masked to the low 16 implemented bits.
