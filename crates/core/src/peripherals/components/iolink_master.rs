@@ -480,11 +480,17 @@ mod tests {
             let _ = m.poll(1000);
         }
         let trace = m.trace_snapshot();
-        assert!(trace.len() >= 5, "expected several frames, got {}", trace.len());
+        assert!(
+            trace.len() >= 5,
+            "expected several frames, got {}",
+            trace.len()
+        );
         assert_eq!(trace[0].kind, IolinkFrameKind::WakeUp);
         assert!(
-            trace.iter().any(|x| x.kind == IolinkFrameKind::Cyclic
-                && x.link_state == IolinkLinkState::Operate),
+            trace
+                .iter()
+                .any(|x| x.kind == IolinkFrameKind::Cyclic
+                    && x.link_state == IolinkLinkState::Operate),
             "expected a cyclic OPERATE frame in the trace"
         );
         for w in trace.windows(2) {
