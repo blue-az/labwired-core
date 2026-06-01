@@ -1675,9 +1675,13 @@ impl SystemBus {
                             )
                         })?;
 
-                    spi.attach(Box::new(
-                        crate::peripherals::components::Sn74hc165::new(cs_pin),
-                    ));
+                    let mut shifter = crate::peripherals::components::Sn74hc165::new(cs_pin);
+                    // Optional preset of the 8 input channels (test/demo stimulus
+                    // before the UI can toggle them live).
+                    if let Some(v) = ext.config.get("inputs").and_then(|v| v.as_u64()) {
+                        shifter.set_inputs(v as u8);
+                    }
+                    spi.attach(Box::new(shifter));
                 }
                 "ssd1680_tricolor_290" | "epd-2in9-tricolor" => {
                     // SPI device path — Waveshare 2.9" tri-color e-paper.
