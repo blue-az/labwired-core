@@ -770,16 +770,56 @@ pub fn configure_xtensa_esp32s3(bus: &mut SystemBus, opts: &Esp32s3Opts) -> Esp3
         Box::new(dcache),
     );
 
-    // ── ROM thunk bank ────────────────────────────────────────────────────
-    let mut rom_bank = RomThunkBank::new(0x4000_0000, 0x6_0000);
-    register_default_thunks(&mut rom_bank);
-    bus.add_peripheral(
-        "rom_thunks",
-        0x4000_0000,
-        0x6_0000,
-        None,
-        Box::new(rom_bank),
-    );
+    // ── ROM: real silicon image (proper model) or thunk bank (legacy stopgap) ─
+    // The faithful model loads the chip's *actual* boot ROM (dumped from silicon
+    // over JTAG) so the firmware executes real ROM code — memset, memcpy,
+    // _xtos_*, the cache routines, libgcc — instead of Rust thunks that diverge.
+    // Opt-in via `LABWIRED_ESP32S3_ROM=<path to the 0x40000000 image>` (keeps
+    // Espressif's copyrighted ROM blob out of the tree); falls back to thunks.
+    let rom_loaded = match std::env::var("LABWIRED_ESP32S3_ROM") {
+        Ok(path) => match std::fs::read(&path) {
+            Ok(bytes) => {
+                let n = bytes.len().min(0x6_0000);
+                let rom = RamPeripheral::with_image(0x6_0000, &bytes);
+                bus.add_peripheral("rom", 0x4000_0000, 0x6_0000, None, Box::new(rom));
+                eprintln!(
+                    "configure_xtensa_esp32s3: loaded REAL ROM ({n} bytes) from {path} — thunks disabled"
+                );
+                true
+            }
+            Err(e) => {
+                eprintln!("configure_xtensa_esp32s3: LABWIRED_ESP32S3_ROM unreadable ({e}); using thunk bank");
+                false
+            }
+        },
+        Err(_) => false,
+    };
+    if !rom_loaded {
+        // ── ROM thunk bank (legacy) ──────────────────────────────────────
+        let mut rom_bank = RomThunkBank::new(0x4000_0000, 0x6_0000);
+        register_default_thunks(&mut rom_bank);
+        bus.add_peripheral("rom_thunks", 0x4000_0000, 0x6_0000, None, Box::new(rom_bank));
+    }
+
+    // ── ROM data (DROM) ───────────────────────────────────────────────────
+    // The real ROM code reads constants + function-pointer tables from DROM
+    // (0x3FF0_0000). Without it, ROM routines load 0 and jump to 0. Loaded
+    // from the silicon dump alongside the IROM (LABWIRED_ESP32S3_DROM).
+    if rom_loaded {
+        if let Ok(path) = std::env::var("LABWIRED_ESP32S3_DROM") {
+            match std::fs::read(&path) {
+                Ok(bytes) => {
+                    let drom = RamPeripheral::with_image(0x2_0000, &bytes);
+                    bus.add_peripheral("drom", 0x3FF0_0000, 0x2_0000, None, Box::new(drom));
+                    eprintln!(
+                        "configure_xtensa_esp32s3: loaded REAL DROM ({} bytes) from {path}",
+                        bytes.len().min(0x2_0000)
+                    );
+                }
+                Err(e) => eprintln!("configure_xtensa_esp32s3: LABWIRED_ESP32S3_DROM unreadable ({e})"),
+            }
+        }
+    }
 
     // ── USB_SERIAL_JTAG ───────────────────────────────────────────────────
     bus.add_peripheral(
@@ -1063,6 +1103,18 @@ impl RamPeripheral {
     pub fn new(size: usize) -> Self {
         Self {
             data: std::cell::RefCell::new(vec![0u8; size]),
+        }
+    }
+
+    /// Allocate `size` bytes and preload the low bytes from `image` (used to
+    /// load a real ROM dump). The buffer stays exactly `size` (image is
+    /// truncated/zero-padded), preserving the fixed-length INVARIANT.
+    pub fn with_image(size: usize, image: &[u8]) -> Self {
+        let mut buf = vec![0u8; size];
+        let n = image.len().min(size);
+        buf[..n].copy_from_slice(&image[..n]);
+        Self {
+            data: std::cell::RefCell::new(buf),
         }
     }
 
