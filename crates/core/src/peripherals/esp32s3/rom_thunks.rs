@@ -218,28 +218,76 @@ impl Peripheral for RomThunkBank {
 // built firmware and reading ESP-IDF's `rom/esp32s3.rom.ld`.
 // The implementations here are NOPs or zero-returns where appropriate.
 
-/// EXTMEM DCache state register (`EXTMEM + 0x130`). ESP-IDF's IRAM
-/// `Cache_Suspend_DCache` wrapper calls the ROM routine and then **busy-waits**
-/// on bits[23:12] of this register until they read `1` ("DCache idle"). On
-/// real silicon the cache controller sets that field once the cache drains;
-/// the simulator has no async cache, so the suspend/resume thunks drive the
-/// field directly. Without this the firmware spins here forever during flash
-/// bring-up, long before the scheduler.
-const EXTMEM_DCACHE_STATE: u64 = 0x600C_4130;
-const DCACHE_STATE_IDLE: u32 = 1 << 12; // bits[23:12] == 1
+/// EXTMEM cache-state register (`EXTMEM + 0x130`). ESP-IDF's IRAM cache
+/// wrappers (`Cache_Suspend_DCache`, `Cache_Freeze_{I,D}Cache_Enable`) call the
+/// ROM routine and then **busy-wait** on this register until their field reads
+/// the expected value. The simulator has no async cache, so these thunks drive
+/// the fields directly:
+///   bits[11:0]  = ICache freeze state          (1 = frozen)
+///   bits[23:12] = DCache suspend/freeze state   (1 = suspended/frozen)
+/// Without this the firmware spins here forever during flash bring-up, before
+/// the scheduler ever starts. Read-modify-write so the two fields don't clobber
+/// each other.
+const EXTMEM_CACHE_STATE: u64 = 0x600C_4130;
+const ICACHE_FIELD: u32 = 0x0000_0FFF; // bits[11:0]
+const DCACHE_FIELD: u32 = 0x00FF_F000; // bits[23:12]
 
-/// `Cache_Suspend_DCache(): u32` — mark the DCache idle so the firmware's
-/// post-call status poll completes, then return 0 (no prior suspend state).
+fn set_cache_field(bus: &mut dyn Bus, mask: u32, frozen: bool) -> SimResult<()> {
+    let v = bus.read_u32(EXTMEM_CACHE_STATE)?;
+    let one = mask & mask.wrapping_neg(); // value `1` placed in the field's LSB
+    let nv = if frozen { (v & !mask) | one } else { v & !mask };
+    bus.write_u32(EXTMEM_CACHE_STATE, nv)
+}
+
+/// `Cache_Suspend_DCache(): u32` — mark the DCache suspended (bits[23:12]=1).
 pub fn cache_suspend_dcache(cpu: &mut XtensaLx7, bus: &mut dyn Bus) -> SimResult<()> {
-    bus.write_u32(EXTMEM_DCACHE_STATE, DCACHE_STATE_IDLE)?;
+    set_cache_field(bus, DCACHE_FIELD, true)?;
     RomThunkBank::return_with(cpu, 0);
     Ok(())
 }
 
-/// `Cache_Resume_DCache(prev: u32) -> u32` — clear the idle field (cache
-/// active again) and return 0.
+/// `Cache_Resume_DCache(prev: u32) -> u32` — clear the DCache field.
 pub fn cache_resume_dcache(cpu: &mut XtensaLx7, bus: &mut dyn Bus) -> SimResult<()> {
-    bus.write_u32(EXTMEM_DCACHE_STATE, 0)?;
+    set_cache_field(bus, DCACHE_FIELD, false)?;
+    RomThunkBank::return_with(cpu, 0);
+    Ok(())
+}
+
+/// `Cache_Freeze_ICache_Enable()` — mark the ICache frozen (bits[11:0]=1).
+pub fn cache_freeze_icache_enable(cpu: &mut XtensaLx7, bus: &mut dyn Bus) -> SimResult<()> {
+    set_cache_field(bus, ICACHE_FIELD, true)?;
+    RomThunkBank::return_with(cpu, 0);
+    Ok(())
+}
+
+/// `Cache_Freeze_ICache_Disable()` — clear the ICache freeze field.
+pub fn cache_freeze_icache_disable(cpu: &mut XtensaLx7, bus: &mut dyn Bus) -> SimResult<()> {
+    set_cache_field(bus, ICACHE_FIELD, false)?;
+    RomThunkBank::return_with(cpu, 0);
+    Ok(())
+}
+
+/// `Cache_Freeze_DCache_Enable()` — mark the DCache frozen (bits[23:12]=1).
+pub fn cache_freeze_dcache_enable(cpu: &mut XtensaLx7, bus: &mut dyn Bus) -> SimResult<()> {
+    set_cache_field(bus, DCACHE_FIELD, true)?;
+    RomThunkBank::return_with(cpu, 0);
+    Ok(())
+}
+
+/// `Cache_Freeze_DCache_Disable()` — clear the DCache freeze field.
+pub fn cache_freeze_dcache_disable(cpu: &mut XtensaLx7, bus: &mut dyn Bus) -> SimResult<()> {
+    set_cache_field(bus, DCACHE_FIELD, false)?;
+    RomThunkBank::return_with(cpu, 0);
+    Ok(())
+}
+
+/// `_xtos_restore_intlevel(saved_ps)` — restore PS.INTLEVEL from the value a
+/// prior `_xtos_set_intlevel` returned (end of a critical section). Pairs with
+/// the existing `xtos_set_intlevel` (below), which returns the prior INTLEVEL.
+pub fn xtos_restore_intlevel(cpu: &mut XtensaLx7, _bus: &mut dyn Bus) -> SimResult<()> {
+    let n = cpu.ps.callinc() * 4;
+    let saved = cpu.regs.read_logical(n + 2);
+    cpu.ps.set_intlevel((saved & 0xF) as u8);
     RomThunkBank::return_with(cpu, 0);
     Ok(())
 }

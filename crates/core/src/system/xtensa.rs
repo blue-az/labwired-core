@@ -950,6 +950,10 @@ fn register_default_thunks(bank: &mut RomThunkBank) {
     // here because we don't model the analog domain.
     bank.register(0x4000_5d48, rom_thunks::nop_return_zero);
     bank.register(0x4000_5d60, rom_thunks::nop_return_zero);
+    // ...and the read/write-with-mask variants (rom_i2c_*Reg_Mask), hit by the
+    // BBPLL/clock tuning path on the full ESP-IDF image.
+    bank.register(0x4000_5d54, rom_thunks::nop_return_zero); // esp_rom_regi2c_read_mask
+    bank.register(0x4000_5d6c, rom_thunks::nop_return_zero); // esp_rom_regi2c_write_mask
     // memcpy and __udivdi3 do real work — emulate them so the firmware
     // doesn't get garbage from the boot-init copy paths.
     bank.register(0x4000_11f4, rom_thunks::rom_memcpy);
@@ -973,10 +977,6 @@ fn register_default_thunks(bank: &mut RomThunkBank) {
         0x4000_1890, // Cache_Enable_DCache
         0x4000_189c, // Cache_Suspend_ICache
         0x4000_18a8, // Cache_Resume_ICache
-        0x4000_18e4, // Cache_Freeze_ICache_Enable
-        0x4000_18f0, // Cache_Freeze_ICache_Disable
-        0x4000_18fc, // Cache_Freeze_DCache_Enable
-        0x4000_1908, // Cache_Freeze_DCache_Disable
         0x4000_1914, // Cache_Set_IDROM_MMU_Size
         0x4000_1950, // Cache_Set_IDROM_MMU_Info
         0x4000_1980, // Cache_Occupy_ICache_MEMORY
@@ -985,6 +985,18 @@ fn register_default_thunks(bank: &mut RomThunkBank) {
     ] {
         bank.register(addr, rom_thunks::nop_return_zero);
     }
+    // Cache freeze enable/disable: the IRAM wrappers busy-wait on the cache
+    // state register (0x600C_4130) after calling these, so they must drive the
+    // matching field rather than nop. (Suspend/Resume_DCache registered above.)
+    bank.register(0x4000_18e4, rom_thunks::cache_freeze_icache_enable);
+    bank.register(0x4000_18f0, rom_thunks::cache_freeze_icache_disable);
+    bank.register(0x4000_18fc, rom_thunks::cache_freeze_dcache_enable);
+    bank.register(0x4000_1908, rom_thunks::cache_freeze_dcache_disable);
+    // ROM interrupt primitives used by FreeRTOS critical sections. The ESP-IDF
+    // image calls these from interrupt context during scheduler bring-up; they
+    // live in ROM (not the loaded image) so they must be thunked.
+    bank.register(0x4000_1c38, rom_thunks::xtos_set_intlevel); // _xtos_set_intlevel
+    bank.register(0x4000_1c08, rom_thunks::xtos_restore_intlevel); // _xtos_restore_intlevel
 }
 
 // ── RamPeripheral helper ────────────────────────────────────────────────
