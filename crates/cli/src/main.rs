@@ -174,6 +174,13 @@ pub struct RunArgs {
     /// Each line is `{"sim_cycle":N, "pin":P, "from":B, "to":B}`.
     #[arg(long)]
     pub gpio_trace: Option<PathBuf>,
+
+    /// Boot from the real ROM reset vector (0x40000400) instead of fast-booting
+    /// the ELF. The chip's real boot ROM runs and loads the 2nd-stage bootloader
+    /// + app through the SPI-flash controller — the faithful chip-model path.
+    /// Requires LABWIRED_ESP32S3_ROM and LABWIRED_ESP32S3_FLASH to be set.
+    #[arg(long)]
+    pub rom_boot: bool,
 }
 
 #[derive(Parser, Debug)]
@@ -738,49 +745,66 @@ fn run_firmware(args: RunArgs) -> ExitCode {
 
     let mut cpu = wiring.cpu;
 
-    // Fast-boot.
-    let boot = match fast_boot(
-        &elf_bytes,
-        &mut bus,
-        &mut cpu,
-        &BootOpts {
-            stack_top_fallback: 0x3FCD_FFF0,
-            icache_backing: Some(wiring.icache_backing),
-            dcache_backing: Some(wiring.dcache_backing),
-        },
-    ) {
-        Ok(b) => b,
-        Err(e) => {
-            eprintln!("error: fast_boot failed: {e}");
-            return ExitCode::from(EXIT_RUNTIME_ERROR);
+    if args.rom_boot {
+        // ── Faithful boot: run the real ROM from the reset vector ──────────
+        // The CPU resets to 0x40000400 (BROM reset vector). With the real ROM
+        // (LABWIRED_ESP32S3_ROM) and the flash image behind the SPI-flash
+        // controller (LABWIRED_ESP32S3_FLASH), the chip's own boot ROM loads
+        // the 2nd-stage bootloader + app and jumps to it — same path as
+        // silicon. No fast_boot, no ELF pre-load, no handshake pre-paint.
+        let _ = &elf_bytes; // ELF used only for symbol/diagnostic context
+        if std::env::var("LABWIRED_ESP32S3_ROM").is_err()
+            || std::env::var("LABWIRED_ESP32S3_FLASH").is_err()
+        {
+            eprintln!(
+                "error: --rom-boot needs LABWIRED_ESP32S3_ROM and LABWIRED_ESP32S3_FLASH set"
+            );
+            return ExitCode::from(EXIT_CONFIG_ERROR);
         }
-    };
-    eprintln!(
-        "labwired-cli run: entry=0x{:08x} stack=0x{:08x} segments={}",
-        boot.entry, boot.stack, boot.segments_loaded,
-    );
-
-    // ESP-IDF dual-core handshake. `system_early_init` busy-waits until both
-    // per-core init flags are set (s_cpu_inited[0]=PRO_CPU, [1]=APP_CPU), and
-    // later stages gate on s_cpu_up / s_system_inited / s_resume_cores /
-    // s_other_cpu_startup_done. The `run` path executes a single CPU, so the
-    // APP_CPU never sets its byte and the wait spins forever. Pre-paint the
-    // handshake bytes the absent core would have written — the same technique
-    // the snapshot-capture `arduino-esp32` profile uses. Done AFTER fast_boot
-    // so the ELF's zero-initialized .bss copies don't clobber them.
-    let symbol_addrs = labwired_loader::extract_arduino_esp32_thunks(&elf_bytes);
-    for (sym, span) in [
-        ("s_cpu_inited", 2u32),
-        ("s_cpu_up", 2),
-        ("s_system_inited", 2),
-        ("s_resume_cores", 1),
-        ("s_other_cpu_startup_done", 1),
-    ] {
-        if let Some(&addr) = symbol_addrs.get(sym) {
-            for off in 0..span {
-                let _ = bus.write_u8(addr as u64 + off as u64, 0x01);
+        eprintln!(
+            "labwired-cli run: ROM-boot from reset vector 0x{:08x} (real ROM + flash controller)",
+            cpu.get_pc(),
+        );
+    } else {
+        // Fast-boot.
+        let boot = match fast_boot(
+            &elf_bytes,
+            &mut bus,
+            &mut cpu,
+            &BootOpts {
+                stack_top_fallback: 0x3FCD_FFF0,
+                icache_backing: Some(wiring.icache_backing),
+                dcache_backing: Some(wiring.dcache_backing),
+            },
+        ) {
+            Ok(b) => b,
+            Err(e) => {
+                eprintln!("error: fast_boot failed: {e}");
+                return ExitCode::from(EXIT_RUNTIME_ERROR);
             }
-            eprintln!("labwired-cli run: handshake {sym} @0x{addr:08x} = 1");
+        };
+        eprintln!(
+            "labwired-cli run: entry=0x{:08x} stack=0x{:08x} segments={}",
+            boot.entry, boot.stack, boot.segments_loaded,
+        );
+
+        // ESP-IDF dual-core handshake (legacy thunk-path stopgap). system_early_init
+        // busy-waits until both per-core init flags are set; the single-CPU run
+        // path pre-paints them. Superseded by the SMP phase of the chip model.
+        let symbol_addrs = labwired_loader::extract_arduino_esp32_thunks(&elf_bytes);
+        for (sym, span) in [
+            ("s_cpu_inited", 2u32),
+            ("s_cpu_up", 2),
+            ("s_system_inited", 2),
+            ("s_resume_cores", 1),
+            ("s_other_cpu_startup_done", 1),
+        ] {
+            if let Some(&addr) = symbol_addrs.get(sym) {
+                for off in 0..span {
+                    let _ = bus.write_u8(addr as u64 + off as u64, 0x01);
+                }
+                eprintln!("labwired-cli run: handshake {sym} @0x{addr:08x} = 1");
+            }
         }
     }
 
