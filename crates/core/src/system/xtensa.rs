@@ -17,9 +17,7 @@ use crate::peripherals::esp32s3::i2c::{Esp32s3I2c, I2C0_BASE, I2C0_INTR_SOURCE_I
 use crate::peripherals::esp32s3::intmatrix::Esp32s3IntMatrix;
 use crate::peripherals::esp32s3::io_mux::Esp32s3IoMux;
 use crate::peripherals::esp32s3::rom_thunks::{self, RomThunkBank};
-use crate::peripherals::esp32s3::system_stub::{
-    EfuseStub, FlashSpiMemStub, RtcCntlStub, SystemStub,
-};
+use crate::peripherals::esp32s3::system_stub::{EfuseStub, RtcCntlStub, SystemStub};
 use crate::peripherals::esp32s3::systimer::Systimer;
 use crate::peripherals::esp32s3::tmp102::Tmp102;
 use crate::peripherals::esp32s3::usb_serial_jtag::UsbSerialJtag;
@@ -867,14 +865,29 @@ pub fn configure_xtensa_esp32s3(bus: &mut SystemBus, opts: &Esp32s3Opts) -> Esp3
     );
 
     // ── SPIMEM1 flash-command controller (0x6000_2000) ───────────────────
-    // Must register BEFORE the 0x6000_0000 catch-all so its CMD register
-    // auto-clears (the bootloader_flash command path busy-waits on it).
+    // Real command executor (READ/RDSR/RDID) over a flash backing — replaces
+    // the auto-clear stub. Registered BEFORE the 0x6000_0000 catch-all. The
+    // backing is the raw flash image (LABWIRED_ESP32S3_FLASH = the flashed
+    // firmware.bin/.factory.bin) so READ returns real bytes; 0xFF otherwise.
+    let spi_flash_backing = {
+        let mut buf = vec![0xFFu8; opts.flash_size as usize];
+        if let Ok(p) = std::env::var("LABWIRED_ESP32S3_FLASH") {
+            if let Ok(bytes) = std::fs::read(&p) {
+                let n = bytes.len().min(buf.len());
+                buf[..n].copy_from_slice(&bytes[..n]);
+                eprintln!("configure_xtensa_esp32s3: loaded flash image ({n} bytes) from {p}");
+            }
+        }
+        Arc::new(Mutex::new(buf))
+    };
     bus.add_peripheral(
         "spimem1",
         0x6000_2000,
         0x100,
         None,
-        Box::new(FlashSpiMemStub::default()),
+        Box::new(crate::peripherals::esp32s3::spi_mem_flash::SpiMemFlash::new(
+            spi_flash_backing,
+        )),
     );
 
     // ── I²C0 + attached TMP102 (Plan 4) ──────────────────────────────────
