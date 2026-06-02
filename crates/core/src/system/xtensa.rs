@@ -722,6 +722,30 @@ pub fn configure_xtensa_esp32s3(bus: &mut SystemBus, opts: &Esp32s3Opts) -> Esp3
         Box::new(RamPeripheral::new(opts.dram_size as usize)),
     );
 
+    // ── RTC SLOW / RTC FAST memory ────────────────────────────────────────
+    // The ESP32-S3 has two small always-on SRAM banks the toolchain places
+    // linker sections in even for a trivial sketch:
+    //   * RTC SLOW @ 0x5000_0000, 8 KiB — RTC_SLOW_MEM / `RTC_DATA_ATTR`,
+    //     deep-sleep retention. Arduino-ESP32 emits a 32-byte segment here.
+    //   * RTC FAST @ 0x600F_E000, 8 KiB — RTC_FAST_MEM / `RTC_NOINIT_ATTR`
+    //     and the deep-sleep wake stub; a 40-byte segment lands near the top.
+    // Without these the ELF loader refuses to place those segments. They are
+    // plain RAM to the CPU (read/write, zero-on-reset via RamPeripheral).
+    bus.add_peripheral(
+        "rtc_slow",
+        0x5000_0000,
+        0x2000,
+        None,
+        Box::new(RamPeripheral::new(0x2000)),
+    );
+    bus.add_peripheral(
+        "rtc_fast",
+        0x600F_E000,
+        0x2000,
+        None,
+        Box::new(RamPeripheral::new(0x2000)),
+    );
+
     // ── Flash-XIP backings — one per window (see Esp32s3Wiring docs) ──────
     let icache_backing = Arc::new(Mutex::new(vec![0u8; opts.flash_size as usize]));
     let dcache_backing = Arc::new(Mutex::new(vec![0u8; opts.flash_size as usize]));
@@ -930,6 +954,12 @@ fn register_default_thunks(bank: &mut RomThunkBank) {
     // doesn't get garbage from the boot-init copy paths.
     bank.register(0x4000_11f4, rom_thunks::rom_memcpy);
     bank.register(0x4000_2544, rom_thunks::rom_udivdi3);
+    // ROM libc siblings of memcpy. A full ESP-IDF/Arduino image (unlike the
+    // minimal esp-hal hello-world) calls these from the C runtime startup and
+    // FreeRTOS init. Addresses are the ESP32-S3 ROM symbol table values.
+    bank.register(0x4000_11e8, rom_thunks::rom_memset);
+    bank.register(0x4000_1200, rom_thunks::rom_memmove);
+    bank.register(0x4000_120c, rom_thunks::rom_memcmp);
 }
 
 // ── RamPeripheral helper ────────────────────────────────────────────────
