@@ -31,6 +31,13 @@ const USER2: u64 = 0x20;
 const MISO_DLEN: u64 = 0x28;
 const W0: u64 = 0x58;
 const USR_BIT: u32 = 1 << 18;
+/// All command-trigger bits in `SPI_MEM_CMD_REG` (bits [31:17]): the generic
+/// user command (`USR`, bit 18) plus the dedicated flash commands the ROM
+/// issues directly — `FLASH_RES` (bit 20, resume-from-powerdown), `FLASH_RDSR`
+/// (bit 27), `FLASH_RDID` (bit 28), `FLASH_WRDI` (bit 29), `FLASH_WREN`
+/// (bit 30), `FLASH_READ` (bit 31), etc. Hardware auto-clears whichever bit
+/// launched once the operation completes; firmware busy-polls `CMD == 0`.
+const CMD_TRIGGER_MASK: u32 = 0xFFFE_0000;
 
 /// Flash command opcodes the controller emulates.
 const CMD_READ: u8 = 0x03; // READ
@@ -58,6 +65,24 @@ impl SpiMemFlash {
 
     fn set_reg(&mut self, off: u64, val: u32) {
         self.regs.insert(off, val);
+    }
+
+    /// Launch whichever command bit is set in CMD. The generic `USR` command
+    /// reads its opcode from USER2 and may return data in the W buffer; the
+    /// dedicated command bits (RES/WRDI/WREN/DP/…) have no data phase the boot
+    /// path consumes — they just need to complete. In all cases the command
+    /// trigger auto-clears so the firmware's `CMD == 0` poll exits.
+    fn launch_command(&mut self) {
+        if self.reg(CMD) & USR_BIT == 0 {
+            // Dedicated flash command (RES, WRDI, WREN, …): no data phase to
+            // model for boot — just signal completion.
+            if std::env::var("LABWIRED_SPI_DEBUG").is_ok() {
+                eprintln!("spimem1: dedicated cmd CMD=0x{:08x} → complete", self.reg(CMD));
+            }
+            self.set_reg(CMD, 0);
+            return;
+        }
+        self.execute_user_command();
     }
 
     /// Execute the user command currently programmed in the registers, placing
@@ -128,9 +153,9 @@ impl Peripheral for SpiMemFlash {
         word &= !(0xFFu32 << byte_off);
         word |= (value as u32) << byte_off;
         self.set_reg(word_off, word);
-        // Byte-wise write that sets the USR bit in CMD launches the command.
-        if word_off == CMD && (word & USR_BIT) != 0 {
-            self.execute_user_command();
+        // Byte-wise write that sets any command-trigger bit in CMD launches it.
+        if word_off == CMD && (word & CMD_TRIGGER_MASK) != 0 {
+            self.launch_command();
         }
         Ok(())
     }
@@ -141,8 +166,8 @@ impl Peripheral for SpiMemFlash {
 
     fn write_u32(&mut self, offset: u64, value: u32) -> SimResult<()> {
         self.set_reg(offset & !3, value);
-        if (offset & !3) == CMD && (value & USR_BIT) != 0 {
-            self.execute_user_command();
+        if (offset & !3) == CMD && (value & CMD_TRIGGER_MASK) != 0 {
+            self.launch_command();
         }
         Ok(())
     }
@@ -176,6 +201,18 @@ mod tests {
         assert_eq!(c.read_u32(CMD).unwrap(), 0);
         // W0 holds the 4 bytes little-endian
         assert_eq!(c.read_u32(W0).unwrap(), 0x4433_2211);
+    }
+
+    #[test]
+    fn dedicated_command_bits_auto_clear() {
+        let mut c = ctrl_with(vec![0u8; 0x10]);
+        // FLASH_RES (bit 20) — resume from power-down; no data phase. The ROM
+        // writes it and polls CMD until zero.
+        c.write_u32(CMD, 1 << 20).unwrap();
+        assert_eq!(c.read_u32(CMD).unwrap(), 0, "FLASH_RES must auto-clear");
+        // FLASH_WRDI (bit 29).
+        c.write_u32(CMD, 1 << 29).unwrap();
+        assert_eq!(c.read_u32(CMD).unwrap(), 0, "FLASH_WRDI must auto-clear");
     }
 
     #[test]

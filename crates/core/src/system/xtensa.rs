@@ -863,6 +863,20 @@ pub fn configure_xtensa_esp32s3(bus: &mut SystemBus, opts: &Esp32s3Opts) -> Esp3
         None,
         Box::new(Esp32s3IntMatrix::new()),
     );
+    // ── EXTMEM cache controller (0x600C_4000) ────────────────────────────
+    // The boot ROM drives cache invalidate/writeback/sync through this block
+    // using a launch-bit/done-bit handshake (CACHE_SYNC_CTRL @+0x28: write an
+    // enable bit, poll SYNC_DONE bit 3). Must register BEFORE the 0x600C_0000
+    // catch-all "system" stub (read-as-zero would never set the done bit, so
+    // the ROM's `bnone a9, 8` poll spins forever). Verified resting value 0x8
+    // off silicon via JTAG.
+    bus.add_peripheral(
+        "extmem",
+        0x600C_4000,
+        0x1000,
+        None,
+        Box::new(crate::peripherals::esp32s3::extmem::Esp32s3Extmem::new()),
+    );
 
     // ── SPIMEM1 flash-command controller (0x6000_2000) ───────────────────
     // Real command executor (READ/RDSR/RDID) over a flash backing — replaces
