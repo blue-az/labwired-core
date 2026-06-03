@@ -1001,19 +1001,19 @@ pub fn configure_xtensa_esp32s3(bus: &mut SystemBus, opts: &Esp32s3Opts) -> Esp3
         Box::new(SystemStub::new()),
     );
 
-    // Catch-all for the rest of the high-MMIO range that esp-hal pokes
-    // during init (LEDC, RMT, GPIO matrix, GDMA, LCD_CAM, EXTMEM cache
-    // config, RTC calibration timer, …). Real silicon has dozens of
-    // distinct peripherals in this window with bit-precise behaviour;
-    // for hello-world we only need round-trip register storage and an
-    // "everything's ready" default for status polls. Use the unwritten-
-    // ones variant so that calibration-RDY / FIFO-empty / link-up bits
-    // trip on the first iteration. The block covers
-    // [0x6001_0000, 0x6004_0000) — 192 KiB.
+    // Catch-all for the rest of the high-MMIO range that esp-hal / the boot
+    // ROM / 2nd-stage bootloader poke during init (LEDC, RMT, GPIO matrix,
+    // GDMA, APB_SARADC (bootloader RNG/entropy enable @0x6004_0000), LCD_CAM,
+    // RTC calibration timer, …). Real silicon has dozens of distinct
+    // peripherals in this window with bit-precise behaviour; for hello-world
+    // we only need round-trip register storage and an "everything's ready"
+    // default for status polls. Use the unwritten-ones variant so that
+    // calibration-RDY / FIFO-empty / link-up bits trip on the first iteration.
+    // The block covers [0x6001_0000, 0x6005_0000) — 256 KiB.
     bus.add_peripheral(
         "mmio_rest",
         0x6001_0000,
-        0x3_0000,
+        0x4_0000,
         None,
         Box::new(SystemStub::with_unwritten_ones()),
     );

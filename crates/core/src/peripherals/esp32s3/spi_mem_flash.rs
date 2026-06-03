@@ -29,6 +29,9 @@ const CMD: u64 = 0x00;
 const ADDR: u64 = 0x04;
 const USER2: u64 = 0x20;
 const MISO_DLEN: u64 = 0x28;
+/// SPI_MEM_RD_STATUS_REG: holds the flash status register value captured by a
+/// dedicated `FLASH_RDSR` / `FLASH_RES` command (bits[15:0]).
+const RD_STATUS: u64 = 0x2C;
 const W0: u64 = 0x58;
 const USR_BIT: u32 = 1 << 18;
 /// All command-trigger bits in `SPI_MEM_CMD_REG` (bits [31:17]): the generic
@@ -38,6 +41,19 @@ const USR_BIT: u32 = 1 << 18;
 /// (bit 30), `FLASH_READ` (bit 31), etc. Hardware auto-clears whichever bit
 /// launched once the operation completes; firmware busy-polls `CMD == 0`.
 const CMD_TRIGGER_MASK: u32 = 0xFFFE_0000;
+
+// Dedicated `SPI_MEM_CMD_REG` flash-command bits.
+const FLASH_BE: u32 = 1 << 23; // block erase
+const FLASH_SE: u32 = 1 << 24; // sector erase
+const FLASH_PP: u32 = 1 << 25; // page program
+const FLASH_WRSR: u32 = 1 << 26; // write status register
+const FLASH_RDSR: u32 = 1 << 27; // read status register
+const FLASH_WRDI: u32 = 1 << 29; // write disable
+const FLASH_WREN: u32 = 1 << 30; // write enable
+
+// Flash status-register bits (SPI NOR standard).
+const STATUS_WIP: u16 = 1 << 0; // write-in-progress (busy)
+const STATUS_WEL: u16 = 1 << 1; // write-enable latch
 
 /// Flash command opcodes the controller emulates.
 const CMD_READ: u8 = 0x03; // READ
@@ -49,6 +65,10 @@ const CMD_RDID: u8 = 0x9F; // read JEDEC id
 pub struct SpiMemFlash {
     regs: HashMap<u64, u32>,
     flash: Arc<Mutex<Vec<u8>>>,
+    /// Modeled flash status register (WIP/WEL). The simulator has no write
+    /// latency, so WIP is never set; WEL tracks WREN/WRDI so the bootloader's
+    /// WREN→RDSR→check-WEL flash-driver loop makes progress.
+    flash_status: u16,
 }
 
 impl SpiMemFlash {
@@ -56,6 +76,7 @@ impl SpiMemFlash {
         Self {
             regs: HashMap::new(),
             flash,
+            flash_status: 0,
         }
     }
 
@@ -73,16 +94,36 @@ impl SpiMemFlash {
     /// path consumes — they just need to complete. In all cases the command
     /// trigger auto-clears so the firmware's `CMD == 0` poll exits.
     fn launch_command(&mut self) {
-        if self.reg(CMD) & USR_BIT == 0 {
-            // Dedicated flash command (RES, WRDI, WREN, …): no data phase to
-            // model for boot — just signal completion.
-            if std::env::var("LABWIRED_SPI_DEBUG").is_ok() {
-                eprintln!("spimem1: dedicated cmd CMD=0x{:08x} → complete", self.reg(CMD));
-            }
-            self.set_reg(CMD, 0);
+        let cmd = self.reg(CMD);
+        if cmd & USR_BIT != 0 {
+            self.execute_user_command();
             return;
         }
-        self.execute_user_command();
+        // Dedicated flash command. Drive the modeled status register so the
+        // firmware's WREN→RDSR→poll-WEL / write→RDSR→poll-WIP loops progress.
+        if cmd & FLASH_WREN != 0 {
+            self.flash_status |= STATUS_WEL;
+        }
+        if cmd & FLASH_WRDI != 0 {
+            self.flash_status &= !STATUS_WEL;
+        }
+        if cmd & (FLASH_PP | FLASH_SE | FLASH_BE | FLASH_WRSR) != 0 {
+            // Program/erase/write-status complete instantly (no write latency);
+            // the write-enable latch is consumed, write-in-progress stays clear.
+            self.flash_status &= !STATUS_WEL;
+            self.flash_status &= !STATUS_WIP;
+        }
+        if cmd & FLASH_RDSR != 0 {
+            // Capture the status register where the firmware reads it back.
+            self.set_reg(RD_STATUS, self.flash_status as u32);
+        }
+        if std::env::var("LABWIRED_SPI_DEBUG").is_ok() {
+            eprintln!(
+                "spimem1: dedicated cmd CMD=0x{cmd:08x} status=0x{:04x} → complete",
+                self.flash_status
+            );
+        }
+        self.set_reg(CMD, 0);
     }
 
     /// Execute the user command currently programmed in the registers, placing
@@ -213,6 +254,33 @@ mod tests {
         // FLASH_WRDI (bit 29).
         c.write_u32(CMD, 1 << 29).unwrap();
         assert_eq!(c.read_u32(CMD).unwrap(), 0, "FLASH_WRDI must auto-clear");
+    }
+
+    #[test]
+    fn wren_then_rdsr_sets_wel_and_clears_wip() {
+        let mut c = ctrl_with(vec![0u8; 0x10]);
+        // FLASH_WREN (bit 30): sets the write-enable latch.
+        c.write_u32(CMD, FLASH_WREN).unwrap();
+        // FLASH_RDSR (bit 27): captures status into RD_STATUS (0x2C).
+        c.write_u32(CMD, FLASH_RDSR).unwrap();
+        let status = c.read_u32(RD_STATUS).unwrap();
+        assert_eq!(status & STATUS_WEL as u32, STATUS_WEL as u32, "WEL must be set");
+        assert_eq!(status & STATUS_WIP as u32, 0, "WIP must be clear (not busy)");
+        // FLASH_WRDI (bit 29): clears the latch.
+        c.write_u32(CMD, FLASH_WRDI).unwrap();
+        c.write_u32(CMD, FLASH_RDSR).unwrap();
+        assert_eq!(c.read_u32(RD_STATUS).unwrap() & STATUS_WEL as u32, 0, "WEL cleared");
+    }
+
+    #[test]
+    fn program_completes_and_consumes_wel() {
+        let mut c = ctrl_with(vec![0u8; 0x10]);
+        c.write_u32(CMD, FLASH_WREN).unwrap();
+        c.write_u32(CMD, FLASH_PP).unwrap(); // page program completes instantly
+        c.write_u32(CMD, FLASH_RDSR).unwrap();
+        let status = c.read_u32(RD_STATUS).unwrap();
+        assert_eq!(status & STATUS_WIP as u32, 0, "WIP clear after program");
+        assert_eq!(status & STATUS_WEL as u32, 0, "WEL consumed by program");
     }
 
     #[test]
