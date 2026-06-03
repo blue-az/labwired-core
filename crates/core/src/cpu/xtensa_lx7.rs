@@ -1720,10 +1720,12 @@ impl XtensaLx7 {
                 let next_idx = wb.wrapping_add(1) & 0x0F;
 
                 if self.regs.windowstart_bit(next_idx) {
-                    // Adjacent frame is live — spill path required.
-                    // Plan 1: raise AllocaCause (EXCCAUSE=5) via the general exception path.
-                    // TODO(plan2): implement register spill instead.
-                    return self.raise_general_exception(5);
+                    // Adjacent frame is live — the window must be spilled. Vector
+                    // to the firmware's AllocaCause (EXCCAUSE=5) handler and
+                    // continue; the handler spills one frame and RFEs back. (The
+                    // earlier abort path only suited fast-boot, where no handler
+                    // is installed.)
+                    return self.vector_exception(5);
                 }
 
                 // Safe path: adjacent frame is free, simple register move.
@@ -2128,6 +2130,26 @@ impl XtensaLx7 {
             cause,
             pc: faulting_pc,
         })
+    }
+
+    /// Vector a general exception to the firmware's handler and CONTINUE
+    /// (return Ok), mirroring `dispatch_irq`. Unlike `raise_general_exception`
+    /// (which aborts the run for the no-handler/fast-boot paths), this drives
+    /// the real Xtensa exception flow: save EPC1/EXCCAUSE, set EXCM, and jump
+    /// to the User (VECBASE+0x340, PS.UM=1) or Kernel (VECBASE+0x300) exception
+    /// vector. Used for MOVSP's AllocaCause (window spill) when booting real
+    /// firmware that installs the handlers.
+    fn vector_exception(&mut self, cause: u8) -> SimResult<()> {
+        self.invalidate_fetch_cache();
+        let faulting_pc = self.pc;
+        self.sr.write(EPC1, faulting_pc);
+        self.sr.write(EXCCAUSE, cause as u32);
+        let user_mode = (self.ps.as_raw() >> 5) & 1 == 1;
+        self.ps.set_excm(true);
+        let vecbase = self.sr.read(VECBASE);
+        let offset = if user_mode { 0x340 } else { KERNEL_VECTOR_OFFSET };
+        self.pc = vecbase.wrapping_add(offset);
+        Ok(())
     }
 }
 

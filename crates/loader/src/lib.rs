@@ -60,6 +60,9 @@ pub fn resolve_symbol_in_elf(buffer: &[u8], name: &str) -> Option<u32> {
 pub fn extract_arduino_esp32_thunks(buffer: &[u8]) -> HashMap<&'static str, u32> {
     use object::{Object, ObjectSymbol};
     const KNOWN: &[&str] = &[
+        // ── SMP / APP_CPU bring-up (rom-boot dual-core). ────────────────────
+        "call_start_cpu1",
+        "esp_cpu_unstall",
         // ── Flash thunks — heap caps suite (bump allocator). ────────────────
         "heap_caps_init",
         "heap_caps_malloc",
