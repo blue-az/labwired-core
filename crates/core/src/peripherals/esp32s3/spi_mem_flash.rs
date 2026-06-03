@@ -74,10 +74,15 @@ const CMD_RDID: u8 = 0x9F; // read JEDEC id
 pub struct SpiMemFlash {
     regs: HashMap<u64, u32>,
     flash: Arc<Mutex<Vec<u8>>>,
-    /// Modeled flash status register (WIP/WEL). The simulator has no write
+    /// Modeled flash status register 1 (WIP/WEL). The simulator has no write
     /// latency, so WIP is never set; WEL tracks WREN/WRDI so the bootloader's
     /// WREN→RDSR→check-WEL flash-driver loop makes progress.
     flash_status: u16,
+    /// Status register 2 (QE/SRP1/…). Stored so a write-then-read-back matches,
+    /// which esp_flash's `set_io_mode` (quad-enable) verification requires.
+    sr2: u8,
+    /// Status register 3.
+    sr3: u8,
 }
 
 impl SpiMemFlash {
@@ -86,6 +91,8 @@ impl SpiMemFlash {
             regs: HashMap::new(),
             flash,
             flash_status: 0,
+            sr2: 0,
+            sr3: 0,
         }
     }
 
@@ -176,9 +183,10 @@ impl SpiMemFlash {
             // the app's esp_flash WREN→RDSR→check-WEL and write-completion polls
             // work through the USR path (not just the dedicated CMD bits).
             CMD_RDSR => self.set_reg(W0, self.flash_status as u32),
-            // Status registers 2 (QE/...) and 3 — no quad enable / config bits
-            // set; the esp_flash chip probe just needs consistent reads.
-            CMD_RDSR2 | CMD_RDSR3 => self.set_reg(W0, 0),
+            // Status registers 2/3 — return the stored values so a write-then-
+            // read-back is coherent (esp_flash's set_io_mode quad-enable verify).
+            CMD_RDSR2 => self.set_reg(W0, self.sr2 as u32),
+            CMD_RDSR3 => self.set_reg(W0, self.sr3 as u32),
             CMD_RDID => {
                 // JEDEC id: a generic 4 MB part (mfg 0x20, type 0x40, cap 0x16).
                 self.set_reg(W0, 0x0016_4020);
@@ -200,9 +208,20 @@ impl SpiMemFlash {
             // bits) so WEL is coherent regardless of which path the app uses.
             CMD_WREN => self.flash_status |= STATUS_WEL,
             CMD_WRDI => self.flash_status &= !STATUS_WEL,
-            // Write status register: completes instantly, consuming the write-
-            // enable latch and leaving WIP clear (no write latency).
-            CMD_WRSR | CMD_WRSR2 | CMD_WRSR3 => {
+            // Write status register: store the written value so the read-back
+            // verification matches, then complete (consume WEL, WIP clear).
+            // SR1 16-bit write (0x01) carries SR2 in the 2nd byte (W0[15:8]);
+            // 0x31 writes SR2 directly, 0x11 writes SR3.
+            CMD_WRSR => {
+                self.sr2 = ((self.reg(W0) >> 8) & 0xFF) as u8;
+                self.flash_status &= !(STATUS_WEL | STATUS_WIP);
+            }
+            CMD_WRSR2 => {
+                self.sr2 = (self.reg(W0) & 0xFF) as u8;
+                self.flash_status &= !(STATUS_WEL | STATUS_WIP);
+            }
+            CMD_WRSR3 => {
+                self.sr3 = (self.reg(W0) & 0xFF) as u8;
                 self.flash_status &= !(STATUS_WEL | STATUS_WIP);
             }
             _ => {
