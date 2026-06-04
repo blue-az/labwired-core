@@ -52,6 +52,8 @@ const REG_CMD0: u64 = 0x58;
 const REG_CMD7: u64 = 0x74;
 
 const CTR_TRANS_START_BIT: u32 = 1 << 5;
+/// CTR bit 11: CONF_UPGATE — self-clearing config-sync trigger.
+const CTR_CONF_UPGATE: u32 = 1 << 11;
 
 /// SR bit 0: set when the slave responded with ACK during the most recent
 /// command. esp-hal checks this after TRANS_COMPLETE — if clear it raises
@@ -202,6 +204,13 @@ impl Peripheral for Esp32s3I2c {
                     // Auto-clear TRANS_START like real silicon.
                     self.ctr &= !CTR_TRANS_START_BIT;
                 }
+                // CONF_UPGATE (bit 11) is a self-clearing sync trigger: writing 1
+                // latches the timing/config registers into the FSM, then the bit
+                // clears automatically (ESP32-S3 TRM §29.4). ESP-IDF's i2c_master
+                // driver writes it and polls for it to clear; if it stays set the
+                // driver concludes the controller is wedged and aborts the
+                // transfer (ESP_ERR_INVALID_STATE). esp-hal never sets it.
+                self.ctr &= !CTR_CONF_UPGATE;
             }
             REG_SLAVE_ADDR => self.slave_addr = value,
             // Byte 0 of value goes into TX FIFO (per esp-hal usage).
