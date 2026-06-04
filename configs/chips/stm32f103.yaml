@@ -124,30 +124,40 @@ peripherals:
     type: "stub"
     base_address: 0x40006C00
     size: "1KB"
-  # Timers, ADC — stubbed; modelled timers are F4-shaped, so a stub is
-  # safer than wrong reads for F1 startup. Address per RM0008.
+  # Timers & ADC — modelled (the timer model is width-configurable, 16-bit =
+  # F1 general-purpose layout; the ADC model defaults to its Stm32F1 layout).
+  # Reset values silicon-confirmed on STM32F103 over SWD: TIM2 ARR=0xFFFF,
+  # TIMx_CR1=0, ADCx CR1/CR2=0. Addresses + IRQs per RM0008 / CMSIS.
+  # TIM1 is the advanced-control timer (BDTR/RCR/dead-time).
   - id: "tim1"
-    type: "stub"
+    type: "timer"
     base_address: 0x40012C00
     size: "1KB"
+    irq: 25
+    config:
+      advanced: true
   - id: "tim2"
-    type: "stub"
+    type: "timer"
     base_address: 0x40000000
     size: "1KB"
+    irq: 28
   - id: "tim3"
-    type: "stub"
+    type: "timer"
     base_address: 0x40000400
     size: "1KB"
+    irq: 29
   - id: "tim4"
-    type: "stub"
+    type: "timer"
     base_address: 0x40000800
     size: "1KB"
+    irq: 30
   - id: "adc1"
-    type: "stub"
+    type: "adc"
     base_address: 0x40012400
     size: "1KB"
+    irq: 18
   - id: "adc2"
-    type: "stub"
+    type: "adc"
     base_address: 0x40012800
     size: "1KB"
   - id: "usart3"

@@ -112,7 +112,10 @@ impl Default for F1I2c {
             sr1: 0,
             sr2: 0,
             ccr: 0,
-            trise: 0,
+            // TRISE reset value is 0x0002 (RM0008 §26.6.9) — silicon-confirmed
+            // on STM32F103 over SWD (reads 0x00000002 after RCC clock enable,
+            // before any write).
+            trise: 0x0002,
             state: I2cState::Idle,
             cycles_remaining: 0,
             attached_devices: Vec::new(),
