@@ -29,6 +29,7 @@ WINDOWS = {
 
 
 def load_segments(elf: bytes):
+    """Yield (p_vaddr, p_paddr, data) for each PT_LOAD with file content."""
     if elf[:4] != b"\x7fELF":
         raise SystemExit("not an ELF")
     e_phoff = struct.unpack_from("<I", elf, 0x1C)[0]
@@ -36,11 +37,11 @@ def load_segments(elf: bytes):
     e_phnum = struct.unpack_from("<H", elf, 0x2C)[0]
     for i in range(e_phnum):
         off = e_phoff + i * e_phentsize
-        p_type, p_offset, p_vaddr, _p_paddr, p_filesz = struct.unpack_from(
+        p_type, p_offset, p_vaddr, p_paddr, p_filesz = struct.unpack_from(
             "<5I", elf, off
         )
         if p_type == 1 and p_filesz:  # PT_LOAD with file bytes
-            yield p_vaddr, elf[p_offset : p_offset + p_filesz]
+            yield p_vaddr, p_paddr, elf[p_offset : p_offset + p_filesz]
 
 
 def main():
@@ -50,12 +51,21 @@ def main():
     out = Path(sys.argv[2]) if len(sys.argv) > 2 else Path("/tmp")
     out.mkdir(parents=True, exist_ok=True)
     segs = list(load_segments(elf))
+    # The IROM window must be laid out by LOAD ADDRESS (p_paddr): code segments
+    # have paddr==vaddr, but the ROM's `.data` is stored at an IROM LMA
+    # (e.g. 0x400577A8, vaddr 0x3FCD7E00 in DRAM) and the ROM's own startup
+    # data-init table copies from those LMAs into DRAM at boot. Keying on vaddr
+    # would drop that `.data` source, so the copy writes zeros — e.g.
+    # rom_cache_internal_table_ptr (0x3FCEFFC4) stays 0 and the cache routines
+    # call a null vtable method. The DROM (data-bus) window is keyed by vaddr.
+    KEY_BY_PADDR = {"esp32s3_rom.bin"}
     for name, (base, size) in WINDOWS.items():
         img = bytearray(size)
         placed = 0
-        for vaddr, data in segs:
-            if base <= vaddr < base + size:
-                rel = vaddr - base
+        for vaddr, paddr, data in segs:
+            addr = paddr if name in KEY_BY_PADDR else vaddr
+            if base <= addr < base + size:
+                rel = addr - base
                 n = min(len(data), size - rel)
                 img[rel : rel + n] = data[:n]
                 placed += 1
