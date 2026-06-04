@@ -109,16 +109,27 @@ use std::collections::HashMap;
 use crate::{Peripheral, PeripheralTickResult, SimResult};
 
 // ── Register offsets ──
+// The full DesignWare-MSHC register map is documented here for fidelity;
+// constants the twin does not yet read are marked dead_code-allowed (repo
+// convention for documentary register maps, cf. gpspi.rs / gdma.rs).
 const CTRL: u64 = 0x00;
+#[allow(dead_code)]
 const PWREN: u64 = 0x04;
+#[allow(dead_code)]
 const CLKDIV: u64 = 0x08;
+#[allow(dead_code)]
 const CLKSRC: u64 = 0x0C;
+#[allow(dead_code)]
 const CLKENA: u64 = 0x10;
 const TMOUT: u64 = 0x14;
+#[allow(dead_code)]
 const CTYPE: u64 = 0x18;
+#[allow(dead_code)]
 const BLKSIZ: u64 = 0x1C;
+#[allow(dead_code)]
 const BYTCNT: u64 = 0x20;
 const INTMASK: u64 = 0x24;
+#[allow(dead_code)]
 const CMDARG: u64 = 0x28;
 const CMD: u64 = 0x2C;
 const RESP0: u64 = 0x30;

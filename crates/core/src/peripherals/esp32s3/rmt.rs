@@ -49,6 +49,7 @@
 //!   * latch that channel's `CHn_TX_END` bit in INT_RAW, and
 //!   * clear the stored `TX_START` bit (it is a write-trigger `WT` field that
 //!     self-clears on real silicon once the FSM consumes it).
+//!
 //! The interrupt then propagates through INT_ST/INT_ENA exactly like hardware.
 //!
 //! ## Interrupt source

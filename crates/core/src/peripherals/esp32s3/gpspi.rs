@@ -10,6 +10,7 @@
 //! `Esp32s3Spi` instance models one controller; the parent registers two:
 //!   * SPI2 / FSPI @ `0x6002_4000`, intr-matrix source `ETS_SPI2_INTR_SOURCE` = 21
 //!   * SPI3        @ `0x6002_5000`, intr-matrix source `ETS_SPI3_INTR_SOURCE` = 22
+//!
 //! (sources verified from `soc/esp32s3/include/soc/interrupts.h`: the enum
 //! anchors `ETS_GPIO_INTR_SOURCE = 16`, then GPIO_NMI=17, GPIO2=18, GPIO_NMI2=19,
 //! SPI1=20, SPI2=21, SPI3=22, with `ETS_LCD_CAM_INTR_SOURCE = 24` confirming the
