@@ -1052,9 +1052,19 @@ pub fn configure_xtensa_esp32s3(bus: &mut SystemBus, opts: &Esp32s3Opts) -> Esp3
         )),
     );
 
-    // ── I²C0 + attached TMP102 (Plan 4) ──────────────────────────────────
+    // ── I²C0 + attached slaves ───────────────────────────────────────────
+    // TMP102 @ 0x48 (Plan 4 demo). Opt-in PCA9685 @ 0x40 for the SpiceDispenser
+    // board (LABWIRED_ESP32S3_PCA9685=1): the two servos hang off its PWM
+    // channels, so attaching it lets the unmodified firmware's I²C dispense
+    // path ACK and drive the servos instead of erroring on an empty bus.
     let mut i2c0 = Esp32s3I2c::new();
     i2c0.attach_slave(Box::new(Tmp102::new()));
+    if std::env::var("LABWIRED_ESP32S3_PCA9685").is_ok() {
+        i2c0.attach_slave(Box::new(
+            crate::peripherals::components::pca9685::Pca9685::new(),
+        ));
+        eprintln!("configure_xtensa_esp32s3: attached PCA9685 @ 0x40 on I²C0");
+    }
     bus.add_peripheral("i2c0", I2C0_BASE as u64, I2C0_SIZE, None, Box::new(i2c0));
     // Bind the I²C0 source ID through the intmatrix helper so esp-hal's
     // poll-then-read driver path doesn't depend on routing existing yet —
