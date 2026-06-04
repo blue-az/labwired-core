@@ -904,12 +904,30 @@ pub fn configure_xtensa_esp32s3(bus: &mut SystemBus, opts: &Esp32s3Opts) -> Esp3
         None,
         Box::new(Esp32s3IoMux::new()),
     );
+    // CORE0 map table at +0x000, CORE1 map table at +0x800 (both on the
+    // shared interrupt base) — widened to 0x1000 so the APP_CPU's interrupt
+    // routing (e.g. FROM_CPU_1, source 80, at +0x940) lands in the matrix
+    // rather than the round-tripping "system" catch-all below.
     bus.add_peripheral(
         "intmatrix",
         0x600C_2000,
-        0x800,
+        0x1000,
         None,
         Box::new(Esp32s3IntMatrix::new()),
+    );
+    // ── Cross-core IPI doorbell (SYSTEM_CPU_INTR_FROM_CPU_0..3, 0x600C_0030) ─
+    // The SMP cross-core software interrupt. Writing FROM_CPU_{core} asserts
+    // the level source FROM_CPU_INTR{core} (79 for core 0, 80 for core 1),
+    // which the interrupt matrix routes to that core. Without it the FreeRTOS
+    // SMP scheduler can never yield/IPC a remote core, so a pinned task like
+    // Arduino's loopTask is never dispatched. MUST register BEFORE the
+    // 0x600C_0000 "system" catch-all so these four words get real semantics.
+    bus.add_peripheral(
+        "crosscore_ipi",
+        crate::peripherals::esp32s3::crosscore_ipi::BASE,
+        crate::peripherals::esp32s3::crosscore_ipi::SIZE,
+        None,
+        Box::new(crate::peripherals::esp32s3::crosscore_ipi::Esp32s3CrossCoreIpi::new()),
     );
     // ── SYSTEM_CORE_1_CONTROL (0x600C_0000) ──────────────────────────────
     // APP_CPU reset/clock-gate control. Registered BEFORE the 0x600C_0000

@@ -15,6 +15,21 @@ use std::fmt;
     dead_code,
     reason = "variants are used in later Plan 1 tasks B3-B8/D1-D8"
 )]
+/// Single-precision FP compare predicate (FP1 group, op1=0xB, op2 selects).
+/// "u*" variants are unordered (true if either operand is NaN); "o*" are
+/// ordered (false if either operand is NaN). HW-oracle op2 values:
+///   un=1 oeq=2 ueq=3 olt=4 ult=5 ole=6 ule=7.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FpCmp {
+    Un,
+    Oeq,
+    Ueq,
+    Olt,
+    Ult,
+    Ole,
+    Ule,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Instruction {
     // -- ALU reg-reg (RRR) --
@@ -576,6 +591,75 @@ pub enum Instruction {
         shift: u8,
         bits: u8,
     },
+    // ── Single-precision FPU (FP0 op1=0xA, FP1 op1=0xB) ────────────────────
+    // `fr`/`fs`/`ft` index the 16-entry FP register file; `ar`/`as_`/`at`
+    // index the AR file. Encodings HW-oracle confirmed against
+    // xtensa-esp32s3-elf-as + objdump (esp-15.2.0_20250920) — see decode_fp0.
+    /// add.s fr, fs, ft : f[fr] = f[fs] + f[ft]
+    AddS { fr: u8, fs: u8, ft: u8 },
+    /// sub.s fr, fs, ft : f[fr] = f[fs] - f[ft]
+    SubS { fr: u8, fs: u8, ft: u8 },
+    /// mul.s fr, fs, ft : f[fr] = f[fs] * f[ft]
+    MulS { fr: u8, fs: u8, ft: u8 },
+    /// madd.s fr, fs, ft : f[fr] = f[fr] + f[fs] * f[ft]
+    MaddS { fr: u8, fs: u8, ft: u8 },
+    /// msub.s fr, fs, ft : f[fr] = f[fr] - f[fs] * f[ft]
+    MsubS { fr: u8, fs: u8, ft: u8 },
+    /// abs.s fr, fs : f[fr] = |f[fs]|
+    AbsS { fr: u8, fs: u8 },
+    /// neg.s fr, fs : f[fr] = -f[fs]
+    NegS { fr: u8, fs: u8 },
+    /// mov.s fr, fs : f[fr] = f[fs]
+    MovS { fr: u8, fs: u8 },
+    /// rfr ar, fs : AR[ar] = bits(f[fs])  (move FR → AR)
+    Rfr { ar: u8, fs: u8 },
+    /// wfr fr, as_ : f[fr] = bits(AR[as_])  (move AR → FR)
+    Wfr { fr: u8, as_: u8 },
+    /// float.s fr, as_, imm : f[fr] = (f32)(i32)AR[as_] / 2^imm
+    FloatS { fr: u8, as_: u8, imm: u8 },
+    /// ufloat.s fr, as_, imm : f[fr] = (f32)(u32)AR[as_] / 2^imm
+    UfloatS { fr: u8, as_: u8, imm: u8 },
+    /// trunc.s ar, fs, imm : AR[ar] = (i32)(f[fs] * 2^imm)  (toward zero)
+    TruncS { ar: u8, fs: u8, imm: u8 },
+    /// utrunc.s ar, fs, imm : AR[ar] = (u32)(f[fs] * 2^imm)  (toward zero)
+    UtruncS { ar: u8, fs: u8, imm: u8 },
+    /// round.s ar, fs, imm : AR[ar] = (i32) round-to-nearest(f[fs] * 2^imm)
+    RoundS { ar: u8, fs: u8, imm: u8 },
+    /// ceil.s ar, fs, imm : AR[ar] = (i32) ceil(f[fs] * 2^imm)
+    CeilS { ar: u8, fs: u8, imm: u8 },
+    /// floor.s ar, fs, imm : AR[ar] = (i32) floor(f[fs] * 2^imm)
+    FloorS { ar: u8, fs: u8, imm: u8 },
+    /// moveqz.s fr, fs, at : if AR[at] == 0 then f[fr] = f[fs]
+    MoveqzS { fr: u8, fs: u8, at: u8 },
+    /// movnez.s fr, fs, at : if AR[at] != 0 then f[fr] = f[fs]
+    MovnezS { fr: u8, fs: u8, at: u8 },
+    /// movltz.s fr, fs, at : if (i32)AR[at]  < 0 then f[fr] = f[fs]
+    MovltzS { fr: u8, fs: u8, at: u8 },
+    /// movgez.s fr, fs, at : if (i32)AR[at] >= 0 then f[fr] = f[fs]
+    MovgezS { fr: u8, fs: u8, at: u8 },
+    /// movf.s fr, fs, bt : if BR[bt] == 0 then f[fr] = f[fs]
+    MovfS { fr: u8, fs: u8, bt: u8 },
+    /// movt.s fr, fs, bt : if BR[bt] == 1 then f[fr] = f[fs]
+    MovtS { fr: u8, fs: u8, bt: u8 },
+    /// FP compares (op1=0xB). Result written to boolean register BR[br].
+    /// `kind` selects the predicate (ordered/unordered + relation).
+    CmpS { br: u8, fs: u8, ft: u8, kind: FpCmp },
+    /// lsi ft, as_, imm : f[ft] = mem32[AR[as_] + imm]   (imm = imm8<<2)
+    Lsi { ft: u8, as_: u8, imm: u32 },
+    /// lsip ft, as_, imm : load then AR[as_] += imm (update form)
+    Lsiu { ft: u8, as_: u8, imm: u32 },
+    /// ssi ft, as_, imm : mem32[AR[as_] + imm] = f[ft]
+    Ssi { ft: u8, as_: u8, imm: u32 },
+    /// ssip ft, as_, imm : store then AR[as_] += imm (update form)
+    Ssiu { ft: u8, as_: u8, imm: u32 },
+    /// lsx fr, as_, at : f[fr] = mem32[AR[as_] + AR[at]]
+    Lsx { fr: u8, as_: u8, at: u8 },
+    /// lsxp fr, as_, at : load then AR[as_] += AR[at] (update form)
+    Lsxu { fr: u8, as_: u8, at: u8 },
+    /// ssx fr, as_, at : mem32[AR[as_] + AR[at]] = f[fr]
+    Ssx { fr: u8, as_: u8, at: u8 },
+    /// ssxp fr, as_, at : store then AR[as_] += AR[at] (update form)
+    Ssxu { fr: u8, as_: u8, at: u8 },
     Unknown(u32),
 }
 
@@ -1020,7 +1104,102 @@ fn decode_qrst(w: u32) -> Instruction {
                 _ => Instruction::Unknown(w),
             }
         }
-        // op1 = 0x6..=0x8, 0xA..=0xF — fill in as needed.
+        // op1 = 0x8 — LSCX group: indexed FP loads/stores (LSX/LSXU/SSX/SSXU).
+        // RRR-shaped: op2 selects, r=fr, s=as_, t=at (index register).
+        // HW-oracle (xtensa-esp32s3-elf-as + objdump, esp-15.2.0_20250920):
+        //   lsx  f2, a1, a3 → 0x082130: op2=0, r=2, s=1, t=3
+        //   lsxp f2, a1, a3 → 0x182130: op2=1
+        //   ssx  f2, a1, a3 → 0x482130: op2=4
+        //   ssxp f2, a1, a3 → 0x582130: op2=5
+        0x8 => match op2 {
+            0x0 => Instruction::Lsx { fr: r, as_: s, at: t },
+            0x1 => Instruction::Lsxu { fr: r, as_: s, at: t },
+            0x4 => Instruction::Ssx { fr: r, as_: s, at: t },
+            0x5 => Instruction::Ssxu { fr: r, as_: s, at: t },
+            _ => Instruction::Unknown(w),
+        },
+        // op1 = 0xA / 0xB — single-precision FPU. See decode_fp0 / decode_fp1.
+        0xA => decode_fp0(w, op2, r, s, t),
+        0xB => decode_fp1(w, op2, r, s, t),
+        // op1 = 0x6..=0x7, 0xC..=0xF — fill in as needed.
+        _ => Instruction::Unknown(w),
+    }
+}
+
+/// FP0 group (op0=0, op1=0xA): single-precision arithmetic, conversions, and
+/// the op2=0xF sub-group (mov/abs/neg/rfr/wfr).
+///
+/// HW-oracle confirmed (xtensa-esp32s3-elf-as + objdump, esp-15.2.0_20250920):
+///   add.s f3,f4,f5 → 0x0a3450 (op2=0)   sub.s → 0x1a3450 (op2=1)
+///   mul.s          → 0x2a3450 (op2=2)   madd.s → 0x4a3450 (op2=4)
+///   msub.s         → 0x5a3450 (op2=5)
+///   round.s a3,f4,n → 0x8a34n0 (op2=8)  trunc.s → 0x9a34n0 (op2=9)
+///   floor.s        → 0xaa34n0 (op2=0xA) ceil.s → 0xba34n0 (op2=0xB)
+///   utrunc.s       → 0xea34n0 (op2=0xE)
+///   float.s f3,a4,n → 0xca34n0 (op2=0xC) ufloat.s → 0xda34n0 (op2=0xD)
+///   op2=0xF: t selects — mov.s(t=0) abs.s(t=1) rfr(t=4) wfr(t=5) neg.s(t=6).
+/// For float/ufloat: r=fr, s=as_, t=imm. For the int-result conversions
+/// (round/trunc/utrunc/ceil/floor): r=ar, s=fs, t=imm.
+fn decode_fp0(w: u32, op2: u8, r: u8, s: u8, t: u8) -> Instruction {
+    match op2 {
+        0x0 => Instruction::AddS { fr: r, fs: s, ft: t },
+        0x1 => Instruction::SubS { fr: r, fs: s, ft: t },
+        0x2 => Instruction::MulS { fr: r, fs: s, ft: t },
+        0x4 => Instruction::MaddS { fr: r, fs: s, ft: t },
+        0x5 => Instruction::MsubS { fr: r, fs: s, ft: t },
+        0x8 => Instruction::RoundS { ar: r, fs: s, imm: t },
+        0x9 => Instruction::TruncS { ar: r, fs: s, imm: t },
+        0xA => Instruction::FloorS { ar: r, fs: s, imm: t },
+        0xB => Instruction::CeilS { ar: r, fs: s, imm: t },
+        0xC => Instruction::FloatS { fr: r, as_: s, imm: t },
+        0xD => Instruction::UfloatS { fr: r, as_: s, imm: t },
+        0xE => Instruction::UtruncS { ar: r, fs: s, imm: t },
+        0xF => match t {
+            0x0 => Instruction::MovS { fr: r, fs: s },
+            0x1 => Instruction::AbsS { fr: r, fs: s },
+            0x4 => Instruction::Rfr { ar: r, fs: s },
+            0x5 => Instruction::Wfr { fr: r, as_: s },
+            0x6 => Instruction::NegS { fr: r, fs: s },
+            _ => Instruction::Unknown(w),
+        },
+        _ => Instruction::Unknown(w),
+    }
+}
+
+/// FP1 group (op0=0, op1=0xB): compares (write boolean BR[r]) and the
+/// floating-point conditional moves (moveqz/movnez/movltz/movgez/movf/movt).
+///
+/// HW-oracle confirmed (xtensa-esp32s3-elf-as + objdump, esp-15.2.0_20250920):
+///   un.s  b0,f4,f5 → 0x1b0450 (op2=1)   oeq.s → 0x2b0450 (op2=2)
+///   ueq.s          → 0x3b0450 (op2=3)   olt.s → 0x4b0450 (op2=4)
+///   ult.s          → 0x5b0450 (op2=5)   ole.s → 0x6b0450 (op2=6)
+///   ule.s          → 0x7b0450 (op2=7)
+///   moveqz.s f3,f4,a5 → 0x8b3450 (op2=8) movnez.s → 0x9b3450 (op2=9)
+///   movltz.s          → 0xab3450 (op2=0xA) movgez.s → 0xbb3450 (op2=0xB)
+///   movf.s f3,f4,b5   → 0xcb3450 (op2=0xC) movt.s → 0xdb3450 (op2=0xD)
+/// Compares: r=br (boolean dest), s=fs, t=ft. Moves: r=fr, s=fs, t=at/bt.
+fn decode_fp1(w: u32, op2: u8, r: u8, s: u8, t: u8) -> Instruction {
+    use FpCmp::*;
+    let cmp = |kind| Instruction::CmpS {
+        br: r,
+        fs: s,
+        ft: t,
+        kind,
+    };
+    match op2 {
+        0x1 => cmp(Un),
+        0x2 => cmp(Oeq),
+        0x3 => cmp(Ueq),
+        0x4 => cmp(Olt),
+        0x5 => cmp(Ult),
+        0x6 => cmp(Ole),
+        0x7 => cmp(Ule),
+        0x8 => Instruction::MoveqzS { fr: r, fs: s, at: t },
+        0x9 => Instruction::MovnezS { fr: r, fs: s, at: t },
+        0xA => Instruction::MovltzS { fr: r, fs: s, at: t },
+        0xB => Instruction::MovgezS { fr: r, fs: s, at: t },
+        0xC => Instruction::MovfS { fr: r, fs: s, bt: t },
+        0xD => Instruction::MovtS { fr: r, fs: s, bt: t },
         _ => Instruction::Unknown(w),
     }
 }
@@ -1257,23 +1436,34 @@ fn sext8(v: u32) -> i32 {
 ///   - MIN/MAX/MINU/MAXU: r=ar, s=as_, op2=at, op1=0, t=subop(4,5,6,7)
 ///   - SEXT/CLAMPS:       r=ar, s=as_, op2=sa-7 (raw immediate, 0..=15), op1=0, t=subop(2,3)
 fn decode_lsci(w: u32) -> Instruction {
-    let op1 = ((w >> 16) & 0xF) as u8;
     let op2 = ((w >> 20) & 0xF) as u8;
     let r = ((w >> 12) & 0xF) as u8;
     let s = ((w >> 8) & 0xF) as u8;
     let t = ((w >> 4) & 0xF) as u8;
+    let imm8 = (w >> 16) & 0xFF;
 
-    // SEXT/CLAMPS/MIN/MAX/MINU/MAXU all share op1=0. FP coprocessor loads
-    // (LSI/LSIU/SSI/SSIU/LSX/SSX/LSXU/SSXU) live in op0=3 with op1 != 0 (the
-    // op1 field encodes which 8-bit immediate scaling and which load/store
-    // direction). They overlap with SEXT/CLAMPS on the `t` discriminator
-    // (e.g. lsi f2, a1, 160 = 0x280123 has t=2, which would mis-decode as
-    // SEXT if we ignore op1). esp-hal's `restore_context` issues `lsi f0..f15`
-    // unconditionally, so without the op1 gate we'd clobber a0 mid-restore
-    // and the level-1 ISR would `ret` to garbage. Plan 3 Task 10 case study.
-    if op1 != 0 {
-        // Treat all op1!=0 LSCI variants as Nop (FP coprocessor not modeled).
-        return Instruction::Nop;
+    // op0=3 is the LSCI format: single-precision FP loads/stores with an
+    // 8-bit immediate (LSI/LSIU/SSI/SSIU). The `r` field is the sub-opcode;
+    // imm8 at bits[23:16] is the WHOLE top byte (scaled <<2 → 0..1020), so
+    // there is NO separate op1/op2 here. s=as_ (base AR), t=ft (FP reg).
+    //
+    // HW-oracle (xtensa-esp32s3-elf-as + objdump, esp-15.2.0_20250920):
+    //   lsi  f2, a1, 0 → 0x000123   lsi f2,a1,4 → 0x010123   lsi f2,a1,1020 → 0xff0123
+    //   lsip f2, a1, 0 → 0x008123 (r=8)   ssi → 0x004123 (r=4)   ssip → 0x00c123 (r=0xC)
+    // So r=0 LSI, r=8 LSIU, r=4 SSI, r=0xC SSIU; imm = imm8 << 2.
+    //
+    // (SEXT/CLAMPS/MIN/MAX/MINU/MAXU are NOT in op0=3 — the real assembler
+    // emits them at op0=0, op1=3 (see decode_qrst). The previous draft of this
+    // routine decoded them here from hand-crafted nibble-swapped inputs; they
+    // are kept as the `_` fallback below only so any such legacy byte pattern
+    // still resolves rather than faulting, but no real firmware reaches it.)
+    let imm = imm8 << 2;
+    match r {
+        0x0 => return Instruction::Lsi { ft: t, as_: s, imm },
+        0x8 => return Instruction::Lsiu { ft: t, as_: s, imm },
+        0x4 => return Instruction::Ssi { ft: t, as_: s, imm },
+        0xC => return Instruction::Ssiu { ft: t, as_: s, imm },
+        _ => {}
     }
 
     match t {
@@ -1782,6 +1972,35 @@ impl Instruction {
             | Movgez { ar, as_, at } => ar.max(as_).max(at),
             Rsil { at, .. } => at,
             Extui { ar, at, .. } => ar.max(at),
+            // FP ops: the FR file is separate from the AR window, so only the
+            // AR operands count toward the window-overflow check.
+            AddS { .. }
+            | SubS { .. }
+            | MulS { .. }
+            | MaddS { .. }
+            | MsubS { .. }
+            | AbsS { .. }
+            | NegS { .. }
+            | MovS { .. }
+            | MoveqzS { .. }
+            | MovnezS { .. }
+            | MovltzS { .. }
+            | MovgezS { .. }
+            | MovfS { .. }
+            | MovtS { .. }
+            | CmpS { .. } => 0,
+            Rfr { ar, .. } => ar,
+            Wfr { as_, .. } => as_,
+            FloatS { as_, .. } | UfloatS { as_, .. } => as_,
+            TruncS { ar, .. }
+            | UtruncS { ar, .. }
+            | RoundS { ar, .. }
+            | CeilS { ar, .. }
+            | FloorS { ar, .. } => ar,
+            Lsi { as_, .. } | Lsiu { as_, .. } | Ssi { as_, .. } | Ssiu { as_, .. } => as_,
+            Lsx { as_, at, .. } | Lsxu { as_, at, .. } | Ssx { as_, at, .. } | Ssxu { as_, at, .. } => {
+                as_.max(at)
+            }
             Unknown(_) => 0,
         }
     }

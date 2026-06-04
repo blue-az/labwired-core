@@ -837,6 +837,31 @@ fn run_firmware(args: RunArgs) -> ExitCode {
     const RING_LEN: usize = 1024;
     let mut pc_ring: [u32; RING_LEN] = [0; RING_LEN];
     let mut ring_head: usize = 0;
+    let smp_trace = std::env::var("LABWIRED_SMP_TRACE").is_ok();
+    let dense_from: u64 = std::env::var("LABWIRED_DENSE_FROM")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(u64::MAX);
+    let dense_len: u64 = std::env::var("LABWIRED_DENSE_LEN")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(800);
+    // First-hit watchpoints for the SMP startup → first-task-dispatch path
+    // (addresses from firmware.elf for this Unity demo). Each tracks whether
+    // it's been reported on core 0 / core 1 yet.
+    let mut watch: [(u32, &str, [bool; 2]); 11] = [
+        (0x4037ec3c, "xPortStartScheduler", [false; 2]),
+        (0x4037f064, "_frxt_dispatch", [false; 2]),
+        (0x4037f067, "dispatch:post-switchctx", [false; 2]),
+        (0x4037f08f, "dispatch:retw-into-task", [false; 2]),
+        (0x4037fd64, "vTaskSwitchContext", [false; 2]),
+        (0x4037f960, "prvIdleTask", [false; 2]),
+        (0x4202240c, "esp_startup_start_app", [false; 2]),
+        (0x4202239c, "main_task", [false; 2]),
+        (0x420047c0, "app_main", [false; 2]),
+        (0x42002040, "setup()", [false; 2]),
+        (0x42001f90, "UnityBegin", [false; 2]),
+    ];
     while steps < limit {
         let pc_before = cpu.get_pc();
         pc_ring[ring_head] = pc_before;
@@ -947,6 +972,67 @@ fn run_firmware(args: RunArgs) -> ExitCode {
         }
         bus.tick_peripherals_with_costs();
         steps += 1;
+
+        // SMP bring-up tracer (gated). Prints both cores' PCs periodically and
+        // flags the first time each core enters app XIP code (>= 0x4200_0000,
+        // where setup()/loop()/Unity live) — the signal that the FreeRTOS SMP
+        // scheduler finally dispatched the pinned loopTask.
+        if smp_trace {
+            for (core, pc) in [
+                (0usize, cpu.get_pc()),
+                (1usize, cpu1.as_ref().map(|c| c.get_pc()).unwrap_or(0)),
+            ] {
+                for w in watch.iter_mut() {
+                    if w.0 == pc && !w.2[core] {
+                        w.2[core] = true;
+                        eprintln!("SMP: core {core} reached {} (0x{pc:08x}) step {steps}", w.1);
+                    }
+                }
+            }
+            if steps % 10_000_000 == 0 {
+                eprintln!(
+                    "SMP: step {steps:>11}  pro=0x{:08x}  app=0x{:08x}",
+                    cpu.get_pc(),
+                    cpu1.as_ref().map(|c| c.get_pc()).unwrap_or(0),
+                );
+            }
+            // Dense single-step trace window (env LABWIRED_DENSE_FROM / _LEN)
+            // for following a context switch instruction-by-instruction.
+            if steps >= dense_from && steps < dense_from + dense_len {
+                eprintln!(
+                    "D {steps} pro=0x{:08x} ps={:x} wb={} ws=0x{:04x} exc={} epc1=0x{:08x} | app=0x{:08x}",
+                    cpu.get_pc(),
+                    cpu.ps.as_raw(),
+                    cpu.regs.windowbase(),
+                    cpu.regs.windowstart(),
+                    cpu.sr.read(232),
+                    cpu.sr.read(177),
+                    cpu1.as_ref().map(|c| c.get_pc()).unwrap_or(0),
+                );
+            }
+        }
+    }
+    // Optional end-of-run dump of the Unity result struct (env
+    // LABWIRED_UNITY_ADDR=<hex base of the `Unity` UNITY_STORAGE_T global>).
+    // Mirrors the hardware oracle (`mdw <addr> 10`): NumberOfTests at +20,
+    // TestFailures at +24, TestIgnores at +28 — the authoritative pass/fail
+    // since Unity's text output goes out USB_SERIAL_JTAG, not stdout.
+    if let Ok(s) = std::env::var("LABWIRED_UNITY_ADDR") {
+        if let Ok(base) = u32::from_str_radix(s.trim_start_matches("0x"), 16) {
+            let mut words = [0u32; 10];
+            for (i, w) in words.iter_mut().enumerate() {
+                *w = bus.read_u32(base as u64 + (i * 4) as u64).unwrap_or(0);
+            }
+            eprint!("labwired-cli run: Unity@0x{base:08x}:");
+            for w in &words {
+                eprint!(" {w:08x}");
+            }
+            eprintln!();
+            eprintln!(
+                "labwired-cli run: Unity NumberOfTests={} TestFailures={} TestIgnores={}",
+                words[5], words[6], words[7],
+            );
+        }
     }
     let cpu1_pc = cpu1
         .as_ref()

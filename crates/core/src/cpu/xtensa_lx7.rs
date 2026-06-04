@@ -89,13 +89,45 @@ const EXCCAUSE_LEVEL1_INTERRUPT: u8 = 4;
 #[allow(dead_code, reason = "reserved for level-gated interrupt arbitration")]
 const EXCM_LEVEL: u8 = 3;
 
+/// Round an `f32` to the nearest integer, ties to even (IEEE-754
+/// round-to-nearest-even). Rust's `f32::round` rounds half *away* from zero,
+/// so we implement banker's rounding explicitly to match `round.s`, which uses
+/// the FPU's default rounding mode.
+#[inline]
+fn round_half_even(v: f32) -> f32 {
+    let floor = v.floor();
+    let diff = v - floor;
+    if diff < 0.5 {
+        floor
+    } else if diff > 0.5 {
+        floor + 1.0
+    } else if (floor as i64) % 2 == 0 {
+        floor
+    } else {
+        floor + 1.0
+    }
+}
+
 pub struct XtensaLx7 {
     pub regs: ArFile,
     pub ps: Ps,
     pub sr: XtensaSrFile,
     /// User-Register file (URs accessed via RUR/WUR). 256 entries; the
-    /// commonly-used IDs are THREADPTR (231), FCR (232), FSR (233).
+    /// commonly-used IDs are THREADPTR (231), FCR (232), FSR (233). FCR holds
+    /// the FP rounding mode + exception enables; FSR holds the sticky FP
+    /// exception flags. We default FCR to round-to-nearest and treat both as
+    /// plain storage — the executor never traps on FP exceptions (the GCC
+    /// soft-float-free path expected here never enables them).
     pub ur: [u32; 256],
+    /// Single-precision FP register file f0..f15, stored as raw u32 bit
+    /// patterns so NaN payloads and signed zeros round-trip losslessly through
+    /// rfr/wfr and lsi/ssi. The Xtensa LX7 FPU is single-precision only.
+    pub fp: [u32; 16],
+    /// Boolean registers b0..b15 (Boolean Option), packed one per bit. FP
+    /// compares (oeq.s/olt.s/…) write a result bit here; movf.s/movt.s read it.
+    /// Modeled minimally: only the FP compare/move instructions touch it (the
+    /// integer BR-consuming branches aren't in the decoded set yet).
+    pub br: u16,
     pub pc: u32,
     /// Set by the branch helper when a conditional branch's predicate
     /// fires. Read by the ZOL post-step check to distinguish a branch
@@ -117,6 +149,11 @@ pub struct XtensaLx7 {
     /// Default false: fast-boot jumps mid-execution without a primed chain, so
     /// it relies on the shadow mechanism instead.
     pub faithful_windows: bool,
+    /// SMP core identity: 0 = PRO_CPU, 1 = APP_CPU. Selects which half of
+    /// the bus's per-core pending-IRQ set this CPU observes and clears, so
+    /// the ESP32-S3 cross-core interrupt (FROM_CPU_n) reaches only its
+    /// target core. Set by `new()` (0) / `new_app_cpu()` (1).
+    pub core_id: u8,
     /// IRAM/flash instruction-fetch slice cache (#119 Phase 1.2).
     fetch_cache: Option<(u64, u64, usize)>,
     /// Decode cache (#124 follow-on): direct-mapped PC → (tag, len, decoded
@@ -149,10 +186,13 @@ impl XtensaLx7 {
             ps: Ps::from_raw(0x1F),
             sr: XtensaSrFile::new(),
             ur: [0u32; 256],
+            fp: [0u32; 16],
+            br: 0,
             pc: 0x4000_0400,
             branched: false,
             halted: false,
             faithful_windows: false,
+            core_id: 0,
             fetch_cache: None,
             decode_cache: vec![None; DECODE_CACHE_SIZE],
             decode_gen: vec![0; DECODE_CACHE_SIZE],
@@ -162,6 +202,18 @@ impl XtensaLx7 {
             #[cfg(feature = "jit")]
             jit_enabled: true,
         }
+    }
+
+    /// Read FP register `f` as an `f32` (decoded from its stored bit pattern).
+    #[inline]
+    fn fget(&self, f: u8) -> f32 {
+        f32::from_bits(self.fp[(f & 0xF) as usize])
+    }
+
+    /// Write an `f32` into FP register `f`, storing its raw bit pattern.
+    #[inline]
+    fn fset(&mut self, f: u8, v: f32) {
+        self.fp[(f & 0xF) as usize] = v.to_bits();
     }
 
     /// Drop the IRAM/flash fetch slice cache. Call when the cached
@@ -205,6 +257,7 @@ impl XtensaLx7 {
         let mut cpu = Self::new();
         cpu.sr = XtensaSrFile::new_app_cpu();
         cpu.halted = true;
+        cpu.core_id = 1;
         cpu
     }
 
@@ -1789,6 +1842,17 @@ impl XtensaLx7 {
             // Level-1 exceptions save PS in-place; the handler reads/modifies PS
             // directly via RSR/WSR. Only EXCM is cleared by RFE — INTLEVEL is left
             // to the handler to restore explicitly.
+            // SYSCALL: raise the Syscall exception (EXCCAUSE=1, SyscallCause).
+            // Per Xtensa ISA RM §4.6.5 it vectors to the (user/kernel) general
+            // exception handler exactly like a synchronous exception, with
+            // EPC1 pointing at the SYSCALL instruction. The firmware's
+            // `_xt_to_syscall_exc` handler (window-spill for setjmp/longjmp,
+            // libc) does the work and advances EPC1 past the instruction
+            // before RFE. Newlib/Unity reach here during the test run.
+            Syscall => {
+                return self.vector_exception(1);
+            }
+
             Rfe => {
                 self.ps.set_excm(false);
                 self.pc = self.sr.read(EPC1);
@@ -1903,7 +1967,7 @@ impl XtensaLx7 {
                 // never dispatches to the user ISR (Plan 3 Task 10 case
                 // study).
                 if sr == INTERRUPT {
-                    v |= bus.pending_cpu_irqs();
+                    v |= bus.pending_cpu_irqs(self.core_id);
                 }
                 self.regs.write_logical(at, v);
                 self.pc = self.pc.wrapping_add(len);
@@ -1989,6 +2053,241 @@ impl XtensaLx7 {
             //             EXCCAUSE=0 semantics, so leaving the alias).
             Ill => return self.raise_general_exception(0),
 
+            // ── Single-precision FPU (Xtensa LX7 hardware FPU) ──────────────
+            // The FR file is `self.fp` (raw u32 bit patterns); arithmetic goes
+            // through Rust `f32`, which gives IEEE-754 round-to-nearest and
+            // correct NaN/inf/signed-zero handling for free. FCR rounding-mode
+            // overrides are not modeled (firmware leaves it at the default).
+            AddS { fr, fs, ft } => {
+                let v = self.fget(fs) + self.fget(ft);
+                self.fset(fr, v);
+                self.pc = self.pc.wrapping_add(len);
+            }
+            SubS { fr, fs, ft } => {
+                let v = self.fget(fs) - self.fget(ft);
+                self.fset(fr, v);
+                self.pc = self.pc.wrapping_add(len);
+            }
+            MulS { fr, fs, ft } => {
+                let v = self.fget(fs) * self.fget(ft);
+                self.fset(fr, v);
+                self.pc = self.pc.wrapping_add(len);
+            }
+            // madd.s: fr = fr + fs*ft. f32::mul_add would give a fused (single-
+            // rounding) result; the Xtensa FPU rounds the product and the sum
+            // separately, so use discrete ops to match the hardware bit-for-bit.
+            MaddS { fr, fs, ft } => {
+                let v = self.fget(fr) + self.fget(fs) * self.fget(ft);
+                self.fset(fr, v);
+                self.pc = self.pc.wrapping_add(len);
+            }
+            MsubS { fr, fs, ft } => {
+                let v = self.fget(fr) - self.fget(fs) * self.fget(ft);
+                self.fset(fr, v);
+                self.pc = self.pc.wrapping_add(len);
+            }
+            // abs.s / neg.s operate on the sign bit only (preserve NaN payload).
+            AbsS { fr, fs } => {
+                let v = self.fp[(fs & 0xF) as usize] & 0x7FFF_FFFF;
+                self.fp[(fr & 0xF) as usize] = v;
+                self.pc = self.pc.wrapping_add(len);
+            }
+            NegS { fr, fs } => {
+                let v = self.fp[(fs & 0xF) as usize] ^ 0x8000_0000;
+                self.fp[(fr & 0xF) as usize] = v;
+                self.pc = self.pc.wrapping_add(len);
+            }
+            MovS { fr, fs } => {
+                self.fp[(fr & 0xF) as usize] = self.fp[(fs & 0xF) as usize];
+                self.pc = self.pc.wrapping_add(len);
+            }
+            // rfr ar, fs : AR[ar] = raw bits of f[fs] (move FR → AR, no convert).
+            Rfr { ar, fs } => {
+                let v = self.fp[(fs & 0xF) as usize];
+                self.regs.write_logical(ar, v);
+                self.pc = self.pc.wrapping_add(len);
+            }
+            // wfr fr, as_ : f[fr] = raw bits of AR[as_] (move AR → FR, no convert).
+            Wfr { fr, as_ } => {
+                let v = self.regs.read_logical(as_);
+                self.fp[(fr & 0xF) as usize] = v;
+                self.pc = self.pc.wrapping_add(len);
+            }
+            // float.s fr, as_, imm : f[fr] = (f32)(i32)AR[as_] * 2^-imm.
+            FloatS { fr, as_, imm } => {
+                let x = self.regs.read_logical(as_) as i32 as f32;
+                let v = x / (1u32 << imm) as f32;
+                self.fset(fr, v);
+                self.pc = self.pc.wrapping_add(len);
+            }
+            UfloatS { fr, as_, imm } => {
+                let x = self.regs.read_logical(as_) as f32;
+                let v = x / (1u32 << imm) as f32;
+                self.fset(fr, v);
+                self.pc = self.pc.wrapping_add(len);
+            }
+            // trunc.s / utrunc.s : scale by 2^imm then round toward zero.
+            // round.s / ceil.s / floor.s : round to nearest / up / down.
+            // Out-of-range / NaN saturate the way Rust's `as` cast does, which
+            // matches the FPU's saturating overflow behaviour closely enough
+            // for the firmware paths we care about.
+            TruncS { ar, fs, imm } => {
+                let v = self.fget(fs) * (1u32 << imm) as f32;
+                self.regs.write_logical(ar, v.trunc() as i32 as u32);
+                self.pc = self.pc.wrapping_add(len);
+            }
+            UtruncS { ar, fs, imm } => {
+                let v = self.fget(fs) * (1u32 << imm) as f32;
+                self.regs.write_logical(ar, v.trunc() as u32);
+                self.pc = self.pc.wrapping_add(len);
+            }
+            RoundS { ar, fs, imm } => {
+                // round half-to-even (IEEE default), matching round.s.
+                let v = self.fget(fs) * (1u32 << imm) as f32;
+                self.regs.write_logical(ar, round_half_even(v) as i32 as u32);
+                self.pc = self.pc.wrapping_add(len);
+            }
+            CeilS { ar, fs, imm } => {
+                let v = self.fget(fs) * (1u32 << imm) as f32;
+                self.regs.write_logical(ar, v.ceil() as i32 as u32);
+                self.pc = self.pc.wrapping_add(len);
+            }
+            FloorS { ar, fs, imm } => {
+                let v = self.fget(fs) * (1u32 << imm) as f32;
+                self.regs.write_logical(ar, v.floor() as i32 as u32);
+                self.pc = self.pc.wrapping_add(len);
+            }
+            // FP conditional moves: predicate on an AR register, copy FR→FR.
+            MoveqzS { fr, fs, at } => {
+                if self.regs.read_logical(at) == 0 {
+                    self.fp[(fr & 0xF) as usize] = self.fp[(fs & 0xF) as usize];
+                }
+                self.pc = self.pc.wrapping_add(len);
+            }
+            MovnezS { fr, fs, at } => {
+                if self.regs.read_logical(at) != 0 {
+                    self.fp[(fr & 0xF) as usize] = self.fp[(fs & 0xF) as usize];
+                }
+                self.pc = self.pc.wrapping_add(len);
+            }
+            MovltzS { fr, fs, at } => {
+                if (self.regs.read_logical(at) as i32) < 0 {
+                    self.fp[(fr & 0xF) as usize] = self.fp[(fs & 0xF) as usize];
+                }
+                self.pc = self.pc.wrapping_add(len);
+            }
+            MovgezS { fr, fs, at } => {
+                if (self.regs.read_logical(at) as i32) >= 0 {
+                    self.fp[(fr & 0xF) as usize] = self.fp[(fs & 0xF) as usize];
+                }
+                self.pc = self.pc.wrapping_add(len);
+            }
+            // movf.s / movt.s: predicate on boolean register BR[bt].
+            MovfS { fr, fs, bt } => {
+                if (self.br >> (bt & 0xF)) & 1 == 0 {
+                    self.fp[(fr & 0xF) as usize] = self.fp[(fs & 0xF) as usize];
+                }
+                self.pc = self.pc.wrapping_add(len);
+            }
+            MovtS { fr, fs, bt } => {
+                if (self.br >> (bt & 0xF)) & 1 == 1 {
+                    self.fp[(fr & 0xF) as usize] = self.fp[(fs & 0xF) as usize];
+                }
+                self.pc = self.pc.wrapping_add(len);
+            }
+            // FP compare → boolean register BR[br]. Ordered predicates are
+            // false when either operand is NaN; unordered are true on NaN.
+            CmpS { br, fs, ft, kind } => {
+                use xtensa::FpCmp::*;
+                let a = self.fget(fs);
+                let b = self.fget(ft);
+                let unordered = a.is_nan() || b.is_nan();
+                let result = match kind {
+                    Un => unordered,
+                    Oeq => a == b,
+                    Ueq => unordered || a == b,
+                    Olt => a < b,
+                    Ult => unordered || a < b,
+                    Ole => a <= b,
+                    Ule => unordered || a <= b,
+                };
+                let bit = 1u16 << (br & 0xF);
+                if result {
+                    self.br |= bit;
+                } else {
+                    self.br &= !bit;
+                }
+                self.pc = self.pc.wrapping_add(len);
+            }
+            // FP loads/stores. The FR file holds raw 32-bit patterns, and the
+            // bus moves 4 bytes verbatim, so memory round-trips the bit pattern.
+            Lsi { ft, as_, imm } => {
+                let ea = self.regs.read_logical(as_).wrapping_add(imm) as u64;
+                let val = bus.read_u32(ea)?;
+                self.fp[(ft & 0xF) as usize] = val;
+                self.pc = self.pc.wrapping_add(len);
+            }
+            Lsiu { ft, as_, imm } => {
+                let base = self.regs.read_logical(as_).wrapping_add(imm);
+                let val = bus.read_u32(base as u64)?;
+                self.fp[(ft & 0xF) as usize] = val;
+                self.regs.write_logical(as_, base);
+                self.pc = self.pc.wrapping_add(len);
+            }
+            Ssi { ft, as_, imm } => {
+                let ea = self.regs.read_logical(as_).wrapping_add(imm);
+                self.maybe_invalidate_for_write(ea);
+                bus.write_u32(ea as u64, self.fp[(ft & 0xF) as usize])?;
+                self.pc = self.pc.wrapping_add(len);
+            }
+            Ssiu { ft, as_, imm } => {
+                let base = self.regs.read_logical(as_).wrapping_add(imm);
+                self.maybe_invalidate_for_write(base);
+                bus.write_u32(base as u64, self.fp[(ft & 0xF) as usize])?;
+                self.regs.write_logical(as_, base);
+                self.pc = self.pc.wrapping_add(len);
+            }
+            // Indexed FP loads/stores: EA = AR[as_] + AR[at]. The *U (xp)
+            // forms write the computed address back into AR[as_].
+            Lsx { fr, as_, at } => {
+                let ea = self
+                    .regs
+                    .read_logical(as_)
+                    .wrapping_add(self.regs.read_logical(at)) as u64;
+                let val = bus.read_u32(ea)?;
+                self.fp[(fr & 0xF) as usize] = val;
+                self.pc = self.pc.wrapping_add(len);
+            }
+            Lsxu { fr, as_, at } => {
+                let base = self
+                    .regs
+                    .read_logical(as_)
+                    .wrapping_add(self.regs.read_logical(at));
+                let val = bus.read_u32(base as u64)?;
+                self.fp[(fr & 0xF) as usize] = val;
+                self.regs.write_logical(as_, base);
+                self.pc = self.pc.wrapping_add(len);
+            }
+            Ssx { fr, as_, at } => {
+                let ea = self
+                    .regs
+                    .read_logical(as_)
+                    .wrapping_add(self.regs.read_logical(at));
+                self.maybe_invalidate_for_write(ea);
+                bus.write_u32(ea as u64, self.fp[(fr & 0xF) as usize])?;
+                self.pc = self.pc.wrapping_add(len);
+            }
+            Ssxu { fr, as_, at } => {
+                let base = self
+                    .regs
+                    .read_logical(as_)
+                    .wrapping_add(self.regs.read_logical(at));
+                self.maybe_invalidate_for_write(base);
+                bus.write_u32(base as u64, self.fp[(fr & 0xF) as usize])?;
+                self.regs.write_logical(as_, base);
+                self.pc = self.pc.wrapping_add(len);
+            }
+
             // Unknown opcode: raise IllegalInstruction (EXCCAUSE=0).
             //
             // Xtensa LX7 ISA RM §5.2: executing an instruction not defined in the
@@ -1998,6 +2297,11 @@ impl XtensaLx7 {
             // real ESP32-S3 hardware behaviour.
             Unknown(_) => return self.raise_general_exception(0),
 
+            // Defensive guard for any instruction variant not yet wired into
+            // the executor. Currently unreachable (every variant is handled),
+            // but kept so adding a decoder variant fails loudly at runtime
+            // rather than silently mis-executing.
+            #[allow(unreachable_patterns)]
             _ => return Err(SimulationError::NotImplemented(format!("exec: {:?}", ins))),
         }
         Ok(())
@@ -2027,7 +2331,8 @@ impl XtensaLx7 {
         //   1. SR-file INTERRUPT register (firmware can software-trigger via WSR).
         //   2. Bus's pending_cpu_irqs (peripheral source IDs routed through
         //      the ESP32-S3 intmatrix in tick_peripherals_with_costs).
-        let pending = (self.sr.read(INTERRUPT) | bus.pending_cpu_irqs()) & self.sr.read(INTENABLE);
+        let pending =
+            (self.sr.read(INTERRUPT) | bus.pending_cpu_irqs(self.core_id)) & self.sr.read(INTENABLE);
         if pending == 0 {
             return None;
         }
@@ -2118,7 +2423,7 @@ impl XtensaLx7 {
         // before the source re-asserts.
         for slot in 0..32u8 {
             if IRQ_LEVELS[slot as usize] == level {
-                bus.clear_cpu_irq_pending(slot);
+                bus.clear_cpu_irq_pending(self.core_id, slot);
             }
         }
 
@@ -2557,5 +2862,209 @@ impl Cpu for XtensaLx7 {
     #[cfg(feature = "jit")]
     fn jit_hit_count(&self) -> u64 {
         self.jit.as_ref().map(|c| c.total_hits()).unwrap_or(0)
+    }
+}
+
+#[cfg(test)]
+mod fp_tests {
+    //! Single-precision FPU exec tests. Each test decodes the HW-oracle
+    //! encoding (xtensa-esp32s3-elf-as + objdump) and runs it through
+    //! `execute`, asserting against the IEEE-754 reference result.
+    use super::*;
+    use crate::decoder::xtensa::decode;
+    use crate::{Bus, DmaRequest, SimResult, SimulationConfig};
+
+    /// Flat-RAM bus: 64 KiB of byte-addressable memory based at 0. Enough for
+    /// the lsi/ssi round-trip; all other FP ops never touch the bus.
+    struct RamBus {
+        mem: Vec<u8>,
+        config: SimulationConfig,
+    }
+    impl RamBus {
+        fn new() -> Self {
+            Self {
+                mem: vec![0u8; 0x1_0000],
+                config: SimulationConfig::default(),
+            }
+        }
+    }
+    impl Bus for RamBus {
+        fn read_u8(&self, addr: u64) -> SimResult<u8> {
+            Ok(self.mem[addr as usize])
+        }
+        fn write_u8(&mut self, addr: u64, value: u8) -> SimResult<()> {
+            self.mem[addr as usize] = value;
+            Ok(())
+        }
+        fn tick_peripherals(&mut self) -> Vec<u32> {
+            Vec::new()
+        }
+        fn execute_dma(&mut self, _requests: &[DmaRequest]) -> SimResult<()> {
+            Ok(())
+        }
+        fn config(&self) -> &SimulationConfig {
+            &self.config
+        }
+    }
+
+    /// Decode `word` and execute it (3-byte wide form). Returns nothing; the
+    /// caller inspects cpu state.
+    fn run(cpu: &mut XtensaLx7, bus: &mut RamBus, word: u32) {
+        let ins = decode(word);
+        cpu.execute(ins, bus, 3).expect("exec");
+    }
+
+    #[test]
+    fn add_sub_mul_madd() {
+        let mut cpu = XtensaLx7::new();
+        let mut bus = RamBus::new();
+        cpu.fset(4, 1.5);
+        cpu.fset(5, 2.25);
+        // add.s f3, f4, f5 → 0x0a3450
+        run(&mut cpu, &mut bus, 0x0a3450);
+        assert_eq!(cpu.fget(3), 3.75);
+        // sub.s f3, f4, f5 → 0x1a3450
+        run(&mut cpu, &mut bus, 0x1a3450);
+        assert_eq!(cpu.fget(3), -0.75);
+        // mul.s f3, f4, f5 → 0x2a3450
+        run(&mut cpu, &mut bus, 0x2a3450);
+        assert_eq!(cpu.fget(3), 3.375);
+        // madd.s f3, f4, f5 → 0x4a3450 : f3 = f3 + f4*f5 = 3.375 + 3.375
+        run(&mut cpu, &mut bus, 0x4a3450);
+        assert_eq!(cpu.fget(3), 6.75);
+        // msub.s f3, f4, f5 → 0x5a3450 : f3 = f3 - f4*f5 = 6.75 - 3.375
+        run(&mut cpu, &mut bus, 0x5a3450);
+        assert_eq!(cpu.fget(3), 3.375);
+    }
+
+    #[test]
+    fn float_trunc_roundtrip() {
+        let mut cpu = XtensaLx7::new();
+        let mut bus = RamBus::new();
+        cpu.regs.write_logical(4, (-7i32) as u32);
+        // float.s f3, a4, 0 → 0xca3400 : f3 = (f32)(-7)
+        run(&mut cpu, &mut bus, 0xca3400);
+        assert_eq!(cpu.fget(3), -7.0);
+        // trunc.s a3, f3, 0 → 0x9a3300 (ar=3, fs=3, imm=0): a3 = (i32)trunc(-7.0)
+        run(&mut cpu, &mut bus, 0x9a3300);
+        assert_eq!(cpu.regs.read_logical(3) as i32, -7);
+
+        // float.s with scale: a4=10, imm=1 → 10/2 = 5.0
+        cpu.regs.write_logical(4, 10);
+        run(&mut cpu, &mut bus, 0xca3410); // float.s f3, a4, 1
+        assert_eq!(cpu.fget(3), 5.0);
+        // ufloat.s f3, a4, 0 with a4 = 0xFFFF_FFFF → 4294967295.0
+        cpu.regs.write_logical(4, 0xFFFF_FFFF);
+        run(&mut cpu, &mut bus, 0xda3400); // ufloat.s f3, a4, 0
+        assert_eq!(cpu.fget(3), 4294967295.0);
+    }
+
+    #[test]
+    fn abs_neg_mov() {
+        let mut cpu = XtensaLx7::new();
+        let mut bus = RamBus::new();
+        cpu.fset(4, -3.5);
+        // abs.s f3, f4 → 0xfa3410
+        run(&mut cpu, &mut bus, 0xfa3410);
+        assert_eq!(cpu.fget(3), 3.5);
+        // neg.s f3, f4 → 0xfa3460
+        run(&mut cpu, &mut bus, 0xfa3460);
+        assert_eq!(cpu.fget(3), 3.5);
+        // mov.s f5, f4 → 0xfa5400 (fr=5, fs=4)
+        run(&mut cpu, &mut bus, 0xfa5400);
+        assert_eq!(cpu.fget(5), -3.5);
+        // -0.0 sign survives neg.s / abs.s as raw bit ops.
+        cpu.fset(4, 0.0);
+        run(&mut cpu, &mut bus, 0xfa3460); // neg.s f3, f4 → -0.0
+        assert_eq!(cpu.fp[3], 0x8000_0000);
+    }
+
+    #[test]
+    fn rfr_wfr_roundtrip() {
+        let mut cpu = XtensaLx7::new();
+        let mut bus = RamBus::new();
+        cpu.regs.write_logical(4, 0x4048_F5C3); // bits of 3.14
+        // wfr f3, a4 → 0xfa3450
+        run(&mut cpu, &mut bus, 0xfa3450);
+        assert_eq!(cpu.fp[3], 0x4048_F5C3);
+        // rfr a5, f3 → 0xfa5340 (ar=5, fs=3)
+        run(&mut cpu, &mut bus, 0xfa5340);
+        assert_eq!(cpu.regs.read_logical(5), 0x4048_F5C3);
+    }
+
+    #[test]
+    fn compare_and_conditional_move() {
+        let mut cpu = XtensaLx7::new();
+        let mut bus = RamBus::new();
+        cpu.fset(4, 1.0);
+        cpu.fset(5, 2.0);
+        // olt.s b0, f4, f5 → 0x4b0450 : 1.0 < 2.0 → b0 = 1
+        run(&mut cpu, &mut bus, 0x4b0450);
+        assert_eq!(cpu.br & 1, 1);
+        // oeq.s b0, f4, f5 → 0x2b0450 : 1.0 == 2.0 → b0 = 0
+        run(&mut cpu, &mut bus, 0x2b0450);
+        assert_eq!(cpu.br & 1, 0);
+        // un.s b0, f4, f5 → 0x1b0450 : neither NaN → 0
+        run(&mut cpu, &mut bus, 0x1b0450);
+        assert_eq!(cpu.br & 1, 0);
+        // NaN makes un.s true.
+        cpu.fset(5, f32::NAN);
+        run(&mut cpu, &mut bus, 0x1b0450);
+        assert_eq!(cpu.br & 1, 1);
+
+        // Integer-predicate FP move: moveqz.s f3, f4, a5.
+        cpu.fset(4, 9.0);
+        cpu.fset(3, 0.0);
+        cpu.regs.write_logical(5, 0);
+        // moveqz.s f3, f4, a5 → 0x8b3450 : a5==0 → f3 = f4
+        run(&mut cpu, &mut bus, 0x8b3450);
+        assert_eq!(cpu.fget(3), 9.0);
+        // Now a5 != 0: moveqz must NOT copy.
+        cpu.fset(4, 1.0);
+        cpu.regs.write_logical(5, 1);
+        run(&mut cpu, &mut bus, 0x8b3450);
+        assert_eq!(cpu.fget(3), 9.0);
+    }
+
+    #[test]
+    fn lsi_ssi_roundtrip() {
+        let mut cpu = XtensaLx7::new();
+        let mut bus = RamBus::new();
+        cpu.regs.write_logical(1, 0x100); // base address
+        cpu.fset(2, 12.5);
+        // ssi f2, a1, 160 → 0x284123 : mem32[0x100 + 160] = f2
+        run(&mut cpu, &mut bus, 0x284123);
+        assert_eq!(bus.read_u32(0x100 + 160).unwrap(), 12.5f32.to_bits());
+        // lsi f5, a1, 160 → 0x280153 (ft=5) : f5 = mem32[0x100 + 160]
+        run(&mut cpu, &mut bus, 0x280153);
+        assert_eq!(cpu.fget(5), 12.5);
+    }
+
+    #[test]
+    fn lsiu_updates_base() {
+        let mut cpu = XtensaLx7::new();
+        let mut bus = RamBus::new();
+        cpu.regs.write_logical(1, 0x100);
+        cpu.fset(2, -1.0);
+        // ssip f2, a1, 4 → 0x01c123 (imm8=1<<2=4, r=0xC, s=1, t=2, op0=3):
+        // EA = a1 + 4 = 0x104; store there, then write EA back into a1.
+        run(&mut cpu, &mut bus, 0x01c123);
+        assert_eq!(bus.read_u32(0x104).unwrap(), (-1.0f32).to_bits());
+        assert_eq!(cpu.regs.read_logical(1), 0x104);
+    }
+
+    #[test]
+    fn lsx_indexed() {
+        let mut cpu = XtensaLx7::new();
+        let mut bus = RamBus::new();
+        cpu.regs.write_logical(1, 0x200); // base
+        cpu.regs.write_logical(3, 0x10); // index
+        cpu.fset(2, 42.0);
+        // ssx f2, a1, a3 → 0x482130 : mem32[0x200+0x10] = f2
+        run(&mut cpu, &mut bus, 0x482130);
+        assert_eq!(bus.read_u32(0x210).unwrap(), 42.0f32.to_bits());
+        // lsx f4, a1, a3 → 0x084130 (fr=4) : f4 = mem32[0x210]
+        run(&mut cpu, &mut bus, 0x084130);
+        assert_eq!(cpu.fget(4), 42.0);
     }
 }

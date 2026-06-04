@@ -5,12 +5,21 @@
 //! Interrupt Matrix peripheral for ESP32-S3.
 //!
 //! Per ESP32-S3 TRM §9.4. The interrupt matrix routes 99 peripheral
-//! source IDs to 32 cpu0 IRQ slots (and a parallel 32 cpu1 IRQ slots,
-//! not modeled in Plan 3).
+//! source IDs to 32 cpu0 IRQ slots AND a parallel 32 cpu1 IRQ slots.
 //!
-//! Each peripheral source ID has a 32-bit map register at:
-//!   PRO_<source>_INTR_MAP_REG = 0x000 + 4 * source_id     (cpu0)
-//!   APP_<source>_INTR_MAP_REG = 0x400 + 4 * source_id     (cpu1, accepted but not modeled)
+//! Both cores' map tables live in one MMIO block based at
+//! `DR_REG_INTERRUPT_BASE = 0x600C_2000` (`DR_REG_INTERRUPT_CORE0_BASE`
+//! and `_CORE1_BASE` are both aliases of it). Each peripheral source ID
+//! has a 32-bit map register at:
+//!   INTERRUPT_CORE0_<source>_MAP_REG = 0x000 + 4 * source_id   (cpu0)
+//!   INTERRUPT_CORE1_<source>_MAP_REG = 0x800 + 4 * source_id   (cpu1)
+//! (verified against esp-idf `soc/interrupt_core{0,1}_reg.h`: CORE1's
+//! MAC_INTR_MAP — source 0 — sits at `BASE + 0x800`, and FROM_CPU_1 —
+//! source 80 — at `BASE + 0x940 = 0x800 + 80*4`).
+//!
+//! ESP-IDF SMP uses this duality for the cross-core interrupt: each core
+//! routes its own `FROM_CPU_INTR{core}` source (79 for core 0, 80 for
+//! core 1) — see [`crate::peripherals::esp32s3::crosscore_ipi`].
 //!
 //! The register stores the cpu IRQ slot (0..31) the source delivers to.
 //! Slot 0 is reserved for software interrupts; we treat any value 0..31
@@ -31,6 +40,10 @@ use crate::{Peripheral, SimResult};
 
 const NUM_SOURCES: usize = 99;
 
+/// CORE1's map table is offset `0x800` from the shared interrupt base;
+/// `BASE + 0x800 + 4*source_id` is `INTERRUPT_CORE1_<source>_MAP_REG`.
+const CORE1_MAP_OFFSET: u64 = 0x800;
+
 /// Offsets of PRO_INTR_STATUS_REG_0..3 (per esp32s3-pac).
 /// Each reg covers 32 source bits; 4 regs × 32 = 128 ≥ NUM_SOURCES (99).
 const INTR_STATUS_BASE: u64 = 0x18C;
@@ -41,9 +54,14 @@ pub struct Esp32s3IntMatrix {
     /// For each peripheral source ID (0..99), which cpu0 IRQ slot it's
     /// bound to. None = never written (no binding).
     cpu0_route: [Option<u8>; NUM_SOURCES],
+    /// Parallel cpu1 (APP_CPU) binding table, programmed via the CORE1
+    /// map window at `CORE1_MAP_OFFSET`.
+    cpu1_route: [Option<u8>; NUM_SOURCES],
     /// PRO_INTR_STATUS_REG_0..3 — bit `i` of word `n` reflects whether
     /// source `n*32 + i` is currently asserting. Updated each tick by the
-    /// bus from peripheral `explicit_irqs`.
+    /// bus from peripheral `explicit_irqs`. The CORE1 status mirror reads
+    /// the same raw source-assertion bitmap (assertion is core-independent;
+    /// only routing differs).
     intr_status: [u32; 4],
 }
 
@@ -51,18 +69,29 @@ impl Esp32s3IntMatrix {
     pub fn new() -> Self {
         Self {
             cpu0_route: [None; NUM_SOURCES],
+            cpu1_route: [None; NUM_SOURCES],
             intr_status: [0u32; 4],
         }
     }
 
-    /// Look up the cpu0 IRQ slot for `source_id`. Returns None if unbound
-    /// or if `source_id` is out of range.
+    /// Look up the cpu0 IRQ slot for `source_id` (back-compat alias for
+    /// `route_for_core(source_id, 0)`).
     pub fn route(&self, source_id: u32) -> Option<u8> {
+        self.route_for_core(source_id, 0)
+    }
+
+    /// Look up the IRQ slot `source_id` is bound to on the given core
+    /// (0 = PRO_CPU, 1 = APP_CPU). Returns None if unbound or out of range.
+    pub fn route_for_core(&self, source_id: u32, core_id: u8) -> Option<u8> {
         let idx = source_id as usize;
         if idx >= NUM_SOURCES {
             return None;
         }
-        self.cpu0_route[idx]
+        if core_id == 0 {
+            self.cpu0_route[idx]
+        } else {
+            self.cpu1_route[idx]
+        }
     }
 
     /// Replace the per-tick set of asserting source IDs. Called from the
@@ -81,25 +110,36 @@ impl Default for Esp32s3IntMatrix {
 
 impl Peripheral for Esp32s3IntMatrix {
     fn read(&self, offset: u64) -> SimResult<u8> {
-        // Layout (PRO half, offset < 0x400):
-        //   0x000..0x18C — per-source map registers (route slot bits[4:0]).
-        //   0x18C..0x19C — PRO_INTR_STATUS_REG_0..3 (live source assertion bitmap).
-        //   0x19C..0x400 — read-as-zero (CLOCK_GATE / VERSION not modeled).
-        // APP half (offset >= 0x400) reads as zero (cpu1 not modeled).
-        if offset < INTR_STATUS_BASE {
-            let word_off = offset & !3;
-            let byte_off = (offset & 3) * 8;
+        // Layout (each core's half is 0x800 apart on the shared base):
+        //   CORE0: 0x000..0x18C — per-source map registers (route slot).
+        //          0x18C..0x19C — PRO_INTR_STATUS_REG_0..3 (assertion bitmap).
+        //   CORE1: 0x800..0x98C — per-source map registers (cpu1 route).
+        //          0x98C..0x99C — APP_INTR_STATUS_REG_0..3 (same bitmap mirror).
+        //   everything else — read-as-zero (CLOCK_GATE / VERSION not modeled).
+        let (core_id, rel) = if offset >= CORE1_MAP_OFFSET {
+            (1u8, offset - CORE1_MAP_OFFSET)
+        } else {
+            (0u8, offset)
+        };
+        if rel < INTR_STATUS_BASE {
+            let word_off = rel & !3;
+            let byte_off = (rel & 3) * 8;
             let src = (word_off / 4) as usize;
+            let table = if core_id == 0 {
+                &self.cpu0_route
+            } else {
+                &self.cpu1_route
+            };
             let slot = if src < NUM_SOURCES {
-                self.cpu0_route[src].unwrap_or(0) as u32
+                table[src].unwrap_or(0) as u32
             } else {
                 0
             };
             Ok(((slot >> byte_off) & 0xFF) as u8)
-        } else if offset < INTR_STATUS_END {
-            let rel = offset - INTR_STATUS_BASE;
-            let word_off = (rel & !3) / 4;
-            let byte_off = (rel & 3) * 8;
+        } else if rel < INTR_STATUS_END {
+            let s = rel - INTR_STATUS_BASE;
+            let word_off = (s & !3) / 4;
+            let byte_off = (s & 3) * 8;
             let word = self.intr_status[word_off as usize];
             Ok(((word >> byte_off) & 0xFF) as u8)
         } else {
@@ -108,28 +148,33 @@ impl Peripheral for Esp32s3IntMatrix {
     }
 
     fn write(&mut self, offset: u64, value: u8) -> SimResult<()> {
-        // INTR_STATUS regs (0x18C..0x19C) are read-only on real silicon.
-        // CLOCK_GATE (0x19C) and VERSION (0x7FC) are accepted but ignored.
-        // APP writes silently accepted (cpu1 not modeled).
-        if offset >= INTR_STATUS_BASE {
+        // INTR_STATUS regs are read-only on real silicon; CLOCK_GATE /
+        // VERSION are accepted but ignored. Map writes bind the source on
+        // the addressed core's half (offset >= 0x800 → CORE1 / cpu1).
+        let (core_id, rel) = if offset >= CORE1_MAP_OFFSET {
+            (1u8, offset - CORE1_MAP_OFFSET)
+        } else {
+            (0u8, offset)
+        };
+        if rel >= INTR_STATUS_BASE {
             return Ok(());
         }
-        let word_off = offset & !3;
-        let byte_off = (offset & 3) * 8;
+        let word_off = rel & !3;
+        let byte_off = (rel & 3) * 8;
         let src = (word_off / 4) as usize;
         if src >= NUM_SOURCES {
             return Ok(());
         }
-        // Read current word, R-M-W the byte.
-        let current = self.cpu0_route[src].unwrap_or(0) as u32;
-        let mut word = current;
+        let table = if core_id == 0 {
+            &mut self.cpu0_route
+        } else {
+            &mut self.cpu1_route
+        };
+        // R-M-W the addressed byte of the source's map word; slot is bits[4:0].
+        let mut word = table[src].unwrap_or(0) as u32;
         word &= !(0xFFu32 << byte_off);
         word |= (value as u32) << byte_off;
-        // Slot is bits[4:0]; only bind if a non-default value was written
-        // OR if the byte that contained the slot bits was touched.
-        // For simplicity: any write to the source's word records the binding.
-        let slot = (word & 0x1F) as u8;
-        self.cpu0_route[src] = Some(slot);
+        table[src] = Some((word & 0x1F) as u8);
         Ok(())
     }
 
@@ -243,6 +288,22 @@ mod tests {
         for src in 0u32..99 {
             assert!(m.route(src).is_none(), "source {src} unexpectedly bound");
         }
+    }
+
+    #[test]
+    fn core1_map_binds_cpu1_route_independently() {
+        let mut m = Esp32s3IntMatrix::new();
+        // FROM_CPU_1 = source 80, CORE1 map at 0x800 + 80*4 = 0x940.
+        let off = CORE1_MAP_OFFSET + 80 * 4;
+        m.write(off, 9).unwrap();
+        assert_eq!(m.route_for_core(80, 1), Some(9), "cpu1 binding");
+        assert_eq!(m.route_for_core(80, 0), None, "cpu0 must stay unbound");
+        // FROM_CPU_0 = source 79, CORE0 map at 79*4 = 0x13C — core 0 only.
+        m.write(79 * 4, 13).unwrap();
+        assert_eq!(m.route_for_core(79, 0), Some(13));
+        assert_eq!(m.route_for_core(79, 1), None);
+        // Read-back of the CORE1 binding through the APP map window.
+        assert_eq!(m.read(off).unwrap(), 9);
     }
 
     #[test]

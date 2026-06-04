@@ -5,6 +5,7 @@
 //! ESP32-S3 peripheral implementations (Plan 2+).
 
 pub mod core1_control;
+pub mod crosscore_ipi;
 pub mod extmem;
 pub mod flash_xip;
 pub mod gpio;

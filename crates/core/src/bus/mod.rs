@@ -141,11 +141,12 @@ pub struct SystemBus {
     /// False for architectures (e.g. RISC-V) whose memory maps collide with
     /// the bit-band alias ranges 0x42000000–0x44000000 / 0x22000000–0x24000000.
     pub bit_band_enabled: bool,
-    /// Plan 3: bitmask of pending cpu0 IRQ slots (32 bits, one per ESP32-S3
-    /// cpu IRQ slot). Aggregated by `tick_peripherals_with_costs` from
-    /// peripheral `explicit_irqs` source IDs routed through the registered
-    /// intmatrix peripheral. Cleared per slot via `clear_cpu_irq_pending`.
-    pub pending_cpu_irqs: u32,
+    /// Plan 3: per-core bitmask of pending cpu IRQ slots (32 bits each;
+    /// index 0 = PRO_CPU, 1 = APP_CPU). Aggregated by
+    /// `tick_peripherals_with_costs` from peripheral `explicit_irqs` source
+    /// IDs routed through the registered interrupt matrix's per-core map
+    /// tables. Cleared per slot via `clear_cpu_irq_pending`.
+    pub pending_cpu_irqs: [u32; 2],
     /// Bus-level thunk table for addresses outside any `RomThunkBank`.
     /// Used to intercept calls to firmware functions resident in flash
     /// (e.g. ESP-IDF's `multi_heap_register` at 0x40194954) so we can
@@ -757,7 +758,7 @@ impl SystemBus {
             observers: Vec::new(),
             config: crate::SimulationConfig::default(),
             bit_band_enabled: true,
-            pending_cpu_irqs: 0,
+            pending_cpu_irqs: [0; 2],
             peripheral_ranges: Vec::new(),
             peripheral_hint: Cell::new(None),
             last_gpio_in: [0; 2],
@@ -785,7 +786,7 @@ impl SystemBus {
             observers: Vec::new(),
             config: crate::SimulationConfig::default(),
             bit_band_enabled: false,
-            pending_cpu_irqs: 0,
+            pending_cpu_irqs: [0; 2],
             peripheral_ranges: Vec::new(),
             peripheral_hint: Cell::new(None),
             last_gpio_in: [0; 2],
@@ -888,12 +889,19 @@ impl SystemBus {
     /// to peripheral source `source_id`. Returns None if no intmatrix is
     /// registered or no binding exists for the source.
     pub fn route_irq_source_to_cpu_irq(&self, source_id: u32) -> Option<u8> {
+        self.route_irq_source_to_cpu_irq_core(source_id, 0)
+    }
+
+    /// Plan 3 (SMP): look up the IRQ slot `source_id` is bound to on
+    /// `core_id` (0 = PRO_CPU, 1 = APP_CPU) via the registered interrupt
+    /// matrix's per-core map table. None if unregistered or unbound.
+    pub fn route_irq_source_to_cpu_irq_core(&self, source_id: u32, core_id: u8) -> Option<u8> {
         for p in &self.peripherals {
             if let Some(any) = p.dev.as_any() {
                 if let Some(matrix) =
                     any.downcast_ref::<crate::peripherals::esp32s3::intmatrix::Esp32s3IntMatrix>()
                 {
-                    return matrix.route(source_id);
+                    return matrix.route_for_core(source_id, core_id);
                 }
             }
         }
@@ -944,7 +952,7 @@ impl SystemBus {
             observers: Vec::new(),
             config: crate::SimulationConfig::default(),
             bit_band_enabled: matches!(chip.arch, labwired_config::Arch::Arm),
-            pending_cpu_irqs: 0,
+            pending_cpu_irqs: [0; 2],
             peripheral_ranges: Vec::new(),
             peripheral_hint: Cell::new(None),
             last_gpio_in: [0; 2],
@@ -2105,13 +2113,46 @@ impl SystemBus {
     /// PRO_INTR_STATUS_REG_n mirror via `set_pending_sources`. No-op for buses
     /// without an intmatrix peripheral.
     fn aggregate_esp32s3_explicit_irqs(&mut self, source_ids: &[u32]) {
-        if source_ids.is_empty() {
+        // Rebuild the per-core routed pending bitmap as a faithful LEVEL
+        // reflection of the sources asserting THIS tick — set while a source
+        // asserts, cleared the tick it stops. (Was OR-accumulate + clear only
+        // on dispatch + early-return when empty, which LATCHED a stale bit
+        // after a level source de-asserted.) A level source like the systimer
+        // tick re-emits its ID every tick while INT_RAW is set and stops the
+        // tick after firmware writes INT_CLR; with the old latch the source
+        // kept re-emitting during the ISR — after dispatch had cleared the
+        // routed bit — so a stale bit survived the ISR's INT_CLR and re-fired
+        // the tick interrupt the instant the ISR returned, wedging the
+        // FreeRTOS SMP scheduler in an endless tick-ISR loop (never returning
+        // to the dispatched task). Runs every tick, including empty, so a
+        // de-asserting source clears its routed bit.
+        // Isolation: this aggregation is ESP32-S3-specific. If no ESP32-S3
+        // interrupt matrix is registered, this is some other architecture's
+        // bus (ARM/RISC-V/nRF use the NVIC path and never read
+        // `pending_cpu_irqs`) — return without touching any state so the
+        // model stays fully self-contained and cannot influence other models.
+        let has_intmatrix = self.peripherals.iter().any(|p| {
+            p.dev
+                .as_any()
+                .and_then(|a| {
+                    a.downcast_ref::<crate::peripherals::esp32s3::intmatrix::Esp32s3IntMatrix>()
+                })
+                .is_some()
+        });
+        if !has_intmatrix {
             return;
         }
+        let mut routed = [0u32; 2];
         let mut intr_status = [0u32; 4];
         for &source_id in source_ids {
-            if let Some(slot) = self.route_irq_source_to_cpu_irq(source_id) {
-                self.pending_cpu_irqs |= 1u32 << slot;
+            // Route each asserting source through BOTH cores' map tables;
+            // a source delivers to whichever core(s) bound it (the SMP
+            // cross-core IPI relies on this: source 79 → core 0, 80 → core 1).
+            if let Some(slot) = self.route_irq_source_to_cpu_irq_core(source_id, 0) {
+                routed[0] |= 1u32 << slot;
+            }
+            if let Some(slot) = self.route_irq_source_to_cpu_irq_core(source_id, 1) {
+                routed[1] |= 1u32 << slot;
             }
             // Mirror into PRO_INTR_STATUS_REG_n bitmap so esp-hal's
             // __level_*_interrupt can discover which source asserted.
@@ -2121,6 +2162,7 @@ impl SystemBus {
                 intr_status[reg] |= 1u32 << bit;
             }
         }
+        self.pending_cpu_irqs = routed;
         // Push the live source-assertion bitmap into the intmatrix peripheral.
         // No-op for buses without an intmatrix registered.
         for p in self.peripherals.iter_mut() {
@@ -2530,12 +2572,12 @@ impl crate::Bus for SystemBus {
         SystemBus::route_irq_source_to_cpu_irq(self, source_id)
     }
 
-    fn pending_cpu_irqs(&self) -> u32 {
-        self.pending_cpu_irqs
+    fn pending_cpu_irqs(&self, core_id: u8) -> u32 {
+        self.pending_cpu_irqs[(core_id & 1) as usize]
     }
 
-    fn clear_cpu_irq_pending(&mut self, slot: u8) {
-        self.pending_cpu_irqs &= !(1u32 << slot);
+    fn clear_cpu_irq_pending(&mut self, core_id: u8, slot: u8) {
+        self.pending_cpu_irqs[(core_id & 1) as usize] &= !(1u32 << slot);
     }
 }
 
@@ -2860,7 +2902,7 @@ mod tests {
             observers: Vec::new(),
             config: crate::SimulationConfig::default(),
             bit_band_enabled: true,
-            pending_cpu_irqs: 0,
+            pending_cpu_irqs: [0; 2],
             flash_thunks: std::collections::HashMap::new(),
             peripheral_ranges: Vec::new(),
             peripheral_hint: Cell::new(None),
@@ -2912,7 +2954,7 @@ mod tests {
             observers: Vec::new(),
             config: crate::SimulationConfig::default(),
             bit_band_enabled: true,
-            pending_cpu_irqs: 0,
+            pending_cpu_irqs: [0; 2],
             flash_thunks: std::collections::HashMap::new(),
             peripheral_ranges: Vec::new(),
             peripheral_hint: Cell::new(None),
@@ -2966,7 +3008,7 @@ mod tests {
             observers: Vec::new(),
             config: crate::SimulationConfig::default(),
             bit_band_enabled: true,
-            pending_cpu_irqs: 0,
+            pending_cpu_irqs: [0; 2],
             flash_thunks: std::collections::HashMap::new(),
             peripheral_ranges: Vec::new(),
             peripheral_hint: Cell::new(None),

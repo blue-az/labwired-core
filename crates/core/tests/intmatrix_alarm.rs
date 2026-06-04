@@ -105,11 +105,19 @@ fn intmatrix_alarm_full_irq_chain() {
 
     // Configure SYSTIMER ALARM0 — TRM-correct sequence (TARGET_CONF has no
     // enable bit; enable lives in SYSTIMER_CONF.target0_work_en at bit 24,
-    // commit handshake via COMP0_LOAD bit 0):
-    //   target = 20 SYSTIMER ticks (~100 CPU cycles at 80MHz CPU / 16MHz SYSTIMER)
+    // commit handshake via COMP0_LOAD bit 0).
+    //
+    // PERIOD (auto-reload) mode, period = 20 SYSTIMER ticks: the alarm fires
+    // every 20 ticks, exactly like the FreeRTOS systick. This exercises
+    // SUSTAINED IRQ delivery — the ISR acks INT_CLR each time and the chain
+    // re-fires on the next period boundary. A one-shot alarm fires exactly
+    // once → a single ISR → one GPIO2 toggle pair; the only reason a one-shot
+    // ever produced repeated toggles was a since-fixed latch bug (a stale
+    // routed pending_cpu_irqs bit spuriously re-entered the ISR after return).
     bus.write_u32((SYSTIMER_BASE + 0x1C) as u64, 0).unwrap(); // pending TARGET0_HI
-    bus.write_u32((SYSTIMER_BASE + 0x20) as u64, 20).unwrap(); // pending TARGET0_LO
-    bus.write_u32((SYSTIMER_BASE + 0x34) as u64, 0).unwrap(); // TARGET0_CONF: target mode, UNIT0
+    bus.write_u32((SYSTIMER_BASE + 0x20) as u64, 20).unwrap(); // pending TARGET0_LO (moot in period mode)
+    bus.write_u32((SYSTIMER_BASE + 0x34) as u64, (1u32 << 30) | 20)
+        .unwrap(); // TARGET0_CONF: PERIOD_MODE (bit30) + period=20, UNIT0
     bus.write_u32((SYSTIMER_BASE + 0x50) as u64, 1).unwrap(); // COMP0_LOAD: commit
                                                               // SYSTIMER_CONF: keep clk_en + unit0/1 work-en defaults (bits 31/30/29),
                                                               // additionally set target0_work_en (bit 24).

@@ -457,19 +457,28 @@ impl Peripheral for Systimer {
             } else {
                 unit0_counter
             };
-            // Detect rising edge: counter >= target with edge_latched still
-            // clear. On edge, latch + set sticky pending (visible via
-            // INT_RAW). For period-mode, bump target by period and re-arm
-            // the latch so the next period boundary can fire.
-            if counter >= alarm.target && !alarm.edge_latched {
+            // Fire when the counter reaches the target.
+            //
+            // PERIOD (auto-reload) mode is handled INDEPENDENTLY of
+            // `edge_latched`: real silicon re-arms automatically every
+            // `period` counts with no firmware intervention (no COMP_LOAD).
+            // We must not gate it behind `edge_latched`, because the FreeRTOS
+            // tick first arms the alarm one-shot, lets it fire once (latching
+            // edge_latched), THEN flips it to period mode via
+            // `systimer_ll_enable_alarm_period` with no COMP_LOAD — leaving a
+            // stale `edge_latched=true` and `target=0` that would wedge the
+            // alarm forever (one tick, then silence → idle cores never wake).
+            // On each period fire we rebase `target = counter + period`, which
+            // both keeps it periodic and repairs a stale/zero initial target.
+            if alarm.period_mode && alarm.period > 0 {
+                if counter >= alarm.target {
+                    alarm.pending = true;
+                    alarm.target = counter.saturating_add(alarm.period);
+                }
+            } else if counter >= alarm.target && !alarm.edge_latched {
+                // One-shot: fire once, latch until firmware re-arms (COMP_LOAD).
                 alarm.edge_latched = true;
                 alarm.pending = true;
-                if alarm.period_mode && alarm.period > 0 {
-                    alarm.target = alarm.target.saturating_add(alarm.period);
-                    // Allow the next edge (counter < new_target → counter
-                    // >= new_target) to re-fire without firmware intervention.
-                    alarm.edge_latched = false;
-                }
             }
             // Level-sensitive IRQ: while pending && int_ena, emit the
             // source on every tick. The bus aggregator OR's into
