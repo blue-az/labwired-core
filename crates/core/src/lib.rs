@@ -506,10 +506,12 @@ pub trait Bus {
         None
     }
 
-    /// Plan 3: bitmask of pending IRQ slots for `core_id` (0 = PRO_CPU,
-    /// 1 = APP_CPU), aggregated by the bus from peripheral tick results
-    /// routed through the per-core interrupt matrix. Default returns 0;
-    /// non-ESP32-S3 buses don't model this.
+    /// Bitmask of pending CPU IRQ slots the bus has aggregated for the given
+    /// core (`core_id` 0 = PRO_CPU, 1 = APP_CPU). On ESP32-S3 the per-core
+    /// interrupt matrix routes peripheral source IDs (and the crosscore_ipi
+    /// FROM_CPU sources) to each core; the classic-ESP32 dual-core path
+    /// delivers FROM_CPU IPIs via the DPORT interrupt matrix instead.
+    /// Default returns 0; non-ESP32 buses don't model this.
     fn pending_cpu_irqs(&self, _core_id: u8) -> u32 {
         0
     }
@@ -663,6 +665,7 @@ pub struct Machine<C: Cpu> {
     /// work (e.g. a UART with an RX stream attached before any MMIO write) get
     /// one chance to schedule their initial events. Always present; only read
     /// under the `event-scheduler` feature.
+    #[allow(dead_code)]
     scheduler_bootstrapped: bool,
 }
 
