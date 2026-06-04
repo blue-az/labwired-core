@@ -42,6 +42,7 @@
 //! * Latched edge (set on the event, cleared W1C via INT_CLR):
 //!   `TX_DONE`(b14) when the FIFO empties; `RXFIFO_OVF`(b4) on RX overflow;
 //!   `RXFIFO_TOUT`(b8) when RX data is waiting.
+//!
 //! `tick()` emits the UART interrupt-matrix source (UART0=27/1=28/2=29) while
 //! `INT_ST != 0`; the bus routes it through the per-core interrupt matrix like
 //! the systimer tick. Self-contained type, distinct from the STM32 `Uart`.
@@ -74,6 +75,7 @@ const INT_RXFIFO_OVF: u32 = 1 << 4;
 const INT_RXFIFO_TOUT: u32 = 1 << 8;
 const INT_TX_DONE: u32 = 1 << 14;
 /// Live (non-latched) interrupt conditions, recomputed from FIFO state.
+#[allow(dead_code)] // documents the live-IRQ mask; not yet read by the twin
 const LEVEL_BITS: u32 = INT_RXFIFO_FULL | INT_TXFIFO_EMPTY;
 
 // CONF0 FIFO-reset bits.
