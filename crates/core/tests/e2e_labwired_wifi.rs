@@ -2,54 +2,50 @@
 // Copyright (C) 2026 Andrii Shylenko
 // SPDX-License-Identifier: MIT
 //
-// End-to-end smoke test for the `labwired-ereader` Arduino-ESP32 sketch.
+// End-to-end bring-up harness for the ESP32 WiFi functional model.
 //
-// Goal: load the ereader's stock ELF (built with PlatformIO) into our
-// ESP32-classic sim, mirror the wasm playground's
-// `install_arduino_esp32_quirks` install path **minimally** by resolving
-// every thunk address from the ELF's symbol table (so the test isn't
-// pinned to one firmware build), and step long enough to either see the
-// UC8151D panel get a `refresh()` or stall.
+// Loads the arduino-esp32 WiFi fixture (examples/platformio/esp32-wifi-fixture)
+// into the ESP32-classic sim, installs the arduino-esp32 ROM thunks plus the
+// WiFi/lwIP socket thunks (`wifi_thunks`), stands up a `SimNet` with a virtual
+// AP + HTTP server, and steps the firmware expecting it to report `WIFI OK`
+// and `HTTP 200` over UART — proving real firmware reaches the in-sim
+// endpoints with no host network and no esp_wifi/lwIP internals running.
 //
-// This is the native-Rust counterpart to the wasm playground path —
-// same panel attach, same SP seed, same handshake bytes, same ROM
-// thunks, same step budget. The cross-core FROM_CPU yield IPI is
-// modeled in the core (DPORT interrupt matrix), not bridged here. If
-// this test paints, the firmware paints in the playground too.
+// STATUS: work-in-progress bring-up (e-reader-scale). The thunks load and
+// resolve against the fixture and the firmware boots, but it currently
+// aborts early in FreeRTOS/event-group init (~1.07M cycles) before reaching
+// setup(); `__assert_func` is routed to a diagnosing thunk that prints the
+// failing assertion so the next walls can be cleared one by one. `#[ignore]`d
+// (heavy, ~200M-cycle budget, and not yet green). Run with:
 //
-// Heavy and slow (~200M cycles in the worst case), so `#[ignore]`d by
-// default. Run with:
+//     cargo test -p labwired-core --test e2e_labwired_wifi -- --ignored --nocapture
 //
-//     cargo test -p labwired-core --test e2e_labwired_ereader \
-//         -- --ignored --nocapture
-//
-// Skips quietly with `[skip]` when the ELF isn't present — the test only
-// fires when a recently-built ereader image is at
-// `/tmp/labwired-ereader/build/labwired-ereader.ino.elf`, or wherever
-// `LABWIRED_EREADER_ELF` points.
+// Skips quietly when the fixture ELF isn't present (build it via `pio run`
+// in examples/platformio/esp32-wifi-fixture, or set `LABWIRED_WIFI_ELF`).
 
 use labwired_core::bus::SystemBus;
 use labwired_core::cpu::xtensa_lx7::XtensaLx7;
-use labwired_core::peripherals::components::Uc8151dTricolor290;
-use labwired_core::peripherals::esp32::spi::Esp32Spi;
-use labwired_core::peripherals::esp32s3::rom_thunks;
+use labwired_core::network::sim::{HttpResponse, HttpServer, SimNet};
+use labwired_core::peripherals::esp32s3::{rom_thunks, wifi_thunks};
 use labwired_core::system::xtensa::configure_xtensa_esp32;
 use labwired_core::{Cpu, Machine};
+use std::net::{Ipv4Addr, SocketAddrV4};
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 
-const DEFAULT_ELF: &str = "/tmp/labwired-ereader/build/labwired-ereader.ino.elf";
+const DEFAULT_ELF: &str = "/tmp/wifi-fixture/.pio/build/esp32dev/firmware.elf";
 
 #[test]
-#[ignore = "loads the 12MB labwired-ereader Arduino-ESP32 ELF and runs up to 200M cycles. \
-            Run with: cargo test -p labwired-core --test e2e_labwired_ereader -- --ignored --nocapture"]
-fn labwired_ereader_runs_to_panel_paint() {
-    let elf_path = std::env::var("LABWIRED_EREADER_ELF")
+#[ignore = "loads the arduino-esp32 WiFi fixture ELF and runs up to 200M cycles. \
+            Run with: cargo test -p labwired-core --test e2e_labwired_wifi -- --ignored --nocapture"]
+fn labwired_wifi_fixture_connects_and_gets() {
+    let elf_path = std::env::var("LABWIRED_WIFI_ELF")
         .map(PathBuf::from)
         .unwrap_or_else(|_| PathBuf::from(DEFAULT_ELF));
     if !elf_path.exists() {
         eprintln!(
-            "[skip] labwired-ereader ELF not found at {elf_path:?}; \
-             build labwired-ereader and/or set LABWIRED_EREADER_ELF to enable"
+            "[skip] WiFi fixture ELF not found at {elf_path:?}; build \
+             examples/platformio/esp32-wifi-fixture and/or set LABWIRED_WIFI_ELF"
         );
         return;
     }
@@ -57,21 +53,24 @@ fn labwired_ereader_runs_to_panel_paint() {
     let elf_bytes = std::fs::read(&elf_path).expect("read ELF");
     let image = labwired_loader::load_elf(&elf_path).expect("parse ELF");
 
-    // ── 1. Bring up an ESP32-classic and attach the UC8151D tri-color
-    //       panel to spi3 (same as install_arduino_esp32_quirks). The
-    //       default configure step doesn't attach a panel.
+    // ── 1. Bring up an ESP32-classic. Capture UART0 TX so we can see the
+    //       firmware's Serial output (the "WIFI OK" / "HTTP 200" markers).
     let mut bus = SystemBus::new();
     let cpu = configure_xtensa_esp32(&mut bus);
 
-    let spi3_idx = bus
-        .find_peripheral_index_by_name("spi3")
-        .expect("spi3 registered by configure_xtensa_esp32");
-    {
-        let any = bus.peripherals[spi3_idx].dev.as_any_mut().unwrap();
-        let spi3 = any.downcast_mut::<Esp32Spi>().unwrap();
-        spi3.attach(Box::new(Uc8151dTricolor290::new("GPIO5")));
-    }
+    let uart_sink: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
+    bus.attach_uart_tx_sink(uart_sink.clone(), false);
     bus.refresh_peripheral_index();
+
+    // ── 1b. Stand up the simulated network the lwIP thunks route to: a
+    //        WPA2 AP and an HTTP server at the SoftAP gateway answering
+    //        GET /status. Matches the fixture's http://192.168.4.1/status.
+    let mut net = SimNet::new();
+    net.listen(
+        SocketAddrV4::new(Ipv4Addr::new(192, 168, 4, 1), 80),
+        Arc::new(HttpServer::new().get("/status", HttpResponse::json(r#"{"ok":true}"#))),
+    );
+    wifi_thunks::install_sim_net(net);
 
     // Real dual-core: attach a second LX6 as APP_CPU (PRID 0xABAB →
     // xPortGetCoreID()==1, starts halted until PRO_CPU releases it via
@@ -332,24 +331,39 @@ fn labwired_ereader_runs_to_panel_paint() {
         "ulTaskGenericNotifyTake",
         rom_thunks::return_pd_true,
     );
-    push_named(&mut thunks, "spiStartBus", rom_thunks::spi_start_bus_fake);
-    push_named(
+    // WiFi + lwIP socket thunks — the firmware-reachability layer. Resolve
+    // each by its exact (possibly C++-mangled) symbol from the ELF and route
+    // to the simulated network. WiFi.begin/status short-circuit the esp_wifi
+    // blob; the lwIP BSD socket calls hit SimNet.
+    let push_sym =
+        |list: &mut Vec<(u32, rom_thunks::RomThunkFn)>, sym: &str, f: rom_thunks::RomThunkFn| {
+            if let Some(pc) = labwired_loader::resolve_symbol_in_elf(&elf_bytes, sym) {
+                list.push((pc, f));
+            } else {
+                eprintln!("[wifi-sim] symbol not found, skipping thunk: {sym}");
+            }
+        };
+    push_sym(
         &mut thunks,
-        "_ZN8SPIClass16beginTransactionE11SPISettings",
-        rom_thunks::spi_class_begin_transaction,
+        "_ZN12WiFiSTAClass5beginEPKcS1_lPKhb",
+        wifi_thunks::wifi_sta_begin,
     );
-
-    // GxEPD2 cmd/data → straight into the attached UC8151D panel.
-    push_named(
+    push_sym(
         &mut thunks,
-        "_ZN10GxEPD2_EPD13_writeCommandEh",
-        rom_thunks::gxepd_write_command,
+        "_ZN12WiFiSTAClass6statusEv",
+        wifi_thunks::wifi_sta_status,
     );
-    push_named(
-        &mut thunks,
-        "_ZN10GxEPD2_EPD10_writeDataEh",
-        rom_thunks::gxepd_write_data,
-    );
+    push_sym(&mut thunks, "lwip_socket", wifi_thunks::lwip_socket);
+    push_sym(&mut thunks, "lwip_connect", wifi_thunks::lwip_connect);
+    push_sym(&mut thunks, "lwip_send", wifi_thunks::lwip_send);
+    push_sym(&mut thunks, "lwip_write", wifi_thunks::lwip_send);
+    push_sym(&mut thunks, "lwip_recv", wifi_thunks::lwip_recv);
+    push_sym(&mut thunks, "lwip_read", wifi_thunks::lwip_recv);
+    push_sym(&mut thunks, "lwip_close", wifi_thunks::lwip_close);
+    push_sym(&mut thunks, "lwip_ioctl", wifi_thunks::lwip_ioctl);
+    push_sym(&mut thunks, "lwip_fcntl", wifi_thunks::lwip_fcntl);
+    push_sym(&mut thunks, "lwip_setsockopt", wifi_thunks::lwip_sockopt_ok);
+    push_sym(&mut thunks, "lwip_getsockopt", wifi_thunks::lwip_sockopt_ok);
 
     // xthal_window_spill_nw — semantic spill via shadow stack. Only the
     // `_nw` leaf (the actual spill loop that would trap on the displaced
@@ -366,10 +380,10 @@ fn labwired_ereader_runs_to_panel_paint() {
     );
 
     // Real-silicon noreturn — halt the CPU rather than letting assert →
-    // return turn into a tight loop.
+    // return turn into a tight loop. __assert_func gets a diagnosing thunk
+    // that prints the failed assertion before halting.
     for sym in &[
         "panic_abort",
-        "__assert_func",
         "abort",
         "__assert",
         "__cxa_pure_virtual",
@@ -377,6 +391,8 @@ fn labwired_ereader_runs_to_panel_paint() {
     ] {
         push_named(&mut thunks, sym, rom_thunks::abort_halt);
     }
+    push_sym(&mut thunks, "__assert_func", wifi_thunks::debug_assert_func);
+    push_sym(&mut thunks, "pcTaskGetName", wifi_thunks::pc_task_get_name);
 
     let installed = thunks.len();
     for (pc, f) in thunks {
@@ -431,76 +447,47 @@ fn labwired_ereader_runs_to_panel_paint() {
         if step_count.is_multiple_of(SAMPLE_EVERY) {
             samples.push((step_count, pc));
         }
-        // Early-exit once the panel has painted — keeps dual-core iteration
-        // fast (paint lands well before the 200M budget).
-        if step_count.is_multiple_of(200_000) {
-            if let Some(idx) = machine.bus.find_peripheral_index_by_name("spi3") {
-                if let Some(p) = machine.bus.peripherals[idx]
-                    .dev
-                    .as_any()
-                    .and_then(|a| a.downcast_ref::<Esp32Spi>())
-                    .and_then(|spi| {
-                        spi.attached_devices.iter().find_map(|d| {
-                            d.as_any()
-                                .and_then(|a| a.downcast_ref::<Uc8151dTricolor290>())
-                        })
-                    })
-                {
-                    if p.refresh_generation() >= 2 {
-                        break;
-                    }
-                }
-            }
+        // Early-exit once the firmware has printed its HTTP result.
+        if step_count.is_multiple_of(200_000)
+            && uart_sink.lock().unwrap().windows(5).any(|w| w == b"HTTP ")
+        {
+            break;
         }
     }
 
     // ── 5. Report.
     let final_pc = machine.cpu.get_pc();
+    let output = String::from_utf8_lossy(&uart_sink.lock().unwrap()).to_string();
 
-    // Pull the panel back out and read its state.
-    let spi3_idx = machine.bus.find_peripheral_index_by_name("spi3").unwrap();
-    let any = machine.bus.peripherals[spi3_idx].dev.as_any().unwrap();
-    let spi = any.downcast_ref::<Esp32Spi>().unwrap();
-    let panel = spi
-        .attached_devices
-        .iter()
-        .find_map(|d| {
-            d.as_any()
-                .and_then(|a| a.downcast_ref::<Uc8151dTricolor290>())
-        })
-        .expect("panel attached");
-    let refresh_gen = panel.refresh_generation();
-    let power_on = panel.power_on();
-    let txns = spi.transactions();
-
-    eprintln!("[ereader-sim] ── final state ─────────────────────────────────");
-    eprintln!("[ereader-sim] cycles executed:    {step_count}");
-    eprintln!("[ereader-sim] final PC:           0x{final_pc:08x}");
-    eprintln!("[ereader-sim] same-PC streak:     {same_pc_streak}");
-    eprintln!("[ereader-sim] panel refresh_gen:  {refresh_gen}");
-    eprintln!("[ereader-sim] panel power_on:     {power_on}");
-    eprintln!("[ereader-sim] SPI3 transactions:  {txns}");
+    eprintln!("[wifi-sim] ── final state ─────────────────────────────────");
+    eprintln!("[wifi-sim] cycles executed:    {step_count}");
+    eprintln!("[wifi-sim] final PC:           0x{final_pc:08x}");
+    eprintln!("[wifi-sim] same-PC streak:     {same_pc_streak}");
     if let Some(e) = &step_err {
-        eprintln!("[ereader-sim] cpu step error:    {e}");
+        eprintln!("[wifi-sim] cpu step error:    {e}");
     }
     if stalled {
-        eprintln!(
-            "[ereader-sim] STALLED at PC=0x{final_pc:08x} (same PC for {same_pc_streak} cycles)"
-        );
-        eprintln!("[ereader-sim] last 64 distinct PCs (oldest → newest):");
+        eprintln!("[wifi-sim] STALLED at PC=0x{final_pc:08x}");
+        eprintln!("[wifi-sim] last 64 distinct PCs (oldest → newest):");
         for p in last_distinct.iter() {
             eprintln!("    0x{p:08x}");
         }
     }
-    eprintln!("[ereader-sim] last 10 PC samples:");
+    eprintln!("[wifi-sim] ── UART output ─────────────────────────────────");
+    eprintln!("{output}");
+    eprintln!("[wifi-sim] last 10 PC samples:");
     for &(s, p) in samples.iter().rev().take(10) {
         eprintln!("    step {s:>10}: pc=0x{p:08x}");
     }
 
-    // ── 6. Verdict. Painting = at least one refresh().
+    // ── 6. Verdict: the firmware reported associated (WIFI OK) and the
+    //       in-sim HTTP server answered the GET (HTTP 200 + body).
     assert!(
-        refresh_gen >= 1,
-        "labwired-ereader did not reach a panel refresh in {step_count} cycles \
-         (final PC=0x{final_pc:08x}, refresh_gen={refresh_gen}, stalled={stalled})"
+        output.contains("WIFI OK"),
+        "WiFi never reported connected (final PC=0x{final_pc:08x}, stalled={stalled})\n--- UART ---\n{output}"
+    );
+    assert!(
+        output.contains("HTTP 200"),
+        "firmware did not get HTTP 200 from the in-sim server (final PC=0x{final_pc:08x})\n--- UART ---\n{output}"
     );
 }
