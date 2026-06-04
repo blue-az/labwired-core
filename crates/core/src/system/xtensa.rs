@@ -1106,6 +1106,46 @@ pub fn configure_xtensa_esp32s3(bus: &mut SystemBus, opts: &Esp32s3Opts) -> Esp3
         Box::new(crate::peripherals::esp32s3::uart::Esp32s3Uart::new(false, 29)),
     );
 
+    // ── Peripheral digital twins (PCNT / LEDC / TIMG0 / TIMG1) ───────────
+    // Registered AFTER the low_mmio/mmio_rest catch-alls so they win their
+    // own (higher-base) windows via the bus's last-start lookup — same
+    // discipline as the UARTs. Uniquely named (*_s3) so they never collide
+    // with the classic-ESP32 timg0/timg1 in the name-keyed snapshot. The TIMG
+    // twins model RTCCALICFG auto-RDY, which the bootloader's RTC-clock
+    // calibration busy-polls (a plain stub leaves RDY clear and hangs boot).
+    bus.add_peripheral(
+        "pcnt",
+        0x6001_7000,
+        0x1000,
+        None,
+        Box::new(crate::peripherals::esp32s3::pcnt::Esp32s3Pcnt::new(41)),
+    );
+    bus.add_peripheral(
+        "ledc",
+        0x6001_9000,
+        0x1000,
+        None,
+        Box::new(crate::peripherals::esp32s3::ledc::Esp32s3Ledc::new()),
+    );
+    bus.add_peripheral(
+        "timg0_s3",
+        0x6001_F000,
+        0x1000,
+        None,
+        Box::new(crate::peripherals::esp32s3::timer_group::Esp32s3TimerGroup::new(
+            50, 240_000_000,
+        )),
+    );
+    bus.add_peripheral(
+        "timg1_s3",
+        0x6002_0000,
+        0x1000,
+        None,
+        Box::new(crate::peripherals::esp32s3::timer_group::Esp32s3TimerGroup::new(
+            53, 240_000_000,
+        )),
+    );
+
     // Power-on register state the real boot ROM checks before booting from
     // flash. Values captured from silicon over JTAG: without them the ROM reads
     // reset-reason = 0 ("invalid reset") and boot-strap = 0 (DOWNLOAD mode) and
