@@ -142,6 +142,24 @@ def main():
         # the ROM's own startup copy lands real values (see function docstring).
         if name in KEY_BY_PADDR:
             populate_data_copy_sources(elf, img, base)
+        # Overlay PROGBITS sections that live in this window but are in NO
+        # PT_LOAD segment. The DROM `.rodata.interface` section (0x3FF1EE50..)
+        # is one: it holds `ets_rom_layout_p` at 0x3FF1FFFC, the pointer ESP-IDF
+        # dereferences for the chip's DRAM boundaries. Without it the pointer
+        # reads 0, the app builds a [0, DRAM_HIGH] region, and heap_caps_init
+        # aborts ("SOC_RESERVE_MEMORY_REGION ... overlaps"). The pointed-to
+        # ets_rom_layout struct itself is already inside the loaded .rodata.
+        sec = 0
+        for sh_addr, data in progbits_sections(elf):
+            if base <= sh_addr < base + size:
+                rel = sh_addr - base
+                # Only fill bytes the PT_LOAD pass left as zero (don't clobber).
+                for i, b in enumerate(data[: size - rel]):
+                    if img[rel + i] == 0:
+                        img[rel + i] = b
+                sec += 1
+        if sec:
+            print(f"  overlaid {sec} PROGBITS sections (non-PT_LOAD content)")
         (out / name).write_bytes(img)
         print(f"{out / name}: {size} bytes, {placed} segments (base 0x{base:08x})")
 
