@@ -1146,6 +1146,41 @@ pub fn configure_xtensa_esp32s3(bus: &mut SystemBus, opts: &Esp32s3Opts) -> Esp3
         )),
     );
 
+    // ── More twins (SAR-ADC / RMT / GP-SPI2 / GP-SPI3) ───────────────────
+    // Same registration discipline (after the catch-alls, *_s3 names so they
+    // never collide with the classic-ESP32 rmt/sar_adc/spi3 stubs in the
+    // name-keyed snapshot). SAR-ADC is touched by the 2nd-stage bootloader's
+    // RNG entropy enable, so its twin round-trips those writes + auto-completes
+    // any conversion-done bit (never blocks boot).
+    bus.add_peripheral(
+        "rmt_s3",
+        0x6001_6000,
+        0x1000,
+        None,
+        Box::new(crate::peripherals::esp32s3::rmt::Esp32s3Rmt::new(40)),
+    );
+    bus.add_peripheral(
+        "spi2_s3",
+        0x6002_4000,
+        0x1000,
+        None,
+        Box::new(crate::peripherals::esp32s3::gpspi::Esp32s3Spi::new(21)),
+    );
+    bus.add_peripheral(
+        "spi3_s3",
+        0x6002_5000,
+        0x1000,
+        None,
+        Box::new(crate::peripherals::esp32s3::gpspi::Esp32s3Spi::new(22)),
+    );
+    bus.add_peripheral(
+        "sar_adc_s3",
+        0x6004_0000,
+        0x1000,
+        None,
+        Box::new(crate::peripherals::esp32s3::sar_adc::Esp32s3SarAdc::new(64)),
+    );
+
     // Power-on register state the real boot ROM checks before booting from
     // flash. Values captured from silicon over JTAG: without them the ROM reads
     // reset-reason = 0 ("invalid reset") and boot-strap = 0 (DOWNLOAD mode) and
