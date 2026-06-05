@@ -73,16 +73,48 @@ fn collect_probe_regs(cluster: &RegisterCluster, parent_offset: u64, out: &mut V
     }
 }
 
-fn expand_probe_register(reg: &Register, parent_offset: u64, out: &mut Vec<ProbeReg>) {
+/// Effective access of an SVD register.
+///
+/// Register-level `<access>` is optional in the ESP32-S3 SVD — for most
+/// registers it lives on the FIELDS instead. A register whose every field is
+/// read-only cannot retain probe writes on real silicon either, so defaulting
+/// it to ReadWrite would misclassify it as an accept-and-ignore stub
+/// (Unmodelled) when the honest verdict is Indeterminate (probe can't tell;
+/// the per-peripheral FSM tests confirm it). Derive from the fields when the
+/// register itself doesn't declare an access.
+fn register_access(info: &svd_parser::svd::RegisterInfo) -> Access {
     use svd_parser::svd::Access as SvdAccess;
+    match info.properties.access {
+        Some(SvdAccess::ReadOnly) => return Access::ReadOnly,
+        Some(SvdAccess::WriteOnly) | Some(SvdAccess::WriteOnce) => return Access::WriteOnly,
+        Some(_) => return Access::ReadWrite,
+        None => {}
+    }
+    let mut saw_field = false;
+    let mut all_ro = true;
+    let mut all_wo = true;
+    for f in info.fields() {
+        saw_field = true;
+        match f.access {
+            Some(SvdAccess::ReadOnly) => all_wo = false,
+            Some(SvdAccess::WriteOnly) | Some(SvdAccess::WriteOnce) => all_ro = false,
+            _ => {
+                all_ro = false;
+                all_wo = false;
+            }
+        }
+    }
+    match (saw_field, all_ro, all_wo) {
+        (true, true, _) => Access::ReadOnly,
+        (true, _, true) => Access::WriteOnly,
+        _ => Access::ReadWrite,
+    }
+}
 
+fn expand_probe_register(reg: &Register, parent_offset: u64, out: &mut Vec<ProbeReg>) {
     match reg {
         Register::Single(info) => {
-            let access = match info.properties.access {
-                Some(SvdAccess::ReadOnly) => Access::ReadOnly,
-                Some(SvdAccess::WriteOnly) | Some(SvdAccess::WriteOnce) => Access::WriteOnly,
-                _ => Access::ReadWrite,
-            };
+            let access = register_access(info);
             let offset = parent_offset + info.address_offset as u64;
             let reset_value = info.properties.reset_value.unwrap_or(0) as u32;
             out.push(ProbeReg {
@@ -94,11 +126,7 @@ fn expand_probe_register(reg: &Register, parent_offset: u64, out: &mut Vec<Probe
         }
         Register::Array(info, dim) => {
             for i in 0..dim.dim {
-                let access = match info.properties.access {
-                    Some(SvdAccess::ReadOnly) => Access::ReadOnly,
-                    Some(SvdAccess::WriteOnly) | Some(SvdAccess::WriteOnce) => Access::WriteOnly,
-                    _ => Access::ReadWrite,
-                };
+                let access = register_access(info);
                 let offset = parent_offset
                     + info.address_offset as u64
                     + i as u64 * dim.dim_increment as u64;
@@ -218,9 +246,28 @@ fn build_matrix(svd: &[SvdPeripheral]) -> CoverageMatrix {
         // (e.g. uart0_s3) shadows a broader catch-all stub (e.g. low_mmio)
         // that has an equal base address, matching the actual dispatch behaviour
         // of read_u32 / write_u32.
-        let Some((_base, window_size)) = bus.resolve_window(sp.base) else {
+        let Some((win_base, win_size)) = bus.resolve_window(sp.base) else {
             continue;
         };
+        // The SVD base may sit INSIDE a broader covering window (a catch-all
+        // stub that spans several SVD peripherals). Probe offsets are applied
+        // from the SVD base, so clamp the probe window to the remaining span
+        // of the resolved window — otherwise the baseline samples (taken near
+        // the window's end) land PAST it on a different peripheral or on
+        // nothing, breaking the write_roundtrips detection and crediting
+        // generic storage as Modelled.
+        let mut window_size = (win_base + win_size).saturating_sub(sp.base);
+        // ALSO clamp at the next registered window start: under last-start-
+        // wins layering, a narrower twin (e.g. i2s0_s3 inside the low-MMIO
+        // catch-all) takes over dispatch above its start even though the
+        // covering window continues underneath. Baseline samples taken past
+        // that boundary would measure the TWIN's semantics (non-round-trip)
+        // and falsely certify the catch-all-backed registers below it as
+        // Modelled. Keeping the probe inside [sp.base, next_start) guarantees
+        // baseline and registers are served by the same peripheral entry.
+        if let Some(next_start) = bus.next_window_start(sp.base) {
+            window_size = window_size.min(next_start - sp.base);
+        }
 
         // NOTE: probes drive REAL model behavior (sentinel writes can fire FSMs). A
         // peripheral model that panics on a probe write must be fixed IN THE MODEL
@@ -294,6 +341,60 @@ pub fn run() -> Option<(CoverageMatrix, String)> {
 
 #[cfg(test)]
 mod tests {
+    use labwired_core::coverage::Access;
+
+    /// Register-level access is honored; field-level access is the fallback;
+    /// mixed or absent field access defaults to ReadWrite.
+    #[test]
+    fn register_access_derives_from_fields_when_register_level_absent() {
+        let svd = r#"<?xml version="1.0" encoding="utf-8"?>
+<device schemaVersion="1.1"><name>T</name>
+ <addressUnitBits>8</addressUnitBits><width>32</width>
+ <peripherals><peripheral><name>P</name><baseAddress>0x0</baseAddress>
+  <registers>
+   <register><name>REG_RW</name><addressOffset>0x0</addressOffset><access>read-write</access></register>
+   <register><name>REG_FIELDS_RO</name><addressOffset>0x4</addressOffset>
+    <fields>
+     <field><name>A</name><bitOffset>0</bitOffset><bitWidth>1</bitWidth><access>read-only</access></field>
+     <field><name>B</name><bitOffset>1</bitOffset><bitWidth>1</bitWidth><access>read-only</access></field>
+    </fields></register>
+   <register><name>REG_FIELDS_WO</name><addressOffset>0x8</addressOffset>
+    <fields>
+     <field><name>C</name><bitOffset>0</bitOffset><bitWidth>1</bitWidth><access>write-only</access></field>
+    </fields></register>
+   <register><name>REG_FIELDS_MIXED</name><addressOffset>0xC</addressOffset>
+    <fields>
+     <field><name>D</name><bitOffset>0</bitOffset><bitWidth>1</bitWidth><access>read-only</access></field>
+     <field><name>E</name><bitOffset>1</bitOffset><bitWidth>1</bitWidth><access>read-write</access></field>
+    </fields></register>
+   <register><name>REG_BARE</name><addressOffset>0x10</addressOffset></register>
+  </registers></peripheral></peripherals></device>"#;
+        let device = svd_parser::parse(svd).expect("parse");
+        let p = match &device.peripherals[0] {
+            svd_parser::svd::Peripheral::Single(i) => i,
+            svd_parser::svd::Peripheral::Array(i, _) => i,
+        };
+        let mut regs = Vec::new();
+        for cluster in p.registers.as_ref().unwrap() {
+            super::collect_probe_regs(cluster, 0, &mut regs);
+        }
+        let by_name = |n: &str| {
+            regs.iter()
+                .find(|r| r.name == n)
+                .unwrap_or_else(|| panic!("{n} missing"))
+                .access
+        };
+        assert_eq!(by_name("REG_RW"), Access::ReadWrite, "register-level wins");
+        assert_eq!(by_name("REG_FIELDS_RO"), Access::ReadOnly, "all fields RO");
+        assert_eq!(by_name("REG_FIELDS_WO"), Access::WriteOnly, "all fields WO");
+        assert_eq!(by_name("REG_FIELDS_MIXED"), Access::ReadWrite, "mixed");
+        assert_eq!(
+            by_name("REG_BARE"),
+            Access::ReadWrite,
+            "no info defaults RW"
+        );
+    }
+
     #[test]
     fn driver_runs_against_real_svd_if_present() {
         if super::discover_svd().is_none() {
