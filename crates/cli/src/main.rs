@@ -697,7 +697,7 @@ fn main() -> ExitCode {
 fn run_firmware(args: RunArgs) -> ExitCode {
     use labwired_core::boot::esp32s3::{fast_boot, BootOpts};
     use labwired_core::bus::SystemBus;
-    use labwired_core::system::xtensa::{configure_xtensa_esp32s3, Esp32s3Opts};
+    use labwired_core::system::xtensa::{configure_xtensa_esp32s3, Esp32s3BootMode, Esp32s3Opts};
     use labwired_core::SimulationError;
 
     // Read the chip YAML to validate the chip family.
@@ -733,6 +733,7 @@ fn run_firmware(args: RunArgs) -> ExitCode {
     let mut bus = SystemBus::new();
     let opts = Esp32s3Opts::default();
     let wiring = configure_xtensa_esp32s3(&mut bus, &opts);
+    let boot_mode = wiring.boot_mode; // Copy before cpu is moved out of wiring
 
     // Install default tracing GPIO observer.
     wiring.add_gpio_observer(
@@ -771,11 +772,20 @@ fn run_firmware(args: RunArgs) -> ExitCode {
         // the 2nd-stage bootloader + app and jumps to it — same path as
         // silicon. No fast_boot, no ELF pre-load, no handshake pre-paint.
         let _ = &elf_bytes; // ELF used only for symbol/diagnostic context
-        if std::env::var("LABWIRED_ESP32S3_ROM").is_err()
-            || std::env::var("LABWIRED_ESP32S3_FLASH").is_err()
-        {
+        // --rom-boot runs the genuine boot ROM. The ROM is auto-provisioned from
+        // the installed toolchain by configure_xtensa_esp32s3 (or pinned via
+        // LABWIRED_ESP32S3_ROM/_DROM); we only need the flash image here. If no
+        // real ROM was resolved we are in harness mode, where --rom-boot is
+        // meaningless — fail clearly.
+        if std::env::var("LABWIRED_ESP32S3_FLASH").is_err() {
+            eprintln!("error: --rom-boot needs LABWIRED_ESP32S3_FLASH set (the firmware flash image)");
+            return ExitCode::from(EXIT_CONFIG_ERROR);
+        }
+        if boot_mode != Esp32s3BootMode::Faithful {
             eprintln!(
-                "error: --rom-boot needs LABWIRED_ESP32S3_ROM and LABWIRED_ESP32S3_FLASH set"
+                "error: --rom-boot needs the real ESP32-S3 boot ROM, but none was found. \
+                 Install the ESP toolchain (PlatformIO/ESP-IDF) or set LABWIRED_ESP32S3_ROM_ELF \
+                 (or pin LABWIRED_ESP32S3_ROM/_DROM)."
             );
             return ExitCode::from(EXIT_CONFIG_ERROR);
         }
