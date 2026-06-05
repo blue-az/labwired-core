@@ -46,6 +46,15 @@ impl Default for Esp32s3Opts {
     }
 }
 
+/// Which ROM path the ESP32-S3 model booted on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Esp32s3BootMode {
+    /// Real Espressif boot ROM loaded (faithful path, zero thunks).
+    Faithful,
+    /// No ROM blob found — running on the thunk harness (degraded).
+    Harness,
+}
+
 /// Result of `configure_xtensa_esp32s3` — exposes the flash backings so the
 /// boot path can write to them (Task 8).
 ///
@@ -60,16 +69,6 @@ impl Default for Esp32s3Opts {
 /// later-loaded segment would overwrite the earlier one. So each window
 /// gets its own backing buffer; fast_boot picks the correct one based on
 /// which window the segment's vaddr falls into.
-
-/// Which ROM path the ESP32-S3 model booted on.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Esp32s3BootMode {
-    /// Real Espressif boot ROM loaded (faithful path, zero thunks).
-    Faithful,
-    /// No ROM blob found — running on the thunk harness (degraded).
-    Harness,
-}
-
 pub struct Esp32s3Wiring {
     pub cpu: XtensaLx7,
     pub icache_backing: Arc<Mutex<Vec<u8>>>,
@@ -849,14 +848,9 @@ pub fn configure_xtensa_esp32s3(bus: &mut SystemBus, opts: &Esp32s3Opts) -> Esp3
     // reads (e.g. virtual 0x3C80_0000) resolve. Fast-boot keeps the legacy
     // per-window static identity mapping over separate 4 MiB backings.
     // The proper model is selected whenever a real ROM is resolved — either
-    // from explicit env-pinned bins (LABWIRED_ESP32S3_ROM/_DROM) or
-    // auto-provisioned from the installed toolchain. Without a real ROM blob
-    // we fall back to fast-boot XIP with the thunk harness.
-    // Resolve the ROM once, up front: a real boot ROM (faithful path) drives the
-    // proper MMU-aware XIP model; without one we use fast-boot XIP + the thunk
-    // harness. proper_model and boot_mode are derived from the SAME decision so
-    // they can never diverge (the real ROM may be auto-provisioned from the
-    // toolchain with no env var, so keying proper_model on the env var was wrong).
+    // auto-provisioned from the installed toolchain or pinned via
+    // LABWIRED_ESP32S3_ROM/_DROM. Without a real ROM blob we fall back to
+    // fast-boot XIP with the thunk harness.
     let rom_images = crate::boot::esp32s3_rom::provision_rom_images();
     let proper_model = rom_images.is_some();
     // Shared flash backing for the proper-model path, loaded from the real

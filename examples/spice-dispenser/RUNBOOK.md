@@ -9,28 +9,18 @@ pio run -e esp32-s3
 # produces .pio/build/esp32-s3/firmware.factory.bin  (merged bootloader+parts+app)
 ```
 
-## 2. Generate the real ROM/DROM images (not vendored)
+## 2. Set the firmware flash image
 
-The ESP32-S3 boot ROM is Espressif-copyright; extract flat images from the copy
-that ships with the ESP toolchain:
+`LABWIRED_ESP32S3_FLASH` is the only required env var. The boot ROM is
+auto-provisioned from the installed ESP toolchain (PlatformIO or ESP-IDF):
 
 ```
-python3 core/scripts/make_esp32s3_rom_bins.py \
-    ~/.platformio/tools/tool-esp-rom-elfs/esp32s3_rev0_rom.elf  /tmp
-# writes /tmp/esp32s3_rom.bin (IROM, by load-address) and /tmp/esp32s3_drom.bin
+export LABWIRED_ESP32S3_FLASH=.../firmware/.pio/build/esp32-s3/firmware.factory.bin
 ```
-
-The script lays the IROM image by **load address** and reconstructs the boot
-ROM's `.data` copy sources, so the ROM's own startup initialises its pointers
-(e.g. `rom_cache_internal_table_ptr`) — required for the cache routines to run.
 
 ## 3. Run the faithful rom-boot in LabWired
 
 ```
-export LABWIRED_ESP32S3_ROM=/tmp/esp32s3_rom.bin
-export LABWIRED_ESP32S3_DROM=/tmp/esp32s3_drom.bin
-export LABWIRED_ESP32S3_FLASH=.../firmware/.pio/build/esp32-s3/firmware.factory.bin
-
 cargo run --release -p labwired-cli -- run \
     --chip configs/chips/esp32s3-zero.yaml \
     --firmware .../firmware/.pio/build/esp32-s3/firmware.elf \
@@ -40,6 +30,20 @@ cargo run --release -p labwired-cli -- run \
 Expected: the real ROM banner, the 2nd-stage bootloader `load:`/`entry` lines,
 then ESP-IDF app startup. Debugging hooks: `--break-at <pc>` (dump a0..a15 +
 window state on first hit, both cores) and `--watch-mem <addr>` (dump a u32).
+
+**Manual override / no-toolchain:** if the ESP toolchain is not installed, extract
+flat ROM images manually and pin them via env vars:
+
+```
+python3 core/scripts/make_esp32s3_rom_bins.py \
+    ~/.platformio/tools/tool-esp-rom-elfs/esp32s3_rev0_rom.elf  /tmp
+# writes /tmp/esp32s3_rom.bin and /tmp/esp32s3_drom.bin
+
+export LABWIRED_ESP32S3_ROM=/tmp/esp32s3_rom.bin
+export LABWIRED_ESP32S3_DROM=/tmp/esp32s3_drom.bin
+```
+
+Alternatively, point directly at the ROM ELF via `LABWIRED_ESP32S3_ROM_ELF`.
 
 ## 4. Validate on real hardware (the oracle)
 

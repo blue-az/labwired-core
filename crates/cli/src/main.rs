@@ -178,7 +178,9 @@ pub struct RunArgs {
     /// Boot from the real ROM reset vector (0x40000400) instead of fast-booting
     /// the ELF. The chip's real boot ROM runs and loads the 2nd-stage bootloader
     /// and app through the SPI-flash controller — the faithful chip-model path.
-    /// Requires LABWIRED_ESP32S3_ROM and LABWIRED_ESP32S3_FLASH to be set.
+    /// Requires LABWIRED_ESP32S3_FLASH (the firmware flash image). The boot ROM is
+    /// auto-provisioned from the installed ESP toolchain, or pinned via
+    /// LABWIRED_ESP32S3_ROM/_DROM (pre-extracted bins) or LABWIRED_ESP32S3_ROM_ELF.
     #[arg(long)]
     pub rom_boot: bool,
 
@@ -767,7 +769,7 @@ fn run_firmware(args: RunArgs) -> ExitCode {
     if args.rom_boot {
         // ── Faithful boot: run the real ROM from the reset vector ──────────
         // The CPU resets to 0x40000400 (BROM reset vector). With the real ROM
-        // (LABWIRED_ESP32S3_ROM) and the flash image behind the SPI-flash
+        // (auto-provisioned, or pinned via LABWIRED_ESP32S3_ROM) and the flash image behind the SPI-flash
         // controller (LABWIRED_ESP32S3_FLASH), the chip's own boot ROM loads
         // the 2nd-stage bootloader + app and jumps to it — same path as
         // silicon. No fast_boot, no ELF pre-load, no handshake pre-paint.
@@ -777,16 +779,16 @@ fn run_firmware(args: RunArgs) -> ExitCode {
         // LABWIRED_ESP32S3_ROM/_DROM); we only need the flash image here. If no
         // real ROM was resolved we are in harness mode, where --rom-boot is
         // meaningless — fail clearly.
-        if std::env::var("LABWIRED_ESP32S3_FLASH").is_err() {
-            eprintln!("error: --rom-boot needs LABWIRED_ESP32S3_FLASH set (the firmware flash image)");
-            return ExitCode::from(EXIT_CONFIG_ERROR);
-        }
         if boot_mode != Esp32s3BootMode::Faithful {
             eprintln!(
                 "error: --rom-boot needs the real ESP32-S3 boot ROM, but none was found. \
                  Install the ESP toolchain (PlatformIO/ESP-IDF) or set LABWIRED_ESP32S3_ROM_ELF \
                  (or pin LABWIRED_ESP32S3_ROM/_DROM)."
             );
+            return ExitCode::from(EXIT_CONFIG_ERROR);
+        }
+        if std::env::var("LABWIRED_ESP32S3_FLASH").is_err() {
+            eprintln!("error: --rom-boot needs LABWIRED_ESP32S3_FLASH set (the firmware flash image)");
             return ExitCode::from(EXIT_CONFIG_ERROR);
         }
         eprintln!(
