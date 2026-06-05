@@ -24,8 +24,14 @@
 //! | 0x28   | INT_ENA     | Enable mask                                    |
 //! | 0x2C   | INT_ST      | INT_RAW & INT_ENA                              |
 //! | 0x58.. | CMD0..CMD7  | 8 command slots; bit 31 = command_done         |
+//! | 0x100  | TXFIFO_START_ADDR | RO window into TX FIFO RAM (peek head)   |
+//! | 0x180  | RXFIFO_START_ADDR | RO window into RX FIFO RAM (peek head)   |
 //!
 //! All other offsets accept writes silently and read 0.
+//!
+//! The same model serves both controllers: I2C0 (base 0x6001_3000, source 42)
+//! and I2C1 (base 0x6002_7000, source 43) — construct the second instance with
+//! [`Esp32s3I2c::with_intr_source`].
 
 use std::cell::RefCell;
 
@@ -47,6 +53,14 @@ pub const I2C0_SIZE: u64 = 0x1000;
 /// interrupt-driven `i2c_master` returned `ESP_ERR_INVALID_STATE`.)
 pub const I2C0_INTR_SOURCE_ID: u32 = 42;
 
+pub const I2C1_BASE: u32 = 0x6002_7000;
+pub const I2C1_SIZE: u64 = 0x1000;
+
+/// ESP32-S3 I2C1 (I2C_EXT1) peripheral interrupt source number —
+/// `ETS_I2C_EXT1_INTR_SOURCE`, immediately after I2C_EXT0 (see the
+/// [`I2C0_INTR_SOURCE_ID`] doc for why the ordinal matters).
+pub const I2C1_INTR_SOURCE_ID: u32 = 43;
+
 // Core FSM / status registers
 const REG_CTR: u64 = 0x04;
 const REG_SR: u64 = 0x08;
@@ -60,6 +74,10 @@ const REG_INT_ENA: u64 = 0x28;
 const REG_INT_ST: u64 = 0x2C;
 const REG_CMD0: u64 = 0x58;
 const REG_CMD7: u64 = 0x74;
+// Read-only APB windows into the FIFO RAM (TRM §29.6: TXFIFO_START_ADDR /
+// RXFIFO_START_ADDR). Reading shows the FIFO head byte without consuming it.
+const REG_TXFIFO_START: u64 = 0x100;
+const REG_RXFIFO_START: u64 = 0x180;
 
 // Config / timing registers (SVD-sourced offsets, reset values, write masks)
 const REG_SCL_LOW_PERIOD: u64 = 0x00;
@@ -116,26 +134,28 @@ pub struct Esp32s3I2c {
     /// Set when a command-list run sets TRANS_COMPLETE & INT_ENA has it.
     /// Drained by `tick()` into the interrupt-matrix source aggregation.
     irq_pending: bool,
+    /// Interrupt-matrix source this instance asserts: 42 for I2C0, 43 for I2C1.
+    intr_source_id: u32,
 
     // Config / timing registers — masked storage (SVD-accurate reset values).
     // On write: stored = (stored & !mask) | (value & mask).  Reserved bits
     // read back their reset value, not arbitrary written data.
-    reg_scl_low_period: u32,      // 0x00  reset 0x0000_0000  mask 0x0000_01FF
-    reg_to: u32,                   // 0x0C  reset 0x0000_0010  mask 0x0000_003F
-    reg_sda_hold: u32,             // 0x30  reset 0x0000_0000  mask 0x0000_01FF
-    reg_sda_sample: u32,           // 0x34  reset 0x0000_0000  mask 0x0000_01FF
-    reg_scl_high_period: u32,      // 0x38  reset 0x0000_0000  mask 0x0000_FFFF
-    reg_scl_start_hold: u32,       // 0x40  reset 0x0000_0008  mask 0x0000_01FF
-    reg_scl_rstart_setup: u32,     // 0x44  reset 0x0000_0008  mask 0x0000_01FF
-    reg_scl_stop_hold: u32,        // 0x48  reset 0x0000_0008  mask 0x0000_01FF
-    reg_scl_stop_setup: u32,       // 0x4C  reset 0x0000_0008  mask 0x0000_01FF
-    reg_filter_cfg: u32,           // 0x50  reset 0x0000_0300  mask 0x0000_03FF
-    reg_clk_conf: u32,             // 0x54  reset 0x0020_0000  mask 0x003F_FFFF
-    reg_scl_st_time_out: u32,      // 0x78  reset 0x0000_0010  mask 0x0000_001F
+    reg_scl_low_period: u32,   // 0x00  reset 0x0000_0000  mask 0x0000_01FF
+    reg_to: u32,               // 0x0C  reset 0x0000_0010  mask 0x0000_003F
+    reg_sda_hold: u32,         // 0x30  reset 0x0000_0000  mask 0x0000_01FF
+    reg_sda_sample: u32,       // 0x34  reset 0x0000_0000  mask 0x0000_01FF
+    reg_scl_high_period: u32,  // 0x38  reset 0x0000_0000  mask 0x0000_FFFF
+    reg_scl_start_hold: u32,   // 0x40  reset 0x0000_0008  mask 0x0000_01FF
+    reg_scl_rstart_setup: u32, // 0x44  reset 0x0000_0008  mask 0x0000_01FF
+    reg_scl_stop_hold: u32,    // 0x48  reset 0x0000_0008  mask 0x0000_01FF
+    reg_scl_stop_setup: u32,   // 0x4C  reset 0x0000_0008  mask 0x0000_01FF
+    reg_filter_cfg: u32,       // 0x50  reset 0x0000_0300  mask 0x0000_03FF
+    reg_clk_conf: u32,         // 0x54  reset 0x0020_0000  mask 0x003F_FFFF
+    reg_scl_st_time_out: u32,  // 0x78  reset 0x0000_0010  mask 0x0000_001F
     reg_scl_main_st_time_out: u32, // 0x7C  reset 0x0000_0010  mask 0x0000_001F
-    reg_scl_sp_conf: u32,          // 0x80  reset 0x0000_0000  mask 0x0000_00FF
-    reg_scl_stretch_conf: u32,     // 0x84  reset 0x0000_0000  mask 0x0000_3FFF
-    reg_date: u32,                 // 0xF8  reset 0x2007_0201  mask 0xFFFF_FFFF
+    reg_scl_sp_conf: u32,      // 0x80  reset 0x0000_0000  mask 0x0000_00FF
+    reg_scl_stretch_conf: u32, // 0x84  reset 0x0000_0000  mask 0x0000_3FFF
+    reg_date: u32,             // 0xF8  reset 0x2007_0201  mask 0xFFFF_FFFF
 }
 
 impl Esp32s3I2c {
@@ -157,6 +177,7 @@ impl Esp32s3I2c {
             rx_fifo: RefCell::new(std::collections::VecDeque::with_capacity(FIFO_CAPACITY)),
             slaves: Vec::new(),
             irq_pending: false,
+            intr_source_id: I2C0_INTR_SOURCE_ID,
 
             // Config / timing registers initialised to SVD reset values.
             reg_scl_low_period: 0x0000_0000,
@@ -175,6 +196,15 @@ impl Esp32s3I2c {
             reg_scl_sp_conf: 0x0000_0000,
             reg_scl_stretch_conf: 0x0000_0000,
             reg_date: 0x2007_0201,
+        }
+    }
+
+    /// Construct an instance asserting a different interrupt-matrix source —
+    /// use [`I2C1_INTR_SOURCE_ID`] for the I2C1 controller at [`I2C1_BASE`].
+    pub fn with_intr_source(intr_source_id: u32) -> Self {
+        Self {
+            intr_source_id,
+            ..Self::new()
         }
     }
 
@@ -268,6 +298,9 @@ impl Peripheral for Esp32s3I2c {
             REG_SCL_SP_CONF => self.reg_scl_sp_conf,
             REG_SCL_STRETCH_CONF => self.reg_scl_stretch_conf,
             REG_DATE => self.reg_date,
+            // Read-only FIFO-RAM windows: peek the head byte, never consume.
+            REG_TXFIFO_START => self.tx_fifo.front().copied().unwrap_or(0) as u32,
+            REG_RXFIFO_START => self.rx_fifo.borrow().front().copied().unwrap_or(0) as u32,
             _ => 0,
         };
         if std::env::var("LABWIRED_I2C_TRACE").is_ok() {
@@ -347,9 +380,7 @@ impl Peripheral for Esp32s3I2c {
                     *slot = value;
                 }
             }
-            REG_SCL_ST_TIME_OUT => {
-                masked_write(&mut self.reg_scl_st_time_out, value, 0x0000_001F)
-            }
+            REG_SCL_ST_TIME_OUT => masked_write(&mut self.reg_scl_st_time_out, value, 0x0000_001F),
             REG_SCL_MAIN_ST_TIME_OUT => {
                 masked_write(&mut self.reg_scl_main_st_time_out, value, 0x0000_001F)
             }
@@ -377,7 +408,7 @@ impl Peripheral for Esp32s3I2c {
         // path is unaffected.
         self.irq_pending = false;
         if self.int_raw & self.int_ena != 0 {
-            explicit.push(I2C0_INTR_SOURCE_ID);
+            explicit.push(self.intr_source_id);
         }
         PeripheralTickResult {
             explicit_irqs: if explicit.is_empty() {
@@ -670,6 +701,70 @@ mod tests {
         assert_eq!(second, 0xBB);
     }
 
+    #[test]
+    fn txfifo_start_addr_window_peeks_tx_fifo_non_destructively() {
+        let mut p = Esp32s3I2c::new();
+        assert_eq!(
+            p.read_u32(REG_TXFIFO_START).unwrap(),
+            0,
+            "empty TX FIFO reads 0"
+        );
+        p.write_u32(REG_DATA, 0xAA).unwrap();
+        p.write_u32(REG_DATA, 0xBB).unwrap();
+        assert_eq!(p.read_u32(REG_TXFIFO_START).unwrap(), 0xAA);
+        assert_eq!(
+            p.read_u32(REG_TXFIFO_START).unwrap(),
+            0xAA,
+            "peek is non-destructive"
+        );
+        let sr = p.read_u32(REG_SR).unwrap();
+        assert_eq!((sr >> 18) & 0x3F, 2, "peek must not consume TX FIFO bytes");
+        // Read-only window: writes are ignored.
+        p.write_u32(REG_TXFIFO_START, 0xFFFF_FFFF).unwrap();
+        assert_eq!(p.read_u32(REG_TXFIFO_START).unwrap(), 0xAA);
+    }
+
+    #[test]
+    fn rxfifo_start_addr_window_peeks_rx_fifo_non_destructively() {
+        let p = Esp32s3I2c::new();
+        assert_eq!(
+            p.read_u32(REG_RXFIFO_START).unwrap(),
+            0,
+            "empty RX FIFO reads 0"
+        );
+        p.rx_fifo.borrow_mut().push_back(0x19);
+        p.rx_fifo.borrow_mut().push_back(0x00);
+        assert_eq!(p.read_u32(REG_RXFIFO_START).unwrap(), 0x19);
+        assert_eq!(
+            p.read_u32(REG_RXFIFO_START).unwrap(),
+            0x19,
+            "peek is non-destructive"
+        );
+        assert_eq!(
+            p.read_u32(REG_DATA).unwrap(),
+            0x19,
+            "DATA pop unaffected by peeks"
+        );
+    }
+
+    #[test]
+    fn i2c1_instance_asserts_its_own_intr_source() {
+        assert_eq!(I2C1_BASE, 0x6002_7000);
+        // ETS_I2C_EXT1_INTR_SOURCE — must be the ets_isr_source_t ordinal,
+        // immediately after ETS_I2C_EXT0_INTR_SOURCE (42).
+        assert_eq!(I2C1_INTR_SOURCE_ID, 43);
+        let mut p = Esp32s3I2c::with_intr_source(I2C1_INTR_SOURCE_ID);
+        // NACK on an empty bus with INT_ENA set → tick asserts source 43.
+        p.write_u32(REG_INT_ENA, INT_NACK).unwrap();
+        p.write_u32(REG_CMD0, cmd(CMD_RSTART, 0)).unwrap();
+        p.write_u32(REG_CMD0 + 4, cmd(CMD_WRITE, 1)).unwrap();
+        p.write_u32(REG_CMD0 + 8, cmd(CMD_STOP, 0)).unwrap();
+        p.write_u32(REG_DATA, 0xA0).unwrap();
+        p.write_u32(REG_CTR, CTR_TRANS_START_BIT).unwrap();
+        let r = p.tick();
+        assert_eq!(r.explicit_irqs, Some(vec![I2C1_INTR_SOURCE_ID]));
+    }
+
     use crate::peripherals::esp32s3::tmp102::Tmp102;
 
     #[test]
@@ -747,25 +842,69 @@ mod tests {
     #[test]
     fn i2c_config_registers_reset_values() {
         let p = Esp32s3I2c::new();
-        assert_eq!(p.read_u32(REG_SCL_LOW_PERIOD).unwrap(), 0x0000_0000, "SCL_LOW_PERIOD");
+        assert_eq!(
+            p.read_u32(REG_SCL_LOW_PERIOD).unwrap(),
+            0x0000_0000,
+            "SCL_LOW_PERIOD"
+        );
         assert_eq!(p.read_u32(REG_TO).unwrap(), 0x0000_0010, "TO");
         assert_eq!(p.read_u32(REG_SDA_HOLD).unwrap(), 0x0000_0000, "SDA_HOLD");
-        assert_eq!(p.read_u32(REG_SDA_SAMPLE).unwrap(), 0x0000_0000, "SDA_SAMPLE");
-        assert_eq!(p.read_u32(REG_SCL_HIGH_PERIOD).unwrap(), 0x0000_0000, "SCL_HIGH_PERIOD");
-        assert_eq!(p.read_u32(REG_SCL_START_HOLD).unwrap(), 0x0000_0008, "SCL_START_HOLD");
-        assert_eq!(p.read_u32(REG_SCL_RSTART_SETUP).unwrap(), 0x0000_0008, "SCL_RSTART_SETUP");
-        assert_eq!(p.read_u32(REG_SCL_STOP_HOLD).unwrap(), 0x0000_0008, "SCL_STOP_HOLD");
-        assert_eq!(p.read_u32(REG_SCL_STOP_SETUP).unwrap(), 0x0000_0008, "SCL_STOP_SETUP");
-        assert_eq!(p.read_u32(REG_FILTER_CFG).unwrap(), 0x0000_0300, "FILTER_CFG");
+        assert_eq!(
+            p.read_u32(REG_SDA_SAMPLE).unwrap(),
+            0x0000_0000,
+            "SDA_SAMPLE"
+        );
+        assert_eq!(
+            p.read_u32(REG_SCL_HIGH_PERIOD).unwrap(),
+            0x0000_0000,
+            "SCL_HIGH_PERIOD"
+        );
+        assert_eq!(
+            p.read_u32(REG_SCL_START_HOLD).unwrap(),
+            0x0000_0008,
+            "SCL_START_HOLD"
+        );
+        assert_eq!(
+            p.read_u32(REG_SCL_RSTART_SETUP).unwrap(),
+            0x0000_0008,
+            "SCL_RSTART_SETUP"
+        );
+        assert_eq!(
+            p.read_u32(REG_SCL_STOP_HOLD).unwrap(),
+            0x0000_0008,
+            "SCL_STOP_HOLD"
+        );
+        assert_eq!(
+            p.read_u32(REG_SCL_STOP_SETUP).unwrap(),
+            0x0000_0008,
+            "SCL_STOP_SETUP"
+        );
+        assert_eq!(
+            p.read_u32(REG_FILTER_CFG).unwrap(),
+            0x0000_0300,
+            "FILTER_CFG"
+        );
         assert_eq!(p.read_u32(REG_CLK_CONF).unwrap(), 0x0020_0000, "CLK_CONF");
-        assert_eq!(p.read_u32(REG_SCL_ST_TIME_OUT).unwrap(), 0x0000_0010, "SCL_ST_TIME_OUT");
+        assert_eq!(
+            p.read_u32(REG_SCL_ST_TIME_OUT).unwrap(),
+            0x0000_0010,
+            "SCL_ST_TIME_OUT"
+        );
         assert_eq!(
             p.read_u32(REG_SCL_MAIN_ST_TIME_OUT).unwrap(),
             0x0000_0010,
             "SCL_MAIN_ST_TIME_OUT"
         );
-        assert_eq!(p.read_u32(REG_SCL_SP_CONF).unwrap(), 0x0000_0000, "SCL_SP_CONF");
-        assert_eq!(p.read_u32(REG_SCL_STRETCH_CONF).unwrap(), 0x0000_0000, "SCL_STRETCH_CONF");
+        assert_eq!(
+            p.read_u32(REG_SCL_SP_CONF).unwrap(),
+            0x0000_0000,
+            "SCL_SP_CONF"
+        );
+        assert_eq!(
+            p.read_u32(REG_SCL_STRETCH_CONF).unwrap(),
+            0x0000_0000,
+            "SCL_STRETCH_CONF"
+        );
         assert_eq!(p.read_u32(REG_DATE).unwrap(), 0x2007_0201, "DATE");
     }
 
