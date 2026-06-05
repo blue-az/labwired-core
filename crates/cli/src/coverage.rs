@@ -200,7 +200,7 @@ impl ProbeTarget for BusTarget<'_> {
     }
 }
 
-pub fn build_matrix(svd: &[SvdPeripheral]) -> CoverageMatrix {
+fn build_matrix(svd: &[SvdPeripheral]) -> CoverageMatrix {
     use labwired_core::bus::SystemBus;
     use labwired_core::system::xtensa::{configure_xtensa_esp32s3, Esp32s3Opts};
 
@@ -213,14 +213,12 @@ pub fn build_matrix(svd: &[SvdPeripheral]) -> CoverageMatrix {
         let mut bus = SystemBus::new();
         let _ = configure_xtensa_esp32s3(&mut bus, &Esp32s3Opts::default());
 
-        // Find the bus peripheral window that contains this SVD peripheral's
-        // base address.
-        let window = bus
-            .peripherals
-            .iter()
-            .find(|e| sp.base >= e.base && sp.base < e.base + e.size)
-            .map(|e| e.size);
-        let Some(window_size) = window else {
+        // Resolve the window the same way the bus router does: last-start-wins
+        // binary search. This ensures that a narrower, later-registered twin
+        // (e.g. uart0_s3) shadows a broader catch-all stub (e.g. low_mmio)
+        // that has an equal base address, matching the actual dispatch behaviour
+        // of read_u32 / write_u32.
+        let Some((_base, window_size)) = bus.resolve_window(sp.base) else {
             continue;
         };
 

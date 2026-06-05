@@ -1882,6 +1882,18 @@ impl SystemBus {
         self.peripherals.iter().position(|p| p.name == name)
     }
 
+    /// Return the `(base, size)` of the peripheral the bus router would dispatch
+    /// `addr` to, using the same last-start-wins binary-search logic as
+    /// [`read_u32`] / [`write_u32`]. Unlike `iter().find()`, this correctly
+    /// resolves overlapping entries where a narrower, later-registered twin
+    /// (e.g. `uart0_s3`) shadows a broader catch-all stub (e.g. `low_mmio`)
+    /// that has an equal or lower base address.
+    pub fn resolve_window(&self, addr: u64) -> Option<(u64, u64)> {
+        let idx = self.find_peripheral_index(addr)?;
+        let p = &self.peripherals[idx];
+        Some((p.base, p.size))
+    }
+
     /// Translate a Cortex-M bit-band alias address to (physical_byte_addr, bit_index).
     ///
     /// Peripheral bit-band: alias 0x42000000–0x43FFFFFF → physical 0x40000000–0x400FFFFF
