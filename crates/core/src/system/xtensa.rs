@@ -60,10 +60,20 @@ impl Default for Esp32s3Opts {
 /// later-loaded segment would overwrite the earlier one. So each window
 /// gets its own backing buffer; fast_boot picks the correct one based on
 /// which window the segment's vaddr falls into.
+/// Which ROM path the ESP32-S3 model booted on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Esp32s3BootMode {
+    /// Real Espressif boot ROM loaded (faithful path, zero thunks).
+    Faithful,
+    /// No ROM blob found — running on the thunk harness (degraded).
+    Harness,
+}
+
 pub struct Esp32s3Wiring {
     pub cpu: XtensaLx7,
     pub icache_backing: Arc<Mutex<Vec<u8>>>,
     pub dcache_backing: Arc<Mutex<Vec<u8>>>,
+    pub boot_mode: Esp32s3BootMode,
 }
 
 impl Esp32s3Wiring {
@@ -898,56 +908,34 @@ pub fn configure_xtensa_esp32s3(bus: &mut SystemBus, opts: &Esp32s3Opts) -> Esp3
         (icache_backing, dcache_backing)
     };
 
-    // ── ROM: real silicon image (proper model) or thunk bank (legacy stopgap) ─
-    // The faithful model loads the chip's *actual* boot ROM (dumped from silicon
-    // over JTAG) so the firmware executes real ROM code — memset, memcpy,
-    // _xtos_*, the cache routines, libgcc — instead of Rust thunks that diverge.
-    // Opt-in via `LABWIRED_ESP32S3_ROM=<path to the 0x40000000 image>` (keeps
-    // Espressif's copyrighted ROM blob out of the tree); falls back to thunks.
-    let rom_loaded = match std::env::var("LABWIRED_ESP32S3_ROM") {
-        Ok(path) => match std::fs::read(&path) {
-            Ok(bytes) => {
-                let n = bytes.len().min(0x6_0000);
-                let rom = RamPeripheral::with_image(0x6_0000, &bytes);
-                bus.add_peripheral("rom", 0x4000_0000, 0x6_0000, None, Box::new(rom));
-                eprintln!(
-                    "configure_xtensa_esp32s3: loaded REAL ROM ({n} bytes) from {path} — thunks disabled"
-                );
-                true
-            }
-            Err(e) => {
-                eprintln!("configure_xtensa_esp32s3: LABWIRED_ESP32S3_ROM unreadable ({e}); using thunk bank");
-                false
-            }
-        },
-        Err(_) => false,
-    };
-    if !rom_loaded {
-        // ── ROM thunk bank (legacy) ──────────────────────────────────────
-        let mut rom_bank = RomThunkBank::new(0x4000_0000, 0x6_0000);
-        register_default_thunks(&mut rom_bank);
-        bus.add_peripheral("rom_thunks", 0x4000_0000, 0x6_0000, None, Box::new(rom_bank));
-    }
-
-    // ── ROM data (DROM) ───────────────────────────────────────────────────
-    // The real ROM code reads constants + function-pointer tables from DROM
-    // (0x3FF0_0000). Without it, ROM routines load 0 and jump to 0. Loaded
-    // from the silicon dump alongside the IROM (LABWIRED_ESP32S3_DROM).
-    if rom_loaded {
-        if let Ok(path) = std::env::var("LABWIRED_ESP32S3_DROM") {
-            match std::fs::read(&path) {
-                Ok(bytes) => {
-                    let drom = RamPeripheral::with_image(0x2_0000, &bytes);
-                    bus.add_peripheral("drom", 0x3FF0_0000, 0x2_0000, None, Box::new(drom));
-                    eprintln!(
-                        "configure_xtensa_esp32s3: loaded REAL DROM ({} bytes) from {path}",
-                        bytes.len().min(0x2_0000)
-                    );
-                }
-                Err(e) => eprintln!("configure_xtensa_esp32s3: LABWIRED_ESP32S3_DROM unreadable ({e})"),
-            }
+    // ── ROM: faithful real-silicon image (default) or thunk harness (fallback) ─
+    // provision_rom_images() resolves the ROM either from explicit pre-extracted
+    // bins (LABWIRED_ESP32S3_ROM/_DROM) or by discovering + extracting the ROM
+    // ELF from the installed toolchain. None → no blob available → thunk harness.
+    let boot_mode = match crate::boot::esp32s3_rom::provision_rom_images() {
+        Some(images) => {
+            let rom = RamPeripheral::with_image(0x6_0000, &images.irom);
+            bus.add_peripheral("rom", 0x4000_0000, 0x6_0000, None, Box::new(rom));
+            let drom = RamPeripheral::with_image(0x2_0000, &images.drom);
+            bus.add_peripheral("drom", 0x3FF0_0000, 0x2_0000, None, Box::new(drom));
+            eprintln!(
+                "configure_xtensa_esp32s3: faithful ROM loaded ({} B IROM, {} B DROM) — real boot ROM, zero thunks",
+                images.irom.len(),
+                images.drom.len()
+            );
+            Esp32s3BootMode::Faithful
         }
-    }
+        None => {
+            let mut rom_bank = RomThunkBank::new(0x4000_0000, 0x6_0000);
+            register_default_thunks(&mut rom_bank);
+            bus.add_peripheral("rom_thunks", 0x4000_0000, 0x6_0000, None, Box::new(rom_bank));
+            eprintln!(
+                "configure_xtensa_esp32s3: ESP32-S3 ROM not found; running in degraded harness mode \
+                 — install the ESP toolchain (or set LABWIRED_ESP32S3_ROM_ELF) for faithful simulation"
+            );
+            Esp32s3BootMode::Harness
+        }
+    };
 
     // ── USB_SERIAL_JTAG ───────────────────────────────────────────────────
     bus.add_peripheral(
@@ -1398,6 +1386,7 @@ pub fn configure_xtensa_esp32s3(bus: &mut SystemBus, opts: &Esp32s3Opts) -> Esp3
         cpu,
         icache_backing,
         dcache_backing,
+        boot_mode,
     }
 }
 
