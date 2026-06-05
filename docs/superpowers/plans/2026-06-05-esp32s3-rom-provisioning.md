@@ -582,7 +582,17 @@ git commit -m "feat(esp32s3): faithful real-ROM path is now the default (auto-pr
 
 ---
 
-## Task 6: Remove the dead `wifi_thunks` module
+## Task 6: ~~Remove the dead `wifi_thunks` module~~ — CANCELLED (not dead)
+
+> **CANCELLED 2026-06-05.** During execution, Task 6 was found invalid: `wifi_thunks`
+> is NOT dead code. `crates/core/tests/e2e_labwired_wifi.rs` (the ESP32-classic
+> WiFi functional-model bring-up harness) uses ~25 symbols from it (SimNet +
+> lwIP socket thunks). The original "dead code" assessment came from a grep that
+> scanned only `src/` and missed `tests/`. The module is left untouched — it is a
+> separate, out-of-scope WiFi workstream, not part of the S3 ROM path. The steps
+> below are retained for the record but were not executed.
+
+### Original (not executed):
 
 **Files:**
 - Modify: `crates/core/src/peripherals/esp32s3/mod.rs:41`

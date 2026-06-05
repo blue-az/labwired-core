@@ -102,7 +102,11 @@ toolchain for faithful simulation."
 - `configure_xtensa_esp32s3` defaults to the faithful path when the blob
   resolves; thunk harness retained as fallback (shared `RomThunkBank`, untouched
   for classic ESP32).
-- Delete `wifi_thunks.rs` — confirmed dead code (no references but its `mod`).
+- ~~Delete `wifi_thunks.rs`~~ **CORRECTION (2026-06-05):** `wifi_thunks.rs` is
+  NOT dead code — it is live ESP32-*classic* WiFi bring-up (SimNet + lwIP socket
+  thunks) exercised by `crates/core/tests/e2e_labwired_wifi.rs`. The earlier
+  "dead code" claim came from a `src/`-only grep that missed the test. It is a
+  separate, out-of-scope WiFi workstream and is left untouched.
 
 ### 5.3 Faithful-mode gate + telemetry
 - The model reports its boot mode (`faithful` | `harness`) and a count of
