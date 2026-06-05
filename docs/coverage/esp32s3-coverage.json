@@ -1021,31 +1021,14 @@
     ]
   },
   "I2C0": {
-    "modelled": 14,
+    "modelled": 31,
     "indeterminate": 0,
-    "unmodelled": 22,
+    "unmodelled": 5,
     "total": 36,
     "unmodelled_regs": [
-      "SCL_LOW_PERIOD",
-      "SR",
-      "TO",
       "DATA",
       "INT_CLR",
       "INT_STATUS",
-      "SDA_HOLD",
-      "SDA_SAMPLE",
-      "SCL_HIGH_PERIOD",
-      "SCL_START_HOLD",
-      "SCL_RSTART_SETUP",
-      "SCL_STOP_HOLD",
-      "SCL_STOP_SETUP",
-      "FILTER_CFG",
-      "CLK_CONF",
-      "SCL_ST_TIME_OUT",
-      "SCL_MAIN_ST_TIME_OUT",
-      "SCL_SP_CONF",
-      "SCL_STRETCH_CONF",
-      "DATE",
       "TXFIFO_START_ADDR",
       "RXFIFO_START_ADDR"
     ]
