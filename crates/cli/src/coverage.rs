@@ -222,54 +222,39 @@ fn build_matrix(svd: &[SvdPeripheral]) -> CoverageMatrix {
             continue;
         };
 
-        // Use catch_unwind so a peripheral model that panics on probe (e.g. RSA
-        // asserting zero-modulus when we write a sentinel) doesn't abort the
-        // entire driver. Those peripherals are marked indeterminate.
+        // NOTE: probes drive REAL model behavior (sentinel writes can fire FSMs). A
+        // peripheral model that panics on a probe write must be fixed IN THE MODEL
+        // (as the RSA zero-modulus guard was) — there is no runtime safety net here:
+        // the workspace builds with panic="abort", so catch_unwind would be a no-op.
         let name = sp.name.clone();
         let regs = sp.registers.clone();
         let base = sp.base;
 
-        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            let mut target = BusTarget {
-                bus: &mut bus,
-                base,
-            };
-            probe_peripheral(&mut target, &regs, window_size)
-        }));
+        let mut target = BusTarget {
+            bus: &mut bus,
+            base,
+        };
+        let results = probe_peripheral(&mut target, &regs, window_size);
 
-        let cov = match result {
-            Ok(results) => {
-                let mut cov = PeripheralCoverage {
-                    modelled: 0,
-                    indeterminate: 0,
-                    unmodelled: 0,
-                    total: results.len(),
-                    unmodelled_regs: Vec::new(),
-                };
-                for r in &results {
-                    match r.status {
-                        RegStatus::Modelled => cov.modelled += 1,
-                        RegStatus::Indeterminate => cov.indeterminate += 1,
-                        RegStatus::Unmodelled => {
-                            cov.unmodelled += 1;
-                            cov.unmodelled_regs.push(r.name.clone());
-                        }
+        let cov = {
+            let mut cov = PeripheralCoverage {
+                modelled: 0,
+                indeterminate: 0,
+                unmodelled: 0,
+                total: results.len(),
+                unmodelled_regs: Vec::new(),
+            };
+            for r in &results {
+                match r.status {
+                    RegStatus::Modelled => cov.modelled += 1,
+                    RegStatus::Indeterminate => cov.indeterminate += 1,
+                    RegStatus::Unmodelled => {
+                        cov.unmodelled += 1;
+                        cov.unmodelled_regs.push(r.name.clone());
                     }
                 }
-                cov
             }
-            Err(_) => {
-                // Probe panicked (e.g. RSA zero-modulus). Score all registers
-                // Indeterminate so the peripheral appears in the matrix but
-                // does not inflate either modelled or unmodelled counts.
-                PeripheralCoverage {
-                    modelled: 0,
-                    indeterminate: regs.len(),
-                    unmodelled: 0,
-                    total: regs.len(),
-                    unmodelled_regs: Vec::new(),
-                }
-            }
+            cov
         };
 
         matrix.insert(name, cov);
