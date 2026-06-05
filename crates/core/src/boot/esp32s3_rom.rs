@@ -1,0 +1,212 @@
+// LabWired - Firmware Simulation Platform
+// Copyright (C) 2026 Andrii Shylenko
+// SPDX-License-Identifier: MIT
+
+//! ESP32-S3 boot-ROM provisioning for the faithful `--rom-boot` path.
+//!
+//! The ESP32-S3 boot ROM is Espressif copyright and is NOT vendored. Instead
+//! we read the ROM ELF shipped with the user's installed toolchain and extract
+//! the two flat images the model loads:
+//!   * IROM (instruction bus) 0x4000_0000..0x4006_0000 (384 KiB)
+//!   * DROM (data bus)        0x3FF0_0000..0x3FF2_0000 (128 KiB)
+//!
+//! This is a Rust port of `scripts/make_esp32s3_rom_bins.py`: PT_LOAD laid by
+//! load-address (p_paddr) for IROM / vaddr for DROM, the boot ROM's `.data`
+//! copy-source reconstruction, and a PROGBITS overlay for sections that live
+//! in no PT_LOAD segment (e.g. `ets_rom_layout_p`).
+
+use goblin::elf::program_header::PT_LOAD;
+use goblin::elf::section_header::SHT_PROGBITS;
+use goblin::elf::Elf;
+
+pub const IROM_BASE: u32 = 0x4000_0000;
+pub const IROM_SIZE: usize = 0x6_0000; // 384 KiB
+pub const DROM_BASE: u32 = 0x3FF0_0000;
+pub const DROM_SIZE: usize = 0x2_0000; // 128 KiB
+
+const DRAM_LO: u32 = 0x3FC8_8000;
+const DRAM_HI: u32 = 0x3FD0_0000;
+
+/// Flat ROM images ready to load as `RamPeripheral`s at their window bases.
+pub struct RomImages {
+    pub irom: Vec<u8>,
+    pub drom: Vec<u8>,
+}
+
+/// Extract the IROM and DROM flat images from the genuine ROM ELF bytes.
+pub fn extract_rom_images(elf_bytes: &[u8]) -> Result<RomImages, String> {
+    let elf = Elf::parse(elf_bytes).map_err(|e| format!("parse ROM ELF: {e}"))?;
+    let irom = build_window(&elf, elf_bytes, IROM_BASE, IROM_SIZE, true);
+    let drom = build_window(&elf, elf_bytes, DROM_BASE, DROM_SIZE, false);
+    Ok(RomImages { irom, drom })
+}
+
+fn build_window(elf: &Elf, bytes: &[u8], base: u32, size: usize, by_paddr: bool) -> Vec<u8> {
+    let mut img = vec![0u8; size];
+    let win_end = base + size as u32;
+
+    // 1. PT_LOAD pass — IROM keyed by load address (p_paddr), DROM by vaddr.
+    for ph in &elf.program_headers {
+        if ph.p_type != PT_LOAD || ph.p_filesz == 0 {
+            continue;
+        }
+        let addr = if by_paddr { ph.p_paddr as u32 } else { ph.p_vaddr as u32 };
+        if addr >= base && addr < win_end {
+            let rel = (addr - base) as usize;
+            let off = ph.p_offset as usize;
+            let n = (ph.p_filesz as usize).min(size - rel);
+            if off + n <= bytes.len() {
+                img[rel..rel + n].copy_from_slice(&bytes[off..off + n]);
+            }
+        }
+    }
+
+    // 2. Reconstruct the boot ROM's `.data` copy sources (IROM window only).
+    if by_paddr {
+        populate_data_copy_sources(elf, bytes, &mut img, base);
+    }
+
+    // 3. Overlay PROGBITS sections that live in this window but in no PT_LOAD
+    //    segment (e.g. the DROM `.rodata.interface` holding `ets_rom_layout_p`).
+    //    Only fill bytes the PT_LOAD pass left as zero.
+    for (sh_addr, data) in progbits_sections(elf, bytes) {
+        if sh_addr >= base && sh_addr < win_end {
+            let rel = (sh_addr - base) as usize;
+            let n = data.len().min(size - rel);
+            for i in 0..n {
+                if img[rel + i] == 0 {
+                    img[rel + i] = data[i];
+                }
+            }
+        }
+    }
+
+    img
+}
+
+/// (sh_addr, bytes) for every SHT_PROGBITS section with an address + content,
+/// sorted by address.
+fn progbits_sections<'a>(elf: &Elf, bytes: &'a [u8]) -> Vec<(u32, &'a [u8])> {
+    let mut v: Vec<(u32, &[u8])> = Vec::new();
+    for sh in &elf.section_headers {
+        if sh.sh_type == SHT_PROGBITS && sh.sh_size != 0 && sh.sh_addr != 0 {
+            let off = sh.sh_offset as usize;
+            let sz = sh.sh_size as usize;
+            if off + sz <= bytes.len() {
+                v.push((sh.sh_addr as u32, &bytes[off..off + sz]));
+            }
+        }
+    }
+    v.sort_by_key(|(a, _)| *a);
+    v
+}
+
+/// Walk the in-image 16-byte copy-table quads (dst_start, dst_end, src, 0) and
+/// fill each `src` LMA in the IROM image with the genuine bytes the matching
+/// DRAM `dst` section holds, so the ROM's own startup copy lands real values.
+fn populate_data_copy_sources(elf: &Elf, bytes: &[u8], irom: &mut [u8], irom_base: u32) {
+    let sections = progbits_sections(elf, bytes);
+    let vma_read = |addr: u32, n: usize| -> Vec<u8> {
+        let mut out = vec![0u8; n];
+        for (sa, data) in &sections {
+            let sa = *sa;
+            let end = sa + data.len() as u32;
+            if sa <= addr + n as u32 && addr < end {
+                let lo = addr.max(sa);
+                let hi = (addr + n as u32).min(end);
+                out[(lo - addr) as usize..(hi - addr) as usize]
+                    .copy_from_slice(&data[(lo - sa) as usize..(hi - sa) as usize]);
+            }
+        }
+        out
+    };
+
+    let irom_hi = irom_base + irom.len() as u32;
+    let mut off = 0usize;
+    while off + 16 <= irom.len() {
+        let dst_s = u32::from_le_bytes(irom[off..off + 4].try_into().unwrap());
+        let dst_e = u32::from_le_bytes(irom[off + 4..off + 8].try_into().unwrap());
+        let src = u32::from_le_bytes(irom[off + 8..off + 12].try_into().unwrap());
+        let term = u32::from_le_bytes(irom[off + 12..off + 16].try_into().unwrap());
+        let ok = DRAM_LO <= dst_s
+            && dst_s < DRAM_HI
+            && dst_s <= dst_e
+            && dst_e < DRAM_HI
+            && irom_base <= src
+            && src < irom_hi
+            && term == 0
+            && dst_e.wrapping_sub(dst_s) < 0x1_0000;
+        if ok {
+            let n = (dst_e - dst_s) as usize;
+            if n != 0 {
+                let vals = vma_read(dst_s, n);
+                if vals.iter().any(|&b| b != 0) {
+                    let rel = (src - irom_base) as usize;
+                    let n2 = n.min(irom.len().saturating_sub(rel));
+                    irom[rel..rel + n2].copy_from_slice(&vals[..n2]);
+                }
+            }
+            off += 16;
+        } else {
+            off += 4;
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Minimal little-endian ELF32 with one PT_LOAD program header, used to
+    /// verify the window-builder places file bytes at the right window offset.
+    fn synthetic_elf_one_ptload(vaddr: u32, paddr: u32, payload: &[u8]) -> Vec<u8> {
+        // Layout: [ehdr 52][phdr 32][payload]
+        let e_phoff = 52u32;
+        let e_phentsize = 32u16;
+        let p_offset = (52 + 32) as u32;
+        let mut elf = vec![0u8; p_offset as usize + payload.len()];
+        elf[0..4].copy_from_slice(b"\x7fELF");
+        elf[4] = 1; // ELFCLASS32
+        elf[5] = 1; // little-endian
+        elf[6] = 1; // version
+        // e_type=ET_EXEC(2), e_machine=94 (Xtensa), e_version=1
+        elf[16..18].copy_from_slice(&2u16.to_le_bytes());
+        elf[18..20].copy_from_slice(&94u16.to_le_bytes());
+        elf[20..24].copy_from_slice(&1u32.to_le_bytes());
+        elf[28..32].copy_from_slice(&e_phoff.to_le_bytes()); // e_phoff
+        elf[42..44].copy_from_slice(&e_phentsize.to_le_bytes()); // e_phentsize
+        elf[44..46].copy_from_slice(&1u16.to_le_bytes()); // e_phnum = 1
+        // program header (ELF32): type, offset, vaddr, paddr, filesz, memsz, flags, align
+        let ph = e_phoff as usize;
+        elf[ph..ph + 4].copy_from_slice(&1u32.to_le_bytes()); // PT_LOAD
+        elf[ph + 4..ph + 8].copy_from_slice(&p_offset.to_le_bytes());
+        elf[ph + 8..ph + 12].copy_from_slice(&vaddr.to_le_bytes());
+        elf[ph + 12..ph + 16].copy_from_slice(&paddr.to_le_bytes());
+        elf[ph + 16..ph + 20].copy_from_slice(&(payload.len() as u32).to_le_bytes());
+        elf[ph + 20..ph + 24].copy_from_slice(&(payload.len() as u32).to_le_bytes());
+        elf[ph + 24..ph + 28].copy_from_slice(&4u32.to_le_bytes());
+        elf[ph + 28..ph + 32].copy_from_slice(&4u32.to_le_bytes());
+        elf[p_offset as usize..].copy_from_slice(payload);
+        elf
+    }
+
+    #[test]
+    fn irom_window_keyed_by_paddr() {
+        // A segment whose paddr is in the IROM window but vaddr is elsewhere
+        // (mirrors the ROM's .data stored at an IROM LMA) must land in IROM.
+        let payload = [0xAA, 0xBB, 0xCC, 0xDD];
+        let elf = synthetic_elf_one_ptload(0x3FCD_7E00, IROM_BASE + 0x100, &payload);
+        let images = extract_rom_images(&elf).expect("extract");
+        assert_eq!(images.irom.len(), IROM_SIZE);
+        assert_eq!(&images.irom[0x100..0x104], &payload);
+    }
+
+    #[test]
+    fn drom_window_keyed_by_vaddr() {
+        let payload = [0x11, 0x22, 0x33, 0x44];
+        let elf = synthetic_elf_one_ptload(DROM_BASE + 0x200, 0xDEAD_0000, &payload);
+        let images = extract_rom_images(&elf).expect("extract");
+        assert_eq!(images.drom.len(), DROM_SIZE);
+        assert_eq!(&images.drom[0x200..0x204], &payload);
+    }
+}
