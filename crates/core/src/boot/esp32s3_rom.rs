@@ -156,6 +156,64 @@ fn populate_data_copy_sources(elf: &Elf, bytes: &[u8], irom: &mut [u8], irom_bas
     }
 }
 
+/// Resolve the ROM images for the faithful path, or `None` to fall back to
+/// the thunk harness.
+///
+/// Order: explicit pre-extracted `LABWIRED_ESP32S3_ROM`/`_DROM` bins (back-compat)
+/// → discover the toolchain ROM ELF, extract (cached by ELF content hash), load.
+pub fn provision_rom_images() -> Option<RomImages> {
+    // 1. Back-compat: explicit pre-extracted flat bins still win.
+    if let (Ok(rp), Ok(dp)) = (
+        std::env::var("LABWIRED_ESP32S3_ROM"),
+        std::env::var("LABWIRED_ESP32S3_DROM"),
+    ) {
+        if let (Ok(irom), Ok(drom)) = (std::fs::read(&rp), std::fs::read(&dp)) {
+            return Some(RomImages { irom, drom });
+        }
+    }
+
+    // 2. Discover + extract (cached).
+    let elf_path = discover_rom_elf()?;
+    let elf_bytes = std::fs::read(&elf_path).ok()?;
+    let key = fnv1a_64(&elf_bytes);
+    let dir = cache_dir();
+    let irom_path = dir.join(format!("esp32s3_irom_{key:016x}.bin"));
+    let drom_path = dir.join(format!("esp32s3_drom_{key:016x}.bin"));
+
+    if let (Ok(irom), Ok(drom)) = (std::fs::read(&irom_path), std::fs::read(&drom_path)) {
+        if irom.len() == IROM_SIZE && drom.len() == DROM_SIZE {
+            return Some(RomImages { irom, drom });
+        }
+    }
+
+    let images = extract_rom_images(&elf_bytes).ok()?;
+    let _ = std::fs::create_dir_all(&dir);
+    let _ = std::fs::write(&irom_path, &images.irom);
+    let _ = std::fs::write(&drom_path, &images.drom);
+    Some(images)
+}
+
+/// Cache directory for extracted ROM images (`$XDG_CACHE_HOME` or `~/.cache`).
+fn cache_dir() -> PathBuf {
+    if let Ok(x) = std::env::var("XDG_CACHE_HOME") {
+        return PathBuf::from(x).join("labwired/esp32s3-rom");
+    }
+    if let Ok(home) = std::env::var("HOME") {
+        return PathBuf::from(home).join(".cache/labwired/esp32s3-rom");
+    }
+    std::env::temp_dir().join("labwired-esp32s3-rom")
+}
+
+/// FNV-1a 64-bit hash (no extra deps; stable cache key across runs).
+fn fnv1a_64(bytes: &[u8]) -> u64 {
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+    for &b in bytes {
+        h ^= b as u64;
+        h = h.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    h
+}
+
 /// Locate the genuine ESP32-S3 ROM ELF in the user's installed toolchain.
 ///
 /// Preference order:
@@ -194,6 +252,10 @@ pub fn discover_rom_elf() -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
+    // Serialises tests that mutate process-wide LABWIRED_ESP32S3_* env vars,
+    // since cargo runs tests in parallel threads.
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     /// Minimal little-endian ELF32 with one PT_LOAD program header, used to
     /// verify the window-builder places file bytes at the right window offset.
@@ -433,12 +495,33 @@ mod tests {
 
     #[test]
     fn explicit_env_override_wins_for_discovery() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         // A path set via LABWIRED_ESP32S3_ROM_ELF that exists is returned as-is.
         let tmp = std::env::temp_dir().join("labwired_test_rom_elf.bin");
         std::fs::write(&tmp, b"\x7fELF").unwrap();
         std::env::set_var("LABWIRED_ESP32S3_ROM_ELF", &tmp);
         let found = discover_rom_elf().expect("env override should resolve");
         assert_eq!(found, tmp);
+        std::env::remove_var("LABWIRED_ESP32S3_ROM_ELF");
+        let _ = std::fs::remove_file(&tmp);
+    }
+
+    #[test]
+    fn provision_extracts_and_caches_from_elf_path() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let payload = [0x5A, 0x5B, 0x5C, 0x5D];
+        let elf = synthetic_elf_one_ptload(IROM_BASE + 0x40, IROM_BASE + 0x40, &payload);
+        let tmp = std::env::temp_dir().join("labwired_test_provision_rom.elf");
+        std::fs::write(&tmp, &elf).unwrap();
+        std::env::set_var("LABWIRED_ESP32S3_ROM_ELF", &tmp);
+        // Ensure the env pre-extracted-bins path is not taken.
+        std::env::remove_var("LABWIRED_ESP32S3_ROM");
+        std::env::remove_var("LABWIRED_ESP32S3_DROM");
+
+        let images = provision_rom_images().expect("provision");
+        assert_eq!(images.irom.len(), IROM_SIZE);
+        assert_eq!(&images.irom[0x40..0x44], &payload);
+
         std::env::remove_var("LABWIRED_ESP32S3_ROM_ELF");
         let _ = std::fs::remove_file(&tmp);
     }
