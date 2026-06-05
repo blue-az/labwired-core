@@ -753,6 +753,36 @@ mod tests {
     }
 
     #[test]
+    fn modexp_zero_modulus_completes_without_panic() {
+        // Regression: writing 1 to MODEXP_START with an all-zero M_MEM must
+        // complete (done bit set) rather than panic. The zero-modulus guard in
+        // run_modexp calls self.complete() and returns early instead of reaching
+        // the BigUint::modpow / rem path that would assert.
+        let mut p = Esp32s3Rsa::new(ETS_RSA_INTR_SOURCE);
+        // MODE = 0 (1 word). M_MEM stays all-zero (default).
+        wr(&mut p, OFF_LENGTH, 0);
+        load_operand(&mut p, OFF_X_MEM, &[4]);
+        load_operand(&mut p, OFF_Y_MEM, &[13]);
+        // Deliberately do NOT load M_MEM — it stays all-zero.
+        assert_eq!(rd(&p, OFF_QUERY_INTERRUPT), 0, "idle before op");
+        wr(&mut p, OFF_MODEXP_START, 1); // must not panic
+        assert_eq!(rd(&p, OFF_QUERY_INTERRUPT), 1, "done after zero-modulus op");
+    }
+
+    #[test]
+    fn modmult_zero_modulus_completes_without_panic() {
+        // Analogous regression for MODMULT_START.
+        let mut p = Esp32s3Rsa::new(ETS_RSA_INTR_SOURCE);
+        wr(&mut p, OFF_LENGTH, 0);
+        load_operand(&mut p, OFF_X_MEM, &[123]);
+        load_operand(&mut p, OFF_Y_MEM, &[456]);
+        // M_MEM stays all-zero.
+        assert_eq!(rd(&p, OFF_QUERY_INTERRUPT), 0, "idle before op");
+        wr(&mut p, OFF_MODMULT_START, 1); // must not panic
+        assert_eq!(rd(&p, OFF_QUERY_INTERRUPT), 1, "done after zero-modulus op");
+    }
+
+    #[test]
     fn bignum_matches_reference_arithmetic() {
         // Cross-check the in-house BigUint against u128 ground truth.
         let a = BigUint::from_le_words(&[0xFFFF_FFFF, 0x0000_00FF]);
