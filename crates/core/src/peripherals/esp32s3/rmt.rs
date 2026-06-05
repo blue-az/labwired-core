@@ -69,6 +69,16 @@ const TX_CHANNELS: usize = 4;
 /// Number of RX channels (4..7).
 const RX_CHANNELS: usize = 4;
 
+/// Total channels (0..7) exposing a CHnDATA APB-FIFO port at 0x00..0x1C.
+const TOTAL_CHANNELS: usize = 8;
+/// RMT per-channel RAM depth on the ESP32-S3 (48 × 32-bit entries per block).
+const RMT_RAM_WORDS: usize = 48;
+
+/// CARRIER_DUTY reset default (ESP32-S3 SVD): high-duty 0x40, low-duty 0x40.
+const CARRIER_DUTY_RESET: u32 = 0x0040_0040;
+/// RX_STATUS read-only idle/reset constant (ESP32-S3 SVD reset 0x0006_00C0).
+const RX_STATUS_IDLE: u32 = 0x0006_00C0;
+
 /// Size of the modeled register block: `RMT_DATE` at 0xCC + 4 = 0xD0.
 /// RMTMEM (the symbol RAM) lives separately at base + 0x400 and is NOT modeled
 /// here.
@@ -122,6 +132,37 @@ pub struct Esp32s3Rmt {
     /// CH4..7 RX_LIM. Offsets 0xB0..0xBC.
     rx_lim: [u32; RX_CHANNELS],
 
+    /// CH0..3 CARRIER_DUTY. Offsets 0x80, 0x84, 0x88, 0x8C. Fully writable TX
+    /// carrier high(31:16)/low(15:0) duty; reset 0x0040_0040.
+    carrier_duty: [u32; TX_CHANNELS],
+    /// CH4..7 RX_CARRIER_RM. Offsets 0x90, 0x94, 0x98, 0x9C. Fully writable RX
+    /// carrier-removal config; reset 0.
+    rx_carrier_rm: [u32; RX_CHANNELS],
+
+    /// Per-channel APB-FIFO RAM shadow for CHnDATA (0x00..0x1C, channels 0..7).
+    ///
+    /// This models the **APB-FIFO access path** into each channel's RMT RAM
+    /// (distinct from RMTMEM at base+0x400, which the parent maps separately).
+    /// Writing CHnDATA pushes a 32-bit RMT entry via an auto-incrementing write
+    /// pointer (`ch_wr`); the index wraps mod [`RMT_RAM_WORDS`] so arbitrary
+    /// input never overflows nor panics.
+    ///
+    /// Reads are **non-destructive** and return the most-recently-written word.
+    /// A pop-on-read FIFO is impossible here because `read_word(&self)` is
+    /// immutable (shared by the `Peripheral::read` trait path and every other
+    /// register), so a read pointer could not advance; a destructive read would
+    /// also corrupt FIFO state on the byte-RMW write path (which calls
+    /// `read_word` then `write_word`). The non-destructive, write-pointer-only
+    /// design is both faithful (write-then-read returns the written word, as the
+    /// APB-FIFO does) and robust to byte-level access.
+    ///
+    /// Note: the TX engine in this model is fire-and-complete and does NOT
+    /// replay buffered symbols — a known FSM-depth limit consistent with the
+    /// model's functional-not-cycle-exact scope.
+    ch_mem: [[u32; RMT_RAM_WORDS]; TOTAL_CHANNELS],
+    /// Per-channel auto-incrementing write pointer for the CHnDATA APB-FIFO.
+    ch_wr: [usize; TOTAL_CHANNELS],
+
     /// SYS_CONF (0xC0): clk src/enable, fractional divider, mem clk.
     sys_conf: u32,
     /// TX_SIM (0xC4): synchronous-TX-start config.
@@ -146,17 +187,19 @@ impl Esp32s3Rmt {
             // RX CONF0 reset default: DIV_CNT=2 (bits[7:0]), IDLE_THRES=32767
             // (bits[22:8] = 0x7FFF<<8), MEM_SIZE=1 (bits[27:24]),
             // CARRIER_EN=1 (28), CARRIER_OUT_LV=1 (29).
-            rx_conf0: [(2)
-                | (0x7FFF << 8)
-                | (1 << 24)
-                | (1 << 28)
-                | (1 << 29); RX_CHANNELS],
+            rx_conf0: [(2) | (0x7FFF << 8) | (1 << 24) | (1 << 28) | (1 << 29); RX_CHANNELS],
             // RX CONF1 reset default: MEM_OWNER=1 (bit 3), RX_FILTER_THRES=15
             // (bits[12:5] = 15<<5 = 0x1E0) → 0x1E8.
             rx_conf1: [(1 << 3) | (15 << 5); RX_CHANNELS],
             // TX_LIM / RX_LIM reset default: 128 (bits[8:0]).
             tx_lim: [128; TX_CHANNELS],
             rx_lim: [128; RX_CHANNELS],
+            // CARRIER_DUTY reset 0x0040_0040; RX_CARRIER_RM reset 0.
+            carrier_duty: [CARRIER_DUTY_RESET; TX_CHANNELS],
+            rx_carrier_rm: [0; RX_CHANNELS],
+            // CHnDATA APB-FIFO RAM shadow + write pointers start empty/zeroed.
+            ch_mem: [[0; RMT_RAM_WORDS]; TOTAL_CHANNELS],
+            ch_wr: [0; TOTAL_CHANNELS],
             // SYS_CONF reset default: SCLK_DIV_NUM=1 (bits[11:4] = 1<<4=0x10),
             // SCLK_SEL=1 (bits[25:24]), SCLK_ACTIVE=1 (26).
             sys_conf: (1 << 4) | (1 << 24) | (1 << 26),
@@ -222,6 +265,58 @@ impl Esp32s3Rmt {
         }
     }
 
+    /// CARRIER_DUTY offsets: 0x80, 0x84, 0x88, 0x8C (TX channels 0..3).
+    fn carrier_duty_index(offset: u64) -> Option<usize> {
+        match offset {
+            0x80 => Some(0),
+            0x84 => Some(1),
+            0x88 => Some(2),
+            0x8C => Some(3),
+            _ => None,
+        }
+    }
+
+    /// RX_CARRIER_RM offsets: 0x90, 0x94, 0x98, 0x9C (RX channels 4..7).
+    fn rx_carrier_rm_index(offset: u64) -> Option<usize> {
+        match offset {
+            0x90 => Some(0),
+            0x94 => Some(1),
+            0x98 => Some(2),
+            0x9C => Some(3),
+            _ => None,
+        }
+    }
+
+    /// RX_STATUS offsets: 0x60, 0x64, 0x68, 0x6C (RX channels 4..7, RO).
+    fn rx_status_index(offset: u64) -> Option<usize> {
+        match offset {
+            0x60 => Some(0),
+            0x64 => Some(1),
+            0x68 => Some(2),
+            0x6C => Some(3),
+            _ => None,
+        }
+    }
+
+    /// TX_STATUS offsets: 0x50, 0x54, 0x58, 0x5C (TX channels 0..3, RO).
+    fn tx_status_index(offset: u64) -> Option<usize> {
+        match offset {
+            0x50 => Some(0),
+            0x54 => Some(1),
+            0x58 => Some(2),
+            0x5C => Some(3),
+            _ => None,
+        }
+    }
+
+    /// CHnDATA APB-FIFO port offsets: 0x00..0x1C → channel 0..7 (offset / 4).
+    fn chndata_index(offset: u64) -> Option<usize> {
+        match offset {
+            0x00 | 0x04 | 0x08 | 0x0C | 0x10 | 0x14 | 0x18 | 0x1C => Some((offset / 4) as usize),
+            _ => None,
+        }
+    }
+
     /// INT_ST = INT_RAW & INT_ENA (masked-interrupt status).
     fn int_st(&self) -> u32 {
         self.int_raw & self.int_ena
@@ -243,6 +338,30 @@ impl Esp32s3Rmt {
         if let Some(i) = Self::rx_lim_index(offset) {
             return self.rx_lim[i];
         }
+        if let Some(i) = Self::carrier_duty_index(offset) {
+            return self.carrier_duty[i];
+        }
+        if let Some(i) = Self::rx_carrier_rm_index(offset) {
+            return self.rx_carrier_rm[i];
+        }
+        // RX_STATUS (RO): return the SVD idle/reset constant per RX channel.
+        if Self::rx_status_index(offset).is_some() {
+            return RX_STATUS_IDLE;
+        }
+        // TX_STATUS (RO): the TX engine is fire-and-complete, so TX is always
+        // idle → reads the SVD reset value 0 (no nonzero state to surface).
+        if Self::tx_status_index(offset).is_some() {
+            return 0;
+        }
+        // CHnDATA APB-FIFO port (RO half here): non-destructive read of the
+        // most-recently-written word (see `ch_mem` doc). Empty channel reads 0.
+        if let Some(ch) = Self::chndata_index(offset) {
+            return if self.ch_wr[ch] == 0 {
+                0
+            } else {
+                self.ch_mem[ch][(self.ch_wr[ch] - 1) % RMT_RAM_WORDS]
+            };
+        }
         match offset {
             0x70 => self.int_raw,
             0x74 => self.int_st(),
@@ -251,10 +370,11 @@ impl Esp32s3Rmt {
             0x7C => 0,
             0xC0 => self.sys_conf,
             0xC4 => self.tx_sim,
-            // RMT_DATE (0xCC): version register. ESP-IDF default 34607489 =
-            // 0x0210_1001.
-            0xCC => 0x0210_1001,
-            // CHnDATA (RO FIFO port), STATUS (RO), CARRIER_DUTY, RX_CARRIER_RM,
+            // RMT_DATE (0xCC): version register. Authoritative ESP32-S3 SVD
+            // reset = 0x0210_1181 (the HW read is clock-gated to 0 on a bare
+            // board, so the SVD governs; this is a pure version/ID register
+            // with no functional branch in any driver).
+            0xCC => 0x0210_1181,
             // REF_CNT_RST (WT) — not separately modeled; read back as 0.
             _ => 0,
         }
@@ -294,6 +414,29 @@ impl Esp32s3Rmt {
             self.rx_lim[i] = value;
             return;
         }
+        // CARRIER_DUTY / RX_CARRIER_RM: fully writable, store verbatim.
+        if let Some(i) = Self::carrier_duty_index(offset) {
+            self.carrier_duty[i] = value;
+            return;
+        }
+        if let Some(i) = Self::rx_carrier_rm_index(offset) {
+            self.rx_carrier_rm[i] = value;
+            return;
+        }
+        // RX_STATUS / TX_STATUS are read-only: ignore writes (fall through to
+        // their index checks so they don't hit the catch-all as writable).
+        if Self::rx_status_index(offset).is_some() || Self::tx_status_index(offset).is_some() {
+            return;
+        }
+        // CHnDATA APB-FIFO port: push the 32-bit entry into the channel's RAM
+        // shadow via the auto-incrementing write pointer (index wraps mod
+        // RMT_RAM_WORDS so arbitrary input never overflows).
+        if let Some(ch) = Self::chndata_index(offset) {
+            let slot = self.ch_wr[ch] % RMT_RAM_WORDS;
+            self.ch_mem[ch][slot] = value;
+            self.ch_wr[ch] = self.ch_wr[ch].wrapping_add(1);
+            return;
+        }
         match offset {
             // INT_RAW (0x70) is R/WTC/SS on silicon (write-1-to-clear per bit).
             // Firmware normally clears via INT_CLR, but honor W1C here too.
@@ -304,8 +447,9 @@ impl Esp32s3Rmt {
             0x7C => self.int_raw &= !(value & INT_VALID_MASK),
             0xC0 => self.sys_conf = value,
             0xC4 => self.tx_sim = value,
-            // CHnDATA / STATUS / CARRIER_DUTY / RX_CARRIER_RM / REF_CNT_RST /
-            // DATE — not modeled as mutable state; ignore.
+            // REF_CNT_RST (0xC8, write-trigger) / DATE (0xCC, RO) — no mutable
+            // state to update here; ignore. (CHnDATA, STATUS, CARRIER_DUTY and
+            // RX_CARRIER_RM are handled by the early returns above.)
             _ => {}
         }
     }
@@ -385,8 +529,9 @@ mod tests {
         assert_eq!(r.read_word(0xB0), 128);
         // SYS_CONF default.
         assert_eq!(r.read_word(0xC0), (1 << 4) | (1 << 24) | (1 << 26));
-        // DATE version.
-        assert_eq!(r.read_word(0xCC), 0x0210_1001);
+        // DATE version. Authoritative ESP32-S3 SVD reset = 0x0210_1181 (the
+        // HW read is clock-gated to 0 on a bare board, so the SVD governs).
+        assert_eq!(r.read_word(0xCC), 0x0210_1181);
     }
 
     #[test]
@@ -563,5 +708,134 @@ mod tests {
         r.write_word(0x20, TX_START_BIT);
         r.write_word(0x78, tx_end_bit(0));
         assert_eq!(r.tick().explicit_irqs.as_deref(), Some(&[99][..]));
+    }
+
+    // ── Task 1: CARRIER_DUTY ch0..3 (0x80..0x8C) ──────────────────────────
+    #[test]
+    fn carrier_duty_reset_and_round_trip() {
+        let mut r = rmt();
+        // Reset value 0x0040_0040 (high duty 0x40, low duty 0x40) on all 4.
+        assert_eq!(r.read_word(0x80), 0x0040_0040, "CH0 CARRIER_DUTY reset");
+        assert_eq!(r.read_word(0x84), 0x0040_0040, "CH1 CARRIER_DUTY reset");
+        assert_eq!(r.read_word(0x88), 0x0040_0040, "CH2 CARRIER_DUTY reset");
+        assert_eq!(r.read_word(0x8C), 0x0040_0040, "CH3 CARRIER_DUTY reset");
+        // Fully writable: arbitrary value round-trips verbatim.
+        r.write_word(0x84, 0x1234_ABCD);
+        assert_eq!(r.read_word(0x84), 0x1234_ABCD);
+        // Other channels unaffected (isolation).
+        assert_eq!(r.read_word(0x80), 0x0040_0040);
+        assert_eq!(r.read_word(0x88), 0x0040_0040);
+    }
+
+    // ── Task 2: RX_CARRIER_RM ch4..7 (0x90..0x9C) ─────────────────────────
+    #[test]
+    fn rx_carrier_rm_reset_and_round_trip() {
+        let mut r = rmt();
+        // Reset 0.
+        assert_eq!(r.read_word(0x90), 0, "CH4 RX_CARRIER_RM reset");
+        assert_eq!(r.read_word(0x9C), 0, "CH7 RX_CARRIER_RM reset");
+        // Fully writable round-trip.
+        r.write_word(0x98, 0xCAFE_F00D);
+        assert_eq!(r.read_word(0x98), 0xCAFE_F00D);
+        assert_eq!(r.read_word(0x90), 0, "isolation");
+    }
+
+    // ── Task 3: RX_STATUS ch4..7 (0x60..0x6C) ─────────────────────────────
+    #[test]
+    fn rx_status_returns_idle_constant_and_is_read_only() {
+        let mut r = rmt();
+        // Read-only idle/reset constant 0x0006_00C0 per channel.
+        assert_eq!(r.read_word(0x60), 0x0006_00C0, "CH4 RX_STATUS idle");
+        assert_eq!(r.read_word(0x64), 0x0006_00C0, "CH5 RX_STATUS idle");
+        assert_eq!(r.read_word(0x68), 0x0006_00C0, "CH6 RX_STATUS idle");
+        assert_eq!(r.read_word(0x6C), 0x0006_00C0, "CH7 RX_STATUS idle");
+        // Read-only: a write does not change it.
+        r.write_word(0x60, 0xFFFF_FFFF);
+        assert_eq!(r.read_word(0x60), 0x0006_00C0, "RX_STATUS ignores writes");
+    }
+
+    // ── Task 4: TX_STATUS ch0..3 (0x50..0x5C) ─────────────────────────────
+    #[test]
+    fn tx_status_idle_zero_and_read_only() {
+        let mut r = rmt();
+        // Fire-and-complete TX engine → TX is always idle → status reads 0.
+        assert_eq!(r.read_word(0x50), 0, "CH0 TX_STATUS idle");
+        assert_eq!(r.read_word(0x5C), 0, "CH3 TX_STATUS idle");
+        // Read-only: writes ignored.
+        r.write_word(0x50, 0xFFFF_FFFF);
+        assert_eq!(r.read_word(0x50), 0, "TX_STATUS ignores writes");
+    }
+
+    // ── Task 5: CHnDATA APB-FIFO port (0x00..0x1C) ────────────────────────
+    #[test]
+    fn chndata_fifo_stores_and_reads_back_written_word() {
+        let mut r = rmt();
+        // Write two distinct words to CH2DATA (0x08).
+        r.write_word(0x08, 0x1111_2222);
+        // Non-destructive read returns the most-recently-written word.
+        assert_eq!(r.read_word(0x08), 0x1111_2222, "read sees last write");
+        r.write_word(0x08, 0x3333_4444);
+        assert_eq!(r.read_word(0x08), 0x3333_4444, "read sees newest write");
+        // Both words landed in CH2's RAM in write order via the auto-incr ptr.
+        assert_eq!(r.ch_mem[2][0], 0x1111_2222, "first word at slot 0");
+        assert_eq!(r.ch_mem[2][1], 0x3333_4444, "second word at slot 1");
+        assert_eq!(r.ch_wr[2], 2, "write pointer advanced twice");
+    }
+
+    #[test]
+    fn chndata_channel_isolation() {
+        let mut r = rmt();
+        // Writing CH2 must not disturb CH3's RAM or read port.
+        r.write_word(0x08, 0xAAAA_AAAA); // CH2
+        assert_eq!(r.read_word(0x0C), 0, "CH3 read unaffected (empty)");
+        r.write_word(0x0C, 0xBBBB_BBBB); // CH3
+        assert_eq!(r.read_word(0x08), 0xAAAA_AAAA, "CH2 still holds its word");
+        assert_eq!(r.read_word(0x0C), 0xBBBB_BBBB, "CH3 holds its own word");
+        assert_eq!(r.ch_wr[2], 1);
+        assert_eq!(r.ch_wr[3], 1);
+    }
+
+    #[test]
+    fn chndata_write_pointer_wraps_at_ram_size() {
+        let mut r = rmt();
+        // Push more than 48 entries on CH0; pointer index wraps mod 48 and the
+        // bounded RAM never overflows (write must never panic).
+        for i in 0..50u32 {
+            r.write_word(0x00, 0xD000_0000 | i);
+        }
+        // Slot 0 was overwritten by entry 48; slot 1 by entry 49.
+        assert_eq!(r.ch_mem[0][0], 0xD000_0000 | 48);
+        assert_eq!(r.ch_mem[0][1], 0xD000_0000 | 49);
+        assert_eq!(
+            r.ch_mem[0][2],
+            0xD000_0000 | 2,
+            "untouched since first pass"
+        );
+        // Last write (entry 49) is what a read returns.
+        assert_eq!(r.read_word(0x00), 0xD000_0000 | 49);
+    }
+
+    #[test]
+    fn chndata_byte_writes_are_panic_free_and_assemble_correct_final_word() {
+        // The APB-FIFO data port is word-accessed by real drivers; the byte
+        // path is non-idiomatic but must stay panic-free under panic=abort and
+        // leave the FIFO in a sane state. Because read_word is non-destructive
+        // (it does not advance ch_wr), the byte RMW reads the in-progress word
+        // back each time, so each of the four byte-writes pushes one
+        // progressively-assembled entry (0xEF, 0xBEEF, 0xADBEEF, 0xDEADBEEF).
+        // The fully-assembled word is the last one pushed and is what a read
+        // returns — which is the behaviour that matters to a (word-accessing)
+        // driver.
+        let mut r = rmt();
+        r.write(0x04, 0xEF).unwrap(); // CH1DATA, low byte first
+        r.write(0x05, 0xBE).unwrap();
+        r.write(0x06, 0xAD).unwrap();
+        r.write(0x07, 0xDE).unwrap();
+        // The newest entry is the complete word, and that is what reads see.
+        assert_eq!(r.read_word(0x04), 0xDEAD_BEEF, "final assembled word readable");
+        assert_eq!(r.ch_mem[1][3], 0xDEAD_BEEF, "complete word landed at slot 3");
+        // Four byte-writes → four pushes of the evolving entry; the pointer is
+        // sane and no index ever went out of range.
+        assert_eq!(r.ch_wr[1], 4, "one push per byte-write RMW");
     }
 }
