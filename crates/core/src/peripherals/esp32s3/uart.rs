@@ -314,7 +314,11 @@ impl Esp32s3Uart {
     /// scaled to CPU-clock ticks. Clamped to ≥1 so progress is always made.
     fn cycles_per_byte(&self) -> u64 {
         let clkdiv = (self.reg(OFF_CLKDIV) & 0xFFF) as u64;
-        let clkdiv = if clkdiv == 0 { RESET_CLKDIV as u64 } else { clkdiv };
+        let clkdiv = if clkdiv == 0 {
+            RESET_CLKDIV as u64
+        } else {
+            clkdiv
+        };
         (10 * clkdiv * CPU_CLOCK_HZ / UART_SCLK_HZ).max(1)
     }
 
@@ -518,7 +522,11 @@ mod tests {
         for &b in b"Hi!" {
             u.push_tx(b);
         }
-        assert_eq!((u.status_word() >> 16) & 0x3FF, 3, "TXFIFO_CNT reflects fill");
+        assert_eq!(
+            (u.status_word() >> 16) & 0x3FF,
+            3,
+            "TXFIFO_CNT reflects fill"
+        );
         assert!(sink.lock().unwrap().is_empty(), "nothing shifted out yet");
         drain_all(&mut u);
         assert_eq!(sink.lock().unwrap().as_slice(), b"Hi!");
@@ -540,7 +548,11 @@ mod tests {
         u.push_rx(b'A');
         u.push_rx(b'B');
         assert_eq!(u.status_word() & 0x3FF, 2, "RXFIFO_CNT=2");
-        assert_eq!(u.read_u32(OFF_FIFO).unwrap(), b'A' as u32, "first read pops A");
+        assert_eq!(
+            u.read_u32(OFF_FIFO).unwrap(),
+            b'A' as u32,
+            "first read pops A"
+        );
         assert_eq!(u.status_word() & 0x3FF, 1, "one consumed");
         assert_eq!(u.read(OFF_FIFO).unwrap(), b'B', "byte read pops B");
         assert_eq!(u.status_word() & 0x3FF, 0, "RX FIFO empty");
@@ -577,7 +589,11 @@ mod tests {
             u.push_rx(i as u8);
         }
         assert_eq!(u.rx_fifo.borrow().len(), FIFO_LEN, "RX capped");
-        assert_eq!(u.int_raw() & INT_RXFIFO_OVF, INT_RXFIFO_OVF, "overflow latched");
+        assert_eq!(
+            u.int_raw() & INT_RXFIFO_OVF,
+            INT_RXFIFO_OVF,
+            "overflow latched"
+        );
         u.write_u32(OFF_INT_CLR, INT_RXFIFO_OVF).unwrap();
         assert_eq!(u.int_raw() & INT_RXFIFO_OVF, 0);
     }
@@ -588,7 +604,8 @@ mod tests {
         u.push_tx(b'x');
         u.push_rx(b'y');
         // TXFIFO_RST (b18) + RXFIFO_RST (b17) pulse → both FIFOs cleared.
-        u.write_u32(OFF_CONF0, CONF0_TXFIFO_RST | CONF0_RXFIFO_RST).unwrap();
+        u.write_u32(OFF_CONF0, CONF0_TXFIFO_RST | CONF0_RXFIFO_RST)
+            .unwrap();
         assert_eq!(u.tx_fifo.len(), 0, "TX FIFO flushed");
         assert_eq!(u.rx_fifo.borrow().len(), 0, "RX FIFO flushed");
     }

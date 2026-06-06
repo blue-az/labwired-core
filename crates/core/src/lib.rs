@@ -508,9 +508,10 @@ pub trait Bus {
     }
 
     /// Bitmask of pending CPU IRQ slots the bus has aggregated for the given
-    /// core (`core_id` 0 = PRO_CPU, 1 = APP_CPU). Combines peripheral source
-    /// IDs routed through the intmatrix (PRO_CPU only today) with cross-core
-    /// `FROM_CPU` IPIs delivered per-core via the DPORT interrupt matrix.
+    /// core (`core_id` 0 = PRO_CPU, 1 = APP_CPU). On ESP32-S3 the per-core
+    /// interrupt matrix routes peripheral source IDs (and the crosscore_ipi
+    /// FROM_CPU sources) to each core; the classic-ESP32 dual-core path
+    /// delivers FROM_CPU IPIs via the DPORT interrupt matrix instead.
     /// Default returns 0; non-ESP32 buses don't model this.
     fn pending_cpu_irqs(&self, _core_id: u8) -> u32 {
         0

@@ -247,7 +247,11 @@ mod tests {
         // Func A: assert request bit 0 → ack bit 2 follows high (request stays).
         e.write_u32(0x150, 1 << 0).unwrap();
         let v = e.read_u32(0x150).unwrap();
-        assert_eq!(v & (1 << 0), 1 << 0, "request bit must persist (level-held)");
+        assert_eq!(
+            v & (1 << 0),
+            1 << 0,
+            "request bit must persist (level-held)"
+        );
         assert_eq!(v & (1 << 2), 1 << 2, "ack bit 2 should follow request high");
         // Func B: clear request bit 0 → ack bit 2 follows low.
         e.write_u32(0x150, v & !(1 << 0)).unwrap();
