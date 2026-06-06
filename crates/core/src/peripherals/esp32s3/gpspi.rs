@@ -16,32 +16,37 @@
 //! SPI1=20, SPI2=21, SPI3=22, with `ETS_LCD_CAM_INTR_SOURCE = 24` confirming the
 //! count.)
 //!
-//! ## Register layout (offsets from base, `soc/esp32s3/register/soc/spi_reg.h`)
+//! ## Register file
+//!
+//! All 38 architected registers of the ESP32-S3 SVD `SPI2` block are modeled
+//! as a fixed register file: each register is seeded with its silicon reset
+//! value and a write applies the register's writable-bit mask
+//! (`stored = (stored & !wmask) | (value & wmask)`) — reserved bits read back
+//! their reset value, never arbitrary written data. Offsets outside the
+//! architected map (the 0x48..0x94 hole, 0xD8/0xDC, 0xEC, and everything
+//! above 0xF0) read as zero and ignore writes, NOT round-trip, so the SVD
+//! behavioral coverage probe cannot mistake this model for generic storage.
+//!
+//! Registers with side effects (offsets per `soc/esp32s3/register/soc/spi_reg.h`):
 //!
 //! | offset | reg          | behavior                                            |
 //! |--------|--------------|-----------------------------------------------------|
-//! | 0x00   | SPI_CMD      | bit24 = `SPI_USR` start; set → launch, auto-clears   |
-//! | 0x04   | SPI_ADDR     | address phase value (round-trip)                    |
-//! | 0x08   | SPI_CTRL     | bit/byte order, dummy/fast-read mode (round-trip)   |
-//! | 0x0C   | SPI_CLOCK    | clock divider config (round-trip)                   |
-//! | 0x10   | SPI_USER     | phase enables (CMD/ADDR/DUMMY/MOSI/MISO) (round-trip)|
-//! | 0x14   | SPI_USER1    | addr/dummy bit lengths (round-trip)                 |
-//! | 0x18   | SPI_USER2    | command opcode + bitlen (round-trip)                |
-//! | 0x1C   | SPI_MS_DLEN  | `SPI_MS_DATA_BITLEN`[17:0] = transfer bits-1        |
-//! | 0x20   | SPI_MISC     | CS / misc config (round-trip)                       |
-//! | 0x30   | SPI_DMA_CONF | DMA config (round-trip)                             |
-//! | 0x34   | SPI_DMA_INT_ENA | interrupt enable mask                            |
-//! | 0x38   | SPI_DMA_INT_CLR | W1C — clears latched raw bits                     |
-//! | 0x3C   | SPI_DMA_INT_RAW | latched raw interrupt bits                         |
-//! | 0x40   | SPI_DMA_INT_ST  | INT_RAW & INT_ENA (read-only)                     |
-//! | 0x98   | SPI_W0       | data buffer word 0 (MOSI out / MISO in)             |
-//! | …      | …            | 16 words W0..W15                                    |
-//! | 0xD4   | SPI_W15      | data buffer word 15                                 |
+//! | 0x00   | CMD          | bit24 `SPI_USR` start: set → launch, auto-clears;   |
+//! |        |              | bit23 `SPI_UPDATE` self-clears (config sync)        |
+//! | 0x1C   | MS_DLEN      | `SPI_MS_DATA_BITLEN`[17:0] = transfer bits-1        |
+//! | 0x30   | DMA_CONF     | AFIFO reset bits 29/30/31 self-clear                |
+//! | 0x34   | DMA_INT_ENA  | interrupt enable mask                               |
+//! | 0x38   | DMA_INT_CLR  | WO, W1C — clears latched raw bits                   |
+//! | 0x3C   | DMA_INT_RAW  | R/WTC — write-1-to-clear latched raw bits           |
+//! | 0x40   | DMA_INT_ST   | RO: INT_RAW & INT_ENA                               |
+//! | 0x44   | DMA_INT_SET  | WO, W1S — software-sets raw bits                    |
+//! | 0x98.. | W0..W15      | 16-word data buffer (MOSI out / MISO in)            |
+//! | 0xE0   | SLAVE        | bit27 `SPI_SOFT_RESET` (WT) self-clears             |
 //!
 //! Note: the GP-SPI controller has a *single* `SPI_MS_DLEN` (0x1C) — there are
 //! no separate MISO_DLEN / MOSI_DLEN registers as on SPIMEM. All transaction
 //! interrupts (including `SPI_TRANS_DONE`, bit 12) live in the `SPI_DMA_INT_*`
-//! register block (0x34/0x38/0x3C/0x40), per the header.
+//! register block (0x34/0x38/0x3C/0x40/0x44), per the header.
 //!
 //! ## Transaction model
 //!
@@ -61,58 +66,93 @@
 //! interrupt matrix.
 
 use crate::{Peripheral, PeripheralTickResult, SimResult};
-use std::collections::HashMap;
 
 const CMD: u64 = 0x00;
-/// `SPI_ADDR` (0x04) — address phase value, pure round-trip.
-#[allow(dead_code)]
 const ADDR: u64 = 0x04;
 const CTRL: u64 = 0x08;
 const CLOCK: u64 = 0x0C;
 const USER: u64 = 0x10;
-/// `SPI_USER1` (0x14) — addr/dummy bit lengths, pure round-trip.
-#[allow(dead_code)]
 const USER1: u64 = 0x14;
-/// `SPI_USER2` (0x18) — command opcode + bitlen, pure round-trip.
-#[allow(dead_code)]
 const USER2: u64 = 0x18;
 const MS_DLEN: u64 = 0x1C;
-/// `SPI_MISC` (0x20) — CS / misc config, pure round-trip.
-#[allow(dead_code)]
 const MISC: u64 = 0x20;
-/// `SPI_DMA_CONF` (0x30) — DMA config, pure round-trip (no DMA modeled).
-#[allow(dead_code)]
+const DIN_MODE: u64 = 0x24;
+const DIN_NUM: u64 = 0x28;
+const DOUT_MODE: u64 = 0x2C;
 const DMA_CONF: u64 = 0x30;
 const DMA_INT_ENA: u64 = 0x34;
 const DMA_INT_CLR: u64 = 0x38;
 const DMA_INT_RAW: u64 = 0x3C;
 const DMA_INT_ST: u64 = 0x40;
+const DMA_INT_SET: u64 = 0x44;
 const W0: u64 = 0x98;
-/// `SPI_W15` (0xD4) — last word of the 16-word data buffer (documents extent).
-#[allow(dead_code)]
+/// `SPI_W15` (0xD4) — last word of the 16-word data buffer.
 const W15: u64 = 0xD4;
+const SLAVE: u64 = 0xE0;
+const SLAVE1: u64 = 0xE4;
+const CLK_GATE: u64 = 0xE8;
+const DATE: u64 = 0xF0;
 
 /// `SPI_USR` launch bit in `SPI_CMD` (bitpos 24).
 const USR_BIT: u32 = 1 << 24;
+/// `SPI_UPDATE` config-sync bit in `SPI_CMD` (bitpos 23) — self-clearing;
+/// ESP-IDF's `spi_master` writes it and polls for it to clear before launch.
+const UPDATE_BIT: u32 = 1 << 23;
 /// `SPI_TRANS_DONE_INT` bit in the `SPI_DMA_INT_*` block (bitpos 12).
 const TRANS_DONE: u32 = 1 << 12;
+/// All 21 architected interrupt bits in the `SPI_DMA_INT_*` block.
+const INT_MASK: u32 = 0x001F_FFFF;
 /// `SPI_MS_DATA_BITLEN` mask in `SPI_MS_DLEN` (bits[17:0]).
 const MS_DATA_BITLEN: u32 = 0x0003_FFFF;
+/// `SPI_DMA_AFIFO_RST`/`SPI_BUF_AFIFO_RST`/`SPI_RX_AFIFO_RST` in `DMA_CONF`
+/// (bits 31/30/29) — self-clearing FIFO reset strobes.
+const AFIFO_RST_BITS: u32 = 0xE000_0000;
+/// `SPI_SOFT_RESET` in `SLAVE` (bitpos 27, WT) — self-clearing.
+const SOFT_RESET_BIT: u32 = 1 << 27;
 
-/// Reset defaults (from `spi_reg.h` register bit defaults).
-/// SPI_CLOCK: CLK_EQU_SYSCLK(b31)=1, CLKCNT_N=3(<<12), CLKCNT_H=1(<<6), CLKCNT_L=3.
-const RESET_CLOCK: u32 = (1 << 31) | (3 << 12) | (1 << 6) | 3; // 0x8000_3043
-/// SPI_CTRL: WP_POL/HOLD_POL/D_POL/Q_POL (b21..b18) default 1.
-const RESET_CTRL: u32 = 0x000F << 18; // 0x003C_0000
-/// SPI_USER: USR_COMMAND(b31)=1, CS_SETUP(b7)=1, CS_HOLD(b6)=1.
-const RESET_USER: u32 = (1 << 31) | (1 << 7) | (1 << 6); // 0x8000_00C0
+/// One word past the last architected register (`DATE` @ 0xF0).
+const NWORDS: usize = 0xF4 / 4;
+
+/// `(reset value, writable-bit mask)` for the architected register at word
+/// index `word` (offset `word * 4`), exactly per the ESP32-S3 SVD `SPI2`
+/// block; `None` = hole in the register map (reads 0, ignores writes).
+const fn spec(word: usize) -> Option<(u32, u32)> {
+    match (word as u64) * 4 {
+        CMD => Some((0x0000_0000, 0x0183_FFFF)),
+        ADDR => Some((0x0000_0000, 0xFFFF_FFFF)),
+        CTRL => Some((0x003C_0000, 0x07BD_C7E8)),
+        CLOCK => Some((0x8000_3043, 0x803F_FFFF)),
+        USER => Some((0x8000_00C0, 0xFF02_F3F9)),
+        USER1 => Some((0xB841_0007, 0xFFFF_00FF)),
+        USER2 => Some((0x7800_0000, 0xF800_FFFF)),
+        MS_DLEN => Some((0x0000_0000, MS_DATA_BITLEN)),
+        MISC => Some((0x0000_003E, 0xE18F_1FFF)),
+        DIN_MODE => Some((0x0000_0000, 0x0001_FFFF)),
+        DIN_NUM => Some((0x0000_0000, 0x0000_FFFF)),
+        DOUT_MODE => Some((0x0000_0000, 0x0000_01FF)),
+        DMA_CONF => Some((0x0000_0003, 0xF83C_0000)),
+        DMA_INT_ENA => Some((0x0000_0000, INT_MASK)),
+        DMA_INT_CLR => Some((0x0000_0000, INT_MASK)), // WO, W1C
+        DMA_INT_RAW => Some((0x0000_0000, INT_MASK)), // R/WTC
+        DMA_INT_ST => Some((0x0000_0000, 0x0000_0000)), // RO
+        DMA_INT_SET => Some((0x0000_0000, INT_MASK)), // WO, W1S
+        W0..=W15 => Some((0x0000_0000, 0xFFFF_FFFF)),
+        SLAVE => Some((0x0280_0000, 0x1FC0_0F0F)),
+        SLAVE1 => Some((0x0000_0000, 0xFFFF_FFFF)),
+        CLK_GATE => Some((0x0000_0000, 0x0000_0007)),
+        DATE => Some((0x0210_1190, 0x0FFF_FFFF)),
+        _ => None,
+    }
+}
 
 pub struct Esp32s3Spi {
     /// Interrupt-matrix source ID (SPI2=21, SPI3=22).
     source_id: u32,
-    /// Backing store for all config registers and the W0..W15 data buffer.
-    regs: HashMap<u64, u32>,
-    /// Latched raw interrupt bits (`SPI_DMA_INT_RAW`); W1C via INT_CLR.
+    /// Register file for the architected map (word-indexed; holes stay 0 and
+    /// are never read back — `spec()` gates both directions).
+    regs: [u32; NWORDS],
+    /// Latched raw interrupt bits (`SPI_DMA_INT_RAW`); W1C via INT_CLR /
+    /// write-1-to-clear on INT_RAW itself; W1S via INT_SET.
     int_raw: u32,
 }
 
@@ -133,10 +173,14 @@ impl Esp32s3Spi {
     /// (`ETS_SPI2_INTR_SOURCE` = 21 for SPI2/FSPI, `ETS_SPI3_INTR_SOURCE` = 22
     /// for SPI3).
     pub fn new(source_id: u32) -> Self {
-        let mut regs = HashMap::new();
-        regs.insert(CLOCK, RESET_CLOCK);
-        regs.insert(CTRL, RESET_CTRL);
-        regs.insert(USER, RESET_USER);
+        let mut regs = [0u32; NWORDS];
+        let mut w = 0;
+        while w < NWORDS {
+            if let Some((reset, _)) = spec(w) {
+                regs[w] = reset;
+            }
+            w += 1;
+        }
         Self {
             source_id,
             regs,
@@ -145,11 +189,31 @@ impl Esp32s3Spi {
     }
 
     fn reg(&self, off: u64) -> u32 {
-        self.regs.get(&off).copied().unwrap_or(0)
+        let w = (off / 4) as usize;
+        if w < NWORDS && spec(w).is_some() {
+            self.regs[w]
+        } else {
+            0
+        }
     }
 
-    fn set_reg(&mut self, off: u64, val: u32) {
-        self.regs.insert(off, val);
+    /// Masked store into an architected register; no-op on holes.
+    fn set_reg_masked(&mut self, off: u64, value: u32) {
+        let w = (off / 4) as usize;
+        if w < NWORDS {
+            if let Some((_, wmask)) = spec(w) {
+                self.regs[w] = (self.regs[w] & !wmask) | (value & wmask);
+            }
+        }
+    }
+
+    /// Raw store (full word) — used by the transaction engine for the W
+    /// buffer and CMD bookkeeping where the mask has already been applied.
+    fn set_reg_raw(&mut self, off: u64, value: u32) {
+        let w = (off / 4) as usize;
+        if w < NWORDS {
+            self.regs[w] = value;
+        }
     }
 
     /// INT_ST = INT_RAW & INT_ENA.
@@ -180,11 +244,11 @@ impl Esp32s3Spi {
                     word |= 0xFFu32 << (8 * b);
                 }
             }
-            self.set_reg(off, word);
+            self.set_reg_raw(off, word);
         }
         // Clear the USR start bit (auto-clear on done) so `!(CMD & USR)` exits.
         let cmd = self.reg(CMD) & !USR_BIT;
-        self.set_reg(CMD, cmd);
+        self.set_reg_raw(CMD, cmd);
         // Latch transaction-done.
         self.int_raw |= TRANS_DONE;
     }
@@ -200,6 +264,8 @@ impl Peripheral for Esp32s3Spi {
         Ok(match offset & !3 {
             DMA_INT_RAW => self.int_raw,
             DMA_INT_ST => self.int_st(),
+            // Write-only registers read as zero.
+            DMA_INT_CLR | DMA_INT_SET => 0,
             o => self.reg(o),
         })
     }
@@ -219,25 +285,45 @@ impl Peripheral for Esp32s3Spi {
 
     fn write_u32(&mut self, offset: u64, value: u32) -> SimResult<()> {
         match offset & !3 {
-            // W1C: clear latched raw bits where INT_CLR has a 1.
+            // WO, W1C: clear latched raw bits where INT_CLR has a 1.
             DMA_INT_CLR => {
-                self.int_raw &= !value;
+                self.int_raw &= !(value & INT_MASK);
             }
-            // INT_RAW is writable (R/WTC) but firmware rarely writes it; store.
+            // R/WTC: writing 1s to INT_RAW clears those latched bits.
             DMA_INT_RAW => {
-                self.int_raw = value;
+                self.int_raw &= !(value & INT_MASK);
+            }
+            // WO, W1S: software-set raw bits (self-test / software interrupts).
+            DMA_INT_SET => {
+                self.int_raw |= value & INT_MASK;
             }
             // INT_ST is read-only; ignore writes.
             DMA_INT_ST => {}
             CMD => {
-                self.set_reg(CMD, value);
+                self.set_reg_masked(CMD, value);
+                // SPI_UPDATE (bit 23) is a self-clearing config-sync strobe:
+                // ESP-IDF's spi_master writes it and polls for it to clear.
+                let cmd = self.reg(CMD) & !UPDATE_BIT;
+                self.set_reg_raw(CMD, cmd);
                 if value & USR_BIT != 0 {
                     self.launch_transaction();
                 }
             }
-            // Everything else (USER/USER1/USER2/CLOCK/CTRL/MISC/DLEN/ADDR/
-            // DMA_CONF/INT_ENA and the W0..W15 buffer) round-trips verbatim.
-            o => self.set_reg(o, value),
+            DMA_CONF => {
+                self.set_reg_masked(DMA_CONF, value);
+                // AFIFO reset strobes (bits 29/30/31) self-clear.
+                let v = self.reg(DMA_CONF) & !AFIFO_RST_BITS;
+                self.set_reg_raw(DMA_CONF, v);
+            }
+            SLAVE => {
+                self.set_reg_masked(SLAVE, value);
+                // SPI_SOFT_RESET (bit 27, WT) self-clears.
+                let v = self.reg(SLAVE) & !SOFT_RESET_BIT;
+                self.set_reg_raw(SLAVE, v);
+            }
+            // Everything else: masked store into the architected register;
+            // holes ignore writes entirely.
+            o => self.set_reg_masked(o, value),
         }
         Ok(())
     }
@@ -270,7 +356,7 @@ mod tests {
     const SPI3_SOURCE: u32 = 22;
 
     #[test]
-    fn config_registers_round_trip() {
+    fn config_registers_store_under_write_mask() {
         let mut s = Esp32s3Spi::new(SPI2_SOURCE);
         s.write_u32(USER, 0x9000_00C0).unwrap();
         s.write_u32(USER1, 0x0000_5817).unwrap();
@@ -280,20 +366,91 @@ mod tests {
         s.write_u32(MISC, 0x0000_003E).unwrap();
         s.write_u32(MS_DLEN, 0x0000_001F).unwrap();
         assert_eq!(s.read_u32(USER).unwrap(), 0x9000_00C0);
-        assert_eq!(s.read_u32(USER1).unwrap(), 0x0000_5817);
+        // USER1 bits 8..15 are reserved (not in the SVD write mask): the 0x58
+        // byte is dropped and the reserved bits keep their reset value (0).
+        assert_eq!(s.read_u32(USER1).unwrap(), 0x0000_0017);
         assert_eq!(s.read_u32(USER2).unwrap(), 0x7000_0006);
         assert_eq!(s.read_u32(CLOCK).unwrap(), 0x0000_1001);
         assert_eq!(s.read_u32(CTRL).unwrap(), 0x003C_0000);
         assert_eq!(s.read_u32(MISC).unwrap(), 0x0000_003E);
         assert_eq!(s.read_u32(MS_DLEN).unwrap(), 0x0000_001F);
+        // MS_DLEN is 18 bits wide: upper bits never store.
+        s.write_u32(MS_DLEN, 0xFFFF_FFFF).unwrap();
+        assert_eq!(s.read_u32(MS_DLEN).unwrap(), MS_DATA_BITLEN);
     }
 
     #[test]
     fn reset_defaults_seeded() {
         let s = Esp32s3Spi::new(SPI2_SOURCE);
-        assert_eq!(s.read_u32(CLOCK).unwrap(), 0x8000_3043);
-        assert_eq!(s.read_u32(CTRL).unwrap(), 0x003C_0000);
-        assert_eq!(s.read_u32(USER).unwrap(), 0x8000_00C0);
+        assert_eq!(s.read_u32(CLOCK).unwrap(), 0x8000_3043, "CLOCK");
+        assert_eq!(s.read_u32(CTRL).unwrap(), 0x003C_0000, "CTRL");
+        assert_eq!(s.read_u32(USER).unwrap(), 0x8000_00C0, "USER");
+        assert_eq!(s.read_u32(USER1).unwrap(), 0xB841_0007, "USER1");
+        assert_eq!(s.read_u32(USER2).unwrap(), 0x7800_0000, "USER2");
+        assert_eq!(s.read_u32(MISC).unwrap(), 0x0000_003E, "MISC");
+        assert_eq!(s.read_u32(DMA_CONF).unwrap(), 0x0000_0003, "DMA_CONF");
+        assert_eq!(s.read_u32(SLAVE).unwrap(), 0x0280_0000, "SLAVE");
+        assert_eq!(s.read_u32(DATE).unwrap(), 0x0210_1190, "DATE");
+    }
+
+    #[test]
+    fn unmapped_offsets_read_zero_and_ignore_writes() {
+        let mut s = Esp32s3Spi::new(SPI2_SOURCE);
+        // Holes inside the map and offsets above DATE must NOT round-trip —
+        // the coverage probe's baseline depends on it.
+        for off in [0x48u64, 0x90, 0xD8, 0xEC, 0xF4, 0xFFC] {
+            s.write_u32(off, 0xDEAD_BEEF).unwrap();
+            assert_eq!(s.read_u32(off).unwrap(), 0, "hole at {off:#x}");
+        }
+    }
+
+    #[test]
+    fn cmd_update_bit_self_clears() {
+        let mut s = Esp32s3Spi::new(SPI2_SOURCE);
+        // ESP-IDF spi_master writes UPDATE then polls for it to clear; a
+        // round-tripping CMD would wedge the driver.
+        s.write_u32(CMD, UPDATE_BIT).unwrap();
+        assert_eq!(
+            s.read_u32(CMD).unwrap() & UPDATE_BIT,
+            0,
+            "UPDATE self-clears"
+        );
+    }
+
+    #[test]
+    fn dma_conf_afifo_rst_strobes_self_clear() {
+        let mut s = Esp32s3Spi::new(SPI3_SOURCE);
+        s.write_u32(DMA_CONF, AFIFO_RST_BITS).unwrap();
+        assert_eq!(
+            s.read_u32(DMA_CONF).unwrap() & AFIFO_RST_BITS,
+            0,
+            "AFIFO reset strobes self-clear"
+        );
+    }
+
+    #[test]
+    fn slave_soft_reset_self_clears() {
+        let mut s = Esp32s3Spi::new(SPI2_SOURCE);
+        s.write_u32(SLAVE, SOFT_RESET_BIT).unwrap();
+        assert_eq!(
+            s.read_u32(SLAVE).unwrap() & SOFT_RESET_BIT,
+            0,
+            "SOFT_RESET (WT) self-clears"
+        );
+    }
+
+    #[test]
+    fn int_set_latches_and_int_raw_write_clears() {
+        let mut s = Esp32s3Spi::new(SPI2_SOURCE);
+        // W1S via INT_SET.
+        s.write_u32(DMA_INT_SET, TRANS_DONE).unwrap();
+        assert_eq!(s.read_u32(DMA_INT_RAW).unwrap() & TRANS_DONE, TRANS_DONE);
+        // R/WTC: writing the set bit to INT_RAW clears it.
+        s.write_u32(DMA_INT_RAW, TRANS_DONE).unwrap();
+        assert_eq!(s.read_u32(DMA_INT_RAW).unwrap() & TRANS_DONE, 0);
+        // Write-only registers read as zero.
+        assert_eq!(s.read_u32(DMA_INT_CLR).unwrap(), 0);
+        assert_eq!(s.read_u32(DMA_INT_SET).unwrap(), 0);
     }
 
     #[test]

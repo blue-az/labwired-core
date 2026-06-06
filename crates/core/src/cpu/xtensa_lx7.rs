@@ -154,6 +154,7 @@ pub struct XtensaLx7 {
     /// and survives reset. We remember it so `reset()` restores the right
     /// PRID — otherwise a reset re-news the SR to 0xCDCD, APP_CPU reads
     /// core_id 0, and it corrupts PRO_CPU's per-core FreeRTOS state.
+    /// (SMP core identity itself is derived from PRID via `core_id()`.)
     pub app_cpu: bool,
     /// IRAM/flash instruction-fetch slice cache (#119 Phase 1.2).
     fetch_cache: Option<(u64, u64, usize)>,

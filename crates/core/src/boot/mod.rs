@@ -10,6 +10,7 @@
 //! returns a `BootSummary` describing what was loaded.
 
 pub mod esp32s3;
+pub mod esp32s3_rom;
 
 use thiserror::Error;
 
