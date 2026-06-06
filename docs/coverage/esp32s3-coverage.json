@@ -994,18 +994,22 @@
     "unmodelled_regs": []
   },
   "SPI2": {
-    "modelled": 0,
-    "indeterminate": 38,
-    "unmodelled": 0,
+    "modelled": 34,
+    "indeterminate": 3,
+    "unmodelled": 1,
     "total": 38,
-    "unmodelled_regs": []
+    "unmodelled_regs": [
+      "DMA_INT_RAW"
+    ]
   },
   "SPI3": {
-    "modelled": 0,
-    "indeterminate": 38,
-    "unmodelled": 0,
+    "modelled": 34,
+    "indeterminate": 3,
+    "unmodelled": 1,
     "total": 38,
-    "unmodelled_regs": []
+    "unmodelled_regs": [
+      "DMA_INT_RAW"
+    ]
   },
   "SYSTEM": {
     "modelled": 42,
