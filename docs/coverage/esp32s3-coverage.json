@@ -957,8 +957,8 @@
     "unmodelled_regs": []
   },
   "SENS": {
-    "modelled": 0,
-    "indeterminate": 71,
+    "modelled": 48,
+    "indeterminate": 23,
     "unmodelled": 0,
     "total": 71,
     "unmodelled_regs": []
