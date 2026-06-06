@@ -109,9 +109,9 @@ use std::collections::HashMap;
 use crate::{Peripheral, PeripheralTickResult, SimResult};
 
 // ── Register offsets ──
-// Several entries map the full controller register file for documentation;
-// the model only drives the subset the boot-ROM probe touches today.
-#[allow(dead_code)]
+// The full DesignWare-MSHC register map is documented here for fidelity;
+// constants the twin does not yet read are marked dead_code-allowed (repo
+// convention for documentary register maps, cf. gpspi.rs / gdma.rs).
 const CTRL: u64 = 0x00;
 #[allow(dead_code)]
 const PWREN: u64 = 0x04;

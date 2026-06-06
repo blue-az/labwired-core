@@ -576,41 +576,52 @@ impl SystemBus {
     }
 
     fn find_peripheral_index(&self, addr: u64) -> Option<usize> {
-        if let Some(idx) = self.peripheral_hint.get() {
-            if let Some(p) = self.peripherals.get(idx) {
-                if Self::is_peripheral_addr(p, addr) {
-                    return Some(idx);
-                }
-            }
-        }
-
-        let mut idx = if self.peripheral_ranges.len() == self.peripherals.len() {
+        // Canonical routing: among the windows CONTAINING `addr`, the one
+        // with the GREATEST start wins (last-start-wins; equal starts resolve
+        // to the last-registered entry). This makes routing a pure function
+        // of the address.
+        //
+        // The hint cache deliberately does NOT short-circuit on containment:
+        // with layered windows (a narrow per-peripheral twin inside a broad
+        // catch-all stub) a hint seeded by a broad-only access also CONTAINS
+        // the twin's addresses, so a containment-only check hijacks them to
+        // the catch-all and routing becomes a function of access history —
+        // see bus::tests::overlapping_windows_route_history_independently.
+        // The canonical path is already cheap: one partition_point (O(log n))
+        // and, in the common non-overlapped case, one containment check.
+        let mut idx = None;
+        if self.peripheral_ranges.len() == self.peripherals.len() {
             let pos = self
                 .peripheral_ranges
                 .partition_point(|range| range.start <= addr);
-            if pos == 0 {
-                None
-            } else {
-                let candidate = self.peripheral_ranges[pos - 1];
-                if addr < candidate.end {
-                    Some(candidate.index)
-                } else {
-                    None
+            // Walk backwards through the candidate starts: the nearest
+            // (greatest-start) window may have already ENDED below `addr`
+            // while a broader, earlier-started window still covers it.
+            for range in self.peripheral_ranges[..pos].iter().rev() {
+                if addr < range.end {
+                    idx = Some(range.index);
+                    break;
                 }
             }
         } else {
-            None
-        };
-
-        let needs_fallback = match idx.and_then(|i| self.peripherals.get(i)) {
-            Some(p) => !Self::is_peripheral_addr(p, addr),
-            None => true,
-        };
-        if needs_fallback {
-            idx = self
-                .peripherals
-                .iter()
-                .position(|p| Self::is_peripheral_addr(p, addr));
+            // Ranges index stale (mid-mutation, defensive only): validated
+            // hint first, then a scan matching the canonical tie-break
+            // (greatest base; max_by_key keeps the LAST of equal maxima,
+            // i.e. the last-registered entry).
+            idx = self.peripheral_hint.get().filter(|&i| {
+                self.peripherals
+                    .get(i)
+                    .is_some_and(|p| Self::is_peripheral_addr(p, addr))
+            });
+            if idx.is_none() {
+                idx = self
+                    .peripherals
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, p)| Self::is_peripheral_addr(p, addr))
+                    .max_by_key(|&(_, p)| p.base)
+                    .map(|(i, _)| i);
+            }
         }
 
         self.peripheral_hint.set(idx);
@@ -1902,6 +1913,40 @@ impl SystemBus {
         self.peripherals.iter().position(|p| p.name == name)
     }
 
+    /// Return the `(base, size)` of the peripheral the bus router would dispatch
+    /// `addr` to, using the same last-start-wins binary-search logic as
+    /// [`read_u32`] / [`write_u32`]. Unlike `iter().find()`, this correctly
+    /// resolves overlapping entries where a narrower, later-registered twin
+    /// (e.g. `uart0_s3`) shadows a broader catch-all stub (e.g. `low_mmio`)
+    /// that has an equal or lower base address.
+    pub fn resolve_window(&self, addr: u64) -> Option<(u64, u64)> {
+        let idx = self.find_peripheral_index(addr)?;
+        let p = &self.peripherals[idx];
+        Some((p.base, p.size))
+    }
+
+    /// Smallest registered window start STRICTLY greater than `addr`, if any.
+    ///
+    /// Together with [`resolve_window`] this bounds the contiguous span from
+    /// `addr` that is guaranteed to dispatch to the same peripheral entry:
+    /// past the next window start, a narrower layered twin may take over even
+    /// though `addr`'s own window continues underneath (last-start-wins).
+    /// The SVD coverage probe uses this to keep its baseline samples inside
+    /// the service region of the peripheral under probe.
+    pub fn next_window_start(&self, addr: u64) -> Option<u64> {
+        if self.peripheral_ranges.len() == self.peripherals.len() {
+            let pos = self
+                .peripheral_ranges
+                .partition_point(|range| range.start <= addr);
+            return self.peripheral_ranges.get(pos).map(|r| r.start);
+        }
+        self.peripherals
+            .iter()
+            .map(|p| p.base)
+            .filter(|&b| b > addr)
+            .min()
+    }
+
     /// Translate a Cortex-M bit-band alias address to (physical_byte_addr, bit_index).
     ///
     /// Peripheral bit-band: alias 0x42000000–0x43FFFFFF → physical 0x40000000–0x400FFFFF
@@ -2233,14 +2278,14 @@ impl crate::Bus for SystemBus {
     }
 
     fn pending_cpu_irqs(&self, core_id: u8) -> u32 {
-        // ESP32-S3: the per-core array already carries everything for this
-        // core — peripheral source IRQs routed through the intmatrix AND the
-        // cross-core FROM_CPU IPIs emitted by the crosscore_ipi peripheral
-        // (sources 79/80, routed per-core in aggregate_esp32s3_explicit_irqs).
-        // Classic-ESP32 dual-core delivers FROM_CPU IPIs via the DPORT
-        // interrupt matrix instead. The two are mutually exclusive per chip
-        // (an S3 bus has no DPORT; a classic bus has no S3 intmatrix, so its
-        // array stays zero), so the union is correct for both.
+        // Two cross-core delivery paths coexist after the dual-core merge:
+        //   * ESP32-S3 (intmatrix registered): the aggregator routes every
+        //     asserting source — including the FROM_CPU IPI sources
+        //     79→core0 / 80→core1 — into this per-core array.
+        //   * ESP32-classic (no intmatrix, DPORT instead): the array stays
+        //     empty and cross-core FROM_CPU IPIs come from the DPORT matrix.
+        // Each path contributes 0 on the other chip, so OR-ing is safe and
+        // keeps both dual-core models working.
         self.pending_cpu_irqs[(core_id & 1) as usize] | self.dport_cross_core_pending(core_id)
     }
 
@@ -2254,6 +2299,94 @@ mod tests {
     use super::*;
     use labwired_config::{ChipDescriptor, SystemManifest};
     use std::path::PathBuf;
+
+    /// Minimal fixed-value peripheral for routing tests: reads return a
+    /// constant tag byte, writes are ignored.
+    #[derive(Debug)]
+    struct TagPeripheral(u8);
+    impl crate::Peripheral for TagPeripheral {
+        fn read(&self, _offset: u64) -> crate::SimResult<u8> {
+            Ok(self.0)
+        }
+        fn write(&mut self, _offset: u64, _value: u8) -> crate::SimResult<()> {
+            Ok(())
+        }
+    }
+
+    /// Routing must be a pure function of the address — never of access
+    /// history. A broad catch-all window with a narrower twin layered inside
+    /// it (the ESP32-S3 low-MMIO + per-peripheral twin pattern) must route
+    /// the twin's addresses to the twin even when the immediately preceding
+    /// access touched a broad-window-only address (which seeds the hint
+    /// cache with the broad entry — containment alone must not let it
+    /// short-circuit the canonical last-start-wins search).
+    #[test]
+    fn overlapping_windows_route_history_independently() {
+        let mut bus = SystemBus::new();
+        // Broad catch-all: 0x7000_0000..0x7000_8000, reads 0xBB.
+        bus.add_peripheral(
+            "broad",
+            0x7000_0000,
+            0x8000,
+            None,
+            Box::new(TagPeripheral(0xBB)),
+        );
+        // Narrow twin layered inside: 0x7000_4000..0x7000_5000, reads 0xAA.
+        bus.add_peripheral(
+            "narrow",
+            0x7000_4000,
+            0x1000,
+            None,
+            Box::new(TagPeripheral(0xAA)),
+        );
+
+        // Cold route: twin wins its window.
+        assert_eq!(
+            bus.read_u8(0x7000_4000).unwrap(),
+            0xAA,
+            "cold: twin owns it"
+        );
+
+        // Poison the hint with the broad entry, then re-route a twin address.
+        assert_eq!(
+            bus.read_u8(0x7000_0008).unwrap(),
+            0xBB,
+            "broad-only address"
+        );
+        assert_eq!(
+            bus.read_u8(0x7000_4FFC).unwrap(),
+            0xAA,
+            "hint poisoned by broad entry must not hijack the twin's window"
+        );
+
+        // resolve_window must agree with dispatch, in both hint states.
+        assert_eq!(bus.read_u8(0x7000_0008).unwrap(), 0xBB); // re-poison
+        assert_eq!(
+            bus.resolve_window(0x7000_4000),
+            Some((0x7000_4000, 0x1000)),
+            "resolve_window must return the twin, not the hinted broad entry"
+        );
+
+        // Addresses in the broad window above the twin still go broad —
+        // including right after a twin access (reverse poisoning), and the
+        // fallback must pick the GREATEST containing start, not the
+        // first-registered entry.
+        assert_eq!(bus.read_u8(0x7000_4000).unwrap(), 0xAA);
+        assert_eq!(
+            bus.read_u8(0x7000_5000).unwrap(),
+            0xBB,
+            "past the twin's end the broad window resumes"
+        );
+
+        // next_window_start: the twin's start bounds the broad window's
+        // uniform service region (used by the coverage probe's baseline).
+        assert_eq!(bus.next_window_start(0x7000_0000), Some(0x7000_4000));
+        assert_eq!(
+            bus.next_window_start(0x7000_4000),
+            Some(0xE000_E010),
+            "above the twin the next start is the default bus's systick"
+        );
+    }
 
     #[test]
     fn test_system_bus_from_config_declarative() {

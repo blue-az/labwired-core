@@ -44,6 +44,15 @@ impl Default for Esp32s3Opts {
     }
 }
 
+/// Which ROM path the ESP32-S3 model booted on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Esp32s3BootMode {
+    /// Real Espressif boot ROM loaded (faithful path, zero thunks).
+    Faithful,
+    /// No ROM blob found — running on the thunk harness (degraded).
+    Harness,
+}
+
 /// Result of `configure_xtensa_esp32s3` — exposes the flash backings so the
 /// boot path can write to them (Task 8).
 ///
@@ -62,6 +71,7 @@ pub struct Esp32s3Wiring {
     pub cpu: XtensaLx7,
     pub icache_backing: Arc<Mutex<Vec<u8>>>,
     pub dcache_backing: Arc<Mutex<Vec<u8>>>,
+    pub boot_mode: Esp32s3BootMode,
 }
 
 impl Esp32s3Wiring {
@@ -849,7 +859,12 @@ pub fn configure_xtensa_esp32s3(bus: &mut SystemBus, opts: &Esp32s3Opts) -> Esp3
     // window spans the full 32 MiB linear range so the ROM's bootloader-load
     // reads (e.g. virtual 0x3C80_0000) resolve. Fast-boot keeps the legacy
     // per-window static identity mapping over separate 4 MiB backings.
-    let proper_model = std::env::var("LABWIRED_ESP32S3_ROM").is_ok();
+    // The proper model is selected whenever a real ROM is resolved — either
+    // auto-provisioned from the installed toolchain or pinned via
+    // LABWIRED_ESP32S3_ROM/_DROM. Without a real ROM blob we fall back to
+    // fast-boot XIP with the thunk harness.
+    let rom_images = crate::boot::esp32s3_rom::provision_rom_images();
+    let proper_model = rom_images.is_some();
     // Shared flash backing for the proper-model path, loaded from the real
     // flash image so XIP reads (and the SPI-flash controller below) return real
     // bytes. In fast-boot this is unused; the legacy per-window backings apply.
@@ -928,64 +943,42 @@ pub fn configure_xtensa_esp32s3(bus: &mut SystemBus, opts: &Esp32s3Opts) -> Esp3
         (icache_backing, dcache_backing)
     };
 
-    // ── ROM: real silicon image (proper model) or thunk bank (legacy stopgap) ─
-    // The faithful model loads the chip's *actual* boot ROM (dumped from silicon
-    // over JTAG) so the firmware executes real ROM code — memset, memcpy,
-    // _xtos_*, the cache routines, libgcc — instead of Rust thunks that diverge.
-    // Opt-in via `LABWIRED_ESP32S3_ROM=<path to the 0x40000000 image>` (keeps
-    // Espressif's copyrighted ROM blob out of the tree); falls back to thunks.
-    let rom_loaded = match std::env::var("LABWIRED_ESP32S3_ROM") {
-        Ok(path) => match std::fs::read(&path) {
-            Ok(bytes) => {
-                let n = bytes.len().min(0x6_0000);
-                let rom = RamPeripheral::with_image(0x6_0000, &bytes);
-                bus.add_peripheral("rom", 0x4000_0000, 0x6_0000, None, Box::new(rom));
-                eprintln!(
-                    "configure_xtensa_esp32s3: loaded REAL ROM ({n} bytes) from {path} — thunks disabled"
-                );
-                true
-            }
-            Err(e) => {
-                eprintln!("configure_xtensa_esp32s3: LABWIRED_ESP32S3_ROM unreadable ({e}); using thunk bank");
-                false
-            }
-        },
-        Err(_) => false,
-    };
-    if !rom_loaded {
-        // ── ROM thunk bank (legacy) ──────────────────────────────────────
-        let mut rom_bank = RomThunkBank::new(0x4000_0000, 0x6_0000);
-        register_default_thunks(&mut rom_bank);
-        bus.add_peripheral(
-            "rom_thunks",
-            0x4000_0000,
-            0x6_0000,
-            None,
-            Box::new(rom_bank),
-        );
-    }
-
-    // ── ROM data (DROM) ───────────────────────────────────────────────────
-    // The real ROM code reads constants + function-pointer tables from DROM
-    // (0x3FF0_0000). Without it, ROM routines load 0 and jump to 0. Loaded
-    // from the silicon dump alongside the IROM (LABWIRED_ESP32S3_DROM).
-    if rom_loaded {
-        if let Ok(path) = std::env::var("LABWIRED_ESP32S3_DROM") {
-            match std::fs::read(&path) {
-                Ok(bytes) => {
-                    let drom = RamPeripheral::with_image(0x2_0000, &bytes);
-                    bus.add_peripheral("drom", 0x3FF0_0000, 0x2_0000, None, Box::new(drom));
-                    eprintln!(
-                        "configure_xtensa_esp32s3: loaded REAL DROM ({} bytes) from {path}",
-                        bytes.len().min(0x2_0000)
-                    );
-                }
-                Err(e) => {
-                    eprintln!("configure_xtensa_esp32s3: LABWIRED_ESP32S3_DROM unreadable ({e})")
-                }
-            }
+    // ── ROM: faithful real-silicon image (default) or thunk harness (fallback) ─
+    // provision_rom_images() resolves the ROM either from explicit pre-extracted
+    // bins (LABWIRED_ESP32S3_ROM/_DROM) or by discovering + extracting the ROM
+    // ELF from the installed toolchain. None → no blob available → thunk harness.
+    let boot_mode = match rom_images {
+        Some(images) => {
+            let rom = RamPeripheral::with_image(0x6_0000, &images.irom);
+            bus.add_peripheral("rom", 0x4000_0000, 0x6_0000, None, Box::new(rom));
+            let drom = RamPeripheral::with_image(0x2_0000, &images.drom);
+            bus.add_peripheral("drom", 0x3FF0_0000, 0x2_0000, None, Box::new(drom));
+            eprintln!(
+                "configure_xtensa_esp32s3: faithful ROM loaded ({} B IROM, {} B DROM) — real boot ROM, zero thunks",
+                images.irom.len(),
+                images.drom.len()
+            );
+            Esp32s3BootMode::Faithful
         }
-    }
+        None => {
+            // DROM (0x3FF0_0000) is intentionally not mapped in harness mode;
+            // only the faithful path loads the real DROM image.
+            let mut rom_bank = RomThunkBank::new(0x4000_0000, 0x6_0000);
+            register_default_thunks(&mut rom_bank);
+            bus.add_peripheral(
+                "rom_thunks",
+                0x4000_0000,
+                0x6_0000,
+                None,
+                Box::new(rom_bank),
+            );
+            eprintln!(
+                "configure_xtensa_esp32s3: ESP32-S3 ROM not found; running in degraded harness mode \
+                 — install the ESP toolchain (or set LABWIRED_ESP32S3_ROM_ELF) for faithful simulation"
+            );
+            Esp32s3BootMode::Harness
+        }
+    };
 
     // ── USB_SERIAL_JTAG ───────────────────────────────────────────────────
     bus.add_peripheral(
@@ -1092,14 +1085,38 @@ pub fn configure_xtensa_esp32s3(bus: &mut SystemBus, opts: &Esp32s3Opts) -> Esp3
         ),
     );
 
-    // ── I²C0 + attached TMP102 (Plan 4) ──────────────────────────────────
+    // ── I²C0 + attached slaves ───────────────────────────────────────────
+    // TMP102 @ 0x48 (Plan 4 demo). Opt-in PCA9685 @ 0x40 for the SpiceDispenser
+    // board (LABWIRED_ESP32S3_PCA9685=1): the two servos hang off its PWM
+    // channels, so attaching it lets the unmodified firmware's I²C dispense
+    // path ACK and drive the servos instead of erroring on an empty bus.
     let mut i2c0 = Esp32s3I2c::new();
     i2c0.attach_slave(Box::new(Tmp102::new()));
+    if std::env::var("LABWIRED_ESP32S3_PCA9685").is_ok() {
+        i2c0.attach_slave(Box::new(
+            crate::peripherals::components::pca9685::Pca9685::new(),
+        ));
+        eprintln!("configure_xtensa_esp32s3: attached PCA9685 @ 0x40 on I²C0");
+    }
     bus.add_peripheral("i2c0", I2C0_BASE as u64, I2C0_SIZE, None, Box::new(i2c0));
     // Bind the I²C0 source ID through the intmatrix helper so esp-hal's
     // poll-then-read driver path doesn't depend on routing existing yet —
     // routing is firmware-controlled, this just leaves the source visible.
     let _ = I2C0_INTR_SOURCE_ID;
+
+    // ── I²C1 ─────────────────────────────────────────────────────────────
+    // Second controller, same faithful model, no slaves attached (an empty
+    // bus NACKs every address, exactly like real hardware with nothing
+    // wired to the I2C1 pins). Asserts ETS_I2C_EXT1_INTR_SOURCE (43).
+    bus.add_peripheral(
+        "i2c1",
+        crate::peripherals::esp32s3::i2c::I2C1_BASE as u64,
+        crate::peripherals::esp32s3::i2c::I2C1_SIZE,
+        None,
+        Box::new(Esp32s3I2c::with_intr_source(
+            crate::peripherals::esp32s3::i2c::I2C1_INTR_SOURCE_ID,
+        )),
+    );
 
     // ── SYSTEM / RTC_CNTL / EFUSE stubs ──────────────────────────────────
     // SYSTEM peripheral on ESP32-S3 is followed by INTERRUPT_CORE0/1 at
@@ -1116,6 +1133,55 @@ pub fn configure_xtensa_esp32s3(bus: &mut SystemBus, opts: &Esp32s3Opts) -> Esp3
         0x1_0000,
         None,
         Box::new(SystemStub::new()),
+    );
+    // ── SYSTEM clock/reset register file (0x600C_0000..0x600C_1000) ───────
+    // Faithful fixed-register model for the 42 architected SYSTEM registers
+    // (silicon reset values + per-register write masks; unmapped offsets read
+    // as zero and ignore writes — NOT round-trip). Registered AFTER the broad
+    // `system` SystemStub above so that, by the bus router's last-start-wins
+    // tie-break on the shared 0x600C_0000 base, this narrower model serves the
+    // register-block window while the SystemStub keeps serving the
+    // accelerator/interrupt-map region above 0x600C_1000.
+    //
+    // CRITICAL — the model is registered as TWO windows straddling a HOLE at
+    // 0x600C_0030..0x600C_0040 so it never overlaps `crosscore_ipi` (the
+    // stateful SMP doorbell whose tick() re-asserts level sources 79/80). The
+    // bus's `peripheral_hint` cache short-circuits to the last peripheral that
+    // *contains* an address, so a single 0x1000-wide window covering the
+    // doorbell would swallow a doorbell write at runtime once any neighbouring
+    // SYSTEM register had been accessed first — deadlocking SMP boot. Leaving
+    // the hole means `crosscore_ipi` is the ONLY narrow peripheral covering
+    // 0x030..0x03F and always wins it. `core1_control` shares the 0x600C_0000
+    // base; its sole behavior (the CORE_1_CONTROL_0 RESETING 1→0 edge that
+    // releases the APP_CPU) is replicated by this model, so APP_CPU boot is
+    // preserved even though window A shadows 0x000/0x004. `resolve_window(
+    // 0x600C_0000)` returns window A (NON-round-tripping), giving the coverage
+    // probe a clean baseline. The empirical routing test
+    // (`system_register_block_routing`) pins all of this down.
+    //
+    // Window A: 0x600C_0000..0x600C_0030 (CORE_1_CONTROL_0/1 .. BT_LPCK_DIV_*).
+    bus.add_peripheral(
+        "system_regs",
+        0x600C_0000,
+        crate::peripherals::esp32s3::crosscore_ipi::BASE - 0x600C_0000, // 0x30
+        None,
+        Box::new(crate::peripherals::esp32s3::system::Esp32s3System::new()),
+    );
+    // Window B: 0x600C_0040..0x600C_1000 (RSA_PD_CTRL .. PVT .. DATE@0xFFC).
+    // The second instance carries window_base=0x40 so its base-relative offsets
+    // map back onto the architected (absolute) register offsets.
+    let win_b_base = crate::peripherals::esp32s3::crosscore_ipi::BASE
+        + crate::peripherals::esp32s3::crosscore_ipi::SIZE; // 0x600C_0040
+    bus.add_peripheral(
+        "system_regs_hi",
+        win_b_base,
+        0x600C_0000 + crate::peripherals::esp32s3::system::SIZE - win_b_base, // up to 0x1000
+        None,
+        Box::new(
+            crate::peripherals::esp32s3::system::Esp32s3System::with_window_base(
+                win_b_base - 0x600C_0000, // 0x40
+            ),
+        ),
     );
     // RTC_CNTL through APB_CTRL/SYSCON are a contiguous block of register
     // banks ESP-HAL pokes during init (clock muxing, voltage rails, GPIO
@@ -1430,6 +1496,7 @@ pub fn configure_xtensa_esp32s3(bus: &mut SystemBus, opts: &Esp32s3Opts) -> Esp3
         cpu,
         icache_backing,
         dcache_backing,
+        boot_mode,
     }
 }
 
@@ -1712,6 +1779,94 @@ mod tests {
         assert!(bus.read_u8(0x6000_7000).is_ok(), "EFUSE");
     }
 
+    /// Empirical routing proof for the layered 0x600C_0000 SYSTEM region.
+    /// Verifies WHICH peripheral the bus router dispatches each probe offset to
+    /// (by the distinct window each owns) and that behavior is correct:
+    ///   * crosscore_ipi (size 0x10) still serves 0x030..0x03C,
+    ///   * the faithful SYSTEM model (windows A/B) serves the register block
+    ///     and `resolve_window(0x600C_0000)` (window A, NON-round-tripping),
+    ///   * the big SystemStub (size 0x1_0000) still serves ≥ 0x600C_1000.
+    #[test]
+    fn system_register_block_routing() {
+        let mut bus = SystemBus::new();
+        let _ = configure_xtensa_esp32s3(&mut bus, &Esp32s3Opts::default());
+
+        let ipi_base = crate::peripherals::esp32s3::crosscore_ipi::BASE; // 0x600C_0030
+        let ipi_size = crate::peripherals::esp32s3::crosscore_ipi::SIZE; // 0x10
+
+        // 1. resolve_window(0x600C_0000) must return the faithful model's
+        //    window A (base 0x600C_0000, size 0x30) — NON-round-tripping, so
+        //    the probe builds a clean baseline and credits the modeled
+        //    registers. (The model is split into two windows straddling the
+        //    crosscore_ipi hole; window A is what the probe resolves.)
+        let (base, size) = bus.resolve_window(0x600C_0000).expect("SYSTEM window");
+        assert_eq!(base, 0x600C_0000);
+        assert_eq!(size, ipi_base - 0x600C_0000, "window A size = 0x30");
+
+        // 2. crosscore_ipi (size 0x10) still serves 0x030..0x03C — the boot
+        //    doorbell must NOT be shadowed by the SYSTEM model. The hole in the
+        //    SYSTEM windows guarantees this regardless of the hint cache, so
+        //    re-query after touching a neighbouring SYSTEM register to prove
+        //    the cache does not pull it back into a SYSTEM window.
+        let _ = bus.read_u32(0x600C_0008); // pollute hint with window A
+        for off in [0x030u64, 0x034, 0x038, 0x03C] {
+            let (b, s) = bus.resolve_window(0x600C_0000 + off).expect("ipi window");
+            assert_eq!(
+                (b, s),
+                (ipi_base, ipi_size),
+                "offset {off:#x} must route to crosscore_ipi (hole preserved)"
+            );
+        }
+
+        // 3a. Window A serves an architected register (PERIP_CLK_EN0 @ 0x018):
+        //     reads its HW reset value and round-trips a masked write.
+        assert_eq!(
+            bus.read_u32(0x600C_0018).unwrap(),
+            0xF9C1_E06F,
+            "PERIP_CLK_EN0 reads its HW-validated reset value"
+        );
+        bus.write_u32(0x600C_0018, 0x1234_5678).unwrap();
+        assert_eq!(
+            bus.read_u32(0x600C_0018).unwrap(),
+            0x1234_5678,
+            "PERIP_CLK_EN0 round-trips a write under its mask"
+        );
+
+        // 3b. Window B serves the high registers (RTC_FASTMEM_CONFIG @ 0x050,
+        //     DATE @ 0xFFC) with correct absolute-offset translation.
+        assert_eq!(
+            bus.read_u32(0x600C_0050).unwrap(),
+            0x7FF0_0000,
+            "RTC_FASTMEM_CONFIG reset value (window B, base-offset translated)"
+        );
+        assert_eq!(
+            bus.read_u32(0x600C_0FFC).unwrap(),
+            0x0210_1220,
+            "DATE constant (window B tail)"
+        );
+
+        // 3c. An unmapped offset inside window B reads as zero and does NOT
+        //     round-trip (the anti-gaming property the coverage probe relies on).
+        assert_eq!(bus.read_u32(0x600C_0100).unwrap(), 0, "unmapped reads 0");
+        bus.write_u32(0x600C_0100, 0xFFFF_FFFF).unwrap();
+        assert_eq!(
+            bus.read_u32(0x600C_0100).unwrap(),
+            0,
+            "unmapped offset must NOT round-trip"
+        );
+
+        // 4. The big SystemStub (size 0x1_0000) still serves the region above
+        //    the register block, e.g. 0x600C_1800 (interrupt-map / accelerator).
+        let (b, s) = bus.resolve_window(0x600C_1800).expect("stub window");
+        assert_eq!(
+            (b, s),
+            (0x600C_0000, 0x1_0000),
+            "0x600C_1800 → big SystemStub"
+        );
+        bus.write_u32(0x600C_1800, 0xDEAD_BEEF).unwrap();
+        assert_eq!(bus.read_u32(0x600C_1800).unwrap(), 0xDEAD_BEEF);
+    }
+
     #[test]
     fn iram_writeable_and_readable() {
         let mut bus = SystemBus::new();
@@ -1840,9 +1995,13 @@ mod tests {
         // Real silicon shares the SPI flash between both windows but each has
         // its own MMU page table; for fast-boot we model this as two distinct
         // backing buffers so that ELFs with .rodata at 0x3c000020 and .text at
-        // 0x42000020 don't collide on the same physical offset.
+        // 0x42000020 don't collide on the same physical offset. Force fast-boot
+        // so the assertion is deterministic regardless of whether the host has
+        // the ESP toolchain ROM installed (which would auto-select faithful mode).
+        std::env::set_var("LABWIRED_ESP32S3_FASTBOOT", "1");
         let mut bus = SystemBus::new();
         let wiring = configure_xtensa_esp32s3(&mut bus, &Esp32s3Opts::default());
+        std::env::remove_var("LABWIRED_ESP32S3_FASTBOOT");
         wiring.icache_backing.lock().unwrap()[0] = 0xCA;
         wiring.dcache_backing.lock().unwrap()[0] = 0xFE;
         assert_eq!(bus.read_u8(0x4200_0000).unwrap(), 0xCA, "I-cache alias");

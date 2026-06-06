@@ -83,6 +83,9 @@ const REG_INT_ST: u64 = 0xC4;
 const REG_INT_ENA: u64 = 0xC8;
 const REG_INT_CLR: u64 = 0xCC;
 const REG_CONF: u64 = 0xD0;
+/// Version control register — SVD reset 0x1904_0200, fully writable.
+const REG_DATE: u64 = 0xFC;
+const DATE_RESET: u32 = 0x1904_0200;
 
 /// CONF1 bit 31: DUTY_START_LSCHn. Software sets it to commit the staged DUTY
 /// register into the channel's active duty (visible at DUTY_R). Real silicon
@@ -133,6 +136,8 @@ pub struct Esp32s3Ledc {
 
     // --- Global ---
     conf: u32,
+    /// DATE version register (0xFC) — reads its SVD reset until written.
+    date: u32,
 }
 
 impl Esp32s3Ledc {
@@ -158,6 +163,7 @@ impl Esp32s3Ledc {
             int_raw: 0,
             int_ena: 0,
             conf: 0,
+            date: DATE_RESET,
         }
     }
 
@@ -243,6 +249,7 @@ impl Peripheral for Esp32s3Ledc {
             REG_INT_ENA => self.int_ena,
             REG_INT_CLR => 0, // write-only semantics; reads as 0
             REG_CONF => self.conf,
+            REG_DATE => self.date,
             _ => 0,
         };
         Ok(v)
@@ -293,6 +300,7 @@ impl Peripheral for Esp32s3Ledc {
             REG_INT_CLR => self.int_raw &= !value,
             REG_INT_ST => {} // read-only (INT_RAW & INT_ENA)
             REG_CONF => self.conf = value,
+            REG_DATE => self.date = value,
             _ => {} // accept-and-ignore (reserved/timing regs)
         }
         Ok(())

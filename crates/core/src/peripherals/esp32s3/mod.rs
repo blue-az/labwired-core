@@ -30,6 +30,7 @@ pub mod sar_adc;
 pub mod sdmmc;
 pub mod sha;
 pub mod spi_mem_flash;
+pub mod system;
 pub mod system_stub;
 pub mod systimer;
 pub mod timer_group;

@@ -130,6 +130,17 @@ const WDT_STG1_HOLD_DEFAULT: u32 = 0x07FF_FFFF; // 134217727
 const WDT_STG2_HOLD_DEFAULT: u32 = 0x000F_FFFF; // 1048575
 const WDT_STG3_HOLD_DEFAULT: u32 = 0x000F_FFFF; // 1048575
 
+/// RTCCALICFG2 (0x80): extra RTC-calibration config. SVD reset 0xFFFF_FF98;
+/// bits[2:0] (RTC_CALI_TIMEOUT / _RDY / _THRES low) are read-only, so only
+/// bits[31:3] are firmware-writable.
+const RTCCALICFG2_RESET: u32 = 0xFFFF_FF98;
+const RTCCALICFG2_WMASK: u32 = 0xFFFF_FFF8;
+/// NTIMERS_DATE (0xF8): IP version register. SVD reset 0x0200_3071, read-only.
+const NTIMERS_DATE: u32 = 0x0200_3071;
+/// REGCLK (0xFC): only bit31 (REGCLK clock-gate force-enable) is writable;
+/// SVD reset 0.
+const REGCLK_WMASK: u32 = 0x8000_0000;
+
 /// State for one general-purpose 64-bit timer (T0 or T1).
 #[derive(Debug, Clone, Copy)]
 struct TimerState {
@@ -234,6 +245,11 @@ pub struct Esp32s3TimerGroup {
     /// busy-polls RTC_CALI_RDY — without auto-completion it spins forever.
     rtccalicfg: u32,
     rtccalicfg1: u32,
+    /// RTCCALICFG2 (0x80): extra calibration config (reset 0xFFFF_FF98).
+    rtccalicfg2: u32,
+
+    /// REGCLK (0xFC): register-clock gate control (bit31 writable, reset 0).
+    regclk: u32,
 
     /// Interrupt-matrix source id for T0. T1 = +1, WDT = +2.
     base_source_id: u32,
@@ -264,6 +280,8 @@ impl Esp32s3TimerGroup {
             wdt_pending: false,
             rtccalicfg: 0,
             rtccalicfg1: 0,
+            rtccalicfg2: RTCCALICFG2_RESET,
+            regclk: 0,
             base_source_id,
         }
     }
@@ -340,6 +358,11 @@ impl Esp32s3TimerGroup {
             0x74 => self.int_raw_word(),
             0x78 => self.int_raw_word() & self.int_ena,
             // 0x7C INT_CLR is W1C; reads as 0.
+
+            // ── Misc config / version ──
+            0x80 => self.rtccalicfg2,
+            0xF8 => NTIMERS_DATE,
+            0xFC => self.regclk,
             _ => 0,
         }
     }
@@ -425,6 +448,13 @@ impl Esp32s3TimerGroup {
                     self.wdt_pending = false;
                 }
             }
+
+            // ── Misc config (NTIMERS_DATE @0xF8 is RO → catch-all) ──
+            0x80 => {
+                self.rtccalicfg2 =
+                    (self.rtccalicfg2 & !RTCCALICFG2_WMASK) | (value & RTCCALICFG2_WMASK)
+            }
+            0xFC => self.regclk = value & REGCLK_WMASK,
             // Unhandled / read-only offsets: ignore (matches systimer).
             _ => {}
         }
@@ -674,6 +704,31 @@ mod tests {
         assert!(tg.t0.enabled());
         assert!(tg.t0.alarm_en());
         assert_eq!(tg.t0.divider(), 7);
+    }
+
+    #[test]
+    fn misc_config_registers_reset_and_access() {
+        let mut tg = new_timg0();
+        // NTIMERS_DATE (0xF8): RO version constant.
+        assert_eq!(tg.read_word(0xF8), 0x0200_3071);
+        tg.write_word(0xF8, 0xDEAD_BEEF); // RO: write ignored
+        assert_eq!(tg.read_word(0xF8), 0x0200_3071);
+
+        // RTCCALICFG2 (0x80): reset 0xFFFF_FF98; bits[2:0] read-only.
+        assert_eq!(tg.read_word(0x80), 0xFFFF_FF98);
+        tg.write_word(0x80, 0x0000_0000);
+        // Writable bits cleared; RO bits[2:0] keep their reset (0).
+        assert_eq!(tg.read_word(0x80), 0x0000_0000);
+        tg.write_word(0x80, 0xFFFF_FFFF);
+        // bits[2:0] stay 0 (RO), the rest become 1.
+        assert_eq!(tg.read_word(0x80), 0xFFFF_FFF8);
+
+        // REGCLK (0xFC): only bit31 writable, reset 0.
+        assert_eq!(tg.read_word(0xFC), 0);
+        tg.write_word(0xFC, 0xFFFF_FFFF);
+        assert_eq!(tg.read_word(0xFC), 0x8000_0000);
+        tg.write_word(0xFC, 0);
+        assert_eq!(tg.read_word(0xFC), 0);
     }
 
     #[test]

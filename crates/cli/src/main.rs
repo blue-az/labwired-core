@@ -17,6 +17,7 @@ use tracing::{error, info};
 
 mod api_client;
 mod asset_validation;
+use labwired_cli::coverage;
 mod gpio_observer;
 mod size_limited_writer;
 mod vcd_trace;
@@ -114,6 +115,25 @@ enum Commands {
     /// fast-replay in the playground. Produces an `.lwrs` blob that
     /// `WasmSimulator::apply_runtime_snapshot` can restore.
     Snapshot(SnapshotArgs),
+
+    /// Report ESP32-S3 register-level peripheral coverage against the SVD.
+    ///
+    /// Probes every register in the SVD behaviorally (read/write sentinel) and
+    /// classifies each as Modelled / Indeterminate / Unmodelled. Prints a
+    /// human-readable table and optionally writes the full matrix as JSON.
+    Coverage(CoverageArgs),
+}
+
+#[derive(Parser, Debug)]
+pub struct CoverageArgs {
+    /// Path to the ESP32-S3 SVD (else auto-discovered from PlatformIO or
+    /// LABWIRED_ESP32S3_SVD env var).
+    #[arg(long)]
+    pub svd: Option<PathBuf>,
+
+    /// Write the coverage matrix as JSON to this path.
+    #[arg(long = "json-out", id = "coverage_json_out")]
+    pub json_out: Option<PathBuf>,
 }
 
 #[derive(Parser, Debug)]
@@ -177,11 +197,23 @@ pub struct RunArgs {
 
     /// Boot from the real ROM reset vector (0x40000400) instead of fast-booting
     /// the ELF. The chip's real boot ROM runs and loads the 2nd-stage bootloader
-    /// + app through the SPI-flash controller — the faithful chip-model path.
-    ///
-    /// Requires LABWIRED_ESP32S3_ROM and LABWIRED_ESP32S3_FLASH to be set.
+    /// and app through the SPI-flash controller — the faithful chip-model path.
+    /// Requires LABWIRED_ESP32S3_FLASH (the firmware flash image). The boot ROM is
+    /// auto-provisioned from the installed ESP toolchain, or pinned via
+    /// LABWIRED_ESP32S3_ROM/_DROM (pre-extracted bins) or LABWIRED_ESP32S3_ROM_ELF.
     #[arg(long)]
     pub rom_boot: bool,
+
+    /// Debug: PC address(es) (hex, e.g. `0x4004eacc`) to break on. On the
+    /// first time each is reached, dump a0..a15 + PS/window state and any
+    /// `--watch-mem` words, then continue. Repeatable. Works on `--rom-boot`.
+    #[arg(long = "break-at", value_name = "HEX")]
+    pub break_at: Vec<String>,
+
+    /// Debug: memory address(es) (hex) to read as u32 and print whenever a
+    /// `--break-at` fires — for tracing ROM pointer chains. Repeatable.
+    #[arg(long = "watch-mem", value_name = "HEX")]
+    pub watch_mem: Vec<String>,
 }
 
 #[derive(Parser, Debug)]
@@ -680,6 +712,7 @@ fn main() -> ExitCode {
         Some(Commands::Asset(args)) => run_asset(args),
         Some(Commands::Run(args)) => run_firmware(args),
         Some(Commands::Snapshot(args)) => run_snapshot(args),
+        Some(Commands::Coverage(args)) => run_coverage(args),
         None => run_interactive(cli),
     }
 }
@@ -687,7 +720,7 @@ fn main() -> ExitCode {
 fn run_firmware(args: RunArgs) -> ExitCode {
     use labwired_core::boot::esp32s3::{fast_boot, BootOpts};
     use labwired_core::bus::SystemBus;
-    use labwired_core::system::xtensa::{configure_xtensa_esp32s3, Esp32s3Opts};
+    use labwired_core::system::xtensa::{configure_xtensa_esp32s3, Esp32s3BootMode, Esp32s3Opts};
     use labwired_core::SimulationError;
 
     // Read the chip YAML to validate the chip family.
@@ -723,6 +756,7 @@ fn run_firmware(args: RunArgs) -> ExitCode {
     let mut bus = SystemBus::new();
     let opts = Esp32s3Opts::default();
     let wiring = configure_xtensa_esp32s3(&mut bus, &opts);
+    let boot_mode = wiring.boot_mode; // Copy before cpu is moved out of wiring
 
     // Install default tracing GPIO observer.
     wiring.add_gpio_observer(
@@ -756,16 +790,27 @@ fn run_firmware(args: RunArgs) -> ExitCode {
     if args.rom_boot {
         // ── Faithful boot: run the real ROM from the reset vector ──────────
         // The CPU resets to 0x40000400 (BROM reset vector). With the real ROM
-        // (LABWIRED_ESP32S3_ROM) and the flash image behind the SPI-flash
+        // (auto-provisioned, or pinned via LABWIRED_ESP32S3_ROM) and the flash image behind the SPI-flash
         // controller (LABWIRED_ESP32S3_FLASH), the chip's own boot ROM loads
         // the 2nd-stage bootloader + app and jumps to it — same path as
         // silicon. No fast_boot, no ELF pre-load, no handshake pre-paint.
         let _ = &elf_bytes; // ELF used only for symbol/diagnostic context
-        if std::env::var("LABWIRED_ESP32S3_ROM").is_err()
-            || std::env::var("LABWIRED_ESP32S3_FLASH").is_err()
-        {
+                            // --rom-boot runs the genuine boot ROM. The ROM is auto-provisioned from
+                            // the installed toolchain by configure_xtensa_esp32s3 (or pinned via
+                            // LABWIRED_ESP32S3_ROM/_DROM); we only need the flash image here. If no
+                            // real ROM was resolved we are in harness mode, where --rom-boot is
+                            // meaningless — fail clearly.
+        if boot_mode != Esp32s3BootMode::Faithful {
             eprintln!(
-                "error: --rom-boot needs LABWIRED_ESP32S3_ROM and LABWIRED_ESP32S3_FLASH set"
+                "error: --rom-boot needs the real ESP32-S3 boot ROM, but none was found. \
+                 Install the ESP toolchain (PlatformIO/ESP-IDF) or set LABWIRED_ESP32S3_ROM_ELF \
+                 (or pin LABWIRED_ESP32S3_ROM/_DROM)."
+            );
+            return ExitCode::from(EXIT_CONFIG_ERROR);
+        }
+        if std::env::var("LABWIRED_ESP32S3_FLASH").is_err() {
+            eprintln!(
+                "error: --rom-boot needs LABWIRED_ESP32S3_FLASH set (the firmware flash image)"
             );
             return ExitCode::from(EXIT_CONFIG_ERROR);
         }
@@ -863,10 +908,67 @@ fn run_firmware(args: RunArgs) -> ExitCode {
         (0x42002040, "setup()", [false; 2]),
         (0x42001f90, "UnityBegin", [false; 2]),
     ];
+    // Debug breakpoints / memory watches (parse hex; ignore unparseable).
+    let parse_hex = |s: &str| -> Option<u32> {
+        u32::from_str_radix(s.trim_start_matches("0x").trim_start_matches("0X"), 16).ok()
+    };
+    let break_at: Vec<u32> = args.break_at.iter().filter_map(|s| parse_hex(s)).collect();
+    let watch_mem: Vec<u32> = args.watch_mem.iter().filter_map(|s| parse_hex(s)).collect();
+    let mut break_hit = vec![false; break_at.len()]; // PRO_CPU first-hit flags
+    let mut break_hit1 = vec![false; break_at.len()]; // APP_CPU first-hit flags
+                                                      // On the first time a core's PC reaches a --break-at address, dump its
+                                                      // a0..a15 + window state and the --watch-mem words. Covers both cores so an
+                                                      // APP_CPU fault is observable too.
+    macro_rules! check_break {
+        ($c:expr, $pc:expr, $hits:expr) => {
+            if let Some(bi) = break_at.iter().position(|&b| b == $pc) {
+                if !$hits[bi] {
+                    $hits[bi] = true;
+                    eprintln!(
+                        "labwired-cli run: BREAK-AT 0x{:08x} (step {steps}, core {})",
+                        $pc,
+                        if $c.app_cpu { 1 } else { 0 }
+                    );
+                    for r in 0..16u8 {
+                        eprintln!("    a{:<2} = 0x{:08x}", r, $c.regs.read_logical(r));
+                    }
+                    eprintln!(
+                        "    PS=0x{:08x} WB={} WS=0x{:04x}",
+                        $c.ps.as_raw(),
+                        $c.regs.windowbase(),
+                        $c.regs.windowstart()
+                    );
+                    for &m in &watch_mem {
+                        match bus.read_u32(m as u64) {
+                            Ok(v) => eprintln!("    mem[0x{m:08x}] = 0x{v:08x}"),
+                            Err(e) => eprintln!("    mem[0x{m:08x}] = <unmapped: {e}>"),
+                        }
+                    }
+                }
+            }
+        };
+    }
+    if !break_at.is_empty() {
+        eprintln!(
+            "labwired-cli run: breakpoints {:?} watch-mem {:?}",
+            break_at
+                .iter()
+                .map(|a| format!("0x{a:08x}"))
+                .collect::<Vec<_>>(),
+            watch_mem
+                .iter()
+                .map(|a| format!("0x{a:08x}"))
+                .collect::<Vec<_>>(),
+        );
+    }
+
     while steps < limit {
         let pc_before = cpu.get_pc();
         pc_ring[ring_head] = pc_before;
         ring_head = (ring_head + 1) % RING_LEN;
+
+        // Debug breakpoint (PRO_CPU): dump on first hit.
+        check_break!(cpu, pc_before, break_hit);
 
         // Capture the APP_CPU entry when PRO_CPU programs it. The ROM also
         // points the APP_CPU at early DRAM stubs during its own bring-up; only
@@ -960,6 +1062,8 @@ fn run_firmware(args: RunArgs) -> ExitCode {
         // A halted APP_CPU returns immediately from step(). S32C1I is atomic
         // within step(), so spinlocks between the cores behave correctly.
         if let Some(c1) = cpu1.as_mut() {
+            // Debug breakpoint (APP_CPU): dump on first hit.
+            check_break!(c1, c1.get_pc(), break_hit1);
             match c1.step(&mut bus, &observers, &config) {
                 Ok(()) | Err(SimulationError::BreakpointHit(_)) => {}
                 Err(e) => {
@@ -1049,6 +1153,30 @@ fn run_firmware(args: RunArgs) -> ExitCode {
 fn run_snapshot(args: SnapshotArgs) -> ExitCode {
     match args.command {
         SnapshotCommands::Capture(a) => run_snapshot_capture(a),
+    }
+}
+
+fn run_coverage(args: CoverageArgs) -> ExitCode {
+    if let Some(p) = &args.svd {
+        std::env::set_var("LABWIRED_ESP32S3_SVD", p);
+    }
+    match coverage::run() {
+        Some((matrix, text)) => {
+            print!("{text}");
+            if let Some(out) = &args.json_out {
+                let json = serde_json::to_string_pretty(&matrix).expect("serialize matrix");
+                std::fs::write(out, &json).expect("write json");
+                eprintln!("wrote {}", out.display());
+            }
+            ExitCode::SUCCESS
+        }
+        None => {
+            eprintln!(
+                "error: ESP32-S3 SVD not found; set --svd or LABWIRED_ESP32S3_SVD, \
+                 or install the espressif32 PlatformIO platform"
+            );
+            ExitCode::from(EXIT_CONFIG_ERROR)
+        }
     }
 }
 

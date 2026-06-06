@@ -209,6 +209,12 @@ impl Esp32s3Rsa {
         let x = BigUint::from_le_words(&self.x_mem[..n]);
         let y = BigUint::from_le_words(&self.y_mem[..n]);
         let m = BigUint::from_le_words(&self.m_mem[..n]);
+        // Hardware behaviour with a zero modulus is undefined; silently
+        // complete without storing a result (probe-safe guard).
+        if m.is_zero() {
+            self.complete();
+            return;
+        }
         let z = x.modpow(&y, &m);
         self.store_z(&z, n);
         self.complete();
@@ -220,6 +226,12 @@ impl Esp32s3Rsa {
         let x = BigUint::from_le_words(&self.x_mem[..n]);
         let y = BigUint::from_le_words(&self.y_mem[..n]);
         let m = BigUint::from_le_words(&self.m_mem[..n]);
+        // Hardware behaviour with a zero modulus is undefined; silently
+        // complete without storing a result (probe-safe guard).
+        if m.is_zero() {
+            self.complete();
+            return;
+        }
         let prod = x.mul(&y);
         let z = prod.rem(&m);
         self.store_z(&z, n);
@@ -531,7 +543,7 @@ impl BigUint {
     /// Modular exponentiation `self^exp mod modulus` (square-and-multiply).
     /// Mirrors `num_bigint::BigUint::modpow`.
     fn modpow(&self, exp: &BigUint, modulus: &BigUint) -> BigUint {
-        assert!(!modulus.is_zero(), "RSA modulus is zero");
+        debug_assert!(!modulus.is_zero(), "RSA modulus is zero");
         // mod 1 == 0 for every base/exponent.
         if modulus.cmp(&BigUint::one()) == std::cmp::Ordering::Equal {
             return BigUint::zero();
@@ -734,6 +746,36 @@ mod tests {
         assert_eq!(rd(&p, OFF_X_MEM + 4), 0x3333_4444);
         assert_eq!(rd(&p, OFF_Y_MEM), 0x5555_6666);
         assert_eq!(rd(&p, OFF_M_MEM), 0x7777_8888);
+    }
+
+    #[test]
+    fn modexp_zero_modulus_completes_without_panic() {
+        // Regression: writing 1 to MODEXP_START with an all-zero M_MEM must
+        // complete (done bit set) rather than panic. The zero-modulus guard in
+        // run_modexp calls self.complete() and returns early instead of reaching
+        // the BigUint::modpow / rem path that would assert.
+        let mut p = Esp32s3Rsa::new(ETS_RSA_INTR_SOURCE);
+        // MODE = 0 (1 word). M_MEM stays all-zero (default).
+        wr(&mut p, OFF_LENGTH, 0);
+        load_operand(&mut p, OFF_X_MEM, &[4]);
+        load_operand(&mut p, OFF_Y_MEM, &[13]);
+        // Deliberately do NOT load M_MEM — it stays all-zero.
+        assert_eq!(rd(&p, OFF_QUERY_INTERRUPT), 0, "idle before op");
+        wr(&mut p, OFF_MODEXP_START, 1); // must not panic
+        assert_eq!(rd(&p, OFF_QUERY_INTERRUPT), 1, "done after zero-modulus op");
+    }
+
+    #[test]
+    fn modmult_zero_modulus_completes_without_panic() {
+        // Analogous regression for MODMULT_START.
+        let mut p = Esp32s3Rsa::new(ETS_RSA_INTR_SOURCE);
+        wr(&mut p, OFF_LENGTH, 0);
+        load_operand(&mut p, OFF_X_MEM, &[123]);
+        load_operand(&mut p, OFF_Y_MEM, &[456]);
+        // M_MEM stays all-zero.
+        assert_eq!(rd(&p, OFF_QUERY_INTERRUPT), 0, "idle before op");
+        wr(&mut p, OFF_MODMULT_START, 1); // must not panic
+        assert_eq!(rd(&p, OFF_QUERY_INTERRUPT), 1, "done after zero-modulus op");
     }
 
     #[test]
