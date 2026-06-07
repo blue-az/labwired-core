@@ -140,17 +140,14 @@ jobs:
       # espup emits ~/export-esp.sh; source it so the +esp toolchain and
       # xtensa-esp32s3-none-elf target are available for cargo build.
       - name: Build ESP32-S3 example fixtures
+        # Build from INSIDE each example dir so its .cargo/config.toml and
+        # rust-toolchain.toml apply (--manifest-path from the repo root skips
+        # them — that's what broke the first run with E0463).
         run: |
           source ~/export-esp.sh
-          cargo +esp build --release \
-            --manifest-path examples/esp32s3-blinky/Cargo.toml \
-            --target xtensa-esp32s3-none-elf
-          cargo +esp build --release \
-            --manifest-path examples/esp32s3-hello-world/Cargo.toml \
-            --target xtensa-esp32s3-none-elf
-          cargo +esp build --release \
-            --manifest-path examples/esp32s3-i2c-tmp102/Cargo.toml \
-            --target xtensa-esp32s3-none-elf
+          (cd examples/esp32s3-blinky && cargo build --release)
+          (cd examples/esp32s3-hello-world && cargo build --release)
+          (cd examples/esp32s3-i2c-tmp102 && cargo build --release)
 
       # The tests are gated on --features esp32s3-fixtures and call
       # ensure_firmware_built() which skips the cargo +esp build if the ELF
@@ -193,6 +190,12 @@ jobs:
       # If espup installs a newer toolchain and the hashes differ from MANIFEST.json,
       # this job fails and a human decides whether to refresh the committed blobs.
       # That failure is the feature — it prevents silent blob drift.
+      - name: Install ARM and RISC-V fixture targets
+        if: env.SKIP_DRIFT != '1'
+        # build_tier1_fixtures.sh chains every per-family build script — the
+        # STM32/nRF/RP2040 fixtures need the thumb targets, the C3 needs riscv.
+        run: rustup target add thumbv6m-none-eabi thumbv7m-none-eabi thumbv7em-none-eabi riscv32imc-unknown-none-elf
+
       - name: Install espup and espflash
         if: env.SKIP_DRIFT != '1'
         run: cargo install espup espflash --locked
