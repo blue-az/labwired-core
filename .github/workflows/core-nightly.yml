@@ -152,18 +152,22 @@ jobs:
       - name: Rebuild tier1 fixture blobs
         if: env.SKIP_DRIFT != '1'
         run: |
+          # Snapshot the COMMITTED manifest first — build_tier1_fixtures.sh
+          # overwrites MANIFEST.json with hashes of the fresh build, and
+          # comparing the rebuild against itself would always pass.
+          git show HEAD:tests/fixtures/tier1/MANIFEST.json > /tmp/committed-manifest.json
           source ~/export-esp.sh
           ./scripts/build_tier1_fixtures.sh
 
-      # Compare freshly-built blob hashes against sha256 values in the committed
-      # MANIFEST.json, ignoring source_rev (which changes on every rebuild).
+      # Compare freshly-built blob hashes against sha256 values in the COMMITTED
+      # manifest (snapshotted above), ignoring source_rev (changes every rebuild).
       - name: Verify fixture hashes match committed manifest
         if: env.SKIP_DRIFT != '1'
         run: |
           python3 - <<'EOF'
           import hashlib, json, pathlib, sys
 
-          manifest_path = pathlib.Path("tests/fixtures/tier1/MANIFEST.json")
+          manifest_path = pathlib.Path("/tmp/committed-manifest.json")
           committed = json.loads(manifest_path.read_text())
 
           failures = []
