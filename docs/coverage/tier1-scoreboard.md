@@ -9,18 +9,18 @@ that arrives with the HIL workstream; no cell currently claims it.
 
 | chip | clock | gpio | uart | timer | dma | irq | adc | i2c | pwm | rmt | rtc | spi | wdt |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| esp32 | · | · | · | · | — | · | — | — | — | · | — | — | — |
-| esp32c3 | — | · | · | · | — | · | — | — | — | · | — | — | — |
-| esp32s3 | · | · | · | · | · | · | — | · | · | · | — | — | — |
-| nrf52832 | — | — | · | — | — | — | — | — | — | · | — | — | — |
-| nrf52840 | — | · | · | — | — | — | — | — | — | · | — | · | — |
-| rp2040 | — | — | · | — | — | — | — | — | — | · | — | — | — |
-| stm32f103 | · | · | · | · | · | — | · | · | — | · | · | · | · |
-| stm32f401 | · | · | · | — | — | — | — | · | — | · | — | — | — |
-| stm32f407 | · | · | · | — | — | — | — | · | — | · | — | — | — |
-| stm32g474re | · | · | · | — | — | — | — | — | — | · | — | — | — |
-| stm32h563 | · | · | · | — | · | — | — | — | — | · | — | — | — |
-| stm32l073 | · | · | · | · | · | · | · | · | — | · | · | · | · |
-| stm32l476 | · | · | · | · | · | · | · | · | — | · | · | · | · |
-| stm32wb55 | · | · | · | — | — | — | — | — | — | · | — | — | — |
-| stm32wba52 | · | · | · | — | — | — | — | — | — | · | — | — | — |
+| esp32 | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | — | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | — | — | — | · | — | — | — |
+| esp32c3 | — | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [⛔](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | — | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | — | — | — | · | — | — | — |
+| esp32s3 | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [⛔](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | — | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | — | — | — |
+| nrf52832 | — | — | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | — | — | — | — | — | — | · | — | — | — |
+| nrf52840 | — | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | — | — | — | — | — | — | · | — | · | — |
+| rp2040 | — | — | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | — | — | — | — | — | — | · | — | — | — |
+| stm32f103 | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | — | · | · | — | · | · | · | · |
+| stm32f401 | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | — | — | — | — | · | — | · | — | — | — |
+| stm32f407 | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | — | — | — | — | · | — | · | — | — | — |
+| stm32g474re | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | — | — | — | — | — | — | · | — | — | — |
+| stm32h563 | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [⛔](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | — | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | — | — | — | — | · | — | — | — |
+| stm32l073 | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | · | · | — | · | · | · | · |
+| stm32l476 | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | · | · | — | · | · | · | · |
+| stm32wb55 | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | — | — | — | — | — | — | · | — | — | — |
+| stm32wba52 | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [⛔](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27104548632) | — | — | — | — | — | — | · | — | — | — |
