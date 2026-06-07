@@ -77,20 +77,7 @@ assertions:
     assert_eq!(result["stop_reason"], "max_steps");
 }
 
-#[test]
-fn test_nested_irq_config_validation() {
-    // Verify that complex system configs with multiple IRQs are parsed and loaded correctly
-    let script = r#"
-schema_version: "1.0"
-inputs:
-  firmware: "__FIRMWARE__"
-  system: "__SYSTEM__"
-limits:
-  max_steps: 100
-assertions: []
-"#;
-    // We override the system to one with more peripherals if we had one,
-    // but for now we verify the runner handles multiple IRQ sources.
-    let result = run_stress_test("irq_config", script, &[]);
-    assert_eq!(result["status"], "pass");
-}
+// TODO(HIL): test_nested_irq_config_validation deleted — admitted it doesn't
+// test nested IRQs (uses a basic uart1 system). A real test needs a
+// system fixture that actually exercises nested-IRQ preemption; tracked
+// under the HIL / system-fixture workstream.

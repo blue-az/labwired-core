@@ -225,28 +225,10 @@ fn replay_engine_handles_minimal_write_and_tick() {
     trace.replay(&mut bus).expect("smoke replay must succeed");
 }
 
-// ── Hardware-anchored test (ignored until silicon oracle is captured) ──
-
-/// Replay the AHT20 + BMP280 chip-ID handshake captured from real F407
-/// silicon. **Ignored** until hardware lands and the oracle fixture is
-/// populated. Run with:
-///
-/// ```bash
-/// cargo test -p labwired-core --test e2e_stm32f407_i2c -- --ignored
-/// ```
-///
-/// Capture procedure for populating the fixture:
-/// see `examples/nucleo-f407-i2c/ORACLE_CAPTURE.md`.
-#[test]
-#[ignore = "needs hardware oracle capture from real F407 silicon"]
-fn aht20_bmp280_chip_id_handshake_matches_silicon() {
-    let path = fixture_path("aht20_bmp280_chip_id.json");
-    let trace = OracleTrace::load(&path).expect("load captured trace");
-    let mut bus = build_f407_bus();
-    if let Err(msg) = trace.replay(&mut bus) {
-        panic!("oracle divergence: {msg}");
-    }
-}
+// TODO(HIL): aht20_bmp280_chip_id_handshake_matches_silicon deleted —
+// fixture had "events": [] (empty capture, test would always vacuously pass).
+// Re-add once real oracle data is captured from F407 silicon under the HIL
+// workstream. See examples/nucleo-f407-i2c/ORACLE_CAPTURE.md.
 
 // ── End-to-end firmware-driven test ───────────────────────────────────
 

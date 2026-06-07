@@ -30,7 +30,8 @@ pub struct PeripheralCoverage {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CoverageMatrix(pub BTreeMap<String, PeripheralCoverage>);
 
-/// Discover the ESP32-S3 SVD: `LABWIRED_ESP32S3_SVD` override, else PlatformIO.
+/// Discover the ESP32-S3 SVD: `LABWIRED_ESP32S3_SVD` override, else PlatformIO,
+/// else the vendored copy under `tests/fixtures/svd/` in the workspace root.
 pub fn discover_svd() -> Option<PathBuf> {
     if let Ok(p) = std::env::var("LABWIRED_ESP32S3_SVD") {
         let p = PathBuf::from(p);
@@ -42,7 +43,13 @@ pub fn discover_svd() -> Option<PathBuf> {
     let pio = PathBuf::from(format!(
         "{home}/.platformio/platforms/espressif32/misc/svd/esp32s3.svd"
     ));
-    pio.is_file().then_some(pio)
+    if pio.is_file() {
+        return Some(pio);
+    }
+    // Fallback: vendored copy committed under tests/fixtures/svd/ so CI runs
+    // the ratchet without requiring PlatformIO or the Xtensa toolchain.
+    let vendored = crate::tier1::workspace_root().join("tests/fixtures/svd/esp32s3.svd");
+    vendored.is_file().then_some(vendored)
 }
 
 /// Flatten a `RegisterCluster` into `ProbeReg` entries, mirroring svd-ingestor's
