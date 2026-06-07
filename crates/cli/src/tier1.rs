@@ -338,7 +338,11 @@ pub fn run_target(
             let s = String::from_utf8_lossy(&out.stderr);
             let trimmed = s.trim_end();
             if trimmed.len() > 500 {
-                trimmed[trimmed.len() - 500..].to_string()
+                let cut = trimmed.len().saturating_sub(500);
+                let cut = (cut..=trimmed.len())
+                    .find(|&i| trimmed.is_char_boundary(i))
+                    .unwrap_or(trimmed.len());
+                trimmed[cut..].to_string()
             } else {
                 trimmed.to_string()
             }
@@ -718,6 +722,22 @@ peripherals:
         let err = run_target(target, &fake).unwrap_err();
         assert!(err.contains("boom-stderr"), "{err}");
         assert!(err.contains("esp32s3"), "{err}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn stderr_tail_truncation_is_char_boundary_safe() {
+        let dir = std::env::temp_dir().join(format!("tier1-crash-utf8-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let fake = dir.join("labwired-fake");
+        // >500 bytes of multibyte stderr (U+2744 = 3 bytes each × 200 = 600 bytes)
+        // so the naive len-500 cut lands mid-char.
+        std::fs::write(&fake, "#!/bin/sh\npython3 << 'PYEOF'\nimport sys\nfor i in range(200):\n    sys.stderr.buffer.write(b'\\xe2\\x9d\\x84')\nsys.exit(3)\nPYEOF\n").unwrap();
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&fake, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let target = &TIER1_TARGETS[0];
+        let err = run_target(target, &fake).unwrap_err();
+        assert!(err.contains("exited"), "{err}");
         let _ = std::fs::remove_dir_all(&dir);
     }
 }
