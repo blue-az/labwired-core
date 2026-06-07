@@ -1485,7 +1485,13 @@ impl CortexM {
                     let val = self.read_reg(rm);
                     let res = val.wrapping_shl(imm as u32);
                     self.write_reg(rd, res);
-                    self.update_nz(res);
+                    // T1 shift-immediate: setflags = !InITBlock(). Inside an
+                    // IT block this encoding is the flag-preserving LSL, and
+                    // leaking flags here would corrupt the remaining block
+                    // conditions (Tier-1 H563/WBA52 gpio-check regression).
+                    if !it_block_instruction {
+                        self.update_nz(res);
+                    }
                     // Note: Carry out not fully implemented for shifts yet
                 }
                 Instruction::Lsr { rd, rm, imm } => {
@@ -1499,7 +1505,10 @@ impl CortexM {
                     // imm5=0 for LSL is imm=0. imm5=0 for LSR is imm=32.
                     // For MVP, letting wrapping_shr handle basics.
                     self.write_reg(rd, res);
-                    self.update_nz(res);
+                    // T1 shift-immediate: setflags = !InITBlock().
+                    if !it_block_instruction {
+                        self.update_nz(res);
+                    }
                 }
                 Instruction::Asr { rd, rm, imm } => {
                     let val = self.read_reg(rm) as i32;
@@ -1509,7 +1518,10 @@ impl CortexM {
                         val >> (imm as u32)
                     }) as u32;
                     self.write_reg(rd, res);
-                    self.update_nz(res);
+                    // T1 shift-immediate: setflags = !InITBlock().
+                    if !it_block_instruction {
+                        self.update_nz(res);
+                    }
                 }
                 Instruction::LslReg { rd, rm } => {
                     let val = self.read_reg(rd);
@@ -2742,6 +2754,84 @@ mod tests {
     /// IRQs read priorities from the shared NVIC IPR. Two pending IRQs
     /// with different priorities must dispatch by priority, not by IRQ
     /// number.
+    // --- Thumb-1 register-offset load/store execution tests ---
+    // Opcodes derived from ARMv7-M A6.2.4: bits[15:9] = 0101 op[2:0],
+    // bits[8:6]=Rm, bits[5:3]=Rn, bits[2:0]=Rt.
+    // All four tests use Rt=R0, Rn=R1 (base), Rm=R2 (offset).
+
+    #[test]
+    fn test_exec_strh_reg_offset() {
+        // STRH R0, [R1, R2] — op=001 — 0101 001 010 001 000 = 0x5288
+        let mut cpu = CortexM::new();
+        let mut bus = MockBus::new();
+        cpu.pc = 0x2000;
+        // Base address in R1, zero offset in R2.
+        cpu.r1 = 0x3000;
+        cpu.r2 = 0x0000;
+        // Value to store: 0xBEEF (bottom 16 bits).
+        cpu.r0 = 0x0000BEEF;
+        run_test_instr(&mut cpu, &mut bus, 0x5288, false);
+        // The halfword at 0x3000 should be 0xBEEF.
+        assert_eq!(bus.read_u16(0x3000).unwrap(), 0xBEEF);
+    }
+
+    #[test]
+    fn test_exec_ldrsb_reg_offset_positive() {
+        // LDRSB R0, [R1, R2] — op=011 — 0101 011 010 001 000 = 0x5688
+        // Positive byte (MSB clear): no sign extension needed.
+        let mut cpu = CortexM::new();
+        let mut bus = MockBus::new();
+        cpu.pc = 0x2000;
+        cpu.r1 = 0x3000;
+        cpu.r2 = 0x0004;
+        bus.write_u8(0x3004, 0x7F).unwrap(); // +127
+        run_test_instr(&mut cpu, &mut bus, 0x5688, false);
+        assert_eq!(cpu.r0, 0x0000007F);
+    }
+
+    #[test]
+    fn test_exec_ldrsb_reg_offset_negative() {
+        // LDRSB R0, [R1, R2] — sign-extends a byte with MSB set.
+        let mut cpu = CortexM::new();
+        let mut bus = MockBus::new();
+        cpu.pc = 0x2000;
+        cpu.r1 = 0x3000;
+        cpu.r2 = 0x0000;
+        bus.write_u8(0x3000, 0xFF).unwrap(); // -1 as i8
+        run_test_instr(&mut cpu, &mut bus, 0x5688, false);
+        // Sign-extended to 32 bits: 0xFFFFFFFF.
+        assert_eq!(cpu.r0, 0xFFFFFFFF);
+    }
+
+    #[test]
+    fn test_exec_ldrh_reg_offset() {
+        // LDRH R0, [R1, R2] — op=101 — 0101 101 010 001 000 = 0x5A88
+        // Zero-extends the 16-bit halfword.
+        let mut cpu = CortexM::new();
+        let mut bus = MockBus::new();
+        cpu.pc = 0x2000;
+        cpu.r1 = 0x4000;
+        cpu.r2 = 0x0002;
+        bus.write_u16(0x4002, 0xDEAD).unwrap();
+        run_test_instr(&mut cpu, &mut bus, 0x5A88, false);
+        assert_eq!(cpu.r0, 0x0000DEAD);
+    }
+
+    #[test]
+    fn test_exec_ldrsh_reg_offset_negative() {
+        // LDRSH R0, [R1, R2] — op=111 — 0101 111 010 001 000 = 0x5E88
+        // Sign-extends a halfword with MSB set.
+        let mut cpu = CortexM::new();
+        let mut bus = MockBus::new();
+        cpu.pc = 0x2000;
+        cpu.r1 = 0x4000;
+        cpu.r2 = 0x0000;
+        bus.write_u16(0x4000, 0x8001).unwrap(); // negative i16
+        run_test_instr(&mut cpu, &mut bus, 0x5E88, false);
+        // Sign-extended: 0xFFFF8001.
+        assert_eq!(cpu.r0, 0xFFFF8001);
+    }
+
     #[test]
     fn nvic_ipr_priority_drives_irq_dispatch_order() {
         let mut cpu = CortexM::new();

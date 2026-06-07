@@ -11,6 +11,26 @@ from pathlib import Path
 ICONS = {"pass": "✅", "partial": "🟡", "blocked": "⛔", "na": "—", "unrecorded": "·"}
 RUBRIC = ["clock", "gpio", "uart", "timer", "dma", "irq"]
 
+# Proper part names for display (row keys stay the stable chip ids that name
+# blobs/yamls). Source: each chip yaml's documented reference part.
+DISPLAY_NAMES = {
+    "esp32": "ESP32 (Xtensa LX6)",
+    "esp32c3": "ESP32-C3 (RISC-V)",
+    "esp32s3": "ESP32-S3 (Xtensa LX7)",
+    "nrf52832": "nRF52832",
+    "nrf52840": "nRF52840",
+    "rp2040": "RP2040",
+    "stm32f103": "STM32F103C8",
+    "stm32f401": "STM32F401RE",
+    "stm32f407": "STM32F407VG",
+    "stm32g474re": "STM32G474RE",
+    "stm32h563": "STM32H563",
+    "stm32l073": "STM32L073RZ",
+    "stm32l476": "STM32L476RG",
+    "stm32wb55": "STM32WB55",
+    "stm32wba52": "STM32WBA52",
+}
+
 
 def render(matrix: dict) -> str:
     # Column set = rubric order, then any extra classes seen (e.g. S3 beachhead).
@@ -46,7 +66,8 @@ def render(matrix: dict) -> str:
                 status = "unrecorded"  # no evidence, no claim
             icon = ICONS.get(status, "·")
             cells.append(f"[{icon}]({url})" if url else icon)
-        lines.append(f"| {chip} | " + " | ".join(cells) + " |")
+        label = DISPLAY_NAMES.get(chip, chip)
+        lines.append(f"| {label} | " + " | ".join(cells) + " |")
     return "\n".join(lines) + "\n"
 
 
