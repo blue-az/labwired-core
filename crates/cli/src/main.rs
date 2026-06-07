@@ -733,6 +733,76 @@ fn main() -> ExitCode {
     }
 }
 
+/// Fast-boot path for RISC-V chip descriptors (e.g. ESP32-C3).
+///
+/// Loads the chip's declarative peripherals from the YAML via
+/// `SystemBus::from_config`, creates a RISC-V CPU, loads the ELF at its entry
+/// point, and runs the step loop up to `max_steps`. UART output is echoed to
+/// stdout, which is how the Tier-1 harness reads protocol lines
+/// (`TIER1 <class> PASS|FAIL` / `TIER1 done`).
+fn run_firmware_riscv(args: RunArgs, _chip_yaml: String) -> ExitCode {
+    use labwired_core::bus::SystemBus;
+
+    let chip = match labwired_config::ChipDescriptor::from_file(&args.chip) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("error: cannot parse chip YAML {:?}: {e}", args.chip);
+            return ExitCode::from(EXIT_CONFIG_ERROR);
+        }
+    };
+
+    // Minimal system manifest: no external devices, no extra peripherals.
+    // All peripherals come from the chip descriptor.
+    let manifest = labwired_config::SystemManifest {
+        schema_version: "1.0".to_string(),
+        name: chip.name.clone(),
+        chip: args.chip.to_string_lossy().into_owned(),
+        memory_overrides: Default::default(),
+        external_devices: vec![],
+        board_io: vec![],
+        peripherals: vec![],
+        walk_deleted: false,
+    };
+
+    let mut bus = match SystemBus::from_config(&chip, &manifest) {
+        Ok(b) => b,
+        Err(e) => {
+            eprintln!("error: failed to build system bus: {e:#}");
+            return ExitCode::from(EXIT_CONFIG_ERROR);
+        }
+    };
+
+    let program = match labwired_loader::load_elf(&args.firmware) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("error: cannot load ELF {:?}: {e}", args.firmware);
+            return ExitCode::from(EXIT_RUNTIME_ERROR);
+        }
+    };
+
+    let cpu = labwired_core::system::riscv::configure_riscv(&mut bus);
+    let mut machine = labwired_core::Machine::new(cpu, bus);
+    if let Err(e) = machine.load_firmware(&program) {
+        eprintln!("error: firmware load failed: {e}");
+        return ExitCode::from(EXIT_RUNTIME_ERROR);
+    }
+
+    let limit = args.max_steps.unwrap_or(u64::MAX);
+    for i in 0..limit {
+        if let Err(e) = machine.step() {
+            tracing::debug!(
+                "labwired-riscv: step {} pc={:#010x} halt: {}",
+                i,
+                machine.cpu.get_pc(),
+                e
+            );
+            break;
+        }
+    }
+
+    ExitCode::from(EXIT_PASS)
+}
+
 fn run_firmware(args: RunArgs) -> ExitCode {
     use labwired_core::boot::esp32s3::{fast_boot, BootOpts};
     use labwired_core::bus::SystemBus;
@@ -747,6 +817,14 @@ fn run_firmware(args: RunArgs) -> ExitCode {
             return ExitCode::from(EXIT_CONFIG_ERROR);
         }
     };
+
+    // RISC-V fast-boot path: load peripherals from the chip YAML and run the
+    // RV32I core. This is the path used by Tier-1 fixtures for RISC-V chips
+    // (e.g. ESP32-C3) which cannot go through the Xtensa boot sequence.
+    if chip_yaml.contains("arch: \"riscv\"") || chip_yaml.contains("arch: riscv") {
+        return run_firmware_riscv(args, chip_yaml);
+    }
+
     if !chip_yaml.contains("xtensa-lx7") {
         eprintln!(
             "error: chip {:?} does not look like an Xtensa LX7 chip; \
