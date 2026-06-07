@@ -6,5 +6,17 @@
   "esp32s3.elf": {
     "sha256": "27a61f851c798edbf2dabc38526cf4ca9211ab51a89387baba9faa1936060a5f",
     "source_rev": "b508acdb09e3e1be97fc7527cf142e709ccecab7"
+  },
+  "nrf52832.elf": {
+    "sha256": "9933cb55cf63861ddd89d1f769a29ed4448ece3d665091cf1831d8c04d80e8a6",
+    "source_rev": "c11a2b1a1baf77de7785f23797309ed486157c47"
+  },
+  "nrf52840.elf": {
+    "sha256": "b92af3da22eef1426ffa58d793085bf9ab9b92faa702d1911b5baaa5cf665139",
+    "source_rev": "c11a2b1a1baf77de7785f23797309ed486157c47"
+  },
+  "rp2040.elf": {
+    "sha256": "9e5b3b3ee61d013d19b82f7ad5b9563eb9476d175bca9f108b7eeb2c76aabd24",
+    "source_rev": "c11a2b1a1baf77de7785f23797309ed486157c47"
   }
 }

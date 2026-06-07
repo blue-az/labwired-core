@@ -747,6 +747,14 @@ fn run_firmware(args: RunArgs) -> ExitCode {
             return ExitCode::from(EXIT_CONFIG_ERROR);
         }
     };
+
+    // ARM fast-boot path: parse the chip YAML, build the bus, run the firmware
+    // through a Cortex-M machine, and stream UART bytes to stdout so the
+    // TIER1 protocol lines are visible to the caller.
+    if chip_yaml.contains("arch: \"arm\"") || chip_yaml.contains("arch: arm") {
+        return run_firmware_arm(&args, &chip_yaml);
+    }
+
     if !chip_yaml.contains("xtensa-lx7") {
         eprintln!(
             "error: chip {:?} does not look like an Xtensa LX7 chip; \
@@ -2957,6 +2965,96 @@ fn run_machine_load(args: LoadArgs) -> ExitCode {
             ExitCode::from(EXIT_CONFIG_ERROR)
         }
     }
+}
+
+/// Fast-boot an ARM Cortex-M firmware from a chip YAML and ELF path.
+///
+/// Builds the bus directly from the chip descriptor (no system manifest
+/// required — the chip YAML's `peripherals` list is sufficient for raw-register
+/// fixture firmware).  UART bytes are streamed to stdout so the TIER1 protocol
+/// lines are visible to callers that pipe stdout.  Exits when the step limit
+/// is reached or the firmware halts.
+fn run_firmware_arm(args: &RunArgs, chip_yaml: &str) -> ExitCode {
+    use labwired_config::{ChipDescriptor, SystemManifest};
+    use labwired_core::bus::SystemBus;
+    use labwired_core::system::cortex_m::configure_cortex_m;
+    use labwired_core::Machine;
+    use std::io::Write;
+
+    // Parse the chip descriptor.
+    let chip = match serde_yaml::from_str::<ChipDescriptor>(chip_yaml) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("error: cannot parse chip YAML: {e}");
+            return ExitCode::from(EXIT_CONFIG_ERROR);
+        }
+    };
+
+    // Synthesise a minimal system manifest (no external devices) so the bus
+    // builder has something to work with.  The chip path is already absolute
+    // because `chip_yaml` was read from `args.chip`.
+    let manifest_yaml = format!(
+        "name: \"tier1-run\"\nchip: \"{}\"\nexternal_devices: []\n",
+        args.chip.display()
+    );
+    let mut manifest = match serde_yaml::from_str::<SystemManifest>(&manifest_yaml) {
+        Ok(m) => m,
+        Err(e) => {
+            eprintln!("error: cannot build minimal manifest: {e}");
+            return ExitCode::from(EXIT_CONFIG_ERROR);
+        }
+    };
+    // Chip field must be an absolute path string; already is (args.chip is absolute
+    // relative to the caller's cwd, which is the workspace root per run_target).
+    manifest.chip = args.chip.to_string_lossy().into_owned();
+
+    // Build the bus.
+    let mut bus = match SystemBus::from_config(&chip, &manifest) {
+        Ok(b) => b,
+        Err(e) => {
+            eprintln!("error: cannot build bus from chip config: {e}");
+            return ExitCode::from(EXIT_CONFIG_ERROR);
+        }
+    };
+
+    // Attach stdout echo to every UART so protocol lines flow through.
+    // `echo_stdout = true` prints each byte as it arrives.
+    let uart_sink = std::sync::Arc::new(std::sync::Mutex::new(Vec::<u8>::new()));
+    bus.attach_uart_tx_sink(uart_sink.clone(), true);
+
+    // Configure Cortex-M CPU.
+    let (cpu, _nvic) = configure_cortex_m(&mut bus);
+    let mut machine = Machine::new(cpu, bus);
+
+    // Load ELF.
+    let image = match labwired_loader::load_elf(&args.firmware) {
+        Ok(img) => img,
+        Err(e) => {
+            eprintln!("error: cannot load firmware ELF {:?}: {e}", args.firmware);
+            return ExitCode::from(EXIT_CONFIG_ERROR);
+        }
+    };
+    if let Err(e) = machine.load_firmware(&image) {
+        eprintln!("error: cannot map firmware into bus: {e}");
+        return ExitCode::from(EXIT_RUNTIME_ERROR);
+    }
+
+    // Run the step loop.
+    let limit = args.max_steps.unwrap_or(u64::MAX);
+    for _ in 0..limit {
+        match machine.step() {
+            Ok(()) => {}
+            Err(e) => {
+                eprintln!("labwired run (arm): simulation error: {e}");
+                // Non-fatal for TIER1: the protocol may already be complete.
+                break;
+            }
+        }
+    }
+
+    // Flush stdout.
+    let _ = std::io::stdout().flush();
+    ExitCode::from(EXIT_PASS)
 }
 
 fn run_interactive_arm(

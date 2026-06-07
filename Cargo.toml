@@ -61,6 +61,9 @@ members = [
     "examples/ili9341-tft-lab",
     "examples/epaper-tricolor-lab",
     "examples/nokia5110-invaders-lab",
+    "examples/tier1-fixture/nrf52832",
+    "examples/tier1-fixture/nrf52840",
+    "examples/tier1-fixture/rp2040",
 ]
 # firmware-hal-test is a standalone reference example pinned to stm32f1xx-hal.
 # It carries its own [profile.release] (opt-level = "z", lto = true) that is
