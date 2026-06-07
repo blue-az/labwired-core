@@ -9,18 +9,18 @@ that arrives with the HIL workstream; no cell currently claims it.
 
 | chip | clock | gpio | uart | timer | dma | irq | adc | i2c | pwm | rmt | rtc | spi | wdt |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| ESP32 (Xtensa LX6) | · | · | · | · | — | · | — | — | — | · | — | — | — |
-| ESP32-C3 (RISC-V) | — | · | · | · | — | · | — | — | — | · | — | — | — |
-| ESP32-S3 (Xtensa LX7) | · | · | · | · | · | · | — | · | · | · | — | — | — |
-| nRF52832 | — | — | · | — | — | — | — | — | — | · | — | — | — |
-| nRF52840 | — | · | · | — | — | — | — | — | — | · | — | · | — |
-| RP2040 | — | — | · | — | — | — | — | — | — | · | — | — | — |
-| STM32F103C8 | · | · | · | · | · | — | · | · | — | · | · | · | · |
-| STM32F401RE | · | · | · | — | — | — | — | · | — | · | — | — | — |
-| STM32F407VG | · | · | · | — | — | — | — | · | — | · | — | — | — |
-| STM32G474RE | · | · | · | — | — | — | — | — | — | · | — | — | — |
-| STM32H563 | · | · | · | — | · | — | — | — | — | · | — | — | — |
-| STM32L073RZ | · | · | · | · | · | · | · | · | — | · | · | · | · |
-| STM32L476RG | · | · | · | · | · | · | · | · | — | · | · | · | · |
-| STM32WB55 | · | · | · | — | — | — | — | — | — | · | — | — | — |
-| STM32WBA52 | · | · | · | — | — | — | — | — | — | · | — | — | — |
+| ESP32 (Xtensa LX6) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | — | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | — | — | — | · | — | — | — |
+| ESP32-C3 (RISC-V) | — | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | — | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | — | — | — | · | — | — | — |
+| ESP32-S3 (Xtensa LX7) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | — | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | — | — | — |
+| nRF52832 | — | — | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | — | — | — | — | — | — | · | — | — | — |
+| nRF52840 | — | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | — | — | — | — | — | — | · | — | · | — |
+| RP2040 | — | — | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | — | — | — | — | — | — | · | — | — | — |
+| STM32F103C8 | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | — | · | · | — | · | · | · | · |
+| STM32F401RE | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | — | — | — | — | · | — | · | — | — | — |
+| STM32F407VG | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | — | — | — | — | · | — | · | — | — | — |
+| STM32G474RE | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | — | — | — | — | — | — | · | — | — | — |
+| STM32H563 | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | — | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | — | — | — | — | · | — | — | — |
+| STM32L073RZ | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | · | · | — | · | · | · | · |
+| STM32L476RG | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | · | · | — | · | · | · | · |
+| STM32WB55 | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | — | — | — | — | — | — | · | — | — | — |
+| STM32WBA52 | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | [✅](https://github.com/w1ne/labwired-core/actions/runs/27106553533) | — | — | — | — | — | — | · | — | — | — |
