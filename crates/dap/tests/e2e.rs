@@ -8,7 +8,11 @@ fn test_dap_e2e_launch_and_uart() {
     let firmware_path = root.join("../../target/thumbv7m-none-eabi/debug/firmware-ci-fixture");
 
     if !firmware_path.exists() {
-        return;
+        panic!(
+            "fixture missing — build firmware-ci-fixture first: \
+             cargo build -p firmware-ci-fixture --target thumbv7m-none-eabi \
+             (see core-ci.yml Build test firmware fixture step)"
+        );
     }
 
     // Start labwired-dap
@@ -41,8 +45,9 @@ fn test_dap_e2e_launch_and_uart() {
     );
     send_dap_message(&mut stdin, &launch_req);
 
-    // Read response
-    let resp = read_dap_message(&mut reader);
+    // Use wait_for_response to skip any intermediate events (e.g. the
+    // `initialized` event the server sends alongside the initialize response).
+    let resp = wait_for_response(&mut reader, "launch", &mut uart_buffer);
     assert!(resp.contains("\"command\":\"launch\""));
 
     // 3. Send ConfigurationDone

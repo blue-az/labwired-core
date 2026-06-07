@@ -76,8 +76,12 @@ fn build_ereader_machine(
             cargo test -p labwired-core --test jit_lockstep -- --ignored --nocapture"]
 fn lockstep_noop_jit_matches_interpreter_on_ereader_firmware() {
     let Some(elf_path) = ereader_elf_path() else {
-        eprintln!("[skip] labwired-ereader ELF missing; set LABWIRED_EREADER_ELF to enable");
-        return;
+        panic!(
+            "labwired-ereader ELF not found — set LABWIRED_EREADER_ELF to its path, or \
+             build it and pass the path. NO CI lane builds the ereader ELF (it is an \
+             Arduino sketch espup cannot produce) — manual only; this test must not \
+             silently no-op when run with --ignored."
+        );
     };
     eprintln!("[lockstep] using ELF: {elf_path:?}");
 
@@ -114,8 +118,12 @@ fn lockstep_noop_jit_matches_interpreter_on_ereader_firmware() {
             cargo test -p labwired-core --test jit_lockstep -- --ignored --nocapture"]
 fn lockstep_detects_register_corruption_on_real_firmware() {
     let Some(elf_path) = ereader_elf_path() else {
-        eprintln!("[skip] labwired-ereader ELF missing; set LABWIRED_EREADER_ELF to enable");
-        return;
+        panic!(
+            "labwired-ereader ELF not found — set LABWIRED_EREADER_ELF to its path, or \
+             build it and pass the path. NO CI lane builds the ereader ELF (it is an \
+             Arduino sketch espup cannot produce) — manual only; this test must not \
+             silently no-op when run with --ignored."
+        );
     };
 
     // Only 64 steps — enough to prove the diff fires; corrupted state
@@ -158,8 +166,12 @@ fn lockstep_detects_register_corruption_on_real_firmware() {
             --test jit_lockstep lockstep_windowed_call_long_run -- --ignored --nocapture"]
 fn lockstep_windowed_call_long_run() {
     let Some(elf_path) = ereader_elf_path() else {
-        eprintln!("[skip] labwired-ereader ELF missing; set LABWIRED_EREADER_ELF to enable");
-        return;
+        panic!(
+            "labwired-ereader ELF not found — set LABWIRED_EREADER_ELF to its path, or \
+             build it and pass the path. NO CI lane builds the ereader ELF (it is an \
+             Arduino sketch espup cannot produce) — manual only; this test must not \
+             silently no-op when run with --ignored."
+        );
     };
     eprintln!("[lockstep] long-run windowed-call check, ELF: {elf_path:?}");
 
@@ -199,8 +211,12 @@ fn lockstep_windowed_call_long_run() {
             --test jit_lockstep lockstep_multi_op_hot_bb_aligned -- --ignored --nocapture"]
 fn lockstep_multi_op_hot_bb_aligned() {
     let Some(elf_path) = ereader_elf_path() else {
-        eprintln!("[skip] labwired-ereader ELF missing; set LABWIRED_EREADER_ELF to enable");
-        return;
+        panic!(
+            "labwired-ereader ELF not found — set LABWIRED_EREADER_ELF to its path, or \
+             build it and pass the path. NO CI lane builds the ereader ELF (it is an \
+             Arduino sketch espup cannot produce) — manual only; this test must not \
+             silently no-op when run with --ignored."
+        );
     };
 
     // 1. Bring up a machine and run until PC == HOT_BB_PC with JIT

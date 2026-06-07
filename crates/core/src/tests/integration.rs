@@ -1973,29 +1973,4 @@ pub mod integration_tests {
             "Should have executed one instruction (thumb)"
         );
     }
-
-    #[test]
-    fn test_blinky_perf_throughput_50mips() {
-        let mut machine = create_machine();
-        machine.config.batch_mode_enabled = true;
-        machine.config.peripheral_tick_interval = 1024;
-        machine.config.decode_cache_enabled = true;
-        machine.config.optimized_bus_access = true;
-
-        let pc = 0x2000_0000;
-        machine.cpu.set_pc(pc);
-
-        // Simple loop: SUBS R0, #1; BNE .-2
-        machine.bus.write_u16(pc as u64, 0x3801).unwrap();
-        machine.bus.write_u16(pc as u64 + 2, 0xD1FD).unwrap();
-
-        machine.cpu.r0 = 1_000_000;
-
-        let start = std::time::Instant::now();
-        let _res = machine.run(Some(2_000_000)).unwrap();
-        let elapsed = start.elapsed();
-
-        let mips = 2.0 / elapsed.as_secs_f64();
-        println!("\n[PERF] MIPS: {:.2} (Elapsed: {:?})", mips, elapsed);
-    }
 }

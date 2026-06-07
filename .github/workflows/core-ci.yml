@@ -46,9 +46,17 @@ jobs:
           cargo build -p firmware-h563-io-demo --release --target thumbv7m-none-eabi
           cargo build -p firmware-f401-demo --release --target thumbv7em-none-eabi
           cargo build -p firmware-rp2040-pio-onboarding --release --target thumbv6m-none-eabi
+          # Debug build: dap/e2e and loader/test_location_to_pc look for the debug path.
+          cargo build -p firmware-ci-fixture --target thumbv7m-none-eabi
 
       - name: Run Workspace Tests
         run: cargo test --workspace
+
+      # Host-only feature lanes: jit uses wasmtime (native host build only) and
+      # event-scheduler enables the scheduler drain path. Both compile and run on
+      # plain host without any cross-compilation toolchain.
+      - name: Feature tests — jit + event-scheduler
+        run: cargo test -p labwired-core --features jit,event-scheduler
 
       # Tier-1 matrix gates: rom-boot sims (~30M steps) are debug-ignored and
       # run here in release (~25s/run instead of ~5.5min each). The ratchet
