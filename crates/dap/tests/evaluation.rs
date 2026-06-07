@@ -1,43 +1,4 @@
 use labwired_core::{DebugControl, Machine};
-use labwired_dap::server::DapServer;
-use serde_json::json;
-
-#[test]
-fn test_dap_evaluate_register() {
-    let server = DapServer::new();
-    let adapter = server.adapter.clone();
-
-    // Set up a machine and set a register
-    let mut bus = labwired_core::bus::SystemBus::new();
-    let (cpu, _) = labwired_core::system::cortex_m::configure_cortex_m(&mut bus);
-    let mut machine = Machine::new(cpu, bus);
-    machine.write_core_reg(0, 0x12345678);
-    *adapter.machine.lock().unwrap() = Some(Box::new(machine));
-
-    // Mock DAP request
-    let request = json!({
-        "seq": 1,
-        "type": "request",
-        "command": "evaluate",
-        "arguments": {
-            "expression": "R0",
-            "frameId": 1,
-            "context": "watch"
-        }
-    });
-
-    let _input = format!(
-        "Content-Length: {}\r\n\r\n{}",
-        serde_json::to_string(&request).unwrap().len(),
-        serde_json::to_string(&request).unwrap()
-    );
-    let mut _output: Vec<u8> = Vec::new();
-
-    // We can't easily run the server loop in a test because it blocks
-    // But we can trigger the handler if we refactor or just test the logic
-    // For now, let's test the adapter's ability to resolve if we expose it,
-    // or use a more integrated approach if the server allowed single-step handling.
-}
 
 #[test]
 fn test_adapter_resolve_and_evaluate() {

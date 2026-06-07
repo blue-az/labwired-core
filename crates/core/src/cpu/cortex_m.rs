@@ -2339,30 +2339,6 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_arm_bfi_bfc() {
-        let mut cpu = CortexM::new();
-        let mut bus = MockBus::new();
-        let config = SimulationConfig::default();
-
-        cpu.r0 = 0x12345678;
-        cpu.r1 = 0xABCDEF01;
-
-        // BFI R1, R0, 4, 8 -> Insert bits 0-7 of R0 into bits 4-11 of R1
-        let _instr = Instruction::Bfi {
-            rd: 1,
-            rn: 0,
-            lsb: 4,
-            width: 8,
-        };
-        cpu.step_internal(&mut bus, &[], &config).unwrap_or(()); // Force manual execute if needed, but let's just test logic
-                                                                 // Wait, step_internal fetches from bus. I should just test the match arm logic if possible,
-                                                                 // but better to actually run it through step_internal by putting opcodes in bus.
-
-        // Actually, let's just test the registers after manual application if step_internal is too complex to mock opcodes for.
-        // But I want THE branch to be hit in coverage. So I MUST use step_internal.
-    }
-
     fn run_test_instr(cpu: &mut CortexM, bus: &mut MockBus, instr_bin: u32, is_32bit: bool) {
         let pc = cpu.pc;
         if is_32bit {
