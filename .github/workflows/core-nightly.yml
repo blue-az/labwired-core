@@ -95,6 +95,9 @@ jobs:
         run: python3 scripts/generate_tier1_scoreboard.py
 
       - name: Commit and push coverage artifacts
+        # Only main may receive refresh commits — a workflow_dispatch from a
+        # branch must not push there (same guard as core-validate-hw-targets).
+        if: github.ref == 'refs/heads/main'
         run: |
           if git diff --quiet -- docs/coverage/tier1-matrix.json docs/coverage/tier1-scoreboard.md; then
             echo "No tier1 coverage changes"
