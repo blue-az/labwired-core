@@ -1672,6 +1672,46 @@ pub mod integration_tests {
         assert_eq!(machine.cpu.r2, 3);
     }
 
+    /// T1 shift-immediate (LSLS/LSRS/ASRS 16-bit encodings) sets flags only
+    /// OUTSIDE an IT block (`setflags = !InITBlock()`). Inside an IT block
+    /// the same encoding is the flag-preserving form, so it must not
+    /// re-evaluate the block's condition mid-flight.
+    ///
+    /// Regression for the Tier-1 H563/WBA52 gpio check epilogue:
+    ///   lsls r1, r1, #26   ; N := bit5  (outside IT)
+    ///   itt  mi
+    ///   lslmi r0, r0, #26  ; r0=0 -> if flags leaked, N clears here...
+    ///   movmi r2, #0       ; ...and this THEN op is wrongly skipped
+    #[test]
+    fn test_it_block_t1_shift_immediate_does_not_set_flags() {
+        let mut machine: Machine<CortexM> = create_machine();
+
+        machine.cpu.pc = 0x0;
+        machine.cpu.r0 = 0; // shifted inside the IT block, result 0
+        machine.cpu.r1 = 1 << 5; // bit 5 set -> lsls #26 makes N=1
+        machine.cpu.r2 = 0xDEAD; // must be cleared by the last THEN op
+
+        // lsls r1, r1, #26
+        machine.bus.write_u16(0x0, 0x0689).unwrap();
+        // itt mi
+        machine.bus.write_u16(0x2, 0xBF44).unwrap();
+        // lslmi r0, r0, #26  (T1 encoding; must NOT set flags in IT block)
+        machine.bus.write_u16(0x4, 0x0680).unwrap();
+        // movmi r2, #0
+        machine.bus.write_u16(0x6, 0x2200).unwrap();
+
+        for _ in 0..4 {
+            machine.step().unwrap();
+        }
+
+        assert_eq!(machine.cpu.r0, 0);
+        assert_eq!(
+            machine.cpu.r2, 0,
+            "movmi was skipped: the in-IT T1 shift leaked flags and \
+             cleared N mid-block"
+        );
+    }
+
     #[test]
     fn test_thumb2_str_reg_shifted_store() {
         let mut machine: Machine<CortexM> = create_machine();
