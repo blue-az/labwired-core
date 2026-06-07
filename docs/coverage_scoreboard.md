@@ -55,6 +55,6 @@ Additional matrix sentinel target:
 3. Update this file when the Top-5 scope, thresholds, or status policy changes.
 4. Do not mark `green` without deterministic re-run evidence.
 
-## Tier-1 validation matrix
+## Tier-1 Validation Matrix
 
 Per-chip, per-peripheral real-firmware validation: [tier1-scoreboard](coverage/tier1-scoreboard.md).

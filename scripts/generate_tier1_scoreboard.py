@@ -17,7 +17,7 @@ def render(matrix: dict) -> str:
     extras = sorted({c for row in matrix.values() for c in row if c not in RUBRIC})
     classes = RUBRIC + extras
     lines = [
-        "# Tier-1 validation matrix",
+        "# Tier-1 Validation Matrix",
         "",
         "Every cell links the CI run that produced it; no link → `·` unrecorded.",
         "",
@@ -32,7 +32,11 @@ def render(matrix: dict) -> str:
             if cell is None:
                 cells.append("·")
                 continue
-            status, url = cell.get("status", "unrecorded"), cell.get("run_url")
+            status = cell.get("status", "unrecorded")
+            url = cell.get("run_url")
+            # Malformed evidence demotes to unrecorded.
+            if url and (not url.startswith("https://") or any(c in url for c in " |()")):
+                url = None
             if status not in ("na", "unrecorded") and not url:
                 status = "unrecorded"  # no evidence, no claim
             icon = ICONS.get(status, "·")
@@ -46,7 +50,11 @@ def main() -> None:
     ap.add_argument("--matrix", default="docs/coverage/tier1-matrix.json")
     ap.add_argument("--out", default="docs/coverage/tier1-scoreboard.md")
     args = ap.parse_args()
-    matrix = json.loads(Path(args.matrix).read_text())
+    path = Path(args.matrix)
+    if not path.exists():
+        raise SystemExit(f"matrix not found: {path}")
+    matrix = json.loads(path.read_text())
+    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     Path(args.out).write_text(render(matrix))
     print(f"wrote {args.out}")
 

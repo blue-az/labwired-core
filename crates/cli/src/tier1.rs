@@ -195,6 +195,25 @@ pub fn apply_na(row: &mut BTreeMap<String, Cell>, declared: &BTreeSet<String>) {
     }
 }
 
+/// Chips that the snapshot records with at least one `pass` cell but which the
+/// live run skipped (fixture missing). A deleted fixture must not silently
+/// disarm the ratchet — these are reported as regressions by the gate.
+pub fn skipped_chips_with_recorded_passes(
+    snapshot: &Tier1Matrix,
+    skipped: &[String],
+) -> Vec<String> {
+    skipped
+        .iter()
+        .filter(|chip| {
+            snapshot
+                .0
+                .get(chip.as_str())
+                .is_some_and(|row| row.values().any(|c| c.status == CellStatus::Pass))
+        })
+        .cloned()
+        .collect()
+}
+
 /// Cells recorded `Pass` in the snapshot must still pass live. Everything else
 /// (partial/blocked/na/unrecorded, chips missing from the live run) moves freely.
 pub fn ratchet_regressions(snapshot: &Tier1Matrix, live: &Tier1Matrix) -> Vec<String> {
@@ -613,6 +632,38 @@ peripherals:
             .unwrap();
         assert_eq!(j1, j2);
         assert!(j1.find("\"a\"").unwrap() < j1.find("\"b\"").unwrap());
+    }
+
+    #[test]
+    fn skipped_chips_with_passes_detects_disarmed_fixture() {
+        // Snapshot has esp32s3 with a pass cell — it gets flagged when skipped.
+        let mut snap = Tier1Matrix::default();
+        snap.0
+            .entry("esp32s3".into())
+            .or_default()
+            .insert("gpio".into(), cell(CellStatus::Pass));
+
+        let skipped = vec!["esp32s3".to_string(), "other".to_string()];
+        let disarmed = skipped_chips_with_recorded_passes(&snap, &skipped);
+        assert_eq!(disarmed, vec!["esp32s3".to_string()]);
+    }
+
+    #[test]
+    fn skipped_chips_with_only_blocked_cells_not_flagged() {
+        // Snapshot has a chip but only blocked/na cells — not a disarmed gate.
+        let mut snap = Tier1Matrix::default();
+        snap.0
+            .entry("esp32s3".into())
+            .or_default()
+            .insert("gpio".into(), cell(CellStatus::Blocked));
+        snap.0
+            .entry("esp32s3".into())
+            .or_default()
+            .insert("dma".into(), cell(CellStatus::Na));
+
+        let skipped = vec!["esp32s3".to_string()];
+        let disarmed = skipped_chips_with_recorded_passes(&snap, &skipped);
+        assert!(disarmed.is_empty());
     }
 
     #[test]

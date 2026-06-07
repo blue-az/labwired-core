@@ -19,10 +19,17 @@ fn tier1_matrix_does_not_regress() {
             .expect("parse snapshot");
 
     let bin = std::path::Path::new(env!("CARGO_BIN_EXE_labwired"));
-    let (live, skipped) = tier1::run_all(bin).expect("tier1 run_all");
+    let (live, skipped) = tier1::run_all(bin).unwrap_or_else(|e| panic!("tier1 run_all: {e}"));
     for chip in &skipped {
         eprintln!("SKIP: {chip} (fixture not present)");
     }
+
+    let disarmed = tier1::skipped_chips_with_recorded_passes(&snapshot, &skipped);
+    assert!(
+        disarmed.is_empty(),
+        "fixtures missing for chips with recorded passes (gate would be silently disarmed): {disarmed:?}. \
+         Restore tests/fixtures/tier1/ blobs or explicitly edit the snapshot."
+    );
 
     let regressions = tier1::ratchet_regressions(&snapshot, &live);
     assert!(

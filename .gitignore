@@ -3,10 +3,14 @@
 target/
 examples/*/target/
 # Generated test fixtures (build artifacts) — but allow committed reference
-# binaries like the Espressif ESP32 BROM ELF in crates/*/tests/fixtures/.
+# binaries like the Espressif ESP32 BROM ELF in crates/*/tests/fixtures/
+# and the workspace-root tier1 fixture tree.
 fixtures/
 !crates/*/tests/fixtures/
 !crates/*/tests/fixtures/**
+!tests/fixtures/
+!tests/fixtures/tier1/
+!tests/fixtures/tier1/**
 /*.rlib
 
 # Local release/test run outputs

@@ -10,7 +10,7 @@ use labwired_cli::tier1;
 #[test]
 fn tier1_matrix_runs_all_available_fixtures() {
     let bin = std::path::Path::new(env!("CARGO_BIN_EXE_labwired"));
-    let (matrix, skipped) = tier1::run_all(bin).expect("tier1 run_all");
+    let (matrix, skipped) = tier1::run_all(bin).unwrap_or_else(|e| panic!("tier1 run_all: {e}"));
     for chip in &skipped {
         eprintln!("SKIP: {chip} (fixture not present)");
     }
