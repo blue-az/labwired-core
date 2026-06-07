@@ -57,7 +57,7 @@ fn ensure_firmware_built() -> PathBuf {
 }
 
 #[test]
-#[ignore = "needs +esp-built epaper ELF; armed by the nightly espup lane"]
+#[ignore = "needs +esp-built epaper ELF; NO CI lane builds it yet — manual only"]
 fn firmware_drives_panel_to_ereader_bitmap() {
     let elf_path = ensure_firmware_built();
     if !elf_path.exists() {
@@ -67,7 +67,7 @@ fn firmware_drives_panel_to_ereader_bitmap() {
             "esp32-epaper-lab ELF not found at {elf_path:?}. \
              Build with: cd core/examples/esp32-epaper-lab && \
              source ~/export-esp.sh && cargo build --release. \
-             This test is armed by the nightly espup lane (core-nightly.yml)."
+             No CI lane builds this ELF yet (the nightly espup lane covers only the\n             esp32s3-fixtures e2e trio) — run manually after a +esp build."
         );
     }
 

@@ -78,8 +78,9 @@ fn lockstep_noop_jit_matches_interpreter_on_ereader_firmware() {
     let Some(elf_path) = ereader_elf_path() else {
         panic!(
             "labwired-ereader ELF not found — set LABWIRED_EREADER_ELF to its path, or \
-             build it with espup and pass the path. This test is armed by the nightly \
-             espup lane (core-nightly.yml) and must not silently no-op when run with --ignored."
+             build it and pass the path. NO CI lane builds the ereader ELF (it is an \
+             Arduino sketch espup cannot produce) — manual only; this test must not \
+             silently no-op when run with --ignored."
         );
     };
     eprintln!("[lockstep] using ELF: {elf_path:?}");
@@ -119,8 +120,9 @@ fn lockstep_detects_register_corruption_on_real_firmware() {
     let Some(elf_path) = ereader_elf_path() else {
         panic!(
             "labwired-ereader ELF not found — set LABWIRED_EREADER_ELF to its path, or \
-             build it with espup and pass the path. This test is armed by the nightly \
-             espup lane (core-nightly.yml) and must not silently no-op when run with --ignored."
+             build it and pass the path. NO CI lane builds the ereader ELF (it is an \
+             Arduino sketch espup cannot produce) — manual only; this test must not \
+             silently no-op when run with --ignored."
         );
     };
 
@@ -166,8 +168,9 @@ fn lockstep_windowed_call_long_run() {
     let Some(elf_path) = ereader_elf_path() else {
         panic!(
             "labwired-ereader ELF not found — set LABWIRED_EREADER_ELF to its path, or \
-             build it with espup and pass the path. This test is armed by the nightly \
-             espup lane (core-nightly.yml) and must not silently no-op when run with --ignored."
+             build it and pass the path. NO CI lane builds the ereader ELF (it is an \
+             Arduino sketch espup cannot produce) — manual only; this test must not \
+             silently no-op when run with --ignored."
         );
     };
     eprintln!("[lockstep] long-run windowed-call check, ELF: {elf_path:?}");
@@ -210,8 +213,9 @@ fn lockstep_multi_op_hot_bb_aligned() {
     let Some(elf_path) = ereader_elf_path() else {
         panic!(
             "labwired-ereader ELF not found — set LABWIRED_EREADER_ELF to its path, or \
-             build it with espup and pass the path. This test is armed by the nightly \
-             espup lane (core-nightly.yml) and must not silently no-op when run with --ignored."
+             build it and pass the path. NO CI lane builds the ereader ELF (it is an \
+             Arduino sketch espup cannot produce) — manual only; this test must not \
+             silently no-op when run with --ignored."
         );
     };
 
