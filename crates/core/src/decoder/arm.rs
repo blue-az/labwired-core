@@ -777,16 +777,20 @@ pub fn decode_thumb_16(opcode: u16) -> Instruction {
         return Instruction::LdrLit { rt, imm: imm8 << 2 };
     }
 
-    // 4.2 Load/Store Register Offset (T1): 0101 lb0 mmm nnn ttt
-    // 0101 000 ... STR
-    // 0101 001 ... STRH
-    // 0101 010 ... STRB
-    // 0101 011 ... LDRSB
-    // 0101 100 ... LDR
-    // 0101 101 ... LDRH
-    // 0101 110 ... LDRB
-    // 0101 111 ... LDRSH
-    if (opcode & 0xF200) == 0x5000 {
+    // 4.2 Load/Store Register Offset (T1): 0101 op2 op1 op0 Rm Rn Rt
+    // bits[15:9] = 0101 op[2:0]; all 8 ops share the 0101 prefix (bits[15:12]).
+    // 0101 000 ... STR   (op=0)
+    // 0101 001 ... STRH  (op=1)
+    // 0101 010 ... STRB  (op=2)
+    // 0101 011 ... LDRSB (op=3)
+    // 0101 100 ... LDR   (op=4)
+    // 0101 101 ... LDRH  (op=5)
+    // 0101 110 ... LDRB  (op=6)
+    // 0101 111 ... LDRSH (op=7)
+    // The former mask 0xF200 incorrectly required bit 9 (op[0]) to be 0,
+    // making the four odd-op forms (STRH/LDRSB/LDRH/LDRSH) fall through to
+    // Unknown.  The correct mask is 0xF000, matching only bits[15:12]=0101.
+    if (opcode & 0xF000) == 0x5000 {
         let op = (opcode >> 9) & 0x7;
         let rm = ((opcode >> 6) & 0x7) as u8;
         let rn = ((opcode >> 3) & 0x7) as u8;
@@ -2197,6 +2201,108 @@ mod tests {
                 rt: 1,
                 rn: 0,
                 imm: 0
+            }
+        );
+    }
+
+    // --- Thumb-1 load/store register-offset (ARMv7-M A6.2.4) ---
+    // Encoding: 0101 op2 op1 op0 Rm[2:0] Rn[2:0] Rt[2:0]
+    // All 8 op values; op[0]==1 forms were gated out by the wrong 0xF200 mask.
+
+    #[test]
+    fn test_decode_reg_offset_even_ops_work() {
+        // Verify the four even ops (op[0]==0) already decode correctly.
+        // Using Rt=0, Rn=1, Rm=2 for all:
+        // op=000 STR:  0101 000 010 001 000 = 0x5088
+        assert_eq!(
+            decode_thumb_16(0x5088),
+            Instruction::StrReg {
+                rt: 0,
+                rn: 1,
+                rm: 2
+            }
+        );
+        // op=010 STRB: 0101 010 010 001 000 = 0x5488
+        assert_eq!(
+            decode_thumb_16(0x5488),
+            Instruction::StrbReg {
+                rt: 0,
+                rn: 1,
+                rm: 2
+            }
+        );
+        // op=100 LDR:  0101 100 010 001 000 = 0x5888
+        assert_eq!(
+            decode_thumb_16(0x5888),
+            Instruction::LdrReg {
+                rt: 0,
+                rn: 1,
+                rm: 2
+            }
+        );
+        // op=110 LDRB: 0101 110 010 001 000 = 0x5C88
+        assert_eq!(
+            decode_thumb_16(0x5C88),
+            Instruction::LdrbReg {
+                rt: 0,
+                rn: 1,
+                rm: 2
+            }
+        );
+    }
+
+    #[test]
+    fn test_decode_strh_reg_offset() {
+        // STRH Rt,[Rn,Rm] — op=001
+        // Rt=0, Rn=1, Rm=2: 0101 001 010 001 000 = 0x5288
+        assert_eq!(
+            decode_thumb_16(0x5288),
+            Instruction::StrhReg {
+                rt: 0,
+                rn: 1,
+                rm: 2
+            }
+        );
+    }
+
+    #[test]
+    fn test_decode_ldrsb_reg_offset() {
+        // LDRSB Rt,[Rn,Rm] — op=011
+        // Rt=0, Rn=1, Rm=2: 0101 011 010 001 000 = 0x5688
+        assert_eq!(
+            decode_thumb_16(0x5688),
+            Instruction::LdrsbReg {
+                rt: 0,
+                rn: 1,
+                rm: 2
+            }
+        );
+    }
+
+    #[test]
+    fn test_decode_ldrh_reg_offset() {
+        // LDRH Rt,[Rn,Rm] — op=101
+        // Rt=0, Rn=1, Rm=2: 0101 101 010 001 000 = 0x5A88
+        assert_eq!(
+            decode_thumb_16(0x5A88),
+            Instruction::LdrhReg {
+                rt: 0,
+                rn: 1,
+                rm: 2
+            }
+        );
+    }
+
+    #[test]
+    fn test_decode_ldrsh_reg_offset() {
+        // LDRSH Rt,[Rn,Rm] — op=111
+        // Rt=0, Rn=1, Rm=2: 0101 111 010 001 000 = 0x5E88
+        assert_eq!(
+            decode_thumb_16(0x5E88),
+            Instruction::LdrshReg {
+                rt: 0,
+                rn: 1,
+                rm: 2
             }
         );
     }
