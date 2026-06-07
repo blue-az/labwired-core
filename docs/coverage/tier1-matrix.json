@@ -4,19 +4,22 @@
       "status": "na"
     },
     "clock": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "dma": {
       "status": "na"
     },
     "gpio": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "i2c": {
       "status": "na"
     },
     "irq": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "pwm": {
       "status": "na"
@@ -28,10 +31,12 @@
       "status": "na"
     },
     "timer": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "uart": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "wdt": {
       "status": "na"
@@ -48,13 +53,15 @@
       "status": "na"
     },
     "gpio": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "i2c": {
       "status": "na"
     },
     "irq": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "pwm": {
       "status": "na"
@@ -66,10 +73,12 @@
       "status": "na"
     },
     "timer": {
-      "status": "blocked"
+      "status": "blocked",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "uart": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "wdt": {
       "status": "na"
@@ -80,25 +89,32 @@
       "status": "na"
     },
     "clock": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "dma": {
-      "status": "blocked"
+      "status": "blocked",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "gpio": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "i2c": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "irq": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "pwm": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "rmt": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "rtc": {
       "status": "na"
@@ -107,10 +123,12 @@
       "status": "na"
     },
     "timer": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "uart": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "wdt": {
       "status": "na"
@@ -148,7 +166,8 @@
       "status": "na"
     },
     "uart": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "wdt": {
       "status": "na"
@@ -165,7 +184,8 @@
       "status": "na"
     },
     "gpio": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "i2c": {
       "status": "na"
@@ -186,7 +206,8 @@
       "status": "na"
     },
     "uart": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "wdt": {
       "status": "na"
@@ -224,7 +245,8 @@
       "status": "na"
     },
     "uart": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "wdt": {
       "status": "na"
@@ -235,13 +257,16 @@
       "status": "unrecorded"
     },
     "clock": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "dma": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "gpio": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "i2c": {
       "status": "unrecorded"
@@ -259,10 +284,12 @@
       "status": "unrecorded"
     },
     "timer": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "uart": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "wdt": {
       "status": "unrecorded"
@@ -273,13 +300,15 @@
       "status": "na"
     },
     "clock": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "dma": {
       "status": "na"
     },
     "gpio": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "i2c": {
       "status": "unrecorded"
@@ -300,7 +329,8 @@
       "status": "na"
     },
     "uart": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "wdt": {
       "status": "na"
@@ -311,13 +341,15 @@
       "status": "na"
     },
     "clock": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "dma": {
       "status": "na"
     },
     "gpio": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "i2c": {
       "status": "unrecorded"
@@ -338,7 +370,8 @@
       "status": "na"
     },
     "uart": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "wdt": {
       "status": "na"
@@ -349,13 +382,15 @@
       "status": "na"
     },
     "clock": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "dma": {
       "status": "na"
     },
     "gpio": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "i2c": {
       "status": "na"
@@ -376,7 +411,8 @@
       "status": "na"
     },
     "uart": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "wdt": {
       "status": "na"
@@ -387,13 +423,16 @@
       "status": "na"
     },
     "clock": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "dma": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "gpio": {
-      "status": "blocked"
+      "status": "blocked",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "i2c": {
       "status": "na"
@@ -414,7 +453,8 @@
       "status": "na"
     },
     "uart": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "wdt": {
       "status": "na"
@@ -425,19 +465,23 @@
       "status": "unrecorded"
     },
     "clock": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "dma": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "gpio": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "i2c": {
       "status": "unrecorded"
     },
     "irq": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "pwm": {
       "status": "na"
@@ -449,10 +493,12 @@
       "status": "unrecorded"
     },
     "timer": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "uart": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "wdt": {
       "status": "unrecorded"
@@ -463,19 +509,23 @@
       "status": "unrecorded"
     },
     "clock": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "dma": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "gpio": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "i2c": {
       "status": "unrecorded"
     },
     "irq": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "pwm": {
       "status": "na"
@@ -487,10 +537,12 @@
       "status": "unrecorded"
     },
     "timer": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "uart": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "wdt": {
       "status": "unrecorded"
@@ -501,13 +553,15 @@
       "status": "na"
     },
     "clock": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "dma": {
       "status": "na"
     },
     "gpio": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "i2c": {
       "status": "na"
@@ -528,7 +582,8 @@
       "status": "na"
     },
     "uart": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "wdt": {
       "status": "na"
@@ -539,13 +594,15 @@
       "status": "na"
     },
     "clock": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "dma": {
       "status": "na"
     },
     "gpio": {
-      "status": "blocked"
+      "status": "blocked",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "i2c": {
       "status": "na"
@@ -566,7 +623,8 @@
       "status": "na"
     },
     "uart": {
-      "status": "pass"
+      "status": "pass",
+      "run_url": "https://github.com/w1ne/labwired-core/actions/runs/27104548632"
     },
     "wdt": {
       "status": "na"
