@@ -1224,6 +1224,15 @@ impl SystemBus {
                 "nrf52840_usbregulator" | "nrf52_usbregulator" => {
                     Box::new(crate::peripherals::nrf52::usbregulator::Nrf52UsbRegulator::new())
                 }
+                // ESP32-family Timer Group (TIMG0/TIMG1) — the same IP block is
+                // used by the classic ESP32, S3, and C3.  All share the register
+                // layout: T0CONFIG=0x00, T0LO=0x04, T0HI=0x08, T0UPDATE=0x0C.
+                // Wiring via this type string gives C3 (RISC-V, from_config path)
+                // the same live counter that the Xtensa chips get via their
+                // hard-wired system builders.
+                "esp32_timg" => Box::new(crate::peripherals::esp32::timg::Timg::new(
+                    p_cfg.base_address as u32,
+                )),
                 "declarative" => {
                     let descriptor_path = p_cfg
                         .config

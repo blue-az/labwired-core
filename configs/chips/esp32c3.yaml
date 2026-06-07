@@ -24,10 +24,8 @@ peripherals:
     config:
       path: "../peripherals/esp32c3/gpio.yaml"
   - id: "timg0"
-    type: "declarative"
+    type: "esp32_timg"
     base_address: 0x6001F000
-    config:
-      path: "../peripherals/esp32c3/timg0.yaml"
   - id: "interrupt_core0"
     type: "declarative"
     base_address: 0x600C2000

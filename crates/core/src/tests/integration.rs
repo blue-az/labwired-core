@@ -1986,6 +1986,96 @@ pub mod integration_tests {
         assert_eq!(p.read(0x04).unwrap(), 0x00, "COUNT should be RO");
     }
 
+    // ── esp32c3 timg0 counter test ─────────────────────────────────────────────
+    //
+    // Builds the ESP32-C3 system from its chip config (which registers timg0 at
+    // 0x6001_F000), enables T0 with EN|INCREASE, advances the bus clock via
+    // tick_peripherals_with_costs, latches via T0UPDATE, and asserts T0LO > 0.
+    //
+    // With the old "declarative" type this fails: the GenericPeripheral has no
+    // live counter; T0LO stays 0 after the strobe.  With "esp32_timg" wired to
+    // esp32::timg::Timg the counter advances on every tick() and the test passes.
+    #[test]
+    fn test_esp32c3_timg0_counter_advances() {
+        use crate::Bus;
+        use labwired_config::{
+            Arch, ChipDescriptor, MemoryRange, PeripheralConfig, SystemManifest,
+        };
+        use std::collections::HashMap;
+
+        // Minimal C3-like chip descriptor: only timg0 at 0x6001_F000.
+        let chip = ChipDescriptor {
+            schema_version: "1.0".to_string(),
+            name: "esp32c3-timg-test".to_string(),
+            arch: Arch::RiscV,
+            flash: MemoryRange {
+                base: 0x4200_0000,
+                size: "4MB".to_string(),
+            },
+            ram: MemoryRange {
+                base: 0x3FC8_0000,
+                size: "400KB".to_string(),
+            },
+            peripherals: vec![PeripheralConfig {
+                id: "timg0".to_string(),
+                r#type: "esp32_timg".to_string(),
+                base_address: 0x6001_F000,
+                size: None,
+                irq: None,
+                config: HashMap::new(),
+            }],
+        };
+
+        let manifest = SystemManifest {
+            walk_deleted: false,
+            schema_version: "1.0".to_string(),
+            name: "test-system".to_string(),
+            chip: "esp32c3-timg-test".to_string(),
+            memory_overrides: HashMap::new(),
+            external_devices: Vec::new(),
+            board_io: Vec::new(),
+            peripherals: Vec::new(),
+        };
+
+        let mut bus =
+            crate::bus::SystemBus::from_config(&chip, &manifest).expect("bus build failed");
+
+        const TIMG0_BASE: u64 = 0x6001_F000;
+        const T0CONFIG_OFF: u64 = 0x00;
+        const T0LO_OFF: u64 = 0x04;
+        const T0HI_OFF: u64 = 0x08;
+        const T0UPDATE_OFF: u64 = 0x0C;
+        const EN: u32 = 1 << 31;
+        const INCREASE: u32 = 1 << 30;
+
+        // Enable T0 counter.
+        bus.write_u32(TIMG0_BASE + T0CONFIG_OFF, EN | INCREASE)
+            .unwrap();
+
+        // Verify the config write round-trips (register is stored).
+        let cfg = bus.read_u32(TIMG0_BASE + T0CONFIG_OFF).unwrap();
+        assert!(cfg & EN != 0, "T0CONFIG.EN did not round-trip");
+
+        // Advance the simulated clock — tick_peripherals_with_costs calls tick()
+        // on all peripherals once per call.  Each tick() increments counter_t0
+        // by 1 when EN is set.
+        for _ in 0..500 {
+            bus.tick_peripherals_with_costs();
+        }
+
+        // Latch the live counter into T0LO/T0HI via a write to T0UPDATE.
+        bus.write_u32(TIMG0_BASE + T0UPDATE_OFF, 1).unwrap();
+
+        let lo = bus.read_u32(TIMG0_BASE + T0LO_OFF).unwrap();
+        let hi = bus.read_u32(TIMG0_BASE + T0HI_OFF).unwrap();
+        let count = ((hi as u64) << 32) | lo as u64;
+
+        assert!(
+            count > 0,
+            "TIMG0 T0 counter must have advanced after 500 ticks with EN set, got {count}"
+        );
+    }
+
     #[test]
     fn test_breakpoint_sticky_step_over() {
         let mut machine = create_machine();
