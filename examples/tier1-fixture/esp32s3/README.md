@@ -60,7 +60,7 @@ To run the fixture directly:
 cargo run -p labwired-cli --release -- run \
     --chip configs/chips/esp32s3.yaml \
     --firmware tests/fixtures/tier1/esp32s3.elf \
-    --max-steps 40000000 --rom-boot
+    --max-steps 30000000 --rom-boot
 ```
 
 with `LABWIRED_ESP32S3_FLASH=tests/fixtures/tier1/esp32s3-flash.bin` in
