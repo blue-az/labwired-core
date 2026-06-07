@@ -122,6 +122,21 @@ enum Commands {
     /// classifies each as Modelled / Indeterminate / Unmodelled. Prints a
     /// human-readable table and optionally writes the full matrix as JSON.
     Coverage(CoverageArgs),
+
+    /// Run the Tier-1 chip × peripheral validation matrix and export it.
+    Tier1Matrix(Tier1MatrixArgs),
+}
+
+#[derive(Parser, Debug)]
+pub struct Tier1MatrixArgs {
+    /// Write the matrix as JSON (the committed snapshot path is
+    /// docs/coverage/tier1-matrix.json).
+    #[arg(long = "json-out")]
+    pub json_out: Option<PathBuf>,
+
+    /// Evidence link stamped into every non-unrecorded cell (CI passes its run URL).
+    #[arg(long = "run-url")]
+    pub run_url: Option<String>,
 }
 
 #[derive(Parser, Debug)]
@@ -713,6 +728,7 @@ fn main() -> ExitCode {
         Some(Commands::Run(args)) => run_firmware(args),
         Some(Commands::Snapshot(args)) => run_snapshot(args),
         Some(Commands::Coverage(args)) => run_coverage(args),
+        Some(Commands::Tier1Matrix(args)) => run_tier1_matrix(args),
         None => run_interactive(cli),
     }
 }
@@ -1176,6 +1192,45 @@ fn run_coverage(args: CoverageArgs) -> ExitCode {
                  or install the espressif32 PlatformIO platform"
             );
             ExitCode::from(EXIT_CONFIG_ERROR)
+        }
+    }
+}
+
+fn run_tier1_matrix(args: Tier1MatrixArgs) -> ExitCode {
+    let self_bin = std::env::current_exe().expect("current exe");
+    match labwired_cli::tier1::run_all(&self_bin) {
+        Ok((mut matrix, skipped)) => {
+            for chip in &skipped {
+                eprintln!("SKIP: {chip} (fixture not present)");
+            }
+            if let Some(url) = &args.run_url {
+                use labwired_cli::tier1::CellStatus;
+                for row in matrix.0.values_mut() {
+                    for cell in row.values_mut() {
+                        if cell.status != CellStatus::Unrecorded && cell.status != CellStatus::Na {
+                            cell.run_url = Some(url.clone());
+                        }
+                    }
+                }
+            }
+            // Text grid for humans.
+            for (chip, row) in &matrix.0 {
+                let cells: Vec<String> = row
+                    .iter()
+                    .map(|(class, cell)| format!("{class}={}", cell.status.as_str()))
+                    .collect();
+                println!("{chip}: {}", cells.join(" "));
+            }
+            if let Some(out) = &args.json_out {
+                let json = serde_json::to_string_pretty(&matrix).expect("serialize tier1 matrix");
+                std::fs::write(out, json.as_bytes()).expect("write tier1 json");
+                eprintln!("wrote {}", out.display());
+            }
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("tier1-matrix failed: {e}");
+            ExitCode::FAILURE
         }
     }
 }
