@@ -1485,7 +1485,13 @@ impl CortexM {
                     let val = self.read_reg(rm);
                     let res = val.wrapping_shl(imm as u32);
                     self.write_reg(rd, res);
-                    self.update_nz(res);
+                    // T1 shift-immediate: setflags = !InITBlock(). Inside an
+                    // IT block this encoding is the flag-preserving LSL, and
+                    // leaking flags here would corrupt the remaining block
+                    // conditions (Tier-1 H563/WBA52 gpio-check regression).
+                    if !it_block_instruction {
+                        self.update_nz(res);
+                    }
                     // Note: Carry out not fully implemented for shifts yet
                 }
                 Instruction::Lsr { rd, rm, imm } => {
@@ -1499,7 +1505,10 @@ impl CortexM {
                     // imm5=0 for LSL is imm=0. imm5=0 for LSR is imm=32.
                     // For MVP, letting wrapping_shr handle basics.
                     self.write_reg(rd, res);
-                    self.update_nz(res);
+                    // T1 shift-immediate: setflags = !InITBlock().
+                    if !it_block_instruction {
+                        self.update_nz(res);
+                    }
                 }
                 Instruction::Asr { rd, rm, imm } => {
                     let val = self.read_reg(rm) as i32;
@@ -1509,7 +1518,10 @@ impl CortexM {
                         val >> (imm as u32)
                     }) as u32;
                     self.write_reg(rd, res);
-                    self.update_nz(res);
+                    // T1 shift-immediate: setflags = !InITBlock().
+                    if !it_block_instruction {
+                        self.update_nz(res);
+                    }
                 }
                 Instruction::LslReg { rd, rm } => {
                     let val = self.read_reg(rd);
