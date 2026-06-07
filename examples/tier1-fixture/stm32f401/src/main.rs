@@ -28,7 +28,7 @@
 //! Every poll is bounded by a fixed iteration count (the simulator is
 //! deterministic — no wall-clock timeouts). Register offsets follow the
 //! simulator's models: rcc.rs (`stm32f4` profile), gpio.rs (the yaml wires
-//! plain `gpio` with no profile, i.e. the stm32f1 CRL/CRH layout) and
+//! the `stm32v2` MODER/ODR/BSRR layout per RM0368) and
 //! uart.rs (`stm32f1` layout: SR @ 0x00, DR @ 0x04 — matches F4 silicon).
 
 #![no_std]
@@ -131,16 +131,18 @@ fn check_clock() -> Result<(), &'static [u8]> {
 }
 
 /// gpio: the yaml wires the default stm32f1 register layout. PA5 to
-/// push-pull output via CRL, set via BSRR, observe ODR, clear via BRR.
+/// output mode via MODER, set via BSRR, observe ODR, clear via BSRR-reset.
 fn check_gpio() -> Result<(), &'static [u8]> {
-    let crl = rd32(GPIOA_BASE);
-    wr32(GPIOA_BASE, (crl & !(0xF << 20)) | (0x3 << 20)); // PA5 output 50MHz
-    wr32(GPIOA_BASE + 0x10, 1 << 5); // BSRR set
-    if rd32(GPIOA_BASE + 0x0C) & (1 << 5) == 0 {
+    // STM32v2 layout (real F401 silicon: MODER/ODR/BSRR — RM0368 §8.4).
+    let moder = rd32(GPIOA_BASE); // MODER @ 0x00
+    wr32(GPIOA_BASE, (moder & !(0x3 << 10)) | (0x1 << 10)); // PA5 output
+    wr32(GPIOA_BASE + 0x18, 1 << 5); // BSRR @ 0x18: set PA5
+    if rd32(GPIOA_BASE + 0x14) & (1 << 5) == 0 {
+        // ODR @ 0x14
         return Err(b"gpio-set");
     }
-    wr32(GPIOA_BASE + 0x14, 1 << 5); // BRR clear
-    if rd32(GPIOA_BASE + 0x0C) & (1 << 5) != 0 {
+    wr32(GPIOA_BASE + 0x18, 1 << (5 + 16)); // BSRR reset half: clear PA5
+    if rd32(GPIOA_BASE + 0x14) & (1 << 5) != 0 {
         return Err(b"gpio-clear");
     }
     Ok(())
