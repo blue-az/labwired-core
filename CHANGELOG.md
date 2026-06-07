@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Bit-band translation gated on cores that have it (M3/M4)**: the bus applied Cortex-M bit-band alias translation (0x4200_0000–0x43FF_FFFF → bit ops on 0x4000_0000) to every ARM chip, but the feature exists only on Cortex-M3/M4. M33 parts (STM32H563, STM32WBA52) map their real GPIO ports at 0x4202_xxxx, so word accesses there were translated into bit-band operations and never reached the GPIO model. Chip descriptors now carry an explicit `core` field; `SystemBus::from_config` enables translation only for `cortex-m3`/`cortex-m4` (configs without a `core` field keep the historical Arm default). Un-blocks the Tier-1 `gpio` cells for `stm32h563` and `stm32wba52` and the NUCLEO-H563ZI io-smoke.
+- **T1 shift-immediate flags inside IT blocks**: the 16-bit `LSL`/`LSR`/`ASR` immediate encodings updated N/Z unconditionally, but the architecture defines `setflags = !InITBlock()`. A flag update mid-IT-block re-evaluated the remaining block conditions and skipped instructions (observed as a false `gpio-bitband-shadow` FAIL in the Tier-1 H563/WBA52 fixtures after the bus fix).
 
 ### Added
 - **`core` field in chip descriptors** (`configs/chips/*.yaml`): exact CPU core (e.g. `cortex-m3`, `cortex-m33`, `cortex-m0+`). `arch` collapses all Cortex-M variants, so core-specific bus behavior keys off this field; SVD-IR imports derive it from the CMSIS `arch` automatically. All in-tree ARM chip yamls now declare it.
