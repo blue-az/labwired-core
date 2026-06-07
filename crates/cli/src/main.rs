@@ -134,7 +134,7 @@ pub struct Tier1MatrixArgs {
     #[arg(long = "json-out")]
     pub json_out: Option<PathBuf>,
 
-    /// Evidence link stamped into every non-unrecorded cell (CI passes its run URL).
+    /// Evidence link stamped into every cell that carries evidence (skips na and unrecorded).
     #[arg(long = "run-url")]
     pub run_url: Option<String>,
 }
@@ -1197,11 +1197,23 @@ fn run_coverage(args: CoverageArgs) -> ExitCode {
 }
 
 fn run_tier1_matrix(args: Tier1MatrixArgs) -> ExitCode {
-    let self_bin = std::env::current_exe().expect("current exe");
+    let self_bin = match std::env::current_exe() {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("error: cannot resolve current executable: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
     match labwired_cli::tier1::run_all(&self_bin) {
         Ok((mut matrix, skipped)) => {
             for chip in &skipped {
                 eprintln!("SKIP: {chip} (fixture not present)");
+            }
+            // --run-url given but nothing was actually exercised → vacuous green
+            // is not permitted; fail loudly so CI notices the misconfiguration.
+            if args.run_url.is_some() && matrix.0.is_empty() {
+                eprintln!("error: --run-url given but no fixtures were exercised");
+                return ExitCode::FAILURE;
             }
             if let Some(url) = &args.run_url {
                 use labwired_cli::tier1::CellStatus;
@@ -1222,8 +1234,17 @@ fn run_tier1_matrix(args: Tier1MatrixArgs) -> ExitCode {
                 println!("{chip}: {}", cells.join(" "));
             }
             if let Some(out) = &args.json_out {
-                let json = serde_json::to_string_pretty(&matrix).expect("serialize tier1 matrix");
-                std::fs::write(out, json.as_bytes()).expect("write tier1 json");
+                let json = match serde_json::to_string_pretty(&matrix) {
+                    Ok(j) => j,
+                    Err(e) => {
+                        eprintln!("error: failed to serialize tier1 matrix: {e}");
+                        return ExitCode::FAILURE;
+                    }
+                };
+                if let Err(e) = std::fs::write(out, json.as_bytes()) {
+                    eprintln!("error: failed to write {}: {e}", out.display());
+                    return ExitCode::FAILURE;
+                }
                 eprintln!("wrote {}", out.display());
             }
             ExitCode::SUCCESS

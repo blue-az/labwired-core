@@ -267,14 +267,16 @@ struct ManifestEntry {
 }
 
 /// Verify every blob listed in `<dir>/MANIFEST.json` against its sha256.
-/// Returns Err naming the first mismatching file.
-pub fn verify_fixture_manifest(dir: &Path) -> Result<(), String> {
+/// Returns the set of verified file names on success, or Err naming the first
+/// mismatching file. The returned set is used by `run_all` to check that every
+/// blob a target uses is explicitly listed.
+pub fn verify_fixture_manifest(dir: &Path) -> Result<BTreeSet<String>, String> {
     let manifest_path = dir.join("MANIFEST.json");
     let manifest: BTreeMap<String, ManifestEntry> = serde_json::from_str(
         &std::fs::read_to_string(&manifest_path)
             .map_err(|e| format!("{}: {e}", manifest_path.display()))?,
     )
-    .map_err(|e| e.to_string())?;
+    .map_err(|e| format!("{}: {e}", manifest_path.display()))?;
     for (file, entry) in &manifest {
         let bytes = std::fs::read(dir.join(file)).map_err(|e| format!("{file}: {e}"))?;
         let got = format!("{:x}", Sha256::digest(&bytes));
@@ -285,7 +287,7 @@ pub fn verify_fixture_manifest(dir: &Path) -> Result<(), String> {
             ));
         }
     }
-    Ok(())
+    Ok(manifest.into_keys().collect())
 }
 
 /// Run one target through the `labwired` binary and parse its TIER1 row.
@@ -303,15 +305,50 @@ pub fn run_target(
         .arg(root.join(target.elf))
         .arg("--max-steps")
         .arg(target.max_steps.to_string());
+
+    // Scrub any inherited LABWIRED_* vars so the matrix is deterministic
+    // regardless of the caller's shell environment, then set only the ones
+    // this target actually needs.
+    for (key, _) in std::env::vars() {
+        if key.starts_with("LABWIRED_") {
+            cmd.env_remove(&key);
+        }
+    }
+
     if target.rom_boot {
         cmd.arg("--rom-boot");
         let flash = target.flash_bin.ok_or("rom_boot target needs flash_bin")?;
         cmd.env("LABWIRED_ESP32S3_FLASH", root.join(flash));
     }
-    let out = cmd.output().map_err(|e| format!("spawn labwired: {e}"))?;
+    let out = cmd
+        .output()
+        .map_err(|e| format!("spawn {}: {e}", labwired_bin.display()))?;
+
     // UART echoes on stdout; the sim may exit nonzero on step-limit — that's
     // fine, the protocol lines are the verdict.
+    //
+    // No wall-clock timeout here: step-count bound is sufficient because the
+    // sim step loop has no blocking paths (no I/O waits, no sleeps).
     let parsed = parse_tier1_uart(&out.stdout);
+
+    // A crash (non-zero exit, no TIER1 output, no `done`) must surface as an
+    // error rather than silently producing a row of Blocked cells.
+    if parsed.classes.is_empty() && !parsed.done && !out.status.success() {
+        let stderr_tail = {
+            let s = String::from_utf8_lossy(&out.stderr);
+            let trimmed = s.trim_end();
+            if trimmed.len() > 500 {
+                trimmed[trimmed.len() - 500..].to_string()
+            } else {
+                trimmed.to_string()
+            }
+        };
+        return Err(format!(
+            "{}: labwired exited {} with no TIER1 output; stderr tail: {}",
+            target.chip, out.status, stderr_tail,
+        ));
+    }
+
     let classes: Vec<&str> = RUBRIC_CLASSES
         .iter()
         .chain(target.extra_classes.iter())
@@ -329,9 +366,57 @@ pub fn run_target(
 pub fn run_all(labwired_bin: &Path) -> Result<(Tier1Matrix, Vec<String>), String> {
     let root = workspace_root();
     let fixture_dir = root.join("tests/fixtures/tier1");
-    if fixture_dir.join("MANIFEST.json").exists() {
-        verify_fixture_manifest(&fixture_dir)?;
+
+    // Determine which targets have ELF files present.
+    let any_elf_present = TIER1_TARGETS.iter().any(|t| root.join(t.elf).exists());
+
+    // If any ELF exists, MANIFEST.json is mandatory and must cover every blob
+    // that a non-skipped target uses.
+    let verified: Option<BTreeSet<String>> = if any_elf_present {
+        let manifest_path = fixture_dir.join("MANIFEST.json");
+        if !manifest_path.exists() {
+            return Err(format!(
+                "MANIFEST.json is required when fixture ELFs are present but was not found at {}",
+                manifest_path.display()
+            ));
+        }
+        Some(verify_fixture_manifest(&fixture_dir)?)
+    } else {
+        None
+    };
+
+    // Before running any target, verify that every blob it uses is listed in
+    // the manifest — an omitted blob is an error naming the file.
+    if let Some(ref listed) = verified {
+        for target in TIER1_TARGETS {
+            if !root.join(target.elf).exists() {
+                continue; // will be skipped below
+            }
+            let elf_name = Path::new(target.elf)
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or(target.elf);
+            if !listed.contains(elf_name) {
+                return Err(format!(
+                    "fixture blob '{elf_name}' used by target '{}' is not listed in MANIFEST.json",
+                    target.chip
+                ));
+            }
+            if let Some(flash) = target.flash_bin {
+                let flash_name = Path::new(flash)
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or(flash);
+                if !listed.contains(flash_name) {
+                    return Err(format!(
+                        "fixture blob '{flash_name}' used by target '{}' is not listed in MANIFEST.json",
+                        target.chip
+                    ));
+                }
+            }
+        }
     }
+
     let mut matrix = Tier1Matrix::default();
     let mut skipped = Vec::new();
     for target in TIER1_TARGETS {
@@ -534,6 +619,20 @@ peripherals:
 
     #[test]
     fn target_table_paths_resolve_relative_to_workspace_root() {
+        let root = workspace_root();
+        for t in TIER1_TARGETS {
+            assert!(
+                t.chip_yaml.ends_with(".yaml"),
+                "{}: chip_yaml does not end with .yaml",
+                t.chip
+            );
+            assert!(
+                root.join(t.chip_yaml).exists(),
+                "{}: chip_yaml {} does not exist",
+                t.chip,
+                t.chip_yaml
+            );
+        }
         let t = &TIER1_TARGETS[0];
         assert_eq!(t.chip, "esp32s3");
         assert!(t.chip_yaml.ends_with("configs/chips/esp32s3.yaml"));
@@ -546,12 +645,79 @@ peripherals:
 
     #[test]
     fn manifest_verification_rejects_corrupt_blob() {
-        let dir = std::env::temp_dir().join("tier1-manifest-test");
+        let dir =
+            std::env::temp_dir().join(format!("tier1-manifest-corrupt-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("esp32s3.elf"), b"not the real elf").unwrap();
         let manifest = r#"{ "esp32s3.elf": { "sha256": "0000000000000000000000000000000000000000000000000000000000000000" } }"#;
         std::fs::write(dir.join("MANIFEST.json"), manifest).unwrap();
         let err = verify_fixture_manifest(&dir).unwrap_err();
         assert!(err.contains("esp32s3.elf"), "{err}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn manifest_verification_happy_path() {
+        let dir = std::env::temp_dir().join(format!("tier1-manifest-happy-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let body = b"good-blob-bytes";
+        std::fs::write(dir.join("esp32s3.elf"), body).unwrap();
+        let sha = format!("{:x}", <sha2::Sha256 as sha2::Digest>::digest(body));
+        std::fs::write(
+            dir.join("MANIFEST.json"),
+            format!(r#"{{ "esp32s3.elf": {{ "sha256": "{sha}" }} }}"#),
+        )
+        .unwrap();
+        let verified = verify_fixture_manifest(&dir).unwrap();
+        assert!(verified.contains("esp32s3.elf"), "{verified:?}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn manifest_verification_missing_blob_file() {
+        let dir =
+            std::env::temp_dir().join(format!("tier1-manifest-missing-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        // MANIFEST.json references a file that doesn't exist in the dir.
+        let manifest = r#"{ "nonexistent.bin": { "sha256": "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789" } }"#;
+        std::fs::write(dir.join("MANIFEST.json"), manifest).unwrap();
+        let err = verify_fixture_manifest(&dir).unwrap_err();
+        assert!(err.contains("nonexistent.bin"), "{err}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn run_all_style_manifest_listing_is_enforced() {
+        // verify_fixture_manifest returns the set of verified file names
+        let dir = std::env::temp_dir().join(format!("tier1-manifest-list-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let body = b"blob-bytes";
+        std::fs::write(dir.join("esp32s3.elf"), body).unwrap();
+        let sha = format!("{:x}", <sha2::Sha256 as sha2::Digest>::digest(body));
+        std::fs::write(
+            dir.join("MANIFEST.json"),
+            format!(r#"{{ "esp32s3.elf": {{ "sha256": "{sha}" }} }}"#),
+        )
+        .unwrap();
+        let verified = verify_fixture_manifest(&dir).unwrap();
+        assert!(verified.contains("esp32s3.elf"));
+        assert!(!verified.contains("esp32s3-flash.bin"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn run_target_surfaces_child_crash_instead_of_blocked_row() {
+        let dir = std::env::temp_dir().join(format!("tier1-crash-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let fake = dir.join("labwired-fake");
+        std::fs::write(&fake, "#!/bin/sh\necho boom-stderr >&2\nexit 3\n").unwrap();
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&fake, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let target = &TIER1_TARGETS[0];
+        // chip yaml exists in-repo, ELF path doesn't need to exist for the spawn itself
+        let err = run_target(target, &fake).unwrap_err();
+        assert!(err.contains("boom-stderr"), "{err}");
+        assert!(err.contains("esp32s3"), "{err}");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
