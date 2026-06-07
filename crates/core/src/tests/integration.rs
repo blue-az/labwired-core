@@ -1997,7 +1997,6 @@ pub mod integration_tests {
     // esp32::timg::Timg the counter advances on every tick() and the test passes.
     #[test]
     fn test_esp32c3_timg0_counter_advances() {
-        use crate::Bus;
         use labwired_config::{
             Arch, ChipDescriptor, MemoryRange, PeripheralConfig, SystemManifest,
         };
@@ -2008,6 +2007,7 @@ pub mod integration_tests {
             schema_version: "1.0".to_string(),
             name: "esp32c3-timg-test".to_string(),
             arch: Arch::RiscV,
+            core: None,
             flash: MemoryRange {
                 base: 0x4200_0000,
                 size: "4MB".to_string(),
@@ -2058,8 +2058,14 @@ pub mod integration_tests {
 
         // Advance the simulated clock — tick_peripherals_with_costs calls tick()
         // on all peripherals once per call.  Each tick() increments counter_t0
-        // by 1 when EN is set.
+        // by 1 when EN is set.  Under the event-scheduler feature tick() is a
+        // no-op and the counter advances lazily via sync_to(current_cycle /
+        // interval) on the T0UPDATE MMIO write — so advance the bus cycle
+        // clock too, exactly as a stepping Machine would. This makes the test
+        // meaningful in BOTH feature modes.
+        let interval = (bus.config.peripheral_tick_interval as u64).max(1);
         for _ in 0..500 {
+            bus.current_cycle += interval;
             bus.tick_peripherals_with_costs();
         }
 
