@@ -468,6 +468,117 @@ pub struct IrLinearMap {
     pub clamp: Option<(f32, f32)>,
 }
 
+/// A validation finding. Mirrors the diagram-diagnostic shape used by the
+/// MCP surface: stable code + human message + suggested fix.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IrComponentDiag {
+    /// Stable machine-readable code, e.g. "ICOMP_RESET_OUT_OF_RANGE".
+    pub code: String,
+    /// Human-readable message.
+    pub message: String,
+    /// Suggested fix.
+    pub hint: String,
+}
+
+impl IrComponentDiag {
+    fn new(code: &str, message: String, hint: &str) -> Self {
+        Self {
+            code: code.into(),
+            message,
+            hint: hint.into(),
+        }
+    }
+}
+
+impl IrComponent {
+    /// Validate the spec. Empty result means executable. Every condition the
+    /// interpreter cannot execute deterministically is rejected here, never
+    /// at run time.
+    pub fn validate(&self) -> Vec<IrComponentDiag> {
+        let mut out = Vec::new();
+        if self.kind == IrComponentKind::Wasm {
+            out.push(IrComponentDiag::new(
+                "ICOMP_WASM_UNSUPPORTED",
+                "kind: wasm is reserved and not yet executable".into(),
+                "Use kind: declarative",
+            ));
+        }
+        let size = self.register_file.size as u64;
+        if self.register_file.size == 0 || self.register_file.size > 65536 {
+            out.push(IrComponentDiag::new(
+                "ICOMP_REGFILE_SIZE",
+                format!(
+                    "register_file.size {} outside 1..=65536",
+                    self.register_file.size
+                ),
+                "Choose the device's real register-file size (often 256)",
+            ));
+        }
+        for &off in self.register_file.reset.keys() {
+            if off >= size {
+                out.push(IrComponentDiag::new(
+                    "ICOMP_RESET_OUT_OF_RANGE",
+                    format!(
+                        "reset value at offset {off:#x} outside register file (size {size:#x})"
+                    ),
+                    "Remove the entry or grow register_file.size",
+                ));
+            }
+        }
+        if let Some(p) = &self.pointer {
+            if let IrAutoIncrement::WhenFieldSet { reg, .. } = p.auto_increment {
+                if reg >= size {
+                    out.push(IrComponentDiag::new(
+                        "ICOMP_AI_REG_OUT_OF_RANGE",
+                        format!("auto_increment enable register {reg:#x} outside register file"),
+                        "Point at a register inside the file",
+                    ));
+                }
+            }
+        }
+        for w in &self.wide_registers {
+            if w.bits != 16 {
+                out.push(IrComponentDiag::new(
+                    "ICOMP_WIDE_BITS_UNSUPPORTED",
+                    format!(
+                        "wide register at pointer {:#x} has bits={}, only 16 supported",
+                        w.pointer, w.bits
+                    ),
+                    "Use bits: 16",
+                ));
+            }
+        }
+        for u in &self.updates {
+            let IrUpdateTrigger::WideReadComplete { pointer } = u.trigger;
+            if !self.wide_registers.iter().any(|w| w.pointer == pointer) {
+                out.push(IrComponentDiag::new(
+                    "ICOMP_UPDATE_DANGLING",
+                    format!(
+                        "update trigger references undeclared wide register pointer {pointer:#x}"
+                    ),
+                    "Declare the wide register or fix the pointer",
+                ));
+            }
+        }
+        for o in &self.observables {
+            let IrObservableValue::U12Compose { lo_rel, hi_rel, .. } = o.value;
+            let span = lo_rel.max(hi_rel);
+            let last = o.base + o.stride * (o.channels.max(1) as u64 - 1) + span;
+            if last >= size {
+                out.push(IrComponentDiag::new(
+                    "ICOMP_OBS_OUT_OF_RANGE",
+                    format!(
+                        "observable '{}' channel block ends at {last:#x}, outside register file (size {size:#x})",
+                        o.name
+                    ),
+                    "Reduce channels/base/stride or grow register_file.size",
+                ));
+            }
+        }
+        out
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -516,5 +627,96 @@ observables:
         // back to the field-level assertions in that case.
         let re: IrComponent = serde_yaml::from_str(&serde_yaml::to_string(&spec).unwrap()).unwrap();
         assert_eq!(re, spec);
+    }
+
+    fn minimal_spec() -> IrComponent {
+        serde_yaml::from_str(
+            r#"
+name: X
+kind: declarative
+interface: { i2c: { default_address: 0x40 } }
+register_file: { size: 256 }
+"#,
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn valid_minimal_spec_has_no_diagnostics() {
+        assert!(minimal_spec().validate().is_empty());
+    }
+
+    #[test]
+    fn wasm_kind_is_rejected_until_supported() {
+        let mut s = minimal_spec();
+        s.kind = IrComponentKind::Wasm;
+        let d = s.validate();
+        assert!(
+            d.iter().any(|d| d.code == "ICOMP_WASM_UNSUPPORTED"),
+            "{d:?}"
+        );
+    }
+
+    #[test]
+    fn reset_offset_out_of_range_is_diagnosed() {
+        let mut s = minimal_spec();
+        s.register_file.reset.insert(300, 1); // size is 256
+        let d = s.validate();
+        assert!(
+            d.iter().any(|d| d.code == "ICOMP_RESET_OUT_OF_RANGE"),
+            "{d:?}"
+        );
+    }
+
+    #[test]
+    fn observable_block_must_fit_register_file() {
+        let mut s = minimal_spec();
+        s.observables.push(IrObservable {
+            name: "x".into(),
+            channels: 16,
+            base: 0xF8, // 0xF8 + 15*4 + 3 > 255
+            stride: 4,
+            value: IrObservableValue::U12Compose {
+                lo_rel: 2,
+                hi_rel: 3,
+                hi_mask: 0x0F,
+            },
+            map: None,
+        });
+        let d = s.validate();
+        assert!(
+            d.iter().any(|d| d.code == "ICOMP_OBS_OUT_OF_RANGE"),
+            "{d:?}"
+        );
+    }
+
+    #[test]
+    fn wide_register_only_16_bits() {
+        let mut s = minimal_spec();
+        s.wide_registers.push(IrWideRegister {
+            pointer: 0,
+            bits: 24,
+            reset: 0,
+        });
+        let d = s.validate();
+        assert!(
+            d.iter().any(|d| d.code == "ICOMP_WIDE_BITS_UNSUPPORTED"),
+            "{d:?}"
+        );
+    }
+
+    #[test]
+    fn update_trigger_must_reference_declared_wide_register() {
+        let mut s = minimal_spec();
+        s.updates.push(IrUpdateRule {
+            trigger: IrUpdateTrigger::WideReadComplete { pointer: 7 },
+            action: IrUpdateAction::AddWrap {
+                add: 1,
+                max: 10,
+                reset: 0,
+            },
+        });
+        let d = s.validate();
+        assert!(d.iter().any(|d| d.code == "ICOMP_UPDATE_DANGLING"), "{d:?}");
     }
 }
