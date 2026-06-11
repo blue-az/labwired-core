@@ -8,6 +8,7 @@
 //! transaction corpus including the firmware's dispense sequences.
 
 use labwired_core::peripherals::components::{IrI2cComponent, Pca9685};
+use labwired_core::peripherals::esp32s3::tmp102::Tmp102;
 use labwired_core::peripherals::i2c::I2cDevice;
 
 fn ir_pca() -> IrI2cComponent {
@@ -120,4 +121,113 @@ fn full_register_sweep_is_byte_equivalent() {
         ops.push(Op::Read);
     }
     run_corpus(&ops);
+}
+
+// ── Part B: corpus hardeners ──────────────────────────────────────────────────
+
+#[test]
+fn corpus_hardeners_are_byte_equivalent() {
+    // B1: Clamp-at-0 — a channel with small nonzero OFF value clamps to 0.0°.
+    // raw ticks = 50 → angle = 50 * 0.46258224 + (-47.368423) = 23.129 - 47.368 = -24.239
+    // clamped to 0.0 by the [0.0, 180.0] clamp range.
+    {
+        let mut ops = vec![Op::Start, Op::Write(0x00), Op::Write(0xA1)]; // AI on
+                                                                         // Write channel 3: ON_L=0, ON_H=0, OFF_L=50, OFF_H=0 (raw=50).
+        ops.push(Op::Start);
+        ops.push(Op::Write(0x06 + 4 * 3)); // LED3_ON_L
+        ops.push(Op::Write(0x00)); // ON_L
+        ops.push(Op::Write(0x00)); // ON_H
+        ops.push(Op::Write(50)); // OFF_L = 50
+        ops.push(Op::Write(0x00)); // OFF_H = 0 → raw = 50
+                                   // Read the 4-byte block back and confirm byte equality.
+        ops.push(Op::Start);
+        ops.push(Op::Write(0x06 + 4 * 3));
+        for _ in 0..4 {
+            ops.push(Op::Read);
+        }
+        run_corpus(&ops);
+        // Both models clamp raw=50 to 0.0°.  Verify via a direct IR observable read.
+        let mut ir = ir_pca();
+        for op in &ops {
+            match op {
+                Op::Start => ir.start(),
+                Op::Write(b) => ir.write(*b),
+                Op::Read => {
+                    let _ = ir.read();
+                }
+            }
+        }
+        let angle = ir
+            .observable("servo_angle", 3)
+            .expect("raw=50, nonzero → Some");
+        assert!(angle == 0.0, "expected 0.0° (clamped), got {angle}");
+    }
+
+    // B2: AI-enable timing — the Write(0xA1) that sets AI is checked *after*
+    // it is stored, so the very next Read (no intervening START) returns
+    // regs[1] (MODE2), not regs[0] (MODE1).
+    {
+        let ops = vec![
+            Op::Start,
+            Op::Write(0x00), // pointer = MODE1 (0x00)
+            Op::Write(0xA1), // stores 0xA1 into regs[0]; AI now set; pointer stays 0
+            // AI is now enabled.  The pointer is still 0, but it was not
+            // incremented by the Write because AI is checked after the store.
+            // A Read now returns regs[0] = 0xA1 (pointer stays 0, no increment
+            // until after the read, per the AI-after-store rule).
+            Op::Read, // reads regs[0] = 0xA1; pointer → 1 (AI enabled post-read)
+            Op::Read, // reads regs[1] (MODE2 = 0x00 in reset); pointer → 2
+        ];
+        run_corpus(&ops);
+    }
+
+    // B3: Double-START idempotence — consecutive STARTs before a normal sequence
+    // are harmless; pointer is set correctly by the first write after the last START.
+    {
+        let ops = vec![
+            Op::Start,
+            Op::Start,       // second consecutive START — must be a no-op
+            Op::Write(0x00), // pointer = MODE1
+            Op::Read,        // should return reset value 0x11
+        ];
+        run_corpus(&ops);
+    }
+}
+
+// ── TMP102 ────────────────────────────────────────────────────────────────────
+
+fn ir_tmp102() -> IrI2cComponent {
+    let yaml = std::fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../configs/components/tmp102.yaml"
+    ))
+    .expect("spec asset");
+    IrI2cComponent::new(serde_yaml::from_str(&yaml).expect("parse"), None).expect("valid")
+}
+
+#[test]
+fn tmp102_temperature_reads_and_drift_are_byte_equivalent() {
+    let mut rust = Tmp102::new();
+    let mut ir = ir_tmp102();
+    assert_eq!(rust.address(), ir.address());
+    // 60 full temperature reads: crosses the 35 °C wrap at least once
+    // ((0x2300 - 0x1900) / 0x80 = 20 reads to first wrap; 60 reads = 3 cycles).
+    for i in 0..60 {
+        rust.start();
+        ir.start();
+        rust.write(0x00);
+        ir.write(0x00);
+        for half in 0..2 {
+            assert_eq!(rust.read(), ir.read(), "read {i}.{half}");
+        }
+    }
+    // Config / T_LOW / T_HIGH read back identically (MSB then LSB).
+    for ptr in 1..=3u8 {
+        rust.start();
+        ir.start();
+        rust.write(ptr);
+        ir.write(ptr);
+        assert_eq!(rust.read(), ir.read(), "ptr {ptr} MSB");
+        assert_eq!(rust.read(), ir.read(), "ptr {ptr} LSB");
+    }
 }
