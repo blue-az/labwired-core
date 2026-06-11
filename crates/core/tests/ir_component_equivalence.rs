@@ -211,7 +211,7 @@ fn tmp102_temperature_reads_and_drift_are_byte_equivalent() {
     assert_eq!(rust.address(), ir.address());
     // 60 full temperature reads: crosses the 35 °C wrap at least once
     // ((0x2300 - 0x1900) / 0x80 = 20 reads to first wrap; 60 reads crosses the wrap twice
-    // (first at read 20, then every 31 reads)).
+    // (first at read 20, then every 31 reads: wrap fires only when value exceeds 0x2300, and 0x1400 + 31×0x80 = 0x2380 is the first to exceed it)).
     for i in 0..60 {
         rust.start();
         ir.start();
