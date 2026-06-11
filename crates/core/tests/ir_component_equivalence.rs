@@ -164,19 +164,18 @@ fn corpus_hardeners_are_byte_equivalent() {
     }
 
     // B2: AI-enable timing — the Write(0xA1) that sets AI is checked *after*
-    // it is stored, so the very next Read (no intervening START) returns
-    // regs[1] (MODE2), not regs[0] (MODE1).
+    // it is stored, so the AI bit is visible for the auto-increment check on
+    // the same write. The pointer advances to 1 on the enabling write, and
+    // the first subsequent Read returns regs[1] (MODE2), not regs[0].
     {
         let ops = vec![
             Op::Start,
             Op::Write(0x00), // pointer = MODE1 (0x00)
-            Op::Write(0xA1), // stores 0xA1 into regs[0]; AI now set; pointer stays 0
-            // AI is now enabled.  The pointer is still 0, but it was not
-            // incremented by the Write because AI is checked after the store.
-            // A Read now returns regs[0] = 0xA1 (pointer stays 0, no increment
-            // until after the read, per the AI-after-store rule).
-            Op::Read, // reads regs[0] = 0xA1; pointer → 1 (AI enabled post-read)
-            Op::Read, // reads regs[1] (MODE2 = 0x00 in reset); pointer → 2
+            Op::Write(0xA1), // stores 0xA1 into regs[0]; AI bit now visible
+            // Auto-increment check happens after the store: AI is set, so
+            // pointer advances from 0 to 1. The next Read will return regs[1].
+            Op::Read, // reads regs[1] = 0x00 (MODE2 reset); pointer → 2
+            Op::Read, // reads regs[2]; pointer → 3
         ];
         run_corpus(&ops);
     }
