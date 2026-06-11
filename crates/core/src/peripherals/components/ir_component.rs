@@ -16,7 +16,7 @@ pub struct IrI2cComponent {
     spec: IrComponent,
     addr: u8,
     regs: Vec<u8>,
-    wide: Vec<i16>, // parallel to spec.wide_registers
+    wide: Vec<u16>, // parallel to spec.wide_registers; raw 16-bit register image
     pointer: u8,
     read_phase: u8, // 0 = MSB next (wide reads); reset on START
     writes_since_start: u32,
@@ -40,7 +40,7 @@ impl IrI2cComponent {
         for (&off, &v) in &spec.register_file.reset {
             regs[off as usize] = v;
         }
-        let wide = spec.wide_registers.iter().map(|w| w.reset as i16).collect();
+        let wide = spec.wide_registers.iter().map(|w| w.reset).collect();
         Ok(Self {
             addr: address_override.unwrap_or(default_address),
             regs,
@@ -90,6 +90,13 @@ impl I2cDevice for IrI2cComponent {
         if pointered && self.writes_since_start == 0 {
             let mask = self.spec.pointer.as_ref().unwrap().pointer_mask;
             self.pointer = data & mask;
+        } else if self.wide_index(self.pointer).is_some() {
+            // Absorb: the current pointer selects a wide (multi-byte) register.
+            // Wide registers have no writable byte representation; data writes
+            // after the pointer-select are silently discarded, matching the
+            // reference behavior for read-only wide-register devices (e.g. TMP102
+            // config register: the host may send config bytes that the simulator
+            // ignores, preserving the reset value intact).
         } else {
             let idx = self.pointer as usize % self.regs.len();
             self.regs[idx] = data;
@@ -102,7 +109,7 @@ impl I2cDevice for IrI2cComponent {
 
     fn read(&mut self) -> u8 {
         if let Some(wi) = self.wide_index(self.pointer) {
-            let value = self.wide[wi] as u16;
+            let value = self.wide[wi];
             let byte = if self.read_phase == 0 {
                 (value >> 8) as u8
             } else {
@@ -150,11 +157,15 @@ impl IrI2cComponent {
         let wi = self.wide_index(pointer).expect("validated");
         for a in actions {
             let IrUpdateAction::AddWrap { add, max, reset } = a;
-            let mut v = self.wide[wi].wrapping_add(add);
+            // Storage is the raw 16-bit register image; AddWrap is defined as
+            // signed per the IR doc ("signed compare, as i16"), so the signed
+            // view exists only here — registers with bit 15 set remain
+            // well-defined (e.g. reset=0xE700 stays negative after wrapping add).
+            let mut v = (self.wide[wi] as i16).wrapping_add(add);
             if v > max {
                 v = reset;
             }
-            self.wide[wi] = v;
+            self.wide[wi] = v as u16;
         }
     }
 }
@@ -234,5 +245,135 @@ pointer:
         d.start();
         d.write(0x06);
         assert_eq!(d.read(), 0x02);
+    }
+
+    // ── Part B1: absorb data writes when pointer selects a wide register ──────
+
+    /// TMP102-shaped spec: size=4, pointer_mask=0x03, wide registers at all
+    /// four pointers with distinct reset values.
+    fn tmp102_like_spec() -> IrComponent {
+        serde_yaml::from_str(
+            r#"
+name: TMP102-like
+interface: { i2c: { default_address: 0x48 } }
+register_file:
+  size: 4
+  reset: {}
+pointer:
+  first_write_after_start_sets_pointer: true
+  pointer_mask: 0x03
+  auto_increment: never
+wide_registers:
+  - { pointer: 0, bits: 16, reset: 0x1900 }
+  - { pointer: 1, bits: 16, reset: 0x60A0 }
+  - { pointer: 2, bits: 16, reset: 0x4B00 }
+  - { pointer: 3, bits: 16, reset: 0x5000 }
+"#,
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn wide_pointer_data_write_is_absorbed_not_stored() {
+        let mut d = IrI2cComponent::new(tmp102_like_spec(), None).unwrap();
+        // Select config register (pointer 1, reset 0x60A0).
+        d.start();
+        d.write(0x01); // pointer select
+        d.write(0xFF); // config byte — must be absorbed, not stored
+                       // Read config MSB+LSB; should equal reset 0x60A0.
+        d.start();
+        d.write(0x01);
+        let msb = d.read();
+        let lsb = d.read();
+        assert_eq!(
+            (msb, lsb),
+            (0x60, 0xA0),
+            "config corrupted by absorbed write: got {msb:#04x} {lsb:#04x}"
+        );
+        // Temperature register (pointer 0) also unaffected.
+        d.start();
+        d.write(0x00);
+        let t_msb = d.read();
+        let t_lsb = d.read();
+        assert_eq!(
+            (t_msb, t_lsb),
+            (0x19, 0x00),
+            "temperature corrupted: {t_msb:#04x} {t_lsb:#04x}"
+        );
+    }
+
+    #[test]
+    fn wide_pointer_absorb_still_counts_writes_since_start() {
+        // writes_since_start must increment even for absorbed bytes so that a
+        // re-select (a new pointer byte) after a START is still treated as the
+        // first write.
+        let mut d = IrI2cComponent::new(tmp102_like_spec(), None).unwrap();
+        d.start();
+        d.write(0x01); // pointer → 1; writes_since_start = 1
+        d.write(0xFF); // absorbed;   writes_since_start = 2
+                       // A new START resets writes_since_start; next write sets pointer again.
+        d.start();
+        d.write(0x00); // pointer → 0 (temperature)
+        let msb = d.read();
+        let lsb = d.read();
+        assert_eq!(
+            (msb, lsb),
+            (0x19, 0x00),
+            "temperature wrong after re-select: {msb:#04x} {lsb:#04x}"
+        );
+    }
+
+    // ── Part B2: wide storage as u16, signed semantics in AddWrap only ────────
+
+    fn wide_signed_spec() -> IrComponent {
+        // A single wide register with reset 0xE700 (negative as i16 = -6400).
+        // AddWrap: add=0x80, max=0x2300, reset=0x1400.
+        // First add: (0xE700 as i16) + 0x80 = -6400 + 128 = -6272 = 0xE780 as u16.
+        // -6272 > 0x2300 (8960)? No (signed: -6272 < 8960) → no reset triggered.
+        serde_yaml::from_str(
+            r#"
+name: signed-wide
+interface: { i2c: { default_address: 0x10 } }
+register_file:
+  size: 4
+  reset: {}
+pointer:
+  first_write_after_start_sets_pointer: true
+  pointer_mask: 0x03
+  auto_increment: never
+wide_registers:
+  - { pointer: 0, bits: 16, reset: 0xE700 }
+updates:
+  - trigger: { wide_read_complete: { pointer: 0 } }
+    action:
+      add_wrap: { add: 128, max: 8960, reset: 5120 }
+"#,
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn wide_stored_as_u16_signed_addwrap_no_false_reset() {
+        let mut d = IrI2cComponent::new(wide_signed_spec(), None).unwrap();
+        // First read: should return reset bytes 0xE7, 0x00.
+        d.start();
+        d.write(0x00);
+        let b0 = d.read(); // MSB triggers update after LSB
+        let b1 = d.read(); // LSB → update fires: (0xE700 as i16) + 128 = 0xE780
+        assert_eq!(
+            (b0, b1),
+            (0xE7, 0x00),
+            "first read wrong: {b0:#04x} {b1:#04x}"
+        );
+        // Second read: post-update value 0xE780 → bytes 0xE7, 0x80.
+        d.start();
+        d.write(0x00);
+        let b2 = d.read();
+        let b3 = d.read();
+        assert_eq!(
+            (b2, b3),
+            (0xE7, 0x80),
+            "second read wrong (signed wrap check): {b2:#04x} {b3:#04x}"
+        );
     }
 }
