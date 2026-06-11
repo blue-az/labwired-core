@@ -629,7 +629,7 @@ observables:
     value:
       u12_compose: { lo_rel: 2, hi_rel: 3, hi_mask: 0x0F }
     map:
-      linear: { scale: 0.46291754, offset: -47.368423, clamp: [0.0, 180.0] }
+      linear: { scale: 0.46258224, offset: -47.368423, clamp: [0.0, 180.0] }
       none_when_raw_zero: true
 "#;
         let spec: IrComponent = serde_yaml::from_str(yaml).expect("parse");

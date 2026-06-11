@@ -440,7 +440,7 @@ observables:
     value:
       u12_compose: { lo_rel: 2, hi_rel: 3, hi_mask: 0x0F }
     map:
-      linear: { scale: 0.46291754, offset: -47.368423, clamp: [0.0, 180.0] }
+      linear: { scale: 0.46258224, offset: -47.368423, clamp: [0.0, 180.0] }
       none_when_raw_zero: true
 "#,
         )
@@ -472,12 +472,12 @@ observables:
         assert_eq!(d.observable("servo_angle", 0), None);
 
         // Write a specific raw value for channel 0.
-        // raw 135 → angle = 135 * 0.46291754 + (-47.368423) ≈ 62.394 - 47.368 ≈ 15.026°
+        // raw 135 → angle = 135 * 0.46258224 + (-47.368423) ≈ 62.449 - 47.368 ≈ 15.080°
         ir_set_angle(&mut d, 0, 135);
         let angle = d
             .observable("servo_angle", 0)
             .expect("should be Some after write");
-        assert!((angle - 15.0).abs() < 1.5, "expected ~15°, got {angle:.3}");
+        assert!((angle - 15.0).abs() < 0.1, "expected ~15°, got {angle:.3}");
 
         // Other channels still None.
         assert_eq!(d.observable("servo_angle", 1), None);
@@ -488,7 +488,7 @@ observables:
             .observable("servo_angle", 15)
             .expect("ch15 should be Some");
         assert!(
-            (angle15 - 15.0).abs() < 1.5,
+            (angle15 - 15.0).abs() < 0.1,
             "ch15 expected ~15°, got {angle15:.3}"
         );
     }
