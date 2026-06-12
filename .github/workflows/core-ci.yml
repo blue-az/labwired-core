@@ -38,11 +38,12 @@ jobs:
       - name: Run Clippy
         run: cargo clippy --all-targets -- -D warnings
 
-      # Unit tests across the workspace (lib + bin targets). Excludes the
+      # Library unit tests across the workspace. `--lib` skips the no_std
+      # firmware bin crates (which only build for thumb targets) and the
       # integration tests under tests/ that need pre-built firmware fixtures —
-      # those run in core-full post-merge.
+      # both run in core-full post-merge.
       - name: Unit tests (no fixtures)
-        run: cargo test --workspace --lib --bins
+        run: cargo test --workspace --lib
 
   # ── Full suite (NOT a PR gate) ─────────────────────────────────────────────
   # Runs after merge on main (and on manual dispatch). Builds firmware fixtures,
