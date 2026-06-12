@@ -1077,10 +1077,10 @@ mod tests {
     fn test_resolve_board_io_bindings_uses_default_gpio_offsets() {
         let chip = labwired_config::ChipDescriptor {
             schema_version: "1.0".to_string(),
+            memory_regions: Vec::new(),
             name: "test".to_string(),
             arch: labwired_config::Arch::Arm,
             core: None,
-            memory_regions: Vec::new(),
             flash: labwired_config::MemoryRange {
                 base: 0x0800_0000,
                 size: "128KB".to_string(),
@@ -1130,10 +1130,10 @@ mod tests {
         gpio_config.insert("profile".to_string(), "stm32v2".into());
         let chip = labwired_config::ChipDescriptor {
             schema_version: "1.0".to_string(),
+            memory_regions: Vec::new(),
             name: "test".to_string(),
             arch: labwired_config::Arch::Arm,
             core: None,
-            memory_regions: Vec::new(),
             flash: labwired_config::MemoryRange {
                 base: 0x0800_0000,
                 size: "128KB".to_string(),
@@ -1196,10 +1196,10 @@ mod tests {
         gpio_config.insert("register_layout".to_string(), "stm32v2".into());
         let chip = labwired_config::ChipDescriptor {
             schema_version: "1.0".to_string(),
+            memory_regions: Vec::new(),
             name: "test".to_string(),
             arch: labwired_config::Arch::Arm,
             core: None,
-            memory_regions: Vec::new(),
             flash: labwired_config::MemoryRange {
                 base: 0x0800_0000,
                 size: "128KB".to_string(),
