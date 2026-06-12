@@ -231,7 +231,7 @@ impl SystemBus {
             | "dma" | "gpdma" | "adc" | "pio" | "declarative" | "strict_ir"
             | "strict_ir_internal" | "pwr" | "flash" | "rng" | "crc" | "rtc" | "rtc_f1"
             | "rtc_v3" | "iwdg" | "wwdg" | "dac" | "dbgmcu" | "lptim" | "quadspi" | "sai"
-            | "usb_otg" | "bxcan" | "sdmmc" | "comp" | "tsc" | "fmc" => {
+            | "usb_otg" | "bxcan" | "fdcan" | "sdmmc" | "comp" | "tsc" | "fmc" => {
                 return t;
             }
             _ => {}
@@ -1352,6 +1352,11 @@ impl SystemBus {
                         Some("stm32h5") | Some("h5") => {
                             Box::new(crate::peripherals::pwr::PwrH5::new())
                         }
+                        // L0 has a two-register surface (CR/CSR), not the L4
+                        // CR1..CR4 / PUCRx set — a distinct reset shape.
+                        Some("stm32l0") | Some("l0") => {
+                            Box::new(crate::peripherals::pwr::PwrL0::new())
+                        }
                         _ => Box::new(crate::peripherals::pwr::Pwr::new()),
                     }
                 }
@@ -1386,6 +1391,7 @@ impl SystemBus {
                 "sai" => Box::new(crate::peripherals::sai::Sai::new()),
                 "usb_otg" => Box::new(crate::peripherals::usb_otg::UsbOtg::new()),
                 "bxcan" => Box::new(crate::peripherals::bxcan::BxCan::new()),
+                "fdcan" => Box::new(crate::peripherals::fdcan::Fdcan::new()),
                 "sdmmc" => Box::new(crate::peripherals::sdmmc::Sdmmc::new()),
                 "comp" => Box::new(crate::peripherals::comp::Comp::new()),
                 "tsc" => Box::new(crate::peripherals::tsc::Tsc::new()),
