@@ -29,6 +29,7 @@
 //! |   0x10    | IN_INT_ENA        | per-bit enable (R/W) |
 //! |   0x14    | IN_INT_CLR        | W1C of IN_INT_RAW |
 //! |   0x20    | IN_LINK           | addr[19:0], stop[21], start[22], restart[23], park[24] (RO=1) |
+//! |   0x48    | IN_PERI_SEL       | bits[5:0] peripheral id (R/W); reset = 0x3F (unbound) |
 //! |   0x60    | OUT_CONF0         | TX config 0 (R/W round-trip) |
 //! |   0x64    | OUT_CONF1         | TX config 1 (R/W round-trip) |
 //! |   0x68    | OUT_INT_RAW       | bit0 OUT_DONE, bit1 OUT_EOF, bit2 OUT_DSCR_ERR, bit3 OUT_TOTAL_EOF |
@@ -36,6 +37,7 @@
 //! |   0x70    | OUT_INT_ENA       | per-bit enable (R/W) |
 //! |   0x74    | OUT_INT_CLR       | W1C of OUT_INT_RAW |
 //! |   0x80    | OUT_LINK          | addr[19:0], stop[20], start[21], restart[22], park[23] (RO=1) |
+//! |   0xA8    | OUT_PERI_SEL      | bits[5:0] peripheral id (R/W); reset = 0x3F (unbound) |
 //!
 //! Global: `MISC_CONF` at absolute offset `0x3C8` (R/W round-trip).
 //!
@@ -76,14 +78,24 @@
 //! Descriptors whose `owner` bit is 0 (CPU-owned) are skipped; the walk
 //! stops at the first CPU-owned descriptor or at `next == 0`.
 //!
-//! ## What remains unimplemented (non-m2m peripheral-coupled transfers)
+//! ## Peripheral-coupled mode — routing split
 //!
-//! Peripheral-paired DMA (SPI2/3, I2S, ADC, AES, SHA, …) still uses the
-//! original auto-complete behaviour: writing `OUTLINK_START` latches
-//! `OUT_EOF + OUT_TOTAL_EOF + OUT_DONE`; writing `INLINK_START` latches
-//! `IN_SUC_EOF + IN_DONE` — without actual byte movement. This keeps those
-//! peripheral drivers making forward progress without modelling the FIFO
-//! handshake, matching the previous behaviour.
+//! When `MEM_TRANS_EN` (bit 4 of `IN_CONF0`) is **clear**, the link-start
+//! path consults `IN_PERI_SEL` / `OUT_PERI_SEL` to decide how to proceed:
+//!
+//! **Coupled set** (`Spi2`, `Spi3`, `Uhci0`, `I2s0`, `I2s1`): the direction
+//! is marked `pending_coupled`; `needs_bus_tick` returns `true`; byte movement
+//! runs inside `tick_with_bus` when the peripheral pump is implemented (Tasks
+//! 2–4 of the Slice 3A plan). Until then EOF stays **unlatched** — a coupled
+//! transfer without a pump visibly hangs rather than silently auto-completing.
+//!
+//! **Fallback set** (everything else, including `AES`, `SHA`, `ADC_DAC`,
+//! `RMT`, `LCD_CAM`, `Unknown`, and the reset / unbound value `0x3F`): the
+//! original auto-complete behaviour is preserved — writing `OUTLINK_START`
+//! latches `OUT_EOF + OUT_TOTAL_EOF + OUT_DONE`; writing `INLINK_START`
+//! latches `IN_SUC_EOF + IN_DONE` — without actual byte movement. Firmware
+//! that never writes `PERI_SEL` gets `0x3F` (unbound → `Unknown`) and falls
+//! through here, preserving full backwards compatibility.
 
 use crate::{Bus, Peripheral, PeripheralTickResult, SimResult};
 
@@ -104,6 +116,9 @@ const IN_INT_ST: u64 = 0x0C;
 const IN_INT_ENA: u64 = 0x10;
 const IN_INT_CLR: u64 = 0x14;
 const IN_LINK: u64 = 0x20;
+/// GDMA_IN_PERI_SEL_CHn: binds IN direction to a peripheral.
+/// Offset verified against esp-idf gdma_struct.h + esp-pacs esp32s3 DMA PAC.
+const IN_PERI_SEL: u64 = 0x48;
 
 // ── OUT (TX) sub-block offsets within a channel block ──
 const OUT_CONF0: u64 = 0x60;
@@ -113,6 +128,9 @@ const OUT_INT_ST: u64 = 0x6C;
 const OUT_INT_ENA: u64 = 0x70;
 const OUT_INT_CLR: u64 = 0x74;
 const OUT_LINK: u64 = 0x80;
+/// GDMA_OUT_PERI_SEL_CHn: binds OUT direction to a peripheral.
+/// Offset verified against esp-idf gdma_struct.h + esp-pacs esp32s3 DMA PAC.
+const OUT_PERI_SEL: u64 = 0xA8;
 
 // ── IN interrupt bits (IN_INT_*_CH*) ──
 const IN_DONE_BIT: u32 = 1 << 0;
@@ -147,6 +165,71 @@ const OUT_LINK_PARK_BIT: u32 = 1 << 23;
 /// MEM_TRANS_EN (bit 4): selects memory-to-memory mode on this channel.
 const MEM_TRANS_EN_BIT: u32 = 1 << 4;
 
+/// 6-bit mask for PERI_SEL fields; bits [31:6] are reserved.
+const PERI_SEL_MASK: u32 = 0x3F;
+
+/// Reset value for IN/OUT_PERI_SEL: no peripheral bound ("unbound").
+/// This value is preserved across reset and keeps the legacy auto-complete
+/// behaviour for firmware that never writes PERI_SEL.
+const PERI_SEL_RESET: u32 = 0x3F;
+
+/// Peripheral targets GDMA can couple to.
+///
+/// Values are per the ESP32-S3 TRM / `gdma_struct.h` PERI_IN_SEL / PERI_OUT_SEL
+/// encoding verified in `docs/esp32s3_gdma_peri_sel.md` (Task 0 ground truth).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DmaPeripheral {
+    /// GP-SPI2 master/slave (sel = 0)
+    Spi2,
+    /// GP-SPI3 master/slave (sel = 1)
+    Spi3,
+    /// UHCI0 bridge → UART DMA path (sel = 2)
+    Uhci0,
+    /// I2S0 TX/RX (sel = 3)
+    I2s0,
+    /// I2S1 TX/RX (sel = 4)
+    I2s1,
+    /// LCD/camera controller (sel = 5) — deferred, fallback behaviour
+    LcdCam,
+    /// AES accelerator (sel = 6) — fallback auto-complete
+    Aes,
+    /// SHA accelerator (sel = 7) — fallback auto-complete
+    Sha,
+    /// SAR ADC (sel = 8) — fallback auto-complete
+    AdcDac,
+    /// RMT controller (sel = 9) — fallback auto-complete
+    Rmt,
+    /// Unrecognised or unbound (0x3F = reset / no selection, others unknown)
+    Unknown(u32),
+}
+
+impl DmaPeripheral {
+    fn from_sel(v: u32) -> Self {
+        match v & PERI_SEL_MASK {
+            0 => Self::Spi2,
+            1 => Self::Spi3,
+            2 => Self::Uhci0,
+            3 => Self::I2s0,
+            4 => Self::I2s1,
+            5 => Self::LcdCam,
+            6 => Self::Aes,
+            7 => Self::Sha,
+            8 => Self::AdcDac,
+            9 => Self::Rmt,
+            other => Self::Unknown(other),
+        }
+    }
+
+    /// True when this peripheral is in the "coupled set" — byte movement is
+    /// handled by `tick_with_bus` (Tasks 2–4 fill in the implementations).
+    fn is_coupled(self) -> bool {
+        matches!(
+            self,
+            Self::Spi2 | Self::Spi3 | Self::Uhci0 | Self::I2s0 | Self::I2s1
+        )
+    }
+}
+
 /// High-address prefix added to the 20-bit LINK_ADDR field to form a full
 /// 32-bit bus address. On ESP32-S3, GDMA descriptors must reside in internal
 /// SRAM which is mapped at 0x3FC0_0000; the INLINK/OUTLINK registers carry
@@ -164,7 +247,7 @@ const MAX_DESC_CHAIN: usize = 4096;
 const DESC_OWNER_BIT: u32 = 1 << 31;
 
 /// One direction (IN or OUT) of a GDMA channel.
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 struct DmaDir {
     conf0: u32,
     conf1: u32,
@@ -174,6 +257,29 @@ struct DmaDir {
     int_raw: u32,
     /// INT_ENA — per-bit IRQ enable.
     int_ena: u32,
+    /// PERI_SEL register value (6-bit masked; reset = 0x3F = unbound).
+    peri_sel: u32,
+    /// Set when this direction has been started in coupled mode (PERI_SEL
+    /// names a coupled peripheral and MEM_TRANS_EN is clear). Byte movement
+    /// is implemented in Tasks 2–4; for now the flag keeps the transfer
+    /// visibly pending (no EOF latched) rather than silently auto-completing.
+    /// `tick_with_bus`/`needs_bus_tick` return true while this is set so the
+    /// engine's tick loop keeps visiting us.
+    pending_coupled: bool,
+}
+
+impl Default for DmaDir {
+    fn default() -> Self {
+        Self {
+            conf0: 0,
+            conf1: 0,
+            link_addr: 0,
+            int_raw: 0,
+            int_ena: 0,
+            peri_sel: PERI_SEL_RESET,
+            pending_coupled: false,
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -245,6 +351,7 @@ impl Esp32s3Gdma {
             // walking a list). We model transfers as instantaneous, so the
             // channel is always parked; START self-clears immediately.
             IN_LINK => (c.rx.link_addr & IN_LINK_ADDR_MASK) | IN_LINK_PARK_BIT,
+            IN_PERI_SEL => c.rx.peri_sel & PERI_SEL_MASK,
             OUT_CONF0 => c.tx.conf0,
             OUT_CONF1 => c.tx.conf1,
             OUT_INT_RAW => c.tx.int_raw,
@@ -252,6 +359,7 @@ impl Esp32s3Gdma {
             OUT_INT_ENA => c.tx.int_ena,
             OUT_INT_CLR => 0,
             OUT_LINK => (c.tx.link_addr & OUT_LINK_ADDR_MASK) | OUT_LINK_PARK_BIT,
+            OUT_PERI_SEL => c.tx.peri_sel & PERI_SEL_MASK,
             _ => 0,
         }
     }
@@ -292,15 +400,31 @@ impl Esp32s3Gdma {
                             c.pending_m2m = true;
                         }
                     } else {
-                        // Peripheral-coupled mode (unimplemented beyond
-                        // register model): auto-complete so the firmware
-                        // polling IN_SUC_EOF can make forward progress.
-                        c.rx.int_raw |= IN_SUC_EOF_BIT | IN_DONE_BIT;
+                        // Peripheral-coupled mode: route by PERI_SEL.
+                        match DmaPeripheral::from_sel(c.rx.peri_sel) {
+                            p if p.is_coupled() => {
+                                // Coupled set (SPI2/3, UHCI0, I2S0/1): mark
+                                // pending — byte movement implemented in
+                                // Tasks 2-4. EOF stays unlatched: a coupled
+                                // transfer with no peripheral pump yet
+                                // visibly hangs rather than silently lying.
+                                c.rx.pending_coupled = true;
+                            }
+                            _ => {
+                                // Fallback set (AES, SHA, ADC, RMT, LCD_CAM,
+                                // Unknown including unbound 0x3F): auto-complete
+                                // so firmware polling IN_SUC_EOF makes forward
+                                // progress. Preserves all legacy behaviour for
+                                // firmware that never writes PERI_SEL.
+                                c.rx.int_raw |= IN_SUC_EOF_BIT | IN_DONE_BIT;
+                            }
+                        }
                     }
                 }
                 // STOP: nothing to do in this register-only model.
                 let _ = IN_LINK_STOP_BIT;
             }
+            IN_PERI_SEL => c.rx.peri_sel = value & PERI_SEL_MASK,
             OUT_CONF0 => c.tx.conf0 = value,
             OUT_CONF1 => c.tx.conf1 = value,
             OUT_INT_RAW => {}
@@ -321,12 +445,24 @@ impl Esp32s3Gdma {
                             c.pending_m2m = true;
                         }
                     } else {
-                        // Peripheral-coupled auto-complete.
-                        c.tx.int_raw |= OUT_EOF_BIT | OUT_TOTAL_EOF_BIT | OUT_DONE_BIT;
+                        // Peripheral-coupled mode: route by PERI_SEL.
+                        match DmaPeripheral::from_sel(c.tx.peri_sel) {
+                            p if p.is_coupled() => {
+                                // Coupled set: mark pending; EOF stays
+                                // unlatched until Tasks 2-4 implement the
+                                // peripheral pump for this direction.
+                                c.tx.pending_coupled = true;
+                            }
+                            _ => {
+                                // Fallback set: auto-complete.
+                                c.tx.int_raw |= OUT_EOF_BIT | OUT_TOTAL_EOF_BIT | OUT_DONE_BIT;
+                            }
+                        }
                     }
                 }
                 let _ = OUT_LINK_STOP_BIT;
             }
+            OUT_PERI_SEL => c.tx.peri_sel = value & PERI_SEL_MASK,
             _ => {}
         }
     }
@@ -449,20 +585,39 @@ impl Peripheral for Esp32s3Gdma {
         }
     }
 
-    /// True when any channel has a pending MEM_TRANS_EN descriptor walk.
+    /// True when any channel has a pending MEM_TRANS_EN descriptor walk or a
+    /// pending coupled-mode transfer.
+    ///
+    /// Coupled channels with `pending_coupled` set keep the engine visiting
+    /// `tick_with_bus` so the peripheral pump (Tasks 2–4) can make progress
+    /// when implemented. For now those ticks are no-ops — the EOF stays
+    /// unlatched, making the transfer visibly hang rather than silently lying.
     fn needs_bus_tick(&self) -> bool {
-        self.channels.iter().any(|c| c.pending_m2m)
+        self.channels
+            .iter()
+            .any(|c| c.pending_m2m || c.rx.pending_coupled || c.tx.pending_coupled)
     }
 
-    /// Execute all pending memory-to-memory descriptor walks.
+    /// Execute all pending descriptor walks and coupled-mode ticks.
     ///
     /// For each channel with `pending_m2m` set:
     /// 1. Walk the OUT (TX) descriptor chain and collect bytes.
     /// 2. Walk the IN (RX) descriptor chain and write bytes.
     /// 3. Latch `IN_SUC_EOF | IN_DONE` and `OUT_EOF | OUT_TOTAL_EOF |
     ///    OUT_DONE` in the respective INT_RAW registers.
+    ///
+    /// Channels with `pending_coupled` set (IN or OUT direction) are visited
+    /// here but no bytes are moved yet — the peripheral pump is implemented in
+    /// Tasks 2 (UART/UHCI0), 3 (SPI2/3), and 4 (I2S0/I2S1). Until then the
+    /// EOF stays unlatched and the transfer visibly hangs.
     fn tick_with_bus(&mut self, bus: &mut dyn Bus) {
         for c in self.channels.iter_mut() {
+            // Coupled-mode no-op: Tasks 2-4 fill in the byte-movement logic.
+            // The `pending_coupled` flag is NOT cleared here so the engine
+            // continues visiting until a real pump claims it.
+            let _ = c.rx.pending_coupled;
+            let _ = c.tx.pending_coupled;
+
             if !c.pending_m2m {
                 continue;
             }
@@ -953,6 +1108,231 @@ mod tests {
             g.read_word(b + IN_INT_RAW) & IN_SUC_EOF_BIT,
             0,
             "IN_SUC_EOF after two-descriptor chain"
+        );
+    }
+
+    // ── PERI_SEL register tests ───────────────────────────────────────────
+
+    /// Round-trip: write a valid sel value to IN_PERI_SEL on ch2, read back.
+    #[test]
+    fn in_peri_sel_round_trip() {
+        let mut g = Esp32s3Gdma::new(IN_CH0_SRC);
+        let b = ch_base(2);
+        // sel = 3 (I2S0).
+        g.write_word(b + IN_PERI_SEL, 0x03);
+        assert_eq!(g.read_word(b + IN_PERI_SEL), 0x03);
+    }
+
+    /// Mask: writing 0xFF to IN_PERI_SEL reads back only the low 6 bits (0x3F).
+    #[test]
+    fn in_peri_sel_mask_enforced() {
+        let mut g = Esp32s3Gdma::new(IN_CH0_SRC);
+        let b = ch_base(2);
+        g.write_word(b + IN_PERI_SEL, 0xFF);
+        assert_eq!(g.read_word(b + IN_PERI_SEL), 0x3F, "only 6 bits are stored");
+    }
+
+    /// Reset value of IN_PERI_SEL is 0x3F (unbound).
+    #[test]
+    fn in_peri_sel_reset_value() {
+        let g = Esp32s3Gdma::new(IN_CH0_SRC);
+        for n in 0..NUM_CHANNELS as u64 {
+            assert_eq!(
+                g.read_word(ch_base(n) + IN_PERI_SEL),
+                PERI_SEL_RESET,
+                "ch{n} IN_PERI_SEL reset must be 0x3F"
+            );
+        }
+    }
+
+    /// Round-trip: write a valid sel value to OUT_PERI_SEL on ch2, read back.
+    #[test]
+    fn out_peri_sel_round_trip() {
+        let mut g = Esp32s3Gdma::new(IN_CH0_SRC);
+        let b = ch_base(2);
+        // sel = 3 (I2S0).
+        g.write_word(b + OUT_PERI_SEL, 0x03);
+        assert_eq!(g.read_word(b + OUT_PERI_SEL), 0x03);
+    }
+
+    /// Mask: writing 0xFF to OUT_PERI_SEL reads back only the low 6 bits.
+    #[test]
+    fn out_peri_sel_mask_enforced() {
+        let mut g = Esp32s3Gdma::new(IN_CH0_SRC);
+        let b = ch_base(2);
+        g.write_word(b + OUT_PERI_SEL, 0xFF);
+        assert_eq!(g.read_word(b + OUT_PERI_SEL), 0x3F);
+    }
+
+    /// Reset value of OUT_PERI_SEL is 0x3F (unbound).
+    #[test]
+    fn out_peri_sel_reset_value() {
+        let g = Esp32s3Gdma::new(IN_CH0_SRC);
+        for n in 0..NUM_CHANNELS as u64 {
+            assert_eq!(
+                g.read_word(ch_base(n) + OUT_PERI_SEL),
+                PERI_SEL_RESET,
+                "ch{n} OUT_PERI_SEL reset must be 0x3F"
+            );
+        }
+    }
+
+    /// PERI_SEL registers on different channels are independent.
+    #[test]
+    fn peri_sel_channels_independent() {
+        let mut g = Esp32s3Gdma::new(IN_CH0_SRC);
+        g.write_word(ch_base(0) + IN_PERI_SEL, 0x02); // UHCI0
+        g.write_word(ch_base(1) + IN_PERI_SEL, 0x07); // SHA
+        assert_eq!(g.read_word(ch_base(0) + IN_PERI_SEL), 0x02);
+        assert_eq!(g.read_word(ch_base(1) + IN_PERI_SEL), 0x07);
+        // Unwritten channels stay at reset.
+        assert_eq!(g.read_word(ch_base(2) + IN_PERI_SEL), PERI_SEL_RESET);
+    }
+
+    // ── Coupled-set start tests ───────────────────────────────────────────
+
+    /// Coupled IN: set OUT_PERI_SEL = UHCI0 (2), MEM_TRANS_EN clear,
+    /// write OUTLINK_START → OUT_INT_RAW must have NO OUT_EOF bits.
+    #[test]
+    fn coupled_out_start_does_not_latch_eof() {
+        let mut g = Esp32s3Gdma::new(IN_CH0_SRC);
+        let b = ch_base(0);
+        // MEM_TRANS_EN must be clear (default).
+        g.write_word(b + OUT_PERI_SEL, 2); // UHCI0 = coupled
+        g.write_word(b + OUT_LINK, OUT_LINK_START_BIT | 0x1000);
+        let raw = g.read_word(b + OUT_INT_RAW);
+        assert_eq!(
+            raw & (OUT_EOF_BIT | OUT_TOTAL_EOF_BIT | OUT_DONE_BIT),
+            0,
+            "coupled OUT start must NOT latch EOF"
+        );
+        // needs_bus_tick returns true because pending_coupled is set.
+        assert!(
+            g.needs_bus_tick(),
+            "needs_bus_tick must be true for coupled OUT"
+        );
+    }
+
+    /// Coupled IN: set IN_PERI_SEL = UHCI0 (2), MEM_TRANS_EN clear,
+    /// write INLINK_START → IN_INT_RAW must have NO IN_SUC_EOF/IN_DONE bits.
+    #[test]
+    fn coupled_in_start_does_not_latch_eof() {
+        let mut g = Esp32s3Gdma::new(IN_CH0_SRC);
+        let b = ch_base(1);
+        g.write_word(b + IN_PERI_SEL, 2); // UHCI0 = coupled
+        g.write_word(b + IN_LINK, IN_LINK_START_BIT | 0x2000);
+        let raw = g.read_word(b + IN_INT_RAW);
+        assert_eq!(
+            raw & (IN_SUC_EOF_BIT | IN_DONE_BIT),
+            0,
+            "coupled IN start must NOT latch EOF"
+        );
+        assert!(
+            g.needs_bus_tick(),
+            "needs_bus_tick must be true for coupled IN"
+        );
+    }
+
+    /// All five coupled peripheral values for OUT direction do NOT latch EOF.
+    #[test]
+    fn coupled_out_all_five_peripherals_no_eof() {
+        for sel in [0u32, 1, 2, 3, 4] {
+            // sel 0=SPI2, 1=SPI3, 2=UHCI0, 3=I2S0, 4=I2S1
+            let mut g = Esp32s3Gdma::new(IN_CH0_SRC);
+            let b = ch_base(0);
+            g.write_word(b + OUT_PERI_SEL, sel);
+            g.write_word(b + OUT_LINK, OUT_LINK_START_BIT | 0x100);
+            let raw = g.read_word(b + OUT_INT_RAW);
+            assert_eq!(
+                raw & (OUT_EOF_BIT | OUT_TOTAL_EOF_BIT | OUT_DONE_BIT),
+                0,
+                "sel={sel} should not latch OUT_EOF"
+            );
+        }
+    }
+
+    /// All five coupled peripheral values for IN direction do NOT latch EOF.
+    #[test]
+    fn coupled_in_all_five_peripherals_no_eof() {
+        for sel in [0u32, 1, 2, 3, 4] {
+            let mut g = Esp32s3Gdma::new(IN_CH0_SRC);
+            let b = ch_base(0);
+            g.write_word(b + IN_PERI_SEL, sel);
+            g.write_word(b + IN_LINK, IN_LINK_START_BIT | 0x100);
+            let raw = g.read_word(b + IN_INT_RAW);
+            assert_eq!(
+                raw & (IN_SUC_EOF_BIT | IN_DONE_BIT),
+                0,
+                "sel={sel} should not latch IN_SUC_EOF"
+            );
+        }
+    }
+
+    // ── Fallback-set auto-complete tests ─────────────────────────────────
+
+    /// Fallback OUT: SHA (sel=7) auto-completes immediately on OUTLINK_START.
+    #[test]
+    fn fallback_out_sha_auto_completes() {
+        let mut g = Esp32s3Gdma::new(IN_CH0_SRC);
+        let b = ch_base(0);
+        g.write_word(b + OUT_PERI_SEL, 7); // SHA = fallback
+        g.write_word(b + OUT_LINK, OUT_LINK_START_BIT | 0x3000);
+        let raw = g.read_word(b + OUT_INT_RAW);
+        assert_eq!(raw & OUT_EOF_BIT, OUT_EOF_BIT, "OUT_EOF must be latched");
+        assert_eq!(
+            raw & OUT_TOTAL_EOF_BIT,
+            OUT_TOTAL_EOF_BIT,
+            "OUT_TOTAL_EOF must be latched"
+        );
+        assert_eq!(raw & OUT_DONE_BIT, OUT_DONE_BIT, "OUT_DONE must be latched");
+        assert!(!g.needs_bus_tick(), "no bus tick needed for fallback OUT");
+    }
+
+    /// Fallback IN: SHA (sel=7) auto-completes immediately on INLINK_START.
+    #[test]
+    fn fallback_in_sha_auto_completes() {
+        let mut g = Esp32s3Gdma::new(IN_CH0_SRC);
+        let b = ch_base(0);
+        g.write_word(b + IN_PERI_SEL, 7); // SHA = fallback
+        g.write_word(b + IN_LINK, IN_LINK_START_BIT | 0x4000);
+        let raw = g.read_word(b + IN_INT_RAW);
+        assert_eq!(
+            raw & IN_SUC_EOF_BIT,
+            IN_SUC_EOF_BIT,
+            "IN_SUC_EOF must be latched"
+        );
+        assert_eq!(raw & IN_DONE_BIT, IN_DONE_BIT, "IN_DONE must be latched");
+    }
+
+    /// Unbound reset value (0x3F) behaves as fallback for OUT direction.
+    /// Firmware that never writes PERI_SEL must get auto-complete (legacy
+    /// compatibility promise).
+    #[test]
+    fn unbound_out_reset_value_is_fallback() {
+        let mut g = Esp32s3Gdma::new(IN_CH0_SRC);
+        let b = ch_base(3);
+        // Do NOT write PERI_SEL; it stays at 0x3F (Unknown).
+        g.write_word(b + OUT_LINK, OUT_LINK_START_BIT | 0x5000);
+        let raw = g.read_word(b + OUT_INT_RAW);
+        assert_ne!(
+            raw & (OUT_EOF_BIT | OUT_TOTAL_EOF_BIT | OUT_DONE_BIT),
+            0,
+            "unbound PERI_SEL (reset 0x3F) must auto-complete OUT"
+        );
+    }
+
+    /// Unbound reset value (0x3F) behaves as fallback for IN direction.
+    #[test]
+    fn unbound_in_reset_value_is_fallback() {
+        let mut g = Esp32s3Gdma::new(IN_CH0_SRC);
+        let b = ch_base(3);
+        // Do NOT write PERI_SEL; it stays at 0x3F (Unknown).
+        g.write_word(b + IN_LINK, IN_LINK_START_BIT | 0x6000);
+        let raw = g.read_word(b + IN_INT_RAW);
+        assert_ne!(
+            raw & (IN_SUC_EOF_BIT | IN_DONE_BIT),
+            0,
+            "unbound PERI_SEL (reset 0x3F) must auto-complete IN"
         );
     }
 }
