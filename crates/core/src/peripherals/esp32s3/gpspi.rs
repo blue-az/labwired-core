@@ -244,9 +244,16 @@ impl Esp32s3Spi {
     }
 
     /// Attach a simulated device to this controller's bus (same surface as
-    /// `Esp32Spi::attach`, used by the e-paper wiring in `system/xtensa.rs`).
+    /// `Esp32Spi::attach`; reachable from config-level external-device
+    /// wiring via `attach_esp32_external_devices` in `system/xtensa.rs`,
+    /// which downcasts to either SPI model).
     pub fn attach(&mut self, device: Box<dyn SpiDevice>) {
         self.attached_devices.push(device);
+    }
+
+    /// Number of attached devices (used by the system-wiring tests).
+    pub fn attached_device_count(&self) -> usize {
+        self.attached_devices.len()
     }
 
     fn reg(&self, off: u64) -> u32 {
@@ -345,10 +352,14 @@ impl Esp32s3Spi {
     }
 
     /// Exchange one burst of wire bytes for the in-flight DMA transaction:
-    /// each MOSI byte is broadcast to the attached devices (first non-zero
-    /// MISO byte wins — the shared `SpiDevice` v1 routing policy); with no
-    /// device attached the MISO line floats high, so every byte reads 0xFF.
-    /// Advances `pending_dma.transferred` by the burst length.
+    /// each MOSI byte is broadcast to the attached devices and the FIRST
+    /// non-zero MISO byte wins, per the `SpiDevice` v1 trait contract
+    /// (see the trait doc in `peripherals/spi.rs`). Note: the shared STM32
+    /// `Spi` transfer engine diverges from that doc and keeps the LAST
+    /// non-zero response; the two are indistinguishable for the
+    /// single-device labs v1 targets, and neither behaviour is changed.
+    /// With no device attached the MISO line floats high, so every byte
+    /// reads 0xFF. Advances `pending_dma.transferred` by the burst length.
     pub(crate) fn dma_transfer(&mut self, mosi: &[u8]) -> Vec<u8> {
         let mut miso = Vec::with_capacity(mosi.len());
         for &m in mosi {
@@ -450,6 +461,17 @@ impl Peripheral for Esp32s3Spi {
                 // SPI_SOFT_RESET (bit 27, WT) self-clears.
                 let v = self.reg(SLAVE) & !SOFT_RESET_BIT;
                 self.set_reg_raw(SLAVE, v);
+                if value & SOFT_RESET_BIT != 0 {
+                    // SOFT_RESET aborts any in-flight DMA transaction —
+                    // firmware timeout-recovery resets the block and re-kicks;
+                    // a stale `pending_dma` would resurrect the dead
+                    // transaction on the next GDMA tick. Also drop USR so the
+                    // launch state machine returns to idle. No TRANS_DONE:
+                    // the transaction was aborted, not completed.
+                    self.pending_dma = None;
+                    let cmd = self.reg(CMD) & !USR_BIT;
+                    self.set_reg_raw(CMD, cmd);
+                }
             }
             // Everything else: masked store into the architected register;
             // holes ignore writes entirely.
@@ -736,6 +758,31 @@ mod tests {
             "TRANS_DONE latched"
         );
         assert!(s.dma_pending().is_none(), "pending cleared");
+    }
+
+    /// `SLAVE.SOFT_RESET` mid-DMA-transaction aborts the pending transfer:
+    /// firmware timeout-recovery must not leave a stale `pending_dma` that
+    /// the GDMA pump would resurrect after the reset.
+    #[test]
+    fn slave_soft_reset_aborts_pending_dma() {
+        let mut s = Esp32s3Spi::new(SPI3_SOURCE);
+        s.write_u32(DMA_CONF, SPI_DMA_TX_ENA | SPI_DMA_RX_ENA)
+            .unwrap();
+        s.write_u32(MS_DLEN, 32 * 8 - 1).unwrap();
+        s.write_u32(CMD, USR_BIT).unwrap();
+        assert!(s.dma_pending().is_some(), "DMA transaction pending");
+        assert_ne!(s.read_u32(CMD).unwrap() & USR_BIT, 0, "USR held");
+
+        // Firmware timeout-recovery: soft-reset the block.
+        s.write_u32(SLAVE, SOFT_RESET_BIT).unwrap();
+
+        assert!(s.dma_pending().is_none(), "SOFT_RESET aborts pending DMA");
+        assert_eq!(s.read_u32(CMD).unwrap() & USR_BIT, 0, "USR cleared");
+        assert_eq!(
+            s.read_u32(DMA_INT_RAW).unwrap() & TRANS_DONE,
+            0,
+            "aborted transaction must NOT latch TRANS_DONE"
+        );
     }
 
     #[test]

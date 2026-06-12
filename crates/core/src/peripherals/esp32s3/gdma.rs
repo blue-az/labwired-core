@@ -313,6 +313,57 @@ const SPI3_S3_NAME: &str = "spi3_s3";
 /// and keeps the simulation engine responsive on long transfers.
 const COUPLED_BYTES_PER_TICK: usize = 64;
 
+/// One decoded GDMA linked-list descriptor (TRM §3.4.2) — the single home
+/// for descriptor FORMAT knowledge (word layout, field extraction, owner /
+/// LEN writeback). Walk and pump POLICIES (per-tick budgets, FIFO
+/// backpressure, idle-EOF rules) stay with their callers.
+#[derive(Debug, Clone, Copy)]
+struct Desc {
+    /// Raw first word: owner (bit 31), suc_eof (bit 30), length, size.
+    dw0: u32,
+    /// dw0[23:12] — bytes valid in the buffer (TX direction reads these).
+    len: u32,
+    /// dw0[11:0] — buffer capacity in bytes (RX direction fills up to this).
+    size: u32,
+    /// dw1 — full 32-bit bus address of the data buffer.
+    buf: u64,
+    /// dw2 — full 32-bit address of the next descriptor; 0 = end-of-list.
+    next: u64,
+}
+
+impl Desc {
+    /// Read and decode the three descriptor words at `addr`.
+    fn read(bus: &mut dyn Bus, addr: u64) -> Self {
+        let dw0 = bus.read_u32(addr).unwrap_or(0);
+        Self {
+            dw0,
+            len: (dw0 >> 12) & 0xFFF,
+            size: dw0 & 0xFFF,
+            buf: bus.read_u32(addr + 4).unwrap_or(0) as u64,
+            next: bus.read_u32(addr + 8).unwrap_or(0) as u64,
+        }
+    }
+
+    /// True when the DMA engine owns this descriptor (dw0 bit 31).
+    fn dma_owned(&self) -> bool {
+        self.dw0 & DESC_OWNER_BIT != 0
+    }
+
+    /// Return the descriptor to the CPU: write dw0 back to `addr` with the
+    /// owner bit cleared — matching the ESP32-S3 TRM §3.4 hardware
+    /// behaviour. RX (IN) descriptors additionally replace the LEN field
+    /// [23:12] with the received byte count (`rx_len = Some(n)`, clearing
+    /// stale CPU-seeded values first); TX (OUT) descriptors keep their
+    /// CPU-seeded length (`rx_len = None`).
+    fn write_back_owner(&self, bus: &mut dyn Bus, addr: u64, rx_len: Option<u32>) {
+        let dw0 = match rx_len {
+            Some(n) => (self.dw0 & !(DESC_OWNER_BIT | DESC_LEN_MASK)) | (n << 12),
+            None => self.dw0 & !DESC_OWNER_BIT,
+        };
+        let _ = bus.write_u32(addr, dw0);
+    }
+}
+
 /// One direction (IN or OUT) of a GDMA channel.
 #[derive(Debug, Clone, Copy)]
 struct DmaDir {
@@ -565,26 +616,23 @@ impl Esp32s3Gdma {
             if addr == 0 {
                 break;
             }
-            let dw0 = bus.read_u32(addr).unwrap_or(0);
+            let d = Desc::read(bus, addr);
             // Skip CPU-owned descriptors (owner=0).
-            if dw0 & DESC_OWNER_BIT == 0 {
+            if !d.dma_owned() {
                 break;
             }
-            let length = (dw0 >> 12) & 0xFFF; // bits [23:12]
-            let buf_ptr = bus.read_u32(addr + 4).unwrap_or(0) as u64;
-            let next_ptr = bus.read_u32(addr + 8).unwrap_or(0) as u64;
 
-            for i in 0..length {
-                bytes.push(bus.read_u8(buf_ptr + i as u64).unwrap_or(0));
+            for i in 0..d.len {
+                bytes.push(bus.read_u8(d.buf + i as u64).unwrap_or(0));
             }
 
-            // Write back dw0 with owner bit cleared (descriptor returned to CPU).
-            let _ = bus.write_u32(addr, dw0 & !DESC_OWNER_BIT);
+            // Descriptor returned to CPU (owner cleared).
+            d.write_back_owner(bus, addr, None);
 
-            if next_ptr == 0 {
+            if d.next == 0 {
                 break;
             }
-            addr = next_ptr;
+            addr = d.next;
         }
         bytes
     }
@@ -603,31 +651,25 @@ impl Esp32s3Gdma {
             if addr == 0 || remaining.is_empty() {
                 break;
             }
-            let dw0 = bus.read_u32(addr).unwrap_or(0);
+            let d = Desc::read(bus, addr);
             // Skip CPU-owned descriptors.
-            if dw0 & DESC_OWNER_BIT == 0 {
+            if !d.dma_owned() {
                 break;
             }
-            let size = (dw0 & 0xFFF) as usize; // bits [11:0] = capacity
-            let buf_ptr = bus.read_u32(addr + 4).unwrap_or(0) as u64;
-            let next_ptr = bus.read_u32(addr + 8).unwrap_or(0) as u64;
 
-            let to_write = remaining.len().min(size);
+            let to_write = remaining.len().min(d.size as usize);
             for (i, &b) in remaining[..to_write].iter().enumerate() {
-                let _ = bus.write_u8(buf_ptr + i as u64, b);
+                let _ = bus.write_u8(d.buf + i as u64, b);
             }
             remaining = &remaining[to_write..];
 
-            // Write back dw0: owner bit cleared, length field set to bytes written.
-            let _ = bus.write_u32(
-                addr,
-                (dw0 & !(DESC_OWNER_BIT | DESC_LEN_MASK)) | ((to_write as u32) << 12),
-            );
+            // Owner bit cleared, length field set to bytes written.
+            d.write_back_owner(bus, addr, Some(to_write as u32));
 
-            if next_ptr == 0 || remaining.is_empty() {
+            if d.next == 0 || remaining.is_empty() {
                 break;
             }
-            addr = next_ptr;
+            addr = d.next;
         }
     }
 
@@ -665,45 +707,42 @@ impl Esp32s3Gdma {
             return false;
         }
 
-        loop {
+        // Hop bound guards against corrupted (e.g. circular) chains.
+        for _ in 0..MAX_DESC_CHAIN {
             let addr = dir.coupled_desc_ptr;
             if addr == 0 || budget == 0 {
                 break;
             }
 
-            let dw0 = bus.read_u32(addr).unwrap_or(0);
+            let d = Desc::read(bus, addr);
             // Skip CPU-owned descriptors; treat as end-of-chain.
-            if dw0 & DESC_OWNER_BIT == 0 {
+            if !d.dma_owned() {
                 return true; // chain drained / halted
             }
 
-            let length = (dw0 >> 12) & 0xFFF; // bits [23:12]
-            let buf_ptr = bus.read_u32(addr + 4).unwrap_or(0) as u64;
-            let next_ptr = bus.read_u32(addr + 8).unwrap_or(0) as u64;
-
             // How many bytes remain in this descriptor?
-            let remaining = length.saturating_sub(dir.coupled_buf_offset) as usize;
+            let remaining = d.len.saturating_sub(dir.coupled_buf_offset) as usize;
             let to_send = remaining.min(budget);
 
             for i in 0..to_send {
                 let byte = bus
-                    .read_u8(buf_ptr + (dir.coupled_buf_offset as u64) + i as u64)
+                    .read_u8(d.buf + (dir.coupled_buf_offset as u64) + i as u64)
                     .unwrap_or(0);
                 let _ = bus.write_u8(UART0_FIFO_ADDR, byte);
             }
             budget -= to_send;
             dir.coupled_buf_offset += to_send as u32;
 
-            if dir.coupled_buf_offset >= length {
-                // Descriptor fully consumed; write back owner bit cleared.
-                let _ = bus.write_u32(addr, dw0 & !DESC_OWNER_BIT);
+            if dir.coupled_buf_offset >= d.len {
+                // Descriptor fully consumed; returned to CPU (owner cleared).
+                d.write_back_owner(bus, addr, None);
                 // Advance to next.
                 dir.coupled_buf_offset = 0;
-                if next_ptr == 0 {
+                if d.next == 0 {
                     dir.coupled_desc_ptr = 0;
                     return true; // end of chain
                 }
-                dir.coupled_desc_ptr = next_ptr;
+                dir.coupled_desc_ptr = d.next;
             } else {
                 // Partially consumed (budget or FIFO exhausted); resume next tick.
                 break;
@@ -745,29 +784,26 @@ impl Esp32s3Gdma {
         let mut any_moved = false;
         let mut in_done = false;
 
-        loop {
+        // Hop bound guards against corrupted (e.g. circular) chains.
+        for _ in 0..MAX_DESC_CHAIN {
             let addr = dir.coupled_desc_ptr;
             if addr == 0 || budget == 0 || rx_avail == 0 {
                 break;
             }
 
-            let dw0 = bus.read_u32(addr).unwrap_or(0);
-            if dw0 & DESC_OWNER_BIT == 0 {
+            let d = Desc::read(bus, addr);
+            if !d.dma_owned() {
                 // CPU-owned: treat as end-of-chain → EOF.
                 let eof = any_moved;
                 return (eof, in_done);
             }
 
-            let size = dw0 & 0xFFF; // bits [11:0] = capacity
-            let buf_ptr = bus.read_u32(addr + 4).unwrap_or(0) as u64;
-            let next_ptr = bus.read_u32(addr + 8).unwrap_or(0) as u64;
-
-            let remaining_cap = size.saturating_sub(dir.coupled_buf_offset) as usize;
+            let remaining_cap = d.size.saturating_sub(dir.coupled_buf_offset) as usize;
             let to_recv = remaining_cap.min(budget).min(rx_avail);
 
             for i in 0..to_recv {
                 let byte = bus.read_u8(UART0_FIFO_ADDR).unwrap_or(0);
-                let _ = bus.write_u8(buf_ptr + (dir.coupled_buf_offset as u64) + i as u64, byte);
+                let _ = bus.write_u8(d.buf + (dir.coupled_buf_offset as u64) + i as u64, byte);
             }
             budget -= to_recv;
             rx_avail -= to_recv;
@@ -776,19 +812,16 @@ impl Esp32s3Gdma {
                 any_moved = true;
             }
 
-            if dir.coupled_buf_offset >= size {
-                // Descriptor capacity filled; write back owner bit cleared and length set.
-                let _ = bus.write_u32(
-                    addr,
-                    (dw0 & !(DESC_OWNER_BIT | DESC_LEN_MASK)) | (size << 12),
-                );
+            if dir.coupled_buf_offset >= d.size {
+                // Descriptor capacity filled; owner cleared, length = capacity.
+                d.write_back_owner(bus, addr, Some(d.size));
                 in_done = true;
                 dir.coupled_buf_offset = 0;
-                if next_ptr == 0 {
+                if d.next == 0 {
                     dir.coupled_desc_ptr = 0;
                     return (true, true); // chain done → IN_SUC_EOF + IN_DONE
                 }
-                dir.coupled_desc_ptr = next_ptr;
+                dir.coupled_desc_ptr = d.next;
             } else {
                 // Descriptor partially filled.
                 break;
@@ -807,13 +840,9 @@ impl Esp32s3Gdma {
         // nothing and must stay DMA-owned (silicon leaves it untouched).
         if eof && dir.coupled_desc_ptr != 0 && dir.coupled_buf_offset > 0 {
             let addr = dir.coupled_desc_ptr;
-            let dw0 = bus.read_u32(addr).unwrap_or(0);
-            if dw0 & DESC_OWNER_BIT != 0 {
-                let partial_len = dir.coupled_buf_offset;
-                let _ = bus.write_u32(
-                    addr,
-                    (dw0 & !(DESC_OWNER_BIT | DESC_LEN_MASK)) | (partial_len << 12),
-                );
+            let d = Desc::read(bus, addr);
+            if d.dma_owned() {
+                d.write_back_owner(bus, addr, Some(dir.coupled_buf_offset));
             }
         }
         (eof, in_done)
@@ -827,36 +856,37 @@ impl Esp32s3Gdma {
     /// chain is exhausted.
     fn coupled_out_collect(dir: &mut DmaDir, bus: &mut dyn Bus, budget: usize) -> Vec<u8> {
         let mut out = Vec::with_capacity(budget);
-        while out.len() < budget {
+        // Hop bound guards against corrupted (e.g. circular) chains.
+        for _ in 0..MAX_DESC_CHAIN {
+            if out.len() >= budget {
+                break;
+            }
             let addr = dir.coupled_desc_ptr;
             if addr == 0 {
                 break;
             }
-            let dw0 = bus.read_u32(addr).unwrap_or(0);
-            if dw0 & DESC_OWNER_BIT == 0 {
+            let d = Desc::read(bus, addr);
+            if !d.dma_owned() {
                 // CPU-owned: chain halted here.
                 dir.coupled_desc_ptr = 0;
                 break;
             }
-            let length = (dw0 >> 12) & 0xFFF; // bits [23:12]
-            let buf_ptr = bus.read_u32(addr + 4).unwrap_or(0) as u64;
-            let next_ptr = bus.read_u32(addr + 8).unwrap_or(0) as u64;
 
-            let remaining = length.saturating_sub(dir.coupled_buf_offset) as usize;
+            let remaining = d.len.saturating_sub(dir.coupled_buf_offset) as usize;
             let to_read = remaining.min(budget - out.len());
             for i in 0..to_read {
                 out.push(
-                    bus.read_u8(buf_ptr + dir.coupled_buf_offset as u64 + i as u64)
+                    bus.read_u8(d.buf + dir.coupled_buf_offset as u64 + i as u64)
                         .unwrap_or(0),
                 );
             }
             dir.coupled_buf_offset += to_read as u32;
 
-            if dir.coupled_buf_offset >= length {
+            if dir.coupled_buf_offset >= d.len {
                 // Descriptor fully consumed: return it to the CPU.
-                let _ = bus.write_u32(addr, dw0 & !DESC_OWNER_BIT);
+                d.write_back_owner(bus, addr, None);
                 dir.coupled_buf_offset = 0;
-                dir.coupled_desc_ptr = if next_ptr == 0 { 0 } else { next_ptr };
+                dir.coupled_desc_ptr = if d.next == 0 { 0 } else { d.next };
             }
             // else: budget exhausted mid-descriptor; resume next tick.
         }
@@ -871,39 +901,37 @@ impl Esp32s3Gdma {
     /// not modelled).
     fn coupled_in_write(dir: &mut DmaDir, bus: &mut dyn Bus, bytes: &[u8]) {
         let mut written = 0usize;
-        while written < bytes.len() {
+        // Hop bound guards against corrupted (e.g. circular) chains.
+        for _ in 0..MAX_DESC_CHAIN {
+            if written >= bytes.len() {
+                break;
+            }
             let addr = dir.coupled_desc_ptr;
             if addr == 0 {
                 break;
             }
-            let dw0 = bus.read_u32(addr).unwrap_or(0);
-            if dw0 & DESC_OWNER_BIT == 0 {
+            let d = Desc::read(bus, addr);
+            if !d.dma_owned() {
                 dir.coupled_desc_ptr = 0;
                 break;
             }
-            let size = dw0 & 0xFFF; // bits [11:0] = capacity
-            let buf_ptr = bus.read_u32(addr + 4).unwrap_or(0) as u64;
-            let next_ptr = bus.read_u32(addr + 8).unwrap_or(0) as u64;
 
-            let cap = size.saturating_sub(dir.coupled_buf_offset) as usize;
+            let cap = d.size.saturating_sub(dir.coupled_buf_offset) as usize;
             let n = cap.min(bytes.len() - written);
             for i in 0..n {
                 let _ = bus.write_u8(
-                    buf_ptr + dir.coupled_buf_offset as u64 + i as u64,
+                    d.buf + dir.coupled_buf_offset as u64 + i as u64,
                     bytes[written + i],
                 );
             }
             written += n;
             dir.coupled_buf_offset += n as u32;
 
-            if dir.coupled_buf_offset >= size {
+            if dir.coupled_buf_offset >= d.size {
                 // Capacity filled: owner back to CPU, received length = size.
-                let _ = bus.write_u32(
-                    addr,
-                    (dw0 & !(DESC_OWNER_BIT | DESC_LEN_MASK)) | (size << 12),
-                );
+                d.write_back_owner(bus, addr, Some(d.size));
                 dir.coupled_buf_offset = 0;
-                dir.coupled_desc_ptr = if next_ptr == 0 { 0 } else { next_ptr };
+                dir.coupled_desc_ptr = if d.next == 0 { 0 } else { d.next };
             }
             // else: out of bytes mid-descriptor; resume next tick (or
             // finalize with a partial-length writeback at transaction end).
@@ -916,12 +944,9 @@ impl Esp32s3Gdma {
     fn coupled_in_finalize(dir: &mut DmaDir, bus: &mut dyn Bus) {
         if dir.coupled_desc_ptr != 0 && dir.coupled_buf_offset > 0 {
             let addr = dir.coupled_desc_ptr;
-            let dw0 = bus.read_u32(addr).unwrap_or(0);
-            if dw0 & DESC_OWNER_BIT != 0 {
-                let _ = bus.write_u32(
-                    addr,
-                    (dw0 & !(DESC_OWNER_BIT | DESC_LEN_MASK)) | (dir.coupled_buf_offset << 12),
-                );
+            let d = Desc::read(bus, addr);
+            if d.dma_owned() {
+                d.write_back_owner(bus, addr, Some(dir.coupled_buf_offset));
             }
         }
     }
@@ -990,7 +1015,15 @@ impl Esp32s3Gdma {
                 break 'work;
             }
 
-            let k = COUPLED_BYTES_PER_TICK.min(pending.total_bytes - pending.transferred);
+            let k =
+                COUPLED_BYTES_PER_TICK.min(pending.total_bytes.saturating_sub(pending.transferred));
+            if k == 0 {
+                // Defensive: a pending record with nothing left to move is
+                // corrupt state (dma_complete clears `pending_dma` on the
+                // completing tick, so `transferred < total_bytes` holds while
+                // pending). Stall visibly rather than spin a zero-byte pump.
+                break 'work;
+            }
             let mosi = match tx_idx {
                 Some(i) if pending.tx_ena => {
                     let mut m =
@@ -1966,7 +1999,7 @@ mod tests {
         );
 
         // Drain via tick_with_bus (5 bytes, well within COUPLED_BYTES_PER_TICK).
-        g.do_tick_with_bus(&mut bus);
+        g.tick_with_bus(&mut bus);
 
         // EOF must be latched.
         let raw = g.read_word(b + OUT_INT_RAW);
@@ -2027,7 +2060,7 @@ mod tests {
         let uart_idx = bus.find_peripheral_index_by_name("uart0_test").unwrap();
         let mut ticks = 0usize;
         while g.needs_bus_tick() {
-            g.do_tick_with_bus(&mut bus);
+            g.tick_with_bus(&mut bus);
             ticks += 1;
             // Drain UART between GDMA ticks to free FIFO space.
             let uart = bus.peripherals[uart_idx]
@@ -2122,7 +2155,7 @@ mod tests {
         );
 
         // One tick should drain 5 bytes (within budget).
-        g.do_tick_with_bus(&mut bus);
+        g.tick_with_bus(&mut bus);
 
         // Check INT_RAW.
         let raw = g.read_word(b + IN_INT_RAW);
@@ -2170,7 +2203,7 @@ mod tests {
 
         // First tick: drain 4 bytes → desc1 filled; IN_DONE set; transfer still
         // pending (8 bytes total but desc1 full, chain advances to desc2).
-        g.do_tick_with_bus(&mut bus);
+        g.tick_with_bus(&mut bus);
 
         // IN_DONE should be set (first descriptor completed).
         assert_eq!(
@@ -2184,7 +2217,7 @@ mod tests {
         // too. Just run until done.
         let mut ticks = 0;
         while g.needs_bus_tick() {
-            g.do_tick_with_bus(&mut bus);
+            g.tick_with_bus(&mut bus);
             ticks += 1;
             assert!(ticks < 100, "did not complete in reasonable ticks");
         }
@@ -2206,6 +2239,53 @@ mod tests {
             IN_SUC_EOF_BIT,
             "IN_SUC_EOF must be latched after full chain"
         );
+    }
+
+    /// FIFO-idle EOF lands exactly on a descriptor boundary: the moved bytes
+    /// exactly fill descriptor 1, descriptor 2 receives nothing and must stay
+    /// DMA-owned and untouched (silicon leaves it alone). Pins the
+    /// `coupled_buf_offset > 0` guard in `pump_uart_in`'s idle-EOF writeback.
+    #[test]
+    fn uart_rx_exact_descriptor_fill_leaves_next_descriptor_dma_owned() {
+        let (mut bus, _sink) = uart_test_bus();
+        // Push exactly descriptor 1's capacity (4 bytes).
+        push_uart_rx(&mut bus, b"ABCD");
+
+        let dst1: u64 = 0x3FC8_9000;
+        let dst2: u64 = 0x3FC8_9010;
+        let desc1: u64 = 0x3FC8_B000;
+        let desc2: u64 = 0x3FC8_B010;
+        write_desc_uart(&mut bus, desc1, (1u32 << 31) | 4, dst1, desc2);
+        write_desc_uart(&mut bus, desc2, (1u32 << 31) | 4, dst2, 0);
+
+        let mut g = Esp32s3Gdma::new(IN_CH0_SRC);
+        let b = ch_base(0);
+        g.write_word(b + IN_PERI_SEL, 2); // UHCI0
+        g.write_word(
+            b + IN_LINK,
+            IN_LINK_START_BIT | (desc1 as u32 & IN_LINK_ADDR_MASK),
+        );
+
+        g.tick_with_bus(&mut bus);
+
+        // FIFO drained after exactly filling desc1 → idle EOF latched.
+        let raw = g.read_word(b + IN_INT_RAW);
+        assert_eq!(raw & IN_SUC_EOF_BIT, IN_SUC_EOF_BIT, "idle EOF latched");
+        assert_eq!(raw & IN_DONE_BIT, IN_DONE_BIT, "IN_DONE for filled desc1");
+        assert!(!g.needs_bus_tick(), "pending_coupled cleared on EOF");
+
+        // desc1: returned to CPU with length = 4.
+        let dw0_1 = bus.read_u32(desc1).unwrap();
+        assert_eq!(dw0_1 & DESC_OWNER_BIT, 0, "desc1 owner returned to CPU");
+        assert_eq!((dw0_1 >> 12) & 0xFFF, 4, "desc1 length = 4");
+        // desc2: received nothing → still DMA-owned and untouched.
+        let dw0_2 = bus.read_u32(desc2).unwrap();
+        assert_eq!(
+            dw0_2 & DESC_OWNER_BIT,
+            DESC_OWNER_BIT,
+            "desc2 must stay DMA-owned (owner=1)"
+        );
+        assert_eq!((dw0_2 >> 12) & 0xFFF, 0, "desc2 length untouched");
     }
 
     // ── Interrupt (explicit_irqs) tests ───────────────────────────────────
@@ -2233,7 +2313,7 @@ mod tests {
             OUT_LINK_START_BIT | (desc_addr as u32 & OUT_LINK_ADDR_MASK),
         );
 
-        g.do_tick_with_bus(&mut bus);
+        g.tick_with_bus(&mut bus);
 
         // Now tick() should emit the OUT_CH0 source (base + 5 + 0 = 71).
         let result = g.tick();
@@ -2265,7 +2345,7 @@ mod tests {
             IN_LINK_START_BIT | (desc as u32 & IN_LINK_ADDR_MASK),
         );
 
-        g.do_tick_with_bus(&mut bus);
+        g.tick_with_bus(&mut bus);
 
         let result = g.tick();
         let irqs = result.explicit_irqs.unwrap_or_default();
@@ -2370,7 +2450,7 @@ mod tests {
             b + OUT_LINK,
             OUT_LINK_START_BIT | (desc_addr as u32 & OUT_LINK_ADDR_MASK),
         );
-        g.do_tick_with_bus(&mut bus);
+        g.tick_with_bus(&mut bus);
 
         let dw0_after = bus.read_u32(desc_addr).unwrap();
         assert_eq!(
@@ -2401,7 +2481,7 @@ mod tests {
             b + IN_LINK,
             IN_LINK_START_BIT | (desc_addr as u32 & IN_LINK_ADDR_MASK),
         );
-        g.do_tick_with_bus(&mut bus);
+        g.tick_with_bus(&mut bus);
 
         let dw0_after = bus.read_u32(desc_addr).unwrap();
         assert_eq!(
@@ -2853,10 +2933,11 @@ mod tests {
         );
     }
 
-    /// SPI3 DMA: TRANS_DONE and OUT_EOF/IN_SUC_EOF all latched on the
-    /// completion tick.
+    /// SPI3 DMA: TRANS_DONE and OUT_EOF/IN_SUC_EOF are all CO-LATCHED on the
+    /// completion tick — this pins their joint appearance within one
+    /// `tick_with_bus`, not a relative order between the three flags.
     #[test]
-    fn spi3_dma_trans_done_and_eof_ordering() {
+    fn spi3_dma_trans_done_and_eof_colatch() {
         let (mut bus, _) = spi3_test_bus(false);
         let n: usize = 4;
         let tx_desc: u64 = 0x3FC8_A000;
@@ -2893,6 +2974,80 @@ mod tests {
             "IN_SUC_EOF"
         );
         assert!(!g.needs_bus_tick(), "idle after completion");
+    }
+
+    /// Burst-boundary pin: a transfer of exactly `COUPLED_BYTES_PER_TICK`
+    /// (64) bytes completes in exactly ONE tick.
+    #[test]
+    fn spi3_dma_64_byte_transfer_completes_in_one_tick() {
+        let (mut bus, _) = spi3_test_bus(false);
+        let n: usize = COUPLED_BYTES_PER_TICK; // 64
+        let tx_desc: u64 = 0x3FC8_A000;
+        let rx_desc: u64 = 0x3FC8_B000;
+        write_desc(&mut bus, tx_desc, tx_dw0(n as u32), 0x3FC8_8000, 0);
+        write_desc(&mut bus, rx_desc, rx_dw0(n as u32), 0x3FC8_9000, 0);
+
+        kick_spi_dma(&mut bus, SPI3_BASE, n);
+
+        let mut g = Esp32s3Gdma::new(IN_CH0_SRC);
+        let b = ch_base(0);
+        g.write_word(b + OUT_PERI_SEL, 1);
+        g.write_word(b + IN_PERI_SEL, 1);
+        g.write_word(
+            b + OUT_LINK,
+            OUT_LINK_START_BIT | (tx_desc as u32 & OUT_LINK_ADDR_MASK),
+        );
+        g.write_word(
+            b + IN_LINK,
+            IN_LINK_START_BIT | (rx_desc as u32 & IN_LINK_ADDR_MASK),
+        );
+
+        let ticks = tick_until_idle(&mut g, &mut bus, 4);
+        assert_eq!(ticks, 1, "64 bytes = exactly one full burst = one tick");
+        assert_eq!(
+            spi_read_u32(&mut bus, SPI3_BASE, SPI_CMD_REG) & SPI_USR_BIT,
+            0,
+            "USR cleared"
+        );
+    }
+
+    /// Burst-boundary pin: 65 bytes (one full burst + 1) needs exactly TWO
+    /// ticks, with the transaction visibly in-flight after the first.
+    #[test]
+    fn spi3_dma_65_byte_transfer_takes_two_ticks() {
+        let (mut bus, _) = spi3_test_bus(false);
+        let n: usize = COUPLED_BYTES_PER_TICK + 1; // 65
+        let tx_desc: u64 = 0x3FC8_A000;
+        let rx_desc: u64 = 0x3FC8_B000;
+        write_desc(&mut bus, tx_desc, tx_dw0(n as u32), 0x3FC8_8000, 0);
+        write_desc(&mut bus, rx_desc, rx_dw0(n as u32), 0x3FC8_9000, 0);
+
+        kick_spi_dma(&mut bus, SPI3_BASE, n);
+
+        let mut g = Esp32s3Gdma::new(IN_CH0_SRC);
+        let b = ch_base(0);
+        g.write_word(b + OUT_PERI_SEL, 1);
+        g.write_word(b + IN_PERI_SEL, 1);
+        g.write_word(
+            b + OUT_LINK,
+            OUT_LINK_START_BIT | (tx_desc as u32 & OUT_LINK_ADDR_MASK),
+        );
+        g.write_word(
+            b + IN_LINK,
+            IN_LINK_START_BIT | (rx_desc as u32 & IN_LINK_ADDR_MASK),
+        );
+
+        // After one tick the 65th byte is still outstanding.
+        g.tick_with_bus(&mut bus);
+        assert!(g.needs_bus_tick(), "65th byte outstanding after tick 1");
+        assert_ne!(
+            spi_read_u32(&mut bus, SPI3_BASE, SPI_CMD_REG) & SPI_USR_BIT,
+            0,
+            "USR still set mid-transfer"
+        );
+
+        let extra = tick_until_idle(&mut g, &mut bus, 4);
+        assert_eq!(extra, 1, "65 bytes = exactly two ticks total");
     }
 
     /// Non-DMA regression: USR with the DMA enables clear keeps the
