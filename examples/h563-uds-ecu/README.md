@@ -1,9 +1,9 @@
 # STM32H563 FDCAN UDS ECU
 
 This example proves the STM32H563 FDCAN model with a small UDS ECU firmware.
-The firmware links UDSLib from `UDSLIB_DIR`, enables FDCAN internal loopback,
-injects a tester ReadDataByIdentifier request for DID `0xF190`, and validates
-the CAN-FD ISO-TP positive response.
+The firmware links UDSLib from `UDSLIB_DIR`, enables FDCAN, waits for the
+`can-diagnostic-tester` external device to send ReadDataByIdentifier DID
+`0xF190`, and validates the CAN-FD ISO-TP positive response.
 
 Build:
 
@@ -19,4 +19,3 @@ cargo run -q -p labwired-cli -- test \
   --output-dir out/h563-uds-ecu \
   --no-uart-stdout
 ```
-
