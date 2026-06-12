@@ -3058,9 +3058,9 @@ mod tests {
         assert_eq!(in_raw & IN_DONE_BIT, IN_DONE_BIT, "IN_DONE");
     }
 
-    /// >64-byte multi-descriptor transaction: 200 bytes over two OUT and two
-    /// IN descriptors, pumped incrementally (64 bytes/tick → 4 ticks), with
-    /// owner-bit writeback and IN length fields verified on every descriptor.
+    /// Over-64-byte multi-descriptor transaction: 200 bytes over two OUT and
+    /// two IN descriptors, pumped incrementally (64 bytes/tick → 4 ticks),
+    /// with owner-bit writeback and IN length fields verified per descriptor.
     #[test]
     fn spi3_dma_multi_descriptor_200_bytes_multi_tick() {
         let (mut bus, log) = spi3_test_bus(true);
@@ -3134,10 +3134,10 @@ mod tests {
         // Device saw all 200 descriptor bytes in order.
         assert_eq!(*log.as_ref().unwrap().lock().unwrap(), payload);
         // MISO landed across both IN buffers.
-        for i in 0..128usize {
+        for (i, &p) in payload.iter().enumerate().take(128) {
             assert_eq!(
                 bus.read_u8(rx_buf1 + i as u64).unwrap(),
-                payload[i] ^ 0xA5,
+                p ^ 0xA5,
                 "rx_buf1[{i}]"
             );
         }
@@ -3697,8 +3697,8 @@ mod tests {
         assert_eq!(in_raw & IN_SUC_EOF_BIT, IN_SUC_EOF_BIT, "IN_SUC_EOF");
         assert_eq!(in_raw & IN_DONE_BIT, IN_DONE_BIT, "IN_DONE");
         // Exactly N bytes landed; the buffer beyond N is untouched (zero).
-        for i in 0..n as usize {
-            assert_eq!(bus.read_u8(buf + i as u64).unwrap(), samples[i], "[{i}]");
+        for (i, &s) in samples.iter().enumerate().take(n as usize) {
+            assert_eq!(bus.read_u8(buf + i as u64).unwrap(), s, "[{i}]");
         }
         for i in n as usize..(n as usize + 4) {
             assert_eq!(bus.read_u8(buf + i as u64).unwrap(), 0, "beyond N [{i}]");
@@ -3771,8 +3771,8 @@ mod tests {
         assert_eq!(ticks, 1, "48 bytes within one 64-byte tick");
 
         assert_ne!(g.read_word(b + IN_INT_RAW) & IN_SUC_EOF_BIT, 0);
-        for i in 0..32usize {
-            assert_eq!(bus.read_u8(buf1 + i as u64).unwrap(), samples[i]);
+        for (i, &s) in samples.iter().enumerate().take(32) {
+            assert_eq!(bus.read_u8(buf1 + i as u64).unwrap(), s);
         }
         for i in 0..16usize {
             assert_eq!(bus.read_u8(buf2 + i as u64).unwrap(), samples[32 + i]);
@@ -3968,8 +3968,8 @@ mod tests {
             0,
             "no IN_SUC_EOF after 64 of 80 bytes"
         );
-        for i in 0..64usize {
-            assert_eq!(bus.read_u8(buf1 + i as u64).unwrap(), samples[i], "[{i}]");
+        for (i, &s) in samples.iter().enumerate().take(64) {
+            assert_eq!(bus.read_u8(buf1 + i as u64).unwrap(), s, "[{i}]");
         }
         assert_eq!(bus.read_u8(buf2).unwrap(), 0, "tick 1 must not touch d2");
         let dw0_1 = bus.read_u32(d1).unwrap();
