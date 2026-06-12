@@ -85,10 +85,10 @@
 //!
 //! **Coupled set** (`Spi2`, `Spi3`, `Uhci0`, `I2s0`, `I2s1`): the direction
 //! is marked `pending_coupled`; `needs_bus_tick` returns `true`; byte movement
-//! runs inside `tick_with_bus` via the peripheral pumps (UART and SPI2/3 are
-//! implemented; I2S is Task 4 of the Slice 3A plan). For a coupled peripheral
-//! without a pump EOF stays **unlatched** — the transfer visibly hangs rather
-//! than silently auto-completing.
+//! runs inside `tick_with_bus` via the peripheral pumps (UART, SPI2/3 and
+//! I2S0/1 are all implemented). For a coupled direction whose pump cannot
+//! make progress (e.g. the I2S START bit is clear) EOF stays **unlatched** —
+//! the transfer visibly stalls rather than silently auto-completing.
 //!
 //! **Fallback set** (everything else, including `AES`, `SHA`, `ADC_DAC`,
 //! `RMT`, `LCD_CAM`, `Unknown`, and the reset / unbound value `0x3F`): the
@@ -116,8 +116,12 @@
 //! TX and RX may be bound on *different* GDMA channels (ESP-IDF's
 //! `gdma_new_channel` allocates them independently), so the pump pairs the
 //! OUT and IN directions by PERI_SEL value, not by channel index.
+//! The I2S0/I2S1 pump reuses the same swap idiom and PERI_SEL pairing —
+//! the I2S block likewise has no MMIO data-port register (samples are
+//! DMA-only on the S3).
 
 use crate::peripherals::esp32s3::gpspi::Esp32s3Spi;
+use crate::peripherals::esp32s3::i2s::Esp32s3I2s;
 use crate::{Bus, Peripheral, PeripheralTickResult, SimResult};
 
 /// Number of GDMA channels on the ESP32-S3.
@@ -306,6 +310,12 @@ const SPI2_S3_NAME: &str = "spi2_s3";
 /// Registered name for GP-SPI3 in the system bus (real base `0x6002_5000`).
 const SPI3_S3_NAME: &str = "spi3_s3";
 
+// ── I2S0/1 coupled DMA constants ─────────────────────────────────────────
+/// Registered name for I2S0 in the system bus (real base `0x6000_F000`).
+const I2S0_S3_NAME: &str = "i2s0_s3";
+/// Registered name for I2S1 in the system bus (real base `0x6002_D000`).
+const I2S1_S3_NAME: &str = "i2s1_s3";
+
 /// Maximum bytes transferred per `tick_with_bus` call for a coupled channel.
 ///
 /// Bounds latency per tick to a realistic burst size. 64 bytes matches the
@@ -393,6 +403,10 @@ struct DmaDir {
     /// how many bytes of this descriptor have been consumed; IN direction:
     /// how many bytes have been written into this descriptor so far).
     coupled_buf_offset: u32,
+    /// Total bytes moved by the current coupled transfer (reset at link
+    /// start). The I2S IN pump compares this against the controller's
+    /// `RXEOF_NUM` byte count to decide when `IN_SUC_EOF` latches.
+    coupled_bytes_moved: u32,
 }
 
 impl Default for DmaDir {
@@ -407,6 +421,7 @@ impl Default for DmaDir {
             pending_coupled: false,
             coupled_desc_ptr: 0,
             coupled_buf_offset: 0,
+            coupled_bytes_moved: 0,
         }
     }
 }
@@ -540,6 +555,7 @@ impl Esp32s3Gdma {
                                 c.rx.pending_coupled = true;
                                 c.rx.coupled_desc_ptr = Self::full_desc_addr(c.rx.link_addr);
                                 c.rx.coupled_buf_offset = 0;
+                                c.rx.coupled_bytes_moved = 0;
                             }
                             _ => {
                                 // Fallback set (AES, SHA, ADC, RMT, LCD_CAM,
@@ -585,6 +601,7 @@ impl Esp32s3Gdma {
                                 c.tx.pending_coupled = true;
                                 c.tx.coupled_desc_ptr = Self::full_desc_addr(c.tx.link_addr);
                                 c.tx.coupled_buf_offset = 0;
+                                c.tx.coupled_bytes_moved = 0;
                             }
                             _ => {
                                 // Fallback set: auto-complete.
@@ -1074,6 +1091,126 @@ impl Esp32s3Gdma {
         sys_bus.peripherals[spi_idx].dev = spi_dev;
     }
 
+    /// Service GDMA↔I2S coupled sample streaming for one controller.
+    ///
+    /// I2S on the S3 has no CPU-visible sample FIFO and no MMIO data-port
+    /// register, so (like SPI, unlike UART) the byte handoff cannot ride
+    /// MMIO: the pump reuses `pump_spi`'s temporary-swap idiom — downcast
+    /// the bus to `SystemBus`, lend the `Esp32s3I2s` instance out from
+    /// behind a stub, move one burst of bytes, swap it back. TX and RX may
+    /// be bound on different GDMA channels, so directions are paired by
+    /// PERI_SEL value (I2S0 = 3, I2S1 = 4), not by channel index.
+    ///
+    /// **TX (OUT):** while the controller's `TX_START` bit is set, up to
+    /// `COUPLED_BYTES_PER_TICK` bytes per tick stream from the OUT
+    /// descriptor chain into the I2S TX sample sink.
+    /// `OUT_EOF | OUT_TOTAL_EOF | OUT_DONE` latch when the chain drains.
+    ///
+    /// **RX (IN):** while `RX_START` is set, queued I2S RX sample bytes
+    /// fill the IN descriptor chain. `RXEOF_NUM` is a **byte** count on the
+    /// S3 (ESP-IDF `i2s_ll_rx_set_eof_num` writes the byte length directly;
+    /// only the classic ESP32 register counts words): `IN_SUC_EOF |
+    /// IN_DONE` latch once exactly `RXEOF_NUM` bytes have been received —
+    /// or when the descriptor chain is exhausted, whichever comes first.
+    /// `RXEOF_NUM == 0` (reset value; ESP-IDF always programs it before
+    /// starting RX) disables the byte-count trigger, leaving only the
+    /// chain-exhaustion EOF.
+    ///
+    /// While the corresponding START bit is clear the pump stalls — no
+    /// data movement, walk state retained — and resumes once firmware sets
+    /// the bit (the engine keeps revisiting via `needs_bus_tick`).
+    fn pump_i2s(&mut self, bus: &mut dyn Bus, peri: DmaPeripheral, i2s_name: &str) {
+        use crate::bus::SystemBus;
+        use crate::peripherals::stub::StubPeripheral;
+
+        let tx_idx = self
+            .channels
+            .iter()
+            .position(|c| c.tx.pending_coupled && DmaPeripheral::from_sel(c.tx.peri_sel) == peri);
+        let rx_idx = self
+            .channels
+            .iter()
+            .position(|c| c.rx.pending_coupled && DmaPeripheral::from_sel(c.rx.peri_sel) == peri);
+        if tx_idx.is_none() && rx_idx.is_none() {
+            return;
+        }
+
+        let Some(sys_bus) = bus.as_any_mut().and_then(|a| a.downcast_mut::<SystemBus>()) else {
+            return;
+        };
+        let Some(i2s_idx) = sys_bus.find_peripheral_index_by_name(i2s_name) else {
+            return;
+        };
+
+        // Swap the I2S out from behind a stub (same dance as `pump_spi`) so
+        // we can hold `&mut` to it while descriptor reads/writes still route
+        // through the bus.
+        let placeholder: Box<dyn Peripheral> = Box::new(StubPeripheral::new(0));
+        let mut i2s_dev = std::mem::replace(&mut sys_bus.peripherals[i2s_idx].dev, placeholder);
+
+        'work: {
+            let Some(i2s) = i2s_dev
+                .as_any_mut()
+                .and_then(|a| a.downcast_mut::<Esp32s3I2s>())
+            else {
+                break 'work;
+            };
+
+            // ── TX: OUT descriptor chain → I2S sample sink ──────────────
+            if let Some(i) = tx_idx {
+                if i2s.tx_running() {
+                    let bytes = Self::coupled_out_collect(
+                        &mut self.channels[i].tx,
+                        &mut *sys_bus,
+                        COUPLED_BYTES_PER_TICK,
+                    );
+                    i2s.dma_push_tx(&bytes);
+                    let tx = &mut self.channels[i].tx;
+                    if tx.coupled_desc_ptr == 0 {
+                        // Chain drained (or halted at a CPU-owned
+                        // descriptor): transfer complete.
+                        tx.int_raw |= OUT_EOF_BIT | OUT_TOTAL_EOF_BIT | OUT_DONE_BIT;
+                        tx.pending_coupled = false;
+                        tx.coupled_buf_offset = 0;
+                    }
+                }
+                // TX_START clear: stall, keep pending_coupled.
+            }
+
+            // ── RX: I2S sample source → IN descriptor chain ─────────────
+            if let Some(i) = rx_idx {
+                if i2s.rx_running() {
+                    let rx = &mut self.channels[i].rx;
+                    let eof_num = i2s.rxeof_num();
+                    // Never consume past the EOF threshold: IN_SUC_EOF
+                    // latches after EXACTLY eof_num bytes; excess source
+                    // bytes stay queued for the next transfer.
+                    let to_eof = if eof_num == 0 {
+                        usize::MAX
+                    } else {
+                        eof_num.saturating_sub(rx.coupled_bytes_moved) as usize
+                    };
+                    let bytes = i2s.dma_pop_rx(COUPLED_BYTES_PER_TICK.min(to_eof));
+                    if !bytes.is_empty() {
+                        Self::coupled_in_write(rx, &mut *sys_bus, &bytes);
+                        rx.coupled_bytes_moved += bytes.len() as u32;
+                    }
+                    let eof_reached = eof_num != 0 && rx.coupled_bytes_moved >= eof_num;
+                    if eof_reached || rx.coupled_desc_ptr == 0 {
+                        Self::coupled_in_finalize(rx, &mut *sys_bus);
+                        rx.int_raw |= IN_SUC_EOF_BIT | IN_DONE_BIT;
+                        rx.pending_coupled = false;
+                        rx.coupled_desc_ptr = 0;
+                        rx.coupled_buf_offset = 0;
+                    }
+                }
+                // RX_START clear: stall, keep pending_coupled.
+            }
+        }
+
+        sys_bus.peripherals[i2s_idx].dev = i2s_dev;
+    }
+
     /// Execute all pending descriptor walks and coupled-mode ticks.
     ///
     /// For each channel with `pending_m2m` set:
@@ -1095,13 +1232,18 @@ impl Esp32s3Gdma {
     /// `COUPLED_BYTES_PER_TICK` wire bytes per tick with the GP-SPI
     /// controller (see its doc comment for the EOF / TRANS_DONE contract).
     ///
-    /// Channels with a non-pumped coupled peripheral (I2S, Task 4) retain
-    /// `pending_coupled`.
+    /// For I2S0/I2S1 coupled channels, `pump_i2s` streams up to
+    /// `COUPLED_BYTES_PER_TICK` bytes per tick between the descriptor
+    /// chains and the controller's sample sink/source, gated by the I2S
+    /// TX/RX START bits (see its doc comment for the RXEOF_NUM contract).
     fn do_tick_with_bus(&mut self, bus: &mut dyn Bus) {
-        // SPI pumps run outside the per-channel loop: a transaction's TX and
-        // RX directions may live on different channels (paired by PERI_SEL).
+        // SPI and I2S pumps run outside the per-channel loop: a transfer's
+        // TX and RX directions may live on different channels (paired by
+        // PERI_SEL).
         self.pump_spi(bus, DmaPeripheral::Spi2, SPI2_S3_NAME);
         self.pump_spi(bus, DmaPeripheral::Spi3, SPI3_S3_NAME);
+        self.pump_i2s(bus, DmaPeripheral::I2s0, I2S0_S3_NAME);
+        self.pump_i2s(bus, DmaPeripheral::I2s1, I2S1_S3_NAME);
 
         for (ch_idx, c) in self.channels.iter_mut().enumerate() {
             // ── UHCI0 (UART) coupled OUT (TX) ────────────────────────────
@@ -1209,8 +1351,8 @@ impl Peripheral for Esp32s3Gdma {
     /// pending coupled-mode transfer.
     ///
     /// Coupled channels with `pending_coupled` set keep the engine visiting
-    /// `tick_with_bus` so the peripheral pumps (UART, SPI2/3; I2S in Task 4)
-    /// can make progress. Cleared per-direction when the transfer completes.
+    /// `tick_with_bus` so the peripheral pumps (UART, SPI2/3, I2S0/1) can
+    /// make progress. Cleared per-direction when the transfer completes.
     fn needs_bus_tick(&self) -> bool {
         self.channels
             .iter()
@@ -3069,5 +3211,414 @@ mod tests {
         );
         // MISO region = 0xFF in the W buffer (CPU path).
         assert_eq!(bus.read_u32(SPI3_BASE + 0x98).unwrap(), 0xFFFF_FFFF, "W0");
+    }
+
+    // ── I2S0/1 DMA coupling tests ─────────────────────────────────────────
+
+    // I2S register offsets and bits — mirrors i2s.rs / ESP-IDF
+    // `soc/esp32s3/register/soc/i2s_reg.h`.
+    const I2S_RX_CONF_REG: u64 = 0x20;
+    const I2S_TX_CONF_REG: u64 = 0x24;
+    const I2S_RXEOF_NUM_REG: u64 = 0x64;
+    /// TX_START / RX_START (bit 2 of TX_CONF / RX_CONF).
+    const I2S_START_BIT: u32 = 1 << 2;
+
+    use crate::peripherals::esp32s3::i2s::{I2S0_BASE, I2S1_BASE};
+
+    /// Build a composite `SystemBus` with DRAM plus one I2S controller at
+    /// `base` registered under `name`, with a TX sample sink attached.
+    fn i2s_test_bus(name: &str, base: u64, source_id: u32) -> (SystemBus, Arc<Mutex<Vec<u8>>>) {
+        let mut bus = bus_with_dram();
+        let mut i2s = Esp32s3I2s::new(source_id);
+        let sink = Arc::new(Mutex::new(Vec::new()));
+        i2s.set_tx_sink(Some(sink.clone()));
+        bus.add_peripheral(name, base, 0x1000, None, Box::new(i2s));
+        (bus, sink)
+    }
+
+    /// Queue RX sample bytes on a bus-registered I2S controller.
+    fn push_i2s_rx(bus: &mut SystemBus, name: &str, bytes: &[u8]) {
+        let idx = bus.find_peripheral_index_by_name(name).unwrap();
+        bus.peripherals[idx]
+            .dev
+            .as_any_mut()
+            .unwrap()
+            .downcast_mut::<Esp32s3I2s>()
+            .unwrap()
+            .push_rx_samples(bytes);
+    }
+
+    /// TX: a known pattern through a two-descriptor OUT chain (100 bytes →
+    /// two 64-byte ticks) lands in the I2S sample sink in order; OUT_EOF
+    /// latches only after chain completion; owner bits cleared on both
+    /// consumed descriptors.
+    #[test]
+    fn i2s0_tx_pattern_streams_to_sink_multi_descriptor() {
+        let (mut bus, sink) = i2s_test_bus(I2S0_S3_NAME, I2S0_BASE as u64, 25);
+        let payload: Vec<u8> = (0..100u32).map(|i| (i * 7 % 256) as u8).collect();
+        let buf1: u64 = 0x3FC8_8000;
+        let buf2: u64 = 0x3FC8_8100;
+        let d1: u64 = 0x3FC8_A000;
+        let d2: u64 = 0x3FC8_A010;
+        for (i, &b) in payload[..60].iter().enumerate() {
+            bus.write_u8(buf1 + i as u64, b).unwrap();
+        }
+        for (i, &b) in payload[60..].iter().enumerate() {
+            bus.write_u8(buf2 + i as u64, b).unwrap();
+        }
+        write_desc(&mut bus, d1, (1 << 31) | (60 << 12) | 60, buf1, d2);
+        write_desc(&mut bus, d2, tx_dw0(40), buf2, 0);
+
+        // Start the I2S TX engine via its real MMIO control bit.
+        bus.write_u32(I2S0_BASE as u64 + I2S_TX_CONF_REG, I2S_START_BIT)
+            .unwrap();
+
+        let mut g = Esp32s3Gdma::new(IN_CH0_SRC);
+        let b = ch_base(0);
+        g.write_word(b + OUT_PERI_SEL, 3); // I2S0
+        g.write_word(
+            b + OUT_LINK,
+            OUT_LINK_START_BIT | (d1 as u32 & OUT_LINK_ADDR_MASK),
+        );
+        assert!(g.needs_bus_tick(), "coupled I2S0 TX pending");
+        assert_eq!(
+            g.read_word(b + OUT_INT_RAW) & (OUT_EOF_BIT | OUT_DONE_BIT),
+            0,
+            "no EOF before the pump runs"
+        );
+
+        // 100 bytes at 64/tick → exactly 2 ticks; no EOF mid-transfer.
+        g.tick_with_bus(&mut bus);
+        assert!(g.needs_bus_tick(), "100-byte transfer needs >1 tick");
+        assert_eq!(
+            g.read_word(b + OUT_INT_RAW) & OUT_EOF_BIT,
+            0,
+            "no OUT_EOF mid-transfer"
+        );
+        let extra = tick_until_idle(&mut g, &mut bus, 8);
+        assert_eq!(extra, 1, "deterministic 2-tick total for 100 bytes");
+
+        assert_eq!(
+            *sink.lock().unwrap(),
+            payload,
+            "sample sink must hold the pattern in order"
+        );
+        let raw = g.read_word(b + OUT_INT_RAW);
+        assert_eq!(raw & OUT_EOF_BIT, OUT_EOF_BIT, "OUT_EOF");
+        assert_eq!(raw & OUT_TOTAL_EOF_BIT, OUT_TOTAL_EOF_BIT, "OUT_TOTAL_EOF");
+        assert_eq!(raw & OUT_DONE_BIT, OUT_DONE_BIT, "OUT_DONE");
+        for (name, d) in [("d1", d1), ("d2", d2)] {
+            assert_eq!(
+                bus.read_u32(d).unwrap() & DESC_OWNER_BIT,
+                0,
+                "{name} owner must be returned to CPU"
+            );
+        }
+    }
+
+    /// Start-bit gating (TX): with TX_START clear nothing moves and EOF
+    /// stays unlatched; setting TX_START resumes the transfer.
+    #[test]
+    fn i2s0_tx_gated_until_tx_start_set() {
+        let (mut bus, sink) = i2s_test_bus(I2S0_S3_NAME, I2S0_BASE as u64, 25);
+        let buf: u64 = 0x3FC8_8000;
+        let d: u64 = 0x3FC8_A000;
+        for i in 0..8u64 {
+            bus.write_u8(buf + i, 0x30 + i as u8).unwrap();
+        }
+        write_desc(&mut bus, d, tx_dw0(8), buf, 0);
+
+        let mut g = Esp32s3Gdma::new(IN_CH0_SRC);
+        let b = ch_base(1);
+        g.write_word(b + OUT_PERI_SEL, 3); // I2S0
+        g.write_word(
+            b + OUT_LINK,
+            OUT_LINK_START_BIT | (d as u32 & OUT_LINK_ADDR_MASK),
+        );
+
+        // TX_START is clear: the pump must stall, retaining state.
+        for _ in 0..3 {
+            g.tick_with_bus(&mut bus);
+        }
+        assert!(sink.lock().unwrap().is_empty(), "no movement while stopped");
+        assert_eq!(g.read_word(b + OUT_INT_RAW), 0, "no EOF while stopped");
+        assert!(g.needs_bus_tick(), "transfer still pending while stopped");
+
+        // Set TX_START → movement resumes and completes.
+        bus.write_u32(I2S0_BASE as u64 + I2S_TX_CONF_REG, I2S_START_BIT)
+            .unwrap();
+        g.tick_with_bus(&mut bus);
+        assert_eq!(
+            *sink.lock().unwrap(),
+            (0..8).map(|i| 0x30 + i as u8).collect::<Vec<_>>()
+        );
+        assert_ne!(g.read_word(b + OUT_INT_RAW) & OUT_EOF_BIT, 0, "OUT_EOF");
+        assert!(!g.needs_bus_tick());
+    }
+
+    /// RX with RXEOF_NUM below one descriptor's capacity: IN_SUC_EOF latches
+    /// after exactly N bytes even though both the source queue and the
+    /// descriptor have more room; excess source bytes stay queued.
+    #[test]
+    fn i2s0_rx_eof_after_exactly_rxeof_num_bytes() {
+        let (mut bus, _) = i2s_test_bus(I2S0_S3_NAME, I2S0_BASE as u64, 25);
+        let n: u32 = 16;
+        let buf: u64 = 0x3FC8_9000;
+        let d: u64 = 0x3FC8_B000;
+        write_desc(&mut bus, d, rx_dw0(64), buf, 0);
+
+        bus.write_u32(I2S0_BASE as u64 + I2S_RXEOF_NUM_REG, n)
+            .unwrap();
+        bus.write_u32(I2S0_BASE as u64 + I2S_RX_CONF_REG, I2S_START_BIT)
+            .unwrap();
+        // Queue MORE than RXEOF_NUM bytes.
+        let samples: Vec<u8> = (0..32u8).map(|i| 0xC0 ^ i).collect();
+        push_i2s_rx(&mut bus, I2S0_S3_NAME, &samples);
+
+        let mut g = Esp32s3Gdma::new(IN_CH0_SRC);
+        let b = ch_base(0);
+        g.write_word(b + IN_PERI_SEL, 3); // I2S0
+        g.write_word(
+            b + IN_LINK,
+            IN_LINK_START_BIT | (d as u32 & IN_LINK_ADDR_MASK),
+        );
+
+        let ticks = tick_until_idle(&mut g, &mut bus, 4);
+        assert_eq!(ticks, 1, "16 bytes complete in one tick");
+
+        let in_raw = g.read_word(b + IN_INT_RAW);
+        assert_eq!(in_raw & IN_SUC_EOF_BIT, IN_SUC_EOF_BIT, "IN_SUC_EOF");
+        assert_eq!(in_raw & IN_DONE_BIT, IN_DONE_BIT, "IN_DONE");
+        // Exactly N bytes landed; the buffer beyond N is untouched (zero).
+        for i in 0..n as usize {
+            assert_eq!(bus.read_u8(buf + i as u64).unwrap(), samples[i], "[{i}]");
+        }
+        for i in n as usize..(n as usize + 4) {
+            assert_eq!(bus.read_u8(buf + i as u64).unwrap(), 0, "beyond N [{i}]");
+        }
+        // Descriptor returned to CPU with the received length = N.
+        let dw0 = bus.read_u32(d).unwrap();
+        assert_eq!(dw0 & DESC_OWNER_BIT, 0, "owner cleared");
+        assert_eq!((dw0 >> 12) & 0xFFF, n, "received length = RXEOF_NUM");
+    }
+
+    /// RX with RXEOF_NUM equal to the descriptor capacity: EOF latches with
+    /// the descriptor exactly full.
+    #[test]
+    fn i2s0_rx_eof_num_equal_to_descriptor_capacity() {
+        let (mut bus, _) = i2s_test_bus(I2S0_S3_NAME, I2S0_BASE as u64, 25);
+        let n: u32 = 32;
+        let buf: u64 = 0x3FC8_9000;
+        let d: u64 = 0x3FC8_B000;
+        write_desc(&mut bus, d, rx_dw0(n), buf, 0);
+        bus.write_u32(I2S0_BASE as u64 + I2S_RXEOF_NUM_REG, n)
+            .unwrap();
+        bus.write_u32(I2S0_BASE as u64 + I2S_RX_CONF_REG, I2S_START_BIT)
+            .unwrap();
+        push_i2s_rx(&mut bus, I2S0_S3_NAME, &[0x5A; 32]);
+
+        let mut g = Esp32s3Gdma::new(IN_CH0_SRC);
+        let b = ch_base(2);
+        g.write_word(b + IN_PERI_SEL, 3); // I2S0
+        g.write_word(
+            b + IN_LINK,
+            IN_LINK_START_BIT | (d as u32 & IN_LINK_ADDR_MASK),
+        );
+        let ticks = tick_until_idle(&mut g, &mut bus, 4);
+        assert_eq!(ticks, 1);
+        assert_ne!(g.read_word(b + IN_INT_RAW) & IN_SUC_EOF_BIT, 0);
+        let dw0 = bus.read_u32(d).unwrap();
+        assert_eq!(dw0 & DESC_OWNER_BIT, 0, "owner cleared");
+        assert_eq!((dw0 >> 12) & 0xFFF, n, "received length = capacity");
+    }
+
+    /// RX with RXEOF_NUM above one descriptor's capacity: the transfer
+    /// spans into a second descriptor and EOF latches after exactly N
+    /// bytes, with per-descriptor owner/length writeback (full first,
+    /// partial second).
+    #[test]
+    fn i2s0_rx_eof_num_spans_two_descriptors() {
+        let (mut bus, _) = i2s_test_bus(I2S0_S3_NAME, I2S0_BASE as u64, 25);
+        let n: u32 = 48; // > 32 (first descriptor's capacity)
+        let buf1: u64 = 0x3FC8_9000;
+        let buf2: u64 = 0x3FC8_9100;
+        let d1: u64 = 0x3FC8_B000;
+        let d2: u64 = 0x3FC8_B010;
+        write_desc(&mut bus, d1, rx_dw0(32), buf1, d2);
+        write_desc(&mut bus, d2, rx_dw0(32), buf2, 0);
+        bus.write_u32(I2S0_BASE as u64 + I2S_RXEOF_NUM_REG, n)
+            .unwrap();
+        bus.write_u32(I2S0_BASE as u64 + I2S_RX_CONF_REG, I2S_START_BIT)
+            .unwrap();
+        let samples: Vec<u8> = (0..64u8).collect(); // more than N queued
+        push_i2s_rx(&mut bus, I2S0_S3_NAME, &samples);
+
+        let mut g = Esp32s3Gdma::new(IN_CH0_SRC);
+        let b = ch_base(0);
+        g.write_word(b + IN_PERI_SEL, 3); // I2S0
+        g.write_word(
+            b + IN_LINK,
+            IN_LINK_START_BIT | (d1 as u32 & IN_LINK_ADDR_MASK),
+        );
+        let ticks = tick_until_idle(&mut g, &mut bus, 4);
+        assert_eq!(ticks, 1, "48 bytes within one 64-byte tick");
+
+        assert_ne!(g.read_word(b + IN_INT_RAW) & IN_SUC_EOF_BIT, 0);
+        for i in 0..32usize {
+            assert_eq!(bus.read_u8(buf1 + i as u64).unwrap(), samples[i]);
+        }
+        for i in 0..16usize {
+            assert_eq!(bus.read_u8(buf2 + i as u64).unwrap(), samples[32 + i]);
+        }
+        let dw0_1 = bus.read_u32(d1).unwrap();
+        let dw0_2 = bus.read_u32(d2).unwrap();
+        assert_eq!(dw0_1 & DESC_OWNER_BIT, 0, "d1 owner cleared");
+        assert_eq!(dw0_2 & DESC_OWNER_BIT, 0, "d2 owner cleared");
+        assert_eq!((dw0_1 >> 12) & 0xFFF, 32, "d1 length full");
+        assert_eq!((dw0_2 >> 12) & 0xFFF, 16, "d2 length partial = N - 32");
+    }
+
+    /// RX samples that trickle in across ticks accumulate toward RXEOF_NUM;
+    /// EOF only latches once the cumulative count reaches N.
+    #[test]
+    fn i2s0_rx_partial_samples_accumulate_across_ticks() {
+        let (mut bus, _) = i2s_test_bus(I2S0_S3_NAME, I2S0_BASE as u64, 25);
+        let n: u32 = 16;
+        let buf: u64 = 0x3FC8_9000;
+        let d: u64 = 0x3FC8_B000;
+        write_desc(&mut bus, d, rx_dw0(64), buf, 0);
+        bus.write_u32(I2S0_BASE as u64 + I2S_RXEOF_NUM_REG, n)
+            .unwrap();
+        bus.write_u32(I2S0_BASE as u64 + I2S_RX_CONF_REG, I2S_START_BIT)
+            .unwrap();
+
+        let mut g = Esp32s3Gdma::new(IN_CH0_SRC);
+        let b = ch_base(0);
+        g.write_word(b + IN_PERI_SEL, 3); // I2S0
+        g.write_word(
+            b + IN_LINK,
+            IN_LINK_START_BIT | (d as u32 & IN_LINK_ADDR_MASK),
+        );
+
+        // First half of the samples: no EOF yet.
+        push_i2s_rx(&mut bus, I2S0_S3_NAME, &[0x11; 8]);
+        g.tick_with_bus(&mut bus);
+        assert_eq!(
+            g.read_word(b + IN_INT_RAW) & IN_SUC_EOF_BIT,
+            0,
+            "8 of 16 bytes: no EOF"
+        );
+        assert!(g.needs_bus_tick(), "still pending");
+
+        // Second half arrives later → EOF at the cumulative N.
+        push_i2s_rx(&mut bus, I2S0_S3_NAME, &[0x22; 8]);
+        g.tick_with_bus(&mut bus);
+        assert_ne!(g.read_word(b + IN_INT_RAW) & IN_SUC_EOF_BIT, 0, "EOF at N");
+        assert!(!g.needs_bus_tick());
+        let dw0 = bus.read_u32(d).unwrap();
+        assert_eq!(dw0 & DESC_OWNER_BIT, 0);
+        assert_eq!((dw0 >> 12) & 0xFFF, n, "received length = N");
+    }
+
+    /// Start-bit gating (RX): queued samples do not move while RX_START is
+    /// clear; movement resumes after start.
+    #[test]
+    fn i2s0_rx_gated_until_rx_start_set() {
+        let (mut bus, _) = i2s_test_bus(I2S0_S3_NAME, I2S0_BASE as u64, 25);
+        let buf: u64 = 0x3FC8_9000;
+        let d: u64 = 0x3FC8_B000;
+        write_desc(&mut bus, d, rx_dw0(8), buf, 0);
+        bus.write_u32(I2S0_BASE as u64 + I2S_RXEOF_NUM_REG, 8)
+            .unwrap();
+        push_i2s_rx(&mut bus, I2S0_S3_NAME, &[0x77; 8]);
+
+        let mut g = Esp32s3Gdma::new(IN_CH0_SRC);
+        let b = ch_base(3);
+        g.write_word(b + IN_PERI_SEL, 3); // I2S0
+        g.write_word(
+            b + IN_LINK,
+            IN_LINK_START_BIT | (d as u32 & IN_LINK_ADDR_MASK),
+        );
+
+        // RX_START clear: stall.
+        for _ in 0..3 {
+            g.tick_with_bus(&mut bus);
+        }
+        assert_eq!(bus.read_u8(buf).unwrap(), 0, "no movement while stopped");
+        assert_eq!(g.read_word(b + IN_INT_RAW), 0, "no EOF while stopped");
+        assert!(g.needs_bus_tick());
+
+        // Start RX → samples land and EOF latches.
+        bus.write_u32(I2S0_BASE as u64 + I2S_RX_CONF_REG, I2S_START_BIT)
+            .unwrap();
+        g.tick_with_bus(&mut bus);
+        for i in 0..8u64 {
+            assert_eq!(bus.read_u8(buf + i).unwrap(), 0x77, "[{i}]");
+        }
+        assert_ne!(g.read_word(b + IN_INT_RAW) & IN_SUC_EOF_BIT, 0);
+        assert!(!g.needs_bus_tick());
+    }
+
+    /// I2S1 routes through PERI_SEL value 4 to the `i2s1_s3` instance —
+    /// pairing is by PERI_SEL value, not channel index.
+    #[test]
+    fn i2s1_routes_by_peri_sel_four() {
+        let (mut bus, sink) = i2s_test_bus(I2S1_S3_NAME, I2S1_BASE as u64, 26);
+        let buf: u64 = 0x3FC8_8000;
+        let d: u64 = 0x3FC8_A000;
+        let payload = b"I2S1-DMA";
+        for (i, &x) in payload.iter().enumerate() {
+            bus.write_u8(buf + i as u64, x).unwrap();
+        }
+        write_desc(&mut bus, d, tx_dw0(payload.len() as u32), buf, 0);
+        bus.write_u32(I2S1_BASE as u64 + I2S_TX_CONF_REG, I2S_START_BIT)
+            .unwrap();
+
+        let mut g = Esp32s3Gdma::new(IN_CH0_SRC);
+        let b = ch_base(4);
+        g.write_word(b + OUT_PERI_SEL, 4); // I2S1
+        g.write_word(
+            b + OUT_LINK,
+            OUT_LINK_START_BIT | (d as u32 & OUT_LINK_ADDR_MASK),
+        );
+        let ticks = tick_until_idle(&mut g, &mut bus, 4);
+        assert_eq!(ticks, 1);
+        assert_eq!(*sink.lock().unwrap(), payload.to_vec());
+        assert_ne!(g.read_word(b + OUT_INT_RAW) & OUT_EOF_BIT, 0, "OUT_EOF");
+        assert_eq!(
+            bus.read_u32(d).unwrap() & DESC_OWNER_BIT,
+            0,
+            "descriptor returned to CPU"
+        );
+    }
+
+    /// I2S IN IRQ: with IN_INT_ENA set, EOF emits the channel's
+    /// interrupt-matrix source from `tick()`.
+    #[test]
+    fn i2s0_rx_irq_fires_on_suc_eof() {
+        let (mut bus, _) = i2s_test_bus(I2S0_S3_NAME, I2S0_BASE as u64, 25);
+        let buf: u64 = 0x3FC8_9000;
+        let d: u64 = 0x3FC8_B000;
+        write_desc(&mut bus, d, rx_dw0(4), buf, 0);
+        bus.write_u32(I2S0_BASE as u64 + I2S_RXEOF_NUM_REG, 4)
+            .unwrap();
+        bus.write_u32(I2S0_BASE as u64 + I2S_RX_CONF_REG, I2S_START_BIT)
+            .unwrap();
+        push_i2s_rx(&mut bus, I2S0_S3_NAME, &[1, 2, 3, 4]);
+
+        let mut g = Esp32s3Gdma::new(IN_CH0_SRC);
+        let b = ch_base(1);
+        g.write_word(b + IN_INT_ENA, IN_SUC_EOF_BIT);
+        g.write_word(b + IN_PERI_SEL, 3); // I2S0
+        g.write_word(
+            b + IN_LINK,
+            IN_LINK_START_BIT | (d as u32 & IN_LINK_ADDR_MASK),
+        );
+        g.tick_with_bus(&mut bus);
+        assert_eq!(
+            g.tick().explicit_irqs.as_deref(),
+            Some(&[IN_CH0_SRC + 1][..]),
+            "IN_CH1 source after I2S RX EOF"
+        );
     }
 }
