@@ -510,6 +510,18 @@ impl SystemBus {
         Some((base + idr_off, bit))
     }
 
+    /// True when the wired devices need cycle-accurate (non-batched) execution
+    /// to behave correctly. Some external devices are driven from `tick_peripherals`
+    /// and observed by cycle-tight firmware loops — e.g. the HC-SR04 holds ECHO
+    /// high for a pulse the firmware times by polling GPIO IN in a busy loop.
+    /// Batched execution advances many instructions before ticking peripherals,
+    /// so the firmware polls a frozen ECHO and measures nothing. Runners should
+    /// disable instruction batching when this returns true (correctness > speed).
+    /// New per-tick GPIO-timing devices should extend this predicate.
+    pub fn requires_cycle_accurate(&self) -> bool {
+        !self.hcsr04.is_empty()
+    }
+
     /// Service all HC-SR04 sensors for one tick: compute each sensor's ECHO
     /// level from its (write-hook-armed) echo window and drive it onto the ECHO
     /// input register, touching the bus only on a level transition. TRIG is NOT
