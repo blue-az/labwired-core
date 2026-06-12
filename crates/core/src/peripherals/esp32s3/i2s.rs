@@ -2,7 +2,8 @@
 // Copyright (C) 2026 Andrii Shylenko
 // SPDX-License-Identifier: MIT
 
-//! ESP32-S3 I2S controller (I2S0 + I2S1) — configuration + control digital twin.
+//! ESP32-S3 I2S controller (I2S0 + I2S1) — configuration/control twin with
+//! GDMA-coupled sample streaming.
 //!
 //! The S3 has two identical I2S peripherals supporting standard (Philips),
 //! TDM and PDM modes, each with independent TX and RX paths:
@@ -239,7 +240,11 @@ impl Esp32s3I2s {
     /// Accept one burst of transmitted sample bytes from the GDMA OUT pump.
     pub(crate) fn dma_push_tx(&mut self, bytes: &[u8]) {
         if let Some(sink) = &self.tx_sink {
-            sink.lock().unwrap().extend_from_slice(bytes);
+            // Poison-tolerant (matches the UART sink): a panicked observer
+            // thread must not cascade a panic into the GDMA swap window.
+            if let Ok(mut s) = sink.lock() {
+                s.extend_from_slice(bytes);
+            }
         }
     }
 
