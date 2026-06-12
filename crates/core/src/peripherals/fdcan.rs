@@ -315,13 +315,7 @@ impl Fdcan {
             REG_HPMS => 0,
             REG_RXF0S => self.rxf0s(),
             REG_RXF0A => 0,
-            REG_RXF1S => {
-                if self.rxf1_lost {
-                    1 << 25
-                } else {
-                    0
-                }
-            }
+            REG_RXF1S => u32::from(self.rxf1_lost) << 25,
             REG_RXF1A => 0,
             REG_TXBC => 0,
             REG_TXFQS => self.txfqs(),
