@@ -1442,8 +1442,10 @@ pub fn configure_xtensa_esp32s3(bus: &mut SystemBus, opts: &Esp32s3Opts) -> Esp3
 
     // ── More twins (GDMA / I2S0 / I2S1 / TWAI) ───────────────────────────
     // After the catch-alls; *_s3 names for i2s avoid the classic-ESP32 i2s0/i2s1
-    // stub name collision in the snapshot. GDMA models registers + EOF
-    // completion (descriptor-walking memory movement is a documented follow-up).
+    // stub name collision in the snapshot. GDMA moves real bytes: M2M
+    // descriptor walks plus peripheral-coupled transfers (UART/UHCI0, SPI2/3,
+    // I2S0/1 — routed by PERI_SEL); unmodeled peripheral ids keep the
+    // auto-complete fallback (see gdma.rs module doc for the full contract).
     bus.add_peripheral(
         "gdma",
         0x6003_F000,

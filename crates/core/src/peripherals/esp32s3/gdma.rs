@@ -83,20 +83,59 @@
 //! When `MEM_TRANS_EN` (bit 4 of `IN_CONF0`) is **clear**, the link-start
 //! path consults `IN_PERI_SEL` / `OUT_PERI_SEL` to decide how to proceed:
 //!
-//! **Coupled set** (`Spi2`, `Spi3`, `Uhci0`, `I2s0`, `I2s1`): the direction
-//! is marked `pending_coupled`; `needs_bus_tick` returns `true`; byte movement
-//! runs inside `tick_with_bus` via the peripheral pumps (UART, SPI2/3 and
-//! I2S0/1 are all implemented). For a coupled direction whose pump cannot
-//! make progress (e.g. the I2S START bit is clear) EOF stays **unlatched** —
-//! the transfer visibly stalls rather than silently auto-completing.
+//! **Coupled set — real byte movement** (`Uhci0` = UART DMA, `Spi2`,
+//! `Spi3`, `I2s0`, `I2s1`): the direction is marked `pending_coupled`;
+//! `needs_bus_tick` returns `true`; byte movement runs inside
+//! `tick_with_bus` via the per-peripheral pumps. For a coupled direction
+//! whose pump cannot make progress (e.g. the I2S START bit is clear, or
+//! `SPI_CMD.USR` was never kicked) EOF stays **unlatched** — the transfer
+//! visibly stalls rather than silently auto-completing.
 //!
-//! **Fallback set** (everything else, including `AES`, `SHA`, `ADC_DAC`,
-//! `RMT`, `LCD_CAM`, `Unknown`, and the reset / unbound value `0x3F`): the
-//! original auto-complete behaviour is preserved — writing `OUTLINK_START`
-//! latches `OUT_EOF + OUT_TOTAL_EOF + OUT_DONE`; writing `INLINK_START`
-//! latches `IN_SUC_EOF + IN_DONE` — without actual byte movement. Firmware
-//! that never writes `PERI_SEL` gets `0x3F` (unbound → `Unknown`) and falls
-//! through here, preserving full backwards compatibility.
+//! **Fallback set — auto-complete, no byte movement** (explicitly: `Aes`,
+//! `Sha`, `AdcDac`, `Rmt`, `LcdCam`, `Unknown`, and the reset / unbound
+//! value `0x3F`): the legacy behaviour is preserved — writing
+//! `OUTLINK_START` latches `OUT_EOF + OUT_TOTAL_EOF + OUT_DONE`; writing
+//! `INLINK_START` latches `IN_SUC_EOF + IN_DONE` — so firmware polling EOF
+//! makes forward progress. Firmware that never writes `PERI_SEL` gets
+//! `0x3F` (unbound → `Unknown`) and falls through here, preserving full
+//! backwards compatibility. LCD_CAM coupling is **deferred by design**
+//! (per the Slice 3 spec): the LCD_CAM register twin exists separately,
+//! but its DMA data path stays on the auto-complete fallback until a
+//! display/camera pipeline needs it.
+//!
+//! ## Coupled-mode data movement — shared mechanics
+//!
+//! All coupled pumps share these mechanics:
+//!
+//! - **Incremental pumping:** at most `COUPLED_BYTES_PER_TICK` (64) bytes
+//!   move per `tick_with_bus` call per transfer. Larger transfers resume
+//!   across ticks from per-direction walk state (`coupled_desc_ptr`,
+//!   `coupled_buf_offset`, `coupled_bytes_moved`) rather than restarting.
+//! - **Owner / LEN writeback:** on completing a descriptor (and in the
+//!   one-shot M2M walks above) the engine writes dw0 back with the owner
+//!   bit cleared, returning the descriptor to the CPU. IN (RX) descriptors
+//!   additionally get dw0[23:12] replaced with the actual received byte
+//!   count (stale CPU-seeded values are cleared first); OUT (TX)
+//!   descriptors keep their CPU-seeded length.
+//! - **Coupling mechanism per peripheral:** UART (UHCI0) couples through
+//!   UART0's real MMIO FIFO at offset 0x00 — DMA-written bytes take the
+//!   identical path as CPU writes, so serial output, STATUS counts, and
+//!   UART interrupts behave the same. SPI2/3 and I2S0/1 have no MMIO
+//!   data-port register, so their pumps use the temporary-swap idiom (see
+//!   the next section).
+//! - **EOF policies:** OUT latches `OUT_EOF + OUT_TOTAL_EOF + OUT_DONE`
+//!   when its chain drains. UART IN latches `IN_DONE` per filled
+//!   descriptor and `IN_SUC_EOF` on chain completion or FIFO-idle after
+//!   ≥1 byte (see `pump_uart_in`). SPI IN latches EOF when the
+//!   transaction's byte count is exhausted. I2S IN honours `RXEOF_NUM`,
+//!   which on the S3 is a **byte** count (ESP-IDF `i2s_ll_rx_set_eof_num`
+//!   writes the byte length directly; only the classic ESP32 register
+//!   counts words): `IN_SUC_EOF` latches after exactly `RXEOF_NUM` bytes.
+//! - **Documented simplification:** when an IN descriptor chain is
+//!   exhausted before the data source is (chain under-provisioned), the
+//!   model latches `IN_SUC_EOF` and drops the excess, where real silicon
+//!   would raise `IN_DSCR_EMPTY`. Firmware sized per ESP-IDF driver
+//!   conventions never hits this path.
 //!
 //! ## SPI2/3 coupling mechanism — design decision
 //!
@@ -568,7 +607,10 @@ impl Esp32s3Gdma {
                         }
                     }
                 }
-                // STOP: nothing to do in this register-only model.
+                // STOP: not modelled — in-flight coupled transfers run to
+                // completion (or stall visibly). SPI-side aborts are handled
+                // by SPI_SOFT_RESET clearing the pending transaction (the
+                // stalled GDMA direction then stays visibly pending).
                 let _ = IN_LINK_STOP_BIT;
             }
             IN_PERI_SEL => c.rx.peri_sel = value & PERI_SEL_MASK,
@@ -914,8 +956,8 @@ impl Esp32s3Gdma {
     /// `dir.coupled_desc_ptr` / `coupled_buf_offset`. Each filled descriptor
     /// gets owner cleared and the length field [23:12] set to its capacity.
     /// Bytes beyond the end of the chain are dropped (the chain was
-    /// under-provisioned; real silicon raises a descriptor-empty error —
-    /// not modelled).
+    /// under-provisioned; real silicon raises `IN_DSCR_EMPTY` here — a
+    /// documented simplification, see the module doc).
     fn coupled_in_write(dir: &mut DmaDir, bus: &mut dyn Bus, bytes: &[u8]) {
         let mut written = 0usize;
         // Hop bound guards against corrupted (e.g. circular) chains.
@@ -1449,13 +1491,14 @@ mod tests {
         assert_eq!(g.read_word(MISC_CONF_OFFSET), 0xDEAD_BEEF);
     }
 
-    /// Without MEM_TRANS_EN, INLINK_START still auto-completes (peripheral-
-    /// coupled mode: no byte movement, but EOF is latched immediately).
+    /// Without MEM_TRANS_EN and with PERI_SEL unbound (reset 0x3F),
+    /// INLINK_START takes the fallback auto-complete path: no byte
+    /// movement, but EOF is latched immediately.
     #[test]
     fn inlink_start_latches_eof_without_mem_trans_en() {
         let mut g = Esp32s3Gdma::new(IN_CH0_SRC);
         let b = ch_base(2);
-        // MEM_TRANS_EN is NOT set → peripheral-coupled auto-complete.
+        // MEM_TRANS_EN clear + unbound PERI_SEL → fallback auto-complete.
         g.write_word(b + IN_LINK, IN_LINK_START_BIT | 0x1234);
         let raw = g.read_word(b + IN_INT_RAW);
         assert_eq!(raw & IN_SUC_EOF_BIT, IN_SUC_EOF_BIT, "IN_SUC_EOF latched");
@@ -1518,7 +1561,7 @@ mod tests {
     fn int_clr_is_w1c() {
         let mut g = Esp32s3Gdma::new(IN_CH0_SRC);
         let b = ch_base(0);
-        // Peripheral-coupled mode (no MEM_TRANS_EN) so EOF auto-latches.
+        // No MEM_TRANS_EN + unbound PERI_SEL → fallback EOF auto-latch.
         g.write_word(b + IN_LINK, IN_LINK_START_BIT);
         assert_eq!(g.read_word(b + IN_INT_RAW), IN_SUC_EOF_BIT | IN_DONE_BIT);
         // Clear only IN_DONE (bit 0); IN_SUC_EOF must remain.
@@ -3620,5 +3663,83 @@ mod tests {
             Some(&[IN_CH0_SRC + 1][..]),
             "IN_CH1 source after I2S RX EOF"
         );
+    }
+
+    /// RX-side per-tick budget: RXEOF_NUM = 80 with 100 bytes queued moves
+    /// exactly `COUPLED_BYTES_PER_TICK` (64) bytes on tick 1 (no EOF) and
+    /// the remaining 16 on tick 2 (EOF at exactly N), with per-descriptor
+    /// owner/length writeback (full 64 on d1, partial 16 on d2) and the
+    /// 20 excess source bytes left queued.
+    #[test]
+    fn i2s0_rx_64_byte_tick_budget_spans_ticks() {
+        let (mut bus, _) = i2s_test_bus(I2S0_S3_NAME, I2S0_BASE as u64, 25);
+        let n: u32 = 80;
+        let buf1: u64 = 0x3FC8_9000;
+        let buf2: u64 = 0x3FC8_9100;
+        let d1: u64 = 0x3FC8_B000;
+        let d2: u64 = 0x3FC8_B010;
+        write_desc(&mut bus, d1, rx_dw0(64), buf1, d2);
+        write_desc(&mut bus, d2, rx_dw0(64), buf2, 0);
+        bus.write_u32(I2S0_BASE as u64 + I2S_RXEOF_NUM_REG, n)
+            .unwrap();
+        bus.write_u32(I2S0_BASE as u64 + I2S_RX_CONF_REG, I2S_START_BIT)
+            .unwrap();
+        let samples: Vec<u8> = (0..100u32).map(|i| (i * 3 % 251) as u8).collect();
+        push_i2s_rx(&mut bus, I2S0_S3_NAME, &samples);
+
+        let mut g = Esp32s3Gdma::new(IN_CH0_SRC);
+        let b = ch_base(0);
+        g.write_word(b + IN_PERI_SEL, 3); // I2S0
+        g.write_word(
+            b + IN_LINK,
+            IN_LINK_START_BIT | (d1 as u32 & IN_LINK_ADDR_MASK),
+        );
+
+        // Tick 1: exactly the 64-byte budget moves; no EOF yet.
+        g.tick_with_bus(&mut bus);
+        assert!(g.needs_bus_tick(), "80-byte transfer needs a second tick");
+        assert_eq!(
+            g.read_word(b + IN_INT_RAW) & IN_SUC_EOF_BIT,
+            0,
+            "no IN_SUC_EOF after 64 of 80 bytes"
+        );
+        for i in 0..64usize {
+            assert_eq!(bus.read_u8(buf1 + i as u64).unwrap(), samples[i], "[{i}]");
+        }
+        assert_eq!(bus.read_u8(buf2).unwrap(), 0, "tick 1 must not touch d2");
+        let dw0_1 = bus.read_u32(d1).unwrap();
+        assert_eq!(dw0_1 & DESC_OWNER_BIT, 0, "d1 owner cleared on tick 1");
+        assert_eq!((dw0_1 >> 12) & 0xFFF, 64, "d1 length = full capacity");
+
+        // Tick 2: the remaining 16 bytes land; EOF at exactly N.
+        g.tick_with_bus(&mut bus);
+        assert!(!g.needs_bus_tick(), "transfer complete after tick 2");
+        let in_raw = g.read_word(b + IN_INT_RAW);
+        assert_eq!(in_raw & IN_SUC_EOF_BIT, IN_SUC_EOF_BIT, "IN_SUC_EOF");
+        assert_eq!(in_raw & IN_DONE_BIT, IN_DONE_BIT, "IN_DONE");
+        for i in 0..16usize {
+            assert_eq!(
+                bus.read_u8(buf2 + i as u64).unwrap(),
+                samples[64 + i],
+                "d2 [{i}]"
+            );
+        }
+        for i in 16..20usize {
+            assert_eq!(bus.read_u8(buf2 + i as u64).unwrap(), 0, "beyond N [{i}]");
+        }
+        let dw0_2 = bus.read_u32(d2).unwrap();
+        assert_eq!(dw0_2 & DESC_OWNER_BIT, 0, "d2 owner cleared");
+        assert_eq!((dw0_2 >> 12) & 0xFFF, 16, "d2 length partial = N - 64");
+
+        // The 20 excess source bytes stay queued for the next transfer.
+        let idx = bus.find_peripheral_index_by_name(I2S0_S3_NAME).unwrap();
+        let leftover = bus.peripherals[idx]
+            .dev
+            .as_any_mut()
+            .unwrap()
+            .downcast_mut::<Esp32s3I2s>()
+            .unwrap()
+            .dma_pop_rx(usize::MAX);
+        assert_eq!(leftover, samples[80..].to_vec(), "excess stays queued");
     }
 }
