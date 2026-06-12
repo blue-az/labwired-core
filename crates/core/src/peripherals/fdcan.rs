@@ -139,6 +139,19 @@ const IR_TFE: u32 = 1 << 9;
 
 const ILE_EINT0: u32 = 1 << 0;
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+pub struct FdcanTraceFrame {
+    pub seq: u64,
+    pub peripheral: String,
+    pub direction: String,
+    pub id: u32,
+    pub data: Vec<u8>,
+    pub extended: bool,
+    pub fd: bool,
+    pub bitrate_switch: bool,
+    pub remote: bool,
+}
+
 /// STM32H5 FDCAN instance (FDCAN1) plus the shared CONFIG block and
 /// SRAMCAN window.
 ///
@@ -189,6 +202,10 @@ pub struct Fdcan {
     /// attached. Bounded: oldest dropped past 64.
     #[serde(skip)]
     pub tx_frames: VecDeque<CanFrame>,
+    #[serde(skip)]
+    trace_seq: u64,
+    #[serde(skip)]
+    trace: VecDeque<FdcanTraceFrame>,
     /// `CanBus` interconnect endpoints (`new_with_bus`). NOTE: the
     /// current CanBus broadcasts to every attached node including the
     /// transmitter; a real CAN node does not receive its own frame.
@@ -236,6 +253,8 @@ impl Fdcan {
             bus_active: false,
             message_ram: vec![0; RAM_WORDS],
             tx_frames: VecDeque::new(),
+            trace_seq: 0,
+            trace: VecDeque::new(),
             bus_tx: None,
             bus_rx: None,
         }
@@ -249,6 +268,35 @@ impl Fdcan {
         dev.bus_tx = Some(tx);
         dev.bus_rx = Some(rx);
         dev
+    }
+
+    pub fn trace_snapshot(&self, peripheral: &str) -> Vec<FdcanTraceFrame> {
+        self.trace
+            .iter()
+            .cloned()
+            .map(|mut frame| {
+                frame.peripheral = peripheral.to_string();
+                frame
+            })
+            .collect()
+    }
+
+    fn push_trace(&mut self, direction: &'static str, frame: &CanFrame) {
+        self.trace_seq = self.trace_seq.wrapping_add(1);
+        if self.trace.len() >= 200 {
+            self.trace.pop_front();
+        }
+        self.trace.push_back(FdcanTraceFrame {
+            seq: self.trace_seq,
+            peripheral: String::new(),
+            direction: direction.to_string(),
+            id: frame.id,
+            data: frame.data.clone(),
+            extended: frame.extended,
+            fd: frame.fd,
+            bitrate_switch: frame.bitrate_switch,
+            remote: frame.remote,
+        });
     }
 
     fn config_unlocked(&self) -> bool {
@@ -420,6 +468,7 @@ impl Fdcan {
             if self.txbtie & bit != 0 {
                 self.ir |= IR_TC;
             }
+            self.push_trace("tx", &frame);
             if self.loopback() {
                 self.receive_frame(frame);
             } else if let Some(tx) = &self.bus_tx {
@@ -471,6 +520,7 @@ impl Fdcan {
             self.ir |= IR_RF0L;
             return false;
         }
+        self.push_trace("rx", &frame);
         let base = RAM_RF0_WORDS + self.rxf0_put as usize * ELEMENT_WORDS;
         self.encode_rx_element(base, &frame);
         self.rxf0_put = (self.rxf0_put + 1) % FIFO_DEPTH;
@@ -708,6 +758,25 @@ mod tests {
         assert_ne!(r1 & (1 << 31), 0, "ANMF");
         assert_eq!(rd(&dev, RAM_BASE + 0xB8), 0xDEAD_BEEF);
         assert_eq!(rd(&dev, RAM_BASE + 0xBC), 0xCAFE_BABE);
+    }
+
+    #[test]
+    fn loopback_frames_are_exposed_as_can_trace_events() {
+        let mut dev = Fdcan::new();
+        enter_loopback(&mut dev);
+        wr(&mut dev, REG_TXBAR, 0x1);
+
+        let trace = dev.trace_snapshot("fdcan1");
+        assert_eq!(trace.len(), 2);
+        assert_eq!(trace[0].peripheral, "fdcan1");
+        assert_eq!(trace[0].direction, "tx");
+        assert_eq!(trace[0].id, 0x123);
+        assert_eq!(
+            trace[0].data,
+            vec![0xEF, 0xBE, 0xAD, 0xDE, 0xBE, 0xBA, 0xFE, 0xCA]
+        );
+        assert_eq!(trace[1].direction, "rx");
+        assert_eq!(trace[1].id, 0x123);
     }
 
     #[test]

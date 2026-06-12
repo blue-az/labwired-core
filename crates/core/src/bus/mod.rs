@@ -200,6 +200,19 @@ pub struct SystemBus {
     /// per-tick pass (`service_hcsr04`) drives the computed ECHO input level,
     /// touching the bus only on a transition. Empty by default → zero cost.
     pub hcsr04: Vec<crate::peripherals::hc_sr04::HcSr04>,
+    /// Reusable CAN diagnostic clients declared as external devices. They
+    /// inject configured CAN frames into a named FDCAN peripheral once it is
+    /// running, so ECU examples can be driven by a virtual off-board tester
+    /// instead of self-loopback firmware.
+    pub can_diagnostic_testers: Vec<CanDiagnosticTester>,
+}
+
+pub struct CanDiagnosticTester {
+    pub id: String,
+    pub connection: String,
+    pub request_id: u32,
+    pub request_data: Vec<u8>,
+    pub sent: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -531,6 +544,80 @@ impl SystemBus {
         }
     }
 
+    pub(crate) fn service_can_diagnostic_testers(&mut self) {
+        if self.can_diagnostic_testers.is_empty() {
+            return;
+        }
+
+        for i in 0..self.can_diagnostic_testers.len() {
+            if self.can_diagnostic_testers[i].sent {
+                continue;
+            }
+
+            let connection = self.can_diagnostic_testers[i].connection.clone();
+            let Some(idx) = self.find_peripheral_index_by_name(&connection) else {
+                continue;
+            };
+            let Some(fdcan) = self.peripherals[idx]
+                .dev
+                .as_any_mut()
+                .and_then(|any| any.downcast_mut::<crate::peripherals::fdcan::Fdcan>())
+            else {
+                continue;
+            };
+
+            let frame = crate::network::CanFrame {
+                id: self.can_diagnostic_testers[i].request_id,
+                data: self.can_diagnostic_testers[i].request_data.clone(),
+                extended: false,
+                fd: self.can_diagnostic_testers[i].request_data.len() > 8,
+                bitrate_switch: self.can_diagnostic_testers[i].request_data.len() > 8,
+                remote: false,
+            };
+            if fdcan.receive_frame(frame) {
+                self.can_diagnostic_testers[i].sent = true;
+            }
+        }
+    }
+
+    fn yaml_u32(value: Option<&serde_yaml::Value>, default: u32) -> u32 {
+        match value {
+            Some(serde_yaml::Value::Number(n)) => n.as_u64().map(|v| v as u32).unwrap_or(default),
+            Some(serde_yaml::Value::String(s)) => {
+                let s = s.trim();
+                if let Some(hex) = s.strip_prefix("0x").or_else(|| s.strip_prefix("0X")) {
+                    u32::from_str_radix(&hex.replace('_', ""), 16).unwrap_or(default)
+                } else {
+                    s.replace('_', "").parse::<u32>().unwrap_or(default)
+                }
+            }
+            _ => default,
+        }
+    }
+
+    fn yaml_bytes(value: Option<&serde_yaml::Value>, default: &[u8]) -> Vec<u8> {
+        match value {
+            Some(serde_yaml::Value::Sequence(seq)) => seq
+                .iter()
+                .map(|value| Self::yaml_u32(Some(value), 0) as u8)
+                .collect(),
+            Some(serde_yaml::Value::String(s)) => s
+                .split(|c: char| c.is_ascii_whitespace() || c == ',' || c == ':')
+                .filter(|part| !part.is_empty())
+                .map(|part| {
+                    let part = part.trim();
+                    if let Some(hex) = part.strip_prefix("0x").or_else(|| part.strip_prefix("0X")) {
+                        u8::from_str_radix(hex, 16).unwrap_or(0)
+                    } else {
+                        u8::from_str_radix(part, 16)
+                            .unwrap_or_else(|_| part.parse::<u8>().unwrap_or(0))
+                    }
+                })
+                .collect(),
+            _ => default.to_vec(),
+        }
+    }
+
     /// Write-hook mirror of [`maybe_latch_dc`](Self::maybe_latch_dc) for the
     /// HC-SR04: after an MMIO write to peripheral `idx`, if that peripheral is
     /// the GPIO hosting any sensor's TRIG line, re-read the TRIG ODR bit and run
@@ -784,6 +871,7 @@ impl SystemBus {
             pending_schedule: Vec::new(),
             legacy_walk_disabled: false,
             hcsr04: Vec::new(),
+            can_diagnostic_testers: Vec::new(),
         };
         bus.rebuild_peripheral_ranges();
         bus
@@ -814,6 +902,7 @@ impl SystemBus {
             pending_schedule: Vec::new(),
             legacy_walk_disabled: false,
             hcsr04: Vec::new(),
+            can_diagnostic_testers: Vec::new(),
         };
         bus.rebuild_peripheral_ranges();
         bus
@@ -1049,6 +1138,7 @@ impl SystemBus {
             pending_schedule: Vec::new(),
             legacy_walk_disabled: false,
             hcsr04: Vec::new(),
+            can_diagnostic_testers: Vec::new(),
         };
 
         let mut merged_peripherals = chip.peripherals.clone();
@@ -1768,6 +1858,25 @@ impl SystemBus {
                         distance_cm,
                     ));
                 }
+                "can-diagnostic-tester" | "uds-diagnostic-tester" => {
+                    if bus.find_peripheral_index_by_name(&ext.connection).is_none() {
+                        return Err(anyhow::anyhow!(
+                            "CAN diagnostic tester '{}' connection '{}' was not found",
+                            ext.id,
+                            ext.connection
+                        ));
+                    }
+                    let request_id = Self::yaml_u32(ext.config.get("request_id"), 0x7E0);
+                    let request_data =
+                        Self::yaml_bytes(ext.config.get("request_data"), &[0x03, 0x22, 0xF1, 0x90]);
+                    bus.can_diagnostic_testers.push(CanDiagnosticTester {
+                        id: ext.id.clone(),
+                        connection: ext.connection.clone(),
+                        request_id,
+                        request_data,
+                        sent: false,
+                    });
+                }
                 // ntc-thermistor dispatches through the PeripheralKit registry above.
                 _ => {
                     tracing::warn!(
@@ -2128,6 +2237,7 @@ impl SystemBus {
         // HC-SR04 service pass: read each sensor's TRIG output level and drive
         // the computed ECHO input level. Empty list → skipped entirely.
         self.service_hcsr04();
+        self.service_can_diagnostic_testers();
 
         (
             interrupts,
@@ -2974,6 +3084,76 @@ mod tests {
         assert_eq!(i2c.attached_devices().len(), 1);
     }
 
+    #[test]
+    fn test_from_config_can_diagnostic_tester_injects_frame_into_fdcan() {
+        let chip: ChipDescriptor = serde_yaml::from_str(
+            r#"
+name: "h563-test"
+arch: "arm"
+core: "cortex-m33"
+flash:
+  base: 0x08000000
+  size: "128KB"
+ram:
+  base: 0x20000000
+  size: "64KB"
+peripherals:
+  - id: "fdcan1"
+    type: "fdcan"
+    base_address: 0x4000A400
+    size: "4KB"
+"#,
+        )
+        .unwrap();
+        let manifest: SystemManifest = serde_yaml::from_str(
+            r#"
+name: "uds-tester"
+chip: "unused"
+external_devices:
+  - id: "uds_tester"
+    type: "can-diagnostic-tester"
+    connection: "fdcan1"
+    config:
+      request_id: "0x7E0"
+      request_data: "03 22 F1 90"
+board_io: []
+"#,
+        )
+        .unwrap();
+        let mut bus = SystemBus::from_config(&chip, &manifest).unwrap();
+        assert_eq!(bus.can_diagnostic_testers.len(), 1);
+
+        // Still in INIT: tester retries but cannot inject into a stopped FDCAN.
+        bus.tick_peripherals_fully();
+        {
+            let idx = bus.find_peripheral_index_by_name("fdcan1").unwrap();
+            let fdcan = bus.peripherals[idx]
+                .dev
+                .as_any()
+                .unwrap()
+                .downcast_ref::<crate::peripherals::fdcan::Fdcan>()
+                .unwrap();
+            assert!(fdcan.trace_snapshot("fdcan1").is_empty());
+        }
+
+        // Leave INIT; next bus tick lets the reusable tester drive the CAN frame.
+        bus.write_u32(0x4000_A400 + 0x018, 0).unwrap();
+        bus.tick_peripherals_fully();
+        let idx = bus.find_peripheral_index_by_name("fdcan1").unwrap();
+        let fdcan = bus.peripherals[idx]
+            .dev
+            .as_any()
+            .unwrap()
+            .downcast_ref::<crate::peripherals::fdcan::Fdcan>()
+            .unwrap();
+        let trace = fdcan.trace_snapshot("fdcan1");
+        assert_eq!(trace.len(), 1);
+        assert_eq!(trace[0].direction, "rx");
+        assert_eq!(trace[0].id, 0x7E0);
+        assert_eq!(trace[0].data, vec![0x03, 0x22, 0xF1, 0x90]);
+        assert!(bus.can_diagnostic_testers[0].sent);
+    }
+
     /// Parse a minimal chip yaml with the given header lines (name/arch/core).
     fn bit_band_test_chip(header: &str, gpio_base: &str, gpio_profile: &str) -> ChipDescriptor {
         let yaml = format!(
@@ -3299,6 +3479,7 @@ peripherals:
             pending_schedule: Vec::new(),
             legacy_walk_disabled: false,
             hcsr04: Vec::new(),
+            can_diagnostic_testers: Vec::new(),
         };
 
         bus.flash.write_u8(0x0800_0000, 0x12);
@@ -3353,6 +3534,7 @@ peripherals:
             pending_schedule: Vec::new(),
             legacy_walk_disabled: false,
             hcsr04: Vec::new(),
+            can_diagnostic_testers: Vec::new(),
         };
 
         bus.rebuild_peripheral_ranges();
@@ -3410,6 +3592,7 @@ peripherals:
             pending_schedule: Vec::new(),
             legacy_walk_disabled: false,
             hcsr04: Vec::new(),
+            can_diagnostic_testers: Vec::new(),
         };
         bus.rebuild_peripheral_ranges();
 

@@ -75,6 +75,7 @@ void *__aeabi_memclr8(void *dst, size_t n)
 
 static volatile uint32_t g_now_ms;
 static volatile bool g_positive_response_sent;
+static volatile bool g_tester_request_seen;
 
 #define REG32(addr) (*(volatile uint32_t *) (addr))
 
@@ -180,12 +181,11 @@ static void read_payload(uint32_t payload_addr, uint8_t *data, uint8_t len)
     }
 }
 
-static void fdcan_start_loopback(void)
+static void fdcan_start(void)
 {
     REG32(fdcan_reg(FDCAN_REG_CCCR)) = CCCR_INIT | CCCR_CCE;
-    REG32(fdcan_reg(FDCAN_REG_CCCR)) = CCCR_INIT | CCCR_CCE | CCCR_TEST | CCCR_MON;
-    REG32(fdcan_reg(FDCAN_REG_TEST)) = TEST_LBCK;
-    REG32(fdcan_reg(FDCAN_REG_CCCR)) = CCCR_TEST | CCCR_MON;
+    REG32(fdcan_reg(FDCAN_REG_TEST)) = 0u;
+    REG32(fdcan_reg(FDCAN_REG_CCCR)) = 0u;
     while ((REG32(fdcan_reg(FDCAN_REG_CCCR)) & CCCR_INIT) != 0u) {
     }
 }
@@ -277,6 +277,10 @@ static void pump_one_tester_request(uds_ctx_t *ctx)
     can_frame_t frame;
     while (fdcan_poll_rx_frame(&frame)) {
         if (frame.id == 0x7E0u) {
+            if (!g_tester_request_seen) {
+                uart_puts("UDS_REQ_22_F190\n");
+                g_tester_request_seen = true;
+            }
             uds_isotp_rx_callback(ctx, frame.id, frame.data, frame.len);
             return;
         }
@@ -315,7 +319,7 @@ int main(void)
     uart_init();
     uart_puts("H563-UDS-ECU\n");
 
-    fdcan_start_loopback();
+    fdcan_start();
     uds_tp_isotp_init(can_send, 0x7E8u, 0x7E0u);
     uds_tp_isotp_set_fd(true);
 
@@ -339,10 +343,6 @@ int main(void)
         for (;;) {
         }
     }
-    static const uint8_t request[] = {0x03u, 0x22u, 0xF1u, 0x90u};
-    uart_puts("UDS_REQ_22_F190\n");
-    (void) fdcan_send_frame(0x7E0u, request, sizeof(request), false);
-
     bool ok = false;
     for (uint32_t i = 0; i < 64u && !ok; ++i) {
         pump_one_tester_request(&ctx);
