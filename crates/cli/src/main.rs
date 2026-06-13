@@ -2053,20 +2053,17 @@ fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
     //   * `arduino-esp32` profile — resolve s_resume_cores / s_cpu_up /
     //     s_cpu_inited / s_system_inited / s_other_cpu_startup_done from
     //     the ELF symbol table and write 0x01 to both bytes of each.
-    // Dual-core handshake pre-seed + 10k-cycle keep-alive. ON by default — it is
-    // LOAD-BEARING for real Arduino-ESP32 firmware: `call_start_cpu0` unstalls
-    // APP_CPU (via `esp_cpu_unstall`, which we thunk to a nop) then spin-waits on
-    // `s_cpu_up[0..1]` for APP_CPU to come up. We don't run a real second core
-    // through `call_start_cpu1`, so without the pre-seed PRO_CPU spins forever in
-    // startup and never reaches the sketch (verified: a real PlatformIO ereader
-    // build gives spi3=0 with this OFF, but spi3=19033 / refresh_gen=1 /
-    // ink=1429 — byte-identical to silicon — with it ON). It is acceptable
-    // plumbing under the fidelity strategy: it gets the firmware past the
-    // unmodeled boot to the REAL render; it does not fake the render. The demo
-    // (agentdeck) ELF happens not to poll s_cpu_up, which is why an earlier
-    // "off by default" attempt looked safe on it. `LABWIRED_NO_PRESEED=1`
-    // disables it for boot-path experiments only.
-    let preseed_handshake = std::env::var("LABWIRED_NO_PRESEED").is_err();
+    // Dual-core handshake pre-seed + 10k-cycle keep-alive — now only a FALLBACK
+    // for when APP_CPU is halted (`LABWIRED_NO_DUALCORE=1`). By default we run
+    // the real second core, which executes the firmware's own `call_start_cpu1`
+    // and sets `s_cpu_up`/etc itself — no faking. The pre-seed was a workaround
+    // for the previously-halted cpu1: `call_start_cpu0` unstalls APP_CPU then
+    // spin-waits on `s_cpu_up[0..1]`, so with cpu1 halted PRO_CPU would spin
+    // forever. With the real second core the firmware renders byte-identical to
+    // silicon (spi3=19033, ink=1429) WITHOUT the pre-seed. Enable explicitly with
+    // `LABWIRED_PRESEED_HANDSHAKE=1`.
+    let preseed_handshake = std::env::var("LABWIRED_NO_DUALCORE").is_ok()
+        || std::env::var("LABWIRED_PRESEED_HANDSHAKE").is_ok();
     let (s_resume_cores, s_cpu_up, s_cpu_inited, s_system_inited, s_other_cpu_startup_done);
     if args.profile == "agentdeck" {
         s_resume_cores = 0;
@@ -2655,10 +2652,14 @@ fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
             {
                 cpu1.set_pc(boot_addr);
                 cpu1.set_sp(appcpu_initial_sp);
-                // Keep cpu1 halted while loopTask is patched to PRO_CPU
-                // (avoids SMP race on shared FreeRTOS lists until DC7).
-                // Set LABWIRED_DUALCORE_RUN=1 to also run cpu1.
-                if std::env::var("LABWIRED_DUALCORE_RUN").is_ok() {
+                // Run APP_CPU for real by default: it executes the firmware's
+                // own `call_start_cpu1`, sets s_cpu_up/etc itself, and runs the
+                // FreeRTOS SMP scheduler on core 1 — so we DON'T pre-seed the
+                // handshake flags (that was a workaround for keeping cpu1
+                // halted). Proven byte-identical to silicon with the real second
+                // core (spi3=19033, ink=1429). LABWIRED_NO_DUALCORE=1 halts it
+                // (falls back to the pre-seed path) for debugging SMP races.
+                if std::env::var("LABWIRED_NO_DUALCORE").is_err() {
                     cpu1.unhalt();
                 }
             }
