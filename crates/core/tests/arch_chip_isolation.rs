@@ -25,7 +25,7 @@ const ALLOWED: &[(&str, &str, &str)] = &[
     // (REG_USER / USER_USR_MOSI_BIT). Test-only; harmless. Relocate the consts
     // to a shared module to drop this.
     (
-        "esp32s3/rom_thunks.rs",
+        "esp_xtensa_common/rom_thunks.rs",
         "peripherals::esp32::spi::",
         "test-only: shared SPI register-bit constants",
     ),

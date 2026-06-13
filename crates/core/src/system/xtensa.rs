@@ -16,8 +16,8 @@ use crate::peripherals::esp32s3::gpio::{Esp32s3Gpio, GpioObserver};
 use crate::peripherals::esp32s3::i2c::{Esp32s3I2c, I2C0_BASE, I2C0_INTR_SOURCE_ID, I2C0_SIZE};
 use crate::peripherals::esp32s3::intmatrix::Esp32s3IntMatrix;
 use crate::peripherals::esp32s3::io_mux::Esp32s3IoMux;
-use crate::peripherals::esp32s3::rom_thunks::{self, RomThunkBank};
-use crate::peripherals::esp32s3::system_stub::{EfuseStub, RtcCntlStub, SystemStub};
+use crate::peripherals::esp_xtensa_common::rom_thunks::{self, RomThunkBank};
+use crate::peripherals::esp_xtensa_common::system_stub::{EfuseStub, RtcCntlStub, SystemStub};
 use crate::peripherals::esp32s3::systimer::Systimer;
 use crate::peripherals::esp32s3::tmp102::Tmp102;
 use crate::peripherals::esp32s3::usb_serial_jtag::UsbSerialJtag;
@@ -616,7 +616,7 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
         0x3FF0_1000,
         0x1_F000,
         None,
-        Box::new(crate::peripherals::esp32s3::system_stub::SystemStub::new()),
+        Box::new(crate::peripherals::esp_xtensa_common::system_stub::SystemStub::new()),
     );
 
     // IO_MUX (TRM §4.11). Firmware configures pin function + drive strength
@@ -628,7 +628,7 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
         0x3FF4_9000,
         0x1000,
         None,
-        Box::new(crate::peripherals::esp32s3::system_stub::SystemStub::new()),
+        Box::new(crate::peripherals::esp_xtensa_common::system_stub::SystemStub::new()),
     );
 
     // RTC_CNTL (TRM §13). Real ESP32-classic peripheral — seeds POWERON_RESET
@@ -711,7 +711,7 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
         0x3FF6_6000,
         0x1000,
         None,
-        Box::new(crate::peripherals::esp32s3::system_stub::SystemStub::with_unwritten_ones()),
+        Box::new(crate::peripherals::esp_xtensa_common::system_stub::SystemStub::with_unwritten_ones()),
     );
 
     // LEDC — LED PWM controller (TRM §14) at 0x3FF5_9000. Real model: 8 HS +
@@ -782,7 +782,7 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
             base,
             0x1000,
             None,
-            Box::new(crate::peripherals::esp32s3::system_stub::SystemStub::new()),
+            Box::new(crate::peripherals::esp_xtensa_common::system_stub::SystemStub::new()),
         );
     }
 
@@ -806,7 +806,7 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
         0x6000_0000,
         0x4_3000,
         None,
-        Box::new(crate::peripherals::esp32s3::system_stub::SystemStub::new()),
+        Box::new(crate::peripherals::esp_xtensa_common::system_stub::SystemStub::new()),
     );
 
     // RTC fast memory (8 KiB at 0x3FF8_0000) — alias for instruction view.

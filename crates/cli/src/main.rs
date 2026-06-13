@@ -1515,7 +1515,7 @@ fn run_firmware(args: RunArgs) -> ExitCode {
         // The APP_CPU then boots the real ROM from its reset vector — exactly
         // like silicon, no firmware-symbol hooks.
         if !appcpu_started
-            && labwired_core::peripherals::esp32s3::rom_thunks::APPCPU_RESET_RELEASED
+            && labwired_core::peripherals::esp_xtensa_common::rom_thunks::APPCPU_RESET_RELEASED
                 .with(|s| s.take())
         {
             appcpu_started = true;
@@ -1922,7 +1922,7 @@ fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
     use labwired_core::bus::SystemBus;
     use labwired_core::peripherals::components::{Ssd1680Tricolor290, Uc8151dTricolor290};
     use labwired_core::peripherals::esp32::spi::Esp32Spi;
-    use labwired_core::peripherals::esp32s3::rom_thunks;
+    use labwired_core::peripherals::esp_xtensa_common::rom_thunks;
     use labwired_core::system::xtensa::configure_xtensa_esp32;
     use labwired_core::{Machine, SimulationError};
     use labwired_loader::{extract_arduino_esp32_thunks, load_elf_bytes};
@@ -2648,7 +2648,7 @@ fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
         // S32C1I is atomic within step() so spinlocks work correctly.
         if let Some(cpu1) = machine.cpu_secondary.as_mut() {
             if let Some(boot_addr) =
-                labwired_core::peripherals::esp32s3::rom_thunks::APPCPU_BOOT_ADDR.with(|s| s.take())
+                labwired_core::peripherals::esp_xtensa_common::rom_thunks::APPCPU_BOOT_ADDR.with(|s| s.take())
             {
                 cpu1.set_pc(boot_addr);
                 cpu1.set_sp(appcpu_initial_sp);
