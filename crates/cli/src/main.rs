@@ -2053,13 +2053,20 @@ fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
     //   * `arduino-esp32` profile — resolve s_resume_cores / s_cpu_up /
     //     s_cpu_inited / s_system_inited / s_other_cpu_startup_done from
     //     the ELF symbol table and write 0x01 to both bytes of each.
-    // De-thunk #0 (FIDELITY.md §C1): the dual-core handshake pre-seed +
-    // 10k-cycle keep-alive is OFF by default — the real APP_CPU, released via
-    // the legitimate `ets_set_appcpu_boot_addr` ROM entry, sets s_cpu_up/etc
-    // itself. Proven byte-identical (refresh_gen=1, ink=756/4736, same end PC)
-    // on the demo e-paper ELF. Escape hatch kept for the cross-firmware soak;
-    // hard-delete this block + the keep-alive once ≥2 more builds confirm.
-    let preseed_handshake = std::env::var("LABWIRED_PRESEED_HANDSHAKE").is_ok();
+    // Dual-core handshake pre-seed + 10k-cycle keep-alive. ON by default — it is
+    // LOAD-BEARING for real Arduino-ESP32 firmware: `call_start_cpu0` unstalls
+    // APP_CPU (via `esp_cpu_unstall`, which we thunk to a nop) then spin-waits on
+    // `s_cpu_up[0..1]` for APP_CPU to come up. We don't run a real second core
+    // through `call_start_cpu1`, so without the pre-seed PRO_CPU spins forever in
+    // startup and never reaches the sketch (verified: a real PlatformIO ereader
+    // build gives spi3=0 with this OFF, but spi3=19033 / refresh_gen=1 /
+    // ink=1429 — byte-identical to silicon — with it ON). It is acceptable
+    // plumbing under the fidelity strategy: it gets the firmware past the
+    // unmodeled boot to the REAL render; it does not fake the render. The demo
+    // (agentdeck) ELF happens not to poll s_cpu_up, which is why an earlier
+    // "off by default" attempt looked safe on it. `LABWIRED_NO_PRESEED=1`
+    // disables it for boot-path experiments only.
+    let preseed_handshake = std::env::var("LABWIRED_NO_PRESEED").is_err();
     let (s_resume_cores, s_cpu_up, s_cpu_inited, s_system_inited, s_other_cpu_startup_done);
     if args.profile == "agentdeck" {
         s_resume_cores = 0;

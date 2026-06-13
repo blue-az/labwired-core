@@ -117,22 +117,27 @@ wire are the same path.
 Lines ~924/927, ~1729-1761, ~4061-4075: skip the boot ROM, `set_pc(entry)`,
 `set_sp(0x3FFE_0000)`. SKIP. (Mirrored in `crates/wasm/src/lib.rs`.)
 
-### C1. Dual-core handshake pre-seed + keep-alive — REMOVABLE (validated 2026-06-13)
-`run_snapshot_capture` pre-seeded the SMP bring-up flags (`s_cpu_up`,
+### C1. Dual-core handshake pre-seed + keep-alive — KEEP (load-bearing plumbing)
+`run_snapshot_capture` pre-seeds the SMP bring-up flags (`s_cpu_up`,
 `s_cpu_inited`, `s_system_inited`, `s_resume_cores`, `s_other_cpu_startup_done`)
-to 0x01 at boot, registered them with `set_appcpu_up_flags`, AND re-stamped them
-every 10k cycles — so `start_other_core`/`do_other_cpu_settings` always saw
-APP_CPU "up". This was a CHEAT(NOP) on the inter-core protocol.
-**Finding:** gated behind `LABWIRED_NO_PRESEED=1`, the demo ESP32 e-paper ELF
-(`demo-esp32-epaper-lab.elf`) runs **byte-identical** — `spi3 transactions=328`,
-same end `pc=0x400d1fc2` at 20M cycles — with the pre-seed AND keep-alive fully
-off. So the real APP_CPU bring-up (released via the legitimate
-`ets_set_appcpu_boot_addr` ROM entry at 0x4000_689c, which unhalts the second
-core at the firmware-supplied vector) already completes the handshake itself;
-the pre-seed is not load-bearing. **Next:** verify across ≥2 more Arduino-ESP32
-builds, then flip the default off and delete the pre-seed + keep-alive. Note the
-arduino-esp32-profile comment about newer cores' tight spin-wait — confirm those
-too before removing the safety net.
+to 0x01 and re-stamps them every 10k cycles, so the firmware's startup sees
+APP_CPU "up". CHEAT(NOP) on the inter-core protocol — but a NECESSARY one.
+**Correction (2026-06-13):** an earlier "removable, off by default" claim was
+WRONG — it was validated only on the demo `agentdeck` ELF, which does not poll
+`s_cpu_up`. REAL PlatformIO Arduino-ESP32 firmware does: `call_start_cpu0`
+unstalls APP_CPU via `esp_cpu_unstall` (thunked to nop — no real 2nd core runs
+`call_start_cpu1`) then spin-waits on `s_cpu_up[0..1]` at `call_start_cpu0+0x130`
+(~0x40082ad6). Without the pre-seed it spins forever: a real ereader build gives
+`spi3=0`, no paint. WITH it: `spi3=19033`, refresh_gen=1, ink=1429/4736 —
+**byte-identical to silicon (19033/19033)**. Under the fidelity strategy this is
+*acceptable plumbing*: it carries the firmware past the unmodeled dual-core boot
+to the REAL render; it does NOT fake the render. Default ON; `LABWIRED_NO_PRESEED=1`
+disables for boot-path experiments. Removing it for real would require modeling a
+real second core through `call_start_cpu1` — pure plumbing, not worth it.
+**Genericity result:** the `arduino-esp32` profile (symbol-resolved thunks) +
+pre-seed paints ANY symbol-bearing Arduino-ESP32 build byte-exact — this is the
+generic path proto.cat should use (NOT `agentdeck`, whose hardcoded addresses
+fit one firmware).
 
 ### D. Peripheral-as-RAM stubs — `crates/core/src/system/xtensa.rs`
 Of 16 `RamPeripheral` installs, the **cheats** are the ones standing in for a
