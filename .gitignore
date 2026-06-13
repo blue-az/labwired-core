@@ -47,3 +47,6 @@ fixtures/
 
 # mkdocs build output
 /site/
+
+# Isolated worktrees (superpowers)
+.worktrees/
