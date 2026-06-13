@@ -199,8 +199,7 @@ impl Esp32Uart {
 
     /// STATUS (0x1C): live RXFIFO_CNT[7:0] + TXFIFO_CNT[23:16] (classic 8-bit).
     fn status_word(&self) -> u32 {
-        ((self.rx_fifo.borrow().len() as u32) & 0xFF)
-            | (((self.tx_fifo.len() as u32) & 0xFF) << 16)
+        ((self.rx_fifo.borrow().len() as u32) & 0xFF) | (((self.tx_fifo.len() as u32) & 0xFF) << 16)
     }
 
     fn read_reg_word(&self, word_off: u64) -> u32 {

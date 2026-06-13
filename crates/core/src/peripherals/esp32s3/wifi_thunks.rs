@@ -44,9 +44,9 @@
 //! Chunked/connection-close `recv` semantics to make `HTTPClient` return a
 //! clean 200 are a follow-up.
 
-use crate::peripherals::esp_xtensa_common::rom_thunks::RomThunkBank;
 use crate::cpu::xtensa_lx7::XtensaLx7;
 use crate::network::sim::SimNet;
+use crate::peripherals::esp_xtensa_common::rom_thunks::RomThunkBank;
 use crate::{Bus, SimResult};
 use std::cell::RefCell;
 use std::collections::HashMap;

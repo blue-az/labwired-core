@@ -16,11 +16,11 @@ use crate::peripherals::esp32s3::gpio::{Esp32s3Gpio, GpioObserver};
 use crate::peripherals::esp32s3::i2c::{Esp32s3I2c, I2C0_BASE, I2C0_INTR_SOURCE_ID, I2C0_SIZE};
 use crate::peripherals::esp32s3::intmatrix::Esp32s3IntMatrix;
 use crate::peripherals::esp32s3::io_mux::Esp32s3IoMux;
-use crate::peripherals::esp_xtensa_common::rom_thunks::{self, RomThunkBank};
-use crate::peripherals::esp_xtensa_common::system_stub::{EfuseStub, RtcCntlStub, SystemStub};
 use crate::peripherals::esp32s3::systimer::Systimer;
 use crate::peripherals::esp32s3::tmp102::Tmp102;
 use crate::peripherals::esp32s3::usb_serial_jtag::UsbSerialJtag;
+use crate::peripherals::esp_xtensa_common::rom_thunks::{self, RomThunkBank};
+use crate::peripherals::esp_xtensa_common::system_stub::{EfuseStub, RtcCntlStub, SystemStub};
 use crate::Bus;
 use crate::Cpu;
 use std::sync::{Arc, Mutex};
@@ -516,9 +516,27 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
     // UART0 — STM32F1 layout for now (see caveat above).
     // UART0 (Serial) echoes to the host console; UART1/2 are capture-only.
     // Interrupt-matrix sources: ETS_UART{0,1,2}_INTR_SOURCE = 34/35/36.
-    bus.add_peripheral("uart0", 0x3FF4_0000, 0x100, None, Box::new(Esp32Uart::new(true, 34)));
-    bus.add_peripheral("uart1", 0x3FF5_0000, 0x100, None, Box::new(Esp32Uart::new(false, 35)));
-    bus.add_peripheral("uart2", 0x3FF6_E000, 0x100, None, Box::new(Esp32Uart::new(false, 36)));
+    bus.add_peripheral(
+        "uart0",
+        0x3FF4_0000,
+        0x100,
+        None,
+        Box::new(Esp32Uart::new(true, 34)),
+    );
+    bus.add_peripheral(
+        "uart1",
+        0x3FF5_0000,
+        0x100,
+        None,
+        Box::new(Esp32Uart::new(false, 35)),
+    );
+    bus.add_peripheral(
+        "uart2",
+        0x3FF6_E000,
+        0x100,
+        None,
+        Box::new(Esp32Uart::new(false, 36)),
+    );
 
     // SPI0 / SPI1 — flash SPI controllers used by the BROM during boot.
     // Sim doesn't model the flash MMU, but Arduino-ESP32's
@@ -711,7 +729,9 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
         0x3FF6_6000,
         0x1000,
         None,
-        Box::new(crate::peripherals::esp_xtensa_common::system_stub::SystemStub::with_unwritten_ones()),
+        Box::new(
+            crate::peripherals::esp_xtensa_common::system_stub::SystemStub::with_unwritten_ones(),
+        ),
     );
 
     // LEDC — LED PWM controller (TRM §14) at 0x3FF5_9000. Real model: 8 HS +

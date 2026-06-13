@@ -2830,7 +2830,8 @@ fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
         // S32C1I is atomic within step() so spinlocks work correctly.
         if let Some(cpu1) = machine.cpu_secondary.as_mut() {
             if let Some(boot_addr) =
-                labwired_core::peripherals::esp_xtensa_common::rom_thunks::APPCPU_BOOT_ADDR.with(|s| s.take())
+                labwired_core::peripherals::esp_xtensa_common::rom_thunks::APPCPU_BOOT_ADDR
+                    .with(|s| s.take())
             {
                 cpu1.set_pc(boot_addr);
                 cpu1.set_sp(appcpu_initial_sp);

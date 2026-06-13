@@ -157,8 +157,10 @@ pub struct SystemBus {
     /// `bus.flash_thunks.insert(pc, thunk)`. The CPU's BREAK 1,14
     /// dispatcher (xtensa_lx7.rs) calls `bus.get_rom_thunk(pc)` which
     /// checks both this table and any `RomThunkBank` peripherals.
-    pub flash_thunks:
-        std::collections::HashMap<u32, crate::peripherals::esp_xtensa_common::rom_thunks::RomThunkFn>,
+    pub flash_thunks: std::collections::HashMap<
+        u32,
+        crate::peripherals::esp_xtensa_common::rom_thunks::RomThunkFn,
+    >,
     peripheral_ranges: Vec<PeripheralRange>,
     peripheral_hint: Cell<Option<usize>>,
     /// Cached index of the classic-ESP32 DPORT peripheral, if one is
