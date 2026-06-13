@@ -1237,16 +1237,20 @@ impl SystemBus {
             // Per-family factories own their peripheral arms in their own modules,
             // so this central match stops growing (and shrinks as families migrate
             // out). Try them first; unmigrated families fall through to the match.
-            if let Some(dev) =
-                crate::peripherals::esp32s3::factory::try_build(&canonical_type, p_cfg)
-            {
+            let family_dev = crate::peripherals::esp32s3::factory::try_build(
+                &canonical_type,
+                p_cfg,
+            )
+            .or_else(|| {
+                crate::peripherals::nrf52::factory::try_build(&canonical_type, p_cfg, manifest)
+            });
+            if let Some(dev) = family_dev {
                 bus.push_peripheral(p_cfg, dev)?;
                 continue;
             }
 
             let dev: Box<dyn Peripheral> = match canonical_type.as_str() {
                 // nRF52 UARTE: full register surface including PSEL/BAUDRATE/CONFIG/DMA.
-                "nrf52840_uart" => Box::new(crate::peripherals::nrf52::uarte::Nrf52Uarte::new()),
                 "uart" | "stm32_uart" | "stm32f1_uart" | "stm32f2_uart" | "stm32f4_uart"
                 | "stm32f7_usart" | "stm32h5_usart" | "efm32_uart" | "nxp_lpuart" | "ns16550"
                 | "pl011" | "gaislerapbuart" => {
@@ -1603,145 +1607,10 @@ impl SystemBus {
                 }
                 // Nordic peripherals — register-surface models cross-validated
                 // by hw-oracle::nrf52_onboarding_diff. See peripherals/nrf52/.
-                "nrf52840_rtc" | "nrf52_rtc" => {
-                    // RTC1/RTC2 have 4 CC; RTC0 has 3 (default).
-                    let num_cc: usize = p_cfg
-                        .config
-                        .get("num_cc")
-                        .and_then(|v| v.as_u64())
-                        .map(|n| n as usize)
-                        .unwrap_or(3);
-                    Box::new(crate::peripherals::nrf52::rtc::Nrf52Rtc::new_with_cc(
-                        num_cc,
-                    ))
-                }
-                "nrf52840_rng" | "nrf52_rng" => {
-                    Box::new(crate::peripherals::nrf52::rng::Nrf52Rng::new())
-                }
-                "nrf52840_watchdog" | "nrf52_watchdog" | "nrf52_wdt" => {
-                    Box::new(crate::peripherals::nrf52::wdt::Nrf52Wdt::new())
-                }
-                "nrf52840_ppi" | "nrf52_ppi" => {
-                    Box::new(crate::peripherals::nrf52::ppi::Nrf52Ppi::new())
-                }
-                "nrf52840_pdm" | "nrf52_pdm" => {
-                    Box::new(crate::peripherals::nrf52::pdm::Nrf52Pdm::new())
-                }
-                "nrf52_gpiote" | "nrf52840_gpiotasksevents" => {
-                    Box::new(crate::peripherals::nrf52::gpiote::Nrf52Gpiote::new())
-                }
-                "nrf52840_ecb" | "nrf52_ecb" => {
-                    Box::new(crate::peripherals::nrf52::ecb::Nrf52Ecb::new())
-                }
-                "nrf52_clock" => Box::new(crate::peripherals::nrf52::clock::Nrf52Clock::new()),
-                "nrf52840_temp" | "nrf52_temp" => {
-                    Box::new(crate::peripherals::nrf52::temp::Nrf52Temp::new())
-                }
-                "nrf52840_adc" | "nrf52840_saadc" | "nrf52_saadc" => {
-                    Box::new(crate::peripherals::nrf52::saadc::Nrf52Saadc::new())
-                }
-                "nrf52840_pwm" | "nrf52_pwm" => {
-                    Box::new(crate::peripherals::nrf52::pwm::Nrf52Pwm::new())
-                }
-                "nrf52840_qspi" | "nrf52_qspi" => {
-                    Box::new(crate::peripherals::nrf52::qspi::Nrf52Qspi::new())
-                }
-                "nrf52840_nfct" | "nrf52_nfct" => {
-                    Box::new(crate::peripherals::nrf52::nfct::Nrf52Nfct::new())
-                }
-                "nrf52840_ficr" | "nrf52_ficr" => {
-                    Box::new(crate::peripherals::nrf52::ficr::Nrf52Ficr::new())
-                }
-                "nrf52840_uicr" | "nrf52_uicr" => {
-                    Box::new(crate::peripherals::nrf52::uicr::Nrf52Uicr::new())
-                }
-                "nrf52840_nvmc" | "nrf52_nvmc" => {
-                    Box::new(crate::peripherals::nrf52::nvmc::Nrf52Nvmc::new())
-                }
-                "nrf52840_egu" | "nrf52_egu" => {
-                    Box::new(crate::peripherals::nrf52::egu::Nrf52Egu::new())
-                }
-                "nrf52840_comp" | "nrf52_comp" => {
-                    Box::new(crate::peripherals::nrf52::comp::Nrf52Comp::new())
-                }
-                "nrf52840_lpcomp" | "nrf52_lpcomp" => {
-                    Box::new(crate::peripherals::nrf52::lpcomp::Nrf52Lpcomp::new())
-                }
-                "nrf52840_qdec" | "nrf52_qdec" => {
-                    Box::new(crate::peripherals::nrf52::qdec::Nrf52Qdec::new())
-                }
-                "nrf52840_i2s" | "nrf52_i2s" => {
-                    Box::new(crate::peripherals::nrf52::i2s::Nrf52I2s::new())
-                }
-                "nrf52840_mwu" | "nrf52_mwu" => {
-                    Box::new(crate::peripherals::nrf52::mwu::Nrf52Mwu::new())
-                }
-                "nrf52840_aar" | "nrf52_aar" => {
-                    Box::new(crate::peripherals::nrf52::aar::Nrf52Aar::new())
-                }
-                "nrf52840_ccm" | "nrf52_ccm" => {
-                    Box::new(crate::peripherals::nrf52::ccm::Nrf52Ccm::new())
-                }
-                "nrf52840_bprot" | "nrf52_bprot" => {
-                    Box::new(crate::peripherals::nrf52::bprot::Nrf52Bprot::new())
-                }
-                "nrf52840_radio" | "nrf52_radio" => {
-                    Box::new(crate::peripherals::nrf52::radio::Nrf52Radio::new())
-                }
-                "nrf52840_usbd" | "nrf52_usbd" => {
-                    Box::new(crate::peripherals::nrf52::usbd::Nrf52Usbd::new())
-                }
-                "nrf52840_acl" | "nrf52_acl" => {
-                    Box::new(crate::peripherals::nrf52::acl::Nrf52Acl::new())
-                }
-                "nrf52840_cryptocell" | "nrf52_cryptocell" => {
-                    Box::new(crate::peripherals::nrf52::cryptocell::Nrf52Cryptocell::new())
-                }
-                "nrf52840_usbregulator" | "nrf52_usbregulator" => {
-                    Box::new(crate::peripherals::nrf52::usbregulator::Nrf52UsbRegulator::new())
-                }
-                "nrf52840_spis" | "nrf52_spis" => {
-                    Box::new(crate::peripherals::nrf52::spis::Nrf52Spis::new())
-                }
-                "nrf52840_twis" | "nrf52_twis" => {
-                    Box::new(crate::peripherals::nrf52::twis::Nrf52Twis::new())
-                }
                 // TWIM (I²C master with EasyDMA) — nRF52840 PS §6.31.
                 // `nrf52840_i2c` is the canonical chip-YAML type; `nrf52840_twim`
                 // and `nrf52_twim` are also accepted so firmware configs that
                 // name it more precisely still resolve here.
-                "nrf52840_twim" | "nrf52_twim" => {
-                    let mut twim = crate::peripherals::nrf52::twim::Nrf52Twim::new();
-                    for ext in &manifest.external_devices {
-                        if ext.connection != p_cfg.id {
-                            continue;
-                        }
-                        match crate::peripherals::components::build_i2c_device(
-                            &ext.r#type,
-                            &ext.config,
-                        ) {
-                            Some(device) => {
-                                tracing::info!(
-                                    "twim attach: '{}' (type={}) -> '{}'",
-                                    ext.id,
-                                    ext.r#type,
-                                    p_cfg.id
-                                );
-                                twim.attach(device);
-                            }
-                            None => {
-                                tracing::warn!(
-                                    "twim attach skipped: unknown device type '{}' \
-                                     for external id '{}' on bus '{}'",
-                                    ext.r#type,
-                                    ext.id,
-                                    p_cfg.id
-                                );
-                            }
-                        }
-                    }
-                    Box::new(twim)
-                }
                 // ESP32-family Timer Group (TIMG0/TIMG1) — the same IP block is
                 // used by the classic ESP32, S3, and C3.  All share the register
                 // layout: T0CONFIG=0x00, T0LO=0x04, T0HI=0x08, T0UPDATE=0x0C.
