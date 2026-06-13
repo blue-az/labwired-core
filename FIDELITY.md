@@ -8,6 +8,31 @@ register/bus decode, skipping a boot step, or inferring a signal we don't model
 — is a **cheat**. Cheats are sometimes pragmatic (we have no boot-ROM binary to
 execute), but every one is a fidelity gap we want to see and close.
 
+## What to model — and the test for a cheat (read this first)
+
+The value is a **hardware oracle**: "does the firmware make the hardware do the
+right thing?" That lives at the **peripheral-facing surface** — the buses
+(SPI/I²C/GPIO) and the devices the firmware drives. Model THAT deep and broad;
+it's the moat (e-paper: 19033/19033 SPI transfers byte-identical to silicon).
+The **boot ROM / flash controller / XIP-MMU / FreeRTOS+heap internals are
+plumbing** the firmware passes through to reach `app_main()`. The agent isn't
+validating them — a bug in our flash-unpack emulation is not a bug in the user's
+firmware. Get past them the cheapest legitimate way.
+
+**The test for whether a thunk is a real cheat:** *does removing it change the
+observable peripheral output?*
+- **Yes** → it fakes the validated behavior → real cheat, must die (e.g. WiFi
+  thunk faking `WL_CONNECTED`, a panel BYPASS faking ink).
+- **No** → it's unmodeled plumbing (`heap_caps_malloc`, `esp_log`, boot-handshake
+  flags). No fidelity payoff in removing it — only genericity (arbitrary firmware),
+  solved cheaply via **real ROM resident + direct segment load**, NOT by emulating
+  the boot/flash path. Removing it for purity alone is optimizing the wrong variable.
+
+Consequence: **the e-paper render path is already an honest oracle** — real
+firmware → real SPI3 + real DC GPIO → real panel model. The boot/runtime thunks
+around it are plumbing; none fake the render. Drill into peripheral/device
+breadth (the product) and genericity-via-resident-ROM, not deeper boot emulation.
+
 ## Marker convention
 
 Every cheat in the code carries a grep-able marker on the line or block:
