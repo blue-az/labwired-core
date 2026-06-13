@@ -77,12 +77,18 @@ fn esp32_uart0_emits_to_sink() {
     bus.attach_uart_tx_sink(sink.clone(), false);
 
     // UART0 base 0x3FF4_0000, real ESP32 layout: TX is the FIFO at offset 0x00.
-    // Bytes shift out at the baud rate, so tick the bus until the FIFO drains.
+    // Bytes shift out at the baud rate. Drain by ticking the uart0 peripheral
+    // directly — independent of the bus's scheduler cadence (uart0 is
+    // event-scheduler-managed, so a tight tick_peripherals loop wouldn't
+    // reliably advance it across build configs).
     for &b in b"ESP32" {
         bus.write_u8(0x3FF4_0000, b).unwrap();
     }
+    let uart0_idx = bus
+        .find_peripheral_index_by_name("uart0")
+        .expect("uart0 mapped");
     for _ in 0..2_000_000 {
-        bus.tick_peripherals_with_costs();
+        let _ = bus.peripherals[uart0_idx].dev.tick();
         if sink.lock().unwrap().len() >= 5 {
             break;
         }
