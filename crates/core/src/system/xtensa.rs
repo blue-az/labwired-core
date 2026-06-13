@@ -1135,39 +1135,6 @@ pub fn configure_xtensa_esp32s3(bus: &mut SystemBus, opts: &Esp32s3Opts) -> Esp3
         ),
     );
 
-    // ── I²C0 + attached slaves ───────────────────────────────────────────
-    // TMP102 @ 0x48 (Plan 4 demo). Opt-in PCA9685 @ 0x40 for the SpiceDispenser
-    // board (LABWIRED_ESP32S3_PCA9685=1): the two servos hang off its PWM
-    // channels, so attaching it lets the unmodified firmware's I²C dispense
-    // path ACK and drive the servos instead of erroring on an empty bus.
-    let mut i2c0 = Esp32s3I2c::new();
-    i2c0.attach_slave(Box::new(Tmp102::new()));
-    if std::env::var("LABWIRED_ESP32S3_PCA9685").is_ok() {
-        i2c0.attach_slave(Box::new(
-            crate::peripherals::components::pca9685::Pca9685::new(),
-        ));
-        eprintln!("configure_xtensa_esp32s3: attached PCA9685 @ 0x40 on I²C0");
-    }
-    bus.add_peripheral("i2c0", I2C0_BASE as u64, I2C0_SIZE, None, Box::new(i2c0));
-    // Bind the I²C0 source ID through the intmatrix helper so esp-hal's
-    // poll-then-read driver path doesn't depend on routing existing yet —
-    // routing is firmware-controlled, this just leaves the source visible.
-    let _ = I2C0_INTR_SOURCE_ID;
-
-    // ── I²C1 ─────────────────────────────────────────────────────────────
-    // Second controller, same faithful model, no slaves attached (an empty
-    // bus NACKs every address, exactly like real hardware with nothing
-    // wired to the I2C1 pins). Asserts ETS_I2C_EXT1_INTR_SOURCE (43).
-    bus.add_peripheral(
-        "i2c1",
-        crate::peripherals::esp32s3::i2c::I2C1_BASE as u64,
-        crate::peripherals::esp32s3::i2c::I2C1_SIZE,
-        None,
-        Box::new(Esp32s3I2c::with_intr_source(
-            crate::peripherals::esp32s3::i2c::I2C1_INTR_SOURCE_ID,
-        )),
-    );
-
     // ── SYSTEM / RTC_CNTL / EFUSE stubs ──────────────────────────────────
     // SYSTEM peripheral on ESP32-S3 is followed by INTERRUPT_CORE0/1 at
     // 0x600C_2000 / 0x600C_2800 (CPU intr-from-CPU mapping) and the AES /
@@ -1283,45 +1250,6 @@ pub fn configure_xtensa_esp32s3(bus: &mut SystemBus, opts: &Esp32s3Opts) -> Esp3
         0x4_0000,
         None,
         Box::new(SystemStub::with_unwritten_ones()),
-    );
-
-    // ── UART0/1/2 — real ESP32-S3 layout (soc/uart_reg.h) ────────────────
-    // FIFO @0x0, STATUS @0x1C (TXFIFO_CNT[25:16]=0 → always room), CONF0 @0x20,
-    // interrupt regs @0x04..0x10 (TXFIFO_EMPTY/TX_DONE level-source). Bases
-    // DR_REG_UART{,1,2}_BASE = 0x6000_0000 / 0x6001_0000 / 0x6002_E000.
-    // MUST register AFTER the wide low_mmio (0x6000_0000+0x7000) and mmio_rest
-    // (0x6001_0000+0x40000) stubs: peripheral lookup resolves an overlap to the
-    // LAST range whose start ≤ addr, so these narrower, same-start UART windows
-    // only win when registered last. A separate, self-contained type from the
-    // STM32 `Uart`, so the S3 layout never perturbs the ARM UART model. UART0
-    // echoes TX to the host console (ESP-IDF / Arduino `Serial`); UART1/2 are
-    // capture-only.
-    bus.add_peripheral(
-        "uart0_s3",
-        0x6000_0000,
-        0x100,
-        None,
-        Box::new(crate::peripherals::esp32s3::uart::Esp32s3Uart::new(
-            true, 27,
-        )),
-    );
-    bus.add_peripheral(
-        "uart1_s3",
-        0x6001_0000,
-        0x100,
-        None,
-        Box::new(crate::peripherals::esp32s3::uart::Esp32s3Uart::new(
-            false, 28,
-        )),
-    );
-    bus.add_peripheral(
-        "uart2_s3",
-        0x6002_E000,
-        0x100,
-        None,
-        Box::new(crate::peripherals::esp32s3::uart::Esp32s3Uart::new(
-            false, 29,
-        )),
     );
 
     // ESP32-S3 peripheral models. Factored into a separate unit so Stage 3 can
@@ -1606,6 +1534,76 @@ fn register_esp32s3_peripherals(bus: &mut SystemBus, opts: &Esp32s3Opts) {
         0x1000,
         None,
         Box::new(crate::peripherals::esp32s3::usb_otg::Esp32s3UsbOtg::new(23)),
+    );
+
+    // ── I²C0 + attached slaves ───────────────────────────────────────────
+    // TMP102 @ 0x48 (Plan 4 demo). Opt-in PCA9685 @ 0x40 for the SpiceDispenser
+    // board (LABWIRED_ESP32S3_PCA9685=1): the two servos hang off its PWM
+    // channels, so attaching it lets the unmodified firmware's I²C dispense
+    // path ACK and drive the servos instead of erroring on an empty bus.
+    let mut i2c0 = Esp32s3I2c::new();
+    i2c0.attach_slave(Box::new(Tmp102::new()));
+    if std::env::var("LABWIRED_ESP32S3_PCA9685").is_ok() {
+        i2c0.attach_slave(Box::new(
+            crate::peripherals::components::pca9685::Pca9685::new(),
+        ));
+        eprintln!("configure_xtensa_esp32s3: attached PCA9685 @ 0x40 on I²C0");
+    }
+    bus.add_peripheral("i2c0", I2C0_BASE as u64, I2C0_SIZE, None, Box::new(i2c0));
+    // Bind the I²C0 source ID through the intmatrix helper so esp-hal's
+    // poll-then-read driver path doesn't depend on routing existing yet —
+    // routing is firmware-controlled, this just leaves the source visible.
+    let _ = I2C0_INTR_SOURCE_ID;
+    // ── I²C1 ─────────────────────────────────────────────────────────────
+    // Second controller, same faithful model, no slaves attached (an empty
+    // bus NACKs every address, exactly like real hardware with nothing
+    // wired to the I2C1 pins). Asserts ETS_I2C_EXT1_INTR_SOURCE (43).
+    bus.add_peripheral(
+        "i2c1",
+        crate::peripherals::esp32s3::i2c::I2C1_BASE as u64,
+        crate::peripherals::esp32s3::i2c::I2C1_SIZE,
+        None,
+        Box::new(Esp32s3I2c::with_intr_source(
+            crate::peripherals::esp32s3::i2c::I2C1_INTR_SOURCE_ID,
+        )),
+    );
+    // ── UART0/1/2 — real ESP32-S3 layout (soc/uart_reg.h) ────────────────
+    // FIFO @0x0, STATUS @0x1C (TXFIFO_CNT[25:16]=0 → always room), CONF0 @0x20,
+    // interrupt regs @0x04..0x10 (TXFIFO_EMPTY/TX_DONE level-source). Bases
+    // DR_REG_UART{,1,2}_BASE = 0x6000_0000 / 0x6001_0000 / 0x6002_E000.
+    // MUST register AFTER the wide low_mmio (0x6000_0000+0x7000) and mmio_rest
+    // (0x6001_0000+0x40000) stubs: peripheral lookup resolves an overlap to the
+    // LAST range whose start ≤ addr, so these narrower, same-start UART windows
+    // only win when registered last. A separate, self-contained type from the
+    // STM32 `Uart`, so the S3 layout never perturbs the ARM UART model. UART0
+    // echoes TX to the host console (ESP-IDF / Arduino `Serial`); UART1/2 are
+    // capture-only.
+    bus.add_peripheral(
+        "uart0_s3",
+        0x6000_0000,
+        0x100,
+        None,
+        Box::new(crate::peripherals::esp32s3::uart::Esp32s3Uart::new(
+            true, 27,
+        )),
+    );
+    bus.add_peripheral(
+        "uart1_s3",
+        0x6001_0000,
+        0x100,
+        None,
+        Box::new(crate::peripherals::esp32s3::uart::Esp32s3Uart::new(
+            false, 28,
+        )),
+    );
+    bus.add_peripheral(
+        "uart2_s3",
+        0x6002_E000,
+        0x100,
+        None,
+        Box::new(crate::peripherals::esp32s3::uart::Esp32s3Uart::new(
+            false, 29,
+        )),
     );
 }
 
