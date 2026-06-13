@@ -1049,14 +1049,20 @@ impl SystemBus {
     ///
     /// When `echo_stdout` is false, UART writes will no longer be printed to stdout.
     pub fn attach_uart_tx_sink(&mut self, sink: Arc<Mutex<Vec<u8>>>, echo_stdout: bool) {
+        use crate::peripherals::esp32::uart::Esp32Uart;
         for p in &mut self.peripherals {
             let Some(any) = p.dev.as_any_mut() else {
                 continue;
             };
-            let Some(uart) = any.downcast_mut::<Uart>() else {
+            // STM32-layout generic UART.
+            if let Some(uart) = any.downcast_mut::<Uart>() {
+                uart.set_sink(Some(sink.clone()), echo_stdout);
                 continue;
-            };
-            uart.set_sink(Some(sink.clone()), echo_stdout);
+            }
+            // Real ESP32-classic UART (echo is fixed at construction time).
+            if let Some(uart) = any.downcast_mut::<Esp32Uart>() {
+                uart.set_sink(Some(sink.clone()));
+            }
         }
     }
 
