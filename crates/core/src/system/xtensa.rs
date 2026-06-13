@@ -841,29 +841,19 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
     XtensaLx7::new()
 }
 
-/// Register all ESP32-S3 peripherals on `bus` and return the CPU + the
-/// shared flash backing buffer.
-pub fn configure_xtensa_esp32s3(bus: &mut SystemBus, opts: &Esp32s3Opts) -> Esp32s3Wiring {
-    // SystemBus::new() seeds the bus with STM32 default peripherals
-    // (tim2 at 0x4000_0000, tim3 at 0x4000_0400, …). On ESP32-S3 the
-    // 0x4000_0000–0x4006_0000 window is the BROM, and on STM32 it's the
-    // peripheral aliased region — completely different memory maps. Drop
-    // the seeded peripherals before installing the ESP32-S3 bank, otherwise
-    // a tim3 read at 0x4000_057c shadows our `rtc_get_reset_reason` thunk
-    // and the BREAK 1,14 dispatch never fires.
-    bus.peripherals.clear();
-    // The seeded `flash` and `ram` LinearMemory slabs use STM32 base
-    // addresses (0x0 and 0x2000_0000) so they don't overlap, but they're
-    // dead weight on Xtensa — leave them allocated; the bus accessors check
-    // `addr >= base_addr` first and fall through to peripherals on miss.
-    //
-    // Disable Cortex-M bit-band aliasing — its 0x4200_0000–0x4400_0000 range
-    // collides with the ESP32-S3 flash-XIP I-cache window. With bit-band
-    // enabled, instruction fetches from 0x4200_xxxx get translated as
-    // single-bit reads of a synthetic peripheral byte instead of going
-    // through our FlashXipPeripheral. ESP32-S3 has no bit-band hardware.
-    bus.bit_band_enabled = false;
+/// Outputs of [`configure_esp32s3_memmap`]: the boot mode plus the flash
+/// backings the caller threads into the SPIMEM1 controller and `Esp32s3Wiring`.
+struct Esp32s3MemMap {
+    boot_mode: Esp32s3BootMode,
+    icache_backing: Arc<Mutex<Vec<u8>>>,
+    dcache_backing: Arc<Mutex<Vec<u8>>>,
+    shared_flash_backing: Arc<Mutex<Vec<u8>>>,
+}
 
+/// Install the ESP32-S3 memory map: IRAM/DRAM/RTC SRAM banks, the flash-XIP
+/// cache windows (real-MMU or fast-boot identity), and the boot ROM (faithful
+/// image or thunk harness). Core wiring, independent of the peripheral models.
+fn configure_esp32s3_memmap(bus: &mut SystemBus, opts: &Esp32s3Opts) -> Esp32s3MemMap {
     // ── IRAM (instruction fetch view) ─────────────────────────────────────
     bus.add_peripheral(
         "iram",
@@ -1033,6 +1023,44 @@ pub fn configure_xtensa_esp32s3(bus: &mut SystemBus, opts: &Esp32s3Opts) -> Esp3
             Esp32s3BootMode::Harness
         }
     };
+
+    Esp32s3MemMap {
+        boot_mode,
+        icache_backing,
+        dcache_backing,
+        shared_flash_backing,
+    }
+}
+
+/// Register all ESP32-S3 peripherals on `bus` and return the CPU + the
+/// shared flash backing buffer.
+pub fn configure_xtensa_esp32s3(bus: &mut SystemBus, opts: &Esp32s3Opts) -> Esp32s3Wiring {
+    // SystemBus::new() seeds the bus with STM32 default peripherals
+    // (tim2 at 0x4000_0000, tim3 at 0x4000_0400, …). On ESP32-S3 the
+    // 0x4000_0000–0x4006_0000 window is the BROM, and on STM32 it's the
+    // peripheral aliased region — completely different memory maps. Drop
+    // the seeded peripherals before installing the ESP32-S3 bank, otherwise
+    // a tim3 read at 0x4000_057c shadows our `rtc_get_reset_reason` thunk
+    // and the BREAK 1,14 dispatch never fires.
+    bus.peripherals.clear();
+    // The seeded `flash` and `ram` LinearMemory slabs use STM32 base
+    // addresses (0x0 and 0x2000_0000) so they don't overlap, but they're
+    // dead weight on Xtensa — leave them allocated; the bus accessors check
+    // `addr >= base_addr` first and fall through to peripherals on miss.
+    //
+    // Disable Cortex-M bit-band aliasing — its 0x4200_0000–0x4400_0000 range
+    // collides with the ESP32-S3 flash-XIP I-cache window. With bit-band
+    // enabled, instruction fetches from 0x4200_xxxx get translated as
+    // single-bit reads of a synthetic peripheral byte instead of going
+    // through our FlashXipPeripheral. ESP32-S3 has no bit-band hardware.
+    bus.bit_band_enabled = false;
+
+    let Esp32s3MemMap {
+        boot_mode,
+        icache_backing,
+        dcache_backing,
+        shared_flash_backing,
+    } = configure_esp32s3_memmap(bus, opts);
 
     // ── USB_SERIAL_JTAG ───────────────────────────────────────────────────
     bus.add_peripheral(
