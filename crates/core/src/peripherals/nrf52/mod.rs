@@ -18,6 +18,7 @@ pub mod comp;
 pub mod cryptocell;
 pub mod ecb;
 pub mod egu;
+pub mod factory;
 pub mod ficr;
 pub mod gpiote;
 pub mod i2s;
