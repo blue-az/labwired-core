@@ -191,9 +191,23 @@ the esp32c3 rom-boot effort, ×dual-core), sequenced below.
      0x11=17. Fix: `RESET_CAUSE_APPCPU_SHIFT 4→6`, `MASK 0xF→0x3F`. BROM now runs
      **1,000,000+ instrs, no fatal stall** (was 12,948). All 18 rtc_cntl tests pass;
      e-paper still paints (756 ink). Silicon-accurate, benefits any reset-reason reader.
-   - **NEXT stall:** the BROM proceeds toward loading the app from SPI flash
-     (`ets_unpack_flash_code`). To boot-to-app the smoke test needs a flash image +
-     the SPI-flash controller / MMU model. Then TIMG/RTC clock. Phased,
-     board-validatable.
+   - **FIXED — spi_flash_attach spin.** Next stall was `spi_flash_attach`
+     (0x40062a6c) polling `SPI1_CMD_REG` (0x3ff42000) until its command bit
+     cleared. `Esp32Spi` only auto-cleared the USR bit (18); the BROM's flash
+     path writes other command bits (bit 12) that also self-clear on real
+     silicon. Fix: a non-USR `CMD_REG` write now clears to 0 (op completes
+     instantly — we don't model flash array content). 99 spi tests pass.
+   - **FIXED — Cache_Read_Init spin.** Next stall was `Cache_Read_Init`
+     (0x40009950) setting DPORT_PRO_CACHE_CTRL (0x3ff00040) bit 4 (CACHE_ENABLE)
+     then waiting for bit 5 (CACHE_ENABLED). DPORT just round-tripped writes. Fix:
+     PRO/APP_CACHE_CTRL now mirror the enabled bit (5) to the enable bit (4). 14
+     dport tests pass. BROM now runs cache + flash-controller init and reaches the
+     flash-image read.
+   - **NEXT stall:** the BROM reads the bootloader/app image from SPI flash
+     (`ets_unpack_flash_code`, region 0x4000f000). The smoke test loads only the
+     BROM — no flash content — so this needs a flash backing image (the
+     Arduino-ESP32 .bin: bootloader@0x1000 + partition@0x8000 + app@0x10000) and
+     flash-read/XIP-MMU modeling so the BROM unpacks + jumps to the app. That's
+     the step that boots an ARBITRARY binary. Then TIMG/RTC clock. Board-validatable.
 5. **heap_caps / FreeRTOS** — let the real allocator + scheduler run once the
    memory map + timers are faithful.
