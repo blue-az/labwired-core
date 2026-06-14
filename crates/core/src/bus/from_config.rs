@@ -1,0 +1,479 @@
+// LabWired - Firmware Simulation Platform
+// Copyright (C) 2026 Andrii Shylenko
+// SPDX-License-Identifier: MIT
+
+//! `SystemBus::from_config`: build a bus + its peripherals from a chip
+//! descriptor + system manifest. Split out of `bus/mod.rs`.
+
+use super::*;
+use crate::memory::LinearMemory;
+use crate::peripherals::gpio::GpioRegisterLayout;
+use crate::peripherals::uart::UartRegisterLayout;
+use crate::Peripheral;
+use anyhow::Context;
+use labwired_config::{parse_size, ChipDescriptor, SystemManifest};
+use std::cell::Cell;
+
+impl SystemBus {
+    pub fn from_config(chip: &ChipDescriptor, manifest: &SystemManifest) -> anyhow::Result<Self> {
+        let flash_size = parse_size(&chip.flash.size)?;
+        let ram_size = parse_size(&chip.ram.size)?;
+
+        let mut extra_mem = Vec::with_capacity(chip.memory_regions.len());
+        for region in &chip.memory_regions {
+            let size = parse_size(&region.size)?;
+            let mut mem = LinearMemory::new(size as usize, region.base);
+            // Optionally preload a raw binary image (e.g. a dumped mask ROM)
+            // from a path given by an env var. Copyrighted vendor blobs are not
+            // committed, so a missing image just leaves the region zero-filled.
+            if let Some(env) = &region.image_env {
+                if let Ok(path) = std::env::var(env) {
+                    match std::fs::read(&path) {
+                        Ok(bytes) => {
+                            let n = bytes.len().min(mem.data.len());
+                            mem.data[..n].copy_from_slice(&bytes[..n]);
+                            tracing::info!(
+                                "loaded {n} bytes into '{}' region @ {:#010x} from {path}",
+                                region.name,
+                                region.base
+                            );
+                        }
+                        Err(e) => tracing::warn!(
+                            "region '{}' image {path} (${env}) unreadable: {e}",
+                            region.name
+                        ),
+                    }
+                }
+            }
+            extra_mem.push(mem);
+        }
+
+        let mut bus = Self {
+            flash_thunks: std::collections::HashMap::new(),
+            flash: LinearMemory::new(flash_size as usize, chip.flash.base),
+            ram: LinearMemory::new(ram_size as usize, chip.ram.base),
+            extra_mem,
+            peripherals: Vec::new(),
+            nvic: None,
+            observers: Vec::new(),
+            config: crate::SimulationConfig::default(),
+            bit_band_enabled: Self::chip_has_bit_band(chip),
+            pending_cpu_irqs: [0; 2],
+            dport_idx: None,
+            peripheral_ranges: Vec::new(),
+            peripheral_hint: Cell::new(None),
+            last_gpio_in: [0; 2],
+            current_cycle: 0,
+            pending_schedule: Vec::new(),
+            legacy_walk_disabled: false,
+            hcsr04: Vec::new(),
+            can_diagnostic_testers: Vec::new(),
+            esp32c3_irq_routing: false,
+            riscv_irq_lines: 0,
+        };
+
+        let mut merged_peripherals = chip.peripherals.clone();
+        for m_p in &manifest.peripherals {
+            if let Some(existing) = merged_peripherals.iter_mut().find(|p| p.id == m_p.id) {
+                // Merge config map
+                for (k, v) in &m_p.config {
+                    existing.config.insert(k.clone(), v.clone());
+                }
+                // Also override other fields if provided
+                if m_p.base_address != 0 {
+                    existing.base_address = m_p.base_address;
+                }
+                if m_p.irq.is_some() {
+                    existing.irq = m_p.irq;
+                }
+                if m_p.size.is_some() {
+                    existing.size = m_p.size.clone();
+                }
+            } else {
+                merged_peripherals.push(m_p.clone());
+            }
+        }
+
+        for p_cfg in &merged_peripherals {
+            let canonical_type = Self::canonical_peripheral_type(&p_cfg.r#type);
+            if canonical_type != p_cfg.r#type.to_ascii_lowercase() {
+                tracing::debug!(
+                    "Canonicalized peripheral type '{}' -> '{}' for id '{}'",
+                    p_cfg.r#type,
+                    canonical_type,
+                    p_cfg.id
+                );
+            }
+
+            // Per-family factories own their peripheral arms in their own modules,
+            // so this central match stops growing (and shrinks as families migrate
+            // out). Try them first; unmigrated families fall through to the match.
+            let family_dev = crate::peripherals::esp32s3::factory::try_build(
+                &canonical_type,
+                p_cfg,
+            )
+            .or_else(|| {
+                crate::peripherals::nrf52::factory::try_build(&canonical_type, p_cfg, manifest)
+            });
+            if let Some(dev) = family_dev {
+                bus.push_peripheral(p_cfg, dev)?;
+                continue;
+            }
+            // Cross-vendor / generic peripherals (fallible: size + profile parsing).
+            if let Some(dev) =
+                crate::peripherals::generic_factory::try_build(&canonical_type, p_cfg, manifest)?
+            {
+                bus.push_peripheral(p_cfg, dev)?;
+                continue;
+            }
+
+            // Remaining: the YAML descriptor loaders (declarative / strict_ir) and
+            // the unknown-type stub fallback.
+            let dev: Box<dyn Peripheral> = match canonical_type.as_str() {
+                "uart" | "stm32_uart" | "stm32f1_uart" | "stm32f2_uart" | "stm32f4_uart"
+                | "stm32f7_usart" | "stm32h5_usart" | "efm32_uart" | "nxp_lpuart" | "ns16550"
+                | "pl011" | "gaislerapbuart" => {
+                    let layout: UartRegisterLayout =
+                        if p_cfg.r#type.contains("stm32h5") || p_cfg.r#type.contains("stm32f7") {
+                            UartRegisterLayout::Stm32V2
+                        } else if p_cfg.r#type.contains("nrf") {
+                            UartRegisterLayout::Nrf52
+                        } else {
+                            Self::parse_profile_or_default(p_cfg, "UART")?
+                        };
+                    // CR3 writable mask is a per-part delta on the shared F1 map:
+                    // F1 implements [10:0] (0x07FF), F4 adds bit 11 ONEBIT (0x0FFF).
+                    // YAML: `config: { cr3_mask: 0xFFF }`; default F1.
+                    let cr3_mask: u32 = p_cfg
+                        .config
+                        .get("cr3_mask")
+                        .and_then(|v| v.as_u64())
+                        .map(|n| n as u32)
+                        .unwrap_or(0x0000_07FF);
+                    Box::new(crate::peripherals::uart::Uart::new_with_layout_cr3(
+                        layout, cr3_mask,
+                    ))
+                }
+                "gpio" | "stm32_gpioport" | "stm32f4_gpio" | "efmgpioport" | "npcx_gpio"
+                | "imxrt_gpio" => {
+                    let layout: GpioRegisterLayout = if p_cfg.r#type.contains("nrf") {
+                        GpioRegisterLayout::Nrf52
+                    } else if p_cfg.r#type.contains("stm32f4") || p_cfg.r#type.contains("h5") {
+                        GpioRegisterLayout::Stm32V2
+                    } else {
+                        Self::parse_profile_or_default(p_cfg, "GPIO")?
+                    };
+                    // For nRF52 ports, an optional `num_pins` config key caps the
+                    // valid-pin range (e.g. 16 for nRF52840 P1 which has P1.0–P1.15).
+                    // Writes outside that range are discarded; reads return 0.
+                    if layout == GpioRegisterLayout::Nrf52 {
+                        let num_pins: u32 = p_cfg
+                            .config
+                            .get("num_pins")
+                            .and_then(|v| v.as_u64())
+                            .map(|n| n as u32)
+                            .unwrap_or(32);
+                        Box::new(crate::peripherals::gpio::GpioPort::new_nrf52(num_pins))
+                    } else if layout == GpioRegisterLayout::Stm32V2
+                        && p_cfg.config.contains_key("reset_moder")
+                    {
+                        // Per-port silicon reset values (MODER/OSPEEDR/PUPDR)
+                        // supplied by the chip yaml; missing keys default to 0.
+                        let cfg_u32 = |key: &str| -> u32 {
+                            p_cfg
+                                .config
+                                .get(key)
+                                .and_then(|v| v.as_u64())
+                                .map(|n| n as u32)
+                                .unwrap_or(0)
+                        };
+                        Box::new(crate::peripherals::gpio::GpioPort::new_stm32v2_with_resets(
+                            cfg_u32("reset_moder"),
+                            cfg_u32("reset_ospeedr"),
+                            cfg_u32("reset_pupdr"),
+                        ))
+                    } else {
+                        Box::new(crate::peripherals::gpio::GpioPort::new_with_layout(layout))
+                    }
+                }
+                "i2c"
+                | "stm32f1_i2c"
+                | "stm32f2_i2c"
+                | "stm32f4_i2c"
+                | "stm32f7_i2c"
+                | "efm32ggi2ccontroller" => {
+                    let layout: crate::peripherals::i2c::I2cRegisterLayout =
+                        Self::parse_profile_or_default(p_cfg, "I2C")?;
+                    let mut i2c = crate::peripherals::i2c::I2c::new_with_layout(layout);
+                    for ext in &manifest.external_devices {
+                        if ext.connection != p_cfg.id {
+                            continue;
+                        }
+                        match crate::peripherals::components::build_i2c_device(
+                            &ext.r#type,
+                            &ext.config,
+                        ) {
+                            Some(device) => {
+                                tracing::info!(
+                                    "i2c attach: '{}' (type={}) -> '{}'",
+                                    ext.id,
+                                    ext.r#type,
+                                    p_cfg.id
+                                );
+                                i2c.attach(device);
+                            }
+                            None => {
+                                tracing::warn!(
+                                    "i2c attach skipped: unknown device type '{}' for external id '{}' on bus '{}'",
+                                    ext.r#type,
+                                    ext.id,
+                                    p_cfg.id
+                                );
+                            }
+                        }
+                    }
+                    Box::new(i2c)
+                }
+                // Nordic peripherals — register-surface models cross-validated
+                // by hw-oracle::nrf52_onboarding_diff. See peripherals/nrf52/.
+                // TWIM (I²C master with EasyDMA) — nRF52840 PS §6.31.
+                // `nrf52840_i2c` is the canonical chip-YAML type; `nrf52840_twim`
+                // and `nrf52_twim` are also accepted so firmware configs that
+                // name it more precisely still resolve here.
+                // ESP32-family Timer Group (TIMG0/TIMG1) — the same IP block is
+                // used by the classic ESP32, S3, and C3.  All share the register
+                // layout: T0CONFIG=0x00, T0LO=0x04, T0HI=0x08, T0UPDATE=0x0C.
+                // Wiring via this type string gives C3 (RISC-V, from_config path)
+                // the same live counter that the Xtensa chips get via their
+                // hard-wired system builders.
+                "declarative" => {
+                    let descriptor_path = p_cfg
+                        .config
+                        .get("path")
+                        .and_then(|v| v.as_str())
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "Field 'path' is required in 'config' for declarative peripheral '{}'",
+                                p_cfg.id
+                            )
+                        })?;
+
+                    let resolved_path = Self::resolve_peripheral_path(manifest, descriptor_path);
+                    let desc = labwired_config::PeripheralDescriptor::from_file(&resolved_path)
+                        .with_context(|| {
+                            format!(
+                                "Failed to load declarative descriptor for '{}' from '{}' (resolved to '{}')",
+                                p_cfg.id,
+                                descriptor_path,
+                                resolved_path.display()
+                            )
+                        })?;
+
+                    Box::new(crate::peripherals::declarative::GenericPeripheral::new(
+                        desc,
+                    ))
+                }
+                "strict_ir" => {
+                    let descriptor_path = p_cfg
+                        .config
+                        .get("path")
+                        .and_then(|v| v.as_str())
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "Field 'path' is required in 'config' for strict_ir peripheral '{}'",
+                                p_cfg.id
+                            )
+                        })?;
+
+                    let resolved_path = Self::resolve_peripheral_path(manifest, descriptor_path);
+                    let content = std::fs::read_to_string(&resolved_path).with_context(|| {
+                        format!(
+                            "Failed to read IR file '{}' (resolved to '{}')",
+                            descriptor_path,
+                            resolved_path.display()
+                        )
+                    })?;
+                    let ir_peripheral = match serde_json::from_str::<labwired_ir::IrPeripheral>(
+                        &content,
+                    ) {
+                        Ok(peripheral) => peripheral,
+                        Err(peripheral_err) => {
+                            let device: labwired_ir::IrDevice = serde_json::from_str(&content)
+                                .with_context(|| {
+                                    format!(
+                                        "Failed to parse Strict IR from {} as IrPeripheral ({}) or IrDevice",
+                                        resolved_path.display(),
+                                        peripheral_err
+                                    )
+                                })?;
+
+                            if let Some(peripheral) = device.peripherals.get(&p_cfg.id) {
+                                peripheral.clone()
+                            } else if device.peripherals.len() == 1 {
+                                device
+                                    .peripherals
+                                    .into_values()
+                                    .next()
+                                    .expect("len() checked above")
+                            } else {
+                                let available = device
+                                    .peripherals
+                                    .keys()
+                                    .cloned()
+                                    .collect::<Vec<_>>()
+                                    .join(", ");
+                                return Err(anyhow::anyhow!(
+                                    "Strict IR '{}' contains multiple peripherals [{}]; no match for id '{}'",
+                                    resolved_path.display(),
+                                    available,
+                                    p_cfg.id
+                                ));
+                            }
+                        }
+                    };
+
+                    let desc: labwired_config::PeripheralDescriptor = ir_peripheral.into();
+
+                    Box::new(crate::peripherals::declarative::GenericPeripheral::new(
+                        desc,
+                    ))
+                }
+                "strict_ir_internal" => {
+                    let val = p_cfg.config.get("internal_ir_peripheral").ok_or_else(|| {
+                        anyhow::anyhow!("Missing internal_ir_peripheral config for converted IR")
+                    })?;
+                    // Convert yaml Value (which was serde_yaml::to_value(p)) back to IrPeripheral
+                    let ir_peripheral: labwired_ir::IrPeripheral =
+                        serde_yaml::from_value(val.clone())?;
+                    let desc: labwired_config::PeripheralDescriptor = ir_peripheral.into();
+
+                    Box::new(crate::peripherals::declarative::GenericPeripheral::new(
+                        desc,
+                    ))
+                }
+                _other => {
+                    tracing::debug!(
+                        "Mapping unknown peripheral type '{}' to Stub for id '{}'",
+                        p_cfg.r#type,
+                        p_cfg.id
+                    );
+                    Box::new(crate::peripherals::stub::StubPeripheral::new(0x00))
+                }
+            };
+
+            bus.push_peripheral(p_cfg, dev)?;
+        }
+
+        for ext in &manifest.external_devices {
+            // First-pass: peripherals that have migrated to the unified
+            // `PeripheralKit` contract are dispatched through the registry,
+            // so each one ships its own `attach` next to its model instead
+            // of a hand-written arm here.
+            if let Some(kit) = crate::peripherals::kit::registry::lookup(&ext.r#type) {
+                let mut ctx = crate::peripherals::kit::AttachCtx::new(&mut bus, ext);
+                kit.attach(&mut ctx)?;
+                continue;
+            }
+            match ext.r#type.as_str() {
+                // ili9341, adxl345/mpu6050/bme280/oled-ssd1306, neo6m-gps,
+                // and bg770a-cellular dispatch through the PeripheralKit
+                // registry above — see `peripherals::kit`.
+                // iolink-master dispatches through the PeripheralKit registry above.
+                // max31855, sn74hc165, ssd1680_tricolor_290, and pcd8544
+                // dispatch through the PeripheralKit registry above.
+                "hc-sr04" | "hcsr04" => {
+                    // GPIO-wired ultrasonic sensor — no SPI/I2C connection. The
+                    // bus services it each tick: reads TRIG (an MCU output) and
+                    // drives ECHO (an MCU input) with a distance-proportional
+                    // pulse. `distance_cm` is the host-controlled "hand position".
+                    let trig = ext
+                        .config
+                        .get("trig_pin")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("PA8")
+                        .to_string();
+                    let echo = ext
+                        .config
+                        .get("echo_pin")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("PA9")
+                        .to_string();
+                    let distance_cm = ext
+                        .config
+                        .get("distance_cm")
+                        .and_then(|v| v.as_f64())
+                        .unwrap_or(50.0) as f32;
+                    let cpu_hz = ext
+                        .config
+                        .get("cpu_hz")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(80_000_000);
+
+                    let (trig_addr, trig_bit) =
+                        Self::resolve_pin_odr(&bus, &trig).ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "HC-SR04 '{}' trig_pin '{}' could not be resolved to a GPIO",
+                                ext.id,
+                                trig
+                            )
+                        })?;
+                    let (echo_addr, echo_bit) =
+                        Self::resolve_pin_idr(&bus, &echo).ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "HC-SR04 '{}' echo_pin '{}' could not be resolved to a GPIO",
+                                ext.id,
+                                echo
+                            )
+                        })?;
+
+                    bus.hcsr04.push(crate::peripherals::hc_sr04::HcSr04::new(
+                        ext.id.clone(),
+                        trig_addr,
+                        trig_bit,
+                        echo_addr,
+                        echo_bit,
+                        cpu_hz,
+                        distance_cm,
+                    ));
+                }
+                "can-diagnostic-tester" | "uds-diagnostic-tester" => {
+                    if bus.find_peripheral_index_by_name(&ext.connection).is_none() {
+                        return Err(anyhow::anyhow!(
+                            "CAN diagnostic tester '{}' connection '{}' was not found",
+                            ext.id,
+                            ext.connection
+                        ));
+                    }
+                    let request_id = Self::yaml_u32(ext.config.get("request_id"), 0x7E0);
+                    let request_data =
+                        Self::yaml_bytes(ext.config.get("request_data"), &[0x03, 0x22, 0xF1, 0x90]);
+                    bus.can_diagnostic_testers.push(CanDiagnosticTester {
+                        id: ext.id.clone(),
+                        connection: ext.connection.clone(),
+                        request_id,
+                        request_data,
+                        sent: false,
+                    });
+                }
+                // ntc-thermistor dispatches through the PeripheralKit registry above.
+                _ => {
+                    tracing::warn!(
+                        "Unsupported external device '{}' type '{}' on connection '{}'; skipping",
+                        ext.id,
+                        ext.r#type,
+                        ext.connection
+                    );
+                    continue;
+                }
+            }
+        }
+
+        bus.rebuild_peripheral_ranges();
+        // Per-config walk-deletion opt-in. The field is only consulted under the
+        // `event-scheduler` feature (the legacy build always walks), so this is a
+        // no-op there. Safe only because the manifest author verified the
+        // firmware runs byte-identical walk-free (see the walk-identity test).
+        bus.legacy_walk_disabled = manifest.walk_deleted;
+        Ok(bus)
+    }
+}
