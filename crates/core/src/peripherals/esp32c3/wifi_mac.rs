@@ -74,6 +74,26 @@ const TXQ_DONE_STATE: u64 = 0xCB0; // hal_mac_get_txq_state mode2 reads &0xF her
 /// DRAM window the low-20-bit TX buffer pointer resolves into.
 const DRAM_BASE: u32 = 0x3FC0_0000;
 
+/// Capacity of the network-analyzer frame-trace ring buffer.
+const TRACE_CAP: usize = 512;
+
+/// One captured 802.11 frame, for the WiFi network analyzer (the WiFi analog of
+/// the BLE `AirFrameTrace`). `bytes` is the raw 802.11 frame as it crossed the
+/// MAC; the analyzer UI decodes the type/addresses/payload. Direction is from
+/// the device's point of view: `"tx"` = transmitted by this STA, `"rx"` =
+/// delivered to this STA from the (virtual) air.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct WifiFrameTrace {
+    /// Monotonic capture sequence (per MAC), so the UI can order/dedup.
+    pub seq: u64,
+    /// `"tx"` or `"rx"` from this device's perspective.
+    pub dir: &'static str,
+    /// Raw 802.11 frame bytes (no rx-control header / FCS).
+    pub bytes: Vec<u8>,
+    /// Receive signal strength (dBm, signed) for `"rx"` frames; 0 for `"tx"`.
+    pub rssi: i8,
+}
+
 #[derive(Debug)]
 pub struct Esp32c3WifiMac {
     regs: Vec<u32>,
@@ -87,6 +107,17 @@ pub struct Esp32c3WifiMac {
     /// 0xC000_0000 write; processed (frame captured + TX-complete signaled) on
     /// the next bus tick, which has bus access to read the frame from DRAM.
     pending_tx: VecDeque<(u8, u32)>,
+    /// Network-analyzer ring buffer of recently captured frames (TX + RX).
+    trace: VecDeque<WifiFrameTrace>,
+    /// Next capture sequence number.
+    trace_seq: u64,
+    /// When `Some(mac)`, this MAC is attached to the shared [`virtual_wifi`]
+    /// medium with the given station MAC: transmitted frames are submitted to
+    /// the medium and frames the medium queues for this MAC are pulled into the
+    /// RX ring each tick. When `None`, the model uses the `tx_out`/`queue_rx_*`
+    /// path driven by the CLI bridge (single-device runs). Medium mode is what
+    /// lets two C3 instances (each a distinct MAC) talk over one virtual AP.
+    medium: Option<[u8; 6]>,
 }
 
 impl Default for Esp32c3WifiMac {
@@ -103,7 +134,45 @@ impl Esp32c3WifiMac {
             pending_rx: VecDeque::new(),
             tx_out: VecDeque::new(),
             pending_tx: VecDeque::new(),
+            trace: VecDeque::new(),
+            trace_seq: 0,
+            medium: None,
         }
+    }
+
+    /// Attach this MAC to the shared [`virtual_wifi`] medium with `mac` as its
+    /// station address (must match the eFuse MAC the firmware reads). Enables
+    /// medium mode: TX is submitted to the medium and the medium's inbox is
+    /// pulled into the RX ring each tick.
+    pub fn attach_to_medium(&mut self, mac: [u8; 6]) {
+        self.medium = Some(mac);
+    }
+
+    /// Record a captured frame in the analyzer ring buffer (oldest dropped at
+    /// `TRACE_CAP`). `dir` is `"tx"` or `"rx"` from this device's perspective.
+    fn trace_push(&mut self, dir: &'static str, bytes: &[u8], rssi: i8) {
+        if self.trace.len() == TRACE_CAP {
+            self.trace.pop_front();
+        }
+        self.trace.push_back(WifiFrameTrace {
+            seq: self.trace_seq,
+            dir,
+            bytes: bytes.to_vec(),
+            rssi,
+        });
+        self.trace_seq += 1;
+    }
+
+    /// Non-consuming snapshot of the analyzer frame trace, most-recent first.
+    /// The network-analyzer UI polls this each tick (mirrors the BLE
+    /// `air_trace_snapshot`).
+    pub fn trace_snapshot(&self) -> Vec<WifiFrameTrace> {
+        self.trace.iter().rev().cloned().collect()
+    }
+
+    /// Clear the analyzer frame trace (UI "reset").
+    pub fn trace_clear(&mut self) {
+        self.trace.clear();
     }
 
     /// Length of the 802.11 frame in a captured TX buffer: parse the MAC header,
@@ -152,13 +221,20 @@ impl Esp32c3WifiMac {
         let len = Self::tx_frame_len(&raw);
         raw.truncate(len);
         if std::env::var("LABWIRED_MAC_TRACE").is_ok() {
-            let head: Vec<String> = raw.iter().take(40).map(|b| format!("{b:02x}")).collect();
+            let head: Vec<String> = raw.iter().take(72).map(|b| format!("{b:02x}")).collect();
             eprintln!(
                 "[tx] ac={ac} buf={bufptr:#010x} len={len}: {}",
                 head.join(" ")
             );
         }
-        self.tx_out.push_back(raw);
+        self.trace_push("tx", &raw, 0);
+        if let Some(mac) = self.medium {
+            // Medium mode: hand the frame to the shared virtual AP, which
+            // responds / routes it to the destination station.
+            super::virtual_wifi::submit(mac, &raw);
+        } else {
+            self.tx_out.push_back(raw);
+        }
         // Signal TX-complete: set the per-queue done state (mode2 reads &0xF at
         // 0xCB0) and the TX-done event bit, then the level-sensitive MAC IRQ
         // runs lmacProcessTxComplete.
@@ -170,6 +246,20 @@ impl Esp32c3WifiMac {
     /// driver's RX ring on the next bus tick.
     pub fn queue_rx_frame(&mut self, frame: Vec<u8>) {
         self.pending_rx.push_back(frame);
+    }
+
+    /// Queue a frame at the FRONT of the RX backlog so it is delivered before
+    /// any already-queued frames. Used for unicast responses (auth/assoc resp,
+    /// DHCP offer/ack, ARP reply) that must reach the driver inside its per-state
+    /// timeout window — they must not sit behind a backlog of periodic beacons.
+    pub fn queue_rx_priority(&mut self, frame: Vec<u8>) {
+        self.pending_rx.push_front(frame);
+    }
+
+    /// Number of RX frames waiting to be delivered. The bridge uses this to avoid
+    /// flooding the backlog with beacons (which would delay real responses).
+    pub fn pending_rx_len(&self) -> usize {
+        self.pending_rx.len()
     }
 
     /// Drain frames the real MAC transmitted (captured on TX kick).
@@ -203,6 +293,7 @@ impl Esp32c3WifiMac {
             let cap = (w0 & 0xFFF) as usize; // lldesc size field (buffer capacity)
             if w0 & DESC_OWNER != 0 && buf != 0 && cap > 0 {
                 let frame = self.pending_rx.pop_front().unwrap();
+                self.trace_push("rx", &frame, -60);
                 // HW DMA layout: a RX_CTRL_HDR_LEN-byte rx-control header, then
                 // the 802.11 frame (CSI off → no CSI block). The driver reads
                 // the frame at buf + 48 and rssi/rate from header bytes 44/45.
@@ -327,9 +418,15 @@ impl Peripheral for Esp32c3WifiMac {
     }
 
     fn tick_with_bus(&mut self, bus: &mut dyn Bus) {
-        // Capture any transmitted frame + signal TX-complete, then deliver one
-        // queued RX frame into the descriptor ring.
+        // Capture any transmitted frame + signal TX-complete (in medium mode this
+        // submits to the shared AP), then in medium mode pull any frames the AP
+        // queued for this station, then deliver one queued RX frame into the ring.
         self.process_tx(bus);
+        if let Some(mac) = self.medium {
+            for frame in super::virtual_wifi::take_inbox(mac) {
+                self.pending_rx.push_back(frame);
+            }
+        }
         self.deliver_one_rx(bus);
     }
 
@@ -385,6 +482,28 @@ mod tests {
             m.tick().explicit_irqs.as_deref(),
             Some(&[MAC_INTR_SOURCE][..])
         );
+    }
+
+    #[test]
+    fn analyzer_trace_captures_rx_and_caps() {
+        let mut m = Esp32c3WifiMac::new();
+        // RX capture path.
+        m.trace_push("rx", &[0x80, 0x00, 0xde, 0xad], -42);
+        m.trace_push("tx", &[0x40, 0x00], 0);
+        let snap = m.trace_snapshot();
+        assert_eq!(snap.len(), 2);
+        assert_eq!(snap[0].dir, "tx"); // most-recent first
+        assert_eq!(snap[1].dir, "rx");
+        assert_eq!(snap[1].rssi, -42);
+        assert_eq!(snap[1].bytes, vec![0x80, 0x00, 0xde, 0xad]);
+        assert_eq!(snap[1].seq, 0);
+        // Ring cap: oldest dropped beyond TRACE_CAP.
+        for _ in 0..TRACE_CAP {
+            m.trace_push("rx", &[0u8; 4], -60);
+        }
+        assert_eq!(m.trace_snapshot().len(), TRACE_CAP);
+        m.trace_clear();
+        assert!(m.trace_snapshot().is_empty());
     }
 
     #[test]
