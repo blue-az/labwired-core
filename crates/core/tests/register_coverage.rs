@@ -221,11 +221,13 @@ fn measure_chip(yaml: &str, svd: &str) -> Option<(usize, usize, usize, usize)> {
             // only. Mirrors cli::coverage::build_matrix.
             let cpu = match chip.name.as_str() {
                 "esp32" => system::xtensa::configure_xtensa_esp32(&mut bus),
-                "esp32s3" => system::xtensa::configure_xtensa_esp32s3(
-                    &mut bus,
-                    &system::xtensa::Esp32s3Opts::default(),
-                )
-                .cpu,
+                "esp32s3" => {
+                    system::xtensa::configure_xtensa_esp32s3(
+                        &mut bus,
+                        &system::xtensa::Esp32s3Opts::default(),
+                    )
+                    .cpu
+                }
                 _ => system::xtensa::configure_xtensa(&mut bus),
             };
             let mut m = Machine::new(cpu, bus);
