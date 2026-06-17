@@ -11,7 +11,7 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 | `seeed-xiao-nrf52840-sense` | 🟢 silicon-verified | 2026-06-17 | 2026-06-14 | ✅ fresh |
 | `stm32h563` | 🟢 silicon-verified | 2026-06-17 | 2026-06-14 | ✅ fresh |
 | `esp32c3` | 🟢 silicon-verified | 2026-06-17 | 2026-06-14 | ✅ fresh |
-| `nucleo-l476rg` | 🟢 silicon-smoke | 2026-06-01 | 2026-06-14 | ⚠ drift acked 2026-06-14 (re-capture pending) |
+| `nucleo-l476rg` | 🟢 silicon-verified | 2026-06-17 | 2026-06-14 | ✅ fresh |
 | `nucleo-l073rz` | 🟢 silicon-smoke | 2026-06-03 | 2026-06-14 | ⚠ drift acked 2026-06-14 (re-capture pending) |
 | `stm32f103` | 🟢 silicon-verified | 2026-06-09 | 2026-06-14 | ⚠ drift acked 2026-06-14 (re-capture pending) |
 | `stm32f407` | 🟢 silicon-smoke | 2026-05-11 | 2026-06-14 | ⚠ drift acked 2026-06-14 (re-capture pending) |
@@ -53,14 +53,14 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
   - offline (CI): esp32c3_reset_conformance::esp32c3_reset_values_match_silicon (79 regs; 366/423 overlap matched silicon)
 - Drift status: **✅ fresh**
 
-## `nucleo-l476rg` — 🟢 silicon-smoke
+## `nucleo-l476rg` — 🟢 silicon-verified
 
 - Doc: [`docs/boards/nucleo-l476rg.md`](nucleo-l476rg.md)  ·  Chip: `configs/chips/stm32l476.yaml`
-- Note: Only RCC/GPIO/SPI1/TIM2 register-diffed + UART byte-parity. Prose doc overstates ('every peripheral exercised').
-- Silicon: **2026-06-01** on ST-LINK SWD (NUCLEO-L476RG) — RCC/GPIO/SPI1/TIM2 mmio diff + UART byte-parity
+- Note: Register diff covers RCC/GPIO/SPI1/TIM2 (15 mmio cases + 104-pattern parity sweep), NOT a full-chip sweep — the prose doc's 'every peripheral exercised' is still an overstatement; this is the honest scope.
+- Silicon: **2026-06-17** on ST-LINK V2 J36 (NUCLEO-L476RG onboard) — mass-erased to clean reset state — l476_mmio_diff 15/15 + parity 104/104, 0 divergence vs live silicon (L476_STRICT)
   - offline (CI): l476_mmio_diff::{l476_mmio_sim_only,l476_parity_sim_only}
   - offline (CI): firmware_survival L476 cases (UART byte stream)
-- Drift status: **⚠ drift acked 2026-06-14 (re-capture pending)**
+- Drift status: **✅ fresh**
 
 ## `nucleo-l073rz` — 🟢 silicon-smoke
 
