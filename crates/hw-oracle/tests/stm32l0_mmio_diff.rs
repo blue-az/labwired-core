@@ -84,7 +84,7 @@ const SPI1_BASE: u32 = 0x4001_3000;
 const SPI1_CR1: u32 = SPI1_BASE + 0x00;
 const SPI1_CR2: u32 = SPI1_BASE + 0x04;
 
-// ── TIM2 (0x4000_0000, 32-bit GP timer) / TIM21 (0x4001_0800, 16-bit) ────────
+// ── TIM2 (0x4000_0000, 16-bit GP timer on L0) / TIM21 (0x4001_0800, 16-bit) ──
 const TIM2_BASE: u32 = 0x4000_0000;
 const TIM2_CR1: u32 = TIM2_BASE + 0x00;
 const TIM2_PSC: u32 = TIM2_BASE + 0x28;
@@ -233,14 +233,16 @@ const CASES: &[MmioCase] = &[
         mask: 0x00F7,
         expect: 0x00E7,
     },
-    // ── TIM2 (32-bit) / TIM21 (16-bit) time-base (CEN left off) ──
+    // ── TIM2 (16-bit on L0) / TIM21 (16-bit) time-base (CEN left off) ──
+    // STM32L0 TIM2 is 16-bit (silicon-confirmed 2026-06-17: writing 0x12345
+    // reads back 0x2345 — top 16 bits are not implemented).
     MmioCase {
-        label: "TIM2 ARR (32-bit reload)",
+        label: "TIM2 ARR (16-bit reload)",
         prep: &[(RCC_APB1ENR, TIM2EN)],
         write: (TIM2_ARR, 0x0001_2345),
         read_addr: TIM2_ARR,
         mask: 0xFFFF_FFFF,
-        expect: 0x0001_2345,
+        expect: 0x0000_2345,
     },
     MmioCase {
         label: "TIM2 PSC",
@@ -352,12 +354,12 @@ const PARITY_REGS: &[ParityReg] = &[
     ParityReg {
         label: "TIM2 ARR",
         addr: TIM2_BASE + 0x2C,
-        mask: 0xFFFF_FFFF,
+        mask: 0x0000_FFFF, // L0 TIM2 is 16-bit (silicon-confirmed 2026-06-17)
     },
     ParityReg {
         label: "TIM2 CCR1",
         addr: TIM2_BASE + 0x34,
-        mask: 0xFFFF_FFFF,
+        mask: 0x0000_FFFF, // L0 TIM2 is 16-bit (silicon-confirmed 2026-06-17)
     },
 ];
 

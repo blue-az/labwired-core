@@ -140,15 +140,15 @@ boards:
   - id: nucleo-l073rz
     doc: docs/boards/nucleo-l073rz.md
     chip: configs/chips/stm32l073.yaml
-    tier: silicon-smoke
+    tier: silicon-verified
+    note: "Register diff covers RCC/GPIO/SPI1/TIM2/TIM21 (20 mmio cases) — not a full-chip sweep. Caught + fixed a real model bug: L0 TIM2 was declared 32-bit (L4 assumption); genuine L0 TIM2 is 16-bit, yaml corrected to width:16."
     offline_tests:
       - "stm32l0_mmio_diff::{l0_mmio_sim_only,l0_parity_sim_only}"
       - "firmware_survival L073 smoke case"
     silicon:
-      last_capture: 2026-06-03
-      probe: "ST-LINK SWD (NUCLEO-L073RZ)"
-      result: "boot + USART2 byte-parity; RCC/GPIO/SPI1/TIM2/TIM21 mmio diff (IDCODE 0x2008_6447)"
-    drift_ack: 2026-06-14   # shared uart/timer/dma models advanced to 06-14; re-capture pending
+      last_capture: 2026-06-17
+      probe: "ST-LINK V2 J28 (NUCLEO-L073RZ, IDCODE 0x2008_6447)"
+      result: "l0_mmio_diff 20/20, 0 divergence (L073_STRICT) — incl. the TIM2-16-bit fix"
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
@@ -199,7 +199,7 @@ boards:
       last_capture: 2026-05-11
       probe: "ST-LINK SWD (NUCLEO-F407, IDCODE 0x1001_6413)"
       result: "smoke + I²C survival UART traces (now stale relative to June model rewrites)"
-    drift_ack: 2026-06-14   # i2c/uart/gpio/timer/dma rewritten through 06-14; re-capture REQUIRED
+    drift_ack: 2026-06-17   # i2c/uart/gpio/timer/dma + classic-SPI CR1 fix through 06-17; re-capture REQUIRED (board not connected)
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
