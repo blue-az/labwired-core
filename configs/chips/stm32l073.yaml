@@ -226,14 +226,16 @@ peripherals:
     irq: 9
 
   # --- Timers ---------------------------------------------------------------
-  # TIM2 — 32-bit general-purpose timer (RM0367 §21).
+  # TIM2 — 16-bit general-purpose timer. (RM0367: on STM32L0, TIM2/TIM3 are
+  # 16-bit — unlike L4/F4 where TIM2 is 32-bit. Silicon-confirmed 2026-06-17:
+  # ARR top 16 bits read 0.)
   - id: "tim2"
     type: "timer"
     base_address: 0x40000000
     size: "1KB"
     irq: 15
     config:
-      width: 32
+      width: 16
 
   # TIM3 — 16-bit general-purpose timer.
   - id: "tim3"
