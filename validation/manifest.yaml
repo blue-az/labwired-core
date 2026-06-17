@@ -114,16 +114,15 @@ boards:
   - id: nucleo-l476rg
     doc: docs/boards/nucleo-l476rg.md
     chip: configs/chips/stm32l476.yaml
-    tier: silicon-smoke
-    note: "Only RCC/GPIO/SPI1/TIM2 register-diffed + UART byte-parity. Prose doc overstates ('every peripheral exercised')."
+    tier: silicon-verified
+    note: "Register diff covers RCC/GPIO/SPI1/TIM2 (15 mmio cases + 104-pattern parity sweep), NOT a full-chip sweep — the prose doc's 'every peripheral exercised' is still an overstatement; this is the honest scope."
     offline_tests:
       - "l476_mmio_diff::{l476_mmio_sim_only,l476_parity_sim_only}"
       - "firmware_survival L476 cases (UART byte stream)"
     silicon:
-      last_capture: 2026-06-01
-      probe: "ST-LINK SWD (NUCLEO-L476RG)"
-      result: "RCC/GPIO/SPI1/TIM2 mmio diff + UART byte-parity"
-    drift_ack: 2026-06-14   # shared uart/timer/dma/spi/adc/rtc_v3 models advanced to 06-14; re-capture pending
+      last_capture: 2026-06-17
+      probe: "ST-LINK V2 J36 (NUCLEO-L476RG onboard) — mass-erased to clean reset state"
+      result: "l476_mmio_diff 15/15 + parity 104/104, 0 divergence vs live silicon (L476_STRICT)"
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
