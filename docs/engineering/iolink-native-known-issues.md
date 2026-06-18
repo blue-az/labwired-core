@@ -95,6 +95,23 @@ match the plan and the pre-existing `iolink_master.rs` placement. Regrouping
 also touches the kit registry and the public re-export path
 `peripherals::components::IolinkMaster`.
 
+## 10. Multiport demo is not browser-runnable — catalog entry skipped
+
+Plan Task 7 calls for a `packages/playground` catalog entry. The real
+`BoardConfig` interface requires a prebuilt `demoFirmwarePath` ELF — every
+catalog lab is a browser-runnable demo (labs with no firmware surface
+"Cannot run: no firmware"). The native multiport demo cannot run in the
+browser: it links the `iolinki-master` + GPL `iolinki` device stack, which is
+gated out of `labwired-wasm`, and there is no demo firmware crate/ELF for it.
+
+Adding a catalog entry now would ship a broken, unrunnable lab. The parent
+`bundled-configs.ts` was therefore left untouched, and the parent catalog test
+(plan Task 8 Step 4) is N/A. The core demo assets
+(`configs/systems/iolink-multiport-demo.yaml`, `examples/iolink-multiport-demo`)
+are committed as scaffolding. A real catalog entry needs a master-side demo
+firmware crate compiled to an ARM ELF (the way `al2205-iolink-dido` runs the
+device stack as firmware) — out of scope for this plan.
+
 ## 8. Single hard-coded master configuration
 
 `NativeIolinkMasterPort::new_type2_com3` hard-codes M-sequence type 2_1, COM3,
