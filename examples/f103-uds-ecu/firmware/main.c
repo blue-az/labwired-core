@@ -1,18 +1,19 @@
 /*
- * F103 bxCAN UDS ECU — reproduction harness for w1c/udslib issue #29
- * ("FF first frame receive error").
+ * F103 bxCAN UDS ECU — silicon-correct, normal-mode (NOT loopback).
  *
- * Runs the real UDSLib ISO-TP + UDS core on the emulated STM32F103 bxCAN in
- * internal loopback. The firmware plays BOTH roles on the single looped-back
- * node: as the *tester* it injects the exact CAN frames captured on the
- * reporter's PCAN bus, and as the *ECU* it runs UDSLib and answers. Every
- * frame the ECU emits loops back into RX FIFO0, so we can watch whether the
- * multi-frame request actually produces a response.
+ * Real UDSLib on the emulated STM32F103 bxCAN, configured exactly as real
+ * silicon requires: a valid BTR bit-timing and an acceptance filter for the
+ * request ID. A separate virtual UDS tester node drives the CAN bus (sends the
+ * multi-frame SecurityAccess request); this firmware is just the ECU — it
+ * receives filtered frames, runs UDSLib ISO-TP, and answers on the bus.
  *
- *   tester -> ECU (0x111): 10 0B 27 01 5A 11 22 33   FirstFrame (FF_DL = 11)
+ *   tester -> ECU (0x111): 10 0B 27 01 5A 11 22 33   FirstFrame  (FF_DL = 11)
  *   ECU -> tester (0x222): 30 08 00 ...              FlowControl CTS
  *   tester -> ECU (0x111): 21 44 55 66 77 88 ..      ConsecutiveFrame SN=1
- *   ECU -> tester (0x222): 06 67 01 DE AD BE EF      SecurityAccess seed  <-- the fix
+ *   ECU -> tester (0x222): 06 67 01 DE AD BE EF      SecurityAccess seed
+ *
+ * Because the bxCAN model is strict (no filter => no RX; degenerate BTR =>
+ * bus-off), this firmware must do the real silicon setup — no lenient shortcut.
  */
 
 #include <stdbool.h>
@@ -76,12 +77,6 @@ static void uart_puts(const char *s)
 {
     while (*s) uart_putc(*s++);
 }
-static void uart_hex8(uint8_t b)
-{
-    static const char hex[] = "0123456789ABCDEF";
-    uart_putc(hex[(b >> 4) & 0xF]);
-    uart_putc(hex[b & 0xF]);
-}
 
 /* --- bxCAN @ 0x40006400 (RM0008 §24.9) --- */
 #define CAN_BASE 0x40006400u
@@ -98,22 +93,48 @@ static void uart_hex8(uint8_t b)
 #define CAN_RDT0R REG32(CAN_BASE + 0x1B4u)
 #define CAN_RDL0R REG32(CAN_BASE + 0x1B8u)
 #define CAN_RDH0R REG32(CAN_BASE + 0x1BCu)
+/* Filter registers */
+#define CAN_FMR REG32(CAN_BASE + 0x200u)
+#define CAN_FM1R REG32(CAN_BASE + 0x204u)
+#define CAN_FS1R REG32(CAN_BASE + 0x20Cu)
+#define CAN_FFA1R REG32(CAN_BASE + 0x214u)
+#define CAN_FA1R REG32(CAN_BASE + 0x21Cu)
+#define CAN_F0R1 REG32(CAN_BASE + 0x240u)
+#define CAN_F0R2 REG32(CAN_BASE + 0x244u)
 #define MCR_INRQ (1u << 0)
+#define MSR_INAK (1u << 0)
 #define TI_TXRQ (1u << 0)
 #define RF_RFOM (1u << 5)
-#define BTR_LBKM (1u << 30)
+/* Valid bit timing (TS1=12, TS2=5, BRP=9) — silicon-captured working value
+ * (loopback used 0x40DC0009; normal mode drops the LBKM bit). A degenerate
+ * BTR with zero segments would bus-off on the real chip and in the model. */
+#define BTR_NORMAL_VALID 0x00DC0009u
 
-typedef struct {
-    uint32_t id;
-    uint8_t len;
-    uint8_t data[8];
-} can_frame_t;
+#define ECU_RX_ID 0x111u /* tester -> ECU (requests)  */
+#define ECU_TX_ID 0x222u /* ECU -> tester (responses) */
 
-static void can_init_loopback(void)
+static void can_init_normal(void)
 {
-    CAN_MCR = MCR_INRQ;          /* request initialization */
-    CAN_BTR = BTR_LBKM;          /* internal loopback */
-    CAN_MCR = 0u;                /* leave init -> running */
+    CAN_MCR = MCR_INRQ; /* request initialization */
+    while ((CAN_MSR & MSR_INAK) == 0u) {
+    }
+    CAN_BTR = BTR_NORMAL_VALID; /* valid timing, NORMAL mode (no loopback) */
+
+    /* Acceptance filter: bank0, 32-bit mask mode, accept only ECU_RX_ID into
+     * FIFO0. Without this the strict model (and real silicon) receive nothing. */
+    CAN_FMR |= 1u;                         /* FINIT: filter init mode */
+    CAN_FA1R &= ~1u;                       /* deactivate bank0 while configuring */
+    CAN_FS1R |= 1u;                        /* bank0 = single 32-bit scale */
+    CAN_FM1R &= ~1u;                       /* bank0 = mask mode */
+    CAN_F0R1 = (ECU_RX_ID & 0x7FFu) << 21; /* id   = 0x111 in STID[31:21] */
+    CAN_F0R2 = (ECU_RX_ID & 0x7FFu) << 21; /* mask = those id bits must match */
+    CAN_FFA1R &= ~1u;                      /* bank0 -> FIFO0 */
+    CAN_FA1R |= 1u;                        /* activate bank0 */
+    CAN_FMR &= ~1u;                        /* leave filter init */
+
+    CAN_MCR = 0u; /* leave init -> normal mode running */
+    while ((CAN_MSR & MSR_INAK) != 0u) {
+    }
 }
 
 static uint32_t pack_lo(const uint8_t *d, uint8_t len)
@@ -129,16 +150,23 @@ static uint32_t pack_hi(const uint8_t *d, uint8_t len)
     return w;
 }
 
-/* UDSLib can_send hook: standard-ID classical frame via TX mailbox 0. */
+/* UDSLib can_send hook: standard-ID classical frame via TX mailbox 0 (the
+ * model puts it on the bus for the virtual tester to read). */
 static int can_send(uint32_t id, const uint8_t *data, uint8_t len)
 {
     if (len > 8u) len = 8u;
     CAN_TDL0R = pack_lo(data, len);
     CAN_TDH0R = pack_hi(data, len);
-    CAN_TDT0R = len;                                /* DLC */
-    CAN_TI0R = ((id & 0x7FFu) << 21) | TI_TXRQ;     /* STID + transmit request */
+    CAN_TDT0R = len;                            /* DLC */
+    CAN_TI0R = ((id & 0x7FFu) << 21) | TI_TXRQ; /* STID + transmit request */
     return 0;
 }
+
+typedef struct {
+    uint32_t id;
+    uint8_t len;
+    uint8_t data[8];
+} can_frame_t;
 
 static bool can_poll(can_frame_t *f)
 {
@@ -148,23 +176,16 @@ static bool can_poll(can_frame_t *f)
     uint32_t lo = CAN_RDL0R, hi = CAN_RDH0R;
     for (uint8_t i = 0; i < 4; ++i) f->data[i] = (uint8_t) (lo >> (i * 8));
     for (uint8_t i = 0; i < 4; ++i) f->data[i + 4] = (uint8_t) (hi >> (i * 8));
-    CAN_RF0R = RF_RFOM;                             /* release FIFO0 mailbox */
+    CAN_RF0R = RF_RFOM; /* release FIFO0 mailbox */
     return true;
 }
 
 /* --- UDS stack --- */
-#define ECU_RX_ID 0x111u /* tester -> ECU */
-#define ECU_TX_ID 0x222u /* ECU -> tester */
-
 static uds_isotp_ctx_t g_iso;
 static uint8_t g_iso_tx_sdu[64];
 static uint8_t g_rx_buf[128];
 static uint8_t g_tx_buf[128];
 static uint32_t g_now_ms;
-
-/* Captured ECU->tester response carrying a SecurityAccess positive reply. */
-static bool g_resp_seen;
-static can_frame_t g_resp;
 
 static uint32_t get_time_ms(void) { return g_now_ms; }
 
@@ -179,6 +200,8 @@ static int security_seed(struct uds_ctx *ctx, uint8_t level, uint8_t *seed, uint
     (void) ctx;
     (void) level;
     (void) max_len;
+    /* The multi-frame request reassembled and dispatched to us — serve a seed. */
+    uart_puts("UDS_SEED_SERVED\n");
     seed[0] = 0xDE;
     seed[1] = 0xAD;
     seed[2] = 0xBE;
@@ -186,38 +209,16 @@ static int security_seed(struct uds_ctx *ctx, uint8_t level, uint8_t *seed, uint
     return 4;
 }
 
-/* Drain RX FIFO0: tester frames feed the ECU; ECU frames (0x222) are the bus
-   monitor — a single-frame 0x67 reply is the SecurityAccess seed response. */
-static void pump(uds_ctx_t *ctx)
-{
-    can_frame_t f;
-    while (can_poll(&f)) {
-        if (f.id == ECU_RX_ID) {
-            uds_isotp_rx_callback(&g_iso, ctx, f.id, f.data, f.len);
-        } else if (f.id == ECU_TX_ID) {
-            uart_puts("CAN_RX 222:");
-            for (uint8_t i = 0; i < f.len; ++i) {
-                uart_putc(' ');
-                uart_hex8(f.data[i]);
-            }
-            uart_putc('\n');
-            if (f.data[0] == 0x06u && f.data[1] == 0x67u) {
-                g_resp = f;
-                g_resp_seen = true;
-            }
-        }
-    }
-}
-
 int main(void)
 {
     uart_init();
     uart_puts("F103-UDS-ECU\n");
 
-    can_init_loopback();
+    can_init_normal();
+    uart_puts("ECU_READY\n"); /* bxCAN normal-mode + filter configured */
 
     uds_tp_isotp_init(&g_iso, can_send, ECU_TX_ID, ECU_RX_ID, g_iso_tx_sdu, sizeof(g_iso_tx_sdu));
-    uds_tp_isotp_set_fd(&g_iso, false); /* classical CAN, like the F103 */
+    uds_tp_isotp_set_fd(&g_iso, false); /* classical CAN */
 
     uds_config_t cfg = {
         .ecu_address = 0x10u,
@@ -238,32 +239,15 @@ int main(void)
         }
     }
 
-    /* FirstFrame: SecurityAccess requestSeed carrying 9 extra bytes (FF_DL=11). */
-    static const uint8_t ff[8] = {0x10, 0x0B, 0x27, 0x01, 0x5A, 0x11, 0x22, 0x33};
-    uart_puts("UDS_REQ_27_01_FF\n");
-    can_send(ECU_RX_ID, ff, 8);
-    pump(&ctx);
-    uds_process(&ctx);
-    uds_tp_isotp_process(&g_iso, ++g_now_ms);
-
-    /* ConsecutiveFrame SN=1: last 5 payload bytes + padding. */
-    static const uint8_t cf[8] = {0x21, 0x44, 0x55, 0x66, 0x77, 0x88, 0x55, 0x55};
-    uart_puts("UDS_REQ_27_01_CF\n");
-    can_send(ECU_RX_ID, cf, 8);
-    pump(&ctx);
-    uds_process(&ctx);
-    uds_tp_isotp_process(&g_iso, ++g_now_ms);
-    pump(&ctx);
-
-    if (g_resp_seen) {
-        uart_puts("UDS_RESP_67_SEED=");
-        for (uint8_t i = 0; i < g_resp.len; ++i) uart_hex8(g_resp.data[i]);
-        uart_putc('\n');
-        uart_puts("UDS_OK\n");
-    } else {
-        uart_puts("UDS_FAIL_NO_RESPONSE\n");
-    }
-
+    /* Pure ECU loop: receive filtered frames, run ISO-TP/UDS, answer. The
+     * virtual tester node drives the request over the bus. */
     for (;;) {
+        can_frame_t f;
+        if (can_poll(&f)) {
+            uds_isotp_rx_callback(&g_iso, &ctx, f.id, f.data, f.len);
+        }
+        uds_process(&ctx);
+        uds_tp_isotp_process(&g_iso, g_now_ms);
+        ++g_now_ms;
     }
 }
