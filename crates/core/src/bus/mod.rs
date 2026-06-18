@@ -2667,4 +2667,95 @@ board_io: []
             "USART1 must go inert again when its clock is removed"
         );
     }
+
+    #[test]
+    fn gated_peripheral_resolves_l4_rcc_offsets() {
+        // The SAME symbolic reg names that map to F1 offsets above must resolve
+        // to the L4 family's offsets via Rcc::enable_reg_offset: apb1enr1 @ 0x58
+        // (not F1's 0x1C) and ahb2enr @ 0x4C. Mirrors the al2205 (USART2 on
+        // apb1enr1) and nokia5110 (GPIOA on ahb2enr) gates on the L476.
+        let chip: ChipDescriptor = serde_yaml::from_str(
+            r#"
+name: "l4-clockgate-test"
+arch: "arm"
+core: "cortex-m4"
+flash:
+  base: 0x08000000
+  size: "1MB"
+ram:
+  base: 0x20000000
+  size: "96KB"
+peripherals:
+  - id: "rcc"
+    type: "rcc"
+    base_address: 0x40021000
+    size: "1KB"
+    config:
+      profile: "stm32l4"
+  - id: "gpioa"
+    type: "gpio"
+    base_address: 0x48000000
+    size: "1KB"
+    config:
+      profile: "stm32v2"
+    clock: { reg: "ahb2enr", bit: 0 }
+  - id: "uart2"
+    type: "uart"
+    base_address: 0x40004400
+    size: "1KB"
+    config:
+      profile: "stm32v2"
+    clock: { reg: "apb1enr1", bit: 17 }
+"#,
+        )
+        .unwrap();
+        let manifest: SystemManifest = serde_yaml::from_str(
+            r#"
+name: "clockgate-l4"
+chip: "unused"
+external_devices: []
+board_io: []
+"#,
+        )
+        .unwrap();
+        let mut bus = SystemBus::from_config(&chip, &manifest).unwrap();
+
+        // USART2_CR1 @ 0x4000_4400 (stm32v2 layout: CR1 at offset 0x00).
+        // Clock OFF out of reset.
+        const U2_CR1: u64 = 0x4000_4400;
+        const CR1_UE_TE: u32 = (1 << 0) | (1 << 3);
+        bus.write_u32(U2_CR1, CR1_UE_TE).unwrap();
+        assert_eq!(
+            bus.read_u32(U2_CR1).unwrap(),
+            0,
+            "unclocked USART2 must drop writes and read 0"
+        );
+
+        // RCC_APB1ENR1 @ 0x58 (L4 offset, NOT the F1 0x1C). USART2EN = bit 17.
+        const RCC_APB1ENR1: u64 = 0x4002_1058;
+        bus.write_u32(RCC_APB1ENR1, 1 << 17).unwrap();
+        bus.write_u32(U2_CR1, CR1_UE_TE).unwrap();
+        assert_eq!(
+            bus.read_u32(U2_CR1).unwrap() & CR1_UE_TE,
+            CR1_UE_TE,
+            "clocked USART2 must accept writes once apb1enr1.17 is set"
+        );
+
+        // GPIOA_MODER @ 0x4800_0000, gated on RCC_AHB2ENR @ 0x4C bit 0.
+        const GPIOA_MODER: u64 = 0x4800_0000;
+        bus.write_u32(GPIOA_MODER, 0x55).unwrap();
+        assert_eq!(
+            bus.read_u32(GPIOA_MODER).unwrap(),
+            0,
+            "unclocked GPIOA must drop writes and read 0"
+        );
+        const RCC_AHB2ENR: u64 = 0x4002_104C;
+        bus.write_u32(RCC_AHB2ENR, 1 << 0).unwrap();
+        bus.write_u32(GPIOA_MODER, 0x55).unwrap();
+        assert_eq!(
+            bus.read_u32(GPIOA_MODER).unwrap() & 0x55,
+            0x55,
+            "clocked GPIOA must accept writes once ahb2enr.0 is set"
+        );
+    }
 }
