@@ -163,6 +163,20 @@ size_t lw_iolm_feed_rx(void* ctx, const uint8_t* data, size_t len)
     return len;
 }
 
+size_t lw_iolm_latest_pd(void* ctx, uint8_t* out, size_t out_len)
+{
+    if ((ctx == 0) || (out == 0) || (out_len == 0U)) {
+        return 0U;
+    }
+    lw_iolm_context_t* c = (lw_iolm_context_t*) ctx;
+    uint8_t copied = 0U;
+    uint8_t cap = (out_len > 255U) ? 255U : (uint8_t) out_len;
+    if (iolink_master_get_pd_in(&c->port, out, cap, &copied) != IOLINK_MASTER_STATUS_OK) {
+        return 0U;
+    }
+    return (size_t) copied;
+}
+
 const char* lw_iolm_state_name(void* ctx)
 {
     if (ctx == 0) {

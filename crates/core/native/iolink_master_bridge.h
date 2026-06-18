@@ -32,6 +32,7 @@ int lw_iolm_tick(void* ctx, lw_iolm_tick_event_t event, uint32_t now_100us);
 size_t lw_iolm_drain_tx(void* ctx, uint8_t* out, size_t out_len);
 size_t lw_iolm_feed_rx(void* ctx, const uint8_t* data, size_t len);
 const char* lw_iolm_state_name(void* ctx);
+size_t lw_iolm_latest_pd(void* ctx, uint8_t* out, size_t out_len);
 
 #ifdef __cplusplus
 }

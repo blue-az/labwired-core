@@ -18,6 +18,12 @@ unsafe extern "C" {
     fn lw_iolm_drain_tx(ctx: *mut std::ffi::c_void, out: *mut u8, out_len: usize) -> usize;
     fn lw_iolm_feed_rx(ctx: *mut std::ffi::c_void, data: *const u8, len: usize) -> usize;
     fn lw_iolm_state_name(ctx: *mut std::ffi::c_void) -> *const std::os::raw::c_char;
+    fn lw_iolm_latest_pd(ctx: *mut std::ffi::c_void, out: *mut u8, out_len: usize) -> usize;
+
+    fn lw_iold_context_size() -> usize;
+    fn lw_iold_init_proximity(ctx: *mut std::ffi::c_void, present: i32) -> i32;
+    fn lw_iold_feed_master(ctx: *mut std::ffi::c_void, data: *const u8, len: usize) -> usize;
+    fn lw_iold_drain_tx(ctx: *mut std::ffi::c_void, out: *mut u8, out_len: usize) -> usize;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -74,6 +80,51 @@ impl NativeIolinkMasterPort {
 
     pub fn state_name(&mut self) -> &'static str {
         c_str_to_static(unsafe { lw_iolm_state_name(self.ptr()) })
+    }
+
+    pub fn latest_pd(&mut self) -> Vec<u8> {
+        let mut out = vec![0u8; 8];
+        let n = unsafe { lw_iolm_latest_pd(self.ptr(), out.as_mut_ptr(), out.len()) };
+        out.truncate(n);
+        out
+    }
+
+    fn ptr(&mut self) -> *mut std::ffi::c_void {
+        self.storage.as_mut_ptr().cast()
+    }
+}
+
+/// One stack-backed IO-Link device instance, wrapping the real (singleton)
+/// `iolinki` device stack. Only one instance may be alive at a time; see
+/// docs/engineering/iolink-device-stack-isolation.md.
+#[derive(Debug)]
+pub struct NativeIolinkDevice {
+    storage: Vec<u64>,
+}
+
+impl NativeIolinkDevice {
+    pub fn new_proximity(present: bool) -> Self {
+        let bytes = unsafe { lw_iold_context_size() };
+        let words = (bytes + std::mem::size_of::<u64>() - 1) / std::mem::size_of::<u64>();
+        let mut storage = vec![0u64; words];
+        let ret =
+            unsafe { lw_iold_init_proximity(storage.as_mut_ptr().cast(), i32::from(present)) };
+        assert_eq!(ret, 0, "lw_iold_init_proximity failed with {ret}");
+        Self { storage }
+    }
+
+    pub fn feed_master(&mut self, bytes: &[u8]) {
+        unsafe {
+            let n = lw_iold_feed_master(self.ptr(), bytes.as_ptr(), bytes.len());
+            assert_eq!(n, bytes.len());
+        }
+    }
+
+    pub fn drain_tx(&mut self) -> Vec<u8> {
+        let mut out = vec![0u8; 64];
+        let n = unsafe { lw_iold_drain_tx(self.ptr(), out.as_mut_ptr(), out.len()) };
+        out.truncate(n);
+        out
     }
 
     fn ptr(&mut self) -> *mut std::ffi::c_void {

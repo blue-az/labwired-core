@@ -51,13 +51,29 @@ fn build_iolink_native_bridge() {
     let mut build = cc::Build::new();
     build
         .file("native/iolink_master_bridge.c")
+        .file("native/iolink_device_bridge.c")
         .file(format!("{master_root}/src/master_port.c"))
         .file(format!("{master_root}/src/master_controller.c"))
         .file(format!("{master_root}/src/master_isdu.c"))
         .file(format!("{master_root}/src/master_parameters.c"))
         .file(format!("{master_root}/src/master_sio.c"))
+        // Device stack (singleton). frame.c/crc.c are shared with the master
+        // helpers above; listing them once is enough.
         .file(format!("{device_root}/src/frame.c"))
         .file(format!("{device_root}/src/crc.c"))
+        .file(format!("{device_root}/src/iolink_core.c"))
+        .file(format!("{device_root}/src/dll.c"))
+        .file(format!("{device_root}/src/isdu.c"))
+        .file(format!("{device_root}/src/events.c"))
+        .file(format!("{device_root}/src/params.c"))
+        .file(format!("{device_root}/src/data_storage.c"))
+        .file(format!("{device_root}/src/device_info.c"))
+        .file(format!("{device_root}/src/phy_generic.c"))
+        .file(format!("{device_root}/src/phy_virtual.c"))
+        .file(format!("{device_root}/src/platform.c"))
+        .file(format!("{device_root}/src/platform_stubs.c"))
+        .file(format!("{device_root}/src/platform/linux/time_utils.c"))
+        .file(format!("{device_root}/src/platform/linux/nvm_mock.c"))
         .include("native")
         .include(format!("{master_root}/include"))
         .include(format!("{device_root}/include"))
@@ -66,6 +82,8 @@ fn build_iolink_native_bridge() {
 
     println!("cargo:rerun-if-changed=native/iolink_master_bridge.h");
     println!("cargo:rerun-if-changed=native/iolink_master_bridge.c");
+    println!("cargo:rerun-if-changed=native/iolink_device_bridge.h");
+    println!("cargo:rerun-if-changed=native/iolink_device_bridge.c");
     println!("cargo:rerun-if-changed={master_root}/src/master_port.c");
     println!("cargo:rerun-if-changed={master_root}/include/iolinki_master/master.h");
 }
