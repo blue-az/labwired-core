@@ -9,9 +9,9 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 |-------|------|----------------------|--------------|--------|
 | `nrf52840` | 🟢 silicon-verified | 2026-06-17 | 2026-06-14 | ✅ fresh |
 | `seeed-xiao-nrf52840-sense` | 🟢 silicon-verified | 2026-06-17 | 2026-06-14 | ✅ fresh |
-| `stm32h563` | 🟢 silicon-verified | 2026-06-17 | 2026-06-18 | ⚠ drift acked 2026-06-19 (re-capture pending) |
+| `stm32h563` | 🟢 silicon-verified | 2026-06-20 | 2026-06-18 | ✅ fresh |
 | `esp32c3` | 🟢 silicon-verified | 2026-06-17 | 2026-06-14 | ✅ fresh |
-| `nucleo-l476rg` | 🟢 silicon-verified | 2026-06-17 | 2026-06-18 | ⚠ drift acked 2026-06-19 (re-capture pending) |
+| `nucleo-l476rg` | 🟢 silicon-verified | 2026-06-20 | 2026-06-18 | ✅ fresh |
 | `nucleo-l073rz` | 🟢 silicon-verified | 2026-06-20 | 2026-06-18 | ✅ fresh |
 | `stm32f103` | 🟢 silicon-verified | 2026-06-20 | 2026-06-19 | ✅ fresh |
 | `stm32f407` | 🟢 silicon-smoke | 2026-05-11 | 2026-06-18 | ⚠ drift acked 2026-06-19 (re-capture pending) |
@@ -40,10 +40,10 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 ## `stm32h563` — 🟢 silicon-verified
 
 - Doc: [`docs/boards/stm32h563.md`](stm32h563.md)  ·  Chip: `configs/chips/stm32h563.yaml`
-- Silicon: **2026-06-17** on ST-LINK V3 (J13) — class 65/65; GPIO mmio 8/8; GPIO parity 48/48 — 0 divergence (dapdirect AP1 recipe)
+- Silicon: **2026-06-20** on STLINK-V3 (USB 0483:374e, NUCLEO-H563ZI, dapdirect AP1 recipe) — Live re-capture after the v0.17.0 merge: h563_mmio_diff + h563_parity_diff + h563_class_diff all pass (class 65/65, GPIO mmio + parity), 0 divergence. Supersedes the 2026-06-19 drift_ack.
   - offline (CI): h563_conformance (5 tests vs frozen 2026-06-10..12 captures)
   - offline (CI): h563_mmio_diff::{h563_mmio_sim_only,h563_parity_sim_only,h563_class_sim_only}
-- Drift status: **⚠ drift acked 2026-06-19 (re-capture pending)**
+- Drift status: **✅ fresh**
 
 ## `esp32c3` — 🟢 silicon-verified
 
@@ -57,10 +57,10 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 
 - Doc: [`docs/boards/nucleo-l476rg.md`](nucleo-l476rg.md)  ·  Chip: `configs/chips/stm32l476.yaml`
 - Note: Register diff covers RCC/GPIO/SPI1/TIM2 (15 mmio cases + 104-pattern parity sweep), NOT a full-chip sweep — the prose doc's 'every peripheral exercised' is still an overstatement; this is the honest scope.
-- Silicon: **2026-06-17** on ST-LINK V2 J36 (NUCLEO-L476RG onboard) — mass-erased to clean reset state — l476_mmio_diff 15/15 + parity 104/104, 0 divergence vs live silicon (L476_STRICT)
+- Silicon: **2026-06-20** on STLINK-V2.1 (USB 0483:374b serial 0670FF…1747, NUCLEO-L476RG onboard) — Live re-capture after the v0.17.0 merge: l476_mmio_diff + l476_parity_diff pass (15 mmio + 104 parity), 0 divergence. Supersedes the 2026-06-19 drift_ack.
   - offline (CI): l476_mmio_diff::{l476_mmio_sim_only,l476_parity_sim_only}
   - offline (CI): firmware_survival L476 cases (UART byte stream)
-- Drift status: **⚠ drift acked 2026-06-19 (re-capture pending)**
+- Drift status: **✅ fresh**
 
 ## `nucleo-l073rz` — 🟢 silicon-verified
 
