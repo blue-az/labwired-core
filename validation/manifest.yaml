@@ -72,10 +72,9 @@ boards:
       - "h563_conformance (5 tests vs frozen 2026-06-10..12 captures)"
       - "h563_mmio_diff::{h563_mmio_sim_only,h563_parity_sim_only,h563_class_sim_only}"
     silicon:
-      last_capture: 2026-06-17
-      probe: "ST-LINK V3 (J13)"
-      result: "class 65/65; GPIO mmio 8/8; GPIO parity 48/48 — 0 divergence (dapdirect AP1 recipe)"
-    drift_ack: 2026-06-19   # merged feat/bxcan-bus-filter (CAN + RCC clock-gating + bus-routing models changed 2026-06-19); re-capture pending, no board connected
+      last_capture: 2026-06-20
+      probe: "STLINK-V3 (USB 0483:374e, NUCLEO-H563ZI, dapdirect AP1 recipe)"
+      result: "Live re-capture after the v0.17.0 merge: h563_mmio_diff + h563_parity_diff + h563_class_diff all pass (class 65/65, GPIO mmio + parity), 0 divergence. Supersedes the 2026-06-19 drift_ack."
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
@@ -121,10 +120,9 @@ boards:
       - "l476_mmio_diff::{l476_mmio_sim_only,l476_parity_sim_only}"
       - "firmware_survival L476 cases (UART byte stream)"
     silicon:
-      last_capture: 2026-06-17
-      probe: "ST-LINK V2 J36 (NUCLEO-L476RG onboard) — mass-erased to clean reset state"
-      result: "l476_mmio_diff 15/15 + parity 104/104, 0 divergence vs live silicon (L476_STRICT)"
-    drift_ack: 2026-06-19   # merged feat/bxcan-bus-filter (CAN + RCC clock-gating + bus-routing models changed 2026-06-19); re-capture pending, no board connected
+      last_capture: 2026-06-20
+      probe: "STLINK-V2.1 (USB 0483:374b serial 0670FF…1747, NUCLEO-L476RG onboard)"
+      result: "Live re-capture after the v0.17.0 merge: l476_mmio_diff + l476_parity_diff pass (15 mmio + 104 parity), 0 divergence. Supersedes the 2026-06-19 drift_ack."
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
