@@ -105,6 +105,12 @@ pub struct SystemBus {
     /// in O(1) instead of scanning by name. `None` on buses with no RCC (e.g.
     /// most non-STM32 chips), in which case no peripheral is ever gated.
     rcc_idx: Option<usize>,
+    /// Measurement-only escape hatch: when `true`, [`is_peripheral_clocked`]
+    /// short-circuits to `true` so RCC clock-gating never suppresses an access.
+    /// Off by default (the runtime always gates); only diagnostic tooling such
+    /// as the SVD register-coverage probe flips it on via
+    /// [`set_clock_gating_bypass`].
+    clock_gating_bypass: bool,
     /// Last-known IN value of GPIO ports 0 and 1, used by the per-tick
     /// edge-detection pass that drives GPIOTE EVENTS_IN. Both default to
     /// 0 at construction; the first tick after a GPIO write will produce
@@ -823,6 +829,9 @@ impl SystemBus {
     /// no modelled RCC). Cheap: one `Option` check, then on the rare gated path a
     /// single cached-index RCC register read.
     fn is_peripheral_clocked(&self, idx: usize) -> bool {
+        if self.clock_gating_bypass {
+            return true; // measurement mode: ignore gating (see set_clock_gating_bypass)
+        }
         let Some(gate) = self
             .peripherals
             .get(idx)
@@ -837,6 +846,23 @@ impl SystemBus {
             Ok(reg) => (reg >> gate.bit) & 1 != 0,
             Err(_) => true,
         }
+    }
+
+    /// Disable RCC clock-gating for measurement/diagnostic tooling: while set,
+    /// `is_peripheral_clocked` returns `true` for every peripheral, so a gated
+    /// peripheral's registers stay accessible regardless of the RCC enable bits.
+    ///
+    /// This is a measurement hook, NOT something the runtime ever calls. The
+    /// runtime requires firmware to clock a peripheral before use, and a gated-
+    /// but-unclocked peripheral must read 0 / ignore writes (silicon fidelity).
+    /// But tooling that measures *register modeling* (the SVD coverage probe)
+    /// needs to ask "is this register modelled" — a property of the device —
+    /// independent of whether its clock happens to be on. A flag is used rather
+    /// than pre-setting the RCC enable bits because the coverage probe itself
+    /// writes 0 to every register, including the RCC enable registers, which
+    /// would re-gate any peripheral probed after the RCC.
+    pub fn set_clock_gating_bypass(&mut self, bypass: bool) {
+        self.clock_gating_bypass = bypass;
     }
 
     pub fn new() -> Self {
@@ -895,6 +921,7 @@ impl SystemBus {
             pending_cpu_irqs: [0; 2],
             dport_idx: None,
             rcc_idx: None,
+            clock_gating_bypass: false,
             peripheral_ranges: Vec::new(),
             peripheral_hint: Cell::new(None),
             last_gpio_in: [0; 2],
@@ -930,6 +957,7 @@ impl SystemBus {
             pending_cpu_irqs: [0; 2],
             dport_idx: None,
             rcc_idx: None,
+            clock_gating_bypass: false,
             peripheral_ranges: Vec::new(),
             peripheral_hint: Cell::new(None),
             last_gpio_in: [0; 2],
@@ -2165,6 +2193,7 @@ peripherals:
             pending_cpu_irqs: [0; 2],
             dport_idx: None,
             rcc_idx: None,
+            clock_gating_bypass: false,
             flash_thunks: std::collections::HashMap::new(),
             peripheral_ranges: Vec::new(),
             peripheral_hint: Cell::new(None),
@@ -2226,6 +2255,7 @@ peripherals:
             pending_cpu_irqs: [0; 2],
             dport_idx: None,
             rcc_idx: None,
+            clock_gating_bypass: false,
             flash_thunks: std::collections::HashMap::new(),
             peripheral_ranges: Vec::new(),
             peripheral_hint: Cell::new(None),
@@ -2289,6 +2319,7 @@ peripherals:
             pending_cpu_irqs: [0; 2],
             dport_idx: None,
             rcc_idx: None,
+            clock_gating_bypass: false,
             flash_thunks: std::collections::HashMap::new(),
             peripheral_ranges: Vec::new(),
             peripheral_hint: Cell::new(None),

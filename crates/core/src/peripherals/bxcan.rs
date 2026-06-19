@@ -619,7 +619,7 @@ mod tests {
         wr(dev, TX_MB_BASE + 0x08, word_from_bytes(data, 0)); // TDL0R
         wr(dev, TX_MB_BASE + 0x0C, word_from_bytes(data, 4)); // TDH0R
         wr(dev, TX_MB_BASE + 0x04, data.len() as u32); // TDT0R: DLC
-        wr(dev, TX_MB_BASE + 0x00, (id & 0x7FF) << 21 | TI_TXRQ); // TI0R
+        wr(dev, TX_MB_BASE, (id & 0x7FF) << 21 | TI_TXRQ); // TI0R
     }
 
     #[test]
