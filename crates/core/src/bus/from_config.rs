@@ -97,6 +97,15 @@ impl SystemBus {
             }
         }
 
+        // External-device ids already attached by a chip-specific I²C path
+        // (the `i2c` / `esp32c3_i2c` arms below). The generic external-device
+        // loop must NOT re-process these — otherwise a device that the bus
+        // loader correctly attached as an I²C slave would also fall through to
+        // the generic `_ =>` arm and emit a spurious "Unsupported external
+        // device" WARN (it is supported — just by a path that ran first).
+        let mut attached_i2c_ext_ids: std::collections::HashSet<&str> =
+            std::collections::HashSet::new();
+
         for p_cfg in &merged_peripherals {
             let canonical_type = Self::canonical_peripheral_type(&p_cfg.r#type);
             if canonical_type != p_cfg.r#type.to_ascii_lowercase() {
@@ -224,6 +233,7 @@ impl SystemBus {
                                     p_cfg.id
                                 );
                                 i2c.attach(device);
+                                attached_i2c_ext_ids.insert(ext.id.as_str());
                             }
                             None => {
                                 // Devices migrated to the PeripheralKit contract
@@ -236,6 +246,50 @@ impl SystemBus {
                                 {
                                     tracing::warn!(
                                         "i2c attach skipped: unknown device type '{}' for external id '{}' on bus '{}'",
+                                        ext.r#type,
+                                        ext.id,
+                                        p_cfg.id
+                                    );
+                                }
+                            }
+                        }
+                    }
+                    Box::new(i2c)
+                }
+                // ESP32-C3 behavioral I²C0 controller (command-list engine).
+                // Same Espressif I²C IP family as the S3; the C3 chip yaml
+                // selects this type for `i2c0` so a slave declared in
+                // `external_devices` (connection: "i2c0") attaches here via the
+                // same `build_i2c_device` factory the STM32 path uses. The C3
+                // (RISC-V) reaches this through the from_config bus loader rather
+                // than a hand-wired system builder.
+                "esp32c3_i2c" => {
+                    let mut i2c = crate::peripherals::esp32c3::i2c::Esp32c3I2c::new();
+                    for ext in &manifest.external_devices {
+                        if ext.connection != p_cfg.id {
+                            continue;
+                        }
+                        match crate::peripherals::components::build_i2c_device(
+                            &ext.r#type,
+                            &ext.config,
+                        ) {
+                            Some(device) => {
+                                tracing::info!(
+                                    "esp32c3 i2c attach: '{}' (type={}) -> '{}'",
+                                    ext.id,
+                                    ext.r#type,
+                                    p_cfg.id
+                                );
+                                i2c.attach_slave(device);
+                                attached_i2c_ext_ids.insert(ext.id.as_str());
+                            }
+                            None => {
+                                // Kit-contract devices attach via the kit pass
+                                // below; only warn for types no path handles.
+                                if crate::peripherals::kit::registry::lookup(&ext.r#type).is_none()
+                                {
+                                    tracing::warn!(
+                                        "esp32c3 i2c attach skipped: unknown device type '{}' for external id '{}' on bus '{}'",
                                         ext.r#type,
                                         ext.id,
                                         p_cfg.id
@@ -377,6 +431,13 @@ impl SystemBus {
         }
 
         for ext in &manifest.external_devices {
+            // Already attached as an I²C slave by a chip-specific i2c path
+            // (the `i2c` / `esp32c3_i2c` arms above). Don't let it fall through
+            // to the generic arms — it is handled, so re-processing it here
+            // would emit a spurious "Unsupported external device" WARN.
+            if attached_i2c_ext_ids.contains(ext.id.as_str()) {
+                continue;
+            }
             // First-pass: peripherals that have migrated to the unified
             // `PeripheralKit` contract are dispatched through the registry,
             // so each one ships its own `attach` next to its model instead
