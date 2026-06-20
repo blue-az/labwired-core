@@ -16,6 +16,7 @@
 
 // ── Register offsets (relative to FLASH base 0x4002_2000) ───────────────────
 
+pub const NSKEYR_OFF: u64 = 0x08;
 pub const NSSR_OFF: u64 = 0x20;
 pub const NSCR_OFF: u64 = 0x28;
 pub const OPTCR_OFF: u64 = 0x1C;
