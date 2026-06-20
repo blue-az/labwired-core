@@ -33,6 +33,9 @@
 use crate::SimResult;
 use std::str::FromStr;
 
+#[path = "flash_h5_regs.rs"]
+mod h5;
+
 /// Register layout / reset-value profile for the FLASH interface.
 /// Adding a variant must NOT touch the read/write branches of existing
 /// variants — keep family-specific behaviour isolated.
