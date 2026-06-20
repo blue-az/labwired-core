@@ -9,14 +9,18 @@
 //! silicon via SWD (2026-06-20): a read of 0x4002_2000×24 confirmed
 //! ACR=0x13, OPTCR=0x1, NSSR=0x0, NSCR=0x1, OPTSR_CUR=OPTSR_PRG=0x2D30_EDF8
 //! (bit31/SWAP_BANK clear → bank 1 active), matching the model reset values.
-//! Bitfield positions (SER/STRT/SNB/SWAP_BANK/OBL_LAUNCH) are architectural
-//! per RM0481 §7 (not reset-readable).
+//! Bitfield positions (SER/STRT/SNB/SWAP_BANK/OPTSTRT) are architectural
+//! per RM0481 §7 (not reset-readable). SVD-confirmed against
+//! `tests/fixtures/real_world/stm32h563.svd`: FLASH_NSKEYR=0x004,
+//! FLASH_SECKEYR=0x008 (secure, unused here), FLASH_OPTKEYR=0x00C;
+//! FLASH_OPTCR has OPTLOCK(bit0), OPTSTRT(bit1), SWAP_BANK(bit31) — there
+//! is no OBL_LAUNCH on H5 (that field exists on F4/L4 only).
 
 #![allow(dead_code)]
 
 // ── Register offsets (relative to FLASH base 0x4002_2000) ───────────────────
 
-pub const NSKEYR_OFF: u64 = 0x08;
+pub const NSKEYR_OFF: u64 = 0x04;
 pub const NSSR_OFF: u64 = 0x20;
 pub const NSCR_OFF: u64 = 0x28;
 pub const OPTCR_OFF: u64 = 0x1C;
@@ -54,8 +58,10 @@ pub const OPTSR_SWAP_BANK: u32 = 1 << 31;
 
 // ── FLASH_OPTCR bitfields (RM0481 §7.9.13) ──────────────────────────────────
 
-/// Bit 27 — OBL_LAUNCH: option byte loading launch.
-pub const OPTCR_OBL_LAUNCH: u32 = 1 << 27;
+/// Bit 1 — OPTSTRT: start option-byte programming (SVD-confirmed, H5 only).
+/// Writing 1 after OPTKEYR unlock and OPTSR_PRG.SWAP_BANK programs the option
+/// bytes; the swap takes effect on the next system reset.
+pub const OPTCR_OPTSTRT: u32 = 1 << 1;
 
 // ── Address / geometry constants ─────────────────────────────────────────────
 
