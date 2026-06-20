@@ -100,11 +100,17 @@ peripherals:
     base_address: 0x60009000
     config:
       path: "../peripherals/esp32c3/io_mux.yaml"
+  # Behavioral I²C0 controller (command-list engine). The C3 I²C is the same
+  # Espressif IP family as the S3, so this drives attached I2cDevice slaves
+  # declared in a system.yaml `external_devices` (connection: "i2c0") — the
+  # foundation for running real I²C sensors (e.g. MLX90640) on a C3 in sim.
+  # The register layout still matches ../peripherals/esp32c3/i2c0.yaml (the SVD
+  # descriptor that this model was diffed against); the behavioral model adds
+  # the transaction engine the declarative descriptor lacks.
   - id: "i2c0"
-    type: "declarative"
+    type: "esp32c3_i2c"
     base_address: 0x60013000
-    config:
-      path: "../peripherals/esp32c3/i2c0.yaml"
+    size: "4KB"
   - id: "spi2"
     type: "declarative"
     base_address: 0x60024000

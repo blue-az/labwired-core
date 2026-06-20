@@ -195,6 +195,12 @@ impl SystemBus {
         if t == "nrf52840_i2c" || t == "nrf52840_twim" || t == "nrf52_twim" || t == "nrf52_i2c" {
             return "nrf52840_twim".to_string();
         }
+        // ESP32-C3 behavioral I²C controller — must precede the generic
+        // "contains(i2c)" matcher below, which would otherwise coerce it to the
+        // STM32 `i2c` model and drop the C3 command-list engine.
+        if t == "esp32c3_i2c" {
+            return "esp32c3_i2c".to_string();
+        }
         // UARTE: nRF52 UART with EasyDMA — must be intercepted before the
         // generic "contains(uart)" matcher, which would coerce it to the
         // STM32-style generic Uart model and lose PSEL/BAUDRATE/CONFIG.
@@ -1243,6 +1249,201 @@ mod tests {
         let any = bus.peripherals[i2c_idx].dev.as_any_mut().unwrap();
         let i2c = any.downcast_mut::<crate::peripherals::i2c::I2c>().unwrap();
         assert_eq!(i2c.attached_devices().len(), 1);
+    }
+
+    /// Wiring guard for the ESP32-C3 behavioral I²C: a chip yaml declaring
+    /// `i2c0` as `esp32c3_i2c` plus a system manifest declaring a BMP280 on
+    /// `connection: "i2c0"` must attach that slave to the behavioral controller
+    /// AND let a register-driven write-then-read transaction reach it. This is
+    /// the path the MLX90640 will use (different device type, same wiring).
+    #[test]
+    fn test_from_config_attaches_bmp280_to_esp32c3_i2c0() {
+        use labwired_config::{
+            Arch, ChipDescriptor, ExternalDevice, MemoryRange, PeripheralConfig, SystemManifest,
+        };
+        use std::collections::HashMap;
+
+        let chip = ChipDescriptor {
+            schema_version: "1.0".to_string(),
+            memory_regions: Vec::new(),
+            name: "esp32c3-i2c-test".to_string(),
+            arch: Arch::RiscV,
+            core: None,
+            flash: MemoryRange {
+                base: 0x4200_0000,
+                size: "4MB".to_string(),
+            },
+            ram: MemoryRange {
+                base: 0x3FC8_0000,
+                size: "400KB".to_string(),
+            },
+            peripherals: vec![PeripheralConfig {
+                id: "i2c0".to_string(),
+                r#type: "esp32c3_i2c".to_string(),
+                base_address: 0x6001_3000,
+                size: Some("4KB".to_string()),
+                irq: None,
+                config: HashMap::new(),
+            }],
+        };
+
+        let mut config = HashMap::new();
+        config.insert(
+            "i2c_address".to_string(),
+            serde_yaml::Value::Number(0x76.into()),
+        );
+        let manifest = SystemManifest {
+            walk_deleted: false,
+            schema_version: "1.0".to_string(),
+            name: "esp32c3-bmp280-test".to_string(),
+            chip: "../chips/esp32c3.yaml".to_string(),
+            memory_overrides: HashMap::new(),
+            external_devices: vec![ExternalDevice {
+                id: "bmp280".to_string(),
+                r#type: "bmp280".to_string(),
+                connection: "i2c0".to_string(),
+                config,
+            }],
+            board_io: Vec::new(),
+            peripherals: Vec::new(),
+        };
+
+        let mut bus = SystemBus::from_config(&chip, &manifest).unwrap();
+        let i2c_idx = bus
+            .find_peripheral_index_by_name("i2c0")
+            .expect("i2c0 must be registered");
+        let any = bus.peripherals[i2c_idx].dev.as_any_mut().unwrap();
+        let i2c = any
+            .downcast_mut::<crate::peripherals::esp32c3::i2c::Esp32c3I2c>()
+            .expect("i2c0 must be the behavioral Esp32c3I2c controller");
+
+        // Drive the canonical register-pointer read of the BMP280 chip-id
+        // (0xD0 → 0x58), exactly as C3 firmware would, through the controller's
+        // registers: RSTART; WRITE 2 (addr+W, ptr); RSTART; WRITE 1 (addr+R);
+        // READ 1; STOP. Opcodes: 6=RSTART, 1=WRITE, 3=READ, 2=STOP.
+        i2c.write_u32(0x58, 6 << 11).unwrap(); // CMD0 RSTART
+        i2c.write_u32(0x5C, (1 << 11) | 2).unwrap(); // CMD1 WRITE 2
+        i2c.write_u32(0x60, 6 << 11).unwrap(); // CMD2 RSTART
+        i2c.write_u32(0x64, (1 << 11) | 1).unwrap(); // CMD3 WRITE 1
+        i2c.write_u32(0x68, (3 << 11) | 1).unwrap(); // CMD4 READ 1
+        i2c.write_u32(0x6C, 2 << 11).unwrap(); // CMD5 STOP
+        i2c.write_u32(0x1C, 0xEC).unwrap(); // addr+W (0x76<<1)
+        i2c.write_u32(0x1C, 0xD0).unwrap(); // pointer = chip-id
+        i2c.write_u32(0x1C, 0xED).unwrap(); // addr+R
+        i2c.write_u32(0x04, 1 << 5).unwrap(); // TRANS_START
+
+        // Address must have matched (no NACK at bit 10) and the chip-id byte
+        // must round-trip out of the RX FIFO.
+        let int_raw = i2c.read_u32(0x20).unwrap();
+        assert_eq!(int_raw & (1 << 10), 0, "BMP280 must ACK; INT_RAW=0x{int_raw:08x}");
+        assert_eq!(
+            i2c.read_u32(0x1C).unwrap(),
+            0x58,
+            "BMP280 CHIP_ID must round-trip through the bus-attached controller"
+        );
+    }
+
+    /// Wiring + reachability guard for the MLX90640 thermal camera on the
+    /// ESP32-C3 behavioral I²C0: a system manifest declaring an `mlx90640` on
+    /// `connection: "i2c0"` must attach it at 0x33 AND let a register-driven
+    /// 16-bit-addressed read reach an EEPROM word. We read the gainEE word at
+    /// EEPROM address 0x2430 (== 0x2400 + 48), which the linearized calibration
+    /// fixes to 6000, exercising the 16-bit register-address protocol over the
+    /// real bus-attached controller.
+    #[test]
+    fn test_from_config_attaches_mlx90640_to_esp32c3_i2c0_and_reads_eeprom() {
+        use labwired_config::{
+            Arch, ChipDescriptor, ExternalDevice, MemoryRange, PeripheralConfig, SystemManifest,
+        };
+        use std::collections::HashMap;
+
+        let chip = ChipDescriptor {
+            schema_version: "1.0".to_string(),
+            memory_regions: Vec::new(),
+            name: "esp32c3-mlx-test".to_string(),
+            arch: Arch::RiscV,
+            core: None,
+            flash: MemoryRange {
+                base: 0x4200_0000,
+                size: "4MB".to_string(),
+            },
+            ram: MemoryRange {
+                base: 0x3FC8_0000,
+                size: "400KB".to_string(),
+            },
+            peripherals: vec![PeripheralConfig {
+                id: "i2c0".to_string(),
+                r#type: "esp32c3_i2c".to_string(),
+                base_address: 0x6001_3000,
+                size: Some("4KB".to_string()),
+                irq: None,
+                config: HashMap::new(),
+            }],
+        };
+
+        let mut config = HashMap::new();
+        config.insert(
+            "i2c_address".to_string(),
+            serde_yaml::Value::Number(0x33.into()),
+        );
+        config.insert(
+            "ambient_c".to_string(),
+            serde_yaml::Value::Number(25.0.into()),
+        );
+        let manifest = SystemManifest {
+            walk_deleted: false,
+            schema_version: "1.0".to_string(),
+            name: "esp32c3-mlx90640-test".to_string(),
+            chip: "../chips/esp32c3.yaml".to_string(),
+            memory_overrides: HashMap::new(),
+            external_devices: vec![ExternalDevice {
+                id: "thermal_cam".to_string(),
+                r#type: "mlx90640".to_string(),
+                connection: "i2c0".to_string(),
+                config,
+            }],
+            board_io: Vec::new(),
+            peripherals: Vec::new(),
+        };
+
+        let mut bus = SystemBus::from_config(&chip, &manifest).unwrap();
+        let i2c_idx = bus
+            .find_peripheral_index_by_name("i2c0")
+            .expect("i2c0 must be registered");
+        let any = bus.peripherals[i2c_idx].dev.as_any_mut().unwrap();
+        let i2c = any
+            .downcast_mut::<crate::peripherals::esp32c3::i2c::Esp32c3I2c>()
+            .expect("i2c0 must be the behavioral Esp32c3I2c controller");
+
+        // 16-bit-addressed read of EEPROM word 0x2430: write the 2-byte big-
+        // endian register address (0x24, 0x30), repeated-start, read 2 bytes
+        // (MSB first). Opcodes: 6=RSTART, 1=WRITE, 3=READ, 2=STOP.
+        i2c.write_u32(0x58, 6 << 11).unwrap(); // CMD0 RSTART
+        i2c.write_u32(0x5C, (1 << 11) | 3).unwrap(); // CMD1 WRITE 3 (addr+W, addr_hi, addr_lo)
+        i2c.write_u32(0x60, 6 << 11).unwrap(); // CMD2 RSTART
+        i2c.write_u32(0x64, (1 << 11) | 1).unwrap(); // CMD3 WRITE 1 (addr+R)
+        i2c.write_u32(0x68, (3 << 11) | 2).unwrap(); // CMD4 READ 2 (one 16-bit word)
+        i2c.write_u32(0x6C, 2 << 11).unwrap(); // CMD5 STOP
+        i2c.write_u32(0x1C, 0x66).unwrap(); // addr+W (0x33<<1)
+        i2c.write_u32(0x1C, 0x24).unwrap(); // reg addr high byte
+        i2c.write_u32(0x1C, 0x30).unwrap(); // reg addr low byte
+        i2c.write_u32(0x1C, 0x67).unwrap(); // addr+R (0x33<<1 | 1)
+        i2c.write_u32(0x04, 1 << 5).unwrap(); // TRANS_START
+
+        let int_raw = i2c.read_u32(0x20).unwrap();
+        assert_eq!(
+            int_raw & (1 << 10),
+            0,
+            "MLX90640 at 0x33 must ACK; INT_RAW=0x{int_raw:08x}"
+        );
+        let hi = i2c.read_u32(0x1C).unwrap();
+        let lo = i2c.read_u32(0x1C).unwrap();
+        let word = (hi << 8) | lo;
+        assert_eq!(
+            word, 6000,
+            "MLX90640 gainEE EEPROM word (0x2430) must round-trip the 16-bit \
+             register protocol through the bus-attached C3 controller"
+        );
     }
 
     #[test]
