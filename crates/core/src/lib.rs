@@ -697,6 +697,12 @@ pub struct Machine<C: Cpu> {
     /// indexed access + one downcast. `None` for configs that don't register
     /// an RTC_CNTL peripheral (every non-ESP32-classic target).
     rtc_cntl_index: Option<usize>,
+    /// Cached bus index of the FLASH peripheral (H5 layout). Resolved once at
+    /// construction; `step()` drains pending FLASH ops (sector erase,
+    /// bank-swap+reset) at clean instruction boundaries without walking the
+    /// full peripheral list every cycle. `None` for configs with no FLASH
+    /// peripheral on the bus (e.g. bare-bus unit tests).
+    flash_index: Option<usize>,
     /// Phase 2B.3b (issue #192): whether the one-time scheduler bootstrap has
     /// run. On the first `drain_scheduler_events`, peripherals with setup-time
     /// work (e.g. a UART with an RX stream attached before any MMIO write) get
@@ -714,6 +720,12 @@ impl<C: Cpu> Machine<C> {
                 .and_then(|a| a.downcast_ref::<crate::peripherals::esp32::rtc_cntl::RtcCntl>())
                 .is_some()
         });
+        let flash_index = bus.peripherals.iter().position(|p| {
+            p.dev
+                .as_any()
+                .and_then(|a| a.downcast_ref::<crate::peripherals::flash::Flash>())
+                .is_some()
+        });
         Self {
             cpu,
             cpu_secondary: None,
@@ -726,6 +738,7 @@ impl<C: Cpu> Machine<C> {
             sched: sched::EventScheduler::new(),
             clocks: sched::ClockGraph::new(),
             rtc_cntl_index,
+            flash_index,
             scheduler_bootstrapped: false,
         }
     }
@@ -927,6 +940,43 @@ impl<C: Cpu> Machine<C> {
             tracing::debug!("RTC_CNTL SW_SYS_RST: CPU re-pointed at reset vector 0x40000400");
         }
 
+        // H5 FLASH pending ops: sector erase fills flash with 0xFF; bank-swap
+        // swaps the two 1 MB banks in the flash buffer then re-runs reset so
+        // the CPU boots from the new bank-1 vector table.
+        if let Some(op) = self.drain_flash_op() {
+            use crate::peripherals::flash::h5;
+            use crate::peripherals::flash::FlashOp;
+            match op {
+                FlashOp::EraseSector { bank, sector } => {
+                    let offset = (bank as u64) * h5::BANK_SIZE + (sector as u64) * h5::SECTOR_SIZE;
+                    self.bus.flash.fill(offset, h5::SECTOR_SIZE, 0xFF);
+                    tracing::debug!(
+                        "FLASH EraseSector bank={bank} sector={sector} offset={offset:#010x}"
+                    );
+                }
+                FlashOp::SwapAndReset => {
+                    // Swap the two architectural 1 MiB (0x100000) banks. The
+                    // H563 flash buffer is sized to exactly 2 * BANK_SIZE by the
+                    // chip yaml (`size: "2MiB"`), so the same BANK_SIZE used by
+                    // EraseSector above also bounds the swap — keeping erase and
+                    // swap on one consistent bank-size notion (real silicon:
+                    // bank 2 @ 0x08100000). swap_banks returns false if the
+                    // buffer is not exactly two banks; debug-assert that here so
+                    // a mis-sized chip yaml fails loudly in tests.
+                    let swapped = self.bus.flash.swap_banks(h5::BANK_SIZE);
+                    debug_assert!(
+                        swapped,
+                        "SWAP_BANK: flash buffer ({} bytes) is not 2 * BANK_SIZE ({}); \
+                         check the chip yaml flash size uses binary (MiB) units",
+                        self.bus.flash.data.len(),
+                        2 * h5::BANK_SIZE
+                    );
+                    tracing::debug!("FLASH SwapAndReset: banks swapped, resetting CPU");
+                    self.reset()?;
+                }
+            }
+        }
+
         Ok(())
     }
 
@@ -1081,6 +1131,20 @@ impl<C: Cpu> Machine<C> {
             .and_then(|a| a.downcast_ref::<crate::peripherals::esp32::rtc_cntl::RtcCntl>())
             .map(|rtc| rtc.drain_reset_request())
             .unwrap_or(false)
+    }
+
+    /// Drain a pending FLASH hardware operation recorded by the H5 FLASH
+    /// peripheral (sector erase or bank-swap+reset). Returns `None` for
+    /// configs that have no FLASH peripheral on the bus. The caller is
+    /// responsible for applying the returned op to `bus.flash` and issuing
+    /// a CPU reset when required.
+    fn drain_flash_op(&self) -> Option<crate::peripherals::flash::FlashOp> {
+        let idx = self.flash_index?;
+        let p = self.bus.peripherals.get(idx)?;
+        p.dev
+            .as_any()
+            .and_then(|a| a.downcast_ref::<crate::peripherals::flash::Flash>())
+            .and_then(|f| f.drain_pending_op())
     }
 
     pub fn snapshot(&self) -> snapshot::MachineSnapshot {

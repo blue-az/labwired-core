@@ -38,10 +38,14 @@ core: "cortex-m33"
 registers_count: 220
 flash:
   base: 0x08000000
-  size: "2MB"
+  # Binary units (MiB) so the buffer is exactly 2 * 0x100000 = 2,097,152 bytes,
+  # matching real H563 silicon: two 1 MiB (0x100000) banks. SI "2MB" would parse
+  # as 2,000,000 (human_size) and break dual-bank addressing (bank 2 @ 0x08100000).
+  size: "2MiB"
 ram:
   base: 0x20000000
-  size: "640KB"
+  # 640 KiB = 655,360 bytes, matching silicon (initial SP read = 0x200A0000 = RAM top).
+  size: "640KiB"
 peripherals:
   - id: "rcc"
     type: "rcc"
