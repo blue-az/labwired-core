@@ -4,7 +4,7 @@
 //! Integration tests for STM32H5 FLASH pending-op drain in Machine::step.
 //!
 //! Tests that NSCR sector-erase fills the flash buffer with 0xFF and that
-//! SWAP_BANK + OBL_LAUNCH swaps the two 1 MB banks and reloads the CPU
+//! SWAP_BANK + OPTSTRT swaps the two 1 MB banks and reloads the CPU
 //! reset vector from the new bank-1 content.
 //!
 //! Bus construction mirrors `h563_conformance.rs`: build a `SystemBus` from
@@ -41,8 +41,12 @@ fn h563_machine() -> Machine<labwired_core::cpu::CortexM> {
 
 /// Unlock the non-secure flash key register (NSKEYR) via the bus.
 fn unlock_nskeyr(m: &mut Machine<labwired_core::cpu::CortexM>) {
-    m.bus.write_u32(FLASH_BASE + 0x08, 0x4567_0123).unwrap(); // KEY1
-    m.bus.write_u32(FLASH_BASE + 0x08, 0xCDEF_89AB).unwrap(); // KEY2
+    m.bus
+        .write_u32(FLASH_BASE + h5::NSKEYR_OFF, 0x4567_0123)
+        .unwrap(); // KEY1
+    m.bus
+        .write_u32(FLASH_BASE + h5::NSKEYR_OFF, 0xCDEF_89AB)
+        .unwrap(); // KEY2
 }
 
 /// Unlock the option-byte key register (OPTKEYR) via the bus.
@@ -161,9 +165,9 @@ fn erase_targets_bank2_with_bksel() {
     );
 }
 
-// ── Test 2: SWAP_BANK + OBL_LAUNCH reboots into bank 2 ─────────────────────
+// ── Test 2: SWAP_BANK + OPTSTRT reboots into bank 2 ────────────────────────
 
-/// Verify that OPTSR_PRG.SWAP_BANK + OPTCR.OBL_LAUNCH causes Machine::step
+/// Verify that OPTSR_PRG.SWAP_BANK + OPTCR.OPTSTRT causes Machine::step
 /// to swap the two 1 MB flash banks and reload the CPU reset vector from the
 /// (now-swapped) new bank 1 content.
 ///
@@ -200,7 +204,7 @@ fn swap_bank_reboots_into_bank2() {
     write_flash_word(&mut m, bank2_base + 4, bank2_pc);
 
     // Arm the swap: unlock OPTKEYR, set SWAP_BANK in OPTSR_PRG, then
-    // OBL_LAUNCH in OPTCR.  (NSKEYR is NOT required for swap — only OPTKEYR.)
+    // OPTSTRT in OPTCR.  (NSKEYR is NOT required for swap — only OPTKEYR.)
     unlock_optkeyr(&mut m);
 
     // OPTSR_PRG: set SWAP_BANK (bit 31).
@@ -208,9 +212,9 @@ fn swap_bank_reboots_into_bank2() {
         .write_u32(FLASH_BASE + h5::OPTSR_PRG_OFF, h5::OPTSR_SWAP_BANK)
         .unwrap();
 
-    // OPTCR: OBL_LAUNCH (bit 27) → records SwapAndReset in the peripheral.
+    // OPTCR: OPTSTRT (bit 1) → records SwapAndReset in the peripheral.
     m.bus
-        .write_u32(FLASH_BASE + h5::OPTCR_OFF, h5::OPTCR_OBL_LAUNCH)
+        .write_u32(FLASH_BASE + h5::OPTCR_OFF, h5::OPTCR_OPTSTRT)
         .unwrap();
 
     // step() executes one NOP (bank1 instruction at PC=0), then applies
@@ -304,7 +308,7 @@ fn erase_applied_via_run() {
 // ── Test 5: bank swap + reset applied via the batch/run path ───────────────
 
 /// Same swap as `swap_bank_reboots_into_bank2`, but driven through
-/// `Machine::run`. Proves SWAP_BANK + OBL_LAUNCH swaps banks AND resets the CPU
+/// `Machine::run`. Proves SWAP_BANK + OPTSTRT swaps banks AND resets the CPU
 /// PC to bank2's reset vector on the shipping batch path.
 #[test]
 fn swap_applied_via_run() {
@@ -328,7 +332,7 @@ fn swap_applied_via_run() {
         .write_u32(FLASH_BASE + h5::OPTSR_PRG_OFF, h5::OPTSR_SWAP_BANK)
         .unwrap();
     m.bus
-        .write_u32(FLASH_BASE + h5::OPTCR_OFF, h5::OPTCR_OBL_LAUNCH)
+        .write_u32(FLASH_BASE + h5::OPTCR_OFF, h5::OPTCR_OPTSTRT)
         .unwrap();
 
     // Drive via run() (the shipping batch path), not step(). Limit to a single
