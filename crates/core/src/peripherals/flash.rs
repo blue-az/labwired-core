@@ -291,6 +291,17 @@ impl Flash {
                         _ => KeyUnlockState::Locked,
                     };
                 }
+                // OPTKEYR (H5 offset 0x0C) — option-byte unlock sequence.
+                // Distinct from NSKEYR: option-byte programming and OBL_LAUNCH
+                // require this sequence (OPTKEY1 then OPTKEY2), not the flash key.
+                0x0C => {
+                    self.optkeyr = value;
+                    self.optkey_state = match (self.optkey_state, value) {
+                        (KeyUnlockState::Locked, OPTKEY1) => KeyUnlockState::HalfUnlocked,
+                        (KeyUnlockState::HalfUnlocked, OPTKEY2) => KeyUnlockState::Unlocked,
+                        _ => KeyUnlockState::Locked,
+                    };
+                }
                 h5::NSCR_OFF => {
                     self.cr = value;
                     if unlocked && (value & h5::NSCR_SER) != 0 && (value & h5::NSCR_STRT) != 0 {
@@ -306,7 +317,10 @@ impl Flash {
                 }
                 h5::OPTSR_PRG_OFF => self.optsr_prg = value,
                 h5::OPTCR_OFF => {
-                    if unlocked
+                    // OBL_LAUNCH requires the OPTION-key (OPTKEYR), not the
+                    // flash key (NSKEYR). This matches silicon: option-byte
+                    // programming is a separate unlock domain on H5 (RM0481 §7).
+                    if matches!(self.optkey_state, KeyUnlockState::Unlocked)
                         && (value & h5::OPTCR_OBL_LAUNCH) != 0
                         && (self.optsr_prg & h5::OPTSR_SWAP_BANK) != 0
                     {
@@ -463,8 +477,13 @@ mod h5_erase_swap_tests {
     use crate::Peripheral;
 
     fn unlock(f: &mut Flash) {
-        f.write_u32(0x08, 0x4567_0123).unwrap(); // NSKEYR
-        f.write_u32(0x08, 0xCDEF_89AB).unwrap();
+        f.write_u32(0x08, 0x4567_0123).unwrap(); // NSKEYR key 1
+        f.write_u32(0x08, 0xCDEF_89AB).unwrap(); // NSKEYR key 2
+    }
+
+    fn unlock_opt(f: &mut Flash) {
+        f.write_u32(0x0C, 0x0819_2A3B).unwrap(); // OPTKEYR key 1
+        f.write_u32(0x0C, 0x4C5D_6E7F).unwrap(); // OPTKEYR key 2
     }
 
     #[test]
@@ -497,10 +516,22 @@ mod h5_erase_swap_tests {
     #[test]
     fn swap_bank_plus_obl_launch_records_swap_and_reset() {
         let mut f = Flash::new_with_layout(FlashRegisterLayout::Stm32H5);
-        unlock(&mut f);
+        unlock(&mut f); // NSKEYR — required for sector erase, not swap
+        unlock_opt(&mut f); // OPTKEYR — required for OBL_LAUNCH / option-byte ops
         f.write_u32(h5::OPTSR_PRG_OFF, h5::OPTSR_SWAP_BANK).unwrap();
         f.write_u32(h5::OPTCR_OFF, h5::OPTCR_OBL_LAUNCH).unwrap();
         assert_eq!(f.drain_pending_op(), Some(FlashOp::SwapAndReset));
+    }
+
+    #[test]
+    fn obl_launch_ignored_without_optkey_unlock() {
+        // NSKEYR (flash-key) unlock alone must NOT trigger swap — silicon requires
+        // the separate OPTKEYR sequence for option-byte operations (RM0481 §7).
+        let mut f = Flash::new_with_layout(FlashRegisterLayout::Stm32H5);
+        unlock(&mut f); // NSKEYR only — no OPTKEYR
+        f.write_u32(h5::OPTSR_PRG_OFF, h5::OPTSR_SWAP_BANK).unwrap();
+        f.write_u32(h5::OPTCR_OFF, h5::OPTCR_OBL_LAUNCH).unwrap();
+        assert_eq!(f.drain_pending_op(), None);
     }
 
     #[test]
