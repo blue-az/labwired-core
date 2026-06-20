@@ -74,6 +74,17 @@ impl FromStr for FlashRegisterLayout {
     }
 }
 
+/// Pending FLASH hardware operation recorded by the simulator.
+/// Drainable via [`Flash::drain_pending_op`]; consumed (and applied) by the
+/// machine layer so that bank-swap takes effect on the next boot cycle.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum FlashOp {
+    /// Non-secure sector erase (`NSCR.SER + STRT`).
+    EraseSector { bank: u8, sector: u32 },
+    /// Bank-swap + option-byte reload (`OPTSR_PRG.SWAP_BANK + OPTCR.OBL_LAUNCH`).
+    SwapAndReset,
+}
+
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Flash {
     layout: FlashRegisterLayout,
@@ -93,6 +104,14 @@ pub struct Flash {
     pcrop2er: u32,
     wrp2ar: u32,
     wrp2br: u32,
+
+    // H5: OPTSR_PRG shadow (mirrors OPTSR_CUR at reset per silicon capture).
+    optsr_prg: u32,
+    // H5: pending hardware op recorded on NSCR.STRT / OPTCR.OBL_LAUNCH.
+    // Cell<Option<_>> gives interior mutability so drain_pending_op takes &self.
+    // skip serde — Cell<Option<_>> is not Serialize; resets to None on restore.
+    #[serde(skip)]
+    pending_op: std::cell::Cell<Option<FlashOp>>,
 
     // Internal: tracks unlock sequence on KEYR (write 0x45670123 then 0xCDEF89AB).
     key_state: KeyUnlockState,
@@ -146,6 +165,9 @@ impl Flash {
             pcrop2er: 0,
             wrp2ar: 0,
             wrp2br: 0,
+            // OPTSR_PRG mirrors OPTSR_CUR at reset (silicon-confirmed).
+            optsr_prg: optr_reset,
+            pending_op: std::cell::Cell::new(None),
             key_state: KeyUnlockState::Locked,
             optkey_state: KeyUnlockState::Locked,
         }
@@ -174,6 +196,8 @@ impl Flash {
             pcrop2er: 0,
             wrp2ar: 0,
             wrp2br: 0,
+            optsr_prg: 0xFFEF_F8AA,
+            pending_op: std::cell::Cell::new(None),
             key_state: KeyUnlockState::Locked,
             optkey_state: KeyUnlockState::Locked,
         }
@@ -204,12 +228,17 @@ impl Flash {
         if matches!(self.layout, FlashRegisterLayout::Stm32H5) {
             return match offset {
                 0x00 => self.acr,
-                0x14 => 0,         // OPSR
+                // NSKEYR: write-only on real hardware; simulator reads back keyr
+                // so that the byte→word reconstruction in write() can assemble
+                // the full 32-bit key value before triggering the state machine.
+                h5::NSKEYR_OFF => self.keyr,
+                0x14 => 0,                           // OPSR
                 0x1C => 0x1,       // OPTCR (silicon reset; option flows not modeled)
                 0x20 => self.sr,   // NSSR
                 0x28 => self.cr,   // NSCR
                 0x30 => 0,         // NSCCR
                 0x50 => self.optr, // OPTSR_CUR
+                h5::OPTSR_PRG_OFF => self.optsr_prg, // OPTSR_PRG
                 _ => 0,
             };
         }
@@ -238,13 +267,53 @@ impl Flash {
     fn write_reg(&mut self, offset: u64, value: u32) {
         // ─── H5 layout (isolated) ───────────────────────────────────────
         if matches!(self.layout, FlashRegisterLayout::Stm32H5) {
-            if offset == 0x00 {
-                // ACR writable bits: LATENCY[3:0], WRHIGHFREQ[5:4],
-                // PRFTEN(8) = mask 0x13F. Round-trips silicon-pinned
-                // (0x11/0x23/0x02/0x25/0x13F — capture6+9; the original
-                // 0x133 mask dropped LATENCY bits 2:3 and broke HAL's
-                // latency-5 read-back check at 250 MHz).
-                self.acr = value & 0x0000_013F;
+            let unlocked = matches!(self.key_state, KeyUnlockState::Unlocked);
+            match offset {
+                0x00 => {
+                    // ACR writable bits: LATENCY[3:0], WRHIGHFREQ[5:4],
+                    // PRFTEN(8) = mask 0x13F. Round-trips silicon-pinned
+                    // (0x11/0x23/0x02/0x25/0x13F — capture6+9; the original
+                    // 0x133 mask dropped LATENCY bits 2:3 and broke HAL's
+                    // latency-5 read-back check at 250 MHz).
+                    self.acr = value & 0x0000_013F;
+                }
+                h5::NSKEYR_OFF => {
+                    // H5 non-secure key register — walks the unlock sequence.
+                    // Store in keyr so byte-level write() can read back + merge.
+                    self.keyr = value;
+                    self.key_state = match (self.key_state, value) {
+                        (KeyUnlockState::Locked, FLASH_KEY1) => KeyUnlockState::HalfUnlocked,
+                        (KeyUnlockState::HalfUnlocked, FLASH_KEY2) => {
+                            // NSCR.LOCK (bit 0) clears on valid key sequence.
+                            self.cr &= !1;
+                            KeyUnlockState::Unlocked
+                        }
+                        _ => KeyUnlockState::Locked,
+                    };
+                }
+                h5::NSCR_OFF => {
+                    self.cr = value;
+                    if unlocked && (value & h5::NSCR_SER) != 0 && (value & h5::NSCR_STRT) != 0 {
+                        let sector = (value & h5::NSCR_SNB_MASK) >> h5::NSCR_SNB_SHIFT;
+                        let bank = if value & h5::NSCR_BKSEL != 0 {
+                            1u8
+                        } else {
+                            0u8
+                        };
+                        self.pending_op
+                            .set(Some(FlashOp::EraseSector { bank, sector }));
+                    }
+                }
+                h5::OPTSR_PRG_OFF => self.optsr_prg = value,
+                h5::OPTCR_OFF => {
+                    if unlocked
+                        && (value & h5::OPTCR_OBL_LAUNCH) != 0
+                        && (self.optsr_prg & h5::OPTSR_SWAP_BANK) != 0
+                    {
+                        self.pending_op.set(Some(FlashOp::SwapAndReset));
+                    }
+                }
+                _ => {}
             }
             return;
         }
@@ -336,6 +405,17 @@ impl Flash {
     }
 }
 
+impl Flash {
+    /// Drain the pending FLASH hardware operation, if any.
+    ///
+    /// Returns `Some(op)` the first time after an operation is recorded;
+    /// subsequent calls return `None` until a new op is recorded. Uses
+    /// interior mutability so callers with a shared reference can drain.
+    pub fn drain_pending_op(&self) -> Option<FlashOp> {
+        self.pending_op.take()
+    }
+}
+
 impl Default for Flash {
     fn default() -> Self {
         Self::new()
@@ -359,7 +439,75 @@ impl crate::Peripheral for Flash {
         self.write_reg(reg, v);
         Ok(())
     }
+    fn write_u32(&mut self, offset: u64, value: u32) -> SimResult<()> {
+        // Bypass the byte-decompose path for 32-bit register writes so that
+        // key-unlock sequences (NSKEYR, OPTKEYR) see the full 32-bit word in
+        // a single write_reg call. The byte path is correct for data regs but
+        // would fragment each 32-bit key write into 4 independent sub-word
+        // triggers, none of which match FLASH_KEY1 / FLASH_KEY2.
+        self.write_reg(offset & !3, value);
+        Ok(())
+    }
+    fn as_any(&self) -> Option<&dyn std::any::Any> {
+        Some(self)
+    }
     fn snapshot(&self) -> serde_json::Value {
         serde_json::to_value(self).unwrap_or(serde_json::Value::Null)
+    }
+}
+
+#[cfg(test)]
+mod h5_erase_swap_tests {
+    use super::h5;
+    use super::{Flash, FlashOp, FlashRegisterLayout};
+    use crate::Peripheral;
+
+    fn unlock(f: &mut Flash) {
+        f.write_u32(0x08, 0x4567_0123).unwrap(); // NSKEYR
+        f.write_u32(0x08, 0xCDEF_89AB).unwrap();
+    }
+
+    #[test]
+    fn ser_strt_records_erase_of_selected_sector() {
+        let mut f = Flash::new_with_layout(FlashRegisterLayout::Stm32H5);
+        unlock(&mut f);
+        // SER + SNB=7 (bank-1) + STRT
+        let nscr = h5::NSCR_SER | (7 << h5::NSCR_SNB_SHIFT) | h5::NSCR_STRT;
+        f.write_u32(h5::NSCR_OFF, nscr).unwrap();
+        assert_eq!(
+            f.drain_pending_op(),
+            Some(FlashOp::EraseSector { bank: 0, sector: 7 })
+        );
+        // op drains exactly once
+        assert_eq!(f.drain_pending_op(), None);
+    }
+
+    #[test]
+    fn ser_with_bksel_targets_bank2() {
+        let mut f = Flash::new_with_layout(FlashRegisterLayout::Stm32H5);
+        unlock(&mut f);
+        let nscr = h5::NSCR_SER | h5::NSCR_BKSEL | (3 << h5::NSCR_SNB_SHIFT) | h5::NSCR_STRT;
+        f.write_u32(h5::NSCR_OFF, nscr).unwrap();
+        assert_eq!(
+            f.drain_pending_op(),
+            Some(FlashOp::EraseSector { bank: 1, sector: 3 })
+        );
+    }
+
+    #[test]
+    fn swap_bank_plus_obl_launch_records_swap_and_reset() {
+        let mut f = Flash::new_with_layout(FlashRegisterLayout::Stm32H5);
+        unlock(&mut f);
+        f.write_u32(h5::OPTSR_PRG_OFF, h5::OPTSR_SWAP_BANK).unwrap();
+        f.write_u32(h5::OPTCR_OFF, h5::OPTCR_OBL_LAUNCH).unwrap();
+        assert_eq!(f.drain_pending_op(), Some(FlashOp::SwapAndReset));
+    }
+
+    #[test]
+    fn erase_ignored_while_locked() {
+        let mut f = Flash::new_with_layout(FlashRegisterLayout::Stm32H5);
+        let nscr = h5::NSCR_SER | (7 << h5::NSCR_SNB_SHIFT) | h5::NSCR_STRT;
+        f.write_u32(h5::NSCR_OFF, nscr).unwrap();
+        assert_eq!(f.drain_pending_op(), None);
     }
 }
