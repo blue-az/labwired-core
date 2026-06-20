@@ -1723,6 +1723,7 @@ mod tests {
                 size: Some("4KB".to_string()),
                 irq: None,
                 config: HashMap::new(),
+                clock: None,
             }],
         };
 
@@ -1817,6 +1818,7 @@ mod tests {
                 size: Some("4KB".to_string()),
                 irq: None,
                 config: HashMap::new(),
+                clock: None,
             }],
         };
 
