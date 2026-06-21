@@ -320,18 +320,17 @@ impl Flash {
                     }
                 }
                 h5::OPTSR_PRG_OFF => self.optsr_prg = value,
-                h5::OPTCR_OFF => {
-                    // OPTSTRT (bit 1) requires the OPTION-key (OPTKEYR), not the
-                    // flash key (NSKEYR). This matches silicon: option-byte
-                    // programming is a separate unlock domain on H5 (RM0481 §7,
-                    // SVD-confirmed: OPTCR has OPTLOCK/bit0, OPTSTRT/bit1,
-                    // SWAP_BANK/bit31; there is no OBL_LAUNCH on H5).
+                // OPTSTRT (bit 1) requires the OPTION-key (OPTKEYR), not the flash
+                // key (NSKEYR): option-byte programming is a separate unlock domain
+                // on H5 (RM0481 §7, SVD-confirmed: OPTCR has OPTLOCK/bit0,
+                // OPTSTRT/bit1, SWAP_BANK/bit31; there is no OBL_LAUNCH on H5). A
+                // match guard keeps this one condition out of a nested `if`.
+                h5::OPTCR_OFF
                     if matches!(self.optkey_state, KeyUnlockState::Unlocked)
                         && (value & h5::OPTCR_OPTSTRT) != 0
-                        && (self.optsr_prg & h5::OPTSR_SWAP_BANK) != 0
-                    {
-                        self.pending_op.set(Some(FlashOp::SwapAndReset));
-                    }
+                        && (self.optsr_prg & h5::OPTSR_SWAP_BANK) != 0 =>
+                {
+                    self.pending_op.set(Some(FlashOp::SwapAndReset));
                 }
                 _ => {}
             }
