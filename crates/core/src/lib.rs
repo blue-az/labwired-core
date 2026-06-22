@@ -703,6 +703,13 @@ pub struct Machine<C: Cpu> {
     /// full peripheral list every cycle. `None` for configs with no FLASH
     /// peripheral on the bus (e.g. bare-bus unit tests).
     flash_index: Option<usize>,
+    /// Cached bus index of the SCB peripheral (Cortex-M). Resolved once at
+    /// construction; `step()` drains a pending SYSRESETREQ latch every cycle
+    /// and, when set, reboots the CPU through the vector table via the
+    /// existing `Machine::reset`. `None` for non-Cortex-M targets (no SCB on
+    /// the bus), so the per-cycle drain short-circuits without a peripheral
+    /// walk or downcast.
+    scb_index: Option<usize>,
     /// Phase 2B.3b (issue #192): whether the one-time scheduler bootstrap has
     /// run. On the first `drain_scheduler_events`, peripherals with setup-time
     /// work (e.g. a UART with an RX stream attached before any MMIO write) get
@@ -726,6 +733,12 @@ impl<C: Cpu> Machine<C> {
                 .and_then(|a| a.downcast_ref::<crate::peripherals::flash::Flash>())
                 .is_some()
         });
+        let scb_index = bus.peripherals.iter().position(|p| {
+            p.dev
+                .as_any()
+                .and_then(|a| a.downcast_ref::<crate::peripherals::scb::Scb>())
+                .is_some()
+        });
         Self {
             cpu,
             cpu_secondary: None,
@@ -739,6 +752,7 @@ impl<C: Cpu> Machine<C> {
             clocks: sched::ClockGraph::new(),
             rtc_cntl_index,
             flash_index,
+            scb_index,
             scheduler_bootstrapped: false,
         }
     }
@@ -938,6 +952,20 @@ impl<C: Cpu> Machine<C> {
             self.cpu.set_pc(0x4000_0400);
             self.cpu.set_sp(0x3FFE_0000);
             tracing::debug!("RTC_CNTL SW_SYS_RST: CPU re-pointed at reset vector 0x40000400");
+        }
+
+        // Cortex-M SCB system reset (AIRCR.SYSRESETREQ with the VECTKEY).
+        // Firmware that asks for a reboot (e.g. a UDS ECUReset) writes
+        // AIRCR and does not expect the store to return; on real silicon the
+        // core restarts through the vector table. We drain the latch here, at
+        // the same clean instruction boundary as RTC_CNTL — after the
+        // AIRCR-writing store and any pending peripheral effects of this
+        // instruction have been applied — then reuse the power-on reset
+        // machinery so MSP/PC reload from vector[0]/vector[1] via the CPU
+        // reset path. No-op on non-Cortex-M targets (no SCB on the bus).
+        if self.drain_scb_reset_request() {
+            self.reset()?;
+            tracing::debug!("SCB SYSRESETREQ: CPU rebooted through vector table");
         }
 
         // H5 FLASH pending ops: sector erase fills flash with 0xFF; bank-swap
@@ -1145,6 +1173,27 @@ impl<C: Cpu> Machine<C> {
             .as_any()
             .and_then(|a| a.downcast_ref::<crate::peripherals::esp32::rtc_cntl::RtcCntl>())
             .map(|rtc| rtc.drain_reset_request())
+            .unwrap_or(false)
+    }
+
+    /// Returns true (and clears the latch) if the registered SCB peripheral
+    /// has a pending SYSRESETREQ — an AIRCR write with the correct VECTKEY
+    /// and the SYSRESETREQ bit set (`Scb::write_reg`, offset 0x0C). Used by
+    /// `step()` to honor a firmware-requested system reset at a clean
+    /// instruction boundary. Uses the cached `scb_index` resolved at
+    /// construction — non-Cortex-M configs (no SCB on the bus) short-circuit
+    /// to `false` without touching the peripheral vector at all.
+    fn drain_scb_reset_request(&self) -> bool {
+        let Some(idx) = self.scb_index else {
+            return false;
+        };
+        let Some(p) = self.bus.peripherals.get(idx) else {
+            return false;
+        };
+        p.dev
+            .as_any()
+            .and_then(|a| a.downcast_ref::<crate::peripherals::scb::Scb>())
+            .map(|scb| scb.drain_reset_request())
             .unwrap_or(false)
     }
 
