@@ -26,7 +26,9 @@ mod gpio_observer;
 mod size_limited_writer;
 mod vcd_trace;
 
-use labwired_config::{load_test_script, LoadedTestScript, StopReason, TestAssertion, TestLimits};
+use labwired_config::{
+    load_test_script, LoadedTestScript, StopReason, TestAssertion, TestLimits, UdsTesterDetails,
+};
 
 pub(crate) const EXIT_PASS: u8 = 0;
 pub(crate) const EXIT_ASSERT_FAIL: u8 = 1;
@@ -1751,6 +1753,15 @@ fn execute_test_loop<C: labwired_core::Cpu>(
                     }
                 }
             }
+            TestAssertion::UdsTester(a) => {
+                match evaluate_uds_tester(&machine.bus.can_uds_testers, &a.uds_tester) {
+                    Ok(()) => true,
+                    Err(msg) => {
+                        error!("Assertion failed: {}", msg);
+                        false
+                    }
+                }
+            }
         };
 
         if matches!(assertion, TestAssertion::ExpectedStopReason(_)) && passed {
@@ -2323,6 +2334,9 @@ fn assertion_short_name(assertion: &TestAssertion) -> String {
             "memory_value: @{:#x}={:#x}",
             a.memory_value.address, a.memory_value.expected_value
         ),
+        TestAssertion::UdsTester(a) => {
+            format!("uds_tester: {} result={:?}", a.uds_tester.id, a.uds_tester.result)
+        }
     };
 
     if s.len() <= MAX_LEN {
@@ -2332,6 +2346,28 @@ fn assertion_short_name(assertion: &TestAssertion) -> String {
     let mut truncated = s.chars().take(MAX_LEN - 1).collect::<String>();
     truncated.push('…');
     truncated
+}
+
+/// Returns `Ok(())` if the named tester ended in `Done`; `Err(message)` otherwise.
+pub(crate) fn evaluate_uds_tester(
+    testers: &[labwired_core::bus::CanUdsTester],
+    details: &UdsTesterDetails,
+) -> Result<(), String> {
+    match testers.iter().find(|t| t.id == details.id) {
+        None => Err(format!("tester '{}': not found", details.id)),
+        Some(t) => {
+            if t.state == labwired_core::bus::CanUdsTesterState::Done {
+                Ok(())
+            } else {
+                let reason = t
+                    .failure
+                    .as_deref()
+                    .unwrap_or_else(|| "not completed")
+                    .to_string();
+                Err(format!("tester '{}': {}", details.id, reason))
+            }
+        }
+    }
 }
 
 // Minimal regex matcher supporting: '^' anchor, '$' anchor, '.' and '*' (Kleene star).
@@ -2386,4 +2422,59 @@ pub(crate) fn simple_regex_is_match(pattern: &str, text: &str) -> bool {
         }
     }
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use labwired_core::bus::{CanUdsTester, CanUdsTesterState};
+    use labwired_config::UdsTesterDetails;
+    use labwired_config::UdsTesterResult;
+
+    fn make_tester(id: &str, state: CanUdsTesterState, failure: Option<&str>) -> CanUdsTester {
+        let mut t = CanUdsTester::new(id.to_string(), "bxcan1".to_string());
+        t.state = state;
+        t.failure = failure.map(|s| s.to_string());
+        t
+    }
+
+    #[test]
+    fn evaluate_uds_tester_done_passes() {
+        let testers = vec![make_tester("my-tester", CanUdsTesterState::Done, None)];
+        let details = UdsTesterDetails {
+            id: "my-tester".to_string(),
+            result: UdsTesterResult::Done,
+        };
+        assert!(evaluate_uds_tester(&testers, &details).is_ok());
+    }
+
+    #[test]
+    fn evaluate_uds_tester_failed_returns_err_with_failure_text() {
+        let testers = vec![make_tester(
+            "my-tester",
+            CanUdsTesterState::Failed,
+            Some("step 0: unexpected response 0x7F"),
+        )];
+        let details = UdsTesterDetails {
+            id: "my-tester".to_string(),
+            result: UdsTesterResult::Done,
+        };
+        let err = evaluate_uds_tester(&testers, &details).unwrap_err();
+        assert!(err.contains("my-tester"), "missing id in: {err}");
+        assert!(
+            err.contains("step 0: unexpected response 0x7F"),
+            "missing failure text in: {err}"
+        );
+    }
+
+    #[test]
+    fn evaluate_uds_tester_unknown_id_returns_err() {
+        let testers = vec![make_tester("other", CanUdsTesterState::Done, None)];
+        let details = UdsTesterDetails {
+            id: "ghost-tester".to_string(),
+            result: UdsTesterResult::Done,
+        };
+        let err = evaluate_uds_tester(&testers, &details).unwrap_err();
+        assert!(err.contains("ghost-tester"), "missing id in: {err}");
+    }
 }

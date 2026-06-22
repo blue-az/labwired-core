@@ -620,12 +620,32 @@ pub struct MemoryValueAssertion {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum UdsTesterResult {
+    Done,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct UdsTesterDetails {
+    pub id: String,
+    pub result: UdsTesterResult,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct UdsTesterAssertion {
+    pub uds_tester: UdsTesterDetails,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(untagged)]
 pub enum TestAssertion {
     UartContains(UartContainsAssertion),
     UartRegex(UartRegexAssertion),
     ExpectedStopReason(StopReasonAssertion),
     MemoryValue(MemoryValueAssertion),
+    UdsTester(UdsTesterAssertion),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -916,5 +936,23 @@ registers:
             desc.registers[1].side_effects.as_ref().unwrap().on_read,
             Some("clear_rxne".to_string())
         );
+    }
+
+    #[test]
+    fn uds_tester_assertion_parses_result_done() {
+        let yaml = r#"
+- uds_tester:
+    id: "uds-tester"
+    result: done
+"#;
+        let assertions: Vec<TestAssertion> = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(assertions.len(), 1);
+        match &assertions[0] {
+            TestAssertion::UdsTester(a) => {
+                assert_eq!(a.uds_tester.id, "uds-tester");
+                assert!(matches!(a.uds_tester.result, UdsTesterResult::Done));
+            }
+            other => panic!("expected UdsTester variant, got {:?}", other),
+        }
     }
 }
