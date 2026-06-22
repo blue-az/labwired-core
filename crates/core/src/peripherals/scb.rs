@@ -58,7 +58,7 @@ pub struct Scb {
     /// NMI pend bit (ICSR.NMIPENDSET=bit 31).
     pub nmi_pending: bool,
     /// Set when firmware writes AIRCR with the correct VECTKEY and SYSRESETREQ.
-    /// Drained by Task 6 reset routing via drain_reset_request().
+    /// Drained by the machine reset routing via drain_reset_request().
     #[serde(skip)]
     pending_reset: Cell<bool>,
 }
