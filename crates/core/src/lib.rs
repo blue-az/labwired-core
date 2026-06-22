@@ -697,6 +697,12 @@ pub struct Machine<C: Cpu> {
     /// indexed access + one downcast. `None` for configs that don't register
     /// an RTC_CNTL peripheral (every non-ESP32-classic target).
     rtc_cntl_index: Option<usize>,
+    /// Cached bus index of the FLASH peripheral (H5 layout). Resolved once at
+    /// construction; `step()` drains pending FLASH ops (sector erase,
+    /// bank-swap+reset) at clean instruction boundaries without walking the
+    /// full peripheral list every cycle. `None` for configs with no FLASH
+    /// peripheral on the bus (e.g. bare-bus unit tests).
+    flash_index: Option<usize>,
     /// Phase 2B.3b (issue #192): whether the one-time scheduler bootstrap has
     /// run. On the first `drain_scheduler_events`, peripherals with setup-time
     /// work (e.g. a UART with an RX stream attached before any MMIO write) get
@@ -714,6 +720,12 @@ impl<C: Cpu> Machine<C> {
                 .and_then(|a| a.downcast_ref::<crate::peripherals::esp32::rtc_cntl::RtcCntl>())
                 .is_some()
         });
+        let flash_index = bus.peripherals.iter().position(|p| {
+            p.dev
+                .as_any()
+                .and_then(|a| a.downcast_ref::<crate::peripherals::flash::Flash>())
+                .is_some()
+        });
         Self {
             cpu,
             cpu_secondary: None,
@@ -726,6 +738,7 @@ impl<C: Cpu> Machine<C> {
             sched: sched::EventScheduler::new(),
             clocks: sched::ClockGraph::new(),
             rtc_cntl_index,
+            flash_index,
             scheduler_bootstrapped: false,
         }
     }
@@ -927,6 +940,58 @@ impl<C: Cpu> Machine<C> {
             tracing::debug!("RTC_CNTL SW_SYS_RST: CPU re-pointed at reset vector 0x40000400");
         }
 
+        // H5 FLASH pending ops: sector erase fills flash with 0xFF; bank-swap
+        // swaps the two 1 MB banks in the flash buffer then re-runs reset so
+        // the CPU boots from the new bank-1 vector table. Also drained on the
+        // batch/CLI run path (`Machine::run`), which executes cycle-accurately
+        // when an H5 op-modeling FLASH is present so this fires per instruction.
+        self.apply_pending_flash_op()?;
+
+        Ok(())
+    }
+
+    /// Drain and apply the single pending H5 FLASH hardware operation, if any.
+    ///
+    /// The FLASH peripheral records at most one op per instruction (in a `Cell`);
+    /// this helper must therefore run once per instruction so no op is lost. It
+    /// is called from both `step()` and the `Machine::run` batch loop body. The
+    /// run loop clamps its batch to 1 when `requires_cycle_accurate()` is true
+    /// (which an H5 op-modeling FLASH forces), preserving the one-op-per-
+    /// instruction invariant and the correct erase-before-program ordering.
+    fn apply_pending_flash_op(&mut self) -> SimResult<()> {
+        if let Some(op) = self.drain_flash_op() {
+            use crate::peripherals::flash::h5;
+            use crate::peripherals::flash::FlashOp;
+            match op {
+                FlashOp::EraseSector { bank, sector } => {
+                    let offset = (bank as u64) * h5::BANK_SIZE + (sector as u64) * h5::SECTOR_SIZE;
+                    self.bus.flash.fill(offset, h5::SECTOR_SIZE, 0xFF);
+                    tracing::debug!(
+                        "FLASH EraseSector bank={bank} sector={sector} offset={offset:#010x}"
+                    );
+                }
+                FlashOp::SwapAndReset => {
+                    // Swap the two architectural 1 MiB (0x100000) banks. The
+                    // H563 flash buffer is sized to exactly 2 * BANK_SIZE by the
+                    // chip yaml (`size: "2MiB"`), so the same BANK_SIZE used by
+                    // EraseSector above also bounds the swap — keeping erase and
+                    // swap on one consistent bank-size notion (real silicon:
+                    // bank 2 @ 0x08100000). swap_banks returns false if the
+                    // buffer is not exactly two banks; debug-assert that here so
+                    // a mis-sized chip yaml fails loudly in tests.
+                    let swapped = self.bus.flash.swap_banks(h5::BANK_SIZE);
+                    debug_assert!(
+                        swapped,
+                        "SWAP_BANK: flash buffer ({} bytes) is not 2 * BANK_SIZE ({}); \
+                         check the chip yaml flash size uses binary (MiB) units",
+                        self.bus.flash.data.len(),
+                        2 * h5::BANK_SIZE
+                    );
+                    tracing::debug!("FLASH SwapAndReset: banks swapped, resetting CPU");
+                    self.reset()?;
+                }
+            }
+        }
         Ok(())
     }
 
@@ -1083,6 +1148,20 @@ impl<C: Cpu> Machine<C> {
             .unwrap_or(false)
     }
 
+    /// Drain a pending FLASH hardware operation recorded by the H5 FLASH
+    /// peripheral (sector erase or bank-swap+reset). Returns `None` for
+    /// configs that have no FLASH peripheral on the bus. The caller is
+    /// responsible for applying the returned op to `bus.flash` and issuing
+    /// a CPU reset when required.
+    fn drain_flash_op(&self) -> Option<crate::peripherals::flash::FlashOp> {
+        let idx = self.flash_index?;
+        let p = self.bus.peripherals.get(idx)?;
+        p.dev
+            .as_any()
+            .and_then(|a| a.downcast_ref::<crate::peripherals::flash::Flash>())
+            .and_then(|f| f.drain_pending_op())
+    }
+
     pub fn snapshot(&self) -> snapshot::MachineSnapshot {
         snapshot::MachineSnapshot {
             schema_version: snapshot::SCHEMA_VERSION,
@@ -1165,11 +1244,22 @@ impl<C: Cpu> DebugControl for Machine<C> {
             let tick_interval = self.config.peripheral_tick_interval as u64;
             let remaining_until_tick = (tick_interval - (current_cycles % tick_interval)) as u32;
 
-            let current_batch = if let Some(limit) = max_steps {
+            let mut current_batch = if let Some(limit) = max_steps {
                 remaining_until_tick.min(limit - steps)
             } else {
                 remaining_until_tick
             };
+
+            // Cycle-accurate buses (HC-SR04, IO-Link, H5 op-modeling FLASH) must
+            // execute one instruction per batch so per-instruction services —
+            // notably the H5 FLASH pending-op drain below — fire on every
+            // instruction. Without this clamp the FLASH op would be recorded in
+            // the peripheral cell but applied at most once per tick interval (or
+            // not at all), losing all but the last op and breaking erase-before-
+            // program ordering.
+            if self.bus.requires_cycle_accurate() {
+                current_batch = current_batch.min(1);
+            }
 
             let executed =
                 self.cpu
@@ -1197,6 +1287,13 @@ impl<C: Cpu> DebugControl for Machine<C> {
 
             #[cfg(feature = "event-scheduler")]
             self.drain_scheduler_events();
+
+            // Apply any pending H5 FLASH op recorded by the instructions just
+            // executed. On a cycle-accurate bus the batch is clamped to 1 above,
+            // so this runs per instruction (matching `step()`); this is the path
+            // the CLI test runner and `Machine::run` take, where the op would
+            // otherwise never be applied.
+            self.apply_pending_flash_op()?;
 
             // If we executed less than requested, it means the CPU wanted to exit early (e.g. branch/exception)
             // or we just finished the batch naturally. The loop will continue and check breakpoints/limits.
