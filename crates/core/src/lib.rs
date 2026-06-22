@@ -1183,7 +1183,7 @@ impl<C: Cpu> Machine<C> {
     /// instruction boundary. Uses the cached `scb_index` resolved at
     /// construction — non-Cortex-M configs (no SCB on the bus) short-circuit
     /// to `false` without touching the peripheral vector at all.
-    fn drain_scb_reset_request(&self) -> bool {
+    pub fn drain_scb_reset_request(&self) -> bool {
         let Some(idx) = self.scb_index else {
             return false;
         };
@@ -1343,6 +1343,14 @@ impl<C: Cpu> DebugControl for Machine<C> {
             // the CLI test runner and `Machine::run` take, where the op would
             // otherwise never be applied.
             self.apply_pending_flash_op()?;
+
+            // Honor a firmware-requested system reset (AIRCR SYSRESETREQ with
+            // VECTKEY) latched by the instructions just executed. `step()` drains
+            // this on every instruction boundary; the batched `run` path must do
+            // the same on every batch return or the reboot never fires.
+            if self.drain_scb_reset_request() {
+                self.reset()?;
+            }
 
             // If we executed less than requested, it means the CPU wanted to exit early (e.g. branch/exception)
             // or we just finished the batch naturally. The loop will continue and check breakpoints/limits.

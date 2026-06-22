@@ -6,7 +6,7 @@
 
 #[cfg(test)]
 mod scb_reset_tests {
-    use crate::{Cpu, Machine};
+    use crate::{Cpu, DebugControl, Machine};
 
     /// AIRCR address: SCB base (0xE000_ED00) + 0x0C.
     const SCB_AIRCR: u64 = 0xE000_ED0C;
@@ -59,6 +59,63 @@ mod scb_reset_tests {
             m.cpu.get_register(13),
             MSP,
             "SP must reload from vector[0] (MSP) after SYSRESETREQ"
+        );
+    }
+
+    /// Same SYSRESETREQ semantics, but exercised through the BATCHED execution
+    /// path (`Machine::run`) instead of a single `step()`. The batched path
+    /// bypasses `step()`, so it must drain the SCB reset latch on each batch
+    /// boundary — mirroring the flash-op drain — or the firmware-requested
+    /// reboot never fires. This regression guard fails without that drain
+    /// (PC keeps spinning in the post-AIRCR loop) and passes with it.
+    #[test]
+    fn sysresetreq_reboots_cpu_via_run() {
+        let mut bus = crate::bus::SystemBus::new();
+        let (cpu, _nvic) = crate::system::cortex_m::configure_cortex_m(&mut bus);
+        let mut m = Machine::new(cpu, bus);
+
+        const MSP: u32 = 0x2000_1000;
+        // Keep the reset vector in the same region the start PC executes from so
+        // the post-reboot self-loop is fetchable on the bare test bus.
+        const RESET_ADDR: u32 = 0x2000_0100;
+
+        // Vector table at address 0 (VTOR defaults to 0).
+        m.bus.write_u32(0x0000_0000, MSP).unwrap();
+        m.bus.write_u32(0x0000_0004, RESET_ADDR | 1).unwrap(); // Thumb bit set
+
+        // After the reboot the core lands at the reset vector. Put a tight
+        // self-loop (`b .` == 0xE7FE) there so any post-reset steps keep PC
+        // pinned at RESET_ADDR, making the final state a deterministic proof
+        // of the reboot regardless of how many steps the batch ran.
+        m.bus.write_u16(RESET_ADDR as u64, 0xE7FE).unwrap();
+
+        // Firmware's pre-reset code: a NOP, then it would spin. We seed a NOP
+        // self-loop at the start PC too, but the AIRCR latch is already armed,
+        // so the first batch boundary must reboot before the loop matters.
+        const PC: u32 = 0x2000_0000;
+        m.bus.write_u16(PC as u64, 0xBF00).unwrap(); // NOP
+        m.bus.write_u16((PC + 2) as u64, 0xE7FE).unwrap(); // b . (spin)
+        m.cpu.set_pc(PC);
+        m.cpu.set_sp(0x2000_8000);
+
+        // Arm the reset latch via the exact MMIO path firmware uses.
+        m.bus
+            .write_u32(SCB_AIRCR, (0x05FA << 16) | (1 << 2))
+            .unwrap();
+
+        // Drive the BATCHED path. A small step budget is enough: the first
+        // batch boundary must drain the latch and reboot.
+        m.run(Some(8)).unwrap();
+
+        assert_eq!(
+            m.cpu.get_pc() & !1,
+            RESET_ADDR,
+            "PC must reload from vector[1] (reset vector) after SYSRESETREQ on the batched run path"
+        );
+        assert_eq!(
+            m.cpu.get_register(13),
+            MSP,
+            "SP must reload from vector[0] (MSP) after SYSRESETREQ on the batched run path"
         );
     }
 

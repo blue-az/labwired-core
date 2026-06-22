@@ -1617,6 +1617,41 @@ fn execute_test_loop<C: labwired_core::Cpu>(
                         }
                     }
 
+                    // Honor a firmware-requested system reset (AIRCR
+                    // SYSRESETREQ with VECTKEY) latched by the batch just
+                    // executed. The single-step `else` branch gets this via
+                    // `machine.step()`; the batched path must drain it
+                    // explicitly or the reboot never fires.
+                    if machine.drain_scb_reset_request() {
+                        if let Err(e) = machine.reset() {
+                            sim_error_happened = true;
+                            stop_reason = match e {
+                                labwired_core::SimulationError::MemoryViolation(_) => {
+                                    StopReason::MemoryViolation
+                                }
+                                labwired_core::SimulationError::DecodeError(_) => {
+                                    StopReason::DecodeError
+                                }
+                                labwired_core::SimulationError::Halt => StopReason::Halt,
+                                labwired_core::SimulationError::SnapshotSchemaMismatch {
+                                    ..
+                                } => StopReason::Exception,
+                                labwired_core::SimulationError::Other(_) => StopReason::Exception,
+                                labwired_core::SimulationError::NotImplemented(_) => {
+                                    StopReason::Exception
+                                }
+                                labwired_core::SimulationError::BreakpointHit(_) => {
+                                    StopReason::Halt
+                                }
+                                labwired_core::SimulationError::ExceptionRaised { .. } => {
+                                    StopReason::Exception
+                                }
+                            };
+                            error!("Reset error at step {}: {}", step, e);
+                            break;
+                        }
+                    }
+
                     if executed < to_execute {
                         // Bailed out early (e.g. exception/branch)
                         continue;
@@ -2362,7 +2397,7 @@ pub(crate) fn evaluate_uds_tester(
                 let reason = t
                     .failure
                     .as_deref()
-                    .unwrap_or_else(|| "not completed")
+                    .unwrap_or("not completed")
                     .to_string();
                 Err(format!("tester '{}': {}", details.id, reason))
             }
