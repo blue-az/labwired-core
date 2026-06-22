@@ -556,6 +556,50 @@ impl SystemBus {
                         ext.config.get("consecutive_frame"),
                         &CanUdsTester::DEFAULT_CONSECUTIVE_FRAME,
                     );
+                    tester.script = Self::parse_script(ext.config.get("script"));
+                    // When no `script:` key is present, synthesize a single step
+                    // from the legacy first_frame / consecutive_frame fields.
+                    if !ext.config.contains_key("script") {
+                        let ff = &tester.first_frame;
+                        // FF: byte0 high nibble == 1; 12-bit length in (byte0 & 0x0F) << 8 | byte1
+                        let pdu_len = if ff.len() >= 2 {
+                            (((ff[0] & 0x0F) as usize) << 8) | (ff[1] as usize)
+                        } else {
+                            0
+                        };
+                        if ext.config.contains_key("first_frame") && (ff.len() < 2 || pdu_len == 0)
+                        {
+                            tracing::warn!(
+                                "[uds-tester] '{}': first_frame is too short or decodes pdu_len=0 \
+                                 — synthesized send will be empty",
+                                ext.id
+                            );
+                        }
+                        let ff_payload: &[u8] = if ff.len() >= 2 { &ff[2..] } else { &[] };
+                        let cf_payload: &[u8] = if !tester.consecutive_frame.is_empty() {
+                            &tester.consecutive_frame[1..]
+                        } else {
+                            &[]
+                        };
+                        let raw: Vec<u8> = ff_payload
+                            .iter()
+                            .chain(cf_payload.iter())
+                            .copied()
+                            .take(pdu_len)
+                            .collect();
+                        if raw.is_empty() && ext.config.contains_key("first_frame") {
+                            tracing::warn!(
+                                "[uds-tester] '{}': reassembled send payload is empty \
+                                 — check first_frame / consecutive_frame config",
+                                ext.id
+                            );
+                        }
+                        tester.script = vec![UdsStep {
+                            send: raw,
+                            expect: vec![Some(0x06), Some(0x67)],
+                            expect_nrc: None,
+                        }];
+                    }
                     bus.can_uds_testers.push(tester);
                 }
                 // ntc-thermistor dispatches through the PeripheralKit registry above.

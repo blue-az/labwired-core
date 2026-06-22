@@ -201,6 +201,19 @@ pub struct CanDiagnosticTester {
 /// frames via `deliver_rx` (bxCAN) / `receive_frame` (FDCAN). Injection is
 /// filter-gated, so a `false` return (filter not yet configured, FIFO full)
 /// leaves the FSM parked on the same send to retry next tick.
+// -----
+/// One step in a UDS tester script: a raw payload to send and the
+/// expected response bytes (`None` = `..` wildcard, any byte matches).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UdsStep {
+    /// Raw bytes to send to the ECU (before ISO-TP framing).
+    pub send: Vec<u8>,
+    /// Expected response bytes; `None` entries match any byte.
+    pub expect: Vec<Option<u8>>,
+    /// Optional expected NRC byte (response 0x7F <sid> <nrc>).
+    pub expect_nrc: Option<u8>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CanUdsTesterState {
     /// Need to inject the FirstFrame.
@@ -209,6 +222,9 @@ pub enum CanUdsTesterState {
     AwaitFc,
     /// ConsecutiveFrame sent; waiting for the ECU's positive response.
     AwaitResp,
+    /// Tester sent FlowControl; collecting ECU ConsecutiveFrames until the
+    /// declared PDU length is reached (script-driven multi-frame response path).
+    AwaitMultiResp,
     /// SecurityAccess positive response observed — handshake complete.
     Done,
     /// Timed out before completion (broken / silent ECU).
@@ -233,6 +249,21 @@ pub struct CanUdsTester {
     pub ticks: u64,
     /// Tick budget before declaring `Failed`.
     pub max_ticks: u64,
+    /// Scripted exchange steps; empty when using legacy hardcoded payloads.
+    pub script: Vec<UdsStep>,
+    /// Index of the current step in `script`.
+    pub step_idx: usize,
+    /// Set when a step fails; describes what went wrong.
+    pub failure: Option<String>,
+    /// PDU accumulator for the script-driven multi-frame ECU response path.
+    /// Cleared at the start of each step.
+    resp_buf: Vec<u8>,
+    /// Declared PDU length from the ECU's FF header (script path only).
+    resp_expected_len: usize,
+    /// Remaining ConsecutiveFrames to inject for a multi-frame tester request,
+    /// populated after the request FF is accepted and the ECU FlowControl is
+    /// received (script path only).
+    pending_cfs: Vec<Vec<u8>>,
 }
 
 impl CanUdsTester {
@@ -255,6 +286,174 @@ impl CanUdsTester {
             state: CanUdsTesterState::Start,
             ticks: 0,
             max_ticks: Self::DEFAULT_MAX_TICKS,
+            script: Vec::new(),
+            step_idx: 0,
+            failure: None,
+            resp_buf: Vec::new(),
+            resp_expected_len: 0,
+            pending_cfs: Vec::new(),
+        }
+    }
+
+    /// Build the ISO-TP request frame(s) for `script[step_idx]`.
+    /// Single-frame when `send.len() <= 7`; otherwise a FirstFrame followed by
+    /// ConsecutiveFrames. The caller sends the first frame and queues the rest
+    /// in `pending_cfs` after FlowControl.
+    fn build_request_frames(&self) -> Vec<Vec<u8>> {
+        let Some(step) = self.script.get(self.step_idx) else {
+            return Vec::new();
+        };
+        let data = &step.send;
+        let len = data.len();
+        if len <= 7 {
+            // Single-frame: [len, payload...]
+            let mut frame = Vec::with_capacity(len + 1);
+            frame.push(len as u8);
+            frame.extend_from_slice(data);
+            return vec![frame];
+        }
+        // Multi-frame: FF then CFs.
+        let mut frames = Vec::new();
+        // FirstFrame: [0x10 | (len>>8), len & 0xFF, first 6 bytes]
+        let mut ff = Vec::with_capacity(8);
+        ff.push(0x10 | ((len >> 8) as u8));
+        ff.push((len & 0xFF) as u8);
+        ff.extend_from_slice(&data[..6.min(len)]);
+        frames.push(ff);
+        // ConsecutiveFrames
+        let mut seq: u8 = 1;
+        let mut offset = 6;
+        while offset < len {
+            let end = (offset + 7).min(len);
+            let mut cf = Vec::with_capacity(8);
+            cf.push(0x20 | (seq & 0x0F));
+            cf.extend_from_slice(&data[offset..end]);
+            frames.push(cf);
+            seq = seq.wrapping_add(1);
+            offset = end;
+        }
+        frames
+    }
+
+    /// Return `true` when `resp` satisfies the match criteria of `step`.
+    /// If `step.expect_nrc` is `Some(nrc)`, matches `[0x7F, send[0], nrc]`.
+    /// Otherwise compares against `step.expect` element-wise (`None` = any byte),
+    /// allowing `resp` to be longer than the pattern (prefix match).
+    fn matches(resp: &[u8], step: &UdsStep) -> bool {
+        if let Some(nrc) = step.expect_nrc {
+            return resp == [0x7F, step.send.first().copied().unwrap_or(0), nrc];
+        }
+        let pattern = &step.expect;
+        if resp.len() < pattern.len() {
+            return false;
+        }
+        pattern
+            .iter()
+            .zip(resp.iter())
+            .all(|(p, b)| p.is_none_or(|expected| expected == *b))
+    }
+
+    /// Observe one ECU frame in the **script-driven** path. Returns the payload
+    /// to inject next (FlowControl or first pending CF), or `None`. Sets
+    /// `state = Done / Failed` when the exchange concludes.
+    fn observe_ecu_frame_script(&mut self, id: u32, data: &[u8]) -> Option<Vec<u8>> {
+        if id != self.reply_id {
+            return None;
+        }
+        match self.state {
+            CanUdsTesterState::AwaitFc => {
+                if data.first().map(|b| b & 0xF0) == Some(0x30) {
+                    // FlowControl received: signal the next CF to inject.
+                    // Do NOT change state here — the injected block in
+                    // service_can_uds_testers advances AwaitFc→AwaitResp only
+                    // after the last CF has been successfully accepted, draining
+                    // pending_cfs one entry per tick.
+                    return self.pending_cfs.first().cloned();
+                }
+                None
+            }
+            CanUdsTesterState::AwaitResp => {
+                let ptype = data.first().map(|b| b & 0xF0).unwrap_or(0xFF);
+                if ptype == 0x00 {
+                    // ECU SingleFrame response
+                    let pdu_len = (data.first().copied().unwrap_or(0) & 0x0F) as usize;
+                    let payload: Vec<u8> = data
+                        .get(1..)
+                        .unwrap_or(&[])
+                        .iter()
+                        .copied()
+                        .take(pdu_len)
+                        .collect();
+                    self.complete_response(payload);
+                } else if ptype == 0x10 {
+                    // ECU FirstFrame: start reassembly, send FlowControl.
+                    let declared = if data.len() >= 2 {
+                        (((data[0] & 0x0F) as usize) << 8) | (data[1] as usize)
+                    } else {
+                        0
+                    };
+                    self.resp_expected_len = declared;
+                    self.resp_buf.clear();
+                    if data.len() > 2 {
+                        self.resp_buf.extend_from_slice(&data[2..]);
+                    }
+                    self.state = CanUdsTesterState::AwaitMultiResp;
+                    // FlowControl: ContinueToSend, block size 0, ST 0.
+                    return Some(vec![0x30, 0x00, 0x00]);
+                }
+                None
+            }
+            CanUdsTesterState::AwaitMultiResp => {
+                if data.first().map(|b| b & 0xF0) == Some(0x20) {
+                    self.resp_buf
+                        .extend_from_slice(data.get(1..).unwrap_or(&[]));
+                    if self.resp_buf.len() >= self.resp_expected_len {
+                        let payload = self.resp_buf[..self.resp_expected_len].to_vec();
+                        self.resp_buf.clear();
+                        self.complete_response(payload);
+                    }
+                }
+                None
+            }
+            _ => None,
+        }
+    }
+
+    /// Called when a complete PDU has been reassembled. Matches against the
+    /// current step and either advances to the next step (or `Done`) or sets
+    /// `Failed`.
+    fn complete_response(&mut self, payload: Vec<u8>) {
+        let Some(step) = self.script.get(self.step_idx) else {
+            self.state = CanUdsTesterState::Done;
+            return;
+        };
+        if Self::matches(&payload, step) {
+            self.step_idx += 1;
+            self.resp_buf.clear();
+            self.resp_expected_len = 0;
+            if self.step_idx >= self.script.len() {
+                self.state = CanUdsTesterState::Done;
+            } else {
+                // More steps: the driver will send the next request next tick.
+                self.state = CanUdsTesterState::Start;
+            }
+        } else {
+            let msg = if let Some(nrc) = step.expect_nrc {
+                format!(
+                    "step {}: expected NRC 7F {:02X} {:02X}, got {:02X?}",
+                    self.step_idx,
+                    step.send.first().copied().unwrap_or(0),
+                    nrc,
+                    payload
+                )
+            } else {
+                format!(
+                    "step {}: expected {:02X?}, got {:02X?}",
+                    self.step_idx, step.expect, payload
+                )
+            };
+            self.failure = Some(msg);
+            self.state = CanUdsTesterState::Failed;
         }
     }
 
@@ -265,13 +464,19 @@ impl CanUdsTester {
         )
     }
 
-    /// Observe one frame the ECU transmitted. In `AwaitFc` an ISO-TP
-    /// FlowControl (`(data[0] & 0xF0) == 0x30`) on `reply_id` clears the wait;
-    /// in `AwaitResp` a SecurityAccess single-frame positive response
-    /// (`data[0] == 0x06 && data[1] == 0x67`) on `reply_id` completes the
-    /// handshake. Returns the payload to inject next (if the observation
-    /// unblocks a send), else `None`.
+    /// Observe one frame the ECU transmitted. Legacy path (empty `script`):
+    /// In `AwaitFc` an ISO-TP FlowControl (`(data[0] & 0xF0) == 0x30`) on
+    /// `reply_id` returns the ConsecutiveFrame payload to inject; in `AwaitResp`
+    /// a SecurityAccess single-frame positive response (`data[0] == 0x06 &&
+    /// data[1] == 0x67`) completes the handshake. Returns the payload to inject
+    /// next, else `None`.
+    ///
+    /// When `script` is non-empty, delegates to `observe_ecu_frame_script`
+    /// instead so the script-driven logic handles framing and matching.
     fn observe_ecu_frame(&mut self, id: u32, data: &[u8]) -> Option<Vec<u8>> {
+        if !self.script.is_empty() {
+            return self.observe_ecu_frame_script(id, data);
+        }
         if id != self.reply_id {
             return None;
         }
@@ -674,10 +879,34 @@ impl SystemBus {
             }
 
             // Decide what (if anything) to inject this tick.
-            let to_send: Option<Vec<u8>> = match self.can_uds_testers[i].state {
-                CanUdsTesterState::Start => Some(self.can_uds_testers[i].first_frame.clone()),
-                CanUdsTesterState::AwaitFc => pending_inject,
-                _ => None,
+            let has_script = !self.can_uds_testers[i].script.is_empty();
+            let to_send: Option<Vec<u8>> = if has_script {
+                match self.can_uds_testers[i].state {
+                    CanUdsTesterState::Start => {
+                        // Build request frames for the current script step.
+                        let frames = self.can_uds_testers[i].build_request_frames();
+                        if let Some((first, rest)) = frames.split_first() {
+                            // Queue any CFs for later (after FlowControl).
+                            self.can_uds_testers[i].pending_cfs = rest.to_vec();
+                            Some(first.clone())
+                        } else {
+                            None
+                        }
+                    }
+                    // Use the observe result when an FC arrived this tick, or
+                    // the front of pending_cfs when additional CFs remain from
+                    // a previous tick's FC (no new ECU frame → pending_inject
+                    // is None but the queue is non-empty).
+                    CanUdsTesterState::AwaitFc => pending_inject
+                        .or_else(|| self.can_uds_testers[i].pending_cfs.first().cloned()),
+                    _ => None,
+                }
+            } else {
+                match self.can_uds_testers[i].state {
+                    CanUdsTesterState::Start => Some(self.can_uds_testers[i].first_frame.clone()),
+                    CanUdsTesterState::AwaitFc => pending_inject,
+                    _ => None,
+                }
             };
 
             let Some(payload) = to_send else {
@@ -706,9 +935,29 @@ impl SystemBus {
             if injected {
                 // Advance only on a successful (accepted) injection; otherwise
                 // stay parked and retry next tick.
+                let has_script = !self.can_uds_testers[i].script.is_empty();
                 match self.can_uds_testers[i].state {
+                    CanUdsTesterState::Start if has_script => {
+                        // SF (no pending CFs) → go straight to AwaitResp.
+                        // FF (pending CFs queued) → go to AwaitFc.
+                        if self.can_uds_testers[i].pending_cfs.is_empty() {
+                            self.can_uds_testers[i].state = CanUdsTesterState::AwaitResp;
+                        } else {
+                            self.can_uds_testers[i].state = CanUdsTesterState::AwaitFc;
+                        }
+                    }
                     CanUdsTesterState::Start => {
                         self.can_uds_testers[i].state = CanUdsTesterState::AwaitFc
+                    }
+                    CanUdsTesterState::AwaitFc if has_script => {
+                        // Pop the CF that was just successfully injected.
+                        if !self.can_uds_testers[i].pending_cfs.is_empty() {
+                            self.can_uds_testers[i].pending_cfs.remove(0);
+                        }
+                        // Only advance to AwaitResp once all CFs have been sent.
+                        if self.can_uds_testers[i].pending_cfs.is_empty() {
+                            self.can_uds_testers[i].state = CanUdsTesterState::AwaitResp;
+                        }
                     }
                     CanUdsTesterState::AwaitFc => {
                         self.can_uds_testers[i].state = CanUdsTesterState::AwaitResp
@@ -746,7 +995,16 @@ impl SystemBus {
                 .map(|part| {
                     let part = part.trim();
                     if let Some(hex) = part.strip_prefix("0x").or_else(|| part.strip_prefix("0X")) {
-                        u8::from_str_radix(hex, 16).unwrap_or(0)
+                        match u8::from_str_radix(hex, 16) {
+                            Ok(b) => b,
+                            Err(_) => {
+                                tracing::warn!(
+                                    "[uds-tester] malformed send byte {:?}, treating as 0x00",
+                                    part
+                                );
+                                0
+                            }
+                        }
                     } else {
                         u8::from_str_radix(part, 16)
                             .unwrap_or_else(|_| part.parse::<u8>().unwrap_or(0))
@@ -755,6 +1013,54 @@ impl SystemBus {
                 .collect(),
             _ => default.to_vec(),
         }
+    }
+
+    /// Parse an expect string such as `"51 01 .."` into a mask vector.
+    /// `".."` becomes `None` (wildcard); any other token is parsed as a hex
+    /// byte and becomes `Some(byte)`.
+    fn parse_expect(s: &str) -> Vec<Option<u8>> {
+        s.split_ascii_whitespace()
+            .map(|tok| {
+                if tok == ".." {
+                    None
+                } else {
+                    let hex = tok.trim_start_matches("0x").trim_start_matches("0X");
+                    match u8::from_str_radix(hex, 16) {
+                        Ok(b) => Some(b),
+                        Err(_) => {
+                            tracing::warn!(
+                                "[uds-tester] malformed expect token {:?}, treating as 0x00",
+                                tok
+                            );
+                            Some(0)
+                        }
+                    }
+                }
+            })
+            .collect()
+    }
+
+    /// Parse an optional YAML `script:` sequence into a `Vec<UdsStep>`.
+    fn parse_script(value: Option<&serde_yaml::Value>) -> Vec<UdsStep> {
+        let seq = match value {
+            Some(serde_yaml::Value::Sequence(s)) => s,
+            _ => return Vec::new(),
+        };
+        seq.iter()
+            .map(|entry| {
+                let send = Self::yaml_bytes(entry.get("send"), &[]);
+                let expect_str = entry.get("expect").and_then(|v| v.as_str()).unwrap_or("");
+                let expect = Self::parse_expect(expect_str);
+                let expect_nrc = entry
+                    .get("expect_nrc")
+                    .map(|v| Self::yaml_u32(Some(v), 0) as u8);
+                UdsStep {
+                    send,
+                    expect,
+                    expect_nrc,
+                }
+            })
+            .collect()
     }
 
     /// Write-hook mirror of [`maybe_latch_dc`](Self::maybe_latch_dc) for the
@@ -2169,6 +2475,113 @@ board_io: []
         assert_eq!(t.state, CanUdsTesterState::Start);
     }
 
+    /// Minimal F103 chip yaml reused across UDS script tests.
+    const MIN_F103_CHIP: &str = r#"
+name: "f103"
+arch: "arm"
+core: "cortex-m3"
+flash:
+  base: 0x08000000
+  size: "128KB"
+ram:
+  base: 0x20000000
+  size: "20KB"
+peripherals:
+  - id: "bxcan1"
+    type: "bxcan"
+    base_address: 0x40006400
+    size: "1KB"
+"#;
+
+    #[test]
+    fn uds_script_parses_send_expect_and_wildcards() {
+        let manifest: SystemManifest = serde_yaml::from_str(
+            r#"
+name: "uds-script"
+chip: "f103"
+external_devices:
+  - id: "uds-tester"
+    type: "uds-tester"
+    connection: "bxcan1"
+    config:
+      request_id: "0x111"
+      reply_id: "0x222"
+      script:
+        - send: "11 01"
+          expect: "51 01"
+        - send: "27 01"
+          expect: "67 01 .."
+board_io: []
+"#,
+        )
+        .unwrap();
+        let chip: ChipDescriptor = serde_yaml::from_str(MIN_F103_CHIP).unwrap();
+        let bus = SystemBus::from_config(&chip, &manifest).unwrap();
+        let t = &bus.can_uds_testers[0];
+        assert_eq!(t.script.len(), 2);
+        assert_eq!(t.script[0].send, vec![0x11, 0x01]);
+        assert_eq!(t.script[0].expect, vec![Some(0x51), Some(0x01)]);
+        assert_eq!(t.script[1].expect, vec![Some(0x67), Some(0x01), None]); // .. = wildcard
+    }
+
+    #[test]
+    fn uds_script_parses_optional_expect_nrc() {
+        let manifest: SystemManifest = serde_yaml::from_str(
+            r#"
+name: "uds-script-opts"
+chip: "f103"
+external_devices:
+  - id: "uds-tester"
+    type: "uds-tester"
+    connection: "bxcan1"
+    config:
+      request_id: "0x111"
+      reply_id: "0x222"
+      script:
+        - send: "28 03"
+          expect: "68 03"
+          expect_nrc: "0x22"
+board_io: []
+"#,
+        )
+        .unwrap();
+        let chip: ChipDescriptor = serde_yaml::from_str(MIN_F103_CHIP).unwrap();
+        let bus = SystemBus::from_config(&chip, &manifest).unwrap();
+        let step = &bus.can_uds_testers[0].script[0];
+        assert_eq!(step.expect_nrc, Some(0x22));
+    }
+
+    #[test]
+    fn uds_legacy_config_becomes_one_step_script() {
+        let manifest: SystemManifest = serde_yaml::from_str(
+            r#"
+name: "uds-legacy"
+chip: "f103"
+external_devices:
+  - id: "uds_node"
+    type: "uds-tester"
+    connection: "bxcan1"
+    config:
+      request_id: "0x111"
+      reply_id: "0x222"
+      first_frame: "10 0B 27 01 5A 11 22 33"
+      consecutive_frame: "21 44 55 66 77 88 55 55"
+board_io: []
+"#,
+        )
+        .unwrap();
+        let chip: ChipDescriptor = serde_yaml::from_str(MIN_F103_CHIP).unwrap();
+        let bus = SystemBus::from_config(&chip, &manifest).unwrap();
+        let t = &bus.can_uds_testers[0];
+        assert_eq!(t.script.len(), 1);
+        assert_eq!(t.script[0].expect, vec![Some(0x06), Some(0x67)]);
+        assert_eq!(
+            t.script[0].send,
+            vec![0x27, 0x01, 0x5A, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88]
+        );
+        assert_eq!(t.script[0].expect_nrc, None);
+    }
+
     /// Parse a minimal chip yaml with the given header lines (name/arch/core).
     fn bit_band_test_chip(header: &str, gpio_base: &str, gpio_profile: &str) -> ChipDescriptor {
         let yaml = format!(
@@ -3266,5 +3679,272 @@ board_io: []
             0x55,
             "clocked GPIOA must accept writes once ahb2enr.0 is set"
         );
+    }
+
+    // -----------------------------------------------------------------------
+    // Script-driven FSM tests
+    // -----------------------------------------------------------------------
+
+    /// Build a bus with an F103 + bxCAN in normal mode (filter accepts 0x111)
+    /// and a UDS tester loaded with the given script steps. Each step is a
+    /// `(send_hex, expect_hex)` pair parsed the same way as the YAML config.
+    /// Returns the bus after the first service tick so the tester has already
+    /// sent its initial SF/FF and is in `AwaitResp` (or `AwaitFc` for a
+    /// multi-frame request).
+    fn bus_with_script(steps: &[(&str, &str)]) -> SystemBus {
+        use crate::peripherals::bxcan::BxCan;
+
+        // bxCAN register offsets (RM0008 §24.9).
+        const MCR: u64 = 0x000;
+        const BTR: u64 = 0x01C;
+        const FMR: u64 = 0x200;
+        const FM1R: u64 = 0x204;
+        const FS1R: u64 = 0x20C;
+        const FFA1R: u64 = 0x214;
+        const FA1R: u64 = 0x21C;
+        const FBANK: u64 = 0x240;
+        const VALID_BTR: u32 = 0x00DC_0009;
+        const BASE: u64 = 0x4000_6400;
+
+        let mut bus = SystemBus::empty();
+        bus.add_peripheral("bxcan1", BASE, 0x400, None, Box::new(BxCan::new()));
+
+        // Normal mode with bank-0 mask filter accepting 0x111 into FIFO0.
+        bus.write_u32(BASE + MCR, 1).unwrap();
+        bus.write_u32(BASE + BTR, VALID_BTR).unwrap();
+        bus.write_u32(BASE + FMR, 1).unwrap();
+        bus.write_u32(BASE + FS1R, 0x1).unwrap();
+        bus.write_u32(BASE + FM1R, 0x0).unwrap();
+        bus.write_u32(BASE + FFA1R, 0x0).unwrap();
+        bus.write_u32(BASE + FBANK, (0x111u32) << 21).unwrap();
+        bus.write_u32(BASE + FBANK + 4, (0x111u32) << 21).unwrap();
+        bus.write_u32(BASE + FA1R, 0x1).unwrap();
+        bus.write_u32(BASE + FMR, 0x0).unwrap();
+        bus.write_u32(BASE + MCR, 0).unwrap();
+
+        let script: Vec<UdsStep> = steps
+            .iter()
+            .map(|(send_str, expect_str)| UdsStep {
+                send: SystemBus::yaml_bytes(
+                    Some(&serde_yaml::Value::String(send_str.to_string())),
+                    &[],
+                ),
+                expect: SystemBus::parse_expect(expect_str),
+                expect_nrc: None,
+            })
+            .collect();
+
+        let mut tester = CanUdsTester::new("uds".into(), "bxcan1".into());
+        tester.script = script;
+        bus.can_uds_testers.push(tester);
+
+        // First tick: sends the initial request frame(s) for step 0.
+        bus.service_can_uds_testers();
+
+        bus
+    }
+
+    /// Push a simulated ECU frame into the connected bxCAN's `tx_frames` so
+    /// the next `service_can_uds_testers` call drains and processes it.
+    fn inject_ecu_reply(bus: &mut SystemBus, id: u32, data: &[u8]) {
+        use crate::peripherals::bxcan::BxCan;
+        let idx = bus
+            .find_peripheral_index_by_name("bxcan1")
+            .expect("bxcan1 must be registered");
+        let bx = bus.peripherals[idx]
+            .dev
+            .as_any_mut()
+            .unwrap()
+            .downcast_mut::<BxCan>()
+            .expect("bxcan1 must be BxCan");
+        bx.tx_frames
+            .push_back(crate::network::CanFrame::classic(id, data.to_vec()));
+    }
+
+    #[test]
+    fn uds_tester_single_step_sf_request_matches_reply() {
+        let mut bus = bus_with_script(&[("11 01", "51 01")]);
+        inject_ecu_reply(&mut bus, 0x222, &[0x02, 0x51, 0x01]);
+        bus.service_can_uds_testers();
+        assert_eq!(bus.can_uds_testers[0].state, CanUdsTesterState::Done);
+    }
+
+    #[test]
+    fn uds_tester_wildcard_and_multistep() {
+        let mut bus = bus_with_script(&[("10 03", "50 03"), ("27 01", "67 01 ..")]);
+        // bus_with_script already sent step 0 request; inject step 0 reply.
+        inject_ecu_reply(&mut bus, 0x222, &[0x02, 0x50, 0x03]);
+        bus.service_can_uds_testers();
+        assert_eq!(bus.can_uds_testers[0].step_idx, 1);
+        // After step 0 completes, state returns to Start. The next service call
+        // sends step 1 request.
+        bus.service_can_uds_testers();
+        inject_ecu_reply(&mut bus, 0x222, &[0x03, 0x67, 0x01, 0xAB]);
+        bus.service_can_uds_testers();
+        assert_eq!(bus.can_uds_testers[0].state, CanUdsTesterState::Done);
+    }
+
+    #[test]
+    fn uds_tester_nrc_mismatch_fails_with_reason() {
+        let mut bus = bus_with_script(&[("11 01", "51 01")]);
+        // NRC response (0x7F 0x11 0x22) — does not match expected "51 01".
+        inject_ecu_reply(&mut bus, 0x222, &[0x03, 0x7F, 0x11, 0x22]);
+        bus.service_can_uds_testers();
+        assert_eq!(bus.can_uds_testers[0].state, CanUdsTesterState::Failed);
+        assert!(bus.can_uds_testers[0]
+            .failure
+            .as_ref()
+            .unwrap()
+            .contains("step 0"));
+    }
+
+    /// Script-path FF+1CF request: send.len() == 8 (one CF required).
+    /// Verifies that the ConsecutiveFrame is injected onto the bus after the
+    /// ECU's FlowControl arrives, and that the step reaches Done.
+    ///
+    /// This test exercises the bug fixed in this commit: before the fix,
+    /// observe_ecu_frame_script set state=AwaitResp before service_can_uds_testers
+    /// evaluated to_send, so the CF payload was silently discarded.
+    #[test]
+    fn uds_tester_script_ff_plus_one_cf_request_completes() {
+        use crate::peripherals::bxcan::BxCan;
+
+        // 8-byte payload: FF carries bytes 0..5, CF carries bytes 6..7.
+        // Expected response for 0x27 service: 0x67 0x02 (single-frame).
+        let mut bus = bus_with_script(&[("27 01 02 03 04 05 06 07", "67 02")]);
+
+        // bus_with_script already ran tick 1: FF sent, state=AwaitFc.
+        assert_eq!(bus.can_uds_testers[0].state, CanUdsTesterState::AwaitFc);
+        assert_eq!(
+            bus.can_uds_testers[0].pending_cfs.len(),
+            1,
+            "one CF must be queued after FF"
+        );
+
+        // ECU responds with FlowControl (ContinueToSend).
+        inject_ecu_reply(
+            &mut bus,
+            0x222,
+            &[0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
+        );
+
+        // Tick 2: tester drains the FC and injects the CF.
+        bus.service_can_uds_testers();
+        assert_eq!(
+            bus.can_uds_testers[0].state,
+            CanUdsTesterState::AwaitResp,
+            "CF must be injected and state must advance to AwaitResp"
+        );
+        assert!(
+            bus.can_uds_testers[0].pending_cfs.is_empty(),
+            "pending_cfs must be drained after the only CF is sent"
+        );
+
+        // Confirm the CF actually landed in the bxCAN RX buffer (direction=rx
+        // means the tester delivered it into the ECU-side FIFO).
+        {
+            let idx = bus.find_peripheral_index_by_name("bxcan1").unwrap();
+            let bx = bus.peripherals[idx]
+                .dev
+                .as_any_mut()
+                .unwrap()
+                .downcast_mut::<BxCan>()
+                .unwrap();
+            let trace = bx.trace_snapshot("bxcan1");
+            // trace contains all rx frames: FF (tick 1) + CF (tick 2).
+            assert!(
+                trace
+                    .iter()
+                    .any(|f| f.direction == "rx" && f.id == 0x111 && f.data.first() == Some(&0x21)),
+                "CF (SN=0x21) must appear as an rx frame in the bxCAN trace"
+            );
+        }
+
+        // ECU sends the positive response (single-frame: len=3, 0x67 0x02 0xAB).
+        inject_ecu_reply(&mut bus, 0x222, &[0x03, 0x67, 0x02, 0xAB]);
+
+        // Tick 3: tester matches the response → Done.
+        bus.service_can_uds_testers();
+        assert_eq!(bus.can_uds_testers[0].state, CanUdsTesterState::Done);
+    }
+
+    /// Script-path FF+2CF request: send.len() == 14 (two CFs required).
+    /// Verifies that both ConsecutiveFrames are injected on successive ticks
+    /// and the step reaches Done.
+    #[test]
+    fn uds_tester_script_ff_plus_two_cf_request_completes() {
+        use crate::peripherals::bxcan::BxCan;
+
+        // 14-byte payload: FF carries bytes 0..5, CF1 carries 6..12, CF2 carries 13.
+        // Expected response: 0x76 0x01.
+        let mut bus = bus_with_script(&[("36 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D", "76 01")]);
+
+        // Tick 1 already ran: FF sent, two CFs queued.
+        assert_eq!(bus.can_uds_testers[0].state, CanUdsTesterState::AwaitFc);
+        assert_eq!(
+            bus.can_uds_testers[0].pending_cfs.len(),
+            2,
+            "two CFs must be queued after FF"
+        );
+
+        // ECU replies with FlowControl.
+        inject_ecu_reply(
+            &mut bus,
+            0x222,
+            &[0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
+        );
+
+        // Tick 2: CF1 injected; one CF still pending, state stays AwaitFc.
+        bus.service_can_uds_testers();
+        assert_eq!(
+            bus.can_uds_testers[0].state,
+            CanUdsTesterState::AwaitFc,
+            "state must stay AwaitFc while CFs remain"
+        );
+        assert_eq!(
+            bus.can_uds_testers[0].pending_cfs.len(),
+            1,
+            "one CF must remain after CF1 is sent"
+        );
+
+        // Tick 3: no new ECU frame; CF2 taken from pending_cfs → AwaitResp.
+        bus.service_can_uds_testers();
+        assert_eq!(
+            bus.can_uds_testers[0].state,
+            CanUdsTesterState::AwaitResp,
+            "state must advance to AwaitResp after last CF is sent"
+        );
+        assert!(bus.can_uds_testers[0].pending_cfs.is_empty());
+
+        // Verify both CFs appear in the trace (SN 0x21 and 0x22).
+        {
+            let idx = bus.find_peripheral_index_by_name("bxcan1").unwrap();
+            let bx = bus.peripherals[idx]
+                .dev
+                .as_any_mut()
+                .unwrap()
+                .downcast_mut::<BxCan>()
+                .unwrap();
+            let trace = bx.trace_snapshot("bxcan1");
+            assert!(
+                trace
+                    .iter()
+                    .any(|f| f.direction == "rx" && f.id == 0x111 && f.data.first() == Some(&0x21)),
+                "CF1 (SN=0x21) must appear as an rx frame"
+            );
+            assert!(
+                trace
+                    .iter()
+                    .any(|f| f.direction == "rx" && f.id == 0x111 && f.data.first() == Some(&0x22)),
+                "CF2 (SN=0x22) must appear as an rx frame"
+            );
+        }
+
+        // ECU single-frame positive response.
+        inject_ecu_reply(&mut bus, 0x222, &[0x02, 0x76, 0x01]);
+
+        // Tick 4: match → Done.
+        bus.service_can_uds_testers();
+        assert_eq!(bus.can_uds_testers[0].state, CanUdsTesterState::Done);
     }
 }
