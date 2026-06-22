@@ -5,6 +5,7 @@
 // See the LICENSE file in the project root for full license information.
 
 use crate::SimResult;
+use std::cell::Cell;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 
@@ -56,6 +57,10 @@ pub struct Scb {
     pub systick_pending: bool,
     /// NMI pend bit (ICSR.NMIPENDSET=bit 31).
     pub nmi_pending: bool,
+    /// Set when firmware writes AIRCR with the correct VECTKEY and SYSRESETREQ.
+    /// Drained by Task 6 reset routing via drain_reset_request().
+    #[serde(skip)]
+    pending_reset: Cell<bool>,
 }
 
 impl Scb {
@@ -94,7 +99,18 @@ impl Scb {
             pendsv_pending: false,
             systick_pending: false,
             nmi_pending: false,
+            pending_reset: Cell::new(false),
         }
+    }
+
+    /// Returns true once if a SYSRESETREQ was latched, then clears the latch.
+    pub fn drain_reset_request(&self) -> bool {
+        self.pending_reset.replace(false)
+    }
+
+    /// Write a 32-bit value to an SCB register at the given word-aligned offset.
+    pub fn write_register(&mut self, offset: u64, value: u32) {
+        self.write_reg(offset, value);
     }
 
     fn read_reg(&self, offset: u64) -> u32 {
@@ -147,7 +163,13 @@ impl Scb {
                 self.icsr = value;
             }
             0x08 => self.vtor.store(value, Ordering::Relaxed),
-            0x0C => self.aircr = value,
+            0x0C => {
+                if (value >> 16) == 0x05FA && value & (1 << 2) != 0 {
+                    self.pending_reset.set(true);
+                }
+                // Store masked: VECTKEY field reads back as 0 (matches silicon).
+                self.aircr = value & 0x0000_FFFF;
+            }
             0x10 => self.scr = value,
             0x14 => self.ccr = value,
             0x18 => self.shpr1.store(value, Ordering::Relaxed),
@@ -220,5 +242,25 @@ impl crate::Peripheral for Scb {
             );
         }
         value
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn aircr_sysresetreq_with_vectkey_latches_reset() {
+        let mut scb = Scb::new(Arc::new(AtomicU32::new(0)));
+        scb.write_register(0x0C, (0x05FA << 16) | (1 << 2)); // VECTKEY + SYSRESETREQ
+        assert!(scb.drain_reset_request());
+        assert!(!scb.drain_reset_request()); // latch cleared
+    }
+
+    #[test]
+    fn aircr_without_vectkey_does_not_reset() {
+        let mut scb = Scb::new(Arc::new(AtomicU32::new(0)));
+        scb.write_register(0x0C, 1 << 2); // SYSRESETREQ but no key
+        assert!(!scb.drain_reset_request());
     }
 }
