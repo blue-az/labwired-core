@@ -203,6 +203,18 @@ impl crate::Peripheral for Scb {
         Ok(())
     }
 
+    fn write_u32(&mut self, offset: u64, value: u32) -> SimResult<()> {
+        // Firmware writes SCB registers with a full-word store (the CPU's
+        // STR lands on the bus's word path, which calls this). AIRCR is an
+        // action-on-write register whose VECTKEY (bits 31:16) reads back as
+        // 0 — so the default byte-by-byte decomposition would never see the
+        // VECTKEY and SYSRESETREQ together. Dispatch the coherent 32-bit
+        // value straight to `write_reg` so the reset latch (and the ICSR
+        // pend bits) react to the value the firmware actually wrote.
+        self.write_reg(offset & !3, value);
+        Ok(())
+    }
+
     fn tick(&mut self) -> crate::PeripheralTickResult {
         // Drain pending system-exception bits set by ICSR writes. NMI
         // takes priority over SysTick over PendSV when multiple are
@@ -232,6 +244,14 @@ impl crate::Peripheral for Scb {
             };
         }
         crate::PeripheralTickResult::default()
+    }
+
+    fn as_any(&self) -> Option<&dyn std::any::Any> {
+        Some(self)
+    }
+
+    fn as_any_mut(&mut self) -> Option<&mut dyn std::any::Any> {
+        Some(self)
     }
 
     fn snapshot(&self) -> serde_json::Value {
