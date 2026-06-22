@@ -212,10 +212,6 @@ pub struct UdsStep {
     pub expect: Vec<Option<u8>>,
     /// Optional expected NRC byte (response 0x7F <sid> <nrc>).
     pub expect_nrc: Option<u8>,
-    /// When `true`, no response is expected within `timeout_ticks`.
-    pub expect_silence: bool,
-    /// Tick budget for this step before declaring a timeout.
-    pub timeout_ticks: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -443,10 +439,20 @@ impl CanUdsTester {
                 self.state = CanUdsTesterState::Start;
             }
         } else {
-            let msg = format!(
-                "step {}: expected {:02X?}, got {:02X?}",
-                self.step_idx, step.expect, payload
-            );
+            let msg = if let Some(nrc) = step.expect_nrc {
+                format!(
+                    "step {}: expected NRC 7F {:02X} {:02X}, got {:02X?}",
+                    self.step_idx,
+                    step.send.first().copied().unwrap_or(0),
+                    nrc,
+                    payload
+                )
+            } else {
+                format!(
+                    "step {}: expected {:02X?}, got {:02X?}",
+                    self.step_idx, step.expect, payload
+                )
+            };
             self.failure = Some(msg);
             self.state = CanUdsTesterState::Failed;
         }
@@ -1054,20 +1060,10 @@ impl SystemBus {
                 let expect_nrc = entry
                     .get("expect_nrc")
                     .map(|v| Self::yaml_u32(Some(v), 0) as u8);
-                let expect_silence = entry
-                    .get("expect_silence")
-                    .and_then(|v| v.as_bool())
-                    .unwrap_or(false);
-                let timeout_ticks = entry
-                    .get("timeout_ticks")
-                    .map(|v| Self::yaml_u32(Some(v), 0) as u64)
-                    .unwrap_or(CanUdsTester::DEFAULT_MAX_TICKS);
                 UdsStep {
                     send,
                     expect,
                     expect_nrc,
-                    expect_silence,
-                    timeout_ticks,
                 }
             })
             .collect()
@@ -2535,7 +2531,7 @@ board_io: []
     }
 
     #[test]
-    fn uds_script_parses_optional_step_fields() {
+    fn uds_script_parses_optional_expect_nrc() {
         let manifest: SystemManifest = serde_yaml::from_str(
             r#"
 name: "uds-script-opts"
@@ -2550,9 +2546,7 @@ external_devices:
       script:
         - send: "28 03"
           expect: "68 03"
-          timeout_ticks: 500
           expect_nrc: "0x22"
-          expect_silence: true
 board_io: []
 "#,
         )
@@ -2560,9 +2554,7 @@ board_io: []
         let chip: ChipDescriptor = serde_yaml::from_str(MIN_F103_CHIP).unwrap();
         let bus = SystemBus::from_config(&chip, &manifest).unwrap();
         let step = &bus.can_uds_testers[0].script[0];
-        assert_eq!(step.timeout_ticks, 500);
         assert_eq!(step.expect_nrc, Some(0x22));
-        assert!(step.expect_silence);
     }
 
     #[test]
@@ -2594,8 +2586,6 @@ board_io: []
             vec![0x27, 0x01, 0x5A, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88]
         );
         assert_eq!(t.script[0].expect_nrc, None);
-        assert!(!t.script[0].expect_silence);
-        assert_eq!(t.script[0].timeout_ticks, CanUdsTester::DEFAULT_MAX_TICKS);
     }
 
     /// Parse a minimal chip yaml with the given header lines (name/arch/core).
@@ -3698,7 +3688,7 @@ board_io: []
     }
 
     // -----------------------------------------------------------------------
-    // Script-driven FSM tests (Task 3)
+    // Script-driven FSM tests
     // -----------------------------------------------------------------------
 
     /// Build a bus with an F103 + bxCAN in normal mode (filter accepts 0x111)
@@ -3747,8 +3737,6 @@ board_io: []
                 ),
                 expect: SystemBus::parse_expect(expect_str),
                 expect_nrc: None,
-                expect_silence: false,
-                timeout_ticks: CanUdsTester::DEFAULT_MAX_TICKS,
             })
             .collect();
 

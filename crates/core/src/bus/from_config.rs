@@ -598,8 +598,6 @@ impl SystemBus {
                             send: raw,
                             expect: vec![Some(0x06), Some(0x67)],
                             expect_nrc: None,
-                            expect_silence: false,
-                            timeout_ticks: CanUdsTester::DEFAULT_MAX_TICKS,
                         }];
                     }
                     bus.can_uds_testers.push(tester);
