@@ -200,9 +200,20 @@ pub fn try_build(
                 .get("error_flags")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
+            // Opt-in H5 read-while-write fidelity gate. `config: { read_while_write:
+            // true }` makes an erase of the bank the CPU is executing from fault
+            // (the firmware must run the flash routine from SRAM) instead of
+            // silently succeeding. Default false (no-op on non-H5 layouts) —
+            // existing configs unchanged. Independent of `error_flags`.
+            let read_while_write = p_cfg
+                .config
+                .get("read_while_write")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
             Box::new(
                 crate::peripherals::flash::Flash::new_with_layout(layout)
-                    .with_error_flags(error_flags),
+                    .with_error_flags(error_flags)
+                    .with_read_while_write(read_while_write),
             )
         }
         "rng" => Box::new(crate::peripherals::rng::Rng::new()),

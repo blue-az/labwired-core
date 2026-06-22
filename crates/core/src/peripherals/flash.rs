@@ -139,6 +139,29 @@ pub struct Flash {
     // restore (a half-written quad-word is never persisted on real silicon).
     #[serde(skip)]
     h5_wbuf: Option<H5WriteBuffer>,
+
+    // OPT-IN read-while-write fidelity gate (H5 only). On real STM32H563 silicon
+    // (RM0481 §7, "read-while-write") a bank cannot be read — including
+    // instruction fetch — while that SAME bank is being erased or programmed:
+    // the bus stalls and code executing from that bank can never make progress.
+    // Production flash routines therefore run from SRAM. When this gate is on,
+    // an erase whose target bank is the one the CPU is executing from FAULTS
+    // (the machine layer turns the check into an unrecoverable error) instead of
+    // silently succeeding, forcing the firmware to relocate the routine to SRAM.
+    // Default false: gate off ⇒ byte-identical to prior behaviour (same-bank
+    // erase succeeds). Independent of `error_flags`; mirrors the same opt-in
+    // pattern.
+    #[serde(default)]
+    read_while_write: bool,
+
+    // H5 bank-swap state. Toggled each time a SWAP_BANK op is applied (the
+    // machine layer calls [`Flash::mark_swapped`] after `swap_banks`). With the
+    // RWW gate on this lets the bank-mapping translate a BKSEL logical bank and a
+    // PC physical bank consistently: under SWAP_BANK the bank presented at
+    // 0x08000000 is the physical second bank. `#[serde(default)]` so older
+    // snapshots restore as not-swapped (reset state).
+    #[serde(default)]
+    swapped: bool,
 }
 
 /// In-progress H5 quad-word write buffer (16 bytes at a 16-aligned base).
@@ -219,6 +242,8 @@ impl Flash {
             optkey_state: KeyUnlockState::Locked,
             error_flags: false,
             h5_wbuf: None,
+            read_while_write: false,
+            swapped: false,
         }
     }
 
@@ -235,6 +260,72 @@ impl Flash {
     /// whether to run the program-error check.
     pub fn h5_error_flags_enabled(&self) -> bool {
         self.error_flags && matches!(self.layout, FlashRegisterLayout::Stm32H5)
+    }
+
+    /// Enable (or disable) the opt-in H5 read-while-write fidelity gate.
+    /// Returns `self` so chip-factory construction can stay one expression.
+    /// No effect on non-H5 layouts (the RWW check is H5-only).
+    pub fn with_read_while_write(mut self, on: bool) -> Self {
+        self.read_while_write = on;
+        self
+    }
+
+    /// True when the H5 read-while-write fidelity gate is enabled AND this is
+    /// the H5 layout. The machine layer consults this before applying a flash
+    /// erase to decide whether the same-bank-as-PC check fires.
+    pub fn h5_rww_enabled(&self) -> bool {
+        self.read_while_write && matches!(self.layout, FlashRegisterLayout::Stm32H5)
+    }
+
+    /// Record that a SWAP_BANK has been applied (the machine layer calls this
+    /// right after `LinearMemory::swap_banks`). Each call toggles the active
+    /// mapping so the RWW bank translation stays consistent across repeated
+    /// swaps. No-op semantics beyond the bool; only meaningful with the RWW
+    /// gate on.
+    pub fn mark_swapped(&mut self) {
+        self.swapped = !self.swapped;
+    }
+
+    /// True if a SWAP_BANK is currently in effect (odd number of applied swaps).
+    pub fn is_swapped(&self) -> bool {
+        self.swapped
+    }
+
+    /// Map a BKSEL logical bank (0 or 1, as written to NSCR.BKSEL) to the
+    /// physical bank under the current SWAP_BANK state. Without a swap, logical
+    /// bank N is physical bank N; under SWAP_BANK the mapping is inverted (the
+    /// physical second bank is presented at 0x08000000, i.e. as logical bank 0).
+    fn logical_to_physical_bank(&self, logical: u8) -> u8 {
+        if self.swapped {
+            logical ^ 1
+        } else {
+            logical
+        }
+    }
+
+    /// Physical bank (0 or 1) containing the flash buffer offset `buf_off`
+    /// (= `absolute_addr - FLASH_BASE`). The CPU fetches code from 0x08000000+
+    /// (the boot view), so PC's buffer offset under the current swap state names
+    /// the physical bank it executes from. The sim physically rearranges the
+    /// backing buffer on swap, so buffer-half N already holds physical bank
+    /// `logical_to_physical_bank(N)`'s contents — translate the same way.
+    pub fn physical_bank_of_offset(&self, buf_off: u64) -> u8 {
+        let half = if buf_off >= h5::BANK_SIZE { 1u8 } else { 0u8 };
+        self.logical_to_physical_bank(half)
+    }
+
+    /// Read-while-write violation test: returns true when an erase of BKSEL
+    /// logical bank `erase_bank` collides with the physical bank the CPU is
+    /// executing from (`pc_buf_off` = `PC - FLASH_BASE`). Both sides are
+    /// translated to a physical bank through the active SWAP_BANK mapping, so a
+    /// same-physical-bank erase faults regardless of which logical view the
+    /// firmware addressed. Only meaningful when [`h5_rww_enabled`] is true.
+    ///
+    /// [`h5_rww_enabled`]: Self::h5_rww_enabled
+    pub fn rww_erase_violates(&self, erase_bank: u8, pc_buf_off: u64) -> bool {
+        let op_phys = self.logical_to_physical_bank(erase_bank & 1);
+        let pc_phys = self.physical_bank_of_offset(pc_buf_off);
+        op_phys == pc_phys
     }
 
     /// Feed one flash-region byte write into the H5 write-buffer state machine.
@@ -340,6 +431,8 @@ impl Flash {
             optkey_state: KeyUnlockState::Locked,
             error_flags: false,
             h5_wbuf: None,
+            read_while_write: false,
+            swapped: false,
         }
     }
 
@@ -702,6 +795,72 @@ mod h5_erase_swap_tests {
         let nscr = h5::NSCR_SER | (7 << h5::NSCR_SNB_SHIFT) | h5::NSCR_STRT;
         f.write_u32(h5::NSCR_OFF, nscr).unwrap();
         assert_eq!(f.drain_pending_op(), None);
+    }
+}
+
+#[cfg(test)]
+mod h5_rww_mapping_tests {
+    use super::h5;
+    use super::{Flash, FlashRegisterLayout};
+
+    fn rww_flash() -> Flash {
+        Flash::new_with_layout(FlashRegisterLayout::Stm32H5).with_read_while_write(true)
+    }
+
+    #[test]
+    fn gate_off_by_default_and_noop_on_non_h5() {
+        let off = Flash::new_with_layout(FlashRegisterLayout::Stm32H5);
+        assert!(!off.h5_rww_enabled(), "gate off by default");
+        let l4 = Flash::new_with_layout(FlashRegisterLayout::Stm32L4).with_read_while_write(true);
+        assert!(!l4.h5_rww_enabled(), "gate is a no-op on non-H5 layout");
+        let h5 = rww_flash();
+        assert!(h5.h5_rww_enabled(), "gate on for H5 when opted in");
+    }
+
+    #[test]
+    fn no_swap_logical_bank_equals_physical() {
+        let f = rww_flash();
+        assert!(!f.is_swapped());
+        // PC in bank 0 (offset 0): erase of bank 0 collides, bank 1 does not.
+        assert!(f.rww_erase_violates(0, 0x0000), "erase bank0 vs PC bank0");
+        assert!(
+            !f.rww_erase_violates(1, 0x0000),
+            "erase bank1 vs PC bank0 OK"
+        );
+        // PC in bank 1 (offset >= BANK_SIZE): erase of bank 1 collides.
+        assert!(f.rww_erase_violates(1, h5::BANK_SIZE + 0x16000));
+        assert!(!f.rww_erase_violates(0, h5::BANK_SIZE + 0x16000));
+    }
+
+    #[test]
+    fn swap_inverts_the_physical_mapping() {
+        let mut f = rww_flash();
+        f.mark_swapped();
+        assert!(f.is_swapped());
+        // Under SWAP_BANK the bank presented at 0x08000000 (buffer offset 0) is
+        // physical bank 1. The firmware still erases with BKSEL=0 (logical bank
+        // 0), which now maps to physical bank 1 — same physical bank as PC.
+        assert_eq!(
+            f.physical_bank_of_offset(0x0000),
+            1,
+            "PC@0x08000000 → phys1"
+        );
+        assert!(
+            f.rww_erase_violates(0, 0x0000),
+            "swapped: logical-bank0 erase hits PC's physical bank1"
+        );
+        // An erase of logical bank 1 maps to physical bank 0 — the OTHER bank.
+        assert!(!f.rww_erase_violates(1, 0x0000), "swapped: cross-bank OK");
+    }
+
+    #[test]
+    fn two_swaps_restore_identity_mapping() {
+        let mut f = rww_flash();
+        f.mark_swapped();
+        f.mark_swapped();
+        assert!(!f.is_swapped(), "even swaps cancel");
+        assert!(f.rww_erase_violates(0, 0x0000));
+        assert!(!f.rww_erase_violates(1, 0x0000));
     }
 }
 
