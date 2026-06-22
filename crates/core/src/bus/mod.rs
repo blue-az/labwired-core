@@ -2576,32 +2576,87 @@ peripherals:
         bus.read_u32(0x4002_2000 + NSSR_OFF).unwrap()
     }
 
-    #[test]
-    fn h5_gate_on_misaligned_program_rejected_sets_pgserr() {
+    /// Enable NSCR.PG on the H5 FLASH peripheral so the write-buffer machine
+    /// programs (silicon requires PG for a flash-region write to land).
+    fn h5_set_pg(bus: &mut SystemBus) {
         use crate::peripherals::flash::h5;
-        let mut bus = h5_flash_bus(true);
-        assert!(bus.flash_error_flags_idx.is_some(), "gate index cached");
-        // Program a byte at a non-16-byte-aligned flash offset (0x08000003).
-        bus.write_u8(0x0800_0003, 0x42).unwrap();
-        // Write rejected: flash byte still erased.
-        assert_eq!(bus.flash.read_u8(0x0800_0003), Some(0xFF));
-        let nssr = read_nssr(&bus);
-        assert_ne!(nssr & h5::NSSR_PGSERR, 0, "PGSERR set");
-        assert_ne!(nssr & h5::NSSR_INCERR, 0, "INCERR set");
+        bus.write_u32(0x4002_2000 + h5::NSCR_OFF, h5::NSCR_PG)
+            .unwrap();
     }
 
     #[test]
-    fn h5_gate_on_program_over_not_erased_rejected_sets_pgserr() {
+    fn h5_gate_on_full_quadword_commits_as_and() {
         use crate::peripherals::flash::h5;
         let mut bus = h5_flash_bus(true);
-        // First aligned program of an erased location succeeds.
-        bus.write_u8(0x0800_0010, 0xAA).unwrap();
-        assert_eq!(bus.flash.read_u8(0x0800_0010), Some(0xAA));
-        assert_eq!(read_nssr(&bus) & h5::NSSR_W1C_MASK, 0, "no flag yet");
-        // Re-programming the same (now non-0xFF) location is rejected.
-        bus.write_u8(0x0800_0010, 0xBB).unwrap();
-        assert_eq!(bus.flash.read_u8(0x0800_0010), Some(0xAA), "unchanged");
-        assert_ne!(read_nssr(&bus) & h5::NSSR_PGSERR, 0, "PGSERR set");
+        assert!(bus.flash_error_flags_idx.is_some(), "gate index cached");
+        h5_set_pg(&mut bus);
+        // Pre-load the quad-word at 0x08000020 with 0xAA in the first lane so the
+        // commit must AND with it (flash only flips 1→0). Write the lower 15
+        // lanes via the buffer first... but to exercise the AND we re-program a
+        // committed quad-word below; here verify a clean commit from erased.
+        for i in 0..16u64 {
+            bus.write_u8(0x0800_0020 + i, 0x33).unwrap();
+        }
+        // 0xFF (erased) & 0x33 = 0x33 — full quad-word committed.
+        for i in 0..16u64 {
+            assert_eq!(bus.flash.read_u8(0x0800_0020 + i), Some(0x33));
+        }
+        assert_ne!(read_nssr(&bus) & h5::NSSR_EOP, 0, "EOP set on commit");
+        assert_eq!(read_nssr(&bus) & h5::NSSR_WBNE, 0, "WBNE clear on commit");
+    }
+
+    #[test]
+    fn h5_gate_on_partial_quadword_buffers_no_commit() {
+        use crate::peripherals::flash::h5;
+        let mut bus = h5_flash_bus(true);
+        h5_set_pg(&mut bus);
+        // Only 4 of 16 bytes: still buffering, flash unchanged, WBNE set.
+        for i in 0..4u64 {
+            bus.write_u8(0x0800_0020 + i, 0x55).unwrap();
+            assert_eq!(bus.flash.read_u8(0x0800_0020 + i), Some(0xFF), "not yet");
+        }
+        assert_ne!(read_nssr(&bus) & h5::NSSR_WBNE, 0, "WBNE set");
+        assert_eq!(read_nssr(&bus) & h5::NSSR_EOP, 0, "no EOP");
+    }
+
+    #[test]
+    fn h5_gate_on_reprogram_committed_quadword_ands_no_pgserr() {
+        use crate::peripherals::flash::h5;
+        let mut bus = h5_flash_bus(true);
+        h5_set_pg(&mut bus);
+        // First program: 0xFF & 0xF0 = 0xF0.
+        for i in 0..16u64 {
+            bus.write_u8(0x0800_0040 + i, 0xF0).unwrap();
+        }
+        assert_eq!(bus.flash.read_u8(0x0800_0040), Some(0xF0));
+        // Clear EOP via NSCCR, then re-program the SAME (now-not-erased) word.
+        bus.write_u32(0x4002_2000 + h5::NSCCR_OFF, h5::NSSR_EOP)
+            .unwrap();
+        for i in 0..16u64 {
+            bus.write_u8(0x0800_0040 + i, 0x0F).unwrap();
+        }
+        // Re-program ALLOWED, result is the AND: 0xF0 & 0x0F = 0x00. No PGSERR.
+        assert_eq!(bus.flash.read_u8(0x0800_0040), Some(0x00), "AND of old&new");
+        assert_eq!(read_nssr(&bus) & h5::NSSR_PGSERR, 0, "no PGSERR over-write");
+        assert_ne!(read_nssr(&bus) & h5::NSSR_EOP, 0, "EOP set (success)");
+    }
+
+    #[test]
+    fn h5_gate_on_misaligned_run_sets_incerr_alone_no_commit() {
+        use crate::peripherals::flash::h5;
+        let mut bus = h5_flash_bus(true);
+        h5_set_pg(&mut bus);
+        // Start at base+4 (quad-word 0x20), then jump into the next quad-word
+        // (0x30) before completing — an inconsistent program run.
+        bus.write_u8(0x0800_0024, 0x11).unwrap();
+        assert_ne!(read_nssr(&bus) & h5::NSSR_WBNE, 0, "WBNE while partial");
+        bus.write_u8(0x0800_0030, 0x22).unwrap();
+        // INCERR alone, nothing committed (both targets stay erased).
+        assert_eq!(bus.flash.read_u8(0x0800_0024), Some(0xFF), "no commit");
+        assert_eq!(bus.flash.read_u8(0x0800_0030), Some(0xFF), "no commit");
+        let nssr = read_nssr(&bus);
+        assert_ne!(nssr & h5::NSSR_INCERR, 0, "INCERR set");
+        assert_eq!(nssr & h5::NSSR_PGSERR, 0, "INCERR alone (no PGSERR)");
     }
 
     #[test]
@@ -2609,12 +2664,14 @@ peripherals:
         use crate::peripherals::flash::h5;
         let mut bus = h5_flash_bus(false);
         assert!(bus.flash_error_flags_idx.is_none(), "gate off ⇒ no index");
-        // Misaligned + over-not-erased: both commit, no flag (old behaviour).
+        // No buffering, no flags: every byte commits straight through, even
+        // misaligned and over-not-erased (old byte-identical behaviour).
         bus.write_u8(0x0800_0003, 0x42).unwrap();
         assert_eq!(bus.flash.read_u8(0x0800_0003), Some(0x42));
         bus.write_u8(0x0800_0003, 0x99).unwrap();
         assert_eq!(bus.flash.read_u8(0x0800_0003), Some(0x99));
         assert_eq!(read_nssr(&bus) & h5::NSSR_W1C_MASK, 0, "no flag ever");
+        assert_eq!(read_nssr(&bus) & h5::NSSR_WBNE, 0, "no WBNE ever");
     }
 
     #[test]

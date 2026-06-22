@@ -121,14 +121,48 @@ pub struct Flash {
     key_state: KeyUnlockState,
     optkey_state: KeyUnlockState,
 
-    // OPT-IN fidelity gate (H5 only). When true, a program (a write into the
-    // flash region) that violates silicon programming rules — non-16-byte
-    // aligned target, or a target not in the erased (0xFF) state — sets the
-    // NSSR PGSERR/INCERR error flags and the write is rejected. Default false:
-    // gate off ⇒ byte-identical to prior behaviour (every program committed,
-    // no flag). Mirrors the per-peripheral opt-in pattern (clock-gating).
+    // OPT-IN fidelity gate (H5 only). When true, a flash-region write is fed
+    // through the silicon-true write-buffer state machine (see
+    // [`Flash::h5_program_byte`]): writes accumulate into a 16-byte quad-word
+    // buffer and commit (as the bitwise AND of new & existing) only on a full
+    // aligned quad-word, setting EOP; a misaligned/inconsistent quad-word
+    // raises INCERR alone and commits nothing. Default false: gate off ⇒
+    // byte-identical to prior behaviour (every write commits, no buffering, no
+    // flag). Mirrors the per-peripheral opt-in pattern (clock-gating).
     #[serde(default)]
     error_flags: bool,
+
+    // H5 write-buffer state. `Some(base)` means a quad-word program is in
+    // progress at the 16-aligned offset `base`; `written` marks which of the
+    // 16 bytes have been supplied, `bytes` holds the buffered values. Only used
+    // when the gate is on and NSCR.PG is set. Resets to empty on snapshot
+    // restore (a half-written quad-word is never persisted on real silicon).
+    #[serde(skip)]
+    h5_wbuf: Option<H5WriteBuffer>,
+}
+
+/// In-progress H5 quad-word write buffer (16 bytes at a 16-aligned base).
+#[derive(Debug, Clone, Copy)]
+struct H5WriteBuffer {
+    base: u64,
+    written: [bool; 16],
+    bytes: [u8; 16],
+}
+
+/// Outcome of feeding one flash-region byte to the H5 write-buffer state
+/// machine ([`Flash::h5_program_byte`]). The bus acts on this:
+/// * `Buffered`     — byte accepted into the pending quad-word; commit nothing.
+/// * `Commit`       — quad-word complete; the bus reads the 16 existing bytes
+///   at `base`, ANDs each with `bytes[i]` (flash only flips 1→0), writes back.
+/// * `Inconsistent` — misaligned/inconsistent quad-word; INCERR already set,
+///   buffer discarded; commit nothing.
+/// * `NotProgramming` — gate on but NSCR.PG clear; no programming occurs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum H5ProgAction {
+    Buffered,
+    Commit { base: u64, bytes: [u8; 16] },
+    Inconsistent,
+    NotProgramming,
 }
 
 #[derive(Debug, Default, Clone, Copy, serde::Serialize, serde::Deserialize)]
@@ -184,6 +218,7 @@ impl Flash {
             key_state: KeyUnlockState::Locked,
             optkey_state: KeyUnlockState::Locked,
             error_flags: false,
+            h5_wbuf: None,
         }
     }
 
@@ -202,42 +237,78 @@ impl Flash {
         self.error_flags && matches!(self.layout, FlashRegisterLayout::Stm32H5)
     }
 
-    /// H5 program-error check for a single byte write into the flash region.
+    /// Feed one flash-region byte write into the H5 write-buffer state machine.
     ///
     /// `flash_offset` is the byte offset within the flash bank (absolute addr
-    /// minus the flash base); `current_byte` is the value currently stored at
-    /// that offset (the erased state is 0xFF). Returns `true` when the program
-    /// is allowed to commit, `false` when it violates a silicon programming
-    /// rule — in which case the corresponding NSSR sticky flags are set and the
-    /// caller must NOT commit the write (a misaligned / over-not-erased
-    /// quad-word program does not store on real silicon).
+    /// minus the flash base). Returns the [`H5ProgAction`] the bus must apply:
+    /// it owns the flash backing memory, so this peripheral only tracks the
+    /// pending quad-word and the NSSR status; the commit (read 16 / AND /
+    /// write back) happens on the bus side.
+    ///
+    /// Silicon model (verified NUCLEO-H563ZI, 2026-06-22):
+    ///   * NSCR.PG must be set, else `NotProgramming` (no commit, no flag).
+    ///   * Writes accumulate into a 16-byte quad-word buffer at the 16-aligned
+    ///     base. WBNE is set while the buffer is partial.
+    ///   * A full aligned quad-word commits as new & existing (flash flips only
+    ///     1→0), sets EOP, clears WBNE, clears the buffer.
+    ///   * A misaligned / inconsistent quad-word — a write that targets a
+    ///     different quad-word base than the in-progress one before it
+    ///     completes, or a first write not at the 16-aligned base — raises
+    ///     INCERR alone, discards the buffer, commits nothing.
+    ///   * Program-over-not-erased is NOT an error here; the AND models it.
     ///
     /// Only meaningful when [`h5_error_flags_enabled`](Self::h5_error_flags_enabled)
     /// is true; with the gate off the bus never calls this and every write
-    /// commits, exactly as before.
-    ///
-    /// Rules (RM0481 §7):
-    ///   * target not 16-byte (quad-word) aligned → PGSERR + INCERR
-    ///   * target not in the erased (0xFF) state    → PGSERR
-    ///
-    /// WRPERR (write-protected/locked region) is intentionally out of scope:
-    /// this model does not yet track per-region write protection, so faking it
-    /// would be silicon-inaccurate.
-    pub fn h5_check_program(&mut self, flash_offset: u64, current_byte: u8) -> bool {
+    /// commits straight through, exactly as before.
+    pub fn h5_program_byte(&mut self, flash_offset: u64, value: u8) -> H5ProgAction {
         if !self.h5_error_flags_enabled() {
-            return true;
+            return H5ProgAction::Buffered; // unreachable: bus gates on the index
         }
-        let mut ok = true;
-        if flash_offset % h5::PROG_GRANULARITY != 0 {
-            // Misaligned quad-word program: sequence + inconsistency error.
-            self.sr |= h5::NSSR_PGSERR | h5::NSSR_INCERR;
-            ok = false;
-        } else if current_byte != 0xFF {
-            // Program over a location not erased to all-ones.
-            self.sr |= h5::NSSR_PGSERR;
-            ok = false;
+        // PG (NSCR.PG, bit 1) must be set for a flash-region write to program.
+        // Silicon detail for a PG-clear write is unverified on this part, so
+        // the simplest faithful choice is taken: no commit, no flag. (A real
+        // part would typically ignore or fault the write; we conservatively
+        // drop it rather than invent a flag.)
+        if self.cr & h5::NSCR_PG == 0 {
+            return H5ProgAction::NotProgramming;
         }
-        ok
+
+        let base = flash_offset & !(h5::PROG_GRANULARITY - 1);
+        let lane = (flash_offset - base) as usize;
+
+        // A write that jumps to a different quad-word while one is still partial
+        // is an inconsistent program run: INCERR alone, discard, commit nothing.
+        if let Some(buf) = self.h5_wbuf {
+            if buf.base != base {
+                self.h5_wbuf = None;
+                self.sr = (self.sr & !h5::NSSR_WBNE) | h5::NSSR_INCERR;
+                return H5ProgAction::Inconsistent;
+            }
+        }
+
+        let buf = self.h5_wbuf.get_or_insert(H5WriteBuffer {
+            base,
+            written: [false; 16],
+            bytes: [0xFF; 16],
+        });
+        buf.written[lane] = true;
+        buf.bytes[lane] = value;
+
+        if buf.written.iter().all(|&w| w) {
+            // Full aligned quad-word: commit (bus ANDs with existing), set EOP.
+            let bytes = buf.bytes;
+            let commit_base = buf.base;
+            self.h5_wbuf = None;
+            self.sr = (self.sr & !h5::NSSR_WBNE) | h5::NSSR_EOP;
+            H5ProgAction::Commit {
+                base: commit_base,
+                bytes,
+            }
+        } else {
+            // Partial quad-word: WBNE live, nothing committed, no error.
+            self.sr |= h5::NSSR_WBNE;
+            H5ProgAction::Buffered
+        }
     }
 
     // (legacy `new()` body replaced; kept as the no-op below for the
@@ -268,6 +339,7 @@ impl Flash {
             key_state: KeyUnlockState::Locked,
             optkey_state: KeyUnlockState::Locked,
             error_flags: false,
+            h5_wbuf: None,
         }
     }
 
@@ -383,11 +455,15 @@ impl Flash {
                             .set(Some(FlashOp::EraseSector { bank, sector }));
                     }
                 }
-                // NSSR error flags are sticky / write-1-to-clear. Firmware (or a
-                // test) clears WRPERR/PGSERR/INCERR by writing 1 to the bit.
-                // BSY and other read-only status bits are unaffected. Mirrors the
-                // L4 SR rc_w1 handling below.
-                h5::NSSR_OFF => self.sr &= !(value & h5::NSSR_W1C_MASK),
+                // NSSR is read-only status on H5: writing it does NOT clear the
+                // flags (verified on silicon — NSSR<-0x20 left EOP/error set).
+                // Flags are cleared via NSCCR (0x30) below. Accept the write,
+                // change nothing.
+                h5::NSSR_OFF => {}
+                // NSCCR @ 0x30 — clear register. Writing 1 to a bit clears the
+                // matching sticky flag in NSSR (EOP/WRPERR/PGSERR/STRBERR/
+                // INCERR). WBNE/BSY are live status, not clearable here.
+                h5::NSCCR_OFF => self.sr &= !(value & h5::NSSR_W1C_MASK),
                 h5::OPTSR_PRG_OFF => self.optsr_prg = value,
                 // OPTSTRT (bit 1) requires the OPTION-key (OPTKEYR), not the flash
                 // key (NSKEYR): option-byte programming is a separate unlock domain
@@ -632,11 +708,14 @@ mod h5_erase_swap_tests {
 #[cfg(test)]
 mod h5_program_error_tests {
     use super::h5;
-    use super::{Flash, FlashRegisterLayout};
+    use super::{Flash, FlashRegisterLayout, H5ProgAction};
     use crate::Peripheral;
 
     fn h5_gate_on() -> Flash {
-        Flash::new_with_layout(FlashRegisterLayout::Stm32H5).with_error_flags(true)
+        // Gate on + PG set: write-buffer programming is armed.
+        let mut f = Flash::new_with_layout(FlashRegisterLayout::Stm32H5).with_error_flags(true);
+        f.write_u32(h5::NSCR_OFF, h5::NSCR_PG).unwrap();
+        f
     }
 
     fn nssr(f: &Flash) -> u32 {
@@ -648,65 +727,90 @@ mod h5_program_error_tests {
             | (b(h5::NSSR_OFF + 3) << 24)
     }
 
-    #[test]
-    fn gate_off_program_commits_and_sets_no_flag() {
-        // Gate OFF (default) ⇒ misaligned, over-not-erased: still allowed,
-        // no NSSR flag. This is the byte-identical-to-before path.
-        let mut f = Flash::new_with_layout(FlashRegisterLayout::Stm32H5);
-        assert!(!f.h5_error_flags_enabled());
-        // misaligned offset, current byte not erased — both rule violations
-        assert!(f.h5_check_program(0x3, 0x00));
-        assert_eq!(nssr(&f), 0, "gate off must never set an NSSR flag");
+    /// Program a full aligned quad-word at `base` byte-by-byte, returning the
+    /// action from the final (16th) byte (which should be a Commit).
+    fn program_full_quadword(f: &mut Flash, base: u64, fill: u8) -> H5ProgAction {
+        let mut last = H5ProgAction::Buffered;
+        for i in 0..16u64 {
+            last = f.h5_program_byte(base + i, fill);
+        }
+        last
     }
 
     #[test]
-    fn misaligned_program_sets_pgserr_incerr_and_rejects() {
+    fn partial_quadword_sets_wbne_no_commit_no_error() {
         let mut f = h5_gate_on();
-        // offset 0x4 is 4-byte but NOT 16-byte (quad-word) aligned
-        let allowed = f.h5_check_program(0x4, 0xFF);
-        assert!(!allowed, "misaligned program must be rejected");
-        assert_ne!(nssr(&f) & h5::NSSR_PGSERR, 0, "PGSERR must be set");
-        assert_ne!(nssr(&f) & h5::NSSR_INCERR, 0, "INCERR must be set");
+        // Three bytes of a 16-byte quad-word: still buffering.
+        for i in 0..3u64 {
+            assert_eq!(f.h5_program_byte(0x20 + i, 0xAA), H5ProgAction::Buffered);
+        }
+        assert_ne!(nssr(&f) & h5::NSSR_WBNE, 0, "WBNE set while partial");
+        assert_eq!(nssr(&f) & h5::NSSR_EOP, 0, "no EOP — not committed");
+        assert_eq!(nssr(&f) & h5::NSSR_INCERR, 0, "no error");
     }
 
     #[test]
-    fn program_over_not_erased_sets_pgserr() {
+    fn full_aligned_quadword_commits_sets_eop_clears_wbne() {
         let mut f = h5_gate_on();
-        // aligned, but current byte is not the erased state (0xFF)
-        let allowed = f.h5_check_program(0x10, 0x00);
-        assert!(
-            !allowed,
-            "program over non-erased location must be rejected"
+        let action = program_full_quadword(&mut f, 0x20, 0xAA);
+        assert_eq!(
+            action,
+            H5ProgAction::Commit {
+                base: 0x20,
+                bytes: [0xAA; 16]
+            },
+            "full quad-word commits with the buffered bytes"
         );
-        assert_ne!(nssr(&f) & h5::NSSR_PGSERR, 0, "PGSERR must be set");
+        assert_ne!(nssr(&f) & h5::NSSR_EOP, 0, "EOP set on commit");
+        assert_eq!(nssr(&f) & h5::NSSR_WBNE, 0, "WBNE cleared on commit");
     }
 
     #[test]
-    fn aligned_erased_program_is_allowed() {
+    fn misaligned_first_write_then_jump_sets_incerr_alone() {
         let mut f = h5_gate_on();
-        assert!(
-            f.h5_check_program(0x20, 0xFF),
-            "valid program must be allowed"
-        );
-        assert_eq!(nssr(&f), 0, "valid program sets no error flag");
+        // First write at base+4 starts a buffer at base 0x20 (the quad-word it
+        // belongs to). A subsequent write into a DIFFERENT quad-word (0x30)
+        // before the first completes is the inconsistent program run.
+        assert_eq!(f.h5_program_byte(0x24, 0x11), H5ProgAction::Buffered);
+        assert_ne!(nssr(&f) & h5::NSSR_WBNE, 0, "WBNE while partial");
+        let action = f.h5_program_byte(0x30, 0x22);
+        assert_eq!(action, H5ProgAction::Inconsistent);
+        assert_ne!(nssr(&f) & h5::NSSR_INCERR, 0, "INCERR set");
+        assert_eq!(nssr(&f) & h5::NSSR_PGSERR, 0, "INCERR alone (no PGSERR)");
+        assert_eq!(nssr(&f) & h5::NSSR_WBNE, 0, "buffer discarded ⇒ WBNE clear");
     }
 
     #[test]
-    fn nssr_error_flags_are_w1c() {
+    fn nsccr_clears_eop_and_incerr_but_nssr_write_does_not() {
         let mut f = h5_gate_on();
-        f.h5_check_program(0x4, 0xFF); // sets PGSERR + INCERR
-        assert_ne!(nssr(&f) & (h5::NSSR_PGSERR | h5::NSSR_INCERR), 0);
-        // Write 1 to PGSERR and INCERR positions to clear them.
-        f.write_u32(h5::NSSR_OFF, h5::NSSR_PGSERR | h5::NSSR_INCERR)
-            .unwrap();
-        assert_eq!(nssr(&f) & h5::NSSR_W1C_MASK, 0, "W1C must clear the flags");
+        // Commit a quad-word to set EOP.
+        program_full_quadword(&mut f, 0x20, 0xAA);
+        assert_ne!(nssr(&f) & h5::NSSR_EOP, 0, "EOP set");
+        // Writing NSSR (0x20) must NOT clear it (silicon: NSSR is RO status).
+        f.write_u32(h5::NSSR_OFF, h5::NSSR_EOP).unwrap();
+        assert_ne!(nssr(&f) & h5::NSSR_EOP, 0, "NSSR write does NOT clear EOP");
+        // Writing NSCCR (0x30) DOES clear it.
+        f.write_u32(h5::NSCCR_OFF, h5::NSSR_EOP).unwrap();
+        assert_eq!(nssr(&f) & h5::NSSR_EOP, 0, "NSCCR clears EOP");
+    }
+
+    #[test]
+    fn pg_clear_does_not_program() {
+        // Gate on but NSCR.PG clear ⇒ no programming, no flag.
+        let mut f = Flash::new_with_layout(FlashRegisterLayout::Stm32H5).with_error_flags(true);
+        assert_eq!(f.cr & h5::NSCR_PG, 0, "PG clear at reset");
+        assert_eq!(f.h5_program_byte(0x20, 0xAA), H5ProgAction::NotProgramming);
+        assert_eq!(nssr(&f), 0, "no flag when PG clear");
     }
 
     #[test]
     fn gate_is_noop_on_non_h5_layout() {
-        // Enabling the gate on L4 must not arm the H5 program check.
+        // Enabling the gate on L4 must not arm the H5 write-buffer machine.
         let mut f = Flash::new_with_layout(FlashRegisterLayout::Stm32L4).with_error_flags(true);
         assert!(!f.h5_error_flags_enabled());
-        assert!(f.h5_check_program(0x3, 0x00), "non-H5 layout never rejects");
+        // h5_program_byte short-circuits to Buffered (bus never calls it here).
+        // Note: on L4 offset 0x20 is OPTR, not NSSR, so reading "nssr" is
+        // meaningless here — the meaningful assertion is the no-op action.
+        assert_eq!(f.h5_program_byte(0x3, 0x00), H5ProgAction::Buffered);
     }
 }
