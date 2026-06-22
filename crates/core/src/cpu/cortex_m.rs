@@ -1083,18 +1083,27 @@ impl CortexM {
                     rn,
                     imm8,
                     add_imm,
+                    index,
+                    writeback,
                 } => {
+                    // ARMv8-M LDRD (immediate): offset_addr = Rn ± imm32;
+                    // access_addr = index ? offset_addr : Rn; if writeback,
+                    // Rn = offset_addr.
                     let base = self.read_reg(rn);
-                    let addr = if add_imm {
+                    let offset_addr = if add_imm {
                         base.wrapping_add(imm8 << 2)
                     } else {
                         base.wrapping_sub(imm8 << 2)
                     };
+                    let addr = if index { offset_addr } else { base };
                     if let Ok(v1) = bus.read_u32(addr as u64) {
                         self.write_reg(rt, v1);
                     }
-                    if let Ok(v2) = bus.read_u32((addr + 4) as u64) {
+                    if let Ok(v2) = bus.read_u32(addr.wrapping_add(4) as u64) {
                         self.write_reg(rt2, v2);
+                    }
+                    if writeback {
+                        self.write_reg(rn, offset_addr);
                     }
                     pc_increment = 4;
                 }
@@ -1104,17 +1113,23 @@ impl CortexM {
                     rn,
                     imm8,
                     add_imm,
+                    index,
+                    writeback,
                 } => {
                     let base = self.read_reg(rn);
-                    let addr = if add_imm {
+                    let offset_addr = if add_imm {
                         base.wrapping_add(imm8 << 2)
                     } else {
                         base.wrapping_sub(imm8 << 2)
                     };
+                    let addr = if index { offset_addr } else { base };
                     let v1 = self.read_reg(rt);
                     let v2 = self.read_reg(rt2);
                     let _ = bus.write_u32(addr as u64, v1);
-                    let _ = bus.write_u32((addr + 4) as u64, v2);
+                    let _ = bus.write_u32(addr.wrapping_add(4) as u64, v2);
+                    if writeback {
+                        self.write_reg(rn, offset_addr);
+                    }
                     pc_increment = 4;
                 }
                 Instruction::Tbb { rn, rm } => {
@@ -2691,6 +2706,66 @@ mod tests {
         // UDIV R0, R1, R2 is 0xFBB1 F0F2
         run_test_instr(&mut cpu, &mut bus, 0xFBB1F0F2, true);
         assert_eq!(cpu.r0, 10);
+    }
+
+    #[test]
+    fn test_strd_predec_writeback() {
+        // e96d ce04 → strd ip, lr, [sp, #-16]!  (P=1, U=0, W=1).
+        // libgcc __aeabi_uldivmod prologue used by the mbedTLS bignum/RSA
+        // path: it stores ip,lr below SP and updates SP. Ignoring writeback
+        // left SP stale so the matching `ldr lr,[sp,#4]` read a garbage
+        // return address and the RSA verify wild-jumped.
+        let mut cpu = CortexM::new();
+        let mut bus = MockBus::new();
+        cpu.pc = 0x1000;
+        cpu.sp = 0x2000_0040;
+        cpu.r12 = 0xAABB_CCDD;
+        cpu.lr = 0x0800_5755;
+
+        run_test_instr(&mut cpu, &mut bus, 0xE96DCE04, true);
+
+        // SP updated to SP-16.
+        assert_eq!(cpu.sp, 0x2000_0030);
+        // Doubleword stored at the new SP.
+        assert_eq!(bus.read_u32(0x2000_0030).unwrap(), 0xAABB_CCDD);
+        assert_eq!(bus.read_u32(0x2000_0034).unwrap(), 0x0800_5755);
+    }
+
+    #[test]
+    fn test_ldrd_postindex_writeback() {
+        // e8f1 2304 → ldrd r2, r3, [r1], #16  (P=0, U=1, W=1).
+        // Post-indexed: load from [r1], then r1 += 16.
+        let mut cpu = CortexM::new();
+        let mut bus = MockBus::new();
+        cpu.pc = 0x1000;
+        cpu.set_register(1, 0x2000_0080);
+        bus.write_u32(0x2000_0080, 0x1122_3344).unwrap();
+        bus.write_u32(0x2000_0084, 0x5566_7788).unwrap();
+
+        run_test_instr(&mut cpu, &mut bus, 0xE8F12304, true);
+
+        assert_eq!(cpu.get_register(2), 0x1122_3344);
+        assert_eq!(cpu.get_register(3), 0x5566_7788);
+        // Base updated by +16 after the access.
+        assert_eq!(cpu.get_register(1), 0x2000_0090);
+    }
+
+    #[test]
+    fn test_ldrd_offset_no_writeback() {
+        // e9d1 0702 → ldrd r0, r7, [r1, #8]  (P=1, U=1, W=0): base unchanged.
+        let mut cpu = CortexM::new();
+        let mut bus = MockBus::new();
+        cpu.pc = 0x1000;
+        cpu.set_register(1, 0x2000_0100);
+        bus.write_u32(0x2000_0108, 0xDEAD_BEEF).unwrap();
+        bus.write_u32(0x2000_010C, 0xFEED_FACE).unwrap();
+
+        run_test_instr(&mut cpu, &mut bus, 0xE9D10702, true);
+
+        assert_eq!(cpu.get_register(0), 0xDEAD_BEEF);
+        assert_eq!(cpu.get_register(7), 0xFEED_FACE);
+        // Offset form: base register must be unchanged.
+        assert_eq!(cpu.get_register(1), 0x2000_0100);
     }
 
     // Helpers for flag inspection in arithmetic tests.

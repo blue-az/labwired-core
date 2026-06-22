@@ -501,6 +501,8 @@ pub enum Instruction {
         rn: u8,
         imm8: u32,
         add_imm: bool,
+        index: bool,
+        writeback: bool,
     },
     Strd {
         rt: u8,
@@ -508,6 +510,8 @@ pub enum Instruction {
         rn: u8,
         imm8: u32,
         add_imm: bool,
+        index: bool,
+        writeback: bool,
     },
     Tbb {
         rn: u8,
@@ -1744,12 +1748,22 @@ pub fn decode_thumb_32(h1: u16, h2: u16) -> Instruction {
             // round keys via `ldrd Rt,Rt2,[Rn,#-imm]` (U=0); ignoring U read
             // the wrong key and corrupted the cipher output.
             let add_imm = (h1 & 0x80) != 0;
+            // P (h1[8]) selects pre/post indexing; W (h1[5]) selects writeback.
+            // Pre-indexed-with-writeback (`ldrd Rt,Rt2,[Rn,#imm]!`) and
+            // post-indexed (`ldrd Rt,Rt2,[Rn],#imm`) both update Rn; the
+            // libgcc 64-bit divide helper used by mbedTLS bignum relies on
+            // the writeback form to restore SP, so ignoring W corrupted the
+            // stack frame and crashed the RSA verify path.
+            let index = (h1 & 0x100) != 0;
+            let writeback = (h1 & 0x20) != 0;
             return Instruction::Ldrd {
                 rt,
                 rt2,
                 rn,
                 imm8,
                 add_imm,
+                index,
+                writeback,
             };
         } else {
             // STREX (T1, B6.7.198) — distinguished from STRD the same
@@ -1773,12 +1787,16 @@ pub fn decode_thumb_32(h1: u16, h2: u16) -> Instruction {
                 return Instruction::Unknown32(h1, h2);
             }
             let add_imm = (h1 & 0x80) != 0;
+            let index = (h1 & 0x100) != 0;
+            let writeback = (h1 & 0x20) != 0;
             return Instruction::Strd {
                 rt,
                 rt2,
                 rn,
                 imm8,
                 add_imm,
+                index,
+                writeback,
             };
         }
     }
@@ -2064,7 +2082,9 @@ mod tests {
                 rt2: 7,
                 rn: 1,
                 imm8: 8,
-                add_imm: false
+                add_imm: false,
+                index: true,
+                writeback: false
             }
         );
         // e9d1 0708 → ldrd r0, r7, [r1, #32]  (U=1, add).
@@ -2075,7 +2095,44 @@ mod tests {
                 rt2: 7,
                 rn: 1,
                 imm8: 8,
-                add_imm: true
+                add_imm: true,
+                index: true,
+                writeback: false
+            }
+        );
+    }
+
+    #[test]
+    fn test_decode_strd_predec_writeback() {
+        // e96d ce04 → strd ip, lr, [sp, #-16]!  (P=1, U=0, W=1).
+        // This is the libgcc __aeabi_uldivmod prologue used by mbedTLS bignum.
+        assert_eq!(
+            decode_thumb_32(0xE96D, 0xCE04),
+            Instruction::Strd {
+                rt: 12,
+                rt2: 14,
+                rn: 13,
+                imm8: 4,
+                add_imm: false,
+                index: true,
+                writeback: true
+            }
+        );
+    }
+
+    #[test]
+    fn test_decode_ldrd_postindex_writeback() {
+        // e8f1 2304 → ldrd r2, r3, [r1], #16  (P=0, U=1, W=1).
+        assert_eq!(
+            decode_thumb_32(0xE8F1, 0x2304),
+            Instruction::Ldrd {
+                rt: 2,
+                rt2: 3,
+                rn: 1,
+                imm8: 4,
+                add_imm: true,
+                index: false,
+                writeback: true
             }
         );
     }
