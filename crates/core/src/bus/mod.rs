@@ -405,9 +405,8 @@ impl CanUdsTester {
             }
             CanUdsTesterState::AwaitMultiResp => {
                 if data.first().map(|b| b & 0xF0) == Some(0x20) {
-                    self.resp_buf.extend_from_slice(
-                        data.get(1..).unwrap_or(&[]),
-                    );
+                    self.resp_buf
+                        .extend_from_slice(data.get(1..).unwrap_or(&[]));
                     if self.resp_buf.len() >= self.resp_expected_len {
                         let payload = self.resp_buf[..self.resp_expected_len].to_vec();
                         self.resp_buf.clear();
@@ -904,9 +903,7 @@ impl SystemBus {
                 }
             } else {
                 match self.can_uds_testers[i].state {
-                    CanUdsTesterState::Start => {
-                        Some(self.can_uds_testers[i].first_frame.clone())
-                    }
+                    CanUdsTesterState::Start => Some(self.can_uds_testers[i].first_frame.clone()),
                     CanUdsTesterState::AwaitFc => pending_inject,
                     _ => None,
                 }
@@ -1052,10 +1049,7 @@ impl SystemBus {
         seq.iter()
             .map(|entry| {
                 let send = Self::yaml_bytes(entry.get("send"), &[]);
-                let expect_str = entry
-                    .get("expect")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("");
+                let expect_str = entry.get("expect").and_then(|v| v.as_str()).unwrap_or("");
                 let expect = Self::parse_expect(expect_str);
                 let expect_nrc = entry
                     .get("expect_nrc")
@@ -3821,18 +3815,30 @@ board_io: []
 
         // bus_with_script already ran tick 1: FF sent, state=AwaitFc.
         assert_eq!(bus.can_uds_testers[0].state, CanUdsTesterState::AwaitFc);
-        assert_eq!(bus.can_uds_testers[0].pending_cfs.len(), 1,
-            "one CF must be queued after FF");
+        assert_eq!(
+            bus.can_uds_testers[0].pending_cfs.len(),
+            1,
+            "one CF must be queued after FF"
+        );
 
         // ECU responds with FlowControl (ContinueToSend).
-        inject_ecu_reply(&mut bus, 0x222, &[0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        inject_ecu_reply(
+            &mut bus,
+            0x222,
+            &[0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
+        );
 
         // Tick 2: tester drains the FC and injects the CF.
         bus.service_can_uds_testers();
-        assert_eq!(bus.can_uds_testers[0].state, CanUdsTesterState::AwaitResp,
-            "CF must be injected and state must advance to AwaitResp");
-        assert!(bus.can_uds_testers[0].pending_cfs.is_empty(),
-            "pending_cfs must be drained after the only CF is sent");
+        assert_eq!(
+            bus.can_uds_testers[0].state,
+            CanUdsTesterState::AwaitResp,
+            "CF must be injected and state must advance to AwaitResp"
+        );
+        assert!(
+            bus.can_uds_testers[0].pending_cfs.is_empty(),
+            "pending_cfs must be drained after the only CF is sent"
+        );
 
         // Confirm the CF actually landed in the bxCAN RX buffer (direction=rx
         // means the tester delivered it into the ECU-side FIFO).
@@ -3847,9 +3853,9 @@ board_io: []
             let trace = bx.trace_snapshot("bxcan1");
             // trace contains all rx frames: FF (tick 1) + CF (tick 2).
             assert!(
-                trace.iter().any(|f| f.direction == "rx"
-                    && f.id == 0x111
-                    && f.data.first() == Some(&0x21)),
+                trace
+                    .iter()
+                    .any(|f| f.direction == "rx" && f.id == 0x111 && f.data.first() == Some(&0x21)),
                 "CF (SN=0x21) must appear as an rx frame in the bxCAN trace"
             );
         }
@@ -3871,28 +3877,43 @@ board_io: []
 
         // 14-byte payload: FF carries bytes 0..5, CF1 carries 6..12, CF2 carries 13.
         // Expected response: 0x76 0x01.
-        let mut bus =
-            bus_with_script(&[("36 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D", "76 01")]);
+        let mut bus = bus_with_script(&[("36 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D", "76 01")]);
 
         // Tick 1 already ran: FF sent, two CFs queued.
         assert_eq!(bus.can_uds_testers[0].state, CanUdsTesterState::AwaitFc);
-        assert_eq!(bus.can_uds_testers[0].pending_cfs.len(), 2,
-            "two CFs must be queued after FF");
+        assert_eq!(
+            bus.can_uds_testers[0].pending_cfs.len(),
+            2,
+            "two CFs must be queued after FF"
+        );
 
         // ECU replies with FlowControl.
-        inject_ecu_reply(&mut bus, 0x222, &[0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        inject_ecu_reply(
+            &mut bus,
+            0x222,
+            &[0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
+        );
 
         // Tick 2: CF1 injected; one CF still pending, state stays AwaitFc.
         bus.service_can_uds_testers();
-        assert_eq!(bus.can_uds_testers[0].state, CanUdsTesterState::AwaitFc,
-            "state must stay AwaitFc while CFs remain");
-        assert_eq!(bus.can_uds_testers[0].pending_cfs.len(), 1,
-            "one CF must remain after CF1 is sent");
+        assert_eq!(
+            bus.can_uds_testers[0].state,
+            CanUdsTesterState::AwaitFc,
+            "state must stay AwaitFc while CFs remain"
+        );
+        assert_eq!(
+            bus.can_uds_testers[0].pending_cfs.len(),
+            1,
+            "one CF must remain after CF1 is sent"
+        );
 
         // Tick 3: no new ECU frame; CF2 taken from pending_cfs → AwaitResp.
         bus.service_can_uds_testers();
-        assert_eq!(bus.can_uds_testers[0].state, CanUdsTesterState::AwaitResp,
-            "state must advance to AwaitResp after last CF is sent");
+        assert_eq!(
+            bus.can_uds_testers[0].state,
+            CanUdsTesterState::AwaitResp,
+            "state must advance to AwaitResp after last CF is sent"
+        );
         assert!(bus.can_uds_testers[0].pending_cfs.is_empty());
 
         // Verify both CFs appear in the trace (SN 0x21 and 0x22).
@@ -3906,15 +3927,15 @@ board_io: []
                 .unwrap();
             let trace = bx.trace_snapshot("bxcan1");
             assert!(
-                trace.iter().any(|f| f.direction == "rx"
-                    && f.id == 0x111
-                    && f.data.first() == Some(&0x21)),
+                trace
+                    .iter()
+                    .any(|f| f.direction == "rx" && f.id == 0x111 && f.data.first() == Some(&0x21)),
                 "CF1 (SN=0x21) must appear as an rx frame"
             );
             assert!(
-                trace.iter().any(|f| f.direction == "rx"
-                    && f.id == 0x111
-                    && f.data.first() == Some(&0x22)),
+                trace
+                    .iter()
+                    .any(|f| f.direction == "rx" && f.id == 0x111 && f.data.first() == Some(&0x22)),
                 "CF2 (SN=0x22) must appear as an rx frame"
             );
         }
