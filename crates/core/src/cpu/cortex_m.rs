@@ -1494,7 +1494,13 @@ impl CortexM {
                     let val = self.read_reg(rm) as u16 as i16 as i32 as u32;
                     self.write_reg(rd, val);
                 }
-                Instruction::ExtendW { rd, rn, rm, rotate, op } => {
+                Instruction::ExtendW {
+                    rd,
+                    rn,
+                    rm,
+                    rotate,
+                    op,
+                } => {
                     // ROR Rm by `rotate` (0/8/16/24), then extract+extend.
                     let v = self.read_reg(rm).rotate_right(rotate as u32);
                     let ext = match op {

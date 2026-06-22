@@ -1491,7 +1491,13 @@ pub fn decode_thumb_32(h1: u16, h2: u16) -> Instruction {
         let rotate = (((h2 >> 4) & 0x3) * 8) as u8;
         let op = ((h1 >> 4) & 0x7) as u8;
         if op == 0b000 || op == 0b001 || op == 0b100 || op == 0b101 {
-            return Instruction::ExtendW { rd, rn, rm, rotate, op };
+            return Instruction::ExtendW {
+                rd,
+                rn,
+                rm,
+                rotate,
+                op,
+            };
         }
     }
 
