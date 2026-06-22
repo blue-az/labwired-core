@@ -2370,7 +2370,10 @@ fn assertion_short_name(assertion: &TestAssertion) -> String {
             a.memory_value.address, a.memory_value.expected_value
         ),
         TestAssertion::UdsTester(a) => {
-            format!("uds_tester: {} result={:?}", a.uds_tester.id, a.uds_tester.result)
+            format!(
+                "uds_tester: {} result={:?}",
+                a.uds_tester.id, a.uds_tester.result
+            )
         }
     };
 
@@ -2394,11 +2397,7 @@ pub(crate) fn evaluate_uds_tester(
             if t.state == labwired_core::bus::CanUdsTesterState::Done {
                 Ok(())
             } else {
-                let reason = t
-                    .failure
-                    .as_deref()
-                    .unwrap_or("not completed")
-                    .to_string();
+                let reason = t.failure.as_deref().unwrap_or("not completed").to_string();
                 Err(format!("tester '{}': {}", details.id, reason))
             }
         }
@@ -2462,9 +2461,9 @@ pub(crate) fn simple_regex_is_match(pattern: &str, text: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use labwired_core::bus::{CanUdsTester, CanUdsTesterState};
     use labwired_config::UdsTesterDetails;
     use labwired_config::UdsTesterResult;
+    use labwired_core::bus::{CanUdsTester, CanUdsTesterState};
 
     fn make_tester(id: &str, state: CanUdsTesterState, failure: Option<&str>) -> CanUdsTester {
         let mut t = CanUdsTester::new(id.to_string(), "bxcan1".to_string());
