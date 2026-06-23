@@ -57,11 +57,11 @@ pub struct Scb {
     pub systick_pending: bool,
     /// NMI pend bit (ICSR.NMIPENDSET=bit 31).
     pub nmi_pending: bool,
-    /// Number of MPU regions reported in MPU_TYPE.DREGION (bits [15:8]). The
-    /// nRF52840 is a Cortex-M4F with 8 regions; this is the DATASHEET value and
-    /// has NOT yet been confirmed by a live SWD read of MPU_TYPE (HW capture is
-    /// a tracked follow-up). 0 means "no MPU". Region programming is accepted
-    /// but not enforced yet.
+    /// Number of MPU regions reported in MPU_TYPE.DREGION (bits [15:8]).
+    /// Confirmed by a live SWD read of the nRF52840 on 2026-06-23 (ST-LINK V2,
+    /// FICR.INFO.PART=0x00052840): MPU_TYPE reads 0x0000_0800, i.e. DREGION = 8,
+    /// matching the Cortex-M4F datasheet. CTRL/RNR/RBAR/RASR all read 0 at reset.
+    /// 0 here means "no MPU". Region programming is accepted but not enforced yet.
     pub mpu_dregion: u32,
     /// MPU_CTRL (0xE000ED94): ENABLE/HFNMIENA/PRIVDEFENA. Stored, not enforced.
     pub mpu_ctrl: u32,
@@ -113,8 +113,8 @@ impl Scb {
             pendsv_pending: false,
             systick_pending: false,
             nmi_pending: false,
-            // Cortex-M4F (nRF52840) ships an 8-region MPU. Datasheet value,
-            // not yet confirmed by a live SWD read of MPU_TYPE (HW capture TODO).
+            // 8-region MPU. Silicon-confirmed on the nRF52840 (2026-06-23 SWD
+            // read: MPU_TYPE=0x0000_0800, DREGION=8). See the field doc above.
             mpu_dregion: 8,
             mpu_ctrl: 0,
             mpu_rnr: 0,
@@ -334,6 +334,11 @@ mod tests {
         // MPU_TYPE.DREGION (bits [15:8]) at offset 0x90 and asserts if it is
         // smaller than the configured region count; an unmodeled MPU read 0 and
         // hung the boot. TYPE = DREGION << 8; SEPARATE/IREGION are 0 on ARMv7-M.
+        //
+        // This expectation is silicon-locked: a 2026-06-23 SWD read of the real
+        // nRF52840 (FICR.INFO.PART=0x00052840) returned MPU_TYPE=0x0000_0800.
+        // Changing the model away from DREGION=8 must fail here — the value is
+        // measured silicon, not a guess.
         let scb = Scb::new(Arc::new(AtomicU32::new(0)));
         let mpu_type = scb.read_register(0x90);
         assert_eq!((mpu_type >> 8) & 0xFF, 8, "DREGION");

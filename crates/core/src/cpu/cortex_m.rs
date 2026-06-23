@@ -34,7 +34,17 @@ pub struct CortexM {
     pub r10: u32,
     pub r11: u32,
     pub r12: u32,
-    pub sp: u32, // R13
+    pub sp: u32, // R13 — the *active* stack pointer (live R13).
+    /// Banked Main / Process stack pointers (ARMv7-M). `sp` is always the
+    /// live copy of whichever bank is currently selected; the OTHER bank is
+    /// held here. Handler mode always uses MSP; Thread mode uses MSP or PSP
+    /// per `CONTROL.SPSEL`. The active bank's stored field is treated as
+    /// stale — `sp` is authoritative for it until the next stack switch.
+    pub msp: u32,
+    pub psp: u32,
+    /// CONTROL register. Only SPSEL (bit 1) and nPRIV (bit 0) are modelled;
+    /// FPCA (bit 2) is not (no lazy FP stacking).
+    pub control: u32,
     pub lr: u32, // R14
     pub pc: u32, // R15
     pub xpsr: u32,
@@ -43,7 +53,18 @@ pub struct CortexM {
     /// 120 -> exception 136), which a single u64 silently dropped —
     /// caught by foreign firmware whose time driver never ticked.
     pub pending_exceptions: [u64; 4],
-    pub primask: bool,        // Interrupt mask (true = disabled)
+    pub primask: bool, // Interrupt mask (true = disabled)
+    /// FAULTMASK: when set, masks every exception except NMI (it raises the
+    /// effective priority to -1). Set by `CPSID f` / `MSR FAULTMASK`, cleared by
+    /// `CPSIE f` and automatically on exception return (except return from NMI).
+    /// Zephyr's fault path toggles it; an unmodelled `CPS f` decoded as Unknown.
+    pub faultmask: bool,
+    /// BASEPRI: when non-zero, masks any exception whose priority value is
+    /// numerically >= basepri (i.e. equal or lower priority). Zephyr's Cortex-M
+    /// critical sections raise BASEPRI to block the scheduler/timer IRQs; an
+    /// unmodelled BASEPRI let those fire mid-critical-section and corrupt kernel
+    /// state. NMI/HardFault (negative priority) are never masked by it.
+    pub basepri: u8,
     pub vtor: Arc<AtomicU32>, // Shared Vector Table Offset Register
     pub it_state: u8,         // Thumb IT block state
     /// Currently active exception number (0 = thread mode). Used to prevent re-entry
@@ -93,11 +114,16 @@ impl Default for CortexM {
             r11: 0,
             r12: 0,
             sp: 0,
+            msp: 0,
+            psp: 0,
+            control: 0,
             lr: 0,
             pc: 0,
             xpsr: 0x01000000, // Typical reset state (Thumb bit set)
             pending_exceptions: [0; 4],
             primask: false,
+            faultmask: false,
+            basepri: 0,
             vtor: Arc::new(AtomicU32::new(0)),
             it_state: 0,
             active_exception: 0,
@@ -180,6 +206,15 @@ impl CortexM {
             }
             _ => 0xFF,
         }
+    }
+
+    /// True if BASEPRI masks an exception of the given priority. A non-zero
+    /// BASEPRI masks any exception whose priority value is numerically >=
+    /// BASEPRI (equal or lower priority). NMI/HardFault (negative priority) are
+    /// never masked.
+    #[inline]
+    fn masked_by_basepri(&self, prio: i32) -> bool {
+        self.basepri != 0 && prio >= self.basepri as i32
     }
 
     /// Among the pending exceptions, return the one with the highest
@@ -324,16 +359,82 @@ impl CortexM {
     fn branch_to<B: Bus + ?Sized>(&mut self, addr: u32, bus: &mut B) -> SimResult<()> {
         if (addr & 0xFFFFFFF0) == 0xFFFFFFF0 {
             // EXC_RETURN: valid values are 0xFFFFFFF1/F9/FD (and FPU variants E1/E9/ED)
-            self.exception_return(bus)?;
+            self.exception_return(addr, bus)?;
         } else {
             self.pc = addr & !1;
         }
         Ok(())
     }
 
-    fn exception_return<B: Bus + ?Sized>(&mut self, bus: &mut B) -> SimResult<()> {
-        // Perform Unstacking
-        let frame_ptr = self.sp;
+    /// True if FAULTMASK currently blocks taking the given exception. FAULTMASK
+    /// masks everything except NMI (exception 2).
+    #[inline]
+    fn faultmask_blocks(&self, exc: u32) -> bool {
+        self.faultmask && exc != 2
+    }
+
+    /// True when the live `sp` is the Process stack: Thread mode with
+    /// CONTROL.SPSEL set. Handler mode always uses MSP.
+    #[inline]
+    fn use_psp(&self) -> bool {
+        self.active_exception == 0 && (self.control & 0x2) != 0
+    }
+
+    /// Persist the live `sp` into whichever bank it currently represents.
+    /// Call this *before* a transition that changes the selected stack.
+    #[inline]
+    fn sync_sp_to_bank(&mut self) {
+        if self.use_psp() {
+            self.psp = self.sp;
+        } else {
+            self.msp = self.sp;
+        }
+    }
+
+    /// The stored value of the bank that selection *would* make active now.
+    #[inline]
+    fn current_stack_value(&self) -> u32 {
+        if self.use_psp() {
+            self.psp
+        } else {
+            self.msp
+        }
+    }
+
+    /// Read MSP regardless of which bank is live.
+    #[inline]
+    fn read_msp(&self) -> u32 {
+        if self.use_psp() {
+            self.msp
+        } else {
+            self.sp
+        }
+    }
+
+    /// Read PSP regardless of which bank is live.
+    #[inline]
+    fn read_psp(&self) -> u32 {
+        if self.use_psp() {
+            self.sp
+        } else {
+            self.psp
+        }
+    }
+
+    fn exception_return<B: Bus + ?Sized>(&mut self, exc_return: u32, bus: &mut B) -> SimResult<()> {
+        // FAULTMASK is cleared automatically on exception return, except when
+        // returning from NMI (exception 2).
+        if self.active_exception != 2 {
+            self.faultmask = false;
+        }
+
+        // We are in Handler mode, so the live `sp` is MSP — capture it.
+        self.sync_sp_to_bank();
+
+        // EXC_RETURN bit 2 selects the stack the frame was stacked on:
+        // 0 → MSP (returning to a handler or Thread/MSP), 1 → PSP (Thread/PSP).
+        let frame_on_psp = (exc_return & 0x4) != 0;
+        let frame_ptr = if frame_on_psp { self.psp } else { self.msp };
 
         self.r0 = bus.read_u32(frame_ptr as u64)?;
         self.r1 = bus.read_u32((frame_ptr + 4) as u64)?;
@@ -345,19 +446,38 @@ impl CortexM {
         self.xpsr = bus.read_u32((frame_ptr + 28) as u64)?;
         self.it_state = Self::itstate_from_xpsr(self.xpsr);
 
-        self.sp = frame_ptr + 32;
+        // Advance the bank the frame was popped from.
+        let new_sp = frame_ptr + 32;
+        if frame_on_psp {
+            self.psp = new_sp;
+        } else {
+            self.msp = new_sp;
+        }
 
         // Restore active exception from stacked xPSR IPSR bits [8:0].
         // When taking an exception, we saved the previous active_exception in IPSR,
         // so restoring it here correctly handles both non-nested and nested cases.
         self.set_active_exception(self.xpsr & 0x1FF);
 
+        // On return to Thread mode, CONTROL.SPSEL takes EXC_RETURN[2].
+        if self.active_exception == 0 {
+            if frame_on_psp {
+                self.control |= 0x2;
+            } else {
+                self.control &= !0x2;
+            }
+        }
+
+        // Re-point the live `sp` at whichever bank is now selected.
+        self.sp = self.current_stack_value();
+
         tracing::debug!(
-            "EXC_RETURN: frame={:#010x} restored LR={:#010x} PC={:#010x} active_exc={}",
+            "EXC_RETURN: frame={:#010x} restored LR={:#010x} PC={:#010x} active_exc={} sp={:#010x}",
             frame_ptr,
             self.lr,
             self.pc,
-            self.active_exception
+            self.active_exception,
+            self.sp
         );
         Ok(())
     }
@@ -371,6 +491,11 @@ impl Cpu for CortexM {
         self.set_active_exception(0);
         self.decode_cache.fill(None);
 
+        // Out of reset the core is in Thread mode using MSP (CONTROL=0); PSP
+        // is architecturally UNKNOWN — start it at 0.
+        self.control = 0;
+        self.psp = 0;
+
         let vtor = self.vtor.load(Ordering::SeqCst) as u64;
         if let Ok(sp) = bus.read_u32(vtor) {
             self.sp = sp;
@@ -378,6 +503,7 @@ impl Cpu for CortexM {
         if let Ok(pc) = bus.read_u32(vtor + 4) {
             self.pc = pc & !1;
         }
+        self.msp = self.sp;
 
         Ok(())
     }
@@ -390,6 +516,9 @@ impl Cpu for CortexM {
     }
     fn set_sp(&mut self, val: u32) {
         self.sp = val;
+        // Keep the active bank coherent (out-of-reset / external SP loads are
+        // on the currently-selected stack).
+        self.sync_sp_to_bank();
     }
     fn set_exception_pending(&mut self, exception_num: u32) {
         if std::env::var("LABWIRED_TRACE_EXC").is_ok() {
@@ -520,8 +649,12 @@ impl Cpu for CortexM {
                 // the currently-active one (or 256 = thread mode baseline).
                 if self.pending_exceptions.iter().any(|&w| w != 0) && !self.primask {
                     if let Some(exc) = self.highest_priority_pending() {
+                        let exc_prio = self.exception_priority(exc);
                         let active_prio = self.exception_priority(self.active_exception);
-                        if self.exception_priority(exc) < active_prio {
+                        if exc_prio < active_prio
+                            && !self.masked_by_basepri(exc_prio)
+                            && !self.faultmask_blocks(exc)
+                        {
                             break;
                         }
                     }
@@ -538,8 +671,12 @@ impl Cpu for CortexM {
             while executed < max_count {
                 if self.pending_exceptions.iter().any(|&w| w != 0) && !self.primask {
                     if let Some(exc) = self.highest_priority_pending() {
+                        let exc_prio = self.exception_priority(exc);
                         let active_prio = self.exception_priority(self.active_exception);
-                        if self.exception_priority(exc) < active_prio {
+                        if exc_prio < active_prio
+                            && !self.masked_by_basepri(exc_prio)
+                            && !self.faultmask_blocks(exc)
+                        {
                             break;
                         }
                     }
@@ -577,7 +714,9 @@ impl CortexM {
         if self.pending_exceptions.iter().any(|&w| w != 0) && !self.primask && exception_num != 0 {
             let take_prio = self.exception_priority(exception_num);
             let active_prio = self.exception_priority(self.active_exception);
-            let can_take = take_prio < active_prio;
+            let can_take = take_prio < active_prio
+                && !self.masked_by_basepri(take_prio)
+                && !self.faultmask_blocks(exception_num);
 
             if can_take {
                 self.pending_exceptions[(exception_num / 64) as usize] &=
@@ -587,7 +726,12 @@ impl CortexM {
                 // On real ARM hardware this happens automatically when the exception is taken.
                 bus.clear_nvic_pending(exception_num);
 
-                // Perform Stacking
+                // Capture the entry context BEFORE switching to Handler mode:
+                // which mode/stack we came from determines EXC_RETURN.
+                let entered_from_handler = self.active_exception != 0;
+                let entry_on_psp = self.use_psp();
+
+                // Perform Stacking on the CURRENT (preempted) stack.
                 let sp = self.sp;
                 let frame_ptr = sp.wrapping_sub(32);
 
@@ -595,10 +739,6 @@ impl CortexM {
                 // exception_return can restore the correct nesting level.
                 let save_xpsr =
                     self.xpsr_with_itstate((self.xpsr & !0x1FF) | self.active_exception);
-
-                // Update active exception before stacking so nested exceptions see
-                // the correct level.
-                self.set_active_exception(exception_num);
 
                 // Stack: R0, R1, R2, R3, R12, LR, PC, xPSR (with previous IPSR)
                 let stacked_lr = self.lr;
@@ -612,11 +752,31 @@ impl CortexM {
                 let _ = bus.write_u32((frame_ptr + 24) as u64, self.pc);
                 let _ = bus.write_u32((frame_ptr + 28) as u64, save_xpsr);
 
-                self.sp = frame_ptr;
+                // Bank the preempted stack pointer into its bank (PSP or MSP)
+                // BEFORE entering Handler mode, then switch the live `sp` to MSP.
+                if entry_on_psp {
+                    self.psp = frame_ptr;
+                } else {
+                    self.msp = frame_ptr;
+                }
+
+                // Update active exception (→ Handler mode) so nested exceptions
+                // see the correct level. Handler always runs on MSP.
+                self.set_active_exception(exception_num);
+                self.sp = self.msp;
                 self.it_state = 0;
 
-                // EXC_RETURN: Thread Mode, MSP
-                self.lr = 0xFFFF_FFF9;
+                // EXC_RETURN encodes the mode/stack to restore on return:
+                //   0xFFFFFFF1 → return to Handler mode (nested), frame on MSP
+                //   0xFFFFFFF9 → return to Thread/MSP
+                //   0xFFFFFFFD → return to Thread/PSP
+                self.lr = if entered_from_handler {
+                    0xFFFF_FFF1
+                } else if entry_on_psp {
+                    0xFFFF_FFFD
+                } else {
+                    0xFFFF_FFF9
+                };
 
                 // Jump to ISR handler
                 let vtor = self.vtor.load(Ordering::SeqCst);
@@ -1708,11 +1868,21 @@ impl CortexM {
                     pc_increment = 4;
                 }
 
-                Instruction::Cpsie => {
-                    self.primask = false;
+                Instruction::Cpsie { primask, faultmask } => {
+                    if primask {
+                        self.primask = false;
+                    }
+                    if faultmask {
+                        self.faultmask = false;
+                    }
                 }
-                Instruction::Cpsid => {
-                    self.primask = true;
+                Instruction::Cpsid { primask, faultmask } => {
+                    if primask {
+                        self.primask = true;
+                    }
+                    if faultmask {
+                        self.faultmask = true;
+                    }
                 }
 
                 // Shifts
@@ -2378,14 +2548,21 @@ impl CortexM {
                     // for Zephyr: _isr_wrapper reads it and computes `IRQ = IPSR-16`
                     // to index the software ISR table. Returning 0 made the index
                     // -16 → garbage handler. The xPSR/IPSR-bearing reads all expose
-                    // the current exception number; PRIMASK is the other modelled
-                    // special register. Anything else still reads as zero.
+                    // the current exception number; PRIMASK, BASEPRI, FAULTMASK,
+                    // the banked SPs and CONTROL are the other modelled special
+                    // registers. Anything else still reads as zero.
                     let ipsr = self.active_exception & 0x1FF;
                     let val: u32 = match sysm {
                         0x00 => self.xpsr & 0xF800_0000,          // APSR (condition flags)
                         0x03 => (self.xpsr & 0xF800_0000) | ipsr, // xPSR
                         0x05 => ipsr,                             // IPSR
+                        0x08 => self.read_msp(),                  // MSP
+                        0x09 => self.read_psp(),                  // PSP
                         0x10 => self.primask as u32,
+                        // BASEPRI (0x11) and BASEPRI_MAX (0x12) both read BASEPRI.
+                        0x11 | 0x12 => self.basepri as u32,
+                        0x13 => self.faultmask as u32, // FAULTMASK
+                        0x14 => self.control & 0x3,    // CONTROL
                         _ => 0,
                     };
                     self.write_reg(rd, val);
@@ -2393,8 +2570,42 @@ impl CortexM {
                 }
                 Instruction::Msr { sysm, rn } => {
                     let val = self.read_reg(rn);
-                    if sysm == 0x10 {
-                        self.primask = (val & 1) != 0;
+                    match sysm {
+                        0x08 => {
+                            // MSP bank. If MSP is the live stack, update `sp` too.
+                            self.msp = val;
+                            if !self.use_psp() {
+                                self.sp = val;
+                            }
+                        }
+                        0x09 => {
+                            // PSP bank. If PSP is the live stack, update `sp` too.
+                            self.psp = val;
+                            if self.use_psp() {
+                                self.sp = val;
+                            }
+                        }
+                        0x10 => self.primask = (val & 1) != 0,
+                        // BASEPRI: plain write of the priority mask byte.
+                        0x11 => self.basepri = (val & 0xFF) as u8,
+                        // BASEPRI_MAX: writes BASEPRI only if it raises the
+                        // masking level (smaller non-zero value), or BASEPRI is 0.
+                        0x12 => {
+                            let new = (val & 0xFF) as u8;
+                            if new != 0 && (self.basepri == 0 || new < self.basepri) {
+                                self.basepri = new;
+                            }
+                        }
+                        0x13 => self.faultmask = (val & 1) != 0, // FAULTMASK
+                        0x14 => {
+                            // CONTROL.SPSEL can switch the active thread stack.
+                            // Persist the live `sp` to its bank, change SPSEL/nPRIV,
+                            // then re-point `sp` at the newly-selected bank.
+                            self.sync_sp_to_bank();
+                            self.control = (self.control & !0x3) | (val & 0x3);
+                            self.sp = self.current_stack_value();
+                        }
+                        _ => {}
                     }
                     pc_increment = 4;
                 }
@@ -2714,27 +2925,69 @@ mod tests {
     }
 
     #[test]
-    fn ldr_to_pc_register_offset_branches_to_target() {
-        // `ldr.w pc, [r3, r0, lsl #2]` = 0xF853 0xF020 is GCC's switch
-        // jump-table idiom. It must branch to the loaded value, not loaded+4:
-        // the load-to-PC path was leaving pc_increment at 4, so PC landed one
-        // instruction past the real target. That corrupted control flow into
-        // Zephyr's onoff state machine (process_event's EVT_START dispatch),
-        // tripping `__ASSERT(state == ONOFF_STATE_OFF)` and hanging boot.
+    fn cps_faultmask_set_clear_and_mask() {
+        // CPSID f (0xB671) sets FAULTMASK; CPSIE f (0xB661) clears it. Zephyr's
+        // fault handler toggles FAULTMASK; an unmodelled CPS-f decoded as Unknown
+        // and the fault path ("ESF could not be retrieved") failed.
+        let mut cpu = CortexM::new();
+        let mut bus = MockBus::new();
+        // Sequential PCs so the decode cache doesn't reuse the first opcode.
+        cpu.pc = 0x1000;
+        run_test_instr(&mut cpu, &mut bus, 0xB671, false); // CPSID f @0x1000
+        assert!(cpu.faultmask, "CPSID f sets FAULTMASK");
+        run_test_instr(&mut cpu, &mut bus, 0xB661, false); // CPSIE f @0x1002
+        assert!(!cpu.faultmask, "CPSIE f clears FAULTMASK");
+
+        // FAULTMASK masks a normal IRQ but NOT NMI (exception 2).
+        cpu.pc = 0x2000;
+        cpu.sp = 0x2000_0040;
+        cpu.faultmask = true;
+        bus.write_u16(0x2000, 0xBF00).unwrap(); // NOP
+        bus.write_u32(0x40, 0x0000_5000 | 1).unwrap(); // exc 16 vector
+        cpu.set_exception_pending(16);
+        let cfg = bus.config.clone();
+        cpu.step_internal(&mut bus, &[], &cfg).unwrap();
+        assert_eq!(cpu.pc, 0x2002, "FAULTMASK must mask the IRQ; the NOP runs");
+
+        // NMI (exception 2) still preempts under FAULTMASK.
+        cpu.pc = 0x3000;
+        bus.write_u32(0x08, 0x0000_6000 | 1).unwrap(); // exc 2 (NMI) vector
+        cpu.set_exception_pending(2);
+        cpu.step_internal(&mut bus, &[], &cfg).unwrap();
+        assert_eq!(cpu.pc, 0x6000, "NMI is never masked by FAULTMASK");
+    }
+
+    #[test]
+    fn basepri_masks_equal_or_lower_priority_exceptions() {
+        // A non-zero BASEPRI masks any exception whose priority value is >=
+        // BASEPRI. Zephyr raises BASEPRI to guard scheduler critical sections; an
+        // unmodelled BASEPRI let the timer IRQ fire inside them and corrupt state.
         let mut cpu = CortexM::new();
         let mut bus = MockBus::new();
         cpu.pc = 0x1000;
-        cpu.r3 = 0x2000; // jump-table base
-        cpu.r0 = 2; // case index
-        // [0x2000 + (2 << 2)] = [0x2008] holds the (thumb) target 0x5001.
-        bus.write_u32(0x2008, 0x5001).unwrap();
+        cpu.sp = 0x2000_0040;
+        bus.write_u16(0x1000, 0xBF00).unwrap(); // NOP at 0x1000
+                                                // Exception 16 (IRQ 0). With no NVIC wired, its priority reads 0xFF.
+        let handler = 0x0000_5000u32;
+        bus.write_u32(0x40, handler | 1).unwrap(); // VTOR=0 → vector[16] at 0x40
+        cpu.set_exception_pending(16);
 
-        run_test_instr(&mut cpu, &mut bus, 0xF853F020, true);
-
+        let cfg = bus.config.clone();
+        // BASEPRI=0x80 masks priority 0xFF (>= 0x80): the NOP runs, no vectoring.
+        cpu.basepri = 0x80;
+        cpu.step_internal(&mut bus, &[], &cfg).unwrap();
         assert_eq!(
-            cpu.pc, 0x5000,
-            "ldr.w pc,[rn,rm,lsl#n] must branch to the loaded target (thumb bit \
-             cleared), not target+4"
+            cpu.pc, 0x1002,
+            "BASEPRI must mask exc 16; the NOP should run"
+        );
+
+        // Clearing BASEPRI lets the still-pending exception through.
+        cpu.basepri = 0;
+        cpu.step_internal(&mut bus, &[], &cfg).unwrap();
+        assert_eq!(
+            cpu.pc,
+            handler & !1,
+            "with BASEPRI=0 the pending exception is taken"
         );
     }
 
@@ -2755,6 +3008,31 @@ mod tests {
         run_test_instr(&mut cpu, &mut bus, 0xF3EF8305, true);
 
         assert_eq!(cpu.r3, 33, "MRS IPSR must read the active exception number");
+    }
+
+    #[test]
+    fn ldr_to_pc_register_offset_branches_to_target() {
+        // `ldr.w pc, [r3, r0, lsl #2]` = 0xF853 0xF020 is GCC's switch
+        // jump-table idiom. It must branch to the loaded value, not loaded+4:
+        // the load-to-PC path was leaving pc_increment at 4, so PC landed one
+        // instruction past the real target. That corrupted control flow into
+        // Zephyr's onoff state machine (process_event's EVT_START dispatch),
+        // tripping `__ASSERT(state == ONOFF_STATE_OFF)` and hanging boot.
+        let mut cpu = CortexM::new();
+        let mut bus = MockBus::new();
+        cpu.pc = 0x1000;
+        cpu.r3 = 0x2000; // jump-table base
+        cpu.r0 = 2; // case index
+                    // [0x2000 + (2 << 2)] = [0x2008] holds the (thumb) target 0x5001.
+        bus.write_u32(0x2008, 0x5001).unwrap();
+
+        run_test_instr(&mut cpu, &mut bus, 0xF853F020, true);
+
+        assert_eq!(
+            cpu.pc, 0x5000,
+            "ldr.w pc,[rn,rm,lsl#n] must branch to the loaded target (thumb bit \
+             cleared), not target+4"
+        );
     }
 
     #[test]
@@ -3785,5 +4063,183 @@ mod tests {
             Some(17),
             "IRQ1 (prio 0x40) outranks IRQ0 (prio 0xC0)"
         );
+    }
+
+    // --- Banked MSP/PSP + CONTROL.SPSEL + EXC_RETURN (ARMv7-M) ---
+
+    /// Pend `exc`, point its vector at `handler`, and take the exception by
+    /// stepping once. Assumes priority lets it through (thread mode / IRQ).
+    fn take_exception(cpu: &mut CortexM, bus: &mut MockBus, exc: u32, handler: u32) {
+        bus.write_u32((exc * 4) as u64, handler).unwrap();
+        cpu.set_exception_pending(exc);
+        cpu.step_internal(bus, &[], &bus.config.clone()).unwrap();
+    }
+
+    #[test]
+    fn msr_psp_sets_psp_without_disturbing_msp() {
+        // Thread mode, MSP active. MSR PSP, r0 must bank PSP and leave the
+        // live MSP stack pointer untouched. MRS r1, PSP reads it back.
+        let mut cpu = CortexM::new();
+        let mut bus = MockBus::new();
+        cpu.sp = 0x8000; // MSP active
+        cpu.r0 = 0x6000;
+        // MSR PSP, r0 = F380 8809
+        run_test_instr(&mut cpu, &mut bus, 0xF380_8809, true);
+        assert_eq!(cpu.psp, 0x6000, "MSR PSP banks the value");
+        assert_eq!(cpu.sp, 0x8000, "MSP (active sp) untouched");
+        // MSP is the live bank here, so `sp` is authoritative for it.
+        assert_eq!(cpu.read_msp(), 0x8000, "MSP read unchanged");
+
+        // MRS r1, PSP = F3EF 8109
+        run_test_instr(&mut cpu, &mut bus, 0xF3EF_8109, true);
+        assert_eq!(cpu.r1, 0x6000, "MRS PSP reads back banked value");
+    }
+
+    #[test]
+    fn control_spsel_routes_thread_stack_to_psp() {
+        // Set CONTROL.SPSEL=1 in thread mode → active stack becomes PSP, and
+        // a PUSH must land on PSP, not MSP.
+        let mut cpu = CortexM::new();
+        let mut bus = MockBus::new();
+        cpu.pc = 0x1000;
+        cpu.sp = 0x8000; // MSP active
+        cpu.psp = 0x6000;
+        cpu.r0 = 0xDEAD_BEEF;
+
+        // MSR CONTROL, r0 with r0=2 (SPSEL=1) = F380 8814
+        cpu.r0 = 0x2;
+        run_test_instr(&mut cpu, &mut bus, 0xF380_8814, true);
+        assert_eq!(cpu.control & 0x2, 0x2, "CONTROL.SPSEL set");
+        assert_eq!(cpu.msp, 0x8000, "leaving MSP banks its value");
+        assert_eq!(cpu.sp, 0x6000, "active sp switched to PSP");
+
+        // PUSH {r0} = B401 must decrement and write PSP.
+        cpu.r0 = 0xDEAD_BEEF;
+        run_test_instr(&mut cpu, &mut bus, 0x0000_B401, false);
+        assert_eq!(cpu.sp, 0x5FFC, "PUSH used PSP");
+        assert_eq!(bus.read_u32(0x5FFC).unwrap(), 0xDEAD_BEEF);
+
+        // MRS r2, CONTROL = F3EF 8214
+        run_test_instr(&mut cpu, &mut bus, 0xF3EF_8214, true);
+        assert_eq!(cpu.r2 & 0x2, 0x2, "MRS CONTROL reflects SPSEL");
+    }
+
+    #[test]
+    fn exception_entry_from_thread_psp_sets_exc_return_fd() {
+        // Thread/PSP fault → LR=0xFFFFFFFD, frame stacked on PSP, handler on MSP.
+        let mut cpu = CortexM::new();
+        let mut bus = MockBus::new();
+        cpu.pc = 0x1000;
+        cpu.control = 0x2; // SPSEL=1, thread/PSP
+        cpu.sp = 0x6000; // PSP active
+        cpu.msp = 0x8000; // banked MSP
+        cpu.r0 = 0x1111_1111;
+
+        take_exception(&mut cpu, &mut bus, 16, 0x2000);
+
+        assert_eq!(cpu.lr, 0xFFFF_FFFD, "EXC_RETURN = Thread/PSP");
+        assert_eq!(cpu.active_exception, 16, "now in handler");
+        assert_eq!(cpu.sp, 0x8000, "handler runs on MSP");
+        assert_eq!(cpu.psp, 0x5FE0, "frame stacked on PSP (0x6000-32)");
+        assert_eq!(cpu.pc, 0x2000, "branched to handler");
+        assert_eq!(
+            bus.read_u32(0x5FE0).unwrap(),
+            0x1111_1111,
+            "r0 on PSP frame"
+        );
+    }
+
+    #[test]
+    fn exception_entry_from_thread_msp_sets_exc_return_f9() {
+        let mut cpu = CortexM::new();
+        let mut bus = MockBus::new();
+        cpu.pc = 0x1000;
+        cpu.control = 0x0; // SPSEL=0, thread/MSP
+        cpu.sp = 0x8000; // MSP active
+
+        take_exception(&mut cpu, &mut bus, 16, 0x2000);
+
+        assert_eq!(cpu.lr, 0xFFFF_FFF9, "EXC_RETURN = Thread/MSP");
+        assert_eq!(cpu.sp, 0x7FE0, "handler on MSP (0x8000-32)");
+        assert_eq!(cpu.msp, 0x7FE0, "MSP bank updated");
+    }
+
+    #[test]
+    fn nested_exception_entry_sets_exc_return_f1() {
+        // Already in a handler → nested exception returns to Handler mode (F1),
+        // and stacks on MSP.
+        let mut cpu = CortexM::new();
+        let mut bus = MockBus::new();
+        cpu.pc = 0x2000;
+        cpu.active_exception = 11; // SVCall in progress (prio 0)
+        cpu.sp = 0x8000; // handler MSP
+        cpu.psp = 0x6000; // banked thread PSP, must NOT be touched
+
+        // HardFault (exc 3, prio -1) preempts.
+        take_exception(&mut cpu, &mut bus, 3, 0x3000);
+
+        assert_eq!(cpu.lr, 0xFFFF_FFF1, "EXC_RETURN = return to Handler");
+        assert_eq!(cpu.active_exception, 3);
+        assert_eq!(cpu.sp, 0x7FE0, "nested frame on MSP");
+        assert_eq!(cpu.msp, 0x7FE0, "MSP bank advanced");
+        assert_eq!(cpu.psp, 0x6000, "PSP bank untouched by nested entry");
+    }
+
+    #[test]
+    fn exception_round_trip_from_psp_restores_state() {
+        // Enter from thread/PSP, BX LR back, PSP + registers restored exactly.
+        let mut cpu = CortexM::new();
+        let mut bus = MockBus::new();
+        cpu.pc = 0x1000;
+        cpu.control = 0x2; // thread/PSP
+        cpu.sp = 0x6000; // PSP active
+        cpu.msp = 0x8000;
+        cpu.r0 = 0xA0;
+        cpu.r1 = 0xA1;
+        cpu.r2 = 0xA2;
+        cpu.r3 = 0xA3;
+        cpu.r12 = 0xAC;
+        cpu.lr = 0x1000_0001;
+        cpu.xpsr = 0x0100_0000;
+
+        // Handler at 0x2000 is a single BX LR (0x4770).
+        bus.write_u16(0x2000, 0x4770).unwrap();
+        take_exception(&mut cpu, &mut bus, 16, 0x2000);
+        assert_eq!(cpu.active_exception, 16);
+        assert_eq!(cpu.sp, 0x8000, "in handler on MSP");
+
+        // Execute BX LR (EXC_RETURN).
+        let cfg = bus.config.clone();
+        cpu.step_internal(&mut bus, &[], &cfg).unwrap();
+
+        assert_eq!(cpu.active_exception, 0, "back to thread mode");
+        assert_eq!(cpu.sp, 0x6000, "PSP restored");
+        assert_eq!(cpu.control & 0x2, 0x2, "still thread/PSP");
+        assert_eq!(cpu.pc, 0x1000, "PC restored from frame");
+        assert_eq!(cpu.r0, 0xA0);
+        assert_eq!(cpu.r1, 0xA1);
+        assert_eq!(cpu.r2, 0xA2);
+        assert_eq!(cpu.r3, 0xA3);
+        assert_eq!(cpu.r12, 0xAC);
+        assert_eq!(cpu.lr, 0x1000_0001, "LR restored from frame");
+    }
+
+    #[test]
+    fn exception_return_to_msp_restores_msp() {
+        // EXC_RETURN 0xFFFFFFF9 returns to thread/MSP.
+        let mut cpu = CortexM::new();
+        let mut bus = MockBus::new();
+        cpu.pc = 0x1000;
+        cpu.control = 0x0; // thread/MSP
+        cpu.sp = 0x8000;
+        bus.write_u16(0x2000, 0x4770).unwrap(); // BX LR
+        take_exception(&mut cpu, &mut bus, 16, 0x2000);
+        assert_eq!(cpu.lr, 0xFFFF_FFF9);
+
+        let cfg = bus.config.clone();
+        cpu.step_internal(&mut bus, &[], &cfg).unwrap();
+        assert_eq!(cpu.active_exception, 0);
+        assert_eq!(cpu.sp, 0x8000, "MSP restored");
+        assert_eq!(cpu.control & 0x2, 0, "SPSEL stays MSP");
     }
 }
