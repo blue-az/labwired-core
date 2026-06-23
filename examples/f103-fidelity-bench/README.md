@@ -1,25 +1,25 @@
 # F103 fidelity benchmark
 
-An emulator's job in CI is to **fail the firmware that real hardware fails**. One
-that passes a known-bad firmware gives a *false pass* — a green run hiding a bug.
-This benchmark runs the same firmware on LabWired and on Renode's own shipped
-STM32F103 platform and scores each against the F103C8 datasheet.
+A faithful emulator must **fail the firmware that real hardware fails**. One that
+passes a known-bad firmware gives a *false pass* — a green CI run hiding a bug.
+This suite runs deliberately-broken firmware on LabWired and checks its verdict
+against the STM32F103C8 datasheet, so false-pass prevention is measured, not
+asserted. It doubles as a CI fidelity regression guard.
 
 ## Result
 
 ```
-case       real-HW   LabWired   Renode
-control    PASS      PASS       PASS
-clockbug   FAIL      FAIL       PASS <FALSE-PASS>
-gpiobug    FAIL      FAIL       PASS <FALSE-PASS>
-rambug     FAIL      FAIL       PASS <FALSE-PASS>
-                     4/4        1/4
+case       real-HW   LabWired
+control    PASS      PASS
+clockbug   FAIL      FAIL
+gpiobug    FAIL      FAIL
+rambug     FAIL      FAIL
+                     4/4
 ```
 
-Renode false-passes the bug cases on its **own** `stm32f103.repl`: it has no RCC
-clock-gating model (the clock-enable write logs as `unimplemented register
-RCC:APB2ENR`) and maps a 256 MB SRAM instead of 20 KB. LabWired models both, so
-it matches silicon.
+LabWired reproduces the real silicon on every case because it models RCC clock
+gating and the real 20 KB SRAM — the behaviour a passing test never exercises is
+exactly where a false pass would otherwise hide.
 
 ## Cases
 
@@ -30,20 +30,17 @@ One firmware (`firmware/main.c`), one line changed each:
 - `gpiobug` — drives GPIOA without `IOPAEN`; writes dropped → **FAIL**
 - `rambug` — stores 4 KB past the 20 KB SRAM; faults → **FAIL**
 
-A case passes iff its marker (`BENCH_*_OK`) reaches the UART — the only signal
-both engines expose, so they are judged identically.
+A case passes iff its marker (`BENCH_*_OK`) reaches the UART.
 
 ## Run
 
 ```bash
-./run-benchmark.sh                      # LabWired only
-RENODE_BIN=/path/to/renode ./run-benchmark.sh   # add Renode
+./run-benchmark.sh
 ```
 
-Exits non-zero if LabWired ever disagrees with silicon (use it as a CI fidelity
-guard). Writes `benchmark-results.json`. `system-nogate.yaml` shows LabWired
-false-passing too once the clock gates are stripped — the gates are what catch
-the bug.
+Exits non-zero if LabWired ever disagrees with silicon, and writes
+`benchmark-results.json`. `system-nogate.yaml` runs the same firmware on a
+clock-gating-stripped chip: it false-passes there, showing the gates are what
+catch the bug.
 
-Needs `arm-none-eabi-gcc` and a built `labwired` (`cargo build -p labwired-cli`);
-Renode optional.
+Needs `arm-none-eabi-gcc` and a built `labwired` (`cargo build -p labwired-cli`).
