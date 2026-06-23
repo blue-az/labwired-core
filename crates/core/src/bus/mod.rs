@@ -375,10 +375,20 @@ impl CanUdsTester {
             CanUdsTesterState::AwaitResp => {
                 let ptype = data.first().map(|b| b & 0xF0).unwrap_or(0xFF);
                 if ptype == 0x00 {
-                    // ECU SingleFrame response
-                    let pdu_len = (data.first().copied().unwrap_or(0) & 0x0F) as usize;
+                    // ECU SingleFrame response. Two ISO-TP SF encodings:
+                    //   * classic: byte0 = 0x0L, length L (1..=7) in the low
+                    //     nibble, payload from byte 1.
+                    //   * CAN-FD escape: byte0 = 0x00, real length in byte 1,
+                    //     payload from byte 2 (used for SF up to 62 bytes on FD
+                    //     frames — the ECU runs ISO-TP in FD mode).
+                    let b0 = data.first().copied().unwrap_or(0);
+                    let (pdu_len, data_off) = if b0 == 0x00 {
+                        (data.get(1).copied().unwrap_or(0) as usize, 2)
+                    } else {
+                        ((b0 & 0x0F) as usize, 1)
+                    };
                     let payload: Vec<u8> = data
-                        .get(1..)
+                        .get(data_off..)
                         .unwrap_or(&[])
                         .iter()
                         .copied()
@@ -2336,6 +2346,37 @@ board_io: []
             .observe_ecu_frame(0x222, &[0x06, 0x67, 0x01, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE])
             .is_none());
         assert_eq!(t.state, CanUdsTesterState::Done);
+        assert!(t.is_terminal());
+    }
+
+    /// Script-driven AwaitResp must decode the CAN-FD *escape* SingleFrame
+    /// (`0x00 LL <payload>`, length in byte 1, payload from byte 2), not just
+    /// the classic SF (`0x0L`). The H563 ECU runs ISO-TP in FD mode and answers
+    /// a 20-byte ReadDataByIdentifier as one 0x00-escape SF; the old parser read
+    /// the low nibble of 0x00 as length 0 and completed with an empty payload
+    /// ("got []"). Regression for the h563-uds-ecu smoke.
+    #[test]
+    fn scripted_tester_decodes_fd_escape_single_frame() {
+        let mut t = CanUdsTester::new("t".into(), "fdcan1".into());
+        t.reply_id = 0x7E8;
+        t.script = vec![UdsStep {
+            send: vec![0x22, 0xF1, 0x90],
+            expect: vec![Some(0x62), Some(0xF1), Some(0x90)],
+            expect_nrc: None,
+        }];
+        t.step_idx = 0;
+        t.state = CanUdsTesterState::AwaitResp;
+
+        // ECU FD escape SF: byte0 = 0x00, real length = 0x14 (20) in byte1,
+        // payload 62 F1 90 + 17-byte VIN string.
+        let mut resp = vec![0x00, 0x14, 0x62, 0xF1, 0x90];
+        resp.extend_from_slice(b"LABWIRED-H563-UDS");
+        assert!(t.observe_ecu_frame(0x7E8, &resp).is_none());
+        assert_eq!(
+            t.state,
+            CanUdsTesterState::Done,
+            "FD escape SF must decode the full payload and match step 0"
+        );
         assert!(t.is_terminal());
     }
 
