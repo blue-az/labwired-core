@@ -899,6 +899,10 @@ impl SystemBus {
                     // is None but the queue is non-empty).
                     CanUdsTesterState::AwaitFc => pending_inject
                         .or_else(|| self.can_uds_testers[i].pending_cfs.first().cloned()),
+                    // ECU sent a FirstFrame this tick; observe_ecu_frame_script
+                    // already set state=AwaitMultiResp and returned the FlowControl
+                    // in pending_inject. Forward it so the ECU can send its CFs.
+                    CanUdsTesterState::AwaitMultiResp => pending_inject,
                     _ => None,
                 }
             } else {
