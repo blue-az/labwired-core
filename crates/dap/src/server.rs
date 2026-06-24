@@ -1400,42 +1400,56 @@ impl DapServer {
                     .unwrap_or(0);
 
                 if addr != 0 {
-                    let _ = self.adapter.set_pc(addr);
-                    sender.send_response(req_seq, "goto", None)?;
-                    sender.send_event(
-                        "stopped",
-                        Some(json!({
-                            "reason": "goto",
-                            "threadId": 1,
-                            "allThreadsStopped": true
-                        })),
-                    )?;
+                    if let Err(e) = self.adapter.set_pc(addr) {
+                        sender.send_error_response(
+                            req_seq,
+                            "goto",
+                            &format!("Goto failed: {}", e),
+                        )?;
+                    } else {
+                        sender.send_response(req_seq, "goto", None)?;
+                        sender.send_event(
+                            "stopped",
+                            Some(json!({
+                                "reason": "goto",
+                                "threadId": 1,
+                                "allThreadsStopped": true
+                            })),
+                        )?;
+                    }
                 } else {
                     sender.send_error_response(req_seq, "goto", "Invalid target address")?;
                 }
             }
             "next" | "stepIn" => {
-                let reason = if command == "next" {
-                    self.adapter
-                        .step_over_source_line(512)
-                        .unwrap_or(labwired_core::StopReason::StepDone)
+                let result = if command == "next" {
+                    self.adapter.step_over_source_line(512)
                 } else {
-                    self.adapter
-                        .step()
-                        .unwrap_or(labwired_core::StopReason::StepDone)
+                    self.adapter.step()
                 };
-                sender.send_response(req_seq, command, None)?;
-                sender.send_event(
-                    "stopped",
-                    Some(json!({
-                        "reason": match reason {
-                            labwired_core::StopReason::Breakpoint(_) => "breakpoint",
-                            _ => "step",
-                        },
-                        "threadId": 1,
-                        "allThreadsStopped": true
-                    })),
-                )?;
+                match result {
+                    Ok(reason) => {
+                        sender.send_response(req_seq, command, None)?;
+                        sender.send_event(
+                            "stopped",
+                            Some(json!({
+                                "reason": match reason {
+                                    labwired_core::StopReason::Breakpoint(_) => "breakpoint",
+                                    _ => "step",
+                                },
+                                "threadId": 1,
+                                "allThreadsStopped": true
+                            })),
+                        )?;
+                    }
+                    Err(e) => {
+                        sender.send_error_response(
+                            req_seq,
+                            command,
+                            &format!("Step failed: {}", e),
+                        )?;
+                    }
+                }
             }
             "stepBack" => {
                 if let Err(e) = self.adapter.step_back() {

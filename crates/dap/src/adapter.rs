@@ -1086,6 +1086,14 @@ mod tests {
             adapter.step_out().is_err(),
             "step_out must error before a machine is attached"
         );
+        assert!(
+            adapter.step().is_err(),
+            "step must error before a machine is attached"
+        );
+        assert!(
+            adapter.set_pc(0x0800_0000).is_err(),
+            "set_pc must error before a machine is attached"
+        );
     }
 
     #[test]
