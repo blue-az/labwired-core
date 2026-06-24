@@ -1963,11 +1963,10 @@ fn write_outputs<C: labwired_core::Cpu>(
             if let Some(cov) = coverage_observer {
                 match labwired_loader::SymbolProvider::new(firmware_path) {
                     Ok(symbols) => {
-                        let report =
-                            labwired_cli::pc_coverage_report::CoverageReport::build(
-                                symbols.statement_rows(),
-                                |addr| cov.was_executed(addr as u32),
-                            );
+                        let report = labwired_cli::pc_coverage_report::CoverageReport::build(
+                            symbols.statement_rows(),
+                            |addr| cov.was_executed(addr as u32),
+                        );
                         let info_path = output_dir.join("coverage.info");
                         if let Err(e) = std::fs::write(&info_path, report.to_lcov()) {
                             error!("Failed to write coverage.info: {}", e);
