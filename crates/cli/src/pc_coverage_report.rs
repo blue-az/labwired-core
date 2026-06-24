@@ -106,7 +106,11 @@ impl CoverageReport {
             out.push_str("TN:\n");
             out.push_str(&format!("SF:{}\n", f.file));
             for l in &f.lines {
-                out.push_str(&format!("DA:{},{}\n", l.line, if l.covered { 1 } else { 0 }));
+                out.push_str(&format!(
+                    "DA:{},{}\n",
+                    l.line,
+                    if l.covered { 1 } else { 0 }
+                ));
             }
             out.push_str(&format!("LF:{}\n", f.lines_found));
             out.push_str(&format!("LH:{}\n", f.lines_hit));
