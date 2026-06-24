@@ -2182,4 +2182,34 @@ pub mod integration_tests {
             "PC must be exactly at the breakpoint, not past it"
         );
     }
+
+    #[test]
+    fn pc_coverage_observer_records_executed_addresses() {
+        use crate::pc_coverage::PcCoverageObserver;
+
+        let mut machine = create_machine();
+        let cov = Arc::new(PcCoverageObserver::new());
+        machine.observers.push(cov.clone());
+
+        let pc = 0x2000_0000u32;
+        machine.cpu.set_pc(pc);
+        // Eight Thumb NOPs (MOV R0, R0).
+        for i in 0..8u64 {
+            machine.bus.write_u16(pc as u64 + i * 2, 0x4600).unwrap();
+        }
+
+        let _ = machine.run(Some(8)).unwrap();
+
+        assert_eq!(
+            cov.covered_count(),
+            8,
+            "all eight straight-line instruction addresses must be covered"
+        );
+        assert!(cov.was_executed(pc));
+        assert!(cov.was_executed(pc + 14));
+        assert!(
+            cov.edges().is_empty(),
+            "straight-line code takes no branch edges"
+        );
+    }
 }

@@ -17,6 +17,7 @@ pub mod memory;
 pub mod metrics;
 pub mod multi_core;
 pub mod network;
+pub mod pc_coverage;
 pub mod peripherals;
 pub mod physics;
 pub mod runtime_snapshot;
