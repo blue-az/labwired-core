@@ -91,7 +91,15 @@ boards:
     # fidelity gates (default off). The erase/program *behavioural* live-diff
     # (writes real flash over SWD) WAS run on 2026-06-22 and the model corrected
     # to match silicon (write-buffer/EOP/INCERR/NSCCR; see result above).
-    drift_ack: 2026-06-22
+    # 2026-06-24: fdcan.rs changed for the async-TX fix (#336/#342) — request_tx
+    # now queues into pending_tx and drain_pending_tx delivers on the next tick,
+    # so TXBRP stays asserted from the TXBAR write until the following tick
+    # (matches real M_CAN; prevents the udslib #88 reset-before-TX false-pass).
+    # TX-completion *timing* change, NOT a register-reset-value change: the prior
+    # MMIO/parity/class reset diffs (0 divergence) and the 2026-06-22 FLASH
+    # behavioural capture still hold. Live re-diff of FDCAN TX timing over SWD is
+    # tracked as a follow-up (no H563 probe attached this session).
+    drift_ack: 2026-06-24
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
