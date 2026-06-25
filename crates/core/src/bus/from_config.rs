@@ -62,6 +62,7 @@ impl SystemBus {
             dport_idx: None,
             rcc_idx: None,
             clock_gating_bypass: false,
+            fault_unclocked: std::collections::HashMap::new(),
             peripheral_ranges: Vec::new(),
             peripheral_hint: Cell::new(None),
             last_gpio_in: [0; 2],
