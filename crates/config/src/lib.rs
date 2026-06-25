@@ -137,6 +137,15 @@ pub struct ChipDescriptor {
     /// the real reset vector when the flash-base vectors are not valid.
     #[serde(default, deserialize_with = "deserialize_u64_lax")]
     pub reset_vector_offset: u64,
+    /// RP2040-style atomic register aliases. When true, every 0x1000-strided
+    /// alias of a peripheral register in the APB window decodes as an atomic
+    /// op on the base register: `+0x0000` normal, `+0x1000` XOR, `+0x2000`
+    /// SET (bitwise OR), `+0x3000` CLR (bitwise AND-NOT). The RP2040 HAL drives
+    /// nearly all of its register setup through these aliases (`hw_set_bits`,
+    /// `hw_clear_bits`), so without them an unmodified image faults on the
+    /// first `hw_set_bits`. Default `false` (other Cortex-M parts).
+    #[serde(default)]
+    pub atomic_register_aliases: bool,
     /// Extra CPU-visible memory windows beyond `flash`/`ram` (e.g. ESP32 IRAM
     /// and flash-DROM). Empty for chips with a simple two-region map.
     #[serde(default)]
@@ -527,6 +536,7 @@ impl From<labwired_ir::IrDevice> for ChipDescriptor {
             flash,
             ram,
             reset_vector_offset: 0,
+            atomic_register_aliases: false,
             memory_regions: Vec::new(),
             peripherals: ir
                 .peripherals

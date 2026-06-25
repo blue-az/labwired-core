@@ -56,6 +56,18 @@ pub struct PeripheralEntry {
     pub clock_gate: Option<ResolvedClockGate>,
 }
 
+/// RP2040 atomic register-alias operation (see
+/// [`SystemBus::atomic_alias_redirect`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AtomicAliasOp {
+    /// `+0x1000`: write XORs the bits, read returns the base register.
+    Xor,
+    /// `+0x2000`: write sets (ORs) the bits.
+    Set,
+    /// `+0x3000`: write clears (AND-NOT) the bits.
+    Clr,
+}
+
 pub struct SystemBus {
     pub flash: LinearMemory,
     pub ram: LinearMemory,
@@ -77,6 +89,11 @@ pub struct SystemBus {
     /// descriptor so `Machine::load_firmware` can relocate the reset vector
     /// past the stage-2 blob. See `ChipDescriptor::reset_vector_offset`.
     pub reset_vector_offset: u64,
+    /// RP2040 atomic register aliases enabled (see
+    /// `ChipDescriptor::atomic_register_aliases`). When set, word accesses in
+    /// the APB peripheral window whose offset has bits [13:12] set decode as
+    /// XOR/SET/CLR atomic ops on the aligned base register.
+    pub atomic_register_aliases: bool,
     /// Plan 3: per-core bitmask of pending cpu IRQ slots (32 bits each;
     /// index 0 = PRO_CPU, 1 = APP_CPU). Aggregated by
     /// `tick_peripherals_with_costs` from peripheral `explicit_irqs` source
@@ -1388,6 +1405,7 @@ impl SystemBus {
             pending_schedule: Vec::new(),
             legacy_walk_disabled: false,
             reset_vector_offset: 0,
+            atomic_register_aliases: false,
             hcsr04: Vec::new(),
             can_diagnostic_testers: Vec::new(),
             can_uds_testers: Vec::new(),
@@ -1428,6 +1446,7 @@ impl SystemBus {
             pending_schedule: Vec::new(),
             legacy_walk_disabled: false,
             reset_vector_offset: 0,
+            atomic_register_aliases: false,
             hcsr04: Vec::new(),
             can_diagnostic_testers: Vec::new(),
             can_uds_testers: Vec::new(),
@@ -1672,6 +1691,27 @@ impl SystemBus {
             }
             None => matches!(chip.arch, labwired_config::Arch::Arm),
         }
+    }
+
+    /// Decode an RP2040 atomic register-alias access. Returns the aligned base
+    /// register address and the atomic op when `addr` lands on a `+0x1000`
+    /// (XOR), `+0x2000` (SET) or `+0x3000` (CLR) alias of a peripheral register
+    /// in the APB/AHB-Lite peripheral window; `None` for a normal (`+0x0000`)
+    /// access or any address outside the window. Only consulted when
+    /// `atomic_register_aliases` is set, so it is a no-op for other parts.
+    #[inline]
+    pub fn atomic_alias_redirect(&self, addr: u64) -> Option<(u64, AtomicAliasOp)> {
+        const APB_AHB: std::ops::Range<u64> = 0x4000_0000..0x5040_0000;
+        if !APB_AHB.contains(&addr) {
+            return None;
+        }
+        let op = match (addr >> 12) & 0x3 {
+            0 => return None,
+            1 => AtomicAliasOp::Xor,
+            2 => AtomicAliasOp::Set,
+            _ => AtomicAliasOp::Clr,
+        };
+        Some((addr & !0x3000, op))
     }
 
     /// Whether the 8 bytes at `addr` form a plausible Cortex-M reset vector:
@@ -2129,6 +2169,7 @@ mod tests {
         let chip = ChipDescriptor {
             schema_version: "1.0".to_string(),
             reset_vector_offset: 0,
+            atomic_register_aliases: false,
             memory_regions: Vec::new(),
             name: "stm32f103-test".to_string(),
             arch: Arch::Arm,
@@ -2195,6 +2236,7 @@ mod tests {
         let chip = ChipDescriptor {
             schema_version: "1.0".to_string(),
             reset_vector_offset: 0,
+            atomic_register_aliases: false,
             memory_regions: Vec::new(),
             name: "esp32c3-i2c-test".to_string(),
             arch: Arch::RiscV,
@@ -2295,6 +2337,7 @@ mod tests {
         let chip = ChipDescriptor {
             schema_version: "1.0".to_string(),
             reset_vector_offset: 0,
+            atomic_register_aliases: false,
             memory_regions: Vec::new(),
             name: "esp32c3-mlx-test".to_string(),
             arch: Arch::RiscV,
@@ -3083,6 +3126,7 @@ peripherals:
         labwired_config::ChipDescriptor {
             schema_version: "1.0".to_string(),
             reset_vector_offset: 0,
+            atomic_register_aliases: false,
             memory_regions: Vec::new(),
             name: "stm32f103-test".to_string(),
             arch: Arch::Arm,
@@ -3296,6 +3340,7 @@ peripherals:
             pending_schedule: Vec::new(),
             legacy_walk_disabled: false,
             reset_vector_offset: 0,
+            atomic_register_aliases: false,
             hcsr04: Vec::new(),
             can_diagnostic_testers: Vec::new(),
             can_uds_testers: Vec::new(),
@@ -3360,6 +3405,7 @@ peripherals:
             pending_schedule: Vec::new(),
             legacy_walk_disabled: false,
             reset_vector_offset: 0,
+            atomic_register_aliases: false,
             hcsr04: Vec::new(),
             can_diagnostic_testers: Vec::new(),
             can_uds_testers: Vec::new(),
@@ -3575,6 +3621,7 @@ peripherals:
             pending_schedule: Vec::new(),
             legacy_walk_disabled: false,
             reset_vector_offset: 0,
+            atomic_register_aliases: false,
             hcsr04: Vec::new(),
             can_diagnostic_testers: Vec::new(),
             can_uds_testers: Vec::new(),
@@ -3789,6 +3836,7 @@ peripherals:
             pending_schedule: Vec::new(),
             legacy_walk_disabled: false,
             reset_vector_offset: 0,
+            atomic_register_aliases: false,
             hcsr04: Vec::new(),
             can_diagnostic_testers: Vec::new(),
             can_uds_testers: Vec::new(),
@@ -3857,6 +3905,7 @@ peripherals:
             pending_schedule: Vec::new(),
             legacy_walk_disabled: false,
             reset_vector_offset: 0,
+            atomic_register_aliases: false,
             hcsr04: Vec::new(),
             can_diagnostic_testers: Vec::new(),
             can_uds_testers: Vec::new(),

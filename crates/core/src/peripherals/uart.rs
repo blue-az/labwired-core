@@ -49,6 +49,10 @@ pub enum UartRegisterLayout {
     Stm32F1,
     Stm32V2,
     Nrf52,
+    /// ARM PrimeCell PL011 (RP2040 UART0/1). Data register UARTDR at 0x00,
+    /// flag register UARTFR at 0x18 (TXFF bit 5, BUSY bit 3 — both clear in the
+    /// shared `status_ready_value` 0xC0, so a polled TX driver proceeds).
+    Pl011,
 }
 
 impl FromStr for UartRegisterLayout {
@@ -60,8 +64,9 @@ impl FromStr for UartRegisterLayout {
             "stm32f1" | "f1" | "legacy" => Ok(Self::Stm32F1),
             "stm32v2" | "v2" | "modern" | "stm32-modern" | "h5" | "stm32h5" => Ok(Self::Stm32V2),
             "nrf52" | "nordic" => Ok(Self::Nrf52),
+            "pl011" | "primecell" | "rp2040" => Ok(Self::Pl011),
             _ => Err(format!(
-                "unsupported UART register layout '{}'; supported: stm32f1, stm32v2",
+                "unsupported UART register layout '{}'; supported: stm32f1, stm32v2, nrf52, pl011",
                 value
             )),
         }
@@ -119,6 +124,18 @@ impl UartRegisterLayout {
                 tx: 0x51C,     // TXD
                 rx: 0x518,     // RXD
                 cr3: 0x500,    // ENABLE
+                cr1: None,
+                txeie_mask: 0,
+                tcie_mask: 0,
+            },
+            UartRegisterLayout::Pl011 => UartRegMap {
+                status: 0x18, // UARTFR
+                tx: 0x00,     // UARTDR
+                rx: 0x00,     // UARTDR
+                // PL011 config (UARTLCR_H/IBRD/CR/IMSC/…) has no behavioural
+                // effect in this polled model; park cr3/cr1 on offsets the
+                // driver never touches so config writes fall through as no-ops.
+                cr3: 0xFFFF_FFFF,
                 cr1: None,
                 txeie_mask: 0,
                 tcie_mask: 0,
