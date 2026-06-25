@@ -111,6 +111,10 @@ pub struct SystemBus {
     /// as the SVD register-coverage probe flips it on via
     /// [`set_clock_gating_bypass`].
     clock_gating_bypass: bool,
+    /// `missing_clock` fault injection: peripheral indices forced unclocked,
+    /// mapped to a count of accesses suppressed because of the fault (the
+    /// runtime fired-observation). Empty in the common case.
+    fault_unclocked: std::collections::HashMap<usize, std::sync::atomic::AtomicU64>,
     /// Last-known IN value of GPIO ports 0 and 1, used by the per-tick
     /// edge-detection pass that drives GPIOTE EVENTS_IN. Both default to
     /// 0 at construction; the first tick after a GPIO write will produce
@@ -1214,6 +1218,13 @@ impl SystemBus {
     /// no modelled RCC). Cheap: one `Option` check, then on the rare gated path a
     /// single cached-index RCC register read.
     fn is_peripheral_clocked(&self, idx: usize) -> bool {
+        // missing_clock fault: force the peripheral unclocked and count the
+        // suppressed access as the runtime fired-observation. Checked before the
+        // bypass so a fault is honoured even under measurement mode.
+        if let Some(suppressed) = self.fault_unclocked.get(&idx) {
+            suppressed.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            return false;
+        }
         if self.clock_gating_bypass {
             return true; // measurement mode: ignore gating (see set_clock_gating_bypass)
         }
@@ -1248,6 +1259,34 @@ impl SystemBus {
     /// would re-gate any peripheral probed after the RCC.
     pub fn set_clock_gating_bypass(&mut self, bypass: bool) {
         self.clock_gating_bypass = bypass;
+    }
+
+    /// Inject a `missing_clock` fault: force `peripheral` to behave as if its
+    /// clock is never enabled, so every CPU access to it is suppressed (reads
+    /// return 0, writes are dropped) exactly like an unclocked peripheral on
+    /// silicon. Returns an error if the peripheral is absent. Whether the fault
+    /// actually fired (an access was suppressed) is read back with
+    /// [`Self::missing_clock_suppressed`] after the run.
+    pub fn inject_missing_clock(&mut self, peripheral: &str) -> Result<(), String> {
+        let idx = self
+            .find_peripheral_index_by_name(peripheral)
+            .ok_or_else(|| format!("fault target peripheral '{peripheral}' not found"))?;
+        self.fault_unclocked
+            .entry(idx)
+            .or_insert_with(|| std::sync::atomic::AtomicU64::new(0));
+        Ok(())
+    }
+
+    /// Number of accesses suppressed by a `missing_clock` fault on `peripheral`
+    /// (0 if not faulted or never accessed). `> 0` means the fault fired.
+    pub fn missing_clock_suppressed(&self, peripheral: &str) -> u64 {
+        let Some(idx) = self.find_peripheral_index_by_name(peripheral) else {
+            return 0;
+        };
+        self.fault_unclocked
+            .get(&idx)
+            .map(|c| c.load(std::sync::atomic::Ordering::Relaxed))
+            .unwrap_or(0)
     }
 
     /// Inject a `wrong_reset_value` fault: force `register` on the declarative
@@ -1335,6 +1374,7 @@ impl SystemBus {
             dport_idx: None,
             rcc_idx: None,
             clock_gating_bypass: false,
+            fault_unclocked: std::collections::HashMap::new(),
             peripheral_ranges: Vec::new(),
             peripheral_hint: Cell::new(None),
             last_gpio_in: [0; 2],
@@ -1373,6 +1413,7 @@ impl SystemBus {
             dport_idx: None,
             rcc_idx: None,
             clock_gating_bypass: false,
+            fault_unclocked: std::collections::HashMap::new(),
             peripheral_ranges: Vec::new(),
             peripheral_hint: Cell::new(None),
             last_gpio_in: [0; 2],
@@ -1870,6 +1911,26 @@ mod tests {
         fn write(&mut self, _offset: u64, _value: u8) -> crate::SimResult<()> {
             Ok(())
         }
+    }
+
+    #[test]
+    fn missing_clock_fault_suppresses_access_and_counts() {
+        let mut bus = SystemBus::new();
+        let base = 0x4000_0000u64;
+        bus.add_peripheral("usart1", base, 0x400, None, Box::new(TagPeripheral(0xAB)));
+
+        // Normally clocked: reads the peripheral's tag bytes.
+        assert_eq!(bus.read_u32(base).unwrap(), 0xABAB_ABAB);
+
+        bus.inject_missing_clock("usart1").unwrap();
+        assert_eq!(bus.missing_clock_suppressed("usart1"), 0);
+
+        // Now the access is suppressed: reads 0, and the fault is recorded fired.
+        assert_eq!(bus.read_u32(base).unwrap(), 0);
+        assert!(bus.missing_clock_suppressed("usart1") > 0);
+
+        // An unknown peripheral is an error, not a silent no-op.
+        assert!(bus.inject_missing_clock("nope").is_err());
     }
 
     /// Routing must be a pure function of the address — never of access
@@ -3191,6 +3252,7 @@ peripherals:
             dport_idx: None,
             rcc_idx: None,
             clock_gating_bypass: false,
+            fault_unclocked: std::collections::HashMap::new(),
             flash_thunks: std::collections::HashMap::new(),
             peripheral_ranges: Vec::new(),
             peripheral_hint: Cell::new(None),
@@ -3253,6 +3315,7 @@ peripherals:
             dport_idx: None,
             rcc_idx: None,
             clock_gating_bypass: false,
+            fault_unclocked: std::collections::HashMap::new(),
             flash_thunks: std::collections::HashMap::new(),
             peripheral_ranges: Vec::new(),
             peripheral_hint: Cell::new(None),
@@ -3466,6 +3529,7 @@ peripherals:
             dport_idx: None,
             rcc_idx: None,
             clock_gating_bypass: false,
+            fault_unclocked: std::collections::HashMap::new(),
             flash_thunks: std::collections::HashMap::new(),
             peripheral_ranges: Vec::new(),
             peripheral_hint: Cell::new(None),
@@ -3678,6 +3742,7 @@ peripherals:
             dport_idx: None,
             rcc_idx: None,
             clock_gating_bypass: false,
+            fault_unclocked: std::collections::HashMap::new(),
             flash_thunks: std::collections::HashMap::new(),
             peripheral_ranges: Vec::new(),
             peripheral_hint: Cell::new(None),
@@ -3744,6 +3809,7 @@ peripherals:
             dport_idx: None,
             rcc_idx: None,
             clock_gating_bypass: false,
+            fault_unclocked: std::collections::HashMap::new(),
             flash_thunks: std::collections::HashMap::new(),
             peripheral_ranges: Vec::new(),
             peripheral_hint: Cell::new(None),
