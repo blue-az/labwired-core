@@ -1505,6 +1505,7 @@ fn handle_load_error<C: labwired_core::Cpu>(
         std::time::Duration::from_secs(0),
         &None,
         &None,
+        &[],
     );
     ExitCode::from(EXIT_RUNTIME_ERROR)
 }
@@ -1520,6 +1521,7 @@ fn execute_test_loop<C: labwired_core::Cpu>(
     metrics: &Arc<labwired_core::metrics::PerformanceMetrics>,
     firmware_path: &Path,
     system_path: Option<&PathBuf>,
+    fault_evidence: &[labwired_cli::faults::FaultEvidence],
 ) -> ExitCode {
     let max_steps = resolved_limits.max_steps;
     let max_cycles = resolved_limits.max_cycles;
@@ -1881,6 +1883,7 @@ fn execute_test_loop<C: labwired_core::Cpu>(
         duration,
         &trace_observer,
         &coverage_observer,
+        fault_evidence,
     );
 
     if !all_passed || (stop_requires_assertion && !expected_stop_reason_matched) {
@@ -1910,6 +1913,7 @@ fn write_outputs<C: labwired_core::Cpu>(
     duration: std::time::Duration,
     trace_observer: &Option<Arc<labwired_core::trace::TraceObserver>>,
     coverage_observer: &Option<Arc<labwired_core::pc_coverage::PcCoverageObserver>>,
+    fault_evidence: &[labwired_cli::faults::FaultEvidence],
 ) {
     let mut hasher = Sha256::new();
     hasher.update(firmware_bytes);
@@ -2085,7 +2089,7 @@ fn write_outputs<C: labwired_core::Cpu>(
                         cpu_state_digest: manifest::digest_value(&cpu.snapshot()),
                     },
                     coverage: coverage_summary.clone(),
-                    fault_injections: Vec::new(),
+                    fault_injections: fault_evidence.to_vec(),
                     digest: String::new(),
                 };
                 man.finalize_digest();
