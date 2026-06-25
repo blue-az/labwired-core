@@ -17,9 +17,9 @@ fn handle_faults(
     bus: &mut labwired_core::bus::SystemBus,
     faults: &[labwired_config::FaultSpec],
     require_fault_fired: bool,
-) -> Option<ExitCode> {
+) -> Result<Vec<labwired_cli::faults::FaultEvidence>, ExitCode> {
     if faults.is_empty() {
-        return None;
+        return Ok(Vec::new());
     }
     let evidence = labwired_cli::faults::apply_faults(bus, faults);
     for e in &evidence {
@@ -43,9 +43,9 @@ fn handle_faults(
     if require_fault_fired && evidence.iter().any(|e| !e.fired) {
         let n = evidence.iter().filter(|e| !e.fired).count();
         error!("require_fault_fired: {n} fault(s) did not fire; run is invalid");
-        return Some(ExitCode::from(EXIT_ASSERT_FAIL));
+        return Err(ExitCode::from(EXIT_ASSERT_FAIL));
     }
-    None
+    Ok(evidence)
 }
 
 pub(crate) fn run_test(args: TestArgs) -> ExitCode {
@@ -349,10 +349,11 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
             // to the app. See FIDELITY.md §C.
             machine.cpu.set_pc(program.entry_point as u32);
             machine.cpu.set_sp(0x3FFE_0000);
-            if let Some(code) = handle_faults(&args, &mut machine.bus, &faults, require_fault_fired)
-            {
-                return code;
-            }
+            let fault_evidence =
+                match handle_faults(&args, &mut machine.bus, &faults, require_fault_fired) {
+                    Ok(ev) => ev,
+                    Err(code) => return code,
+                };
             let exit_code = execute_test_loop(
                 &args,
                 &mut machine,
@@ -363,6 +364,7 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
                 &metrics,
                 &firmware_path,
                 system_path.as_ref(),
+                &fault_evidence,
             );
             // Device-block render readout. Surfaces the attached panel block's
             // REAL render state — refresh_gen AND black-plane ink — so a generic
@@ -485,10 +487,11 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
                     e,
                 );
             }
-            if let Some(code) = handle_faults(&args, &mut machine.bus, &faults, require_fault_fired)
-            {
-                return code;
-            }
+            let fault_evidence =
+                match handle_faults(&args, &mut machine.bus, &faults, require_fault_fired) {
+                    Ok(ev) => ev,
+                    Err(code) => return code,
+                };
             execute_test_loop(
                 &args,
                 &mut machine,
@@ -499,6 +502,7 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
                 &metrics,
                 &firmware_path,
                 system_path.as_ref(),
+                &fault_evidence,
             )
         }};
     }

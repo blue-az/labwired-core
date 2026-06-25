@@ -68,8 +68,9 @@ pub struct RunManifest {
     pub configs: Vec<HashedFile>,
     pub results: ManifestResults,
     pub coverage: Option<CoverageSummary>,
-    /// Contract slot for fault-injection evidence (populated by a later plan).
-    pub fault_injections: Vec<Value>,
+    /// Per-fault evidence for fault-injection runs; empty for ordinary runs.
+    /// Included in the digest so a faulted run's verdict is signed and reproducible.
+    pub fault_injections: Vec<crate::faults::FaultEvidence>,
     /// SHA-256 over the canonical JSON of every field above. Filled by
     /// [`RunManifest::finalize_digest`].
     pub digest: String,
@@ -200,6 +201,26 @@ mod tests {
         assert_ne!(
             a.digest, b.digest,
             "a changed firmware hash must move the digest"
+        );
+    }
+
+    #[test]
+    fn digest_includes_fault_injections() {
+        let mut a = sample();
+        a.finalize_digest();
+
+        let mut b = sample();
+        b.fault_injections.push(crate::faults::FaultEvidence {
+            id: "f1".to_string(),
+            kind: "WrongResetValue".to_string(),
+            fired: true,
+            error: None,
+        });
+        b.finalize_digest();
+
+        assert_ne!(
+            a.digest, b.digest,
+            "fault evidence must be part of the signed digest"
         );
     }
 
