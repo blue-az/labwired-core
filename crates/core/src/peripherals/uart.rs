@@ -1269,7 +1269,7 @@ mod tests {
 
     #[test]
     fn test_uart_lpuart_rx_sets_rdrf_and_reads_data() {
-        let mut uart = Uart::new_with_layout(UartRegisterLayout::Lpuart);
+        let uart = Uart::new_with_layout(UartRegisterLayout::Lpuart);
         uart.rx_buffer().lock().unwrap().push_back(b'Z');
         // RDRF (STAT bit 21) sits at byte 2 bit 5 → read 0x06 has bit 5 set.
         assert_eq!(uart.read(0x06).unwrap(), 0xC0 | (1 << 5));
