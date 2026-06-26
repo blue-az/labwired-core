@@ -217,6 +217,9 @@ pub fn try_build(
             )
         }
         "rng" => Box::new(crate::peripherals::rng::Rng::new()),
+        "rp2040_clkrst" => Box::new(crate::peripherals::rp2040_clocks::Rp2040ClockReset::new(
+            p_cfg.base_address,
+        )),
         "crc" => {
             // IDR scratch register width: 8-bit on F0/F1/L0, 32-bit
             // on F2+/L4+. YAML: `config: { idr_width: 8 }`; default 32.
@@ -291,6 +294,11 @@ pub fn try_build(
         "esp32_timg" => Box::new(crate::peripherals::esp32::timg::Timg::new(
             p_cfg.base_address as u32,
         )),
+        // Instruction/data cache controllers (H5, WBA, U5…). Zephyr's SoC init
+        // enables the cache via ICACHE_CR.EN and never polls a completion flag,
+        // so a read-as-zero stub keeps the enable sequence from bus-faulting.
+        // No cache behaviour is modelled — the simulator has flat memory.
+        "icache" | "dcache" => Box::new(crate::peripherals::stub::StubPeripheral::new(0x00)),
         // NXP Kinetis clock peripherals — behavioural so the vendor MCUXpresso
         // clock bring-up (which spins on MCG_S / RSIM_CONTROL status bits)
         // settles instead of hanging. A passive register bank cannot complete
