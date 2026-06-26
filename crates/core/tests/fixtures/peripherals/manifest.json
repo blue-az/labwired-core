@@ -400,7 +400,7 @@
         {
           "name": "co2_start_ppm",
           "ty": "float",
-          "doc": "CO₂ at the first reading, ppm (fresh-room start). Default 450."
+          "doc": "CO₂ the ramp starts from, ppm (fresh-room baseline). Default 450."
         },
         {
           "name": "co2_target_ppm",

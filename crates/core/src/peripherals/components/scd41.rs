@@ -16,7 +16,9 @@
 //! - `0xEC05` read_measurement        → 3 words: CO₂ ppm, T raw, RH raw
 //! - `0x3F86` stop_periodic_measurement             (no response)
 //! - `0x3682` get_serial_number       → 3 words
-//! - `0x36F6` reinit / `0x3639` factory_reset       (no response)
+//! - `0x3646` reinit / `0x3632` factory_reset / `0x36F6` wake_up (no response)
+//! - `0x3639` perform_self_test       → 1 word: 0x0000 = no malfunction
+//! - `0x219D` measure_single_shot     (write-only trigger; no response)
 //!
 //! Word encodings (datasheet §3.6.2):
 //! - CO₂ [ppm] = `word`
@@ -39,7 +41,7 @@ const CMD_GET_DATA_READY: u16 = 0xE4B8;
 const CMD_READ_MEASUREMENT: u16 = 0xEC05;
 const CMD_STOP_PERIODIC: u16 = 0x3F86;
 const CMD_GET_SERIAL: u16 = 0x3682;
-const CMD_MEASURE_SINGLE_SHOT: u16 = 0x219D;
+const CMD_PERFORM_SELF_TEST: u16 = 0x3639;
 
 /// SCD41 model.
 pub struct Scd41 {
@@ -107,7 +109,7 @@ impl Scd41 {
                 // Non-zero low 11 bits ⇒ data ready. Deterministic always-ready.
                 self.read_buf = encode_words(&[0x8006]);
             }
-            CMD_READ_MEASUREMENT | CMD_MEASURE_SINGLE_SHOT => {
+            CMD_READ_MEASUREMENT => {
                 let co2 = self.co2.advance().round().clamp(0.0, 40000.0) as u16;
                 let t = Self::encode_temperature(self.temp_c.advance());
                 let rh = Self::encode_humidity(self.rh.advance());
@@ -116,7 +118,14 @@ impl Scd41 {
             CMD_GET_SERIAL => {
                 self.read_buf = encode_words(&[0x4C45, 0x4F31, 0x0041]); // "LEO1" + tag
             }
-            _ => {} // reinit, factory_reset, set_* — accepted, no response
+            CMD_PERFORM_SELF_TEST => {
+                // 0x0000 ⇒ no sensor malfunction (datasheet §3.9.3).
+                self.read_buf = encode_words(&[0x0000]);
+            }
+            // measure_single_shot (0x219D) is a write-only trigger: the real
+            // driver issues it then reads the result via read_measurement, so it
+            // returns no data here — fall through to the no-response arm.
+            _ => {} // single_shot, reinit, factory_reset, wake_up, set_* — no response
         }
     }
 }
@@ -194,7 +203,7 @@ static SCD41_METADATA: KitMetadata = KitMetadata {
         ConfigKey {
             name: "co2_start_ppm",
             ty: ConfigType::Float,
-            doc: "CO₂ at the first reading, ppm (fresh-room start). Default 450.",
+            doc: "CO₂ the ramp starts from, ppm (fresh-room baseline). Default 450.",
         },
         ConfigKey {
             name: "co2_target_ppm",
@@ -317,6 +326,37 @@ mod tests {
         let word = ((b[0] as u16) << 8) | b[1] as u16;
         assert_ne!(word & 0x07FF, 0, "data-ready word must be non-zero");
         assert_eq!(b[2], crc8(&b[..2]));
+    }
+
+    #[test]
+    fn self_test_reports_no_malfunction() {
+        let mut d = Scd41::new_default(SCD41_ADDR);
+        send_cmd(&mut d, CMD_PERFORM_SELF_TEST);
+        let b = read_n(&mut d, 3);
+        let word = ((b[0] as u16) << 8) | b[1] as u16;
+        assert_eq!(word, 0x0000, "0x0000 = no malfunction");
+        assert_eq!(b[2], crc8(&b[..2]));
+    }
+
+    #[test]
+    fn single_shot_is_write_only_trigger() {
+        // measure_single_shot (0x219D) must NOT queue a measurement response and
+        // must NOT advance the scene — the driver reads the result via 0xEC05.
+        let mut d = Scd41::new_default(SCD41_ADDR);
+        send_cmd(&mut d, 0x219D);
+        let b = read_n(&mut d, 9);
+        assert!(
+            b.iter().all(|&x| x == 0xFF),
+            "no response queued for single-shot"
+        );
+        // The next real read_measurement should still start near the fresh value.
+        send_cmd(&mut d, CMD_READ_MEASUREMENT);
+        let m = read_n(&mut d, 9);
+        let co2 = ((m[0] as u16) << 8) | m[1] as u16;
+        assert!(
+            (450..=600).contains(&co2),
+            "scene not advanced by single-shot: {co2}"
+        );
     }
 
     #[test]
