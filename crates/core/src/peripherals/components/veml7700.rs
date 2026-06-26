@@ -148,6 +148,70 @@ impl I2cDevice for Veml7700 {
     }
 }
 
+// ─── PeripheralKit registration ────────────────────────────────────────────
+
+use crate::peripherals::kit::{
+    AttachCtx, Category, ConfigKey, ConfigType, KitMetadata, LabRef, PeripheralKit, Transport,
+};
+
+pub struct Veml7700Kit;
+pub static VEML7700_KIT: Veml7700Kit = Veml7700Kit;
+
+static VEML7700_METADATA: KitMetadata = KitMetadata {
+    device_type: "veml7700",
+    label: "Vishay VEML7700 Light",
+    summary: "Ambient-light sensor (lux) over I2C.",
+    detail: "Vishay VEML7700 at fixed address 0x10, a register-pointer device with \
+             16-bit little-endian words. Reports a raw ALS count the firmware scales \
+             to lux at the default gain ×1 / 100 ms resolution (0.0576 lux/count). \
+             Light follows a configurable ramp (dims toward evening by default).",
+    transport: Transport::I2c,
+    category: Category::I2c,
+    config_keys: &[
+        ConfigKey {
+            name: "i2c_address",
+            ty: ConfigType::Int,
+            doc: "7-bit slave address. Defaults to the VEML7700 fixed address 0x10.",
+        },
+        ConfigKey {
+            name: "lux_start",
+            ty: ConfigType::Float,
+            doc: "Ambient light at the first reading, lux (daylit room). Default 450.",
+        },
+        ConfigKey {
+            name: "lux_target",
+            ty: ConfigType::Float,
+            doc: "Lux the ramp approaches (dims when below start). Default 90.",
+        },
+        ConfigKey {
+            name: "ramp_alpha",
+            ty: ConfigType::Float,
+            doc: "Per-read approach rate 0..1 (0 = flat scene). Default 0.08.",
+        },
+    ],
+    labs: &[LabRef {
+        board_id: "leo-airquality-lab",
+        chip: "esp32c3",
+        example_dir: "esp32c3-leo-airquality",
+        demo_elf: "demo-esp32c3-leo-airquality.elf",
+    }],
+};
+
+impl PeripheralKit for Veml7700Kit {
+    fn metadata(&self) -> &'static KitMetadata {
+        &VEML7700_METADATA
+    }
+    fn attach(&self, ctx: &mut AttachCtx<'_>) -> anyhow::Result<()> {
+        let address = ctx.i2c_address_or(VEML7700_ADDR)?;
+        let lux_start = ctx.config_f64("lux_start").unwrap_or(450.0);
+        let lux_target = ctx.config_f64("lux_target").unwrap_or(90.0);
+        let alpha = ctx.config_f64("ramp_alpha").unwrap_or(0.08);
+        ctx.attach_i2c_device(Box::new(Veml7700::new(
+            address, lux_start, lux_target, alpha,
+        )))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
