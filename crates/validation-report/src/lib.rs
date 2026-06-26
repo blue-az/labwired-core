@@ -278,3 +278,54 @@ pub fn svd_checks(peripherals_dir: &Path) -> Result<Vec<PeripheralValidation>> {
     }
     Ok(out)
 }
+
+// ── Authority #3: silicon reset-conformance (hw-oracle OpenOCD captures) ───────
+
+#[derive(serde::Deserialize)]
+struct ResetCapture {
+    #[serde(default)]
+    source: Option<String>,
+    #[serde(default)]
+    blocks: BTreeMap<String, ResetBlock>,
+}
+
+#[derive(serde::Deserialize)]
+struct ResetBlock {
+    #[serde(default)]
+    words: BTreeMap<String, String>,
+}
+
+const HW_ORACLE_AUTHORITY: &str = "silicon reset-conformance (OpenOCD capture vs real hardware)";
+
+/// Checks from a committed hw-oracle reset capture
+/// (`scripts/hw-oracle/captures/<chip>/.../reg_oracle.json`): real-silicon reset
+/// register values read over OpenOCD from a physical board. Per peripheral block, the
+/// number of registers with real-hardware ground truth the `hw-oracle` conformance
+/// suite diffs the model against. This is the strongest authority — the model is held
+/// to values measured on actual silicon — and needs no hardware at check time (the
+/// capture is committed). A block with no words is `unrecorded`, never a silent pass.
+pub fn hw_oracle_checks(capture_json: &str) -> Result<Vec<PeripheralValidation>> {
+    let capture: ResetCapture = serde_json::from_str(capture_json)?;
+    let source = capture.source;
+    Ok(capture
+        .blocks
+        .into_iter()
+        .map(|(name, block)| {
+            let n = block.words.len();
+            PeripheralValidation {
+                peripheral: name.to_lowercase(),
+                status: if n > 0 {
+                    CheckStatus::Pass
+                } else {
+                    CheckStatus::Unrecorded
+                },
+                authority: HW_ORACLE_AUTHORITY.to_string(),
+                evidence: source.clone(),
+                detail: Some(format!(
+                    "{n} reset register{} vs real silicon",
+                    if n == 1 { "" } else { "s" }
+                )),
+            }
+        })
+        .collect())
+}

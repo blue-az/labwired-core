@@ -6,7 +6,7 @@
 //! register-layout authority.
 use anyhow::{anyhow, Result};
 use std::path::PathBuf;
-use validation_report::{svd_checks, tier1_checks, ModelValidationReport};
+use validation_report::{hw_oracle_checks, svd_checks, tier1_checks, ModelValidationReport};
 
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
@@ -31,6 +31,12 @@ fn main() -> Result<()> {
         checks.extend(svd_checks(&svd_dir)?);
     }
 
+    // hw-oracle authority: auto-find a committed silicon reset capture for the chip
+    // at scripts/hw-oracle/captures/<chip>/.../reg_oracle.json.
+    if let Some(capture) = find_reset_capture(chip) {
+        checks.extend(hw_oracle_checks(&std::fs::read_to_string(&capture)?)?);
+    }
+
     let report = ModelValidationReport::from_checks(chip, checks);
     if as_json {
         println!("{}", serde_json::to_string_pretty(&report)?);
@@ -38,4 +44,22 @@ fn main() -> Result<()> {
         print!("{}", report.to_markdown());
     }
     Ok(())
+}
+
+/// Find a committed silicon reset capture for `chip` under
+/// `scripts/hw-oracle/captures/<chip>/` (captures live in timestamped subdirs).
+fn find_reset_capture(chip: &str) -> Option<PathBuf> {
+    let root = PathBuf::from(format!("scripts/hw-oracle/captures/{chip}"));
+    let direct = root.join("reg_oracle.json");
+    if direct.is_file() {
+        return Some(direct);
+    }
+    let mut found: Vec<PathBuf> = std::fs::read_dir(&root)
+        .ok()?
+        .filter_map(|e| e.ok())
+        .map(|e| e.path().join("reg_oracle.json"))
+        .filter(|p| p.is_file())
+        .collect();
+    found.sort(); // timestamped dir names sort chronologically; take the latest
+    found.pop()
 }
