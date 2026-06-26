@@ -36,6 +36,7 @@ fn dummy_manifest(path: &str) -> SystemManifest {
         board_io: vec![],
         peripherals: vec![],
         memory_overrides: Default::default(),
+        debug_uart: None,
     }
 }
 
