@@ -49,23 +49,17 @@ static int i2c_run(void) {
 
 void veml7700_init(void) {
     i2c_reset_fifos();
-    /* Write ALS_CONF = 0x0000 (power on, gain ×1, IT 100 ms):
-     *   RSTART; WRITE 3 (addr+W, reg, lo, hi)? — config is reg + 16-bit LE. */
+    /* Write ALS_CONF = 0x0000 (power on, gain ×1, IT 100 ms). The config is a
+     * 16-bit little-endian word, so the device must receive reg + low + high =
+     * 3 data bytes. The C3 WRITE byte count INCLUDES the address byte, so this
+     * is WRITE 4: addr+W, reg, lo, hi — one transaction. */
     cmd_slot(0, cmd(OP_RSTART, 0));
-    cmd_slot(1, cmd(OP_WRITE, 3)); /* addr+W, reg, lo  ... */
+    cmd_slot(1, cmd(OP_WRITE, 4));
     cmd_slot(2, cmd(OP_STOP, 0));
     I2C_DATA = (uint32_t)(VEML7700_I2C_ADDR << 1);
     I2C_DATA = (uint32_t)VEML7700_REG_ALS_CONF;
-    I2C_DATA = 0x00u; /* low byte; high byte defaults to 0 */
-    (void)i2c_run();
-    /* Second byte of the 16-bit word (high) — separate minimal write. */
-    i2c_reset_fifos();
-    cmd_slot(0, cmd(OP_RSTART, 0));
-    cmd_slot(1, cmd(OP_WRITE, 3));
-    cmd_slot(2, cmd(OP_STOP, 0));
-    I2C_DATA = (uint32_t)(VEML7700_I2C_ADDR << 1);
-    I2C_DATA = (uint32_t)VEML7700_REG_ALS_CONF;
-    I2C_DATA = 0x00u;
+    I2C_DATA = 0x00u; /* config low byte  */
+    I2C_DATA = 0x00u; /* config high byte */
     (void)i2c_run();
 }
 

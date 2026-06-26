@@ -14,21 +14,25 @@
 //! - `0x03` PSM        (power-saving mode)
 //! - `0x04` ALS        (ambient-light output, 16-bit) — read
 //! - `0x05` WHITE      (white-channel output, 16-bit) — read
+//! - `0x06` ALS_INT    (interrupt status, 16-bit) — read
 //!
-//! Lux = `raw_counts × resolution`. At the power-on default (gain ×1,
-//! integration time 100 ms) resolution is `0.0576 lux/count`, so this model
-//! inverts a lux [`Ramp`] into raw counts the firmware multiplies back out.
-//! The default scenario *dims* (450 → 90 lux) as the room settles for the
-//! evening, complementing the rising CO₂ story.
+//! Lux = `raw_counts × resolution`. Resolution scales inversely with the
+//! programmed gain and integration time, anchored at `0.0576 lux/count` for the
+//! power-on default (gain ×1, integration time 100 ms — ALS_CONF reset value
+//! 0x0000). The model honours ALS_CONF gain/IT bits when converting its lux
+//! [`Ramp`] to raw counts, so firmware that reprograms gain/IT sees the same
+//! count scaling a real part would. The default scenario *dims* (450 → 90 lux)
+//! as the room settles for the evening, complementing the rising CO₂ story.
 
 use crate::peripherals::components::air_scene::Ramp;
 use crate::peripherals::i2c::I2cDevice;
 
 pub const VEML7700_ADDR: u8 = 0x10;
 
-/// Lux per count at the default gain ×1 / integration-time 100 ms.
+/// Lux per count at the power-on default gain ×1 / integration-time 100 ms.
 const RESOLUTION_LUX_PER_COUNT: f64 = 0.0576;
 
+const REG_ALS_CONF: u8 = 0x00;
 const REG_ALS: u8 = 0x04;
 const REG_WHITE: u8 = 0x05;
 
@@ -70,17 +74,48 @@ impl Veml7700 {
         Self::new(address, 450.0, 90.0, 0.08)
     }
 
-    fn lux_to_counts(lux: f64) -> u16 {
-        (lux / RESOLUTION_LUX_PER_COUNT).round().clamp(0.0, 65535.0) as u16
+    /// Effective lux/count from the programmed ALS_CONF gain + integration time.
+    /// Resolution scales inversely with both, anchored at 0.0576 lux/count for
+    /// gain ×1 / 100 ms (Vishay app-note resolution table). ALS_CONF bit layout:
+    /// gain in bits [12:11], integration time in bits [9:6].
+    fn resolution(&self) -> f64 {
+        let conf = self.conf[REG_ALS_CONF as usize];
+        let it_ms = match (conf >> 6) & 0xF {
+            0b1100 => 25.0,
+            0b1000 => 50.0,
+            0b0000 => 100.0,
+            0b0001 => 200.0,
+            0b0010 => 400.0,
+            0b0011 => 800.0,
+            _ => 100.0, // reserved encodings → treat as the 100 ms default
+        };
+        let gain_factor = match (conf >> 11) & 0x3 {
+            0b00 => 1.0,
+            0b01 => 2.0,
+            0b10 => 0.125, // ×1/8
+            0b11 => 0.25,  // ×1/4
+            _ => 1.0,
+        };
+        RESOLUTION_LUX_PER_COUNT * (100.0 / it_ms) / gain_factor
+    }
+
+    fn lux_to_counts(&self, lux: f64) -> u16 {
+        (lux / self.resolution()).round().clamp(0.0, 65535.0) as u16
     }
 
     /// Latch the word a read of the current pointer returns. Advances the light
     /// ramp exactly once per read transaction (only for the ALS channel).
     fn latch_read_word(&mut self) {
         self.read_word = match self.pointer {
-            REG_ALS => Self::lux_to_counts(self.lux.advance()),
+            REG_ALS => {
+                let lux = self.lux.advance();
+                self.lux_to_counts(lux)
+            }
             // White channel runs a bit brighter than ALS; don't advance again.
-            REG_WHITE => Self::lux_to_counts(self.lux.value() * 1.15),
+            REG_WHITE => {
+                let lux = self.lux.value() * 1.15;
+                self.lux_to_counts(lux)
+            }
             r if (r as usize) < self.conf.len() => self.conf[r as usize],
             _ => 0,
         };
@@ -269,5 +304,24 @@ mod tests {
         d.write(0x12);
         let v = read_reg(&mut d, 0x00);
         assert_eq!(v, 0x1234, "config register round-trips");
+    }
+
+    #[test]
+    fn gain_and_integration_time_scale_resolution() {
+        // Flat 100 lux scene so the ALS count depends only on resolution.
+        let mut d = Veml7700::new(VEML7700_ADDR, 100.0, 100.0, 0.0);
+        let default_counts = read_reg(&mut d, REG_ALS); // gain ×1 / IT 100 ms
+                                                        // Program ALS_CONF = 0x08C0: gain ×2 (bits[12:11]=01) + IT 800 ms
+                                                        // (bits[9:6]=0011) → resolution 0.0036 lux/count → ~16× the counts.
+        d.start();
+        d.write(REG_ALS_CONF);
+        d.write(0xC0); // low byte
+        d.write(0x08); // high byte
+        let hi_res_counts = read_reg(&mut d, REG_ALS);
+        let ratio = hi_res_counts as f64 / default_counts as f64;
+        assert!(
+            (ratio - 16.0).abs() < 0.5,
+            "gain×2 / IT 800 ms should give ~16× counts, got {ratio:.1}"
+        );
     }
 }

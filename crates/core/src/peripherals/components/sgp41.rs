@@ -12,7 +12,7 @@
 //!
 //! Datasheet (SGP41, Sensirion, rev 1.1) protocol — 16-bit big-endian commands,
 //! responses are 16-bit words each followed by a CRC-8 (poly 0x31) byte:
-//! - `0x2615` execute_conditioning (params RH+T words) → 1 word: SRAW_VOC
+//! - `0x2612` execute_conditioning (params RH+T words) → 1 word: SRAW_VOC
 //! - `0x2619` measure_raw_signals (params RH+T words) → 2 words: SRAW_VOC, SRAW_NOX
 //! - `0x280E` execute_self_test → 1 word: `0xD400` low byte = result (0 = OK)
 //! - `0x3615` turn_heater_off (no response)
@@ -27,7 +27,7 @@ use crate::peripherals::i2c::I2cDevice;
 
 pub const SGP41_ADDR: u8 = 0x59;
 
-const CMD_EXECUTE_CONDITIONING: u16 = 0x2615;
+const CMD_EXECUTE_CONDITIONING: u16 = 0x2612;
 const CMD_MEASURE_RAW: u16 = 0x2619;
 const CMD_EXECUTE_SELF_TEST: u16 = 0x280E;
 const CMD_TURN_HEATER_OFF: u16 = 0x3615;
@@ -256,5 +256,17 @@ mod tests {
         let b = read_n(&mut d, 3);
         assert_eq!(b[1], 0x00, "self-test low byte 0 = pass");
         assert_eq!(b[2], crc8(&b[..2]));
+    }
+
+    #[test]
+    fn conditioning_uses_real_command_0x2612() {
+        // The real Sensirion execute_conditioning command is 0x2612 and returns
+        // one SRAW_VOC word; an unhandled command would return 0xFF (CRC fail).
+        assert_eq!(CMD_EXECUTE_CONDITIONING, 0x2612);
+        let mut d = Sgp41::new_default(SGP41_ADDR);
+        send_cmd(&mut d, CMD_EXECUTE_CONDITIONING);
+        let b = read_n(&mut d, 3);
+        assert_ne!(b[0], 0xFF, "conditioning must return a real VOC word");
+        assert_eq!(b[2], crc8(&b[..2]), "valid CRC");
     }
 }

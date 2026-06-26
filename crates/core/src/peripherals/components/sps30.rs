@@ -13,8 +13,12 @@
 //! - `0x0300` read_measured_values → 10 values (float mode: each value is 2
 //!   words/4 bytes + 2 CRCs; uint16 mode: each value is 1 word + CRC). Order:
 //!   mass PM1.0/2.5/4.0/10.0, number PM0.5/1.0/2.5/4.0/10.0, typical size.
-//! - `0xD002` reset / `0x5607` wake / `0x5602` sleep / `0xD060` fan-clean (no resp)
-//! - `0xD033` read serial → 48 bytes (16 words)
+//! - `0x1103` wake / `0x1001` sleep / `0x5607` start_fan_cleaning / `0xD304`
+//!   device_reset / `0xD210` clear_device_status (no response)
+//! - `0xD033` read_serial_number → 48 bytes (16 words)
+//! - `0xD002` read_product_type → 12 bytes / `0xD100` read_version → 1 word /
+//!   `0xD206` read_device_status_register → 2 words / `0x8004`
+//!   read_auto_cleaning_interval → 2 words
 //!
 //! PM2.5 mass advances along a [`Ramp`]; the other bins are derived from it with
 //! fixed ratios so the whole particle picture moves together.
@@ -30,6 +34,10 @@ const CMD_STOP_MEASUREMENT: u16 = 0x0104;
 const CMD_READ_DATA_READY: u16 = 0x0202;
 const CMD_READ_MEASURED_VALUES: u16 = 0x0300;
 const CMD_GET_SERIAL: u16 = 0xD033;
+const CMD_READ_PRODUCT_TYPE: u16 = 0xD002;
+const CMD_READ_VERSION: u16 = 0xD100;
+const CMD_READ_STATUS_REGISTER: u16 = 0xD206;
+const CMD_READ_AUTO_CLEAN_INTERVAL: u16 = 0x8004;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Mode {
@@ -135,8 +143,10 @@ impl Sps30 {
             }
             CMD_STOP_MEASUREMENT => self.running = false,
             CMD_READ_DATA_READY => {
-                // Low byte 0x01 ⇒ a new measurement is available.
-                self.read_buf = encode_words(&[0x0001]);
+                // Low byte 0x01 ⇒ a new measurement is available; the real part
+                // reports not-ready (0x0000) until measurement mode is running.
+                let flag = if self.running { 0x0001 } else { 0x0000 };
+                self.read_buf = encode_words(&[flag]);
             }
             CMD_READ_MEASURED_VALUES => {
                 self.read_buf = self.measured_values();
@@ -146,6 +156,22 @@ impl Sps30 {
                 let mut words = vec![0x4C45, 0x4F30, 0x3100];
                 words.resize(16, 0x0000);
                 self.read_buf = encode_words(&words);
+            }
+            CMD_READ_PRODUCT_TYPE => {
+                // 4 words = "00080000" ASCII product type (what the driver reads).
+                self.read_buf = encode_words(&[0x3030, 0x3038, 0x3030, 0x3030]);
+            }
+            CMD_READ_VERSION => {
+                // 1 word: firmware major.minor = 2.2.
+                self.read_buf = encode_words(&[0x0202]);
+            }
+            CMD_READ_STATUS_REGISTER => {
+                // 2 words: device status register = 0 (no fan/laser/speed faults).
+                self.read_buf = encode_words(&[0x0000, 0x0000]);
+            }
+            CMD_READ_AUTO_CLEAN_INTERVAL => {
+                // 2 words: 604800 s (1 week, the SPS30 default).
+                self.read_buf = encode_words(&[0x0009, 0x3A80]);
             }
             _ => {}
         }
@@ -327,12 +353,33 @@ mod tests {
     }
 
     #[test]
-    fn data_ready_flag_reports_ready() {
+    fn data_ready_flag_gated_on_running() {
         let mut d = Sps30::new_default(SPS30_ADDR);
+        // Idle (no start_measurement): the real part reports not-ready.
         send(&mut d, &[0x02, 0x02]);
-        let b = read_n(&mut d, 3);
-        assert_eq!(b[1], 0x01, "low byte 1 = data ready");
-        assert_eq!(b[2], crc8(&b[..2]));
+        let idle = read_n(&mut d, 3);
+        assert_eq!(idle[1], 0x00, "not-ready until measurement starts");
+        assert_eq!(idle[2], crc8(&idle[..2]));
+        // After start_measurement: ready.
+        send(&mut d, &[0x00, 0x10, 0x05, 0x00, crc8(&[0x05, 0x00])]);
+        send(&mut d, &[0x02, 0x02]);
+        let running = read_n(&mut d, 3);
+        assert_eq!(running[1], 0x01, "ready once measuring");
+        assert_eq!(running[2], crc8(&running[..2]));
+    }
+
+    #[test]
+    fn identity_commands_return_valid_crc_words() {
+        let mut d = Sps30::new_default(SPS30_ADDR);
+        for cmd in [[0xD0, 0x02], [0xD1, 0x00], [0xD2, 0x06], [0x80, 0x04]] {
+            send(&mut d, &cmd);
+            let b = read_n(&mut d, 3);
+            assert_ne!(
+                b[0], 0xFF,
+                "identity cmd {cmd:02X?} must return a real word"
+            );
+            assert_eq!(b[2], crc8(&b[..2]), "valid CRC for {cmd:02X?}");
+        }
     }
 
     #[test]
