@@ -14,10 +14,11 @@
 //! distinct peripheral (Fail > Pass > Unrecorded > n/a) and reports coverage over
 //! peripherals, not raw rows — so being validated twice doesn't inflate the score.
 //!
-//! Sources wired: tier-1 coverage matrix (`docs/coverage/tier1-matrix.json`) and the
-//! SVD-derived register descriptors (`configs/peripherals/<chip>/*.yaml`). Designed so
-//! further authorities (hw-oracle reset registers, vendor-stack boot, QEMU/Renode
-//! differential) attach as more checks without reshaping the report.
+//! Authorities wired: (1) tier-1 coverage matrix (`docs/coverage/tier1-matrix.json`),
+//! (2) SVD register descriptors (`configs/peripherals/<chip>/*.yaml`), (3) silicon
+//! reset-conformance captures (`scripts/hw-oracle/captures/<chip>/.../reg_oracle.json`),
+//! (4) vendor-stack / integration example boots (`examples/*/`, device-level). Designed
+//! so further authorities (QEMU/Renode differential) attach without reshaping the report.
 
 use anyhow::{anyhow, Result};
 use serde::Serialize;
@@ -98,11 +99,27 @@ pub struct Summary {
     pub authorities: usize,
 }
 
+/// A device-level behavioral validation: an example boots firmware on the model and
+/// runs to its acceptance assertions (the strongest behavioral evidence, esp. when the
+/// firmware is an unmodified vendor stack — ESP-IDF/Zephyr/HAL/UDSLib). Device-level,
+/// so it is reported alongside (not mixed into) per-peripheral coverage.
+#[derive(Debug, Clone, Serialize)]
+pub struct IntegrationCheck {
+    pub example: String,
+    pub status: CheckStatus,
+    /// Number of acceptance assertions the example's test scripts gate on.
+    pub assertions: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub evidence: Option<String>,
+}
+
 /// The provenanced model-validation report for a single chip.
 #[derive(Debug, Clone, Serialize)]
 pub struct ModelValidationReport {
     pub chip: String,
     pub peripherals: Vec<PeripheralValidation>,
+    /// Device-level example boots (vendor-stack / integration behavioral checks).
+    pub integrations: Vec<IntegrationCheck>,
     pub summary: Summary,
 }
 
@@ -120,8 +137,16 @@ impl ModelValidationReport {
         ModelValidationReport {
             chip: chip.to_string(),
             peripherals: checks,
+            integrations: Vec::new(),
             summary,
         }
+    }
+
+    /// Attach device-level example-boot checks, sorted by example name.
+    pub fn with_integrations(mut self, mut integrations: Vec<IntegrationCheck>) -> Self {
+        integrations.sort_by(|a, b| a.example.cmp(&b.example));
+        self.integrations = integrations;
+        self
     }
 
     fn summarize(checks: &[PeripheralValidation]) -> Summary {
@@ -187,6 +212,20 @@ impl ModelValidationReport {
                 p.detail.as_deref().unwrap_or("—"),
                 p.evidence.as_deref().unwrap_or("—"),
             ));
+        }
+        if !self.integrations.is_empty() {
+            out.push_str("\n## Integration boots (firmware runs to acceptance assertions)\n\n");
+            out.push_str("| Example | Result | Assertions | Evidence |\n");
+            out.push_str("|---|---|---|---|\n");
+            for i in &self.integrations {
+                out.push_str(&format!(
+                    "| {} | {} | {} | {} |\n",
+                    i.example,
+                    i.status.label(),
+                    i.assertions,
+                    i.evidence.as_deref().unwrap_or("—"),
+                ));
+            }
         }
         out
     }
@@ -328,4 +367,79 @@ pub fn hw_oracle_checks(capture_json: &str) -> Result<Vec<PeripheralValidation>>
             }
         })
         .collect())
+}
+
+// ── Authority #4: vendor-stack / integration example boots ────────────────────
+
+#[derive(serde::Deserialize)]
+struct ExampleManifest {
+    chip: String,
+}
+
+/// Resolve a `chip:` manifest field to a chip id: the file stem of the referenced
+/// path (`../../configs/chips/esp32c3.yaml` → `esp32c3`), or the value itself if it
+/// is already a bare id.
+fn chip_id_of(manifest_chip: &str) -> String {
+    Path::new(manifest_chip)
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or(manifest_chip)
+        .to_string()
+}
+
+/// Device-level behavioral checks: scan an examples directory for examples whose
+/// `system.yaml` targets `chip`, and for each count the acceptance assertions across
+/// its test scripts (any `*.yaml` with a top-level `assertions:` sequence). An example
+/// boots real firmware on the model and is gated on those assertions in CI — the
+/// strongest behavioral evidence (especially the unmodified vendor-stack examples).
+/// An example with zero assertions is `unrecorded`, never a silent pass.
+pub fn vendor_stack_checks(examples_dir: &Path, chip: &str) -> Result<Vec<IntegrationCheck>> {
+    let mut out = Vec::new();
+    for entry in std::fs::read_dir(examples_dir)
+        .map_err(|e| anyhow!("reading {}: {e}", examples_dir.display()))?
+    {
+        let dir = entry?.path();
+        let manifest_path = dir.join("system.yaml");
+        if !manifest_path.is_file() {
+            continue;
+        }
+        let manifest: ExampleManifest =
+            match serde_yaml::from_str(&std::fs::read_to_string(&manifest_path)?) {
+                Ok(m) => m,
+                Err(_) => continue, // not a chip-targeting manifest
+            };
+        if chip_id_of(&manifest.chip) != chip {
+            continue;
+        }
+        // Sum acceptance assertions across the example's test scripts.
+        let mut assertions = 0usize;
+        for f in std::fs::read_dir(&dir)? {
+            let p = f?.path();
+            if p.extension().and_then(|e| e.to_str()) != Some("yaml") {
+                continue;
+            }
+            if let Ok(v) = serde_yaml::from_str::<serde_yaml::Value>(&std::fs::read_to_string(&p)?)
+            {
+                if let Some(seq) = v.get("assertions").and_then(|a| a.as_sequence()) {
+                    assertions += seq.len();
+                }
+            }
+        }
+        let name = dir
+            .file_name()
+            .and_then(|f| f.to_str())
+            .unwrap_or("example")
+            .to_string();
+        out.push(IntegrationCheck {
+            status: if assertions > 0 {
+                CheckStatus::Pass
+            } else {
+                CheckStatus::Unrecorded
+            },
+            evidence: Some(format!("examples/{name}")),
+            example: name,
+            assertions,
+        });
+    }
+    Ok(out)
 }

@@ -33,14 +33,15 @@ peripherals, so being validated twice never inflates the score. Real `esp32c3` r
 
 ## Status / roadmap
 
-- **Wired:** (1) tier-1 raw-register-vs-TRM matrix; (2) SVD register-layout descriptors
-  (`configs/peripherals/<chip>/*.yaml`); (3) silicon reset-conformance from committed
-  hw-oracle OpenOCD captures (`scripts/hw-oracle/captures/<chip>/.../reg_oracle.json`) —
-  real-hardware ground truth, no board needed at check time. Coverage = pass / applicable
-  (excludes `n/a`); `n/a`/`unrecorded` peripherals are shown, never silently dropped.
-- **Next authority:** vendor-stack-boot pass/fail derived from the examples that boot
-  unmodified ESP-IDF/Zephyr/HAL.
-- **Later (needs infra):** QEMU (Espressif fork) / Renode differential, as another column.
+- **Wired (4 authorities):** (1) tier-1 raw-register-vs-TRM matrix; (2) SVD register-layout
+  descriptors (`configs/peripherals/<chip>/*.yaml`); (3) silicon reset-conformance from
+  committed hw-oracle OpenOCD captures (`scripts/hw-oracle/captures/<chip>/.../reg_oracle.json`)
+  — real-hardware ground truth, no board at check time; (4) vendor-stack / integration
+  example boots (`examples/*/` targeting the chip, counted by acceptance assertions) —
+  device-level behavioral validation, reported separately from per-peripheral coverage.
+  Coverage = pass / applicable (excludes `n/a`); `n/a`/`unrecorded` are shown, never dropped.
+- **Later (needs infra):** QEMU (Espressif fork) / Renode differential, as another column —
+  deferred until a runner exists (same posture as on-silicon HIL).
 - **Later (needs infra):** QEMU (Espressif fork) / Renode **differential** — run the same
   firmware on labwired and the reference emulator, diff traces, attach as another column.
   No hardware required; deferred until a runner exists (same posture as on-silicon HIL).

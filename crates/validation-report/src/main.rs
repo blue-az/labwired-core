@@ -6,7 +6,9 @@
 //! register-layout authority.
 use anyhow::{anyhow, Result};
 use std::path::PathBuf;
-use validation_report::{hw_oracle_checks, svd_checks, tier1_checks, ModelValidationReport};
+use validation_report::{
+    hw_oracle_checks, svd_checks, tier1_checks, vendor_stack_checks, ModelValidationReport,
+};
 
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
@@ -37,7 +39,15 @@ fn main() -> Result<()> {
         checks.extend(hw_oracle_checks(&std::fs::read_to_string(&capture)?)?);
     }
 
-    let report = ModelValidationReport::from_checks(chip, checks);
+    // vendor-stack / integration authority: example boots targeting this chip.
+    let examples = PathBuf::from("examples");
+    let integrations = if examples.is_dir() {
+        vendor_stack_checks(&examples, chip)?
+    } else {
+        Vec::new()
+    };
+
+    let report = ModelValidationReport::from_checks(chip, checks).with_integrations(integrations);
     if as_json {
         println!("{}", serde_json::to_string_pretty(&report)?);
     } else {
