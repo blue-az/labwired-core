@@ -130,6 +130,76 @@ impl I2cDevice for Sgp41 {
     }
 }
 
+// ─── PeripheralKit registration ────────────────────────────────────────────
+
+use crate::peripherals::kit::{
+    AttachCtx, Category, ConfigKey, ConfigType, KitMetadata, LabRef, PeripheralKit, Transport,
+};
+
+pub struct Sgp41Kit;
+pub static SGP41_KIT: Sgp41Kit = Sgp41Kit;
+
+static SGP41_METADATA: KitMetadata = KitMetadata {
+    device_type: "sgp41",
+    label: "Sensirion SGP41 VOC/NOx",
+    summary: "MOx gas sensor returning raw VOC/NOx signals over I2C.",
+    detail: "Sensirion SGP41 at fixed address 0x59, speaking the real Sensirion \
+             command protocol with CRC-8 (poly 0x31). Returns raw SRAW_VOC / SRAW_NOX \
+             ticks that the on-host Sensirion Gas Index Algorithm converts to a VOC \
+             Index; the raw VOC signal advances along a configurable ramp.",
+    transport: Transport::I2c,
+    category: Category::I2c,
+    config_keys: &[
+        ConfigKey {
+            name: "i2c_address",
+            ty: ConfigType::Int,
+            doc: "7-bit slave address. Defaults to the SGP41 fixed address 0x59.",
+        },
+        ConfigKey {
+            name: "voc_sraw_start",
+            ty: ConfigType::Float,
+            doc: "Raw VOC tick at the first measurement (~20000..40000). Default 28000.",
+        },
+        ConfigKey {
+            name: "voc_sraw_target",
+            ty: ConfigType::Float,
+            doc: "Raw VOC tick the ramp approaches. Default 34000.",
+        },
+        ConfigKey {
+            name: "nox_sraw",
+            ty: ConfigType::Float,
+            doc: "Steady raw NOx tick value. Default 16000.",
+        },
+        ConfigKey {
+            name: "ramp_alpha",
+            ty: ConfigType::Float,
+            doc: "Per-measurement approach rate 0..1 (0 = flat scene). Default 0.08.",
+        },
+    ],
+    labs: &[LabRef {
+        board_id: "leo-airquality-lab",
+        chip: "esp32c3",
+        example_dir: "esp32c3-leo-airquality",
+        demo_elf: "demo-esp32c3-leo-airquality.elf",
+    }],
+};
+
+impl PeripheralKit for Sgp41Kit {
+    fn metadata(&self) -> &'static KitMetadata {
+        &SGP41_METADATA
+    }
+    fn attach(&self, ctx: &mut AttachCtx<'_>) -> anyhow::Result<()> {
+        let address = ctx.i2c_address_or(SGP41_ADDR)?;
+        let voc_start = ctx.config_f64("voc_sraw_start").unwrap_or(28000.0);
+        let voc_target = ctx.config_f64("voc_sraw_target").unwrap_or(34000.0);
+        let nox = ctx.config_f64("nox_sraw").unwrap_or(16000.0);
+        let alpha = ctx.config_f64("ramp_alpha").unwrap_or(0.08);
+        ctx.attach_i2c_device(Box::new(Sgp41::new(
+            address, voc_start, voc_target, nox, alpha,
+        )))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

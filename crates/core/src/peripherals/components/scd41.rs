@@ -165,6 +165,83 @@ impl I2cDevice for Scd41 {
     }
 }
 
+// ─── PeripheralKit registration ────────────────────────────────────────────
+
+use crate::peripherals::kit::{
+    AttachCtx, Category, ConfigKey, ConfigType, KitMetadata, LabRef, PeripheralKit, Transport,
+};
+
+pub struct Scd41Kit;
+pub static SCD41_KIT: Scd41Kit = Scd41Kit;
+
+static SCD41_METADATA: KitMetadata = KitMetadata {
+    device_type: "scd41",
+    label: "Sensirion SCD41 CO₂",
+    summary: "Photoacoustic CO₂ + temperature + humidity sensor over I2C.",
+    detail: "Sensirion SCD41 at fixed address 0x62, speaking the real Sensirion \
+             command protocol (16-bit commands, 16-bit words + CRC-8 poly 0x31), so \
+             the unmodified Sensirion SCD4x vendor driver decodes it on-target. CO₂ \
+             advances along a configurable ramp each read_measurement, so a closed \
+             room climbs from fresh toward stuffy and the firmware verdict flips.",
+    transport: Transport::I2c,
+    category: Category::I2c,
+    config_keys: &[
+        ConfigKey {
+            name: "i2c_address",
+            ty: ConfigType::Int,
+            doc: "7-bit slave address. Defaults to the SCD41 fixed address 0x62.",
+        },
+        ConfigKey {
+            name: "co2_start_ppm",
+            ty: ConfigType::Float,
+            doc: "CO₂ at the first reading, ppm (fresh-room start). Default 450.",
+        },
+        ConfigKey {
+            name: "co2_target_ppm",
+            ty: ConfigType::Float,
+            doc: "CO₂ the ramp approaches, ppm (closed-room steady state). Default 1400.",
+        },
+        ConfigKey {
+            name: "ramp_alpha",
+            ty: ConfigType::Float,
+            doc: "Per-measurement approach rate 0..1 (0 = flat scene). Default 0.08.",
+        },
+        ConfigKey {
+            name: "temp_c",
+            ty: ConfigType::Float,
+            doc: "Starting temperature, °C. Default 22.0.",
+        },
+        ConfigKey {
+            name: "rh_pct",
+            ty: ConfigType::Float,
+            doc: "Starting relative humidity, %. Default 45.0.",
+        },
+    ],
+    labs: &[LabRef {
+        board_id: "leo-airquality-lab",
+        chip: "esp32c3",
+        example_dir: "esp32c3-leo-airquality",
+        demo_elf: "demo-esp32c3-leo-airquality.elf",
+    }],
+};
+
+impl PeripheralKit for Scd41Kit {
+    fn metadata(&self) -> &'static KitMetadata {
+        &SCD41_METADATA
+    }
+    fn attach(&self, ctx: &mut AttachCtx<'_>) -> anyhow::Result<()> {
+        let address = ctx.i2c_address_or(SCD41_ADDR)?;
+        let co2_start = ctx.config_f64("co2_start_ppm").unwrap_or(450.0);
+        let co2_target = ctx.config_f64("co2_target_ppm").unwrap_or(1400.0);
+        let alpha = ctx.config_f64("ramp_alpha").unwrap_or(0.08);
+        let temp_c = ctx.config_f64("temp_c").unwrap_or(22.0);
+        let rh = ctx.config_f64("rh_pct").unwrap_or(45.0);
+        ctx.attach_i2c_device(Box::new(Scd41::new(
+            address, co2_start, co2_target, alpha, temp_c, rh,
+        )))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -204,6 +204,69 @@ impl I2cDevice for Sps30 {
     }
 }
 
+// ─── PeripheralKit registration ────────────────────────────────────────────
+
+use crate::peripherals::kit::{
+    AttachCtx, Category, ConfigKey, ConfigType, KitMetadata, LabRef, PeripheralKit, Transport,
+};
+
+pub struct Sps30Kit;
+pub static SPS30_KIT: Sps30Kit = Sps30Kit;
+
+static SPS30_METADATA: KitMetadata = KitMetadata {
+    device_type: "sps30",
+    label: "Sensirion SPS30 PM",
+    summary: "Laser particulate-matter sensor (PM1/2.5/4/10) over I2C.",
+    detail: "Sensirion SPS30 at fixed address 0x69, speaking the real Sensirion \
+             command protocol with CRC-8 (poly 0x31) in both float and uint16 output \
+             modes. PM2.5 mass advances along a configurable ramp and the other size \
+             bins track it. Drive it in uint16 mode on the ESP32-C3 (30-byte frame \
+             fits the controller's 32-byte FIFO).",
+    transport: Transport::I2c,
+    category: Category::I2c,
+    config_keys: &[
+        ConfigKey {
+            name: "i2c_address",
+            ty: ConfigType::Int,
+            doc: "7-bit slave address. Defaults to the SPS30 fixed address 0x69.",
+        },
+        ConfigKey {
+            name: "pm2_5_start",
+            ty: ConfigType::Float,
+            doc: "PM2.5 mass at the first reading, µg/m³ (clean air). Default 6.0.",
+        },
+        ConfigKey {
+            name: "pm2_5_target",
+            ty: ConfigType::Float,
+            doc: "PM2.5 mass the ramp approaches, µg/m³. Default 22.0.",
+        },
+        ConfigKey {
+            name: "ramp_alpha",
+            ty: ConfigType::Float,
+            doc: "Per-read approach rate 0..1 (0 = flat scene). Default 0.08.",
+        },
+    ],
+    labs: &[LabRef {
+        board_id: "leo-airquality-lab",
+        chip: "esp32c3",
+        example_dir: "esp32c3-leo-airquality",
+        demo_elf: "demo-esp32c3-leo-airquality.elf",
+    }],
+};
+
+impl PeripheralKit for Sps30Kit {
+    fn metadata(&self) -> &'static KitMetadata {
+        &SPS30_METADATA
+    }
+    fn attach(&self, ctx: &mut AttachCtx<'_>) -> anyhow::Result<()> {
+        let address = ctx.i2c_address_or(SPS30_ADDR)?;
+        let pm_start = ctx.config_f64("pm2_5_start").unwrap_or(6.0);
+        let pm_target = ctx.config_f64("pm2_5_target").unwrap_or(22.0);
+        let alpha = ctx.config_f64("ramp_alpha").unwrap_or(0.08);
+        ctx.attach_i2c_device(Box::new(Sps30::new(address, pm_start, pm_target, alpha)))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
