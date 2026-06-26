@@ -31,6 +31,73 @@ pub fn build_i2c_device(
             )))
         }
         "aht20" => Some(Box::new(crate::peripherals::components::Aht20::new())),
+        "scd41" => {
+            use crate::peripherals::components::scd41::{Scd41, SCD41_ADDR};
+            let f = |key: &str, default: f64| -> f64 {
+                config.get(key).and_then(|v| v.as_f64()).unwrap_or(default)
+            };
+            let address = config
+                .get("i2c_address")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(SCD41_ADDR as u64) as u8;
+            Some(Box::new(Scd41::new(
+                address,
+                f("co2_start_ppm", 450.0),
+                f("co2_target_ppm", 1400.0),
+                f("ramp_alpha", 0.08),
+                f("temp_c", 22.0),
+                f("rh_pct", 45.0),
+            )))
+        }
+        "sgp41" => {
+            use crate::peripherals::components::sgp41::{Sgp41, SGP41_ADDR};
+            let f = |key: &str, default: f64| -> f64 {
+                config.get(key).and_then(|v| v.as_f64()).unwrap_or(default)
+            };
+            let address = config
+                .get("i2c_address")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(SGP41_ADDR as u64) as u8;
+            Some(Box::new(Sgp41::new(
+                address,
+                f("voc_sraw_start", 28000.0),
+                f("voc_sraw_target", 34000.0),
+                f("nox_sraw", 16000.0),
+                f("ramp_alpha", 0.08),
+            )))
+        }
+        "sps30" => {
+            use crate::peripherals::components::sps30::{Sps30, SPS30_ADDR};
+            let f = |key: &str, default: f64| -> f64 {
+                config.get(key).and_then(|v| v.as_f64()).unwrap_or(default)
+            };
+            let address = config
+                .get("i2c_address")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(SPS30_ADDR as u64) as u8;
+            Some(Box::new(Sps30::new(
+                address,
+                f("pm2_5_start", 6.0),
+                f("pm2_5_target", 22.0),
+                f("ramp_alpha", 0.08),
+            )))
+        }
+        "veml7700" => {
+            use crate::peripherals::components::veml7700::{Veml7700, VEML7700_ADDR};
+            let f = |key: &str, default: f64| -> f64 {
+                config.get(key).and_then(|v| v.as_f64()).unwrap_or(default)
+            };
+            let address = config
+                .get("i2c_address")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(VEML7700_ADDR as u64) as u8;
+            Some(Box::new(Veml7700::new(
+                address,
+                f("lux_start", 450.0),
+                f("lux_target", 90.0),
+                f("ramp_alpha", 0.08),
+            )))
+        }
         "bmp280" => {
             let address = config
                 .get("i2c_address")
