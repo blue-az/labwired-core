@@ -8,3 +8,4 @@ description = "Aggregates labwired's per-chip model-fidelity evidence (tier-1 ma
 anyhow = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+serde_yaml = { workspace = true }

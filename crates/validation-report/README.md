@@ -20,17 +20,25 @@ run. So a reviewer (or proto.cat's verdict) can cite validation, not just claim 
 ## Use
 
 ```sh
+# tier-1 + SVD (auto-finds configs/peripherals/<chip>)
 cargo run -p validation-report -- docs/coverage/tier1-matrix.json esp32c3        # markdown
 cargo run -p validation-report -- docs/coverage/tier1-matrix.json esp32c3 --json # json
+cargo run -p validation-report -- docs/coverage/tier1-matrix.json esp32c3 path/to/descriptors
 ```
+
+A peripheral can carry checks from several authorities; the summary derives ONE status
+per distinct peripheral (Fail > Pass > Unrecorded > n/a) and reports coverage over
+peripherals, so being validated twice never inflates the score. Real `esp32c3` run:
+**51 distinct peripherals, 2 authorities, 97.7% coverage.**
 
 ## Status / roadmap
 
-- **Now:** aggregates the tier-1 matrix (source #1). Coverage = pass / applicable
-  (excludes `n/a`); `n/a`/`unrecorded` peripherals are shown, never silently dropped.
+- **Wired:** (1) tier-1 raw-register-vs-TRM matrix; (2) SVD register-layout descriptors
+  (`configs/peripherals/<chip>/*.yaml`). Coverage = pass / applicable (excludes `n/a`);
+  `n/a`/`unrecorded` peripherals are shown, never silently dropped.
 - **Next authorities** plug in as additional per-peripheral checks (the report shape is
-  built for it): hw-oracle reset-conformance counts, SVD register coverage, and a
-  vendor-stack-boot pass/fail derived from the examples.
+  built for it): hw-oracle reset-conformance counts and a vendor-stack-boot pass/fail
+  derived from the examples.
 - **Later (needs infra):** QEMU (Espressif fork) / Renode **differential** — run the same
   firmware on labwired and the reference emulator, diff traces, attach as another column.
   No hardware required; deferred until a runner exists (same posture as on-silicon HIL).
