@@ -64,11 +64,7 @@ fn onboarding_uart_parity_ratchet() {
             continue;
         }
         // The message is: UART type '<type>' (peripheral ...) ...
-        let ty = msg
-            .split('\'')
-            .nth(1)
-            .unwrap_or("<unknown>")
-            .to_string();
+        let ty = msg.split('\'').nth(1).unwrap_or("<unknown>").to_string();
         if UNMODELLED_UART_TYPES.contains(&ty.as_str()) {
             seen_unmodelled.insert(ty);
         } else {

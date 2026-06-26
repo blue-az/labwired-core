@@ -202,7 +202,7 @@ impl UartRegisterLayout {
                 txeie_mask: 1 << 7, // TXEIE
                 tcie_mask: 1 << 6,  // TCIE
                 status_width: 4,
-                status_idle: 0xC0,  // TXE | TC
+                status_idle: 0xC0,      // TXE | TC
                 rx_present_set: 1 << 5, // RXNE
                 rx_present_clear: 0,
             },
@@ -223,7 +223,7 @@ impl UartRegisterLayout {
                 txeie_mask: 1 << 7, // TXEIE/TXFNFIE
                 tcie_mask: 1 << 6,  // TCIE
                 status_width: 4,
-                status_idle: 0xC0,  // TXE | TC
+                status_idle: 0xC0,      // TXE | TC
                 rx_present_set: 1 << 5, // RXNE
                 rx_present_clear: 0,
             },
@@ -246,11 +246,11 @@ impl UartRegisterLayout {
             // TX/RX data register. CR3 points at MODIR (no DMAT-on-CR3 concept;
             // the smoke path never touches it).
             UartRegisterLayout::Lpuart => UartRegMap {
-                status: 0x04,    // STAT
-                tx: 0x0C,        // DATA (write transmits)
-                rx: 0x0C,        // DATA (read pops RX)
-                cr3: 0x14,       // MODIR
-                cr1: Some(0x08), // CTRL
+                status: 0x04,        // STAT
+                tx: 0x0C,            // DATA (write transmits)
+                rx: 0x0C,            // DATA (read pops RX)
+                cr3: 0x14,           // MODIR
+                cr1: Some(0x08),     // CTRL
                 txeie_mask: 1 << 23, // TIE
                 tcie_mask: 1 << 22,  // TCIE
                 status_width: 4,
@@ -319,7 +319,7 @@ impl UartRegisterLayout {
                 txeie_mask: 0,
                 tcie_mask: 0,
                 status_width: 4,
-                status_idle: 0x0A,        // TxEMPTY(3) | RxEMPTY(1)
+                status_idle: 0x0A, // TxEMPTY(3) | RxEMPTY(1)
                 rx_present_set: 0,
                 rx_present_clear: 1 << 1, // clear RxEMPTY on data
             },
@@ -426,7 +426,7 @@ impl UartRegisterLayout {
                 txeie_mask: 0,
                 tcie_mask: 0,
                 status_width: 4,
-                status_idle: 0x50,        // RX_EMPTY(4) | TX_EMPTY(6)
+                status_idle: 0x50, // RX_EMPTY(4) | TX_EMPTY(6)
                 rx_present_set: 0,
                 rx_present_clear: 1 << 4, // clear RX_EMPTY on data
             },
@@ -442,7 +442,7 @@ impl UartRegisterLayout {
                 txeie_mask: 0,
                 tcie_mask: 0,
                 status_width: 4,
-                status_idle: 0x2C,        // TXEMPTY(2) | TXIDLE(3) | RXEMPTY(5)
+                status_idle: 0x2C, // TXEMPTY(2) | TXIDLE(3) | RXEMPTY(5)
                 rx_present_set: 0,
                 rx_present_clear: 1 << 5, // clear RXEMPTY on data
             },
@@ -537,8 +537,8 @@ impl UartRegisterLayout {
                 txeie_mask: 0,
                 tcie_mask: 0,
                 status_width: 4,
-                status_idle: 0x0010_0000,       // TX FIFO free = 16
-                rx_present_set: 0x0100_0000,     // RX occupancy = 1
+                status_idle: 0x0010_0000,    // TX FIFO free = 16
+                rx_present_set: 0x0100_0000, // RX occupancy = 1
                 rx_present_clear: 0,
             },
             // Microsemi CoreUARTapb. TxData@0x00, RxData@0x04, Status@0x10:
@@ -599,8 +599,8 @@ impl UartRegisterLayout {
                 txeie_mask: 0,
                 tcie_mask: 0,
                 status_width: 4,
-                status_idle: 0xC000_0000,     // TDRE | TC
-                rx_present_set: 0x2000_0000,   // RDRF
+                status_idle: 0xC000_0000,    // TDRE | TC
+                rx_present_set: 0x2000_0000, // RDRF
                 rx_present_clear: 0,
             },
             // PicoSoC simpleuart. reg_dat@0x04 (write=TX, read=RX). No status
@@ -889,7 +889,6 @@ impl Uart {
         self.layout.regmap().tcie_mask
     }
 
-
     fn push_tx(&mut self, value: u8) {
         self.record_trace("tx", value);
 
@@ -954,11 +953,7 @@ impl crate::Peripheral for Uart {
     fn read(&self, offset: u64) -> SimResult<u8> {
         let status = self.status_offset();
         if offset >= status && offset < status + self.layout.regmap().status_width {
-            let rx_present = self
-                .rx_buf
-                .lock()
-                .map(|g| !g.is_empty())
-                .unwrap_or(false);
+            let rx_present = self.rx_buf.lock().map(|g| !g.is_empty()).unwrap_or(false);
             let word = self.status_word(rx_present);
             return Ok(((word >> ((offset - status) * 8)) & 0xFF) as u8);
         }
@@ -1077,11 +1072,7 @@ impl crate::Peripheral for Uart {
     fn peek(&self, offset: u64) -> Option<u8> {
         let status = self.status_offset();
         if offset >= status && offset < status + self.layout.regmap().status_width {
-            let rx_present = self
-                .rx_buf
-                .lock()
-                .map(|g| !g.is_empty())
-                .unwrap_or(false);
+            let rx_present = self.rx_buf.lock().map(|g| !g.is_empty()).unwrap_or(false);
             let word = self.status_word(rx_present);
             return Some(((word >> ((offset - status) * 8)) & 0xFF) as u8);
         }
@@ -1236,9 +1227,11 @@ mod tests {
     fn test_vendor_empty_flag_rx_semantics() {
         use super::UartRegisterLayout::*;
         // (layout, status_offset, rx_empty_bit)
-        for (layout, status, empty_bit) in
-            [(Pl011, 0x18u64, 4u32), (Cadence, 0x2C, 1), (OpenTitan, 0x14, 5)]
-        {
+        for (layout, status, empty_bit) in [
+            (Pl011, 0x18u64, 4u32),
+            (Cadence, 0x2C, 1),
+            (OpenTitan, 0x14, 5),
+        ] {
             let mut uart = Uart::new_with_layout(layout);
             uart.set_sink(None, false);
             // Idle: empty bit set.
