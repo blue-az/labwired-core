@@ -448,7 +448,8 @@ mod tests {
             adc.write_u32(0x08, (1 << 28) | 1).unwrap(); // ADEN -> ADRDY
             assert_eq!(adc.read_u32(0x00).unwrap() & 0x1, 1, "ADRDY");
             adc.write_u32(0x0C, res << 3).unwrap(); // CFGR.RES
-            adc.write_u32(0x08, adc.read_u32(0x08).unwrap() | (1 << 2)).unwrap(); // ADSTART
+            adc.write_u32(0x08, adc.read_u32(0x08).unwrap() | (1 << 2))
+                .unwrap(); // ADSTART
             let isr = adc.read_u32(0x00).unwrap();
             (adc.read_u32(0x40).unwrap() & 0xFFFF, isr)
         };
@@ -468,7 +469,10 @@ mod tests {
         assert_eq!(dr12, 3723, "12-bit code = (3.0/3.3) * 4096");
         assert_eq!(dr10, 930, "10-bit code = 3723 >> 2");
         assert_eq!(dr8, 232, "8-bit code = 3723 >> 4");
-        assert!(dr10 < dr12 && dr8 < dr10, "code scales down with resolution");
+        assert!(
+            dr10 < dr12 && dr8 < dr10,
+            "code scales down with resolution"
+        );
     }
 
     #[test]
