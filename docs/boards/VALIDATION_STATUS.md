@@ -11,7 +11,7 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 | `seeed-xiao-nrf52840-sense` | 🟢 silicon-verified | 2026-06-17 | 2026-06-27 | ⚠ drift acked 2026-06-27 (re-capture pending) |
 | `stm32h563` | 🟢 silicon-verified | 2026-06-22 | 2026-06-28 | ⚠ drift acked 2026-06-28 (re-capture pending) |
 | `esp32c3` | 🟢 silicon-verified | 2026-06-17 | 2026-06-28 | ⚠ drift acked 2026-06-28 (re-capture pending) |
-| `nucleo-l476rg` | 🟢 silicon-verified | 2026-06-20 | 2026-06-27 | ⚠ drift acked 2026-06-27 (re-capture pending) |
+| `nucleo-l476rg` | 🟢 silicon-verified | 2026-06-20 | 2026-06-28 | ⚠ drift acked 2026-06-28 (re-capture pending) |
 | `nucleo-l073rz` | 🟢 silicon-verified | 2026-06-20 | 2026-06-28 | ⚠ drift acked 2026-06-28 (re-capture pending) |
 | `stm32f103` | 🟢 silicon-verified | 2026-06-20 | 2026-06-28 | ⚠ drift acked 2026-06-28 (re-capture pending) |
 | `stm32f407` | 🟢 silicon-smoke | 2026-06-20 | 2026-06-28 | ⚠ drift acked 2026-06-28 (re-capture pending) |
@@ -61,7 +61,7 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 - Silicon: **2026-06-20** on STLINK-V2.1 (USB 0483:374b serial 0670FF…1747, NUCLEO-L476RG onboard) — Live re-capture after the v0.17.0 merge: l476_mmio_diff + l476_parity_diff pass (15 mmio + 104 parity), 0 divergence. Supersedes the 2026-06-19 drift_ack.
   - offline (CI): l476_mmio_diff::{l476_mmio_sim_only,l476_parity_sim_only}
   - offline (CI): firmware_survival L476 cases (UART byte stream)
-- Drift status: **⚠ drift acked 2026-06-27 (re-capture pending)**
+- Drift status: **⚠ drift acked 2026-06-28 (re-capture pending)**
 
 ## `nucleo-l073rz` — 🟢 silicon-verified
 

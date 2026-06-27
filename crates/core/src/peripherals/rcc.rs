@@ -59,11 +59,27 @@ impl FromStr for RccRegisterLayout {
 
 // ── Shared, stateless helpers (shared silicon IP behaviour, never shared state) ─
 
-/// Optimistic SW→SWS: the switch completes immediately (SWS mirrors SW).
-/// Used by the classic families (F1/F4/V2) whose existing models assume the
-/// requested source is always ready.
-fn cfgr_with_optimistic_sws(value: u32) -> u32 {
-    (value & !(0x3 << 2)) | ((value & 0x3) << 2)
+/// Source-ready SW→SWS gate. The SYSCLK switch only completes (SWS follows SW)
+/// once the requested source's CR ready bit is set; until then SWS holds its
+/// previous value, exactly as silicon does. `rdy_bits[sw]` is the CR ready-bit
+/// index for each SW[1:0] encoding, or `None` for a reserved encoding that
+/// never switches. This mirrors the per-source gating the L4/L0/H5 models
+/// already apply, and prevents the false-pass where firmware switches SYSCLK to
+/// a source it never enabled+waited for.
+///
+/// Per-family `rdy_bits` (silicon-verified against the ST CMSIS headers):
+///   F1/F4 (CFGR @ 0x04/0x08): 00 HSI→1, 01 HSE→17, 10 PLL→25, 11 reserved.
+///   G4/WB (CFGR @ 0x08):      00 MSI→1, 01 HSI16→10, 10 HSE→17, 11 PLL→25.
+///   WBA   (CFGR1 @ 0x1C):     00 HSI16→10, 01 reserved, 10 HSE→17, 11 PLL1R→25.
+fn cfgr_with_gated_sws(value: u32, cr: u32, prev_cfgr: u32, rdy_bits: [Option<u32>; 4]) -> u32 {
+    let sw = (value & 0x3) as usize;
+    let ready = matches!(rdy_bits[sw], Some(b) if cr & (1 << b) != 0);
+    let sws = if ready {
+        (value & 0x3) << 2
+    } else {
+        prev_cfgr & (0x3 << 2)
+    };
+    (value & !(0x3 << 2)) | sws
 }
 
 /// Classic CR ready-flag rule (F1/F4/V2): each ON bit auto-sets its RDY bit.
@@ -145,7 +161,16 @@ impl RccModel for F1Rcc {
         // enable bits 12:8 (0x1F00) read back.
         match offset {
             0x00 => self.cr = classic_cr_ready(value),
-            0x04 => self.cfgr = cfgr_with_optimistic_sws(value),
+            // SW→SWS only follows once the requested source is ready in CR:
+            // 00 HSI (bit1), 01 HSE (bit17), 10 PLL (bit25), 11 reserved.
+            0x04 => {
+                self.cfgr = cfgr_with_gated_sws(
+                    value,
+                    self.cr,
+                    self.cfgr,
+                    [Some(1), Some(17), Some(25), None],
+                )
+            }
             0x08 => self.cir = value & 0x0000_1F00,
             0x0C => self.apb2rstr = value,
             0x10 => self.apb1rstr = value,
@@ -245,9 +270,17 @@ impl RccModel for F4Rcc {
             // PLLCFGR writable = PLLM/PLLN/PLLP/PLLSRC/PLLQ = 0x7F43_7FFF
             // (silicon-confirmed on F407). Reserved bits read 0.
             0x04 => self.pllcfgr = value & 0x7F43_7FFF,
-            // CFGR at 0x08 on F4 (not 0x04). The optimistic SW->SWS fake lets
-            // firmware that switches SYSCLK to PLL/HSE see the switch complete.
-            0x08 => self.cfgr = cfgr_with_optimistic_sws(value),
+            // CFGR at 0x08 on F4 (not 0x04). SW→SWS follows only once the
+            // requested source is ready in CR: 00 HSI (bit1), 01 HSE (bit17),
+            // 10 PLL (bit25), 11 reserved.
+            0x08 => {
+                self.cfgr = cfgr_with_gated_sws(
+                    value,
+                    self.cr,
+                    self.cfgr,
+                    [Some(1), Some(17), Some(25), None],
+                )
+            }
             // CIR interrupt-enable bits 13:8 = 0x3F00 (F4 adds PLLI2SRDYIE bit
             // 13 over the F1's 5 bits) — silicon-confirmed on F407.
             0x0C => self.cir = value & 0x0000_3F00,
@@ -349,10 +382,28 @@ impl RccModel for V2Rcc {
     fn write_reg(&mut self, offset: u64, value: u32) {
         match offset {
             0x00 => self.cr = Self::ready(value),
-            0x08 => self.cfgr = cfgr_with_optimistic_sws(value),
-            // WBA RCC_CFGR1 (0x1C): SW[1:0]→SWS[3:2], so the SYSCLK switch the
-            // SoC init waits on completes immediately.
-            0x1C => self.cfgr1 = cfgr_with_optimistic_sws(value),
+            // G4/WB RCC_CFGR (0x08): SW→SWS follows only once the requested
+            // source is ready in CR — 00 MSI (bit1), 01 HSI16 (bit10),
+            // 10 HSE (bit17), 11 PLL (bit25).
+            0x08 => {
+                self.cfgr = cfgr_with_gated_sws(
+                    value,
+                    self.cr,
+                    self.cfgr,
+                    [Some(1), Some(10), Some(17), Some(25)],
+                )
+            }
+            // WBA RCC_CFGR1 (0x1C): SW[1:0]→SWS[3:2], gated on the source's CR
+            // ready bit — 00 HSI16 (bit10), 01 reserved, 10 HSE (bit17),
+            // 11 PLL1R (bit25). (RM0493: SW=01 is not a defined source.)
+            0x1C => {
+                self.cfgr1 = cfgr_with_gated_sws(
+                    value,
+                    self.cr,
+                    self.cfgr1,
+                    [Some(10), None, Some(17), Some(25)],
+                )
+            }
             0x28 => self.reg28 = value,
             // BDCR: LSEON (bit0) → LSERDY (bit1); rest is RTC/backup storage.
             0x90 => {
@@ -1086,11 +1137,20 @@ mod tests {
             assert_ne!(bdcr1 & (1 << rdy), 0, "BDCR1 rdy bit {rdy}");
         }
 
-        rcc.write_u32(0x1C, 0x3).unwrap(); // SW = 0b11
+        // CFGR1 SW=PLL1R (0b11) is gated on PLLRDY: with the PLL off the switch
+        // holds; enabling PLL1 (CR bit24 → PLLRDY bit25) lets it complete.
+        rcc.write_u32(0x1C, 0x3).unwrap();
+        assert_eq!(
+            (rcc.read_u32(0x1C).unwrap() >> 2) & 0x3,
+            0x0,
+            "SWS holds while PLL not ready"
+        );
+        rcc.write_u32(0x00, 1 << 24).unwrap(); // PLL1ON → PLL1RDY
+        rcc.write_u32(0x1C, 0x3).unwrap();
         assert_eq!(
             (rcc.read_u32(0x1C).unwrap() >> 2) & 0x3,
             0x3,
-            "SWS follows SW"
+            "SWS follows SW once PLL ready"
         );
 
         // 0x28: clearing request bit20 confirms via ack bit22.
@@ -1204,12 +1264,18 @@ mod tests {
     }
 
     #[test]
-    fn test_rcc_cfgr_sws_mirrors_sw() {
+    fn test_rcc_cfgr_sws_follows_sw_when_source_ready() {
         let mut rcc = Rcc::new();
-        rcc.write(0x04, 0b10).unwrap();
-        let cfgr = rcc.read(0x04).unwrap();
-        assert_eq!(cfgr & 0b11, 0b10); // SW
-        assert_eq!((cfgr >> 2) & 0b11, 0b10); // SWS mirrors SW
+        // SW=PLL (0b10) with PLL off: the switch must NOT complete — SWS holds.
+        rcc.write_u32(0x04, 0b10).unwrap();
+        let cfgr = rcc.read_u32(0x04).unwrap();
+        assert_eq!(cfgr & 0b11, 0b10); // SW latched
+        assert_eq!((cfgr >> 2) & 0b11, 0b00, "SWS holds while PLL not ready");
+        // Enable PLL (CR bit24 → PLLRDY bit25), then SW=PLL completes.
+        rcc.write_u32(0x00, rcc.read_u32(0x00).unwrap() | (1 << 24))
+            .unwrap();
+        rcc.write_u32(0x04, 0b10).unwrap();
+        assert_eq!((rcc.read_u32(0x04).unwrap() >> 2) & 0b11, 0b10, "SWS=PLL");
     }
 
     #[test]
