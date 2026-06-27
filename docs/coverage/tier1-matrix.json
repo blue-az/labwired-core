@@ -19,13 +19,13 @@
       "status": "pass"
     },
     "pwm": {
-      "status": "na"
+      "status": "pass"
     },
     "rtc": {
       "status": "na"
     },
     "spi": {
-      "status": "na"
+      "status": "pass"
     },
     "timer": {
       "status": "pass"

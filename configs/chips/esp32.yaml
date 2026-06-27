@@ -76,3 +76,16 @@ peripherals:
     type: "intmatrix_stub"
     base_address: 0x3FF00000
     size: "4KB"
+  # SPI3 / VSPI (TRM §7). Real Esp32Spi model wired by configure_xtensa_esp32;
+  # base matches ESP32_PERIPHERALS (spi3 = 0x3FF6_5000).
+  - id: "spi3"
+    type: "esp32_spi"
+    base_address: 0x3FF65000
+    size: "4KB"
+  # LEDC — LED PWM controller (TRM §14). Real Ledc model; base matches
+  # ESP32_PERIPHERALS (ledc = 0x3FF5_9000). Backs the pwm matrix class
+  # (the matrix aliases ledc -> pwm).
+  - id: "ledc"
+    type: "esp32_ledc"
+    base_address: 0x3FF59000
+    size: "4KB"
