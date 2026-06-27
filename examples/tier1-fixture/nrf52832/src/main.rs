@@ -118,7 +118,10 @@ const SAADC_RESOLUTION: u32 = SAADC_BASE + 0x5F0;
 const SAADC_RESULT_PTR: u32 = SAADC_BASE + 0x62C;
 const SAADC_RESULT_MAXCNT: u32 = SAADC_BASE + 0x630;
 const SAADC_RESULT_AMOUNT: u32 = SAADC_BASE + 0x634;
-const SAADC_SAMPLE_VALUE: u16 = 0x0AAA; // engine's deterministic sample code
+// Converted codes for the model's fixed internal source (V(P)=3.0 V, 3.6 V
+// full-scale): code(N) = (3.0/3.6) * 2^N, narrower resolutions drop LSBs.
+const SAADC_CODE_12BIT: u16 = 3413; // (3.0/3.6) * 2^12
+const SAADC_CODE_10BIT: u16 = 853; // (3.0/3.6) * 2^10
 
 // ── PWM0 (nrf52840_pwm, base 0x4001c000) ──────────────────────────────────
 // Sequence playback engine: TASKS_SEQSTART0 reads SEQ0.CNT duty values from
@@ -342,10 +345,13 @@ fn check_spi() -> Result<(), &'static str> {
     Ok(())
 }
 
-// ── adc (SAADC): EasyDMA conversion → RESULT buffer + END/RESULTDONE ────────
-fn check_adc() -> Result<(), &'static str> {
+// ── adc (SAADC): real EasyDMA conversion of a fixed internal source ─────────
+// The model converts V(P)=3.0 V against a 3.6 V full-scale, scaled to the
+// configured RESOLUTION. This fixture proves a real conversion BY VALUE at two
+// resolutions — it fails if the engine returned a constant or didn't convert.
+fn saadc_sample(res: u32) -> Result<u16, &'static str> {
     reg_write(SAADC_ENABLE, 1); // enable SAADC
-    reg_write(SAADC_RESOLUTION, 2); // 12-bit
+    reg_write(SAADC_RESOLUTION, res);
     reg_write(SAADC_CH0_PSELP, 1); // CH[0].PSELP = AnalogInput0
     reg_write(SAADC_CH0_CONFIG, 0x0002_0000); // CH[0].CONFIG (gain/ref defaults)
     reg_write(SAADC_EVENTS_STARTED, 0);
@@ -371,10 +377,23 @@ fn check_adc() -> Result<(), &'static str> {
     if reg_read(SAADC_RESULT_AMOUNT) != 4 {
         return Err("adc-amount");
     }
-    // The engine wrote SAADC_SAMPLE_VALUE into every slot via EasyDMA.
-    let sample = unsafe { core::ptr::read_volatile(core::ptr::addr_of!(ADC_RESULT_BUF[0])) };
-    if sample != SAADC_SAMPLE_VALUE {
-        return Err("adc-sample");
+    Ok(unsafe { core::ptr::read_volatile(core::ptr::addr_of!(ADC_RESULT_BUF[0])) })
+}
+
+fn check_adc() -> Result<(), &'static str> {
+    // 12-bit conversion of the fixed internal source.
+    let code12 = saadc_sample(2)?;
+    if code12 != SAADC_CODE_12BIT {
+        return Err("adc-code12");
+    }
+    // 10-bit conversion: the SAR core drops 2 LSBs, so the code must scale
+    // down. This is what distinguishes a real conversion from a constant.
+    let code10 = saadc_sample(1)?;
+    if code10 != SAADC_CODE_10BIT {
+        return Err("adc-code10");
+    }
+    if code10 >= code12 {
+        return Err("adc-scale");
     }
     Ok(())
 }
