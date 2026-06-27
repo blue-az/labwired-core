@@ -124,7 +124,21 @@ fn check_clock() -> Result<(), &'static [u8]> {
     if rd32(RCC_BASE) & (1 << 17) != 0 {
         return Err(b"clock-hserdy-stuck");
     }
-    // Switch SYSCLK to HSI16 (SW=01); SWS must follow (HSI ready @ bit 1).
+    // Enable HSI16 (CR bit 8) and wait for HSI16RDY (bit 10): the L4 RCC model
+    // gates the SYSCLK switch on the requested source being ready, so HSI16 must
+    // be on before SW=01 will latch into SWS.
+    wr32(RCC_BASE, rd32(RCC_BASE) | (1 << 8));
+    let mut hsi_ready = false;
+    for _ in 0..10_000 {
+        if rd32(RCC_BASE) & (1 << 10) != 0 {
+            hsi_ready = true;
+            break;
+        }
+    }
+    if !hsi_ready {
+        return Err(b"clock-hsi16rdy");
+    }
+    // Switch SYSCLK to HSI16 (SW=01); SWS must follow now that HSI16 is ready.
     wr32(RCC_BASE + 0x08, 0x1);
     if (rd32(RCC_BASE + 0x08) >> 2) & 0x3 != 0x1 {
         return Err(b"clock-sws");
@@ -251,6 +265,10 @@ unsafe fn DefaultHandler(irqn: i16) {
 
 #[entry]
 fn main() -> ! {
+    // USART2 is clock-gated in stm32l476.yaml (RCC_APB1ENR1.USART2EN, bit 17 @
+    // offset 0x58) and is unclocked out of reset — enable it before the first
+    // report() or the console UART silently drops every byte.
+    wr32(RCC_BASE + 0x58, rd32(RCC_BASE + 0x58) | (1 << 17));
     report(b"clock", check_clock());
     report(b"gpio", check_gpio());
     report(b"timer", check_timer());
