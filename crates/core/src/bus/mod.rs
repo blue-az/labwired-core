@@ -619,6 +619,13 @@ impl SystemBus {
         if t == "esp32c3_i2c" {
             return "esp32c3_i2c".to_string();
         }
+        // RP2040 native peripherals — keep ahead of the generic
+        // "contains(timer)" / "contains(spi)" / "contains(i2c)" fuzzy matchers,
+        // which would otherwise coerce them to the STM32 models and drop the
+        // RP2040 register layouts (PL022 SSP, DW_apb_i2c, the 64-bit timer).
+        if t == "rp2040_timer" || t == "rp2040_spi" || t == "rp2040_i2c" {
+            return t;
+        }
         // UARTE: nRF52 UART with EasyDMA — must be intercepted before the
         // generic "contains(uart)" matcher, which would coerce it to the
         // STM32-style generic Uart model and lose PSEL/BAUDRATE/CONFIG.

@@ -123,7 +123,7 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 ## `rp2040` — ⚪ structural
 
 - Doc: [`docs/boards/rp2040.md`](rp2040.md)  ·  Chip: `configs/chips/rp2040.yaml`
-- Note: UART0 (stm32v2-profile cheat) + PIO0 declared, but ZERO PIO0 test coverage. No silicon.
+- Note: Behavioural models for clocks/resets (RESET_DONE/PLL-LOCK/XOSC-STABLE), the 64-bit free-running TIMER, SIO GPIO (drive/readback round-trip), PL022 SPI0 (loopback transfer), and DW_apb_i2c I2C0 (no-slave address-NACK abort), plus the PL011 UART0 console. Each is exercised by the tier-1 fixture (tests/fixtures/tier1/rp2040.elf) which reports clock/timer/gpio/spi/i2c PASS over UART. PIO0 is declared but has no test coverage. No silicon bench.
 - Silicon: none — not validated against real hardware.
 - Drift status: **no silicon capture**
 
