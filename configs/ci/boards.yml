@@ -13,3 +13,18 @@ boards:
     packs: [stm32cubel4@v1.18.2]
     submodules: recursive
     gate: true
+  - id: ci-fixture-arm
+    kind: firmware-gate
+    path: examples/ci-fixture-arm
+    rust_targets: [thumbv6m-none-eabi]
+    gate: false
+  - id: ci-fixture-riscv
+    kind: firmware-gate
+    path: examples/ci-fixture-riscv
+    rust_targets: [riscv32i-unknown-none-elf]
+    gate: false
+  - id: nucleo-h563zi
+    kind: firmware-gate
+    path: examples/nucleo-h563zi
+    rust_targets: [thumbv7m-none-eabi]
+    gate: false
