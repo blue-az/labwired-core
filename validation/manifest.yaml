@@ -117,7 +117,8 @@ boards:
     # 2026-06-27: additive L4/V2 i2c transaction engine (ISR.NACKF on a write to
     # an absent slave; AUTOEND clears BUSY + sets STOPF). Register layout and the
     # previously-pinned reset/latch behaviour are unchanged; no silicon re-capture.
-    drift_ack: 2026-06-27
+    # 2026-06-28: clock-gating retrofit (gpdma1/tim1/tim2/i2c1/spi1/adc1/fdcan1/rtc RCC clock:{reg,bit}); additive, enabled-clock path unchanged, h563_mmio_diff + h563_conformance pass. No live re-capture.
+    drift_ack: 2026-06-28
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
@@ -164,7 +165,13 @@ boards:
     # (CLOCK=0x80003043, CTRL=0x3c0000, DMA_CONF reset 0 + DATE=0x2007220 for SPI;
     # ONETIME_SAMPLE/INT layout for ADC). They do not touch the asserted reset-oracle
     # set; this ack covers the new model files until the next full live re-capture.
-    drift_ack: 2026-06-27
+    # 2026-06-28: added behavioural LEDC controller (esp32c3/ledc.rs), wired into
+    # esp32c3.yaml for the tier-1 pwm cell. ADDITIVE: the four low-speed timers now
+    # run as live up-counters that advance with elapsed cycles, wrap at 2^DUTY_RES,
+    # and latch LSTIMERx_OVF (TIMERx_CONF/VALUE + INT_* layout diffed against the
+    # committed ledc.yaml SVD descriptor). It does not touch the asserted reset-oracle
+    # set; this ack covers the new model file until the next full live re-capture.
+    drift_ack: 2026-06-28
 
   - id: nucleo-l476rg
     doc: docs/boards/nucleo-l476rg.md
@@ -230,7 +237,8 @@ boards:
     # fidelity (was dropped → read 0). Additive, read-back only — no byte-path or
     # reset-value change; l0_mmio_diff (no BRR write-then-read) passes unchanged.
     # No live re-capture this session.
-    drift_ack: 2026-06-27
+    # 2026-06-28: clock-gating retrofit (tim2/i2c1/spi1/adc1/dma1 RCC clock:{reg,bit}); additive, enabled-clock path unchanged, l0_mmio_diff passes. No live re-capture.
+    drift_ack: 2026-06-28
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
@@ -262,7 +270,8 @@ boards:
     # 2026-06-27: uart.rs BRR read-back fix is gated to the Stm32V2 layout; the F1
     # USART arm (this board) is untouched — purely a shared-file hash drift, zero
     # behavioural change. stm32f1_mmio_diff + f103_conformance pass unchanged.
-    drift_ack: 2026-06-27
+    # 2026-06-28: clock-gating retrofit (tim2/i2c1/spi1/adc1/dma1 RCC clock:{reg,bit}); additive, enabled-clock path unchanged, stm32f1_mmio_diff + f103_conformance pass. No live re-capture.
+    drift_ack: 2026-06-28
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/afio.rs
@@ -300,7 +309,8 @@ boards:
     # 2026-06-27: uart.rs BRR read-back fix is gated to the Stm32V2 layout; the F1
     # USART arm (this board) is untouched — purely a shared-file hash drift, zero
     # behavioural change. stm32f4_mmio_diff passes unchanged.
-    drift_ack: 2026-06-27
+    # 2026-06-28: clock-gating retrofit (tim2/i2c1/spi1/adc1 RCC clock:{reg,bit}); additive, enabled-clock path byte-for-byte unchanged, stm32f4_mmio_diff passes. No live re-capture.
+    drift_ack: 2026-06-28
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs

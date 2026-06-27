@@ -1,7 +1,7 @@
 {
   "esp32": {
     "adc": {
-      "status": "na"
+      "status": "pass"
     },
     "clock": {
       "status": "pass"
@@ -57,7 +57,7 @@
       "status": "pass"
     },
     "pwm": {
-      "status": "unrecorded"
+      "status": "pass"
     },
     "rtc": {
       "status": "na"
