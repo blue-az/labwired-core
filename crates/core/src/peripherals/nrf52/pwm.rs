@@ -308,7 +308,11 @@ mod tests {
 
         p.tick_with_bus(&mut bus);
 
-        assert_eq!(p.read_u32(OFF_EVENTS_SEQSTARTED0).unwrap(), 1, "SEQSTARTED0");
+        assert_eq!(
+            p.read_u32(OFF_EVENTS_SEQSTARTED0).unwrap(),
+            1,
+            "SEQSTARTED0"
+        );
         assert_eq!(p.read_u32(OFF_EVENTS_SEQEND0).unwrap(), 1, "SEQEND0");
         assert_eq!(
             p.read_u32(OFF_EVENTS_PWMPERIODEND).unwrap(),

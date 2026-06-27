@@ -399,7 +399,10 @@ mod tests {
         let mut s = Nrf52Saadc::new();
         s.write_u32(OFF_RESULT_MAXCNT, 4).unwrap();
         s.write_u32(OFF_TASKS_SAMPLE, 1).unwrap();
-        assert!(!s.needs_bus_tick(), "disabled SAADC does not arm conversion");
+        assert!(
+            !s.needs_bus_tick(),
+            "disabled SAADC does not arm conversion"
+        );
     }
 
     #[test]
