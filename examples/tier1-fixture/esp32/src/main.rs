@@ -50,6 +50,11 @@ const UART0_BASE: u32 = 0x3FF4_0000;
 const GPIO_BASE: u32 = 0x3FF4_4000;
 const TIMG0_BASE: u32 = 0x3FF5_F000;
 const DPORT_BASE: u32 = 0x3FF0_0000;
+// SPI3 / VSPI controller (TRM §7). Free general-purpose SPI on classic ESP32
+// (SPI0/SPI1 are the flash controllers). Wired as a real Esp32Spi model.
+const SPI3_BASE: u32 = 0x3FF6_5000;
+// LEDC — LED PWM controller (TRM §14). Real Ledc model; backs the pwm class.
+const LEDC_BASE: u32 = 0x3FF5_9000;
 
 #[inline(always)]
 fn reg_read(addr: u32) -> u32 {
@@ -261,6 +266,83 @@ fn check_dma() -> Result<(), &'static str> {
     Err("esp32-no-dma-model")
 }
 
+// ── spi: FIFO round-trip + CMD.USR synchronous self-clear on SPI3 ──────────
+//
+// TRM §7 (SPI Controller, ESP32-classic offsets):
+//   SPI_CMD_REG       @ 0x00 — bit 18 (USR) = start; cleared on completion.
+//   SPI_USER_REG      @ 0x1C — bit 27 (USR_MOSI) requests the MOSI phase.
+//   SPI_MOSI_DLEN_REG @ 0x28 — MOSI bit length minus 1.
+//   SPI_W0..W15       @ 0x80 — 64-byte data FIFO.
+//
+// The model (`crates/core/src/peripherals/esp32/spi.rs`) backs the FIFO with
+// real storage and, on a CMD write with USR set, synchronously streams the
+// MOSI bytes and clears CMD.USR. A read-as-zero / round-trip stub would leave
+// USR set (the busy-poll would hang). So both the FIFO round-trip and the
+// self-clearing busy bit are behaviour a stub cannot fake. No SPI device is
+// attached in the tier-1 setup; the streamed bytes go nowhere, which is fine —
+// we are validating the controller, not a peripheral on the bus.
+fn check_spi() -> Result<(), &'static str> {
+    const CMD: u32 = SPI3_BASE + 0x00;
+    const USER: u32 = SPI3_BASE + 0x1C;
+    const MOSI_DLEN: u32 = SPI3_BASE + 0x28;
+    const W0: u32 = SPI3_BASE + 0x80;
+    const CMD_USR: u32 = 1 << 18;
+    const USER_USR_MOSI: u32 = 1 << 27;
+
+    // FIFO round-trip: write two data words and read them back verbatim.
+    reg_write(W0, 0xDEAD_BEEF);
+    reg_write(W0 + 4, 0x0102_0304);
+    if reg_read(W0) != 0xDEAD_BEEF {
+        return Err("spi-fifo-w0");
+    }
+    if reg_read(W0 + 4) != 0x0102_0304 {
+        return Err("spi-fifo-w1");
+    }
+
+    // Behavioural: arm a 4-byte MOSI transfer, fire CMD.USR, and confirm the
+    // controller cleared the USR bit synchronously (transaction completed).
+    reg_write(USER, USER_USR_MOSI);
+    reg_write(MOSI_DLEN, (4 * 8) - 1);
+    reg_write(CMD, CMD_USR);
+    if reg_read(CMD) & CMD_USR != 0 {
+        return Err("spi-cmd-usr-not-cleared");
+    }
+    Ok(())
+}
+
+// ── ledc (→ pwm): CONF1.DUTY_START latches staged DUTY into DUTY_R ─────────
+//
+// TRM §14 (LED PWM Controller at 0x3FF5_9000). HS channel 0 register block:
+//   HSCH0_DUTY   @ 0x08 — staged duty (Q4 fixed-point).
+//   HSCH0_CONF1  @ 0x0C — bit 31 (DUTY_START) commits staged DUTY → DUTY_R.
+//   HSCH0_DUTY_R @ 0x10 — live duty shadow, read back by ledc_get_duty().
+//
+// The model (`crates/core/src/peripherals/esp32/ledc.rs`) implements the
+// DUTY_START strobe: before the strobe DUTY_R reads 0; after it, DUTY_R equals
+// the staged DUTY. A round-trip stub would leave DUTY_R at 0 (it never copies
+// DUTY across), so the latch is genuine, register-observable PWM behaviour.
+// The matrix aliases `ledc` -> the pwm column.
+fn check_ledc() -> Result<(), &'static str> {
+    const CH0_DUTY: u32 = LEDC_BASE + 0x08;
+    const CH0_CONF1: u32 = LEDC_BASE + 0x0C;
+    const CH0_DUTY_R: u32 = LEDC_BASE + 0x10;
+    const DUTY_START: u32 = 1 << 31;
+    // Stage duty 512 in Q4 format (integer 512 → register value 512 << 4).
+    const STAGED: u32 = 512 << 4;
+
+    reg_write(CH0_DUTY, STAGED);
+    // Before the strobe, the live shadow must still be zero.
+    if reg_read(CH0_DUTY_R) != 0 {
+        return Err("ledc-duty-r-prematurely-set");
+    }
+    // Strobe DUTY_START — commits the staged duty into the live shadow.
+    reg_write(CH0_CONF1, DUTY_START);
+    if reg_read(CH0_DUTY_R) != STAGED {
+        return Err("ledc-duty-not-latched");
+    }
+    Ok(())
+}
+
 #[esp_hal::main]
 fn main() -> ! {
     let _peripherals = esp_hal::init(esp_hal::Config::default());
@@ -270,6 +352,9 @@ fn main() -> ! {
     report("timer", check_timer());
     report("irq", check_irq());
     report("dma", check_dma());
+    report("spi", check_spi());
+    // LEDC backs the pwm column (the matrix aliases `ledc` -> `pwm`).
+    report("ledc", check_ledc());
     uart0_write_line("TIER1 done");
 
     loop {
