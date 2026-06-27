@@ -128,9 +128,10 @@ fn report(class: &[u8], result: Result<(), &'static [u8]>) {
 // ── Checks ──────────────────────────────────────────────────────────────────
 
 /// clock: V2 (H5-style) RCC. HSI is on+ready out of reset; HSEON (bit 16) must
-/// latch HSERDY (bit 17); SW→SWS mirrors in RCC_CFGR1 @ 0x1C (WBA uses CFGR1
-/// for the SYSCLK switch, not the G4/WB CFGR @ 0x08); AHB2ENR @ 0x8C round-trips
-/// GPIO port enables.
+/// latch HSERDY (bit 17); SW→SWS in RCC_CFGR1 @ 0x1C is gated on the source
+/// being ready (WBA uses CFGR1 for the SYSCLK switch, not the G4/WB CFGR @ 0x08;
+/// RM0493 SW: 00 HSI16, 10 HSE, 11 PLL1R — 01 is reserved); AHB2ENR @ 0x8C
+/// round-trips GPIO port enables.
 fn check_clock() -> Result<(), &'static [u8]> {
     if rd32(RCC_BASE) & (1 << 1) == 0 {
         return Err(b"clock-hsirdy");
@@ -144,9 +145,13 @@ fn check_clock() -> Result<(), &'static [u8]> {
     if rd32(RCC_BASE) & (1 << 17) != 0 {
         return Err(b"clock-hserdy-stuck");
     }
-    // CFGR1 (0x1C) SW=01 → SWS must mirror.
-    wr32(RCC_BASE + 0x1C, 0x1);
-    if (rd32(RCC_BASE + 0x1C) >> 2) & 0x3 != 0x1 {
+    // Faithful SYSCLK switch: re-enable HSE and wait HSERDY, THEN select HSE
+    // (WBA SW=10). SWS follows only once the source is ready — the RCC gates it.
+    // (WBA SW=01 is a reserved encoding and never switches.)
+    wr32(RCC_BASE, cr | (1 << 16)); // HSEON
+    while rd32(RCC_BASE) & (1 << 17) == 0 {}
+    wr32(RCC_BASE + 0x1C, 0x2); // SW=10 = HSE
+    if (rd32(RCC_BASE + 0x1C) >> 2) & 0x3 != 0x2 {
         return Err(b"clock-sws");
     }
     // AHB2ENR round-trip: GPIOA/B/C/H enables.
