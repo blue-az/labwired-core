@@ -451,9 +451,14 @@ impl L4I2c {
                         self.state = I2cState::AddressPending;
                         self.cycles_remaining = 20;
                         self.start_armed = false;
-                    } else {
-                        self.isr |= 1 << 1; // TXIS: hardware requests the byte
                     }
+                    // For a write, TXIS is NOT asserted here: on real STM32 L4
+                    // silicon TXIS only sets once the address phase has been
+                    // clocked out and ACKed (hardware then requests the first
+                    // byte). Firmware reading ISR immediately after setting
+                    // CR2.START sees only BUSY|TXE (0x8001), not TXIS. The byte
+                    // request is modelled by the engine consuming TXDR after the
+                    // address ACK (see `tick`), so no premature TXIS is needed.
                 }
                 if (value & (1 << 14)) != 0 {
                     // STOP: release the bus and tear down any armed/in-flight
