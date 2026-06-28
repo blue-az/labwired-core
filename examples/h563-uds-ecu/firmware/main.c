@@ -86,6 +86,14 @@ static volatile uint32_t g_now_ms;
 #define USART_CR1_UE (1u << 0)
 #define USART_CR1_TE (1u << 3)
 
+/* RCC: FDCAN1 hangs off APB1H and is clock-gated out of reset (RM0481 §11.8.38).
+ * Its register surface reads 0 / ignores writes until RCC_APB1HENR.FDCAN1EN is
+ * set, so the clock MUST be enabled before any FDCAN access — the simulator
+ * models this gate (chip YAML `clock: { reg: apb1henr, bit: 9 }`). */
+#define RCC_BASE 0x44020C00u
+#define RCC_APB1HENR REG32(RCC_BASE + 0x0A0u)
+#define RCC_APB1HENR_FDCAN1EN (1u << 9)
+
 #define FDCAN1_BASE 0x4000A400u
 #define FDCAN_REG_TEST 0x010u
 #define FDCAN_REG_CCCR 0x018u
@@ -185,6 +193,12 @@ static void read_payload(uint32_t payload_addr, uint8_t *data, uint8_t len)
 
 static void fdcan_start(void)
 {
+    /* Enable the FDCAN1 bus-interface clock before touching its registers;
+     * without this the peripheral is held unclocked and every access is a no-op
+     * (reads 0), which silently breaks ISO-TP RX on real silicon and in-sim. */
+    RCC_APB1HENR |= RCC_APB1HENR_FDCAN1EN;
+    (void) RCC_APB1HENR; /* read-back: ensure the enable lands before use */
+
     REG32(fdcan_reg(FDCAN_REG_CCCR)) = CCCR_INIT | CCCR_CCE;
     REG32(fdcan_reg(FDCAN_REG_TEST)) = 0u;
     REG32(fdcan_reg(FDCAN_REG_CCCR)) = 0u;
