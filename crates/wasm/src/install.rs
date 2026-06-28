@@ -159,43 +159,56 @@ impl WasmSimulator {
 
         let symbol_addrs = labwired_loader::extract_arduino_esp32_thunks(elf_bytes);
 
+        // Real dual-core when a secondary APP_CPU is attached (the default for
+        // the Xtensa path). In that mode the firmware drives the SMP rendezvous
+        // itself on a genuine second core, so we must NOT forge the handshake
+        // flags or repin loopTask — doing so would race the real core. The
+        // single-core fallback (no secondary CPU) keeps the old stub behaviour.
+        let dual_core = machine.cpu_secondary.is_some();
+
         // Dual-core handshake bytes — resolved per firmware. Recorded for
         // the keep-alive in step_with_esp32_aids so the firmware's `.bss`
         // zero-init (which runs after this install but before the spin-wait
         // check in call_start_cpu0) can't wipe them.
         let mut handshake_bytes: Vec<u32> = Vec::new();
-        for sym in &[
-            "s_resume_cores",
-            "s_cpu_up",
-            "s_cpu_inited",
-            "s_system_inited",
-        ] {
-            if let Some(&addr) = symbol_addrs.get(*sym) {
-                let _ = machine.bus.write_u8(addr as u64, 0x01);
-                let _ = machine.bus.write_u8(addr as u64 + 1, 0x01);
-                handshake_bytes.push(addr);
-                handshake_bytes.push(addr + 1);
+        if !dual_core {
+            for sym in &[
+                "s_resume_cores",
+                "s_cpu_up",
+                "s_cpu_inited",
+                "s_system_inited",
+            ] {
+                if let Some(&addr) = symbol_addrs.get(*sym) {
+                    let _ = machine.bus.write_u8(addr as u64, 0x01);
+                    let _ = machine.bus.write_u8(addr as u64 + 1, 0x01);
+                    handshake_bytes.push(addr);
+                    handshake_bytes.push(addr + 1);
+                }
             }
-        }
-        if let Some(&addr) = symbol_addrs.get("s_other_cpu_startup_done") {
-            let _ = machine.bus.write_u8(addr as u64, 0x01);
-            handshake_bytes.push(addr);
+            if let Some(&addr) = symbol_addrs.get("s_other_cpu_startup_done") {
+                let _ = machine.bus.write_u8(addr as u64, 0x01);
+                handshake_bytes.push(addr);
+            }
         }
         // Re-assert these flags the instant PRO_CPU releases APP_CPU, so
         // newer arduino-esp32 cores whose `start_other_core` spin-waits
         // with a tight cycle-count timeout see APP_CPU "up" without
         // depending on the coarse 10k-cycle keep-alive in
         // step_with_esp32_aids. Models APP_CPU bring-up; see
-        // labwired_core rom_thunks::ets_set_appcpu_boot_addr.
+        // labwired_core rom_thunks::ets_set_appcpu_boot_addr. Empty list in
+        // real dual-core mode (the live APP_CPU marks the flags itself).
         labwired_core::peripherals::esp_xtensa_common::rom_thunks::set_appcpu_up_flags(
             handshake_bytes.clone(),
         );
 
-        // loopTask xCoreID patch — repin loopTask from APP_CPU to PRO_CPU
-        // (we model only PRO_CPU). Handles both the legacy and IDF-5.x
-        // app_main layouts. See rom_thunks::repin_loop_task.
-        if let Some(&app_main_addr) = symbol_addrs.get("app_main") {
-            let _ = rom_thunks::repin_loop_task(&mut machine.bus, app_main_addr);
+        // loopTask xCoreID patch — repin loopTask from APP_CPU to PRO_CPU.
+        // ONLY for the single-core fallback; with a real APP_CPU, loopTask
+        // genuinely runs on core 1 (CONFIG_ARDUINO_RUNNING_CORE=1) and must
+        // NOT be repinned. Handles both legacy and IDF-5.x app_main layouts.
+        if !dual_core {
+            if let Some(&app_main_addr) = symbol_addrs.get("app_main") {
+                let _ = rom_thunks::repin_loop_task(&mut machine.bus, app_main_addr);
+            }
         }
 
         // pxCurrentTCB pointer seed for xTaskGetCurrentTaskHandle thunk.
@@ -460,10 +473,16 @@ impl WasmSimulator {
                 .map_err(|e| JsValue::from_str(&format!("install thunk @{pc:#x}: {e}")))?;
         }
 
-        self.esp32_ipi = Some(Esp32IpiBridge {
-            handshake_bytes,
-            ..Esp32IpiBridge::default()
-        });
+        // Only arm the single-core IPI bridge / handshake keep-alive when there
+        // is no real APP_CPU. With real dual-core, step_with_esp32_aids delegates
+        // straight to Machine::step (which delivers the DPORT IPI), so the bridge
+        // would be dead weight.
+        if !dual_core {
+            self.esp32_ipi = Some(Esp32IpiBridge {
+                handshake_bytes,
+                ..Esp32IpiBridge::default()
+            });
+        }
         Ok(())
     }
 

@@ -249,7 +249,14 @@ impl WasmSimulator {
         bus.refresh_peripheral_index();
 
         let boxed: Box<dyn Cpu> = Box::new(cpu);
-        let mut machine = Machine::new(boxed, bus);
+        // Real dual-core: attach a second LX6 as APP_CPU (PRID 0xABAB → core 1,
+        // starts halted until PRO_CPU releases it via ets_set_appcpu_boot_addr).
+        // This replaces the old single-core handshake-forging stub: loopTask
+        // (pinned to CONFIG_ARDUINO_RUNNING_CORE=1) now runs on a genuine
+        // second core, and the cross-core yield IPI is delivered by the core's
+        // DPORT through Machine::step — see crates/core/tests/e2e_labwired_ereader.rs.
+        let app_cpu: Box<dyn Cpu> = Box::new(labwired_core::cpu::XtensaLx7::new_app_cpu());
+        let mut machine = Machine::new(boxed, bus).with_secondary_cpu(app_cpu);
 
         let program_image = load_elf_bytes(firmware)
             .map_err(|e| JsValue::from_str(&format!("Loader Error: {}", e)))?;
@@ -260,6 +267,13 @@ impl WasmSimulator {
         // We skip BROM emulation and jump straight to the ELF's app entry,
         // matching where a 2nd-stage bootloader would land.
         machine.cpu.set_pc(program_image.entry_point as u32);
+        // BROM seeds SP near top of DRAM before call_start_cpu0; we skip BROM,
+        // so seed both cores' stacks (APP_CPU in a separate DRAM region below
+        // PRO_CPU's), matching the native dual-core bring-up.
+        machine.cpu.set_sp(0x3FFE_0000);
+        if let Some(cpu1) = machine.cpu_secondary.as_mut() {
+            cpu1.set_sp(0x3FFD_8000);
+        }
 
         let board_io = manifest.board_io.clone();
 
@@ -517,6 +531,17 @@ impl WasmSimulator {
     /// been called yet.
     #[wasm_bindgen]
     pub fn step_with_esp32_aids(&mut self, cycles: u32) -> Result<(), JsValue> {
+        // Real dual-core: a genuine APP_CPU is attached, so the handshake
+        // keep-alive and the FROM_CPU IPI bridge below are unnecessary — the
+        // firmware drives the rendezvous itself and Machine::step delivers the
+        // cross-core IPI via the DPORT. Just step both cores.
+        if self
+            .machine
+            .as_ref()
+            .is_some_and(|m| m.cpu_secondary.is_some())
+        {
+            return self.step(cycles);
+        }
         if self.esp32_ipi.is_none() {
             return self.step(cycles);
         }
