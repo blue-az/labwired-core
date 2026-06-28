@@ -13,8 +13,12 @@ def statuses(path: str) -> dict:
 
 
 def main() -> int:
-    a, b = sys.argv[1], sys.argv[2]
-    return 0 if statuses(a) == statuses(b) else 1
+    try:
+        a, b = sys.argv[1], sys.argv[2]
+        return 0 if statuses(a) == statuses(b) else 1
+    except Exception as e:  # noqa: BLE001
+        print(f"tier1_status_equal: {e}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":

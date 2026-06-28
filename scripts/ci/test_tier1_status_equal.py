@@ -25,3 +25,16 @@ def test_differs_when_cell_added(tmp_path):
     a = _write(tmp_path, "a.json", {"esp32": {"adc": {"status": "pass"}}})
     b = _write(tmp_path, "b.json", {"esp32": {"adc": {"status": "pass"}, "spi": {"status": "pass"}}})
     assert _run(a, b) == 1
+
+
+def test_differs_when_cell_removed(tmp_path):
+    a = _write(tmp_path, "a.json", {"esp32": {"adc": {"status": "pass"}, "spi": {"status": "pass"}}})
+    b = _write(tmp_path, "b.json", {"esp32": {"adc": {"status": "pass"}}})
+    assert _run(a, b) == 1
+
+
+def test_error_exit_on_malformed(tmp_path):
+    good = _write(tmp_path, "g.json", {"esp32": {"adc": {"status": "pass"}}})
+    bad = tmp_path / "bad.json"
+    bad.write_text("{not json")
+    assert _run(good, str(bad)) == 2
