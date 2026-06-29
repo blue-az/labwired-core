@@ -33,6 +33,80 @@ firmware → real SPI3 + real DC GPIO → real panel model. The boot/runtime thu
 around it are plumbing; none fake the render. Drill into peripheral/device
 breadth (the product) and genericity-via-resident-ROM, not deeper boot emulation.
 
+## Temporal fidelity — completion events must not fire instantaneously
+
+There is a second class of fidelity gap that has nothing to do with faking a
+value: **getting the *timing* wrong.** A peripheral that performs a multi-cycle
+operation in the real world — a DMA/EasyDMA bus transfer, an ADC conversion, a
+flash page write, a UART byte — does not finish "on the next tick." It finishes
+microseconds later, and its completion EVENT (and the IRQ it raises) lands then.
+A model that fires the completion **synchronously, on the tick right after the
+firmware writes the START task, is a cheat** — it short-circuits the wall-clock
+the firmware's driver depends on, even though every register value is correct.
+
+**Why it breaks real firmware (the failure is non-obvious):** interrupt-driven
+RTOS drivers (Zephyr's `nrfx`, STM32 HAL `_IT`/`_DMA`, ESP-IDF, …) follow a
+launch-then-park pattern:
+
+```
+k_spin_lock();              // or a HAL critical section — IRQs masked / lock held
+nrfx_twim_xfer(...);        // writes TASKS_START* — the transfer begins
+k_spin_unlock();            // lock released
+k_sem_take(&done, FOREVER); // park; the ISR will give the sem, IRQs enabled
+```
+
+On silicon the completion IRQ arrives long after the lock is released. If the
+model fires it on the very next tick, **the IRQ preempts the driver while the
+spinlock is still held** → the ISR re-takes the same lock → recursive-spinlock
+fault (or re-entrancy the driver never expects), and the firmware wedges *before
+it ever reaches `main()`*. The simulator looks "fast"; the firmware looks broken.
+
+### Case study: nRF52 TWIM I²C (`peripherals/nrf52/twim.rs`, 2026-06-30)
+
+- **Symptom:** a real Zephyr BME280 firmware never printed its boot banner. The
+  CPU was pinned in `__nrfy_internal_twim_event_handle` → `z_spin_lock_valid`
+  (recursive-spinlock). The sim executed millions of steps; the firmware made no
+  progress.
+- **Root cause:** `tick_with_bus` performed the I²C transfer and set
+  `EVENTS_SUSPENDED`/`STOPPED` (raising the IRQ) on the first tick after
+  `TASKS_STARTTX`. With `peripheral_tick_interval = 1` that is the very next
+  instruction — the IRQ fired inside the nrfx driver's transfer-launch critical
+  section.
+- **Fix:** model the wire time. `Nrf52Twim::transfer_cycles(bytes)` derives the
+  transfer latency from the real bit-rate — `(bytes+1) × 9 bits × (core_hz /
+  scl_hz)` (≈5760 cycles for one byte at 100 kHz on the 64 MHz core) — and a
+  `busy_cycles` countdown holds the completion EVENTS/IRQ until that budget,
+  decremented by `peripheral_tick_interval` each `tick_with_bus`, elapses. The
+  IRQ now lands after the driver has dropped its lock and parked in `k_sem_take`.
+- **Silicon cross-check:** the *same* `zephyr.elf`, flashed to a real nRF52840
+  over SWD (ST-Link), boots fully to `arch_cpu_idle` and leaves the TWIM at
+  `ENABLE=6`, all `EVENTS=0` — i.e. real silicon clears the event and idles,
+  never storming. After the fix the sim matches: it boots Zephyr and runs the
+  test suite. This is the oracle for the class: *the firmware must reach the same
+  idle/ready state the silicon reaches.*
+
+### The general rule (applies to every chip)
+
+Any peripheral whose real operation spans more than a handful of cycles **and**
+can raise an interrupt on completion must model that latency before firing the
+completion EVENT/IRQ. Derive the delay from physics (byte/bit count × clock,
+conversion time, page-program time) — not a magic constant — so it scales with
+the transfer and the configured speed, and make the countdown interval-aware so
+it is independent of `peripheral_tick_interval`. `transfer_cycles` /
+`busy_cycles` in `twim.rs` is the reference implementation.
+
+**At-risk models elsewhere (audit when an interrupt-driven driver hangs at
+boot):** any peripheral that sets a completion/`LAST*`/`DONE`/`TC`/`EOC` event
+inside its `tick`/`tick_with_bus` on the same tick as the START task — e.g. the
+nRF52 SPIM and UARTE EasyDMA paths, STM32 SPI/I²C/DMA `TC`/`TXE`/`RXNE`
+completions, ESP32 SPI/I²C command-list `done` interrupts, and any ADC/SAADC
+that flags `EOC`/`END` immediately. A polling driver tolerates a zero-latency
+completion; an interrupt-driven one on an RTOS may not. Find candidates with:
+
+```sh
+grep -rn "events_.* = 1\|_done = 1\|tc = 1\|eoc = 1" crates/core/src/peripherals --include="*.rs"
+```
+
 ## Marker convention
 
 Every cheat in the code carries a grep-able marker on the line or block:
