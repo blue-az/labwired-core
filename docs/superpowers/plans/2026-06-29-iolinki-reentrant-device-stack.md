@@ -2,161 +2,44 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Redesign the C `iolinki` device stack so one host process can run several isolated real IO-Link devices against one or more real C master ports, without fake protocol shims or prefixed duplicate builds.
+**Goal:** Redesign the C `iolinki` device stack so one host process can run several isolated real IO-Link devices against several real C master ports, without fake protocol shims, global singleton state, or prefixed duplicate C builds.
 
-**Architecture:** Add an explicit `iolink_device_t` instance API and move current singleton state behind it. Preserve the existing global `iolink_*` API as a compatibility wrapper around one static instance, then update LabWired native conformance to instantiate several real device stacks in the same process.
+**Architecture:** Follow the proven UDSLib shape: caller-owned protocol contexts, borrowed immutable config, app/transport/storage callbacks with `void *user`, and no hidden allocation. Replace singleton `iolink_*` entry points with `iolink_device_ctx_t` as the public device instance API. Keep `iolinki-master` separate: master role state stays in `iolink_master_port_t` / `iolink_master_controller_t`, while `iolinki` owns device role state, parameters, object dictionary, events, and Data Storage server behavior.
 
 **Tech Stack:** C99, CMake/CTest, CMocka, existing `iolinki` C stack, `iolinki-master` C master, LabWired Rust `iolink-native` feature.
 
 ---
 
+## Delegated Architecture Inputs
+
+Three read-only subagents reviewed the architecture before this plan revision:
+
+- `iolinki` audit: lower engines are already mostly context based: `iolink_dll_ctx_t`, `iolink_isdu_ctx_t`, `iolink_ds_ctx_t`, events, and frame helpers. Singleton blockers are `iolink_core.c`, `device_info.c`, `params.c`, `isdu.c` Direct Parameter page 2, and DS calls to global params.
+- UDSLib audit: best pattern is caller-owned `uds_ctx_t`, borrowed `uds_config_t`, caller-provided RX/TX buffers, clock/transport/storage callbacks, `void *app_data`, optional lock hooks, and role separation. IO-Link should mirror that.
+- `iolinki-master` audit: master side is already reentrant. Multi-device conformance should use `N` `iolink_master_port_t` ports under one `iolink_master_controller_t`, paired with `N` real `iolink_device_ctx_t` instances.
+
 ## Scope And Stop Gates
 
-This plan has two implementation roots:
+Implementation roots:
 
 - Device stack: `/home/andrii/projects/labwired/core/.worktrees/iolink-simulator-conformance/third_party/iolinki`
+- Master stack reference: `/home/andrii/projects/iolinki-master`
 - LabWired integration: `/home/andrii/projects/labwired/core/.worktrees/iolink-simulator-conformance`
 
-The device stack submodule is detached in this worktree. Before implementation, create a dedicated branch or worktree for the upstream `iolinki` repo and make the LabWired submodule point at the resulting commit only after device-stack tests pass.
+Before implementation, create a real branch/worktree for the upstream `iolinki` repo. The submodule in LabWired should be advanced only after device-stack tests pass.
 
 Stop gates:
 
-- Do not change `iolinki-master` public behavior to hide device-stack problems.
-- Do not use prefixed duplicate C builds as the final architecture.
-- Do not claim "multi-device LabWired conformance" until one process runs at least two independent `iolink_device_t` instances with separate PD, ISDU writable tags, device info, events, and data-storage state.
-- Keep legacy `iolink_init()`, `iolink_process()`, `iolink_pd_input_update()`, and related APIs working until all examples/tests are migrated.
+- Do not change `iolinki-master` public behavior to hide device-stack flaws.
+- Do not put master ISDU/client state into the device context.
+- Do not require consumers to mutate context internals directly. The context may be a complete public struct for static allocation, matching UDSLib, but fields are private by convention and normal consumers use accessor functions.
+- Do not preserve the old singleton `iolink_*` API. There are no external users yet; tests, examples, and LabWired integration should migrate to the reentrant API directly.
+- Do not rely on process-per-device, prefixed duplicate builds, or fake Rust devices as the final architecture.
+- Do not claim multi-device LabWired conformance until one process runs at least two independent real `iolink_device_ctx_t` instances with separate PD, ISDU writable tags, device info, events, Direct Parameter page 2, and Data Storage state.
 
-## File Structure
+## Public API Shape
 
-Device-stack files:
-
-- Create `third_party/iolinki/include/iolinki/device.h`: public reentrant instance API and `iolink_device_t` type.
-- Modify `third_party/iolinki/include/iolinki/iolink.h`: include `device.h` and document legacy singleton wrappers.
-- Modify `third_party/iolinki/include/iolinki/application.h`: add instance-aware PD APIs while preserving existing wrappers.
-- Modify `third_party/iolinki/include/iolinki/device_info.h`: add `iolink_device_info_ctx_t` and context APIs.
-- Modify `third_party/iolinki/include/iolinki/params.h`: add `iolink_params_ctx_t` and context APIs.
-- Modify `third_party/iolinki/include/iolinki/isdu.h`: add device backlink in `iolink_isdu_ctx_t`.
-- Modify `third_party/iolinki/include/iolinki/data_storage.h`: add parameter callbacks to `iolink_ds_ctx_t`.
-- Modify `third_party/iolinki/src/iolink_core.c`: implement `iolink_device_*` and legacy wrappers.
-- Modify `third_party/iolinki/src/device_info.c`: move globals into context-backed implementation.
-- Modify `third_party/iolinki/src/params.c`: move NVM shadow and device-info dependency into context-backed implementation.
-- Modify `third_party/iolinki/src/isdu.c`: route parameter/device-info access through the owning device instance.
-- Modify `third_party/iolinki/src/data_storage.c`: route DS image build/apply through parameter callbacks instead of global functions.
-- Modify `third_party/iolinki/tests/CMakeLists.txt`: add reentrant tests.
-- Create `third_party/iolinki/tests/test_reentrant_device.c`: proves several device instances in one process.
-
-LabWired files:
-
-- Modify `crates/core/native/iolink_conformance.c`: replace singleton real-device helper with several `iolink_device_t` instances.
-- Modify `crates/core/src/peripherals/components/iolink_master.rs`: add/assert multi-device native conformance result.
-- Modify `crates/core/build.rs`: compile new `device.h` dependencies if needed; keep POSIX define.
-
-## Task 1: Add Public Reentrant Device API As A Red Test
-
-**Files:**
-
-- Create: `third_party/iolinki/include/iolinki/device.h`
-- Create: `third_party/iolinki/tests/test_reentrant_device.c`
-- Modify: `third_party/iolinki/tests/CMakeLists.txt`
-
-- [ ] **Step 1: Create the failing public-header test**
-
-Add this file:
-
-```c
-/* third_party/iolinki/tests/test_reentrant_device.c */
-#include <setjmp.h>
-#include <stdarg.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <string.h>
-
-#include <cmocka.h>
-
-#include "iolinki/device.h"
-
-typedef struct
-{
-    uint8_t rx[64];
-    uint8_t rx_head;
-    uint8_t rx_len;
-    uint8_t tx[64];
-    uint8_t tx_len;
-    int wakeup;
-} test_phy_t;
-
-static int noop(void)
-{
-    return 0;
-}
-
-static void test_device_instance_api_initializes_two_devices(void** state)
-{
-    (void)state;
-    test_phy_t phy_a_state = {0};
-    test_phy_t phy_b_state = {0};
-    iolink_device_t dev_a;
-    iolink_device_t dev_b;
-    static const iolink_phy_api_t phy = {
-        .init = noop,
-    };
-    iolink_config_t cfg_a = {
-        .m_seq_type = IOLINK_M_SEQ_TYPE_1_1,
-        .min_cycle_time = 10U,
-        .pd_in_len = 1U,
-        .pd_out_len = 0U,
-        .t_pd_us = 0U,
-    };
-    iolink_config_t cfg_b = {
-        .m_seq_type = IOLINK_M_SEQ_TYPE_2_1,
-        .min_cycle_time = 10U,
-        .pd_in_len = 2U,
-        .pd_out_len = 2U,
-        .t_pd_us = 0U,
-    };
-
-    (void)phy_a_state;
-    (void)phy_b_state;
-
-    assert_int_equal(iolink_device_init(&dev_a, &phy, &cfg_a), 0);
-    assert_int_equal(iolink_device_init(&dev_b, &phy, &cfg_b), 0);
-    assert_int_equal(iolink_device_get_pd_in_len(&dev_a), 1U);
-    assert_int_equal(iolink_device_get_pd_out_len(&dev_a), 0U);
-    assert_int_equal(iolink_device_get_pd_in_len(&dev_b), 2U);
-    assert_int_equal(iolink_device_get_pd_out_len(&dev_b), 2U);
-}
-
-int main(void)
-{
-    const struct CMUnitTest tests[] = {
-        cmocka_unit_test(test_device_instance_api_initializes_two_devices),
-    };
-    return cmocka_run_group_tests(tests, NULL, NULL);
-}
-```
-
-- [ ] **Step 2: Register the failing test**
-
-In `third_party/iolinki/tests/CMakeLists.txt`, add inside the `if(CMOCKA_FOUND)` block:
-
-```cmake
-    add_iolink_test(test_reentrant_device test_reentrant_device.c)
-```
-
-- [ ] **Step 3: Verify the test fails because the API does not exist**
-
-Run:
-
-```bash
-cmake -S third_party/iolinki -B /tmp/iolinki-reentrant-build -DBUILD_TESTING=ON
-cmake --build /tmp/iolinki-reentrant-build --target test_reentrant_device
-```
-
-Expected: build fails with an error like `iolinki/device.h: No such file or directory` or unknown type `iolink_device_t`.
-
-- [ ] **Step 4: Add the public header skeleton**
-
-Create `third_party/iolinki/include/iolinki/device.h`:
+Create `third_party/iolinki/include/iolinki/device.h` with a caller-owned context. Like UDSLib, the struct is complete so embedded users can allocate it on the stack, in static storage, or inside a board/port object. Fields are documented as private; API users should use functions rather than direct field mutation.
 
 ```c
 #ifndef IOLINK_DEVICE_H
@@ -168,39 +51,208 @@ Create `third_party/iolinki/include/iolinki/device.h`:
 #include "iolinki/dll.h"
 #include "iolinki/iolink.h"
 #include "iolinki/params.h"
+#include "iolinki/phy.h"
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+typedef uint64_t (*iolink_device_time_us_fn)(void* user);
+typedef void (*iolink_device_lock_fn)(void* user);
+typedef void (*iolink_device_unlock_fn)(void* user);
 
 typedef struct
 {
-    iolink_dll_ctx_t dll;
-    iolink_config_t config;
-    iolink_params_ctx_t params;
-    iolink_device_info_ctx_t device_info;
-    const iolink_app_callbacks_t* app_callbacks;
-    iolink_reset_handler_t reset_handler;
     void* user;
-} iolink_device_t;
+    int (*init)(void* user);
+    void (*set_mode)(void* user, iolink_phy_mode_t mode);
+    void (*set_baudrate)(void* user, iolink_baudrate_t baudrate);
+    int (*send)(void* user, const uint8_t* data, size_t len);
+    int (*recv_byte)(void* user, uint8_t* byte);
+    int (*detect_wakeup)(void* user);
+    void (*set_cq_line)(void* user, uint8_t state);
+    int (*get_voltage_mv)(void* user);
+    bool (*is_short_circuit)(void* user);
+} iolink_device_phy_t;
 
-int iolink_device_init(iolink_device_t* dev,
-                       const iolink_phy_api_t* phy,
-                       const iolink_config_t* config);
-void iolink_device_process(iolink_device_t* dev);
-int iolink_device_pd_input_update(iolink_device_t* dev,
+typedef struct
+{
+    iolink_device_phy_t phy;
+    iolink_config_t stack;
+    const iolink_app_callbacks_t* app_callbacks;
+    const iolink_device_info_t* device_info;
+    const iolink_ds_storage_api_t* ds_storage;
+    iolink_device_time_us_fn time_us;
+    iolink_device_lock_fn lock;
+    iolink_device_unlock_fn unlock;
+    void* user;
+} iolink_device_config_t;
+
+typedef struct
+{
+    /* Private fields. Allocate this object directly, but use API functions. */
+    iolink_dll_ctx_t dll;
+    iolink_config_t stack_config;
+    iolink_device_info_ctx_t device_info;
+    iolink_params_ctx_t params;
+    const iolink_device_config_t* config;
+    iolink_reset_handler_t reset_handler;
+    uint8_t direct_param_page2[16];
+} iolink_device_ctx_t;
+
+size_t iolink_device_ctx_size(void);
+int iolink_device_init(iolink_device_ctx_t* ctx, const iolink_device_config_t* config);
+void iolink_device_process(iolink_device_ctx_t* ctx);
+int iolink_device_pd_input_update(iolink_device_ctx_t* ctx,
                                   const uint8_t* data,
                                   size_t len,
                                   bool valid);
-int iolink_device_pd_output_read(iolink_device_t* dev, uint8_t* data, size_t len);
-void iolink_device_app_register(iolink_device_t* dev, const iolink_app_callbacks_t* callbacks);
-void iolink_device_set_reset_handler(iolink_device_t* dev, iolink_reset_handler_t handler);
-iolink_events_ctx_t* iolink_device_get_events_ctx(iolink_device_t* dev);
-iolink_ds_ctx_t* iolink_device_get_ds_ctx(iolink_device_t* dev);
-iolink_dll_state_t iolink_device_get_state(const iolink_device_t* dev);
-uint8_t iolink_device_get_pd_in_len(const iolink_device_t* dev);
-uint8_t iolink_device_get_pd_out_len(const iolink_device_t* dev);
+int iolink_device_pd_output_read(iolink_device_ctx_t* ctx, uint8_t* data, size_t len);
+void iolink_device_set_reset_handler(iolink_device_ctx_t* ctx, iolink_reset_handler_t handler);
+iolink_events_ctx_t* iolink_device_get_events_ctx(iolink_device_ctx_t* ctx);
+iolink_ds_ctx_t* iolink_device_get_ds_ctx(iolink_device_ctx_t* ctx);
+iolink_dll_state_t iolink_device_get_state(const iolink_device_ctx_t* ctx);
+iolink_phy_mode_t iolink_device_get_phy_mode(const iolink_device_ctx_t* ctx);
+iolink_baudrate_t iolink_device_get_baudrate(const iolink_device_ctx_t* ctx);
+void iolink_device_get_dll_stats(const iolink_device_ctx_t* ctx, iolink_dll_stats_t* out_stats);
+void iolink_device_set_timing_enforcement(iolink_device_ctx_t* ctx, bool enable);
+void iolink_device_set_t_ren_limit_us(iolink_device_ctx_t* ctx, uint32_t limit_us);
+iolink_m_seq_type_t iolink_device_get_m_seq_type(const iolink_device_ctx_t* ctx);
+uint8_t iolink_device_get_pd_in_len(const iolink_device_ctx_t* ctx);
+uint8_t iolink_device_get_pd_out_len(const iolink_device_ctx_t* ctx);
+int iolink_device_set_pd_length(iolink_device_ctx_t* ctx,
+                                uint8_t pd_in_len,
+                                uint8_t pd_out_len);
 
 #endif
 ```
 
-- [ ] **Step 5: Re-run and verify the next failure**
+Keep `iolink_device_ctx_size()` as a compile/runtime sanity helper, but normal C users can simply declare `iolink_device_ctx_t device;`.
+
+Remove direct production use of the old `iolink_phy_api_t` as part of this migration. New multi-instance code must use `iolink_device_phy_t` so every callback receives its own per-port `user` pointer. This is the same ownership rule as UDSLib transport callbacks and prevents active-context globals in LabWired.
+
+## File Structure
+
+Device stack:
+
+- Create `third_party/iolinki/include/iolinki/device.h`: reentrant public API.
+- Modify `third_party/iolinki/include/iolinki/iolink.h`: remove singleton public API declarations or turn it into a transition include for `device.h`.
+- Modify `third_party/iolinki/include/iolinki/phy.h`: introduce or document `iolink_device_phy_t` as the new user-aware transport model.
+- Modify `third_party/iolinki/include/iolinki/device_info.h`: add `iolink_device_info_ctx_t`.
+- Modify `third_party/iolinki/include/iolinki/params.h`: add `iolink_params_ctx_t`.
+- Modify `third_party/iolinki/include/iolinki/isdu.h`: replace implicit global dependencies with backend pointers.
+- Modify `third_party/iolinki/include/iolinki/data_storage.h`: add parameter backend callbacks to `iolink_ds_ctx_t`.
+- Modify `third_party/iolinki/include/iolinki/dll.h`: add owner/dependency pointer only if needed by ISDU/DLL callbacks.
+- Modify `third_party/iolinki/src/iolink_core.c`: implement `iolink_device_*` and remove global singleton state.
+- Modify `third_party/iolinki/src/device_info.c`: move default identity, app tag, and access locks into context.
+- Modify `third_party/iolinki/src/params.c`: move writable tags/NVM shadow into context.
+- Modify `third_party/iolinki/src/isdu.c`: route params/device-info/Direct Parameter page 2 through the owning context.
+- Modify `third_party/iolinki/src/data_storage.c`: route parameter image build/apply through context callbacks.
+- Create `third_party/iolinki/tests/test_reentrant_device.c`: public API and isolation tests.
+- Create `third_party/iolinki/tests/test_multi_device_real_master.c`: real master against several real device instances.
+
+LabWired:
+
+- Modify `crates/core/native/iolink_conformance.c`: use per-port link state and several `iolink_device_ctx_t` instances.
+- Modify `crates/core/src/peripherals/components/iolink_master.rs`: assert multi-device native conformance.
+- Modify `crates/core/build.rs`: compile new device-stack files and keep `_POSIX_C_SOURCE` define.
+
+## Task 1: Red-Test The Public Reentrant API
+
+**Files:**
+
+- Create: `third_party/iolinki/include/iolinki/device.h`
+- Create: `third_party/iolinki/tests/test_reentrant_device.c`
+- Modify: `third_party/iolinki/tests/CMakeLists.txt`
+
+- [ ] **Step 1: Write the failing public API test**
+
+Create `third_party/iolinki/tests/test_reentrant_device.c`:
+
+```c
+#include <setjmp.h>
+#include <stdarg.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#include <cmocka.h>
+
+#include "iolinki/device.h"
+
+static int noop_user(void* user)
+{
+    (void)user;
+    return 0;
+}
+
+static void test_device_context_api_initializes_two_configs(void** state)
+{
+    (void)state;
+    iolink_device_ctx_t dev_a;
+    iolink_device_ctx_t dev_b;
+    static iolink_device_phy_t phy = {.init = noop_user};
+    iolink_device_config_t cfg_a = {
+        .phy = phy,
+        .stack = {
+            .m_seq_type = IOLINK_M_SEQ_TYPE_1_1,
+            .min_cycle_time = 10U,
+            .pd_in_len = 1U,
+            .pd_out_len = 0U,
+            .t_pd_us = 0U,
+        },
+    };
+    iolink_device_config_t cfg_b = {
+        .phy = phy,
+        .stack = {
+            .m_seq_type = IOLINK_M_SEQ_TYPE_2_1,
+            .min_cycle_time = 10U,
+            .pd_in_len = 2U,
+            .pd_out_len = 2U,
+            .t_pd_us = 0U,
+        },
+    };
+
+    assert_true(iolink_device_ctx_size() == sizeof(iolink_device_ctx_t));
+    assert_int_equal(iolink_device_init(&dev_a, &cfg_a), 0);
+    assert_int_equal(iolink_device_init(&dev_b, &cfg_b), 0);
+    assert_int_equal(iolink_device_get_pd_in_len(&dev_a), 1U);
+    assert_int_equal(iolink_device_get_pd_out_len(&dev_a), 0U);
+    assert_int_equal(iolink_device_get_pd_in_len(&dev_b), 2U);
+    assert_int_equal(iolink_device_get_pd_out_len(&dev_b), 2U);
+}
+
+int main(void)
+{
+    const struct CMUnitTest tests[] = {
+        cmocka_unit_test(test_device_context_api_initializes_two_configs),
+    };
+    return cmocka_run_group_tests(tests, NULL, NULL);
+}
+```
+
+- [ ] **Step 2: Register the failing test**
+
+In `third_party/iolinki/tests/CMakeLists.txt`, add inside `if(CMOCKA_FOUND)`:
+
+```cmake
+    add_iolink_test(test_reentrant_device test_reentrant_device.c)
+```
+
+- [ ] **Step 3: Verify the red failure**
+
+Run:
+
+```bash
+cmake -S third_party/iolinki -B /tmp/iolinki-reentrant-build -DBUILD_TESTING=ON
+cmake --build /tmp/iolinki-reentrant-build --target test_reentrant_device
+```
+
+Expected: build fails on missing `iolinki/device.h` or undefined `iolink_device_ctx_t`.
+
+- [ ] **Step 4: Add header skeleton only**
+
+Create `third_party/iolinki/include/iolinki/device.h` with the API from the Public API Shape section.
+
+- [ ] **Step 5: Verify the next failure**
 
 Run:
 
@@ -208,7 +260,7 @@ Run:
 cmake --build /tmp/iolinki-reentrant-build --target test_reentrant_device
 ```
 
-Expected: build now fails on missing `iolink_params_ctx_t`, `iolink_device_info_ctx_t`, or undefined `iolink_device_*` symbols.
+Expected: compile or link failure for missing implementation symbols.
 
 - [ ] **Step 6: Commit the red API test**
 
@@ -217,30 +269,30 @@ git -C third_party/iolinki add include/iolinki/device.h tests/test_reentrant_dev
 git -C third_party/iolinki commit -m "test: define reentrant device API expectations"
 ```
 
-## Task 2: Add Context Types Without Changing Legacy Behavior
+## Task 2: Introduce Context Backends For Device Info And Parameters
 
 **Files:**
 
-- Modify: `third_party/iolinki/include/iolinki/params.h`
 - Modify: `third_party/iolinki/include/iolinki/device_info.h`
-- Modify: `third_party/iolinki/src/params.c`
+- Modify: `third_party/iolinki/include/iolinki/params.h`
 - Modify: `third_party/iolinki/src/device_info.c`
+- Modify: `third_party/iolinki/src/params.c`
 
-- [ ] **Step 1: Add context structs to public headers**
+- [ ] **Step 1: Add context types**
 
-In `third_party/iolinki/include/iolinki/device_info.h`, add after `iolink_device_info_t`:
+In `device_info.h`, add:
 
 ```c
 typedef struct
 {
-    const iolink_device_info_t* info;
-    iolink_device_info_t default_info;
+    const iolink_device_info_t* configured;
+    iolink_device_info_t defaults;
     char application_tag[33];
     uint16_t access_locks;
 } iolink_device_info_ctx_t;
 
 void iolink_device_info_ctx_init(iolink_device_info_ctx_t* ctx,
-                                 const iolink_device_info_t* info);
+                                 const iolink_device_info_t* configured);
 const iolink_device_info_t* iolink_device_info_ctx_get(const iolink_device_info_ctx_t* ctx);
 int iolink_device_info_ctx_set_application_tag(iolink_device_info_ctx_t* ctx,
                                                const char* tag,
@@ -249,7 +301,7 @@ uint16_t iolink_device_info_ctx_get_access_locks(const iolink_device_info_ctx_t*
 void iolink_device_info_ctx_set_access_locks(iolink_device_info_ctx_t* ctx, uint16_t locks);
 ```
 
-In `third_party/iolinki/include/iolinki/params.h`, add:
+In `params.h`, add:
 
 ```c
 #include "iolinki/device_info.h"
@@ -280,382 +332,57 @@ int iolink_params_ctx_set(iolink_params_ctx_t* ctx,
 void iolink_params_ctx_factory_reset(iolink_params_ctx_t* ctx);
 ```
 
-- [ ] **Step 2: Implement context-backed device-info functions**
+- [ ] **Step 2: Implement context functions and remove singleton storage**
 
-In `third_party/iolinki/src/device_info.c`, keep the existing globals, but implement the context functions first. Use the current default values from `g_default_info`:
+Move existing `g_device_info`, `g_default_info`, `g_app_tag_buffer`, and `g_nvm_shadow` behavior into context functions. Delete the file-static parameter/device-info state after the context tests are green. Any existing tests that call singleton helpers must be migrated to context helpers in this task.
 
-```c
-void iolink_device_info_ctx_init(iolink_device_info_ctx_t* ctx,
-                                 const iolink_device_info_t* info)
-{
-    if(ctx == NULL) {
-        return;
-    }
-    memset(ctx, 0, sizeof(*ctx));
-    ctx->default_info = g_default_info;
-    memcpy(ctx->application_tag, "DefaultTag", 10U);
-    ctx->default_info.application_tag = ctx->application_tag;
-    ctx->access_locks = ctx->default_info.access_locks;
-    ctx->info = (info != NULL) ? info : &ctx->default_info;
-}
-```
-
-Then implement:
+The new call shape must be:
 
 ```c
-const iolink_device_info_t* iolink_device_info_ctx_get(const iolink_device_info_ctx_t* ctx);
-int iolink_device_info_ctx_set_application_tag(iolink_device_info_ctx_t* ctx,
-                                               const char* tag,
-                                               uint8_t len);
-uint16_t iolink_device_info_ctx_get_access_locks(const iolink_device_info_ctx_t* ctx);
-void iolink_device_info_ctx_set_access_locks(iolink_device_info_ctx_t* ctx, uint16_t locks);
+iolink_device_info_ctx_t info;
+iolink_params_ctx_t params;
+
+iolink_device_info_ctx_init(&info, NULL);
+iolink_params_ctx_init(&params, &info);
+int n = iolink_params_ctx_get(&params, index, subindex, buffer, sizeof(buffer));
 ```
 
-Make existing legacy functions call the context functions on a static legacy context. Preserve the old public behavior.
+- [ ] **Step 3: Add context isolation assertions**
 
-- [ ] **Step 3: Implement context-backed params functions**
-
-In `third_party/iolinki/src/params.c`, introduce context implementations and make legacy functions call a static legacy context:
+Extend `test_reentrant_device.c` with:
 
 ```c
-static iolink_device_info_ctx_t g_legacy_device_info;
-static iolink_params_ctx_t g_legacy_params;
-static bool g_legacy_params_init;
-```
-
-Legacy init:
-
-```c
-void iolink_params_init(void)
-{
-    if(!g_legacy_params_init) {
-        iolink_device_info_ctx_init(&g_legacy_device_info, NULL);
-        iolink_params_ctx_init(&g_legacy_params, &g_legacy_device_info);
-        g_legacy_params_init = true;
-    }
-}
-```
-
-Context init:
-
-```c
-void iolink_params_ctx_init(iolink_params_ctx_t* ctx, iolink_device_info_ctx_t* device_info)
-{
-    if(ctx == NULL) {
-        return;
-    }
-    memset(ctx, 0, sizeof(*ctx));
-    ctx->device_info = device_info;
-}
-```
-
-Move the existing get/set/factory-reset switch logic into `iolink_params_ctx_get`, `iolink_params_ctx_set`, and `iolink_params_ctx_factory_reset`.
-
-- [ ] **Step 4: Verify legacy tests still pass**
-
-Run:
-
-```bash
-cmake --build /tmp/iolinki-reentrant-build
-ctest --test-dir /tmp/iolinki-reentrant-build --output-on-failure
-```
-
-Expected: existing tests pass; `test_reentrant_device` may still fail on undefined `iolink_device_*` until Task 3.
-
-- [ ] **Step 5: Commit context type migration**
-
-```bash
-git -C third_party/iolinki add include/iolinki/params.h include/iolinki/device_info.h src/params.c src/device_info.c
-git -C third_party/iolinki commit -m "refactor: add context-backed device parameters"
-```
-
-## Task 3: Implement `iolink_device_t` Core And Legacy Wrappers
-
-**Files:**
-
-- Modify: `third_party/iolinki/include/iolinki/iolink.h`
-- Modify: `third_party/iolinki/include/iolinki/application.h`
-- Modify: `third_party/iolinki/src/iolink_core.c`
-- Test: `third_party/iolinki/tests/test_reentrant_device.c`
-
-- [ ] **Step 1: Update headers for compatibility**
-
-In `third_party/iolinki/include/iolinki/iolink.h`, include the new header near the end of declarations without creating a recursive include loop. If needed, forward declare `struct iolink_device` in `device.h` and move full struct layout into `src/iolink_core.c`.
-
-In `third_party/iolinki/include/iolinki/application.h`, add instance APIs:
-
-```c
-struct iolink_device;
-typedef struct iolink_device iolink_device_t;
-
-int iolink_device_pd_input_update(iolink_device_t* dev,
-                                  const uint8_t* data,
-                                  size_t len,
-                                  bool valid);
-int iolink_device_pd_output_read(iolink_device_t* dev, uint8_t* data, size_t len);
-void iolink_device_app_register(iolink_device_t* dev, const iolink_app_callbacks_t* callbacks);
-```
-
-- [ ] **Step 2: Implement device init and process**
-
-In `third_party/iolinki/src/iolink_core.c`, replace singleton globals with:
-
-```c
-static iolink_device_t g_legacy_device;
-static bool g_legacy_device_initialized;
-```
-
-Implement:
-
-```c
-int iolink_device_init(iolink_device_t* dev,
-                       const iolink_phy_api_t* phy,
-                       const iolink_config_t* config)
-{
-    if((dev == NULL) || (phy == NULL)) {
-        return -1;
-    }
-
-    memset(dev, 0, sizeof(*dev));
-    if(config != NULL) {
-        memcpy(&dev->config, config, sizeof(dev->config));
-    } else {
-        dev->config.m_seq_type = IOLINK_M_SEQ_TYPE_0;
-        dev->config.min_cycle_time = 0U;
-    }
-
-    if(phy->init != NULL) {
-        int err = phy->init();
-        if(err != 0) {
-            return err;
-        }
-    }
-
-    iolink_device_info_ctx_init(&dev->device_info, NULL);
-    iolink_params_ctx_init(&dev->params, &dev->device_info);
-    iolink_dll_init(&dev->dll, phy);
-    dev->dll.owner = dev;
-    dev->dll.state_cb = core_state_cb;
-    dev->dll.m_seq_type = (uint8_t)dev->config.m_seq_type;
-    dev->dll.pd_in_len = dev->config.pd_in_len;
-    dev->dll.pd_out_len = dev->config.pd_out_len;
-    dev->dll.min_cycle_time_us = (uint32_t)dev->config.min_cycle_time * 100U;
-    dev->dll.t_pd_delay_us = dev->config.t_pd_us;
-    return 0;
-}
-```
-
-If `iolink_dll_ctx_t` does not yet have `owner`, add `void* owner;` to `third_party/iolinki/include/iolinki/dll.h`.
-
-- [ ] **Step 3: Implement instance operations**
-
-In `third_party/iolinki/src/iolink_core.c`, implement:
-
-```c
-void iolink_device_process(iolink_device_t* dev)
-{
-    if(dev == NULL) {
-        return;
-    }
-    iolink_dll_process(&dev->dll);
-    if(dev->dll.isdu.reset_pending) {
-        dev->dll.isdu.reset_pending = false;
-        if(dev->reset_handler != NULL) {
-            dev->reset_handler(IOLINK_RESET_DEVICE);
-        }
-    }
-    if(dev->dll.isdu.app_reset_pending) {
-        dev->dll.isdu.app_reset_pending = false;
-        if(dev->reset_handler != NULL) {
-            dev->reset_handler(IOLINK_RESET_APPLICATION);
-        }
-    }
-}
-```
-
-Move the existing PD input/output and callback behavior from global `g_dll_ctx` to `dev->dll`.
-
-- [ ] **Step 4: Make legacy wrappers call the static instance**
-
-Implement wrappers like:
-
-```c
-int iolink_init(const iolink_phy_api_t* phy, const iolink_config_t* config)
-{
-    int ret = iolink_device_init(&g_legacy_device, phy, config);
-    g_legacy_device_initialized = (ret == 0);
-    return ret;
-}
-
-void iolink_process(void)
-{
-    if(g_legacy_device_initialized) {
-        iolink_device_process(&g_legacy_device);
-    }
-}
-```
-
-Repeat for:
-
-```c
-iolink_pd_input_update
-iolink_pd_output_read
-iolink_app_register
-iolink_set_reset_handler
-iolink_get_events_ctx
-iolink_get_ds_ctx
-iolink_get_state
-iolink_get_phy_mode
-iolink_get_baudrate
-iolink_get_dll_stats
-iolink_set_timing_enforcement
-iolink_set_t_ren_limit_us
-iolink_get_m_seq_type
-iolink_get_pd_in_len
-iolink_get_pd_out_len
-iolink_set_pd_length
-```
-
-- [ ] **Step 5: Verify the API smoke test passes**
-
-Run:
-
-```bash
-cmake --build /tmp/iolinki-reentrant-build --target test_reentrant_device
-/tmp/iolinki-reentrant-build/tests/test_reentrant_device
-```
-
-Expected: `test_device_instance_api_initializes_two_devices` passes.
-
-- [ ] **Step 6: Verify full legacy suite**
-
-Run:
-
-```bash
-ctest --test-dir /tmp/iolinki-reentrant-build --output-on-failure
-```
-
-Expected: all existing tests pass.
-
-- [ ] **Step 7: Commit core instance API**
-
-```bash
-git -C third_party/iolinki add include/iolinki/device.h include/iolinki/iolink.h include/iolinki/application.h include/iolinki/dll.h src/iolink_core.c
-git -C third_party/iolinki commit -m "feat: add reentrant IO-Link device instances"
-```
-
-## Task 4: Route ISDU Through Owning Device Context
-
-**Files:**
-
-- Modify: `third_party/iolinki/include/iolinki/isdu.h`
-- Modify: `third_party/iolinki/src/dll.c`
-- Modify: `third_party/iolinki/src/isdu.c`
-- Test: `third_party/iolinki/tests/test_reentrant_device.c`
-
-- [ ] **Step 1: Add a failing two-device ISDU test**
-
-Append to `third_party/iolinki/tests/test_reentrant_device.c`:
-
-```c
-static void test_two_devices_keep_application_tags_isolated(void** state)
+static void test_parameter_contexts_keep_writable_tags_isolated(void** state)
 {
     (void)state;
-    iolink_device_t dev_a;
-    iolink_device_t dev_b;
-    static const iolink_phy_api_t phy = {.init = noop};
-    iolink_config_t cfg = {
-        .m_seq_type = IOLINK_M_SEQ_TYPE_2_2,
-        .min_cycle_time = 10U,
-        .pd_in_len = 2U,
-        .pd_out_len = 2U,
-        .t_pd_us = 0U,
-    };
+    iolink_device_info_ctx_t info_a;
+    iolink_device_info_ctx_t info_b;
+    iolink_params_ctx_t params_a;
+    iolink_params_ctx_t params_b;
     const uint8_t tag_a[] = "DeviceA";
     const uint8_t tag_b[] = "DeviceB";
     uint8_t out_a[32] = {0};
     uint8_t out_b[32] = {0};
 
-    assert_int_equal(iolink_device_init(&dev_a, &phy, &cfg), 0);
-    assert_int_equal(iolink_device_init(&dev_b, &phy, &cfg), 0);
+    iolink_device_info_ctx_init(&info_a, NULL);
+    iolink_device_info_ctx_init(&info_b, NULL);
+    iolink_params_ctx_init(&params_a, &info_a);
+    iolink_params_ctx_init(&params_b, &info_b);
 
-    assert_int_equal(iolink_params_ctx_set(&dev_a.params, IOLINK_IDX_APPLICATION_TAG, 0U,
+    assert_int_equal(iolink_params_ctx_set(&params_a, IOLINK_IDX_APPLICATION_TAG, 0U,
                                            tag_a, sizeof(tag_a) - 1U, true), 0);
-    assert_int_equal(iolink_params_ctx_set(&dev_b.params, IOLINK_IDX_APPLICATION_TAG, 0U,
+    assert_int_equal(iolink_params_ctx_set(&params_b, IOLINK_IDX_APPLICATION_TAG, 0U,
                                            tag_b, sizeof(tag_b) - 1U, true), 0);
-    assert_int_equal(iolink_params_ctx_get(&dev_a.params, IOLINK_IDX_APPLICATION_TAG, 0U,
+    assert_int_equal(iolink_params_ctx_get(&params_a, IOLINK_IDX_APPLICATION_TAG, 0U,
                                            out_a, sizeof(out_a)), (int)(sizeof(tag_a) - 1U));
-    assert_int_equal(iolink_params_ctx_get(&dev_b.params, IOLINK_IDX_APPLICATION_TAG, 0U,
+    assert_int_equal(iolink_params_ctx_get(&params_b, IOLINK_IDX_APPLICATION_TAG, 0U,
                                            out_b, sizeof(out_b)), (int)(sizeof(tag_b) - 1U));
     assert_memory_equal(out_a, tag_a, sizeof(tag_a) - 1U);
     assert_memory_equal(out_b, tag_b, sizeof(tag_b) - 1U);
 }
 ```
 
-Add it to the `tests[]` array.
-
-- [ ] **Step 2: Verify it fails before ISDU/context routing is complete**
-
-Run:
-
-```bash
-cmake --build /tmp/iolinki-reentrant-build --target test_reentrant_device
-/tmp/iolinki-reentrant-build/tests/test_reentrant_device
-```
-
-Expected: failure if params still share global state, or compile failure if context fields are not exposed correctly.
-
-- [ ] **Step 3: Add owner pointers**
-
-In `third_party/iolinki/include/iolinki/isdu.h`, add to `iolink_isdu_ctx_t`:
-
-```c
-void* device_ctx;
-```
-
-In `third_party/iolinki/include/iolinki/dll.h`, add to `iolink_dll_ctx_t`:
-
-```c
-void* owner;
-```
-
-In `iolink_device_init`, set:
-
-```c
-dev->dll.owner = dev;
-dev->dll.isdu.device_ctx = dev;
-dev->dll.isdu.event_ctx = &dev->dll.events;
-dev->dll.isdu.ds_ctx = &dev->dll.ds;
-dev->dll.isdu.dll_ctx = &dev->dll;
-```
-
-- [ ] **Step 4: Replace global parameter/device-info calls in ISDU**
-
-In `third_party/iolinki/src/isdu.c`, add:
-
-```c
-#include "iolinki/device.h"
-
-static iolink_device_t* isdu_device(iolink_isdu_ctx_t* ctx)
-{
-    return (ctx == NULL) ? NULL : (iolink_device_t*)ctx->device_ctx;
-}
-```
-
-Replace calls:
-
-```c
-iolink_params_get(...)
-iolink_params_set(...)
-iolink_params_factory_reset()
-iolink_device_info_get()
-iolink_device_info_get_access_locks()
-iolink_device_info_set_access_locks(...)
-```
-
-with the matching context calls through `isdu_device(ctx)`.
-
-- [ ] **Step 5: Verify isolated tag test and full suite**
+- [ ] **Step 4: Verify**
 
 Run:
 
@@ -665,13 +392,218 @@ cmake --build /tmp/iolinki-reentrant-build --target test_reentrant_device
 ctest --test-dir /tmp/iolinki-reentrant-build --output-on-failure
 ```
 
-Expected: reentrant device test and legacy suite pass.
+Expected: context tests pass; any remaining `test_reentrant_device` failure is only from missing full `iolink_device_*` implementation if Task 1 skeleton is still linked.
 
-- [ ] **Step 6: Commit ISDU context routing**
+- [ ] **Step 5: Commit**
 
 ```bash
-git -C third_party/iolinki add include/iolinki/isdu.h include/iolinki/dll.h src/dll.c src/isdu.c tests/test_reentrant_device.c
-git -C third_party/iolinki commit -m "refactor: route ISDU through device context"
+git -C third_party/iolinki add include/iolinki/device_info.h include/iolinki/params.h src/device_info.c src/params.c tests/test_reentrant_device.c
+git -C third_party/iolinki commit -m "refactor: add isolated device parameter contexts"
+```
+
+## Task 3: Implement `iolink_device_ctx_t` Core And Delete Singleton Entry Points
+
+**Files:**
+
+- Modify: `third_party/iolinki/include/iolinki/iolink.h`
+- Modify: `third_party/iolinki/include/iolinki/phy.h`
+- Modify: `third_party/iolinki/include/iolinki/dll.h`
+- Modify: `third_party/iolinki/src/iolink_core.c`
+- Test: `third_party/iolinki/tests/test_reentrant_device.c`
+
+- [ ] **Step 1: Confirm the public context layout compiles**
+
+The complete `iolink_device_ctx_t` layout lives in `device.h`. Do not create a separate heap-allocated private object. This matches UDSLib's public caller-owned `uds_ctx_t` style and keeps embedded allocation explicit.
+
+Add a user-aware PHY pointer to `iolink_dll_ctx_t`:
+
+```c
+const iolink_device_phy_t* device_phy;
+uint64_t (*time_us)(void* user);
+void* time_user;
+```
+
+Remove old `const iolink_phy_api_t* phy` use from the core once DLL calls use `device_phy`.
+
+- [ ] **Step 2: Implement instance init**
+
+In `iolink_core.c`, include `device.h` and implement:
+
+```c
+size_t iolink_device_ctx_size(void)
+{
+    return sizeof(iolink_device_ctx_t);
+}
+
+int iolink_device_init(iolink_device_ctx_t* ctx, const iolink_device_config_t* config)
+{
+    if((ctx == NULL) || (config == NULL)) {
+        return -1;
+    }
+    memset(ctx, 0, sizeof(*ctx));
+    ctx->config = config;
+    memcpy(&ctx->stack_config, &config->stack, sizeof(ctx->stack_config));
+    iolink_device_info_ctx_init(&ctx->device_info, config->device_info);
+    iolink_params_ctx_init(&ctx->params, &ctx->device_info);
+    if(config->phy.init != NULL) {
+        int err = config->phy.init(config->phy.user);
+        if(err != 0) {
+            return err;
+        }
+    }
+    iolink_dll_init_device_phy(&ctx->dll, &config->phy);
+    ctx->dll.owner = ctx;
+    ctx->dll.time_us = config->time_us;
+    ctx->dll.time_user = config->user;
+    ctx->dll.m_seq_type = (uint8_t)ctx->stack_config.m_seq_type;
+    ctx->dll.pd_in_len = ctx->stack_config.pd_in_len;
+    ctx->dll.pd_out_len = ctx->stack_config.pd_out_len;
+    ctx->dll.min_cycle_time_us = (uint32_t)ctx->stack_config.min_cycle_time * 100U;
+    ctx->dll.t_pd_delay_us = ctx->stack_config.t_pd_us;
+    return 0;
+}
+```
+
+- [ ] **Step 3: Replace DLL PHY calls with user-aware calls**
+
+In `dll.c`, replace direct calls like:
+
+```c
+ctx->phy->send(data, len);
+ctx->phy->recv_byte(&byte);
+ctx->phy->detect_wakeup();
+```
+
+with helpers:
+
+```c
+static int dll_phy_send(iolink_dll_ctx_t* ctx, const uint8_t* data, size_t len)
+{
+    if((ctx == NULL) || (ctx->device_phy == NULL) || (ctx->device_phy->send == NULL)) {
+        return -1;
+    }
+    return ctx->device_phy->send(ctx->device_phy->user, data, len);
+}
+```
+
+Create equivalent helpers for `recv_byte`, `detect_wakeup`, `set_mode`, `set_baudrate`, diagnostics, and SIO line control.
+
+Also replace direct `iolink_time_get_us()` calls in `dll.c` with:
+
+```c
+static uint64_t dll_time_us(const iolink_dll_ctx_t* ctx)
+{
+    if((ctx != NULL) && (ctx->time_us != NULL)) {
+        return ctx->time_us(ctx->time_user);
+    }
+    return iolink_time_get_us();
+}
+```
+
+Use optional `config->lock(config->user)` / `config->unlock(config->user)` around public `iolink_device_*` operations that can race with RX/tick callers. If no lock hooks are provided, the stack remains single-threaded/cooperative as today.
+
+- [ ] **Step 4: Implement instance methods and remove singleton API**
+
+Move current `g_dll_ctx` behavior to `ctx->dll`. Delete the file-static globals:
+
+```c
+g_dll_ctx
+g_config
+g_reset_handler
+g_app_callbacks
+```
+
+Remove singleton functions from `iolink.h` and migrate tests/examples to the `iolink_device_*` equivalents. If keeping source compatibility temporarily is useful during the same task, keep static `static` helper functions inside tests only; do not leave public singleton APIs in the library.
+
+- [ ] **Step 5: Verify**
+
+Run:
+
+```bash
+cmake --build /tmp/iolinki-reentrant-build --target test_reentrant_device
+/tmp/iolinki-reentrant-build/tests/test_reentrant_device
+ctest --test-dir /tmp/iolinki-reentrant-build --output-on-failure
+```
+
+Expected: public API test and migrated suite pass.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git -C third_party/iolinki add include/iolinki/device.h include/iolinki/iolink.h include/iolinki/phy.h include/iolinki/dll.h src/dll.c src/iolink_core.c tests/test_reentrant_device.c
+git -C third_party/iolinki commit -m "feat: add caller-owned IO-Link device contexts"
+```
+
+## Task 4: Inject ISDU Dependencies Through The Device Context
+
+**Files:**
+
+- Modify: `third_party/iolinki/include/iolinki/isdu.h`
+- Modify: `third_party/iolinki/src/dll.c`
+- Modify: `third_party/iolinki/src/isdu.c`
+- Modify: `third_party/iolinki/src/iolink_core.c`
+- Test: `third_party/iolinki/tests/test_reentrant_device.c`
+
+- [ ] **Step 1: Add ISDU backend pointers**
+
+In `iolink_isdu_ctx_t`, replace global access assumptions with:
+
+```c
+void* device_ctx;
+void* params_ctx;
+void* device_info_ctx;
+uint8_t* direct_param_page2;
+```
+
+Set these in `iolink_device_init`:
+
+```c
+ctx->dll.isdu.device_ctx = ctx;
+ctx->dll.isdu.params_ctx = &ctx->params;
+ctx->dll.isdu.device_info_ctx = &ctx->device_info;
+ctx->dll.isdu.direct_param_page2 = ctx->direct_param_page2;
+ctx->dll.isdu.event_ctx = &ctx->dll.events;
+ctx->dll.isdu.ds_ctx = &ctx->dll.ds;
+ctx->dll.isdu.dll_ctx = &ctx->dll;
+```
+
+- [ ] **Step 2: Replace global calls in ISDU**
+
+In `isdu.c`, replace:
+
+```c
+iolink_params_get
+iolink_params_set
+iolink_params_factory_reset
+iolink_device_info_get
+iolink_device_info_get_access_locks
+iolink_device_info_set_access_locks
+g_direct_param_page2
+```
+
+with context-backed calls using `ctx->params_ctx`, `ctx->device_info_ctx`, and `ctx->direct_param_page2`.
+
+- [ ] **Step 3: Add Direct Parameter page 2 isolation assertion**
+
+Add a test that writes different Direct Parameter page 2 data through two ISDU contexts and verifies the buffers differ. Use the existing ISDU direct parameter helpers in `isdu.c`; if no public helper exists, test through an ISDU write/read transaction in `test_reentrant_device.c`.
+
+- [ ] **Step 4: Verify**
+
+Run:
+
+```bash
+cmake --build /tmp/iolinki-reentrant-build --target test_reentrant_device
+/tmp/iolinki-reentrant-build/tests/test_reentrant_device
+ctest --test-dir /tmp/iolinki-reentrant-build --output-on-failure
+```
+
+Expected: context isolation and migrated tests pass.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git -C third_party/iolinki add include/iolinki/isdu.h src/dll.c src/isdu.c src/iolink_core.c tests/test_reentrant_device.c
+git -C third_party/iolinki commit -m "refactor: inject ISDU device dependencies"
 ```
 
 ## Task 5: Make Data Storage Instance-Isolated
@@ -683,52 +615,9 @@ git -C third_party/iolinki commit -m "refactor: route ISDU through device contex
 - Modify: `third_party/iolinki/src/iolink_core.c`
 - Test: `third_party/iolinki/tests/test_reentrant_device.c`
 
-- [ ] **Step 1: Add failing DS isolation test**
+- [ ] **Step 1: Add DS parameter backend**
 
-Append to `third_party/iolinki/tests/test_reentrant_device.c`:
-
-```c
-static void test_two_devices_build_distinct_data_storage_images(void** state)
-{
-    (void)state;
-    iolink_device_t dev_a;
-    iolink_device_t dev_b;
-    static const iolink_phy_api_t phy = {.init = noop};
-    iolink_config_t cfg = {
-        .m_seq_type = IOLINK_M_SEQ_TYPE_2_2,
-        .min_cycle_time = 10U,
-        .pd_in_len = 2U,
-        .pd_out_len = 2U,
-        .t_pd_us = 0U,
-    };
-    const uint8_t tag_a[] = "DS-A";
-    const uint8_t tag_b[] = "DS-B";
-    const uint8_t* image_a;
-    const uint8_t* image_b;
-    size_t len_a = 0U;
-    size_t len_b = 0U;
-
-    assert_int_equal(iolink_device_init(&dev_a, &phy, &cfg), 0);
-    assert_int_equal(iolink_device_init(&dev_b, &phy, &cfg), 0);
-    assert_int_equal(iolink_params_ctx_set(&dev_a.params, IOLINK_IDX_APPLICATION_TAG, 0U,
-                                           tag_a, sizeof(tag_a) - 1U, true), 0);
-    assert_int_equal(iolink_params_ctx_set(&dev_b.params, IOLINK_IDX_APPLICATION_TAG, 0U,
-                                           tag_b, sizeof(tag_b) - 1U, true), 0);
-
-    image_a = iolink_ds_get_image(iolink_device_get_ds_ctx(&dev_a), &len_a);
-    image_b = iolink_ds_get_image(iolink_device_get_ds_ctx(&dev_b), &len_b);
-
-    assert_non_null(image_a);
-    assert_non_null(image_b);
-    assert_true(len_a > 0U);
-    assert_true(len_b > 0U);
-    assert_int_not_equal(memcmp(image_a, image_b, len_a < len_b ? len_a : len_b), 0);
-}
-```
-
-- [ ] **Step 2: Add parameter callbacks to DS context**
-
-In `third_party/iolinki/include/iolinki/data_storage.h`, add:
+In `data_storage.h`, add:
 
 ```c
 typedef struct
@@ -744,55 +633,25 @@ typedef struct
 } iolink_ds_params_api_t;
 ```
 
-Add to `iolink_ds_ctx_t`:
-
-```c
-iolink_ds_params_api_t params;
-```
-
-Add a new init variant:
+Add `iolink_ds_params_api_t params;` to `iolink_ds_ctx_t` and:
 
 ```c
 void iolink_ds_set_params_api(iolink_ds_ctx_t* ctx, const iolink_ds_params_api_t* params);
 ```
 
-- [ ] **Step 3: Wire DS callbacks from device init**
+- [ ] **Step 2: Wire device params into DS**
 
-In `third_party/iolinki/src/iolink_core.c`, add static adapters:
+In `iolink_core.c`, create adapters from `iolink_params_ctx_get/set` and call `iolink_ds_set_params_api(&ctx->dll.ds, &api)` from `iolink_device_init`.
 
-```c
-static int device_params_get(void* user, uint16_t index, uint8_t subindex, uint8_t* buffer, size_t max_len)
-{
-    return iolink_params_ctx_get((iolink_params_ctx_t*)user, index, subindex, buffer, max_len);
-}
+- [ ] **Step 3: Replace global params in DS**
 
-static int device_params_set(void* user,
-                             uint16_t index,
-                             uint8_t subindex,
-                             const uint8_t* data,
-                             size_t len,
-                             bool persist)
-{
-    return iolink_params_ctx_set((iolink_params_ctx_t*)user, index, subindex, data, len, persist);
-}
-```
+In `data_storage.c`, replace `iolink_params_get/set` with `ctx->params.get/set`. Missing callbacks return `-1`.
 
-During `iolink_device_init`, after DS init:
+- [ ] **Step 4: Add DS isolation test**
 
-```c
-iolink_ds_params_api_t params_api = {
-    .get = device_params_get,
-    .set = device_params_set,
-    .user = &dev->params,
-};
-iolink_ds_set_params_api(&dev->dll.ds, &params_api);
-```
+In `test_reentrant_device.c`, initialize two devices, set different Application Tags, call `iolink_ds_get_image(iolink_device_get_ds_ctx(dev), &len)` for each, and assert the images differ.
 
-- [ ] **Step 4: Replace global params calls in DS**
-
-In `third_party/iolinki/src/data_storage.c`, replace direct calls to `iolink_params_get` and `iolink_params_set` with `ctx->params.get` and `ctx->params.set`. If callbacks are missing, return `-1` from image build/apply.
-
-- [ ] **Step 5: Verify DS isolation and full suite**
+- [ ] **Step 5: Verify and commit**
 
 Run:
 
@@ -802,25 +661,23 @@ cmake --build /tmp/iolinki-reentrant-build --target test_reentrant_device
 ctest --test-dir /tmp/iolinki-reentrant-build --output-on-failure
 ```
 
-Expected: DS images differ when each device has a different application tag; all existing tests pass.
-
-- [ ] **Step 6: Commit DS isolation**
+Then:
 
 ```bash
 git -C third_party/iolinki add include/iolinki/data_storage.h src/data_storage.c src/iolink_core.c tests/test_reentrant_device.c
-git -C third_party/iolinki commit -m "refactor: isolate data storage per device instance"
+git -C third_party/iolinki commit -m "refactor: isolate data storage per device context"
 ```
 
-## Task 6: Add Real Master Against Two Real Device Instances In C
+## Task 6: Prove Real Master Against Several Real Device Contexts
 
 **Files:**
 
 - Create: `third_party/iolinki/tests/test_multi_device_real_master.c`
 - Modify: `third_party/iolinki/tests/CMakeLists.txt`
 
-- [ ] **Step 1: Add failing multi-device master test**
+- [ ] **Step 1: Add real multi-device conformance harness**
 
-Create `third_party/iolinki/tests/test_multi_device_real_master.c` by adapting the queue pattern from `/home/andrii/projects/iolinki-master/tests/test_master_real_iolinki_device.c`, but replace global `iolink_init()` and `iolink_process()` with two `iolink_device_t` instances:
+Create a harness with per-port state:
 
 ```c
 typedef struct
@@ -828,59 +685,37 @@ typedef struct
     link_queue_t master_to_device;
     link_queue_t device_to_master;
     int wakeup_pending;
-    iolink_device_t device;
-    iolink_master_port_t master;
-    uint8_t last_pd_out[32];
-    uint8_t last_pd_out_len;
+    uint8_t observed_pd_out[32];
+    uint8_t observed_pd_out_len;
+    uint8_t device_ctx_storage[512];
+    iolink_device_ctx_t* device;
+    iolink_master_port_t master_port;
+    iolink_device_config_t device_config;
+    iolink_master_config_t master_config;
 } port_pair_t;
 ```
 
-The test must initialize two `port_pair_t` objects:
+Use one `iolink_master_controller_t` with two or four `iolink_master_port_t` ports. Each simulated cycle:
+
+1. Tick the controller.
+2. Pump every real `iolink_device_ctx_t`.
+3. Poll/tick the controller for received bytes.
+4. Repeat until every port reaches `IOLINK_MASTER_STATE_OPERATE`.
+
+Assertions:
 
 ```c
-static void test_two_master_ports_drive_two_real_device_instances(void** state)
-```
-
-Expected assertions:
-
-```c
-assert_int_equal(iolink_master_get_state(&pair_a.master), IOLINK_MASTER_STATE_OPERATE);
-assert_int_equal(iolink_master_get_state(&pair_b.master), IOLINK_MASTER_STATE_OPERATE);
-assert_memory_equal(pd_in_a, expected_a, pd_in_len_a);
-assert_memory_equal(pd_in_b, expected_b, pd_in_len_b);
+assert_int_equal(iolink_master_get_state(&pair_a.master_port), IOLINK_MASTER_STATE_OPERATE);
+assert_int_equal(iolink_master_get_state(&pair_b.master_port), IOLINK_MASTER_STATE_OPERATE);
 assert_memory_not_equal(pd_in_a, pd_in_b, min_len);
-assert_memory_equal(pair_a.last_pd_out, expected_pd_out_a, pd_out_len_a);
-assert_memory_equal(pair_b.last_pd_out, expected_pd_out_b, pd_out_len_b);
+assert_memory_not_equal(pair_a.observed_pd_out, pair_b.observed_pd_out, min_len);
 ```
 
-- [ ] **Step 2: Register the test**
+- [ ] **Step 2: Keep master/device boundaries clean**
 
-In `third_party/iolinki/tests/CMakeLists.txt`, add:
+The test may include `iolinki_master/master.h` and link master sources, but production `iolinki` must not depend on `iolinki-master`. Add `IOLINKI_MASTER_DIR` as an optional CMake test-only path.
 
-```cmake
-    add_iolink_test(test_multi_device_real_master test_multi_device_real_master.c)
-```
-
-If `iolinki-master` is not available inside the device-stack test build, add a CMake cache variable:
-
-```cmake
-set(IOLINKI_MASTER_DIR "" CACHE PATH "Path to iolinki-master checkout")
-if(IOLINKI_MASTER_DIR)
-    add_executable(test_multi_device_real_master test_multi_device_real_master.c test_helpers.c)
-    target_include_directories(test_multi_device_real_master PRIVATE "${IOLINKI_MASTER_DIR}/include")
-    target_sources(test_multi_device_real_master PRIVATE
-        "${IOLINKI_MASTER_DIR}/src/master_controller.c"
-        "${IOLINKI_MASTER_DIR}/src/master_isdu.c"
-        "${IOLINKI_MASTER_DIR}/src/master_parameters.c"
-        "${IOLINKI_MASTER_DIR}/src/master_port.c"
-        "${IOLINKI_MASTER_DIR}/src/master_sio.c"
-    )
-    target_link_libraries(test_multi_device_real_master iolinki ${CMOCKA_LIBRARIES})
-    add_test(NAME test_multi_device_real_master COMMAND test_multi_device_real_master)
-endif()
-```
-
-- [ ] **Step 3: Verify the real multi-device C test passes**
+- [ ] **Step 3: Register and run**
 
 Run:
 
@@ -891,16 +726,16 @@ cmake --build /tmp/iolinki-reentrant-build --target test_multi_device_real_maste
 ctest --test-dir /tmp/iolinki-reentrant-build --output-on-failure
 ```
 
-Expected: both independent master/device pairs reach OPERATE in the same process.
+Expected: several independent real devices reach OPERATE against real master ports in one process.
 
-- [ ] **Step 4: Commit real C multi-device conformance**
+- [ ] **Step 4: Commit**
 
 ```bash
 git -C third_party/iolinki add tests/test_multi_device_real_master.c tests/CMakeLists.txt
-git -C third_party/iolinki commit -m "test: prove multi-device real master conformance"
+git -C third_party/iolinki commit -m "test: prove real master multi-device conformance"
 ```
 
-## Task 7: Update LabWired Native Conformance To Use Several Real Devices
+## Task 7: Update LabWired Native Conformance
 
 **Files:**
 
@@ -908,44 +743,21 @@ git -C third_party/iolinki commit -m "test: prove multi-device real master confo
 - Modify: `crates/core/src/peripherals/components/iolink_master.rs`
 - Modify: `crates/core/build.rs`
 
-- [ ] **Step 1: Add failing Rust assertion for several devices**
+- [ ] **Step 1: Add failing Rust FFI test**
 
-In `crates/core/src/peripherals/components/iolink_master.rs`, extend the native FFI result with:
+Add `NativeMultiDeviceConformanceResult` and FFI for:
 
-```rust
-#[cfg(test)]
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default)]
-pub(crate) struct NativeMultiDeviceConformanceResult {
-    pub(crate) port_count: u8,
-    pub(crate) operate_count: u8,
-    pub(crate) pd_in_a: [u8; 32],
-    pub(crate) pd_in_b: [u8; 32],
-    pub(crate) pd_out_a: [u8; 32],
-    pub(crate) pd_out_b: [u8; 32],
-    pub(crate) pd_in_len_a: u8,
-    pub(crate) pd_in_len_b: u8,
-    pub(crate) pd_out_len_a: u8,
-    pub(crate) pd_out_len_b: u8,
-}
+```c
+int lw_iolm_conformance_run_multi_device(lw_iolm_multi_device_result_t* result);
 ```
 
-Add FFI:
-
-```rust
-#[cfg(test)]
-fn lw_iolm_conformance_run_multi_device(result: *mut NativeMultiDeviceConformanceResult) -> c_int;
-```
-
-Add test:
+Add Rust test:
 
 ```rust
 #[cfg(feature = "iolink-native")]
 #[test]
 fn native_real_master_runs_several_real_device_stack_instances() {
-    use super::native::run_real_multi_device_stack_conformance;
-
-    let result = run_real_multi_device_stack_conformance()
+    let result = super::native::run_real_multi_device_stack_conformance()
         .expect("real multi-device IO-Link conformance");
     assert_eq!(result.port_count, 2);
     assert_eq!(result.operate_count, 2);
@@ -953,15 +765,9 @@ fn native_real_master_runs_several_real_device_stack_instances() {
         &result.pd_in_a[..result.pd_in_len_a as usize],
         &result.pd_in_b[..result.pd_in_len_b as usize]
     );
-    assert_ne!(
-        &result.pd_out_a[..result.pd_out_len_a as usize],
-        &result.pd_out_b[..result.pd_out_len_b as usize]
-    );
 }
 ```
 
-- [ ] **Step 2: Verify the Rust test fails on missing C symbol**
-
 Run:
 
 ```bash
@@ -970,37 +776,15 @@ IOLINKI_DEVICE_DIR=/home/andrii/projects/labwired/core/.worktrees/iolink-simulat
 cargo test -p labwired-core --features iolink-native native_real_master_runs_several_real_device_stack_instances --lib -- --nocapture
 ```
 
-Expected: link failure for `lw_iolm_conformance_run_multi_device`.
+Expected: link failure for missing `lw_iolm_conformance_run_multi_device`.
 
-- [ ] **Step 3: Implement C multi-device helper**
+- [ ] **Step 2: Implement LabWired helper with per-device link state**
 
-In `crates/core/native/iolink_conformance.c`, replace the singleton helper internals with the same `port_pair_t` pattern from Task 6. Export:
+In `crates/core/native/iolink_conformance.c`, remove shared globals from the multi-device path. Use `port_pair_t` with its own queues, wakeup flag, observed PD buffers, master port, and `iolink_device_ctx_t` storage per device.
 
-```c
-int lw_iolm_conformance_run_multi_device(lw_iolm_multi_device_result_t* result);
-```
+Do not hand-author response bytes. All device responses must come from `iolink_device_process()`.
 
-The helper must:
-
-- Initialize two `iolink_master_port_t` instances.
-- Initialize two `iolink_device_t` instances.
-- Pump each pair independently in an interleaved loop.
-- Assert by returned fields, not by C aborts.
-- Fill `operate_count == 2` only if both master ports reach OPERATE.
-
-- [ ] **Step 4: Run focused LabWired native test**
-
-Run:
-
-```bash
-IOLINKI_MASTER_DIR=/home/andrii/projects/iolinki-master \
-IOLINKI_DEVICE_DIR=/home/andrii/projects/labwired/core/.worktrees/iolink-simulator-conformance/third_party/iolinki \
-cargo test -p labwired-core --features iolink-native native_real_master_runs_several_real_device_stack_instances --lib -- --nocapture
-```
-
-Expected: the new multi-device test passes.
-
-- [ ] **Step 5: Run complete native selector**
+- [ ] **Step 3: Verify**
 
 Run:
 
@@ -1008,80 +792,68 @@ Run:
 IOLINKI_MASTER_DIR=/home/andrii/projects/iolinki-master \
 IOLINKI_DEVICE_DIR=/home/andrii/projects/labwired/core/.worktrees/iolink-simulator-conformance/third_party/iolinki \
 cargo test -p labwired-core --features iolink-native native_ --lib -- --nocapture
+IOLINKI_MASTER_DIR=/home/andrii/projects/iolinki-master \
+IOLINKI_DEVICE_DIR=/home/andrii/projects/labwired/core/.worktrees/iolink-simulator-conformance/third_party/iolinki \
+cargo check -p labwired-core --features iolink-native
+git diff --check
 ```
 
-Expected: all native IO-Link tests pass.
+Expected: native selector and feature check pass.
 
-- [ ] **Step 6: Commit LabWired multi-device native conformance**
+- [ ] **Step 4: Commit**
 
 ```bash
 git add crates/core/native/iolink_conformance.c crates/core/src/peripherals/components/iolink_master.rs crates/core/build.rs third_party/iolinki
-git commit -m "sim: test real IO-Link master against several device instances"
+git commit -m "sim: test real IO-Link master against several device contexts"
 ```
 
-## Task 8: CI And Documentation Cleanup
+## Task 8: CI And Documentation
 
 **Files:**
 
 - Modify: `.github/workflows/core-iolink-native.yml`
-- Modify: `third_party/iolinki/docs/ARCHITECTURE.md`
 - Modify: `third_party/iolinki/docs/API.md`
+- Modify: `third_party/iolinki/docs/ARCHITECTURE.md`
 
-- [ ] **Step 1: Keep GitHub-hosted native CI on the multi-device selector**
+- [ ] **Step 1: Keep hosted native CI**
 
-Ensure `.github/workflows/core-iolink-native.yml` still runs:
+Ensure the workflow still runs:
 
 ```yaml
 run: cargo test -p labwired-core --features iolink-native native_ --lib -- --nocapture
 ```
 
-This selector must include:
+- [ ] **Step 2: Document UDSLib-style ownership**
 
-- master-only UART-boundary test
-- single real device-stack profile matrix
-- several real device-stack instances against real master ports
-
-- [ ] **Step 2: Document instance API**
-
-In `third_party/iolinki/docs/API.md`, add:
+Add to `docs/API.md`:
 
 ```markdown
-## Reentrant Device Instances
+## Reentrant Device Contexts
 
-Use `iolink_device_t` when an application, simulator, or test process needs
-more than one IO-Link Device stack at a time. Each instance owns its DLL,
-ISDU, Process Data, Events, Data Storage, parameters, device identity, and
-application callbacks.
+New integrations should use caller-owned `iolink_device_ctx_t` instances with a
+borrowed `iolink_device_config_t`. The stack does not allocate memory and does
+not own transport, clock, mutex, storage, or application objects. These are
+provided through callbacks and `void *user`.
 
-The legacy `iolink_init()` / `iolink_process()` API remains available as a
-single-device compatibility wrapper around one internal `iolink_device_t`.
-New integrations should prefer:
-
-```c
-iolink_device_t dev;
-iolink_device_init(&dev, &phy, &config);
-iolink_device_pd_input_update(&dev, pd, pd_len, true);
-iolink_device_process(&dev);
-```
+The old singleton `iolink_init()` / `iolink_process()` API was removed before
+public adoption. All examples use caller-owned `iolink_device_ctx_t`.
 ```
 
-- [ ] **Step 3: Document architecture boundary**
-
-In `third_party/iolinki/docs/ARCHITECTURE.md`, add:
+Add to `docs/ARCHITECTURE.md`:
 
 ```markdown
-## Device Instance Boundary
+## Role And Instance Boundaries
 
-The stack is reentrant at the `iolink_device_t` boundary. A process may create
-one instance per simulated or physical IO-Link Device. Platform PHY drivers may
-still expose singleton hardware resources on embedded targets, but the protocol
-state is not global.
+`iolinki` owns the IO-Link Device role. `iolinki-master` owns the IO-Link Master
+role. Shared code is limited to frame/checksum/protocol helpers and test-only
+real-stack conformance harnesses.
 
-The IO-Link Master stack remains a sibling project. Shared protocol helpers are
-limited to frame/checksum/protocol constants and real-stack conformance tests.
+Every simulated or physical IO-Link Device should have one
+`iolink_device_ctx_t`. Bundled platform PHYs may remain single-port adapters,
+but protocol state is not global.
 ```
 
-- [ ] **Step 4: Run final local verification**
+- [ ] **Step 3: Final verification**
 
 Run:
 
@@ -1100,28 +872,27 @@ git diff --check
 
 Expected: all commands pass.
 
-- [ ] **Step 5: Commit docs and CI cleanup**
+- [ ] **Step 4: Commit and push**
 
 ```bash
 git add .github/workflows/core-iolink-native.yml third_party/iolinki/docs/API.md third_party/iolinki/docs/ARCHITECTURE.md third_party/iolinki
 git commit -m "docs: describe reentrant IO-Link device architecture"
+git push
 ```
 
 ## Self-Review
 
-Spec coverage:
+Coverage:
 
-- Reentrant device stack: Tasks 1-5.
-- Several real devices in one process: Task 6.
-- LabWired native conformance with no fake device responses: Task 7.
-- CI and public architecture docs: Task 8.
+- UDSLib-style caller-owned contexts and borrowed config: Public API Shape, Tasks 1 and 3.
+- Existing `iolinki` context migration order: Tasks 2 through 5.
+- Direct Parameter page 2 global: Task 4.
+- Master/device role separation: Scope, Task 6, Task 8 docs.
+- LabWired multi-device no-shim conformance: Task 7.
+- Hosted CI and documentation: Task 8.
 
-Placeholder scan:
+Quality checks:
 
-- No placeholder requirements are present.
-- Every task includes exact files, commands, expected outcomes, and commit commands.
-
-Type consistency:
-
-- `iolink_device_t`, `iolink_params_ctx_t`, `iolink_device_info_ctx_t`, and DS callback names are introduced before dependent tasks use them.
-- Legacy APIs remain wrappers around the static device instance.
+- No fake response generation is allowed in the conformance path.
+- The plan removes legacy singleton public APIs instead of preserving wrappers.
+- The plan treats bundled singleton PHYs as migration targets, not as the core instance model.
