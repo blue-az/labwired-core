@@ -441,19 +441,15 @@ impl Peripheral for Nrf52Twim {
                 self.pending = PENDING_STOP;
                 self.busy_cycles = self.transfer_cycles(0);
             }
-            // TASKS_RESUME: un-suspends a bus held by a LAST*_SUSPEND short. nrfx
-            // pairs it with a START task — e.g. the ISR's TXTX/TXRX SUSPENDED
-            // handler writes `STARTTX; RESUME`, and the read-after-suspend path
-            // writes `STARTRX; RESUME`. The preceding START task already set
-            // `pending`, so RESUME must NOT override it. Only when nothing is
-            // pending (a bare RESUME continuing a suspended read) does it begin
-            // the follow-on RX, using the RXD descriptor the driver set up.
-            OFF_TASKS_RESUME
-                if value != 0 && self.pending == PENDING_NONE && self.rxd_maxcnt > 0 =>
-            {
-                self.pending = PENDING_RX;
-                self.busy_cycles = self.transfer_cycles(self.rxd_maxcnt & MAXCNT_MASK);
-            }
+            // TASKS_RESUME / TASKS_SUSPEND only un-/suspend the bus; they never
+            // start a transfer. In `nrfx_twim` every xfer setup triggers RESUME
+            // *before* the real START task (`tx_start`/`rx_start` →
+            // STARTTX/STARTRX), and the ISR's continuation paths trigger
+            // STARTTX/STOP alongside RESUME. Since this model does not hold the
+            // bus between atomic `tick_with_bus` transfers, RESUME is a no-op —
+            // the STARTTX/STARTRX tasks are the sole transfer initiators. (The
+            // earlier RESUME→RX heuristic mis-fired on a stale RXD.MAXCNT,
+            // turning the follow-on register write into a bogus read.)
             OFF_TASKS_RESUME | OFF_TASKS_SUSPEND => {}
             OFF_TASKS_STARTRX | OFF_TASKS_STARTTX | OFF_TASKS_STOP => {
                 // value == 0: no-op (tasks are level-triggered on non-zero)
