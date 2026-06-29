@@ -1,0 +1,66 @@
+name: Core IO-Link Native
+
+on:
+  push:
+    paths:
+      - ".github/workflows/core-iolink-native.yml"
+      - "Cargo.lock"
+      - "crates/core/Cargo.toml"
+      - "crates/core/build.rs"
+      - "crates/core/native/**"
+      - "crates/core/src/peripherals/components/iolink_master.rs"
+      - "third_party/iolinki"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/core-iolink-native.yml"
+      - "Cargo.lock"
+      - "crates/core/Cargo.toml"
+      - "crates/core/build.rs"
+      - "crates/core/native/**"
+      - "crates/core/src/peripherals/components/iolink_master.rs"
+      - "third_party/iolinki"
+  workflow_dispatch:
+
+concurrency:
+  group: core-iolink-native-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  iolink-native:
+    name: iolink-native-c-master
+    runs-on: ["self-hosted", "Linux", "X64", "ci", "iolink-native", "pluto"]
+    steps:
+      - name: Checkout LabWired core
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Configure private submodule auth
+        run: git config --global url."https://x-access-token:${{ github.token }}@github.com/".insteadOf "git@github.com:"
+
+      - name: Checkout iolinki device submodule
+        run: git submodule update --init --depth 1 third_party/iolinki
+
+      - name: Checkout C iolinki-master
+        uses: actions/checkout@v4
+        with:
+          repository: w1ne/iolinki-master
+          path: iolinki-master
+          fetch-depth: 1
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@1.95.0
+
+      - name: Native C master UART-boundary tests
+        env:
+          IOLINKI_MASTER_DIR: ${{ github.workspace }}/iolinki-master
+          IOLINKI_DEVICE_DIR: ${{ github.workspace }}/third_party/iolinki
+        run: cargo test -p labwired-core --features iolink-native native_ --lib -- --nocapture
+
+      - name: Native C master compile check
+        env:
+          IOLINKI_MASTER_DIR: ${{ github.workspace }}/iolinki-master
+          IOLINKI_DEVICE_DIR: ${{ github.workspace }}/third_party/iolinki
+        run: cargo check -p labwired-core --features iolink-native
