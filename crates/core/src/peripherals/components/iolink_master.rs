@@ -132,10 +132,12 @@ struct PendingXfer {
 mod native {
     use std::ffi::{c_int, c_uint, c_void};
     use std::ptr::NonNull;
+    use std::sync::Mutex;
 
     const IOLINK_MASTER_STATE_STARTUP: c_int = 1;
     const IOLINK_MASTER_STATE_PREOPERATE: c_int = 2;
     const IOLINK_MASTER_STATE_OPERATE: c_int = 3;
+    static NATIVE_CALL_LOCK: Mutex<()> = Mutex::new(());
 
     unsafe extern "C" {
         fn lw_iolm_bridge_new(
@@ -174,9 +176,9 @@ mod native {
         bridge: NonNull<c_void>,
     }
 
-    // The bridge pointer is uniquely owned by this wrapper. All C entry points
-    // that mutate state require `&mut self`, and the C active-context global is
-    // set only for the duration of those calls.
+    // The bridge pointer is uniquely owned by this wrapper. Mutating C entry
+    // points require `&mut self`; the module-level mutex serializes calls that
+    // use the bridge shim's short-lived active-context global.
     unsafe impl Send for NativeIolinkMaster {}
 
     impl std::fmt::Debug for NativeIolinkMaster {
@@ -196,11 +198,15 @@ mod native {
             if pd_in_len > u8::MAX as usize || pd_out.len() > u8::MAX as usize {
                 return Err("IO-Link PD length does not fit native C API");
             }
+            let _guard = NATIVE_CALL_LOCK
+                .lock()
+                .expect("native IO-Link lock poisoned");
             let ptr = unsafe {
                 lw_iolm_bridge_new(m_seq_type, pd_in_len as u8, pd_out.len() as u8, 10, 20)
             };
             let bridge = NonNull::new(ptr).ok_or("failed to initialize native IO-Link master")?;
             let mut this = Self { bridge };
+            drop(_guard);
             this.set_pd_out(pd_out)?;
             Ok(this)
         }
@@ -209,6 +215,9 @@ mod native {
             if pd_out.len() > u8::MAX as usize {
                 return Err("IO-Link PD out length does not fit native C API");
             }
+            let _guard = NATIVE_CALL_LOCK
+                .lock()
+                .expect("native IO-Link lock poisoned");
             let ret = unsafe {
                 lw_iolm_bridge_set_pd_out(self.bridge.as_ptr(), pd_out.as_ptr(), pd_out.len() as u8)
             };
@@ -220,6 +229,9 @@ mod native {
         }
 
         pub(crate) fn cycle_due(&mut self, now_100us: u32) -> Result<(), &'static str> {
+            let _guard = NATIVE_CALL_LOCK
+                .lock()
+                .expect("native IO-Link lock poisoned");
             let ret = unsafe { lw_iolm_bridge_cycle_due(self.bridge.as_ptr(), now_100us) };
             if ret >= 0 {
                 Ok(())
@@ -229,6 +241,9 @@ mod native {
         }
 
         pub(crate) fn tick_none(&mut self, now_100us: u32) -> Result<i32, &'static str> {
+            let _guard = NATIVE_CALL_LOCK
+                .lock()
+                .expect("native IO-Link lock poisoned");
             let ret = unsafe { lw_iolm_bridge_tick_none(self.bridge.as_ptr(), now_100us) };
             if ret >= 0 {
                 Ok(ret)
