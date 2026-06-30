@@ -14,12 +14,12 @@ Gate of the strongest proving firmware: 🟢 PR gate · 🟡 release CI · 🟠 
 | Chip | Arch | Proven | Unit-only | Dead | Shim | Strongest gate |
 |------|------|--------|-----------|------|------|----------------|
 | `stm32l476` | cortex-m4f | 28 | 2 | 4 | 0 | 🟢 PR gate |
-| `esp32c3` | riscv32imc | 8 | 5 | 2 | 2 | 🟢 PR gate |
-| `esp32s3` | xtensa-lx7 | 10 | 23 | 1 | 1 | 🟢 PR gate |
+| `esp32c3` | riscv32imc | 8 | 7 | 2 | 0 | 🟢 PR gate |
+| `esp32s3` | xtensa-lx7 | 11 | 23 | 0 | 1 | 🟢 PR gate |
 | `esp32` | xtensa-lx6 | 7 | 7 | 0 | 1 | 🟡 release CI |
 | `rp2040` | cortex-m0plus | 6 | 0 | 3 | 0 | 🟢 PR gate |
 | `nrf52832` | cortex-m4f | 9 | 5 | 7 | 0 | 🟡 release CI |
-| `nrf52840` | cortex-m4f | 6 | 20 | 8 | 2 | 🟢 PR gate |
+| `nrf52840` | cortex-m4f | 6 | 21 | 8 | 1 | 🟢 PR gate |
 | `mkw41z4` | cortex-m0plus | 4 | 0 | 16 | 0 | 🟢 PR gate |
 | `stm32h563` | cortex-m33 | 4 | 4 | 28 | 0 | 🟢 PR gate |
 | `stm32l073` | cortex-m0plus | 5 | 4 | 26 | 0 | 🟢 PR gate |
@@ -31,9 +31,9 @@ Gate of the strongest proving firmware: 🟢 PR gate · 🟡 release CI · 🟠 
 | `stm32wba52` | cortex-m33 | 4 | 0 | 31 | 0 | 🟢 PR gate |
 | `nrf5340` | cortex-m33 | 3 | 3 | 0 | 1 | 🟢 PR gate |
 | `ci-fixture-riscv` | riscv32 | 1 | 0 | 0 | 0 | 🟢 PR gate |
-| **total** | | **112** | **86** | **254** | **7** | |
+| **total** | | **113** | **89** | **253** | **4** | |
 
-> 112 peripheral models are driven by real firmware; 86 are register-tested only; 254 are modeled but never run; **7 are shims** (hardcoded stubs presenting as models).
+> 113 peripheral models are driven by real firmware; 89 are register-tested only; 253 are modeled but never run; **4 are shims** (hardcoded stubs presenting as models).
 
 ## `stm32l476` — cortex-m4f
 
@@ -78,7 +78,7 @@ _Strongest ARM chip — 20+ peripherals driven by real firmware + IO-Link statio
 
 ## `esp32c3` — riscv32imc
 
-_Only functional-sensor proof in the PR gate: real Sensirion/Melexis/Vishay drivers decode CO2/humidity/condensation over modeled I2C (Leo air-quality e2e)._
+_Only functional-sensor proof in the PR gate: real Sensirion/Melexis/Vishay drivers decode CO2/humidity/condensation over modeled I2C (Leo air-quality e2e). The WiFi path is a REAL simulated-medium model (two C3 firmwares associate + exchange IP over a shared VirtualWifi air), not a shim._
 
 **Proven by running firmware:**
 
@@ -93,14 +93,9 @@ _Only functional-sensor proof in the PR gate: real Sensirion/Melexis/Vishay driv
 | intmatrix | `tier1-fixture/esp32c3` | esp32c3/src/main.rs:187 | 🟡 release CI |
 | I2C sensor stack (SCD41/SGP41/SPS30/VEML7700/MLX90614) | `leo-airquality` | e2e_leo_airquality.rs:126-143 | 🟢 PR gate |
 
-**Unit-only** (register test, no firmware drives it): `ana_i2c`, `forced_status`, `rtc_timer`, `sar_adc`, `sha`
+**Unit-only** (register test, no firmware drives it): `ana_i2c`, `forced_status`, `rtc_timer`, `sar_adc`, `sha`, `virtual_wifi (real shared-802.11 medium model, 2 tests; driven by the dual-C3 CLI run)`, `wifi_mac (RE'd MAC↔SimNet bridge, RX descriptor ring, 5 tests)`
 
 **Dead** (2 modeled but never exercised): `cache`, `rng`
-
-**Shims** (hardcoded stubs — not real fidelity):
-
-- `virtual_wifi` (esp32c3/virtual_wifi.rs) — no real 802.11; unit-only stub
-- `wifi_mac` (esp32c3/wifi_mac.rs) — MAC stub, not driven by firmware
 
 ## `esp32s3` — xtensa-lx7
 
@@ -120,16 +115,13 @@ _Broad model surface (~35), thin firmware: tier1 fixture + TMP102 read prove ~9;
 | mcpwm | `tier1-fixture/esp32s3` | esp32s3/src/main.rs:344 | 🟡 release CI |
 | rmt | `tier1-fixture/esp32s3` | esp32s3/src/main.rs:374 | 🟡 release CI |
 | UART | `tier1-fixture/esp32s3` | esp32s3/src/main.rs | 🟡 release CI |
+| GDMA (mem-to-mem) | `tier1-fixture/esp32s3` | tier1-matrix.json esp32s3.dma=pass (real descriptor walk, 65 unit tests incl. m2m_single_descriptor_bytes_move) | 🟡 release CI |
 
 **Unit-only** (register test, no firmware drives it): `aes`, `core1_control`, `crosscore_ipi`, `ds`, `extmem`, `flash_xip`, `gpspi`, `hmac`, `i2s`, `io_mux`, `ledc`, `lcd_cam`, `pcnt`, `rng`, `rsa`, `sar_adc`, `sdmmc`, `sens`, `sha`, `spi_mem_flash`, `system`, `twai`, `usb_otg`
 
-**Dead** (1 modeled but never exercised): `gdma`
-
-  > ⚠ gdma is WORSE than dead — the tier1 fixture FAILS it with code=gdma-no-m2m-model; it is listed as a model but has no working mem-to-mem path.
-
 **Shims** (hardcoded stubs — not real fidelity):
 
-- `wifi_thunks` (esp32s3/wifi_thunks.rs:8) — explicit thunk shortcutting the WiFi stack (hardcoded WL_CONNECTED + SimNet)
+- `wifi_thunks` (esp32s3/wifi_thunks.rs:8 (CHEAT(THUNK-LIB))) — IRREDUCIBLE: the ESP32 WiFi MAC/PHY is a closed RF-coprocessor blob with NO executable image — there is no firmware to run, so it can never be firmware-exercised. The lwIP/socket layer above is routed to a real SimNet. Honestly labeled, e2e test #[ignore]d.
 
 ## `esp32` — xtensa-lx6
 
@@ -151,7 +143,7 @@ _tier1 fixture drives 7 blocks incl. a BMP280 chip-id read over the I2C command-
 
 **Shims** (hardcoded stubs — not real fidelity):
 
-- `sdio_stub` (esp32/sdio_stub.rs:5) — hardcoded FSM_DONE for BROM init
+- `sdio_stub` (esp32/sdio_stub.rs:5) — STRUCTURAL: hardcoded FSM_DONE so the boot ROM's SDIO bring-up poll terminates. Removing it breaks boot; the ROM blob is the only 'firmware' that touches it.
 
 ## `rp2040` — cortex-m0plus
 
@@ -209,14 +201,13 @@ _Demo firmware drives UARTE/GPIO/SPIM0 in the PR gate; radio/clock/timer only vi
 | CLOCK | `nrf52840-proximity` | e2e_nrf52840_proximity.rs:79 (#[ignore]) | 🟠 on-demand |
 | TIMER0 | `nrf52840-proximity` | e2e_nrf52840_proximity.rs:79 (#[ignore]) | 🟠 on-demand |
 
-**Unit-only** (register test, no firmware drives it): `TWIM`, `TWIS`, `SPIS`, `SAADC`, `PWM`, `RTC`, `CCM`, `RNG`, `TEMP`, `ECB`, `GPIOTE`, `PPI`, `NVMC`, `FICR`, `UICR`, `NFCT`, `PDM`, `EGU`, `QSPI`, `TIMER1-4`
+**Unit-only** (register test, no firmware drives it): `TWIM`, `TWIS`, `SPIS`, `SAADC`, `PWM`, `RTC`, `CCM`, `RNG`, `TEMP`, `ECB`, `GPIOTE`, `PPI`, `NVMC`, `FICR`, `UICR`, `NFCT`, `PDM`, `EGU`, `QSPI`, `TIMER1-4`, `USBD (partial endpoint model, 4 tests)`
 
 **Dead** (8 modeled but never exercised): `QDEC`, `AAR`, `ACL`, `BPROT`, `COMP`, `CRYPTOCELL`, `I2S`, `LPCOMP`, `MWU`
 
 **Shims** (hardcoded stubs — not real fidelity):
 
-- `USBD` (nrf52/usbd.rs) — endpoint stubs only
-- `USBREGULATOR` (nrf52/usbregulator.rs) — register stub
+- `USBREGULATOR` (nrf52/usbregulator.rs (70 lines, 0 tests)) — thin VBUS-ready register stub
 
 ## `mkw41z4` — cortex-m0plus
 
@@ -377,7 +368,7 @@ _Banner-only unmodified Zephyr: CLOCK/UARTE0/RTC1 drive the boot; nine periphera
 
 **Shims** (hardcoded stubs — not real fidelity):
 
-- `DCNF/FPU/CACHE/SPU/OSC_REG/CTRLAP/GPIOTE0/DPPIC/FICR` (nrf5340_*_stub) — poked by SystemInit, never polled — benign for UART boot only
+- `DCNF/FPU/CACHE/SPU/OSC_REG/CTRLAP/GPIOTE0/DPPIC/FICR` (nrf5340_*_stub) — STRUCTURAL: SystemInit pokes them once during boot and never polls them again, so a register stub is byte-faithful for the hello_world boot path. Real behaviour only matters once firmware uses these blocks (none does yet).
 
 ## `ci-fixture-riscv` — riscv32
 

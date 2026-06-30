@@ -85,7 +85,7 @@ chips:
 
   - id: esp32c3
     arch: riscv32imc
-    headline: "Only functional-sensor proof in the PR gate: real Sensirion/Melexis/Vishay drivers decode CO2/humidity/condensation over modeled I2C (Leo air-quality e2e)."
+    headline: "Only functional-sensor proof in the PR gate: real Sensirion/Melexis/Vishay drivers decode CO2/humidity/condensation over modeled I2C (Leo air-quality e2e). The WiFi path is a REAL simulated-medium model (two C3 firmwares associate + exchange IP over a shared VirtualWifi air), not a shim."
     proven:
       - {p: UART,       fw: tier1-fixture/esp32c3,  ev: "tier1_matrix (release)", gate: release}
       - {p: GPIO,       fw: tier1-fixture/esp32c3,  ev: "esp32c3/src/main.rs:114", gate: release}
@@ -95,11 +95,11 @@ chips:
       - {p: ledc,       fw: tier1-fixture/esp32c3,  ev: "esp32c3/src/main.rs:366", gate: release}
       - {p: intmatrix,  fw: tier1-fixture/esp32c3,  ev: "esp32c3/src/main.rs:187", gate: release}
       - {p: "I2C sensor stack (SCD41/SGP41/SPS30/VEML7700/MLX90614)", fw: leo-airquality, ev: "e2e_leo_airquality.rs:126-143", gate: pr}
-    unit_only: [ana_i2c, forced_status, rtc_timer, sar_adc, sha]
+    unit_only: [ana_i2c, forced_status, rtc_timer, sar_adc, sha,
+                "virtual_wifi (real shared-802.11 medium model, 2 tests; driven by the dual-C3 CLI run)",
+                "wifi_mac (RE'd MAC↔SimNet bridge, RX descriptor ring, 5 tests)"]
     dead: {count: 2, examples: [cache, rng]}
-    shim:
-      - {p: virtual_wifi, ev: "esp32c3/virtual_wifi.rs", note: "no real 802.11; unit-only stub"}
-      - {p: wifi_mac,     ev: "esp32c3/wifi_mac.rs",     note: "MAC stub, not driven by firmware"}
+    shim: []
 
   - id: esp32s3
     arch: xtensa-lx7
@@ -115,15 +115,13 @@ chips:
       - {p: mcpwm,           fw: tier1-fixture/esp32s3,  ev: "esp32s3/src/main.rs:344", gate: release}
       - {p: rmt,             fw: tier1-fixture/esp32s3,  ev: "esp32s3/src/main.rs:374", gate: release}
       - {p: UART,            fw: tier1-fixture/esp32s3,  ev: "esp32s3/src/main.rs", gate: release}
+      - {p: "GDMA (mem-to-mem)", fw: tier1-fixture/esp32s3, ev: "tier1-matrix.json esp32s3.dma=pass (real descriptor walk, 65 unit tests incl. m2m_single_descriptor_bytes_move)", gate: release}
     unit_only: [aes, core1_control, crosscore_ipi, ds, extmem, flash_xip, gpspi, hmac, i2s,
                 io_mux, ledc, lcd_cam, pcnt, rng, rsa, sar_adc, sdmmc, sens, sha,
                 spi_mem_flash, system, twai, usb_otg]
-    dead:
-      count: 1
-      examples: [gdma]
-      note: "gdma is WORSE than dead — the tier1 fixture FAILS it with code=gdma-no-m2m-model; it is listed as a model but has no working mem-to-mem path."
+    dead: {count: 0, examples: []}
     shim:
-      - {p: wifi_thunks, ev: "esp32s3/wifi_thunks.rs:8", note: "explicit thunk shortcutting the WiFi stack (hardcoded WL_CONNECTED + SimNet)"}
+      - {p: wifi_thunks, ev: "esp32s3/wifi_thunks.rs:8 (CHEAT(THUNK-LIB))", note: "IRREDUCIBLE: the ESP32 WiFi MAC/PHY is a closed RF-coprocessor blob with NO executable image — there is no firmware to run, so it can never be firmware-exercised. The lwIP/socket layer above is routed to a real SimNet. Honestly labeled, e2e test #[ignore]d."}
 
   - id: esp32
     arch: xtensa-lx6
@@ -139,7 +137,7 @@ chips:
     unit_only: [efuse, ledc, mcpwm, rtc_cntl, sha, syscon, twai]
     dead: {count: 0, examples: []}
     shim:
-      - {p: sdio_stub, ev: "esp32/sdio_stub.rs:5", note: "hardcoded FSM_DONE for BROM init"}
+      - {p: sdio_stub, ev: "esp32/sdio_stub.rs:5", note: "STRUCTURAL: hardcoded FSM_DONE so the boot ROM's SDIO bring-up poll terminates. Removing it breaks boot; the ROM blob is the only 'firmware' that touches it."}
 
   - id: rp2040
     arch: cortex-m0plus
@@ -187,11 +185,11 @@ chips:
       - {p: CLOCK,  fw: nrf52840-proximity,       ev: "e2e_nrf52840_proximity.rs:79 (#[ignore])", gate: ignored}
       - {p: TIMER0, fw: nrf52840-proximity,       ev: "e2e_nrf52840_proximity.rs:79 (#[ignore])", gate: ignored}
     unit_only: [TWIM, TWIS, SPIS, SAADC, PWM, RTC, CCM, RNG, TEMP, ECB, GPIOTE, PPI,
-                NVMC, FICR, UICR, NFCT, PDM, EGU, QSPI, "TIMER1-4"]
+                NVMC, FICR, UICR, NFCT, PDM, EGU, QSPI, "TIMER1-4",
+                "USBD (partial endpoint model, 4 tests)"]
     dead: {count: 8, examples: [QDEC, AAR, ACL, BPROT, COMP, CRYPTOCELL, I2S, LPCOMP, MWU]}
     shim:
-      - {p: USBD,         ev: "nrf52/usbd.rs", note: "endpoint stubs only"}
-      - {p: USBREGULATOR, ev: "nrf52/usbregulator.rs", note: "register stub"}
+      - {p: USBREGULATOR, ev: "nrf52/usbregulator.rs (70 lines, 0 tests)", note: "thin VBUS-ready register stub"}
 
   - id: mkw41z4
     arch: cortex-m0plus
@@ -310,7 +308,7 @@ chips:
     unit_only: [GPIO, "TIMER0-2", RTC0]
     dead: {count: 0, examples: []}
     shim:
-      - {p: "DCNF/FPU/CACHE/SPU/OSC_REG/CTRLAP/GPIOTE0/DPPIC/FICR", ev: "nrf5340_*_stub", note: "poked by SystemInit, never polled — benign for UART boot only"}
+      - {p: "DCNF/FPU/CACHE/SPU/OSC_REG/CTRLAP/GPIOTE0/DPPIC/FICR", ev: "nrf5340_*_stub", note: "STRUCTURAL: SystemInit pokes them once during boot and never polls them again, so a register stub is byte-faithful for the hello_world boot path. Real behaviour only matters once firmware uses these blocks (none does yet)."}
 
   - id: ci-fixture-riscv
     arch: riscv32
