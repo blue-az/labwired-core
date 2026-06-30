@@ -241,6 +241,7 @@ impl SystemBus {
         let uart = any
             .downcast_mut::<crate::peripherals::uart::Uart>()
             .ok_or_else(|| anyhow::anyhow!("peripheral '{uart_id}' is not a UART"))?;
+        uart.set_sink(None, false);
         uart.attach_stream(dev);
         Ok(())
     }

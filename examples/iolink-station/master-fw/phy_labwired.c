@@ -15,15 +15,23 @@
 #include "phy_labwired.h"
 #include <stdint.h>
 
-static int phy_init(void) {
+static int phy_init(void *user) {
+    (void)user;
     USART2->CR1 = USART_CR1_UE | USART_CR1_TE | USART_CR1_RE;
     return 0;
 }
 
-static void phy_set_mode(iolink_phy_mode_t mode) { (void)mode; }
-static void phy_set_baudrate(iolink_baudrate_t baudrate) { (void)baudrate; }
+static void phy_set_mode(void *user, iolink_phy_mode_t mode) {
+    (void)user;
+    (void)mode;
+}
+static void phy_set_baudrate(void *user, iolink_baudrate_t baudrate) {
+    (void)user;
+    (void)baudrate;
+}
 
-static int phy_send(const uint8_t *data, size_t len) {
+static int phy_send(void *user, const uint8_t *data, size_t len) {
+    (void)user;
     for (size_t i = 0; i < len; i++) {
         while ((USART2->ISR & USART_ISR_TXE) == 0u) {
         }
@@ -32,7 +40,8 @@ static int phy_send(const uint8_t *data, size_t len) {
     return (int)len;
 }
 
-static int phy_recv_byte(uint8_t *byte) {
+static int phy_recv_byte(void *user, uint8_t *byte) {
+    (void)user;
     if (USART2->ISR & USART_ISR_RXNE) {
         *byte = (uint8_t)USART2->RDR;
         return 1;
@@ -42,16 +51,16 @@ static int phy_recv_byte(uint8_t *byte) {
 
 /* ---- master config callbacks ---- */
 static int m_set_mode_checked(iolink_phy_mode_t mode) {
-    phy_set_mode(mode);
+    phy_set_mode(0, mode);
     return 0;
 }
 static int m_set_baudrate_checked(iolink_baudrate_t baudrate) {
-    phy_set_baudrate(baudrate);
+    phy_set_baudrate(0, baudrate);
     return 0;
 }
 static int m_flush_rx(void) {
     uint8_t b;
-    while (phy_recv_byte(&b) > 0) {
+    while (phy_recv_byte(0, &b) > 0) {
     }
     return 0;
 }
@@ -59,10 +68,11 @@ static int m_prepare_tx(void) { return 0; }
 static int m_prepare_rx(void) { return 0; }
 static int m_wake_up(void) {
     uint8_t w = 0x55u;
-    return phy_send(&w, 1u) == 1 ? 0 : -1;
+    return phy_send(0, &w, 1u) == 1 ? 0 : -1;
 }
 
 static const iolink_phy_api_t PHY = {
+    .user = 0,
     .init = phy_init,
     .set_mode = phy_set_mode,
     .set_baudrate = phy_set_baudrate,
