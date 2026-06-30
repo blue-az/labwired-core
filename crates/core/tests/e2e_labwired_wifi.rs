@@ -4,7 +4,7 @@
 //
 // End-to-end bring-up harness for the ESP32 WiFi functional model.
 //
-// Loads the arduino-esp32 WiFi fixture (examples/platformio/esp32-wifi-fixture)
+// Loads the arduino-esp32 WiFi fixture (platformio/esp32-wifi-fixture)
 // into the ESP32-classic sim, installs the arduino-esp32 ROM thunks plus the
 // WiFi/lwIP socket thunks (`wifi_thunks`), stands up a `SimNet` with a virtual
 // AP + HTTP server, and steps the firmware. It PASSES when the firmware
@@ -17,7 +17,7 @@
 // single-recv delivery — see the wifi_thunks module header).
 //
 // `#[ignore]`d: it needs the fixture ELF (built via `pio run` in
-// examples/platformio/esp32-wifi-fixture, or set `LABWIRED_WIFI_ELF`) and runs
+// platformio/esp32-wifi-fixture, or set `LABWIRED_WIFI_ELF`) and runs
 // up to a 200M-cycle budget. Run with:
 //
 //     cargo test -p labwired-core --test e2e_labwired_wifi -- --ignored --nocapture
@@ -45,7 +45,7 @@ fn labwired_wifi_fixture_connects_and_gets() {
     if !elf_path.exists() {
         eprintln!(
             "[skip] WiFi fixture ELF not found at {elf_path:?}; build \
-             examples/platformio/esp32-wifi-fixture and/or set LABWIRED_WIFI_ELF"
+             platformio/esp32-wifi-fixture and/or set LABWIRED_WIFI_ELF"
         );
         return;
     }
