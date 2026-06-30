@@ -5,10 +5,17 @@ name: "al2205-iolink-dido"
 chip: "../../configs/chips/stm32l476.yaml"
 debug_uart: "uart1"
 external_devices:
-  # Native IO-Link master peer driving the device firmware over USART2.
-  - id: "iolink_master"
+  # Native IO-Link master peers driving independent device firmware contexts.
+  - id: "iolink_master_port2"
     type: "iolink-master"
     connection: "uart2"
+    config:
+      pd_in_len: 1
+      m_seq_type: 1
+      com: "COM2"
+  - id: "iolink_master_port3"
+    type: "iolink-master"
+    connection: "uart3"
     config:
       pd_in_len: 1
       m_seq_type: 1

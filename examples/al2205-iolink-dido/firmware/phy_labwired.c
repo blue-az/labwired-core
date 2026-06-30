@@ -1,4 +1,4 @@
-/* PHY backend over the simulated STM32L476 USART2 (stm32v2 register layout).
+/* PHY backend over a simulated STM32L476 USART (stm32v2 register layout).
  *
  * The simulator transmits on any TDR write and reports TXE ready, and exposes
  * received bytes via RXNE/RDR, so only a token CR1 (UE|TE|RE) init is needed.
@@ -8,21 +8,19 @@
 #include "phy_labwired.h"
 #include <stdint.h>
 
-#define USART2_BASE 0x40004400u
 #define REG(a) (*(volatile uint32_t *)(a))
-#define U2_CR1 REG(USART2_BASE + 0x00u)
-#define U2_ISR REG(USART2_BASE + 0x1Cu)
-#define U2_RDR REG(USART2_BASE + 0x24u)
-#define U2_TDR REG(USART2_BASE + 0x28u)
 #define ISR_RXNE (1u << 5)
 #define ISR_TXE (1u << 7)
 #define CR1_UE (1u << 0)
 #define CR1_RE (1u << 2)
 #define CR1_TE (1u << 3)
 
+static uintptr_t base_from_user(void *user) {
+    return (uintptr_t)user;
+}
+
 static int phy_init(void *user) {
-    (void)user;
-    U2_CR1 = CR1_UE | CR1_TE | CR1_RE;
+    REG(base_from_user(user) + 0x00u) = CR1_UE | CR1_TE | CR1_RE;
     return 0;
 }
 
@@ -37,19 +35,19 @@ static void phy_set_baudrate(void *user, iolink_baudrate_t baudrate) {
 }
 
 static int phy_send(void *user, const uint8_t *data, size_t len) {
-    (void)user;
+    uintptr_t base = base_from_user(user);
     for (size_t i = 0; i < len; i++) {
-        while ((U2_ISR & ISR_TXE) == 0u) {
+        while ((REG(base + 0x1Cu) & ISR_TXE) == 0u) {
         }
-        U2_TDR = (uint32_t)data[i];
+        REG(base + 0x28u) = (uint32_t)data[i];
     }
     return (int)len;
 }
 
 static int phy_recv_byte(void *user, uint8_t *byte) {
-    (void)user;
-    if (U2_ISR & ISR_RXNE) {
-        *byte = (uint8_t)U2_RDR;
+    uintptr_t base = base_from_user(user);
+    if (REG(base + 0x1Cu) & ISR_RXNE) {
+        *byte = (uint8_t)REG(base + 0x24u);
         return 1;
     }
     return 0;
@@ -65,18 +63,15 @@ static int phy_detect_wakeup(void *user) {
     return 0;
 }
 
-static const iolink_phy_api_t PHY = {
-    .init = phy_init,
-    .set_mode = phy_set_mode,
-    .set_baudrate = phy_set_baudrate,
-    .send = phy_send,
-    .recv_byte = phy_recv_byte,
-    .detect_wakeup = phy_detect_wakeup,
-    .set_cq_line = 0,
-    .get_voltage_mv = 0,
-    .is_short_circuit = 0,
-};
-
-const iolink_phy_api_t *iolink_phy_labwired_get(void) {
-    return &PHY;
+void iolink_phy_labwired_init(iolink_phy_api_t *phy, uintptr_t usart_base) {
+    phy->user = (void *)usart_base;
+    phy->init = phy_init;
+    phy->set_mode = phy_set_mode;
+    phy->set_baudrate = phy_set_baudrate;
+    phy->send = phy_send;
+    phy->recv_byte = phy_recv_byte;
+    phy->detect_wakeup = phy_detect_wakeup;
+    phy->set_cq_line = 0;
+    phy->get_voltage_mv = 0;
+    phy->is_short_circuit = 0;
 }
