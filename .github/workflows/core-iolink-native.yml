@@ -53,6 +53,9 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Configure private submodule auth
+        run: git config --global url."https://x-access-token:${{ github.token }}@github.com/".insteadOf "git@github.com:"
+
       - name: Checkout iolinki device submodule
         run: git submodule update --init --depth 1 third_party/iolinki
 
