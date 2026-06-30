@@ -4,8 +4,7 @@
  * with a constant process-data input. The native IO-Link master (M3) and the
  * 74HC165 input shifter (M4) are wired in later milestones.
  */
-#include "iolinki/iolink.h"
-#include "iolinki/application.h"
+#include "iolinki/device.h"
 #include "phy_labwired.h"
 #include "debug_uart.h"
 #include <string.h>
@@ -37,6 +36,8 @@ static uint8_t spi1_read_byte(void) {
 }
 
 int main(void) {
+    static iolink_device_ctx_t device;
+
     dbg_uart_init();
     dbg_puts("AL2205 BOOT\r\n");
 
@@ -44,19 +45,20 @@ int main(void) {
      * -Os, short-enums) a designated-initializer left t_pd_us uninitialised,
      * which made the stack arm a bogus power-on delay (t_pd) that never
      * expired. memset + explicit assignment is robust. */
-    iolink_config_t cfg;
+    iolink_device_config_t cfg;
     memset(&cfg, 0, sizeof(cfg));
-    cfg.m_seq_type = IOLINK_M_SEQ_TYPE_1_1;
-    cfg.min_cycle_time = 0;
-    cfg.pd_in_len = 1;
-    cfg.pd_out_len = 0;
-    cfg.t_pd_us = 0;
-    if (iolink_init(iolink_phy_labwired_get(), &cfg) != 0) {
+    cfg.phy = *iolink_phy_labwired_get();
+    cfg.stack.m_seq_type = IOLINK_M_SEQ_TYPE_1_1;
+    cfg.stack.min_cycle_time = 0;
+    cfg.stack.pd_in_len = 1;
+    cfg.stack.pd_out_len = 0;
+    cfg.stack.t_pd_us = 0;
+    if (iolink_device_init(&device, &cfg) != 0) {
         dbg_puts("IOLINK INIT FAIL\r\n");
         for (;;) {
         }
     }
-    iolink_set_timing_enforcement(false);
+    iolink_device_set_timing_enforcement(&device, false);
     spi1_init();
     dbg_puts("IOLINK INIT OK\r\n");
 
@@ -65,8 +67,8 @@ int main(void) {
         /* Read the 8 digital inputs from the 74HC165 and publish them as the
          * IO-Link process data the master cyclically reads. */
         uint8_t pd = spi1_read_byte();
-        iolink_pd_input_update(&pd, 1, true);
-        iolink_process();
+        iolink_device_pd_input_update(&device, &pd, 1, true);
+        iolink_device_process(&device);
         /* Deliberately do NOT advance g_iolink_ticks_ms: the CPU loops far
          * faster than the simulated UART byte rate, so a per-loop tick would
          * race the stack's millisecond timeouts (e.g. the >1000 ms inactivity
@@ -74,7 +76,7 @@ int main(void) {
          * timing enforcement off, the handshake is driven purely by byte
          * arrival, which is what the cycle-stepped simulator models. */
 
-        iolink_dll_state_t s = iolink_get_state();
+        iolink_dll_state_t s = iolink_device_get_state(&device);
         if (s != last) {
             last = s;
             /* Trace transitions (so a stall is visible); flag OPERATE for the gate. */

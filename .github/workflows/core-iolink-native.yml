@@ -9,6 +9,7 @@ on:
       - "crates/core/build.rs"
       - "crates/core/native/**"
       - "crates/core/src/peripherals/components/iolink_master.rs"
+      - "examples/al2205-iolink-dido/**"
       - "third_party/iolinki"
   pull_request:
     branches:
@@ -20,6 +21,7 @@ on:
       - "crates/core/build.rs"
       - "crates/core/native/**"
       - "crates/core/src/peripherals/components/iolink_master.rs"
+      - "examples/al2205-iolink-dido/**"
       - "third_party/iolinki"
   workflow_dispatch:
 
@@ -62,8 +64,9 @@ jobs:
       - name: Install host C toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential
+          sudo apt-get install -y --no-install-recommends build-essential gcc-arm-none-eabi
           cc --version
+          arm-none-eabi-gcc --version
 
       - name: Native C master UART-boundary tests
         env:
@@ -76,3 +79,19 @@ jobs:
           IOLINKI_MASTER_DIR: ${{ github.workspace }}/iolinki-master
           IOLINKI_DEVICE_DIR: ${{ github.workspace }}/third_party/iolinki
         run: cargo check -p labwired-core --features iolink-native
+
+      - name: Build AL2205 IO-Link device firmware
+        run: make -C examples/al2205-iolink-dido/firmware
+
+      - name: Real LabWired IO-Link simulation
+        env:
+          IOLINKI_MASTER_DIR: ${{ github.workspace }}/iolinki-master
+          IOLINKI_DEVICE_DIR: ${{ github.workspace }}/third_party/iolinki
+        run: cargo run --release -q -p labwired-cli --features labwired-core/iolink-native -- test --script examples/al2205-iolink-dido/test.yaml --output-dir out/iolink/al2205 --no-uart-stdout
+
+      - name: Upload LabWired IO-Link simulation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: labwired-iolink-al2205
+          path: out/iolink/al2205

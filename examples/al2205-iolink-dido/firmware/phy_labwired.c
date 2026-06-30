@@ -20,20 +20,24 @@
 #define CR1_RE (1u << 2)
 #define CR1_TE (1u << 3)
 
-static int phy_init(void) {
+static int phy_init(void *user) {
+    (void)user;
     U2_CR1 = CR1_UE | CR1_TE | CR1_RE;
     return 0;
 }
 
-static void phy_set_mode(iolink_phy_mode_t mode) {
+static void phy_set_mode(void *user, iolink_phy_mode_t mode) {
+    (void)user;
     (void)mode;
 }
 
-static void phy_set_baudrate(iolink_baudrate_t baudrate) {
+static void phy_set_baudrate(void *user, iolink_baudrate_t baudrate) {
+    (void)user;
     (void)baudrate;
 }
 
-static int phy_send(const uint8_t *data, size_t len) {
+static int phy_send(void *user, const uint8_t *data, size_t len) {
+    (void)user;
     for (size_t i = 0; i < len; i++) {
         while ((U2_ISR & ISR_TXE) == 0u) {
         }
@@ -42,7 +46,8 @@ static int phy_send(const uint8_t *data, size_t len) {
     return (int)len;
 }
 
-static int phy_recv_byte(uint8_t *byte) {
+static int phy_recv_byte(void *user, uint8_t *byte) {
+    (void)user;
     if (U2_ISR & ISR_RXNE) {
         *byte = (uint8_t)U2_RDR;
         return 1;
@@ -50,9 +55,9 @@ static int phy_recv_byte(uint8_t *byte) {
     return 0;
 }
 
-static int phy_detect_wakeup(void) {
+static int phy_detect_wakeup(void *user) {
     uint8_t b;
-    while (phy_recv_byte(&b) > 0) {
+    while (phy_recv_byte(user, &b) > 0) {
         if (b == 0x55u) {
             return 1;
         }
