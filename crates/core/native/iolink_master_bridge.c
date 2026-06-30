@@ -58,29 +58,37 @@ static int q_pop(uint8_t* q, size_t* head, size_t* len, uint8_t* byte)
     return 1;
 }
 
-static int bridge_send(const uint8_t* data, size_t len)
+static int bridge_send(void* user, const uint8_t* data, size_t len)
 {
-    if ((g_active == 0) || (data == 0)) {
+    lw_iolm_context_t* c = (lw_iolm_context_t*) user;
+    if (c == 0) {
+        c = g_active;
+    }
+    if ((c == 0) || (data == 0)) {
         return -1;
     }
     for (size_t i = 0; i < len; i++) {
-        q_push(g_active->tx_queue, &g_active->tx_head, &g_active->tx_len, data[i]);
+        q_push(c->tx_queue, &c->tx_head, &c->tx_len, data[i]);
     }
     return (int) len;
 }
 
-static int bridge_recv_byte(uint8_t* byte)
+static int bridge_recv_byte(void* user, uint8_t* byte)
 {
-    if ((g_active == 0) || (byte == 0)) {
+    lw_iolm_context_t* c = (lw_iolm_context_t*) user;
+    if (c == 0) {
+        c = g_active;
+    }
+    if ((c == 0) || (byte == 0)) {
         return -1;
     }
-    return q_pop(g_active->rx_queue, &g_active->rx_head, &g_active->rx_len, byte);
+    return q_pop(c->rx_queue, &c->rx_head, &c->rx_len, byte);
 }
 
 static int bridge_wake_up(void)
 {
     uint8_t byte = 0x55U;
-    return bridge_send(&byte, 1U) == 1 ? 0 : -1;
+    return bridge_send(g_active, &byte, 1U) == 1 ? 0 : -1;
 }
 
 static int bridge_set_mode_checked(iolink_phy_mode_t mode)
@@ -107,6 +115,7 @@ int lw_iolm_init(void* ctx, const lw_iolm_config_t* config)
     lw_iolm_context_t* c = (lw_iolm_context_t*) ctx;
     memset(c, 0, sizeof(*c));
 
+    c->phy.user = c;
     c->phy.send = bridge_send;
     c->phy.recv_byte = bridge_recv_byte;
     iolink_master_config_t cfg = {

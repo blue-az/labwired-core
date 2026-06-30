@@ -1,0 +1,86 @@
+name: Core IO-Link Native
+
+on:
+  push:
+    paths:
+      - ".github/workflows/core-iolink-native.yml"
+      - "Cargo.lock"
+      - "crates/core/Cargo.toml"
+      - "crates/core/build.rs"
+      - "crates/core/native/**"
+      - "crates/core/src/peripherals/components/iolink_master.rs"
+      - "crates/core/src/peripherals/components/iolink_native.rs"
+      - "crates/core/src/peripherals/components/iolink_station.rs"
+      - "crates/core/src/world.rs"
+      - "crates/core/tests/iolink_native_master.rs"
+      - "crates/core/tests/world_multichip.rs"
+      - "examples/iolink-dido/**"
+      - "examples/iolink-station/**"
+      - "third_party/iolinki"
+      - "third_party/iolinki-master/**"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/core-iolink-native.yml"
+      - "Cargo.lock"
+      - "crates/core/Cargo.toml"
+      - "crates/core/build.rs"
+      - "crates/core/native/**"
+      - "crates/core/src/peripherals/components/iolink_master.rs"
+      - "crates/core/src/peripherals/components/iolink_native.rs"
+      - "crates/core/src/peripherals/components/iolink_station.rs"
+      - "crates/core/src/world.rs"
+      - "crates/core/tests/iolink_native_master.rs"
+      - "crates/core/tests/world_multichip.rs"
+      - "examples/iolink-dido/**"
+      - "examples/iolink-station/**"
+      - "third_party/iolinki"
+      - "third_party/iolinki-master/**"
+  workflow_dispatch:
+
+concurrency:
+  group: core-iolink-native-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  iolink-native:
+    name: iolink-native-c-master
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout LabWired core
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Configure private submodule auth
+        run: git config --global url."https://x-access-token:${{ github.token }}@github.com/".insteadOf "git@github.com:"
+
+      - name: Checkout iolinki device submodule
+        run: git submodule update --init --depth 1 third_party/iolinki
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@1.95.0
+
+      - name: Install host C toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential gcc-arm-none-eabi libnewlib-arm-none-eabi
+          cc --version
+          arm-none-eabi-gcc --version
+
+      - name: Native C master UART-boundary tests
+        run: cargo test -p labwired-core --features iolink-native --test iolink_native_master -- --nocapture
+
+      - name: Native C master compile check
+        run: cargo check -p labwired-core --features iolink-native
+
+      - name: Multi-chip world tests skip cleanly without prebuilt station ELFs
+        run: cargo test -p labwired-core --test world_multichip -- --nocapture
+
+      - name: Upload LabWired IO-Link simulation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: labwired-iolink-native
+          path: out/iolink

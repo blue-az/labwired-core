@@ -86,7 +86,7 @@ fn build_iolink_native_bridge() {
         // helpers above; listing them once is enough.
         .file(format!("{device_root}/src/frame.c"))
         .file(format!("{device_root}/src/crc.c"))
-        .file(format!("{device_root}/src/iolink_core.c"))
+        .file(format!("{device_root}/src/device.c"))
         .file(format!("{device_root}/src/dll.c"))
         .file(format!("{device_root}/src/isdu.c"))
         .file(format!("{device_root}/src/events.c"))

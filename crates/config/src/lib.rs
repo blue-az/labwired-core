@@ -585,6 +585,8 @@ pub struct TestLimits {
     pub wall_time_ms: Option<u64>,
     #[serde(default)]
     pub max_vcd_bytes: Option<u64>,
+    #[serde(default)]
+    pub stop_when_assertions_pass: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -598,6 +600,7 @@ pub enum StopReason {
     MaxVcdBytes,
     NoProgress,
     WallTime,
+    AssertionsPassed,
     MemoryViolation,
     DecodeError,
     Halt,

@@ -12,6 +12,7 @@
 #include "iolink_device_bridge.h"
 
 #include "iolinki/application.h"
+#include "iolinki/device.h"
 #include "iolinki/iolink.h"
 #include "iolinki/phy.h"
 
@@ -22,6 +23,8 @@
 typedef struct {
     /* `iolink_init` retains the PHY by pointer, so it must outlive init. */
     iolink_phy_api_t phy;
+    iolink_device_config_t config;
+    iolink_device_ctx_t device;
     uint8_t tx_queue[LW_IOLD_QUEUE_CAP]; /* device -> master */
     size_t tx_head;
     size_t tx_len;
@@ -31,13 +34,10 @@ typedef struct {
 } lw_iold_context_t;
 
 /*
- * Routes the device PHY callbacks. Thread-local so it never races with master
- * bridge calls on other threads. `g_device_in_use` stays process-global: the
- * device stack keeps its state in a true global (`g_dll_ctx`), so only one
- * device may exist process-wide regardless of thread.
+ * Routes the device PHY callbacks. Prefer the PHY's `user` pointer; keep the
+ * thread-local fallback only for older call sites that might not pass user.
  */
 static __thread lw_iold_context_t* g_device_active;
-static int g_device_in_use;
 
 static void q_push(uint8_t* q, size_t* head, size_t* len, uint8_t byte)
 {
@@ -60,25 +60,31 @@ static int q_pop(uint8_t* q, size_t* head, size_t* len, uint8_t* byte)
     return 1;
 }
 
-static int dev_send(const uint8_t* data, size_t len)
+static int dev_send(void* user, const uint8_t* data, size_t len)
 {
-    if ((g_device_active == 0) || (data == 0)) {
+    lw_iold_context_t* c = (lw_iold_context_t*) user;
+    if (c == 0) {
+        c = g_device_active;
+    }
+    if ((c == 0) || (data == 0)) {
         return -1;
     }
     for (size_t i = 0; i < len; i++) {
-        q_push(g_device_active->tx_queue, &g_device_active->tx_head,
-               &g_device_active->tx_len, data[i]);
+        q_push(c->tx_queue, &c->tx_head, &c->tx_len, data[i]);
     }
     return (int) len;
 }
 
-static int dev_recv_byte(uint8_t* byte)
+static int dev_recv_byte(void* user, uint8_t* byte)
 {
-    if ((g_device_active == 0) || (byte == 0)) {
+    lw_iold_context_t* c = (lw_iold_context_t*) user;
+    if (c == 0) {
+        c = g_device_active;
+    }
+    if ((c == 0) || (byte == 0)) {
         return -1;
     }
-    return q_pop(g_device_active->rx_queue, &g_device_active->rx_head,
-                 &g_device_active->rx_len, byte);
+    return q_pop(c->rx_queue, &c->rx_head, &c->rx_len, byte);
 }
 
 size_t lw_iold_context_size(void)
@@ -91,16 +97,15 @@ int lw_iold_init_proximity(void* ctx, int present)
     if (ctx == 0) {
         return -1;
     }
-    if (g_device_in_use) {
-        return -2;
-    }
 
     lw_iold_context_t* c = (lw_iold_context_t*) ctx;
     memset(c, 0, sizeof(*c));
+    c->phy.user = c;
     c->phy.send = dev_send;
     c->phy.recv_byte = dev_recv_byte;
 
-    iolink_config_t cfg = {
+    c->config.phy = c->phy;
+    c->config.stack = (iolink_config_t) {
         .m_seq_type = IOLINK_M_SEQ_TYPE_2_1,
         .min_cycle_time = 20U,
         .pd_in_len = 1U,
@@ -109,17 +114,16 @@ int lw_iold_init_proximity(void* ctx, int present)
     };
 
     g_device_active = c;
-    int ret = iolink_init(&c->phy, &cfg);
+    int ret = iolink_device_init(&c->device, &c->config);
     if (ret != 0) {
         g_device_active = 0;
         return ret;
     }
-    iolink_set_timing_enforcement(false);
+    iolink_device_set_timing_enforcement(&c->device, false);
 
     uint8_t pd = present ? 0x01U : 0x00U;
-    (void) iolink_pd_input_update(&pd, 1U, true);
+    (void) iolink_device_pd_input_update(&c->device, &pd, 1U, true);
 
-    g_device_in_use = 1;
     return 0;
 }
 
@@ -146,7 +150,7 @@ size_t lw_iold_feed_master(void* ctx, const uint8_t* data, size_t len)
     }
 
     g_device_active = c;
-    iolink_process();
+    iolink_device_process(&c->device);
     return len;
 }
 
