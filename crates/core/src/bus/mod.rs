@@ -209,6 +209,12 @@ pub struct SystemBus {
     /// before committing, and `peripherals[idx]` (the `Flash`) records the
     /// resulting NSSR error flags.
     flash_error_flags_idx: Option<usize>,
+    /// Universal bus-transaction trace (logic analyzer): a shared, ring-
+    /// buffered log that `I2c`/`Spi` peripherals record into once wrapped via
+    /// `set_bus_trace` + `attach` (see `crate::bus::bus_trace`). Always
+    /// present (never `None`) — empty until at least one peripheral is wired
+    /// to it in `from_config`.
+    pub bus_trace: bus_trace::BusTraceLog,
 }
 
 pub struct CanDiagnosticTester {
@@ -577,6 +583,13 @@ impl Default for SystemBus {
 }
 
 impl SystemBus {
+    /// Snapshot of the universal bus-transaction trace (logic analyzer):
+    /// every I²C/SPI byte recorded so far by peripherals wired to
+    /// `self.bus_trace` (see `crate::bus::bus_trace`), oldest first.
+    pub fn bus_trace_snapshot(&self) -> Vec<bus_trace::BusTraceEvent> {
+        self.bus_trace.lock().unwrap().snapshot()
+    }
+
     pub(crate) fn canonical_peripheral_type(raw_type: &str) -> String {
         let t = raw_type.to_ascii_lowercase();
 
@@ -1576,6 +1589,7 @@ impl SystemBus {
             riscv_irq_lines: 0,
             flash_models_ops: false,
             flash_error_flags_idx: None,
+            bus_trace: bus_trace::new_log(),
         };
         bus.rebuild_peripheral_ranges();
         bus
@@ -1617,6 +1631,7 @@ impl SystemBus {
             riscv_irq_lines: 0,
             flash_models_ops: false,
             flash_error_flags_idx: None,
+            bus_trace: bus_trace::new_log(),
         };
         bus.rebuild_peripheral_ranges();
         bus
@@ -3549,6 +3564,7 @@ peripherals:
             riscv_irq_lines: 0,
             flash_models_ops: false,
             flash_error_flags_idx: None,
+            bus_trace: bus_trace::new_log(),
         };
 
         bus.flash.write_u8(0x0800_0000, 0x12);
@@ -3614,6 +3630,7 @@ peripherals:
             riscv_irq_lines: 0,
             flash_models_ops: false,
             flash_error_flags_idx: None,
+            bus_trace: bus_trace::new_log(),
         };
         bus.rebuild_peripheral_ranges();
         bus
@@ -3830,6 +3847,7 @@ peripherals:
             riscv_irq_lines: 0,
             flash_models_ops: false,
             flash_error_flags_idx: None,
+            bus_trace: bus_trace::new_log(),
         };
         bus.rebuild_peripheral_ranges();
         bus
@@ -4045,6 +4063,7 @@ peripherals:
             riscv_irq_lines: 0,
             flash_models_ops: false,
             flash_error_flags_idx: None,
+            bus_trace: bus_trace::new_log(),
         };
 
         bus.rebuild_peripheral_ranges();
@@ -4114,6 +4133,7 @@ peripherals:
             riscv_irq_lines: 0,
             flash_models_ops: false,
             flash_error_flags_idx: None,
+            bus_trace: bus_trace::new_log(),
         };
         bus.rebuild_peripheral_ranges();
 
