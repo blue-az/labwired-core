@@ -17,7 +17,7 @@ Also includes a matrix testing example for testing across multiple ARM targets.
 **Quick Start:**
 ```bash
 # Copy to your repository
-cp examples/workflows/github-actions.yml .github/workflows/firmware-test.yml
+cp docs/integration-templates/github-actions.yml .github/workflows/firmware-test.yml
 
 # Customize the firmware build commands and test scripts
 # Then commit and push
@@ -36,7 +36,7 @@ GitLab CI pipeline template with:
 **Quick Start:**
 ```bash
 # Copy to your repository root
-cp examples/workflows/gitlab-ci.yml .gitlab-ci.yml
+cp docs/integration-templates/gitlab-ci.yml .gitlab-ci.yml
 
 # Customize the firmware package name and test scripts
 # Then commit and push
@@ -90,7 +90,7 @@ targets: thumbv7em-none-eabi
 
 ## Test Script Examples
 
-See [examples/ci/](../ci/) for working test script examples:
+See [examples/ci/](../../examples/ci/) for working test script examples:
 
 - `uart-ok.yaml` - Basic UART output validation
 - `dummy-max-steps.yaml` - Step limit testing
@@ -212,7 +212,7 @@ strategy:
 
 1. Copy the appropriate template to your repository
 2. Customize firmware build commands and test scripts
-3. Create test YAML files (see [examples/ci/README.md](../ci/README.md))
+3. Create test YAML files (see [examples/ci/README.md](../../examples/ci/README.md))
 4. Commit and push to trigger your first CI run
 5. Review artifacts and adjust assertions as needed
 

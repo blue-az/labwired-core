@@ -19,7 +19,7 @@ A Rust `no_std` firmware that:
 
 ## 2. The Test Script
 
-The test script ([stm32f103_integrated_test.yaml](../../examples/tests/stm32f103_integrated_test.yaml)) automates the simulation:
+The test script ([stm32f103_integrated_test.yaml](../../examples/stm32f103-integrated-test/stm32f103_integrated_test.yaml)) automates the simulation:
 
 ```yaml
 schema_version: "1.0"
@@ -38,7 +38,7 @@ assertions:
 Run the test locally using the CLI:
 
 ```bash
-labwired test --script examples/tests/stm32f103_integrated_test.yaml --output-dir out/test-results
+labwired test --script examples/stm32f103-integrated-test/stm32f103_integrated_test.yaml --output-dir out/test-results
 ```
 
 ### Inspecting Results
@@ -55,6 +55,6 @@ You can easily integrate this into a GitHub Actions workflow:
 - name: Run LabWired Integrated Test
   run: |
     labwired test \
-      --script examples/tests/stm32f103_integrated_test.yaml \
+      --script examples/stm32f103-integrated-test/stm32f103_integrated_test.yaml \
       --output-dir artifacts
 ```

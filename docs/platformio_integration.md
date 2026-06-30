@@ -6,7 +6,7 @@ on physical hardware — no board, no debug probe, no upload. This is the same
 PlatformIO documents for Renode and QEMU, pointed at LabWired.
 
 A complete, runnable example lives in
-[`examples/platformio/nrf52840-unity/`](../examples/platformio/nrf52840-unity/).
+[`platformio/nrf52840-unity/`](../platformio/nrf52840-unity/).
 
 ## How it works
 
