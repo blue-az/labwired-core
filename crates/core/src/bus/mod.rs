@@ -18,10 +18,13 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 mod accessors;
+pub mod bus_trace;
 mod embedded_descriptors;
 mod from_config;
 mod routing;
 mod tick;
+
+pub use bus_trace::{BusPayload, BusTraceEvent, BusTraceLog, I2cSym, new_log};
 
 impl SystemBus {}
 
