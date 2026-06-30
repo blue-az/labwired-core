@@ -113,10 +113,13 @@ fn master_chip_reaches_operate_with_real_sensor_chip() {
     // table rather than hardcoding link addresses — robust to linker/layout
     // changes (e.g. the STM32CubeL4 linker script). 3 == IOLINK_MASTER_STATE_OPERATE.
     let master_bytes = std::fs::read(&master_elf).expect("read master elf");
+    let device_bytes = std::fs::read(&device_elf).expect("read device elf");
     let state_addr = labwired_loader::resolve_symbol_in_elf(&master_bytes, "g_master_state")
         .expect("g_master_state symbol in master elf") as u64;
     let pd0_addr = labwired_loader::resolve_symbol_in_elf(&master_bytes, "g_master_pd0")
         .expect("g_master_pd0 symbol in master elf") as u64;
+    let device_state_addr = labwired_loader::resolve_symbol_in_elf(&device_bytes, "g_device_state")
+        .expect("g_device_state symbol in device elf") as u64;
     const OPERATE: u8 = 3;
 
     // The sensor publishes its 74HC165 input byte as process data; the
@@ -126,11 +129,14 @@ fn master_chip_reaches_operate_with_real_sensor_chip() {
 
     let mut reached_operate = false;
     let mut last_state = 0u8;
+    let mut device_state = 0u8;
     let mut pd0 = 0xFFu8;
     for _ in 0..5_000_000u64 {
         world.step_all();
         let master = world.machines.get("master").unwrap();
         last_state = master.read_u8(state_addr).unwrap();
+        let device = world.machines.get("sensor1").unwrap();
+        device_state = device.read_u8(device_state_addr).unwrap();
         if last_state == OPERATE {
             reached_operate = true;
         }
@@ -143,7 +149,8 @@ fn master_chip_reaches_operate_with_real_sensor_chip() {
 
     assert!(
         reached_operate,
-        "master chip never reached OPERATE driving the real sensor chip; last_state={last_state:#x}"
+        "master chip never reached OPERATE driving the real sensor chip; \
+         last_state={last_state:#x} device_state={device_state:#x} pd0={pd0:#x}"
     );
     assert_eq!(
         pd0, EXPECTED_PD,

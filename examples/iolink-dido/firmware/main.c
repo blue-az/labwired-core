@@ -24,6 +24,8 @@
  * Cube examples). Plain C globals are initialised by the startup .data copy. */
 void __libc_init_array(void) {}
 
+volatile uint8_t g_device_state = 0xFFu;
+
 /* RCC (STM32L4, RM0351 §6.4) — enable the peripheral clocks this firmware uses
  * before touching their registers. REQUIRED on real silicon and modelled by the
  * simulator (clock-gating): USART1/USART2/SPI1 are unclocked out of reset, so
@@ -93,6 +95,7 @@ int main(void) {
          * arrival, which is what the cycle-stepped simulator models. */
 
         iolink_dll_state_t s = iolink_device_get_state(&device);
+        g_device_state = (uint8_t)s;
         if (s != last) {
             last = s;
             /* Trace transitions (so a stall is visible); flag OPERATE for the gate. */
