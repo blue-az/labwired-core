@@ -1,17 +1,23 @@
 /* 4-port MASTER PHY over the simulated L476 USART2/3/4/5, driven through the
  * CMSIS register definitions.
  *
- * The iolink_phy_api_t callbacks carry no port context, so each port gets its
- * own generated set of send/recv/init/wake/flush functions bound to one USART
- * instance (PORT macro). Shared port-agnostic no-ops cover mode/baudrate/prepare.
- * Config matches the iolink-dido device firmware: M-sequence type 1_1, 1-byte PD in.
+ * Each port gets its own generated set of send/recv/init/wake/flush functions
+ * bound to one USART instance (PORT macro). Shared port-agnostic no-ops cover
+ * mode/baudrate/prepare. Config matches the iolink-dido device firmware:
+ * M-sequence type 1_1, 1-byte PD in.
  */
 #include "stm32l476xx.h"
 #include "phy_labwired.h"
 #include <stdint.h>
 
-static void p_set_mode(iolink_phy_mode_t m) { (void)m; }
-static void p_set_baud(iolink_baudrate_t b) { (void)b; }
+static void p_set_mode(void *user, iolink_phy_mode_t m) {
+    (void)user;
+    (void)m;
+}
+static void p_set_baud(void *user, iolink_baudrate_t b) {
+    (void)user;
+    (void)b;
+}
 static int p_set_mode_chk(iolink_phy_mode_t m) {
     (void)m;
     return 0;
@@ -23,7 +29,8 @@ static int p_set_baud_chk(iolink_baudrate_t b) {
 static int p_prepare(void) { return 0; }
 
 #define PORT(IDX, U)                                                            \
-    static int send_##IDX(const uint8_t *d, size_t n) {                         \
+    static int send_##IDX(void *user, const uint8_t *d, size_t n) {             \
+        (void)user;                                                             \
         for (size_t i = 0; i < n; i++) {                                        \
             while (((U)->ISR & USART_ISR_TXE) == 0u) {                          \
             }                                                                   \
@@ -31,24 +38,26 @@ static int p_prepare(void) { return 0; }
         }                                                                       \
         return (int)n;                                                         \
     }                                                                           \
-    static int recv_##IDX(uint8_t *b) {                                         \
+    static int recv_##IDX(void *user, uint8_t *b) {                             \
+        (void)user;                                                             \
         if ((U)->ISR & USART_ISR_RXNE) {                                        \
             *b = (uint8_t)(U)->RDR;                                             \
             return 1;                                                          \
         }                                                                       \
         return 0;                                                              \
     }                                                                           \
-    static int init_##IDX(void) {                                               \
+    static int init_##IDX(void *user) {                                         \
+        (void)user;                                                             \
         (U)->CR1 = USART_CR1_UE | USART_CR1_TE | USART_CR1_RE;                  \
         return 0;                                                              \
     }                                                                           \
     static int wake_##IDX(void) {                                               \
         uint8_t w = 0x55u;                                                      \
-        return send_##IDX(&w, 1u) == 1 ? 0 : -1;                               \
+        return send_##IDX(0, &w, 1u) == 1 ? 0 : -1;                            \
     }                                                                           \
     static int flush_##IDX(void) {                                              \
         uint8_t b;                                                             \
-        while (recv_##IDX(&b) > 0) {                                            \
+        while (recv_##IDX(0, &b) > 0) {                                         \
         }                                                                       \
         return 0;                                                              \
     }
@@ -59,8 +68,9 @@ PORT(2, UART4)
 PORT(3, UART5)
 
 static void fill_one(iolink_phy_api_t *phy, iolink_master_config_t *cfg,
-                     int (*init)(void), int (*send)(const uint8_t *, size_t),
-                     int (*recv)(uint8_t *), int (*wake)(void), int (*flush)(void)) {
+                     int (*init)(void *), int (*send)(void *, const uint8_t *, size_t),
+                     int (*recv)(void *, uint8_t *), int (*wake)(void), int (*flush)(void)) {
+    phy->user = 0;
     phy->init = init;
     phy->set_mode = p_set_mode;
     phy->set_baudrate = p_set_baud;
