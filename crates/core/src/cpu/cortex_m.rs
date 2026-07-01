@@ -2363,7 +2363,17 @@ impl CortexM {
                             base = base.wrapping_add(4);
                         }
                     }
-                    self.write_reg(rn, base);
+                    // LDM (T1) writeback: the base register is written back with
+                    // the incremented address ONLY when it is NOT in the register
+                    // list. When the base IS in the list (the assembler emits no
+                    // `!`, e.g. `ldmia r2, {r0,r1,r2}`), the ARMv6-M architecture
+                    // specifies the loaded value wins and no writeback occurs.
+                    // Writing back unconditionally clobbered the just-loaded value
+                    // — which corrupted the compiler's struct-copy / stacked-arg
+                    // reload idiom and silently dropped a loaded argument.
+                    if (registers & (1 << rn)) == 0 {
+                        self.write_reg(rn, base);
+                    }
                 }
                 Instruction::Stm { rn, registers } => {
                     let mut base = self.read_reg(rn);
@@ -4006,6 +4016,45 @@ mod tests {
         bus.write_u16(0x4002, 0xDEAD).unwrap();
         run_test_instr(&mut cpu, &mut bus, 0x5A88, false);
         assert_eq!(cpu.r0, 0x0000DEAD);
+    }
+
+    #[test]
+    fn test_exec_ldmia_base_in_list_no_writeback() {
+        // LDMIA R2, {R0, R1, R2} = 0xCA07 (base R2 is IN the list → no `!` →
+        // no writeback; the LOADED value wins). Regression for the KW41Z-LCD
+        // "blank cow" bug: the compiler's struct-copy / stacked-arg reload
+        // idiom `ldmia rN, {..., rN}` had its final register clobbered by an
+        // unconditional base writeback, silently dropping a loaded argument.
+        let mut cpu = CortexM::new();
+        let mut bus = MockBus::new();
+        cpu.pc = 0x2000;
+        cpu.r2 = 0x4000;
+        bus.write_u32(0x4000, 0x1111_1111).unwrap(); // -> r0
+        bus.write_u32(0x4004, 0x2222_2222).unwrap(); // -> r1
+        bus.write_u32(0x4008, 0x0000_0014).unwrap(); // -> r2 (the loaded value)
+        run_test_instr(&mut cpu, &mut bus, 0xCA07, false);
+        assert_eq!(cpu.r0, 0x1111_1111);
+        assert_eq!(cpu.r1, 0x2222_2222);
+        // Must be the value loaded from [base+8], NOT base+12 (0x400C).
+        assert_eq!(cpu.r2, 0x0000_0014, "base-in-list LDM must not write back");
+    }
+
+    #[test]
+    fn test_exec_ldmia_base_not_in_list_writes_back() {
+        // LDMIA R3!, {R0, R1} = 0xCB03 (base R3 NOT in list → writeback).
+        let mut cpu = CortexM::new();
+        let mut bus = MockBus::new();
+        cpu.pc = 0x2000;
+        cpu.r3 = 0x4000;
+        bus.write_u32(0x4000, 0xAAAA_AAAA).unwrap();
+        bus.write_u32(0x4004, 0xBBBB_BBBB).unwrap();
+        run_test_instr(&mut cpu, &mut bus, 0xCB03, false);
+        assert_eq!(cpu.r0, 0xAAAA_AAAA);
+        assert_eq!(cpu.r1, 0xBBBB_BBBB);
+        assert_eq!(
+            cpu.r3, 0x4008,
+            "base-not-in-list LDM must write back base+8"
+        );
     }
 
     #[test]
