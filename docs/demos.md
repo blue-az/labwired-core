@@ -36,7 +36,7 @@ Headless, deterministic execution for scaled regression testing.
 | Demo | Description | Path |
 | :--- | :--- | :--- |
 | **UART Smoke Test** | Simple deterministic test runner (`labwired test`) example. | [`examples/ci/uart-ok.yaml`](../examples/ci/uart-ok.yaml) |
-| **Workflow Templates** | Ready-to-use GitHub Actions and GitLab CI files. | [`examples/workflows/`](../examples/workflows/) |
+| **Workflow Templates** | Ready-to-use GitHub Actions and GitLab CI files. | [`docs/integration-templates/`](integration-templates/) |
 
 ---
 

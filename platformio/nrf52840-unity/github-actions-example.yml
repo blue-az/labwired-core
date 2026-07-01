@@ -25,5 +25,5 @@ jobs:
           echo "$PWD/target/release" >> "$GITHUB_PATH"
 
       - name: Run unit tests in the simulator
-        working-directory: examples/platformio/nrf52840-unity
+        working-directory: platformio/nrf52840-unity
         run: pio test -e nrf52840_dk

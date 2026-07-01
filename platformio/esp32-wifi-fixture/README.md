@@ -16,7 +16,7 @@ int code = http.GET();
 ## Build
 
 ```sh
-cd examples/platformio/esp32-wifi-fixture
+cd platformio/esp32-wifi-fixture
 pio run                       # → .pio/build/esp32dev/firmware.elf (classic ESP32)
 ```
 

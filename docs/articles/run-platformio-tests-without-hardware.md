@@ -39,7 +39,7 @@ results from its output.
              cargo build --release -p labwired-cli
              echo "$PWD/target/release" >> "$GITHUB_PATH"
          - name: Run unit tests in the simulator
-           working-directory: examples/platformio/nrf52840-unity
+           working-directory: platformio/nrf52840-unity
            run: pio test -e nrf52840_dk
    ```
 
@@ -56,11 +56,11 @@ test/test_smoke/test_main.c:52: test_string_length    [PASSED]
 ```
 
 > Prefer a terminal? Open the repo in a **GitHub Codespace** and run
-> `cd examples/platformio/nrf52840-unity && pio test`. Still nothing installed
+> `cd platformio/nrf52840-unity && pio test`. Still nothing installed
 > locally — it runs in your browser.
 
 The runnable project is at
-[`examples/platformio/nrf52840-unity/`](../../examples/platformio/nrf52840-unity/).
+[`platformio/nrf52840-unity/`](../../platformio/nrf52840-unity/).
 
 ---
 
@@ -156,7 +156,7 @@ cargo build --release -p labwired-cli
 export PATH="$PWD/target/release:$PATH"
 
 # Run the tests in the simulator
-cd examples/platformio/nrf52840-unity
+cd platformio/nrf52840-unity
 pio test -e nrf52840_dk
 ```
 
