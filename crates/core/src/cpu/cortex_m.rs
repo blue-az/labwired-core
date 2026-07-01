@@ -4051,7 +4051,10 @@ mod tests {
         run_test_instr(&mut cpu, &mut bus, 0xCB03, false);
         assert_eq!(cpu.r0, 0xAAAA_AAAA);
         assert_eq!(cpu.r1, 0xBBBB_BBBB);
-        assert_eq!(cpu.r3, 0x4008, "base-not-in-list LDM must write back base+8");
+        assert_eq!(
+            cpu.r3, 0x4008,
+            "base-not-in-list LDM must write back base+8"
+        );
     }
 
     #[test]
