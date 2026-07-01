@@ -1242,9 +1242,12 @@ fn test_kw41z_lcd_renders_screen() {
     let lit = fb.iter().filter(|&&b| b != 0).count();
     assert!(
         lit > 0,
-        "PCD8544 framebuffer is blank — no activity bars were rendered"
+        "PCD8544 framebuffer is blank — no cow was rendered"
     );
+
     // ASCII snapshot of the 84x48 Nokia-5110 screen (bank-major, 8 px/byte).
+    // Printed BEFORE the feature assertions below so a failure still leaves
+    // the rendered cow visible in the test output.
     eprintln!("┌{}┐", "─".repeat(84));
     for bank in 0..6 {
         for sub in 0..8 {
@@ -1257,7 +1260,31 @@ fn test_kw41z_lcd_renders_screen() {
         }
     }
     eprintln!("└{}┘", "─".repeat(84));
-    eprintln!("PCD8544 rendered: {lit} non-blank framebuffer bytes, display ON");
+    eprintln!("PCD8544 rendered: {lit} non-blank framebuffer bytes, display ON — cute cow face");
+
+    // Pixel-level helper matching the firmware's own bank-major addressing
+    // (fb[(y/8)*84 + x], bit y%8), so we can assert on specific cow features
+    // rather than just "something is lit".
+    let px = |x: usize, y: usize| -> bool { (fb[(y / 8) * 84 + x] >> (y % 8)) & 1 != 0 };
+
+    // Head outline: the ellipse's left/right extremes at its vertical center
+    // (cx=42, cy=20, rx=25) must be lit.
+    assert!(px(17, 20) || px(18, 20), "cow head left edge missing");
+    assert!(px(66, 20) || px(67, 20), "cow head right edge missing");
+    // Muzzle nostrils (mx=42, my=29, offsets ±5,-1): two solid dots.
+    assert!(px(37, 28), "left nostril missing");
+    assert!(px(47, 28), "right nostril missing");
+    // The whole cow reads as more than a couple of bars: expect a healthy
+    // number of lit framebuffer bytes across the face + banner + meter.
+    assert!(
+        lit > 150,
+        "framebuffer has too few non-blank bytes ({lit}) for a full cow face"
+    );
+
+    // The bottom-edge activity meter track (row 46) must span the full width.
+    for x in 0..84 {
+        assert!(px(x, 46), "activity meter track missing at column {x}");
+    }
 }
 
 /// End-to-end proof that the universal bus-trace logic analyzer (Tasks 1-2)
