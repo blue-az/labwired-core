@@ -1223,7 +1223,15 @@ pub(crate) fn build_c3_rom_boot_machine(
     // 31 interrupt lines (incl. line 7) are ESP matrix lines, so a
     // self-pending MTIP would collide. mtimecmp=MAX keeps mip bit7 clear.
     cpu.mtimecmp = u64::MAX;
-    Ok(labwired_core::Machine::new(cpu, bus))
+    let mut machine = labwired_core::Machine::new(cpu, bus);
+    // ROM-boot firmware is interrupt-driven (FreeRTOS tick via the interrupt
+    // matrix). Instruction batching freezes peripherals — and interrupt
+    // delivery — across each 10k-step batch, so the scheduler never runs and
+    // the app spins in vPortEnterCritical forever. Cycle-accurate stepping is
+    // required for correctness here, exactly like the cycle-tight GPIO-timing
+    // devices the test loop already exempts.
+    machine.config.batch_mode_enabled = false;
+    Ok(machine)
 }
 
 /// Two-station WiFi run: boot two ESP32-C3 instances with distinct factory MACs
