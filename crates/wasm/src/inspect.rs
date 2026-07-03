@@ -203,9 +203,7 @@ impl WasmSimulator {
         // so both must be enumerable here — otherwise `get_ssd1306_framebuffer`
         // returns "not an I2C controller" and the OLED renders blank in the
         // playground/embed even though the device is present and being drawn to.
-        if let Some(i2c) =
-            any.downcast_ref::<labwired_core::peripherals::i2c::I2c>()
-        {
+        if let Some(i2c) = any.downcast_ref::<labwired_core::peripherals::i2c::I2c>() {
             for device in i2c.attached_devices() {
                 let device = device.borrow();
                 if device.address() != address {
