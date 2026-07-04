@@ -38,6 +38,21 @@ const DRAM: DramWindow = DramWindow {
     hi: 0x3FCE_0000,
 };
 
+/// Replicate the ESP32-C3 boot ROM's reset-time `.data` initialization for the
+/// fast-boot path, the RISC-V analogue of [`super::esp32s3_rom::s3_rom_data_init_writes`].
+///
+/// Fast-boot jumps straight into the app and skips the ROM's own startup
+/// `unpackloop` (0x40001ef8), so the ROM's DRAM globals — e.g. the ROM function
+/// tables esp-hal's init dispatches through (`ets_ops_table_ptr` @0x3FCDFFFC) —
+/// would stay zero and a ROM call jumps through a null/garbage pointer. Walking
+/// the copy table here lands the genuine values exactly as the real ROM reset
+/// does (zero thunks); idempotent with `--rom-boot`, which runs the copy itself.
+/// The copy-table format and IROM base match the S3, so this reuses the S3
+/// walker with the C3 DRAM window.
+pub fn c3_rom_data_init_writes(irom: &[u8]) -> Vec<(u32, Vec<u8>)> {
+    super::esp32s3_rom::rom_data_init_writes(irom, IROM_BASE, DRAM)
+}
+
 /// Extract the IROM and DROM flat images from the genuine C3 ROM ELF bytes.
 pub fn extract_rom_images(elf_bytes: &[u8]) -> Result<RomImages, String> {
     let elf = Elf::parse(elf_bytes).map_err(|e| format!("parse ROM ELF: {e}"))?;

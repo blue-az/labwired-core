@@ -133,7 +133,10 @@ impl WasmSimulator {
 
         match chip.arch {
             Arch::Arm | Arch::Unknown => Self::new_from_config_arm(&chip, &manifest, firmware),
-            Arch::RiscV => Self::new_from_config_riscv(&chip, &manifest, firmware),
+            Arch::RiscV => {
+                let blob_map = parse_named_blobs(&blobs);
+                Self::new_from_config_riscv(&chip, &manifest, firmware, &blob_map)
+            }
             Arch::Xtensa if chip.name.starts_with("esp32s3") => {
                 let blob_map = parse_named_blobs(&blobs);
                 Self::new_from_config_xtensa_esp32s3(&manifest, firmware, &blob_map)
@@ -188,15 +191,103 @@ impl WasmSimulator {
     /// RISC-V core via `configure_riscv` and seeds the stack pointer at the top
     /// of DRAM — fast-boot skips the ROM/2nd-stage bootloader that would
     /// normally set SP, so the app's first prologue store would otherwise fault.
+    ///
+    /// The ESP32-C3 boot ROM is injected on demand via `blobs` under
+    /// `esp32c3_irom`/`esp32c3_drom` — the RISC-V analogue of the S3 path's
+    /// `Esp32s3Opts.rom_images`. The chip YAML declares zero-filled `rom` /
+    /// `rom_data` regions (IROM 0x4000_0000, DROM 0x3FF0_0000) that native
+    /// builds fill from env pins or the vendored images; on wasm the vendored
+    /// images are excluded from the bundle, so the browser fetches the two ROM
+    /// bins and passes them here. With the ROM present, esp-hal's ROM function
+    /// calls during init resolve for real (zero thunks) instead of dispatching
+    /// through zeros.
     fn new_from_config_riscv(
         chip: &ChipDescriptor,
         manifest: &SystemManifest,
         firmware: &[u8],
+        blobs: &std::collections::HashMap<String, Vec<u8>>,
     ) -> Result<WasmSimulator, JsValue> {
         let mut bus = SystemBus::from_config(chip, manifest)
             .map_err(|e| JsValue::from_str(&format!("Bus config error: {:#}", e)))?;
 
+        // Inject the on-demand ESP32-C3 boot ROM blobs into the chip's still
+        // zero-filled `rom`/`rom_data` regions, matching how the native
+        // `--rom-boot` path (`build_c3_rom_boot_machine`) provisions them.
+        // Absent blobs (non-C3 RISC-V chips, or the browser not supplying them)
+        // leave the regions zero, preserving the pre-existing fast-boot path.
+        let faithful_c3_rom = {
+            use labwired_core::boot::esp32c3_rom::{c3_rom_data_init_writes, DROM_BASE, IROM_BASE};
+            let mut injected_irom: Option<Vec<u8>> = None;
+            for mem in bus.extra_mem.iter_mut() {
+                let src = if mem.base_addr == IROM_BASE as u64 {
+                    blobs.get("esp32c3_irom")
+                } else if mem.base_addr == DROM_BASE as u64 {
+                    blobs.get("esp32c3_drom")
+                } else {
+                    None
+                };
+                if let Some(src) = src {
+                    let n = src.len().min(mem.data.len());
+                    mem.data[..n].copy_from_slice(&src[..n]);
+                    if mem.base_addr == IROM_BASE as u64 {
+                        injected_irom = Some(src.clone());
+                    }
+                }
+            }
+            // Fast-boot skips the ROM reset's own `.data` copy, so replicate it:
+            // land the ROM's DRAM globals (ROM function tables esp-hal calls
+            // dispatch through) exactly as silicon does — otherwise those calls
+            // jump through a null/garbage pointer. Mirrors the S3 path's
+            // `s3_rom_data_init_writes` in `configure_xtensa_esp32s3`.
+            if let Some(irom) = injected_irom {
+                for (dst, bytes) in c3_rom_data_init_writes(&irom) {
+                    for (i, b) in bytes.iter().enumerate() {
+                        let _ = bus.write_u8(dst as u64 + i as u64, *b);
+                    }
+                }
+                // With the real ROM present, esp-hal's clock bring-up runs the
+                // genuine `rom_i2c_*Reg` helpers, which drive the analog I²C
+                // master / ANA_CONFIG block (0x6000_E000) for the PLL. That
+                // block is not in the chip YAML (it's the same custom model the
+                // native `--rom-boot` builder wires), so add it here on the
+                // faithful path — otherwise the first ROM PLL transaction faults
+                // on an unmapped access. Its FSM-status model lets the ROM's
+                // transaction busy-poll complete.
+                bus.add_peripheral(
+                    "rtc_i2c_ana",
+                    0x6000_E000,
+                    0x400,
+                    None,
+                    Box::new(labwired_core::peripherals::esp32c3::ana_i2c::Esp32c3AnaI2c::new()),
+                );
+                bus.refresh_peripheral_index();
+                true
+            } else {
+                false
+            }
+        };
+
         let uart_sink = Arc::new(Mutex::new(Vec::new()));
+        // On the faithful C3 ROM path, esp-println's `jtag-serial` feature (used
+        // by esp-hal apps) prints through USB_SERIAL_JTAG (0x6004_3000), not
+        // UART0. The chip YAML only has a declarative register stub there, which
+        // never drains bytes, so route the real behavioral model (same IP as the
+        // S3, reused unchanged) into `uart_sink` — mirroring the S3 path — so the
+        // widget's Serial tab shows the app's output. A narrower, later-registered
+        // window overrides the declarative stub.
+        if faithful_c3_rom {
+            use labwired_core::peripherals::esp32s3::usb_serial_jtag::UsbSerialJtag;
+            let mut usb_serial = UsbSerialJtag::new();
+            usb_serial.set_sink(Some(uart_sink.clone()), false);
+            bus.add_peripheral(
+                "usb_serial_jtag",
+                0x6004_3000,
+                0x100,
+                None,
+                Box::new(usb_serial),
+            );
+            bus.refresh_peripheral_index();
+        }
         if let Some(debug_uart) = manifest.debug_uart.as_deref() {
             if !bus.attach_uart_tx_sink_named(debug_uart, uart_sink.clone(), false) {
                 bus.attach_uart_tx_sink(uart_sink.clone(), false);
