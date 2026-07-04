@@ -73,6 +73,10 @@ jobs:
             make: examples/canmod-gps-sim/firmware
             script: examples/canmod-gps-sim/canmod-smoke.yaml
             system: examples/canmod-gps-sim/system.yaml
+          - id: f103-j1939-monitor
+            make: examples/f103-j1939-monitor/firmware
+            script: examples/f103-j1939-monitor/j1939-replay.yaml
+            system: examples/f103-j1939-monitor/replay-system.yaml
 
     steps:
       - uses: actions/checkout@v4
@@ -120,7 +124,7 @@ jobs:
             --no-uart-stdout
 
       - name: Verify frames against CSS's real DBC
-        if: matrix.make != ''
+        if: matrix.id == 'canmod-gps-sim'
         run: |
           python3 -m pip install --quiet cantools
           python3 "$(dirname "${{ matrix.script }}")/decode_check.py" \
@@ -136,6 +140,7 @@ jobs:
             --out-dir "out/coverage-matrix/${{ matrix.id }}/unsupported-audit"
 
       - name: Publish audit summary
+        if: matrix.crate != ''
         run: |
           python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
           import json
@@ -189,6 +194,7 @@ jobs:
             --required-target stm32f401cdu6 \
             --required-target riscv-ci-fixture \
             --required-target demo-blinky-stm32f103 \
+            --required-target f103-j1939-monitor \
             --min-required-pass-rate 0.80
 
       - name: Publish scoreboard summary
@@ -206,6 +212,7 @@ jobs:
             --required-target stm32f401cdu6 \
             --required-target riscv-ci-fixture \
             --required-target demo-blinky-stm32f103 \
+            --required-target f103-j1939-monitor \
             --min-required-pass-rate 0.80
 
       - name: Upload scoreboard artifacts

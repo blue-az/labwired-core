@@ -295,8 +295,39 @@ impl ChipDescriptor {
 
 impl SystemManifest {
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
+        let path = path.as_ref();
         let f = std::fs::File::open(path)?;
-        serde_yaml::from_reader(f).context("Failed to parse System Manifest")
+        let mut manifest: SystemManifest =
+            serde_yaml::from_reader(f).context("Failed to parse System Manifest")?;
+        // can-player accepts `path:` as a CLI convenience; core itself only
+        // ever sees `data:` (keeps std::fs out of the sim core → wasm-safe).
+        let base = path.parent().map(|p| p.to_path_buf()).unwrap_or_default();
+        for ext in &mut manifest.external_devices {
+            if ext.r#type == "can-player" {
+                if ext.config.contains_key("path") && ext.config.contains_key("data") {
+                    return Err(anyhow::anyhow!(
+                        "can-player '{}': both 'path' and 'data' are set in config; set only one \
+                         ('path' is a CLI convenience that inlines the log into 'data')",
+                        ext.id
+                    ));
+                }
+                if let Some(p) = ext.config.remove("path") {
+                    let p = p
+                        .as_str()
+                        .ok_or_else(|| {
+                            anyhow::anyhow!("can-player '{}': path must be a string", ext.id)
+                        })?
+                        .to_string();
+                    let full = base.join(&p);
+                    let text = std::fs::read_to_string(&full).map_err(|e| {
+                        anyhow::anyhow!("can-player '{}': cannot read log {:?}: {e}", ext.id, full)
+                    })?;
+                    ext.config
+                        .insert("data".into(), serde_yaml::Value::String(text));
+                }
+            }
+        }
+        Ok(manifest)
     }
 }
 
@@ -1580,5 +1611,114 @@ peripherals: []
 "#;
         let chip: ChipDescriptor = serde_yaml::from_str(yaml).expect("parse");
         assert!(chip.pins.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod can_player_path_inline_tests {
+    use super::*;
+
+    /// `SystemManifest::from_file` inlines a `can-player` device's `path:`
+    /// (resolved relative to the system yaml on disk) into `data:`, so the
+    /// sim core itself only ever consumes inline text (keeps `std::fs` out
+    /// of the wasm-safe core).
+    #[test]
+    fn from_file_inlines_can_player_path_into_data() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("s.log"), "(1.0) can0 123#11\n").unwrap();
+        let yaml = r#"
+name: "t"
+chip: "chip.yaml"
+external_devices:
+  - type: "can-player"
+    id: "p"
+    connection: "bxcan1"
+    config:
+      path: "./s.log"
+board_io: []
+"#;
+        let sys_path = dir.path().join("system.yaml");
+        std::fs::write(&sys_path, yaml).unwrap();
+        let m = SystemManifest::from_file(&sys_path).unwrap();
+        let cfg = &m.external_devices[0].config;
+        assert!(cfg.get("path").is_none());
+        assert_eq!(
+            cfg.get("data").unwrap().as_str().unwrap(),
+            "(1.0) can0 123#11\n"
+        );
+    }
+
+    /// Setting both `path:` and `data:` on a `can-player` device is
+    /// ambiguous — silently letting `path` overwrite `data` (the prior
+    /// behavior) hides a config mistake. Must error naming the device id
+    /// and both keys.
+    #[test]
+    fn from_file_errors_when_both_path_and_data_set() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("s.log"), "(1.0) can0 123#11\n").unwrap();
+        let yaml = r#"
+name: "t"
+chip: "chip.yaml"
+external_devices:
+  - type: "can-player"
+    id: "p"
+    connection: "bxcan1"
+    config:
+      path: "./s.log"
+      data: "(1.0) can0 123#11\n"
+board_io: []
+"#;
+        let sys_path = dir.path().join("system.yaml");
+        std::fs::write(&sys_path, yaml).unwrap();
+        let err = SystemManifest::from_file(&sys_path).unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("'p'"), "unexpected error: {msg}");
+        assert!(msg.contains("path"), "unexpected error: {msg}");
+        assert!(msg.contains("data"), "unexpected error: {msg}");
+    }
+
+    /// A `path:` pointing at a file that doesn't exist fails with an error
+    /// that names the (resolved) path, not just an opaque io::Error.
+    #[test]
+    fn from_file_errors_on_nonexistent_path() {
+        let dir = tempfile::tempdir().unwrap();
+        let yaml = r#"
+name: "t"
+chip: "chip.yaml"
+external_devices:
+  - type: "can-player"
+    id: "p"
+    connection: "bxcan1"
+    config:
+      path: "./missing.log"
+board_io: []
+"#;
+        let sys_path = dir.path().join("system.yaml");
+        std::fs::write(&sys_path, yaml).unwrap();
+        let err = SystemManifest::from_file(&sys_path).unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("missing.log"), "unexpected error: {msg}");
+    }
+
+    /// A non-string `path:` value fails with an error naming the device id.
+    #[test]
+    fn from_file_errors_on_non_string_path() {
+        let dir = tempfile::tempdir().unwrap();
+        let yaml = r#"
+name: "t"
+chip: "chip.yaml"
+external_devices:
+  - type: "can-player"
+    id: "p"
+    connection: "bxcan1"
+    config:
+      path: 123
+board_io: []
+"#;
+        let sys_path = dir.path().join("system.yaml");
+        std::fs::write(&sys_path, yaml).unwrap();
+        let err = SystemManifest::from_file(&sys_path).unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("'p'"), "unexpected error: {msg}");
     }
 }

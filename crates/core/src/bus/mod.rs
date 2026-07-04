@@ -183,6 +183,10 @@ pub struct SystemBus {
     /// named CAN peripheral (bxCAN or FDCAN) running in normal mode. Empty by
     /// default → zero per-tick cost.
     pub can_uds_testers: Vec<CanUdsTester>,
+    /// Deterministic CAN log replay nodes (candump-sourced). Each delivers
+    /// pre-parsed frames into a named bxCAN/FDCAN peripheral at scheduled
+    /// tick offsets. Empty by default → zero per-tick cost.
+    pub can_log_players: Vec<CanLogPlayer>,
     /// ESP32-C3 (RISC-V) interrupt routing: when true, each tick the bus routes
     /// asserted peripheral sources and the SYSTEM FROM_CPU IPI registers
     /// (0x600C0028..0x34) through the INTERRUPT_CORE0 matrix MAP registers into
@@ -563,6 +567,62 @@ impl CanUdsTester {
             }
             _ => None,
         }
+    }
+}
+
+/// Deterministic CAN log replay node: an external bus participant that
+/// delivers pre-parsed frames into a bxCAN/FDCAN peripheral at scheduled
+/// tick offsets. Vendor-neutral by design — candump input only; vendor log
+/// formats convert outside core (2026-07-02 replay-showcase spec).
+pub struct CanLogPlayer {
+    pub id: String,
+    /// Name of the connected CAN peripheral (e.g. `bxcan1` / `fdcan1`).
+    pub connection: String,
+    /// (due_tick, frame), ascending; first frame rebased to tick 0.
+    pub frames: Vec<(u64, crate::network::CanFrame)>,
+    pub next_idx: usize,
+    pub ticks: u64,
+    /// Frames accepted by the peripheral.
+    pub delivered: u64,
+    /// Frames refused (filters closed / FIFO full / CAN not initialized).
+    pub dropped: u64,
+}
+
+impl CanLogPlayer {
+    pub fn from_candump(
+        id: String,
+        connection: String,
+        text: &str,
+        ticks_per_second: u64,
+    ) -> Result<Self, String> {
+        let parsed = crate::network::candump::parse_candump(text)?;
+        if parsed.is_empty() {
+            return Err(format!("can-player '{id}': log contains no frames"));
+        }
+        let t0 = parsed[0].0;
+        let mut frames: Vec<(u64, crate::network::CanFrame)> = parsed
+            .into_iter()
+            .map(|(t, f)| {
+                (
+                    ((t - t0).max(0.0) * ticks_per_second as f64).round() as u64,
+                    f,
+                )
+            })
+            .collect();
+        frames.sort_by_key(|(t, _)| *t);
+        Ok(Self {
+            id,
+            connection,
+            frames,
+            next_idx: 0,
+            ticks: 0,
+            delivered: 0,
+            dropped: 0,
+        })
+    }
+
+    pub fn is_done(&self) -> bool {
+        self.next_idx >= self.frames.len()
     }
 }
 
@@ -1333,6 +1393,56 @@ impl SystemBus {
         }
     }
 
+    /// Per-tick service for deterministic CAN log replay nodes. For each
+    /// player, advance its tick counter and deliver every due frame
+    /// (`due_tick < now`) into the connected peripheral, filter-gated the
+    /// same way a real bus would drop unmatched frames.
+    pub(crate) fn service_can_log_players(&mut self) {
+        if self.can_log_players.is_empty() {
+            return;
+        }
+        for i in 0..self.can_log_players.len() {
+            self.can_log_players[i].ticks += 1;
+            if self.can_log_players[i].is_done() {
+                continue;
+            }
+            let connection = self.can_log_players[i].connection.clone();
+            let Some(idx) = self.find_peripheral_index_by_name(&connection) else {
+                continue;
+            };
+            let now = self.can_log_players[i].ticks;
+            while !self.can_log_players[i].is_done()
+                && self.can_log_players[i].frames[self.can_log_players[i].next_idx].0 < now
+            {
+                let j = self.can_log_players[i].next_idx;
+                let frame = self.can_log_players[i].frames[j].1.clone();
+                let accepted = {
+                    let any = self.peripherals[idx].dev.as_any_mut();
+                    match any {
+                        Some(a) => {
+                            if let Some(bx) = a.downcast_mut::<crate::peripherals::bxcan::BxCan>() {
+                                bx.deliver_rx(frame)
+                            } else if let Some(fd) =
+                                a.downcast_mut::<crate::peripherals::fdcan::Fdcan>()
+                            {
+                                fd.receive_frame(frame)
+                            } else {
+                                false
+                            }
+                        }
+                        None => false,
+                    }
+                };
+                if accepted {
+                    self.can_log_players[i].delivered += 1;
+                } else {
+                    self.can_log_players[i].dropped += 1;
+                }
+                self.can_log_players[i].next_idx += 1;
+            }
+        }
+    }
+
     fn yaml_u32(value: Option<&serde_yaml::Value>, default: u32) -> u32 {
         match value {
             Some(serde_yaml::Value::Number(n)) => n.as_u64().map(|v| v as u32).unwrap_or(default),
@@ -1746,6 +1856,7 @@ impl SystemBus {
             hcsr04: Vec::new(),
             can_diagnostic_testers: Vec::new(),
             can_uds_testers: Vec::new(),
+            can_log_players: Vec::new(),
             esp32c3_irq_routing: false,
             riscv_irq_lines: 0,
             flash_models_ops: false,
@@ -1789,6 +1900,7 @@ impl SystemBus {
             hcsr04: Vec::new(),
             can_diagnostic_testers: Vec::new(),
             can_uds_testers: Vec::new(),
+            can_log_players: Vec::new(),
             esp32c3_irq_routing: false,
             riscv_irq_lines: 0,
             flash_models_ops: false,
@@ -3407,6 +3519,131 @@ board_io: []
         assert_eq!(t.script[0].expect_nrc, None);
     }
 
+    /// Config parsing: a `can-player` external device with inline `data:`
+    /// attaches a `CanLogPlayer` to the bus with the parsed frames.
+    #[test]
+    fn can_player_from_config_attaches_replayer() {
+        let manifest: SystemManifest = serde_yaml::from_str(
+            r#"
+name: "can-player-attach"
+chip: "f103"
+external_devices:
+  - id: "p"
+    type: "can-player"
+    connection: "bxcan1"
+    config:
+      data: "(1.0) can0 123#11\n"
+board_io: []
+"#,
+        )
+        .unwrap();
+        let chip: ChipDescriptor = serde_yaml::from_str(MIN_F103_CHIP).unwrap();
+        let bus = SystemBus::from_config(&chip, &manifest).unwrap();
+        assert_eq!(bus.can_log_players.len(), 1);
+        assert_eq!(bus.can_log_players[0].frames.len(), 1);
+    }
+
+    /// Config parsing: a `can-player` device whose `connection` doesn't name
+    /// a real peripheral on the bus fails with an error naming the device.
+    #[test]
+    fn can_player_from_config_errors_on_missing_connection() {
+        let manifest: SystemManifest = serde_yaml::from_str(
+            r#"
+name: "can-player-bad-conn"
+chip: "f103"
+external_devices:
+  - id: "p"
+    type: "can-player"
+    connection: "nope"
+    config:
+      data: "(1.0) can0 123#11\n"
+board_io: []
+"#,
+        )
+        .unwrap();
+        let chip: ChipDescriptor = serde_yaml::from_str(MIN_F103_CHIP).unwrap();
+        let err = expect_from_config_error(&chip, &manifest);
+        let msg = err.to_string();
+        assert!(msg.contains("can-player 'p'"), "unexpected error: {msg}");
+    }
+
+    /// Config parsing: a `can-player` device with neither `path` nor `data`
+    /// (post config-crate path-inlining, only `data` ever reaches core)
+    /// fails with an error naming both keys.
+    #[test]
+    fn can_player_from_config_errors_when_neither_path_nor_data_present() {
+        let manifest: SystemManifest = serde_yaml::from_str(
+            r#"
+name: "can-player-no-data"
+chip: "f103"
+external_devices:
+  - id: "p"
+    type: "can-player"
+    connection: "bxcan1"
+    config: {}
+board_io: []
+"#,
+        )
+        .unwrap();
+        let chip: ChipDescriptor = serde_yaml::from_str(MIN_F103_CHIP).unwrap();
+        let err = expect_from_config_error(&chip, &manifest);
+        let msg = err.to_string();
+        assert!(msg.contains("path"), "unexpected error: {msg}");
+        assert!(msg.contains("data"), "unexpected error: {msg}");
+    }
+
+    /// Config parsing: an explicit `ticks_per_second:` on a `can-player`
+    /// device actually reaches the attached `CanLogPlayer` — two frames 1.0s
+    /// apart at 2 ticks/sec rebase to ticks 0 and 2.
+    #[test]
+    fn can_player_from_config_honors_ticks_per_second_override() {
+        let manifest: SystemManifest = serde_yaml::from_str(
+            r#"
+name: "can-player-tps"
+chip: "f103"
+external_devices:
+  - id: "p"
+    type: "can-player"
+    connection: "bxcan1"
+    config:
+      ticks_per_second: 2
+      data: "(1.0) can0 123#11\n(2.0) can0 123#22\n"
+board_io: []
+"#,
+        )
+        .unwrap();
+        let chip: ChipDescriptor = serde_yaml::from_str(MIN_F103_CHIP).unwrap();
+        let bus = SystemBus::from_config(&chip, &manifest).unwrap();
+        assert_eq!(bus.can_log_players[0].frames.len(), 2);
+        assert_eq!(bus.can_log_players[0].frames[0].0, 0);
+        assert_eq!(bus.can_log_players[0].frames[1].0, 2);
+    }
+
+    /// Config parsing: omitting `ticks_per_second:` defaults to
+    /// 1_000_000 ticks/sec — two frames 100µs apart rebase to tick 100.
+    #[test]
+    fn can_player_from_config_defaults_ticks_per_second() {
+        let manifest: SystemManifest = serde_yaml::from_str(
+            r#"
+name: "can-player-tps-default"
+chip: "f103"
+external_devices:
+  - id: "p"
+    type: "can-player"
+    connection: "bxcan1"
+    config:
+      data: "(10.000000) can0 123#11\n(10.000100) can0 123#22\n"
+board_io: []
+"#,
+        )
+        .unwrap();
+        let chip: ChipDescriptor = serde_yaml::from_str(MIN_F103_CHIP).unwrap();
+        let bus = SystemBus::from_config(&chip, &manifest).unwrap();
+        assert_eq!(bus.can_log_players[0].frames.len(), 2);
+        assert_eq!(bus.can_log_players[0].frames[0].0, 0);
+        assert_eq!(bus.can_log_players[0].frames[1].0, 100);
+    }
+
     /// Parse a minimal chip yaml with the given header lines (name/arch/core).
     fn bit_band_test_chip(header: &str, gpio_base: &str, gpio_profile: &str) -> ChipDescriptor {
         let yaml = format!(
@@ -3746,6 +3983,7 @@ peripherals:
             hcsr04: Vec::new(),
             can_diagnostic_testers: Vec::new(),
             can_uds_testers: Vec::new(),
+            can_log_players: Vec::new(),
             esp32c3_irq_routing: false,
             riscv_irq_lines: 0,
             flash_models_ops: false,
@@ -3813,6 +4051,7 @@ peripherals:
             hcsr04: Vec::new(),
             can_diagnostic_testers: Vec::new(),
             can_uds_testers: Vec::new(),
+            can_log_players: Vec::new(),
             esp32c3_irq_routing: false,
             riscv_irq_lines: 0,
             flash_models_ops: false,
@@ -4031,6 +4270,7 @@ peripherals:
             hcsr04: Vec::new(),
             can_diagnostic_testers: Vec::new(),
             can_uds_testers: Vec::new(),
+            can_log_players: Vec::new(),
             esp32c3_irq_routing: false,
             riscv_irq_lines: 0,
             flash_models_ops: false,
@@ -4248,6 +4488,7 @@ peripherals:
             hcsr04: Vec::new(),
             can_diagnostic_testers: Vec::new(),
             can_uds_testers: Vec::new(),
+            can_log_players: Vec::new(),
             esp32c3_irq_routing: false,
             riscv_irq_lines: 0,
             flash_models_ops: false,
@@ -4319,6 +4560,7 @@ peripherals:
             hcsr04: Vec::new(),
             can_diagnostic_testers: Vec::new(),
             can_uds_testers: Vec::new(),
+            can_log_players: Vec::new(),
             esp32c3_irq_routing: false,
             riscv_irq_lines: 0,
             flash_models_ops: false,
@@ -4612,6 +4854,115 @@ board_io: []
             .expect("bxcan1 must be BxCan");
         bx.tx_frames
             .push_back(crate::network::CanFrame::classic(id, data.to_vec()));
+    }
+
+    /// Same construction idiom as `bus_with_steps`: a bare `SystemBus` with a
+    /// single `bxcan1` `BxCan`, taken out of INIT with a filter configured —
+    /// here a wide (32-bit) mask filter with id=0/mask=0, which accepts every
+    /// frame (standard or extended), so `CanLogPlayer` replay isn't gated by
+    /// filter setup unrelated to this test.
+    fn bus_with_open_bxcan() -> SystemBus {
+        use crate::peripherals::bxcan::BxCan;
+        const MCR: u64 = 0x000;
+        const BTR: u64 = 0x01C;
+        const FMR: u64 = 0x200;
+        const FM1R: u64 = 0x204;
+        const FS1R: u64 = 0x20C;
+        const FFA1R: u64 = 0x214;
+        const FA1R: u64 = 0x21C;
+        const FBANK: u64 = 0x240;
+        const VALID_BTR: u32 = 0x00DC_0009;
+        const BASE: u64 = 0x4000_6400;
+
+        let mut bus = SystemBus::empty();
+        bus.add_peripheral("bxcan1", BASE, 0x400, None, Box::new(BxCan::new()));
+
+        bus.write_u32(BASE + MCR, 1).unwrap();
+        bus.write_u32(BASE + BTR, VALID_BTR).unwrap();
+        bus.write_u32(BASE + FMR, 1).unwrap();
+        bus.write_u32(BASE + FS1R, 0x1).unwrap(); // wide (32-bit) filter
+        bus.write_u32(BASE + FM1R, 0x0).unwrap(); // mask mode (not list)
+        bus.write_u32(BASE + FFA1R, 0x0).unwrap();
+        bus.write_u32(BASE + FBANK, 0).unwrap(); // id = 0
+        bus.write_u32(BASE + FBANK + 4, 0).unwrap(); // mask = 0 -> accept all
+        bus.write_u32(BASE + FA1R, 0x1).unwrap();
+        bus.write_u32(BASE + FMR, 0x0).unwrap();
+        bus.write_u32(BASE + MCR, 0).unwrap();
+        bus
+    }
+
+    #[test]
+    fn can_log_player_delivers_frames_at_scheduled_ticks() {
+        // Two frames 100µs apart at 1M ticks/sec => ticks 0 and 100.
+        let log = "(10.000000) can0 0CF00300#DD0000FFFFFF5CFF\n\
+                   (10.000100) can0 18FEF100#0102030405060708\n";
+        let mut bus = bus_with_open_bxcan();
+        let player =
+            CanLogPlayer::from_candump("p".into(), "bxcan1".into(), log, 1_000_000).unwrap();
+        bus.can_log_players.push(player);
+
+        // Tick 1: first frame (tick 0 is due immediately).
+        bus.service_can_log_players();
+        assert_eq!(bus.can_log_players[0].delivered, 1);
+        // Ticks 2..=99: nothing new.
+        for _ in 0..98 {
+            bus.service_can_log_players();
+        }
+        assert_eq!(bus.can_log_players[0].delivered, 1);
+        assert!(!bus.can_log_players[0].is_done());
+        // Tick 100+: second frame.
+        for _ in 0..3 {
+            bus.service_can_log_players();
+        }
+        assert_eq!(bus.can_log_players[0].delivered, 2);
+        assert!(bus.can_log_players[0].is_done());
+
+        // And the bxCAN RX FIFO actually holds data: read via the same register
+        // asserts the uds-tester tests use (RF0R pending count != 0).
+        const RF0R: u64 = 0x00C;
+        const BASE: u64 = 0x4000_6400;
+        let rf0r = bus.read_u32(BASE + RF0R).unwrap();
+        assert_ne!(rf0r & 0x3, 0, "RF0R FMP0 must show pending frames");
+    }
+
+    #[test]
+    fn can_log_player_counts_dropped_when_filters_never_opened() {
+        // Same construction idiom as `bus_with_open_bxcan`, minus the filter
+        // banks — the bxCAN is taken out of INIT (so it's "running") but no
+        // filter bank is ever activated (FA1R stays 0), so every delivered
+        // frame is refused by acceptance filtering and must count as
+        // `dropped`, never `delivered`.
+        use crate::peripherals::bxcan::BxCan;
+        const MCR: u64 = 0x000;
+        const BTR: u64 = 0x01C;
+        const VALID_BTR: u32 = 0x00DC_0009;
+        const BASE: u64 = 0x4000_6400;
+
+        let mut bus = SystemBus::empty();
+        bus.add_peripheral("bxcan1", BASE, 0x400, None, Box::new(BxCan::new()));
+        bus.write_u32(BASE + MCR, 1).unwrap();
+        bus.write_u32(BASE + BTR, VALID_BTR).unwrap();
+        bus.write_u32(BASE + MCR, 0).unwrap(); // leave INIT; filters left unconfigured
+
+        let log = "(10.000000) can0 0CF00300#DD0000FFFFFF5CFF\n\
+                   (10.000100) can0 18FEF100#0102030405060708\n";
+        let player =
+            CanLogPlayer::from_candump("p".into(), "bxcan1".into(), log, 1_000_000).unwrap();
+        bus.can_log_players.push(player);
+
+        for _ in 0..101 {
+            bus.service_can_log_players();
+        }
+        assert!(bus.can_log_players[0].is_done());
+        assert_eq!(bus.can_log_players[0].delivered, 0);
+        assert!(bus.can_log_players[0].dropped > 0);
+    }
+
+    #[test]
+    fn can_log_player_rebases_first_frame_to_tick_zero() {
+        let log = "(1578925462.000450) can0 123#11\n";
+        let p = CanLogPlayer::from_candump("p".into(), "bxcan1".into(), log, 1_000_000).unwrap();
+        assert_eq!(p.frames[0].0, 0);
     }
 
     #[test]
