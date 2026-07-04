@@ -1711,6 +1711,13 @@ fn execute_test_loop<C: labwired_core::Cpu>(
         .map(|s| (s, false))
         .collect();
 
+    // Tracks the step at which all runtime assertions first passed. The
+    // `stop_when_assertions_pass` early-stop is only accepted after the machine
+    // keeps executing for a settling window past this point WITHOUT faulting —
+    // print-then-crash firmware breaks with its fault reason during the window
+    // instead of certifying as passed. A regression (assertions stop passing)
+    // resets it, so the pass must be durable.
+    let mut assertions_first_passed_at: Option<u64> = None;
     let mut step = 0;
     while step < max_steps {
         // Fire any `after_cycles` stimulus whose threshold the run has reached.
@@ -1913,13 +1920,32 @@ fn execute_test_loop<C: labwired_core::Cpu>(
                     let bytes = uart_tx.lock().map(|g| g.clone()).unwrap_or_default();
                     String::from_utf8_lossy(&bytes).to_string()
                 };
-                if assertions
+                let all_pass = assertions
                     .iter()
                     .filter(|a| !matches!(a, TestAssertion::ExpectedStopReason(_)))
-                    .all(|a| assertion_currently_passes(a, &uart_text, machine))
-                {
-                    stop_reason = StopReason::AssertionsPassed;
-                    break;
+                    .all(|a| assertion_currently_passes(a, &uart_text, machine));
+                if all_pass {
+                    // Latch the first all-pass step, but not before the absolute
+                    // minimum-steps floor: assertions that satisfy trivially early
+                    // (e.g. a token already present at reset) don't short-circuit
+                    // the run before real execution has happened.
+                    if assertions_first_passed_at.is_none()
+                        && step >= resolved_limits.stop_when_assertions_pass_min_steps
+                    {
+                        assertions_first_passed_at = Some(step);
+                    }
+                } else {
+                    // A regression means the pass was not durable — restart the
+                    // settling window from scratch.
+                    assertions_first_passed_at = None;
+                }
+                if let Some(first) = assertions_first_passed_at {
+                    if step.saturating_sub(first)
+                        >= resolved_limits.stop_when_assertions_pass_settle_steps
+                    {
+                        stop_reason = StopReason::AssertionsPassed;
+                        break;
+                    }
                 }
             }
         }
@@ -2412,6 +2438,8 @@ pub(crate) fn write_config_error_outputs(
         wall_time_ms: None,
         max_vcd_bytes: None,
         stop_when_assertions_pass: false,
+        stop_when_assertions_pass_settle_steps: 0,
+        stop_when_assertions_pass_min_steps: 0,
     });
 
     let stop_reason = StopReason::ConfigError;
