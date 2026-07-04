@@ -1423,7 +1423,7 @@ impl<C: Cpu> Machine<C> {
             .bus
             .peripherals
             .iter()
-            .filter(|entry| filter.map_or(true, |f| entry.name == f))
+            .filter(|entry| filter.is_none_or(|f| entry.name == f))
             .map(|entry| entry.dev.inspect(entry.base, &entry.name, opts))
             .collect();
         crate::inspect::MachineInspect { peripherals }
