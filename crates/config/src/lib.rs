@@ -605,6 +605,21 @@ pub struct TestLimits {
     pub max_vcd_bytes: Option<u64>,
     #[serde(default)]
     pub stop_when_assertions_pass: bool,
+    /// Number of steps the machine must keep executing past the first moment
+    /// all runtime assertions pass before `AssertionsPassed` is accepted. This
+    /// closes the print-then-crash false-pass hole: firmware that emits its
+    /// acceptance token and then faults will break with the fault reason during
+    /// the settling window instead of certifying as passed.
+    #[serde(default = "default_stop_settle_steps")]
+    pub stop_when_assertions_pass_settle_steps: u64,
+    /// Absolute step floor: the assertions-pass early-stop may not trigger
+    /// before this many steps have executed.
+    #[serde(default)]
+    pub stop_when_assertions_pass_min_steps: u64,
+}
+
+fn default_stop_settle_steps() -> u64 {
+    100_000
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]

@@ -219,6 +219,102 @@ assertions:
     );
 }
 
+/// Regression guard for the print-then-crash false-pass hole.
+///
+/// The `uart-then-bkpt-thumbv7m.elf` fixture emits the acceptance token
+/// ("OK\n") to UART1 and then executes `bkpt #0`, which the simulator surfaces
+/// as `SimulationError::Halt` (the firmware-reachable abort path; a Rust
+/// panic/abort lowers to the same trap). Before the settling window was added,
+/// `stop_when_assertions_pass` declared victory the instant the token appeared
+/// and never saw the crash. With a settle window, the machine keeps executing
+/// past the first all-pass and hits the trap during the window, so the run must
+/// report the fault (`halt`) rather than `assertions_passed` even though the
+/// token is present in the UART log.
+#[test]
+fn test_stop_when_assertions_pass_does_not_mask_crash() {
+    let temp_dir = std::env::temp_dir().join("labwired-stop-crash");
+    let _ = std::fs::remove_dir_all(&temp_dir);
+    std::fs::create_dir_all(&temp_dir).unwrap();
+
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let workspace_root = manifest_dir.parent().unwrap().parent().unwrap();
+    let firmware_path = workspace_root
+        .join("tests/fixtures/uart-then-bkpt-thumbv7m.elf")
+        .canonicalize()
+        .expect("print-then-crash fixture must exist");
+    let system_path = workspace_root
+        .join("configs/systems/ci-fixture-uart1.yaml")
+        .canonicalize()
+        .unwrap();
+
+    let script_content = format!(
+        r#"
+schema_version: "1.0"
+inputs:
+  firmware: "{}"
+  system: "{}"
+limits:
+  max_steps: 1000000
+  stop_when_assertions_pass: true
+  stop_when_assertions_pass_settle_steps: 50
+assertions:
+  - uart_contains: "OK"
+"#,
+        firmware_path.display(),
+        system_path.display()
+    );
+
+    let script_path = temp_dir.join("script.yaml");
+    std::fs::write(&script_path, script_content).unwrap();
+
+    let output = Command::new(get_labwired_bin())
+        .arg("test")
+        .arg("--script")
+        .arg(&script_path)
+        .arg("--output-dir")
+        .arg(&temp_dir)
+        .arg("--no-uart-stdout")
+        .output()
+        .expect("Failed to run labwired");
+
+    let result_json_path = temp_dir.join("result.json");
+    let result_content = std::fs::read_to_string(&result_json_path).unwrap_or_else(|_| {
+        panic!(
+            "no result.json. Exit {:?}\nStdout: {}\nStderr: {}",
+            output.status.code(),
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        )
+    });
+    let result: Value = serde_json::from_str(&result_content).expect("Failed to parse result.json");
+
+    // The token IS present — the firmware printed its acceptance string.
+    let uart_log = std::fs::read_to_string(temp_dir.join("uart.log")).unwrap_or_default();
+    assert!(
+        uart_log.contains("OK"),
+        "fixture should have emitted the acceptance token; uart.log = {uart_log:?}"
+    );
+
+    // ...but the run crashed right after, so it must NOT certify as passed.
+    assert_ne!(
+        result["stop_reason"], "assertions_passed",
+        "print-then-crash firmware must not certify as assertions_passed"
+    );
+    // The crash is surfaced as a fault stop reason (`halt` for the bkpt trap).
+    let stop_reason = result["stop_reason"].as_str().unwrap();
+    assert!(
+        matches!(
+            stop_reason,
+            "halt" | "memory_violation" | "decode_error" | "exception"
+        ),
+        "expected a fault stop reason after the crash, got {stop_reason:?}"
+    );
+    assert_ne!(
+        result["status"], "pass",
+        "a run that crashed after the token must not report status=pass"
+    );
+}
+
 #[test]
 fn test_max_uart_bytes() {
     let script = r#"
