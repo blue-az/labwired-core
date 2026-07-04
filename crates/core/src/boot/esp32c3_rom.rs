@@ -345,10 +345,12 @@ pub fn build_rom_boot_machine<C: crate::Cpu, F: FnOnce(crate::cpu::RiscV) -> C>(
         0x6000_6174,
         0x4,
         None,
-        Box::new(crate::peripherals::esp32c3::forced_status::Esp32c3ForcedStatus::new(
-            0x4,
-            vec![(0x0, 1 << 16)],
-        )),
+        Box::new(
+            crate::peripherals::esp32c3::forced_status::Esp32c3ForcedStatus::new(
+                0x4,
+                vec![(0x0, 1 << 16)],
+            ),
+        ),
     );
     // WiFi MAC (WIFI_MAC 0x6003_3000, 12 KiB) — behavioral model for the
     // MAC <-> SimNet bridge: register-backed bring-up, MAC-ready bit (0xD14
@@ -437,10 +439,7 @@ pub fn build_rom_boot_machine<C: crate::Cpu, F: FnOnce(crate::cpu::RiscV) -> C>(
         // C3 SYSTIMER_TARGET0 routes through the interrupt matrix on source
         // 37 (TARGET1/2 at 38/39), unlike the S3's 57; the FreeRTOS tick
         // alarm fires on that source.
-        Box::new(crate::peripherals::esp32s3::systimer::Systimer::new_with_source(
-            160_000_000,
-            37,
-        )),
+        Box::new(crate::peripherals::esp32s3::systimer::Systimer::new_with_source(160_000_000, 37)),
     );
     // RTC_CNTL main timer (0x6000_8000): the free-running slow-clock counter
     // the IDF reads via rtc_time_get (set TIME_UPDATE @0x0C bit31 to latch,

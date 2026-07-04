@@ -163,7 +163,11 @@ fn extract_field(word: u32, bits: [u8; 2]) -> u32 {
     let msb = bits[0].min(31);
     let lsb = bits[1].min(msb);
     let width = msb - lsb + 1;
-    let mask = if width >= 32 { u32::MAX } else { (1u32 << width) - 1 };
+    let mask = if width >= 32 {
+        u32::MAX
+    } else {
+        (1u32 << width) - 1
+    };
     (word >> lsb) & mask
 }
 
@@ -196,7 +200,11 @@ pub fn default_inspect<P: Peripheral + ?Sized>(
     _opts: &InspectOpts,
 ) -> PeripheralInspect {
     let schema = p.describe_registers();
-    let kind = if schema.is_some() { "declarative" } else { "native" };
+    let kind = if schema.is_some() {
+        "declarative"
+    } else {
+        "native"
+    };
 
     let mut registers = Vec::new();
     if let Some(schema) = schema {
@@ -258,7 +266,13 @@ mod tests {
 
     #[test]
     fn generation_changes_with_bytes() {
-        assert_ne!(artifact_generation(&[0, 0, 0]), artifact_generation(&[0, 1, 0]));
-        assert_eq!(artifact_generation(&[1, 2, 3]), artifact_generation(&[1, 2, 3]));
+        assert_ne!(
+            artifact_generation(&[0, 0, 0]),
+            artifact_generation(&[0, 1, 0])
+        );
+        assert_eq!(
+            artifact_generation(&[1, 2, 3]),
+            artifact_generation(&[1, 2, 3])
+        );
     }
 }
