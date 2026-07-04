@@ -146,7 +146,8 @@ boards:
     # 2026-06-30: additive Kinetis I2C variant (KinetisI2c) + enum arm in i2c.rs for the KW41Z; the STM32 F1/L4 I2C engines are byte-for-byte untouched, stm32h563 diff/conformance unchanged. No live re-capture.
     # 2026-07-01: additive bus-trace device wrappers at I2c/Spi attach + shared BusTraceLog on SystemBus (universal bus analyzer); STM32 register engines byte-for-byte untouched, wrappers only forward (transparent as_any) and activate only when a device+log is attached. Diff/conformance unchanged; no live re-capture.
     # 2026-07-03: additive `as_sim_input_mut` default method on the I2cDevice trait (generic SimInput hook) + new SystemBus set_input/list_inputs; STM32 register engines byte-for-byte untouched, the default returns None for all STM32 devices. Diff/conformance unchanged; no live re-capture.
-    drift_ack: 2026-07-03
+    # 2026-07-04: drift is the file-hash of the additive L4 PLLSAI1/2 ready-bit change in rcc.rs (L4Rcc::ready); this board's RCC engine (H5Rcc) is byte-for-byte untouched, h563_mmio_diff + h563_conformance unchanged, no live re-capture.
+    drift_ack: 2026-07-04
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
@@ -239,7 +240,8 @@ boards:
     # 2026-06-30: additive Kinetis I2C variant (KinetisI2c) + enum arm in i2c.rs for the KW41Z; the STM32 F1/L4 I2C engines are byte-for-byte untouched, nucleo-l476rg diff/conformance unchanged. No live re-capture.
     # 2026-07-01: additive bus-trace device wrappers at I2c/Spi attach + shared BusTraceLog on SystemBus (universal bus analyzer); STM32 register engines byte-for-byte untouched, wrappers only forward (transparent as_any) and activate only when a device+log is attached. Diff/conformance unchanged; no live re-capture.
     # 2026-07-03: additive `as_sim_input_mut` default method on the I2cDevice trait (generic SimInput hook) + new SystemBus set_input/list_inputs; STM32 register engines byte-for-byte untouched, the default returns None for all STM32 devices. Diff/conformance unchanged; no live re-capture.
-    drift_ack: 2026-07-03
+    # 2026-07-04: modeled RCC_CR PLLSAI1RDY(bit27)←PLLSAI1ON, PLLSAI2RDY(bit29)←PLLSAI2ON (RM0351 §6.4.1) so STM32 Arduino HAL PLLSAI1 (48 MHz domain) bring-up completes instead of HAL_TIMEOUT. Additive ready-bit behavior; pending live HW re-capture.
+    drift_ack: 2026-07-04
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
@@ -282,7 +284,8 @@ boards:
     # hash drift only). stm32l0_mmio_diff passes unchanged. No live re-capture.
     # 2026-06-30: additive Kinetis GPIO + DSPI variants in gpio.rs/spi.rs for the KW41Z; the STM32 GPIO/SPI engines are untouched, l073 diff unchanged. No live re-capture.
     # 2026-07-01: additive bus-trace device wrappers at I2c/Spi attach + shared BusTraceLog on SystemBus (universal bus analyzer); STM32 register engines byte-for-byte untouched, wrappers only forward (transparent as_any) and activate only when a device+log is attached. Diff/conformance unchanged; no live re-capture.
-    drift_ack: 2026-07-01
+    # 2026-07-04: drift is the file-hash of the additive L4 PLLSAI1/2 ready-bit change in rcc.rs (L4Rcc::ready); this board's RCC engine (L0Rcc) is byte-for-byte untouched, stm32l0_mmio_diff unchanged, no live re-capture.
+    drift_ack: 2026-07-04
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
@@ -322,7 +325,8 @@ boards:
     # 2026-06-30: additive Kinetis I2C variant (KinetisI2c) + enum arm in i2c.rs for the KW41Z; the STM32 F1/L4 I2C engines are byte-for-byte untouched, stm32f103 diff/conformance unchanged. No live re-capture.
     # 2026-07-01: additive bus-trace device wrappers at I2c/Spi attach + shared BusTraceLog on SystemBus (universal bus analyzer); STM32 register engines byte-for-byte untouched, wrappers only forward (transparent as_any) and activate only when a device+log is attached. Diff/conformance unchanged; no live re-capture.
     # 2026-07-03: additive `as_sim_input_mut` default method on the I2cDevice trait (generic SimInput hook) + new SystemBus set_input/list_inputs; STM32 register engines byte-for-byte untouched, the default returns None for all STM32 devices. Diff/conformance unchanged; no live re-capture.
-    drift_ack: 2026-07-03
+    # 2026-07-04: drift is the file-hash of the additive L4 PLLSAI1/2 ready-bit change in rcc.rs (L4Rcc::ready); this board's RCC engine (F1Rcc) is byte-for-byte untouched, stm32f1_mmio_diff + f103_conformance unchanged, no live re-capture.
+    drift_ack: 2026-07-04
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/afio.rs
@@ -369,7 +373,8 @@ boards:
     # 2026-06-30: additive Kinetis I2C variant (KinetisI2c) + enum arm in i2c.rs for the KW41Z; the STM32 F1/L4 I2C engines are byte-for-byte untouched, stm32f407 diff/conformance unchanged. No live re-capture.
     # 2026-07-01: additive bus-trace device wrappers at I2c/Spi attach + shared BusTraceLog on SystemBus (universal bus analyzer); STM32 register engines byte-for-byte untouched, wrappers only forward (transparent as_any) and activate only when a device+log is attached. Diff/conformance unchanged; no live re-capture.
     # 2026-07-03: additive `as_sim_input_mut` default method on the I2cDevice trait (generic SimInput hook) + new SystemBus set_input/list_inputs; STM32 register engines byte-for-byte untouched, the default returns None for all STM32 devices. Diff/conformance unchanged; no live re-capture.
-    drift_ack: 2026-07-03
+    # 2026-07-04: drift is the file-hash of the additive L4 PLLSAI1/2 ready-bit change in rcc.rs (L4Rcc::ready); this board's RCC engine (F4Rcc) is byte-for-byte untouched, stm32f4_mmio_diff + stm32f4_exec_oracle unchanged, no live re-capture.
+    drift_ack: 2026-07-04
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
