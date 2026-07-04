@@ -369,8 +369,7 @@ impl WasmSimulator {
         // regions (the native path fills them from env pins / vendored images;
         // on wasm the browser fetches and passes the two bins). ROM-boot cannot
         // proceed without the real ROM — the reset vector executes it directly.
-        let (Some(irom), Some(drom)) =
-            (blobs.get("esp32c3_irom"), blobs.get("esp32c3_drom"))
+        let (Some(irom), Some(drom)) = (blobs.get("esp32c3_irom"), blobs.get("esp32c3_drom"))
         else {
             return Err(JsValue::from_str(
                 "rom-boot needs the ESP32-C3 boot ROM: pass esp32c3_irom + esp32c3_drom blobs",
@@ -1084,9 +1083,8 @@ mod romboot_tests {
             .expect("read vendored C3 IROM");
         let drom = std::fs::read(manifest_dir.join("../core/roms/esp32c3/esp32c3_drom.bin"))
             .expect("read vendored C3 DROM");
-        let flash =
-            std::fs::read(manifest_dir.join("tests/fixtures/esp32c3-oled-demo-flash.bin"))
-                .expect("read C3 OLED demo flash image");
+        let flash = std::fs::read(manifest_dir.join("tests/fixtures/esp32c3-oled-demo-flash.bin"))
+            .expect("read C3 OLED demo flash image");
 
         let mut blobs: HashMap<String, Vec<u8>> = HashMap::new();
         blobs.insert("esp32c3_irom".into(), irom);

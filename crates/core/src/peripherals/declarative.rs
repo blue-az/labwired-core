@@ -769,7 +769,11 @@ mod tests {
         let p = GenericPeripheral::new(desc);
 
         let reg_value = |pi: &crate::inspect::PeripheralInspect| {
-            pi.registers.iter().find(|r| r.name == "REG1").unwrap().value
+            pi.registers
+                .iter()
+                .find(|r| r.name == "REG1")
+                .unwrap()
+                .value
         };
 
         // Inspecting twice yields the same value — read() would have cleared it.

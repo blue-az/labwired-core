@@ -1086,7 +1086,10 @@ mod tests {
         assert_eq!(fb.meta["w"], 128);
         assert_eq!(fb.meta["h"], 64);
         assert_eq!(fb.meta["format"], "ssd1306_page");
-        assert!(fb.meta["generation"].is_u64(), "cheap change-detection hash");
+        assert!(
+            fb.meta["generation"].is_u64(),
+            "cheap change-detection hash"
+        );
         assert!(fb.bytes.is_none(), "bytes omitted in summary mode");
 
         // include_bytes: full GDDRAM payload attached.

@@ -165,7 +165,9 @@ fn machine_inspect_enumerates_and_filters() {
         0x5000_0000,
         0x100,
         None,
-        Box::new(crate::peripherals::declarative::GenericPeripheral::new(desc)),
+        Box::new(crate::peripherals::declarative::GenericPeripheral::new(
+            desc,
+        )),
     );
     bus.add_peripheral("tag", 0x6000_0000, 0x10, None, Box::new(PeekTag(0xAB)));
     let machine = Machine::new(cpu, bus);
