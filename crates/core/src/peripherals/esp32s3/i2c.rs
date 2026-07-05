@@ -98,6 +98,8 @@ const REG_SCL_STRETCH_CONF: u64 = 0x84;
 const REG_DATE: u64 = 0xF8;
 
 const CTR_TRANS_START_BIT: u32 = 1 << 5;
+/// CTR bit 10: FSM_RST — write-trigger master FSM reset.
+const CTR_FSM_RST: u32 = 1 << 10;
 /// CTR bit 11: CONF_UPGATE — self-clearing config-sync trigger.
 const CTR_CONF_UPGATE: u32 = 1 << 11;
 
@@ -114,6 +116,7 @@ const CMD_DONE_BIT: u32 = 1 << 31;
 pub const INT_END_DETECT: u32 = 1 << 3;
 pub const INT_TRANS_COMPLETE: u32 = 1 << 7;
 pub const INT_NACK: u32 = 1 << 10;
+const SCL_RST_SLV_EN: u32 = 1 << 0;
 
 /// ESP32-S3 has 8 COMD slots at offsets 0x58..0x78. Higher offsets are
 /// SCL/SP timing registers that we accept-and-ignore.
@@ -136,6 +139,8 @@ pub struct Esp32s3I2c {
     irq_pending: bool,
     /// Interrupt-matrix source this instance asserts: 42 for I2C0, 43 for I2C1.
     intr_source_id: u32,
+    active_slave: Option<usize>,
+    expects_addr: bool,
 
     // Config / timing registers — masked storage (SVD-accurate reset values).
     // On write: stored = (stored & !mask) | (value & mask).  Reserved bits
@@ -178,6 +183,8 @@ impl Esp32s3I2c {
             slaves: Vec::new(),
             irq_pending: false,
             intr_source_id: I2C0_INTR_SOURCE_ID,
+            active_slave: None,
+            expects_addr: true,
 
             // Config / timing registers initialised to SVD reset values.
             reg_scl_low_period: 0x0000_0000,
@@ -237,6 +244,17 @@ impl Esp32s3I2c {
         let rx = (self.rx_fifo.borrow().len() as u32) & 0x3F;
         let tx = (self.tx_fifo.len() as u32) & 0x3F;
         (self.sr & SR_RESP_REC) | SR_STRETCH_CAUSE_RESET | (rx << 8) | (tx << 18)
+    }
+
+    fn find_slave_from_slave_addr_register(&self) -> Option<usize> {
+        let raw = self.slave_addr & 0x7FFF;
+        if raw <= 0x7F {
+            if let Some(idx) = self.slaves.iter().position(|s| s.address() == raw as u8) {
+                return Some(idx);
+            }
+        }
+        let shifted = ((raw >> 1) & 0x7F) as u8;
+        self.slaves.iter().position(|s| s.address() == shifted)
     }
 }
 
@@ -339,7 +357,7 @@ impl Peripheral for Esp32s3I2c {
                 // driver writes it and polls for it to clear; if it stays set the
                 // driver concludes the controller is wedged and aborts the
                 // transfer (ESP_ERR_INVALID_STATE). esp-hal never sets it.
-                self.ctr &= !CTR_CONF_UPGATE;
+                self.ctr &= !(CTR_FSM_RST | CTR_CONF_UPGATE);
             }
             REG_TO => masked_write(&mut self.reg_to, value, 0x0000_003F),
             REG_SLAVE_ADDR => self.slave_addr = value,
@@ -384,7 +402,12 @@ impl Peripheral for Esp32s3I2c {
             REG_SCL_MAIN_ST_TIME_OUT => {
                 masked_write(&mut self.reg_scl_main_st_time_out, value, 0x0000_001F)
             }
-            REG_SCL_SP_CONF => masked_write(&mut self.reg_scl_sp_conf, value, 0x0000_00FF),
+            REG_SCL_SP_CONF => {
+                masked_write(&mut self.reg_scl_sp_conf, value, 0x0000_00FF);
+                // SCL_RST_SLV_EN is R/W/SC. Arduino's S3 bus-clear helper
+                // writes it and then polls until hardware clears it.
+                self.reg_scl_sp_conf &= !SCL_RST_SLV_EN;
+            }
             REG_SCL_STRETCH_CONF => {
                 masked_write(&mut self.reg_scl_stretch_conf, value, 0x0000_3FFF)
             }
@@ -444,10 +467,10 @@ impl Esp32s3I2c {
         const OP_END: u32 = 4;
         const OP_RSTART: u32 = 6;
 
-        // Index into self.slaves of the currently-selected device, or
-        // None if no address has been latched yet (or just after RSTART).
-        let mut active: Option<usize> = None;
-        let mut expects_addr = true;
+        // Index into self.slaves of the currently-selected device. END pauses
+        // the command list, so the selected slave can carry into the next run.
+        let mut active = self.active_slave;
+        let mut expects_addr = self.expects_addr;
         let mut last_op_was_end = false;
         let mut hit_stop = false;
 
@@ -475,15 +498,26 @@ impl Esp32s3I2c {
                             // First byte of a WRITE following RSTART is addr+R/W.
                             let addr = b >> 1;
                             active = self.slaves.iter().position(|s| s.address() == addr);
-                            if active.is_none() {
-                                self.int_raw |= INT_NACK;
-                            } else {
+                            if active.is_some() {
                                 // Slave acknowledged its address.
                                 self.sr |= SR_RESP_REC;
+                                expects_addr = false;
+                                // Don't deliver the addr byte to the slave's write().
+                                continue;
+                            }
+
+                            // ESP-IDF/Arduino can program the address in
+                            // SLAVE_ADDR and put only payload bytes in TXFIFO.
+                            // In that shape the first FIFO byte is real data.
+                            active = self.find_slave_from_slave_addr_register();
+                            if active.is_some() {
+                                self.sr |= SR_RESP_REC;
+                            } else {
+                                self.int_raw |= INT_NACK;
+                                expects_addr = false;
+                                continue;
                             }
                             expects_addr = false;
-                            // Don't deliver the addr byte to the slave's write().
-                            continue;
                         }
                         if let Some(slave_idx) = active {
                             self.slaves[slave_idx].write(b);
@@ -514,6 +548,8 @@ impl Esp32s3I2c {
                     if let Some(slave_idx) = active {
                         self.slaves[slave_idx].stop();
                     }
+                    active = None;
+                    expects_addr = true;
                     self.cmds[idx] |= CMD_DONE_BIT;
                     hit_stop = true;
                     break;
@@ -531,12 +567,18 @@ impl Esp32s3I2c {
         // TRANS_COMPLETE (bit 7). esp-hal blocks on (END_DETECT | TX_COMPLETE)
         // and uses END_DETECT to chain phase 2 of a write_read.
         if last_op_was_end {
+            self.active_slave = active;
+            self.expects_addr = expects_addr;
             self.int_raw |= INT_END_DETECT;
         } else if hit_stop {
+            self.active_slave = None;
+            self.expects_addr = true;
             self.int_raw |= INT_TRANS_COMPLETE;
         } else {
             // Empty cmd list or reserved opcode — set TRANS_COMPLETE so the
             // driver's wait loop unblocks rather than hanging.
+            self.active_slave = None;
+            self.expects_addr = true;
             self.int_raw |= INT_TRANS_COMPLETE;
         }
         if self.int_ena & (INT_TRANS_COMPLETE | INT_END_DETECT | INT_NACK) != 0 {
@@ -920,9 +962,9 @@ mod tests {
         p.write_u32(REG_FILTER_CFG, 0xFFFF_FFFF).unwrap();
         assert_eq!(p.read_u32(REG_FILTER_CFG).unwrap(), 0x0000_03FF);
 
-        // SCL_SP_CONF: mask 0xFF.
+        // SCL_SP_CONF: mask 0xFF, with SCL_RST_SLV_EN bit 0 self-clearing.
         p.write_u32(REG_SCL_SP_CONF, 0xFFFF_FFFF).unwrap();
-        assert_eq!(p.read_u32(REG_SCL_SP_CONF).unwrap(), 0x0000_00FF);
+        assert_eq!(p.read_u32(REG_SCL_SP_CONF).unwrap(), 0x0000_00FE);
 
         // TO: mask 0x3F — bits 6..31 are reserved, read back reset (0x10 & ~0x3F == 0,
         // so reserved bits are 0; full write reads back 0x3F only).

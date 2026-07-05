@@ -77,6 +77,16 @@ impl Ssd1306 {
         &self.gddram
     }
 
+    /// Count framebuffer bytes that contain at least one lit OLED pixel.
+    pub fn ink_bytes(&self) -> usize {
+        self.gddram.iter().filter(|b| **b != 0).count()
+    }
+
+    /// Count lit OLED pixels across the page-major GDDRAM framebuffer.
+    pub fn lit_pixels(&self) -> usize {
+        self.gddram.iter().map(|b| b.count_ones() as usize).sum()
+    }
+
     /// Panel width in pixels (128).
     pub fn width(&self) -> usize {
         WIDTH
