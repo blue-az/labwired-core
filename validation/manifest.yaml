@@ -157,7 +157,11 @@ boards:
     # 2026-07-01: additive bus-trace device wrappers at I2c/Spi attach + shared BusTraceLog on SystemBus (universal bus analyzer); STM32 register engines byte-for-byte untouched, wrappers only forward (transparent as_any) and activate only when a device+log is attached. Diff/conformance unchanged; no live re-capture.
     # 2026-07-03: additive `as_sim_input_mut` default method on the I2cDevice trait (generic SimInput hook) + new SystemBus set_input/list_inputs; STM32 register engines byte-for-byte untouched, the default returns None for all STM32 devices. Diff/conformance unchanged; no live re-capture.
     # 2026-07-04: drift is the file-hash of the additive L4 PLLSAI1/2 ready-bit change in rcc.rs (L4Rcc::ready); this board's RCC engine (H5Rcc) is byte-for-byte untouched, h563_mmio_diff + h563_conformance unchanged, no live re-capture.
-    drift_ack: 2026-07-04
+    # 2026-07-05: shared i2c.rs gained SSD1306 inspect artifact metadata
+    # (`ink_bytes`/`lit_pixels`) so browser/OLED proof paths can detect drawn ink.
+    # STM32 H5 I2C register/transaction engines are untouched; h563_mmio_diff +
+    # h563_conformance remain the pinned coverage. No live re-capture.
+    drift_ack: 2026-07-05
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
@@ -261,7 +265,11 @@ boards:
     # 2026-07-01: additive bus-trace device wrappers at I2c/Spi attach + shared BusTraceLog on SystemBus (universal bus analyzer); STM32 register engines byte-for-byte untouched, wrappers only forward (transparent as_any) and activate only when a device+log is attached. Diff/conformance unchanged; no live re-capture.
     # 2026-07-03: additive `as_sim_input_mut` default method on the I2cDevice trait (generic SimInput hook) + new SystemBus set_input/list_inputs; STM32 register engines byte-for-byte untouched, the default returns None for all STM32 devices. Diff/conformance unchanged; no live re-capture.
     # 2026-07-04: modeled RCC_CR PLLSAI1RDY(bit27)←PLLSAI1ON, PLLSAI2RDY(bit29)←PLLSAI2ON (RM0351 §6.4.1) so STM32 Arduino HAL PLLSAI1 (48 MHz domain) bring-up completes instead of HAL_TIMEOUT. Additive ready-bit behavior; pending live HW re-capture.
-    drift_ack: 2026-07-04
+    # 2026-07-05: shared i2c.rs gained SSD1306 inspect artifact metadata
+    # (`ink_bytes`/`lit_pixels`) so browser/OLED proof paths can detect drawn ink.
+    # STM32 L4 I2C register/transaction engines are untouched; l476_mmio_diff +
+    # l476_parity_diff remain the pinned coverage. No live re-capture.
+    drift_ack: 2026-07-05
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
@@ -346,7 +354,11 @@ boards:
     # 2026-07-01: additive bus-trace device wrappers at I2c/Spi attach + shared BusTraceLog on SystemBus (universal bus analyzer); STM32 register engines byte-for-byte untouched, wrappers only forward (transparent as_any) and activate only when a device+log is attached. Diff/conformance unchanged; no live re-capture.
     # 2026-07-03: additive `as_sim_input_mut` default method on the I2cDevice trait (generic SimInput hook) + new SystemBus set_input/list_inputs; STM32 register engines byte-for-byte untouched, the default returns None for all STM32 devices. Diff/conformance unchanged; no live re-capture.
     # 2026-07-04: drift is the file-hash of the additive L4 PLLSAI1/2 ready-bit change in rcc.rs (L4Rcc::ready); this board's RCC engine (F1Rcc) is byte-for-byte untouched, stm32f1_mmio_diff + f103_conformance unchanged, no live re-capture.
-    drift_ack: 2026-07-04
+    # 2026-07-05: shared i2c.rs gained SSD1306 inspect artifact metadata
+    # (`ink_bytes`/`lit_pixels`) so browser/OLED proof paths can detect drawn ink.
+    # STM32 F1 I2C register/transaction engines are untouched; stm32f1_mmio_diff +
+    # f103_conformance remain the pinned coverage. No live re-capture.
+    drift_ack: 2026-07-05
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/afio.rs
@@ -394,7 +406,11 @@ boards:
     # 2026-07-01: additive bus-trace device wrappers at I2c/Spi attach + shared BusTraceLog on SystemBus (universal bus analyzer); STM32 register engines byte-for-byte untouched, wrappers only forward (transparent as_any) and activate only when a device+log is attached. Diff/conformance unchanged; no live re-capture.
     # 2026-07-03: additive `as_sim_input_mut` default method on the I2cDevice trait (generic SimInput hook) + new SystemBus set_input/list_inputs; STM32 register engines byte-for-byte untouched, the default returns None for all STM32 devices. Diff/conformance unchanged; no live re-capture.
     # 2026-07-04: drift is the file-hash of the additive L4 PLLSAI1/2 ready-bit change in rcc.rs (L4Rcc::ready); this board's RCC engine (F4Rcc) is byte-for-byte untouched, stm32f4_mmio_diff + stm32f4_exec_oracle unchanged, no live re-capture.
-    drift_ack: 2026-07-04
+    # 2026-07-05: shared i2c.rs gained SSD1306 inspect artifact metadata
+    # (`ink_bytes`/`lit_pixels`) so browser/OLED proof paths can detect drawn ink.
+    # STM32 F4 I2C register/transaction engines are untouched; stm32f4_mmio_diff +
+    # stm32f4_exec_oracle remain the pinned coverage. No live re-capture.
+    drift_ack: 2026-07-05
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
