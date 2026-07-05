@@ -1031,6 +1031,8 @@ impl crate::Peripheral for I2c {
                         "h": oled.height(),
                         "format": "ssd1306_page",
                         "generation": crate::inspect::artifact_generation(fb),
+                        "ink_bytes": oled.ink_bytes(),
+                        "lit_pixels": oled.lit_pixels(),
                     }),
                     bytes: if opts.include_bytes {
                         Some(fb.to_vec())

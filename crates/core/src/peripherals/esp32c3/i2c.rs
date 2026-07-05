@@ -99,6 +99,8 @@ const REG_SCL_STRETCH_CONF: u64 = 0x84;
 const REG_DATE: u64 = 0xF8;
 
 const CTR_TRANS_START_BIT: u32 = 1 << 5;
+/// CTR bit 10: FSM_RST — write-trigger master FSM reset.
+const CTR_FSM_RST: u32 = 1 << 10;
 /// CTR bit 11: CONF_UPGATE — self-clearing config-sync trigger.
 const CTR_CONF_UPGATE: u32 = 1 << 11;
 
@@ -113,6 +115,7 @@ const CMD_DONE_BIT: u32 = 1 << 31;
 pub const INT_END_DETECT: u32 = 1 << 3;
 pub const INT_TRANS_COMPLETE: u32 = 1 << 7;
 pub const INT_NACK: u32 = 1 << 10;
+const SCL_RST_SLV_EN: u32 = 1 << 0;
 
 /// ESP32-C3 has 8 COMD slots at offsets 0x58..0x78 (COMD0..COMD7 in the yaml).
 const NUM_CMDS: usize = 8;
@@ -136,6 +139,8 @@ pub struct Esp32c3I2c {
     irq_pending: bool,
     /// Interrupt-matrix source this instance asserts (29 for I2C0).
     intr_source_id: u32,
+    active_slave: Option<usize>,
+    expects_addr: bool,
 
     // Config / timing registers — masked storage (reset values per C3 i2c0.yaml).
     reg_scl_low_period: u32,   // 0x00  reset 0x0000_0000  mask 0x0000_01FF
@@ -178,6 +183,8 @@ impl Esp32c3I2c {
             slaves: Vec::new(),
             irq_pending: false,
             intr_source_id: I2C0_INTR_SOURCE_ID,
+            active_slave: None,
+            expects_addr: true,
 
             reg_scl_low_period: 0x0000_0000,
             reg_to: 0x0000_0010,
@@ -242,6 +249,17 @@ impl Esp32c3I2c {
         let rx = (self.rx_fifo.borrow().len() as u32) & 0x3F;
         let tx = (self.tx_fifo.len() as u32) & 0x3F;
         (self.sr & SR_RESP_REC) | SR_STRETCH_CAUSE_RESET | (rx << 8) | (tx << 18)
+    }
+
+    fn find_slave_from_slave_addr_register(&self) -> Option<usize> {
+        let raw = self.slave_addr & 0x7FFF;
+        if raw <= 0x7F {
+            if let Some(idx) = self.slaves.iter().position(|s| s.address() == raw as u8) {
+                return Some(idx);
+            }
+        }
+        let shifted = ((raw >> 1) & 0x7F) as u8;
+        self.slaves.iter().position(|s| s.address() == shifted)
     }
 }
 
@@ -338,8 +356,9 @@ impl Peripheral for Esp32c3I2c {
                     // Auto-clear TRANS_START like real silicon.
                     self.ctr &= !CTR_TRANS_START_BIT;
                 }
-                // CONF_UPGATE (bit 11) is a self-clearing sync trigger.
-                self.ctr &= !CTR_CONF_UPGATE;
+                // One-shot control bits self-clear after the write-triggered
+                // operation is accepted.
+                self.ctr &= !(CTR_FSM_RST | CTR_CONF_UPGATE);
             }
             REG_TO => masked_write(&mut self.reg_to, value, 0x0000_003F),
             REG_SLAVE_ADDR => self.slave_addr = value,
@@ -382,7 +401,12 @@ impl Peripheral for Esp32c3I2c {
             REG_SCL_MAIN_ST_TIME_OUT => {
                 masked_write(&mut self.reg_scl_main_st_time_out, value, 0x0000_001F)
             }
-            REG_SCL_SP_CONF => masked_write(&mut self.reg_scl_sp_conf, value, 0x0000_00FF),
+            REG_SCL_SP_CONF => {
+                masked_write(&mut self.reg_scl_sp_conf, value, 0x0000_00FF);
+                // SCL_RST_SLV_EN is R/W/SC. Arduino's C3 bus-clear helper
+                // writes it and then polls until hardware clears it.
+                self.reg_scl_sp_conf &= !SCL_RST_SLV_EN;
+            }
             REG_SCL_STRETCH_CONF => {
                 masked_write(&mut self.reg_scl_stretch_conf, value, 0x0000_3FFF)
             }
@@ -446,6 +470,8 @@ impl Peripheral for Esp32c3I2c {
                         "h": oled.height(),
                         "format": "ssd1306_page",
                         "generation": crate::inspect::artifact_generation(fb),
+                        "ink_bytes": oled.ink_bytes(),
+                        "lit_pixels": oled.lit_pixels(),
                     }),
                     bytes: if opts.include_bytes {
                         Some(fb.to_vec())
@@ -474,8 +500,8 @@ impl Esp32c3I2c {
         const OP_END: u32 = 4;
         const OP_RSTART: u32 = 6;
 
-        let mut active: Option<usize> = None;
-        let mut expects_addr = true;
+        let mut active = self.active_slave;
+        let mut expects_addr = self.expects_addr;
         let mut last_op_was_end = false;
 
         // Reset RESP_REC and the TX-FIFO read pointer at the start of a new
@@ -504,15 +530,26 @@ impl Esp32c3I2c {
                             // First byte of a WRITE following RSTART is addr+R/W.
                             let addr = b >> 1;
                             active = self.slaves.iter().position(|s| s.address() == addr);
-                            if active.is_none() {
-                                self.int_raw |= INT_NACK;
-                            } else {
+                            if active.is_some() {
                                 // Slave acknowledged its address.
                                 self.sr |= SR_RESP_REC;
+                                expects_addr = false;
+                                // Don't deliver the addr byte to the slave's write().
+                                continue;
+                            }
+
+                            // ESP-IDF/Arduino can program the address in
+                            // SLAVE_ADDR and put only payload bytes in TXFIFO.
+                            // In that shape the first FIFO byte is real data.
+                            active = self.find_slave_from_slave_addr_register();
+                            if active.is_some() {
+                                self.sr |= SR_RESP_REC;
+                            } else {
+                                self.int_raw |= INT_NACK;
+                                expects_addr = false;
+                                continue;
                             }
                             expects_addr = false;
-                            // Don't deliver the addr byte to the slave's write().
-                            continue;
                         }
                         if let Some(slave_idx) = active {
                             self.slaves[slave_idx].write(b);
@@ -542,6 +579,8 @@ impl Esp32c3I2c {
                     if let Some(slave_idx) = active {
                         self.slaves[slave_idx].stop();
                     }
+                    active = None;
+                    expects_addr = true;
                     self.cmds[idx] |= CMD_DONE_BIT;
                     break;
                 }
@@ -557,8 +596,12 @@ impl Esp32c3I2c {
         // list that runs out without an explicit END) completes the transaction
         // and raises TRANS_COMPLETE (bit 7).
         if last_op_was_end {
+            self.active_slave = active;
+            self.expects_addr = expects_addr;
             self.int_raw |= INT_END_DETECT;
         } else {
+            self.active_slave = None;
+            self.expects_addr = true;
             self.int_raw |= INT_TRANS_COMPLETE;
         }
         if self.int_ena & (INT_TRANS_COMPLETE | INT_END_DETECT | INT_NACK) != 0 {
@@ -691,6 +734,29 @@ mod tests {
         p.write_u32(REG_CMD0, cmd(CMD_END, 0)).unwrap();
         p.write_u32(REG_CTR, CTR_TRANS_START_BIT).unwrap();
         assert_eq!(p.read_u32(REG_CTR).unwrap() & CTR_TRANS_START_BIT, 0);
+    }
+
+    #[test]
+    fn one_shot_control_bits_auto_clear() {
+        let mut p = Esp32c3I2c::new();
+        p.write_u32(REG_CTR, CTR_FSM_RST | CTR_CONF_UPGATE).unwrap();
+        assert_eq!(
+            p.read_u32(REG_CTR).unwrap() & (CTR_FSM_RST | CTR_CONF_UPGATE),
+            0
+        );
+    }
+
+    #[test]
+    fn scl_reset_slave_enable_self_clears() {
+        let mut p = Esp32c3I2c::new();
+        // Exact value observed in Arduino's i2c_ll_master_clr_bus(): enable
+        // plus 9 SCL pulses encoded in SCL_RST_SLV_NUM bits [5:1].
+        p.write_u32(REG_SCL_SP_CONF, 0x13).unwrap();
+        assert_eq!(
+            p.read_u32(REG_SCL_SP_CONF).unwrap(),
+            0x12,
+            "SCL_RST_SLV_EN must self-clear while preserving pulse count"
+        );
     }
 
     #[test]
@@ -829,6 +895,103 @@ mod tests {
             p.read_u32(REG_INT_RAW).unwrap() & INT_TRANS_COMPLETE,
             INT_TRANS_COMPLETE
         );
+    }
+
+    #[test]
+    fn inspect_ssd1306_framebuffer_reports_ink_metrics() {
+        use crate::inspect::InspectOpts;
+        use crate::peripherals::components::Ssd1306;
+
+        let mut p = Esp32c3I2c::new();
+        p.attach_slave(Box::new(Ssd1306::new(0x3C)));
+
+        // Same transaction shape as the C3 OLED firmware:
+        // RSTART; WRITE 3 (addr+W, control=0x40, one framebuffer byte); STOP.
+        p.write_u32(REG_CMD0, cmd(CMD_RSTART, 0)).unwrap();
+        p.write_u32(REG_CMD0 + 4, cmd(CMD_WRITE, 3)).unwrap();
+        p.write_u32(REG_CMD0 + 8, cmd(CMD_STOP, 0)).unwrap();
+        p.write_u32(REG_DATA, 0x78).unwrap(); // 0x3C << 1, write
+        p.write_u32(REG_DATA, 0x40).unwrap(); // SSD1306 data stream
+        p.write_u32(REG_DATA, 0xAA).unwrap(); // four lit pixels in byte 0
+        p.write_u32(REG_CTR, CTR_TRANS_START_BIT).unwrap();
+
+        let pi = p.inspect(0x6001_3000, "i2c0", &InspectOpts::default());
+        let fb = pi
+            .artifacts
+            .iter()
+            .find(|a| a.kind == "framebuffer")
+            .expect("framebuffer artifact present");
+        assert_eq!(fb.meta["ink_bytes"], 1);
+        assert_eq!(fb.meta["lit_pixels"], 4);
+    }
+
+    #[test]
+    fn register_addressed_write_delivers_payload_to_ssd1306() {
+        use crate::inspect::InspectOpts;
+        use crate::peripherals::components::Ssd1306;
+
+        let mut p = Esp32c3I2c::new();
+        p.attach_slave(Box::new(Ssd1306::new(0x3C)));
+
+        // Arduino-ESP32 / ESP-IDF may program SLAVE_ADDR with addr<<1 and
+        // write only the SSD1306 payload bytes to TXFIFO: control byte 0x40,
+        // then data 0xAA.
+        p.write_u32(REG_SLAVE_ADDR, 0x3C << 1).unwrap();
+        p.write_u32(REG_CMD0, cmd(CMD_RSTART, 0)).unwrap();
+        p.write_u32(REG_CMD0 + 4, cmd(CMD_WRITE, 2)).unwrap();
+        p.write_u32(REG_CMD0 + 8, cmd(CMD_STOP, 0)).unwrap();
+        p.write_u32(REG_DATA, 0x40).unwrap();
+        p.write_u32(REG_DATA, 0xAA).unwrap();
+        p.write_u32(REG_CTR, CTR_TRANS_START_BIT).unwrap();
+
+        assert_eq!(p.read_u32(REG_INT_RAW).unwrap() & INT_NACK, 0);
+        let pi = p.inspect(0x6001_3000, "i2c0", &InspectOpts::default());
+        let fb = pi
+            .artifacts
+            .iter()
+            .find(|a| a.kind == "framebuffer")
+            .expect("framebuffer artifact present");
+        assert_eq!(fb.meta["ink_bytes"], 1);
+        assert_eq!(fb.meta["lit_pixels"], 4);
+    }
+
+    #[test]
+    fn end_paused_address_phase_carries_active_slave() {
+        use crate::inspect::InspectOpts;
+        use crate::peripherals::components::Ssd1306;
+
+        let mut p = Esp32c3I2c::new();
+        p.attach_slave(Box::new(Ssd1306::new(0x3C)));
+
+        // Arduino-ESP32 splits a write: address phase ends with END_DETECT,
+        // then payload bytes are sent by a second command-list run.
+        p.write_u32(REG_CMD0, cmd(CMD_RSTART, 0)).unwrap();
+        p.write_u32(REG_CMD0 + 4, cmd(CMD_WRITE, 1)).unwrap();
+        p.write_u32(REG_CMD0 + 8, cmd(CMD_END, 0)).unwrap();
+        p.write_u32(REG_DATA, 0x78).unwrap();
+        p.write_u32(REG_CTR, CTR_TRANS_START_BIT).unwrap();
+        assert_eq!(
+            p.read_u32(REG_INT_RAW).unwrap() & INT_END_DETECT,
+            INT_END_DETECT
+        );
+        p.write_u32(REG_INT_CLR, INT_END_DETECT).unwrap();
+
+        p.write_u32(REG_CMD0, cmd(CMD_WRITE, 2)).unwrap();
+        p.write_u32(REG_CMD0 + 4, cmd(CMD_STOP, 0)).unwrap();
+        p.write_u32(REG_CMD0 + 8, 0).unwrap();
+        p.write_u32(REG_DATA, 0x40).unwrap();
+        p.write_u32(REG_DATA, 0xAA).unwrap();
+        p.write_u32(REG_CTR, CTR_TRANS_START_BIT).unwrap();
+
+        assert_eq!(p.read_u32(REG_INT_RAW).unwrap() & INT_NACK, 0);
+        let pi = p.inspect(0x6001_3000, "i2c0", &InspectOpts::default());
+        let fb = pi
+            .artifacts
+            .iter()
+            .find(|a| a.kind == "framebuffer")
+            .expect("framebuffer artifact present");
+        assert_eq!(fb.meta["ink_bytes"], 1);
+        assert_eq!(fb.meta["lit_pixels"], 4);
     }
 
     #[test]
