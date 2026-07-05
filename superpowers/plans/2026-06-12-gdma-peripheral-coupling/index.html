@@ -1,0 +1,2539 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://labwired.com/docs/superpowers/plans/2026-06-12-gdma-peripheral-coupling/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>GDMA Peripheral-Coupled Mode Implementation Plan (Slice 3A) - LabWired Core</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#gdma-peripheral-coupled-mode-implementation-plan-slice-3a" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="LabWired Core" class="md-header__button md-logo" aria-label="LabWired Core" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            LabWired Core
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              GDMA Peripheral-Coupled Mode Implementation Plan (Slice 3A)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/w1ne/labwired-core" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    w1ne/labwired-core
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../architecture/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture Overview
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../golden_reference/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Hardware-Sim Parity
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../supported_devices/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Hardware Matrix
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../agents/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  AI Agent Manual
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../getting_started_firmware/" class="md-tabs__link">
+          
+  
+  
+  Tutorials
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../board_onboarding_playbook/" class="md-tabs__link">
+          
+  
+  
+  How-To Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../configuration_reference/" class="md-tabs__link">
+          
+  
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../boards/stm32f103/" class="md-tabs__link">
+          
+  
+  
+  Boards
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../release_strategy/" class="md-tabs__link">
+          
+  
+  
+  Operations
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../architecture_overview/" class="md-tabs__link">
+          
+  
+  
+  Explanation
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="LabWired Core" class="md-nav__button md-logo" aria-label="LabWired Core" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    LabWired Core
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/w1ne/labwired-core" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    w1ne/labwired-core
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../golden_reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware-Sim Parity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../supported_devices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware Matrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI Agent Manual
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting_started_firmware/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running Firmware
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../examples/i2c_sensor_example/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Simulating Sensors (I2C)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../examples/dma_exti_example/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mastering DMA & Interrupts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../examples/integrated_test_walkthrough/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Integrated Test Walkthrough
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-To Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    How-To Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../board_onboarding_playbook/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Board Onboarding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ci_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CI/CD Integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../peripheral_development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developing Peripherals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CONTRIBUTING_PERIPHERALS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing Peripherals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../advanced_peripherals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced Peripherals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../hardware_interaction_guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware Interaction Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../vscode_debugging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Debugging with VS Code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../gdb_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GDB Integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../debugging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Debugging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../configuration_reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration (YAML)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../declarative_registers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Declarative Registers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../cli_reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ci_test_runner/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test Script Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference_client_flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Client Flows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../isa_coverage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ISA Coverage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../schema_compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Schema Compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../catalog_validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Catalog Validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../target_support_rubric/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Target Support Rubric
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Boards
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Boards
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../boards/stm32f103/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    STM32F103
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../boards/stm32f401/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    STM32F401
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../boards/stm32f407/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    STM32F407
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../boards/nucleo-l476rg/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NUCLEO-L476RG
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../boards/stm32h563/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    STM32H563
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../boards/stm32wba52/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    STM32WBA52
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../boards/nrf52832/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nRF52832
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../boards/nrf52840/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nRF52840
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../boards/rp2040/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RP2040
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../boards/esp32c3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ESP32-C3
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../boards/esp32s3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ESP32-S3
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Operations
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../release_strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Strategy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../RELEASE_DETERMINISM/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Determinism
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../labwired_audit_protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verification Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../supported_devices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware Matrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../coverage_scoreboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coverage Scoreboard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../coverage/chip-conformance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chip Conformance (live)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../coverage/tier1-scoreboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tier-1 Matrix (live)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../safety/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Safety & Guardrails
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../demos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Demos
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../case_study_stm32/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Case Study (STM32)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Explanation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../architecture_overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../simulation_protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Simulation Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#task-0-peri_sel-ground-truth-research-gate-no-production-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 0: PERI_SEL ground truth (research gate, no production code)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#task-1-peri_sel-registers-coupled-mode-routing-skeleton" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 1: PERI_SEL registers + coupled-mode routing skeleton
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#task-2-uart-uhci0-coupling-tx-and-rx-byte-movement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 2: UART (UHCI0) coupling — TX and RX byte movement
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#task-3-gp-spi-spi2spi3-coupling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 3: GP-SPI (SPI2/SPI3) coupling
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#task-4-i2s-coupling-sample-streaming" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 4: I2S coupling — sample streaming
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#task-5-contract-docs-compatibility-matrix-full-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 5: Contract docs, compatibility matrix, full verification
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#self-review-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Self-review notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="gdma-peripheral-coupled-mode-implementation-plan-slice-3a">GDMA Peripheral-Coupled Mode Implementation Plan (Slice 3A)</h1>
+<blockquote>
+<p><strong>For agentic workers:</strong> REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (<code>- [ ]</code>) syntax for tracking.</p>
+</blockquote>
+<p><strong>Goal:</strong> ESP32-S3 GDMA moves real bytes between memory descriptors and the UART/SPI/I2S peripherals (peripheral-coupled mode), so standard ESP-IDF DMA drivers run instead of receiving phantom EOFs.</p>
+<p><strong>Architecture:</strong> Add the missing <code>PERI_SEL</code> register pair per channel; in <code>tick_with_bus()</code>, coupled channels pump bytes between descriptor chains and the target peripheral THROUGH THE BUS (UART via its real MMIO FIFO; SPI via its DMA-enabled transaction path; I2S via a new sample-stream surface). Unmodeled peripheral ids keep today's auto-complete fallback (compatibility). EOF/interrupt semantics per direction follow the existing M2M wiring (sources 66–75).</p>
+<p><strong>Tech Stack:</strong> Rust (labwired-core), register-level integration tests (no cross-toolchain dependency in the gate; e2e firmware optional follow-up).</p>
+<p><strong>Spec:</strong> parent <code>labwired</code> repo <code>docs/superpowers/specs/2026-06-11-hw-substrate-sota-design.md</code>, Slice 3 ("GDMA peripheral-coupled mode"). LCD coupling explicitly deferred.</p>
+<p><strong>CRITICAL — workspace:</strong> ALL work in the core worktree <code>/home/andrii/projects/labwired/.worktrees/core-slice3-gdma</code> (branch <code>feat/gdma-peripheral-coupling</code>, tracks core origin/main). Another agent works in <code>/home/andrii/projects/labwired</code> and <code>/home/andrii/projects/labwired/core</code> — NEVER touch those. Commits: no Claude/AI/assistant references, no Co-Authored-By.</p>
+<p><strong>Ground-truth anchors (read before each task):</strong> <code>crates/core/src/peripherals/esp32s3/gdma.rs</code> (958 LoC: M2M walk at 339–397, auto-complete fallback at 294–326, irq emission 431–450, doc-comment contract 79–86), <code>uart.rs</code> (FIFO at offset 0x00, STATUS counts at 0x1C), <code>gpspi.rs</code> (W0..W15 + <code>SPI_CMD.USR</code> immediate-complete + storage-only <code>DMA_CONF</code> 0x30), <code>i2s.rs</code> (control surface only; <code>RXEOF_NUM</code> 0x64), and the M2M tests (gdma.rs 500–959) as the test-style template.</p>
+<hr />
+<h3 id="task-0-peri_sel-ground-truth-research-gate-no-production-code">Task 0: PERI_SEL ground truth (research gate, no production code)</h3>
+<p><strong>Files:</strong>
+- Create: <code>docs/esp32s3_gdma_peri_sel.md</code> (short note)</p>
+<p>GDMA on real silicon binds channels to peripherals via <code>GDMA_IN_PERI_SEL_CHn_REG</code> / <code>GDMA_OUT_PERI_SEL_CHn_REG</code>. Before implementing, pin down: (a) the register OFFSETS within the per-channel block, and (b) the <code>PERI_IN_SEL</code>/<code>PERI_OUT_SEL</code> value encodings (which integer selects SPI2, SPI3, UHCI0/UART-DMA, I2S0, I2S1, LCD_CAM, AES, SHA, ADC, RMT).</p>
+<ul>
+<li>[ ] <strong>Step 1:</strong> Search the repo for existing evidence: <code>grep -rn "PERI_SEL\|peri_sel\|peri_in_sel" crates/ docs/ scripts/</code> — ROM-thunk or hw-oracle captures may already reference them. Also check any vendored ESP-IDF headers (<code>grep -rln "GDMA_IN_PERI_SEL" --include=*.h .</code> and <code>grep -rn "SOC_GDMA" crates/</code>).</li>
+<li>[ ] <strong>Step 2:</strong> If absent in-repo, derive from authoritative public sources (ESP32-S3 TRM chapter "GDMA Controller", or esp-idf <code>soc/esp32s3/include/soc/gdma_struct.h</code> + <code>gdma_channel.h</code> via WebFetch of the espressif GitHub raw files). Record in <code>docs/esp32s3_gdma_peri_sel.md</code>: offsets relative to the channel block (expected: IN_PERI_SEL at 0x40, OUT_PERI_SEL at 0xA0 within the 0xC0 stride — VERIFY, do not trust this parenthetical), the value→peripheral table, and the citation (URL + struct names). Wrong offsets here poison every later task — this is the one task where slowing down pays.</li>
+<li>[ ] <strong>Step 3:</strong> Cross-check against the existing register map constants in gdma.rs lines 99–115 (no collisions with already-modeled offsets). Commit: <code>docs(core): ESP32-S3 GDMA PERI_SEL register/value ground truth</code></li>
+</ul>
+<hr />
+<h3 id="task-1-peri_sel-registers-coupled-mode-routing-skeleton">Task 1: PERI_SEL registers + coupled-mode routing skeleton</h3>
+<p><strong>Files:</strong>
+- Modify: <code>crates/core/src/peripherals/esp32s3/gdma.rs</code></p>
+<p>TDD. Add <code>IN_PERI_SEL</code>/<code>OUT_PERI_SEL</code> registers (offsets from Task 0) as read/write storage on each direction's state; define</p>
+<div class="language-rust highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="sd">/// Peripheral targets GDMA can couple to. Values per Task 0 ground truth.</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="cp">#[derive(Debug, Clone, Copy, PartialEq, Eq)]</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="k">enum</span><span class="w"> </span><span class="nc">DmaPeripheral</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="n">Spi2</span><span class="p">,</span><span class="w"> </span><span class="n">Spi3</span><span class="p">,</span><span class="w"> </span><span class="n">Uhci0</span><span class="p">,</span><span class="w"> </span><span class="n">I2s0</span><span class="p">,</span><span class="w"> </span><span class="n">I2s1</span><span class="p">,</span><span class="w"> </span><span class="n">LcdCam</span><span class="p">,</span><span class="w"> </span><span class="n">Aes</span><span class="p">,</span><span class="w"> </span><span class="n">Sha</span><span class="p">,</span><span class="w"> </span><span class="n">Adc</span><span class="p">,</span><span class="w"> </span><span class="n">Rmt</span><span class="p">,</span><span class="w"> </span><span class="c1">// adjust to the verified table</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="n">Unknown</span><span class="p">(</span><span class="kt">u32</span><span class="p">),</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">}</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="k">impl</span><span class="w"> </span><span class="n">DmaPeripheral</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="nf">from_sel</span><span class="p">(</span><span class="n">v</span><span class="p">:</span><span class="w"> </span><span class="kt">u32</span><span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nc">Self</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="cm">/* per table */</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
+</span></code></pre></div>
+<p>Routing rule in the link-start paths (replacing the blanket auto-complete at lines 294–326): when <code>MEM_TRANS_EN</code> is clear, look up <code>DmaPeripheral::from_sel(peri_sel)</code>:
+- <strong>Coupled set</strong> (<code>Uhci0</code>, <code>Spi2</code>, <code>Spi3</code>, <code>I2s0</code>, <code>I2s1</code>): mark the direction <code>pending_coupled</code> (new state) — byte movement happens in <code>tick_with_bus</code> (Tasks 2–4). Do NOT latch EOF at start.
+- <strong>Fallback set</strong> (everything else, incl. <code>Unknown</code>): keep today's immediate auto-complete byte-for-byte (the doc comment at 79–86 must be updated to describe the new split). This preserves AES/SHA/ADC-using firmware behavior exactly.</p>
+<p>Tests (extend the existing test module style): PERI_SEL read/write round-trip per channel/direction; coupled-set start does NOT latch EOF; fallback-set start still auto-completes (pin existing behavior with an explicit test so the compatibility promise is enforced); M2M tests untouched and green.</p>
+<p>Run: <code>cargo test -p labwired-core gdma</code> → green; <code>cargo clippy -p labwired-core -- -D warnings</code>; <code>cargo fmt --all</code>.
+Commit: <code>feat(core): GDMA PERI_SEL registers + coupled/fallback routing split</code></p>
+<hr />
+<h3 id="task-2-uart-uhci0-coupling-tx-and-rx-byte-movement">Task 2: UART (UHCI0) coupling — TX and RX byte movement</h3>
+<p><strong>Files:</strong>
+- Modify: <code>crates/core/src/peripherals/esp32s3/gdma.rs</code>
+- Modify (only if needed): <code>crates/core/src/peripherals/esp32s3/uart.rs</code></p>
+<p>On real silicon UART-DMA flows through UHCI0 bridging GDMA↔UART FIFOs. We model the data path, not UHCI framing: a coupled OUT (TX) channel walks its descriptor chain (reuse <code>walk_out_chain</code>) and pushes each byte to the UART by <code>bus.write_u8(UART_FIFO_ADDR, byte)</code> — the UART's real MMIO FIFO write path, so serial output, interrupts, and STATUS counts behave identically to CPU writes. A coupled IN (RX) channel reads <code>STATUS.RXFIFO_CNT</code> via the bus, pops available bytes via <code>bus.read_u8(UART_FIFO_ADDR)</code>, and writes them into the IN descriptor chain (reuse <code>walk_in_chain</code> mechanics, but incremental: partial fills must NOT latch <code>IN_SUC_EOF</code> until the descriptor chain is satisfied or the UART idles — model: EOF when the current descriptor fills OR rx fifo empties after at least one byte with <code>IN_DONE</code> per completed descriptor; verify the exact EOF policy against how ESP-IDF's uart driver consumes it — <code>uart_read_bytes</code> waits on <code>IN_SUC_EOF</code>; document the chosen policy in the code comment).</p>
+<p>Which UART instance: derive the UART base address from the UHCI0 binding (UHCI0 bridges to UART0 by default; if the repo's uart.rs models multiple instances, couple to UART0's base and document). Respect throughput realism minimally: move at most N bytes per tick (pick the value other peripherals use for batched ticking; a <code>const COUPLED_BYTES_PER_TICK</code> keeps it tunable).</p>
+<p>Tests (register-level, in gdma.rs test module or a sibling integration test — follow where the M2M tests live):
+- TX: program a descriptor with "HELLO", set OUT_PERI_SEL=UHCI0, start OUT link → after ticks, the UART's tx output (however uart.rs exposes transmitted bytes — read its tests for the accessor) contains "HELLO"; OUT_EOF latched only after the last byte entered the FIFO.
+- RX: preload the UART rx fifo (uart.rs test helper or MMIO loopback — read how uart tests inject rx), program IN descriptor, start IN link → memory contains the bytes; IN_SUC_EOF + irq source 66+n raised; partial-fill does not EOF prematurely.
+- Both with the interrupt enable mask set, assert <code>explicit_irqs</code> carries the right source ids.</p>
+<p>Run gates as Task 1. Commit: <code>feat(core): GDMA↔UART coupled transfers via MMIO FIFO path</code></p>
+<hr />
+<h3 id="task-3-gp-spi-spi2spi3-coupling">Task 3: GP-SPI (SPI2/SPI3) coupling</h3>
+<p><strong>Files:</strong>
+- Modify: <code>crates/core/src/peripherals/esp32s3/gpspi.rs</code>
+- Modify: <code>crates/core/src/peripherals/esp32s3/gdma.rs</code></p>
+<p>Today <code>gpspi.rs</code> auto-completes a transaction on <code>SPI_CMD.USR</code> using the W0..W15 buffer; <code>DMA_CONF</code> is storage-only. ESP-IDF's SPI master driver in DMA mode: configures GDMA channel (PERI_SEL=SPI2/3), sets <code>DMA_CONF</code> enables, fills descriptors, kicks <code>USR</code>. Model: when <code>USR</code> is kicked with DMA tx/rx enabled in <code>DMA_CONF</code> (read the real bit names from the register doc in gpspi.rs or ESP-IDF spi_struct.h — record them), the SPI defers completion until GDMA supplies/consumes the data: GDMA's coupled OUT chain provides MOSI bytes (replacing W-buffer reads), coupled IN chain receives MISO bytes (the model's existing MISO fill policy: attached device response if a device is attached — gpspi has an attach() path used by the e-paper work — else 0xFF). On completion: SPI latches TRANS_DONE; GDMA latches OUT_EOF/IN_SUC_EOF.</p>
+<p>Coupling mechanism: GDMA and SPI are separate peripherals on the bus; the byte handoff cannot go through MMIO (W buffer is the non-DMA path). Implement the smallest cross-peripheral contract that fits the existing architecture — read how the bus owner composes peripherals (<code>crates/core/src/bus/mod.rs</code>) and choose: (a) a shared <code>DmaEndpoint</code> trait object registered by base-address/peri-id that GDMA can resolve during <code>tick_with_bus</code> (mirrors how external device attach() works), or (b) a mailbox in the bus that SPI posts "transaction pending, need N bytes" requests to and GDMA services (mirrors the STM32 DmaRequest pattern at dma.rs:127–246). Prefer whichever pattern the codebase already uses for cross-peripheral signaling — investigate <code>dma_requests</code> in <code>PeripheralTickResult</code> first; if that mechanism can carry this, use it and do NOT invent a new trait. Document the decision in the module doc.</p>
+<p>Tests: DMA-mode SPI3 transaction with an attached test device (reuse the e-paper test device pattern from the 93f6f9a8 work or gpspi tests): descriptor-fed MOSI bytes reach the device byte-for-byte; device-fed MISO bytes land in the IN descriptor buffer; TRANS_DONE + both EOFs ordered correctly; non-DMA (CPU W-buffer) transactions unchanged (regression-pin with existing tests).</p>
+<p>Run gates. Commit: <code>feat(core): GDMA-coupled SPI2/3 transactions (DMA-mode master path)</code></p>
+<hr />
+<h3 id="task-4-i2s-coupling-sample-streaming">Task 4: I2S coupling — sample streaming</h3>
+<p><strong>Files:</strong>
+- Modify: <code>crates/core/src/peripherals/esp32s3/i2s.rs</code>
+- Modify: <code>crates/core/src/peripherals/esp32s3/gdma.rs</code></p>
+<p>I2S on S3 is DMA-only (no CPU FIFO) — this task makes I2S actually move data for the first time. Scope (minimal faithful): TX path: coupled OUT chain bytes stream into a new I2S sample sink — an internal bounded buffer drained at the configured sample rate is over-modeling; instead expose transmitted samples to tests/observability the same way UART exposes tx bytes (read how uart.rs surfaces output and mirror it; if there's a generic observable mechanism use it). RX path: a test-injectable sample source feeds the IN chain; <code>RXEOF_NUM</code> (i2s.rs 0x64) governs when IN_SUC_EOF latches (that's its documented purpose — wire it for real). TX EOF: when the descriptor chain drains. Start/stop respects the I2S TX/RX start bits already modeled in i2s.rs.</p>
+<p>Tests: TX stream of a known pattern lands in the sample sink in order with OUT_EOF after chain completion; RX with RXEOF_NUM = N latches IN_SUC_EOF after exactly N bytes; I2S start-bit gating (no movement while stopped).</p>
+<p>Run gates. Commit: <code>feat(core): GDMA-coupled I2S sample streaming (RXEOF_NUM honored)</code></p>
+<hr />
+<h3 id="task-5-contract-docs-compatibility-matrix-full-verification">Task 5: Contract docs, compatibility matrix, full verification</h3>
+<p><strong>Files:</strong>
+- Modify: <code>crates/core/src/peripherals/esp32s3/gdma.rs</code> (module doc 79–86 rewrite)
+- Modify: the compatibility/支持 matrix doc (<code>docs/specs/compatibility_matrix.md</code> in the parent repo is OUT of this worktree — instead update core's own doc: grep <code>docs/</code> for the S3/GDMA support statements and update those in THIS repo)
+- Modify: <code>CHANGELOG.md</code> (core repo conventions — read recent entries)</p>
+<ol>
+<li>Rewrite the gdma.rs "What remains unimplemented" section: coupled = UART(UHCI0)/SPI2/SPI3/I2S0/I2S1 with real byte movement; fallback auto-complete = AES/SHA/ADC/RMT/LCD_CAM + unknown (explicit list); LCD_CAM deferred-by-design note.</li>
+<li>Sweep for stale claims: <code>grep -rn "auto-complete\|peripheral-coupled\|non-m2m" crates/core/src/peripherals/esp32s3/ docs/</code> and update every statement that now lies.</li>
+<li>Full verification (paste summaries): <code>cargo fmt --all --check &amp;&amp; cargo clippy -p labwired-core -- -D warnings &amp;&amp; cargo test -p labwired-core</code> (scoped package — workspace-wide may need cross-compiled fixtures: prebuild <code>cargo build -p firmware-hil-showcase --release --target thumbv7m-none-eabi</code> if running broader suites, per the known strict_onboarding requirement).</li>
+<li>Confirm no regression in the existing S3 e2e tests (<code>cargo test -p labwired-core --test e2e_labwired_ereader</code> and any other S3 e2e — the e-paper CPU-driven path must be untouched).</li>
+</ol>
+<p>Commits: <code>docs(core): GDMA coupled-mode contract + stale-claim sweep</code> (verification has no separate commit).</p>
+<hr />
+<h2 id="self-review-notes">Self-review notes</h2>
+<ul>
+<li>Parent-spec coverage (Slice 3 GDMA item): UART/SPI/I2S coupling (Tasks 2–4), EOF/interrupt semantics per direction (each task's tests + existing source-id wiring), LCD deferred (Task 5 doc), compatibility preserved for non-coupled peripherals (Task 1 fallback + pinned test).</li>
+<li>Deliberately out: e2e cross-compiled DMA firmware fixtures (Xtensa toolchain dependency — register-level tests gate the logic; a firmware fixture is a fast-follow once a toolchain-built ELF can be committed like other fixtures); virtual netif (Slice 3B, separate plan); dual-core verification (3C).</li>
+<li>The riskiest unknowns are pinned to Task 0 (PERI_SEL ground truth) and the Task 3 coupling-mechanism decision (investigate-first instruction with two named candidate patterns from the codebase).</li>
+<li>No placeholder steps: every task names its test cases, files, gates, and commit message; implementation details that depend on unread code are framed as verify-then-adapt with exact anchors.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "toc.follow", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,3032 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://labwired.com/docs/superpowers/specs/2026-04-25-plan-1.5-hw-runner-and-sim-cleanup/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Plan 1.5 — HW Runner Cleanup and Sim-Side TODO Closure - LabWired Core</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#plan-15-hw-runner-cleanup-and-sim-side-todo-closure" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="LabWired Core" class="md-header__button md-logo" aria-label="LabWired Core" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            LabWired Core
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Plan 1.5 — HW Runner Cleanup and Sim-Side TODO Closure
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/w1ne/labwired-core" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    w1ne/labwired-core
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../architecture/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture Overview
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../golden_reference/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Hardware-Sim Parity
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../supported_devices/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Hardware Matrix
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../agents/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  AI Agent Manual
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../getting_started_firmware/" class="md-tabs__link">
+          
+  
+  
+  Tutorials
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../board_onboarding_playbook/" class="md-tabs__link">
+          
+  
+  
+  How-To Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../configuration_reference/" class="md-tabs__link">
+          
+  
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../boards/stm32f103/" class="md-tabs__link">
+          
+  
+  
+  Boards
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../release_strategy/" class="md-tabs__link">
+          
+  
+  
+  Operations
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../architecture_overview/" class="md-tabs__link">
+          
+  
+  
+  Explanation
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="LabWired Core" class="md-nav__button md-logo" aria-label="LabWired Core" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    LabWired Core
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/w1ne/labwired-core" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    w1ne/labwired-core
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../golden_reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware-Sim Parity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../supported_devices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware Matrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI Agent Manual
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting_started_firmware/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running Firmware
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../examples/i2c_sensor_example/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Simulating Sensors (I2C)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../examples/dma_exti_example/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mastering DMA & Interrupts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../examples/integrated_test_walkthrough/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Integrated Test Walkthrough
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-To Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    How-To Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../board_onboarding_playbook/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Board Onboarding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ci_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CI/CD Integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../peripheral_development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developing Peripherals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CONTRIBUTING_PERIPHERALS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing Peripherals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../advanced_peripherals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced Peripherals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../hardware_interaction_guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware Interaction Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../vscode_debugging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Debugging with VS Code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../gdb_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GDB Integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../debugging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Debugging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../configuration_reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration (YAML)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../declarative_registers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Declarative Registers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../cli_reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ci_test_runner/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test Script Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference_client_flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Client Flows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../isa_coverage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ISA Coverage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../schema_compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Schema Compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../catalog_validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Catalog Validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../target_support_rubric/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Target Support Rubric
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Boards
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Boards
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../boards/stm32f103/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    STM32F103
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../boards/stm32f401/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    STM32F401
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../boards/stm32f407/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    STM32F407
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../boards/nucleo-l476rg/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NUCLEO-L476RG
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../boards/stm32h563/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    STM32H563
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../boards/stm32wba52/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    STM32WBA52
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../boards/nrf52832/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nRF52832
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../boards/nrf52840/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nRF52840
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../boards/rp2040/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RP2040
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../boards/esp32c3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ESP32-C3
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../boards/esp32s3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ESP32-S3
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Operations
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../release_strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Strategy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../RELEASE_DETERMINISM/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Determinism
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../labwired_audit_protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verification Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../supported_devices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware Matrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../coverage_scoreboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coverage Scoreboard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../coverage/chip-conformance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chip Conformance (live)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../coverage/tier1-scoreboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tier-1 Matrix (live)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../safety/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Safety & Guardrails
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../demos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Demos
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../case_study_stm32/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Case Study (STM32)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Explanation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../architecture_overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../simulation_protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Simulation Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-goal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Goal
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-non-goals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Non-goals
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Context
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-three-layer-split-unchanged-from-plan-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Three-layer split (unchanged from Plan 1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-hw-runner-extension-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 HW runner extension points
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-simulator-extension-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Simulator extension points
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-oracle-test-additions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 Oracle test additions
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Components
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Components">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#51-crateshw-oraclesrcopenocdrs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 crates/hw-oracle/src/openocd.rs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#52-cratescoresrccpuxtensa_lx7rs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 crates/core/src/cpu/xtensa_lx7.rs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#53-crateshw-oracletestsoraclesrs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.3 crates/hw-oracle/tests/oracles.rs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#54-exccause-constants" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.4 EXCCAUSE constants
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#55-docscase_study_esp32s3_plan1md" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.5 docs/case_study_esp32s3_plan1.md
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#56-docshw-oracle-runner-setupmd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.6 docs/hw-oracle-runner-setup.md
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-data-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Data flow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Error handling
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-testing-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Testing strategy
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. Testing strategy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#81-per-fix-rhythm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.1 Per-fix rhythm
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#82-sim-path-regression-gate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.2 Sim-path regression gate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#83-hw-path-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.3 HW-path validation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#84-sequencing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.4 Sequencing
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-exit-criteria" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Exit criteria
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-risks-and-mitigations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Risks and mitigations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-schedule" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Schedule
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="plan-15-hw-runner-cleanup-and-sim-side-todo-closure">Plan 1.5 — HW Runner Cleanup and Sim-Side TODO Closure</h1>
+<p><strong>Date:</strong> 2026-04-25
+<strong>Branch target:</strong> <code>feature/esp32s3-plan1.5-cleanup</code> (off <code>feature/esp32s3-plan1-foundation</code>)
+<strong>Predecessor:</strong> Plan 1 (<code>docs/case_study_esp32s3_plan1.md</code>, branch <code>feature/esp32s3-plan1-foundation</code>)
+<strong>Successor:</strong> Plan 2 — Boot Path + UART (M3) and Plan 3 — GPIO + SYSTIMER + Blinky (M4)</p>
+<hr />
+<h2 id="1-goal">1. Goal</h2>
+<p>Close exit criterion 4 from Plan 1 (full 90/90 <code>_hw</code>/<code>_diff</code> variants pass on the connected ESP32-S3-Zero) and close the four documented sim-side gaps listed in <code>docs/case_study_esp32s3_plan1.md</code> §"Known Gaps and Acknowledged Limitations" (MOVSP register spill, ROTW privilege check, RFWU for UF8/UF12, S32E outside-vector IllegalInstruction). Every fixed behavior gets a dedicated <code>#[hw_oracle_test]</code> per the §7.5 methodology rule from the ESP32-S3-Zero design spec.</p>
+<p>The two <code>TODO(plan2)</code> source comments in <code>crates/core/src/cpu/xtensa_lx7.rs</code> (both in the MOVSP spill arm) are removed as part of the MOVSP fix. The other three sim-side gaps don't have explicit <code>TODO(plan2)</code> comments in code — they're documented only in the case study's Known Gaps section, and closing them means removing them from that section.</p>
+<p>After Plan 1.5, Plan 1 reads as 100 % closed and the simulator's Xtensa LX7 core has zero deferred behaviors. Plan 2 (boot path + UART) inherits a clean foundation.</p>
+<h2 id="2-non-goals">2. Non-goals</h2>
+<ul>
+<li>Any peripheral work (UART, GPIO, SYSTIMER, intmatrix) — that is Plan 2 / Plan 3.</li>
+<li>Any boot-path work — that is Plan 2.</li>
+<li>Any new system module under <code>crates/core/src/system/</code> — <code>xtensa.rs</code> does not exist yet, and is not added by this plan. Plan 2 introduces it.</li>
+<li>Any change to the ELF flashing strategy (still Strategy C: OpenOCD <code>program</code> command).</li>
+<li>Any changes to the four pre-existing cross-compile failures (<code>arm-hello</code>, <code>firmware-ci-fixture</code>, <code>riscv-hello</code>, <code>demo_blinky</code>) — those predate Plan 1 and remain <code>--exclude</code>'d.</li>
+<li>Any new architecture support, decoder additions, or instruction implementations beyond what's needed to close the four sim TODOs.</li>
+</ul>
+<h2 id="3-context">3. Context</h2>
+<p>Plan 1 closed with 62/90 <code>_hw</code>/<code>_diff</code> variants passing and the headline <code>fibonacci_10_diff</code> bit-exact. The remaining 28 failures cluster into five root causes documented in <code>docs/case_study_esp32s3_plan1.md</code> §"Live HW oracle bank — current state". All five are in the HW runner / OpenOCD interface layer; the simulator semantics for the cases that pass agree with the chip bit-for-bit.</p>
+<p>In addition to the runner-side failures, Plan 1 deliberately shipped four <code>TODO(plan2)</code> markers in the simulator core covering MOVSP register spill, RFWU for UF8/UF12, ROTW privilege check, and the IllegalInstruction path for S32E outside an exception vector. These are documented in <code>docs/case_study_esp32s3_plan1.md</code> §"Known Gaps and Acknowledged Limitations".</p>
+<p>This plan delivers both surfaces in one branch. The work is largely independent across the nine fixes, so subagent-driven development with one fix per task is the natural execution pattern.</p>
+<h2 id="4-architecture">4. Architecture</h2>
+<h3 id="41-three-layer-split-unchanged-from-plan-1">4.1 Three-layer split (unchanged from Plan 1)</h3>
+<p>This plan does not change the three-layer architecture established in Plan 1:</p>
+<ul>
+<li><strong>Simulator</strong> (<code>crates/core/</code>) — the Cpu / Bus / Peripheral abstraction.</li>
+<li><strong>Hardware oracle</strong> (<code>crates/hw-oracle/</code>, <code>crates/hw-oracle-macros/</code>) — the <code>#[hw_oracle_test]</code> macro and its OpenOCD-backed runtime.</li>
+<li><strong>Test fixtures</strong> (<code>fixtures/xtensa-asm/</code>) — hand-written Xtensa asm bytecode the oracle harness flashes and runs.</li>
+</ul>
+<p>All Plan 1.5 work is internal to the first two layers.</p>
+<h3 id="42-hw-runner-extension-points">4.2 HW runner extension points</h3>
+<p>The OpenOCD wrapper in <code>crates/hw-oracle/src/openocd.rs</code> gains three named capabilities, each behind a small public API surface:</p>
+<ol>
+<li><strong>SR dispatch table.</strong> A static <code>HashMap&lt;&amp;'static str, SrAccessForm&gt;</code> populated lazily on first use per session. <code>SrAccessForm</code> is one of <code>XtensaRsr</code>, <code>OcdReg</code>, or <code>Reg</code>. The runner probes each form once per SR by reading and writing back the same value via each command, accepting the form whose readback round-trips correctly.</li>
+<li><strong>Windowed-register translation.</strong> New methods <code>read_logical_ar(idx: u8) -&gt; u32</code> and <code>write_logical_ar(idx: u8, val: u32)</code> that read the current <code>WindowBase</code> SR (using the SR dispatch table from #1), compute <code>phys = ((wb &lt;&lt; 2) + idx) &amp; 0x3F</code>, and route to physical AR access. The existing <code>read_register("aN")</code> and <code>write_register("aN", v)</code> calls dispatch through this layer when the name matches the regex <code>^a(0|1[0-5]|[1-9])$</code>. Other register names (PC, PS, SR names) bypass.</li>
+<li><strong>VECBASE write sequencer.</strong> A new <code>set_vecbase(addr: u32)</code> that wraps whatever halt-write-flush-resume sequence the empirical investigation finds. The current <code>write_register("vecbase", ...)</code> call sites switch to this method.</li>
+</ol>
+<p>These three capabilities are the only API additions; everything else inside <code>openocd.rs</code> is internal refactoring.</p>
+<h3 id="43-simulator-extension-points">4.3 Simulator extension points</h3>
+<p>Four narrow changes to <code>crates/core/src/cpu/xtensa_lx7.rs</code>:</p>
+<ol>
+<li><strong>MOVSP exec arm</strong> gains a real spill loop before the existing <code>AllocaCause</code> exception entry. The spill writes physical AR slots <code>(WB+1)*4 .. (WB+1)*4 + 4</code> to <code>[a1 - 16, a1)</code> per the windowed ABI when <code>WindowStart[(WB+1) &amp; 0xF]</code> is set, then proceeds with the existing exception entry.</li>
+<li><strong>RFWU exec arm</strong> generalises the existing UF4 path. The number of frames to reload is N/4 where N is encoded in the RFWU instruction's immediate (4, 8, or 12). Per-frame restore loop indexed by window-rotation offset.</li>
+<li><strong>ROTW exec arm</strong> gains a <code>if self.ps.ring() != 0 { return self.raise_general_exception(8); }</code> guard at the top, where 8 is <code>PrivilegedCause</code> per the existing inline comment at the ROTW arm (<code>// if ps.ring() != 0 { raise PrivilegedCause (EXCCAUSE=8) }</code>).</li>
+<li><strong>S32E/L32E disambiguation in <code>step()</code></strong> changes the EXCM-gated fall-through. Currently when EXCM is unset, the encoding is treated as S32I.N. After this fix, when EXCM is unset and the encoding pattern matches S32E/L32E specifically (not other QRST encodings), the step raises IllegalInstruction.</li>
+</ol>
+<h3 id="44-oracle-test-additions">4.4 Oracle test additions</h3>
+<p>Nine new <code>#[hw_oracle_test]</code> entries in <code>crates/hw-oracle/tests/oracles.rs</code>:</p>
+<ul>
+<li>4 sim-side regression tests (one per sim fix above).</li>
+<li>4 replacements for the wrong-illegal-opcode tests (root cause #4): the existing tests are removed and replaced with tests using opcodes <code>xtensa-esp32s3-elf-as</code> confirms are actually invalid (e.g., reserved bit-pattern <code>0xFFFFFF</code> if confirmed reserved by HW probe; otherwise, an opcode the assembler rejects and which the live S3-Zero raises EXCCAUSE=0 on).</li>
+<li>1 windowed-register translation regression test that pre-loads <code>WindowBase</code> to a non-default value (e.g., 4), writes <code>a3</code> via the runner, and asserts that physical <code>ar15</code> (= <code>(4*4 + 3) &amp; 0x3F</code>) holds the value.</li>
+</ul>
+<p>In addition, the four sim-side fixes naturally re-enable existing <code>_hw</code> tests that were <code>#[ignore]</code>-blocked because the sim path failed; those <code>#[ignore]</code> attributes are removed.</p>
+<h2 id="5-components">5. Components</h2>
+<h3 id="51-crateshw-oraclesrcopenocdrs">5.1 <code>crates/hw-oracle/src/openocd.rs</code></h3>
+<table>
+<thead>
+<tr>
+<th>Addition</th>
+<th>API</th>
+<th>Lines (rough)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SR access form enum + per-SR cache</td>
+<td><code>enum SrAccessForm</code>, <code>fn probe_sr_form(&amp;mut self, name: &amp;str) -&gt; Result&lt;SrAccessForm&gt;</code>, <code>fn read_sr(&amp;mut self, name: &amp;str) -&gt; Result&lt;u32&gt;</code>, <code>fn write_sr(&amp;mut self, name: &amp;str, val: u32) -&gt; Result&lt;()&gt;</code></td>
+<td>~80</td>
+</tr>
+<tr>
+<td>Windowed AR translation</td>
+<td><code>fn read_logical_ar(&amp;mut self, idx: u8) -&gt; Result&lt;u32&gt;</code>, <code>fn write_logical_ar(&amp;mut self, idx: u8, val: u32) -&gt; Result&lt;()&gt;</code></td>
+<td>~40</td>
+</tr>
+<tr>
+<td><code>read_register</code> / <code>write_register</code> dispatch update</td>
+<td>(changed signature, same name)</td>
+<td>~30</td>
+</tr>
+<tr>
+<td>VECBASE sequencer</td>
+<td><code>fn set_vecbase(&amp;mut self, addr: u32) -&gt; Result&lt;()&gt;</code></td>
+<td>~40</td>
+</tr>
+<tr>
+<td>Sub-word DRAM readback workaround</td>
+<td>(internal helper used by oracle tests; documented in <code>docs/hw-oracle-runner-setup.md</code>)</td>
+<td>~20</td>
+</tr>
+</tbody>
+</table>
+<p>Total: roughly +200 lines, ~50 lines refactored.</p>
+<h3 id="52-cratescoresrccpuxtensa_lx7rs">5.2 <code>crates/core/src/cpu/xtensa_lx7.rs</code></h3>
+<table>
+<thead>
+<tr>
+<th>Change</th>
+<th>Site</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MOVSP spill loop</td>
+<td>within the existing MOVSP arm, before the <code>raise_general_exception(ALLOCA_CAUSE)</code> call</td>
+</tr>
+<tr>
+<td>RFWU loop generalisation</td>
+<td>within the existing RFWU arm; replace UF4-only logic with N-frame loop</td>
+</tr>
+<tr>
+<td>ROTW privilege guard</td>
+<td>one-line guard at top of ROTW arm</td>
+</tr>
+<tr>
+<td>S32E/L32E IllegalInstruction path</td>
+<td>within the EXCM-gated disambiguation in <code>step()</code></td>
+</tr>
+</tbody>
+</table>
+<p>Total: roughly +150 lines, mostly the MOVSP spill loop.</p>
+<h3 id="53-crateshw-oracletestsoraclesrs">5.3 <code>crates/hw-oracle/tests/oracles.rs</code></h3>
+<p>Nine new <code>#[hw_oracle_test]</code> entries. Each follows the existing pattern in the file: a closure setting up registers / memory, a closure asserting end state, and the macro emitting <code>_sim</code>/<code>_hw</code>/<code>_diff</code> triplets.</p>
+<h3 id="54-exccause-constants">5.4 EXCCAUSE constants</h3>
+<p>The existing code uses literal EXCCAUSE codes inline (e.g., <code>raise_general_exception(0)</code> for IllegalInstruction, <code>raise_general_exception(8)</code> for PrivilegedCause as commented at the ROTW arm). The implementation plan continues this convention rather than introducing constants — the inline literals are already documented by adjacent comments. If the implementer prefers constants, they may extract <code>EXCCAUSE_ILLEGAL_INSTRUCTION = 0</code> and <code>EXCCAUSE_PRIVILEGED = 8</code> to <code>crates/core/src/cpu/xtensa_sr.rs</code> as a non-functional refactor; that decision is left to the implementer and is not load-bearing.</p>
+<h3 id="55-docscase_study_esp32s3_plan1md">5.5 <code>docs/case_study_esp32s3_plan1.md</code></h3>
+<p>Append an "Addendum: Plan 1.5 closeout" section noting:
+- Exit criterion 4 now reads PASS — 90/90.
+- Both <code>TODO(plan2)</code> source comments in <code>cpu/xtensa_lx7.rs</code> removed (both were in the MOVSP path).
+- The four sim-side gaps in the case study's "Known Gaps and Acknowledged Limitations" section all closed — that section reduced to "Pre-existing workspace cross-compile failures" only (which predate Plan 1).
+- New oracle test count.
+- Reference to the Plan 1.5 spec and implementation plan.</p>
+<h3 id="56-docshw-oracle-runner-setupmd">5.6 <code>docs/hw-oracle-runner-setup.md</code></h3>
+<p>Update with notes on:
+- Which OpenOCD command form works for each SR class (output of probe).
+- The windowed-register translation behaviour (developer-facing contract: "use logical <code>aN</code> names; the runner handles WB").
+- The VECBASE write sequence the runner uses.
+- The sub-word DRAM readback workaround (if the empirical investigation lands on one).</p>
+<h2 id="6-data-flow">6. Data flow</h2>
+<p>No new data flows. The HW runner's existing flow — <code>OracleCase</code> constructs sim and HW state, runs both to a <code>BREAK</code>, diffs registers + memory + selected SRs — is unchanged. The three new HW runner capabilities (SR dispatch, windowed translation, VECBASE sequencer) are pure transparent improvements to the existing register- and SR-access paths.</p>
+<h2 id="7-error-handling">7. Error handling</h2>
+<p>The HW runner's existing <code>Result</code> chain is preserved. Two new failure modes:</p>
+<ol>
+<li><strong>SR probe fails for all forms.</strong> <code>probe_sr_form</code> returns an error indicating the SR is not accessible via any known OpenOCD command. Surfaces as a clear test failure with the SR name and the probed forms tried.</li>
+<li><strong>Windowed register index out of range.</strong> <code>read_logical_ar</code> / <code>write_logical_ar</code> panic on <code>idx &gt;= 16</code> (programmer error; the AR window is always 16 wide).</li>
+</ol>
+<p>Sim-side error handling for the four new fixes uses the existing <code>raise_general_exception</code> machinery; no new error types are added to <code>SimulationError</code>.</p>
+<h2 id="8-testing-strategy">8. Testing strategy</h2>
+<h3 id="81-per-fix-rhythm">8.1 Per-fix rhythm</h3>
+<p>Every fix lands as its own commit with the new oracle test in the same commit. Sequence per fix:</p>
+<ol>
+<li>Write the oracle test for the new behaviour.</li>
+<li>Verify <code>_sim</code> FAILs (or PASSes if the test is for the runner only) the way the bug predicts.</li>
+<li>Verify <code>_hw</code> FAILs the way the bug predicts on the live board.</li>
+<li>Land the fix.</li>
+<li>Verify both <code>_sim</code> and <code>_hw</code> PASS and <code>_diff</code> is bit-exact.</li>
+<li>Re-run the full HW oracle bank to confirm the fix did not regress the previously-passing 62 cases.</li>
+</ol>
+<h3 id="82-sim-path-regression-gate">8.2 Sim-path regression gate</h3>
+<p>After every commit:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>cargo test --workspace --exclude firmware --exclude firmware-ci-fixture --exclude riscv-ci-fixture
+</span></code></pre></div>
+<p>must stay at 461+ green. Each new sim test increments the count by 1.</p>
+<h3 id="83-hw-path-validation">8.3 HW-path validation</h3>
+<p>The live S3-Zero is connected for this work. After each fix:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>cargo test -p labwired-hw-oracle --features hw-oracle -- --ignored --test-threads=1
+</span></code></pre></div>
+<p>The full HW bank runs end-of-task to confirm no regression.</p>
+<h3 id="84-sequencing">8.4 Sequencing</h3>
+<p>Tasks are largely independent. Recommended order:</p>
+<table>
+<thead>
+<tr>
+<th>Order</th>
+<th>Fix</th>
+<th>Why this slot</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>HW root cause #1 (SR name dispatch)</td>
+<td>Unblocks tests gated on <code>epc1</code> and other SR readback. Several other tests depend on this working.</td>
+</tr>
+<tr>
+<td>2</td>
+<td>HW root cause #2 (windowed-reg translation)</td>
+<td>Unblocks the largest single batch of failing tests (~10).</td>
+</tr>
+<tr>
+<td>3</td>
+<td>HW root cause #3 (VECBASE sequencer)</td>
+<td>Smaller batch (3 tests) but conceptually clean.</td>
+</tr>
+<tr>
+<td>4</td>
+<td>HW root cause #4 (illegal-opcode replacements)</td>
+<td>Mechanical; depends on ad-hoc probing of which opcodes are actually invalid.</td>
+</tr>
+<tr>
+<td>5</td>
+<td>HW root cause #5 (sub-word DRAM readback)</td>
+<td>The murky one; gets last so easy wins are banked first. Time-box: half a day.</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Sim ROTW privilege check</td>
+<td>One-line; warm-up.</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Sim S32E IllegalInstruction</td>
+<td>Small; clear.</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Sim RFWU UF8/UF12</td>
+<td>Generalises existing UF4 logic.</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Sim MOVSP spill</td>
+<td>Largest; gets last so RFWU's frame-walking helpers can be reused.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="9-exit-criteria">9. Exit criteria</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Criterion</th>
+<th>Verification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Sim suite stays green</td>
+<td><code>cargo test --workspace --exclude firmware --exclude firmware-ci-fixture --exclude riscv-ci-fixture</code> reports ≥ 470 passing (461 baseline + at least 9 new sim tests; some fixes add more than one)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>All HW oracle variants pass</td>
+<td><code>cargo test -p labwired-hw-oracle --features hw-oracle -- --ignored --test-threads=1</code> reports 90/90 (or higher if new tests added cleanly)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Both <code>TODO(plan2)</code> source comments removed and four documented sim-side gaps closed</td>
+<td><code>grep -c "TODO(plan2)" crates/core/src/cpu/xtensa_lx7.rs</code> returns 0; <code>docs/case_study_esp32s3_plan1.md</code> "Known Gaps" section retains only the pre-existing cross-compile entry</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Each new behaviour has a dedicated oracle test</td>
+<td><code>grep -c "#\[hw_oracle_test\]" crates/hw-oracle/tests/oracles.rs</code> increases by ≥ 9 from baseline</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Case study addendum reflects 90/90 + closed sim TODOs</td>
+<td><code>docs/case_study_esp32s3_plan1.md</code> ends with an "Addendum: Plan 1.5 closeout" section</td>
+</tr>
+<tr>
+<td>6</td>
+<td>No new <code>#[ignore]</code> markers added</td>
+<td><code>grep -c "#\[ignore\]" crates/hw-oracle/tests/oracles.rs</code> ≤ baseline</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Runner setup doc updated</td>
+<td><code>docs/hw-oracle-runner-setup.md</code> mentions SR dispatch, windowed translation, VECBASE sequencer, sub-word DRAM workaround</td>
+</tr>
+</tbody>
+</table>
+<h2 id="10-risks-and-mitigations">10. Risks and mitigations</h2>
+<table>
+<thead>
+<tr>
+<th>Risk</th>
+<th>Likelihood</th>
+<th>Impact</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HW root cause #5 (sub-word DRAM readback) won't yield to the obvious fixes</td>
+<td>Medium</td>
+<td>Medium — could blow the time budget</td>
+<td>Time-box to half a day. Fallback workaround: have the test fixture's load instruction be followed by <code>or aT, aT, a0</code> so the writeback is reified through a normal AR write; document the workaround in <code>docs/hw-oracle-runner-setup.md</code> and accept it as the chosen behaviour.</td>
+</tr>
+<tr>
+<td>MOVSP spill semantics diverge from real silicon in a corner case</td>
+<td>Medium</td>
+<td>Medium — could cause a <code>_diff</code> mismatch on a complex spill scenario</td>
+<td>Cross-validate against ESP-IDF <code>xtensa-rt</code>'s <code>_WindowSpill</code> macro (MIT-licensed, allowed per design doc §7.6 reference rule). Add a multi-frame spill oracle test as part of the MOVSP fix; bit-exact diff is the verifier.</td>
+</tr>
+<tr>
+<td>OpenOCD SR probe sequence triggers a target halt-state issue (e.g., one of the tried command forms leaves the target in a bad state)</td>
+<td>Low</td>
+<td>Medium — could break the session for subsequent tests</td>
+<td>Probe inside a halt context that's known-safe; on probe failure for a given form, issue an explicit <code>reset halt</code> before trying the next form. Cache the working form so probes happen at most once per session per SR.</td>
+</tr>
+<tr>
+<td>Windowed-register translation introduces a subtle off-by-one in physical-slot computation</td>
+<td>Low</td>
+<td>High — every windowed test silently writes to the wrong slot</td>
+<td>The dedicated translation regression test (Section 4.4 last bullet) catches this directly. Sim and HW paths both compute the physical slot independently; the <code>_diff</code> check verifies they agree.</td>
+</tr>
+<tr>
+<td>Replacement illegal opcodes turn out to also be valid on this LX7 variant</td>
+<td>Low</td>
+<td>Low — just probe more opcodes</td>
+<td>Use <code>xtensa-esp32s3-elf-as</code> as the first authority: any opcode the assembler refuses to emit is a candidate. Then probe on the live board (write, single-step, expect EXCCAUSE=0) before committing to it.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="11-schedule">11. Schedule</h2>
+<p>Estimated effort: 3–4 working days for the implementer.</p>
+<table>
+<thead>
+<tr>
+<th>Day</th>
+<th>Tasks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Day 1</td>
+<td>HW root causes 1, 2, 3 (SR dispatch, windowed translation, VECBASE)</td>
+</tr>
+<tr>
+<td>Day 2</td>
+<td>HW root causes 4, 5 (illegal-opcode replacements, sub-word DRAM) + Sim ROTW + Sim S32E</td>
+</tr>
+<tr>
+<td>Day 3</td>
+<td>Sim RFWU 8/12, Sim MOVSP spill (largest single fix)</td>
+</tr>
+<tr>
+<td>Day 4</td>
+<td>Case study addendum, runner-setup doc updates, full HW bank verification, branch finalisation</td>
+</tr>
+</tbody>
+</table>
+<h2 id="12-references">12. References</h2>
+<ul>
+<li><code>docs/design/2026-04-24-esp32s3-zero-digital-twin-design.md</code> (the design spec)</li>
+<li><code>docs/case_study_esp32s3_plan1.md</code> (Plan 1 closeout, including the documented gaps this plan closes)</li>
+<li><code>docs/implementation/2026-04-24-esp32s3-plan-1-foundation.md</code> (Plan 1 implementation plan)</li>
+<li>ESP-IDF <code>xtensa-rt</code> <code>_WindowSpill</code> macro — MIT-licensed reference for MOVSP spill semantics</li>
+<li>Cadence Xtensa ISA Reference Manual — first authority for instruction semantics</li>
+<li>Real ESP32-S3-Zero via OpenOCD — first authority for behavioural ground truth (per design doc §7.6)</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "toc.follow", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
