@@ -72,6 +72,27 @@ pub enum AtomicAliasOp {
     Clr,
 }
 
+#[derive(Clone, Debug)]
+pub(crate) struct Esp32c3IrqCache {
+    pub int_enable: u32,
+    pub int_thresh: u8,
+    pub source_line: [u8; 128],
+    pub line_pri: [u8; 32],
+    pub from_cpu_pending: u8,
+}
+
+impl Default for Esp32c3IrqCache {
+    fn default() -> Self {
+        Self {
+            int_enable: 0,
+            int_thresh: 0,
+            source_line: [0; 128],
+            line_pri: [0; 32],
+            from_cpu_pending: 0,
+        }
+    }
+}
+
 pub struct SystemBus {
     pub flash: LinearMemory,
     pub ram: LinearMemory,
@@ -118,6 +139,7 @@ pub struct SystemBus {
     >,
     peripheral_ranges: Vec<PeripheralRange>,
     legacy_tick_indices: Vec<usize>,
+    bus_tick_indices: Vec<usize>,
     peripheral_hint: Cell<Option<usize>>,
     /// Cached index of the classic-ESP32 DPORT peripheral, if one is
     /// registered (`None` otherwise — the common case, incl. every ESP32-S3
@@ -202,6 +224,7 @@ pub struct SystemBus {
     /// intmatrix so each chip keeps its own interrupt-controller abstraction.
     esp32c3_system_idx: Option<usize>,
     esp32c3_interrupt_core0_idx: Option<usize>,
+    esp32c3_irq_cache: Option<Esp32c3IrqCache>,
     /// ESP32-S3 interrupt routing is present only when the S3 interrupt matrix
     /// peripheral is registered. Cached separately from C3's RISC-V routing so
     /// each chip model owns its own interrupt abstraction.
@@ -1857,6 +1880,7 @@ impl SystemBus {
             fault_unclocked: std::collections::HashMap::new(),
             peripheral_ranges: Vec::new(),
             legacy_tick_indices: Vec::new(),
+            bus_tick_indices: Vec::new(),
             peripheral_hint: Cell::new(None),
             last_gpio_in: [0; 2],
             current_cycle: 0,
@@ -1872,6 +1896,7 @@ impl SystemBus {
             riscv_irq_lines: 0,
             esp32c3_system_idx: None,
             esp32c3_interrupt_core0_idx: None,
+            esp32c3_irq_cache: None,
             esp32s3_irq_routing: false,
             esp32s3_intmatrix_idx: None,
             flash_models_ops: false,
@@ -1906,6 +1931,7 @@ impl SystemBus {
             fault_unclocked: std::collections::HashMap::new(),
             peripheral_ranges: Vec::new(),
             legacy_tick_indices: Vec::new(),
+            bus_tick_indices: Vec::new(),
             peripheral_hint: Cell::new(None),
             last_gpio_in: [0; 2],
             current_cycle: 0,
@@ -1921,6 +1947,7 @@ impl SystemBus {
             riscv_irq_lines: 0,
             esp32c3_system_idx: None,
             esp32c3_interrupt_core0_idx: None,
+            esp32c3_irq_cache: None,
             esp32s3_irq_routing: false,
             esp32s3_intmatrix_idx: None,
             flash_models_ops: false,
@@ -4148,6 +4175,7 @@ peripherals:
             flash_thunks: std::collections::HashMap::new(),
             peripheral_ranges: Vec::new(),
             legacy_tick_indices: Vec::new(),
+            bus_tick_indices: Vec::new(),
             peripheral_hint: Cell::new(None),
             last_gpio_in: [0; 2],
             current_cycle: 0,
@@ -4163,6 +4191,7 @@ peripherals:
             riscv_irq_lines: 0,
             esp32c3_system_idx: None,
             esp32c3_interrupt_core0_idx: None,
+            esp32c3_irq_cache: None,
             esp32s3_irq_routing: false,
             esp32s3_intmatrix_idx: None,
             flash_models_ops: false,
@@ -4221,6 +4250,7 @@ peripherals:
             flash_thunks: std::collections::HashMap::new(),
             peripheral_ranges: Vec::new(),
             legacy_tick_indices: Vec::new(),
+            bus_tick_indices: Vec::new(),
             peripheral_hint: Cell::new(None),
             last_gpio_in: [0; 2],
             current_cycle: 0,
@@ -4236,6 +4266,7 @@ peripherals:
             riscv_irq_lines: 0,
             esp32c3_system_idx: None,
             esp32c3_interrupt_core0_idx: None,
+            esp32c3_irq_cache: None,
             esp32s3_irq_routing: false,
             esp32s3_intmatrix_idx: None,
             flash_models_ops: false,
@@ -4445,6 +4476,7 @@ peripherals:
             flash_thunks: std::collections::HashMap::new(),
             peripheral_ranges: Vec::new(),
             legacy_tick_indices: Vec::new(),
+            bus_tick_indices: Vec::new(),
             peripheral_hint: Cell::new(None),
             last_gpio_in: [0; 2],
             current_cycle: 0,
@@ -4460,6 +4492,7 @@ peripherals:
             riscv_irq_lines: 0,
             esp32c3_system_idx: None,
             esp32c3_interrupt_core0_idx: None,
+            esp32c3_irq_cache: None,
             esp32s3_irq_routing: false,
             esp32s3_intmatrix_idx: None,
             flash_models_ops: false,
@@ -4668,6 +4701,7 @@ peripherals:
             flash_thunks: std::collections::HashMap::new(),
             peripheral_ranges: Vec::new(),
             legacy_tick_indices: Vec::new(),
+            bus_tick_indices: Vec::new(),
             peripheral_hint: Cell::new(None),
             last_gpio_in: [0; 2],
             current_cycle: 0,
@@ -4683,6 +4717,7 @@ peripherals:
             riscv_irq_lines: 0,
             esp32c3_system_idx: None,
             esp32c3_interrupt_core0_idx: None,
+            esp32c3_irq_cache: None,
             esp32s3_irq_routing: false,
             esp32s3_intmatrix_idx: None,
             flash_models_ops: false,
@@ -4745,6 +4780,7 @@ peripherals:
             flash_thunks: std::collections::HashMap::new(),
             peripheral_ranges: Vec::new(),
             legacy_tick_indices: Vec::new(),
+            bus_tick_indices: Vec::new(),
             peripheral_hint: Cell::new(None),
             last_gpio_in: [0; 2],
             current_cycle: 0,
@@ -4760,6 +4796,7 @@ peripherals:
             riscv_irq_lines: 0,
             esp32c3_system_idx: None,
             esp32c3_interrupt_core0_idx: None,
+            esp32c3_irq_cache: None,
             esp32s3_irq_routing: false,
             esp32s3_intmatrix_idx: None,
             flash_models_ops: false,
