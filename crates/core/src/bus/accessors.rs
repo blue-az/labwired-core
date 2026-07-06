@@ -233,6 +233,8 @@ impl crate::Bus for SystemBus {
         if res.is_ok() {
             // Wake up the peripheral
             if let Some(idx) = self.find_peripheral_index(addr) {
+                let base = self.peripherals[idx].base;
+                self.sync_esp32c3_irq_cache_write(idx, addr - base);
                 self.peripherals[idx].ticks_remaining = 0;
                 self.refresh_legacy_tick_index(idx);
             }
@@ -394,6 +396,10 @@ impl crate::Bus for SystemBus {
             self.maybe_arm_hcsr04(idx);
             #[cfg(feature = "event-scheduler")]
             self.collect_scheduled_events(idx);
+            if r.is_ok() {
+                let base = self.peripherals[idx].base;
+                self.sync_esp32c3_irq_cache_write(idx, addr - base);
+            }
             self.refresh_legacy_tick_index(idx);
             return r;
         }
@@ -462,6 +468,10 @@ impl crate::Bus for SystemBus {
             self.maybe_arm_hcsr04(idx);
             #[cfg(feature = "event-scheduler")]
             self.collect_scheduled_events(idx);
+            if r.is_ok() {
+                let base = self.peripherals[idx].base;
+                self.sync_esp32c3_irq_cache_write(idx, addr - base);
+            }
             self.refresh_legacy_tick_index(idx);
             return r;
         }
