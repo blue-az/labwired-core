@@ -330,6 +330,25 @@ impl SystemBus {
         active
     }
 
+    pub(crate) fn refresh_bus_tick_index(&mut self, idx: usize) -> bool {
+        let active = self
+            .peripherals
+            .get(idx)
+            .is_some_and(|p| p.dev.needs_bus_tick());
+        let pos = self.bus_tick_indices.iter().position(|&i| i == idx);
+        match (active, pos) {
+            (true, None) => {
+                self.bus_tick_indices.push(idx);
+                self.bus_tick_indices.sort_unstable();
+            }
+            (false, Some(pos)) => {
+                self.bus_tick_indices.remove(pos);
+            }
+            _ => {}
+        }
+        active
+    }
+
     pub(crate) fn find_peripheral_index(&self, addr: u64) -> Option<usize> {
         // Canonical routing: among the windows CONTAINING `addr`, the one
         // with the GREATEST start wins (last-start-wins; equal starts resolve

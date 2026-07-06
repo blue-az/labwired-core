@@ -155,15 +155,20 @@ impl SystemBus {
         // `&mut self` into `tick_with_bus`; a no-op stub stands in for the
         // duration. `needs_bus_tick` returning false skips this for
         // everyone else at near-zero cost.
-        for pos in 0..self.bus_tick_indices.len() {
-            let i = self.bus_tick_indices[pos];
+        let mut bus_tick_pos = 0;
+        while bus_tick_pos < self.bus_tick_indices.len() {
+            let i = self.bus_tick_indices[bus_tick_pos];
             let placeholder: Box<dyn Peripheral> =
                 Box::new(crate::peripherals::stub::StubPeripheral::new(0));
             let mut dev = std::mem::replace(&mut self.peripherals[i].dev, placeholder);
             dev.tick_with_bus(self);
             self.peripherals[i].dev = dev;
+            let still_needs_bus_tick = self.refresh_bus_tick_index(i);
             if self.peripherals[i].dev.legacy_tick_dynamic() {
                 self.refresh_legacy_tick_index(i);
+            }
+            if still_needs_bus_tick {
+                bus_tick_pos += 1;
             }
         }
 

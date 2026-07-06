@@ -2443,7 +2443,10 @@ impl SystemBus {
             self.maybe_arm_hcsr04(idx);
             #[cfg(feature = "event-scheduler")]
             self.collect_scheduled_events(idx);
-            self.refresh_legacy_tick_index(idx);
+            if r.is_ok() {
+                self.refresh_legacy_tick_index(idx);
+                self.refresh_bus_tick_index(idx);
+            }
             return r;
         }
 
@@ -2508,7 +2511,10 @@ impl SystemBus {
             self.maybe_arm_hcsr04(idx);
             #[cfg(feature = "event-scheduler")]
             self.collect_scheduled_events(idx);
-            self.refresh_legacy_tick_index(idx);
+            if r.is_ok() {
+                self.refresh_legacy_tick_index(idx);
+                self.refresh_bus_tick_index(idx);
+            }
             return r;
         }
 

@@ -237,6 +237,7 @@ impl crate::Bus for SystemBus {
                 self.sync_esp32c3_irq_cache_write(idx, addr - base);
                 self.peripherals[idx].ticks_remaining = 0;
                 self.refresh_legacy_tick_index(idx);
+                self.refresh_bus_tick_index(idx);
             }
 
             // Trigger observers
@@ -399,8 +400,9 @@ impl crate::Bus for SystemBus {
             if r.is_ok() {
                 let base = self.peripherals[idx].base;
                 self.sync_esp32c3_irq_cache_write(idx, addr - base);
+                self.refresh_legacy_tick_index(idx);
+                self.refresh_bus_tick_index(idx);
             }
-            self.refresh_legacy_tick_index(idx);
             return r;
         }
         self.write_u8(addr, (value & 0xFF) as u8)?;
@@ -471,8 +473,9 @@ impl crate::Bus for SystemBus {
             if r.is_ok() {
                 let base = self.peripherals[idx].base;
                 self.sync_esp32c3_irq_cache_write(idx, addr - base);
+                self.refresh_legacy_tick_index(idx);
+                self.refresh_bus_tick_index(idx);
             }
-            self.refresh_legacy_tick_index(idx);
             return r;
         }
         self.write_u8(addr, (value & 0xFF) as u8)?;
