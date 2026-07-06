@@ -229,7 +229,16 @@ boards:
     # snapshot/resume — normal-run register/timing/reset behaviour is byte-for-byte
     # unchanged; the reset-state silicon anchor is unaffected. Covers the model-file
     # touch; no live re-capture warranted.
-    drift_ack: 2026-07-05
+    # 2026-07-06: C3 run-loop/peripheral optimizations cache bus-tick and IRQ
+    # routing indices and dynamically trim idle legacy IRQ tick walks. They skip
+    # redundant polling work but keep MMIO-visible register, IRQ-source, and
+    # elapsed-cycle semantics intact; covered by offline C3 IRQ and browser OLED
+    # ROM-boot tests. SSD1306 command parsing now preserves multi-byte command
+    # state across split I2C transactions and consumes common init command
+    # parameters, matching Arduino/Wire traffic; this is an attached device model,
+    # not an ESP32-C3 silicon register/reset change. No live USB-JTAG re-capture
+    # this session; re-capture remains pending.
+    drift_ack: 2026-07-06
 
   - id: nucleo-l476rg
     doc: docs/boards/nucleo-l476rg.md
