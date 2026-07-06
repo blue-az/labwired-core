@@ -157,6 +157,12 @@ impl SystemBus {
             .enumerate()
             .filter_map(|(index, p)| p.dev.legacy_tick_active().then_some(index))
             .collect();
+        self.bus_tick_indices = self
+            .peripherals
+            .iter()
+            .enumerate()
+            .filter_map(|(index, p)| p.dev.needs_bus_tick().then_some(index))
+            .collect();
         self.peripheral_hint.set(None);
         // Cache the DPORT index (classic-ESP32 only) so the per-step
         // cross-core IPI read is O(1) instead of scanning every peripheral.
@@ -198,6 +204,7 @@ impl SystemBus {
             .peripherals
             .iter()
             .position(|p| p.name == "interrupt_core0" && p.base == 0x600C_2000);
+        self.rebuild_esp32c3_irq_cache();
         self.esp32s3_intmatrix_idx = self.peripherals.iter().position(|p| {
             p.dev
                 .as_any()
@@ -207,6 +214,97 @@ impl SystemBus {
                 .is_some()
         });
         self.esp32s3_irq_routing = self.esp32s3_intmatrix_idx.is_some();
+    }
+
+    pub(crate) fn rebuild_esp32c3_irq_cache(&mut self) {
+        let Some(int_idx) = self.esp32c3_interrupt_core0_idx else {
+            self.esp32c3_irq_cache = None;
+            return;
+        };
+
+        let mut cache = crate::bus::Esp32c3IrqCache {
+            int_enable: self
+                .read_cached_declarative_u32(int_idx, 0x104)
+                .unwrap_or(0),
+            int_thresh: (self
+                .read_cached_declarative_u32(int_idx, 0x194)
+                .unwrap_or(0)
+                & 0xF) as u8,
+            ..Default::default()
+        };
+
+        for src in 0..cache.source_line.len() {
+            cache.source_line[src] = (self
+                .read_cached_declarative_u32(int_idx, (src as u64) * 4)
+                .unwrap_or(0)
+                & 0x1F) as u8;
+        }
+        for line in 0..cache.line_pri.len() {
+            cache.line_pri[line] = (self
+                .read_cached_declarative_u32(int_idx, 0x114 + (line as u64) * 4)
+                .unwrap_or(0)
+                & 0xF) as u8;
+        }
+
+        if let Some(system_idx) = self.esp32c3_system_idx {
+            for n in 0..4 {
+                let offset = 0x28 + (n as u64) * 4;
+                if self
+                    .read_cached_declarative_u32(system_idx, offset)
+                    .unwrap_or(0)
+                    & 1
+                    != 0
+                {
+                    cache.from_cpu_pending |= 1 << n;
+                }
+            }
+        }
+
+        self.esp32c3_irq_cache = Some(cache);
+    }
+
+    pub(crate) fn sync_esp32c3_irq_cache_write(&mut self, idx: usize, offset: u64) {
+        if self.esp32c3_irq_cache.is_none() {
+            return;
+        }
+
+        let aligned = offset & !3;
+        let Some(value) = self.read_cached_declarative_u32(idx, aligned) else {
+            return;
+        };
+
+        if Some(idx) == self.esp32c3_interrupt_core0_idx {
+            if let Some(cache) = &mut self.esp32c3_irq_cache {
+                match aligned {
+                    0x104 => cache.int_enable = value,
+                    0x194 => cache.int_thresh = (value & 0xF) as u8,
+                    0x114..=0x190 if (aligned - 0x114) % 4 == 0 => {
+                        let line = ((aligned - 0x114) / 4) as usize;
+                        if let Some(pri) = cache.line_pri.get_mut(line) {
+                            *pri = (value & 0xF) as u8;
+                        }
+                    }
+                    off if off % 4 == 0 => {
+                        let src = (off / 4) as usize;
+                        if let Some(line) = cache.source_line.get_mut(src) {
+                            *line = (value & 0x1F) as u8;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        } else if Some(idx) == self.esp32c3_system_idx && (0x28..=0x34).contains(&aligned) {
+            let slot = ((aligned - 0x28) / 4) as u8;
+            if slot < 4 {
+                if let Some(cache) = &mut self.esp32c3_irq_cache {
+                    if value & 1 != 0 {
+                        cache.from_cpu_pending |= 1 << slot;
+                    } else {
+                        cache.from_cpu_pending &= !(1 << slot);
+                    }
+                }
+            }
+        }
     }
 
     pub fn refresh_peripheral_index(&mut self) {
@@ -226,6 +324,25 @@ impl SystemBus {
             }
             (false, Some(pos)) => {
                 self.legacy_tick_indices.swap_remove(pos);
+            }
+            _ => {}
+        }
+        active
+    }
+
+    pub(crate) fn refresh_bus_tick_index(&mut self, idx: usize) -> bool {
+        let active = self
+            .peripherals
+            .get(idx)
+            .is_some_and(|p| p.dev.needs_bus_tick());
+        let pos = self.bus_tick_indices.iter().position(|&i| i == idx);
+        match (active, pos) {
+            (true, None) => {
+                self.bus_tick_indices.push(idx);
+                self.bus_tick_indices.sort_unstable();
+            }
+            (false, Some(pos)) => {
+                self.bus_tick_indices.remove(pos);
             }
             _ => {}
         }
