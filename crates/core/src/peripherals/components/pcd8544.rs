@@ -284,11 +284,10 @@ impl PeripheralKit for Pcd8544Kit {
                 dc_pin,
             )
         })?;
-        let spi = ctx.spi()?;
         let mut dev = Pcd8544::new(cs_pin, dc_pin);
         let (odr_addr, bit) = dc_src;
         crate::peripherals::spi::SpiDevice::set_dc_source(&mut dev, odr_addr, bit);
-        spi.attach(Box::new(dev));
+        ctx.attach_spi_device(Box::new(dev))?;
         Ok(())
     }
 }

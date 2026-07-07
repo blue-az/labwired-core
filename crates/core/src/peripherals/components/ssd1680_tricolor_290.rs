@@ -565,8 +565,19 @@ impl PeripheralKit for Ssd1680Tricolor290Kit {
     }
     fn attach(&self, ctx: &mut AttachCtx<'_>) -> anyhow::Result<()> {
         let cs_pin = ctx.config_str("cs_pin").unwrap_or("PA4").to_string();
-        let spi = ctx.spi()?;
-        spi.attach(Box::new(Ssd1680Tricolor290::new(cs_pin)));
+        let mut panel = Ssd1680Tricolor290::new(cs_pin);
+        if let Some(dc_pin) = ctx.config_str("dc_pin") {
+            let (odr_addr, bit) = ctx.resolve_pin_odr(dc_pin).ok_or_else(|| {
+                anyhow::anyhow!(
+                    "ssd1680_tricolor_290 '{}' dc_pin '{}' could not be resolved to a GPIO output",
+                    ctx.device_id(),
+                    dc_pin
+                )
+            })?;
+            panel = panel.with_dc_pin(dc_pin.to_string());
+            crate::peripherals::spi::SpiDevice::set_dc_source(&mut panel, odr_addr, bit);
+        }
+        ctx.attach_spi_device(Box::new(panel))?;
         Ok(())
     }
 }

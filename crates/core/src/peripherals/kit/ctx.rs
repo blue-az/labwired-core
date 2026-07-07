@@ -18,8 +18,9 @@ use labwired_config::ExternalDevice;
 use crate::bus::SystemBus;
 use crate::peripherals::adc::Adc;
 use crate::peripherals::esp32c3::i2c::Esp32c3I2c;
+use crate::peripherals::esp32c3::spi::Esp32c3Spi;
 use crate::peripherals::i2c::{I2c, I2cDevice};
-use crate::peripherals::spi::Spi;
+use crate::peripherals::spi::{Spi, SpiDevice};
 use crate::peripherals::uart::Uart;
 
 pub struct AttachCtx<'a> {
@@ -123,6 +124,31 @@ impl<'a> AttachCtx<'a> {
             return Ok(());
         }
         Err(wrong_transport_err(ext, "I2C"))
+    }
+
+    /// Attach an [`SpiDevice`] to whichever SPI controller the `connection:`
+    /// field resolves to: the generic STM32-style [`Spi`] or the ESP32-C3 GP-SPI
+    /// model. This mirrors [`Self::attach_i2c_device`] for mixed-controller
+    /// systems.
+    pub fn attach_spi_device(&mut self, device: Box<dyn SpiDevice>) -> Result<()> {
+        let ext = self.ext;
+        let idx = self
+            .bus
+            .find_peripheral_index_by_name(&ext.connection)
+            .ok_or_else(|| missing_connection_err(ext))?;
+        let any = self.bus.peripherals[idx]
+            .dev
+            .as_any_mut()
+            .ok_or_else(|| downcast_err(ext))?;
+        if let Some(spi) = any.downcast_mut::<Spi>() {
+            spi.attach(device);
+            return Ok(());
+        }
+        if let Some(c3) = any.downcast_mut::<Esp32c3Spi>() {
+            c3.attach_device(device);
+            return Ok(());
+        }
+        Err(wrong_transport_err(ext, "SPI"))
     }
 
     /// Acquire the ADC peripheral declared in the system.yaml `connection:`
