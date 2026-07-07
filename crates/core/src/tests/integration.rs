@@ -2373,6 +2373,173 @@ pub mod integration_tests {
     }
 
     #[test]
+    fn test_esp32c3_gpio_w1ts_w1tc_drive_output_readback() {
+        let chip = ChipDescriptor {
+            schema_version: "1.0".to_string(),
+            name: "esp32c3-gpio-test".to_string(),
+            arch: Arch::RiscV,
+            core: None,
+            flash: MemoryRange {
+                base: 0x4200_0000,
+                size: "4MB".to_string(),
+            },
+            ram: MemoryRange {
+                base: 0x3FC8_0000,
+                size: "400KB".to_string(),
+            },
+            reset_vector_offset: 0,
+            atomic_register_aliases: false,
+            memory_regions: Vec::new(),
+            peripherals: vec![PeripheralConfig {
+                id: "gpio".to_string(),
+                r#type: "esp32c3_gpio".to_string(),
+                base_address: 0x6000_4000,
+                size: Some("4KB".to_string()),
+                irq: None,
+                clock: None,
+                config: HashMap::new(),
+            }],
+            pins: Default::default(),
+        };
+
+        let manifest = SystemManifest {
+            walk_deleted: false,
+            schema_version: "1.0".to_string(),
+            name: "esp32c3-gpio-test".to_string(),
+            chip: "esp32c3-gpio-test".to_string(),
+            memory_overrides: HashMap::new(),
+            external_devices: Vec::new(),
+            board_io: Vec::new(),
+            debug_uart: None,
+            peripherals: Vec::new(),
+        };
+
+        let mut bus = crate::bus::SystemBus::from_config(&chip, &manifest).unwrap();
+        const GPIO_BASE: u64 = 0x6000_4000;
+        const GPIO_OUT: u64 = 0x04;
+        const GPIO_OUT_W1TS: u64 = 0x08;
+        const GPIO_OUT_W1TC: u64 = 0x0C;
+
+        bus.write_u32(GPIO_BASE + GPIO_OUT_W1TS, (1 << 4) | (1 << 5))
+            .unwrap();
+        assert_eq!(
+            bus.read_u32(GPIO_BASE + GPIO_OUT).unwrap() & ((1 << 4) | (1 << 5)),
+            (1 << 4) | (1 << 5)
+        );
+
+        bus.write_u32(GPIO_BASE + GPIO_OUT_W1TC, 1 << 4).unwrap();
+        let out = bus.read_u32(GPIO_BASE + GPIO_OUT).unwrap();
+        assert_eq!(out & (1 << 4), 0, "target pin should clear");
+        assert_eq!(out & (1 << 5), 1 << 5, "other output pins must survive");
+    }
+
+    #[test]
+    fn test_esp32c3_spi_latches_pcd8544_dc_from_gpio_output() {
+        let chip = ChipDescriptor {
+            schema_version: "1.0".to_string(),
+            name: "esp32c3-spi-dc-test".to_string(),
+            arch: Arch::RiscV,
+            core: None,
+            flash: MemoryRange {
+                base: 0x4200_0000,
+                size: "4MB".to_string(),
+            },
+            ram: MemoryRange {
+                base: 0x3FC8_0000,
+                size: "400KB".to_string(),
+            },
+            reset_vector_offset: 0,
+            atomic_register_aliases: false,
+            memory_regions: Vec::new(),
+            peripherals: vec![
+                PeripheralConfig {
+                    id: "gpio".to_string(),
+                    r#type: "esp32c3_gpio".to_string(),
+                    base_address: 0x6000_4000,
+                    size: Some("4KB".to_string()),
+                    irq: None,
+                    clock: None,
+                    config: HashMap::new(),
+                },
+                PeripheralConfig {
+                    id: "spi2".to_string(),
+                    r#type: "esp32c3_spi".to_string(),
+                    base_address: 0x6002_4000,
+                    size: Some("4KB".to_string()),
+                    irq: None,
+                    clock: None,
+                    config: HashMap::new(),
+                },
+            ],
+            pins: Default::default(),
+        };
+
+        let manifest = SystemManifest {
+            walk_deleted: false,
+            schema_version: "1.0".to_string(),
+            name: "esp32c3-spi-dc-test".to_string(),
+            chip: "esp32c3-spi-dc-test".to_string(),
+            memory_overrides: HashMap::new(),
+            external_devices: Vec::new(),
+            board_io: Vec::new(),
+            debug_uart: None,
+            peripherals: Vec::new(),
+        };
+
+        let mut bus = crate::bus::SystemBus::from_config(&chip, &manifest).unwrap();
+        let (odr_addr, bit) =
+            crate::bus::SystemBus::resolve_pin_odr_pub(&bus, "GPIO2").expect("GPIO2 ODR");
+        let mut lcd = crate::peripherals::components::Pcd8544::new("GPIO10".into(), "GPIO2".into());
+        crate::peripherals::spi::SpiDevice::set_dc_source(&mut lcd, odr_addr, bit);
+
+        let spi_idx = bus
+            .find_peripheral_index_by_name("spi2")
+            .expect("spi2 peripheral");
+        {
+            let spi = bus.peripherals[spi_idx]
+                .dev
+                .as_any_mut()
+                .and_then(|any| any.downcast_mut::<crate::peripherals::esp32c3::spi::Esp32c3Spi>())
+                .expect("esp32c3 spi2");
+            spi.attach_device(Box::new(lcd));
+        }
+
+        const GPIO_BASE: u64 = 0x6000_4000;
+        const GPIO_OUT_W1TS: u64 = 0x08;
+        const SPI2_BASE: u64 = 0x6002_4000;
+        const SPI_CMD: u64 = 0x00;
+        const SPI_MS_DLEN: u64 = 0x1C;
+        const SPI_W0: u64 = 0x98;
+        const SPI_USR: u32 = 1 << 24;
+
+        // D/C high means the following SPI byte is display RAM data.
+        bus.write_u32(GPIO_BASE + GPIO_OUT_W1TS, 1 << 2).unwrap();
+        bus.write_u32(SPI2_BASE + SPI_W0, 0xFF).unwrap();
+        bus.write_u32(SPI2_BASE + SPI_MS_DLEN, 8 - 1).unwrap();
+        bus.write_u32(SPI2_BASE + SPI_CMD, SPI_USR).unwrap();
+
+        let spi = bus.peripherals[spi_idx]
+            .dev
+            .as_any()
+            .and_then(|any| any.downcast_ref::<crate::peripherals::esp32c3::spi::Esp32c3Spi>())
+            .expect("esp32c3 spi2");
+        let lcd = spi
+            .attached_devices()
+            .iter()
+            .find_map(|device| {
+                device
+                    .as_any()
+                    .and_then(|any| any.downcast_ref::<crate::peripherals::components::Pcd8544>())
+            })
+            .expect("attached pcd8544");
+        assert_eq!(
+            lcd.framebuffer()[0],
+            0xFF,
+            "C3 SPI must latch PCD8544 D/C from GPIO2 before transfer"
+        );
+    }
+
+    #[test]
     fn test_breakpoint_sticky_step_over() {
         let mut machine = create_machine();
         let pc = 0x2000_0000;

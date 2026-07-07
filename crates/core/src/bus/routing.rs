@@ -85,6 +85,8 @@ impl SystemBus {
                 .map(|a| {
                     a.downcast_ref::<crate::peripherals::esp32::gpio::Esp32Gpio>()
                         .is_some()
+                        || a.downcast_ref::<crate::peripherals::esp32c3::gpio::Esp32c3Gpio>()
+                            .is_some()
                 })
                 .unwrap_or(false);
             if is_esp32 {
