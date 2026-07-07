@@ -22,7 +22,15 @@ static constexpr int PIN_SPI_MOSI = 7;
 static constexpr int PIN_SPI_MISO_UNUSED = 8;
 static constexpr int PIN_CS = 10;
 
-static uint8_t oled[128 * 4];
+#ifndef WORKSHOP_OLED_HEIGHT
+#define WORKSHOP_OLED_HEIGHT 64
+#endif
+
+static constexpr uint8_t OLED_HEIGHT = WORKSHOP_OLED_HEIGHT;
+static constexpr uint8_t OLED_PAGES = OLED_HEIGHT / 8;
+static_assert(OLED_HEIGHT == 32 || OLED_HEIGHT == 64, "WORKSHOP_OLED_HEIGHT must be 32 or 64");
+
+static uint8_t oled[128 * OLED_PAGES];
 static uint8_t nokia[84 * 6];
 static uint32_t lastSecond = 0;
 static bool epaperDone = false;
@@ -91,8 +99,9 @@ static void oledInit() {
   Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL);
   delay(20);
   const uint8_t init[] = {
-    0xAE, 0xD5, 0x80, 0xA8, 0x1F, 0xD3, 0x00, 0x40, 0x8D, 0x14, 0x20, 0x00,
-    0xA1, 0xC8, 0xDA, 0x02, 0x81, 0x8F, 0xD9, 0xF1, 0xDB, 0x40, 0xA4, 0xA6, 0xAF
+    0xAE, 0xD5, 0x80, 0xA8, static_cast<uint8_t>(OLED_HEIGHT - 1), 0xD3, 0x00, 0x40,
+    0x8D, 0x14, 0x20, 0x00, 0xA1, 0xC8, 0xDA, static_cast<uint8_t>(OLED_HEIGHT == 64 ? 0x12 : 0x02),
+    0x81, 0x8F, 0xD9, 0xF1, 0xDB, 0x40, 0xA4, 0xA6, 0xAF
   };
   for (uint8_t c : init) oledCmd(c);
 }
@@ -137,7 +146,7 @@ static void drawClock(uint8_t *buf, int w, int h, int hh, int mm) {
 }
 
 static void oledFlush() {
-  for (uint8_t page = 0; page < 4; page++) {
+  for (uint8_t page = 0; page < OLED_PAGES; page++) {
     oledCmd(0xB0 | page);
     oledCmd(0x00);
     oledCmd(0x10);
@@ -213,7 +222,7 @@ static void drawSpiDisplays(uint8_t hh, uint8_t mm, bool includeEpaper) {
 }
 
 static void drawI2cDisplays(uint8_t hh, uint8_t mm) {
-  drawClock(oled, 128, 32, hh, mm);
+  drawClock(oled, 128, OLED_HEIGHT, hh, mm);
   oledFlush();
 }
 
@@ -226,6 +235,7 @@ static void drawAllDisplays(uint8_t hh, uint8_t mm, bool colon) {
 static void workshopSerialBegin() {
   Serial.begin(115200);
 #if defined(ARDUINO_USB_CDC_ON_BOOT) && ARDUINO_USB_CDC_ON_BOOT
+  Serial.setTxTimeoutMs(0);
   Serial0.begin(115200);
 #endif
 }
@@ -248,12 +258,13 @@ void setup() {
   pinMode(PIN_BUSY, INPUT);
   digitalWrite(PIN_CS, HIGH);
   tmDisplay(12, 34, true);
+  oledInit();
+  drawI2cDisplays(12, 34);
+  workshopSerialPrintln("WORKSHOP_TICK 00:00");
   SPI.begin(PIN_SPI_SCK, PIN_SPI_MISO_UNUSED, PIN_SPI_MOSI, PIN_CS);
   SPI.beginTransaction(SPISettings(2000000, MSBFIRST, SPI_MODE0));
   nokiaInit();
   drawSpiDisplays(12, 34, true);
-  oledInit();
-  drawI2cDisplays(12, 34);
   lastSecond = millis() / 1000;
 }
 
