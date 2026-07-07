@@ -142,7 +142,7 @@ pub struct Esp32c3Spi {
     int_raw: u32,
     /// Devices on this controller's bus: MOSI bytes broadcast to every device,
     /// first non-zero MISO byte wins (single-device labs in practice).
-    attached_devices: Vec<Box<dyn SpiDevice>>,
+    pub(crate) attached_devices: Vec<Box<dyn SpiDevice>>,
 }
 
 impl std::fmt::Debug for Esp32c3Spi {
@@ -181,6 +181,10 @@ impl Esp32c3Spi {
     /// Attach a simulated device to this controller's bus.
     pub fn attach_device(&mut self, device: Box<dyn SpiDevice>) {
         self.attached_devices.push(device);
+    }
+
+    pub fn attached_devices(&self) -> &[Box<dyn SpiDevice>] {
+        &self.attached_devices
     }
 
     fn reg(&self, off: u64) -> u32 {
