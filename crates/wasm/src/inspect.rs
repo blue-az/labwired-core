@@ -282,23 +282,31 @@ impl WasmSimulator {
             .as_any()
             .ok_or_else(|| JsValue::from_str("Peripheral does not support downcasting"))?;
 
-        let spi = any
-            .downcast_ref::<labwired_core::peripherals::spi::Spi>()
-            .ok_or_else(|| {
-                JsValue::from_str(&format!(
-                    "Peripheral '{}' is not an SPI controller",
-                    binding.peripheral
-                ))
-            })?;
-
-        for device in &spi.attached_devices {
-            if let Some(tft) = device
-                .as_any()
-                .and_then(|a| a.downcast_ref::<labwired_core::peripherals::components::Ili9341>())
-            {
-                let fb = tft.framebuffer().to_vec().into_boxed_slice();
-                return Ok(fb);
+        if let Some(spi) = any.downcast_ref::<labwired_core::peripherals::spi::Spi>() {
+            for device in &spi.attached_devices {
+                if let Some(tft) = device.as_any().and_then(|a| {
+                    a.downcast_ref::<labwired_core::peripherals::components::Ili9341>()
+                }) {
+                    let fb = tft.framebuffer().to_vec().into_boxed_slice();
+                    return Ok(fb);
+                }
             }
+        } else if let Some(spi) =
+            any.downcast_ref::<labwired_core::peripherals::esp32c3::spi::Esp32c3Spi>()
+        {
+            for device in spi.attached_devices() {
+                if let Some(tft) = device.as_any().and_then(|a| {
+                    a.downcast_ref::<labwired_core::peripherals::components::Ili9341>()
+                }) {
+                    let fb = tft.framebuffer().to_vec().into_boxed_slice();
+                    return Ok(fb);
+                }
+            }
+        } else {
+            return Err(JsValue::from_str(&format!(
+                "Peripheral '{}' is not an SPI controller",
+                binding.peripheral
+            )));
         }
 
         Err(JsValue::from_str(&format!(
@@ -340,28 +348,59 @@ impl WasmSimulator {
             .as_any()
             .ok_or_else(|| JsValue::from_str("Peripheral does not support downcasting"))?;
 
-        let spi = any
-            .downcast_ref::<labwired_core::peripherals::spi::Spi>()
-            .ok_or_else(|| {
-                JsValue::from_str(&format!(
-                    "Peripheral '{}' is not an SPI controller",
-                    binding.peripheral
-                ))
-            })?;
-
-        for device in &spi.attached_devices {
-            if let Some(lcd) = device
-                .as_any()
-                .and_then(|a| a.downcast_ref::<labwired_core::peripherals::components::Pcd8544>())
-            {
-                return Ok(lcd.framebuffer().to_vec().into_boxed_slice());
+        if let Some(spi) = any.downcast_ref::<labwired_core::peripherals::spi::Spi>() {
+            for device in &spi.attached_devices {
+                if let Some(lcd) = device.as_any().and_then(|a| {
+                    a.downcast_ref::<labwired_core::peripherals::components::Pcd8544>()
+                }) {
+                    return Ok(lcd.framebuffer().to_vec().into_boxed_slice());
+                }
             }
+        } else if let Some(spi) =
+            any.downcast_ref::<labwired_core::peripherals::esp32c3::spi::Esp32c3Spi>()
+        {
+            for device in spi.attached_devices() {
+                if let Some(lcd) = device.as_any().and_then(|a| {
+                    a.downcast_ref::<labwired_core::peripherals::components::Pcd8544>()
+                }) {
+                    return Ok(lcd.framebuffer().to_vec().into_boxed_slice());
+                }
+            }
+        } else {
+            return Err(JsValue::from_str(&format!(
+                "Peripheral '{}' is not an SPI controller",
+                binding.peripheral
+            )));
         }
 
         Err(JsValue::from_str(&format!(
             "PCD8544 device not found on SPI peripheral '{}'",
             binding.peripheral
         )))
+    }
+
+    /// Return the decoded four-character text currently latched into a TM1637
+    /// 4-digit display. The TM1637 is GPIO bit-banged, so it is stored on the
+    /// bus side rather than inside a hardware bus peripheral.
+    #[wasm_bindgen]
+    pub fn get_tm1637_text(&self, device_id: &str) -> Result<String, JsValue> {
+        let machine = self.machine.as_ref().unwrap();
+        machine
+            .bus
+            .tm1637
+            .iter()
+            .find(|dev| dev.id == device_id)
+            .map(|dev| {
+                let mut text = dev.text();
+                if dev.colon() && text.len() >= 2 {
+                    text.insert(2, ':');
+                }
+                if !dev.display_on() {
+                    text.clear();
+                }
+                text
+            })
+            .ok_or_else(|| JsValue::from_str(&format!("TM1637 device '{}' not found", device_id)))
     }
 
     /// Return the SSD1680 tri-color e-paper framebuffer for the device identified by `device_id`.
@@ -422,6 +461,14 @@ impl WasmSimulator {
                 any.downcast_ref::<labwired_core::peripherals::esp32::spi::Esp32Spi>()
             {
                 spi.attached_devices.iter().find_map(|dev| {
+                    dev.as_any().and_then(|a| {
+                    a.downcast_ref::<labwired_core::peripherals::components::Ssd1680Tricolor290>()
+                }).map(|panel| (panel.black_plane().to_vec(), panel.red_plane().to_vec()))
+                })
+            } else if let Some(spi) =
+                any.downcast_ref::<labwired_core::peripherals::esp32c3::spi::Esp32c3Spi>()
+            {
+                spi.attached_devices().iter().find_map(|dev| {
                     dev.as_any().and_then(|a| {
                     a.downcast_ref::<labwired_core::peripherals::components::Ssd1680Tricolor290>()
                 }).map(|panel| (panel.black_plane().to_vec(), panel.red_plane().to_vec()))
@@ -493,6 +540,14 @@ impl WasmSimulator {
             any.downcast_ref::<labwired_core::peripherals::esp32::spi::Esp32Spi>()
         {
             spi.attached_devices.iter().find_map(|dev| {
+                dev.as_any().and_then(|a| {
+                    a.downcast_ref::<labwired_core::peripherals::components::Ssd1680Tricolor290>()
+                }).map(|panel| panel.refresh_generation())
+            })
+        } else if let Some(spi) =
+            any.downcast_ref::<labwired_core::peripherals::esp32c3::spi::Esp32c3Spi>()
+        {
+            spi.attached_devices().iter().find_map(|dev| {
                 dev.as_any().and_then(|a| {
                     a.downcast_ref::<labwired_core::peripherals::components::Ssd1680Tricolor290>()
                 }).map(|panel| panel.refresh_generation())

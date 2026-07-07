@@ -7,7 +7,9 @@
 pub mod ana_i2c;
 pub mod apb_saradc;
 pub mod cache;
+pub mod factory;
 pub mod forced_status;
+pub mod gpio;
 pub mod i2c;
 pub mod ledc;
 pub mod reg_block;

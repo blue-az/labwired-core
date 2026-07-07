@@ -142,13 +142,18 @@ impl SystemBus {
             // Per-family factories own their peripheral arms in their own modules,
             // so this central match stops growing (and shrinks as families migrate
             // out). Try them first; unmigrated families fall through to the match.
-            let family_dev = crate::peripherals::esp32s3::factory::try_build(
-                &canonical_type,
-                p_cfg,
-            )
-            .or_else(|| {
-                crate::peripherals::nrf52::factory::try_build(&canonical_type, p_cfg, manifest)
-            });
+            let family_dev =
+                crate::peripherals::esp32s3::factory::try_build(&canonical_type, p_cfg)
+                    .or_else(|| {
+                        crate::peripherals::esp32c3::factory::try_build(&canonical_type, p_cfg)
+                    })
+                    .or_else(|| {
+                        crate::peripherals::nrf52::factory::try_build(
+                            &canonical_type,
+                            p_cfg,
+                            manifest,
+                        )
+                    });
             if let Some(dev) = family_dev {
                 // The nRF52 serial-instance mux (SPIM0/TWIM0) attaches all
                 // external devices connected to the shared MMIO window itself,
