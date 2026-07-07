@@ -485,9 +485,27 @@ pub fn run_target(
         let flash = target.flash_bin.ok_or("rom_boot target needs flash_bin")?;
         cmd.env("LABWIRED_ESP32S3_FLASH", root.join(flash));
     }
-    let out = cmd
-        .output()
-        .map_err(|e| format!("spawn {}: {e}", labwired_bin.display()))?;
+    // Spawning a just-written executable can transiently fail with ETXTBSY
+    // ("Text file busy", os error 26): in a multithreaded process another
+    // thread's fork() can momentarily hold a copy of the writer's fd while the
+    // binary is still open for write. The condition clears within milliseconds,
+    // so retry a few times before giving up. (Real sim binaries never race this
+    // way; the coverage-gate tier1 tests, which write a fake binary and spawn
+    // it immediately, hit it under llvm-cov's slower, more-concurrent runs.)
+    let out = {
+        let mut attempt = 0;
+        loop {
+            match cmd.output() {
+                Ok(out) => break out,
+                // ETXTBSY == 26 on Linux/BSD/macOS.
+                Err(e) if e.raw_os_error() == Some(26) && attempt < 10 => {
+                    attempt += 1;
+                    std::thread::sleep(std::time::Duration::from_millis(20));
+                }
+                Err(e) => return Err(format!("spawn {}: {e}", labwired_bin.display())),
+            }
+        }
+    };
 
     // UART echoes on stdout; the sim may exit nonzero on step-limit — that's
     // fine, the protocol lines are the verdict.
