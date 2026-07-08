@@ -23,7 +23,14 @@ jobs:
         uses: w1ne/labwired/.github/actions/labwired-test@main
         with:
           script: tests/basic_boot.yaml
-          artifact_name: test-results
+          output_dir: test-results
+
+      - name: Upload LabWired artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: labwired-results
+          path: test-results/
 ```
 
 ### GitLab CI
@@ -93,7 +100,8 @@ steps:
 
 ## 4. Artifacts and Reporting
 
-The test runner produces machine-readable outputs for integration with CI reporting tools.
+The test runner produces machine-readable outputs for integration with CI reporting tools. The
+`labwired-test` GitHub Action fails when assertions fail, after writing these artifacts.
 
 - **`result.json`**: Detailed execution statistics (cycles, instructions, assertion results).
 - **`junit.xml`**: Standard JUnit format for test result visualization in GitHub/GitLab UI.
