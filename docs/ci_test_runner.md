@@ -335,6 +335,7 @@ This repo includes a minimal composite action wrapper at `.github/actions/labwir
 - runs `labwired test`
 - emits artifact paths as outputs
 - writes a small summary into the GitHub Actions step summary
+- fails the action when `labwired test` exits nonzero, after writing artifacts and the summary
 
 Copy-paste this workflow into `.github/workflows/labwired-test.yml`:
 
@@ -368,12 +369,6 @@ jobs:
           name: labwired-artifacts
           path: ${{ steps.labwired.outputs.artifacts_dir }}
           if-no-files-found: warn
-
-      - name: Fail job if test failed
-        if: ${{ steps.labwired.outputs.exit_code != '0' }}
-        run: |
-          echo "labwired test failed with exit_code=${{ steps.labwired.outputs.exit_code }}"
-          exit ${{ steps.labwired.outputs.exit_code }}
 ```
 
 ## Local vs CI Parity

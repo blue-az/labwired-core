@@ -45,7 +45,8 @@ jobs:
           profile: release
           no_uart_stdout: true
 
-      # Upload test artifacts
+      # Upload test artifacts. The LabWired action fails on failed assertions
+      # after writing result.json, uart.log, junit.xml, and summary.md.
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
