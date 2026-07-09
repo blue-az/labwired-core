@@ -64,45 +64,8 @@ run_case() {
   fi
 
   local fp
-  fp="$(python3 - "$result_json" "$snapshot_json" "$uart_log" <<'PY'
-import hashlib
-import json
-import pathlib
-import sys
-
-result_path = pathlib.Path(sys.argv[1])
-snapshot_path = pathlib.Path(sys.argv[2])
-uart_path = pathlib.Path(sys.argv[3])
-
-result = json.loads(result_path.read_text())
-snapshot = json.loads(snapshot_path.read_text())
-uart = uart_path.read_text()
-
-# Fingerprint firmware-OBSERVABLE behaviour only. Deliberately excluded:
-#   - cpu register snapshot, cycles, instructions: internal model state that
-#     legitimately shifts whenever the CPU/cycle model is refined even though
-#     the firmware behaves identically. Including them made this gate red on
-#     every benign model change (see #189 and follow-ups) — a re-baseline
-#     treadmill, not a regression signal.
-#   - limits: input config, not behaviour.
-#   - stop_reason_details: redundant with stop_reason.
-# Kept: status, stop_reason, steps_executed, assertions, uart — the
-# firmware-visible contract. A real behavioural regression (wrong output,
-# wrong termination, failed assertion, different step count) still trips it.
-payload = {
-    "result": {
-        "status": result.get("status"),
-        "stop_reason": result.get("stop_reason"),
-        "steps_executed": result.get("steps_executed"),
-        "assertions": result.get("assertions"),
-    },
-    "uart": uart,
-}
-
-blob = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
-print(hashlib.sha256(blob).hexdigest())
-PY
-)"
+  fp="$(python3 "$CORE_DIR/scripts/trace_drift_fingerprint.py" \
+    "$result_json" "$snapshot_json" "$uart_log")"
 
   echo "$fp" >"$fingerprint_file"
 
