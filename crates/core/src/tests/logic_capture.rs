@@ -163,7 +163,7 @@ mod logic_capture_tests {
         step_n(&mut machine, gap);
         let second = machine.logic_read_edges(first.cursor);
         assert_eq!(second.edges.len(), 1, "only the new edge since the cursor");
-        assert_eq!(second.edges[0].value, false);
+        assert!(!second.edges[0].value);
 
         // Re-reading with the same cursor yields nothing.
         let again = machine.logic_read_edges(second.cursor);
