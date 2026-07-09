@@ -597,6 +597,9 @@ mod routing_tests {
     use crate::Peripheral;
 
     #[test]
+    // Zero-valued nibbles are kept explicit: each term documents one pin's slot
+    // in the register layout the assertions below depend on.
+    #[allow(clippy::identity_op)]
     fn stm32f1_routing_modes() {
         let mut g = GpioPort::new_with_layout(GpioRegisterLayout::Stm32F1);
         // CRL nibbles: pin0 = MODE01/CNF00 (output), pin1 = MODE01/CNF10 (AF),
@@ -613,6 +616,8 @@ mod routing_tests {
     }
 
     #[test]
+    // Zero-valued fields kept explicit — same rationale as stm32f1_routing_modes.
+    #[allow(clippy::identity_op)]
     fn stm32v2_routing_modes_and_af_number() {
         let mut g = GpioPort::new_with_layout(GpioRegisterLayout::Stm32V2);
         // MODER: pin0=01 output, pin1=10 AF, pin2=00 input, pin3=11 analog.
