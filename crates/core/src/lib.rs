@@ -903,7 +903,9 @@ impl<C: Cpu> Machine<C> {
             .iter()
             .map(|r| {
                 r.and_then(|(idx, pin)| {
-                    bus.peripherals.get(idx).and_then(|p| p.dev.read_gpio_pad(pin))
+                    bus.peripherals
+                        .get(idx)
+                        .and_then(|p| p.dev.read_gpio_pad(pin))
                 })
             })
             .collect();
@@ -933,7 +935,9 @@ impl<C: Cpu> Machine<C> {
         let now = self.total_cycles;
         let bus = &self.bus;
         self.logic_capture.sample(now, |idx, pin| {
-            bus.peripherals.get(idx).and_then(|p| p.dev.read_gpio_pad(pin))
+            bus.peripherals
+                .get(idx)
+                .and_then(|p| p.dev.read_gpio_pad(pin))
         });
     }
 }
@@ -1809,8 +1813,7 @@ impl<C: Cpu> DebugControl for Machine<C> {
             // stride past intermediate edges we can only read at batch
             // boundaries. Cost is paid ONLY while a watch set is active.
             if self.logic_capture.is_active() {
-                current_batch =
-                    current_batch.min(logic_capture::LOGIC_SAMPLE_INTERVAL as u32);
+                current_batch = current_batch.min(logic_capture::LOGIC_SAMPLE_INTERVAL as u32);
             }
 
             let executed =

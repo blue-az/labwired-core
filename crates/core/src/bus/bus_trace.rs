@@ -263,8 +263,7 @@ impl SpiDevice for TracingSpiDevice {
     }
     fn transfer(&mut self, mosi: u8) -> u8 {
         let miso = self.inner.transfer(mosi);
-        self.trace
-            .push(&self.bus, BusPayload::Spi { mosi, miso });
+        self.trace.push(&self.bus, BusPayload::Spi { mosi, miso });
         miso
     }
     fn cs_pin(&self) -> &str {
@@ -350,6 +349,9 @@ mod tests {
         let snap = log.snapshot();
         assert_eq!(snap.len(), 2);
         assert_eq!(snap[0].cycle, 0, "first event predates any step");
-        assert_eq!(snap[1].cycle, 4242, "second event carries the advanced cycle");
+        assert_eq!(
+            snap[1].cycle, 4242,
+            "second event carries the advanced cycle"
+        );
     }
 }

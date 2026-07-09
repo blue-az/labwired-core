@@ -7,7 +7,9 @@
 #[cfg(test)]
 mod logic_capture_tests {
     use crate::cpu::CortexM;
-    use crate::logic_capture::{LogicCapture, LogicEdge, LOGIC_RING_CAPACITY, LOGIC_SAMPLE_INTERVAL};
+    use crate::logic_capture::{
+        LogicCapture, LogicEdge, LOGIC_RING_CAPACITY, LOGIC_SAMPLE_INTERVAL,
+    };
     use crate::peripherals::gpio::{GpioPort, GpioRegisterLayout};
     use crate::{Bus, Machine};
 
@@ -35,7 +37,10 @@ mod logic_capture_tests {
         let mut machine = Machine::new(cpu, bus);
 
         // MODER pin0 = 0b01 (output) so read_gpio_pad(0) reflects ODR bit 0.
-        machine.bus.write_u32(GPIO_BASE + MODER, 0x0000_0001).unwrap();
+        machine
+            .bus
+            .write_u32(GPIO_BASE + MODER, 0x0000_0001)
+            .unwrap();
 
         // Fill a RAM window with `movs r0, #0` and run from it.
         for i in 0..256u64 {
@@ -109,7 +114,10 @@ mod logic_capture_tests {
         let mut b = machine_with_gpio();
         let (edges_a, _, _) = run_scenario(&mut a);
         let (edges_b, _, _) = run_scenario(&mut b);
-        assert_eq!(edges_a, edges_b, "determinism: same firmware + watch => same edges");
+        assert_eq!(
+            edges_a, edges_b,
+            "determinism: same firmware + watch => same edges"
+        );
     }
 
     #[test]
@@ -129,7 +137,10 @@ mod logic_capture_tests {
         step_n(&mut machine, gap);
 
         let batch = machine.logic_read_edges(0);
-        assert!(batch.edges.iter().all(|e| e.ch == 1), "only channel 1 emits");
+        assert!(
+            batch.edges.iter().all(|e| e.ch == 1),
+            "only channel 1 emits"
+        );
         assert_eq!(batch.edges.len(), 1);
     }
 
@@ -178,7 +189,11 @@ mod logic_capture_tests {
 
         let batch = cap.read_edges(0);
         assert_eq!(batch.dropped, overflow as u64, "oldest edges dropped");
-        assert_eq!(batch.edges.len(), LOGIC_RING_CAPACITY, "ring is full, not larger");
+        assert_eq!(
+            batch.edges.len(),
+            LOGIC_RING_CAPACITY,
+            "ring is full, not larger"
+        );
         // Newest edge is the last sample taken.
         let last = batch.edges.last().unwrap();
         assert_eq!(last.cycle, total as u64 * LOGIC_SAMPLE_INTERVAL);

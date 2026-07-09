@@ -802,10 +802,9 @@ impl SystemBus {
         let idx = self
             .find_peripheral_index_by_name(controller)
             .ok_or_else(|| anyhow::anyhow!("attach_i2c_slave: no peripheral '{controller}'"))?;
-        let any = self.peripherals[idx]
-            .dev
-            .as_any_mut()
-            .ok_or_else(|| anyhow::anyhow!("attach_i2c_slave: '{controller}' is not downcastable"))?;
+        let any = self.peripherals[idx].dev.as_any_mut().ok_or_else(|| {
+            anyhow::anyhow!("attach_i2c_slave: '{controller}' is not downcastable")
+        })?;
         if let Some(c) = any.downcast_mut::<crate::peripherals::i2c::I2c>() {
             c.push_slave(wrapped);
         } else if let Some(c) = any.downcast_mut::<crate::peripherals::esp32c3::i2c::Esp32c3I2c>() {
@@ -833,17 +832,17 @@ impl SystemBus {
         let idx = self
             .find_peripheral_index_by_name(controller)
             .ok_or_else(|| anyhow::anyhow!("attach_spi_device: no peripheral '{controller}'"))?;
-        let any = self.peripherals[idx]
-            .dev
-            .as_any_mut()
-            .ok_or_else(|| anyhow::anyhow!("attach_spi_device: '{controller}' is not downcastable"))?;
+        let any = self.peripherals[idx].dev.as_any_mut().ok_or_else(|| {
+            anyhow::anyhow!("attach_spi_device: '{controller}' is not downcastable")
+        })?;
         if let Some(c) = any.downcast_mut::<crate::peripherals::spi::Spi>() {
             c.push_device(wrapped);
         } else if let Some(c) = any.downcast_mut::<crate::peripherals::esp32c3::spi::Esp32c3Spi>() {
             c.push_device(wrapped);
         } else if let Some(c) = any.downcast_mut::<crate::peripherals::esp32::spi::Esp32Spi>() {
             c.push_device(wrapped);
-        } else if let Some(c) = any.downcast_mut::<crate::peripherals::esp32s3::gpspi::Esp32s3Spi>() {
+        } else if let Some(c) = any.downcast_mut::<crate::peripherals::esp32s3::gpspi::Esp32s3Spi>()
+        {
             c.push_device(wrapped);
         } else {
             anyhow::bail!("attach_spi_device: '{controller}' is not a SPI controller");

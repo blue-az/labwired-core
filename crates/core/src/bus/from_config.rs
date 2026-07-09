@@ -172,14 +172,12 @@ impl SystemBus {
                 continue;
             }
             // Cross-vendor / generic peripherals (fallible: size + profile parsing).
-            if let Some(dev) =
-                crate::peripherals::generic_factory::try_build(
-                    &canonical_type,
-                    p_cfg,
-                    manifest,
-                    &bus.bus_trace,
-                )?
-            {
+            if let Some(dev) = crate::peripherals::generic_factory::try_build(
+                &canonical_type,
+                p_cfg,
+                manifest,
+                &bus.bus_trace,
+            )? {
                 bus.push_peripheral(p_cfg, dev)?;
                 continue;
             }
@@ -192,7 +190,8 @@ impl SystemBus {
             // silently untraced (the ESP32-C3 blind-bus bug that motivated this).
             if matches!(
                 canonical_type.as_str(),
-                "i2c" | "stm32f1_i2c"
+                "i2c"
+                    | "stm32f1_i2c"
                     | "stm32f2_i2c"
                     | "stm32f4_i2c"
                     | "stm32f7_i2c"
@@ -214,10 +213,8 @@ impl SystemBus {
                     if ext.connection != p_cfg.id {
                         continue;
                     }
-                    match crate::peripherals::components::build_i2c_device(
-                        &ext.r#type,
-                        &ext.config,
-                    ) {
+                    match crate::peripherals::components::build_i2c_device(&ext.r#type, &ext.config)
+                    {
                         Some(device) => {
                             tracing::info!(
                                 "i2c attach: '{}' (type={}) -> '{}'",
