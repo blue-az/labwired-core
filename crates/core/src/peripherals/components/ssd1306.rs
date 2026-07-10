@@ -280,6 +280,7 @@ pub struct Ssd1306Kit;
 pub static SSD1306_KIT: Ssd1306Kit = Ssd1306Kit;
 
 static SSD1306_METADATA: KitMetadata = KitMetadata {
+    inputs: &[],
     device_type: "oled-ssd1306",
     label: "SSD1306 OLED",
     summary: "128×64 monochrome OLED display over I2C with a paged framebuffer.",
@@ -319,6 +320,7 @@ pub struct Ssd1306Oled091Kit;
 pub static SSD1306_128X32_KIT: Ssd1306Oled091Kit = Ssd1306Oled091Kit;
 
 static SSD1306_128X32_METADATA: KitMetadata = KitMetadata {
+    inputs: &[],
     device_type: "oled-ssd1306-128x32",
     label: "SSD1306 OLED 0.91″",
     summary: "0.91″ 128×32 monochrome OLED display over I2C with a paged framebuffer.",
@@ -333,12 +335,11 @@ static SSD1306_128X32_METADATA: KitMetadata = KitMetadata {
         ty: ConfigType::Int,
         doc: "7-bit slave address. Defaults to 0x3C; 0x3D selects the SA0=high variant.",
     }],
-    labs: &[LabRef {
-        board_id: "ssd1306-128x32-lab",
-        chip: "stm32f103",
-        example_dir: "ssd1306-128x32-lab",
-        demo_elf: "demo-ssd1306-128x32-lab.elf",
-    }],
+    // No lab yet: examples/ssd1306-128x32-lab has only a README + system.yaml — no demo
+    // firmware/ELF is built or published. Declaring a LabRef would promise a
+    // one-click demo that 404s (the playground gate rightly rejects it).
+    // Re-add the LabRef when the demo firmware ships.
+    labs: &[],
 };
 
 impl PeripheralKit for Ssd1306Oled091Kit {

@@ -191,6 +191,7 @@ pub struct Veml7700Kit;
 pub static VEML7700_KIT: Veml7700Kit = Veml7700Kit;
 
 static VEML7700_METADATA: KitMetadata = KitMetadata {
+    inputs: &[],
     device_type: "veml7700",
     label: "Vishay VEML7700 Light",
     summary: "Ambient-light sensor (lux) over I2C.",
@@ -223,7 +224,7 @@ static VEML7700_METADATA: KitMetadata = KitMetadata {
         },
     ],
     labs: &[LabRef {
-        board_id: "leo-airquality-lab",
+        board_id: "esp32c3-leo-airquality",
         chip: "esp32c3",
         example_dir: "esp32c3-leo-airquality",
         demo_elf: "demo-esp32c3-leo-airquality.elf",
