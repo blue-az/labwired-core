@@ -190,6 +190,7 @@ pub struct Mlx90614Kit;
 pub static MLX90614_KIT: Mlx90614Kit = Mlx90614Kit;
 
 static MLX90614_METADATA: KitMetadata = KitMetadata {
+    inputs: &[],
     device_type: "mlx90614",
     label: "Melexis MLX90614 IR Temp",
     summary: "Single-point IR (non-contact) thermometer over SMBus/I2C.",
@@ -228,7 +229,7 @@ static MLX90614_METADATA: KitMetadata = KitMetadata {
         },
     ],
     labs: &[LabRef {
-        board_id: "leo-airquality-lab",
+        board_id: "esp32c3-leo-airquality",
         chip: "esp32c3",
         example_dir: "esp32c3-leo-airquality",
         demo_elf: "demo-esp32c3-leo-airquality.elf",
