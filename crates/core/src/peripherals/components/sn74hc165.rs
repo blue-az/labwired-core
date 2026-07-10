@@ -21,6 +21,9 @@ pub struct Sn74hc165 {
     inputs: u8,
     /// Value captured at the last load (CS assert).
     latched: u8,
+    /// system.yaml `external_devices` id, stamped at attach (see
+    /// [`crate::sim_input::SimInput::component_id`]).
+    component_id: Option<String>,
 }
 
 impl Sn74hc165 {
@@ -29,6 +32,7 @@ impl Sn74hc165 {
             cs_pin: cs_pin.into(),
             inputs: 0,
             latched: 0,
+            component_id: None,
         }
     }
 
@@ -128,6 +132,13 @@ impl crate::sim_input::SimInput for Sn74hc165 {
         self.set_channel(ch, value >= 0.5);
         Ok(())
     }
+    fn component_id(&self) -> Option<&str> {
+        self.component_id.as_deref()
+    }
+
+    fn set_component_id(&mut self, id: String) {
+        self.component_id = Some(id);
+    }
 }
 
 // ─── PeripheralKit registration ────────────────────────────────────────────
@@ -175,11 +186,12 @@ impl PeripheralKit for Sn74hc165Kit {
     fn attach(&self, ctx: &mut AttachCtx<'_>) -> anyhow::Result<()> {
         let cs_pin = ctx.config_str("cs_pin").unwrap_or("PA4").to_string();
         let inputs = ctx.config_i64("inputs");
-        let spi = ctx.spi()?;
         let mut shifter = Sn74hc165::new(cs_pin);
         if let Some(v) = inputs {
             shifter.set_inputs(v as u8);
         }
+        crate::sim_input::SimInput::set_component_id(&mut shifter, ctx.device_id().to_string());
+        let spi = ctx.spi()?;
         spi.attach(Box::new(shifter));
         Ok(())
     }

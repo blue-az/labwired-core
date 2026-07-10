@@ -169,43 +169,43 @@
           "key": "ax",
           "label": "Accel X",
           "unit": "g",
-          "min": -2.0,
-          "max": 2.0
+          "min": -16.0,
+          "max": 16.0
         },
         {
           "key": "ay",
           "label": "Accel Y",
           "unit": "g",
-          "min": -2.0,
-          "max": 2.0
+          "min": -16.0,
+          "max": 16.0
         },
         {
           "key": "az",
           "label": "Accel Z",
           "unit": "g",
-          "min": -2.0,
-          "max": 2.0
+          "min": -16.0,
+          "max": 16.0
         },
         {
           "key": "gx",
           "label": "Gyro X",
           "unit": "°/s",
-          "min": -250.0,
-          "max": 250.0
+          "min": -2000.0,
+          "max": 2000.0
         },
         {
           "key": "gy",
           "label": "Gyro Y",
           "unit": "°/s",
-          "min": -250.0,
-          "max": 250.0
+          "min": -2000.0,
+          "max": 2000.0
         },
         {
           "key": "gz",
           "label": "Gyro Z",
           "unit": "°/s",
-          "min": -250.0,
-          "max": 250.0
+          "min": -2000.0,
+          "max": 2000.0
         }
       ]
     },

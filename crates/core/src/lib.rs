@@ -872,10 +872,11 @@ impl<C: Cpu> Machine<C> {
         self.bus.set_input(None, channel, value)
     }
 
-    /// [`Machine::set_input`] narrowed to the device owned by the peripheral
-    /// (or directly-attached sensor id) named `component` — the disambiguator
-    /// a test-script stimulus `target.component` resolves through when two
-    /// devices expose the same channel key.
+    /// [`Machine::set_input`] narrowed to the device named `component` — the
+    /// external-device id from system.yaml (stamped onto the model at attach)
+    /// or the owning peripheral's bus name; the disambiguator a test-script
+    /// stimulus `target.component` resolves through when two devices expose
+    /// the same channel key.
     pub fn set_input_on(
         &mut self,
         component: &str,
@@ -883,6 +884,18 @@ impl<C: Cpu> Machine<C> {
         value: f64,
     ) -> Result<(), crate::sim_input::SimInputError> {
         self.bus.set_input(Some(component), channel, value)
+    }
+
+    /// Apply several input sets as one atomic transaction (delegates to
+    /// [`bus::SystemBus::set_inputs`]): every set is validated first and
+    /// either all apply or none do, with no execution in between — the way to
+    /// drive a multi-channel pose (an IMU's x/y/z, a GPS lat+lon) without the
+    /// firmware ever observing a torn update.
+    pub fn set_inputs(
+        &mut self,
+        sets: &[(Option<&str>, &str, f64)],
+    ) -> Result<(), crate::sim_input::SimInputError> {
+        self.bus.set_inputs(sets)
     }
 }
 

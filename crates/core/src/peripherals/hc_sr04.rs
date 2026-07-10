@@ -163,6 +163,11 @@ impl crate::sim_input::SimInput for HcSr04 {
         self.set_distance_cm(value as f32);
         Ok(())
     }
+
+    fn component_id(&self) -> Option<&str> {
+        // Constructed with its system.yaml id (from_config) — already identity.
+        Some(&self.id)
+    }
 }
 
 impl HcSr04 {

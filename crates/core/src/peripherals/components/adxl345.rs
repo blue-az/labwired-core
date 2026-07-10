@@ -18,6 +18,9 @@ pub struct Adxl345 {
     sample_x: i16,
     sample_y: i16,
     sample_z: i16,
+    /// system.yaml `external_devices` id, stamped at attach (see
+    /// [`crate::sim_input::SimInput::component_id`]).
+    component_id: Option<String>,
 }
 
 impl Default for Adxl345 {
@@ -38,6 +41,7 @@ impl Adxl345 {
             sample_x: 0,
             sample_y: 0,
             sample_z: 256,
+            component_id: None,
         }
     }
 
@@ -115,10 +119,14 @@ impl I2cDevice for Adxl345 {
     }
 }
 
-/// Drivable accelerometer axes, in g. Full-resolution mode is 3.9 mg/LSB
-/// (256 counts = 1 g — the model's default rest sample is z = 256), physical
-/// full-scale ±16 g. One table backs BOTH the `SimInput` impl and the kit
-/// metadata, so the device schema and the runtime API cannot drift.
+/// Drivable accelerometer axes, in g, physical full-scale ±16 g. The
+/// conversion follows the LIVE `data_format` register the firmware wrote:
+/// full-res mode (bit 3) is always 3.9 mg/LSB (256 counts = 1 g — the
+/// model's default rest sample is z = 256); fixed 10-bit mode halves the
+/// counts-per-g per range step (±2g→256, ±4g→128, ±8g→64, ±16g→32). Values
+/// beyond the configured range saturate, like the silicon. One table backs
+/// BOTH the `SimInput` impl and the kit metadata, so the device schema and
+/// the runtime API cannot drift.
 pub const INPUT_CHANNELS: &[crate::sim_input::InputChannel] = &[
     crate::sim_input::InputChannel {
         key: "x",
@@ -150,7 +158,15 @@ impl crate::sim_input::SimInput for Adxl345 {
 
     fn set_input(&mut self, key: &str, value: f64) -> Result<(), crate::sim_input::SimInputError> {
         self.require_channel(key, value)?;
-        let raw = (value * 256.0).round() as i16;
+        let range_bits = (self.data_format & 0x03) as u32; // 0=±2g … 3=±16g
+        let full_res = self.data_format & 0x08 != 0;
+        let counts_per_g = if full_res {
+            256.0
+        } else {
+            (256 >> range_bits) as f64
+        };
+        let full_scale = (2 << range_bits) as f64;
+        let raw = (value.clamp(-full_scale, full_scale) * counts_per_g).round() as i16;
         match key {
             "x" => self.sample_x = raw,
             "y" => self.sample_y = raw,
@@ -158,6 +174,14 @@ impl crate::sim_input::SimInput for Adxl345 {
             _ => unreachable!("require_channel validated the key"),
         }
         Ok(())
+    }
+
+    fn component_id(&self) -> Option<&str> {
+        self.component_id.as_deref()
+    }
+
+    fn set_component_id(&mut self, id: String) {
+        self.component_id = Some(id);
     }
 }
 
@@ -199,8 +223,10 @@ impl PeripheralKit for Adxl345Kit {
     }
     fn attach(&self, ctx: &mut AttachCtx<'_>) -> anyhow::Result<()> {
         let address = ctx.i2c_address_or(0x53)?;
+        let mut dev = Adxl345::new(address);
+        crate::sim_input::SimInput::set_component_id(&mut dev, ctx.device_id().to_string());
         let i2c = ctx.i2c()?;
-        i2c.attach(Box::new(Adxl345::new(address)));
+        i2c.attach(Box::new(dev));
         Ok(())
     }
 }
