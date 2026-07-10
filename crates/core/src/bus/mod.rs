@@ -219,13 +219,6 @@ pub struct SystemBus {
     /// per-tick pass (`service_hcsr04`) drives the computed ECHO input level,
     /// touching the bus only on a transition. Empty by default → zero cost.
     pub hcsr04: Vec<crate::peripherals::hc_sr04::HcSr04>,
-    /// `(external-device id, owning peripheral bus name)` for every
-    /// `external_devices` entry attached from config. Lets the stimulus
-    /// resolver accept the device id an author wrote in system.yaml (e.g.
-    /// `fxos8700`) as a `component` selector and translate it to the owning
-    /// peripheral (`i2c1`) the input walk reports under. Empty for hand-built
-    /// buses.
-    pub input_component_aliases: Vec<(String, String)>,
     /// TM1637 4-digit 7-segment displays bit-banged over two GPIO lines. Each is
     /// driven by the CLK/DIO GPIO write-hook (`maybe_clock_tm1637`), which feeds
     /// line transitions to the display's protocol state machine. Purely
@@ -767,15 +760,29 @@ impl SystemBus {
         }
     }
 
+    /// Whether one walked device answers to `component`: its stamped
+    /// system.yaml id first (the name an author writes), falling back to the
+    /// owning peripheral's bus name.
+    fn component_matches(
+        component: Option<&str>,
+        owner: &str,
+        si: &dyn crate::sim_input::SimInput,
+    ) -> bool {
+        component.is_none_or(|c| si.component_id() == Some(c) || c == owner)
+    }
+
     /// Discover every drivable input channel across attached devices, tagged
-    /// with the owning peripheral's name — the "what can an agent drive?"
-    /// query behind `labwired_list_inputs` / the browser panel / the MCP
-    /// stimulus surface.
+    /// with the owning component — the "what can an agent drive?" query
+    /// behind `labwired_list_inputs` / the browser panel / the MCP stimulus
+    /// surface. The owner is the device's system.yaml `external_devices` id
+    /// when stamped (so discovery speaks the SAME vocabulary `set_input`'s
+    /// `component` accepts), falling back to the peripheral's bus name.
     pub fn list_inputs(&mut self) -> Vec<(String, crate::sim_input::InputChannel)> {
         let mut out = Vec::new();
         self.for_each_sim_input(&mut |name, si| {
+            let owner = si.component_id().unwrap_or(name).to_string();
             for ch in si.input_channels() {
-                out.push((name.to_string(), *ch));
+                out.push((owner.clone(), *ch));
             }
             false
         });
@@ -786,14 +793,13 @@ impl SystemBus {
     /// unique attached input device that exposes it. Generic over device type
     /// via [`crate::sim_input::SimInput`] — no per-type dispatch.
     ///
-    /// `component`, when given, narrows resolution to devices owned by the
-    /// named component — the disambiguator when two devices expose the same
-    /// channel key (e.g. two accelerometers, or `distance` on both a VL53L1X
-    /// and an HC-SR04). It accepts either the external-device id from
-    /// system.yaml (`fxos8700`, via `input_component_aliases`) or the owning
-    /// peripheral's bus name (`i2c1`) / directly-attached sensor id. Errors if
-    /// no device (or more than one, after narrowing) exposes the channel, or
-    /// the value is out of range.
+    /// `component`, when given, narrows resolution to the named device — the
+    /// disambiguator when two devices expose the same channel key (e.g. two
+    /// accelerometers on one bus, or `distance` on both a VL53L1X and an
+    /// HC-SR04). It matches the external-device id from system.yaml
+    /// (`fxos8700`, stamped onto the model at attach) or the owning
+    /// peripheral's bus name (`i2c1`). Errors if no device (or more than one,
+    /// after narrowing) exposes the channel, or the value is out of range.
     pub fn set_input(
         &mut self,
         component: Option<&str>,
@@ -801,25 +807,13 @@ impl SystemBus {
         value: f64,
     ) -> Result<(), crate::sim_input::SimInputError> {
         use crate::sim_input::SimInputError;
-        // An external-device id aliases the peripheral it is attached to. The
-        // walk reports transport-attached devices under the peripheral's bus
-        // name and bus-direct sensors under their own id, so accept a
-        // component that matches EITHER the reported owner or an id whose
-        // alias points at it.
-        let aliased_owner = component.and_then(|c| {
-            self.input_component_aliases
-                .iter()
-                .find(|(id, _)| id == c)
-                .map(|(_, owner)| owner.clone())
-        });
-        let owner_matches = |name: &str| {
-            component.is_none_or(|c| c == name) || aliased_owner.as_deref() == Some(name)
-        };
         // Count matches first so ambiguity is a typed error, not a silent
         // "first wins".
         let mut matches = 0usize;
         self.for_each_sim_input(&mut |name, si| {
-            if owner_matches(name) && si.input_channels().iter().any(|c| c.key == channel) {
+            if Self::component_matches(component, name, si)
+                && si.input_channels().iter().any(|c| c.key == channel)
+            {
                 matches += 1;
             }
             false
@@ -839,7 +833,9 @@ impl SystemBus {
         }
         let mut result = Ok(());
         self.for_each_sim_input(&mut |name, si| {
-            if owner_matches(name) && si.input_channels().iter().any(|c| c.key == channel) {
+            if Self::component_matches(component, name, si)
+                && si.input_channels().iter().any(|c| c.key == channel)
+            {
                 result = si.set_input(channel, value);
                 true
             } else {
@@ -847,6 +843,53 @@ impl SystemBus {
             }
         });
         result
+    }
+
+    /// Apply several input sets as ONE transaction: every set is resolved and
+    /// range-checked first, and only if ALL are valid are any applied — so a
+    /// multi-channel pose (an accelerometer's x/y/z, a GPS lat+lon) can never
+    /// be half-applied, and the firmware can never observe a torn update
+    /// (nothing steps between the applications). All-or-nothing: the first
+    /// error aborts the whole batch with nothing written.
+    pub fn set_inputs(
+        &mut self,
+        sets: &[(Option<&str>, &str, f64)],
+    ) -> Result<(), crate::sim_input::SimInputError> {
+        use crate::sim_input::SimInputError;
+        // Validate pass: unique resolution + range for every set.
+        for &(component, channel, value) in sets {
+            let mut matches = 0usize;
+            let mut range: Result<(), SimInputError> = Ok(());
+            self.for_each_sim_input(&mut |name, si| {
+                if Self::component_matches(component, name, si)
+                    && si.input_channels().iter().any(|c| c.key == channel)
+                {
+                    matches += 1;
+                    range = si.require_channel(channel, value).map(|_| ());
+                }
+                false
+            });
+            if matches == 0 {
+                let missing = match component {
+                    Some(c) => format!("{c}/{channel}"),
+                    None => channel.to_string(),
+                };
+                return Err(SimInputError::NoDevice(missing));
+            }
+            if matches > 1 {
+                return Err(SimInputError::Ambiguous {
+                    channel: channel.to_string(),
+                    matches,
+                });
+            }
+            range?;
+        }
+        // Apply pass — validated above, so failures here can't strand a
+        // partial batch short of a device error, which set_input surfaces.
+        for &(component, channel, value) in sets {
+            self.set_input(component, channel, value)?;
+        }
+        Ok(())
     }
 
     /// Snapshot of the universal bus-transaction trace (logic analyzer):
@@ -2053,7 +2096,6 @@ impl SystemBus {
             reset_vector_offset: 0,
             atomic_register_aliases: false,
             hcsr04: Vec::new(),
-            input_component_aliases: Vec::new(),
             tm1637: Vec::new(),
             can_diagnostic_testers: Vec::new(),
             can_uds_testers: Vec::new(),
@@ -2106,7 +2148,6 @@ impl SystemBus {
             reset_vector_offset: 0,
             atomic_register_aliases: false,
             hcsr04: Vec::new(),
-            input_component_aliases: Vec::new(),
             tm1637: Vec::new(),
             can_diagnostic_testers: Vec::new(),
             can_uds_testers: Vec::new(),
@@ -4395,7 +4436,6 @@ peripherals:
             reset_vector_offset: 0,
             atomic_register_aliases: false,
             hcsr04: Vec::new(),
-            input_component_aliases: Vec::new(),
             tm1637: Vec::new(),
             can_diagnostic_testers: Vec::new(),
             can_uds_testers: Vec::new(),
@@ -4472,7 +4512,6 @@ peripherals:
             reset_vector_offset: 0,
             atomic_register_aliases: false,
             hcsr04: Vec::new(),
-            input_component_aliases: Vec::new(),
             tm1637: Vec::new(),
             can_diagnostic_testers: Vec::new(),
             can_uds_testers: Vec::new(),
@@ -4700,7 +4739,6 @@ peripherals:
             reset_vector_offset: 0,
             atomic_register_aliases: false,
             hcsr04: Vec::new(),
-            input_component_aliases: Vec::new(),
             tm1637: Vec::new(),
             can_diagnostic_testers: Vec::new(),
             can_uds_testers: Vec::new(),
@@ -4927,7 +4965,6 @@ peripherals:
             reset_vector_offset: 0,
             atomic_register_aliases: false,
             hcsr04: Vec::new(),
-            input_component_aliases: Vec::new(),
             tm1637: Vec::new(),
             can_diagnostic_testers: Vec::new(),
             can_uds_testers: Vec::new(),
@@ -5008,7 +5045,6 @@ peripherals:
             reset_vector_offset: 0,
             atomic_register_aliases: false,
             hcsr04: Vec::new(),
-            input_component_aliases: Vec::new(),
             tm1637: Vec::new(),
             can_diagnostic_testers: Vec::new(),
             can_uds_testers: Vec::new(),

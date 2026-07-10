@@ -73,7 +73,6 @@ impl SystemBus {
             pending_schedule: Vec::new(),
             legacy_walk_disabled: false,
             hcsr04: Vec::new(),
-            input_component_aliases: Vec::new(),
             tm1637: Vec::new(),
             can_diagnostic_testers: Vec::new(),
             can_uds_testers: Vec::new(),
@@ -256,8 +255,9 @@ impl SystemBus {
                         if ext.connection != p_cfg.id {
                             continue;
                         }
-                        match crate::peripherals::components::build_i2c_device(
+                        match crate::peripherals::components::build_external_i2c_device(
                             &ext.r#type,
+                            &ext.id,
                             &ext.config,
                         ) {
                             Some(device) => {
@@ -309,8 +309,9 @@ impl SystemBus {
                         if ext.connection != p_cfg.id {
                             continue;
                         }
-                        match crate::peripherals::components::build_i2c_device(
+                        match crate::peripherals::components::build_external_i2c_device(
                             &ext.r#type,
+                            &ext.id,
                             &ext.config,
                         ) {
                             Some(device) => {
@@ -538,15 +539,6 @@ impl SystemBus {
                     spi.set_bus_trace(entry.name.clone(), trace_log.clone());
                 }
             }
-        }
-
-        // Record every external device's id → connection pairing up front
-        // (including the chip-specific i2c attaches above), so the stimulus
-        // resolver can accept the id an author wrote in system.yaml as a
-        // `component` selector regardless of which attach path handled it.
-        for ext in &manifest.external_devices {
-            bus.input_component_aliases
-                .push((ext.id.clone(), ext.connection.clone()));
         }
 
         for ext in &manifest.external_devices {

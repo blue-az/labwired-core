@@ -111,7 +111,11 @@ pub fn try_build(
                 if ext.connection != p_cfg.id {
                     continue;
                 }
-                match crate::peripherals::components::build_i2c_device(&ext.r#type, &ext.config) {
+                match crate::peripherals::components::build_external_i2c_device(
+                    &ext.r#type,
+                    &ext.id,
+                    &ext.config,
+                ) {
                     Some(device) => {
                         tracing::info!(
                             "twim attach: '{}' (type={}) -> '{}'",
@@ -143,9 +147,11 @@ pub fn try_build(
                     continue;
                 }
                 // Try I²C device first.
-                if let Some(device) =
-                    crate::peripherals::components::build_i2c_device(&ext.r#type, &ext.config)
-                {
+                if let Some(device) = crate::peripherals::components::build_external_i2c_device(
+                    &ext.r#type,
+                    &ext.id,
+                    &ext.config,
+                ) {
                     tracing::info!(
                         "serial-instance i2c attach: '{}' (type={}) -> '{}'",
                         ext.id,

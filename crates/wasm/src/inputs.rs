@@ -27,9 +27,42 @@ impl WasmSimulator {
             .map_err(|e| JsValue::from_str(&e.to_string()))
     }
 
+    /// Apply several input sets as ONE atomic transaction. `sets` is a JSON
+    /// array of `{channel, value, component?}`; every set is validated first
+    /// and either all apply or none do, with no simulation steps in between —
+    /// the way to drive a multi-channel pose (an IMU's x/y/z, a GPS lat+lon)
+    /// without the firmware observing a torn update, especially from a
+    /// worker-engine bridge where single calls interleave with execution.
+    #[wasm_bindgen]
+    pub fn set_inputs(&mut self, sets: JsValue) -> Result<(), JsValue> {
+        #[derive(serde::Deserialize)]
+        struct InputSet {
+            channel: String,
+            value: f64,
+            #[serde(default)]
+            component: Option<String>,
+        }
+        let sets: Vec<InputSet> =
+            serde_wasm_bindgen::from_value(sets).map_err(|e| JsValue::from_str(&e.to_string()))?;
+        let machine = self
+            .machine
+            .as_mut()
+            .ok_or_else(|| JsValue::from_str("simulator not initialized"))?;
+        let refs: Vec<(Option<&str>, &str, f64)> = sets
+            .iter()
+            .map(|s| (s.component.as_deref(), s.channel.as_str(), s.value))
+            .collect();
+        machine
+            .set_inputs(&refs)
+            .map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
     /// Discover the drivable input channels on the running machine, as JSON:
-    /// `[{"peripheral":"i2c1","key":"x","label":"X","unit":"g","min":-2,"max":2}, …]`.
-    /// The "what can I drive?" query an agent calls before `set_input`.
+    /// `[{"peripheral":"imu","key":"ax","label":"Accel X","unit":"g","min":-16,"max":16}, …]`.
+    /// `peripheral` is the system.yaml external-device id when stamped (the
+    /// same name `set_input`'s component selector accepts), else the owning
+    /// peripheral's bus name. The "what can I drive?" query an agent calls
+    /// before `set_input`.
     #[wasm_bindgen]
     pub fn list_inputs(&mut self) -> Result<JsValue, JsValue> {
         let machine = self

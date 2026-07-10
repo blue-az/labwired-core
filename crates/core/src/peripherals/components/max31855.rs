@@ -31,6 +31,9 @@ pub struct Max31855 {
     pub fault: bool,
     /// Position within the 4-byte response (0..3). Reset on CS select.
     byte_index: u8,
+    /// system.yaml `external_devices` id, stamped at attach (see
+    /// [`crate::sim_input::SimInput::component_id`]).
+    component_id: Option<String>,
 }
 
 impl Max31855 {
@@ -42,6 +45,7 @@ impl Max31855 {
             internal_temp_q12: 352, // 22.0 × 16
             fault: false,
             byte_index: 0,
+            component_id: None,
         }
     }
 
@@ -147,6 +151,13 @@ impl crate::sim_input::SimInput for Max31855 {
         }
         Ok(())
     }
+    fn component_id(&self) -> Option<&str> {
+        self.component_id.as_deref()
+    }
+
+    fn set_component_id(&mut self, id: String) {
+        self.component_id = Some(id);
+    }
 }
 
 // ─── PeripheralKit registration ────────────────────────────────────────────
@@ -187,8 +198,10 @@ impl PeripheralKit for Max31855Kit {
     }
     fn attach(&self, ctx: &mut AttachCtx<'_>) -> anyhow::Result<()> {
         let cs_pin = ctx.config_str("cs_pin").unwrap_or("PA4").to_string();
+        let mut dev = Max31855::new(cs_pin);
+        crate::sim_input::SimInput::set_component_id(&mut dev, ctx.device_id().to_string());
         let spi = ctx.spi()?;
-        spi.attach(Box::new(Max31855::new(cs_pin)));
+        spi.attach(Box::new(dev));
         Ok(())
     }
 }

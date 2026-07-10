@@ -28,6 +28,9 @@ pub struct Neo6mGps {
     time_since_last_sentence_us: u32,
     /// Round-robin sentence type counter so we emit GGA, RMC alternately.
     sentence_index: u8,
+    /// system.yaml `external_devices` id, stamped at attach (see
+    /// [`crate::sim_input::SimInput::component_id`]).
+    component_id: Option<String>,
 }
 
 impl Default for Neo6mGps {
@@ -46,6 +49,7 @@ impl Neo6mGps {
             out_queue: VecDeque::new(),
             time_since_last_sentence_us: 0,
             sentence_index: 0,
+            component_id: None,
         }
     }
 
@@ -213,6 +217,13 @@ impl crate::sim_input::SimInput for Neo6mGps {
         }
         Ok(())
     }
+    fn component_id(&self) -> Option<&str> {
+        self.component_id.as_deref()
+    }
+
+    fn set_component_id(&mut self, id: String) {
+        self.component_id = Some(id);
+    }
 }
 
 // ─── PeripheralKit registration ────────────────────────────────────────────
@@ -262,11 +273,12 @@ impl PeripheralKit for Neo6mGpsKit {
         let lat = ctx.config_f64("lat_deg");
         let lon = ctx.config_f64("lon_deg");
 
-        let uart = ctx.uart()?;
         let mut gps = Neo6mGps::new();
         if let (Some(lat), Some(lon)) = (lat, lon) {
             gps.set_position(lat, lon);
         }
+        crate::sim_input::SimInput::set_component_id(&mut gps, ctx.device_id().to_string());
+        let uart = ctx.uart()?;
         uart.attach_stream(Box::new(gps));
         Ok(())
     }
