@@ -154,10 +154,17 @@ fn mid_batch_read_staleness_is_bounded_by_interval() {
     let queries = [50u64, 65, 100, 130, 199, 200];
     let golden = walk_reference(&queries, 200);
     let sched = scheduler_reads(&queries, interval);
-    for (i, (&c, (&g, &s))) in queries.iter().zip(golden.iter().zip(sched.iter())).enumerate() {
+    for (i, (&c, (&g, &s))) in queries
+        .iter()
+        .zip(golden.iter().zip(sched.iter()))
+        .enumerate()
+    {
         // The scheduler read never runs ahead of the walk, and trails it by
         // strictly less than one interval — the documented "< one tick" bound.
-        assert!(s <= g, "query[{i}] c={c}: scheduler read {s} ran ahead of walk {g}");
+        assert!(
+            s <= g,
+            "query[{i}] c={c}: scheduler read {s} ran ahead of walk {g}"
+        );
         assert!(
             g - s < interval,
             "query[{i}] c={c}: staleness {} exceeds interval {interval}",
@@ -166,6 +173,9 @@ fn mid_batch_read_staleness_is_bounded_by_interval() {
         // And the stale value equals the walk value AT the batch-start cycle —
         // i.e. exact quantization to the tick grid, no drift.
         let batch_start = (c / interval) * interval;
-        assert_eq!(s, batch_start, "query[{i}] c={c}: read must equal batch-start counter");
+        assert_eq!(
+            s, batch_start,
+            "query[{i}] c={c}: read must equal batch-start counter"
+        );
     }
 }
