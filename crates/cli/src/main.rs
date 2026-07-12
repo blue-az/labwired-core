@@ -865,6 +865,10 @@ fn run_two_c3_wifi(
                 uart.set_stdout_prefix(label);
             }
         }
+        // `attach_to_medium` flips the MAC's `needs_bus_tick()` on (medium
+        // stations poll their inbox + beacon each tick) but is a non-MMIO
+        // toggle, so rebuild the bus tick-index once to make the MAC resident.
+        m.bus.refresh_peripheral_index();
     }
 
     let limit = args.max_steps.unwrap_or(u64::MAX);
