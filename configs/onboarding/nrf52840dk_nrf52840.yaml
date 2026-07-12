@@ -17,6 +17,6 @@ validation:
     system_manifest: true
     chip_descriptor: true
     simulation: true
-  timestamp_utc: '2026-07-05T09:39:45.772368+00:00'
-  run_url: https://github.com/blue-az/labwired-core/actions/runs/28736460651/attempts/1
+  timestamp_utc: '2026-07-12T03:36:23.904068+00:00'
+  run_url: https://github.com/blue-az/labwired-core/actions/runs/29178411399/attempts/1
   artifacts_url: https://github.com/w1ne/labwired-core/blob/main/docs/boards/nrf52840dk_nrf52840.md
