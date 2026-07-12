@@ -276,6 +276,37 @@ impl SystemBus {
     }
 
     pub(crate) fn sync_esp32c3_irq_cache_write(&mut self, idx: usize, offset: u64) {
+        // Walk-free de-assert glue (the last-walker bus addition): once the C3
+        // bus is walk-DELETED (every peripheral migrated → `legacy_walk_disabled`)
+        // the per-cycle walk no longer re-derives scheduler-driven peripheral
+        // LEVELS each tick (`aggregate_esp32c3_irqs` stops running on the trivial
+        // tick path). A write-armed level — an INT_RAW set by a transaction, or
+        // the MAC event, and above all the acknowledge that CLEARS it
+        // (INT_CLR / EVENT_CLR) — must therefore re-derive the routed line mask
+        // AT THE WRITE, or a level would latch forever and re-enter its ISR. Do
+        // it here, at the shared MMIO write choke, but ONLY for a
+        // scheduler-driven peripheral (an ordinary register write pays nothing).
+        //
+        // Gated on `legacy_walk_disabled`: on a walk-ON bus the per-tick
+        // aggregation already owns level derivation and `esp32c3_asserted_sources`
+        // carries the walk-emitted sources — recomputing mid-instruction from
+        // that (stale until the next tick rebuilds it) would perturb routing, so
+        // the choke stays off there. On a walk-DELETED bus the walk never runs,
+        // so `esp32c3_asserted_sources` is inert and the recompute is the clean,
+        // authoritative level derivation. `recompute_esp32c3_irq_lines` also
+        // no-ops without the INTC cache, keeping this inert on hand-built buses.
+        #[cfg(feature = "event-scheduler")]
+        if self.legacy_walk_disabled
+            && self.esp32c3_irq_routing
+            && self
+                .peripherals
+                .get(idx)
+                .is_some_and(|p| p.dev.uses_scheduler())
+        {
+            self.refresh_esp32c3_sched_sources();
+            self.recompute_esp32c3_irq_lines();
+        }
+
         if self.esp32c3_irq_cache.is_none() {
             return;
         }
