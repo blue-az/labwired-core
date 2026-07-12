@@ -26,6 +26,17 @@ pub mod xtensa_jit;
 // pulling in wasmtime.
 pub mod xtensa_jit_bytes;
 
+// Speed plan Phase 2 (#124 follow-on): ISA-agnostic universal-dispatch JIT
+// framework. This is the shared, architecture-neutral scaffold — block
+// cache, side-exit protocol, per-ISA frontend trait, native/browser
+// runtime abstraction, interpreter-fallback hooks, and the differential
+// harness. It carries NO per-ISA codegen: the only frontend is a
+// passthrough that side-exits every block to the interpreter. Gated behind
+// `jit-framework` so default and existing builds are unaffected. See
+// `docs/engineering/universal-jit-framework.md`.
+#[cfg(feature = "jit-framework")]
+pub mod jit_framework;
+
 pub use cortex_m::CortexM;
 pub use riscv::RiscV;
 pub use xtensa_lx7::XtensaLx7;
