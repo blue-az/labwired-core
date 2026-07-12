@@ -49,6 +49,7 @@ pub mod differential;
 pub mod dispatch;
 pub mod fallback;
 pub mod frontend;
+pub mod riscv;
 pub mod runtime;
 pub mod side_exit;
 
