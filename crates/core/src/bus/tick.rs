@@ -1026,9 +1026,7 @@ mod walk_free_campaign {
     /// countdown engine is the part that cannot.) Remaining plan Class-B on this
     /// bus: 3 i2c + adc + exti + bxcan.
     #[cfg(feature = "event-scheduler")]
-    const EXPECTED_WALK_FORCING: &[&str] = &[
-        "i2c1", "i2c2", "i2c3", "adc1", "exti", "can1",
-    ];
+    const EXPECTED_WALK_FORCING: &[&str] = &["i2c1", "i2c2", "i2c3", "adc1", "exti", "can1"];
 
     /// Featureless builds: the scheduler does not exist, so SysTick and SCB
     /// stay on the legacy walk — the full post-B0 set of 22.

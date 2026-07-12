@@ -167,8 +167,24 @@ fn load_firmware_memcpy(bus: &mut SystemBus) {
         bus,
         0x40,
         &[
-            0x4808, 0x4909, 0x6001, 0x4809, 0x4909, 0x6101, 0x4909, 0x6141, 0x2100 | (N as u16),
-            0x60C1, 0x4908, 0x6081, 0x4A08, 0x2300, 0x3301, 0x6013, 0x6804, 0xE7FB,
+            0x4808,
+            0x4909,
+            0x6001,
+            0x4809,
+            0x4909,
+            0x6101,
+            0x4909,
+            0x6141,
+            0x2100 | (N as u16),
+            0x60C1,
+            0x4908,
+            0x6081,
+            0x4A08,
+            0x2300,
+            0x3301,
+            0x6013,
+            0x6804,
+            0xE7FB,
         ],
     );
     write_word(bus, 0x64, NVIC_ISER0);
@@ -176,7 +192,11 @@ fn load_firmware_memcpy(bus: &mut SystemBus) {
     write_word(bus, 0x6C, DMA_BASE);
     write_word(bus, 0x70, DST_ADDR);
     write_word(bus, 0x74, SRC_ADDR);
-    write_word(bus, 0x78, (1 << 0) | (1 << 1) | (1 << 4) | (1 << 6) | (1 << 7) | (1 << 14));
+    write_word(
+        bus,
+        0x78,
+        (1 << 0) | (1 << 1) | (1 << 4) | (1 << 6) | (1 << 7) | (1 << 14),
+    );
     write_word(bus, 0x7C, MAIN_COUNT_ADDR as u32);
     load_isr(bus);
     fill_source(bus);
@@ -222,12 +242,7 @@ fn run_probed(machine: &mut Machine<CortexM>, entry: u32, steps: u64) -> Vec<Pro
     probes
 }
 
-fn run_differential(
-    load: fn(&mut SystemBus),
-    steps: u64,
-    interval: u32,
-    what: &str,
-) -> Vec<Probe> {
+fn run_differential(load: fn(&mut SystemBus), steps: u64, interval: u32, what: &str) -> Vec<Probe> {
     let mut walk = build_machine(false, interval);
     load(&mut walk.bus);
     let walk_probes = run_probed(&mut walk, 0x40, steps);
@@ -255,8 +270,12 @@ fn run_differential(
 #[test]
 fn mem2mem_memcpy_tcie_firmware_is_byte_identical_at_interval_1() {
     const STEPS: u64 = 800;
-    let walk_probes =
-        run_differential(load_firmware_memcpy, STEPS, 1, "DMA mem2mem memcpy firmware (interval 1)");
+    let walk_probes = run_differential(
+        load_firmware_memcpy,
+        STEPS,
+        1,
+        "DMA mem2mem memcpy firmware (interval 1)",
+    );
     let last = walk_probes.last().unwrap();
     assert_eq!(last.isr_count, 1, "reference must take exactly one TC ISR");
     assert!(last.main_count > 100, "main loop must run");
@@ -296,7 +315,13 @@ fn mem2mem_memcpy_is_byte_identical_at_interval_64() {
         walk_probe, sched_probe,
         "interval-64 batched run: final state diverged (walk vs scheduler)"
     );
-    assert_eq!(walk_probe.isr_count, 1, "the TC ISR must fire once at interval 64");
+    assert_eq!(
+        walk_probe.isr_count, 1,
+        "the TC ISR must fire once at interval 64"
+    );
     let expected: Vec<u8> = (0..N).map(|i| 0xA0u8 ^ (i as u8).wrapping_mul(7)).collect();
-    assert_eq!(walk_probe.dst, expected, "mem2mem copies the source bytes at interval 64");
+    assert_eq!(
+        walk_probe.dst, expected,
+        "mem2mem copies the source bytes at interval 64"
+    );
 }

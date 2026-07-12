@@ -707,11 +707,11 @@ mod tests {
         fn mem2mem_self_paced_transfer_walk_identity() {
             // CH1 mem2mem, 6 elements, MINC|PINC — self-drains one per cycle.
             let script = [
-                (1u64, Op::Write(0x0C, 6)),          // CNDTR = 6
-                (1, Op::Write(0x14, 0x2000_0000)),   // CMAR (src)
-                (1, Op::Write(0x10, 0x2000_0100)),   // CPAR (dst)
+                (1u64, Op::Write(0x0C, 6)),        // CNDTR = 6
+                (1, Op::Write(0x14, 0x2000_0000)), // CMAR (src)
+                (1, Op::Write(0x10, 0x2000_0100)), // CPAR (dst)
                 (1, Op::Write(0x08, en_mem2mem(true))),
-                (20, Op::Write(0x04, 0xFFFF_FFFF)),  // IFCR clear-all mid-idle
+                (20, Op::Write(0x04, 0xFFFF_FFFF)), // IFCR clear-all mid-idle
             ];
             assert_walk_identical(&script, 40, "mem2mem 6-element self-paced");
         }
@@ -736,11 +736,14 @@ mod tests {
             // request drives one more — the walk sets `active` on the request,
             // services it the next tick; the event path arms a delay-0 event.
             let script = [
-                (1u64, Op::Write(0x0C, 5)),          // CNDTR = 5
-                (1, Op::Write(0x14, 0x2000_0000)),   // CMAR
-                (1, Op::Write(0x10, 0x2000_0100)),   // CPAR
+                (1u64, Op::Write(0x0C, 5)),        // CNDTR = 5
+                (1, Op::Write(0x14, 0x2000_0000)), // CMAR
+                (1, Op::Write(0x10, 0x2000_0100)), // CPAR
                 // EN|DIR(mem->periph)|MINC|TCIE — no MEM2MEM.
-                (1, Op::Write(0x08, (1 << 0) | (1 << 4) | (1 << 7) | (1 << 1))),
+                (
+                    1,
+                    Op::Write(0x08, (1 << 0) | (1 << 4) | (1 << 7) | (1 << 1)),
+                ),
                 (6, Op::Request(1)),
                 (10, Op::Request(1)),
                 (14, Op::Request(1)),
@@ -769,13 +772,13 @@ mod tests {
             // Two mem2mem channels running at once: both transfer the same
             // cycle in the walk; two independent event chains in scheduler mode.
             let script = [
-                (1u64, Op::Write(0x0C, 5)),          // CH1 CNDTR
-                (1, Op::Write(0x14, 0x2000_0000)),   // CH1 CMAR
-                (1, Op::Write(0x10, 0x2000_0100)),   // CH1 CPAR
+                (1u64, Op::Write(0x0C, 5)),        // CH1 CNDTR
+                (1, Op::Write(0x14, 0x2000_0000)), // CH1 CMAR
+                (1, Op::Write(0x10, 0x2000_0100)), // CH1 CPAR
                 (1, Op::Write(0x08, en_mem2mem(true))),
-                (1, Op::Write(0x20, 4)),             // CH2 CNDTR (0x08 + 20 + 0x04)
-                (1, Op::Write(0x28, 0x2000_0200)),   // CH2 CMAR
-                (1, Op::Write(0x24, 0x2000_0300)),   // CH2 CPAR
+                (1, Op::Write(0x20, 4)), // CH2 CNDTR (0x08 + 20 + 0x04)
+                (1, Op::Write(0x28, 0x2000_0200)), // CH2 CMAR
+                (1, Op::Write(0x24, 0x2000_0300)), // CH2 CPAR
                 (1, Op::Write(0x1C, en_mem2mem(true))), // CH2 CCR
             ];
             assert_walk_identical(&script, 20, "two concurrent mem2mem channels");
