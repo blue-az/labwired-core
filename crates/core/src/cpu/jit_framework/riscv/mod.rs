@@ -317,12 +317,13 @@ impl IsaFrontend for RiscVFrontend {
             return Err(FrontendRefusal::PcOutOfRange);
         }
 
-        // Chunk C: if the entry instruction is integer-ALU, emit real wasm
-        // for the maximal ALU prefix. The block runs that prefix and
-        // side-exits (fall-through Chain) to `end_pc`, where the interpreter
-        // (or a future compiled block) picks up the first non-ALU
-        // instruction.
-        if let Some(blk) = emit::emit_alu_block(pc, code) {
+        // Chunks C+D: emit real wasm for the maximal ALU prefix at `pc`,
+        // ended by one control-flow terminator (branch/jump) when present.
+        // An ALU-only block side-exits with the fall-through Chain to
+        // `end_pc`; a terminator block resolves its next PC in wasm and
+        // side-exits with the dynamic Chain. Only an entry the emitter can
+        // model neither ALU nor terminator falls through to the all-bail walk.
+        if let Some(blk) = emit::emit_block(pc, code) {
             return Ok(BlockPlan {
                 entry_pc: pc,
                 end_pc: blk.end_pc,
@@ -502,33 +503,38 @@ mod tests {
     }
 
     #[test]
-    fn translate_block_emits_alu_prefix() {
-        // addi x1,x0,1 ; jal x0,0 (self-loop terminator). Chunk C emits the
-        // addi and stops before the jal (chunk D territory).
+    fn translate_block_emits_alu_prefix_and_terminator() {
+        // addi x1,x0,1 ; jal x0,0 (self-loop terminator). Chunks C+D emit the
+        // addi AND the jal terminator as one block.
         let mut prog = Vec::new();
         w(&mut prog, 0x0010_0093); // addi x1,x0,1
         w(&mut prog, 0x0000_006f); // jal x0,0
         let view = CodeView::new(BASE, &prog);
         let plan = RiscVFrontend::new().translate_block(BASE, &view).unwrap();
-        assert!(!plan.is_stub(), "ALU entry now emits real wasm");
+        assert!(!plan.is_stub(), "ALU + terminator emits real wasm");
         assert_eq!(plan.entry_pc, BASE);
-        assert_eq!(plan.instr_count, 1, "only the addi; jal excluded");
-        assert_eq!(plan.end_pc, BASE + 4, "ends before the jal");
+        assert_eq!(plan.instr_count, 2, "the addi and the jal terminator");
+        assert_eq!(plan.end_pc, BASE + 8, "spans through the jal");
         assert_eq!(plan.exits.len(), 1);
-        assert_eq!(plan.exits[0].wire_code, emit::WIRE_FALL_THROUGH);
+        assert_eq!(plan.exits[0].wire_code, emit::WIRE_CHAIN_DYNAMIC);
         assert_eq!(&plan.code[0..4], &[0x00, 0x61, 0x73, 0x6d], "wasm magic");
     }
 
     #[test]
-    fn translate_block_non_alu_entry_falls_back_to_stub() {
-        // Entry is a jump (chunk D) → no ALU prefix, so the foundation's
-        // all-bail metadata plan is produced.
+    fn translate_block_terminator_only_entry_emits_dynamic_chain() {
+        // Entry is a jump (chunk D) with no ALU prefix → a terminator-only
+        // compiled block that resolves its next PC in wasm.
         let mut prog = Vec::new();
         w(&mut prog, 0x0000_006f); // jal x0,0
         let view = CodeView::new(BASE, &prog);
         let plan = RiscVFrontend::new().translate_block(BASE, &view).unwrap();
-        assert!(plan.is_stub(), "non-ALU entry stays all-bail");
+        assert!(
+            !plan.is_stub(),
+            "a branch/jump entry now compiles (chunk D)"
+        );
         assert_eq!(plan.instr_count, 1);
+        assert_eq!(plan.end_pc, BASE + 4);
+        assert_eq!(plan.exits[0].wire_code, emit::WIRE_CHAIN_DYNAMIC);
         assert_eq!(plan.exits[0].reason, BailReason::PartialBlock);
     }
 
