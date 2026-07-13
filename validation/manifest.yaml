@@ -289,6 +289,46 @@ boards:
     # oled_lab_spi2_apb_saradc_walk_on_vs_scheduler_is_byte_identical (serial +
     # total_cycles + SSD1306 framebuffer at interval 1/64). Register map, reset values,
     # INT/one-shot semantics unchanged; reset oracle unaffected. No live re-capture.
+    # 2026-07-12: ledc (esp32c3/ledc.rs) walk-free migration — the MEDIUM timer port.
+    # Unlike the level-only pair, LEDC is a genuine timer: its four low-speed up-counters
+    # advance and latch LSTIMERx_OVF over time. Migrated off the per-cycle walk with
+    # uses_scheduler + attach_cycle_clock: the counters advance LAZILY in closed form off
+    # the bus-published CycleClock (fresh on every &self read / write-path sync_to / level
+    # poll) and each overflow rides a SCHEDULED event (take_scheduled_events arms the
+    # nearest wrap; on_event materialises the latch at its exact cycle, re-arms the
+    # successor, arm-token kills a stale chain on reconfig), with the level exported via
+    # matrix_irq_sources. All model quirks preserved (RST/PAUSE freeze, 2^DUTY_RES wrap
+    # clamped to 14 bits, integer CLK_DIV divider, sticky W1C OVF latch). Proven
+    # byte-identical to the walk by committed differentials: the in-module scheduler_mode
+    # walk-identity gates (all four counters + INT_RAW + OVF level-assert cycles at
+    # interval 1, plus interval-64 batched + the no-poll event-delivery gate) and the
+    # bus-level c3_ledc_matrix_routing (walk aggregation vs scheduler routing produce the
+    # same riscv_irq_lines for LEDC source 23; force_legacy_walk re-emits the same source;
+    # INT_CLR de-asserts). Register map, reset values and MMIO byte paths unchanged; reset
+    # oracle unaffected. No live re-capture. Remaining C3 walk pinner: wifi_mac only.
+    # 2026-07-12: wifi_mac (esp32c3/wifi_mac.rs) walk-free migration — the LAST C3 walk
+    # pinner, on TWO axes. (1) The MAC interrupt LEVEL (matrix source 0, asserted while a
+    # MAC event is pending) migrates off the walk with uses_scheduler + a matrix_irq_sources
+    # export (the level-only pattern); on a walk-DELETED bus the write-armed EVENT_CLR
+    # acknowledge is re-derived at the MMIO write choke (sync_esp32c3_irq_cache_write, gated
+    # on legacy_walk_disabled) so the level de-asserts without a walk tick. (2) The
+    # descriptor-ring PUMP (tick_with_bus) is honestly gated: needs_bus_tick() is now true
+    # only while WiFi is up (rx_ring != 0 / a pending TX / medium mode) instead of
+    # unconditionally, so an idle MAC (WiFi off — the OLED demo never enables WiFi) arms
+    # nothing and the bus is walk-DELETABLE. No new event machinery: the pump rides the
+    # existing write-armed, self-perpetuating bus-tick path (refresh_bus_tick_index). The
+    # WiFi frame-moving model is byte-for-byte preserved (no thunk change). Proven
+    # byte-identical to the walk by committed differentials: the WiFi-exercising pump
+    # differential c3_wifi_mac_walk_differential (TX ring + RX ring delivery byte-identical
+    # walk-vs-scheduler at interval 1 AND 64, non-vacuity = frames moved) + the direct
+    # IRQ-delivery gate c3_wifi_mac_matrix_routing (walk aggregation vs scheduler routing
+    # produce the same riscv_irq_lines for MAC source 0; force_legacy_walk re-emits the same
+    # source; EVENT_CLR de-asserts at the write choke on a walk-deleted bus) + the OLED
+    # rom-boot lab (serial + total_cycles + SSD1306 framebuffer byte-identical at interval 1
+    # and the now-unlocked interval 64). THE UNLOCK: with wifi_mac migrated the C3 OLED
+    # rom-boot bus derives walk-DELETED, EXPECTED_PINNERS is empty, and max_safe_tick_interval
+    # rises to 64 (native OLED-lab throughput ~5.2 → ~16.2 MIPS). Register map, reset values
+    # and MMIO byte paths unchanged; reset oracle unaffected. No live re-capture.
     drift_ack: 2026-07-12
 
   - id: nucleo-l476rg
