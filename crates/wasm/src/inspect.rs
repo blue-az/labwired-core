@@ -150,9 +150,9 @@ impl WasmSimulator {
         serde_wasm_bindgen::to_value(&out).unwrap_or(JsValue::NULL)
     }
 
-    /// Drain logic edges captured since `cursor`. Pass `0` right after
-    /// [`watch_logic_signals`], then pass back the returned `cursor` to receive
-    /// only newer edges.
+    /// Read logic edges captured since `cursor`. Pass `0` right after
+    /// [`watch_logic_signals`], then pass back the returned `cursor` to
+    /// acknowledge those retained edges and receive only newer ones.
     ///
     /// Returns `{ cursor, dropped, nowCycle, edges: [{ ch, cycle, value }] }`:
     /// - `cursor` — monotonic edge sequence number to pass back next time.
@@ -163,8 +163,8 @@ impl WasmSimulator {
     /// Cycles are emitted as JS numbers (f64), matching the sub-2^53 engine
     /// cycle counts the playground runs to.
     #[wasm_bindgen]
-    pub fn read_logic_edges(&self, cursor: f64) -> JsValue {
-        let machine = self.machine.as_ref().unwrap();
+    pub fn read_logic_edges(&mut self, cursor: f64) -> JsValue {
+        let machine = self.machine.as_mut().unwrap();
         let batch = machine.logic_read_edges(cursor as u64);
         let edges: Vec<serde_json::Value> = batch
             .edges

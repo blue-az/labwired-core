@@ -53,8 +53,8 @@
 //! The capture guarantee: any pad level that persists across at least one
 //! instruction boundary is captured — no aliasing, at any toggle rate. A pad
 //! toggling every cycle yields an edge every cycle (and fills the ring in
-//! [`LOGIC_RING_CAPACITY`] cycles if never drained; overflow drops the OLDEST
-//! edges and counts them, it never distorts the newest). Earlier versions
+//! [`LOGIC_RING_CAPACITY`] cycles if never acknowledged; overflow drops the
+//! OLDEST edges and counts them, it never distorts the newest). Earlier versions
 //! sampled on a fixed 16-cycle grid, which aliased anything toggling faster
 //! than ~32 cycles — bit-banged buses looked wrong before they looked dropped.
 //!
@@ -70,7 +70,8 @@ use std::sync::{Arc, Mutex};
 /// Maximum number of edges retained in the ring buffer. On overflow the oldest
 /// edge is dropped (and counted) so capture never grows without bound. 64k
 /// edges is ~10 s of a steadily toggling 100 kHz signal on a single channel
-/// before the UI must drain — far more than any interactive poll interval.
+/// before the UI must acknowledge a read — far more than any interactive poll
+/// interval.
 pub const LOGIC_RING_CAPACITY: usize = 64 * 1024;
 
 /// A single recorded logic transition.
@@ -225,13 +226,13 @@ impl LogicTap {
     }
 }
 
-/// Result of draining the edge ring from a caller cursor.
+/// Result of reading the edge ring from a caller cursor.
 pub struct LogicEdgeBatch {
-    /// Monotonic edge sequence number to pass back on the next read to receive
-    /// only newer edges.
+    /// Monotonic edge sequence number to pass back on the next read. Doing so
+    /// acknowledges all retained edges before it and receives only newer ones.
     pub cursor: u64,
-    /// Cumulative count of edges dropped to ring-buffer overflow since the watch
-    /// set was installed.
+    /// Cumulative count of edges dropped to ring-buffer overflow since the
+    /// watch set was installed. Acknowledging an edge never increments this.
     pub dropped: u64,
     /// New edges since the caller's cursor, oldest first.
     pub edges: Vec<LogicEdge>,
@@ -395,13 +396,20 @@ impl LogicCapture {
         self.next_seq += 1;
     }
 
-    /// Drain edges newer than `cursor`. Pass `0` on the first read (right after
-    /// `watch`); pass back the returned `cursor` thereafter. Edges older than
-    /// the retained window (dropped to overflow) are silently skipped — the
-    /// `dropped` count reflects the loss.
-    pub fn read_edges(&self, cursor: u64) -> LogicEdgeBatch {
+    /// Read edges newer than `cursor`. Pass `0` on the first read (right after
+    /// `watch`); pass back the returned `cursor` thereafter to acknowledge all
+    /// retained edges before it and free their capacity. A stale cursor sees
+    /// only the still-retained window; a future cursor is clamped to the newest
+    /// recorded edge. Edges lost to capacity overflow are silently skipped —
+    /// `dropped` reflects that loss.
+    pub fn read_edges(&mut self, cursor: u64) -> LogicEdgeBatch {
+        let retained_base = self.next_seq - self.ring.len() as u64;
+        let acknowledge_to = cursor.max(retained_base).min(self.next_seq);
+        let acknowledged = (acknowledge_to - retained_base) as usize;
+        self.ring.drain(..acknowledged);
+
         let base = self.next_seq - self.ring.len() as u64;
-        let start = cursor.max(base);
+        let start = cursor.max(base).min(self.next_seq);
         let skip = (start - base) as usize;
         let edges = self.ring.iter().skip(skip).copied().collect();
         LogicEdgeBatch {
