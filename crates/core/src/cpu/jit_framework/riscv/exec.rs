@@ -49,10 +49,16 @@ use super::super::frontend::BlockPlan;
 use super::super::side_exit::{BailReason, SideExit};
 use super::super::{CodeView, Pc};
 use super::emit::{
-    MemBinding, FAULT_PC_SLOT, FAULT_RETIRED_SLOT, RAM_WINDOW_OFF, RES_FLAG_SLOT,
-    WIRE_FALL_THROUGH, WIRE_MEM_FAULT,
+    MemBinding, FAULT_PC_SLOT, FAULT_RETIRED_SLOT, NEXT_PC_SLOT, RAM_WINDOW_OFF, RES_FLAG_SLOT,
+    WIRE_CHAIN_DYNAMIC, WIRE_FALL_THROUGH, WIRE_MEM_FAULT,
 };
 use super::RiscVFrontend;
+
+/// Bytes synced between the guest register file and the imported memory each
+/// block run: `x0..x31` (`128`) plus the one-word dynamic next-PC slot
+/// ([`NEXT_PC_SLOT`]) a [`WIRE_CHAIN_DYNAMIC`] block writes its resolved
+/// continuation address to.
+const REG_SYNC_BYTES: usize = NEXT_PC_SLOT as usize + 4;
 
 /// One instantiated, runnable compiled block: its own `wasmtime` store, the
 /// imported memory (register file + optional guest-RAM window), and the
@@ -86,8 +92,14 @@ impl CompiledBlock {
     /// Returns the resolved [`SideExit`], the number of guest instructions the
     /// block retired, and whether the caller must clear `cpu.reservation`
     /// (a store executed inline). `ram` is ignored for pure-ALU blocks.
+    ///
+    /// The `bytes` buffer syncs the union of the register file (`x0..x31`) and
+    /// the one-word dynamic next-PC slot ([`NEXT_PC_SLOT`], word 32) a
+    /// [`WIRE_CHAIN_DYNAMIC`] block writes its resolved continuation to; the
+    /// memory-fault control slots (words 33/34/35) and the guest-RAM window
+    /// (byte [`RAM_WINDOW_OFF`]) are synced separately below.
     pub fn run(&mut self, x: &mut [u32; 32], ram: &mut [u8]) -> (SideExit, u32, bool) {
-        let mut bytes = [0u8; 128];
+        let mut bytes = [0u8; REG_SYNC_BYTES];
         for (i, w) in x.iter().enumerate() {
             bytes[i * 4..i * 4 + 4].copy_from_slice(&w.to_le_bytes());
         }
@@ -136,12 +148,23 @@ impl CompiledBlock {
         }
 
         let (exit, n) = match wire {
+            // Straight-line prefix (ALU + in-window loads/stores) ran through:
+            // chain to the static end PC.
             WIRE_FALL_THROUGH => (
                 SideExit::Chain {
                     next_pc: self.end_pc,
                 },
                 self.instr_count,
             ),
+            // A branch/jump terminator resolved its continuation in wasm and
+            // wrote it to the next-PC slot (word 32); chain there. The
+            // terminator itself is retired, so the whole block count applies.
+            WIRE_CHAIN_DYNAMIC => {
+                let s = NEXT_PC_SLOT as usize;
+                let next_pc =
+                    u32::from_le_bytes([bytes[s], bytes[s + 1], bytes[s + 2], bytes[s + 3]]) as Pc;
+                (SideExit::Chain { next_pc }, self.instr_count)
+            }
             // Memory fault mid-block: the faulting load/store published its own
             // PC and the count of instructions retired before it. The
             // interpreter resumes there to perform the real (MMIO) access.

@@ -341,10 +341,12 @@ impl RiscVFrontend {
             return Err(FrontendRefusal::PcOutOfRange);
         }
 
-        // Chunks C+E: emit real wasm for the maximal ALU + load/store prefix.
-        // The block runs that prefix and either falls through (Chain to
-        // `end_pc`) or, on an out-of-window access, side-exits with a memory
-        // fault at the faulting instruction.
+        // Chunks C+D+E: emit real wasm for the maximal ALU + load/store prefix,
+        // optionally ended by one control-flow terminator (branch/jump). The
+        // block runs that prefix and either (a) falls through (Chain to
+        // `end_pc`), (b) resolves a terminator's next PC in wasm and side-exits
+        // with the dynamic Chain, or (c) on an out-of-window access, side-exits
+        // with a memory fault at the faulting instruction.
         if let Some(blk) = emit::emit_block(pc, code, self.ram_window) {
             let plan = BlockPlan {
                 entry_pc: pc,
@@ -356,8 +358,9 @@ impl RiscVFrontend {
             return Ok((plan, blk.binding));
         }
 
-        // Entry is not emittable (a branch/jump → chunk D, or an
-        // interpreter-owned op). Fall back to the foundation's all-bail walk.
+        // Entry is not emittable (an interpreter-owned op such as ecall/csr, or
+        // a load/store whose entry address is out of the RAM window). Fall back
+        // to the foundation's all-bail walk.
         let walk = walk_block(pc, code).ok_or(FrontendRefusal::PcOutOfRange)?;
         if walk.instr_count == 0 {
             return Err(FrontendRefusal::BlockTooShort);
@@ -535,33 +538,38 @@ mod tests {
     }
 
     #[test]
-    fn translate_block_emits_alu_prefix() {
-        // addi x1,x0,1 ; jal x0,0 (self-loop terminator). Chunk C emits the
-        // addi and stops before the jal (chunk D territory).
+    fn translate_block_emits_alu_prefix_and_terminator() {
+        // addi x1,x0,1 ; jal x0,0 (self-loop terminator). Chunks C+D emit the
+        // addi AND the jal terminator as one block.
         let mut prog = Vec::new();
         w(&mut prog, 0x0010_0093); // addi x1,x0,1
         w(&mut prog, 0x0000_006f); // jal x0,0
         let view = CodeView::new(BASE, &prog);
         let plan = RiscVFrontend::new().translate_block(BASE, &view).unwrap();
-        assert!(!plan.is_stub(), "ALU entry now emits real wasm");
+        assert!(!plan.is_stub(), "ALU + terminator emits real wasm");
         assert_eq!(plan.entry_pc, BASE);
-        assert_eq!(plan.instr_count, 1, "only the addi; jal excluded");
-        assert_eq!(plan.end_pc, BASE + 4, "ends before the jal");
+        assert_eq!(plan.instr_count, 2, "the addi and the jal terminator");
+        assert_eq!(plan.end_pc, BASE + 8, "spans through the jal");
         assert_eq!(plan.exits.len(), 1);
-        assert_eq!(plan.exits[0].wire_code, emit::WIRE_FALL_THROUGH);
+        assert_eq!(plan.exits[0].wire_code, emit::WIRE_CHAIN_DYNAMIC);
         assert_eq!(&plan.code[0..4], &[0x00, 0x61, 0x73, 0x6d], "wasm magic");
     }
 
     #[test]
-    fn translate_block_non_alu_entry_falls_back_to_stub() {
-        // Entry is a jump (chunk D) → no ALU prefix, so the foundation's
-        // all-bail metadata plan is produced.
+    fn translate_block_terminator_only_entry_emits_dynamic_chain() {
+        // Entry is a jump (chunk D) with no ALU prefix → a terminator-only
+        // compiled block that resolves its next PC in wasm.
         let mut prog = Vec::new();
         w(&mut prog, 0x0000_006f); // jal x0,0
         let view = CodeView::new(BASE, &prog);
         let plan = RiscVFrontend::new().translate_block(BASE, &view).unwrap();
-        assert!(plan.is_stub(), "non-ALU entry stays all-bail");
+        assert!(
+            !plan.is_stub(),
+            "a branch/jump entry now compiles (chunk D)"
+        );
         assert_eq!(plan.instr_count, 1);
+        assert_eq!(plan.end_pc, BASE + 4);
+        assert_eq!(plan.exits[0].wire_code, emit::WIRE_CHAIN_DYNAMIC);
         assert_eq!(plan.exits[0].reason, BailReason::PartialBlock);
     }
 

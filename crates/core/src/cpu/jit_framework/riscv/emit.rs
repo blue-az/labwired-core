@@ -68,8 +68,18 @@ use super::wasm_encode::{build_module, enc, op};
 
 /// Wire code the emitted body returns on a clean straight-line fall-through
 /// to `end_pc`. The runtime maps it to
-/// [`SideExit::Chain`](super::super::side_exit::SideExit::Chain).
+/// [`SideExit::Chain`](super::super::side_exit::SideExit::Chain) to `end_pc`.
 pub const WIRE_FALL_THROUGH: i32 = 0;
+
+/// Wire code a control-flow-terminated block (chunk D) returns. The block has
+/// already resolved its taken/not-taken/jump-target address **in wasm** and
+/// written it to the [`NEXT_PC_SLOT`] word of the register memory; the runtime
+/// reads that slot and maps this code to
+/// [`SideExit::Chain`](super::super::side_exit::SideExit::Chain) to it. One
+/// code covers every branch/jump kind — conditional branches pick the address
+/// with an in-wasm `if`, and `JALR`/`C.JR` compute a data-dependent one — so
+/// the runtime never needs a per-terminator code.
+pub const WIRE_CHAIN_DYNAMIC: i32 = 1;
 
 /// Wire code for a **memory fault** side-exit (chunk E): a load/store whose
 /// effective address fell outside the bound guest-RAM window. The runtime
@@ -78,9 +88,9 @@ pub const WIRE_FALL_THROUGH: i32 = 0;
 /// with [`BailReason::MemoryFault`], resuming at the faulting PC published in
 /// [`FAULT_PC_SLOT`].
 ///
-/// Value `2` is deliberately chosen to leave `1` free for chunk D's
-/// dynamic-chain wire code — the two chunks add non-overlapping arms to the
-/// single `match` in [`CompiledBlock::run`](super::exec::CompiledBlock).
+/// The three wire codes are disjoint — `0` fall-through (C), `1` dynamic-chain
+/// (D), `2` memory-fault (E) — and add non-overlapping arms to the single
+/// `match` in [`CompiledBlock::run`](super::exec::CompiledBlock).
 pub const WIRE_MEM_FAULT: i32 = 2;
 
 /// Number of `i32` locals mapped to guest registers `x0..x31` (local index ==
@@ -91,13 +101,19 @@ const REG_LOCALS: u32 = 32;
 /// address in (declared only when a block emits at least one load/store).
 const SCRATCH_LOCAL: u32 = REG_LOCALS;
 
-// ── Dedicated control slots in the imported memory (chunk E) ───────────────
+// ── Dedicated control slots in the imported memory ─────────────────────────
 //
-// The register file occupies bytes 0..128 (x0..x31). Chunk D (PR #534) claimed
-// word 32 (byte offset 128) as its dynamic-chain next-PC slot, so chunk E
-// starts ITS three 4-byte slots at word 33 (byte offset 132) to stay clear of
-// both the register bytes and D's slot. Do not renumber these without
-// reconciling with D's slot at 128.
+// The register file occupies bytes 0..128 (x0..x31). Chunk D claims word 32
+// (byte 128) as its dynamic-chain next-PC slot; chunk E's three 4-byte control
+// slots start at word 33 (byte 132) to stay clear of both the register bytes
+// and D's slot; the guest-RAM window is mapped far above at byte 256. The
+// three slot regions are disjoint — do not renumber without reconciling all.
+
+/// Byte offset in the imported register memory of the **dynamic next-PC slot**
+/// a [`WIRE_CHAIN_DYNAMIC`] block writes its resolved continuation address to.
+/// It sits at word `32`, immediately past `x31` (bytes `0..128`), so it never
+/// aliases a guest register. The runtime syncs `132` bytes to carry it.
+pub const NEXT_PC_SLOT: i32 = 32 * 4;
 
 /// Byte offset of the slot the faulting load/store writes its resume PC to
 /// (word 33 — deliberately *not* D's word-32 next-PC slot at 128).
@@ -189,7 +205,37 @@ pub fn is_mem_emittable(inst: &Instruction) -> bool {
     )
 }
 
-/// Is `inst` emittable in a block, given whether a RAM window is bound?
+/// Is `inst` a control-flow terminator chunk D emits wasm for?
+///
+/// These are the branch/jump instructions the block ends **at and includes**.
+/// A block is the maximal ALU + load/store prefix followed by at most one of
+/// these; the terminator resolves the block's next PC in wasm and returns
+/// [`WIRE_CHAIN_DYNAMIC`]. `C.JAL` is absent because the decoder maps it to
+/// `Jal { rd: 1, .. }`, already covered here.
+pub fn is_terminator_emittable(inst: &Instruction) -> bool {
+    use Instruction::*;
+    matches!(
+        inst,
+        Beq { .. }
+            | Bne { .. }
+            | Blt { .. }
+            | Bge { .. }
+            | Bltu { .. }
+            | Bgeu { .. }
+            | Jal { .. }
+            | Jalr { .. }
+            | CJ { .. }
+            | CJr { .. }
+            | CJalr { .. }
+            | CBeqz { .. }
+            | CBnez { .. }
+    )
+}
+
+/// Is `inst` emittable in the straight-line block **body**, given whether a
+/// RAM window is bound? This is the ALU set (chunk C) unioned with the
+/// load/store set (chunk E). Terminators are *not* body ops — they end the
+/// block ([`is_terminator_emittable`]).
 ///
 /// Loads/stores are only emittable when a window is present; without one the
 /// block ends before them and the interpreter takes over (identical to the
@@ -198,8 +244,9 @@ fn is_emittable(inst: &Instruction, mem_ok: bool) -> bool {
     is_alu_emittable(inst) || (mem_ok && is_mem_emittable(inst))
 }
 
-/// One decoded instruction plus the guest PC it sits at (needed for `AUIPC`
-/// and for the memory-fault resume PC).
+/// One decoded body instruction plus the guest PC it sits at (needed for
+/// `AUIPC`, which folds `pc` into a constant, and for the memory-fault resume
+/// PC).
 struct Op {
     pc: u32,
     inst: Instruction,
@@ -210,31 +257,53 @@ struct Op {
 pub struct EmittedBlock {
     /// Real wasm module bytes (magic-prefixed), consumed by the runtime.
     pub code: Vec<u8>,
-    /// Guest PC one past the last emitted instruction.
+    /// Guest PC one past the last instruction the block subsumes. For a
+    /// fall-through (chunk-C/E) block this is the continuation the runtime
+    /// chains to; for a terminator (chunk-D) block the continuation is
+    /// dynamic (written to [`NEXT_PC_SLOT`]) and this is metadata only.
     pub end_pc: Pc,
     /// Number of guest instructions the block retires in one clean run.
     pub instr_count: u32,
-    /// Side-exit edges by wire code.
+    /// Side-exit edges. The primary (clean-exit) edge is the fall-through
+    /// ([`WIRE_FALL_THROUGH`]) for a body-only block or the dynamic chain
+    /// ([`WIRE_CHAIN_DYNAMIC`]) when it ends at a branch/jump; a block that
+    /// touches RAM adds the memory-fault edge ([`WIRE_MEM_FAULT`]).
     pub exits: Vec<ExitEdge>,
     /// Memory-binding metadata, present iff the block contains a load/store.
     pub binding: Option<MemBinding>,
 }
 
-/// Emit a wasm block for the maximal emittable prefix at `pc`.
+/// Emit a wasm block for the maximal emittable body prefix at `pc`, optionally
+/// ended by one control-flow terminator (chunks C+D+E).
 ///
 /// `window` is the guest-RAM window (`bus.ram`) loads/stores bind against;
-/// when `None`, loads/stores are treated as non-emittable and the block ends
-/// before the first one (chunk-C behaviour). Returns `None` when the
-/// instruction at `pc` is not emittable at all (the caller keeps that PC on
-/// the interpreter).
+/// when `None`, loads/stores are treated as non-emittable and the body ends
+/// before the first one (chunk-C behaviour).
+///
+/// - The block body is the maximal straight-line prefix of ALU (chunk C) and
+///   in-window load/store (chunk E) ops.
+/// - If a branch/jump ([`is_terminator_emittable`]) follows that prefix (or
+///   sits at `pc` with no prefix), the block **includes** it, resolves its
+///   next PC in wasm, and exits with [`WIRE_CHAIN_DYNAMIC`]; otherwise it exits
+///   with [`WIRE_FALL_THROUGH`] to `end_pc`.
+///
+/// Returns `None` when there is nothing to emit at `pc` — neither a body op
+/// nor an emittable terminator (the caller keeps that PC on the interpreter —
+/// never an error).
 pub fn emit_block(pc: Pc, code: &CodeView<'_>, window: Option<RamWindow>) -> Option<EmittedBlock> {
     let ops = walk_ops(pc, code, window.is_some());
-    if ops.is_empty() {
+    let prefix_end = pc + ops.iter().map(|o| inst_len_of(o.pc, code)).sum::<u64>();
+
+    // The instruction immediately after the body prefix; the block ends at it
+    // and includes it when it is an emittable control-flow terminator.
+    let terminator = decode_at(prefix_end, code).filter(|(inst, _)| is_terminator_emittable(inst));
+
+    if ops.is_empty() && terminator.is_none() {
         return None;
     }
-    let end_pc = pc + ops.iter().map(|o| inst_len_of(o.pc, code)).sum::<u64>();
-    let instr_count = ops.len() as u32;
 
+    // Emit the body ops (ALU + in-window load/store) into a scratch buffer,
+    // recording read/write sets and memory-binding facts.
     let mut body = Body {
         window,
         ..Body::default()
@@ -243,12 +312,22 @@ pub fn emit_block(pc: Pc, code: &CodeView<'_>, window: Option<RamWindow>) -> Opt
         body.emit_instruction(aop.pc, &aop.inst);
     }
 
+    // Choose the terminating shape: dynamic chain (branch/jump) or the plain
+    // fall-through wire. Both carry `PartialBlock` — telemetry only; the
+    // runtime's resolved `Chain` is the correctness contract.
+    let (end_pc, instr_count, wire) = if let Some((tinst, tlen)) = terminator {
+        body.emit_terminator(prefix_end as u32, tlen as u32, &tinst);
+        (prefix_end + tlen, ops.len() as u32 + 1, WIRE_CHAIN_DYNAMIC)
+    } else {
+        (prefix_end, ops.len() as u32, WIRE_FALL_THROUGH)
+    };
+
     let mut expr = Vec::with_capacity(body.buf.len() + 16 * REG_LOCALS as usize);
     body.emit_prologue(&mut expr); // loads touched regs into locals
-    expr.extend_from_slice(&body.buf); // body operating on locals + inline RAM
+    expr.extend_from_slice(&body.buf); // body + terminator, on locals + inline RAM/slots
     body.emit_epilogue(&mut expr); // stores written regs back to mem
-    expr.push(op::I32_CONST); // clean fall-through return value
-    enc::sleb(&mut expr, WIRE_FALL_THROUGH as i64);
+    expr.push(op::I32_CONST); // the block's clean-exit return value
+    enc::sleb(&mut expr, wire as i64);
 
     let local_count = if body.scratch_used {
         REG_LOCALS + 1
@@ -279,8 +358,10 @@ pub fn emit_block(pc: Pc, code: &CodeView<'_>, window: Option<RamWindow>) -> Opt
 
     let code_bytes = build_module(local_count, mem_pages, &expr);
 
+    // Primary clean-exit edge: the dynamic chain for a terminator block, else
+    // the fall-through. A block that touches RAM adds the memory-fault edge.
     let mut exits = vec![ExitEdge {
-        wire_code: WIRE_FALL_THROUGH,
+        wire_code: wire,
         reason: BailReason::PartialBlock,
     }];
     if body.has_mem {
@@ -299,7 +380,29 @@ pub fn emit_block(pc: Pc, code: &CodeView<'_>, window: Option<RamWindow>) -> Opt
     })
 }
 
-/// Walk the maximal run of emittable instructions from `pc`.
+/// Decode the instruction at `pc` in `code`, returning it with its byte
+/// length. `None` if `pc` is outside the view or a 4-byte instruction runs
+/// past its end.
+fn decode_at(pc: Pc, code: &CodeView<'_>) -> Option<(Instruction, u64)> {
+    let bytes = code.from(pc)?;
+    if bytes.len() < 2 {
+        return None;
+    }
+    let low = u16::from_le_bytes([bytes[0], bytes[1]]);
+    let len = inst_len(low);
+    if len == 4 && bytes.len() < 4 {
+        return None;
+    }
+    let word = if len == 4 {
+        u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
+    } else {
+        low as u32
+    };
+    Some((decode_rv32(word), len))
+}
+
+/// Walk the maximal run of emittable body instructions (ALU + in-window
+/// load/store) from `pc`.
 fn walk_ops(pc: Pc, code: &CodeView<'_>, mem_ok: bool) -> Vec<Op> {
     let mut ops = Vec::new();
     let mut cur = pc;
@@ -824,6 +927,122 @@ impl Body {
             other => unreachable!("non-emittable instruction reached emit: {other:?}"),
         }
         self.emitted += 1;
+    }
+
+    /// Store the `i32` currently on the stack (below it: the [`NEXT_PC_SLOT`]
+    /// address) to the dynamic next-PC slot.
+    fn store_next_pc(&mut self) {
+        self.buf.push(op::I32_STORE);
+        enc::uleb(&mut self.buf, 2); // align = 2 (4-byte)
+        enc::uleb(&mut self.buf, 0); // offset = 0 (address already == slot)
+    }
+
+    /// Write a **constant** next PC to the slot (`Jal`, `C.J`, and the two
+    /// arms of a conditional branch all resolve to compile-time addresses).
+    fn next_pc_const(&mut self, v: i32) {
+        self.i32_const(NEXT_PC_SLOT);
+        self.i32_const(v);
+        self.store_next_pc();
+    }
+
+    /// Emit a two-register conditional branch: `next = cmp(rs1,rs2) ? pc+imm
+    /// : pc+ilen`, stored to the slot. `cmp` is the wasm predicate opcode
+    /// (`I32_EQ`, `I32_LT_S`, …) mirroring the interpreter's comparison.
+    fn cond_branch(&mut self, rs1: u8, rs2: u8, cmp: u8, pc: u32, ilen: u32, imm: i32) {
+        self.i32_const(NEXT_PC_SLOT); // store address (stays below the `if`)
+        self.read(rs1);
+        self.read(rs2);
+        self.buf.push(cmp);
+        self.if_i32();
+        self.i32_const(pc.wrapping_add(imm as u32) as i32); // taken
+        self.buf.push(op::ELSE);
+        self.i32_const(pc.wrapping_add(ilen) as i32); // not taken
+        self.buf.push(op::END);
+        self.store_next_pc();
+    }
+
+    /// Emit a compressed compare-with-zero branch (`C.BEQZ`/`C.BNEZ`):
+    /// `next = (rs1 == 0)==want_zero ? pc+imm : pc+ilen`.
+    fn cond_branch_zero(&mut self, rs1: u8, want_zero: bool, pc: u32, ilen: u32, imm: i32) {
+        self.i32_const(NEXT_PC_SLOT);
+        self.read(rs1);
+        // `C.BEQZ` takes when rs1 == 0 → test with `i32.eqz`; `C.BNEZ` takes
+        // when rs1 != 0 → the raw value is already truthy for `if`.
+        if want_zero {
+            self.buf.push(op::I32_EQZ);
+        }
+        self.if_i32();
+        self.i32_const(pc.wrapping_add(imm as u32) as i32); // taken
+        self.buf.push(op::ELSE);
+        self.i32_const(pc.wrapping_add(ilen) as i32); // not taken
+        self.buf.push(op::END);
+        self.store_next_pc();
+    }
+
+    /// Emit `rs1 & !1` (jump-target low-bit mask) onto the stack.
+    fn read_masked(&mut self, rs1: u8) {
+        self.read(rs1);
+        self.i32_const(!1); // 0xFFFF_FFFE
+        self.buf.push(op::I32_AND);
+    }
+
+    /// Emit the block's control-flow terminator. `pc` is its own guest PC,
+    /// `ilen` its byte length. Mirrors the branch/jump arms of
+    /// [`crate::cpu::riscv::RiscV::step`] exactly — including link-register
+    /// timing (the next PC is resolved *before* the link write, so `rd == rs1`
+    /// `JALR` reads the old `rs1`) and the `& !1` target mask.
+    fn emit_terminator(&mut self, pc: u32, ilen: u32, inst: &Instruction) {
+        use Instruction::*;
+        match *inst {
+            Beq { rs1, rs2, imm } => self.cond_branch(rs1, rs2, op::I32_EQ, pc, ilen, imm),
+            Bne { rs1, rs2, imm } => self.cond_branch(rs1, rs2, op::I32_NE, pc, ilen, imm),
+            Blt { rs1, rs2, imm } => self.cond_branch(rs1, rs2, op::I32_LT_S, pc, ilen, imm),
+            Bge { rs1, rs2, imm } => self.cond_branch(rs1, rs2, op::I32_GE_S, pc, ilen, imm),
+            Bltu { rs1, rs2, imm } => self.cond_branch(rs1, rs2, op::I32_LT_U, pc, ilen, imm),
+            Bgeu { rs1, rs2, imm } => self.cond_branch(rs1, rs2, op::I32_GE_U, pc, ilen, imm),
+            CBeqz { rs1, imm } => self.cond_branch_zero(rs1, true, pc, ilen, imm),
+            CBnez { rs1, imm } => self.cond_branch_zero(rs1, false, pc, ilen, imm),
+
+            // Unconditional jump: next = pc + imm; link rd = pc + ilen (the
+            // decoder maps 2-byte C.JAL to Jal { rd: 1 }, so ilen links it at
+            // pc+2 while a 4-byte JAL links at pc+4).
+            Jal { rd, imm } => {
+                self.next_pc_const(pc.wrapping_add(imm as u32) as i32);
+                self.i32_const(pc.wrapping_add(ilen) as i32);
+                self.write(rd);
+            }
+            // Indirect jump: next = (rs1 + imm) & !1, computed BEFORE the link
+            // write so `jalr rd, rd, imm` reads the pre-write rs1.
+            Jalr { rd, rs1, imm } => {
+                self.i32_const(NEXT_PC_SLOT);
+                self.read(rs1);
+                self.i32_const(imm);
+                self.buf.push(op::I32_ADD);
+                self.i32_const(!1);
+                self.buf.push(op::I32_AND);
+                self.store_next_pc();
+                self.i32_const(pc.wrapping_add(ilen) as i32);
+                self.write(rd);
+            }
+
+            CJ { imm } => self.next_pc_const(pc.wrapping_add(imm as u32) as i32),
+            // C.JR: next = rs1 & !1 (no link).
+            CJr { rs1 } => {
+                self.i32_const(NEXT_PC_SLOT);
+                self.read_masked(rs1);
+                self.store_next_pc();
+            }
+            // C.JALR: next = rs1 & !1; link x1 = pc + 2 (always 2-byte).
+            CJalr { rs1 } => {
+                self.i32_const(NEXT_PC_SLOT);
+                self.read_masked(rs1);
+                self.store_next_pc();
+                self.i32_const(pc.wrapping_add(2) as i32);
+                self.write(1);
+            }
+
+            other => unreachable!("non-terminator reached emit_terminator: {other:?}"),
+        }
     }
 
     /// Emit the prologue: `local.set r (i32.load (r*4))` for each read reg.
