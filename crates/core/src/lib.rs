@@ -1117,9 +1117,9 @@ impl<C: Cpu> Machine<C> {
         self.logic_force_poll = force;
     }
 
-    /// Drain logic edges newer than `cursor` (see
-    /// [`logic_capture::LogicCapture::read_edges`]).
-    pub fn logic_read_edges(&self, cursor: u64) -> logic_capture::LogicEdgeBatch {
+    /// Read logic edges newer than `cursor`, acknowledging retained edges
+    /// before it (see [`logic_capture::LogicCapture::read_edges`]).
+    pub fn logic_read_edges(&mut self, cursor: u64) -> logic_capture::LogicEdgeBatch {
         self.logic_capture.read_edges(cursor)
     }
 
