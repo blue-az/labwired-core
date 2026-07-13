@@ -100,9 +100,11 @@ pub mod op {
     // ── i32 arithmetic / logic ─────────────────────────────────────────
     pub const I32_EQZ: u8 = 0x45;
     pub const I32_EQ: u8 = 0x46;
+    pub const I32_NE: u8 = 0x47;
     pub const I32_LT_S: u8 = 0x48;
     pub const I32_LT_U: u8 = 0x49;
     pub const I32_LE_U: u8 = 0x4d;
+    pub const I32_GE_S: u8 = 0x4e;
     pub const I32_GE_U: u8 = 0x4f;
     pub const I32_ADD: u8 = 0x6a;
     pub const I32_SUB: u8 = 0x6b;
