@@ -910,7 +910,6 @@ pub struct StepProfile {
     pub legacy_tick_entries: u64,
 }
 
-
 pub struct Machine<C: Cpu> {
     pub cpu: C,
     /// Secondary CPU instance — for dual-core SoCs (ESP32, ESP32-S3).
