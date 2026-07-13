@@ -197,6 +197,34 @@ mod logic_capture_tests {
         assert_eq!(batch.cursor, total as u64);
     }
 
+    #[test]
+    fn acknowledged_reads_free_ring_capacity_for_continuous_capture() {
+        let mut cap = LogicCapture::new();
+        cap.install(&[Some((0, 0))], &[Some(false)], &[false]);
+
+        for i in 0..LOGIC_RING_CAPACITY {
+            cap.sample(i as u64 + 1, |_, _| Some(i % 2 == 0));
+        }
+
+        let first = cap.read_edges(0);
+        assert_eq!(first.edges.len(), LOGIC_RING_CAPACITY);
+        assert_eq!(first.dropped, 0);
+
+        let acknowledged = cap.read_edges(first.cursor);
+        assert!(acknowledged.edges.is_empty());
+        assert_eq!(acknowledged.dropped, 0);
+
+        for i in 0..LOGIC_RING_CAPACITY {
+            cap.sample(LOGIC_RING_CAPACITY as u64 + i as u64 + 1, |_, _| {
+                Some(i % 2 == 0)
+            });
+        }
+
+        let second = cap.read_edges(first.cursor);
+        assert_eq!(second.edges.len(), LOGIC_RING_CAPACITY);
+        assert_eq!(second.dropped, 0, "acknowledged edges must not overflow");
+    }
+
     /// A pad that reads back as unknown (`None`) records no edges for that
     /// channel, even across many samples.
     #[test]
