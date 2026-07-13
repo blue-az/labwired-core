@@ -48,8 +48,14 @@ use super::super::block_cache::{BlockCache, Lookup};
 use super::super::frontend::{BlockPlan, IsaFrontend};
 use super::super::side_exit::{BailReason, SideExit};
 use super::super::{CodeView, Pc};
-use super::emit::WIRE_FALL_THROUGH;
+use super::emit::{NEXT_PC_SLOT, WIRE_CHAIN_DYNAMIC, WIRE_FALL_THROUGH};
 use super::RiscVFrontend;
+
+/// Bytes synced between the guest register file and the imported memory each
+/// block run: `x0..x31` (`128`) plus the one-word dynamic next-PC slot
+/// ([`NEXT_PC_SLOT`]) a [`WIRE_CHAIN_DYNAMIC`] block writes its resolved
+/// continuation address to.
+const REG_SYNC_BYTES: usize = NEXT_PC_SLOT as usize + 4;
 
 /// One instantiated, runnable compiled block: its own `wasmtime` store, the
 /// imported register-file memory, and the exported `run` entry.
@@ -66,7 +72,7 @@ impl CompiledBlock {
     /// place. Returns the resolved [`SideExit`] and the number of guest
     /// instructions the block retired.
     pub fn run(&mut self, x: &mut [u32; 32]) -> (SideExit, u32) {
-        let mut bytes = [0u8; 128];
+        let mut bytes = [0u8; REG_SYNC_BYTES];
         for (i, w) in x.iter().enumerate() {
             bytes[i * 4..i * 4 + 4].copy_from_slice(&w.to_le_bytes());
         }
@@ -77,7 +83,7 @@ impl CompiledBlock {
         let wire = self
             .run
             .call(&mut self.store, ())
-            .expect("compiled ALU block never traps");
+            .expect("compiled block never traps");
 
         self.regs
             .read(&self.store, 0, &mut bytes)
@@ -93,12 +99,20 @@ impl CompiledBlock {
         x[0] = 0; // x0 is hardwired to zero
 
         let exit = match wire {
+            // Straight-line ALU prefix ran through: chain to the static end PC.
             WIRE_FALL_THROUGH => SideExit::Chain {
                 next_pc: self.end_pc,
             },
-            // No other edge exists in chunk C; treat an unknown wire as a
-            // conservative bail so a future emit bug can never silently
-            // corrupt state.
+            // A branch/jump resolved its continuation in wasm and wrote it to
+            // the next-PC slot; chain there.
+            WIRE_CHAIN_DYNAMIC => {
+                let s = NEXT_PC_SLOT as usize;
+                let next_pc =
+                    u32::from_le_bytes([bytes[s], bytes[s + 1], bytes[s + 2], bytes[s + 3]]) as Pc;
+                SideExit::Chain { next_pc }
+            }
+            // No other edge exists yet; treat an unknown wire as a conservative
+            // bail so a future emit bug can never silently corrupt state.
             _ => SideExit::EnterInterpreter {
                 resume_pc: self.end_pc,
                 reason: BailReason::PartialBlock,
