@@ -22,6 +22,9 @@ use std::process::ExitCode;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
+const INVALID_ENVIRONMENT_INPUT_PLACEHOLDER: &str = "__labwired_invalid_inputs_env__.yaml";
+const WORLD_FIRMWARE_HASH_DOMAIN: &[u8] = b"labwired.environment.world-firmware.v1\0";
+
 /// Entry point kept separate from the single-machine runner so its world
 /// topology and artifact contract cannot accidentally inherit one-firmware
 /// assumptions.
@@ -120,9 +123,9 @@ pub(crate) fn run_environment_test(args: &TestArgs, script: EnvTestScript) -> Ex
 
 /// Preserve the environment artifact contract even when strict schema parsing
 /// rejects an otherwise recognizable `inputs.env` script before it can become
-/// an [`EnvTestScript`]. Returns `true` only when the raw YAML unambiguously
-/// names an environment input; single-node and malformed/non-YAML scripts keep
-/// the legacy config-error writer unchanged.
+/// an [`EnvTestScript`]. Returns `true` whenever raw, parseable YAML explicitly
+/// contains `inputs.env`, including a null or non-string value; single-node and
+/// malformed/non-YAML scripts keep the legacy config-error writer unchanged.
 pub(crate) fn try_write_load_error_outputs(args: &TestArgs, message: String) -> bool {
     let Ok(contents) = std::fs::read_to_string(&args.script) else {
         return false;
@@ -130,23 +133,28 @@ pub(crate) fn try_write_load_error_outputs(args: &TestArgs, message: String) -> 
     let Ok(raw) = serde_yaml::from_str::<serde_yaml::Value>(&contents) else {
         return false;
     };
-    let Some(environment_value) = raw
-        .get("inputs")
-        .and_then(|inputs| inputs.get("env"))
-        .and_then(serde_yaml::Value::as_str)
-    else {
+    let Some(environment_value) = raw.get("inputs").and_then(|inputs| inputs.get("env")) else {
         return false;
     };
 
-    let environment_path = resolve_script_path(&args.script, environment_value);
+    let usable_environment_path = environment_value
+        .as_str()
+        .filter(|value| !value.trim().is_empty())
+        .map(|value| resolve_script_path(&args.script, value));
+    let environment_path = usable_environment_path
+        .clone()
+        .unwrap_or_else(|| invalid_environment_path(args));
     let limits = raw
         .get("limits")
         .cloned()
         .and_then(|limits| serde_yaml::from_value::<TestLimits>(limits).ok())
         .unwrap_or_else(default_environment_limits);
-    let config = match EnvironmentManifest::from_file(&environment_path) {
-        Ok(manifest) => environment_config(args, &environment_path, &manifest),
-        Err(_) => empty_environment_config(args, &environment_path),
+    let config = match usable_environment_path {
+        Some(_) => match EnvironmentManifest::from_file(&environment_path) {
+            Ok(manifest) => environment_config(args, &environment_path, &manifest),
+            Err(_) => empty_environment_config(args, &environment_path),
+        },
+        None => empty_environment_config(args, &environment_path),
     };
     let _ = write_config_error(args, &limits, config, message);
     true
@@ -485,13 +493,16 @@ fn render_uart_log(sinks: &BTreeMap<String, Arc<Mutex<Vec<u8>>>>) -> Vec<u8> {
 fn world_snapshots(world: &World) -> Vec<EnvironmentNodeSnapshot> {
     sorted_node_ids(world)
         .into_iter()
-        .map(|id| EnvironmentNodeSnapshot {
-            state: world
+        .map(|id| {
+            let machine = world
                 .machines
                 .get(&id)
-                .expect("id was collected from world")
-                .snapshot(),
-            id,
+                .expect("id was collected from world");
+            EnvironmentNodeSnapshot {
+                cycles: machine.total_cycles(),
+                state: machine.snapshot(),
+                id,
+            }
         })
         .collect()
 }
@@ -500,6 +511,7 @@ fn empty_environment_config(args: &TestArgs, environment: &Path) -> EnvironmentC
     EnvironmentConfig {
         script: resolved_path(&args.script),
         environment: resolved_path(environment),
+        world_firmware_hash: aggregate_world_firmware_hash(&[]),
         nodes: Vec::new(),
     }
 }
@@ -525,12 +537,38 @@ fn environment_config(
             }
         })
         .collect::<Vec<_>>();
-    nodes.sort_by(|left, right| left.id.cmp(&right.id));
+    nodes.sort_by(|left, right| {
+        left.id
+            .cmp(&right.id)
+            .then_with(|| left.firmware.cmp(&right.firmware))
+            .then_with(|| left.firmware_hash.cmp(&right.firmware_hash))
+    });
     EnvironmentConfig {
         script: resolved_path(&args.script),
         environment: resolved_path(environment),
+        world_firmware_hash: aggregate_world_firmware_hash(&nodes),
         nodes,
     }
+}
+
+fn aggregate_world_firmware_hash(nodes: &[EnvironmentNodeProvenance]) -> String {
+    let mut hash = Sha256::new();
+    hash.update(WORLD_FIRMWARE_HASH_DOMAIN);
+    hash.update((nodes.len() as u64).to_be_bytes());
+    for node in nodes {
+        hash_framed(&mut hash, node.id.as_bytes());
+        hash_framed(&mut hash, node.firmware.to_string_lossy().as_bytes());
+        hash_framed(
+            &mut hash,
+            &std::fs::read(&node.firmware).unwrap_or_default(),
+        );
+    }
+    format!("{:x}", hash.finalize())
+}
+
+fn hash_framed(hash: &mut Sha256, value: &[u8]) {
+    hash.update((value.len() as u64).to_be_bytes());
+    hash.update(value);
 }
 
 fn file_hash(path: &Path) -> String {
@@ -544,6 +582,13 @@ fn file_hash(path: &Path) -> String {
 
 fn resolved_path(path: &Path) -> PathBuf {
     std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
+}
+
+fn invalid_environment_path(args: &TestArgs) -> PathBuf {
+    resolved_path(&args.script)
+        .parent()
+        .unwrap_or_else(|| Path::new("."))
+        .join(INVALID_ENVIRONMENT_INPUT_PLACEHOLDER)
 }
 
 fn resolve_script_path(script: &Path, value: &str) -> PathBuf {
@@ -595,6 +640,7 @@ fn write_config_error(
             .iter()
             .map(|node| EnvironmentNodeSnapshot {
                 id: node.id.clone(),
+                cycles: 0,
                 state: None,
             })
             .collect(),

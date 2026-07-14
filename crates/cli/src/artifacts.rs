@@ -101,6 +101,10 @@ pub(crate) struct EnvironmentNodeProvenance {
 pub(crate) struct EnvironmentConfig {
     pub(crate) script: PathBuf,
     pub(crate) environment: PathBuf,
+    /// SHA-256 identity of the sorted `(node id, firmware path, firmware
+    /// content)` world topology. This lets CI compare a whole environment
+    /// without inventing a misleading single-firmware field.
+    pub(crate) world_firmware_hash: String,
     /// Sorted lexically by `id`, independent of manifest declaration order.
     pub(crate) nodes: Vec<EnvironmentNodeProvenance>,
 }
@@ -130,6 +134,9 @@ pub(crate) struct EnvironmentTestResult {
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct EnvironmentNodeSnapshot {
     pub(crate) id: String,
+    /// The node-local final cycle count. The environment-level snapshot cycle
+    /// count remains the world maximum for limit/reporting compatibility.
+    pub(crate) cycles: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) state: Option<labwired_core::snapshot::MachineSnapshot>,
 }
