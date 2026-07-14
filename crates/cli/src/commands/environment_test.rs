@@ -123,18 +123,38 @@ pub(crate) fn run_environment_test(args: &TestArgs, script: EnvTestScript) -> Ex
 
 /// Preserve the environment artifact contract even when strict schema parsing
 /// rejects an otherwise recognizable `inputs.env` script before it can become
-/// an [`EnvTestScript`]. Returns `true` whenever raw, parseable YAML explicitly
-/// contains `inputs.env`, including a null or non-string value; single-node and
-/// malformed/non-YAML scripts keep the legacy config-error writer unchanged.
+/// an [`EnvTestScript`]. Parsed YAML retains the full `inputs.env` behavior,
+/// while malformed YAML is accepted only for the conservative, direct
+/// `inputs:` / `env:` mapping shape. Other malformed scripts keep the legacy
+/// config-error writer unchanged.
 pub(crate) fn try_write_load_error_outputs(args: &TestArgs, message: String) -> bool {
     let Ok(contents) = std::fs::read_to_string(&args.script) else {
         return false;
     };
-    let Ok(raw) = serde_yaml::from_str::<serde_yaml::Value>(&contents) else {
-        return false;
-    };
-    let Some(environment_value) = raw.get("inputs").and_then(|inputs| inputs.get("env")) else {
-        return false;
+    let parsed = serde_yaml::from_str::<serde_yaml::Value>(&contents);
+    let (environment_value, limits) = match parsed {
+        Ok(raw) => {
+            let Some(environment_value) = raw
+                .get("inputs")
+                .and_then(|inputs| inputs.get("env"))
+                .cloned()
+            else {
+                return false;
+            };
+            let limits = raw
+                .get("limits")
+                .cloned()
+                .and_then(|limits| serde_yaml::from_value::<TestLimits>(limits).ok())
+                .unwrap_or_else(default_environment_limits);
+            (environment_value, limits)
+        }
+        Err(_) => {
+            let Some(environment_value) = recognizable_env_input_from_malformed_yaml(&contents)
+            else {
+                return false;
+            };
+            (environment_value, default_environment_limits())
+        }
     };
 
     let usable_environment_path = environment_value
@@ -144,11 +164,6 @@ pub(crate) fn try_write_load_error_outputs(args: &TestArgs, message: String) -> 
     let environment_path = usable_environment_path
         .clone()
         .unwrap_or_else(|| invalid_environment_path(args));
-    let limits = raw
-        .get("limits")
-        .cloned()
-        .and_then(|limits| serde_yaml::from_value::<TestLimits>(limits).ok())
-        .unwrap_or_else(default_environment_limits);
     let config = match usable_environment_path {
         Some(_) => match EnvironmentManifest::from_file(&environment_path) {
             Ok(manifest) => environment_config(args, &environment_path, &manifest),
@@ -158,6 +173,83 @@ pub(crate) fn try_write_load_error_outputs(args: &TestArgs, message: String) -> 
     };
     let _ = write_config_error(args, &limits, config, message);
     true
+}
+
+/// Extract a direct `inputs.env` scalar from malformed YAML without attempting
+/// to repair or broadly reinterpret the document. The scanner deliberately
+/// accepts only the indentation shape emitted in the public examples:
+///
+/// ```yaml
+/// inputs:
+///   env: "two-node.yaml"
+/// ```
+///
+/// This gives a parse-error report the correct environment provenance while
+/// leaving ambiguous or unrelated malformed YAML on the legacy path.
+fn recognizable_env_input_from_malformed_yaml(contents: &str) -> Option<serde_yaml::Value> {
+    let mut inputs_indent = None;
+    let mut child_indent = None;
+
+    for (line_index, line) in contents.lines().enumerate() {
+        if line.contains('\t') {
+            return None;
+        }
+        let trimmed = line.trim_start_matches(' ');
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+        let indent = line.len() - trimmed.len();
+
+        let Some(parent_indent) = inputs_indent else {
+            if indent == 0 {
+                if let Some(value) = yaml_mapping_value(trimmed, "inputs") {
+                    if value.trim().is_empty() || value.trim_start().starts_with('#') {
+                        inputs_indent = Some(indent);
+                    }
+                }
+            }
+            continue;
+        };
+
+        if indent <= parent_indent {
+            return None;
+        }
+        let direct_child_indent = *child_indent.get_or_insert(indent);
+        if indent != direct_child_indent {
+            continue;
+        }
+        let Some(value) = yaml_mapping_value(trimmed, "env") else {
+            continue;
+        };
+        let value = value.trim_start();
+        if value.starts_with('|') || value.starts_with('>') {
+            return None;
+        }
+
+        // Parsing the prefix proves that `inputs.env` occurs before the YAML
+        // syntax error, rather than being text after an already-invalid line.
+        let prefix = contents
+            .lines()
+            .take(line_index + 1)
+            .collect::<Vec<_>>()
+            .join("\n");
+        let parsed = serde_yaml::from_str::<serde_yaml::Value>(&prefix).ok()?;
+        return parsed
+            .get("inputs")
+            .and_then(|inputs| inputs.get("env"))
+            .cloned();
+    }
+
+    None
+}
+
+fn yaml_mapping_value<'a>(line: &'a str, key: &str) -> Option<&'a str> {
+    let value = line.strip_prefix(key)?.strip_prefix(':')?;
+    match value.chars().next() {
+        None | Some('#') => Some(value),
+        Some(first) if first.is_whitespace() => Some(value),
+        Some(_) => None,
+    }
 }
 
 fn default_environment_limits() -> TestLimits {
@@ -205,7 +297,7 @@ fn unsupported_option_message(args: &TestArgs) -> Option<String> {
     if args.max_vcd_bytes.is_some() {
         unsupported.push("--max-vcd-bytes");
     }
-    if args.trace || args.vcd.is_some() || args.trace_max != 100_000 {
+    if args.trace || args.vcd.is_some() || args.trace_max.is_some() {
         unsupported.push("--trace/--vcd/--trace-max");
     }
     if args.coverage {
@@ -439,20 +531,17 @@ fn memory_assertion_passes(
         4 | 32 => 4,
         _ => return false,
     };
-    let mut value = 0_u64;
+    let mut value = 0_u32;
     for offset in 0..width {
         let byte = match machine.read_u8(assertion.memory_value.address + offset) {
             Ok(byte) => byte,
             Err(_) => return false,
         };
-        value |= u64::from(byte) << (offset * 8);
+        value |= u32::from(byte) << (offset * 8);
     }
-    let mask = assertion.memory_value.mask.unwrap_or(match width {
-        1 => 0xff,
-        2 => 0xffff,
-        _ => 0xffff_ffff,
-    });
-    (value & mask) == (assertion.memory_value.expected_value & mask)
+    let mask = assertion.memory_value.mask.unwrap_or(0xffff_ffff) as u32;
+    let expected = assertion.memory_value.expected_value as u32;
+    (value & mask) == (expected & mask)
 }
 
 fn max_cycles(world: &World) -> u64 {

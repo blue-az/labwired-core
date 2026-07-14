@@ -470,6 +470,157 @@ assertions:
 }
 
 #[test]
+fn environment_runner_memory_assertions_keep_single_node_u32_mask_semantics() {
+    let dir = unique_dir("memory-mask-semantics");
+    let (_environment, _firmware, _system) = write_two_node_environment(&dir);
+    let output = run_environment_script(
+        &dir,
+        r#"schema_version: "1.0"
+inputs:
+  env: "two-node.yaml"
+limits:
+  max_steps: 1
+assertions:
+  - memory_value:
+      node: alpha
+      address: 0x20000000
+      expected_value: 0x100
+      size: 8
+"#,
+        &[],
+    );
+
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "an 8-bit zero must not equal an unmasked u32 expected value: stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let result: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(dir.join("artifacts/result.json")).expect("read result.json"),
+    )
+    .expect("parse result.json");
+    assert_eq!(result["status"], "fail");
+    assert_eq!(result["assertions"][0]["passed"], false);
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn environment_runner_rejects_explicit_default_trace_max() {
+    let dir = unique_dir("explicit-trace-max");
+    let (_environment, _firmware, _system) = write_two_node_environment(&dir);
+    let output = run_environment_script(
+        &dir,
+        r#"schema_version: "1.0"
+inputs:
+  env: "two-node.yaml"
+limits:
+  max_steps: 1
+assertions:
+  - memory_value:
+      node: alpha
+      address: 0x20000000
+      expected_value: 0
+"#,
+        &["--trace-max", "100000"],
+    );
+
+    assert_eq!(output.status.code(), Some(2));
+    let result: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(dir.join("artifacts/result.json")).expect("read result.json"),
+    )
+    .expect("parse result.json");
+    assert_eq!(result["stop_reason"], "config_error");
+    assert!(result["message"]
+        .as_str()
+        .expect("config error message")
+        .contains("--trace/--vcd/--trace-max"));
+    assert!(result["config"].get("firmware").is_none());
+    assert_eq!(result["config"]["nodes"].as_array().unwrap().len(), 2);
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn malformed_environment_script_with_recognizable_env_keeps_environment_artifacts() {
+    let dir = unique_dir("malformed-environment-script");
+    let (_environment, _firmware, _system) = write_two_node_environment(&dir);
+    let output = run_environment_script(
+        &dir,
+        r#"schema_version: "1.0"
+inputs:
+  env: "two-node.yaml"
+limits:
+  max_steps: [1
+"#,
+        &[],
+    );
+
+    assert_eq!(output.status.code(), Some(2));
+    let output_dir = dir.join("artifacts");
+    let result: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(output_dir.join("result.json")).expect("read result.json"),
+    )
+    .expect("parse result.json");
+    assert_eq!(result["stop_reason"], "config_error");
+    assert!(result["config"].get("firmware").is_none());
+    assert!(result["config"]["environment"]
+        .as_str()
+        .expect("environment provenance")
+        .ends_with("two-node.yaml"));
+    assert_eq!(result["config"]["nodes"][0]["id"], "alpha");
+    assert_eq!(result["config"]["nodes"][1]["id"], "beta");
+
+    let snapshot: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(output_dir.join("snapshot.json")).expect("read snapshot.json"),
+    )
+    .expect("parse snapshot.json");
+    assert_eq!(snapshot["type"], "environment");
+    assert_eq!(
+        std::fs::read_to_string(output_dir.join("uart.log")).expect("read uart.log"),
+        "[node:alpha]\n[node:beta]\n"
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn malformed_script_without_a_direct_inputs_env_keeps_legacy_artifacts() {
+    let dir = unique_dir("ambiguous-malformed-script");
+    let (_environment, _firmware, _system) = write_two_node_environment(&dir);
+    let output = run_environment_script(
+        &dir,
+        r#"notes: |
+  inputs:
+    env: "two-node.yaml"
+limits:
+  max_steps: [1
+"#,
+        &[],
+    );
+
+    assert_eq!(output.status.code(), Some(2));
+    let output_dir = dir.join("artifacts");
+    let result: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(output_dir.join("result.json")).expect("read result.json"),
+    )
+    .expect("parse result.json");
+    assert!(
+        result["config"].get("firmware").is_some(),
+        "a scalar mentioning inputs.env must not be reclassified as an environment run"
+    );
+
+    let snapshot: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(output_dir.join("snapshot.json")).expect("read snapshot.json"),
+    )
+    .expect("parse snapshot.json");
+    assert_eq!(snapshot["type"], "config_error");
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn environment_runner_reports_world_cycle_and_total_uart_limits_truthfully() {
     let cycle_dir = unique_dir("max-cycles");
     let (_environment, _firmware, _system) = write_two_node_environment(&cycle_dir);
