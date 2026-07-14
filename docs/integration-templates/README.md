@@ -7,7 +7,7 @@ result.json, uart.log, snapshot.json, and junit.xml artifacts.
 
 [github-actions.yml](github-actions.yml) is the primary GitHub template. It
 uses the public Core action at
-w1ne/labwired-core/.github/actions/labwired-test@c6f8c68f0bd8e14b0f7fc04a647f7609b17fdc0f
+w1ne/labwired-core/.github/actions/labwired-test@a26816999aff2a03d44e1a6961898d6af66e79e2
 as an immutable action-source pin, while `version: v0.19.0` independently pins
 the Core CLI. Its only inputs are `script` (required), `version`, `output-dir`,
 and whitespace-separated `args`. The action downloads the public release archive

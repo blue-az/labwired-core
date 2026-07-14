@@ -22,6 +22,10 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The static contract verifier inspects the immutable action-source
+          # commit referenced by consumer documentation.
+          fetch-depth: 0
 
       - name: Verify release runner contract
         run: bash scripts/ci/verify-release-runner-contract.sh

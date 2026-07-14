@@ -76,10 +76,12 @@ assertions:
 
 Environment assertions are node-qualified `memory_value` assertions. CLI
 `--firmware` and `--system` overrides apply only to a single-machine script,
-not to `inputs.env`. v0.19 environment worlds are Cortex-M-only: each node's
-system/chip and firmware ELF must be ARM/Cortex-M. A non-Arm system/chip or
-firmware ELF is rejected with a configuration error until architecture-specific
-world setup exists.
+not to `inputs.env`. v0.19 environment worlds are Cortex-M-only: each resolved
+node chip must resolve to `arch: arm` and explicitly declare `core: cortex-m*`.
+Its firmware must be an `EM_ARM` ELF with a valid Cortex-M Thumb reset vector
+at `flash.base + reset_vector_offset`: the initial stack pointer is in RAM and
+the Thumb-bit reset handler is in flash. Anything outside that contract is a
+configuration error before a Cortex-M machine is constructed.
 
 ### 2.2 System Manifest (`system.yaml`)
 
@@ -124,13 +126,20 @@ interconnects:
       peripheral: "can1"
 ```
 
-`nodes[].config_overrides` is rejected in environment schema 1.0. Interconnect
-membership is strict:
+`nodes[].config_overrides` must be omitted in environment schema 1.0. Every
+explicit occurrence, including `{}` and `null`, is rejected. Interconnect
+membership and `config` are strict and closed:
 
-- `can_bus` requires a nonblank `config.peripheral` and at least two unique,
-  known nodes.
-- `uart_cross_link` requires exactly two unique, known nodes.
-- `egress` requires exactly one known node.
+- `uart_cross_link` requires exactly two unique, known nodes and accepts only
+  optional non-empty string `node_a_uart` / `node_b_uart` keys (default
+  `uart2`).
+- `can_bus` requires at least two unique, known nodes and accepts only required
+  non-empty string `config.peripheral`.
+- `egress` requires exactly one known node and accepts only optional non-empty
+  strings `uart` (default `usart2`), `transport` (`tcp`, `mqtt`, `http`), and
+  `encoding` (`raw`, `ndjson-trace`, `frames-json`); required non-empty string
+  `url`; MQTT-only required non-empty string `topic`; and positive integer
+  `buffer_max`. `topic` is invalid for TCP and HTTP.
 
 ### 2.4 Hardware Descriptors (`chip.yaml` & `peripheral.yaml`)
 
@@ -227,11 +236,12 @@ The environment arm deliberately has no top-level `firmware_hash`; it carries
 a whole-world identity in `config.world_firmware_hash` and per-node system and
 firmware provenance in `config.nodes`. Environment snapshots use
 `type: "environment"` and a `nodes` array rather than a single CPU snapshot.
-A rejected `config_overrides` field, non-Arm system/chip or firmware ELF
-outside the Cortex-M-only world boundary, or invalid
-`uart_cross_link`/`can_bus`/`egress` membership is still emitted as this
-environment result arm (with a configuration error) when an output directory
-is requested: `status: "error"` and `stop_reason: "config_error"`.
+An explicit `config_overrides` field (including `{}` or `null`), a chip without
+an explicit Cortex-M core, an ARM ELF without a valid Thumb reset vector, or
+unknown, mistyped, or invalid `uart_cross_link`/`can_bus`/`egress`
+configuration is still emitted as this environment result arm (with a
+configuration error) when an output directory is requested: `status: "error"`
+and `stop_reason: "config_error"`.
 
 ### 4.2 Value Change Dump (`trace.vcd`)
 

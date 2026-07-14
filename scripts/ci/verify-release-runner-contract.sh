@@ -8,6 +8,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 
 workflow=.github/workflows/core-release.yml
+core_ci_workflow=.github/workflows/core-ci.yml
 backfill_workflow=.github/workflows/core-backfill-runner-image.yml
 dockerfile=Dockerfile.ci
 action=.github/actions/labwired-test/action.yml
@@ -80,6 +81,7 @@ job_line() {
 }
 
 require_file "$workflow"
+require_file "$core_ci_workflow"
 require_file "$backfill_workflow"
 require_file "$dockerfile"
 require_file "$action"
@@ -92,6 +94,14 @@ require_file "$dockerignore"
 if ! python3 "$renderer_test"; then
   fail 'report renderer unit tests pass'
 fi
+
+release_runner_contract_block=$(awk '
+  $0 == "  release-runner-contract:" { inside = 1; next }
+  inside && $0 ~ /^  [[:alnum:]_-]+:$/ { exit }
+  inside { print }
+' "$core_ci_workflow")
+require_block_literal "$release_runner_contract_block" 'actions/checkout@v4' 'release runner contract job checks out the source'
+require_block_literal "$release_runner_contract_block" 'fetch-depth: 0' 'release runner contract job fetches immutable action-source pins'
 
 require_literal "$workflow" 'tags:' 'release workflow declares a tag trigger'
 require_literal "$workflow" "'v[0-9]+.[0-9]+.[0-9]+'" 'release workflow triggers vMAJOR.MINOR.PATCH tags'
@@ -320,7 +330,7 @@ require_literal "$backfill_workflow" 'examples/ci/dummy-max-steps.yaml' 'runner 
 require_literal RELEASE_PROCESS.md 'core-backfill-runner-image.yml' 'release process documents the one-time runner image backfill workflow'
 require_literal RELEASE_PROCESS.md 'v0.18.0' 'release process documents the initial v0.18.0 runner image backfill'
 
-safe_action_sha=c6f8c68f0bd8e14b0f7fc04a647f7609b17fdc0f
+safe_action_sha=a26816999aff2a03d44e1a6961898d6af66e79e2
 safe_action_version=v0.19.0
 safe_action_ref="w1ne/labwired-core/.github/actions/labwired-test@${safe_action_sha}"
 for doc in docs/ci_integration.md docs/ci_test_runner.md docs/integration-templates/github-actions.yml docs/integration-templates/gitlab-ci.yml docs/integration-templates/README.md docs/reference_client_flows.md .github/actions/labwired-test/README.md; do
@@ -329,7 +339,7 @@ for doc in docs/ci_integration.md docs/ci_test_runner.md docs/integration-templa
   require_absent_literal "$doc" '3a13349ad6c4f65b4fa19276f576bc3086b219e6' "$doc does not retain the superseded public action pin"
   require_absent_literal "$doc" 'version: v0.18.0' "$doc does not retain the superseded Core release version"
 done
-for doc in .github/actions/labwired-test/README.md docs/ci_integration.md docs/ci_test_runner.md docs/integration-templates/github-actions.yml docs/integration-templates/README.md docs/reference_client_flows.md; do
+for doc in docs/ci_integration.md docs/ci_test_runner.md docs/integration-templates/github-actions.yml docs/integration-templates/README.md docs/reference_client_flows.md; do
   require_absent_literal "$doc" 'w1ne/labwired-core/.github/actions/labwired-test@main' "$doc does not use a mutable public Core action ref"
   require_absent_literal "$doc" 'labwired/setup-action@v1' "$doc does not use the obsolete setup action"
   require_literal "$doc" "$safe_action_ref" "$doc uses the immutable public Core action ref"
@@ -353,11 +363,48 @@ require_literal docs/ci_test_runner.md 'if: always()' 'runner guide links the au
 require_absent_literal docs/ci_test_runner.md 'uses: actions/upload-artifact@v4' 'runner guide does not duplicate the action artifact upload'
 require_literal docs/integration-templates/gitlab-ci.yml "name: ghcr.io/w1ne/labwired:$safe_action_version" 'GitLab template uses the pinned runner image'
 require_literal docs/integration-templates/gitlab-ci.yml 'entrypoint: [""]' 'GitLab template clears the image entrypoint before invoking labwired'
-require_literal .github/actions/labwired-test/README.md "$safe_action_ref" 'core action README directs users to the immutable public Core action'
-require_literal .github/actions/labwired-test/README.md "version: $safe_action_version" 'core action README pins the immutable CLI release separately from action source'
-require_literal .github/actions/labwired-test/README.md 'output-dir: out/labwired' 'core action README uses the Core action artifact input spelling'
-require_literal .github/actions/labwired-test/README.md 'steps.labwired.outputs.artifact-url' 'core action README documents the automatic artifact output'
-require_literal .github/actions/labwired-test/README.md 'if: always()' 'core action README links the automatic artifact after failed tests'
+
+if ! git cat-file -e "${safe_action_sha}^{commit}" 2>/dev/null; then
+  fail "immutable action-source commit $safe_action_sha is available locally"
+else
+  pinned_action=''
+  pinned_action_readme=''
+  if ! pinned_action=$(git show "${safe_action_sha}:${action}" 2>/dev/null); then
+    fail "immutable action-source commit $safe_action_sha contains $action"
+  fi
+  if ! pinned_action_readme=$(git show "${safe_action_sha}:.github/actions/labwired-test/README.md" 2>/dev/null); then
+    fail "immutable action-source commit $safe_action_sha contains its action README"
+  fi
+  if [[ -n "$pinned_action" ]]; then
+    require_block_literal "$pinned_action" 'default: "v0.19.0"' 'pinned action defaults to the supported public release'
+    require_block_literal "$pinned_action" 'https://github.com/w1ne/labwired-core/releases/download/${version}/${asset}' 'pinned action downloads the public release archive'
+    pinned_action_inputs=$(awk '
+      /^inputs:$/ { inside = 1; next }
+      inside && /^[^[:space:]]/ { exit }
+      inside && /^  [[:alnum:]][[:alnum:]-]*:$/ {
+        key = $1
+        sub(/:$/, "", key)
+        print key
+      }
+    ' <<<"$pinned_action" | sort)
+    if [[ "$pinned_action_inputs" != $'args\noutput-dir\nscript\nversion' ]]; then
+      fail 'pinned action exposes exactly script, version, output-dir, and args inputs'
+    fi
+    for removed_input in repo: junit: upload-artifacts: github-token:; do
+      require_block_absent_literal "$pinned_action" "$removed_input" "pinned action does not expose retired $removed_input input"
+    done
+    require_block_literal "$pinned_action" 'if: ${{ always() }}' 'pinned action always renders and uploads reports'
+  fi
+  if [[ -n "$pinned_action_readme" ]]; then
+    require_block_literal "$pinned_action_readme" '[CI integration guide](../../../docs/ci_integration.md)' 'pinned action README links the canonical consumer guide'
+    require_block_literal "$pinned_action_readme" 'intentionally documents the action beside its implementation' 'pinned action README explains its source-local contract'
+    require_block_absent_literal "$pinned_action_readme" 'uses: w1ne/labwired-core/.github/actions/labwired-test@' 'pinned action README does not recursively choose its own SHA'
+    for retired_input in repo: github-token: junit: upload-artifacts:; do
+      require_block_absent_literal "$pinned_action_readme" "$retired_input" "pinned action README does not document retired $retired_input input"
+    done
+  fi
+fi
+
 require_literal docs/ci_test_runner.md 'oneOf' 'runner guide documents the single-machine/environment result union'
 require_literal docs/ci_test_runner.md '"1.0-environment"' 'runner guide documents the environment result schema version'
 require_literal docs/ci_test_runner.md '"run_type"' 'runner guide documents the environment run discriminator'
@@ -365,19 +412,29 @@ require_literal docs/ci_test_runner.md 'world_firmware_hash' 'runner guide docum
 require_literal docs/ci_test_runner.md 'inputs.env' 'runner guide documents environment test inputs'
 require_literal docs/ci_test_runner.md 'config.peripheral' 'runner guide documents the CAN-bus peripheral requirement'
 require_literal docs/ci_test_runner.md 'Cortex-M-only' 'runner guide documents the current world architecture boundary'
-require_literal docs/ci_test_runner.md 'firmware ELF must be ARM/Cortex-M' 'runner guide documents that the Cortex-M boundary covers both node inputs'
+require_literal docs/ci_test_runner.md 'core: cortex-m*' 'runner guide documents the explicit Cortex-M core requirement'
+require_literal docs/ci_test_runner.md 'Cortex-M Thumb reset vector' 'runner guide documents the firmware vector requirement'
 require_literal docs/ci_test_runner.md 'config_overrides' 'runner guide documents that per-node overrides are rejected'
+require_literal docs/ci_test_runner.md 'including `{}` and `null`' 'runner guide documents that explicit empty and null overrides are rejected'
 require_literal docs/ci_test_runner.md 'uart_cross_link' 'runner guide documents UART cross-link membership validation'
 require_literal docs/ci_test_runner.md 'egress' 'runner guide documents egress membership validation'
+require_literal docs/ci_test_runner.md 'Each `config` mapping is closed and type-checked' 'runner guide documents strict interconnect config mappings'
 require_literal docs/simulation_protocol.md 'schema_version: "1.0"' 'simulation protocol documents the released environment schema'
 require_literal docs/simulation_protocol.md 'world_firmware_hash' 'simulation protocol documents environment provenance'
 require_literal docs/simulation_protocol.md 'config.peripheral' 'simulation protocol documents the CAN-bus peripheral requirement'
 require_literal docs/simulation_protocol.md 'Cortex-M-only' 'simulation protocol documents the current world architecture boundary'
-require_literal docs/simulation_protocol.md 'firmware ELF must be ARM/Cortex-M' 'simulation protocol documents that the Cortex-M boundary covers both node inputs'
+require_literal docs/simulation_protocol.md 'core: cortex-m*' 'simulation protocol documents the explicit Cortex-M core requirement'
+require_literal docs/simulation_protocol.md 'Cortex-M Thumb reset vector' 'simulation protocol documents the firmware vector requirement'
 require_literal docs/simulation_protocol.md 'config_overrides' 'simulation protocol documents that per-node overrides are rejected'
+require_literal docs/simulation_protocol.md 'including `{}` and `null`' 'simulation protocol documents that explicit empty and null overrides are rejected'
 require_literal docs/simulation_protocol.md 'uart_cross_link' 'simulation protocol documents UART cross-link membership validation'
 require_literal docs/simulation_protocol.md 'egress' 'simulation protocol documents egress membership validation'
+require_literal docs/simulation_protocol.md 'strict and closed' 'simulation protocol documents strict interconnect config mappings'
 require_absent_literal docs/simulation_protocol.md 'Future v1.1' 'simulation protocol does not label released environments as future work'
+require_literal docs/configuration_reference.md 'core: cortex-m*' 'configuration reference documents the explicit Cortex-M core requirement'
+require_literal docs/configuration_reference.md 'including `{}` and `null`' 'configuration reference documents explicit empty and null override rejection'
+require_literal examples/egress-demo/README.md 'config` is a closed mapping' 'egress example documents its closed config mapping'
+require_literal examples/egress-demo/README.md 'positive integer' 'egress example documents buffer_max type validation'
 require_literal README.md 'LABWIRED_VERSION=v0.19.0' 'public README pins the current release version'
 require_absent_literal README.md 'LABWIRED_VERSION=v0.18.0' 'public README does not retain the superseded release version'
 
