@@ -182,8 +182,18 @@ jobs:
           output-dir: out/release-action-smoke
           args: --no-uart-stdout
 
+      - name: Run a second release archive through the core action
+        uses: ./.github/actions/labwired-test
+        with:
+          version: ${{ github.ref_name }}
+          script: examples/ci/two-node-inputs-env.yaml
+          output-dir: out/release-action-smoke-second
+          args: --no-uart-stdout
+
       - name: Verify core action artifacts
         shell: bash
         run: |
           test -s out/release-action-smoke/result.json
           test -s out/release-action-smoke/junit.xml
+          test -s out/release-action-smoke-second/result.json
+          test -s out/release-action-smoke-second/junit.xml
