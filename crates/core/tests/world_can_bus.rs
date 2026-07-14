@@ -96,8 +96,8 @@ fn read_u32(machine: &dyn MachineTrait, addr: u64) -> u32 {
 }
 
 fn start_fdcan(machine: &mut dyn MachineTrait) {
-    // FDCAN1 is clock-gated on the H563. Mirror the real firmware's RCC
-    // enable before taking FDCAN out of INIT.
+    // FDCAN1 is clock-gated on the H563. Firmware must enable its RCC gate
+    // before taking FDCAN out of INIT.
     write_u32(machine, RCC_BASE + RCC_APB1HENR, 1 << 9);
     write_u32(machine, FDCAN_BASE + FDCAN_CCCR, 0);
 }
@@ -183,6 +183,51 @@ fn manifest_can_bus_routes_a_known_fdcan_frame_without_sender_echo() {
         "the distinct manifest-connected node receives exactly one frame"
     );
     assert_eq!(rx_fifo0_frame(receiver.as_ref(), 0), (0x321, 0xA5));
+}
+
+#[test]
+fn manifest_can_bus_keeps_fdcan_reset_until_its_rcc_gate_is_enabled() {
+    let mut world = World::from_manifest(
+        quiet_can_environment(can_bus(&["tester", "ecu"], Some("fdcan1"))),
+        &repo_root(),
+    )
+    .expect("the manifest-defined FDCAN topology should build");
+
+    // The unclocked write must be dropped. Once the real RCC gate opens, the
+    // controller still reports its reset INIT state rather than the requested
+    // started state. This keeps firmware responsibility for RCC setup intact.
+    let tester = world.machines.get_mut("tester").unwrap();
+    write_u32(tester.as_mut(), FDCAN_BASE + FDCAN_CCCR, 0);
+    write_u32(tester.as_mut(), RCC_BASE + RCC_APB1HENR, 1 << 9);
+    assert_eq!(
+        read_u32(tester.as_ref(), FDCAN_BASE + FDCAN_CCCR) & 1,
+        1,
+        "unclocked FDCAN writes must not take the controller out of INIT"
+    );
+
+    for id in ["tester", "ecu"] {
+        start_fdcan(world.machines.get_mut(id).unwrap().as_mut());
+    }
+    queue_fdcan_tx(
+        world.machines.get_mut("tester").unwrap().as_mut(),
+        0x456,
+        0x5A,
+    );
+    for _ in 0..2 {
+        let results = world.step_all();
+        assert!(
+            results.values().all(Result::is_ok),
+            "world round failed: {results:?}"
+        );
+    }
+
+    let receiver = world.machines.get("ecu").unwrap();
+    assert_eq!(
+        read_u32(receiver.as_ref(), FDCAN_BASE + FDCAN_RXF0S) & 0x7F,
+        1,
+        "the real FDCAN wiring routes once firmware enables its RCC gate"
+    );
+    assert_eq!(rx_fifo0_frame(receiver.as_ref(), 0), (0x456, 0x5A));
 }
 
 #[test]
