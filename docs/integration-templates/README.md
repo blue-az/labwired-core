@@ -6,10 +6,10 @@ result.json, uart.log, snapshot.json, and junit.xml artifacts.
 ## GitHub Actions
 
 [github-actions.yml](github-actions.yml) is the primary GitHub template. It
-uses the public root action at
-w1ne/labwired/.github/actions/labwired-test@main and pins the Core CLI with
-version: v0.18.0. Set api-key from LABWIRED_API_KEY only when your project uses
-a Pro or Enterprise workspace; it is optional.
+uses the public Core action at
+w1ne/labwired-core/.github/actions/labwired-test@main and pins the Core CLI
+with version: v0.18.0. It passes --no-uart-stdout through the action's safe
+whitespace-separated args input.
 
 Copy it into a firmware repository, then replace your-firmware and the test
 script path:

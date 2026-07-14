@@ -216,15 +216,19 @@ require_literal RELEASE_PROCESS.md 'v0.18.0' 'release process documents the init
 
 for doc in docs/ci_integration.md docs/ci_test_runner.md docs/integration-templates/github-actions.yml docs/integration-templates/gitlab-ci.yml docs/integration-templates/README.md; do
   require_absent_literal "$doc" 'ghcr.io/w1ne/labwired:latest' "$doc does not recommend a mutable runner image tag"
+  require_absent_literal "$doc" 'w1ne/labwired/.github/actions/labwired-test@main' "$doc does not point public users at the private root action"
 done
-require_literal docs/ci_integration.md 'w1ne/labwired/.github/actions/labwired-test@main' 'CI guide uses the published root GitHub action'
-require_literal docs/ci_integration.md 'version: v0.18.0' 'CI guide pins the CLI release independently of the root action ref'
-require_literal docs/integration-templates/github-actions.yml 'w1ne/labwired/.github/actions/labwired-test@main' 'GitHub template uses the published root action'
-require_literal docs/integration-templates/github-actions.yml 'version: v0.18.0' 'GitHub template pins the CLI release independently of the root action ref'
+require_literal docs/ci_integration.md 'w1ne/labwired-core/.github/actions/labwired-test@main' 'CI guide uses the public Core GitHub action'
+require_literal docs/ci_integration.md 'version: v0.18.0' 'CI guide pins the CLI release independently of the public action ref'
+require_literal docs/ci_integration.md 'output-dir: out/labwired' 'CI guide uses the Core action artifact input spelling'
+require_literal docs/integration-templates/github-actions.yml 'w1ne/labwired-core/.github/actions/labwired-test@main' 'GitHub template uses the public Core action'
+require_literal docs/integration-templates/github-actions.yml 'version: v0.18.0' 'GitHub template pins the CLI release independently of the public action ref'
+require_literal docs/integration-templates/github-actions.yml 'output-dir: out/labwired' 'GitHub template uses the Core action artifact input spelling'
 require_literal docs/integration-templates/gitlab-ci.yml 'name: ghcr.io/w1ne/labwired:v0.18.0' 'GitLab template uses the pinned runner image'
 require_literal docs/integration-templates/gitlab-ci.yml 'entrypoint: [""]' 'GitLab template clears the image entrypoint before invoking labwired'
-require_literal .github/actions/labwired-test/README.md 'w1ne/labwired/.github/actions/labwired-test@main' 'core action README directs users to the published root action'
+require_literal .github/actions/labwired-test/README.md 'w1ne/labwired-core/.github/actions/labwired-test@main' 'core action README directs users to the public Core action'
 require_literal .github/actions/labwired-test/README.md 'version: v0.18.0' 'core action README pins the immutable CLI release separately from action source'
+require_literal .github/actions/labwired-test/README.md 'output-dir: out/labwired' 'core action README uses the Core action artifact input spelling'
 
 if (( failures > 0 )); then
   printf 'Release runner contract failed with %d issue(s).\n' "$failures" >&2
