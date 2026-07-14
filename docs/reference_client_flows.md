@@ -37,7 +37,7 @@ jobs:
       # Step 2: Run the public immutable Core action
       - id: labwired
         name: Run LabWired CLI
-        uses: w1ne/labwired-core/.github/actions/labwired-test@c6f8c68f0bd8e14b0f7fc04a647f7609b17fdc0f
+        uses: w1ne/labwired-core/.github/actions/labwired-test@a26816999aff2a03d44e1a6961898d6af66e79e2
         with:
           script: tests/hardware_validation.yaml
           version: v0.19.0

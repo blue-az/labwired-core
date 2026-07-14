@@ -78,18 +78,29 @@ interconnects:
 ```
 
 An environment assertion must be a node-qualified `memory_value` assertion.
-v0.19 environment worlds are Cortex-M-only: each node's system/chip and
-firmware ELF must be ARM/Cortex-M. A non-Arm system/chip or firmware ELF is
-rejected with a clear configuration error until architecture-specific world
-setup exists.
-`nodes[].config_overrides` is also rejected in environment schema 1.0.
+v0.19 environment worlds are Cortex-M-only: each resolved node chip must
+resolve to `arch: arm` and explicitly declare `core: cortex-m*`. Its firmware
+must be an `EM_ARM` ELF with a valid Cortex-M Thumb reset vector at
+`flash.base + reset_vector_offset`: the initial stack pointer must land in RAM
+and the Thumb-bit reset handler must land in flash. A node outside that contract
+is rejected as a configuration error before a Cortex-M machine is constructed.
 
-Interconnect membership is validated before the world starts:
+`nodes[].config_overrides` must be omitted. Every explicit occurrence,
+including `{}` and `null`, is rejected in environment schema 1.0.
 
-- `can_bus` requires a nonblank `config.peripheral` and at least two unique,
-  known nodes.
-- `uart_cross_link` requires exactly two unique, known nodes.
-- `egress` requires exactly one known node.
+Interconnect membership and `config` are validated before the world starts.
+Each `config` mapping is closed and type-checked:
+
+- `uart_cross_link` requires exactly two unique, known nodes. Its only optional
+  keys are non-empty strings `node_a_uart` and `node_b_uart` (each defaults to
+  `uart2`).
+- `can_bus` requires at least two unique, known nodes. Its only key is required
+  non-empty string `config.peripheral`.
+- `egress` requires exactly one known node. Its only keys are optional non-empty
+  strings `uart` (default `usart2`), `transport` (`tcp`, `mqtt`, or `http`),
+  `encoding` (`raw`, `ndjson-trace`, or `frames-json`), required non-empty
+  string `url`, MQTT-only required non-empty string `topic`, and positive
+  integer `buffer_max`. `topic` is invalid for TCP and HTTP.
 
 Environment scripts do not accept single-machine firmware/system overrides or
 topology-affecting CLI options.
@@ -356,10 +367,11 @@ top-level `firmware_hash`: it identifies the world with
 `config.world_firmware_hash` and records each node's `id`, `system`,
 `firmware`, `system_hash`, and `firmware_hash`. A world config error still
 uses the environment arm; its `nodes` list can be empty when the manifest
-could not be resolved. That includes rejected `config_overrides`, a non-Arm
-system/chip or firmware ELF outside the current Cortex-M-only world boundary,
-and invalid interconnect membership; these produce `status: "error"` with
-`stop_reason: "config_error"` without changing the result-union arm.
+could not be resolved. That includes explicit `config_overrides` (including
+`{}` and `null`), a chip without an explicit Cortex-M core, an ARM ELF without
+a valid Thumb reset vector, and unknown, mistyped, or invalid interconnect
+configuration; these produce `status: "error"` with `stop_reason:
+"config_error"` without changing the result-union arm.
 
 ## CI release runners
 
@@ -375,7 +387,7 @@ only inputs are required `script`, optional `version` (default
 ~~~yaml
 - id: labwired
   name: Run LabWired tests
-  uses: w1ne/labwired-core/.github/actions/labwired-test@c6f8c68f0bd8e14b0f7fc04a647f7609b17fdc0f
+  uses: w1ne/labwired-core/.github/actions/labwired-test@a26816999aff2a03d44e1a6961898d6af66e79e2
   with:
     version: v0.19.0
     script: examples/ci/dummy-max-steps.yaml
@@ -388,7 +400,7 @@ only inputs are required `script`, optional `version` (default
 ~~~
 
 The Core action is an immutable action-source pin to
-`c6f8c68f0bd8e14b0f7fc04a647f7609b17fdc0f`; `version: v0.19.0` independently
+`a26816999aff2a03d44e1a6961898d6af66e79e2`; `version: v0.19.0` independently
 pins the immutable Core CLI release. It downloads that public release archive
 with `curl`, creates `output-dir/junit.xml` plus Markdown and HTML reports,
 appends the Markdown report to the job summary, and always uploads the entire
