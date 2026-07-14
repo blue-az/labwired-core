@@ -25,7 +25,7 @@ jobs:
 
       - id: labwired
         name: Run LabWired
-        uses: w1ne/labwired-core/.github/actions/labwired-test@main
+        uses: w1ne/labwired-core/.github/actions/labwired-test@9bb729459a15a885e8b5b523e1f25c9637531b66
         with:
           version: v0.18.0
           script: tests/firmware-test.yaml
@@ -37,8 +37,9 @@ jobs:
         run: echo "${{ steps.labwired.outputs.artifact-url }}" >> "$GITHUB_STEP_SUMMARY"
 ~~~
 
-The public action reference remains at main until a post-hardening Core action
-tag is published. The version input is the immutable Core CLI release pin.
+The public action reference is an immutable action-source pin to
+`9bb729459a15a885e8b5b523e1f25c9637531b66`. The `version: v0.18.0` input
+independently pins the immutable Core CLI release.
 The action automatically appends `summary.md` to the job summary and uploads
 the output directory plus the external JUnit file as an artifact, even when the
 test fails. Its `status`, `summary-md`, `report-html`, `artifact-url`, and

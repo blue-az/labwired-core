@@ -22,7 +22,8 @@ jobs:
 
       - id: labwired
         name: Run LabWired test
-        uses: w1ne/labwired-core/.github/actions/labwired-test@main
+        # This immutable action-source pin is separate from the CLI version below.
+        uses: w1ne/labwired-core/.github/actions/labwired-test@9bb729459a15a885e8b5b523e1f25c9637531b66
         with:
           version: v0.18.0
           script: tests/firmware-test.yaml
