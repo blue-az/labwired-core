@@ -969,6 +969,16 @@ impl TestScript {
             anyhow::bail!("Limit 'max_steps' must be greater than zero");
         }
 
+        for (index, assertion) in self.assertions.iter().enumerate() {
+            if let TestAssertion::MemoryValue(memory) = assertion {
+                if memory.memory_value.node.is_some() {
+                    anyhow::bail!(
+                        "single-node test scripts do not support 'node' on memory_value assertions (assertions[{index}])"
+                    );
+                }
+            }
+        }
+
         // Fault injection requires schema_version 1.1+.
         if self.schema_version == "1.0" && (!self.faults.is_empty() || self.verdict.is_some()) {
             anyhow::bail!(
@@ -1028,11 +1038,11 @@ impl TestScript {
 /// The explicit fault, verdict, and stimulus fields are parsed so validation
 /// can reject them diagnostically rather than silently treating them as
 /// unknown or ignoring them in the environment runner.
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(deny_unknown_fields)]
+#[derive(Debug, Serialize, Clone)]
 pub struct EnvTestScript {
     pub schema_version: String,
     pub inputs: EnvTestInputs,
+    #[serde(serialize_with = "serialize_env_test_limits")]
     pub limits: TestLimits,
     #[serde(default)]
     pub assertions: Vec<TestAssertion>,
@@ -1042,6 +1052,175 @@ pub struct EnvTestScript {
     pub verdict: Option<Verdict>,
     #[serde(default)]
     pub stimuli: Vec<StimulusSpec>,
+    #[serde(skip)]
+    explicit_limits: EnvExplicitLimits,
+}
+
+/// A field whose parser records the difference between being absent and being
+/// explicitly configured to a default value (or `null`). Environment scripts
+/// use this for single-node-only early-stop tuning: every explicit occurrence
+/// is rejected instead of being normalized away during deserialization.
+#[derive(Debug, Clone, Copy, Default)]
+enum FieldPresence<T> {
+    #[default]
+    Absent,
+    Present(Option<T>),
+}
+
+impl<T> FieldPresence<T> {
+    fn is_present(&self) -> bool {
+        matches!(self, Self::Present(_))
+    }
+
+    fn into_value(self) -> Option<T> {
+        match self {
+            Self::Absent | Self::Present(None) => None,
+            Self::Present(Some(value)) => Some(value),
+        }
+    }
+}
+
+impl<'de, T> Deserialize<'de> for FieldPresence<T>
+where
+    T: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        Ok(Self::Present(Option::<T>::deserialize(deserializer)?))
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct EnvExplicitLimits {
+    stop_when_assertions_pass_settle_steps: bool,
+    stop_when_assertions_pass_min_steps: bool,
+}
+
+/// Serialize only settings that environment scripts can honor. In particular,
+/// this prevents a valid script from gaining explicit single-node early-stop
+/// defaults and then being rejected when it is loaded again.
+fn serialize_env_test_limits<S>(
+    limits: &TestLimits,
+    serializer: S,
+) -> std::result::Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    #[derive(Serialize)]
+    struct SerializableEnvTestLimits {
+        max_steps: u64,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        max_cycles: Option<u64>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        max_uart_bytes: Option<u64>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        wall_time_ms: Option<u64>,
+    }
+
+    SerializableEnvTestLimits {
+        max_steps: limits.max_steps,
+        max_cycles: limits.max_cycles,
+        max_uart_bytes: limits.max_uart_bytes,
+        wall_time_ms: limits.wall_time_ms,
+    }
+    .serialize(serializer)
+}
+
+/// Wire shape for an environment limits block. It resolves to `TestLimits`
+/// after retaining presence information for settings the environment runner
+/// intentionally does not implement.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct EnvTestLimits {
+    max_steps: u64,
+    #[serde(default)]
+    max_cycles: Option<u64>,
+    #[serde(default)]
+    max_uart_bytes: Option<u64>,
+    #[serde(default)]
+    no_progress_steps: Option<u64>,
+    #[serde(default)]
+    wall_time_ms: Option<u64>,
+    #[serde(default)]
+    max_vcd_bytes: Option<u64>,
+    #[serde(default)]
+    stop_when_assertions_pass: bool,
+    #[serde(default)]
+    stop_when_assertions_pass_settle_steps: FieldPresence<u64>,
+    #[serde(default)]
+    stop_when_assertions_pass_min_steps: FieldPresence<u64>,
+}
+
+impl EnvTestLimits {
+    fn into_parts(self) -> (TestLimits, EnvExplicitLimits) {
+        let explicit_limits = EnvExplicitLimits {
+            stop_when_assertions_pass_settle_steps: self
+                .stop_when_assertions_pass_settle_steps
+                .is_present(),
+            stop_when_assertions_pass_min_steps: self
+                .stop_when_assertions_pass_min_steps
+                .is_present(),
+        };
+        let limits = TestLimits {
+            max_steps: self.max_steps,
+            max_cycles: self.max_cycles,
+            max_uart_bytes: self.max_uart_bytes,
+            no_progress_steps: self.no_progress_steps,
+            wall_time_ms: self.wall_time_ms,
+            max_vcd_bytes: self.max_vcd_bytes,
+            stop_when_assertions_pass: self.stop_when_assertions_pass,
+            stop_when_assertions_pass_settle_steps: self
+                .stop_when_assertions_pass_settle_steps
+                .into_value()
+                .unwrap_or_else(default_stop_settle_steps),
+            stop_when_assertions_pass_min_steps: self
+                .stop_when_assertions_pass_min_steps
+                .into_value()
+                .unwrap_or_default(),
+        };
+        (limits, explicit_limits)
+    }
+}
+
+/// Strict deserialization wire form for `EnvTestScript`. The public type keeps
+/// `TestLimits` for runners, while this shape preserves which unsupported
+/// early-stop fields were explicitly supplied in YAML.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct EnvTestScriptWire {
+    schema_version: String,
+    inputs: EnvTestInputs,
+    limits: EnvTestLimits,
+    #[serde(default)]
+    assertions: Vec<TestAssertion>,
+    #[serde(default)]
+    faults: Vec<FaultSpec>,
+    #[serde(default)]
+    verdict: Option<Verdict>,
+    #[serde(default)]
+    stimuli: Vec<StimulusSpec>,
+}
+
+impl<'de> Deserialize<'de> for EnvTestScript {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let wire = EnvTestScriptWire::deserialize(deserializer)?;
+        let (limits, explicit_limits) = wire.limits.into_parts();
+        Ok(Self {
+            schema_version: wire.schema_version,
+            inputs: wire.inputs,
+            limits,
+            assertions: wire.assertions,
+            faults: wire.faults,
+            verdict: wire.verdict,
+            stimuli: wire.stimuli,
+            explicit_limits,
+        })
+    }
 }
 
 impl EnvTestScript {
@@ -1070,6 +1249,16 @@ impl EnvTestScript {
         if self.limits.stop_when_assertions_pass {
             anyhow::bail!(
                 "Environment test scripts do not support 'limits.stop_when_assertions_pass'"
+            );
+        }
+        if self.explicit_limits.stop_when_assertions_pass_settle_steps {
+            anyhow::bail!(
+                "Environment test scripts do not support 'limits.stop_when_assertions_pass_settle_steps'"
+            );
+        }
+        if self.explicit_limits.stop_when_assertions_pass_min_steps {
+            anyhow::bail!(
+                "Environment test scripts do not support 'limits.stop_when_assertions_pass_min_steps'"
             );
         }
         if !self.faults.is_empty() {
@@ -1704,6 +1893,35 @@ assertions:
     }
 
     #[test]
+    fn env_script_serialization_does_not_introduce_unsupported_early_stop_options() {
+        let script: EnvTestScript = serde_yaml::from_str(
+            r#"
+schema_version: "1.0"
+inputs: { env: "twonode-env.yaml" }
+limits:
+  max_steps: 10
+assertions:
+  - memory_value: { node: tester, address: 0x20010000, expected_value: 1 }
+"#,
+        )
+        .unwrap();
+        script.validate().unwrap();
+
+        let serialized = serde_yaml::to_string(&script).unwrap();
+        assert!(
+            !serialized.contains("stop_when_assertions_pass_settle_steps"),
+            "unexpected serialized script: {serialized}"
+        );
+        assert!(
+            !serialized.contains("stop_when_assertions_pass_min_steps"),
+            "unexpected serialized script: {serialized}"
+        );
+
+        let round_tripped: EnvTestScript = serde_yaml::from_str(&serialized).unwrap();
+        round_tripped.validate().unwrap();
+    }
+
+    #[test]
     fn load_single_node_script_still_selects_v1_0_variant() {
         let script_path = write_temp_file(
             "single-node-script",
@@ -1721,6 +1939,29 @@ limits:
             load_test_script(&script_path).unwrap(),
             LoadedTestScript::V1_0(_)
         ));
+    }
+
+    #[test]
+    fn single_node_script_rejects_node_qualified_memory_assertions() {
+        let script_path = write_temp_file(
+            "single-node-memory-node",
+            r#"
+schema_version: "1.0"
+inputs:
+  firmware: "fw.elf"
+limits:
+  max_steps: 1000
+assertions:
+  - memory_value:
+      node: tester
+      address: 0x20010000
+      expected_value: 1
+"#,
+        );
+
+        let err = load_test_script(&script_path).unwrap_err().to_string();
+        assert!(err.contains("node"), "unexpected error: {err}");
+        assert!(err.contains("single-node"), "unexpected error: {err}");
     }
 
     #[test]
@@ -1863,6 +2104,26 @@ assertions:
                 "early-pass",
                 "  stop_when_assertions_pass: true",
                 "stop_when_assertions_pass",
+            ),
+            (
+                "early-pass-settle",
+                "  stop_when_assertions_pass_settle_steps: 100000",
+                "stop_when_assertions_pass_settle_steps",
+            ),
+            (
+                "early-pass-settle-null",
+                "  stop_when_assertions_pass_settle_steps: null",
+                "stop_when_assertions_pass_settle_steps",
+            ),
+            (
+                "early-pass-minimum",
+                "  stop_when_assertions_pass_min_steps: 0",
+                "stop_when_assertions_pass_min_steps",
+            ),
+            (
+                "early-pass-minimum-null",
+                "  stop_when_assertions_pass_min_steps: null",
+                "stop_when_assertions_pass_min_steps",
             ),
             (
                 "faults",
