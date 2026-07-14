@@ -8,11 +8,14 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 
 workflow=.github/workflows/core-release.yml
+core_ci_workflow=.github/workflows/core-ci.yml
 backfill_workflow=.github/workflows/core-backfill-runner-image.yml
 dockerfile=Dockerfile.ci
 action=.github/actions/labwired-test/action.yml
 renderer=.github/actions/labwired-test/render_report.py
 renderer_test=.github/actions/labwired-test/test_render_report.py
+environment_smoke_script=examples/ci/two-node-inputs-env.yaml
+environment_smoke_manifest=examples/ci/two-node-env.yaml
 dockerignore=.dockerignore
 failures=0
 
@@ -78,16 +81,27 @@ job_line() {
 }
 
 require_file "$workflow"
+require_file "$core_ci_workflow"
 require_file "$backfill_workflow"
 require_file "$dockerfile"
 require_file "$action"
 require_file "$renderer"
 require_file "$renderer_test"
+require_file "$environment_smoke_script"
+require_file "$environment_smoke_manifest"
 require_file "$dockerignore"
 
 if ! python3 "$renderer_test"; then
   fail 'report renderer unit tests pass'
 fi
+
+release_runner_contract_block=$(awk '
+  $0 == "  release-runner-contract:" { inside = 1; next }
+  inside && $0 ~ /^  [[:alnum:]_-]+:$/ { exit }
+  inside { print }
+' "$core_ci_workflow")
+require_block_literal "$release_runner_contract_block" 'actions/checkout@v4' 'release runner contract job checks out the source'
+require_block_literal "$release_runner_contract_block" 'fetch-depth: 0' 'release runner contract job fetches immutable action-source pins'
 
 require_literal "$workflow" 'tags:' 'release workflow declares a tag trigger'
 require_literal "$workflow" "'v[0-9]+.[0-9]+.[0-9]+'" 'release workflow triggers vMAJOR.MINOR.PATCH tags'
@@ -148,6 +162,8 @@ require_block_absent_literal "$smoke_block" 'docker/login-action@v3' 'release sm
 require_block_literal "$smoke_block" 'docker pull "ghcr.io/w1ne/labwired:${{ github.ref_name }}"' 'release smoke anonymously pulls the immutable image'
 require_block_literal "$smoke_block" 'Make the GHCR package public' 'release smoke explains how to fix a private first GHCR package'
 require_block_literal "$smoke_block" 'docker run --rm' 'release smoke runs the image directly'
+require_block_absent_literal "$smoke_block" 'cargo build' 'release smoke does not build Core from source'
+require_block_absent_literal "$smoke_block" 'cross build' 'release smoke does not cross-build Core from source'
 runner_command_block=$(awk '
   /docker run --rm/ { inside = 1 }
   inside { print }
@@ -155,16 +171,25 @@ runner_command_block=$(awk '
 ' <<<"$smoke_block")
 require_block_literal "$runner_command_block" '"ghcr.io/w1ne/labwired:${{ github.ref_name }}"' 'release smoke runs the immutable image that it pulled'
 require_block_absent_literal "$runner_command_block" 'ghcr.io/w1ne/labwired:latest' 'release smoke does not run the mutable latest tag'
-require_block_literal "$smoke_block" 'examples/ci/dummy-max-steps.yaml' 'release smoke uses the deterministic CI script'
+require_block_literal "$smoke_block" 'examples/ci/two-node-inputs-env.yaml' 'release smoke uses the explicit two-node inputs.env script'
 require_block_literal "$smoke_block" 'out/release-runner-smoke' 'release smoke writes runner artifacts to a dedicated directory'
 require_block_literal "$smoke_block" '--no-uart-stdout' 'release smoke suppresses UART output'
 require_block_literal "$smoke_block" 'test -s out/release-runner-smoke/result.json' 'release smoke asserts the runner result JSON exists and is nonempty'
+require_block_literal "$smoke_block" 'test -s out/release-runner-smoke/junit.xml' 'release smoke asserts the OCI runner writes JUnit in its output directory'
 require_block_literal "$smoke_block" 'uses: ./.github/actions/labwired-test' 'release smoke exercises the checked-out core action'
 require_block_literal "$smoke_block" 'version: ${{ github.ref_name }}' 'release smoke pins the core action to the release tag'
-require_block_literal "$smoke_block" 'github-token: ${{ github.token }}' 'release smoke explicitly passes its workflow token to the core action'
+require_block_absent_literal "$smoke_block" 'github-token:' 'release smoke does not need an archive-download token'
 require_block_literal "$smoke_block" 'output-dir: out/release-action-smoke' 'release action smoke writes a dedicated output directory'
-require_block_literal "$smoke_block" "upload-artifacts: 'false'" 'release action smoke avoids duplicate workflow artifacts'
+require_block_absent_literal "$smoke_block" 'upload-artifacts:' 'release action smoke cannot disable artifact uploads'
 require_block_literal "$smoke_block" 'test -s out/release-action-smoke/result.json' 'release smoke asserts the action result JSON exists and is nonempty'
+require_block_literal "$smoke_block" 'test -s out/release-action-smoke/junit.xml' 'release smoke asserts the action writes JUnit in its output directory'
+release_action_invocations=$(grep -F -c 'uses: ./.github/actions/labwired-test' <<<"$smoke_block" || true)
+if [[ "$release_action_invocations" -ne 2 ]]; then
+  fail 'release smoke invokes the core action twice in one job to prove artifact names do not collide'
+fi
+require_block_literal "$smoke_block" 'output-dir: out/release-action-smoke-second' 'release smoke gives the second action invocation its own output directory'
+require_block_literal "$smoke_block" 'test -s out/release-action-smoke-second/result.json' 'release smoke asserts the second action result JSON exists and is nonempty'
+require_block_literal "$smoke_block" 'test -s out/release-action-smoke-second/junit.xml' 'release smoke asserts the second action writes JUnit in its output directory'
 
 require_literal "$dockerfile" 'FROM rust:1.95-slim AS builder' 'runner image builds with Rust 1.95'
 require_literal "$dockerfile" 'RUN cargo build --release -p labwired-cli --locked' 'runner image builds only the CLI'
@@ -185,25 +210,46 @@ if [[ -f "$dockerignore" ]]; then
   done
 fi
 
-require_literal "$action" 'default: "v0.18.0"' 'core action defaults to the pinned supported release'
-require_literal "$action" 'default: "w1ne/labwired-core"' 'core action downloads release archives from the core repository'
-require_literal "$action" 'default: ${{ github.token }}' 'core action defaults its archive download token to the workflow token'
-require_literal "$action" 'GH_TOKEN: ${{ inputs.github-token }}' 'core action passes an explicit or default token to gh release download'
+require_literal "$action" 'default: "v0.19.0"' 'core action defaults to the supported public release'
+action_inputs=$(awk '
+  /^inputs:$/ { inside = 1; next }
+  inside && /^[^[:space:]]/ { exit }
+  inside && /^  [[:alnum:]][[:alnum:]-]*:$/ {
+    key = $1
+    sub(/:$/, "", key)
+    print key
+  }
+' "$action" | sort)
+if [[ "$action_inputs" != $'args\noutput-dir\nscript\nversion' ]]; then
+  fail 'core action exposes exactly script, version, output-dir, and args inputs'
+fi
+if ! awk '
+  /^  script:$/ { inside = 1; next }
+  inside && /^  [[:alnum:]][[:alnum:]-]*:$/ { exit }
+  inside && /^    required: true$/ { found = 1 }
+  END { exit !found }
+' "$action"; then
+  fail 'core action requires the script input'
+fi
+require_literal "$action" 'https://github.com/w1ne/labwired-core/releases/download/${version}/${asset}' 'core action downloads the fixed public Core release archive'
+require_literal "$action" 'curl --fail --location --retry 3 --retry-delay 2 --output "$archive" "$url"' 'core action downloads archives with curl'
+require_literal "$action" 'version must be a vMAJOR.MINOR.PATCH release tag.' 'core action requires an immutable release version'
+for removed_input in repo: junit: upload-artifacts: github-token:; do
+  require_absent_literal "$action" "$removed_input" "core action exposes only the public one-step inputs, not $removed_input"
+done
+require_absent_literal "$action" 'GH_TOKEN' 'core action does not expose a release-download token to a shell'
+require_absent_literal "$action" 'gh release' 'core action does not depend on the gh CLI'
+require_absent_literal "$action" 'latest' 'core action does not resolve a mutable latest release'
 require_literal "$action" 'LABWIRED_VERSION: ${{ inputs.version }}' 'core action passes the version through an environment binding'
-require_literal "$action" 'LABWIRED_REPO: ${{ inputs.repo }}' 'core action passes the repository through an environment binding'
 require_literal "$action" 'LABWIRED_SCRIPT: ${{ inputs.script }}' 'core action passes the script through an environment binding'
 require_literal "$action" 'LABWIRED_ARGS: ${{ inputs.args }}' 'core action passes extra args through an environment binding'
 require_literal "$action" 'command=(labwired test' 'core action constructs the test command as a Bash array'
+require_literal "$action" '--junit "$LABWIRED_OUTPUT_DIR/junit.xml"' 'core action always writes JUnit inside its output directory'
+require_literal "$action" 'mkdir -p "$LABWIRED_OUTPUT_DIR"' 'core action prepares the output directory before running'
 require_literal "$action" 'read -r -a extra_args <<< "$LABWIRED_ARGS"' 'core action splits extra args without shell evaluation'
 require_absent_literal "$action" "ver='\${{ inputs.version }}'" 'core action does not splice the version input into Bash source'
-require_absent_literal "$action" "repo='\${{ inputs.repo }}'" 'core action does not splice the repository input into Bash source'
 require_absent_literal "$action" "--script '\${{ inputs.script }}'" 'core action does not splice the script input into Bash source'
 require_absent_literal "$action" '          ${{ inputs.args }}' 'core action does not splice extra args into Bash source'
-repo_validation_line=$(grep -n -m 1 'repo must use the owner/name form' "$action" | cut -d: -f1 || true)
-latest_lookup_line=$(grep -n -m 1 'gh release view --repo' "$action" | cut -d: -f1 || true)
-if [[ -z "$repo_validation_line" || -z "$latest_lookup_line" || "$repo_validation_line" -ge "$latest_lookup_line" ]]; then
-  fail 'core action validates the release repository before using GH_TOKEN with gh release view'
-fi
 
 require_literal "$action" 'outputs:' 'core action exposes report outputs'
 require_literal "$action" 'summary-md:' 'core action exposes a Markdown report output'
@@ -222,11 +268,14 @@ require_literal "$action" 'id: upload' 'core action identifies the artifact uplo
 require_literal "$action" 'render_report.py' 'core action invokes the bundled report renderer'
 require_literal "$action" 'GITHUB_STEP_SUMMARY' 'core action appends the report to the job summary'
 require_literal "$action" 'cat "$LABWIRED_SUMMARY_MD" >> "$GITHUB_STEP_SUMMARY"' 'core action appends only the renderer-produced summary to the job summary'
-require_literal "$action" "always() && inputs.upload-artifacts == 'true'" 'core action uploads artifacts even after a failed test'
+require_literal "$action" 'if: ${{ always() }}' 'core action always renders and uploads artifacts after a failed test'
+require_literal "$action" 'path: ${{ inputs.output-dir }}' 'core action uploads exactly the configured output directory'
+require_literal "$action" 'if-no-files-found: error' 'core action treats a missing output directory as a workflow error'
+require_literal "$action" 'name: labwired-${{ github.job }}-${{ github.run_id }}-${{ github.action }}' 'core action gives each invocation a unique artifact name'
 require_literal "$action" 'LABWIRED_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}' 'core action records the workflow run URL'
 require_literal "$action" 'LABWIRED_SOURCE_REVISION: ${{ github.sha }}' 'core action records the source revision'
 require_literal "$action" 'LABWIRED_RELEASE_VERSION: ${{ steps.install.outputs.release_version }}' 'core action records the resolved release'
-require_literal "$action" 'echo "release_version=$ver" >> "$GITHUB_OUTPUT"' 'core action records the resolved release version after installation'
+require_literal "$action" 'echo "release_version=$version" >> "$GITHUB_OUTPUT"' 'core action records the resolved release version after installation'
 require_literal "$action" 'LABWIRED_EXIT_CODE: ${{ steps.run.outputs.exit_code }}' 'core action safely passes the captured exit code to its final step'
 require_literal "$action" 'exit "$LABWIRED_EXIT_CODE"' 'core action returns the captured LabWired failure code after reporting'
 
@@ -258,6 +307,19 @@ require_literal "$renderer_test" 'test_omitted_assertion_failure_is_included_in_
 require_literal "$renderer_test" 'test_config_error_message_is_safely_rendered' 'renderer tests config-error diagnostics escaping'
 require_literal "$renderer_test" 'test_large_script_hashes_without_reading_the_whole_file' 'renderer tests streamed script hashing'
 require_literal "$renderer_test" 'test_markdown_summary_cap_is_bounded_and_marked' 'renderer tests job-summary caps'
+require_literal "$renderer_test" 'test_renders_environment_result_without_single_machine_provenance' 'renderer tests the environment result union arm'
+require_literal "$renderer_test" '"result_schema_version": "1.0-environment"' 'renderer environment fixture uses the environment result schema'
+require_literal "$renderer_test" '"run_type": "environment"' 'renderer environment fixture distinguishes the environment run type'
+
+require_literal "$environment_smoke_script" 'inputs:' 'release smoke fixture declares inputs'
+require_literal "$environment_smoke_script" 'env: "two-node-env.yaml"' 'release smoke fixture selects the two-node environment through inputs.env'
+require_literal "$environment_smoke_manifest" 'schema_version: "1.0"' 'release smoke environment uses the supported manifest schema'
+two_node_count=$(grep -Ec '^[[:space:]]*-[[:space:]]id:' "$environment_smoke_manifest" || true)
+if [[ "$two_node_count" -ne 2 ]]; then
+  fail 'release smoke environment manifest declares exactly two nodes'
+fi
+require_literal "$environment_smoke_manifest" 'id: alpha' 'release smoke environment includes alpha'
+require_literal "$environment_smoke_manifest" 'id: beta' 'release smoke environment includes beta'
 
 require_literal "$backfill_workflow" 'workflow_dispatch:' 'runner backfill workflow requires explicit manual dispatch'
 require_literal "$backfill_workflow" 'required: true' 'runner backfill requires an explicit release version'
@@ -276,25 +338,30 @@ require_literal "$backfill_workflow" 'examples/ci/dummy-max-steps.yaml' 'runner 
 require_literal RELEASE_PROCESS.md 'core-backfill-runner-image.yml' 'release process documents the one-time runner image backfill workflow'
 require_literal RELEASE_PROCESS.md 'v0.18.0' 'release process documents the initial v0.18.0 runner image backfill'
 
-safe_action_sha=3a13349ad6c4f65b4fa19276f576bc3086b219e6
+safe_action_sha=82c6c78983669f8688f3823db9a81d1c2bdef202
+safe_action_version=v0.19.0
 safe_action_ref="w1ne/labwired-core/.github/actions/labwired-test@${safe_action_sha}"
-for doc in docs/ci_integration.md docs/ci_test_runner.md docs/integration-templates/github-actions.yml docs/integration-templates/gitlab-ci.yml docs/integration-templates/README.md; do
+for doc in docs/ci_integration.md docs/ci_test_runner.md docs/integration-templates/github-actions.yml docs/integration-templates/gitlab-ci.yml docs/integration-templates/README.md docs/reference_client_flows.md .github/actions/labwired-test/README.md; do
   require_absent_literal "$doc" 'ghcr.io/w1ne/labwired:latest' "$doc does not recommend a mutable runner image tag"
   require_absent_literal "$doc" 'w1ne/labwired/.github/actions/labwired-test@main' "$doc does not point public users at the private root action"
+  require_absent_literal "$doc" '3a13349ad6c4f65b4fa19276f576bc3086b219e6' "$doc does not retain the superseded public action pin"
+  require_absent_literal "$doc" 'version: v0.18.0' "$doc does not retain the superseded Core release version"
 done
-for doc in .github/actions/labwired-test/README.md docs/ci_integration.md docs/ci_test_runner.md docs/integration-templates/github-actions.yml docs/integration-templates/README.md; do
+for doc in docs/ci_integration.md docs/ci_test_runner.md docs/integration-templates/github-actions.yml docs/integration-templates/README.md docs/reference_client_flows.md; do
   require_absent_literal "$doc" 'w1ne/labwired-core/.github/actions/labwired-test@main' "$doc does not use a mutable public Core action ref"
+  require_absent_literal "$doc" 'labwired/setup-action@v1' "$doc does not use the obsolete setup action"
   require_literal "$doc" "$safe_action_ref" "$doc uses the immutable public Core action ref"
   require_literal "$doc" 'immutable action-source pin' "$doc explains the immutable action source pin"
+  require_literal "$doc" "version: $safe_action_version" "$doc pins the Core CLI release independently of the action source"
 done
 require_literal docs/ci_integration.md "$safe_action_ref" 'CI guide uses the immutable public Core GitHub action'
-require_literal docs/ci_integration.md 'version: v0.18.0' 'CI guide pins the CLI release independently of the public action ref'
+require_literal docs/ci_integration.md "version: $safe_action_version" 'CI guide pins the CLI release independently of the public action ref'
 require_literal docs/ci_integration.md 'output-dir: out/labwired' 'CI guide uses the Core action artifact input spelling'
 require_literal docs/ci_integration.md 'steps.labwired.outputs.artifact-url' 'CI guide shows how to consume the automatic artifact URL'
 require_literal docs/ci_integration.md 'if: always()' 'CI guide links the automatic artifact after failed tests'
 require_absent_literal docs/ci_integration.md 'uses: actions/upload-artifact@v4' 'CI guide does not duplicate the action artifact upload'
 require_literal docs/integration-templates/github-actions.yml "$safe_action_ref" 'GitHub template uses the immutable public Core action'
-require_literal docs/integration-templates/github-actions.yml 'version: v0.18.0' 'GitHub template pins the CLI release independently of the public action ref'
+require_literal docs/integration-templates/github-actions.yml "version: $safe_action_version" 'GitHub template pins the CLI release independently of the public action ref'
 require_literal docs/integration-templates/github-actions.yml 'output-dir: out/labwired' 'GitHub template uses the Core action artifact input spelling'
 require_literal docs/integration-templates/github-actions.yml 'steps.labwired.outputs.artifact-url' 'GitHub template shows how to consume the automatic artifact URL'
 require_literal docs/integration-templates/github-actions.yml 'if: always()' 'GitHub template links the automatic artifact after failed tests'
@@ -302,13 +369,83 @@ require_absent_literal docs/integration-templates/github-actions.yml 'uses: acti
 require_literal docs/ci_test_runner.md 'steps.labwired.outputs.artifact-url' 'runner guide shows how to consume the automatic artifact URL'
 require_literal docs/ci_test_runner.md 'if: always()' 'runner guide links the automatic artifact after failed tests'
 require_absent_literal docs/ci_test_runner.md 'uses: actions/upload-artifact@v4' 'runner guide does not duplicate the action artifact upload'
-require_literal docs/integration-templates/gitlab-ci.yml 'name: ghcr.io/w1ne/labwired:v0.18.0' 'GitLab template uses the pinned runner image'
+require_literal docs/integration-templates/gitlab-ci.yml "name: ghcr.io/w1ne/labwired:$safe_action_version" 'GitLab template uses the pinned runner image'
 require_literal docs/integration-templates/gitlab-ci.yml 'entrypoint: [""]' 'GitLab template clears the image entrypoint before invoking labwired'
-require_literal .github/actions/labwired-test/README.md "$safe_action_ref" 'core action README directs users to the immutable public Core action'
-require_literal .github/actions/labwired-test/README.md 'version: v0.18.0' 'core action README pins the immutable CLI release separately from action source'
-require_literal .github/actions/labwired-test/README.md 'output-dir: out/labwired' 'core action README uses the Core action artifact input spelling'
-require_literal .github/actions/labwired-test/README.md 'steps.labwired.outputs.artifact-url' 'core action README documents the automatic artifact output'
-require_literal .github/actions/labwired-test/README.md 'if: always()' 'core action README links the automatic artifact after failed tests'
+
+if ! git cat-file -e "${safe_action_sha}^{commit}" 2>/dev/null; then
+  fail "immutable action-source commit $safe_action_sha is available locally"
+else
+  pinned_action=''
+  pinned_action_readme=''
+  if ! pinned_action=$(git show "${safe_action_sha}:${action}" 2>/dev/null); then
+    fail "immutable action-source commit $safe_action_sha contains $action"
+  fi
+  if ! pinned_action_readme=$(git show "${safe_action_sha}:.github/actions/labwired-test/README.md" 2>/dev/null); then
+    fail "immutable action-source commit $safe_action_sha contains its action README"
+  fi
+  if [[ -n "$pinned_action" ]]; then
+    require_block_literal "$pinned_action" 'default: "v0.19.0"' 'pinned action defaults to the supported public release'
+    require_block_literal "$pinned_action" 'https://github.com/w1ne/labwired-core/releases/download/${version}/${asset}' 'pinned action downloads the public release archive'
+    pinned_action_inputs=$(awk '
+      /^inputs:$/ { inside = 1; next }
+      inside && /^[^[:space:]]/ { exit }
+      inside && /^  [[:alnum:]][[:alnum:]-]*:$/ {
+        key = $1
+        sub(/:$/, "", key)
+        print key
+      }
+    ' <<<"$pinned_action" | sort)
+    if [[ "$pinned_action_inputs" != $'args\noutput-dir\nscript\nversion' ]]; then
+      fail 'pinned action exposes exactly script, version, output-dir, and args inputs'
+    fi
+    for removed_input in repo: junit: upload-artifacts: github-token:; do
+      require_block_absent_literal "$pinned_action" "$removed_input" "pinned action does not expose retired $removed_input input"
+    done
+    require_block_literal "$pinned_action" 'if: ${{ always() }}' 'pinned action always renders and uploads reports'
+    require_block_literal "$pinned_action" 'name: labwired-${{ github.job }}-${{ github.run_id }}-${{ github.action }}' 'pinned action gives each invocation a unique artifact name'
+  fi
+  if [[ -n "$pinned_action_readme" ]]; then
+    require_block_literal "$pinned_action_readme" '[CI integration guide](../../../docs/ci_integration.md)' 'pinned action README links the canonical consumer guide'
+    require_block_literal "$pinned_action_readme" 'intentionally documents the action beside its implementation' 'pinned action README explains its source-local contract'
+    require_block_absent_literal "$pinned_action_readme" 'uses: w1ne/labwired-core/.github/actions/labwired-test@' 'pinned action README does not recursively choose its own SHA'
+    for retired_input in repo: github-token: junit: upload-artifacts:; do
+      require_block_absent_literal "$pinned_action_readme" "$retired_input" "pinned action README does not document retired $retired_input input"
+    done
+  fi
+fi
+
+require_literal docs/ci_test_runner.md 'oneOf' 'runner guide documents the single-machine/environment result union'
+require_literal docs/ci_test_runner.md '"1.0-environment"' 'runner guide documents the environment result schema version'
+require_literal docs/ci_test_runner.md '"run_type"' 'runner guide documents the environment run discriminator'
+require_literal docs/ci_test_runner.md 'world_firmware_hash' 'runner guide documents world provenance'
+require_literal docs/ci_test_runner.md 'inputs.env' 'runner guide documents environment test inputs'
+require_literal docs/ci_test_runner.md 'config.peripheral' 'runner guide documents the CAN-bus peripheral requirement'
+require_literal docs/ci_test_runner.md 'Cortex-M-only' 'runner guide documents the current world architecture boundary'
+require_literal docs/ci_test_runner.md 'core: cortex-m*' 'runner guide documents the explicit Cortex-M core requirement'
+require_literal docs/ci_test_runner.md 'Cortex-M Thumb reset vector' 'runner guide documents the firmware vector requirement'
+require_literal docs/ci_test_runner.md 'config_overrides' 'runner guide documents that per-node overrides are rejected'
+require_literal docs/ci_test_runner.md 'including `{}` and `null`' 'runner guide documents that explicit empty and null overrides are rejected'
+require_literal docs/ci_test_runner.md 'uart_cross_link' 'runner guide documents UART cross-link membership validation'
+require_literal docs/ci_test_runner.md 'egress' 'runner guide documents egress membership validation'
+require_literal docs/ci_test_runner.md 'Each `config` mapping is closed and type-checked' 'runner guide documents strict interconnect config mappings'
+require_literal docs/simulation_protocol.md 'schema_version: "1.0"' 'simulation protocol documents the released environment schema'
+require_literal docs/simulation_protocol.md 'world_firmware_hash' 'simulation protocol documents environment provenance'
+require_literal docs/simulation_protocol.md 'config.peripheral' 'simulation protocol documents the CAN-bus peripheral requirement'
+require_literal docs/simulation_protocol.md 'Cortex-M-only' 'simulation protocol documents the current world architecture boundary'
+require_literal docs/simulation_protocol.md 'core: cortex-m*' 'simulation protocol documents the explicit Cortex-M core requirement'
+require_literal docs/simulation_protocol.md 'Cortex-M Thumb reset vector' 'simulation protocol documents the firmware vector requirement'
+require_literal docs/simulation_protocol.md 'config_overrides' 'simulation protocol documents that per-node overrides are rejected'
+require_literal docs/simulation_protocol.md 'including `{}` and `null`' 'simulation protocol documents that explicit empty and null overrides are rejected'
+require_literal docs/simulation_protocol.md 'uart_cross_link' 'simulation protocol documents UART cross-link membership validation'
+require_literal docs/simulation_protocol.md 'egress' 'simulation protocol documents egress membership validation'
+require_literal docs/simulation_protocol.md 'strict and closed' 'simulation protocol documents strict interconnect config mappings'
+require_absent_literal docs/simulation_protocol.md 'Future v1.1' 'simulation protocol does not label released environments as future work'
+require_literal docs/configuration_reference.md 'core: cortex-m*' 'configuration reference documents the explicit Cortex-M core requirement'
+require_literal docs/configuration_reference.md 'including `{}` and `null`' 'configuration reference documents explicit empty and null override rejection'
+require_literal examples/egress-demo/README.md 'config` is a closed mapping' 'egress example documents its closed config mapping'
+require_literal examples/egress-demo/README.md 'positive integer' 'egress example documents buffer_max type validation'
+require_literal README.md 'LABWIRED_VERSION=v0.19.0' 'public README pins the current release version'
+require_absent_literal README.md 'LABWIRED_VERSION=v0.18.0' 'public README does not retain the superseded release version'
 
 if (( failures > 0 )); then
   printf 'Release runner contract failed with %d issue(s).\n' "$failures" >&2

@@ -605,8 +605,8 @@ struct TestArgs {
     vcd: Option<PathBuf>,
 
     /// Maximum number of instructions to trace
-    #[arg(long, default_value = "100000")]
-    trace_max: usize,
+    #[arg(long)]
+    trace_max: Option<usize>,
 
     /// Collect firmware statement coverage. Writes coverage.info (LCOV) and
     /// coverage.json into --output-dir. Distinct from `labwired coverage`,
@@ -1329,7 +1329,9 @@ fn execute_test_loop<C: labwired_core::Cpu>(
     let mut steps_executed: u64 = 0;
 
     let trace_observer = if args.trace {
-        let obs = Arc::new(labwired_core::trace::TraceObserver::new(args.trace_max));
+        let obs = Arc::new(labwired_core::trace::TraceObserver::new(
+            args.trace_max.unwrap_or(100_000),
+        ));
         machine.observers.push(obs.clone());
         Some(obs)
     } else {
