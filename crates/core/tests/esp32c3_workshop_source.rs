@@ -4,7 +4,9 @@
 
 #[test]
 fn workshop_clock_uses_arduino_time_not_the_cycle_csr() {
-    let source = include_str!("../../../examples/esp32c3-display-workshop-arduino/esp32c3-display-workshop.ino");
+    let source = include_str!(
+        "../../../examples/esp32c3-display-workshop-arduino/esp32c3-display-workshop.ino"
+    );
 
     for forbidden_arch_specific_timing in ["rdcycle", "asm volatile", "__asm__"] {
         assert!(
