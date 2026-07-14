@@ -7,7 +7,7 @@ compiling Rust on the consumer's runner.
 ~~~yaml
 - id: labwired
   name: Run LabWired tests
-  uses: w1ne/labwired-core/.github/actions/labwired-test@main
+  uses: w1ne/labwired-core/.github/actions/labwired-test@9bb729459a15a885e8b5b523e1f25c9637531b66
   with:
     version: v0.18.0
     script: tests/firmware-test.yaml
@@ -19,9 +19,9 @@ compiling Rust on the consumer's runner.
   run: echo "${{ steps.labwired.outputs.artifact-url }}" >> "$GITHUB_STEP_SUMMARY"
 ~~~
 
-The action source is referenced at `main` because no post-hardening Core action
-tag exists yet. The `version` input independently selects the immutable Core CLI
-release archive named
+The action source is an immutable action-source pin to
+`9bb729459a15a885e8b5b523e1f25c9637531b66`. The `version: v0.18.0` input
+independently pins the immutable Core CLI release archive named
 `labwired-v0.18.0-<platform>.tar.gz`.
 
 The local Core action still uses its hyphenated names for its internal release

@@ -321,7 +321,7 @@ Use the public Core action and pin the Core CLI with its version input:
 ~~~yaml
 - id: labwired
   name: Run LabWired tests
-  uses: w1ne/labwired-core/.github/actions/labwired-test@main
+  uses: w1ne/labwired-core/.github/actions/labwired-test@9bb729459a15a885e8b5b523e1f25c9637531b66
   with:
     version: v0.18.0
     script: examples/ci/dummy-max-steps.yaml
@@ -333,10 +333,11 @@ Use the public Core action and pin the Core CLI with its version input:
   run: echo "${{ steps.labwired.outputs.artifact-url }}" >> "$GITHUB_STEP_SUMMARY"
 ~~~
 
-The Core action is intentionally referenced at main until a post-hardening
-action tag is published. The version input still selects the immutable Core
-CLI release. The action automatically appends its Markdown report to the job
-summary and uploads the output directory plus the configured JUnit file, even
+The Core action is an immutable action-source pin to
+`9bb729459a15a885e8b5b523e1f25c9637531b66`; `version: v0.18.0` independently
+pins the immutable Core CLI release. The action automatically appends its
+Markdown report to the job summary and uploads the output directory plus the
+configured JUnit file, even
 after a failed test. Its `status`, `summary-md`, `report-html`, `artifact-url`,
 and `exit-code` outputs are available through the `labwired` step ID.
 

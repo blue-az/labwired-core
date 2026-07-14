@@ -274,17 +274,24 @@ require_literal "$backfill_workflow" 'examples/ci/dummy-max-steps.yaml' 'runner 
 require_literal RELEASE_PROCESS.md 'core-backfill-runner-image.yml' 'release process documents the one-time runner image backfill workflow'
 require_literal RELEASE_PROCESS.md 'v0.18.0' 'release process documents the initial v0.18.0 runner image backfill'
 
+safe_action_sha=9bb729459a15a885e8b5b523e1f25c9637531b66
+safe_action_ref="w1ne/labwired-core/.github/actions/labwired-test@${safe_action_sha}"
 for doc in docs/ci_integration.md docs/ci_test_runner.md docs/integration-templates/github-actions.yml docs/integration-templates/gitlab-ci.yml docs/integration-templates/README.md; do
   require_absent_literal "$doc" 'ghcr.io/w1ne/labwired:latest' "$doc does not recommend a mutable runner image tag"
   require_absent_literal "$doc" 'w1ne/labwired/.github/actions/labwired-test@main' "$doc does not point public users at the private root action"
 done
-require_literal docs/ci_integration.md 'w1ne/labwired-core/.github/actions/labwired-test@main' 'CI guide uses the public Core GitHub action'
+for doc in .github/actions/labwired-test/README.md docs/ci_integration.md docs/ci_test_runner.md docs/integration-templates/github-actions.yml docs/integration-templates/README.md; do
+  require_absent_literal "$doc" 'w1ne/labwired-core/.github/actions/labwired-test@main' "$doc does not use a mutable public Core action ref"
+  require_literal "$doc" "$safe_action_ref" "$doc uses the immutable public Core action ref"
+  require_literal "$doc" 'immutable action-source pin' "$doc explains the immutable action source pin"
+done
+require_literal docs/ci_integration.md "$safe_action_ref" 'CI guide uses the immutable public Core GitHub action'
 require_literal docs/ci_integration.md 'version: v0.18.0' 'CI guide pins the CLI release independently of the public action ref'
 require_literal docs/ci_integration.md 'output-dir: out/labwired' 'CI guide uses the Core action artifact input spelling'
 require_literal docs/ci_integration.md 'steps.labwired.outputs.artifact-url' 'CI guide shows how to consume the automatic artifact URL'
 require_literal docs/ci_integration.md 'if: always()' 'CI guide links the automatic artifact after failed tests'
 require_absent_literal docs/ci_integration.md 'uses: actions/upload-artifact@v4' 'CI guide does not duplicate the action artifact upload'
-require_literal docs/integration-templates/github-actions.yml 'w1ne/labwired-core/.github/actions/labwired-test@main' 'GitHub template uses the public Core action'
+require_literal docs/integration-templates/github-actions.yml "$safe_action_ref" 'GitHub template uses the immutable public Core action'
 require_literal docs/integration-templates/github-actions.yml 'version: v0.18.0' 'GitHub template pins the CLI release independently of the public action ref'
 require_literal docs/integration-templates/github-actions.yml 'output-dir: out/labwired' 'GitHub template uses the Core action artifact input spelling'
 require_literal docs/integration-templates/github-actions.yml 'steps.labwired.outputs.artifact-url' 'GitHub template shows how to consume the automatic artifact URL'
@@ -295,7 +302,7 @@ require_literal docs/ci_test_runner.md 'if: always()' 'runner guide links the au
 require_absent_literal docs/ci_test_runner.md 'uses: actions/upload-artifact@v4' 'runner guide does not duplicate the action artifact upload'
 require_literal docs/integration-templates/gitlab-ci.yml 'name: ghcr.io/w1ne/labwired:v0.18.0' 'GitLab template uses the pinned runner image'
 require_literal docs/integration-templates/gitlab-ci.yml 'entrypoint: [""]' 'GitLab template clears the image entrypoint before invoking labwired'
-require_literal .github/actions/labwired-test/README.md 'w1ne/labwired-core/.github/actions/labwired-test@main' 'core action README directs users to the public Core action'
+require_literal .github/actions/labwired-test/README.md "$safe_action_ref" 'core action README directs users to the immutable public Core action'
 require_literal .github/actions/labwired-test/README.md 'version: v0.18.0' 'core action README pins the immutable CLI release separately from action source'
 require_literal .github/actions/labwired-test/README.md 'output-dir: out/labwired' 'core action README uses the Core action artifact input spelling'
 require_literal .github/actions/labwired-test/README.md 'steps.labwired.outputs.artifact-url' 'core action README documents the automatic artifact output'
