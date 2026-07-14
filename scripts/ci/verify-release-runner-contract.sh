@@ -79,6 +79,28 @@ require_file "$dockerfile"
 require_file "$action"
 require_file "$dockerignore"
 
+require_literal "$workflow" 'tags:' 'release workflow declares a tag trigger'
+require_literal "$workflow" "'v[0-9]+.[0-9]+.[0-9]+'" 'release workflow triggers vMAJOR.MINOR.PATCH tags'
+for target in \
+  x86_64-unknown-linux-gnu \
+  aarch64-unknown-linux-gnu \
+  x86_64-apple-darwin \
+  aarch64-apple-darwin; do
+  require_literal "$workflow" "target: $target" "archive matrix includes $target"
+done
+for platform in linux-x86_64 linux-aarch64 darwin-x86_64 darwin-aarch64; do
+  require_literal "$workflow" "platform: $platform" "archive matrix includes $platform"
+done
+require_literal "$workflow" 'ARCHIVE="labwired-${VERSION}-${PLATFORM}.tar.gz"' 'archive names include the release version and platform'
+require_literal "$workflow" 'cp "target/${{ matrix.target }}/release/labwired" dist/labwired' 'archive package copies the labwired binary'
+require_literal "$workflow" 'tar -czf "${ARCHIVE}" -C dist labwired' 'archive package contains the labwired binary'
+require_literal "$workflow" 'name: labwired-${{ matrix.platform }}' 'archive artifact names follow the platform matrix'
+
+release_block=$(job_block release)
+require_block_literal "$release_block" 'needs: build' 'release waits for all archive builds'
+require_block_literal "$release_block" 'softprops/action-gh-release@v2' 'release creates the GitHub release with action-gh-release'
+require_block_literal "$release_block" 'files: dist/*.tar.gz' 'release uploads every generated archive asset'
+
 require_literal "$workflow" 'packages: write' 'release workflow grants GHCR package publishing permission'
 require_literal "$workflow" 'docker/setup-buildx-action@v3' 'publish job configures Docker Buildx'
 require_literal "$workflow" 'docker/login-action@v3' 'publish job logs into GHCR'
@@ -92,11 +114,16 @@ fi
 
 publish_block=$(job_block publish)
 require_block_literal "$publish_block" 'needs: release' 'publish waits for archive release completion'
+require_block_literal "$publish_block" 'docker/setup-buildx-action@v3' 'publish configures Buildx in the publish job'
+require_block_literal "$publish_block" 'docker/login-action@v3' 'publish logs into GHCR in the publish job'
+require_block_literal "$publish_block" 'docker/build-push-action@v6' 'publish uses build-push-action in the publish job'
 require_block_literal "$publish_block" 'registry: ghcr.io' 'publish logs into ghcr.io'
+require_block_literal "$publish_block" 'context: .' 'publish builds from the repository context'
 require_block_literal "$publish_block" 'ghcr.io/w1ne/labwired:${{ github.ref_name }}' 'publish includes the immutable release tag'
 require_block_literal "$publish_block" 'ghcr.io/w1ne/labwired:latest' 'publish updates the latest tag'
 require_block_literal "$publish_block" 'platforms: linux/amd64' 'publish initially targets linux/amd64'
 require_block_literal "$publish_block" 'file: ./Dockerfile.ci' 'publish uses the CI runner Dockerfile'
+require_block_literal "$publish_block" 'push: true' 'publish pushes the runner image to GHCR'
 require_block_literal "$publish_block" 'VERSION=${{ github.ref_name }}' 'publish passes the OCI version build argument'
 require_block_literal "$publish_block" 'REVISION=${{ github.sha }}' 'publish passes the OCI revision build argument'
 
@@ -111,6 +138,13 @@ require_block_absent_literal "$smoke_block" 'docker/login-action@v3' 'release sm
 require_block_literal "$smoke_block" 'docker pull "ghcr.io/w1ne/labwired:${{ github.ref_name }}"' 'release smoke anonymously pulls the immutable image'
 require_block_literal "$smoke_block" 'Make the GHCR package public' 'release smoke explains how to fix a private first GHCR package'
 require_block_literal "$smoke_block" 'docker run --rm' 'release smoke runs the image directly'
+runner_command_block=$(awk '
+  /docker run --rm/ { inside = 1 }
+  inside { print }
+  inside && /test -s out\/release-runner-smoke\/result\.json/ { exit }
+' <<<"$smoke_block")
+require_block_literal "$runner_command_block" '"ghcr.io/w1ne/labwired:${{ github.ref_name }}"' 'release smoke runs the immutable image that it pulled'
+require_block_absent_literal "$runner_command_block" 'ghcr.io/w1ne/labwired:latest' 'release smoke does not run the mutable latest tag'
 require_block_literal "$smoke_block" 'examples/ci/dummy-max-steps.yaml' 'release smoke uses the deterministic CI script'
 require_block_literal "$smoke_block" 'out/release-runner-smoke' 'release smoke writes runner artifacts to a dedicated directory'
 require_block_literal "$smoke_block" '--no-uart-stdout' 'release smoke suppresses UART output'
