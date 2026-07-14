@@ -23,25 +23,27 @@ jobs:
       - name: Build firmware
         run: cargo build --release --target thumbv7m-none-eabi -p firmware
 
-      - name: Run LabWired
-        uses: w1ne/labwired-core/.github/actions/labwired-test@main
+      - id: labwired
+        name: Run LabWired
+        uses: w1ne/labwired-core/.github/actions/labwired-test@3a13349ad6c4f65b4fa19276f576bc3086b219e6
         with:
           version: v0.18.0
           script: tests/firmware-test.yaml
           output-dir: out/labwired
           args: --no-uart-stdout
 
-      - name: Upload LabWired artifacts
+      - name: Link the automatic LabWired artifact
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: labwired-results
-          path: out/labwired
-          if-no-files-found: warn
+        run: echo "${{ steps.labwired.outputs.artifact-url }}" >> "$GITHUB_STEP_SUMMARY"
 ~~~
 
-The public action reference remains at main until a post-hardening Core action
-tag is published. The version input is the immutable Core CLI release pin.
+The public action reference is an immutable action-source pin to
+`3a13349ad6c4f65b4fa19276f576bc3086b219e6`. The `version: v0.18.0` input
+independently pins the immutable Core CLI release.
+The action automatically appends `summary.md` to the job summary and uploads
+the output directory plus the external JUnit file as an artifact, even when the
+test fails. Its `status`, `summary-md`, `report-html`, `artifact-url`, and
+`exit-code` outputs are available through the `labwired` step ID.
 
 ## Container runner
 
@@ -79,8 +81,9 @@ test:firmware:
 ## Artifacts and reporting
 
 Use --output-dir in every environment. A run writes result.json, snapshot.json,
-uart.log, and junit.xml under that directory. Upload the directory with an
-always/failure-safe artifact step so failed assertions retain their diagnostics.
+uart.log, and junit.xml under that directory. The GitHub action automatically
+adds a failure-safe job summary and artifact; other CI environments should
+retain the directory so failed assertions keep their diagnostics.
 
 ## Advanced: build from source
 
