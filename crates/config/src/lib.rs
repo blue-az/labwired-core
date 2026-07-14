@@ -713,8 +713,7 @@ pub struct StopReasonAssertion {
     pub expected_stop_reason: StopReason,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(deny_unknown_fields)]
+#[derive(Debug, Serialize, Clone)]
 pub struct MemoryValueDetails {
     pub address: u64,
     pub expected_value: u64,
@@ -727,8 +726,41 @@ pub struct MemoryValueDetails {
     pub size: Option<u8>,
     /// Target node for a multi-node environment assertion. Single-node scripts
     /// leave this unset and continue to use the existing machine path.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub node: Option<String>,
+    #[serde(skip)]
+    node_was_explicit: bool,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct MemoryValueDetailsWire {
+    address: u64,
+    expected_value: u64,
+    #[serde(default)]
+    mask: Option<u64>,
+    #[serde(default)]
+    size: Option<u8>,
+    #[serde(default)]
+    node: FieldPresence<String>,
+}
+
+impl<'de> Deserialize<'de> for MemoryValueDetails {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let wire = MemoryValueDetailsWire::deserialize(deserializer)?;
+        let node_was_explicit = wire.node.is_present();
+        Ok(Self {
+            address: wire.address,
+            expected_value: wire.expected_value,
+            mask: wire.mask,
+            size: wire.size,
+            node: wire.node.into_value(),
+            node_was_explicit,
+        })
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -943,6 +975,19 @@ pub struct TestScript {
     pub stimuli: Vec<StimulusSpec>,
 }
 
+fn reject_explicit_memory_nodes(assertions: &[TestAssertion], script_kind: &str) -> Result<()> {
+    for (index, assertion) in assertions.iter().enumerate() {
+        if let TestAssertion::MemoryValue(memory) = assertion {
+            if memory.memory_value.node_was_explicit {
+                anyhow::bail!(
+                    "{script_kind} test scripts do not support 'node' on memory_value assertions (assertions[{index}])"
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
 impl TestScript {
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
         let f = std::fs::File::open(&path)
@@ -969,15 +1014,7 @@ impl TestScript {
             anyhow::bail!("Limit 'max_steps' must be greater than zero");
         }
 
-        for (index, assertion) in self.assertions.iter().enumerate() {
-            if let TestAssertion::MemoryValue(memory) = assertion {
-                if memory.memory_value.node.is_some() {
-                    anyhow::bail!(
-                        "single-node test scripts do not support 'node' on memory_value assertions (assertions[{index}])"
-                    );
-                }
-            }
-        }
+        reject_explicit_memory_nodes(&self.assertions, "single-node")?;
 
         // Fault injection requires schema_version 1.1+.
         if self.schema_version == "1.0" && (!self.faults.is_empty() || self.verdict.is_some()) {
@@ -1094,6 +1131,9 @@ where
 
 #[derive(Debug, Clone, Copy, Default)]
 struct EnvExplicitLimits {
+    no_progress_steps: bool,
+    max_vcd_bytes: bool,
+    stop_when_assertions_pass: bool,
     stop_when_assertions_pass_settle_steps: bool,
     stop_when_assertions_pass_min_steps: bool,
 }
@@ -1140,13 +1180,13 @@ struct EnvTestLimits {
     #[serde(default)]
     max_uart_bytes: Option<u64>,
     #[serde(default)]
-    no_progress_steps: Option<u64>,
+    no_progress_steps: FieldPresence<u64>,
     #[serde(default)]
     wall_time_ms: Option<u64>,
     #[serde(default)]
-    max_vcd_bytes: Option<u64>,
+    max_vcd_bytes: FieldPresence<u64>,
     #[serde(default)]
-    stop_when_assertions_pass: bool,
+    stop_when_assertions_pass: FieldPresence<bool>,
     #[serde(default)]
     stop_when_assertions_pass_settle_steps: FieldPresence<u64>,
     #[serde(default)]
@@ -1156,6 +1196,9 @@ struct EnvTestLimits {
 impl EnvTestLimits {
     fn into_parts(self) -> (TestLimits, EnvExplicitLimits) {
         let explicit_limits = EnvExplicitLimits {
+            no_progress_steps: self.no_progress_steps.is_present(),
+            max_vcd_bytes: self.max_vcd_bytes.is_present(),
+            stop_when_assertions_pass: self.stop_when_assertions_pass.is_present(),
             stop_when_assertions_pass_settle_steps: self
                 .stop_when_assertions_pass_settle_steps
                 .is_present(),
@@ -1167,10 +1210,10 @@ impl EnvTestLimits {
             max_steps: self.max_steps,
             max_cycles: self.max_cycles,
             max_uart_bytes: self.max_uart_bytes,
-            no_progress_steps: self.no_progress_steps,
+            no_progress_steps: self.no_progress_steps.into_value(),
             wall_time_ms: self.wall_time_ms,
-            max_vcd_bytes: self.max_vcd_bytes,
-            stop_when_assertions_pass: self.stop_when_assertions_pass,
+            max_vcd_bytes: self.max_vcd_bytes.into_value(),
+            stop_when_assertions_pass: self.stop_when_assertions_pass.into_value().unwrap_or(false),
             stop_when_assertions_pass_settle_steps: self
                 .stop_when_assertions_pass_settle_steps
                 .into_value()
@@ -1240,13 +1283,13 @@ impl EnvTestScript {
             anyhow::bail!("Limit 'max_steps' must be greater than zero");
         }
 
-        if self.limits.no_progress_steps.is_some() {
+        if self.explicit_limits.no_progress_steps {
             anyhow::bail!("Environment test scripts do not support 'limits.no_progress_steps'");
         }
-        if self.limits.max_vcd_bytes.is_some() {
+        if self.explicit_limits.max_vcd_bytes {
             anyhow::bail!("Environment test scripts do not support 'limits.max_vcd_bytes'");
         }
-        if self.limits.stop_when_assertions_pass {
+        if self.explicit_limits.stop_when_assertions_pass {
             anyhow::bail!(
                 "Environment test scripts do not support 'limits.stop_when_assertions_pass'"
             );
@@ -1433,6 +1476,7 @@ impl LegacyTestScriptV1 {
                 "Unsupported legacy schema_version. Supported legacy versions: 1 (deprecated)"
             );
         }
+        reject_explicit_memory_nodes(&self.assertions, "legacy")?;
         Ok(())
     }
 }
@@ -1854,6 +1898,30 @@ assertions: []
     }
 
     #[test]
+    fn legacy_script_rejects_node_qualified_memory_assertions() {
+        for (name, node) in [("legacy-node", "tester"), ("legacy-null-node", "null")] {
+            let script_path = write_temp_file(
+                name,
+                &format!(
+                    r#"
+schema_version: 1
+max_steps: 10
+assertions:
+  - memory_value:
+      node: {node}
+      address: 0x20010000
+      expected_value: 1
+"#
+                ),
+            );
+
+            let err = load_test_script(&script_path).unwrap_err().to_string();
+            assert!(err.contains("node"), "unexpected error: {err}");
+            assert!(err.contains("legacy"), "unexpected error: {err}");
+        }
+    }
+
+    #[test]
     fn load_env_script_selects_env_variant_and_preserves_allowed_fields() {
         let script_path = write_temp_file(
             "env-script",
@@ -1893,7 +1961,7 @@ assertions:
     }
 
     #[test]
-    fn env_script_serialization_does_not_introduce_unsupported_early_stop_options() {
+    fn env_script_serialization_does_not_introduce_unsupported_runner_options() {
         let script: EnvTestScript = serde_yaml::from_str(
             r#"
 schema_version: "1.0"
@@ -1908,14 +1976,18 @@ assertions:
         script.validate().unwrap();
 
         let serialized = serde_yaml::to_string(&script).unwrap();
-        assert!(
-            !serialized.contains("stop_when_assertions_pass_settle_steps"),
-            "unexpected serialized script: {serialized}"
-        );
-        assert!(
-            !serialized.contains("stop_when_assertions_pass_min_steps"),
-            "unexpected serialized script: {serialized}"
-        );
+        for option in [
+            "no_progress_steps",
+            "max_vcd_bytes",
+            "stop_when_assertions_pass",
+            "stop_when_assertions_pass_settle_steps",
+            "stop_when_assertions_pass_min_steps",
+        ] {
+            assert!(
+                !serialized.contains(option),
+                "unexpected serialized script: {serialized}"
+            );
+        }
 
         let round_tripped: EnvTestScript = serde_yaml::from_str(&serialized).unwrap();
         round_tripped.validate().unwrap();
@@ -1962,6 +2034,53 @@ assertions:
         let err = load_test_script(&script_path).unwrap_err().to_string();
         assert!(err.contains("node"), "unexpected error: {err}");
         assert!(err.contains("single-node"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn single_node_script_rejects_explicit_null_memory_node() {
+        let script_path = write_temp_file(
+            "single-node-memory-null-node",
+            r#"
+schema_version: "1.0"
+inputs:
+  firmware: "fw.elf"
+limits:
+  max_steps: 1000
+assertions:
+  - memory_value:
+      node: null
+      address: 0x20010000
+      expected_value: 1
+"#,
+        );
+
+        let err = load_test_script(&script_path).unwrap_err().to_string();
+        assert!(err.contains("node"), "unexpected error: {err}");
+        assert!(err.contains("single-node"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn ordinary_memory_assertion_without_node_round_trips_without_node_key() {
+        let script: TestScript = serde_yaml::from_str(
+            r#"
+schema_version: "1.0"
+inputs: { firmware: "fw.elf" }
+limits: { max_steps: 10 }
+assertions:
+  - memory_value: { address: 0x20010000, expected_value: 1 }
+"#,
+        )
+        .unwrap();
+        script.validate().unwrap();
+
+        let serialized = serde_yaml::to_string(&script).unwrap();
+        assert!(
+            !serialized.contains("node:"),
+            "unexpected serialized script: {serialized}"
+        );
+
+        let round_tripped: TestScript = serde_yaml::from_str(&serialized).unwrap();
+        round_tripped.validate().unwrap();
     }
 
     #[test]
@@ -2099,10 +2218,26 @@ assertions:
     fn env_script_rejects_runner_options_it_cannot_honor() {
         for (name, extra, diagnostic) in [
             ("no-progress", "  no_progress_steps: 5", "no_progress_steps"),
+            (
+                "no-progress-null",
+                "  no_progress_steps: null",
+                "no_progress_steps",
+            ),
             ("vcd", "  max_vcd_bytes: 1024", "max_vcd_bytes"),
+            ("vcd-null", "  max_vcd_bytes: null", "max_vcd_bytes"),
             (
                 "early-pass",
                 "  stop_when_assertions_pass: true",
+                "stop_when_assertions_pass",
+            ),
+            (
+                "early-pass-false",
+                "  stop_when_assertions_pass: false",
+                "stop_when_assertions_pass",
+            ),
+            (
+                "early-pass-null",
+                "  stop_when_assertions_pass: null",
                 "stop_when_assertions_pass",
             ),
             (
