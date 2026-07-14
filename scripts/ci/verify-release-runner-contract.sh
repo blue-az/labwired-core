@@ -183,6 +183,13 @@ require_block_literal "$smoke_block" 'output-dir: out/release-action-smoke' 'rel
 require_block_absent_literal "$smoke_block" 'upload-artifacts:' 'release action smoke cannot disable artifact uploads'
 require_block_literal "$smoke_block" 'test -s out/release-action-smoke/result.json' 'release smoke asserts the action result JSON exists and is nonempty'
 require_block_literal "$smoke_block" 'test -s out/release-action-smoke/junit.xml' 'release smoke asserts the action writes JUnit in its output directory'
+release_action_invocations=$(grep -F -c 'uses: ./.github/actions/labwired-test' <<<"$smoke_block" || true)
+if [[ "$release_action_invocations" -ne 2 ]]; then
+  fail 'release smoke invokes the core action twice in one job to prove artifact names do not collide'
+fi
+require_block_literal "$smoke_block" 'output-dir: out/release-action-smoke-second' 'release smoke gives the second action invocation its own output directory'
+require_block_literal "$smoke_block" 'test -s out/release-action-smoke-second/result.json' 'release smoke asserts the second action result JSON exists and is nonempty'
+require_block_literal "$smoke_block" 'test -s out/release-action-smoke-second/junit.xml' 'release smoke asserts the second action writes JUnit in its output directory'
 
 require_literal "$dockerfile" 'FROM rust:1.95-slim AS builder' 'runner image builds with Rust 1.95'
 require_literal "$dockerfile" 'RUN cargo build --release -p labwired-cli --locked' 'runner image builds only the CLI'
