@@ -713,23 +713,51 @@ pub struct StopReasonAssertion {
     pub expected_stop_reason: StopReason,
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Clone)]
 pub struct MemoryValueDetails {
     pub address: u64,
     pub expected_value: u64,
-    #[serde(default)]
     pub mask: Option<u64>,
     /// Value width to read at `address`. Accepts bytes (1/2/4) or the
     /// equivalent bit width (8/16/32); both map to a u8/u16/u32 read.
     /// Defaults to a 32-bit (u32) word.
-    #[serde(default)]
     pub size: Option<u8>,
     /// Target node for a multi-node environment assertion. Single-node scripts
     /// leave this unset and continue to use the existing machine path.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub node: Option<String>,
-    #[serde(skip)]
-    node_was_explicit: bool,
+    /// Preserves an explicitly supplied `node: null` through serialization.
+    #[doc(hidden)]
+    pub node_was_explicit: bool,
+}
+
+#[derive(Serialize)]
+struct SerializableMemoryValueDetails<'a> {
+    address: u64,
+    expected_value: u64,
+    mask: Option<u64>,
+    size: Option<u8>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    node: Option<Option<&'a str>>,
+}
+
+impl Serialize for MemoryValueDetails {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        SerializableMemoryValueDetails {
+            address: self.address,
+            expected_value: self.expected_value,
+            mask: self.mask,
+            size: self.size,
+            node: match self.node.as_deref() {
+                Some(node) => Some(Some(node)),
+                None if self.node_was_explicit => Some(None),
+                None => None,
+            },
+        }
+        .serialize(serializer)
+    }
 }
 
 #[derive(Deserialize)]
@@ -2080,6 +2108,33 @@ assertions:
     }
 
     #[test]
+    fn legacy_explicit_null_memory_node_round_trips_as_invalid() {
+        let script: LegacyTestScriptV1 = serde_yaml::from_str(
+            r#"
+schema_version: 1
+max_steps: 10
+assertions:
+  - memory_value:
+      node: null
+      address: 0x20010000
+      expected_value: 1
+"#,
+        )
+        .unwrap();
+        let err = script.validate().unwrap_err().to_string();
+        assert!(err.contains("legacy"), "unexpected error: {err}");
+
+        let serialized = serde_yaml::to_string(&script).unwrap();
+        assert!(
+            serialized.contains("node: null"),
+            "explicit null node was lost during serialization: {serialized}"
+        );
+        let round_tripped: LegacyTestScriptV1 = serde_yaml::from_str(&serialized).unwrap();
+        let err = round_tripped.validate().unwrap_err().to_string();
+        assert!(err.contains("legacy"), "unexpected error: {err}");
+    }
+
+    #[test]
     fn load_env_script_selects_env_variant_and_preserves_allowed_fields() {
         let script_path = write_temp_file(
             "env-script",
@@ -2317,10 +2372,22 @@ assertions:
 "#,
         )
         .unwrap();
-        let TestAssertion::MemoryValue(assertion) = &mut single_node.assertions[0] else {
-            panic!("expected memory_value assertion");
-        };
-        assertion.memory_value.node = Some("tester".to_string());
+        {
+            let TestAssertion::MemoryValue(assertion) = &mut single_node.assertions[0] else {
+                panic!("expected memory_value assertion");
+            };
+            assertion.memory_value.node = Some("tester".to_string());
+        }
+        let err = single_node.validate().unwrap_err().to_string();
+        assert!(err.contains("single-node"), "unexpected error: {err}");
+
+        {
+            let TestAssertion::MemoryValue(assertion) = &mut single_node.assertions[0] else {
+                panic!("expected memory_value assertion");
+            };
+            assertion.memory_value.node = None;
+            assertion.memory_value.node_was_explicit = true;
+        }
         let err = single_node.validate().unwrap_err().to_string();
         assert!(err.contains("single-node"), "unexpected error: {err}");
 
@@ -2333,10 +2400,22 @@ assertions:
 "#,
         )
         .unwrap();
-        let TestAssertion::MemoryValue(assertion) = &mut legacy.assertions[0] else {
-            panic!("expected memory_value assertion");
-        };
-        assertion.memory_value.node = Some("tester".to_string());
+        {
+            let TestAssertion::MemoryValue(assertion) = &mut legacy.assertions[0] else {
+                panic!("expected memory_value assertion");
+            };
+            assertion.memory_value.node = Some("tester".to_string());
+        }
+        let err = legacy.validate().unwrap_err().to_string();
+        assert!(err.contains("legacy"), "unexpected error: {err}");
+
+        {
+            let TestAssertion::MemoryValue(assertion) = &mut legacy.assertions[0] else {
+                panic!("expected memory_value assertion");
+            };
+            assertion.memory_value.node = None;
+            assertion.memory_value.node_was_explicit = true;
+        }
         let err = legacy.validate().unwrap_err().to_string();
         assert!(err.contains("legacy"), "unexpected error: {err}");
     }
@@ -2404,6 +2483,34 @@ assertions:
 
         let err = load_test_script(&script_path).unwrap_err().to_string();
         assert!(err.contains("node"), "unexpected error: {err}");
+        assert!(err.contains("single-node"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn single_node_explicit_null_memory_node_round_trips_as_invalid() {
+        let script: TestScript = serde_yaml::from_str(
+            r#"
+schema_version: "1.0"
+inputs: { firmware: "fw.elf" }
+limits: { max_steps: 10 }
+assertions:
+  - memory_value:
+      node: null
+      address: 0x20010000
+      expected_value: 1
+"#,
+        )
+        .unwrap();
+        let err = script.validate().unwrap_err().to_string();
+        assert!(err.contains("single-node"), "unexpected error: {err}");
+
+        let serialized = serde_yaml::to_string(&script).unwrap();
+        assert!(
+            serialized.contains("node: null"),
+            "explicit null node was lost during serialization: {serialized}"
+        );
+        let round_tripped: TestScript = serde_yaml::from_str(&serialized).unwrap();
+        let err = round_tripped.validate().unwrap_err().to_string();
         assert!(err.contains("single-node"), "unexpected error: {err}");
     }
 

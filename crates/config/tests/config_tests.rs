@@ -4,7 +4,7 @@
 // This software is released under the MIT License.
 // See the LICENSE file in the project root for full license information.
 
-use labwired_config::ChipDescriptor;
+use labwired_config::{ChipDescriptor, MemoryValueDetails};
 
 #[test]
 fn test_old_yaml_still_parses() {
@@ -52,4 +52,31 @@ peripherals:
     assert_eq!(desc.peripherals[0].id, "uart1");
     assert_eq!(desc.peripherals[0].size, Some("1KB".to_string()));
     assert_eq!(desc.peripherals[0].irq, Some(37));
+}
+
+#[test]
+fn memory_value_details_literal_remains_externally_constructible() {
+    let details = MemoryValueDetails {
+        address: 0x2001_0000,
+        expected_value: 1,
+        mask: None,
+        size: None,
+        node: None,
+        node_was_explicit: false,
+    };
+    let serialized = serde_yaml::to_string(&details).unwrap();
+    assert!(
+        !serialized.contains("node:"),
+        "ordinary node-less details should stay sparse: {serialized}"
+    );
+
+    let explicit_null = MemoryValueDetails {
+        node_was_explicit: true,
+        ..details
+    };
+    let serialized = serde_yaml::to_string(&explicit_null).unwrap();
+    assert!(
+        serialized.contains("node: null"),
+        "explicit null node should survive serialization: {serialized}"
+    );
 }
