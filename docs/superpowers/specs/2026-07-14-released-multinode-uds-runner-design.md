@@ -53,6 +53,46 @@ and a world-level test proves a receiver gets a frame and the manifest rejects
 an unknown node.  The UDS acceptance assertion remains tester-to-ECU behavior,
 not a self-echo claim.
 
+## Explicit environment-runner contract
+
+`schema_version: "1.0"` accepts exactly one input shape.  A script has either
+`inputs.firmware` (single machine) or `inputs.env` (world); it cannot contain
+both.  `inputs.env` is resolved relative to the test script, and every
+node/system/firmware reference in that manifest is resolved relative to the
+environment manifest.  CLI `--firmware` and `--system` overrides are rejected
+for an environment script because they would make the topology ambiguous.
+
+The first released environment mode accepts only `memory_value` assertions and
+each one must name an existing `node`.  It rejects UART, regex, stop-reason,
+UDS-tester, fault, verdict, stimulus, VCD, and no-progress-only features with
+an `error` result and a diagnostic instead of silently ignoring them.  A memory
+value uses the existing little-endian 1/2/4-byte or 8/16/32-bit size rules.
+
+`max_steps` means world rounds: in one round every node executes exactly one
+step in stable lexical node-id order, then every interconnect ticks once.
+`max_cycles` is the greatest final node cycle count.  `max_uart_bytes` is the
+sum of all captured node UART bytes, and `wall_time_ms` covers the whole world
+run.  Reaching a configured limit is `max_steps`, `max_cycles`,
+`max_uart_bytes`, or `wall_time` in `result.json`; assertions still determine
+the pass/fail verdict as in the single-node runner.
+
+Environment output is intentionally unambiguous:
+
+- `result.json` retains `status`, stop reason, metrics, and assertion results,
+  and names `config.environment` rather than pretending there is one firmware.
+- `uart.log` contains sorted node sections headed `[node:<id>]`; it does not
+  silently interleave a hash-map-dependent byte stream.
+- `snapshot.json` has `type: "environment"` and sorted per-node cycle/final
+  state records.
+- `junit.xml` has one run case plus one case per assertion, matching the
+  single-node failure/error semantics.
+
+The public Action source is pinned by a full commit SHA; the `version` input is
+an immutable Core release tag.  The release pipeline runs a multi-node YAML
+with the built archive and the published OCI image before either artifact is
+considered usable.  UDSLib's consumer contract bans Core clones, Cargo builds,
+and descriptor copying in its workflow.
+
 ## Release and migration
 
 Core publishes this support as `v0.19.0`, with release archives and the GHCR
