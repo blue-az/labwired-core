@@ -6,7 +6,7 @@
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 /// Canonical device config v1 — the single JSON shape the agent builds and both
@@ -261,6 +261,7 @@ pub struct SystemManifest {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct NodeConfig {
     pub id: String,
     pub system: String,   // Path to SystemManifest
@@ -270,6 +271,7 @@ pub struct NodeConfig {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct EnvironmentManifest {
     #[serde(default = "default_schema_version")]
     pub schema_version: String,
@@ -280,6 +282,7 @@ pub struct EnvironmentManifest {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct InterconnectConfig {
     pub r#type: String,     // "uart_cross_link", "virtual_switch", etc.
     pub nodes: Vec<String>, // List of node IDs
@@ -289,9 +292,247 @@ pub struct InterconnectConfig {
 
 impl EnvironmentManifest {
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let f = std::fs::File::open(path)?;
-        serde_yaml::from_reader(f).context("Failed to parse Environment Manifest")
+        let source = std::fs::read_to_string(path)?;
+        // `NodeConfig` deliberately keeps a plain HashMap for source
+        // compatibility with callers that build worlds in Rust. A YAML key with
+        // an empty mapping would otherwise deserialize identically to an absent
+        // key, so inspect the wire shape before that normalization happens.
+        let wire: serde_yaml::Value =
+            serde_yaml::from_str(&source).context("Failed to parse Environment Manifest")?;
+        reject_explicit_node_config_overrides(&wire)?;
+        let manifest: Self =
+            serde_yaml::from_str(&source).context("Failed to parse Environment Manifest")?;
+        manifest.validate()?;
+        Ok(manifest)
     }
+
+    /// Validate the structural contract shared by all environment runners.
+    ///
+    /// Topology-specific checks stay with `World::from_manifest`, where the
+    /// named peripherals and machines are available. This layer rejects input
+    /// that cannot describe an unambiguous world at all.
+    pub fn validate(&self) -> Result<()> {
+        if self.schema_version != "1.0" {
+            anyhow::bail!(
+                "Unsupported environment schema_version '{}'. Supported version: '1.0'",
+                self.schema_version
+            );
+        }
+        if self.name.trim().is_empty() {
+            anyhow::bail!("Environment manifest requires a non-empty name");
+        }
+        if self.nodes.is_empty() {
+            anyhow::bail!("Environment manifest requires at least one node");
+        }
+
+        let mut node_ids = HashSet::with_capacity(self.nodes.len());
+        for (index, node) in self.nodes.iter().enumerate() {
+            if node.id.trim().is_empty() {
+                anyhow::bail!("Environment manifest nodes[{index}].id must be non-empty");
+            }
+            if !node_ids.insert(&node.id) {
+                anyhow::bail!("Environment manifest has duplicate node id '{}'", node.id);
+            }
+            if node.system.trim().is_empty() {
+                anyhow::bail!("Environment manifest nodes[{index}].system must be non-empty");
+            }
+            if node.firmware.trim().is_empty() {
+                anyhow::bail!("Environment manifest nodes[{index}].firmware must be non-empty");
+            }
+            if !node.config_overrides.is_empty() {
+                anyhow::bail!(
+                    "Environment manifest nodes[{index}].config_overrides is unsupported in environment schema 1.0"
+                );
+            }
+        }
+
+        for (index, interconnect) in self.interconnects.iter().enumerate() {
+            validate_environment_interconnect_config(index, interconnect)?;
+        }
+
+        Ok(())
+    }
+}
+
+/// Reject `config_overrides` on the YAML wire before Serde collapses an absent
+/// field, `{}`, and `null` into the same empty `HashMap`. Programmatic callers
+/// cannot express that distinction, but every user-facing environment manifest
+/// passes through [`EnvironmentManifest::from_file`].
+fn reject_explicit_node_config_overrides(wire: &serde_yaml::Value) -> Result<()> {
+    let nodes_key = serde_yaml::Value::String("nodes".to_string());
+    let overrides_key = serde_yaml::Value::String("config_overrides".to_string());
+    let Some(nodes) = wire
+        .as_mapping()
+        .and_then(|manifest| manifest.get(&nodes_key))
+        .and_then(serde_yaml::Value::as_sequence)
+    else {
+        return Ok(());
+    };
+
+    for (index, node) in nodes.iter().enumerate() {
+        if node
+            .as_mapping()
+            .is_some_and(|node| node.contains_key(&overrides_key))
+        {
+            anyhow::bail!(
+                "Environment manifest nodes[{index}].config_overrides is unsupported in environment schema 1.0"
+            );
+        }
+    }
+
+    Ok(())
+}
+
+fn validate_environment_interconnect_config(
+    index: usize,
+    interconnect: &InterconnectConfig,
+) -> Result<()> {
+    let kind = interconnect.r#type.as_str();
+    match kind {
+        "uart_cross_link" => {
+            reject_unknown_interconnect_config_keys(
+                index,
+                kind,
+                &interconnect.config,
+                &["node_a_uart", "node_b_uart"],
+            )?;
+            optional_nonempty_interconnect_string(
+                index,
+                kind,
+                &interconnect.config,
+                "node_a_uart",
+            )?;
+            optional_nonempty_interconnect_string(
+                index,
+                kind,
+                &interconnect.config,
+                "node_b_uart",
+            )?;
+        }
+        "can_bus" => {
+            reject_unknown_interconnect_config_keys(
+                index,
+                kind,
+                &interconnect.config,
+                &["peripheral"],
+            )?;
+            if interconnect
+                .config
+                .get("peripheral")
+                .and_then(serde_yaml::Value::as_str)
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .is_none()
+            {
+                anyhow::bail!("can_bus: missing nonblank config.peripheral");
+            }
+        }
+        "egress" => {
+            reject_unknown_interconnect_config_keys(
+                index,
+                kind,
+                &interconnect.config,
+                &[
+                    "uart",
+                    "transport",
+                    "url",
+                    "topic",
+                    "encoding",
+                    "buffer_max",
+                ],
+            )?;
+            optional_nonempty_interconnect_string(index, kind, &interconnect.config, "uart")?;
+            let transport = optional_nonempty_interconnect_string(
+                index,
+                kind,
+                &interconnect.config,
+                "transport",
+            )?
+            .unwrap_or("tcp");
+            let url =
+                optional_nonempty_interconnect_string(index, kind, &interconnect.config, "url")?;
+            if url.is_none() {
+                anyhow::bail!("egress: missing 'url'");
+            }
+            let topic =
+                optional_nonempty_interconnect_string(index, kind, &interconnect.config, "topic")?;
+            match transport {
+                "tcp" | "http" => {
+                    if topic.is_some() {
+                        anyhow::bail!(
+                            "interconnects[{index}].config.topic is supported only for egress transport mqtt"
+                        );
+                    }
+                }
+                "mqtt" => {
+                    if topic.is_none() {
+                        anyhow::bail!("egress: mqtt needs 'topic'");
+                    }
+                }
+                other => anyhow::bail!("egress: unknown transport '{other}'"),
+            }
+            let encoding = optional_nonempty_interconnect_string(
+                index,
+                kind,
+                &interconnect.config,
+                "encoding",
+            )?
+            .unwrap_or("raw");
+            if !matches!(encoding, "raw" | "ndjson-trace" | "frames-json") {
+                anyhow::bail!("egress: unknown encoding '{encoding}'");
+            }
+            if let Some(buffer_max) = interconnect.config.get("buffer_max") {
+                let Some(buffer_max) = buffer_max.as_u64() else {
+                    anyhow::bail!(
+                        "interconnects[{index}].config.buffer_max must be a positive integer"
+                    );
+                };
+                if buffer_max == 0 || usize::try_from(buffer_max).is_err() {
+                    anyhow::bail!(
+                        "interconnects[{index}].config.buffer_max must be a positive integer"
+                    );
+                }
+            }
+        }
+        other => anyhow::bail!("unsupported interconnect type '{other}'"),
+    }
+    Ok(())
+}
+
+fn reject_unknown_interconnect_config_keys(
+    index: usize,
+    kind: &str,
+    config: &HashMap<String, serde_yaml::Value>,
+    allowed: &[&str],
+) -> Result<()> {
+    let mut unknown: Vec<_> = config
+        .keys()
+        .filter(|key| !allowed.contains(&key.as_str()))
+        .collect();
+    unknown.sort();
+    if let Some(key) = unknown.first() {
+        anyhow::bail!("interconnects[{index}].config.{key} is not supported for {kind}");
+    }
+    Ok(())
+}
+
+fn optional_nonempty_interconnect_string<'a>(
+    index: usize,
+    kind: &str,
+    config: &'a HashMap<String, serde_yaml::Value>,
+    key: &str,
+) -> Result<Option<&'a str>> {
+    let Some(value) = config.get(key) else {
+        return Ok(None);
+    };
+    let Some(value) = value
+        .as_str()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    else {
+        anyhow::bail!("interconnects[{index}].config.{key} must be a non-empty string for {kind}");
+    };
+    Ok(Some(value))
 }
 
 impl ChipDescriptor {
@@ -636,6 +877,14 @@ pub struct TestInputs {
     pub system: Option<String>,
 }
 
+/// Inputs for a multi-node environment test. Environment scripts are selected
+/// exclusively by `inputs.env`; they cannot name single-node firmware inputs.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct EnvTestInputs {
+    pub env: String,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct TestLimits {
@@ -705,18 +954,109 @@ pub struct StopReasonAssertion {
     pub expected_stop_reason: StopReason,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(deny_unknown_fields)]
+#[derive(Debug, Clone)]
 pub struct MemoryValueDetails {
     pub address: u64,
     pub expected_value: u64,
-    #[serde(default)]
     pub mask: Option<u64>,
     /// Value width to read at `address`. Accepts bytes (1/2/4) or the
     /// equivalent bit width (8/16/32); both map to a u8/u16/u32 read.
     /// Defaults to a 32-bit (u32) word.
-    #[serde(default)]
     pub size: Option<u8>,
+    /// Target node for a multi-node environment assertion. Single-node scripts
+    /// leave this unset and continue to use the existing machine path.
+    pub node: Option<String>,
+}
+
+// `MemoryValueDetails` is public and callers historically construct it with a
+// struct literal. Keep that field shape intact while retaining the distinction
+// between an omitted `node` and parsed `node: null`: the latter is an invalid
+// explicit qualifier in single-node scripts and must survive a serde round
+// trip. This reserved private sentinel is created only while deserializing a
+// `node: null` field.
+const EXPLICIT_NULL_NODE_SENTINEL: &str = "\u{0}labwired:explicit-null-node";
+
+fn is_explicit_null_node(node: Option<&str>) -> bool {
+    node == Some(EXPLICIT_NULL_NODE_SENTINEL)
+}
+
+impl MemoryValueDetails {
+    /// Creates an unqualified memory assertion with all optional fields unset.
+    ///
+    /// Set [`Self::node`] after construction when building an environment
+    /// assertion programmatically.
+    pub fn new(address: u64, expected_value: u64) -> Self {
+        Self {
+            address,
+            expected_value,
+            mask: None,
+            size: None,
+            node: None,
+        }
+    }
+}
+
+#[derive(Serialize)]
+struct SerializableMemoryValueDetails<'a> {
+    address: u64,
+    expected_value: u64,
+    mask: Option<u64>,
+    size: Option<u8>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    node: Option<Option<&'a str>>,
+}
+
+impl Serialize for MemoryValueDetails {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        SerializableMemoryValueDetails {
+            address: self.address,
+            expected_value: self.expected_value,
+            mask: self.mask,
+            size: self.size,
+            node: if is_explicit_null_node(self.node.as_deref()) {
+                Some(None)
+            } else {
+                self.node.as_deref().map(Some)
+            },
+        }
+        .serialize(serializer)
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct MemoryValueDetailsWire {
+    address: u64,
+    expected_value: u64,
+    #[serde(default)]
+    mask: Option<u64>,
+    #[serde(default)]
+    size: Option<u8>,
+    #[serde(default)]
+    node: FieldPresence<String>,
+}
+
+impl<'de> Deserialize<'de> for MemoryValueDetails {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let wire = MemoryValueDetailsWire::deserialize(deserializer)?;
+        Ok(Self {
+            address: wire.address,
+            expected_value: wire.expected_value,
+            mask: wire.mask,
+            size: wire.size,
+            node: match wire.node {
+                FieldPresence::Absent => None,
+                FieldPresence::Present(Some(node)) => Some(node),
+                FieldPresence::Present(None) => Some(EXPLICIT_NULL_NODE_SENTINEL.to_string()),
+            },
+        })
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -931,6 +1271,19 @@ pub struct TestScript {
     pub stimuli: Vec<StimulusSpec>,
 }
 
+fn reject_explicit_memory_nodes(assertions: &[TestAssertion], script_kind: &str) -> Result<()> {
+    for (index, assertion) in assertions.iter().enumerate() {
+        if let TestAssertion::MemoryValue(memory) = assertion {
+            if memory.memory_value.node.is_some() {
+                anyhow::bail!(
+                    "{script_kind} test scripts do not support 'node' on memory_value assertions (assertions[{index}])"
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
 impl TestScript {
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
         let f = std::fs::File::open(&path)
@@ -956,6 +1309,8 @@ impl TestScript {
         if self.limits.max_steps == 0 {
             anyhow::bail!("Limit 'max_steps' must be greater than zero");
         }
+
+        reject_explicit_memory_nodes(&self.assertions, "single-node")?;
 
         // Fault injection requires schema_version 1.1+.
         if self.schema_version == "1.0" && (!self.faults.is_empty() || self.verdict.is_some()) {
@@ -1005,6 +1360,433 @@ impl TestScript {
                 anyhow::bail!("Duplicate fault id '{}'", fault.id);
             }
             validate_fault(fault)?;
+        }
+
+        Ok(())
+    }
+}
+
+/// A strict v1.0 script for a multi-node environment world.
+///
+/// The explicit fault, verdict, and stimulus fields are parsed so validation
+/// can reject them diagnostically rather than silently treating them as
+/// unknown or ignoring them in the environment runner.
+#[derive(Debug, Clone)]
+pub struct EnvTestScript {
+    pub schema_version: String,
+    pub inputs: EnvTestInputs,
+    pub limits: TestLimits,
+    pub assertions: Vec<TestAssertion>,
+    pub faults: Vec<FaultSpec>,
+    pub verdict: Option<Verdict>,
+    pub stimuli: Vec<StimulusSpec>,
+    explicit_limits: EnvExplicitLimits,
+    explicit_unsupported_fields: EnvExplicitUnsupportedFields,
+}
+
+/// A field whose parser records the difference between being absent and being
+/// explicitly configured to a default value (or `null`). Environment scripts
+/// use this for single-node-only early-stop tuning: every explicit occurrence
+/// is rejected instead of being normalized away during deserialization.
+#[derive(Debug, Clone, Copy, Default)]
+enum FieldPresence<T> {
+    #[default]
+    Absent,
+    Present(Option<T>),
+}
+
+impl<T> FieldPresence<T> {
+    fn is_present(&self) -> bool {
+        matches!(self, Self::Present(_))
+    }
+
+    fn into_value(self) -> Option<T> {
+        match self {
+            Self::Absent | Self::Present(None) => None,
+            Self::Present(Some(value)) => Some(value),
+        }
+    }
+}
+
+impl<'de, T> Deserialize<'de> for FieldPresence<T>
+where
+    T: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        Ok(Self::Present(Option::<T>::deserialize(deserializer)?))
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct EnvExplicitLimits {
+    no_progress_steps: FieldPresence<u64>,
+    max_vcd_bytes: FieldPresence<u64>,
+    stop_when_assertions_pass: FieldPresence<bool>,
+    stop_when_assertions_pass_settle_steps: FieldPresence<u64>,
+    stop_when_assertions_pass_min_steps: FieldPresence<u64>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct EnvExplicitUnsupportedFields {
+    faults: FieldPresence<Vec<FaultSpec>>,
+    verdict: FieldPresence<Verdict>,
+    stimuli: FieldPresence<Vec<StimulusSpec>>,
+}
+
+/// Serialization keeps the user-visible environment contract strict in both
+/// directions. Valid scripts omit runner options that environment execution
+/// cannot honor; invalid parsed or programmatically-mutated scripts retain the
+/// unsupported field so a serialize/parse cycle cannot make them look valid.
+#[derive(Serialize)]
+struct SerializableEnvTestScript<'a> {
+    schema_version: &'a str,
+    inputs: &'a EnvTestInputs,
+    limits: SerializableEnvTestLimits,
+    assertions: &'a [TestAssertion],
+    #[serde(skip_serializing_if = "Option::is_none")]
+    faults: Option<Option<&'a [FaultSpec]>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    verdict: Option<Option<&'a Verdict>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    stimuli: Option<Option<&'a [StimulusSpec]>>,
+}
+
+#[derive(Serialize)]
+struct SerializableEnvTestLimits {
+    max_steps: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    max_cycles: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    max_uart_bytes: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    no_progress_steps: Option<Option<u64>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    wall_time_ms: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    max_vcd_bytes: Option<Option<u64>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    stop_when_assertions_pass: Option<Option<bool>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    stop_when_assertions_pass_settle_steps: Option<Option<u64>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    stop_when_assertions_pass_min_steps: Option<Option<u64>>,
+}
+
+fn serialize_unsupported_option_limit(
+    explicit: FieldPresence<u64>,
+    value: Option<u64>,
+) -> Option<Option<u64>> {
+    match value {
+        Some(value) => Some(Some(value)),
+        None if explicit.is_present() => Some(None),
+        None => None,
+    }
+}
+
+fn serialize_unsupported_bool_limit(
+    explicit: FieldPresence<bool>,
+    value: bool,
+) -> Option<Option<bool>> {
+    if value {
+        Some(Some(true))
+    } else {
+        match explicit {
+            FieldPresence::Absent => None,
+            FieldPresence::Present(None) => Some(None),
+            FieldPresence::Present(Some(_)) => Some(Some(false)),
+        }
+    }
+}
+
+fn serialize_unsupported_defaulted_limit(
+    explicit: FieldPresence<u64>,
+    value: u64,
+    default: u64,
+) -> Option<Option<u64>> {
+    if value != default {
+        Some(Some(value))
+    } else {
+        match explicit {
+            FieldPresence::Absent => None,
+            FieldPresence::Present(None) => Some(None),
+            FieldPresence::Present(Some(_)) => Some(Some(value)),
+        }
+    }
+}
+
+fn serialize_unsupported_sequence<'a, T>(
+    explicit: &FieldPresence<Vec<T>>,
+    value: &'a [T],
+) -> Option<Option<&'a [T]>> {
+    if !value.is_empty() {
+        Some(Some(value))
+    } else {
+        match explicit {
+            FieldPresence::Absent => None,
+            FieldPresence::Present(None) => Some(None),
+            FieldPresence::Present(Some(_)) => Some(Some(value)),
+        }
+    }
+}
+
+fn serialize_unsupported_verdict<'a>(
+    explicit: &FieldPresence<Verdict>,
+    value: Option<&'a Verdict>,
+) -> Option<Option<&'a Verdict>> {
+    match value {
+        Some(value) => Some(Some(value)),
+        None if explicit.is_present() => Some(None),
+        None => None,
+    }
+}
+
+impl Serialize for EnvTestScript {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        SerializableEnvTestScript {
+            schema_version: &self.schema_version,
+            inputs: &self.inputs,
+            limits: SerializableEnvTestLimits {
+                max_steps: self.limits.max_steps,
+                max_cycles: self.limits.max_cycles,
+                max_uart_bytes: self.limits.max_uart_bytes,
+                no_progress_steps: serialize_unsupported_option_limit(
+                    self.explicit_limits.no_progress_steps,
+                    self.limits.no_progress_steps,
+                ),
+                wall_time_ms: self.limits.wall_time_ms,
+                max_vcd_bytes: serialize_unsupported_option_limit(
+                    self.explicit_limits.max_vcd_bytes,
+                    self.limits.max_vcd_bytes,
+                ),
+                stop_when_assertions_pass: serialize_unsupported_bool_limit(
+                    self.explicit_limits.stop_when_assertions_pass,
+                    self.limits.stop_when_assertions_pass,
+                ),
+                stop_when_assertions_pass_settle_steps: serialize_unsupported_defaulted_limit(
+                    self.explicit_limits.stop_when_assertions_pass_settle_steps,
+                    self.limits.stop_when_assertions_pass_settle_steps,
+                    default_stop_settle_steps(),
+                ),
+                stop_when_assertions_pass_min_steps: serialize_unsupported_defaulted_limit(
+                    self.explicit_limits.stop_when_assertions_pass_min_steps,
+                    self.limits.stop_when_assertions_pass_min_steps,
+                    0,
+                ),
+            },
+            assertions: &self.assertions,
+            faults: serialize_unsupported_sequence(
+                &self.explicit_unsupported_fields.faults,
+                &self.faults,
+            ),
+            verdict: serialize_unsupported_verdict(
+                &self.explicit_unsupported_fields.verdict,
+                self.verdict.as_ref(),
+            ),
+            stimuli: serialize_unsupported_sequence(
+                &self.explicit_unsupported_fields.stimuli,
+                &self.stimuli,
+            ),
+        }
+        .serialize(serializer)
+    }
+}
+
+/// Wire shape for an environment limits block. It resolves to `TestLimits`
+/// after retaining presence information for settings the environment runner
+/// intentionally does not implement.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct EnvTestLimits {
+    max_steps: u64,
+    #[serde(default)]
+    max_cycles: Option<u64>,
+    #[serde(default)]
+    max_uart_bytes: Option<u64>,
+    #[serde(default)]
+    no_progress_steps: FieldPresence<u64>,
+    #[serde(default)]
+    wall_time_ms: Option<u64>,
+    #[serde(default)]
+    max_vcd_bytes: FieldPresence<u64>,
+    #[serde(default)]
+    stop_when_assertions_pass: FieldPresence<bool>,
+    #[serde(default)]
+    stop_when_assertions_pass_settle_steps: FieldPresence<u64>,
+    #[serde(default)]
+    stop_when_assertions_pass_min_steps: FieldPresence<u64>,
+}
+
+impl EnvTestLimits {
+    fn into_parts(self) -> (TestLimits, EnvExplicitLimits) {
+        let explicit_limits = EnvExplicitLimits {
+            no_progress_steps: self.no_progress_steps,
+            max_vcd_bytes: self.max_vcd_bytes,
+            stop_when_assertions_pass: self.stop_when_assertions_pass,
+            stop_when_assertions_pass_settle_steps: self.stop_when_assertions_pass_settle_steps,
+            stop_when_assertions_pass_min_steps: self.stop_when_assertions_pass_min_steps,
+        };
+        let limits = TestLimits {
+            max_steps: self.max_steps,
+            max_cycles: self.max_cycles,
+            max_uart_bytes: self.max_uart_bytes,
+            no_progress_steps: self.no_progress_steps.into_value(),
+            wall_time_ms: self.wall_time_ms,
+            max_vcd_bytes: self.max_vcd_bytes.into_value(),
+            stop_when_assertions_pass: self.stop_when_assertions_pass.into_value().unwrap_or(false),
+            stop_when_assertions_pass_settle_steps: self
+                .stop_when_assertions_pass_settle_steps
+                .into_value()
+                .unwrap_or_else(default_stop_settle_steps),
+            stop_when_assertions_pass_min_steps: self
+                .stop_when_assertions_pass_min_steps
+                .into_value()
+                .unwrap_or_default(),
+        };
+        (limits, explicit_limits)
+    }
+}
+
+/// Strict deserialization wire form for `EnvTestScript`. The public type keeps
+/// `TestLimits` for runners, while this shape preserves which unsupported
+/// early-stop fields were explicitly supplied in YAML.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct EnvTestScriptWire {
+    schema_version: String,
+    inputs: EnvTestInputs,
+    limits: EnvTestLimits,
+    #[serde(default)]
+    assertions: Vec<TestAssertion>,
+    #[serde(default)]
+    faults: FieldPresence<Vec<FaultSpec>>,
+    #[serde(default)]
+    verdict: FieldPresence<Verdict>,
+    #[serde(default)]
+    stimuli: FieldPresence<Vec<StimulusSpec>>,
+}
+
+impl<'de> Deserialize<'de> for EnvTestScript {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let wire = EnvTestScriptWire::deserialize(deserializer)?;
+        let EnvTestScriptWire {
+            schema_version,
+            inputs,
+            limits: wire_limits,
+            assertions,
+            faults,
+            verdict,
+            stimuli,
+        } = wire;
+        let (limits, explicit_limits) = wire_limits.into_parts();
+        let explicit_unsupported_fields = EnvExplicitUnsupportedFields {
+            faults: faults.clone(),
+            verdict: verdict.clone(),
+            stimuli: stimuli.clone(),
+        };
+        Ok(Self {
+            schema_version,
+            inputs,
+            limits,
+            assertions,
+            faults: faults.into_value().unwrap_or_default(),
+            verdict: verdict.into_value(),
+            stimuli: stimuli.into_value().unwrap_or_default(),
+            explicit_limits,
+            explicit_unsupported_fields,
+        })
+    }
+}
+
+impl EnvTestScript {
+    pub fn validate(&self) -> Result<()> {
+        if self.schema_version != "1.0" {
+            anyhow::bail!(
+                "Environment test scripts require schema_version '1.0' (got '{}')",
+                self.schema_version
+            );
+        }
+
+        if self.inputs.env.trim().is_empty() {
+            anyhow::bail!("Input 'env' path cannot be empty");
+        }
+
+        if self.limits.max_steps == 0 {
+            anyhow::bail!("Limit 'max_steps' must be greater than zero");
+        }
+
+        if self.explicit_limits.no_progress_steps.is_present()
+            || self.limits.no_progress_steps.is_some()
+        {
+            anyhow::bail!("Environment test scripts do not support 'limits.no_progress_steps'");
+        }
+        if self.explicit_limits.max_vcd_bytes.is_present() || self.limits.max_vcd_bytes.is_some() {
+            anyhow::bail!("Environment test scripts do not support 'limits.max_vcd_bytes'");
+        }
+        if self.explicit_limits.stop_when_assertions_pass.is_present()
+            || self.limits.stop_when_assertions_pass
+        {
+            anyhow::bail!(
+                "Environment test scripts do not support 'limits.stop_when_assertions_pass'"
+            );
+        }
+        if self
+            .explicit_limits
+            .stop_when_assertions_pass_settle_steps
+            .is_present()
+            || self.limits.stop_when_assertions_pass_settle_steps != default_stop_settle_steps()
+        {
+            anyhow::bail!(
+                "Environment test scripts do not support 'limits.stop_when_assertions_pass_settle_steps'"
+            );
+        }
+        if self
+            .explicit_limits
+            .stop_when_assertions_pass_min_steps
+            .is_present()
+            || self.limits.stop_when_assertions_pass_min_steps != 0
+        {
+            anyhow::bail!(
+                "Environment test scripts do not support 'limits.stop_when_assertions_pass_min_steps'"
+            );
+        }
+        if self.explicit_unsupported_fields.faults.is_present() || !self.faults.is_empty() {
+            anyhow::bail!("Environment test scripts do not support 'faults'");
+        }
+        if self.explicit_unsupported_fields.verdict.is_present() || self.verdict.is_some() {
+            anyhow::bail!("Environment test scripts do not support 'verdict'");
+        }
+        if self.explicit_unsupported_fields.stimuli.is_present() || !self.stimuli.is_empty() {
+            anyhow::bail!("Environment test scripts do not support 'stimuli'");
+        }
+
+        if self.assertions.is_empty() {
+            anyhow::bail!("Environment test scripts require at least one assertion");
+        }
+
+        for (index, assertion) in self.assertions.iter().enumerate() {
+            let TestAssertion::MemoryValue(memory) = assertion else {
+                anyhow::bail!(
+                    "Environment test scripts support only memory_value assertions (assertions[{index}])"
+                );
+            };
+            let has_node =
+                memory.memory_value.node.as_deref().is_some_and(|node| {
+                    !node.trim().is_empty() && !is_explicit_null_node(Some(node))
+                });
+            if !has_node {
+                anyhow::bail!(
+                    "Environment memory_value assertion at assertions[{index}] requires a non-empty 'node'"
+                );
+            }
         }
 
         Ok(())
@@ -1147,6 +1929,7 @@ impl LegacyTestScriptV1 {
                 "Unsupported legacy schema_version. Supported legacy versions: 1 (deprecated)"
             );
         }
+        reject_explicit_memory_nodes(&self.assertions, "legacy")?;
         Ok(())
     }
 }
@@ -1155,16 +1938,44 @@ impl LegacyTestScriptV1 {
 pub enum LoadedTestScript {
     V1_0(TestScript),
     LegacyV1(LegacyTestScriptV1),
+    Env(EnvTestScript),
 }
 
 /// Load a CI test script from YAML.
 ///
 /// Supported formats:
+/// - v1.0 environment: `schema_version: "1.0"` with `inputs.env`.
 /// - v1.0 (frozen): `schema_version: \"1.0\"` with `inputs` + `limits` + `assertions`.
 /// - legacy v1 (deprecated): `schema_version: 1` with `max_steps` at the top level.
 pub fn load_test_script<P: AsRef<Path>>(path: P) -> Result<LoadedTestScript> {
     let contents = std::fs::read_to_string(&path)
         .with_context(|| format!("Failed to read test script at {:?}", path.as_ref()))?;
+
+    // Probe the raw YAML before trying the strict single-node schema. That
+    // keeps TestInputs' deny_unknown_fields boundary intact while making the
+    // two v1.0 input shapes unambiguous.
+    let raw_script: serde_yaml::Value =
+        serde_yaml::from_str(&contents).context("Failed to parse Test Script YAML")?;
+    let raw_inputs = raw_script.get("inputs");
+    let raw_env = raw_inputs.and_then(|inputs| inputs.get("env"));
+    let raw_firmware = raw_inputs.and_then(|inputs| inputs.get("firmware"));
+
+    if raw_env.is_some() && raw_firmware.is_some() {
+        anyhow::bail!(
+            "Test script inputs cannot contain both 'env' and 'firmware'; choose exactly one"
+        );
+    }
+
+    if raw_env.is_some_and(serde_yaml::Value::is_string) {
+        let env_script: EnvTestScript = serde_yaml::from_str(&contents)
+            .context("Failed to parse environment Test Script YAML")?;
+        env_script.validate()?;
+        return Ok(LoadedTestScript::Env(env_script));
+    }
+
+    if raw_inputs.is_some() && raw_env.is_none() && raw_firmware.is_none() {
+        anyhow::bail!("Test script inputs must contain exactly one of 'env' or 'firmware'");
+    }
 
     match serde_yaml::from_str::<TestScript>(&contents) {
         Ok(script) => {
@@ -1172,9 +1983,9 @@ pub fn load_test_script<P: AsRef<Path>>(path: P) -> Result<LoadedTestScript> {
             Ok(LoadedTestScript::V1_0(script))
         }
         Err(v1_err) => {
-            let looks_like_legacy_v1 = serde_yaml::from_str::<serde_yaml::Value>(&contents)
-                .ok()
-                .and_then(|v| v.get("schema_version").cloned())
+            let looks_like_legacy_v1 = raw_script
+                .get("schema_version")
+                .cloned()
                 .map(|v| match v {
                     serde_yaml::Value::Number(n) => n.as_i64() == Some(1) || n.as_u64() == Some(1),
                     serde_yaml::Value::String(s) => s.trim() == "1",
@@ -1537,6 +2348,655 @@ assertions: []
 
         let loaded = load_test_script(&script_path).unwrap();
         assert!(matches!(loaded, LoadedTestScript::LegacyV1(_)));
+    }
+
+    #[test]
+    fn legacy_script_rejects_node_qualified_memory_assertions() {
+        for (name, node) in [("legacy-node", "tester"), ("legacy-null-node", "null")] {
+            let script_path = write_temp_file(
+                name,
+                &format!(
+                    r#"
+schema_version: 1
+max_steps: 10
+assertions:
+  - memory_value:
+      node: {node}
+      address: 0x20010000
+      expected_value: 1
+"#
+                ),
+            );
+
+            let err = load_test_script(&script_path).unwrap_err().to_string();
+            assert!(err.contains("node"), "unexpected error: {err}");
+            assert!(err.contains("legacy"), "unexpected error: {err}");
+        }
+    }
+
+    #[test]
+    fn legacy_explicit_null_memory_node_round_trips_as_invalid() {
+        let script: LegacyTestScriptV1 = serde_yaml::from_str(
+            r#"
+schema_version: 1
+max_steps: 10
+assertions:
+  - memory_value:
+      node: null
+      address: 0x20010000
+      expected_value: 1
+"#,
+        )
+        .unwrap();
+        let err = script.validate().unwrap_err().to_string();
+        assert!(err.contains("legacy"), "unexpected error: {err}");
+
+        let serialized = serde_yaml::to_string(&script).unwrap();
+        assert!(
+            serialized.contains("node: null"),
+            "explicit null node was lost during serialization: {serialized}"
+        );
+        let round_tripped: LegacyTestScriptV1 = serde_yaml::from_str(&serialized).unwrap();
+        let err = round_tripped.validate().unwrap_err().to_string();
+        assert!(err.contains("legacy"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn load_env_script_selects_env_variant_and_preserves_allowed_fields() {
+        let script_path = write_temp_file(
+            "env-script",
+            r#"
+schema_version: "1.0"
+inputs:
+  env: "twonode-env.yaml"
+limits:
+  max_steps: 50000
+  max_cycles: 75000
+  max_uart_bytes: 2048
+  wall_time_ms: 3000
+assertions:
+  - memory_value:
+      node: tester
+      address: 0x20010000
+      expected_value: 0xA5
+      size: 1
+"#,
+        );
+
+        let loaded = load_test_script(&script_path).unwrap();
+        match loaded {
+            LoadedTestScript::Env(script) => {
+                assert_eq!(script.inputs.env, "twonode-env.yaml");
+                assert_eq!(script.limits.max_steps, 50_000);
+                assert_eq!(script.limits.max_cycles, Some(75_000));
+                assert_eq!(script.limits.max_uart_bytes, Some(2_048));
+                assert_eq!(script.limits.wall_time_ms, Some(3_000));
+                let TestAssertion::MemoryValue(assertion) = &script.assertions[0] else {
+                    panic!("expected memory_value assertion");
+                };
+                assert_eq!(assertion.memory_value.node.as_deref(), Some("tester"));
+            }
+            other => panic!("expected environment script, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn env_script_serialization_does_not_introduce_unsupported_runner_options() {
+        let script: EnvTestScript = serde_yaml::from_str(
+            r#"
+schema_version: "1.0"
+inputs: { env: "twonode-env.yaml" }
+limits:
+  max_steps: 10
+assertions:
+  - memory_value: { node: tester, address: 0x20010000, expected_value: 1 }
+"#,
+        )
+        .unwrap();
+        script.validate().unwrap();
+
+        let serialized = serde_yaml::to_string(&script).unwrap();
+        for option in [
+            "no_progress_steps",
+            "max_vcd_bytes",
+            "stop_when_assertions_pass",
+            "stop_when_assertions_pass_settle_steps",
+            "stop_when_assertions_pass_min_steps",
+            "faults:",
+            "verdict:",
+            "stimuli:",
+        ] {
+            assert!(
+                !serialized.contains(option),
+                "unexpected serialized script: {serialized}"
+            );
+        }
+
+        let round_tripped: EnvTestScript = serde_yaml::from_str(&serialized).unwrap();
+        round_tripped.validate().unwrap();
+    }
+
+    fn valid_env_script_for_mutation() -> EnvTestScript {
+        serde_yaml::from_str(
+            r#"
+schema_version: "1.0"
+inputs: { env: "twonode-env.yaml" }
+limits:
+  max_steps: 10
+assertions:
+  - memory_value: { node: tester, address: 0x20010000, expected_value: 1 }
+"#,
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn env_validation_and_serialization_reject_publicly_mutated_unsupported_values() {
+        macro_rules! assert_rejected_and_round_trips_invalid {
+            ($field:literal, $mutate:expr) => {{
+                let mut script = valid_env_script_for_mutation();
+                $mutate(&mut script);
+
+                let err = script.validate().unwrap_err().to_string();
+                assert!(err.contains($field), "unexpected error: {err}");
+
+                let serialized = serde_yaml::to_string(&script).unwrap();
+                assert!(
+                    serialized.contains(&format!("{}:", $field)),
+                    "missing unsupported field after serialization: {serialized}"
+                );
+                let round_tripped: EnvTestScript = serde_yaml::from_str(&serialized).unwrap();
+                let err = round_tripped.validate().unwrap_err().to_string();
+                assert!(err.contains($field), "unexpected error: {err}");
+            }};
+        }
+
+        assert_rejected_and_round_trips_invalid!(
+            "no_progress_steps",
+            |script: &mut EnvTestScript| script.limits.no_progress_steps = Some(1)
+        );
+        assert_rejected_and_round_trips_invalid!("max_vcd_bytes", |script: &mut EnvTestScript| {
+            script.limits.max_vcd_bytes = Some(1)
+        });
+        assert_rejected_and_round_trips_invalid!(
+            "stop_when_assertions_pass",
+            |script: &mut EnvTestScript| script.limits.stop_when_assertions_pass = true
+        );
+        assert_rejected_and_round_trips_invalid!(
+            "stop_when_assertions_pass_settle_steps",
+            |script: &mut EnvTestScript| {
+                script.limits.stop_when_assertions_pass_settle_steps =
+                    default_stop_settle_steps() + 1
+            }
+        );
+        assert_rejected_and_round_trips_invalid!(
+            "stop_when_assertions_pass_min_steps",
+            |script: &mut EnvTestScript| script.limits.stop_when_assertions_pass_min_steps = 1
+        );
+        assert_rejected_and_round_trips_invalid!("faults", |script: &mut EnvTestScript| {
+            script.faults.push(
+                serde_yaml::from_str(
+                    r#"
+id: unsupported
+kind: missing_clock
+"#,
+                )
+                .unwrap(),
+            )
+        });
+        assert_rejected_and_round_trips_invalid!("verdict", |script: &mut EnvTestScript| {
+            script.verdict = Some(serde_yaml::from_str("{}").unwrap())
+        });
+        assert_rejected_and_round_trips_invalid!("stimuli", |script: &mut EnvTestScript| {
+            script.stimuli.push(
+                serde_yaml::from_str(
+                    r#"
+target: { channel: x }
+value: 1.0
+"#,
+                )
+                .unwrap(),
+            )
+        });
+    }
+
+    #[test]
+    fn explicitly_unsupported_env_fields_round_trip_as_invalid() {
+        for (limits_extra, top_level_extra, expected_serialized, diagnostic) in [
+            (
+                "  no_progress_steps: null",
+                "",
+                "no_progress_steps: null",
+                "no_progress_steps",
+            ),
+            (
+                "  max_vcd_bytes: null",
+                "",
+                "max_vcd_bytes: null",
+                "max_vcd_bytes",
+            ),
+            (
+                "  stop_when_assertions_pass: false",
+                "",
+                "stop_when_assertions_pass: false",
+                "stop_when_assertions_pass",
+            ),
+            (
+                "  stop_when_assertions_pass_settle_steps: 100000",
+                "",
+                "stop_when_assertions_pass_settle_steps: 100000",
+                "stop_when_assertions_pass_settle_steps",
+            ),
+            (
+                "  stop_when_assertions_pass_min_steps: 0",
+                "",
+                "stop_when_assertions_pass_min_steps: 0",
+                "stop_when_assertions_pass_min_steps",
+            ),
+            ("", "faults: null", "faults: null", "faults"),
+            ("", "faults: []", "faults: []", "faults"),
+            ("", "verdict: null", "verdict: null", "verdict"),
+            ("", "stimuli: null", "stimuli: null", "stimuli"),
+            ("", "stimuli: []", "stimuli: []", "stimuli"),
+        ] {
+            let yaml = format!(
+                r#"
+schema_version: "1.0"
+inputs: {{ env: "twonode-env.yaml" }}
+limits:
+  max_steps: 10
+{limits_extra}
+assertions:
+  - memory_value: {{ node: tester, address: 0x20010000, expected_value: 1 }}
+{top_level_extra}
+"#
+            );
+            let script: EnvTestScript = serde_yaml::from_str(&yaml).unwrap();
+
+            let err = script.validate().unwrap_err().to_string();
+            assert!(err.contains(diagnostic), "unexpected error: {err}");
+
+            let serialized = serde_yaml::to_string(&script).unwrap();
+            assert!(
+                serialized.contains(expected_serialized),
+                "missing explicit unsupported field after serialization: {serialized}"
+            );
+            let round_tripped: EnvTestScript = serde_yaml::from_str(&serialized).unwrap();
+            let err = round_tripped.validate().unwrap_err().to_string();
+            assert!(err.contains(diagnostic), "unexpected error: {err}");
+        }
+    }
+
+    #[test]
+    fn single_node_and_legacy_validation_reject_public_memory_node_mutations() {
+        let mut single_node: TestScript = serde_yaml::from_str(
+            r#"
+schema_version: "1.0"
+inputs: { firmware: "fw.elf" }
+limits: { max_steps: 10 }
+assertions:
+  - memory_value: { address: 0x20010000, expected_value: 1 }
+"#,
+        )
+        .unwrap();
+        {
+            let TestAssertion::MemoryValue(assertion) = &mut single_node.assertions[0] else {
+                panic!("expected memory_value assertion");
+            };
+            assertion.memory_value.node = Some("tester".to_string());
+        }
+        let err = single_node.validate().unwrap_err().to_string();
+        assert!(err.contains("single-node"), "unexpected error: {err}");
+
+        let mut legacy: LegacyTestScriptV1 = serde_yaml::from_str(
+            r#"
+schema_version: 1
+max_steps: 10
+assertions:
+  - memory_value: { address: 0x20010000, expected_value: 1 }
+"#,
+        )
+        .unwrap();
+        {
+            let TestAssertion::MemoryValue(assertion) = &mut legacy.assertions[0] else {
+                panic!("expected memory_value assertion");
+            };
+            assertion.memory_value.node = Some("tester".to_string());
+        }
+        let err = legacy.validate().unwrap_err().to_string();
+        assert!(err.contains("legacy"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn load_single_node_script_still_selects_v1_0_variant() {
+        let script_path = write_temp_file(
+            "single-node-script",
+            r#"
+schema_version: "1.0"
+inputs:
+  firmware: "fw.elf"
+  system: "system.yaml"
+limits:
+  max_steps: 1000
+"#,
+        );
+
+        assert!(matches!(
+            load_test_script(&script_path).unwrap(),
+            LoadedTestScript::V1_0(_)
+        ));
+    }
+
+    #[test]
+    fn single_node_script_rejects_node_qualified_memory_assertions() {
+        let script_path = write_temp_file(
+            "single-node-memory-node",
+            r#"
+schema_version: "1.0"
+inputs:
+  firmware: "fw.elf"
+limits:
+  max_steps: 1000
+assertions:
+  - memory_value:
+      node: tester
+      address: 0x20010000
+      expected_value: 1
+"#,
+        );
+
+        let err = load_test_script(&script_path).unwrap_err().to_string();
+        assert!(err.contains("node"), "unexpected error: {err}");
+        assert!(err.contains("single-node"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn single_node_script_rejects_explicit_null_memory_node() {
+        let script_path = write_temp_file(
+            "single-node-memory-null-node",
+            r#"
+schema_version: "1.0"
+inputs:
+  firmware: "fw.elf"
+limits:
+  max_steps: 1000
+assertions:
+  - memory_value:
+      node: null
+      address: 0x20010000
+      expected_value: 1
+"#,
+        );
+
+        let err = load_test_script(&script_path).unwrap_err().to_string();
+        assert!(err.contains("node"), "unexpected error: {err}");
+        assert!(err.contains("single-node"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn single_node_explicit_null_memory_node_round_trips_as_invalid() {
+        let script: TestScript = serde_yaml::from_str(
+            r#"
+schema_version: "1.0"
+inputs: { firmware: "fw.elf" }
+limits: { max_steps: 10 }
+assertions:
+  - memory_value:
+      node: null
+      address: 0x20010000
+      expected_value: 1
+"#,
+        )
+        .unwrap();
+        let err = script.validate().unwrap_err().to_string();
+        assert!(err.contains("single-node"), "unexpected error: {err}");
+
+        let serialized = serde_yaml::to_string(&script).unwrap();
+        assert!(
+            serialized.contains("node: null"),
+            "explicit null node was lost during serialization: {serialized}"
+        );
+        let round_tripped: TestScript = serde_yaml::from_str(&serialized).unwrap();
+        let err = round_tripped.validate().unwrap_err().to_string();
+        assert!(err.contains("single-node"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn ordinary_memory_assertion_without_node_round_trips_without_node_key() {
+        let script: TestScript = serde_yaml::from_str(
+            r#"
+schema_version: "1.0"
+inputs: { firmware: "fw.elf" }
+limits: { max_steps: 10 }
+assertions:
+  - memory_value: { address: 0x20010000, expected_value: 1 }
+"#,
+        )
+        .unwrap();
+        script.validate().unwrap();
+
+        let serialized = serde_yaml::to_string(&script).unwrap();
+        assert!(
+            !serialized.contains("node:"),
+            "unexpected serialized script: {serialized}"
+        );
+
+        let round_tripped: TestScript = serde_yaml::from_str(&serialized).unwrap();
+        round_tripped.validate().unwrap();
+    }
+
+    #[test]
+    fn env_script_rejects_missing_or_blank_env_path() {
+        for (name, yaml) in [
+            (
+                "blank-env",
+                r#"
+schema_version: "1.0"
+inputs: { env: "   " }
+limits: { max_steps: 10 }
+assertions:
+  - memory_value: { node: tester, address: 0x20010000, expected_value: 1 }
+"#,
+            ),
+            (
+                "missing-env",
+                r#"
+schema_version: "1.0"
+inputs: {}
+limits: { max_steps: 10 }
+assertions:
+  - memory_value: { node: tester, address: 0x20010000, expected_value: 1 }
+"#,
+            ),
+        ] {
+            let script_path = write_temp_file(name, yaml);
+            let err = load_test_script(&script_path).unwrap_err().to_string();
+            assert!(err.contains("env"), "unexpected error: {err}");
+        }
+    }
+
+    #[test]
+    fn env_script_requires_schema_v1_0_and_positive_step_limit() {
+        for (name, yaml, diagnostic) in [
+            (
+                "wrong-env-schema",
+                r#"
+schema_version: "1.1"
+inputs: { env: "twonode-env.yaml" }
+limits: { max_steps: 10 }
+assertions:
+  - memory_value: { node: tester, address: 0x20010000, expected_value: 1 }
+"#,
+                "schema_version",
+            ),
+            (
+                "zero-env-steps",
+                r#"
+schema_version: "1.0"
+inputs: { env: "twonode-env.yaml" }
+limits: { max_steps: 0 }
+assertions:
+  - memory_value: { node: tester, address: 0x20010000, expected_value: 1 }
+"#,
+                "max_steps",
+            ),
+        ] {
+            let script_path = write_temp_file(name, yaml);
+            let err = load_test_script(&script_path).unwrap_err().to_string();
+            assert!(err.contains(diagnostic), "unexpected error: {err}");
+        }
+    }
+
+    #[test]
+    fn env_script_requires_memory_assertions_with_nodes() {
+        for (name, yaml, diagnostic) in [
+            (
+                "no-assertions",
+                r#"
+schema_version: "1.0"
+inputs: { env: "twonode-env.yaml" }
+limits: { max_steps: 10 }
+"#,
+                "at least one assertion",
+            ),
+            (
+                "missing-node",
+                r#"
+schema_version: "1.0"
+inputs: { env: "twonode-env.yaml" }
+limits: { max_steps: 10 }
+assertions:
+  - memory_value: { address: 0x20010000, expected_value: 1 }
+"#,
+                "node",
+            ),
+            (
+                "blank-node",
+                r#"
+schema_version: "1.0"
+inputs: { env: "twonode-env.yaml" }
+limits: { max_steps: 10 }
+assertions:
+  - memory_value: { node: " ", address: 0x20010000, expected_value: 1 }
+"#,
+                "node",
+            ),
+            (
+                "unsupported-assertion",
+                r#"
+schema_version: "1.0"
+inputs: { env: "twonode-env.yaml" }
+limits: { max_steps: 10 }
+assertions:
+  - uart_contains: "PASS"
+"#,
+                "memory_value",
+            ),
+        ] {
+            let script_path = write_temp_file(name, yaml);
+            let err = load_test_script(&script_path).unwrap_err().to_string();
+            assert!(err.contains(diagnostic), "unexpected error: {err}");
+        }
+    }
+
+    #[test]
+    fn env_script_rejects_combined_firmware_and_env_inputs() {
+        let script_path = write_temp_file(
+            "combined-inputs",
+            r#"
+schema_version: "1.0"
+inputs: { env: "twonode-env.yaml", firmware: "fw.elf" }
+limits: { max_steps: 10 }
+assertions:
+  - memory_value: { node: tester, address: 0x20010000, expected_value: 1 }
+"#,
+        );
+
+        let err = load_test_script(&script_path).unwrap_err().to_string();
+        assert!(err.contains("both") && err.contains("env") && err.contains("firmware"));
+    }
+
+    #[test]
+    fn env_script_rejects_runner_options_it_cannot_honor() {
+        for (name, extra, diagnostic) in [
+            ("no-progress", "  no_progress_steps: 5", "no_progress_steps"),
+            (
+                "no-progress-null",
+                "  no_progress_steps: null",
+                "no_progress_steps",
+            ),
+            ("vcd", "  max_vcd_bytes: 1024", "max_vcd_bytes"),
+            ("vcd-null", "  max_vcd_bytes: null", "max_vcd_bytes"),
+            (
+                "early-pass",
+                "  stop_when_assertions_pass: true",
+                "stop_when_assertions_pass",
+            ),
+            (
+                "early-pass-false",
+                "  stop_when_assertions_pass: false",
+                "stop_when_assertions_pass",
+            ),
+            (
+                "early-pass-null",
+                "  stop_when_assertions_pass: null",
+                "stop_when_assertions_pass",
+            ),
+            (
+                "early-pass-settle",
+                "  stop_when_assertions_pass_settle_steps: 100000",
+                "stop_when_assertions_pass_settle_steps",
+            ),
+            (
+                "early-pass-settle-null",
+                "  stop_when_assertions_pass_settle_steps: null",
+                "stop_when_assertions_pass_settle_steps",
+            ),
+            (
+                "early-pass-minimum",
+                "  stop_when_assertions_pass_min_steps: 0",
+                "stop_when_assertions_pass_min_steps",
+            ),
+            (
+                "early-pass-minimum-null",
+                "  stop_when_assertions_pass_min_steps: null",
+                "stop_when_assertions_pass_min_steps",
+            ),
+            (
+                "faults",
+                "faults:\n  - id: x\n    kind: missing_clock",
+                "faults",
+            ),
+            ("faults-empty", "faults: []", "faults"),
+            ("faults-null", "faults: null", "faults"),
+            ("verdict", "verdict: {}", "verdict"),
+            ("verdict-null", "verdict: null", "verdict"),
+            (
+                "stimuli",
+                "stimuli:\n  - target: { channel: x }\n    value: 1.0",
+                "stimuli",
+            ),
+            ("stimuli-empty", "stimuli: []", "stimuli"),
+            ("stimuli-null", "stimuli: null", "stimuli"),
+        ] {
+            let script_path = write_temp_file(
+                name,
+                &format!(
+                    r#"
+schema_version: "1.0"
+inputs: {{ env: "twonode-env.yaml" }}
+limits:
+  max_steps: 10
+{extra}
+assertions:
+  - memory_value: {{ node: tester, address: 0x20010000, expected_value: 1 }}
+"#
+                ),
+            );
+
+            let err = load_test_script(&script_path).unwrap_err().to_string();
+            assert!(err.contains(diagnostic), "unexpected error: {err}");
+        }
     }
 
     #[test]

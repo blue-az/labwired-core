@@ -76,6 +76,17 @@ connectors:
     endpoint: "host_console"  # Pipes UART output to simulator stdout
 ```
 
+For an `inputs.env` CI world, each `nodes[].system` value points to this
+same System Manifest format used by the Playground. The environment manifest
+adds node IDs, firmware paths, and explicit interconnects; it does not create a
+second board-configuration dialect. v0.19 world manifests reject
+`nodes[].config_overrides`: the field must be omitted, including `{}` and `null`.
+Each resolved node chip must resolve to `arch: arm` and declare
+`core: cortex-m*`; its firmware must be an `EM_ARM` ELF with a valid Cortex-M
+Thumb reset vector at `flash.base + reset_vector_offset` (SP in RAM and
+Thumb-bit reset handler in flash). See the [CI Test Runner](ci_test_runner.md)
+for the closed world-interconnect schema.
+
 ## 4. CLI Usage
 
 To run a simulation, provide both the firmware and the system manifest:
