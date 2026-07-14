@@ -316,16 +316,16 @@ command described above and writes the same artifact contract.
 
 ### GitHub Actions
 
-Use the public root action and pin the Core CLI with its version input:
+Use the public Core action and pin the Core CLI with its version input:
 
 ~~~yaml
 - name: Run LabWired tests
-  uses: w1ne/labwired/.github/actions/labwired-test@main
+  uses: w1ne/labwired-core/.github/actions/labwired-test@main
   with:
     version: v0.18.0
     script: examples/ci/dummy-max-steps.yaml
-    output_dir: out/artifacts
-    # Optional: api-key: ${{ secrets.LABWIRED_API_KEY }}
+    output-dir: out/artifacts
+    args: --no-uart-stdout
 
 - name: Upload artifacts (pass/fail)
   if: always()
@@ -336,9 +336,9 @@ Use the public root action and pin the Core CLI with its version input:
     if-no-files-found: warn
 ~~~
 
-The root action is intentionally referenced at main because that repository
-does not publish a v0.18.0 tag. The version input still selects the immutable
-Core CLI release.
+The Core action is intentionally referenced at main until a post-hardening
+action tag is published. The version input still selects the immutable Core
+CLI release.
 
 ### Docker and GitLab runners
 

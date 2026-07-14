@@ -6,8 +6,8 @@ against a reproducible simulator version.
 
 ## GitHub Actions
 
-Use the public LabWired action at its published root location and select the
-Core CLI release with the version input:
+Use the public LabWired Core action and select the Core CLI release with its
+version input:
 
 ~~~yaml
 name: Firmware simulation
@@ -24,12 +24,12 @@ jobs:
         run: cargo build --release --target thumbv7m-none-eabi -p firmware
 
       - name: Run LabWired
-        uses: w1ne/labwired/.github/actions/labwired-test@main
+        uses: w1ne/labwired-core/.github/actions/labwired-test@main
         with:
           version: v0.18.0
           script: tests/firmware-test.yaml
-          output_dir: out/labwired
-          # Optional: api-key: ${{ secrets.LABWIRED_API_KEY }}
+          output-dir: out/labwired
+          args: --no-uart-stdout
 
       - name: Upload LabWired artifacts
         if: always()
@@ -40,8 +40,8 @@ jobs:
           if-no-files-found: warn
 ~~~
 
-The public action reference remains at main because its repository has no
-v0.18.0 tag. The version input is the immutable Core CLI release pin.
+The public action reference remains at main until a post-hardening Core action
+tag is published. The version input is the immutable Core CLI release pin.
 
 ## Container runner
 

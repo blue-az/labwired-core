@@ -21,12 +21,12 @@ jobs:
         run: cargo build --release --target thumbv7m-none-eabi -p your-firmware
 
       - name: Run LabWired test
-        uses: w1ne/labwired/.github/actions/labwired-test@main
+        uses: w1ne/labwired-core/.github/actions/labwired-test@main
         with:
           version: v0.18.0
           script: tests/firmware-test.yaml
-          output_dir: out/labwired
-          # Optional: api-key: ${{ secrets.LABWIRED_API_KEY }}
+          output-dir: out/labwired
+          args: --no-uart-stdout
 
       - name: Upload LabWired artifacts
         if: always()
