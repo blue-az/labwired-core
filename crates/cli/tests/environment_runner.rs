@@ -32,6 +32,16 @@ fn workspace_root() -> PathBuf {
 }
 
 fn write_two_node_environment(dir: &Path) -> (PathBuf, PathBuf, PathBuf) {
+    // Deliberately list beta first: the runner contract serializes and captures
+    // nodes in lexical id order, not input-manifest order.
+    write_two_node_environment_in_order(dir, &["beta", "alpha"])
+}
+
+fn write_two_node_environment_in_order(
+    dir: &Path,
+    node_order: &[&str],
+) -> (PathBuf, PathBuf, PathBuf) {
+    assert_eq!(node_order.len(), 2, "fixture world must contain two nodes");
     let root = workspace_root();
     let firmware = std::fs::canonicalize(root.join("tests/fixtures/uart-ok-thumbv7m.elf"))
         .expect("fixture firmware");
@@ -39,30 +49,40 @@ fn write_two_node_environment(dir: &Path) -> (PathBuf, PathBuf, PathBuf) {
         .expect("fixture system manifest");
     let environment = dir.join("two-node.yaml");
 
-    // Deliberately list beta first: the runner contract serializes and captures
-    // nodes in lexical id order, not input-manifest order.
+    let nodes = node_order
+        .iter()
+        .map(|id| {
+            format!(
+                "  - id: {id}\n    system: \"{}\"\n    firmware: \"{}\"\n",
+                system.display(),
+                firmware.display(),
+            )
+        })
+        .collect::<String>();
     std::fs::write(
         &environment,
         format!(
             r#"schema_version: "1.0"
 name: fixture-world
 nodes:
-  - id: beta
-    system: "{}"
-    firmware: "{}"
-  - id: alpha
-    system: "{}"
-    firmware: "{}"
-"#,
-            system.display(),
-            firmware.display(),
-            system.display(),
-            firmware.display(),
+{}"#,
+            nodes,
         ),
     )
     .expect("write environment manifest");
 
     (environment, firmware, system)
+}
+
+fn assert_sha256(value: &serde_json::Value) {
+    let value = value.as_str().expect("SHA-256 string");
+    assert_eq!(value.len(), 64, "SHA-256 must be 64 hex characters");
+    assert!(
+        value
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte)),
+        "SHA-256 must be lowercase hexadecimal: {value}"
+    );
 }
 
 fn run_environment_script(dir: &Path, script: &str, extra_args: &[&str]) -> std::process::Output {
@@ -143,6 +163,7 @@ assertions:
     assert!(nodes
         .iter()
         .all(|node| node["system_hash"].as_str().is_some()));
+    assert_sha256(&result["config"]["world_firmware_hash"]);
 
     let snapshot: serde_json::Value = serde_json::from_str(
         &std::fs::read_to_string(output_dir.join("snapshot.json")).expect("read snapshot.json"),
@@ -153,6 +174,11 @@ assertions:
     assert_eq!(snapshot_nodes[0]["id"], "alpha");
     assert_eq!(snapshot_nodes[1]["id"], "beta");
     assert!(snapshot_nodes[0]["state"]["cpu"].is_object());
+    assert_eq!(snapshot_nodes[0]["cycles"], result["cycles"]);
+    assert_eq!(snapshot_nodes[1]["cycles"], result["cycles"]);
+    assert!(snapshot_nodes
+        .iter()
+        .all(|node| node["cycles"].as_u64().is_some_and(|cycles| cycles > 0)));
 
     let uart = std::fs::read_to_string(output_dir.join("uart.log")).expect("read uart.log");
     assert!(uart.starts_with("[node:alpha]\n"));
@@ -216,6 +242,8 @@ assertions:
     assert_eq!(snapshot["status"], "error");
     assert_eq!(snapshot["nodes"][0]["id"], "alpha");
     assert_eq!(snapshot["nodes"][1]["id"], "beta");
+    assert_eq!(snapshot["nodes"][0]["cycles"], 0);
+    assert_eq!(snapshot["nodes"][1]["cycles"], 0);
 
     let uart = std::fs::read_to_string(output_dir.join("uart.log")).expect("read uart.log");
     assert_eq!(uart, "[node:alpha]\n[node:beta]\n");
@@ -273,6 +301,133 @@ assertions:
     );
 
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn environment_runner_unusable_explicit_env_values_keep_environment_artifacts() {
+    let mut empty_world_hashes = Vec::new();
+
+    for (label, env_value) in [("null", "null"), ("number", "42")] {
+        let dir = unique_dir(&format!("invalid-env-{label}"));
+        let output = run_environment_script(
+            &dir,
+            &format!(
+                r#"schema_version: "1.0"
+inputs:
+  env: {env_value}
+limits:
+  max_steps: 1
+assertions: []
+"#
+            ),
+            &[],
+        );
+
+        assert_eq!(
+            output.status.code(),
+            Some(2),
+            "{label} env value: stderr={}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let output_dir = dir.join("artifacts");
+        let result: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(output_dir.join("result.json")).expect("read result.json"),
+        )
+        .expect("parse result.json");
+        assert_eq!(result["stop_reason"], "config_error");
+        assert!(result["config"].get("firmware").is_none());
+        assert!(result["config"]["environment"]
+            .as_str()
+            .expect("placeholder environment provenance")
+            .ends_with("__labwired_invalid_inputs_env__.yaml"));
+        assert!(result["config"]["nodes"]
+            .as_array()
+            .expect("environment nodes")
+            .is_empty());
+        assert_sha256(&result["config"]["world_firmware_hash"]);
+        empty_world_hashes.push(
+            result["config"]["world_firmware_hash"]
+                .as_str()
+                .expect("world firmware hash")
+                .to_owned(),
+        );
+
+        let snapshot: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(output_dir.join("snapshot.json")).expect("read snapshot.json"),
+        )
+        .expect("parse snapshot.json");
+        assert_eq!(snapshot["type"], "environment");
+        assert_eq!(snapshot["status"], "error");
+        assert!(snapshot["nodes"]
+            .as_array()
+            .expect("snapshot nodes")
+            .is_empty());
+        assert_eq!(
+            std::fs::read_to_string(output_dir.join("uart.log")).expect("read uart.log"),
+            ""
+        );
+        let junit = std::fs::read_to_string(output_dir.join("junit.xml")).expect("read junit.xml");
+        assert!(junit.contains("config error"));
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    assert_eq!(
+        empty_world_hashes[0], empty_world_hashes[1],
+        "an empty environment world has deterministic provenance"
+    );
+}
+
+#[test]
+fn environment_runner_world_firmware_hash_is_order_independent() {
+    let first_dir = unique_dir("world-firmware-hash-first");
+    let second_dir = unique_dir("world-firmware-hash-second");
+    write_two_node_environment_in_order(&first_dir, &["beta", "alpha"]);
+    write_two_node_environment_in_order(&second_dir, &["alpha", "beta"]);
+    let script = r#"schema_version: "1.0"
+inputs:
+  env: "two-node.yaml"
+limits:
+  max_steps: 1
+assertions:
+  - memory_value:
+      node: alpha
+      address: 0x20000000
+      expected_value: 0
+"#;
+
+    let first_output = run_environment_script(&first_dir, script, &[]);
+    let second_output = run_environment_script(&second_dir, script, &[]);
+    assert!(
+        first_output.status.success(),
+        "first world run failed: {}",
+        String::from_utf8_lossy(&first_output.stderr)
+    );
+    assert!(
+        second_output.status.success(),
+        "second world run failed: {}",
+        String::from_utf8_lossy(&second_output.stderr)
+    );
+
+    let first: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(first_dir.join("artifacts/result.json"))
+            .expect("read first result.json"),
+    )
+    .expect("parse first result.json");
+    let second: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(second_dir.join("artifacts/result.json"))
+            .expect("read second result.json"),
+    )
+    .expect("parse second result.json");
+    assert_sha256(&first["config"]["world_firmware_hash"]);
+    assert_sha256(&second["config"]["world_firmware_hash"]);
+    assert_eq!(
+        first["config"]["world_firmware_hash"], second["config"]["world_firmware_hash"],
+        "manifest declaration order must not change the world firmware identity"
+    );
+
+    let _ = std::fs::remove_dir_all(&first_dir);
+    let _ = std::fs::remove_dir_all(&second_dir);
 }
 
 #[test]
