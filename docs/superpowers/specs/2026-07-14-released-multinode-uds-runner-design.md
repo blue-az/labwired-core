@@ -34,20 +34,24 @@ report.  Consumer workflows must not clone or compile LabWired Core.
   declared `can_bus` endpoints to named FDCAN peripherals, steps all nodes,
   and evaluates node-qualified memory assertions.
 
-The environment runner uses the same result schema and output names as the
-single-node runner.  Its `result.json` identifies the environment script and
-records every assertion; `uart.log` has deterministic node-prefixed console
-output; `snapshot.json` is an environment-safe final-state record; and JUnit
-reports every assertion.  Configuration errors also yield the standard
+The environment runner uses the same outer result contract and output names as
+the single-node runner.  Its `result.json` identifies the environment script
+and records every assertion; `uart.log` records deterministic node-labelled
+console output; `snapshot.json` is an environment-safe final-state record; and
+JUnit reports every assertion.  Configuration errors also yield the standard
 machine-readable artifact set.  Unsupported assertion kinds in environment
 mode fail explicitly rather than silently weakening a gate.
 
 FDCAN wiring is a small post-construction seam: `World::from_manifest` creates
 one `CanBus` per manifest interconnect and attaches an endpoint to each named
-node's configured FDCAN peripheral.  The pre-existing `CanBus` continues to
-move frames during `World::step_all`; a narrow test proves an attached
-peripheral changes from unattached to attached, and a world-level test proves
-the manifest rejects an unknown node.
+node's configured FDCAN peripheral.  Every world node is built with
+`configure_cortex_m`, matching the normal CLI path rather than constructing a
+bare CPU.  Nodes are stepped and rendered in stable id order.  The
+pre-existing `CanBus` continues to move frames during `World::step_all`; a
+narrow test proves an attached peripheral changes from unattached to attached,
+and a world-level test proves a receiver gets a frame and the manifest rejects
+an unknown node.  The UDS acceptance assertion remains tester-to-ECU behavior,
+not a self-echo claim.
 
 ## Release and migration
 
