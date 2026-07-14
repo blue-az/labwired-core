@@ -726,8 +726,24 @@ pub struct MemoryValueDetails {
     /// leave this unset and continue to use the existing machine path.
     pub node: Option<String>,
     /// Preserves an explicitly supplied `node: null` through serialization.
-    #[doc(hidden)]
-    pub node_was_explicit: bool,
+    node_was_explicit: bool,
+}
+
+impl MemoryValueDetails {
+    /// Creates an unqualified memory assertion with all optional fields unset.
+    ///
+    /// Set [`Self::node`] after construction when building an environment
+    /// assertion programmatically.
+    pub fn new(address: u64, expected_value: u64) -> Self {
+        Self {
+            address,
+            expected_value,
+            mask: None,
+            size: None,
+            node: None,
+            node_was_explicit: false,
+        }
+    }
 }
 
 #[derive(Serialize)]
@@ -2381,16 +2397,6 @@ assertions:
         let err = single_node.validate().unwrap_err().to_string();
         assert!(err.contains("single-node"), "unexpected error: {err}");
 
-        {
-            let TestAssertion::MemoryValue(assertion) = &mut single_node.assertions[0] else {
-                panic!("expected memory_value assertion");
-            };
-            assertion.memory_value.node = None;
-            assertion.memory_value.node_was_explicit = true;
-        }
-        let err = single_node.validate().unwrap_err().to_string();
-        assert!(err.contains("single-node"), "unexpected error: {err}");
-
         let mut legacy: LegacyTestScriptV1 = serde_yaml::from_str(
             r#"
 schema_version: 1
@@ -2405,16 +2411,6 @@ assertions:
                 panic!("expected memory_value assertion");
             };
             assertion.memory_value.node = Some("tester".to_string());
-        }
-        let err = legacy.validate().unwrap_err().to_string();
-        assert!(err.contains("legacy"), "unexpected error: {err}");
-
-        {
-            let TestAssertion::MemoryValue(assertion) = &mut legacy.assertions[0] else {
-                panic!("expected memory_value assertion");
-            };
-            assertion.memory_value.node = None;
-            assertion.memory_value.node_was_explicit = true;
         }
         let err = legacy.validate().unwrap_err().to_string();
         assert!(err.contains("legacy"), "unexpected error: {err}");

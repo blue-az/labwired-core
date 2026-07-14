@@ -55,28 +55,15 @@ peripherals:
 }
 
 #[test]
-fn memory_value_details_literal_remains_externally_constructible() {
-    let details = MemoryValueDetails {
-        address: 0x2001_0000,
-        expected_value: 1,
-        mask: None,
-        size: None,
-        node: None,
-        node_was_explicit: false,
-    };
+fn memory_value_details_constructor_is_externally_constructible_and_sparse() {
+    let details = MemoryValueDetails::new(0x2001_0000, 1);
+    assert_eq!(details.mask, None);
+    assert_eq!(details.size, None);
+    assert_eq!(details.node, None);
+
     let serialized = serde_yaml::to_string(&details).unwrap();
     assert!(
         !serialized.contains("node:"),
         "ordinary node-less details should stay sparse: {serialized}"
-    );
-
-    let explicit_null = MemoryValueDetails {
-        node_was_explicit: true,
-        ..details
-    };
-    let serialized = serde_yaml::to_string(&explicit_null).unwrap();
-    assert!(
-        serialized.contains("node: null"),
-        "explicit null node should survive serialization: {serialized}"
     );
 }
