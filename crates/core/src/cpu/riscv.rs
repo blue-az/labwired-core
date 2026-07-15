@@ -166,7 +166,7 @@ impl RiscV {
             // pure delay. Delay loops only need to *complete*, not match wall
             // time, so a coarse cycle estimate is correct in sim; the real-time
             // CLINT timer (mtime vs mtimecmp, CSR 0xB00) stays unscaled.
-            0x7E0 | 0x7E1 | 0x7E2 if self.core_profile == RiscVCoreProfile::Esp32C3 => {
+            0x7E0..=0x7E2 if self.core_profile == RiscVCoreProfile::Esp32C3 => {
                 (self.mtime.wrapping_mul(CYCLE_SCALE) & 0xFFFFFFFF) as u32
             }
             0xC00 if self.core_profile == RiscVCoreProfile::StandardRv32 => {
@@ -189,7 +189,7 @@ impl RiscV {
             0x341 => self.mepc = val,
             0x342 => self.mcause = val,
             0x343 => self.mtval = val,
-            0x7E0 | 0x7E1 | 0x7E2 if self.core_profile == RiscVCoreProfile::Esp32C3 => {}
+            0x7E0..=0x7E2 if self.core_profile == RiscVCoreProfile::Esp32C3 => {}
             _ => return false,
         }
         true
@@ -795,10 +795,8 @@ impl Cpu for RiscV {
                 let Some(old) = self.csr_read_or_trap(csr, opcode) else {
                     return Ok(());
                 };
-                if imm != 0 {
-                    if !self.csr_write_or_trap(csr, old | (imm as u32), opcode) {
-                        return Ok(());
-                    }
+                if imm != 0 && !self.csr_write_or_trap(csr, old | (imm as u32), opcode) {
+                    return Ok(());
                 }
                 if rd != 0 {
                     self.write_reg(rd, old);
@@ -808,10 +806,8 @@ impl Cpu for RiscV {
                 let Some(old) = self.csr_read_or_trap(csr, opcode) else {
                     return Ok(());
                 };
-                if imm != 0 {
-                    if !self.csr_write_or_trap(csr, old & !(imm as u32), opcode) {
-                        return Ok(());
-                    }
+                if imm != 0 && !self.csr_write_or_trap(csr, old & !(imm as u32), opcode) {
+                    return Ok(());
                 }
                 if rd != 0 {
                     self.write_reg(rd, old);
