@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.19.2] - 2026-07-15
+
+### Fixed
+- **Release runner smoke**: Bind-mounted container runs now preserve the
+  caller's artifact ownership, so the published image and archive-backed
+  GitHub Action can write report bundles in the same workspace.
+
+### Changed
+- **Public runner default**: The GitHub Action, integration templates, and
+  documented release pins now use the verified v0.19.2 runner contract.
+
+## [0.19.1] - 2026-07-15
+
+### Fixed
+- **Environment completion**: `inputs.env` scripts can opt into the same
+  durable assertion-pass stop contract as single-machine runs, including the
+  settling window and minimum-step floor. Node runtime failures and configured
+  wall-time/cycle/UART limits retain precedence over completion.
+- **CI runner image**: The image now builds against the same Debian/glibc
+  baseline it runs on. The required Core CI check builds and executes the final
+  image before a release tag can be created.
+
+### Changed
+- **Public runner default**: The one-step GitHub Action now defaults to the
+  v0.19.1 immutable CLI release; release smoke exercises both that default and
+  an explicit release pin.
+
+## [0.19.0] - 2026-07-14
+
+### Added
+- **Released multi-node CI runner**: GitHub Actions and OCI release smoke tests
+  can run a complete inputs.env world from YAML and publish a self-contained
+  report bundle without rebuilding LabWired.
+- **Environment result contract**: Multi-node runs write an explicit
+  1.0-environment result schema with per-node provenance and fidelity gaps.
+
+### Fixed
+- **Environment CI safety and evidence**: Strict environment-manifest
+  validation, deterministic snapshot peripheral ordering, explicit CAN
+  peripheral selection, and correct safety-stop / assertion precedence make
+  multi-node evidence reproducible and fail-closed.
+
 ## [0.18.0] - 2026-07-09
 
 ### Added

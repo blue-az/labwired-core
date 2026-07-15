@@ -9,13 +9,13 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 |-------|------|----------------------|--------------|--------|
 | `nrf52840` | 🟢 silicon-verified | 2026-06-17 | 2026-07-10 | ⚠ drift acked 2026-07-10 (re-capture pending) |
 | `seeed-xiao-nrf52840-sense` | 🟢 silicon-verified | 2026-06-17 | 2026-07-10 | ⚠ drift acked 2026-07-10 (re-capture pending) |
-| `stm32h563` | 🟢 silicon-verified | 2026-06-22 | 2026-07-12 | ⚠ drift acked 2026-07-12 (re-capture pending) |
-| `esp32c3` | 🟢 silicon-verified | 2026-06-17 | 2026-07-12 | ⚠ drift acked 2026-07-12 (re-capture pending) |
+| `stm32h563` | 🟢 silicon-verified | 2026-06-22 | 2026-07-14 | ⚠ drift acked 2026-07-14 (re-capture pending) |
+| `esp32c3` | 🟢 silicon-verified | 2026-06-17 | 2026-07-15 | ⚠ drift acked 2026-07-15 (re-capture pending) |
 | `nucleo-l476rg` | 🟢 silicon-verified | 2026-06-20 | 2026-07-12 | ⚠ drift acked 2026-07-12 (re-capture pending) |
 | `nucleo-l073rz` | 🟢 silicon-verified | 2026-06-20 | 2026-07-12 | ⚠ drift acked 2026-07-12 (re-capture pending) |
 | `stm32f103` | 🟢 silicon-verified | 2026-06-20 | 2026-07-12 | ⚠ drift acked 2026-07-12 (re-capture pending) |
 | `stm32f407` | 🟢 silicon-smoke | 2026-06-20 | 2026-07-12 | ⚠ drift acked 2026-07-12 (re-capture pending) |
-| `esp32s3` | 🟢 silicon-verified | 2026-06-20 | 2026-07-12 | ⚠ drift acked 2026-07-12 (re-capture pending) |
+| `esp32s3` | 🟢 silicon-verified | 2026-06-20 | 2026-07-14 | ⚠ drift acked 2026-07-14 (re-capture pending) |
 | `stm32f401` | 🟡 smoke-manual | — | 2026-06-27 | no silicon capture |
 | `stm32wba52` | 🟡 smoke-manual | — | 2026-06-27 | no silicon capture |
 | `nrf52832` | ⚪ structural | — | 2026-06-27 | no silicon capture |
@@ -44,7 +44,7 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 - Silicon: **2026-06-22** on STLINK-V3 (USB 0483:374e, NUCLEO-H563ZI, dapdirect AP1 recipe) — FLASH program-behaviour live-diff run on the board 2026-06-22 (drives real program/erase over SWD): write buffer (NSSR.WBNE) accumulates a 16-byte quad-word, commits + sets EOP only on completion; a misaligned quad-word raises INCERR alone and commits nothing; program-over-not-erased is permitted and ANDs the bits (no PGSERR); flags clear via NSCCR (0x30), not by writing NSSR. The sim H5 flash error-flag + read-while-write fidelity gates were CORRECTED to match this capture (earlier datasheet model was wrong on all four points). Prior MMIO/reset diff (h563_mmio_diff + h563_parity_diff + h563_class_diff, 0 divergence) still holds.
   - offline (CI): h563_conformance (5 tests vs frozen 2026-06-10..12 captures)
   - offline (CI): h563_mmio_diff::{h563_mmio_sim_only,h563_parity_sim_only,h563_class_sim_only}
-- Drift status: **⚠ drift acked 2026-07-12 (re-capture pending)**
+- Drift status: **⚠ drift acked 2026-07-14 (re-capture pending)**
 
 ## `esp32c3` — 🟢 silicon-verified
 
@@ -52,7 +52,7 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 - Note: Reset-state oracle, not behavioural. ~40 peripherals declared (NOT 6 as the prose doc says).
 - Silicon: **2026-06-17** on USB-JTAG (built-in, openocd-esp32) — re-verified live — reset oracle re-captured live 2026-06-17: 1123/1123 static registers match committed baseline (13 deltas all in per-chip efuse + live USB-device state, none in the asserted set); esp32c3_reset_values_match_silicon passes
   - offline (CI): esp32c3_reset_conformance::esp32c3_reset_values_match_silicon (79 regs; 366/423 overlap matched silicon)
-- Drift status: **⚠ drift acked 2026-07-12 (re-capture pending)**
+- Drift status: **⚠ drift acked 2026-07-15 (re-capture pending)**
 
 ## `nucleo-l476rg` — 🟢 silicon-verified
 
@@ -97,7 +97,7 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 - Silicon: **2026-06-20** on USB-JTAG built-in (ESP32-S3-Zero, USB 303a:1001, openocd-esp32, Tensilica tap 0x120034e5) — Live re-capture after the v0.17.0 merge: reset-state oracle 9/9 match live silicon (SYSTIMER CONF 0x46000000 + I2C0 timing block TO/FIFO_CONF/SCL holds/FILTER_CFG), and esp32s3_reset_conformance (sim vs frozen) passes. Supersedes the 2026-06-19 drift_ack.
   - offline (CI): esp32s3_reset_conformance (9 reset regs vs live silicon, firmware-path bus)
   - offline (CI): e2e_i2c_tmp102 / e2e_hello_world / xtensa_exec / e2e_esp32_epaper (sim)
-- Drift status: **⚠ drift acked 2026-07-12 (re-capture pending)**
+- Drift status: **⚠ drift acked 2026-07-14 (re-capture pending)**
 
 ## `stm32f401` — 🟡 smoke-manual
 

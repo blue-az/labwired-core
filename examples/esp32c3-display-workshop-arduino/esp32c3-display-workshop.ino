@@ -18,11 +18,11 @@ static constexpr uint8_t OLED_HEIGHT = WORKSHOP_OLED_HEIGHT;
 static constexpr uint8_t OLED_PAGES = OLED_HEIGHT / 8;
 static_assert(OLED_HEIGHT == 32 || OLED_HEIGHT == 64, "WORKSHOP_OLED_HEIGHT must be 32 or 64");
 static constexpr uint32_t DEMO_CLOCK_START_SECONDS = 19UL * 3600UL;
-static uint32_t demoCyclesPerClockSecond = 0;
+static constexpr uint32_t DEMO_CLOCK_INTERVAL_MS = 1000UL;
 
 static uint8_t oled[128 * OLED_PAGES];
 static uint32_t displayedSeconds = DEMO_CLOCK_START_SECONDS;
-static uint32_t lastClockCycle = 0;
+static uint32_t lastClockMillis = 0;
 
 static const uint8_t SEG_BITS[10][7] = {
   {1,1,1,1,1,1,0}, {0,1,1,0,0,0,0}, {1,1,0,1,1,0,1}, {1,1,1,1,0,0,1},
@@ -169,17 +169,13 @@ void setup() {
   oledInit();
   displayedSeconds = DEMO_CLOCK_START_SECONDS;
   renderClockSeconds(displayedSeconds);
-  // ESP32-C3's cycle counter is the machine PCCR CSR (0x7E2), exposed by
-  // Arduino as ESP.getCycleCount(). The standard RISC-V rdcycle CSR (0xC00)
-  // is not implemented by this core.
-  demoCyclesPerClockSecond = static_cast<uint32_t>(getCpuFrequencyMhz()) * 1000000UL;
-  lastClockCycle = ESP.getCycleCount();
+  lastClockMillis = millis();
 }
 
 void loop() {
-  uint32_t now = ESP.getCycleCount();
-  if (static_cast<uint32_t>(now - lastClockCycle) < demoCyclesPerClockSecond) return;
-  lastClockCycle = now;
+  const uint32_t now = millis();
+  if (static_cast<uint32_t>(now - lastClockMillis) < DEMO_CLOCK_INTERVAL_MS) return;
+  lastClockMillis = now;
   displayedSeconds++;
   renderClockSeconds(displayedSeconds);
 }

@@ -14,6 +14,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # This static verifier reads workflow/Dockerfile/action/docs text only; it
+  # intentionally needs neither Docker nor a Rust build.
+  release-runner-contract:
+    name: release-runner-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The static contract verifier inspects the immutable action-source
+          # commit referenced by consumer documentation.
+          fetch-depth: 0
+
+      - name: Verify release runner contract
+        run: bash scripts/ci/verify-release-runner-contract.sh
+
   # ── Fast PR gate (REQUIRED) ────────────────────────────────────────────────
   # Formatting, lints, and unit tests only — no firmware cross-builds, no
   # fixture-dependent integration tests, no Tier-1 sims. Target a few minutes so
@@ -89,6 +105,22 @@ jobs:
           --test stm32_dma_walk_differential
           --test kw41z_walk_free_differential
           --lib
+
+      # This is deliberately inside the required core-integrity check: every
+      # merge must prove the final OCI runtime can execute the CLI before a
+      # main commit can be tagged for release. Building from fresh base layers
+      # catches builder/runtime ABI drift such as a newer glibc in Rust's slim
+      # image than the release runtime provides.
+      - name: Smoke CI runner image
+        run: |
+          set -euo pipefail
+          docker build --pull \
+            --file Dockerfile.ci \
+            --tag labwired-ci-smoke:local \
+            --build-arg VERSION=ci-smoke \
+            --build-arg REVISION="$GITHUB_SHA" \
+            .
+          docker run --rm labwired-ci-smoke:local --version
 
   # ── Full suite (NOT a PR gate) ─────────────────────────────────────────────
   # Builds firmware fixtures, runs the complete workspace tests, the host-only

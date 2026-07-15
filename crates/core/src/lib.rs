@@ -172,8 +172,31 @@ pub fn emit_trace_event(
 }
 
 /// Trait representing a CPU architecture
+/// Feature-agnostic JIT engine run counters, mirrored from a concrete CPU's
+/// engine so generic (`C: Cpu`) callers can observe non-vacuity without pulling
+/// in the JIT-only `EngineStats` type. All-zero / absent for interpreter-only
+/// CPUs and for runs where the JIT engine was never created.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct CpuJitStats {
+    /// Blocks that crossed the hot threshold and were compiled + installed.
+    pub compiled: u64,
+    /// Compiled-block invocations.
+    pub block_runs: u64,
+    /// Guest instructions retired inside compiled blocks.
+    pub block_instrs: u64,
+    /// Guest instructions retired on the interpreter fallback path.
+    pub interpreted: u64,
+}
+
 pub trait Cpu: Send {
     fn reset(&mut self, bus: &mut dyn Bus) -> SimResult<()>;
+    /// JIT engine counters for this CPU, if it ran a JIT that was created.
+    /// Default `None` (interpreter-only CPUs / non-JIT builds). Lets generic
+    /// `C: Cpu` callers — e.g. the CLI oracle loop — assert the compiled path
+    /// was non-vacuously exercised without downcasting to the concrete CPU.
+    fn jit_engine_stats(&self) -> Option<CpuJitStats> {
+        None
+    }
     /// Downcast escape hatch for runtime fast-paths that need the
     /// concrete CPU type (e.g. the browser-side JIT prototype in
     /// `labwired-wasm` reaches into `XtensaLx7` for direct register
@@ -590,6 +613,17 @@ pub trait Peripheral: std::fmt::Debug + Send {
         Ok(())
     }
 
+    /// Optional source register descriptor for debugger clients that need the
+    /// config-level layout (including reset values and descriptions), rather
+    /// than the display-oriented [`Self::describe_registers`] schema.
+    ///
+    /// Declarative peripherals return their original descriptor. Behavioral
+    /// peripherals that replace a declarative register surface may do the same
+    /// to keep debugger integrations faithful to the configured chip.
+    fn peripheral_descriptor(&self) -> Option<labwired_config::PeripheralDescriptor> {
+        None
+    }
+
     /// Optional register-layout schema for the universal inspect interface.
     /// Declarative peripherals ([`crate::peripherals::declarative::GenericPeripheral`])
     /// return their descriptor's registers, so every declarative peripheral
@@ -783,6 +817,38 @@ pub trait Bus {
     fn external_irq_lines(&self) -> u32 {
         0
     }
+
+    /// Event-scheduler Gap-#1 hook: `true` iff an MMIO write executed since the
+    /// last `drain_scheduler_events` armed a peripheral event that has not yet
+    /// been moved into the scheduler heap (it is sitting in `pending_schedule`).
+    /// A CPU batch loop polls this after each interpreted instruction while the
+    /// tick interval is widened (> 1) so it can END the batch on the arming
+    /// write — the just-armed event is then enqueued by the post-batch drain and
+    /// the NEXT batch's `next_event_deadline` clamp delivers it at its exact
+    /// cycle, instead of the batch overrunning the deadline. O(1); default false
+    /// for buses that don't model the scheduler.
+    #[cfg(feature = "event-scheduler")]
+    fn has_pending_schedule(&self) -> bool {
+        false
+    }
+
+    /// The bus's mirrored "current cycle" (what lazy peripherals read through the
+    /// shared `CycleClock`). A CPU batch loop reads this once at batch entry to
+    /// learn the batch-start cycle, then republishes the EXACT cycle before each
+    /// interpreted instruction via [`Self::publish_cycle`] so a mid-batch MMIO
+    /// read of a lazily-derived counter sees `batch_start + retired` — the same
+    /// value interval-1 would show — instead of the stale batch-start value.
+    /// Default 0 for buses that don't model a cycle clock.
+    #[cfg(feature = "event-scheduler")]
+    fn current_cycle(&self) -> u64 {
+        0
+    }
+
+    /// Republish the shared `CycleClock` to `cycle` (see [`Self::current_cycle`]).
+    /// Called per interpreted instruction while the tick interval is widened, so
+    /// the cost is a single relaxed atomic store on the hot path. Default no-op.
+    #[cfg(feature = "event-scheduler")]
+    fn publish_cycle(&mut self, _cycle: u64) {}
 
     /// Plan 2: deliver a coherent 32-bit value to peripherals after the
     /// four byte writes that compose a write_u32 have been dispatched.
@@ -987,6 +1053,16 @@ pub struct Machine<C: Cpu> {
 }
 
 impl<C: Cpu> Machine<C> {
+    /// Whether any logic-analyzer / signal probe is armed (poll or push mode).
+    /// The `jit_framework` [`SafetyGate`](crate::cpu::jit_framework::fallback::SafetyGate)
+    /// reads this to force the interpreter while a probe needs per-cycle pad
+    /// visibility. `logic_capture` is module-private, so this crate-internal
+    /// accessor is how the RISC-V JIT host reaches it.
+    #[cfg(any(feature = "jit", feature = "jit-framework"))]
+    pub(crate) fn logic_probes_active(&self) -> bool {
+        self.logic_capture.poll_active() || self.logic_capture.push_active()
+    }
+
     /// Discover the drivable input channels on this machine (delegates to
     /// [`bus::SystemBus::list_inputs`]). See [`crate::sim_input`].
     pub fn list_inputs(&mut self) -> Vec<(String, crate::sim_input::InputChannel)> {
@@ -1117,6 +1193,39 @@ impl<C: Cpu> Machine<C> {
     /// read so the UI can extend flat traces to "now".
     pub fn logic_now_cycle(&self) -> u64 {
         self.total_cycles
+    }
+
+    /// `true` while at least one watched channel is on the per-cycle poll
+    /// fallback — the bespoke CLI test loop uses this to clamp its instruction
+    /// batch to one, exactly as [`Machine::run`] does, so polled pads are
+    /// sampled at every cycle boundary. Push-only watch sets keep the full
+    /// batch width (their peripherals report edges from the write sites).
+    #[inline]
+    pub fn logic_poll_active(&self) -> bool {
+        self.logic_capture.poll_active()
+    }
+
+    /// Seed the push-capture tap clock at a batch start, so pad writes during
+    /// the batch stamp with the boundary they become observable at (the CPU
+    /// bumps the clock once per retired instruction while armed). No-op unless
+    /// a push-mode watch set is armed. The bespoke CLI test loop calls this
+    /// before each `cpu.step_batch`, mirroring [`Machine::run`].
+    #[inline]
+    pub fn logic_seed_batch_clock(&self, batch_start_cycle: u64) {
+        if self.logic_capture.push_active() {
+            self.bus.logic_tap.set_clock(batch_start_cycle);
+        }
+    }
+
+    /// Public boundary-observe for run loops that step the CPU directly
+    /// (`cpu.step_batch` / `cpu.step`) instead of via [`Machine::step`] /
+    /// [`Machine::run`], which observe internally. Drains the push tap and
+    /// samples polled channels at `boundary` — the engine cycle at the end of
+    /// the just-executed batch, BEFORE peripheral tick costs. No-op when no
+    /// watch set is armed. See [`Machine::logic_observe`] for the semantics.
+    #[inline]
+    pub fn logic_observe_boundary(&mut self, boundary: u64) {
+        self.logic_observe(boundary);
     }
 
     /// Observe the watched channels at the current cycle boundary: drain the
@@ -2091,6 +2200,21 @@ impl<C: Cpu> DebugControl for Machine<C> {
                 remaining_until_tick
             };
 
+            // ── RISC-V JIT batching note (chunk H) ───────────────────────────
+            // The JIT does NOT widen the batch past `remaining_until_tick`. A
+            // widened batch would skip the peripheral-tick boundaries the
+            // interpreter crosses, leaving `bus.current_cycle` (refreshed once
+            // per batch) staler than the interpreter's — and main's lazy
+            // walk-free peripherals (LEDC/wifi_mac) read that clock, so coarse
+            // JIT batching would read counters off-by-one. Keeping the JIT on
+            // the SAME per-tick-interval cadence as the interpreter guarantees
+            // identical `current_cycle` refresh points, hence byte-identity.
+            // A compiled block runs whenever it fits in the current window
+            // (`run_jit_loop`'s `retired + n <= max_count`); raise
+            // `peripheral_tick_interval` toward `max_safe_tick_interval` to make
+            // the window (and thus JIT engagement) larger while both arms stay
+            // byte-identical to interval-1.
+
             // Cycle-accurate buses (HC-SR04, IO-Link, H5 op-modeling FLASH) must
             // execute one instruction per batch so per-instruction services —
             // notably the H5 FLASH pending-op drain below — fire on every
@@ -2145,6 +2269,62 @@ impl<C: Cpu> DebugControl for Machine<C> {
                 }
             }
 
+            // Event-scheduler GENERAL clamp (Phase 0): end the batch exactly at
+            // the next scheduled peripheral event of ANY kind — SYSTIMER/TIMx
+            // alarms, SPI/UART frame edges, DMA elements, the LEDC overflow
+            // latch, and the HC-SR04 ECHO edges above — so the post-batch
+            // `drain_scheduler_events` applies it at its EXACT absolute cycle
+            // instead of at whatever coarse tick boundary the widened batch
+            // happened to land on. This generalises the single-peripheral
+            // HC-SR04 clamp directly above to the whole scheduler heap.
+            //
+            // With it, a wide `peripheral_tick_interval` delivers every event
+            // (and thus pends every IRQ, and thus enters every ISR) at the
+            // IDENTICAL cycle it would at interval 1: the CPU is never allowed
+            // to retire an instruction at a cycle past a pending event's
+            // deadline before that event fires. That makes ALL OBSERVABLE state
+            // — every peripheral snapshot (framebuffer, counters, GPIO…),
+            // memory, and `total_cycles` — byte-identical to interval-1 BY
+            // CONSTRUCTION (proven by esp32c3_clamped_full_state_differential).
+            //
+            // The `cpu_state` register snapshot (pc/mepc/GPRs) is NOT covered
+            // and provably cannot be: firmware that busy-waits on a lazy,
+            // tick-refreshed free-running counter (RTC/SYSTIMER) reads a value
+            // up to (interval-1) cycles stale, so a data-dependent branch can
+            // retire at a different pc at the same `total_cycles` — a property
+            // of the counter READ path, not event delivery, unclosable by any
+            // clamp short of ticking every cycle. That residual is exactly why
+            // the CLI fidelity gate excludes `cpu_state`: its exclusion is
+            // principled, not a workaround for an incomplete clamp.
+            //
+            // The `next_event_deadline` heap scan is O(heap) per batch, so we
+            // GATE the whole clamp on `peripheral_tick_interval > 1`: at
+            // interval 1 the batch is already one instruction (the drain runs
+            // every cycle and delivers events exactly), so the scan would be
+            // pure wasted cost on the hot interval-1 path the deploy pins.
+            // `current_batch > 1` further skips the scan whenever an earlier
+            // clamp (cycle-accurate bus, breakpoint, poll capture, HC-SR04)
+            // already pinned the batch to one instruction.
+            //
+            // NOTE: this does NOT cover an event a firmware ARMS via an MMIO
+            // write partway through THIS batch — that event is only enqueued at
+            // the post-batch drain, so it is not in the heap when this scan
+            // runs. That mid-batch-scheduling case is handled separately after
+            // `step_batch` returns (see the `pending_schedule` re-clamp below).
+            #[cfg(feature = "event-scheduler")]
+            if self.config.peripheral_tick_interval > 1 && current_batch > 1 {
+                let generations = self.bus.peripheral_generations();
+                if let Some(dl) = self.sched.next_event_deadline(&generations) {
+                    if dl > self.total_cycles {
+                        current_batch = current_batch.min((dl - self.total_cycles) as u32);
+                    } else {
+                        // Already due at/behind `now`: take one instruction so
+                        // the post-batch drain fires it before advancing further.
+                        current_batch = current_batch.min(1);
+                    }
+                }
+            }
+
             // Push-mode capture: seed the tap clock at the batch start; the
             // CPU advances it once per retired instruction so pad writes stamp
             // with the boundary they become observable at.
@@ -2160,6 +2340,21 @@ impl<C: Cpu> DebugControl for Machine<C> {
             self.total_cycles += executed as u64;
             self.step_profile.cpu_instructions += executed as u64;
             self.step_profile.cpu_batches += 1;
+
+            // Exact-cycle clock cleanup: `step_batch` republished the bus clock
+            // per interpreted instruction for cycle-exact mid-batch reads, so on
+            // return it sits at an implementation-dependent value (the last
+            // interpreted instruction's cycle under the interpreter, the last
+            // block's START cycle under the JIT — they differ). Everything below
+            // (the peripheral-tick block, which can read `current_cycle`) must
+            // see one arm-INDEPENDENT value, and it must be the SAME value main
+            // showed there before this optimisation: the batch-START cycle
+            // (`current_cycles`, seeded at the top of the loop). Restore it here
+            // so the tick path is byte-identical to main and to itself across
+            // the JIT-on/off arms; the drain below re-advances the clock to the
+            // batch-end cycle exactly as before.
+            #[cfg(feature = "event-scheduler")]
+            self.bus.set_current_cycle(current_cycles);
             // The cycle boundary the batch ended at, BEFORE peripheral tick
             // costs — logic pushes stamped at it are finalised to the
             // post-cost "now" (see `logic_observe`).
@@ -2286,12 +2481,8 @@ impl<C: Cpu> DebugControl for Machine<C> {
         &self,
         name: &str,
     ) -> Option<labwired_config::PeripheralDescriptor> {
-        use crate::peripherals::declarative::GenericPeripheral;
         let entry = self.bus.peripherals.iter().find(|p| p.name == name)?;
-        let gen_p = entry.dev.as_any()?.downcast_ref::<GenericPeripheral>()?;
-        // We need a way to get the descriptor from GenericPeripheral.
-        // It's private currently. Let's make it public or add a getter.
-        Some(gen_p.get_descriptor().clone())
+        entry.dev.peripheral_descriptor()
     }
 
     fn reset(&mut self) -> SimResult<()> {

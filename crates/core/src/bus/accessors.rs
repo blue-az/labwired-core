@@ -216,8 +216,14 @@ impl crate::Bus for SystemBus {
                 #[cfg(feature = "event-scheduler")]
                 self.sync_scheduler_peripheral(idx);
                 self.maybe_latch_dc(idx);
-                let p = &mut self.peripherals[idx];
-                let r = p.dev.write(addr - p.base, value);
+                let c3_io_mux_capture = self.begin_esp32c3_io_mux_write(idx);
+                let r = {
+                    let p = &mut self.peripherals[idx];
+                    p.dev.write(addr - p.base, value)
+                };
+                if r.is_ok() {
+                    self.finish_esp32c3_io_mux_write(c3_io_mux_capture);
+                }
                 self.maybe_arm_hcsr04(idx);
                 self.maybe_clock_tm1637(idx);
                 #[cfg(feature = "event-scheduler")]
@@ -396,9 +402,15 @@ impl crate::Bus for SystemBus {
             #[cfg(feature = "event-scheduler")]
             self.sync_scheduler_peripheral(idx);
             self.maybe_latch_dc(idx);
-            let p = &mut self.peripherals[idx];
-            p.ticks_remaining = 0;
-            let r = p.dev.write_u16(addr - p.base, value);
+            let c3_io_mux_capture = self.begin_esp32c3_io_mux_write(idx);
+            let r = {
+                let p = &mut self.peripherals[idx];
+                p.ticks_remaining = 0;
+                p.dev.write_u16(addr - p.base, value)
+            };
+            if r.is_ok() {
+                self.finish_esp32c3_io_mux_write(c3_io_mux_capture);
+            }
             self.maybe_arm_hcsr04(idx);
             self.maybe_clock_tm1637(idx);
             #[cfg(feature = "event-scheduler")]
@@ -470,9 +482,15 @@ impl crate::Bus for SystemBus {
             #[cfg(feature = "event-scheduler")]
             self.sync_scheduler_peripheral(idx);
             self.maybe_latch_dc(idx);
-            let p = &mut self.peripherals[idx];
-            p.ticks_remaining = 0;
-            let r = p.dev.write_u32(addr - p.base, value);
+            let c3_io_mux_capture = self.begin_esp32c3_io_mux_write(idx);
+            let r = {
+                let p = &mut self.peripherals[idx];
+                p.ticks_remaining = 0;
+                p.dev.write_u32(addr - p.base, value)
+            };
+            if r.is_ok() {
+                self.finish_esp32c3_io_mux_write(c3_io_mux_capture);
+            }
             self.maybe_arm_hcsr04(idx);
             self.maybe_clock_tm1637(idx);
             #[cfg(feature = "event-scheduler")]
@@ -551,6 +569,21 @@ impl crate::Bus for SystemBus {
 
     fn external_irq_lines(&self) -> u32 {
         self.riscv_irq_lines
+    }
+
+    #[cfg(feature = "event-scheduler")]
+    fn has_pending_schedule(&self) -> bool {
+        !self.pending_schedule.is_empty()
+    }
+
+    #[cfg(feature = "event-scheduler")]
+    fn current_cycle(&self) -> u64 {
+        self.current_cycle
+    }
+
+    #[cfg(feature = "event-scheduler")]
+    fn publish_cycle(&mut self, cycle: u64) {
+        self.set_current_cycle(cycle);
     }
 
     fn as_any(&self) -> Option<&dyn std::any::Any> {
