@@ -237,7 +237,7 @@ if [[ -f "$dockerignore" ]]; then
   done
 fi
 
-require_literal "$action" 'default: "v0.19.1"' 'core action defaults to the supported public release'
+require_literal "$action" 'default: "v0.19.2"' 'core action defaults to the supported public release'
 action_inputs=$(awk '
   /^inputs:$/ { inside = 1; next }
   inside && /^[^[:space:]]/ { exit }
