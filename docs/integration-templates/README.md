@@ -41,7 +41,7 @@ For local or non-GitHub CI runs, the release image keeps labwired as its
 entrypoint:
 
 ~~~bash
-docker run --rm -v "$PWD:/workspace" -w /workspace \
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/workspace" -w /workspace \
   ghcr.io/w1ne/labwired:v0.19.1 \
   test --script tests/firmware-test.yaml --output-dir out/labwired --no-uart-stdout
 ~~~

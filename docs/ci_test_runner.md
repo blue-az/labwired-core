@@ -436,7 +436,7 @@ after the pinned image name. Docker and the Action accept the same test YAML:
 use either a single-machine script or an `inputs.env` world script.
 
 ~~~bash
-docker run --rm -v "$PWD:/workspace" -w /workspace \
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/workspace" -w /workspace \
   ghcr.io/w1ne/labwired:v0.19.1 \
   test --script examples/ci/dummy-max-steps.yaml \
        --output-dir out/artifacts \
