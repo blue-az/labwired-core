@@ -168,7 +168,12 @@ boards:
     # 2026-07-11: STM32 SPI bit-level wire engine — classic/FIFO `Spi` DR writes now clock frames over derived wire time (CR1 BR/CPOL/CPHA/LSBFIRST + CR2.DS/CR1.DFF; SR flags flip at wire time — same firmware-visible completion timing, bits x 2^(BR+1) PCLK cycles, as the previous countdown) and GPIO ports gained read-only SPI AF pad routing (read_gpio_pad reads the live SCK/MOSI/MISO wire per the datasheet AF maps; H5's SPI-v3 model untouched). Register layouts, reset values and byte paths unchanged; mmio diffs/conformance unaffected. No live re-capture.
     # 2026-07-12: STM32 TIMx walk-free migration (timer.rs) — event-scheduler builds now derive CNT/SR lazily from the bus cycle clock (exact closed-form walk replay incl. the enabled-flag counter freeze) and deliver update/compare IRQs via scheduled events; the legacy walk path is byte-identical, pinned by committed differentials (stm32_timer_walk_differential + in-module walk-identity gates). The tick-cost sim artifact (cycles:1 charged on overflow/held-level ticks) is removed in both modes. Register layout, reset values and MMIO byte paths unchanged; mmio diffs/conformance unaffected. No live re-capture.
     # 2026-07-12: STM32 DMA1/DMA2 walk-free migration (dma.rs) + NXP Kinetis I2C walk-free migration (i2c.rs) — event-scheduler builds drive DMA element transfers via per-channel scheduled events (delay-1 mem2mem self-pacing, request-armed via route_dma_signal) and the Kinetis I2C level IRQ via a held-level re-pend chain; both are byte-identical to the walk, pinned by committed differentials (stm32_dma_walk_differential + in-module dma/i2c walk-identity gates). The DMA tick-cost sim artifact (cycles:1 per transferring tick) is removed in both modes. STM32 F1/L4 I2C transaction engines and H5 GPDMA are untouched and stay on the walk. Register layout, reset values and MMIO byte paths unchanged; mmio diffs/conformance unaffected. No live re-capture.
-    drift_ack: 2026-07-12
+    # 2026-07-14: FDCAN gained the post-construction endpoint binding used by
+    # environment CAN worlds, so a named H563 FDCAN participates in the real
+    # inter-node wire instead of an inert topology. This changes dynamic CAN
+    # frame delivery, which the reset/MMIO/flash capture does not cover. A live
+    # H563 FDCAN data-path re-diff remains tracked; no probe was attached here.
+    drift_ack: 2026-07-14
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
@@ -329,7 +334,40 @@ boards:
     # rom-boot bus derives walk-DELETED, EXPECTED_PINNERS is empty, and max_safe_tick_interval
     # rises to 64 (native OLED-lab throughput ~5.2 → ~16.2 MIPS). Register map, reset values
     # and MMIO byte paths unchanged; reset oracle unaffected. No live re-capture.
-    drift_ack: 2026-07-12
+    # 2026-07-14: I2C0 (esp32c3/i2c.rs) TX-FIFO underrun correctness fix — begin_byte
+    # no longer fabricates a 0x00 (pop_front().unwrap_or(0)) when the TX FIFO drains
+    # mid-WRITE. It now models the real controller: hold SCL low (clock-stretch),
+    # assert TXFIFO_WM, and resume with the real byte once firmware refills
+    # (new EngineState::TxStall). This only changes behaviour on a TX-FIFO UNDERRUN;
+    # firmware that keeps the FIFO fed (no underrun) is byte-for-byte identical, so
+    # the reset-state oracle and every prior capture/differential are unaffected.
+    # The bug corrupted multi-chunk bursts (e.g. a 128-byte SSD1306 page through the
+    # 32-byte FIFO → black OLED). Register map, reset values, FIFO reset semantics and
+    # the byte-level traced-slave contract are unchanged. A live USB-JTAG re-validation
+    # of the underrun clock-stretch timing is recommended as follow-up (no bench board
+    # this session); this ack covers the model-file change in the interim.
+    # 2026-07-14: captured live CLOCK RATES over the built-in USB-JTAG
+    # (openocd-esp32) via scripts/hw-capture-esp32c3.sh — SYSTIMER 16.013 MHz
+    # (model 16 MHz, matches) and RTC_CNTL slow clock 136.72 kHz (RC_SLOW
+    # oscillator, SYSTIMER-referenced so it's independent of JTAG/halt overhead).
+    # Recorded the measured RTC rate as RTC_SLOW_HZ_MEASURED (136_700) + an opt-in
+    # Esp32c3RtcTimer::set_slow_clock_hz in esp32c3/rtc_timer.rs; the DEFAULT stays
+    # 1 tick per CPU cycle, so the reset-oracle set, the boot budget and every
+    # prior capture/differential are byte-unchanged. This clock capture is an
+    # OPTIONAL bench / weekly job (NOT a PR gate — hosted CI has no board); re-run
+    # the script on a bench to refresh. Additive model touch, no reset-value change.
+    # 2026-07-15: physical C3 OLED-lab fixture
+    # crates/wasm/tests/fixtures/esp32c3-oled-demo-flash.bin
+    # (SHA-256 d951cc06cdf615d4c6a2dc0197daf9c11509353529ebbe3ab7fbf6d75777dcd0)
+    # was flashed at offset 0x0 with esptool verification on a USB-JTAG ESP32-C3.
+    # USB serial logged `oled-lab app_main entered` and `OLED painted: LabWired`.
+    # After reset-run/wait, live USB-JTAG reads found GPIO_ENABLE=0x00000030,
+    # GPIO4/5 OUT_SEL=0x00000036/0x00000035 and I2CEXT0 SDA/SCL IN_SEL
+    # (signals 54/53)=0x00000044/0x00000045: the active matrix route matches
+    # the physical GPIO4/GPIO5 contract. This does not replace the reset-state
+    # oracle or claim visible OLED photons/I2C ACK; visual or wire-level capture
+    # remains pending.
+    drift_ack: 2026-07-15
 
   - id: nucleo-l476rg
     doc: docs/boards/nucleo-l476rg.md
@@ -598,7 +636,18 @@ boards:
     # equivalence are preserved (elapsed-vs-repeated + walk-vs-scheduler
     # differential gates). S3 default construction is unchanged. No live
     # re-capture warranted.
-    drift_ack: 2026-07-12
+    # 2026-07-14: wifi_thunks (esp32s3/wifi_thunks.rs — test-only fake
+    # WL_CONNECTED WiFi outcome + simulated sockets) is now feature-gated behind
+    # an off-by-default `wifi-thunks` Cargo feature and excluded from the default
+    # build and the CI feature set (jit,event-scheduler). This only changes the
+    # esp32s3 module source surface (a `#[cfg(feature = "wifi-thunks")]` gate on
+    # the module declaration); no real silicon behaviour changes — wifi_thunks
+    # was never a live-verified peripheral (it is a functional thunk, not a
+    # register model, and the WiFi MAC/PHY is a closed RF-coprocessor blob with
+    # no executable image). Register map, reset values, MMIO byte paths and the
+    # 9-reg reset-state silicon anchor are byte-for-byte unaffected. No live
+    # re-capture warranted.
+    drift_ack: 2026-07-14
     models:
       - crates/core/src/peripherals/esp32s3
       - crates/core/src/peripherals/esp_xtensa_common
