@@ -188,6 +188,7 @@ runner_command_block=$(awk '
 ' <<<"$smoke_block")
 require_block_literal "$runner_command_block" '"ghcr.io/w1ne/labwired:${{ github.ref_name }}"' 'release smoke runs the immutable image that it pulled'
 require_block_absent_literal "$runner_command_block" 'ghcr.io/w1ne/labwired:latest' 'release smoke does not run the mutable latest tag'
+require_block_literal "$runner_command_block" '--user "$(id -u):$(id -g)"' 'release smoke preserves host ownership for bind-mounted runner artifacts'
 require_block_literal "$smoke_block" 'examples/ci/two-node-inputs-env.yaml' 'release smoke uses the explicit two-node inputs.env script'
 require_block_literal "$smoke_block" 'out/release-runner-smoke' 'release smoke writes runner artifacts to a dedicated directory'
 require_block_literal "$smoke_block" '--no-uart-stdout' 'release smoke suppresses UART output'
