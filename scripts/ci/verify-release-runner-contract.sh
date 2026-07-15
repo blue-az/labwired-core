@@ -361,6 +361,7 @@ require_literal "$backfill_workflow" 'ghcr.io/w1ne/labwired:${{ inputs.version }
 require_absent_literal "$backfill_workflow" 'ghcr.io/w1ne/labwired:latest' 'runner backfill never overwrites the moving latest tag'
 require_literal "$backfill_workflow" 'docker logout ghcr.io || true' 'runner backfill verifies a public anonymous pull'
 require_literal "$backfill_workflow" 'docker pull "ghcr.io/w1ne/labwired:${{ inputs.version }}"' 'runner backfill pulls the immutable tag after publication'
+require_literal "$backfill_workflow" '--user "$(id -u):$(id -g)"' 'runner backfill preserves host ownership for bind-mounted artifacts'
 require_literal "$backfill_workflow" 'examples/ci/dummy-max-steps.yaml' 'runner backfill uses the deterministic CI smoke script'
 require_literal RELEASE_PROCESS.md 'core-backfill-runner-image.yml' 'release process documents the one-time runner image backfill workflow'
 require_literal RELEASE_PROCESS.md 'v0.18.0' 'release process documents the initial v0.18.0 runner image backfill'
@@ -375,6 +376,9 @@ for doc in docs/ci_integration.md docs/ci_test_runner.md docs/integration-templa
   require_absent_literal "$doc" '82c6c78983669f8688f3823db9a81d1c2bdef202' "$doc does not retain the superseded action pin"
   require_absent_literal "$doc" 'version: v0.18.0' "$doc does not retain the superseded Core release version"
   require_absent_literal "$doc" 'version: v0.19.0' "$doc does not retain the superseded Core release version"
+done
+for doc in docs/ci_integration.md docs/ci_test_runner.md docs/integration-templates/README.md; do
+  require_literal "$doc" '--user "$(id -u):$(id -g)"' "$doc keeps bind-mounted container artifacts writable by the caller"
 done
 for doc in docs/ci_integration.md docs/ci_test_runner.md docs/integration-templates/github-actions.yml docs/integration-templates/README.md docs/reference_client_flows.md; do
   require_absent_literal "$doc" 'w1ne/labwired-core/.github/actions/labwired-test@main' "$doc does not use a mutable public Core action ref"

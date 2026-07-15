@@ -53,6 +53,7 @@ image name; do not repeat labwired in the container command:
 
 ~~~bash
 docker run --rm \
+  --user "$(id -u):$(id -g)" \
   --volume "$PWD:/workspace" \
   --workdir /workspace \
   ghcr.io/w1ne/labwired:v0.19.1 \
@@ -61,10 +62,10 @@ docker run --rm \
        --no-uart-stdout
 ~~~
 
-The image runs as the runtime default user so it can write artifacts into the
-mounted workspace. The Docker command and GitHub action accept the same test
-YAML: it can be a single-machine script or a world script that selects its
-environment through `inputs.env`.
+When bind-mounting a workspace, pass the caller UID/GID so generated artifacts
+remain writable on the host. The Docker command and GitHub action accept the
+same test YAML: it can be a single-machine script or a world script that
+selects its environment through `inputs.env`.
 
 ## GitLab CI
 
