@@ -73,6 +73,26 @@ fn test_machine_run_cycles() {
 }
 
 #[test]
+fn legacy_run_breakpoint_stickiness_allows_one_step_then_rearms() {
+    let cpu = MockCpu::default();
+    let bus = crate::bus::SystemBus::new();
+    let mut machine = Machine::new(cpu, bus);
+    machine.set_pc(0x1001);
+    machine.add_breakpoint(0x1000);
+
+    let first = machine.run(None).unwrap();
+    assert_eq!(first, StopReason::Breakpoint(0x1001));
+
+    let stepped = machine.run(Some(1)).unwrap();
+    assert_eq!(stepped, StopReason::MaxStepsReached);
+    assert_eq!(machine.get_pc(), 0x1003);
+
+    machine.set_pc(0x1001);
+    let rearmed = machine.run(None).unwrap();
+    assert_eq!(rearmed, StopReason::Breakpoint(0x1001));
+}
+
+#[test]
 fn machine_run_records_step_profile_counters() {
     let cpu = MockCpu::default();
     let bus = crate::bus::SystemBus::new();
