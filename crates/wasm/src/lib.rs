@@ -24,7 +24,7 @@ use labwired_core::system::cortex_m::configure_cortex_m;
 use labwired_core::system::xtensa::configure_xtensa_esp32;
 use labwired_core::Arch as CoreArch;
 use labwired_core::Bus;
-use labwired_core::{Cpu, DebugControl, Machine};
+use labwired_core::{AdvanceRequest, Cpu, Machine};
 use labwired_loader::load_elf_bytes;
 use wasm_bindgen::prelude::*;
 
@@ -868,7 +868,7 @@ impl WasmSimulator {
     pub fn step(&mut self, cycles: u32) -> Result<(), JsValue> {
         for _ in 0..cycles {
             self.machine()
-                .step()
+                .advance(AdvanceRequest::single())
                 .map_err(|e| JsValue::from_str(&format!("Step Error: {}", e)))?;
         }
         Ok(())
@@ -877,7 +877,8 @@ impl WasmSimulator {
     #[wasm_bindgen]
     pub fn step_single(&mut self) -> Result<(), JsValue> {
         self.machine()
-            .step()
+            .advance(AdvanceRequest::single())
+            .map(|_| ())
             .map_err(|e| JsValue::from_str(&format!("Step Error: {}", e)))
     }
 
@@ -1007,10 +1008,15 @@ impl WasmSimulator {
     pub fn step_batch(&mut self, max_cycles: u32) -> Result<u32, JsValue> {
         let machine = self.machine();
         let before = machine.total_cycles;
-        match machine.run(Some(max_cycles)) {
-            Ok(_) => Ok((machine.total_cycles - before) as u32),
+        match machine.advance(AdvanceRequest::run(Some(u64::from(max_cycles)))) {
+            Ok(report) => {
+                let elapsed = machine.total_cycles.saturating_sub(before);
+                debug_assert_eq!(elapsed, report.elapsed_cycles);
+                Ok(elapsed.min(u64::from(u32::MAX)) as u32)
+            }
             Err(e) => {
-                let executed = (machine.total_cycles - before) as u32;
+                let elapsed = machine.total_cycles.saturating_sub(before);
+                let executed = elapsed.min(u64::from(u32::MAX)) as u32;
                 if executed > 0 {
                     Ok(executed)
                 } else {
@@ -1029,16 +1035,23 @@ impl WasmSimulator {
         let machine = self.machine();
         let before = machine.total_cycles;
         machine.reset_step_profile();
-        let run_result = machine.run(Some(max_cycles));
-        let executed = (machine.total_cycles - before) as u32;
+        let advance_result = machine.advance(AdvanceRequest::run(Some(u64::from(max_cycles))));
+        let elapsed = machine.total_cycles.saturating_sub(before);
+        let executed = match advance_result {
+            Ok(report) => {
+                debug_assert_eq!(elapsed, report.elapsed_cycles);
+                report.elapsed_cycles.min(u64::from(u32::MAX)) as u32
+            }
+            Err(e) => {
+                let partial = elapsed.min(u64::from(u32::MAX)) as u32;
+                if partial == 0 {
+                    return Err(JsValue::from_str(&format!("Step Error: {}", e)));
+                }
+                partial
+            }
+        };
         let profile = machine.step_profile();
         let t1 = perf_now();
-
-        if let Err(e) = run_result {
-            if executed == 0 {
-                return Err(JsValue::from_str(&format!("Step Error: {}", e)));
-            }
-        }
 
         serde_wasm_bindgen::to_value(&WasmStepBatchProfile {
             requested_cycles: max_cycles,
@@ -1338,6 +1351,206 @@ fn parse_named_blobs(blobs: &JsValue) -> std::collections::HashMap<String, Vec<u
 // WasmGdbEventLoop removed — see `gdb_process_packet` above for the rationale.
 // Restoring this requires `LabwiredTarget` to be implemented for an arch-erased
 // CPU type, which is the follow-up tracked alongside Phase 1.
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod machine_advance_tests {
+    use super::*;
+    use std::collections::BTreeSet;
+
+    fn wrap_test_machine<C: Cpu + 'static>(
+        cpu: C,
+        mut bus: SystemBus,
+        arch: Arch,
+    ) -> WasmSimulator {
+        let uart_sink = Arc::new(Mutex::new(Vec::new()));
+        bus.attach_uart_tx_sink(uart_sink.clone(), false);
+        let uart_rx_bufs = bus.attach_uart_rx_source();
+        let cpu: Box<dyn Cpu> = Box::new(cpu);
+        let mut machine = Machine::new(cpu, bus);
+        machine.config.peripheral_tick_interval = 64;
+        machine.bus.config.peripheral_tick_interval = 64;
+
+        WasmSimulator {
+            machine: Some(machine),
+            board_io: Vec::new(),
+            uart_sink,
+            uart_rx_bufs,
+            arch,
+            esp32_ipi: None,
+            jit_browser_enabled: false,
+            jit_browser_cache: None,
+        }
+    }
+
+    fn arm_simulator() -> WasmSimulator {
+        let mut bus = SystemBus::new();
+        let mut cpu = labwired_core::cpu::CortexM::new();
+        for index in 0..64_u64 {
+            bus.write_u16(index * 2, 0xBF00).unwrap();
+        }
+        cpu.set_pc(0);
+        wrap_test_machine(cpu, bus, Arch::Arm)
+    }
+
+    fn configured_arm_simulator() -> WasmSimulator {
+        let mut bus = SystemBus::new();
+        let (mut cpu, _) = configure_cortex_m(&mut bus);
+        for index in 0..64_u64 {
+            bus.write_u16(index * 2, 0xBF00).unwrap();
+        }
+        cpu.set_pc(0);
+        wrap_test_machine(cpu, bus, Arch::Arm)
+    }
+
+    fn riscv_simulator() -> WasmSimulator {
+        let mut bus = SystemBus::new();
+        let mut cpu = labwired_core::system::riscv::configure_riscv(&mut bus);
+        for index in 0..64_u64 {
+            bus.write_u32(index * 4, 0x0000_0013).unwrap();
+        }
+        cpu.set_pc(0);
+        wrap_test_machine(cpu, bus, Arch::RiscV)
+    }
+
+    fn xtensa_simulator() -> WasmSimulator {
+        let mut bus = SystemBus::new();
+        let mut cpu = labwired_core::cpu::XtensaLx7::new();
+        for index in 0..64_u64 {
+            bus.write_u8(index * 2, 0x3d).unwrap();
+            bus.write_u8(index * 2 + 1, 0xf0).unwrap();
+        }
+        cpu.set_pc(0);
+        wrap_test_machine(cpu, bus, Arch::Xtensa)
+    }
+
+    fn assert_batch_matches_32_singles(
+        build: impl Fn() -> WasmSimulator,
+        expected_batch_count: u64,
+        expect_peripherals: bool,
+    ) {
+        let mut singles = build();
+        let mut batch = build();
+
+        for _ in 0..32 {
+            singles.step_single().expect("single step");
+        }
+        assert_eq!(batch.step_batch(32).expect("batch step"), 32);
+
+        let singles = singles.machine.as_ref().unwrap();
+        let batch = batch.machine.as_ref().unwrap();
+        let singles_snapshot = singles.snapshot();
+        let batch_snapshot = batch.snapshot();
+
+        assert_eq!(
+            serde_json::to_value(&singles_snapshot).unwrap(),
+            serde_json::to_value(&batch_snapshot).unwrap()
+        );
+        assert_eq!(
+            serde_json::to_value(singles.cpu.snapshot()).unwrap(),
+            serde_json::to_value(batch.cpu.snapshot()).unwrap()
+        );
+        assert_eq!(singles_snapshot.peripherals, batch_snapshot.peripherals);
+        if expect_peripherals {
+            assert!(!singles_snapshot.peripherals.is_empty());
+            assert!(!batch_snapshot.peripherals.is_empty());
+        }
+        assert_eq!(singles.total_cycles, batch.total_cycles);
+        assert_eq!(singles.bus.current_cycle, batch.bus.current_cycle);
+        assert_eq!(singles.cpu.get_pc(), batch.cpu.get_pc());
+        assert_ne!(singles.cpu.get_pc(), 0);
+        assert_eq!((singles.total_cycles, batch.total_cycles), (32, 32));
+
+        let singles_profile = singles.step_profile();
+        let batch_profile = batch.step_profile();
+        assert_eq!(singles_profile.cpu_instructions, 32);
+        assert_eq!(batch_profile.cpu_instructions, 32);
+        assert_eq!(singles_profile.cpu_batches, 32);
+        assert_eq!(batch_profile.cpu_batches, expected_batch_count);
+        if expected_batch_count == 1 {
+            assert!(batch_profile.cpu_batches < batch_profile.cpu_instructions);
+        }
+
+        // CPU batch count is intentionally execution-path dependent. Every
+        // peripheral-work counter must remain identical across the two paths.
+        assert_eq!(
+            singles_profile.peripheral_ticks,
+            batch_profile.peripheral_ticks
+        );
+        assert_eq!(
+            singles_profile.peripheral_ticked_entries,
+            batch_profile.peripheral_ticked_entries
+        );
+        assert_eq!(
+            singles_profile.bus_tick_entries,
+            batch_profile.bus_tick_entries
+        );
+        assert_eq!(
+            singles_profile.legacy_tick_entries,
+            batch_profile.legacy_tick_entries
+        );
+    }
+
+    #[test]
+    fn arm_batch_matches_32_single_boundaries() {
+        assert_batch_matches_32_singles(arm_simulator, 1, false);
+    }
+
+    #[test]
+    fn configured_arm_batch_matches_32_single_boundaries() {
+        // A real Cortex-M topology contains an SCB, whose reset-fidelity rail
+        // intentionally commits one instruction per CPU batch.
+        assert_batch_matches_32_singles(configured_arm_simulator, 32, true);
+    }
+
+    #[test]
+    fn riscv_batch_matches_32_single_boundaries() {
+        assert_batch_matches_32_singles(riscv_simulator, 1, false);
+    }
+
+    #[test]
+    fn xtensa_batch_matches_32_single_boundaries() {
+        assert_batch_matches_32_singles(xtensa_simulator, 1, false);
+    }
+
+    #[test]
+    fn step_batch_profile_schema_is_exact() {
+        let value = serde_json::to_value(WasmStepBatchProfile {
+            requested_cycles: 1,
+            executed_cycles: 2,
+            wall_ms: 3.0,
+            cycles_per_second: 4.0,
+            cpu_instructions: 5,
+            cpu_batches: 6,
+            peripheral_ticks: 7,
+            peripheral_ticked_entries: 8,
+            bus_tick_entries: 9,
+            legacy_tick_entries: 10,
+        })
+        .unwrap();
+        let actual = value
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(String::as_str)
+            .collect::<BTreeSet<_>>();
+        let expected = [
+            "bus_tick_entries",
+            "cpu_batches",
+            "cpu_instructions",
+            "cycles_per_second",
+            "executed_cycles",
+            "legacy_tick_entries",
+            "peripheral_ticked_entries",
+            "peripheral_ticks",
+            "requested_cycles",
+            "wall_ms",
+        ]
+        .into_iter()
+        .collect::<BTreeSet<_>>();
+
+        assert_eq!(actual, expected);
+    }
+}
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod romboot_tests {
