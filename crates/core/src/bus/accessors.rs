@@ -609,6 +609,7 @@ impl crate::Bus for SystemBus {
         !self.pending_schedule.is_empty()
     }
 
+    #[cfg(feature = "event-scheduler")]
     fn earliest_pending_deadline(&self) -> Option<u64> {
         self.pending_schedule
             .iter()
