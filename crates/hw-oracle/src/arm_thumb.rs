@@ -215,10 +215,10 @@ pub struct ThumbOracleCase {
     /// this so a vector table can sit at the load base while `main` runs from
     /// after it. Set via [`ThumbOracleCase::entry_offset`].
     pub entry_offset: u32,
-    /// Drive the sim's peripherals **live** during execution: after each CPU
-    /// step, tick all peripherals and pend any IRQs they raise into the CPU
-    /// (mirroring `Machine::step`), and build the CPU with the Cortex-M system
-    /// block (shared NVIC/VTOR) so it can actually take them. Required for
+    /// Drive the sim's peripherals **live** during execution: configure the
+    /// authoritative `Machine::advance` lifecycle to tick after every CPU
+    /// instruction, and build the CPU with the Cortex-M system block (shared
+    /// NVIC/VTOR) so it can actually take delivered interrupts. Required for
     /// interrupt-delivery oracles; default off, so static oracles are
     /// unaffected. On silicon this is automatic. Set via
     /// [`ThumbOracleCase::live_peripherals`].
@@ -900,7 +900,7 @@ fn run_capture(
     cortex_m_system: bool,
 ) -> ThumbOracleState {
     use labwired_core::cpu::cortex_m::CortexM;
-    use labwired_core::Cpu;
+    use labwired_core::{AdvanceRequest, Cpu, Machine};
 
     // For interrupt-delivery oracles the CPU must share the bus's NVIC/SCB/VTOR
     // state, so build it through the Cortex-M system wiring; otherwise a bare
@@ -940,60 +940,73 @@ fn run_capture(
         });
     }
 
-    // Step until PC settles on the B-self terminator (or limit).
-    let sim_config = labwired_core::SimulationConfig::default();
-    let mut last_pc = cpu.pc;
+    // Run through the authoritative machine lifecycle so scheduler-driven
+    // peripherals observe the same published cycle clock and event drains as
+    // production frontends. Static oracle cases retain their historical
+    // no-live-peripheral behavior by placing the periodic tick boundary beyond
+    // this harness's step budget; event-driven MMIO effects still drain at
+    // committed instruction boundaries, as they do in production.
+    let mut machine = Machine::new(cpu, bus);
+    machine.config.peripheral_tick_interval = if case.live_peripherals { 1 } else { u32::MAX };
+    let mut last_pc = machine.cpu.pc;
     let mut stable_count: u32 = 0;
     for _ in 0..MAX_STEPS {
-        cpu.step(&mut bus, &[], &sim_config)
-            .unwrap_or_else(|e| panic!("thumb oracle sim error at pc=0x{:08X}: {e:?}", cpu.pc));
-        // Interrupt-delivery mode: after each instruction, advance peripherals
-        // and pend any IRQs they raise so the CPU takes them on the next step —
-        // mirroring `Machine::step`. On silicon this happens autonomously.
-        if case.live_peripherals {
-            let (interrupts, _costs) = bus.tick_peripherals_fully();
-            for irq in interrupts {
-                cpu.set_exception_pending(irq);
-            }
-        }
-        if cpu.pc == last_pc {
+        machine
+            .advance(AdvanceRequest::single())
+            .unwrap_or_else(|e| {
+                panic!(
+                    "thumb oracle sim error at pc=0x{:08X}: {e:?}",
+                    machine.cpu.pc
+                )
+            });
+        if machine.cpu.pc == last_pc {
             stable_count += 1;
             if stable_count >= 2 {
                 break;
             }
         } else {
             stable_count = 0;
-            last_pc = cpu.pc;
+            last_pc = machine.cpu.pc;
         }
     }
 
     // Let any autonomous engine the program armed (DMA mem-to-mem, …) run to
     // completion before the snapshot.  On silicon these run concurrently and
     // have long finished by the breakpoint halt; in sim they advance one
-    // element per peripheral tick, so we tick explicitly here.
+    // element per committed machine boundary, so advance the settled B-self
+    // loop explicitly here.
+    machine.config.peripheral_tick_interval = 1;
     for _ in 0..case.settle_ticks {
-        let _ = bus.tick_peripherals_fully();
+        machine
+            .advance(AdvanceRequest::single())
+            .unwrap_or_else(|e| {
+                panic!(
+                    "thumb oracle settle error at pc=0x{:08X}: {e:?}",
+                    machine.cpu.pc
+                )
+            });
     }
 
     // Build end state.
     let mut end = ThumbOracleState::default();
     for i in 0..13u8 {
-        end.regs.insert(format!("r{i}"), read_arm_reg(&cpu, i));
+        end.regs
+            .insert(format!("r{i}"), read_arm_reg(&machine.cpu, i));
     }
-    end.regs.insert("sp".to_string(), cpu.sp);
-    end.regs.insert("lr".to_string(), cpu.lr);
-    end.regs.insert("pc".to_string(), cpu.pc);
+    end.regs.insert("sp".to_string(), machine.cpu.sp);
+    end.regs.insert("lr".to_string(), machine.cpu.lr);
+    end.regs.insert("pc".to_string(), machine.cpu.pc);
     // Capture the program status register so cases can assert the APSR
     // condition flags (NZCV in bits 31..28).
-    end.regs.insert("xpsr".to_string(), cpu.xpsr);
-    end.pc = cpu.pc;
+    end.regs.insert("xpsr".to_string(), machine.cpu.xpsr);
+    end.pc = machine.cpu.pc;
 
     let mut addrs: Vec<u32> = init_state.mem.keys().copied().collect();
     addrs.extend_from_slice(&case.mem_capture_addrs);
     addrs.sort_unstable();
     addrs.dedup();
     for addr in addrs {
-        let val = labwired_core::Bus::read_u32(&bus, addr as u64)
+        let val = labwired_core::Bus::read_u32(&machine.bus, addr as u64)
             .unwrap_or_else(|e| panic!("thumb oracle: end read_u32(0x{addr:08X}) failed: {e:?}"));
         end.mem.insert(addr, val);
     }
