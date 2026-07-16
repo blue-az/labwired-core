@@ -1005,7 +1005,7 @@ cargo test -p labwired-core machine_advance -- --nocapture
 cargo test -p labwired-core scb_reset -- --nocapture
 cargo test -p labwired-core logic_capture -- --nocapture
 cargo test -p labwired-cli --test machine_advance_fidelity -- --nocapture
-cargo test -p labwired-wasm wasm_step_batch -- --nocapture
+cargo test -p labwired-wasm machine_advance_tests -- --nocapture
 git diff --check
 ```
 
@@ -1040,7 +1040,7 @@ Expected: all non-ignored tests pass.
 
 ```bash
 cargo test -p labwired-core --features event-scheduler --test systick_walk_differential --test stm32_timer_walk_differential --test stm32_dma_walk_differential --test esp32s3_walk_differential -- --nocapture
-cargo test --release -p labwired-core --features jit --test riscv_jit_c3_oled_differential -- --ignored --nocapture
+cargo test --release -p labwired-core --features jit,event-scheduler --test riscv_jit_c3_oled_differential -- --ignored --nocapture
 ```
 
 Expected: PASS with nonzero JIT-path evidence.
@@ -1084,7 +1084,7 @@ Delete `Machine::step_legacy_for_test`, obsolete tests that assert the intention
 cargo test -p labwired-core machine_advance -- --nocapture
 cargo test -p labwired-core scb_reset -- --nocapture
 cargo test -p labwired-cli --test runner --test outputs --test snapshots --test determinism -- --nocapture
-cargo test -p labwired-wasm wasm_step_batch -- --nocapture
+cargo test -p labwired-wasm machine_advance_tests -- --nocapture
 rg -n "LABWIRED_TEST_EXECUTOR|ExecutionEngine|step_legacy_for_test" crates
 ```
 
