@@ -232,6 +232,10 @@ impl RiscV {
             // The ESP32-C3 ROM clears ustatus during reset. This emulator runs
             // only in machine mode, so no user-status bits can become active.
             0x000 if self.core_profile == RiscVCoreProfile::Esp32C3 => 0,
+            // Undocumented vendor ROM-init CSRs observed in the ESP32-C3 mask
+            // ROM. The observed writes discard the old values; any silicon
+            // side effects are not modeled.
+            0x800 | 0x801 if self.core_profile == RiscVCoreProfile::Esp32C3 => 0,
             0x300 => self.mstatus,
             0x304 => self.mie,
             0x344 => self.mip,
@@ -272,6 +276,8 @@ impl RiscV {
         match csr {
             // See read_csr: accept the ROM's reset-time clear as a no-op.
             0x000 if self.core_profile == RiscVCoreProfile::Esp32C3 => {}
+            // See read_csr: accept the ROM-init writes and discard their values.
+            0x800 | 0x801 if self.core_profile == RiscVCoreProfile::Esp32C3 => {}
             0x300 => self.mstatus = val & 0x0000_1888, // Minimal mstatus (MIE, MPP)
             0x304 => self.mie = val,
             0x344 => self.mip = val,
@@ -1472,6 +1478,8 @@ mod tests {
     /// CSRRW x0, ustatus (0x000), x0: emitted by the ESP32-C3 ROM before
     /// mtvec is initialized.
     const CLEAR_USTATUS: u32 = 0x0000_1073;
+    const C3_ROM_INIT_CSR_800: u32 = 0x8002_9073;
+    const C3_ROM_INIT_CSR_801: u32 = 0x8012_9073;
 
     #[test]
     fn test_riscv_addi() {
@@ -1548,6 +1556,69 @@ mod tests {
         assert_eq!(machine.cpu.mcause, 2);
         assert_eq!(machine.cpu.mtval, CLEAR_USTATUS);
         assert_eq!(machine.cpu.pc, 0x100);
+    }
+
+    #[test]
+    fn esp32c3_accepts_exact_rom_init_csrs_before_mtvec_initialization() {
+        const ROM_PC: u32 = 0x4000_1ea4;
+        let mut bus = SystemBus::new();
+        bus.flash = crate::memory::LinearMemory::new(12, ROM_PC as u64);
+        bus.flash.data = vec![
+            0x85, 0x42, // c.li x5, 1
+            0x73, 0x90, 0x02, 0x80, // csrrw x0, 0x800, x5
+            0x85, 0x42, // c.li x5, 1
+            0x73, 0x90, 0x12, 0x80, // csrrw x0, 0x801, x5
+        ];
+        let mut cpu = RiscV::new_for(RiscVCoreProfile::Esp32C3);
+        cpu.pc = ROM_PC;
+        let mut machine = Machine::new(cpu, bus);
+
+        machine.step().unwrap();
+        assert_eq!(machine.cpu.pc, 0x4000_1ea6);
+        assert_eq!(machine.cpu.read_reg(5), 1);
+        machine.step().unwrap();
+        assert_eq!(machine.cpu.pc, 0x4000_1eaa);
+        assert_eq!(machine.cpu.read_reg(0), 0);
+        machine.step().unwrap();
+        assert_eq!(machine.cpu.pc, 0x4000_1eac);
+        machine.step().unwrap();
+        assert_eq!(machine.cpu.pc, 0x4000_1eb0);
+        assert_eq!(machine.cpu.read_reg(0), 0);
+        assert_eq!(machine.cpu.mcause, 0);
+        assert_eq!(machine.cpu.mtval, 0);
+
+        for csr in [0x800, 0x801] {
+            assert_eq!(machine.cpu.read_csr(csr), Some(0));
+            assert!(machine.cpu.write_csr(csr, u32::MAX));
+            assert_eq!(machine.cpu.read_csr(csr), Some(0));
+        }
+    }
+
+    #[test]
+    fn c3_rom_init_csrs_do_not_widen_custom_csr_acceptance() {
+        let cases = [
+            (RiscVCoreProfile::Esp32C3, 0x7ff2_9073, 0x7ff),
+            (RiscVCoreProfile::Esp32C3, 0x8062_9073, 0x806),
+            (RiscVCoreProfile::StandardRv32, C3_ROM_INIT_CSR_800, 0x800),
+            (RiscVCoreProfile::StandardRv32, C3_ROM_INIT_CSR_801, 0x801),
+        ];
+
+        for (profile, opcode, csr) in cases {
+            let mut bus = SystemBus::new();
+            bus.flash.data = opcode.to_le_bytes().to_vec();
+            let mut cpu = RiscV::new_for(profile);
+            cpu.pc = 0;
+            cpu.mtvec = 0x100;
+            cpu.x[5] = 1;
+            let mut machine = Machine::new(cpu, bus);
+
+            machine.step().unwrap();
+
+            assert_eq!(machine.cpu.mcause, 2, "profile={profile:?} csr={csr:#x}");
+            assert_eq!(machine.cpu.mtval, opcode);
+            assert_eq!(machine.cpu.pc, 0x100);
+            assert_eq!(machine.cpu.read_csr(csr), None);
+        }
     }
 
     #[test]
