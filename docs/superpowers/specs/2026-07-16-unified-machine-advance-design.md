@@ -99,12 +99,19 @@ pub struct AdvanceLimits {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AdvanceMode {
+    Single,
+    Run,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct AdvanceRequest {
     limits: AdvanceLimits,
     breakpoints: BreakpointPolicy,
     idle: IdlePolicy,
     batching: BatchPolicy,
+    mode: AdvanceMode,
 }
 
 impl AdvanceRequest {
@@ -143,6 +150,12 @@ impl<C: Cpu> Machine<C> {
     ) -> SimResult<AdvanceReport>;
 }
 ```
+
+`AdvanceMode` is a private boundary-timing discriminator, not a public policy.
+The constructors set it and the builder methods preserve it, so orthogonal
+customization such as `AdvanceRequest::single().with_cycle_limit(1)` retains
+single-step cycle publication. Production code uses a crate-private predicate
+instead of comparing the complete request value.
 
 `fuel` preserves the existing debugger contract: one unit is consumed by a
 primary CPU scheduling quantum or an idle-fast-forwarded cycle. It is not named

@@ -185,16 +185,38 @@ git commit -m "test(core): characterize machine execution paths"
 fn single_request_is_one_non_batched_non_idle_quantum() {
     let request = AdvanceRequest::single();
     assert_eq!(request.limits().fuel, Some(1));
+    assert_eq!(request.limits().simulated_cycles, None);
     assert_eq!(request.breakpoint_policy(), BreakpointPolicy::Ignore);
     assert_eq!(request.idle_policy(), IdlePolicy::Disabled);
     assert_eq!(request.batch_policy(), BatchPolicy::AtMost(NonZeroU32::new(1).unwrap()));
+    assert!(request.is_single());
 }
 
 #[test]
 fn run_request_preserves_optional_fuel() {
-    assert_eq!(AdvanceRequest::run(Some(64)).limits().fuel, Some(64));
+    let request = AdvanceRequest::run(Some(64));
+    assert_eq!(request.limits().fuel, Some(64));
+    assert_eq!(request.limits().simulated_cycles, None);
     assert_eq!(AdvanceRequest::run(None).limits().fuel, None);
-    assert_eq!(AdvanceRequest::run(Some(64)).breakpoint_policy(), BreakpointPolicy::Honor);
+    assert_eq!(request.breakpoint_policy(), BreakpointPolicy::Honor);
+    assert_eq!(request.idle_policy(), IdlePolicy::Configured);
+    assert_eq!(request.batch_policy(), BatchPolicy::Auto);
+    assert!(!request.is_single());
+}
+
+#[test]
+fn request_builders_override_only_their_policy() {
+    let cap = NonZeroU32::new(7).unwrap();
+    let request = AdvanceRequest::single()
+        .with_cycle_limit(9)
+        .with_batch_cap(cap)
+        .with_breakpoints(BreakpointPolicy::Honor);
+    assert_eq!(request.limits().fuel, Some(1));
+    assert_eq!(request.limits().simulated_cycles, Some(9));
+    assert_eq!(request.batch_policy(), BatchPolicy::AtMost(cap));
+    assert_eq!(request.breakpoint_policy(), BreakpointPolicy::Honor);
+    assert_eq!(request.idle_policy(), IdlePolicy::Disabled);
+    assert!(request.is_single(), "builders must preserve boundary timing mode");
 }
 ```
 
@@ -218,6 +240,7 @@ impl AdvanceRequest {
             breakpoints: BreakpointPolicy::Ignore,
             idle: IdlePolicy::Disabled,
             batching: BatchPolicy::AtMost(NonZeroU32::new(1).unwrap()),
+            mode: AdvanceMode::Single,
         }
     }
     pub fn run(fuel: Option<u64>) -> Self {
@@ -226,6 +249,7 @@ impl AdvanceRequest {
             breakpoints: BreakpointPolicy::Honor,
             idle: IdlePolicy::Configured,
             batching: BatchPolicy::Auto,
+            mode: AdvanceMode::Run,
         }
     }
     pub fn with_cycle_limit(mut self, cycles: u64) -> Self { self.limits.simulated_cycles = Some(cycles); self }
@@ -235,6 +259,7 @@ impl AdvanceRequest {
     pub fn breakpoint_policy(self) -> BreakpointPolicy { self.breakpoints }
     pub fn idle_policy(self) -> IdlePolicy { self.idle }
     pub fn batch_policy(self) -> BatchPolicy { self.batching }
+    pub(crate) fn is_single(self) -> bool { self.mode == AdvanceMode::Single }
 }
 ```
 
@@ -604,7 +629,7 @@ pub fn advance(&mut self, request: AdvanceRequest) -> SimResult<AdvanceReport> {
                 idle_cycles, cpu_batches));
         }
         let batch_start = self.total_cycles;
-        let published_cycle = if request == AdvanceRequest::single() {
+        let published_cycle = if request.is_single() {
             batch_start + 1
         } else {
             batch_start
@@ -638,7 +663,6 @@ fn run(&mut self, max_steps: Option<u32>) -> SimResult<StopReason> {
         AdvanceStop::Breakpoint(pc) => StopReason::Breakpoint(pc),
         AdvanceStop::FuelLimit => StopReason::MaxStepsReached,
         AdvanceStop::CycleLimit | AdvanceStop::NoProgress => StopReason::StepDone,
-        AdvanceStop::Manual => StopReason::ManualStop,
     })
 }
 
