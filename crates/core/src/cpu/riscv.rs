@@ -1795,14 +1795,20 @@ mod tests {
         machine.run(Some(10)).unwrap();
 
         assert_eq!(machine.total_cycles, 10);
-        assert!(
-            machine.idle_fast_forward_cycles_skipped > 0,
-            "idle FF counter must rise when WFI skip fires"
-        );
-        assert!(
-            machine.step_profile().cpu_instructions < 10,
-            "fast-forwarded cycles should not retire CPU instructions"
-        );
+        if cfg!(feature = "event-scheduler") {
+            assert!(
+                machine.idle_fast_forward_cycles_skipped > 0,
+                "idle FF counter must rise when WFI skip fires"
+            );
+            assert!(
+                machine.step_profile().cpu_instructions < 10,
+                "fast-forwarded cycles should not retire CPU instructions"
+            );
+        } else {
+            // Without the event scheduler, idle fast-forward intentionally remains inactive.
+            assert_eq!(machine.idle_fast_forward_cycles_skipped, 0);
+            assert_eq!(machine.step_profile().cpu_instructions, 10);
+        }
     }
 
     #[test]
@@ -1821,10 +1827,16 @@ mod tests {
         machine.run(Some(10)).unwrap();
 
         assert_eq!(machine.total_cycles, 10);
-        assert!(
-            machine.step_profile().cpu_instructions < 10,
-            "boxed C3 CPU path should still leave the batch loop at WFI so Machine can fast-forward"
-        );
+        if cfg!(feature = "event-scheduler") {
+            assert!(
+                machine.step_profile().cpu_instructions < 10,
+                "boxed C3 CPU path should still leave the batch loop at WFI so Machine can fast-forward"
+            );
+            assert!(machine.idle_fast_forward_cycles_skipped > 0);
+        } else {
+            assert_eq!(machine.step_profile().cpu_instructions, 10);
+            assert_eq!(machine.idle_fast_forward_cycles_skipped, 0);
+        }
     }
 
     #[test]
@@ -1862,12 +1874,22 @@ mod tests {
         machine.config.idle_fast_forward_enabled = true;
         machine.run(Some(40)).unwrap();
 
-        assert!(
-            machine.step_profile().cpu_instructions < machine.total_cycles,
-            "WFI should skip idle cycles until the SYSTIMER event; retired {} over {} cycles",
-            machine.step_profile().cpu_instructions,
-            machine.total_cycles
-        );
+        assert_eq!(machine.total_cycles, 40);
+        if cfg!(feature = "event-scheduler") {
+            assert!(machine.idle_fast_forward_cycles_skipped > 0);
+            assert!(
+                machine.step_profile().cpu_instructions < machine.total_cycles,
+                "WFI should skip idle cycles until the SYSTIMER event; retired {} over {} cycles",
+                machine.step_profile().cpu_instructions,
+                machine.total_cycles
+            );
+        } else {
+            assert_eq!(machine.idle_fast_forward_cycles_skipped, 0);
+            assert_eq!(
+                machine.step_profile().cpu_instructions,
+                machine.total_cycles
+            );
+        }
         assert_ne!(
             machine.cpu.mcause & 0x8000_0000,
             0,
