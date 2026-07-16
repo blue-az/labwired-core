@@ -186,6 +186,10 @@ pub struct SystemBus {
     peripheral_ranges: Vec<PeripheralRange>,
     legacy_tick_indices: Vec<usize>,
     bus_tick_indices: Vec<usize>,
+    /// Indices of peripherals with `uses_scheduler() == true`. Filled in
+    /// `rebuild_peripheral_ranges` so IRQ-level re-derivation on MMIO write
+    /// can poll only those models (not the full bus).
+    scheduler_driver_indices: Vec<usize>,
     peripheral_hint: Cell<Option<usize>>,
     /// Last **winning** peripheral window from [`find_peripheral_index`]:
     /// `(range_ord, start, end, peri_index)` where `range_ord` is the index
@@ -2677,6 +2681,7 @@ impl SystemBus {
             peripheral_ranges: Vec::new(),
             legacy_tick_indices: Vec::new(),
             bus_tick_indices: Vec::new(),
+            scheduler_driver_indices: Vec::new(),
             peripheral_hint: Cell::new(None),
             last_route: Cell::new(None),
             last_gpio_in: [0; 2],
@@ -2738,6 +2743,7 @@ impl SystemBus {
             peripheral_ranges: Vec::new(),
             legacy_tick_indices: Vec::new(),
             bus_tick_indices: Vec::new(),
+            scheduler_driver_indices: Vec::new(),
             peripheral_hint: Cell::new(None),
             last_route: Cell::new(None),
             last_gpio_in: [0; 2],
@@ -5570,6 +5576,7 @@ peripherals:
             peripheral_ranges: Vec::new(),
             legacy_tick_indices: Vec::new(),
             bus_tick_indices: Vec::new(),
+            scheduler_driver_indices: Vec::new(),
             peripheral_hint: Cell::new(None),
             last_route: Cell::new(None),
             last_gpio_in: [0; 2],
@@ -5655,6 +5662,7 @@ peripherals:
             peripheral_ranges: Vec::new(),
             legacy_tick_indices: Vec::new(),
             bus_tick_indices: Vec::new(),
+            scheduler_driver_indices: Vec::new(),
             peripheral_hint: Cell::new(None),
             last_route: Cell::new(None),
             last_gpio_in: [0; 2],
@@ -5891,6 +5899,7 @@ peripherals:
             peripheral_ranges: Vec::new(),
             legacy_tick_indices: Vec::new(),
             bus_tick_indices: Vec::new(),
+            scheduler_driver_indices: Vec::new(),
             peripheral_hint: Cell::new(None),
             last_route: Cell::new(None),
             last_gpio_in: [0; 2],
@@ -6126,6 +6135,7 @@ peripherals:
             peripheral_ranges: Vec::new(),
             legacy_tick_indices: Vec::new(),
             bus_tick_indices: Vec::new(),
+            scheduler_driver_indices: Vec::new(),
             peripheral_hint: Cell::new(None),
             last_route: Cell::new(None),
             last_gpio_in: [0; 2],
@@ -6215,6 +6225,7 @@ peripherals:
             peripheral_ranges: Vec::new(),
             legacy_tick_indices: Vec::new(),
             bus_tick_indices: Vec::new(),
+            scheduler_driver_indices: Vec::new(),
             peripheral_hint: Cell::new(None),
             last_route: Cell::new(None),
             last_gpio_in: [0; 2],
