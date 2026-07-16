@@ -229,6 +229,15 @@ impl RiscV {
 
     fn read_csr(&self, csr: u16) -> Option<u32> {
         Some(match csr {
+            // The ESP32-C3 ROM clears ustatus during reset. This emulator runs
+            // only in machine mode, so no user-status bits can become active.
+            0x000 if self.core_profile == RiscVCoreProfile::Esp32C3 => 0,
+            // Undocumented vendor ROM-init CSRs observed in the ESP32-C3 mask
+            // ROM. The observed writes discard the old values; any silicon
+            // side effects are not modeled.
+            0x800 | 0x801 if self.core_profile == RiscVCoreProfile::Esp32C3 => 0,
+            // This emulator exposes one hart, whose architectural ID is zero.
+            0xF14 => 0,
             0x300 => self.mstatus,
             0x304 => self.mie,
             0x344 => self.mip,
@@ -267,6 +276,10 @@ impl RiscV {
 
     fn write_csr(&mut self, csr: u16, val: u32) -> bool {
         match csr {
+            // See read_csr: accept the ROM's reset-time clear as a no-op.
+            0x000 if self.core_profile == RiscVCoreProfile::Esp32C3 => {}
+            // See read_csr: accept the ROM-init writes and discard their values.
+            0x800 | 0x801 if self.core_profile == RiscVCoreProfile::Esp32C3 => {}
             0x300 => self.mstatus = val & 0x0000_1888, // Minimal mstatus (MIE, MPP)
             0x304 => self.mie = val,
             0x344 => self.mip = val,
@@ -1464,6 +1477,14 @@ mod tests {
     use crate::DebugControl;
     use crate::Machine;
 
+    /// CSRRW x0, ustatus (0x000), x0: emitted by the ESP32-C3 ROM before
+    /// mtvec is initialized.
+    const CLEAR_USTATUS: u32 = 0x0000_1073;
+    const C3_ROM_INIT_CSR_800: u32 = 0x8002_9073;
+    const C3_ROM_INIT_CSR_801: u32 = 0x8012_9073;
+    const READ_MHARTID_X7: u32 = 0xf140_23f3;
+    const WRITE_MHARTID_X5: u32 = 0xf142_9073;
+
     #[test]
     fn test_riscv_addi() {
         let mut bus = SystemBus::new();
@@ -1510,10 +1531,144 @@ mod tests {
     }
 
     #[test]
+    fn esp32c3_accepts_rom_ustatus_clear_before_mtvec_initialization() {
+        let mut bus = SystemBus::new();
+        let mut cpu = RiscV::new_for(RiscVCoreProfile::Esp32C3);
+        bus.flash.data = CLEAR_USTATUS.to_le_bytes().to_vec();
+        cpu.pc = 0;
+        let mut machine = Machine::new(cpu, bus);
+
+        machine.step().unwrap();
+
+        assert_eq!(machine.cpu.pc, 4, "ustatus write must not trap");
+        assert_eq!(machine.cpu.mcause, 0);
+        assert_eq!(machine.cpu.mtval, 0);
+        assert_eq!(machine.cpu.read_csr(0x000), Some(0));
+    }
+
+    #[test]
+    fn standard_rv32_rejects_esp32c3_rom_ustatus_clear() {
+        let mut bus = SystemBus::new();
+        let mut cpu = RiscV::new_for(RiscVCoreProfile::StandardRv32);
+        bus.flash.data = CLEAR_USTATUS.to_le_bytes().to_vec();
+        cpu.pc = 0;
+        cpu.mtvec = 0x100;
+        let mut machine = Machine::new(cpu, bus);
+
+        machine.step().unwrap();
+
+        assert_eq!(machine.cpu.mcause, 2);
+        assert_eq!(machine.cpu.mtval, CLEAR_USTATUS);
+        assert_eq!(machine.cpu.pc, 0x100);
+    }
+
+    #[test]
+    fn esp32c3_accepts_exact_rom_init_csrs_before_mtvec_initialization() {
+        const ROM_PC: u32 = 0x4000_1ea4;
+        let mut bus = SystemBus::new();
+        bus.flash = crate::memory::LinearMemory::new(12, ROM_PC as u64);
+        bus.flash.data = vec![
+            0x85, 0x42, // c.li x5, 1
+            0x73, 0x90, 0x02, 0x80, // csrrw x0, 0x800, x5
+            0x85, 0x42, // c.li x5, 1
+            0x73, 0x90, 0x12, 0x80, // csrrw x0, 0x801, x5
+        ];
+        let mut cpu = RiscV::new_for(RiscVCoreProfile::Esp32C3);
+        cpu.pc = ROM_PC;
+        let mut machine = Machine::new(cpu, bus);
+
+        machine.step().unwrap();
+        assert_eq!(machine.cpu.pc, 0x4000_1ea6);
+        assert_eq!(machine.cpu.read_reg(5), 1);
+        machine.step().unwrap();
+        assert_eq!(machine.cpu.pc, 0x4000_1eaa);
+        assert_eq!(machine.cpu.read_reg(0), 0);
+        machine.step().unwrap();
+        assert_eq!(machine.cpu.pc, 0x4000_1eac);
+        machine.step().unwrap();
+        assert_eq!(machine.cpu.pc, 0x4000_1eb0);
+        assert_eq!(machine.cpu.read_reg(0), 0);
+        assert_eq!(machine.cpu.mcause, 0);
+        assert_eq!(machine.cpu.mtval, 0);
+
+        for csr in [0x800, 0x801] {
+            assert_eq!(machine.cpu.read_csr(csr), Some(0));
+            assert!(machine.cpu.write_csr(csr, u32::MAX));
+            assert_eq!(machine.cpu.read_csr(csr), Some(0));
+        }
+    }
+
+    #[test]
+    fn c3_rom_init_csrs_do_not_widen_custom_csr_acceptance() {
+        let cases = [
+            (RiscVCoreProfile::Esp32C3, 0x7ff2_9073, 0x7ff),
+            (RiscVCoreProfile::Esp32C3, 0x8062_9073, 0x806),
+            (RiscVCoreProfile::StandardRv32, C3_ROM_INIT_CSR_800, 0x800),
+            (RiscVCoreProfile::StandardRv32, C3_ROM_INIT_CSR_801, 0x801),
+        ];
+
+        for (profile, opcode, csr) in cases {
+            let mut bus = SystemBus::new();
+            bus.flash.data = opcode.to_le_bytes().to_vec();
+            let mut cpu = RiscV::new_for(profile);
+            cpu.pc = 0;
+            cpu.mtvec = 0x100;
+            cpu.x[5] = 1;
+            let mut machine = Machine::new(cpu, bus);
+
+            machine.step().unwrap();
+
+            assert_eq!(machine.cpu.mcause, 2, "profile={profile:?} csr={csr:#x}");
+            assert_eq!(machine.cpu.mtval, opcode);
+            assert_eq!(machine.cpu.pc, 0x100);
+            assert_eq!(machine.cpu.read_csr(csr), None);
+        }
+    }
+
+    #[test]
     fn standard_rv32_profile_exposes_cycle_csr() {
         let cpu = RiscV::new_for(RiscVCoreProfile::StandardRv32);
         assert_eq!(cpu.read_csr(0xC00), Some(0));
         assert_eq!(cpu.read_csr(0x7E2), None);
+        assert_eq!(cpu.read_csr(0x000), None);
+    }
+
+    #[test]
+    fn mhartid_reads_zero_for_all_riscv_profiles() {
+        for profile in [RiscVCoreProfile::StandardRv32, RiscVCoreProfile::Esp32C3] {
+            let mut bus = SystemBus::new();
+            bus.flash.data = READ_MHARTID_X7.to_le_bytes().to_vec();
+            let mut cpu = RiscV::new_for(profile);
+            cpu.pc = 0;
+            let mut machine = Machine::new(cpu, bus);
+
+            machine.step().unwrap();
+
+            assert_eq!(machine.cpu.pc, 4, "profile={profile:?}");
+            assert_eq!(machine.cpu.read_reg(7), 0, "profile={profile:?}");
+            assert_eq!(machine.cpu.mcause, 0, "profile={profile:?}");
+            assert_eq!(machine.cpu.mtval, 0, "profile={profile:?}");
+        }
+    }
+
+    #[test]
+    fn mhartid_write_traps_for_all_riscv_profiles() {
+        for profile in [RiscVCoreProfile::StandardRv32, RiscVCoreProfile::Esp32C3] {
+            let mut bus = SystemBus::new();
+            bus.flash.data = WRITE_MHARTID_X5.to_le_bytes().to_vec();
+            let mut cpu = RiscV::new_for(profile);
+            cpu.pc = 0;
+            cpu.mtvec = 0x100;
+            cpu.x[5] = 1;
+            let mut machine = Machine::new(cpu, bus);
+            assert_eq!(machine.cpu.read_csr(0xF14), Some(0));
+
+            machine.step().unwrap();
+
+            assert_eq!(machine.cpu.mcause, 2, "profile={profile:?}");
+            assert_eq!(machine.cpu.mtval, WRITE_MHARTID_X5, "profile={profile:?}");
+            assert_eq!(machine.cpu.pc, 0x100, "profile={profile:?}");
+        }
     }
 
     #[test]
@@ -1795,14 +1950,20 @@ mod tests {
         machine.run(Some(10)).unwrap();
 
         assert_eq!(machine.total_cycles, 10);
-        assert!(
-            machine.idle_fast_forward_cycles_skipped > 0,
-            "idle FF counter must rise when WFI skip fires"
-        );
-        assert!(
-            machine.step_profile().cpu_instructions < 10,
-            "fast-forwarded cycles should not retire CPU instructions"
-        );
+        if cfg!(feature = "event-scheduler") {
+            assert!(
+                machine.idle_fast_forward_cycles_skipped > 0,
+                "idle FF counter must rise when WFI skip fires"
+            );
+            assert!(
+                machine.step_profile().cpu_instructions < 10,
+                "fast-forwarded cycles should not retire CPU instructions"
+            );
+        } else {
+            // Without the event scheduler, idle fast-forward intentionally remains inactive.
+            assert_eq!(machine.idle_fast_forward_cycles_skipped, 0);
+            assert_eq!(machine.step_profile().cpu_instructions, 10);
+        }
     }
 
     #[test]
@@ -1821,10 +1982,16 @@ mod tests {
         machine.run(Some(10)).unwrap();
 
         assert_eq!(machine.total_cycles, 10);
-        assert!(
-            machine.step_profile().cpu_instructions < 10,
-            "boxed C3 CPU path should still leave the batch loop at WFI so Machine can fast-forward"
-        );
+        if cfg!(feature = "event-scheduler") {
+            assert!(
+                machine.step_profile().cpu_instructions < 10,
+                "boxed C3 CPU path should still leave the batch loop at WFI so Machine can fast-forward"
+            );
+            assert!(machine.idle_fast_forward_cycles_skipped > 0);
+        } else {
+            assert_eq!(machine.step_profile().cpu_instructions, 10);
+            assert_eq!(machine.idle_fast_forward_cycles_skipped, 0);
+        }
     }
 
     #[test]
@@ -1862,12 +2029,22 @@ mod tests {
         machine.config.idle_fast_forward_enabled = true;
         machine.run(Some(40)).unwrap();
 
-        assert!(
-            machine.step_profile().cpu_instructions < machine.total_cycles,
-            "WFI should skip idle cycles until the SYSTIMER event; retired {} over {} cycles",
-            machine.step_profile().cpu_instructions,
-            machine.total_cycles
-        );
+        assert_eq!(machine.total_cycles, 40);
+        if cfg!(feature = "event-scheduler") {
+            assert!(machine.idle_fast_forward_cycles_skipped > 0);
+            assert!(
+                machine.step_profile().cpu_instructions < machine.total_cycles,
+                "WFI should skip idle cycles until the SYSTIMER event; retired {} over {} cycles",
+                machine.step_profile().cpu_instructions,
+                machine.total_cycles
+            );
+        } else {
+            assert_eq!(machine.idle_fast_forward_cycles_skipped, 0);
+            assert_eq!(
+                machine.step_profile().cpu_instructions,
+                machine.total_cycles
+            );
+        }
         assert_ne!(
             machine.cpu.mcause & 0x8000_0000,
             0,
