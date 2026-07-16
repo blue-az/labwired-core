@@ -139,9 +139,7 @@ impl EventScheduler {
     /// return it immediately. Only if the top is stale do we fall back to a
     /// full scan for the next live deadline.
     pub fn next_event_deadline(&self, peripheral_generations: &[u32]) -> Option<SimCycle> {
-        let Some(Reverse(top)) = self.heap.peek() else {
-            return None;
-        };
+        let Reverse(top) = self.heap.peek()?;
         if !Self::is_stale(top, peripheral_generations) {
             return Some(top.deadline);
         }
