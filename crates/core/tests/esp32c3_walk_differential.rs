@@ -765,3 +765,67 @@ fn oled_lab_walk_pinners_after_rtc_migration() {
         bus.max_safe_tick_interval()
     );
 }
+
+/// Live silicon cross-check helper: run the same flash image the bench board
+/// just booted (`esp32c3-oled-demo-flash.bin`) and print serial markers + device
+/// time so an operator can diff against USB UART from `/dev/cu.usbmodem*`.
+#[test]
+#[ignore = "operator bench report; run with --release --ignored --nocapture"]
+fn oled_lab_sim_serial_vs_silicon_report() {
+    use std::time::Instant;
+    let t0 = Instant::now();
+    let mut lab = build_oled_lab(512, false, false, false, false);
+    lab.machine.config.idle_fast_forward_enabled = true;
+    lab.machine.bus.config.idle_fast_forward_enabled = true;
+    // Match browser recommended interval after #557.
+    lab.machine.config.peripheral_tick_interval = 512;
+    lab.machine.bus.config.peripheral_tick_interval = 512;
+
+    let mut entered = None;
+    let mut painted = None;
+    let mut freq_line = None;
+    for _ in 0..80 {
+        lab.machine.run(Some(2_000_000)).expect("run");
+        let s = String::from_utf8_lossy(&lab.serial.lock().unwrap()).to_string();
+        if entered.is_none() && s.contains("app_main entered") {
+            entered = Some(lab.machine.total_cycles);
+        }
+        if freq_line.is_none() {
+            if let Some(line) = s.lines().find(|l| l.contains("cpu freq")) {
+                freq_line = Some(line.to_string());
+            }
+        }
+        if painted.is_none() && s.contains("OLED painted") {
+            painted = Some(lab.machine.total_cycles);
+            break;
+        }
+    }
+    let wall = t0.elapsed().as_secs_f64();
+    let s = String::from_utf8_lossy(&lab.serial.lock().unwrap()).to_string();
+    let fb = ssd1306_framebuffer(&lab.machine);
+    eprintln!("=== SIM vs silicon report (same flash image) ===");
+    eprintln!("wall_s={wall:.3} total_cycles={} lit_pixels={}", lab.machine.total_cycles, lit_pixels(&fb));
+    eprintln!("cpu_freq_line={freq_line:?}");
+    eprintln!(
+        "app_main entered @ cycles={entered:?} device_ms≈{:.1}",
+        entered.map(|c| c as f64 / 160_000.0).unwrap_or(0.0)
+    );
+    eprintln!(
+        "OLED painted @ cycles={painted:?} device_ms≈{:.1}",
+        painted.map(|c| c as f64 / 160_000.0).unwrap_or(0.0)
+    );
+    for line in s.lines() {
+        if line.contains("oled-lab")
+            || line.contains("cpu freq")
+            || line.contains("chip revision")
+            || line.contains("Chip rev")
+            || line.contains("app_main")
+            || line.contains("OLED painted")
+            || line.contains("Project name")
+        {
+            eprintln!("SIM| {line}");
+        }
+    }
+    assert!(painted.is_some(), "sim must reach OLED painted like silicon");
+    assert!(lit_pixels(&fb) >= MIN_LIT, "sim framebuffer must light pixels");
+}
