@@ -183,6 +183,7 @@ fn legacy_run_currently_omits_secondary_core() {
 #[test]
 fn legacy_single_step_publishes_and_profiles_one_cycle() {
     let mut machine = Machine::new(CountingCpu::default(), crate::bus::SystemBus::new());
+    machine.reset_step_profile();
 
     machine.step().expect("legacy step should succeed");
 
