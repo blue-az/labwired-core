@@ -28,8 +28,8 @@
 //!
 //! Under a `jit-core` build the JIT-on arm is additionally asserted NON-VACUOUS
 //! (compiled blocks actually ran) by parsing the `LABWIRED_JIT_STATS=1` stderr.
-//! Without `jit-core` the eligible path is compiled out (`cfg!` false) so both
-//! arms run the identical interpreter and byte-identity holds trivially.
+//! Without `jit-core` the eligible path is compiled out, so the test reports an
+//! explicit skip instead of spending time on a vacuous interpreter comparison.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -185,6 +185,14 @@ fn assert_arms_byte_identical(scenario: &str, fx: &Fixtures, script: &Path, tmp:
 
 #[test]
 fn jit_on_vs_off_result_json_byte_identical_c3_oled() {
+    if !cfg!(feature = "jit-core") {
+        eprintln!(
+            "SKIP: built without `jit-core`; the RISC-V JIT is compiled out, so \
+             JIT-on vs JIT-off is not exercised."
+        );
+        return;
+    }
+
     let fx = fixtures();
     let tmp = std::env::temp_dir().join(format!("lw-jit-oled-{}", std::process::id()));
     std::fs::create_dir_all(&tmp).expect("create tmp dir");
