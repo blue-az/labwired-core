@@ -205,6 +205,12 @@ pub struct SystemBus {
     /// `rebuild_peripheral_ranges` so IRQ-level re-derivation on MMIO write
     /// can poll only those models (not the full bus).
     scheduler_driver_indices: Vec<usize>,
+    /// Retained scratch for `poll_scheduler_matrix_sources`: each scheduler-driven
+    /// peripheral fills this buffer via `Peripheral::matrix_irq_sources_into`
+    /// instead of returning a freshly-allocated `Vec` per poll. Cleared before
+    /// each peripheral, reused across the whole poll and across batches — the
+    /// per-batch IRQ-level re-derivation no longer allocates.
+    matrix_source_scratch: Vec<u32>,
     peripheral_hint: Cell<Option<usize>>,
     /// Last **winning** peripheral window from [`find_peripheral_index`]:
     /// `(range_ord, start, end, peri_index)` where `range_ord` is the index

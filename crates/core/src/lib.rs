@@ -809,8 +809,22 @@ pub trait Peripheral: std::fmt::Debug + Send {
     /// (`SystemBus::refresh_esp32c3_sched_sources`, called from the event path
     /// and the walk-tick aggregation). Default empty — only scheduler-driven
     /// peripherals that raise C3 matrix IRQs override it.
+    ///
+    /// Push-based twin of [`Self::matrix_irq_sources`]: the bus polls this on
+    /// the per-batch IRQ-level re-derivation path (`poll_scheduler_matrix_sources`)
+    /// with a RETAINED scratch buffer, so a scheduler-driven peripheral no longer
+    /// allocates a fresh `Vec` per poll. Override THIS (not the returning form) in
+    /// new models; the returning `matrix_irq_sources` defaults to a thin wrapper.
+    fn matrix_irq_sources_into(&self, out: &mut Vec<u32>) {
+        let _ = out;
+    }
+
+    /// Convenience returning form (tests, one-shot callers). The hot per-batch
+    /// poll uses [`Self::matrix_irq_sources_into`] with retained scratch instead.
     fn matrix_irq_sources(&self) -> Vec<u32> {
-        Vec::new()
+        let mut out = Vec::new();
+        self.matrix_irq_sources_into(&mut out);
+        out
     }
 }
 

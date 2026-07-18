@@ -373,14 +373,12 @@ impl Systimer {
     /// per-cycle walk no longer re-emits this level every tick, so the bus
     /// re-derives it from here (`SystemBus::refresh_esp32c3_sched_sources`) to
     /// keep the C3 interrupt matrix level-accurate.
-    fn asserted_matrix_sources(&self) -> Vec<u32> {
-        let mut out = Vec::new();
+    fn asserted_matrix_sources_into(&self, out: &mut Vec<u32>) {
         for (i, alarm) in self.unit0_alarms.iter().enumerate() {
             if alarm.pending && (self.int_ena & (1 << i) != 0) {
                 out.push(self.target0_source + i as u32);
             }
         }
-        out
     }
 
     /// Restore the (non-serialized) cycle clock and re-anchor the scheduler
@@ -769,8 +767,8 @@ impl Peripheral for Systimer {
     /// from the event path and the walk-tick aggregation so a scheduler-driven
     /// SYSTIMER keeps its level-sensitive IRQ routed even though the per-cycle
     /// walk no longer re-emits it.
-    fn matrix_irq_sources(&self) -> Vec<u32> {
-        self.asserted_matrix_sources()
+    fn matrix_irq_sources_into(&self, out: &mut Vec<u32>) {
+        self.asserted_matrix_sources_into(out);
     }
 
     fn take_scheduled_events(&mut self) -> Vec<(u64, u32)> {
