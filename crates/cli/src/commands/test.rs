@@ -435,6 +435,77 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
                 // No load_firmware / set_pc: the CPU resets at 0x40000400 and
                 // the mapped ROM boots the app from flash exactly like silicon.
                 machine
+            } else if is_esp32s3 {
+                // ── ESP32-S3 (Xtensa LX7) fast-boot from the manifest ──────────
+                // `build_esp32_system_from_manifest` builds a CLASSIC ESP32 (LX6)
+                // memory map, which cannot load an S3 XIP ELF (its .rodata/.text
+                // land in the 0x3C00_0000 / 0x4200_0000 cache windows). S3 gets
+                // its own branch here — the SAME wiring the `run` command and the
+                // wasm/playground twin use: configure_xtensa_esp32s3 + wire the
+                // manifest's external_devices + fast_boot.
+                use labwired_core::boot::esp32s3::{fast_boot, BootOpts};
+                use labwired_core::peripherals::esp32s3::usb_serial_jtag::UsbSerialJtag;
+                use labwired_core::system::xtensa::{configure_xtensa_esp32s3, Esp32s3Opts};
+
+                let mut bus = labwired_core::bus::SystemBus::new();
+                let wiring = configure_xtensa_esp32s3(&mut bus, &Esp32s3Opts::default());
+                // Wire the manifest's declared external devices (e.g. the SH1107
+                // OLED on i2c0) through the generic factory.
+                if let Err(e) =
+                    labwired_core::system::xtensa::attach_esp32_external_devices(&mut bus, manifest)
+                {
+                    let msg = format!("{:#}", e);
+                    error!("{}", msg);
+                    write_config_error_outputs(
+                        &args,
+                        Some(&firmware_path),
+                        system_path.as_ref(),
+                        Some(&firmware_bytes),
+                        Some(&resolved_limits),
+                        msg,
+                    );
+                    return ExitCode::from(EXIT_CONFIG_ERROR);
+                }
+                bus.refresh_peripheral_index();
+
+                // S3 esp-hal serial goes through USB_SERIAL_JTAG, not UART0.
+                for p in bus.peripherals.iter_mut() {
+                    if p.name == "usb_serial_jtag" {
+                        if let Some(any) = p.dev.as_any_mut() {
+                            if let Some(jtag) = any.downcast_mut::<UsbSerialJtag>() {
+                                jtag.set_sink(Some(uart_tx.clone()), !args.no_uart_stdout);
+                            }
+                        }
+                    }
+                }
+                bus.attach_uart_tx_sink(uart_tx.clone(), !args.no_uart_stdout);
+
+                let mut cpu = wiring.cpu;
+                if let Err(e) = fast_boot(
+                    &firmware_bytes,
+                    &mut bus,
+                    &mut cpu,
+                    &BootOpts {
+                        stack_top_fallback: 0x3FCD_FFF0,
+                        icache_backing: Some(wiring.icache_backing),
+                        dcache_backing: Some(wiring.dcache_backing),
+                    },
+                ) {
+                    let msg = format!("ESP32-S3 fast_boot: {e}");
+                    error!("{}", msg);
+                    write_config_error_outputs(
+                        &args,
+                        Some(&firmware_path),
+                        system_path.as_ref(),
+                        Some(&firmware_bytes),
+                        Some(&resolved_limits),
+                        msg,
+                    );
+                    return ExitCode::from(EXIT_RUNTIME_ERROR);
+                }
+                let mut machine = labwired_core::Machine::new(cpu, bus);
+                machine.observers.push(metrics.clone());
+                machine
             } else {
                 let (mut esp_bus, esp_cpu) =
                     match labwired_core::system::builder::build_esp32_system_from_manifest(
