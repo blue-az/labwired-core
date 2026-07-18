@@ -1339,10 +1339,18 @@ mod walk_free_campaign {
         // flip. (bxCAN never forced it here — its walk work is gated on an
         // attached CanBus interconnect, absent on this bus.)
         let bus = invaders_bus_walk_stripped();
+        #[cfg(feature = "event-scheduler")]
         assert!(
             bus.derive_walk_deletable(),
             "invaders bus should be walk-deletable once every Class-B walker \
              (i2c/exti/adc) is migrated and the forcing set is empty"
+        );
+        // Featureless builds have no scheduler, so the migrated models honestly
+        // stay on the walk and the bus does NOT flip.
+        #[cfg(not(feature = "event-scheduler"))]
+        assert!(
+            !bus.derive_walk_deletable(),
+            "featureless build keeps the walk (no scheduler to migrate onto)"
         );
     }
 }
