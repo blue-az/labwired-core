@@ -76,6 +76,7 @@ pub const MODEL_TYPES: &[&str] = &[
     "fmc",
     // RP2040 native peripherals (built here).
     "rp2040_timer",
+    "rp2040_dma",
     "rp2040_spi",
     "rp2040_i2c",
     "rp2040_xip_ssi",
@@ -313,6 +314,7 @@ pub fn try_build(
             p_cfg.base_address,
         )),
         "rp2040_timer" => Box::new(crate::peripherals::rp2040::timer::Rp2040Timer::new()),
+        "rp2040_dma" => Box::new(crate::peripherals::rp2040::dma::Rp2040Dma::new()),
         "rp2040_sio" => Box::new(crate::peripherals::rp2040::sio::Rp2040Sio::new()),
         "rp2040_spi" => Box::new(crate::peripherals::rp2040::spi::Rp2040Spi::new()),
         "rp2040_i2c" => Box::new(crate::peripherals::rp2040::i2c::Rp2040I2c::new()),
