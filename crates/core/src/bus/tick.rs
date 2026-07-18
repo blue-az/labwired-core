@@ -694,8 +694,13 @@ impl SystemBus {
     /// level-derivation semantics (rebuilt from scratch → a source that stops
     /// asserting drops out on the next poll) and only their storage/routing
     /// differ. Sources ≥ 128 (none on either SoC) are ignored.
-    fn poll_scheduler_matrix_sources(&self) -> [u64; 2] {
+    fn poll_scheduler_matrix_sources(&mut self) -> [u64; 2] {
         let mut asserted = [0u64; 2];
+        // Fill each peripheral's asserted source IDs into ONE retained scratch
+        // buffer (`matrix_irq_sources_into`) instead of allocating a fresh `Vec`
+        // per peripheral per poll. Taken out so `self.peripherals` can be
+        // borrowed immutably alongside; restored before return.
+        let mut scratch = std::mem::take(&mut self.matrix_source_scratch);
         // Prefer the cached scheduler-driver index list (filled in
         // `rebuild_peripheral_ranges`) so a walk-deleted C3 bus does not
         // virtual-dispatch `uses_scheduler` across every peripheral on every
@@ -705,26 +710,31 @@ impl SystemBus {
                 let Some(p) = self.peripherals.get(i) else {
                     continue;
                 };
-                for src in p.dev.matrix_irq_sources() {
+                scratch.clear();
+                p.dev.matrix_irq_sources_into(&mut scratch);
+                for &src in &scratch {
                     let idx = (src / 64) as usize;
                     if idx < asserted.len() {
                         asserted[idx] |= 1u64 << (src % 64);
                     }
                 }
             }
-            return asserted;
-        }
-        for p in &self.peripherals {
-            if !p.dev.uses_scheduler() {
-                continue;
-            }
-            for src in p.dev.matrix_irq_sources() {
-                let idx = (src / 64) as usize;
-                if idx < asserted.len() {
-                    asserted[idx] |= 1u64 << (src % 64);
+        } else {
+            for p in &self.peripherals {
+                if !p.dev.uses_scheduler() {
+                    continue;
+                }
+                scratch.clear();
+                p.dev.matrix_irq_sources_into(&mut scratch);
+                for &src in &scratch {
+                    let idx = (src / 64) as usize;
+                    if idx < asserted.len() {
+                        asserted[idx] |= 1u64 << (src % 64);
+                    }
                 }
             }
         }
+        self.matrix_source_scratch = scratch;
         asserted
     }
 
