@@ -1259,8 +1259,14 @@ mod walk_free_campaign {
     /// `CanBus` mpsc interconnect, so `needs_legacy_walk()` now reports
     /// `bus_rx.is_some()` — false on this bus (no multi-node CanBus is wired;
     /// can-player replay is pushed by `service_can_log_players`, not the tick).
+    ///
+    /// EXTI (`exti`) NO LONGER forces the walk: its held-level `explicit_irqs`
+    /// re-emission is driven by a delay-1 self-perpetuating event chain (armed on
+    /// the MMIO write that raises a masked pending line, stopping when firmware
+    /// clears PR). Byte-identical proof: `exti::scheduler_diff`. Remaining plan
+    /// Class-B on this bus: adc.
     #[cfg(feature = "event-scheduler")]
-    const EXPECTED_WALK_FORCING: &[&str] = &["adc1", "exti"];
+    const EXPECTED_WALK_FORCING: &[&str] = &["adc1"];
 
     /// Featureless builds: the scheduler does not exist, so SysTick and SCB
     /// stay on the legacy walk. bxCAN (`can1`) is excluded regardless of the
