@@ -1241,33 +1241,50 @@ mod walk_free_campaign {
     use labwired_config::{ChipDescriptor, SystemManifest};
     use std::path::PathBuf;
 
-    /// Walk-forcing ids on the runtime invaders bus after B4 (event-scheduler
-    /// builds): the prior 8 (B2/B3 timers + the DWT lazy-CYCCNT migration from
-    /// #522) minus the 2 `dma*` (B4 — per-channel element event chains, delay-1
-    /// mem2mem self-pacing, request-armed via the `route_dma_signal` hook) = 6.
-    /// The 3 `i2c*` STAY on the walk: THIS bus instantiates the STM32 **F1** I2C
-    /// variant, whose transaction engine is a `cycles_remaining` countdown
-    /// driven by `&self`-read side effects (`rxne_consumed` / `read_dr_consumed`)
-    /// that arm subsequent IRQ-raising state transitions. The bus read path is
-    /// `&self` (cannot schedule events) with event arming only on writes, so a
-    /// per-byte receive IRQ cannot be delivered through the event path without
-    /// dropping it or overrunning the read-gated byte stream (a fidelity loss).
-    /// Per the non-negotiable fidelity rule F1/L4 I2C stays on the legacy walk.
-    /// (The NXP **Kinetis** I2C variant — whose `tick()` is a pure level-IRQ
-    /// re-assertion with all byte/device work synchronous in read/write — IS
-    /// migrated in this batch, unblocking the FRDM-KW41Z board flip; the STM32
-    /// countdown engine is the part that cannot.) Remaining plan Class-B on this
-    /// bus: 3 i2c + adc + exti + bxcan.
+    /// Walk-forcing ids on the runtime invaders bus after the I2C migration
+    /// (event-scheduler builds): the prior 6 (B2/B3 timers minus the 2 `dma*`,
+    /// with the DWT lazy-CYCCNT migration from #522) minus the 3 `i2c*` = 2.
+    /// The 3 `i2c*` NOW migrate: the STM32 F1/L4 transaction engine is self-paced
+    /// by the SAME held-level, delay-1 self-perpetuating event chain the Kinetis
+    /// variant uses. The chain runs `F1I2c::tick()`/`L4I2c::tick()` every cycle
+    /// while a transfer is *active* (countdown in flight OR SR2.BUSY set), so the
+    /// `&self`-read side effects (`rxne_consumed` / device byte pulls) are
+    /// observed by the already-live chain's next `on_event` exactly as the walk's
+    /// next `tick()` would — no event needs arming from the read path. Proven
+    /// byte-identical (registers + read bytes + NVIC-pend cycles) by the
+    /// `kinetis_scheduler` differential module (`f1_*`/`l4_*` cases). Remaining
+    /// plan Class-B on this bus: adc + exti.
+    ///
+    /// bxCAN (`can1`) NO LONGER forces the walk: its `tick()` only drains a
+    /// `CanBus` mpsc interconnect, so `needs_legacy_walk()` now reports
+    /// `bus_rx.is_some()` — false on this bus (no multi-node CanBus is wired;
+    /// can-player replay is pushed by `service_can_log_players`, not the tick).
+    ///
+    /// EXTI (`exti`) NO LONGER forces the walk: its held-level `explicit_irqs`
+    /// re-emission is driven by a delay-1 self-perpetuating event chain (armed on
+    /// the MMIO write that raises a masked pending line, stopping when firmware
+    /// clears PR). Byte-identical proof: `exti::scheduler_diff`.
+    ///
+    /// ADC (`adc1`) NO LONGER forces the walk: its F1 conversion countdown is
+    /// event-scheduled (delay-1 chain armed on SWSTART, perpetuating through
+    /// continuous mode), and the legacy `cycles: 1` per-converting-tick cost is
+    /// normalized to zero in BOTH modes (SysTick B1 pattern) so `total_cycles`
+    /// agrees. Byte-identical proof: `adc::scheduler_diff`.
+    ///
+    /// The forcing set is now EMPTY — with every Class-B walker migrated the
+    /// runtime invaders (L476) bus derives walk-deletion with no hand flag: the
+    /// campaign's full STM32 board flip.
     #[cfg(feature = "event-scheduler")]
-    const EXPECTED_WALK_FORCING: &[&str] = &["i2c1", "i2c2", "i2c3", "adc1", "exti", "can1"];
+    const EXPECTED_WALK_FORCING: &[&str] = &[];
 
     /// Featureless builds: the scheduler does not exist, so SysTick and SCB
-    /// stay on the legacy walk — the full post-B0 set of 22.
+    /// stay on the legacy walk. bxCAN (`can1`) is excluded regardless of the
+    /// feature — its walk-forcing is gated on an attached interconnect, not the
+    /// scheduler.
     #[cfg(not(feature = "event-scheduler"))]
     const EXPECTED_WALK_FORCING: &[&str] = &[
         "systick", "tim1", "tim2", "tim3", "tim4", "tim5", "tim6", "tim7", "tim8", "tim15",
-        "tim16", "tim17", "dma1", "dma2", "i2c1", "i2c2", "i2c3", "adc1", "exti", "scb", "can1",
-        "dwt",
+        "tim16", "tim17", "dma1", "dma2", "i2c1", "i2c2", "i2c3", "adc1", "exti", "scb", "dwt",
     ];
 
     fn invaders_bus_walk_stripped() -> SystemBus {
@@ -1315,15 +1332,25 @@ mod walk_free_campaign {
     }
 
     #[test]
-    fn remaining_class_b_walkers_still_pin_walk_deletion() {
-        // I2C/ADC/EXTI/bxCAN (+DWT) still force the walk, so B4
-        // cannot flip the invaders bus yet: the derivation must stay
-        // conservative until every Class-B walker is migrated.
+    fn invaders_bus_now_flips_with_every_class_b_migrated() {
+        // With I2C, EXTI and ADC all event-scheduled, the runtime invaders
+        // (L476) bus has an EMPTY walk-forcing set and derives walk-deletion
+        // with no hand `walk_deleted` flag — the campaign's full STM32 board
+        // flip. (bxCAN never forced it here — its walk work is gated on an
+        // attached CanBus interconnect, absent on this bus.)
         let bus = invaders_bus_walk_stripped();
+        #[cfg(feature = "event-scheduler")]
+        assert!(
+            bus.derive_walk_deletable(),
+            "invaders bus should be walk-deletable once every Class-B walker \
+             (i2c/exti/adc) is migrated and the forcing set is empty"
+        );
+        // Featureless builds have no scheduler, so the migrated models honestly
+        // stay on the walk and the bus does NOT flip.
+        #[cfg(not(feature = "event-scheduler"))]
         assert!(
             !bus.derive_walk_deletable(),
-            "invaders bus became walk-deletable after B4, but Class-B walkers remain — \
-             each batch must be honest bookkeeping with no premature walk deletion"
+            "featureless build keeps the walk (no scheduler to migrate onto)"
         );
     }
 }
