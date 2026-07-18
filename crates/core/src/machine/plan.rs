@@ -55,8 +55,7 @@ impl<C: Cpu> Machine<C> {
                 count = count.min(until.clamp(1, u64::from(u32::MAX)));
             }
             if tick_interval > 1 && count > 1 {
-                self.refresh_generation_scratch();
-                if let Some(deadline) = self.sched.next_event_deadline(&self.generation_scratch) {
+                if let Some(deadline) = self.sched.next_event_deadline() {
                     let until = if deadline > self.total_cycles {
                         deadline - self.total_cycles
                     } else {
