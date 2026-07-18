@@ -199,17 +199,14 @@ const SHIPPED: &[Board] = &[
 /// convention test), then DELETE the row — the gate fails if a listed gap is
 /// found already covered, so stale rows cannot accumulate.
 const KNOWN_GAPS: &[(&str, Class)] = &[
-    // RP2040 executing-fidelity is now covered by rp2040_timer_exec_oracle +
-    // rp2040_reset_conformance + rp2040_pio_onboarding (PR that added this row's
-    // deletion). NOTE: RP2040 DMA remains a MODELING gap (no `dma` block in
-    // `configs/chips/rp2040.yaml`) tracked in issue #577 — the ratchet deliberately
-    // does not demand a DMA test for a peripheral the chip does not model.
+    // EMPTY — every shipped chip now carries its required coverage classes.
+    // RP2040 covered by rp2040_{timer_exec_oracle,reset_conformance,pio_onboarding};
+    // STM32F401 covered by stm32f401_walk_differential.
     //
-    // STM32F401 (BlackPill / demo) ships but its executing coverage is only
-    // `firmware_survival::test_stm32f401_blinky_survival`. The F4 exec-oracle /
-    // mmio-diff target real F407 silicon, not F401. Fill with an F401 walk
-    // differential or an F401 mmio-diff/exec-oracle.
-    ("stm32f401", Class::Exec),
+    // Two MODELING gaps (not test gaps) are tracked as issues, NOT allowlisted here,
+    // because the ratchet must not demand a test for a peripheral the chip doesn't
+    // model: RP2040 DMA (issue #577) and STM32F407 DMA (issue #578) have no block in
+    // their chip descriptors. F401 cold-reset value divergences vs RM0368: issue #576.
 ];
 
 fn core_crate_root() -> PathBuf {
