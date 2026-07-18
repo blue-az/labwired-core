@@ -305,11 +305,7 @@ impl WasmSimulator {
     /// `device_id` must match a `board_io` binding with `device_type: "potentiometer"`.
     /// `position_pct` must be in 0..=100.
     #[wasm_bindgen]
-    pub fn set_potentiometer(
-        &mut self,
-        device_id: &str,
-        position_pct: f32,
-    ) -> Result<(), JsValue> {
+    pub fn set_potentiometer(&mut self, device_id: &str, position_pct: f32) -> Result<(), JsValue> {
         use labwired_core::peripherals::components::Potentiometer;
 
         if !(0.0..=100.0).contains(&position_pct) {
