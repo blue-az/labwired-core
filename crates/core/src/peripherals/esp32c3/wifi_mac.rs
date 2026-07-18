@@ -584,11 +584,9 @@ impl Peripheral for Esp32c3WifiMac {
     /// path and at the MMIO write choke) so the level-sensitive IRQ stays routed
     /// and de-asserts the tick/write after firmware clears the event via
     /// `EVENT_CLR`.
-    fn matrix_irq_sources(&self) -> Vec<u32> {
+    fn matrix_irq_sources_into(&self, out: &mut Vec<u32>) {
         if self.event() != 0 {
-            vec![MAC_INTR_SOURCE]
-        } else {
-            Vec::new()
+            out.push(MAC_INTR_SOURCE);
         }
     }
 

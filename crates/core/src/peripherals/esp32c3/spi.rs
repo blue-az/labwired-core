@@ -409,11 +409,9 @@ impl Peripheral for Esp32c3Spi {
     /// level from here (`refresh_esp32c3_sched_sources`, polled on the event
     /// path and the walk-tick aggregation) so the level-sensitive IRQ stays
     /// routed and de-asserts the tick after firmware writes INT_CLR.
-    fn matrix_irq_sources(&self) -> Vec<u32> {
+    fn matrix_irq_sources_into(&self, out: &mut Vec<u32>) {
         if self.int_st() != 0 {
-            vec![self.source_id]
-        } else {
-            Vec::new()
+            out.push(self.source_id);
         }
     }
 
