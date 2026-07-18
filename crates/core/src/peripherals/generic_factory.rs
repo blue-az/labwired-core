@@ -274,6 +274,9 @@ pub fn try_build(
                 Some("stm32l0") | Some("l0") => Box::new(crate::peripherals::pwr::PwrL0::new()),
                 // WBA: VOSR (0x0C) VOS→VOSRDY handshake the SoC init polls.
                 Some("stm32wba") | Some("wba") => Box::new(crate::peripherals::pwr::PwrWba::new()),
+                // F4 has only PWR_CR/PWR_CSR (RM0368 §5.4) — a distinct reset
+                // shape from the L4 CR1..CR4 / PUCRx set.
+                Some("stm32f4") | Some("f4") => Box::new(crate::peripherals::pwr::PwrF4::new()),
                 _ => Box::new(crate::peripherals::pwr::Pwr::new()),
             }
         }
