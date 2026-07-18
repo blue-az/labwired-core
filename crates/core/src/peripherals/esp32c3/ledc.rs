@@ -558,12 +558,10 @@ impl Peripheral for Esp32c3Ledc {
     /// reflected (the bus polls this on the event path and every walk-tick
     /// aggregation, `refresh_esp32c3_sched_sources`), keeping the level-sensitive
     /// IRQ routed and de-asserting the tick after firmware writes INT_CLR.
-    fn matrix_irq_sources(&self) -> Vec<u32> {
+    fn matrix_irq_sources_into(&self, out: &mut Vec<u32>) {
         self.sync_from_clock();
         if self.int_st() != 0 {
-            vec![self.source_id]
-        } else {
-            Vec::new()
+            out.push(self.source_id);
         }
     }
 
