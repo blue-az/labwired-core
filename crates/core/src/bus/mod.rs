@@ -109,10 +109,6 @@ pub struct PeripheralEntry {
     pub irq: Option<u32>,
     pub dev: Box<dyn Peripheral>,
     pub ticks_remaining: u64,
-    /// Phase 2B.1 (issue #192): lazy cancel token for the event scheduler.
-    /// Bumped when the peripheral resets; `EventScheduler::drain_due` drops
-    /// entries whose generation no longer matches the snapshot.
-    pub generation: u32,
     /// Optional RCC clock-gate (silicon clock-gating model). `None` (the common
     /// case) → the peripheral is never gated and accesses always pass through.
     /// `Some` → accesses are dropped (writes ignored, reads return 0) while the

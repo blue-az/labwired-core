@@ -22,7 +22,6 @@ impl SystemBus {
                     irq: Some(37),
                     dev: Box::new(crate::peripherals::uart::Uart::new()),
                     ticks_remaining: 0,
-                    generation: 0,
                     clock_gate: None,
                 },
                 PeripheralEntry {
@@ -32,7 +31,6 @@ impl SystemBus {
                     irq: None,
                     dev: Box::new(crate::peripherals::gpio::GpioPort::new()),
                     ticks_remaining: 0,
-                    generation: 0,
                     clock_gate: None,
                 },
                 PeripheralEntry {
@@ -42,7 +40,6 @@ impl SystemBus {
                     irq: None,
                     dev: Box::new(crate::peripherals::rcc::Rcc::new()),
                     ticks_remaining: 0,
-                    generation: 0,
                     clock_gate: None,
                 },
                 PeripheralEntry {
@@ -52,7 +49,6 @@ impl SystemBus {
                     irq: Some(15),
                     dev: Box::new(crate::peripherals::systick::Systick::new()),
                     ticks_remaining: 0,
-                    generation: 0,
                     clock_gate: None,
                 },
             ],
@@ -217,18 +213,9 @@ impl SystemBus {
             irq,
             dev,
             ticks_remaining: 0,
-            generation: 0,
             clock_gate: None,
         });
         self.rebuild_peripheral_ranges();
-    }
-
-    /// Phase 2B.1 (issue #192): snapshot of every peripheral's lazy-cancel
-    /// generation, indexed by `peripheral_idx`. Threaded into
-    /// `EventScheduler::drain_due` / `next_event_deadline` so stale events
-    /// (scheduled before a peripheral reset) are dropped.
-    pub fn peripheral_generations(&self) -> Vec<u32> {
-        self.peripherals.iter().map(|p| p.generation).collect()
     }
 
     /// Look up a registered ROM thunk by absolute PC.
@@ -553,7 +540,6 @@ impl SystemBus {
             irq: p_cfg.irq,
             dev,
             ticks_remaining: 0,
-            generation: 0,
             // Resolved in a post-pass once every peripheral (incl. the RCC) is
             // on the bus — see `resolve_clock_gates`.
             clock_gate: None,

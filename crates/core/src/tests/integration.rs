@@ -205,7 +205,6 @@ pub mod integration_tests {
             irq: None,
             dev: Box::new(RecordingPeripheral::new()),
             ticks_remaining: 0,
-            generation: 0,
             clock_gate: None,
         });
 
@@ -225,7 +224,6 @@ pub mod integration_tests {
             irq: None,
             dev: Box::new(RecordingPeripheral::new()),
             ticks_remaining: 0,
-            generation: 0,
             clock_gate: None,
         });
 
@@ -273,7 +271,6 @@ pub mod integration_tests {
                 reads: reads.clone(),
             }),
             ticks_remaining: 0,
-            generation: 0,
             clock_gate: None,
         });
 
@@ -300,7 +297,6 @@ pub mod integration_tests {
             irq: Some(16),
             dev: Box::new(RecordingPeripheral::with_tick(true)),
             ticks_remaining: 0,
-            generation: 0,
             clock_gate: None,
         });
 
@@ -330,7 +326,6 @@ pub mod integration_tests {
             irq: Some(16),
             dev: Box::new(RecordingPeripheral::with_tick(true)),
             ticks_remaining: 0,
-            generation: 0,
             clock_gate: None,
         });
 
@@ -376,7 +371,6 @@ pub mod integration_tests {
                 tick_count: tick_count.clone(),
             }),
             ticks_remaining: 0,
-            generation: 0,
             clock_gate: None,
         });
 
@@ -1573,7 +1567,6 @@ pub mod integration_tests {
             irq: Some(irq_num),
             dev: Box::new(crate::peripherals::stub::StubPeripheral::new(0)),
             ticks_remaining: 0,
-            generation: 0,
             clock_gate: None,
         });
         // (Note: StubPeripheral::tick returns false. I should use a more active one or just pend manually)
@@ -2139,7 +2132,6 @@ pub mod integration_tests {
             irq: Some(18), // ADC1_2 global interrupt
             dev: Box::new(Adc::new()),
             ticks_remaining: 0,
-            generation: 0,
             clock_gate: None,
         });
 

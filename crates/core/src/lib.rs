@@ -1132,11 +1132,6 @@ pub struct Machine<C: Cpu> {
     /// feature.
     #[allow(dead_code)]
     hcsr04_edge_scratch: Vec<(usize, u64, u64)>,
-    /// Reusable generation snapshot for `next_event_deadline` / `drain_due`.
-    /// Avoids allocating a fresh `Vec` on every batch / drain (was a real
-    /// host-side tax at tick-512: one alloc + full peripheral walk per batch).
-    #[allow(dead_code)]
-    generation_scratch: Vec<u32>,
     /// Reusable scratch for the per-tick `tick_peripherals_fully` interrupt
     /// harvest, so the steady-state peripheral tick pushes pending NVIC IRQs
     /// into a retained buffer instead of allocating a fresh `Vec` every tick
@@ -1414,7 +1409,6 @@ impl<C: Cpu> Machine<C> {
             scb_index,
             scheduler_bootstrapped: false,
             hcsr04_edge_scratch: Vec::new(),
-            generation_scratch: Vec::new(),
             tick_irq_scratch: Vec::new(),
             tick_cost_scratch: Vec::new(),
             pending_schedule_scratch: Vec::new(),
@@ -1448,25 +1442,6 @@ impl<C: Cpu> Machine<C> {
         self.step_profile.peripheral_ticked_entries += cost_entries as u64;
         self.step_profile.bus_tick_entries += bus_tick_entries as u64;
         self.step_profile.legacy_tick_entries += legacy_tick_entries as u64;
-    }
-
-    /// Refresh [`Self::generation_scratch`] from the bus (no alloc after the
-    /// first call once the peripheral count is stable). Replaces
-    /// `bus.peripheral_generations()` on the per-batch deadline clamp and
-    /// drain hot paths. Callers then pass `&self.generation_scratch`.
-    #[cfg(feature = "event-scheduler")]
-    fn refresh_generation_scratch(&mut self) {
-        let n = self.bus.peripherals.len();
-        if self.generation_scratch.len() != n {
-            self.generation_scratch.resize(n, 0);
-        }
-        for (dst, p) in self
-            .generation_scratch
-            .iter_mut()
-            .zip(self.bus.peripherals.iter())
-        {
-            *dst = p.generation;
-        }
     }
 
     fn try_idle_fast_forward(
@@ -1527,8 +1502,7 @@ impl<C: Cpu> Machine<C> {
             }
             budget = budget.min(remaining);
 
-            self.refresh_generation_scratch();
-            if let Some(deadline_cycle) = self.sched.next_event_deadline(&self.generation_scratch) {
+            if let Some(deadline_cycle) = self.sched.next_event_deadline() {
                 if deadline_cycle <= self.total_cycles {
                     return 0;
                 }
@@ -1905,14 +1879,7 @@ impl<C: Cpu> Machine<C> {
             &mut self.pending_schedule_scratch,
         );
         for (idx, deadline, token) in self.pending_schedule_scratch.drain(..) {
-            let gen = self
-                .bus
-                .peripherals
-                .get(idx)
-                .map(|p| p.generation)
-                .unwrap_or(0);
-            self.sched
-                .schedule(deadline.max(now), idx as u32, token, gen);
+            self.sched.schedule(deadline.max(now), idx as u32, token);
         }
         // HC-SR04: enqueue the ECHO rise/fall edges of any freshly-armed window
         // as events under the reserved subsystem idx, at their exact cycles
@@ -1927,27 +1894,23 @@ impl<C: Cpu> Machine<C> {
                 rise_cycle.max(now),
                 sched::SUBSYSTEM_PERIPHERAL_IDX,
                 sensor as u32,
-                0,
             );
             self.sched.schedule(
                 fall_cycle.max(now),
                 sched::SUBSYSTEM_PERIPHERAL_IDX,
                 sensor as u32,
-                0,
             );
         }
         // Nothing queued (steady state between an SPI frame / HC-SR04 pulse):
-        // skip the generation snapshot + heap drain entirely — no allocation.
+        // skip the heap drain entirely — no allocation.
         if self.sched.is_empty() {
             return;
         }
-        self.refresh_generation_scratch();
         // Fill the retained scratch (taken out so `on_event` below can borrow
         // `&mut self.sched` / `&mut self.bus`) instead of allocating a fresh
         // `Vec` per drain; restored at the end with its capacity intact.
         let mut due = std::mem::take(&mut self.due_events_scratch);
-        self.sched
-            .drain_due_into(&self.generation_scratch, &mut due);
+        self.sched.drain_due_into(&mut due);
         for ev in due.drain(..) {
             // Bus-subsystem pseudo-peripheral (HC-SR04): no `peripherals[]`
             // entry — dispatch straight to the shared ECHO choke point.
@@ -1973,13 +1936,11 @@ impl<C: Cpu> Machine<C> {
             let stub_back = std::mem::replace(&mut self.bus.peripherals[idx].dev, dev);
             self.event_placeholder = Some(stub_back);
             // Phase 2B.3b: a level-triggered peripheral re-arms its own event
-            // (same token) while it has active work. We own the (idx,
-            // generation) the scheduler needs, so we do it here.
+            // (same token) while it has active work. We own the idx the
+            // scheduler needs, so we do it here.
             if let Some(delay) = result.reschedule_delay {
-                let gen = self.bus.peripherals[idx].generation;
                 let deadline = self.sched.now() + delay;
-                self.sched
-                    .schedule(deadline, idx as u32, ev.event_token, gen);
+                self.sched.schedule(deadline, idx as u32, ev.event_token);
             }
             self.apply_event_result(idx, result);
         }
