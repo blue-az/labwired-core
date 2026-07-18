@@ -1241,30 +1241,26 @@ mod walk_free_campaign {
     use labwired_config::{ChipDescriptor, SystemManifest};
     use std::path::PathBuf;
 
-    /// Walk-forcing ids on the runtime invaders bus after B4 (event-scheduler
-    /// builds): the prior 8 (B2/B3 timers + the DWT lazy-CYCCNT migration from
-    /// #522) minus the 2 `dma*` (B4 — per-channel element event chains, delay-1
-    /// mem2mem self-pacing, request-armed via the `route_dma_signal` hook) = 6.
-    /// The 3 `i2c*` STAY on the walk: THIS bus instantiates the STM32 **F1** I2C
-    /// variant, whose transaction engine is a `cycles_remaining` countdown
-    /// driven by `&self`-read side effects (`rxne_consumed` / `read_dr_consumed`)
-    /// that arm subsequent IRQ-raising state transitions. The bus read path is
-    /// `&self` (cannot schedule events) with event arming only on writes, so a
-    /// per-byte receive IRQ cannot be delivered through the event path without
-    /// dropping it or overrunning the read-gated byte stream (a fidelity loss).
-    /// Per the non-negotiable fidelity rule F1/L4 I2C stays on the legacy walk.
-    /// (The NXP **Kinetis** I2C variant — whose `tick()` is a pure level-IRQ
-    /// re-assertion with all byte/device work synchronous in read/write — IS
-    /// migrated in this batch, unblocking the FRDM-KW41Z board flip; the STM32
-    /// countdown engine is the part that cannot.) Remaining plan Class-B on this
-    /// bus: 3 i2c + adc + exti.
+    /// Walk-forcing ids on the runtime invaders bus after the I2C migration
+    /// (event-scheduler builds): the prior 6 (B2/B3 timers minus the 2 `dma*`,
+    /// with the DWT lazy-CYCCNT migration from #522) minus the 3 `i2c*` = 2.
+    /// The 3 `i2c*` NOW migrate: the STM32 F1/L4 transaction engine is self-paced
+    /// by the SAME held-level, delay-1 self-perpetuating event chain the Kinetis
+    /// variant uses. The chain runs `F1I2c::tick()`/`L4I2c::tick()` every cycle
+    /// while a transfer is *active* (countdown in flight OR SR2.BUSY set), so the
+    /// `&self`-read side effects (`rxne_consumed` / device byte pulls) are
+    /// observed by the already-live chain's next `on_event` exactly as the walk's
+    /// next `tick()` would — no event needs arming from the read path. Proven
+    /// byte-identical (registers + read bytes + NVIC-pend cycles) by the
+    /// `kinetis_scheduler` differential module (`f1_*`/`l4_*` cases). Remaining
+    /// plan Class-B on this bus: adc + exti.
     ///
     /// bxCAN (`can1`) NO LONGER forces the walk: its `tick()` only drains a
     /// `CanBus` mpsc interconnect, so `needs_legacy_walk()` now reports
     /// `bus_rx.is_some()` — false on this bus (no multi-node CanBus is wired;
     /// can-player replay is pushed by `service_can_log_players`, not the tick).
     #[cfg(feature = "event-scheduler")]
-    const EXPECTED_WALK_FORCING: &[&str] = &["i2c1", "i2c2", "i2c3", "adc1", "exti"];
+    const EXPECTED_WALK_FORCING: &[&str] = &["adc1", "exti"];
 
     /// Featureless builds: the scheduler does not exist, so SysTick and SCB
     /// stay on the legacy walk. bxCAN (`can1`) is excluded regardless of the
