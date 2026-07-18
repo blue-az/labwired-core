@@ -2073,10 +2073,9 @@ mod tests {
             SYSTIMER_BASE,
             0x100,
             None,
-            Box::new(crate::peripherals::esp32s3::systimer::Systimer::new_with_source(
-                160_000_000,
-                37,
-            )),
+            Box::new(
+                crate::peripherals::esp32s3::systimer::Systimer::new_with_source(160_000_000, 37),
+            ),
         );
         bus.add_peripheral(
             "gpio",
