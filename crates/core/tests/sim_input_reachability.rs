@@ -126,6 +126,40 @@ const CASES: &[Case] = &[
         controller: "spi2",
         attach: Attach::SpiMax31855 { cs_pin: "GPIO7" },
     },
+    // nRF52840 — the family that could not attach at all. `Nrf52Twim`'s
+    // `Peripheral` impl declared no `as_any_mut`, so `attach_i2c_slave`'s
+    // downcast could never match it and every attach to a TWIM controller
+    // failed loudly. `twi1` (chip type `nrf52840_i2c`, canonical
+    // `nrf52840_twim`) is the standalone TWIM every nRF52840 board carries.
+    Case {
+        chip: "nrf52840 (Nrf52Twim)",
+        system: "nrf52840-dk.yaml",
+        controller: "twi1",
+        attach: Attach::I2cAdxl345 {
+            address: 0x53,
+            route: None,
+        },
+    },
+    // `i2c0` is the SPIM0/TWIM0 mux sharing one MMIO window. It was reachable
+    // by neither attach funnel (absent from both dispatch chains) AND
+    // implemented no `for_each_attached_sim_input`, so devices the nRF52
+    // factory attached into it from a manifest were SILENTLY undrivable —
+    // the worse of the two holes, since attach appeared to succeed.
+    Case {
+        chip: "nrf52840 (Nrf52SerialInstance, TWIM half)",
+        system: "nrf52840-dk.yaml",
+        controller: "i2c0",
+        attach: Attach::I2cAdxl345 {
+            address: 0x53,
+            route: None,
+        },
+    },
+    Case {
+        chip: "nrf52840 (Nrf52SerialInstance, SPIM half)",
+        system: "nrf52840-dk.yaml",
+        controller: "i2c0",
+        attach: Attach::SpiMax31855 { cs_pin: "P0.31" },
+    },
 ];
 
 impl Case {
@@ -208,6 +242,8 @@ fn with_adxl345<R>(bus: &mut SystemBus, f: impl FnOnce(&mut Adxl345) -> R) -> R 
     use labwired_core::peripherals::esp32c3::i2c::Esp32c3I2c;
     use labwired_core::peripherals::esp32s3::i2c::Esp32s3I2c;
     use labwired_core::peripherals::i2c::I2c;
+    use labwired_core::peripherals::nrf52::serial_instance::Nrf52SerialInstance;
+    use labwired_core::peripherals::nrf52::twim::Nrf52Twim;
 
     for entry in bus.peripherals.iter_mut() {
         let Some(any) = entry.dev.as_any_mut() else {
@@ -232,6 +268,20 @@ fn with_adxl345<R>(bus: &mut SystemBus, f: impl FnOnce(&mut Adxl345) -> R) -> R 
                     return f(a);
                 }
             }
+        } else if let Some(c) = any.downcast_ref::<Nrf52Twim>() {
+            for cell in c.attached_devices() {
+                let mut dev = cell.borrow_mut();
+                if let Some(a) = dev.as_any_mut().and_then(|a| a.downcast_mut::<Adxl345>()) {
+                    return f(a);
+                }
+            }
+        } else if let Some(c) = any.downcast_ref::<Nrf52SerialInstance>() {
+            for cell in c.attached_i2c_devices() {
+                let mut dev = cell.borrow_mut();
+                if let Some(a) = dev.as_any_mut().and_then(|a| a.downcast_mut::<Adxl345>()) {
+                    return f(a);
+                }
+            }
         }
     }
     panic!("no ADXL345 found on the bus — the test's own readback path is broken");
@@ -240,6 +290,7 @@ fn with_adxl345<R>(bus: &mut SystemBus, f: impl FnOnce(&mut Adxl345) -> R) -> R 
 /// SPI counterpart of [`with_adxl345`].
 fn with_max31855<R>(bus: &mut SystemBus, f: impl FnOnce(&mut Max31855) -> R) -> R {
     use labwired_core::peripherals::esp32c3::spi::Esp32c3Spi;
+    use labwired_core::peripherals::nrf52::serial_instance::Nrf52SerialInstance;
     use labwired_core::peripherals::spi::Spi;
 
     for entry in bus.peripherals.iter_mut() {
@@ -254,6 +305,12 @@ fn with_max31855<R>(bus: &mut SystemBus, f: impl FnOnce(&mut Max31855) -> R) -> 
             }
         } else if let Some(c) = any.downcast_mut::<Esp32c3Spi>() {
             for dev in c.attached_devices_mut() {
+                if let Some(m) = dev.as_any_mut().and_then(|a| a.downcast_mut::<Max31855>()) {
+                    return f(m);
+                }
+            }
+        } else if let Some(c) = any.downcast_mut::<Nrf52SerialInstance>() {
+            for dev in c.attached_spi_devices_mut() {
                 if let Some(m) = dev.as_any_mut().and_then(|a| a.downcast_mut::<Max31855>()) {
                     return f(m);
                 }

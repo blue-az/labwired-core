@@ -246,6 +246,13 @@ impl Nrf52Twim {
         self.attached_devices.push(RefCell::new(device));
     }
 
+    /// The attached I²C slaves, in attach order. Mirrors
+    /// [`crate::peripherals::i2c::I2c::attached_devices`] so callers can reach
+    /// a device by a path independent of the sim-input walk.
+    pub fn attached_devices(&self) -> &[RefCell<Box<dyn I2cDevice>>] {
+        &self.attached_devices
+    }
+
     /// Find the first attached device whose `address()` matches `addr7`.
     fn device_for(&self, addr7: u8) -> Option<usize> {
         self.attached_devices
@@ -634,14 +641,19 @@ impl Peripheral for Nrf52Twim {
         }
     }
 
+    /// Required for [`crate::bus::SystemBus::attach_i2c_slave`] to downcast to
+    /// `Nrf52Twim`. Without these, that downcast can never match and attaching
+    /// any I²C slave to a TWIM controller fails loudly at attach time — which
+    /// removed the whole nRF52 board line from programmatic attach.
+    fn as_any(&self) -> Option<&dyn std::any::Any> {
+        Some(self)
+    }
+
+    fn as_any_mut(&mut self) -> Option<&mut dyn std::any::Any> {
+        Some(self)
+    }
+
     /// TWIM holds its slaves behind `RefCell`, like the generic `I2c`.
-    ///
-    /// NOTE: this impl is currently unreachable from the bus walk because this
-    /// `Peripheral` impl declares no `as_any_mut`, so
-    /// [`crate::bus::SystemBus::attach_i2c_slave`]'s downcast to `Nrf52Twim`
-    /// can never match and attaching to a TWIM controller fails loudly at
-    /// attach time. That is a separate (loud, not silent) gap; the seam is
-    /// implemented here so TWIM is correct the moment it is closed.
     fn for_each_attached_sim_input(
         &mut self,
         f: &mut dyn FnMut(&mut dyn crate::sim_input::SimInput) -> bool,
