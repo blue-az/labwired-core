@@ -60,6 +60,16 @@ impl Nrf52SerialInstance {
         self.spim.push_device(dev);
     }
 
+    /// The TWIM sub-peripheral's attached I²C slaves, in attach order.
+    pub fn attached_i2c_devices(&self) -> &[std::cell::RefCell<Box<dyn I2cDevice>>] {
+        self.twim.attached_devices()
+    }
+
+    /// The SPIM sub-peripheral's attached SPI devices, in attach order.
+    pub fn attached_spi_devices_mut(&mut self) -> &mut [Box<dyn SpiDevice>] {
+        &mut self.spim.attached_devices
+    }
+
     fn active(&self) -> u32 {
         self.enable & ENABLE_MASK
     }
@@ -224,6 +234,22 @@ impl Peripheral for Nrf52SerialInstance {
 
     fn as_any_mut(&mut self) -> Option<&mut dyn std::any::Any> {
         Some(self)
+    }
+
+    /// Forward the stimulus walk into BOTH sub-peripherals.
+    ///
+    /// The mux owns its devices (the nRF52 factory attaches manifest externals
+    /// straight into `twim`/`spim`), so a walk that stopped at this struct
+    /// would report no inputs at all for every device on the shared
+    /// SPIM0/TWIM0 window — discoverable by nothing, drivable by nothing.
+    /// Both sub-models are held live regardless of ENABLE, so both are walked:
+    /// a sensor must stay addressable while the mux happens to be in the other
+    /// mode.
+    fn for_each_attached_sim_input(
+        &mut self,
+        f: &mut dyn FnMut(&mut dyn crate::sim_input::SimInput) -> bool,
+    ) -> bool {
+        self.twim.for_each_attached_sim_input(f) || self.spim.for_each_attached_sim_input(f)
     }
 
     fn snapshot(&self) -> serde_json::Value {

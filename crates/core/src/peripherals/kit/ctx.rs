@@ -152,6 +152,36 @@ impl<'a> AttachCtx<'a> {
             .ok_or_else(|| wrong_transport_err(ext, "ADC"))
     }
 
+    /// Attach an analog stimulus source (potentiometer wiper, thermistor
+    /// divider) to `channel` of whichever ADC the `connection:` field names.
+    ///
+    /// The model is *retained* on the bus rather than being used once to
+    /// compute a boot level and dropped — that retention is what makes the
+    /// part drivable at runtime through `set_input`. The current level is
+    /// seeded immediately so the firmware sees a correct value before any
+    /// stimulus arrives.
+    pub fn attach_analog_source(
+        &mut self,
+        channel: u8,
+        mut source: Box<dyn crate::bus::sim_inputs::AnalogSource>,
+    ) -> Result<()> {
+        // Same identity stamp as `attach_i2c_device`.
+        source.set_component_id(self.ext.id.clone());
+        let connection = self.ext.connection.clone();
+        let mv = source.output_mv();
+        if !self.bus.seed_adc_channel(&connection, channel, mv) {
+            return Err(wrong_transport_err(self.ext, "ADC"));
+        }
+        self.bus
+            .analog_inputs
+            .push(crate::bus::sim_inputs::AnalogInputSource {
+                connection,
+                channel,
+                source,
+            });
+        Ok(())
+    }
+
     /// Resolve an STM32 pin label (e.g. `"PC7"`) to its `(ODR address, bit)`
     /// so a SPI display can sample the host's D/C line directly from the
     /// driving GPIO's output register. Returns None for unknown ports or

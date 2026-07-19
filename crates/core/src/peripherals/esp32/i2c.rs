@@ -294,6 +294,20 @@ impl Peripheral for Esp32I2c {
     fn as_any_mut(&mut self) -> Option<&mut dyn std::any::Any> {
         Some(self)
     }
+
+    fn for_each_attached_sim_input(
+        &mut self,
+        f: &mut dyn FnMut(&mut dyn crate::sim_input::SimInput) -> bool,
+    ) -> bool {
+        for slave in self.slaves.iter_mut() {
+            if let Some(si) = slave.as_sim_input_mut() {
+                if f(si) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
 }
 
 impl Esp32I2c {

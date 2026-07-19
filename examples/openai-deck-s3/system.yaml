@@ -31,7 +31,6 @@ external_devices:
     connection: "sar_adc_s3"
     config:
       channel: 0
-      initial_position_pct: 60.0
 
   # Slide fader → max-tokens. A potentiometer wiper on ADC1 channel 1 (GPIO2).
   - id: "fader"
@@ -39,7 +38,6 @@ external_devices:
     connection: "sar_adc_s3"
     config:
       channel: 1
-      initial_position_pct: 40.0
 
 board_io:
   # Framebuffer readback binding. The S3 GPIO matrix routes I2C0 SDA/SCL to

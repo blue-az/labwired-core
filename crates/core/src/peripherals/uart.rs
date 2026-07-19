@@ -1217,6 +1217,22 @@ impl crate::Peripheral for Uart {
         Some(self)
     }
 
+    /// UART's attachables are byte streams (GPS, modem), not addressed slaves,
+    /// but they carry stimulus channels the same way.
+    fn for_each_attached_sim_input(
+        &mut self,
+        f: &mut dyn FnMut(&mut dyn crate::sim_input::SimInput) -> bool,
+    ) -> bool {
+        for stream in self.attached_streams.iter_mut() {
+            if let Some(si) = stream.as_sim_input_mut() {
+                if f(si) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
     fn snapshot(&self) -> serde_json::Value {
         serde_json::to_value(self).unwrap_or(serde_json::Value::Null)
     }

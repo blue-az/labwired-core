@@ -31,7 +31,7 @@ mod mmio_words;
 mod policy;
 mod profiles;
 mod routing;
-mod sim_inputs;
+pub mod sim_inputs;
 mod tick;
 
 pub use can_devices::*;
@@ -304,6 +304,13 @@ pub struct SystemBus {
     /// line transitions to the display's protocol state machine. Purely
     /// write-driven (no per-tick pass). Empty by default → zero cost.
     pub tm1637: Vec<crate::peripherals::components::tm1637_7seg::Tm1637>,
+    /// Analog stimulus sources (potentiometer, NTC thermistor). Unlike a bus
+    /// slave these do not sit on I2C/SPI/UART - they drive one ADC channel's
+    /// injected millivolt level. They are held here so the generic stimulus
+    /// walk ([`Self::for_each_sim_input`]) can reach them: previously the kit
+    /// computed a level at attach and dropped the model, which made these
+    /// parts un-drivable at runtime. Empty by default -> zero cost.
+    pub analog_inputs: Vec<sim_inputs::AnalogInputSource>,
     /// Reusable CAN diagnostic clients declared as external devices. They
     /// inject configured CAN frames into a named FDCAN peripheral once it is
     /// running, so ECU examples can be driven by a virtual off-board tester

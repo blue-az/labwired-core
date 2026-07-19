@@ -28,6 +28,9 @@ pub struct Potentiometer {
     position_pct: f32,
     /// Reference voltage across the pot, in mV.
     v_ref_mv: f32, // 3300.0
+    /// system.yaml `external_devices` id, stamped at attach (see
+    /// [`crate::sim_input::SimInput::component_id`]).
+    component_id: Option<String>,
 }
 
 impl Default for Potentiometer {
@@ -42,6 +45,7 @@ impl Potentiometer {
             channel,
             position_pct,
             v_ref_mv: 3300.0,
+            component_id: None,
         }
     }
 
@@ -79,6 +83,45 @@ impl Potentiometer {
     }
 }
 
+/// The wiper position, in percent of full travel. One table backs BOTH the
+/// `SimInput` impl and the kit metadata, so the device schema and the runtime
+/// API cannot drift.
+pub const INPUT_CHANNELS: &[crate::sim_input::InputChannel] = &[crate::sim_input::InputChannel {
+    key: "position",
+    label: "Position",
+    unit: "%",
+    min: 0.0,
+    max: 100.0,
+}];
+
+impl crate::sim_input::SimInput for Potentiometer {
+    fn input_channels(&self) -> &'static [crate::sim_input::InputChannel] {
+        INPUT_CHANNELS
+    }
+
+    fn set_input(&mut self, key: &str, value: f64) -> Result<(), crate::sim_input::SimInputError> {
+        self.require_channel(key, value)?;
+        // Only the position moves; the divider math that turns it into a wiper
+        // voltage is unchanged and still lives in `wiper_output_mv`.
+        self.set_position_pct(value as f32);
+        Ok(())
+    }
+
+    fn component_id(&self) -> Option<&str> {
+        self.component_id.as_deref()
+    }
+
+    fn set_component_id(&mut self, id: String) {
+        self.component_id = Some(id);
+    }
+}
+
+impl crate::bus::sim_inputs::AnalogSource for Potentiometer {
+    fn output_mv(&self) -> u16 {
+        self.wiper_output_mv()
+    }
+}
+
 // ─── PeripheralKit registration ────────────────────────────────────────────
 
 use crate::peripherals::kit::{
@@ -89,29 +132,21 @@ pub struct PotentiometerKit;
 pub static POTENTIOMETER_KIT: PotentiometerKit = PotentiometerKit;
 
 static POTENTIOMETER_METADATA: KitMetadata = KitMetadata {
-    inputs: &[],
+    inputs: INPUT_CHANNELS,
     device_type: "potentiometer",
     label: "Potentiometer",
     summary: "3-pin linear potentiometer on an ADC channel (rotary or slide).",
-    detail: "Linear voltage-divider model: the wiper taps off Vref * position/100. \
-             Constructor takes a channel + initial wiper position; the kit seeds the \
-             ADC channel with the corresponding wiper voltage. Live updates come from \
-             the WASM bridge as the host moves the position slider. A rotary pot and a \
-             slide pot are electrically identical and share this model.",
+    detail: "Linear voltage-divider model: the wiper taps off Vref * position/100. Drive the \
+             `position` channel (0..100 %) at runtime and the ADC channel follows through the \
+             real divider math. Starts centred at 50 %. A rotary pot and a slide pot are \
+             electrically identical and share this model.",
     transport: Transport::Analog,
     category: Category::Analog,
-    config_keys: &[
-        ConfigKey {
-            name: "channel",
-            ty: ConfigType::Int,
-            doc: "ADC channel index (0..N). Defaults to 0.",
-        },
-        ConfigKey {
-            name: "initial_position_pct",
-            ty: ConfigType::Float,
-            doc: "Initial wiper position 0..100 %. Defaults to 50.0.",
-        },
-    ],
+    config_keys: &[ConfigKey {
+        name: "channel",
+        ty: ConfigType::Int,
+        doc: "ADC channel index (0..N). Defaults to 0.",
+    }],
     labs: &[],
 };
 
@@ -121,13 +156,9 @@ impl PeripheralKit for PotentiometerKit {
     }
     fn attach(&self, ctx: &mut AttachCtx<'_>) -> anyhow::Result<()> {
         let channel = ctx.config_i64("channel").unwrap_or(0).clamp(0, 255) as u8;
-        let position_pct = ctx.config_f64("initial_position_pct").unwrap_or(50.0) as f32;
-        // Compute the wiper voltage up front; the Potentiometer instance itself
-        // is not stored — the bus seeds the ADC channel once and the wasm bridge
-        // mutates that channel directly on host stimulus.
-        let mv = Potentiometer::new(channel, position_pct).wiper_output_mv();
-        let adc = ctx.adc()?;
-        adc.set_channel_input(channel, mv);
+        // Retained on the bus so `set_input("position", …)` can drive it; the
+        // wiper level is seeded from the centred default at attach.
+        ctx.attach_analog_source(channel, Box::new(Potentiometer::new(channel, 50.0)))?;
         Ok(())
     }
 }

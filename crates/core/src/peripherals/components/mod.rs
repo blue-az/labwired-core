@@ -6,7 +6,6 @@
 
 pub mod adxl345;
 pub mod aht20;
-pub mod air_scene;
 pub mod bg770a;
 pub mod bme280;
 pub mod bmp280;

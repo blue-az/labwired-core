@@ -659,6 +659,15 @@ impl Esp32c3I2c {
         &self.slaves
     }
 
+    /// Mutable counterpart of [`Self::attached_slaves`], for callers that must
+    /// drive a slave's device protocol (register reads) rather than just
+    /// inspect it. Production stimulus does NOT use this — it goes through
+    /// [`crate::Peripheral::for_each_attached_sim_input`]; this exists so tests
+    /// can reach a device by a path independent of the walk they are gating.
+    pub fn attached_slaves_mut(&mut self) -> &mut [Box<dyn I2cDevice>] {
+        &mut self.slaves
+    }
+
     /// Share GPIO's live matrix state with this controller after both C3
     /// peripherals have been constructed on a system bus.
     pub(crate) fn set_matrix_route_state(&mut self, route: C3I2cMatrixRoute) {
@@ -1022,6 +1031,26 @@ impl Peripheral for Esp32c3I2c {
 
     fn as_any_mut(&mut self) -> Option<&mut dyn std::any::Any> {
         Some(self)
+    }
+
+    /// Stimulus reaches every attached slave regardless of `slave_routes`: a
+    /// pad route decides whether the slave ACKs a *bus transaction*, not
+    /// whether an agent may pose the physical world the sensor measures. A
+    /// mis-routed device should read its driven value and still go unanswered
+    /// on the wire — that is the honest failure, and route-filtering here would
+    /// hide it behind a `NoDevice` error instead.
+    fn for_each_attached_sim_input(
+        &mut self,
+        f: &mut dyn FnMut(&mut dyn crate::sim_input::SimInput) -> bool,
+    ) -> bool {
+        for slave in self.slaves.iter_mut() {
+            if let Some(si) = slave.as_sim_input_mut() {
+                if f(si) {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// Custom inspection: generic register decode plus a `framebuffer` artifact

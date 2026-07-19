@@ -81,7 +81,15 @@ boards:
     # sweep (conformance/mmio/GPIO/POWER/SPIS/TWIS/RTC/TIMER) is unaffected. No live
     # SWD re-capture of the legacy-UART TX sequence this session (no bench board).
     # 2026-07-10: bus-trace single-choke-point refactor (attach wraps at SystemBus::attach_i2c_slave/attach_spi_device; no per-callsite set_bus_trace) + cycle stamp on trace events + gpio_routing/pin_routing metadata. Additive; oracle output unchanged.
-    drift_ack: 2026-07-10
+    # 2026-07-19: unified stimulus interface — every bus controller gained a
+    # `for_each_attached_sim_input` impl (and TWIM/SPIM gained `as_any` +
+    # attached-device accessors) so SimInput reaches devices without
+    # downcasting. PURELY ADDITIVE: `git diff` over every model file listed
+    # below shows 0 removed lines — no existing method body was modified, so
+    # no register read/write path changed. Reset values, register layout and
+    # byte paths are unchanged; the mmio/conformance diffs pass unchanged.
+    # Drift is the shared-file commit date only. No live re-capture.
+    drift_ack: 2026-07-19
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -108,7 +116,15 @@ boards:
     # 2026-07-04: rides the nrf52840 legacy-UART (UART0/UARTE0) TXD/TXDRDY model;
     # same silicon. Additive, no live re-capture. See the nrf52840 drift_ack note.
     # 2026-07-10: bus-trace single-choke-point refactor (attach wraps at SystemBus::attach_i2c_slave/attach_spi_device; no per-callsite set_bus_trace) + cycle stamp on trace events + gpio_routing/pin_routing metadata. Additive; oracle output unchanged.
-    drift_ack: 2026-07-10
+    # 2026-07-19: unified stimulus interface — every bus controller gained a
+    # `for_each_attached_sim_input` impl (and TWIM/SPIM gained `as_any` +
+    # attached-device accessors) so SimInput reaches devices without
+    # downcasting. PURELY ADDITIVE: `git diff` over every model file listed
+    # below shows 0 removed lines — no existing method body was modified, so
+    # no register read/write path changed. Reset values, register layout and
+    # byte paths are unchanged; the mmio/conformance diffs pass unchanged.
+    # Drift is the shared-file commit date only. No live re-capture.
+    drift_ack: 2026-07-19
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -194,7 +210,15 @@ boards:
     # Featureless builds keep the walk. Register layout, reset values and byte
     # paths unchanged; h563_mmio_diff/conformance pass unchanged. Drift is the
     # shared-file hash only. No live re-capture.
-    drift_ack: 2026-07-18
+    # 2026-07-19: unified stimulus interface — every bus controller gained a
+    # `for_each_attached_sim_input` impl (and TWIM/SPIM gained `as_any` +
+    # attached-device accessors) so SimInput reaches devices without
+    # downcasting. PURELY ADDITIVE: `git diff` over every model file listed
+    # below shows 0 removed lines — no existing method body was modified, so
+    # no register read/write path changed. Reset values, register layout and
+    # byte paths are unchanged; the mmio/conformance diffs pass unchanged.
+    # Drift is the shared-file commit date only. No live re-capture.
+    drift_ack: 2026-07-19
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
@@ -396,7 +420,15 @@ boards:
     # LIVE on real C3 silicon this date (USB-JTAG/openocd + esptool): boot->paint
     # UART parity vs sim ("OLED painted: LabWired"), SYSTIMER 16.34 MHz and the
     # known RC_SLOW ~148 kHz board deviation captured — consistent with prior.
-    drift_ack: 2026-07-18
+    # 2026-07-19: unified stimulus interface — every bus controller gained a
+    # `for_each_attached_sim_input` impl (and TWIM/SPIM gained `as_any` +
+    # attached-device accessors) so SimInput reaches devices without
+    # downcasting. PURELY ADDITIVE: `git diff` over every model file listed
+    # below shows 0 removed lines — no existing method body was modified, so
+    # no register read/write path changed. Reset values, register layout and
+    # byte paths are unchanged; the mmio/conformance diffs pass unchanged.
+    # Drift is the shared-file commit date only. No live re-capture.
+    drift_ack: 2026-07-19
 
   - id: nucleo-l476rg
     doc: docs/boards/nucleo-l476rg.md
@@ -457,7 +489,15 @@ boards:
     # (SysTick B1 pattern). Featureless builds keep the walk. Register layout,
     # reset values and MMIO byte paths unchanged; l476_mmio_diff + l476_parity_diff
     # pass unchanged. No live re-capture.
-    drift_ack: 2026-07-18
+    # 2026-07-19: unified stimulus interface — every bus controller gained a
+    # `for_each_attached_sim_input` impl (and TWIM/SPIM gained `as_any` +
+    # attached-device accessors) so SimInput reaches devices without
+    # downcasting. PURELY ADDITIVE: `git diff` over every model file listed
+    # below shows 0 removed lines — no existing method body was modified, so
+    # no register read/write path changed. Reset values, register layout and
+    # byte paths are unchanged; the mmio/conformance diffs pass unchanged.
+    # Drift is the shared-file commit date only. No live re-capture.
+    drift_ack: 2026-07-19
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
@@ -521,7 +561,15 @@ boards:
     # untouched — the change is confined to the F4 variant — so l0_mmio_diff is
     # unchanged. Same rationale as the 2026-07-04 L4-only rcc.rs entry above.
     # No live re-capture.
-    drift_ack: 2026-07-18
+    # 2026-07-19: unified stimulus interface — every bus controller gained a
+    # `for_each_attached_sim_input` impl (and TWIM/SPIM gained `as_any` +
+    # attached-device accessors) so SimInput reaches devices without
+    # downcasting. PURELY ADDITIVE: `git diff` over every model file listed
+    # below shows 0 removed lines — no existing method body was modified, so
+    # no register read/write path changed. Reset values, register layout and
+    # byte paths are unchanged; the mmio/conformance diffs pass unchanged.
+    # Drift is the shared-file commit date only. No live re-capture.
+    drift_ack: 2026-07-19
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
@@ -593,7 +641,15 @@ boards:
     # fast-forward). All byte-identical; featureless builds keep the walk.
     # Register layout, reset values and MMIO byte paths unchanged; stm32f1_mmio_diff
     # (102/102) + f103_conformance pass unchanged. No live re-capture.
-    drift_ack: 2026-07-18
+    # 2026-07-19: unified stimulus interface — every bus controller gained a
+    # `for_each_attached_sim_input` impl (and TWIM/SPIM gained `as_any` +
+    # attached-device accessors) so SimInput reaches devices without
+    # downcasting. PURELY ADDITIVE: `git diff` over every model file listed
+    # below shows 0 removed lines — no existing method body was modified, so
+    # no register read/write path changed. Reset values, register layout and
+    # byte paths are unchanged; the mmio/conformance diffs pass unchanged.
+    # Drift is the shared-file commit date only. No live re-capture.
+    drift_ack: 2026-07-19
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/afio.rs
@@ -663,7 +719,15 @@ boards:
     # Featureless builds keep the walk. Register layout, reset values and MMIO byte
     # paths unchanged; stm32f4_mmio_diff (RCC/GPIO/SPI/TIM, not I2C — I2C stays
     # smoke-tier) passes unchanged. No live re-capture.
-    drift_ack: 2026-07-18
+    # 2026-07-19: unified stimulus interface — every bus controller gained a
+    # `for_each_attached_sim_input` impl (and TWIM/SPIM gained `as_any` +
+    # attached-device accessors) so SimInput reaches devices without
+    # downcasting. PURELY ADDITIVE: `git diff` over every model file listed
+    # below shows 0 removed lines — no existing method body was modified, so
+    # no register read/write path changed. Reset values, register layout and
+    # byte paths are unchanged; the mmio/conformance diffs pass unchanged.
+    # Drift is the shared-file commit date only. No live re-capture.
+    drift_ack: 2026-07-19
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
@@ -749,7 +813,15 @@ boards:
     # refactor, additive/behaviour-neutral; the 9-reg reset-state anchor is
     # unaffected. No S3 board attached this session (no live re-capture); C3
     # sibling silicon re-validated live this date. See esp32c3 drift_ack.
-    drift_ack: 2026-07-18
+    # 2026-07-19: unified stimulus interface — every bus controller gained a
+    # `for_each_attached_sim_input` impl (and TWIM/SPIM gained `as_any` +
+    # attached-device accessors) so SimInput reaches devices without
+    # downcasting. PURELY ADDITIVE: `git diff` over every model file listed
+    # below shows 0 removed lines — no existing method body was modified, so
+    # no register read/write path changed. Reset values, register layout and
+    # byte paths are unchanged; the mmio/conformance diffs pass unchanged.
+    # Drift is the shared-file commit date only. No live re-capture.
+    drift_ack: 2026-07-19
     models:
       - crates/core/src/peripherals/esp32s3
       - crates/core/src/peripherals/esp_xtensa_common
