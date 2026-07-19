@@ -222,6 +222,17 @@ impl Esp32s3Sens {
     /// Inject a millivolt reading for an ADC1 channel (CH0..9 = GPIO1..10). The
     /// next SENS oneshot that selects this channel returns the equivalent 12-bit
     /// count (3.3 V Vref) instead of the fixed mid-scale placeholder.
+    /// Read back the injected 12-bit count for a channel (`0xFFFF` = nothing
+    /// injected). The read-back counterpart of [`Self::set_channel_input`], so
+    /// a stimulus test can assert what the next conversion will return without
+    /// running one.
+    pub fn channel_input_count(&self, channel: u8) -> u16 {
+        self.channel_inputs
+            .get(channel as usize)
+            .copied()
+            .unwrap_or(0xFFFF)
+    }
+
     pub fn set_channel_input(&mut self, channel: u8, millivolts: u16) {
         if (channel as usize) < self.channel_inputs.len() {
             let count = ((millivolts as u32 * 4095) / 3300).min(4095) as u16;

@@ -1222,6 +1222,24 @@ impl crate::Peripheral for I2c {
         Some(self)
     }
 
+    /// Slaves live behind `RefCell` here (the transaction engine hands out
+    /// interior-mutable borrows mid-transfer), so the walk borrows each cell in
+    /// turn rather than taking one long `&mut` over the vector.
+    fn for_each_attached_sim_input(
+        &mut self,
+        f: &mut dyn FnMut(&mut dyn crate::sim_input::SimInput) -> bool,
+    ) -> bool {
+        for cell in self.attached_devices() {
+            let mut dev = cell.borrow_mut();
+            if let Some(si) = dev.as_sim_input_mut() {
+                if f(si) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
     /// Custom inspection: the generic register decode plus a `framebuffer`
     /// artifact for any attached SSD1306 OLED. This is the pattern the ~10
     /// bespoke `get_*_framebuffer` wasm accessors generalize into — the

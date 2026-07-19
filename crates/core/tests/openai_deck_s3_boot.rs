@@ -113,13 +113,11 @@ external_devices:
     connection: sar_adc_s3
     config:
       channel: 0
-      initial_position_pct: 60.0
   - id: fader
     type: potentiometer
     connection: sar_adc_s3
     config:
       channel: 1
-      initial_position_pct: 40.0
 "#,
     )
     .expect("parse inline deck manifest");

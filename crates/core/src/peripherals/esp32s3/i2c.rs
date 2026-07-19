@@ -233,6 +233,12 @@ impl Esp32s3I2c {
         &self.slaves
     }
 
+    /// Mutable counterpart of [`Self::attached_slaves`] — see
+    /// `Esp32c3I2c::attached_slaves_mut` for why this exists.
+    pub fn attached_slaves_mut(&mut self) -> &mut [Box<dyn I2cDevice>] {
+        &mut self.slaves
+    }
+
     fn fifo_status(&self) -> u32 {
         // Per ESP32-S3 PAC `i2c0::fifo_st`:
         //   bits  0..4  RXFIFO_RADDR
@@ -461,6 +467,20 @@ impl Peripheral for Esp32s3I2c {
 
     fn as_any_mut(&mut self) -> Option<&mut dyn std::any::Any> {
         Some(self)
+    }
+
+    fn for_each_attached_sim_input(
+        &mut self,
+        f: &mut dyn FnMut(&mut dyn crate::sim_input::SimInput) -> bool,
+    ) -> bool {
+        for slave in self.slaves.iter_mut() {
+            if let Some(si) = slave.as_sim_input_mut() {
+                if f(si) {
+                    return true;
+                }
+            }
+        }
+        false
     }
 }
 

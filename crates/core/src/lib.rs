@@ -638,6 +638,40 @@ pub trait Peripheral: std::fmt::Debug + Send {
     fn as_any_mut(&mut self) -> Option<&mut dyn Any> {
         None
     }
+
+    /// Stimulus reachability: call `f` once for every device attached to this
+    /// controller that accepts simulated input, in attach order.
+    ///
+    /// This is the seam behind [`crate::bus::SystemBus::list_inputs`] and
+    /// `set_input`. The bus walks peripherals and asks each one this question;
+    /// it does NOT know which concrete controller types can host devices. That
+    /// is the whole point — the previous implementation was a downcast chain
+    /// over three hardcoded types, so every controller added afterwards
+    /// (ESP32-C3 I²C/SPI, ESP32-S3 I²C) silently hosted devices that no agent,
+    /// test script, MCP call, or UI panel could drive. The component unit tests
+    /// still passed; the devices were simply unreachable.
+    ///
+    /// **A controller that can host attachable devices MUST override this.**
+    /// If it does not, its devices are undrivable: they answer no
+    /// `list_inputs` query and `set_input` fails with `NoDevice`. There is no
+    /// diagnostic for this — the default below is indistinguishable from an
+    /// honest "I host nothing", which is exactly how the bug survived. The
+    /// rule of thumb: if a type appears in
+    /// [`crate::bus::SystemBus::attach_i2c_slave`] or `attach_spi_device`, it
+    /// owes an implementation here.
+    ///
+    /// Early stop: `f` returns `true` to request that the walk stop. An
+    /// implementation MUST stop calling `f` at that point and propagate
+    /// `true` as its own return value; return `false` when the walk ran to
+    /// completion. The bus relies on this to make `set_input` apply to exactly
+    /// one device.
+    fn for_each_attached_sim_input(
+        &mut self,
+        _f: &mut dyn FnMut(&mut dyn crate::sim_input::SimInput) -> bool,
+    ) -> bool {
+        false
+    }
+
     fn dma_request(&mut self, _request_id: u32) {}
     fn snapshot(&self) -> serde_json::Value {
         serde_json::Value::Null

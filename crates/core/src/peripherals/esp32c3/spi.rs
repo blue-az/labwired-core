@@ -209,6 +209,12 @@ impl Esp32c3Spi {
         &self.attached_devices
     }
 
+    /// Mutable counterpart of [`Self::attached_devices`] — see
+    /// `Esp32c3I2c::attached_slaves_mut` for why this exists.
+    pub fn attached_devices_mut(&mut self) -> &mut [Box<dyn SpiDevice>] {
+        &mut self.attached_devices
+    }
+
     fn reg(&self, off: u64) -> u32 {
         let w = (off / 4) as usize;
         if w < NWORDS && spec(w).is_some() {
@@ -421,6 +427,20 @@ impl Peripheral for Esp32c3Spi {
 
     fn as_any_mut(&mut self) -> Option<&mut dyn std::any::Any> {
         Some(self)
+    }
+
+    fn for_each_attached_sim_input(
+        &mut self,
+        f: &mut dyn FnMut(&mut dyn crate::sim_input::SimInput) -> bool,
+    ) -> bool {
+        for dev in self.attached_devices.iter_mut() {
+            if let Some(si) = dev.as_sim_input_mut() {
+                if f(si) {
+                    return true;
+                }
+            }
+        }
+        false
     }
 }
 

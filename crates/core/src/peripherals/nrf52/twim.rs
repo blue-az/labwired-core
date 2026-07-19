@@ -633,6 +633,29 @@ impl Peripheral for Nrf52Twim {
             ..Default::default()
         }
     }
+
+    /// TWIM holds its slaves behind `RefCell`, like the generic `I2c`.
+    ///
+    /// NOTE: this impl is currently unreachable from the bus walk because this
+    /// `Peripheral` impl declares no `as_any_mut`, so
+    /// [`crate::bus::SystemBus::attach_i2c_slave`]'s downcast to `Nrf52Twim`
+    /// can never match and attaching to a TWIM controller fails loudly at
+    /// attach time. That is a separate (loud, not silent) gap; the seam is
+    /// implemented here so TWIM is correct the moment it is closed.
+    fn for_each_attached_sim_input(
+        &mut self,
+        f: &mut dyn FnMut(&mut dyn crate::sim_input::SimInput) -> bool,
+    ) -> bool {
+        for cell in self.attached_devices.iter_mut() {
+            let mut dev = cell.borrow_mut();
+            if let Some(si) = dev.as_sim_input_mut() {
+                if f(si) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

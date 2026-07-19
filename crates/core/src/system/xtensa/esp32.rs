@@ -41,24 +41,6 @@ fn build_i2c_external_device(
     }
 }
 
-/// Seed an ESP32-S3 ADC1 channel's injected input (12-bit-count-from-mV) on the
-/// SENS controller — the register path esp-hal's S3 ADC oneshot reads. Returns
-/// false if the bus has no S3 SENS block (e.g. a classic-ESP32 bus), so the
-/// caller can warn rather than silently drop the declaration.
-fn seed_sar_adc_channel(bus: &mut SystemBus, channel: u8, millivolts: u16) -> bool {
-    let Some(idx) = bus.find_peripheral_index_by_name("sens_s3") else {
-        return false;
-    };
-    let Some(any) = bus.peripherals[idx].dev.as_any_mut() else {
-        return false;
-    };
-    let Some(sens) = any.downcast_mut::<crate::peripherals::esp32s3::sens::Esp32s3Sens>() else {
-        return false;
-    };
-    sens.set_channel_input(channel, millivolts);
-    true
-}
-
 /// Attach external devices declared in `manifest.external_devices` to an
 /// ESP32-classic bus that was already set up by `configure_xtensa_esp32`.
 ///
@@ -93,28 +75,18 @@ pub fn attach_esp32_external_devices(
         }
 
         // Potentiometer: an analog wiper on a SAR-ADC channel. It is not a bus
-        // slave — it seeds the ADC channel's injected value from its declared
-        // position, so `analogRead()` on that channel returns the wiper voltage.
+        // slave — it drives the ADC channel's injected level, so `analogRead()`
+        // on that channel returns the wiper voltage.
+        //
+        // Delegated to the potentiometer kit rather than re-parsing config
+        // here: the kit is what retains the model on the bus, and that
+        // retention is what makes `set_input("position", …)` reach it. A second
+        // copy of this wiring would silently produce a pot that reads correctly
+        // at boot but cannot be driven.
         if ext.r#type == "potentiometer" {
-            let channel = ext
-                .config
-                .get("channel")
-                .and_then(|v| v.as_u64())
-                .unwrap_or(0) as u8;
-            let position_pct = ext
-                .config
-                .get("initial_position_pct")
-                .and_then(|v| v.as_f64())
-                .unwrap_or(50.0) as f32;
-            let mv = crate::peripherals::components::Potentiometer::new(channel, position_pct)
-                .wiper_output_mv();
-            if !seed_sar_adc_channel(bus, channel, mv) {
-                tracing::warn!(
-                    "potentiometer '{}': no ESP32-S3 SAR ADC on the bus to seed channel {}; skipping",
-                    ext.id,
-                    channel
-                );
-            }
+            use crate::peripherals::kit::PeripheralKit;
+            let mut ctx = crate::peripherals::kit::AttachCtx::new(bus, ext);
+            crate::peripherals::components::potentiometer::POTENTIOMETER_KIT.attach(&mut ctx)?;
             continue;
         }
 

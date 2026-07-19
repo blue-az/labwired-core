@@ -26,12 +26,9 @@ external_devices:
       scl: "GPIO5"
     config:
       i2c_address: 0x62
-      co2_start_ppm: 450.0    # fresh room
-      co2_target_ppm: 1400.0  # stuffy, closed-room steady state
-      ramp_alpha: 0.08        # per-measurement approach rate (0 = flat scene)
+      co2_ppm: 450.0          # initial value; the scene drives `co2` at runtime
       temp_c: 22.0
-      rh_pct: 50.0            # closed room, mild humidity
-      rh_target_pct: 72.0     # climbs into mold-favorable range as it fills
+      rh_pct: 50.0           # initial value; driven via `humidity`
 
   # ── Sensirion SGP41: VOC / NOx raw signals (→ VOC Index on-device) ─────────
   - id: "sgp41"
@@ -42,10 +39,8 @@ external_devices:
       scl: "GPIO5"
     config:
       i2c_address: 0x59
-      voc_sraw_start: 28000.0
-      voc_sraw_target: 34000.0
+      voc_sraw: 28000.0       # initial value; driven via `voc_sraw`
       nox_sraw: 16000.0
-      ramp_alpha: 0.08
 
   # ── Sensirion SPS30: particulate matter (PM1/2.5/4/10) ─────────────────────
   - id: "sps30"
@@ -56,9 +51,7 @@ external_devices:
       scl: "GPIO5"
     config:
       i2c_address: 0x69
-      pm2_5_start: 6.0        # µg/m³, clean indoor air
-      pm2_5_target: 22.0      # mild haze as the room settles
-      ramp_alpha: 0.08
+      pm2_5: 6.0             # initial value; driven via `pm2_5`
 
   # ── Vishay VEML7700: ambient light ────────────────────────────────────────
   - id: "veml7700"
@@ -69,9 +62,7 @@ external_devices:
       scl: "GPIO5"
     config:
       i2c_address: 0x10
-      lux_start: 450.0        # daylit room
-      lux_target: 90.0        # dims toward evening
-      ramp_alpha: 0.08
+      lux: 450.0             # initial value; driven via `lux`
 
   # ── Melexis MLX90614: IR surface temperature (condensation / mold) ────────
   # Pointed at a cold spot (window / exterior wall). As the room air RH climbs
@@ -87,10 +78,8 @@ external_devices:
       scl: "GPIO5"
     config:
       i2c_address: 0x5A
-      surface_temp_c: 18.0          # cold window, start of evening
-      surface_temp_target_c: 10.0   # cools below the rising dew point
+      surface_temp_c: 18.0    # initial value; driven via `surface_temp`
       ambient_temp_c: 22.0          # roughly the room air temperature
-      ramp_alpha: 0.08
 
   # ── SSD1306 OLED: on-device screen showing the plain-language verdict ──────
   - id: "oled"
