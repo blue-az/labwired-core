@@ -186,6 +186,7 @@ impl CanonicalConfig {
     /// All TS emitters are ported: legacy I²C devices ([`emit_legacy_i2c_device`]),
     /// GPIO/ADC `board_io` from point-to-point wires ([`emit_board_io_from_wires`]),
     /// SPI devices ([`emit_spi_device`]), ultrasonic ([`emit_ultrasonic`]),
+    /// dht22 ([`emit_dht22`]),
     /// the direct-drive seven-segment ([`emit_seven_segment`]),
     /// pcd8544 ([`emit_pcd8544`]), sn74hc165 ([`emit_sn74hc165`]), iolink-master
     /// ([`emit_iolink_master`]), neo6m-gps ([`emit_neo6m_gps`]) and the CAN
@@ -282,6 +283,13 @@ impl CanonicalConfig {
                     push(ext, bio);
                 }
             }
+            // 1a. DHT22 / AM2302 one-wire sensor — same shape as the HC-SR04.
+            for part in non_mcu() {
+                if part.r#type == "dht22" {
+                    let (ext, bio) = emit_dht22(&board, &wires, mcu_id, part);
+                    push(ext, bio);
+                }
+            }
             // 1b. Direct-drive seven-segment (nine GPIO pins).
             for part in non_mcu() {
                 if part.r#type == "seven-segment" {
@@ -358,7 +366,7 @@ impl CanonicalConfig {
             &self.parts,
         ));
 
-        Ok(build_system_yaml(&external_devices, &board_io))
+        Ok(build_system_yaml(&external_devices, &board_io, &board))
     }
 }
 
@@ -930,6 +938,13 @@ fn emit_ultrasonic(
         .and_then(|s| s.trim().parse::<f64>().ok())
         .filter(|d| d.is_finite())
         .unwrap_or(100.0);
+    // NOTE: this is the port of `DEFAULT_CPU_HZ_BY_BOARD`, an HC-SR04-SPECIFIC
+    // echo-pacing override — NOT a board clock. The 250 kHz on stm32l476 shrinks
+    // an echo pulse to a few simulated cycles so ultrasonic labs run fast, which
+    // is harmless only because the firmware times the echo with its own timer.
+    // A device that GENERATES its own waveform from `cpu_hz` must not read this
+    // table (it would stretch every bit cell 320x); such devices use
+    // [`sim_cpu_hz`] instead.
     let cpu_hz = if board == "stm32l476" {
         250_000
     } else {
@@ -939,6 +954,66 @@ fn emit_ultrasonic(
         "  - id: \"{}\"\n    type: \"hc-sr04\"\n    connection: \"gpio\"\n    config:\n      trig_pin: \"{trig}\"\n      echo_pin: \"{echo}\"\n      distance_cm: {}\n      cpu_hz: {cpu_hz}",
         part.id,
         format_js_number(distance_cm)
+    );
+    (Some(ext), None)
+}
+
+/// The simulated core clock for a device that generates its own waveform from
+/// `cpu_hz` (port of `simCpuHz`).
+///
+/// Mirrors the top-level `cpu_hz` pacing rather than the HC-SR04 override table
+/// in [`emit_ultrasonic`]: 160 MHz on esp32c3, the core default otherwise. A
+/// self-timing device converts microseconds to cycles as `us * cpu_hz / 1e6`, so
+/// this value must be the clock the FIRMWARE was built against — anything else
+/// scales every bit cell and the decode becomes noise. `board` is already the
+/// chip key here (see [`mcu_type_to_board_key`]), so this compares it directly
+/// where the TS calls `boardChipId`.
+fn sim_cpu_hz(board: &str) -> u64 {
+    if board == "esp32c3" {
+        160_000_000
+    } else {
+        80_000_000
+    }
+}
+
+/// Emit the `external_devices` fragment for a dht22/am2302 part (port of
+/// `emitDht22`).
+///
+/// The DHT22 speaks a bit-banged one-wire protocol on a SINGLE pin, so — like the
+/// HC-SR04 — it cannot be described by a `board_io` entry: the kit needs the pin
+/// plus the timing base (`cpu_hz`) to decode the start pulse and clock out the
+/// reply frame. That is why it leaves the generic `board_io` path (it stays in
+/// the catalog's `boardIoKind` table as a `button`, but is listed in the
+/// wire-emitter skip set) and gets this dedicated emitter instead.
+///
+/// `temperature_c` defaults to 25 and `humidity_pct` to 50 (the diagram-contract
+/// attr defaults); both keys are ALWAYS written, so the differing defaults in the
+/// engine's `from_config` reader are never reached. `cpu_hz` comes from
+/// [`sim_cpu_hz`] — deliberately NOT the HC-SR04 override table, because the
+/// DHT22 clocks out its own reply frame and needs the real firmware clock.
+fn emit_dht22(
+    board: &str,
+    wires: &[Wire],
+    mcu_id: &str,
+    part: &CanonicalPart,
+) -> (Option<String>, Option<String>) {
+    let Some(data) = mcu_pin_for_part_pin(wires, mcu_id, &part.id, "DATA") else {
+        return (None, None);
+    };
+    let temperature_c = attr_string(part, "temperature")
+        .and_then(|s| s.trim().parse::<f64>().ok())
+        .filter(|t| t.is_finite())
+        .unwrap_or(25.0);
+    let humidity_pct = attr_string(part, "humidity")
+        .and_then(|s| s.trim().parse::<f64>().ok())
+        .filter(|h| h.is_finite())
+        .unwrap_or(50.0);
+    let cpu_hz = sim_cpu_hz(board);
+    let ext = format!(
+        "  - id: \"{}\"\n    type: \"dht22\"\n    connection: \"gpio\"\n    config:\n      data_pin: \"{data}\"\n      temperature_c: {}\n      humidity_pct: {}\n      cpu_hz: {cpu_hz}",
+        part.id,
+        format_js_number(temperature_c),
+        format_js_number(humidity_pct)
     );
     (Some(ext), None)
 }
@@ -1165,6 +1240,7 @@ fn emit_board_io_from_wires(
     // Types owned by dedicated emitters (port of the TS `skipTypes` set).
     const SKIP_TYPES: &[&str] = &[
         "ultrasonic",
+        "dht22",
         "pcd8544",
         "sn74hc165",
         "iolink-master",
@@ -1226,7 +1302,22 @@ fn emit_board_io_from_wires(
 /// Assemble the system YAML string from the fragment arrays (port of
 /// `buildSystemYaml`), byte-identical including the `  []` empty-list sentinel
 /// and the trailing newline.
-fn build_system_yaml(external_devices: &[String], board_io: &[String]) -> String {
+fn build_system_yaml(external_devices: &[String], board_io: &[String], board: &str) -> String {
+    // Top-level clock pacing: esp32c3 runs at 160 MHz, every other board takes
+    // the core default and the line is omitted entirely.
+    //
+    // The literal `160_000_000` here vs. the bare `160000000` a device-level
+    // `cpu_hz` carries is NOT a typo — do not "unify" them. TS hard-codes this
+    // one as the string `'cpu_hz: 160_000_000\n'`, while device-level values go
+    // through `format_js_number` (the `${n}` template literal), which never
+    // emits underscores. The engine's YAML parser accepts both, but this string
+    // is gated byte-for-byte against the TS oracle, so the asymmetry is load-
+    // bearing.
+    let pacing = if board == "esp32c3" {
+        "cpu_hz: 160_000_000\n"
+    } else {
+        ""
+    };
     let ext = if external_devices.is_empty() {
         "  []".to_string()
     } else {
@@ -1237,7 +1328,9 @@ fn build_system_yaml(external_devices: &[String], board_io: &[String]) -> String
     } else {
         board_io.join("\n")
     };
-    format!("name: \"playground-board\"\nchip: \"inline\"\nexternal_devices:\n{ext}\nboard_io:\n{bio}\n")
+    format!(
+        "name: \"playground-board\"\nchip: \"inline\"\n{pacing}external_devices:\n{ext}\nboard_io:\n{bio}\n"
+    )
 }
 
 #[cfg(test)]
@@ -1605,6 +1698,122 @@ board_io:
   []
 "#;
 
+    /// No `attrs` — exercises the diagram-contract defaults (25 / 50), which the
+    /// emitter writes explicitly rather than leaving to the engine reader.
+    const FIXTURE_DHT22: &str = r#"{
+      "version": 1,
+      "parts": [
+        { "id": "mcu", "type": "nucleo-f401re" },
+        { "id": "th", "type": "dht22" }
+      ],
+      "connections": [
+        ["mcu:PA8", "th:DATA"],
+        ["mcu:3V3", "th:VCC"],
+        ["mcu:GND", "th:GND"]
+      ]
+    }"#;
+
+    const EXPECTED_DHT22: &str = r#"name: "playground-board"
+chip: "inline"
+external_devices:
+  - id: "th"
+    type: "dht22"
+    connection: "gpio"
+    config:
+      data_pin: "PA8"
+      temperature_c: 25
+      humidity_pct: 50
+      cpu_hz: 80000000
+board_io:
+  []
+"#;
+
+    /// The same part with explicit attrs — and a non-integer humidity, to pin the
+    /// `${n}` number formatting the TS template literal produces.
+    const FIXTURE_DHT22_ATTRS: &str = r#"{
+      "version": 1,
+      "parts": [
+        { "id": "mcu", "type": "nucleo-f401re" },
+        { "id": "th", "type": "dht22", "attrs": { "temperature": "-7", "humidity": "41.5" } }
+      ],
+      "connections": [
+        ["mcu:PB4", "th:DATA"]
+      ]
+    }"#;
+
+    const EXPECTED_DHT22_ATTRS: &str = r#"name: "playground-board"
+chip: "inline"
+external_devices:
+  - id: "th"
+    type: "dht22"
+    connection: "gpio"
+    config:
+      data_pin: "PB4"
+      temperature_c: -7
+      humidity_pct: 41.5
+      cpu_hz: 80000000
+board_io:
+  []
+"#;
+
+    /// The esp32c3 branch of [`sim_cpu_hz`] — the only board that is not the
+    /// 80 MHz core default.
+    const FIXTURE_DHT22_ESP32C3: &str = r#"{
+      "version": 1,
+      "parts": [
+        { "id": "mcu", "type": "esp32-c3-supermini" },
+        { "id": "th", "type": "dht22" }
+      ],
+      "connections": [
+        ["mcu:GPIO4", "th:DATA"]
+      ]
+    }"#;
+
+    const EXPECTED_DHT22_ESP32C3: &str = r#"name: "playground-board"
+chip: "inline"
+cpu_hz: 160_000_000
+external_devices:
+  - id: "th"
+    type: "dht22"
+    connection: "gpio"
+    config:
+      data_pin: "GPIO4"
+      temperature_c: 25
+      humidity_pct: 50
+      cpu_hz: 160000000
+board_io:
+  []
+"#;
+
+    /// Regression pin: stm32l476 must get the 80 MHz core default, NOT the
+    /// 250 kHz HC-SR04 echo-pacing override that `emit_ultrasonic` applies. A
+    /// self-timing device on that override decodes 320x-stretched bit cells.
+    const FIXTURE_DHT22_L476: &str = r#"{
+      "version": 1,
+      "parts": [
+        { "id": "mcu", "type": "nucleo-l476rg" },
+        { "id": "th", "type": "dht22" }
+      ],
+      "connections": [
+        ["mcu:PA8", "th:DATA"]
+      ]
+    }"#;
+
+    const EXPECTED_DHT22_L476: &str = r#"name: "playground-board"
+chip: "inline"
+external_devices:
+  - id: "th"
+    type: "dht22"
+    connection: "gpio"
+    config:
+      data_pin: "PA8"
+      temperature_c: 25
+      humidity_pct: 50
+      cpu_hz: 80000000
+board_io:
+  []
+"#;
+
     const FIXTURE_PCD8544: &str = r#"{
       "version": 1,
       "parts": [
@@ -1879,6 +2088,14 @@ board_io:
             ("spi-max31855", FIXTURE_SPI_MAX31855, EXPECTED_SPI_MAX31855),
             ("spi-ssd1680", FIXTURE_SPI_SSD1680, EXPECTED_SPI_SSD1680),
             ("ultrasonic", FIXTURE_ULTRASONIC, EXPECTED_ULTRASONIC),
+            ("dht22", FIXTURE_DHT22, EXPECTED_DHT22),
+            ("dht22-attrs", FIXTURE_DHT22_ATTRS, EXPECTED_DHT22_ATTRS),
+            (
+                "dht22-esp32c3",
+                FIXTURE_DHT22_ESP32C3,
+                EXPECTED_DHT22_ESP32C3,
+            ),
+            ("dht22-l476", FIXTURE_DHT22_L476, EXPECTED_DHT22_L476),
             ("pcd8544", FIXTURE_PCD8544, EXPECTED_PCD8544),
             ("sn74hc165", FIXTURE_SN74HC165, EXPECTED_SN74HC165),
             (
