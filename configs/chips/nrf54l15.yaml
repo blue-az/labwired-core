@@ -87,15 +87,22 @@ peripherals:
   # far more than it needs a third and fourth UART. Enabling a UARTE model at
   # either base instead would collide.
   #
-  # EasyDMA TWIM is register-compatible with nRF52, so the nRF52 TWIM model is
-  # reused at these bases.
+  # A DEDICATED nRF54L model, for the same reason as the UARTE: EasyDMA moved
+  # into a DMA.{RX,TX} cluster. TX start is 0x050 (nRF52 STARTTX 0x008), RX
+  # start 0x028 (0x000), DMA.TX.PTR/MAXCNT 0x73C/0x740 (0x544/0x548) and
+  # DMA.RX.PTR/MAXCNT 0x704/0x708 (0x534/0x538).
+  #
+  # EVENTS_STOPPED (0x104), ENABLE (0x500, value 6), FREQUENCY (0x524) and
+  # ADDRESS (0x588) match nRF52 — the same class of coincidence that disguised
+  # the UARTE incompatibility. The SHORTS bit positions are genuinely unchanged,
+  # so the write-then-repeated-START-read sequence is driven as before.
   - id: "twi21"
-    type: "nrf52840_twim"
+    type: "nrf54l_twim"
     base_address: 0x500C7000
     size: "4KB"
     irq: 199
   - id: "twi22"
-    type: "nrf52840_twim"
+    type: "nrf54l_twim"
     base_address: 0x500C8000
     size: "4KB"
     irq: 200

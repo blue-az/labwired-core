@@ -32,12 +32,14 @@ use labwired_core::Bus;
 // Peripherals at the secure alias the cpuapp DT uses by default.
 const UARTE20: u64 = 0x500C_6000;
 const UARTE30: u64 = 0x5010_4000;
-// GPIO PERIPHERAL bases = devicetree address - 0x500. A Nordic GPIO DT node
-// points at the OUT register, not at the peripheral base. See the long comment
-// in configs/chips/nrf54l15.yaml.
-const GPIO_P0: u64 = 0x5010_9B00;
-const GPIO_P1: u64 = 0x500D_7D00;
-const GPIO_P2: u64 = 0x5004_FF00;
+// GPIO mapped bases = MDK NRF_Pn_S_BASE - 0x504, so the gpio model's
+// nRF52-relative offsets land on the real registers. On THIS family
+// NRF_GPIO_Type has OUT at +0x000 (nRF52840: +0x504, nRF5340: +0x004), so
+// e.g. P2 OUT ends up at 0x5005_0400 = NRF_P2_S_BASE. See the comment in
+// configs/chips/nrf54l15.yaml.
+const GPIO_P0: u64 = 0x5010_9AFC;
+const GPIO_P1: u64 = 0x500D_7CFC;
+const GPIO_P2: u64 = 0x5004_FEFC;
 const TIMER20: u64 = 0x500C_A000;
 const GRTC: u64 = 0x500E_2000;
 const TEMP: u64 = 0x500D_7000;
@@ -139,8 +141,9 @@ fn all_three_gpio_ports_are_mapped_and_independent() {
     let mut bus = nrf54l15_bus();
 
     // DK LED0 is P2.09, LED1 is P1.10 — the split across ports is the point.
-    // These land on the absolute addresses the devicetree advertises:
-    // P2 OUTSET = 0x5004_FF00 + 0x508 = 0x5005_0408 = DT 0x5005_0400 + 0x008.
+    // These land on the absolute addresses the MDK advertises:
+    // P2 OUT    = 0x5004_FEFC + 0x504 = 0x5005_0400 = NRF_P2_S_BASE + 0x000
+    // P2 OUTSET = 0x5004_FEFC + 0x508 = 0x5005_0404 = NRF_P2_S_BASE + 0x004
     bus.write_u32(GPIO_P2 + GPIO_DIRSET, 1 << 9).unwrap();
     bus.write_u32(GPIO_P2 + GPIO_OUTSET, 1 << 9).unwrap();
     assert_ne!(

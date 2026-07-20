@@ -16,12 +16,17 @@
 //! model here (see [`super::uarte`]).
 
 use crate::Peripheral;
-use labwired_config::PeripheralConfig;
+use labwired_config::{PeripheralConfig, SystemManifest};
 
 /// Build an nRF54L peripheral model for `canonical_type`, or `None` if this
 /// family does not own that type (so `from_config` falls through to the next
 /// factory and then the generic match).
-pub fn try_build(canonical_type: &str, p_cfg: &PeripheralConfig) -> Option<Box<dyn Peripheral>> {
+pub fn try_build(
+    canonical_type: &str,
+    p_cfg: &PeripheralConfig,
+    manifest: &SystemManifest,
+    bus_trace: &crate::bus::bus_trace::BusTrace,
+) -> Option<Box<dyn Peripheral>> {
     let dev: Box<dyn Peripheral> = match canonical_type {
         "nrf54l_grtc" => {
             // nRF54L15 has 12 CC channels (Zephyr DT `cc-num`, MDK
@@ -37,6 +42,39 @@ pub fn try_build(canonical_type: &str, p_cfg: &PeripheralConfig) -> Option<Box<d
             ))
         }
         "nrf54l_uarte" => Box::new(crate::peripherals::nrf54l::uarte::Nrf54lUarte::new()),
+        "nrf54l_twim" => {
+            let mut twim = crate::peripherals::nrf54l::twim::Nrf54lTwim::new();
+            for ext in &manifest.external_devices {
+                if ext.connection != p_cfg.id {
+                    continue;
+                }
+                match crate::peripherals::components::build_external_i2c_device(
+                    &ext.r#type,
+                    &ext.id,
+                    &ext.config,
+                ) {
+                    Some(device) => {
+                        tracing::info!(
+                            "nrf54l twim attach: '{}' (type={}) -> '{}'",
+                            ext.id,
+                            ext.r#type,
+                            p_cfg.id
+                        );
+                        twim.push_slave(crate::bus::bus_trace::wrap_i2c(
+                            &p_cfg.id, bus_trace, device,
+                        ));
+                    }
+                    None => {
+                        tracing::warn!(
+                            "nrf54l twim attach skipped: unknown device type '{}' for '{}'",
+                            ext.r#type,
+                            ext.id
+                        );
+                    }
+                }
+            }
+            Box::new(twim)
+        }
         "nrf54l_clock" => Box::new(crate::peripherals::nrf54l::clock::Nrf54lClock::new()),
         _ => return None,
     };

@@ -101,6 +101,7 @@ pub const MODEL_TYPES: &[&str] = &[
     // `contains("uart")` heuristic cannot coerce `nrf54l_uarte` onto the
     // generic STM32 UART layout — it is a distinct silicon register map.
     "nrf54l_uarte",
+    "nrf54l_twim",
 ];
 
 /// True if `t` is already a canonical model-type name (see [`MODEL_TYPES`]).

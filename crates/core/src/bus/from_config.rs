@@ -174,7 +174,12 @@ impl SystemBus {
                         )
                     })
                     .or_else(|| {
-                        crate::peripherals::nrf54l::factory::try_build(&canonical_type, p_cfg)
+                        crate::peripherals::nrf54l::factory::try_build(
+                            &canonical_type,
+                            p_cfg,
+                            manifest,
+                            &bus.bus_trace,
+                        )
                     });
             if let Some(dev) = family_dev {
                 // The nRF52 serial-instance mux (SPIM0/TWIM0) attaches all
@@ -193,6 +198,7 @@ impl SystemBus {
                 if canonical_type == "nrf52_serial_instance"
                     || canonical_type == "nrf52840_twim"
                     || canonical_type == "nrf52_twim"
+                    || canonical_type == "nrf54l_twim"
                 {
                     for ext in &manifest.external_devices {
                         if ext.connection == p_cfg.id {

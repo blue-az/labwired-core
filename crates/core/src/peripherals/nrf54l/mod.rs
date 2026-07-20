@@ -15,6 +15,8 @@
 //!   * UARTE — the nRF54L-generation UART with EasyDMA. It is *not*
 //!     register-compatible with the nRF52 UARTE: EasyDMA moved into a
 //!     `DMA.{RX,TX}` cluster and the task/event offsets were renumbered.
+//!   * TWIM — the nRF54L-generation I²C master. Same DMA-cluster change as
+//!     the UARTE, so likewise not nRF52-compatible.
 //!   * CLOCK — oscillator control. Also *not* nRF52-compatible despite the
 //!     shared `nordic,nrf-clock` devicetree binding: the HFCLK/LFCLK task
 //!     pair became an XO/PLL/LFCLK trio and every status register moved.
@@ -22,4 +24,5 @@
 pub mod clock;
 pub mod factory;
 pub mod grtc;
+pub mod twim;
 pub mod uarte;
