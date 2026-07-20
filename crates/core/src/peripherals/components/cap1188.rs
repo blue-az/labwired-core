@@ -219,13 +219,9 @@ impl Cap1188 {
     fn read_register(&self, reg: u8) -> u8 {
         match reg {
             REG_MAIN_CONTROL => self.main_control,
-            REG_GENERAL_STATUS => {
-                if self.touched != 0 {
-                    GENERAL_TOUCH
-                } else {
-                    0
-                }
-            }
+            // GENERAL_TOUCH is asserted while any pad reads as touched.
+            REG_GENERAL_STATUS if self.touched != 0 => GENERAL_TOUCH,
+            REG_GENERAL_STATUS => 0,
             REG_SENSOR_INPUT_STATUS => self.status_latch,
             REG_NOISE_FLAGS => self.noise_flags,
             REG_DELTA_BASE..=0x17 => self.delta_count((reg - REG_DELTA_BASE) as usize) as u8,

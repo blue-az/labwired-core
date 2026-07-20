@@ -77,7 +77,11 @@ const OFF_DMA_TX_PTR: u64 = 0x73C;
 const OFF_DMA_TX_MAXCNT: u64 = 0x740;
 const OFF_DMA_TX_AMOUNT: u64 = 0x744;
 
-/// `TWIM_ENABLE_ENABLE_Enabled` (MDK) — 6, same as nRF52.
+/// `TWIM_ENABLE_ENABLE_Enabled` (MDK) — 6, same as nRF52. The model does not
+/// gate transfers on ENABLE (a disabled TWIM on silicon simply does not drive
+/// the bus, and no firmware path here depends on that distinction), so this is
+/// referenced only by the tests that drive the documented enable sequence.
+#[cfg(test)]
 const ENABLE_TWIM: u32 = 6;
 
 // SHORTS bits — positions unchanged from nRF52.
