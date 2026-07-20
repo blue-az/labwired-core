@@ -445,7 +445,6 @@ impl crate::Peripheral for Nrf54lTwim {
     fn as_any_mut(&mut self) -> Option<&mut dyn std::any::Any> {
         Some(self)
     }
-
 }
 
 #[cfg(test)]
