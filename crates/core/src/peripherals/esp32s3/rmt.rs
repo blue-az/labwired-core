@@ -5,10 +5,14 @@
 //! RMT (Remote Control / pulse transceiver) peripheral for ESP32-S3.
 //!
 //! The ESP32-S3 RMT has **4 TX channels (0..3) + 4 RX channels (4..7)** sharing
-//! a 384×32 RAM block (RMTMEM) mapped at `DR_REG_RMT_BASE + 0x400`. This module
-//! models **only the register block** (`base .. base + 0x400`); the parent maps
-//! the symbol RAM separately, so we cap the modeled window at the last register
-//! (`RMT_DATE` at offset 0xCC, i.e. a 0xD0-byte register file).
+//! a 384×32 RAM block (RMTMEM) mapped at `DR_REG_RMT_BASE + 0x400`.
+//!
+//! The parent (`system/xtensa/esp32s3.rs`) maps this peripheral as a single
+//! **0x1000-byte** window at 0x6001_6000 — there is no separate RMTMEM device.
+//! Both the register file (0x00..0xD0) and the symbol RAM (0x400..0xA00) are
+//! therefore this module's responsibility, and both are backed here. Offsets
+//! inside the 0x1000 window that belong to neither (0xD0..0x400, 0xA00..0x1000)
+//! read as 0 and ignore writes.
 //!
 //! ## Register map (verified against ESP-IDF
 //! `components/soc/esp32s3/register/soc/rmt_reg.h`, base = DR_REG_RMT_BASE =
@@ -16,7 +20,7 @@
 //!
 //! | Offset | Name                | Notes |
 //! |-------:|---------------------|-------|
-//! | 0x00..0x1C | CH0..7 DATA      | APB-FIFO data port (RO here; RAM lives at +0x400) |
+//! | 0x00..0x1C | CH0..7 DATA      | APB-FIFO data port; aliases the same RAM as +0x400 |
 //! | 0x20..0x2C | CH0..3 CONF0     | TX channel config 0 (tx_start/mem_rd_rst/conf_update/carrier/divider) |
 //! | 0x30 | CH4 CONF0             | RX channel config 0 (div/idle_thres/mem_size/carrier) |
 //! | 0x34 | CH4 CONF1             | RX channel config 1 (rx_en/mem_owner/filter/conf_update) |
@@ -36,6 +40,32 @@
 //! | 0xC4 | TX_SIM               | synchronous-TX-start config |
 //! | 0xC8 | REF_CNT_RST          | per-channel clock-divider reset (WT) |
 //! | 0xCC | DATE                 | version register |
+//! | 0x400..0xA00 | RMTMEM        | 384×32 symbol RAM, shared by all 8 channels |
+//!
+//! ## Symbol RAM (RMTMEM)
+//!
+//! RMTMEM is one flat 384-word array. There are two access paths into it and
+//! they alias the **same** backing store:
+//!
+//!   * **Direct** (0x400..0xA00) — a plain word-addressed memory. Modern
+//!     ESP-IDF (`rmt_tx`) composes symbols straight into RMTMEM this way.
+//!   * **APB-FIFO** (CHnDATA, 0x00..0x1C) — pushes one 32-bit entry at a time
+//!     through the channel's auto-incrementing write pointer.
+//!
+//! Each channel `n` owns a window starting at word `n * 48`. Its **length**
+//! comes from that channel's `MEM_SIZE` field (TX `CHnCONF0[19:16]`, RX
+//! `CHmCONF0[27:24]`), so a channel may *borrow* subsequent blocks:
+//! `MEM_SIZE = 2` gives channel 0 words 0..96. Chosen semantics:
+//!
+//!   * `MEM_SIZE = 0` is not a legal hardware configuration (a zero-length
+//!     window has nowhere to put an entry); it is treated as one block.
+//!   * A window is clamped to the end of RMTMEM, so an over-large `MEM_SIZE`
+//!     lets a channel run to word 384 but never past it. Borrowing is *not*
+//!     policed against the next channel's base — on silicon an overlapping
+//!     `MEM_SIZE` genuinely does corrupt the neighbouring channel, and the
+//!     flat store reproduces that faithfully.
+//!   * The FIFO write pointer wraps modulo the window length, so no amount of
+//!     CHnDATA traffic can overflow or panic.
 //!
 //! ## TX completion model
 //!
@@ -71,18 +101,23 @@ const RX_CHANNELS: usize = 4;
 
 /// Total channels (0..7) exposing a CHnDATA APB-FIFO port at 0x00..0x1C.
 const TOTAL_CHANNELS: usize = 8;
-/// RMT per-channel RAM depth on the ESP32-S3 (48 × 32-bit entries per block).
-const RMT_RAM_WORDS: usize = 48;
+/// RMT memory block depth on the ESP32-S3 (48 × 32-bit entries per block).
+/// One block is a channel's default window; `MEM_SIZE` may borrow more.
+const RMT_BLOCK_WORDS: usize = 48;
+/// Total RMTMEM depth: 8 blocks × 48 words = 384 × 32-bit, shared by all
+/// channels (`SOC_RMT_MEM_WORDS_PER_CHANNEL * SOC_RMT_CHANNELS_PER_GROUP`).
+const RMT_MEM_WORDS: usize = RMT_BLOCK_WORDS * TOTAL_CHANNELS;
+
+/// First offset of the direct RMTMEM aperture inside the parent's 0x1000
+/// window (`DR_REG_RMT_BASE + 0x400`).
+const RMTMEM_START: u64 = 0x400;
+/// One past the last RMTMEM byte offset: 0x400 + 384*4 = 0xA00.
+const RMTMEM_END: u64 = RMTMEM_START + (RMT_MEM_WORDS as u64) * 4;
 
 /// CARRIER_DUTY reset default (ESP32-S3 SVD): high-duty 0x40, low-duty 0x40.
 const CARRIER_DUTY_RESET: u32 = 0x0040_0040;
 /// RX_STATUS read-only idle/reset constant (ESP32-S3 SVD reset 0x0006_00C0).
 const RX_STATUS_IDLE: u32 = 0x0006_00C0;
-
-/// Size of the modeled register block: `RMT_DATE` at 0xCC + 4 = 0xD0.
-/// RMTMEM (the symbol RAM) lives separately at base + 0x400 and is NOT modeled
-/// here.
-pub const RMT_REG_BLOCK_SIZE: u64 = 0xD0;
 
 // ── CHnCONF0 (TX, n=0..3) bit fields ──────────────────────────────────────
 /// TX_START — bit 0 (WT, self-clearing): start sending data on the channel.
@@ -139,15 +174,20 @@ pub struct Esp32s3Rmt {
     /// carrier-removal config; reset 0.
     rx_carrier_rm: [u32; RX_CHANNELS],
 
-    /// Per-channel APB-FIFO RAM shadow for CHnDATA (0x00..0x1C, channels 0..7).
+    /// RMTMEM — the flat 384×32 symbol RAM shared by all 8 channels.
     ///
-    /// This models the **APB-FIFO access path** into each channel's RMT RAM
-    /// (distinct from RMTMEM at base+0x400, which the parent maps separately).
+    /// This is the single backing store for **both** access paths: the direct
+    /// aperture at 0x400..0xA00 and the CHnDATA APB-FIFO port at 0x00..0x1C
+    /// alias the same words. Channel `n`'s window starts at word
+    /// `n * RMT_BLOCK_WORDS` and runs for `mem_window_words(n)` words (see the
+    /// module docs for the `MEM_SIZE` borrowing rules).
+    ///
     /// Writing CHnDATA pushes a 32-bit RMT entry via an auto-incrementing write
-    /// pointer (`ch_wr`); the index wraps mod [`RMT_RAM_WORDS`] so arbitrary
-    /// input never overflows nor panics.
+    /// pointer (`ch_wr`); the index wraps mod the channel's window length so
+    /// arbitrary input never overflows nor panics.
     ///
-    /// Reads are **non-destructive** and return the most-recently-written word.
+    /// CHnDATA reads are **non-destructive** and return the most-recently-
+    /// written word.
     /// A pop-on-read FIFO is impossible here because `read_word(&self)` is
     /// immutable (shared by the `Peripheral::read` trait path and every other
     /// register), so a read pointer could not advance; a destructive read would
@@ -159,7 +199,7 @@ pub struct Esp32s3Rmt {
     /// Note: the TX engine in this model is fire-and-complete and does NOT
     /// replay buffered symbols — a known FSM-depth limit consistent with the
     /// model's functional-not-cycle-exact scope.
-    ch_mem: [[u32; RMT_RAM_WORDS]; TOTAL_CHANNELS],
+    mem: [u32; RMT_MEM_WORDS],
     /// Per-channel auto-incrementing write pointer for the CHnDATA APB-FIFO.
     ch_wr: [usize; TOTAL_CHANNELS],
 
@@ -182,8 +222,16 @@ impl Esp32s3Rmt {
             source_id,
             // TX CONF0 reset default: DIV_CNT=2 (bits[15:8]), MEM_SIZE=1
             // (bits[19:16]), CARRIER_EFF_EN=1 (20), CARRIER_EN=1 (21),
-            // CARRIER_OUT_LV=1 (22) → 0x0017_0200.
-            tx_conf0: [0x0017_0200; TX_CHANNELS],
+            // CARRIER_OUT_LV=1 (22) → 0x0071_0200.
+            //
+            // NOTE: this constant read 0x0017_0200 until RMTMEM was backed —
+            // a transposition of the two upper nibbles that contradicted the
+            // comment above on every field it names (it decodes to MEM_SIZE=7,
+            // CARRIER_EN=0, CARRIER_OUT_LV=0). It was inert while MEM_SIZE was
+            // unused, but it is load-bearing now: MEM_SIZE=7 would give every
+            // TX channel a 336-word window at reset and let a channel-0 FIFO
+            // burst overwrite channels 1..6.
+            tx_conf0: [0x0071_0200; TX_CHANNELS],
             // RX CONF0 reset default: DIV_CNT=2 (bits[7:0]), IDLE_THRES=32767
             // (bits[22:8] = 0x7FFF<<8), MEM_SIZE=1 (bits[27:24]),
             // CARRIER_EN=1 (28), CARRIER_OUT_LV=1 (29).
@@ -197,8 +245,8 @@ impl Esp32s3Rmt {
             // CARRIER_DUTY reset 0x0040_0040; RX_CARRIER_RM reset 0.
             carrier_duty: [CARRIER_DUTY_RESET; TX_CHANNELS],
             rx_carrier_rm: [0; RX_CHANNELS],
-            // CHnDATA APB-FIFO RAM shadow + write pointers start empty/zeroed.
-            ch_mem: [[0; RMT_RAM_WORDS]; TOTAL_CHANNELS],
+            // RMTMEM symbol RAM + FIFO write pointers start empty/zeroed.
+            mem: [0; RMT_MEM_WORDS],
             ch_wr: [0; TOTAL_CHANNELS],
             // SYS_CONF reset default: SCLK_DIV_NUM=1 (bits[11:4] = 1<<4=0x10),
             // SCLK_SEL=1 (bits[25:24]), SCLK_ACTIVE=1 (26).
@@ -317,6 +365,40 @@ impl Esp32s3Rmt {
         }
     }
 
+    /// Direct RMTMEM aperture (0x400..0xA00) → flat word index into `mem`.
+    /// Offsets outside the aperture (including the 0xD0..0x400 and
+    /// 0xA00..0x1000 holes in the parent's window) map to `None`.
+    fn rmtmem_index(offset: u64) -> Option<usize> {
+        if (RMTMEM_START..RMTMEM_END).contains(&offset) {
+            Some(((offset - RMTMEM_START) / 4) as usize)
+        } else {
+            None
+        }
+    }
+
+    /// `MEM_SIZE` for channel `ch`, in 48-word blocks. TX channels 0..3 carry
+    /// it in `CHnCONF0[19:16]`; RX channels 4..7 in `CHmCONF0[27:24]`.
+    /// `MEM_SIZE = 0` is not a legal hardware setting (a zero-length window has
+    /// nowhere to store an entry) and is treated as the reset value, 1 block.
+    fn mem_size_blocks(&self, ch: usize) -> usize {
+        let raw = if ch < TX_CHANNELS {
+            (self.tx_conf0[ch] >> 16) & 0xF
+        } else {
+            (self.rx_conf0[ch - TX_CHANNELS] >> 24) & 0xF
+        } as usize;
+        raw.max(1)
+    }
+
+    /// Length in words of channel `ch`'s RMTMEM window, honouring `MEM_SIZE`
+    /// block borrowing. Clamped to the end of RMTMEM so an over-large
+    /// `MEM_SIZE` can never index past the 384-word store. Overlap with the
+    /// next channel's block is deliberately *not* policed — silicon corrupts
+    /// the neighbour in exactly that case.
+    fn mem_window_words(&self, ch: usize) -> usize {
+        let base = ch * RMT_BLOCK_WORDS;
+        (self.mem_size_blocks(ch) * RMT_BLOCK_WORDS).min(RMT_MEM_WORDS - base)
+    }
+
     /// INT_ST = INT_RAW & INT_ENA (masked-interrupt status).
     fn int_st(&self) -> u32 {
         self.int_raw & self.int_ena
@@ -354,13 +436,18 @@ impl Esp32s3Rmt {
             return 0;
         }
         // CHnDATA APB-FIFO port (RO half here): non-destructive read of the
-        // most-recently-written word (see `ch_mem` doc). Empty channel reads 0.
+        // most-recently-written word (see `mem` doc). Empty channel reads 0.
         if let Some(ch) = Self::chndata_index(offset) {
             return if self.ch_wr[ch] == 0 {
                 0
             } else {
-                self.ch_mem[ch][(self.ch_wr[ch] - 1) % RMT_RAM_WORDS]
+                let len = self.mem_window_words(ch);
+                self.mem[ch * RMT_BLOCK_WORDS + (self.ch_wr[ch] - 1) % len]
             };
+        }
+        // Direct RMTMEM aperture: plain word-addressed symbol RAM.
+        if let Some(i) = Self::rmtmem_index(offset) {
+            return self.mem[i];
         }
         match offset {
             0x70 => self.int_raw,
@@ -428,13 +515,20 @@ impl Esp32s3Rmt {
         if Self::rx_status_index(offset).is_some() || Self::tx_status_index(offset).is_some() {
             return;
         }
-        // CHnDATA APB-FIFO port: push the 32-bit entry into the channel's RAM
-        // shadow via the auto-incrementing write pointer (index wraps mod
-        // RMT_RAM_WORDS so arbitrary input never overflows).
+        // CHnDATA APB-FIFO port: push the 32-bit entry into the channel's
+        // RMTMEM window via the auto-incrementing write pointer (the index
+        // wraps mod the window length so arbitrary input never overflows).
+        // This lands in the SAME store the direct 0x400 aperture exposes.
         if let Some(ch) = Self::chndata_index(offset) {
-            let slot = self.ch_wr[ch] % RMT_RAM_WORDS;
-            self.ch_mem[ch][slot] = value;
+            let len = self.mem_window_words(ch);
+            let slot = ch * RMT_BLOCK_WORDS + self.ch_wr[ch] % len;
+            self.mem[slot] = value;
             self.ch_wr[ch] = self.ch_wr[ch].wrapping_add(1);
+            return;
+        }
+        // Direct RMTMEM aperture: plain word-addressed symbol RAM.
+        if let Some(i) = Self::rmtmem_index(offset) {
+            self.mem[i] = value;
             return;
         }
         match offset {
@@ -515,9 +609,17 @@ mod tests {
     #[test]
     fn reset_defaults_seeded() {
         let r = rmt();
-        // TX CONF0 default 0x0017_0200 (DIV_CNT=2, MEM_SIZE=1, carrier bits).
-        assert_eq!(r.read_word(0x20), 0x0017_0200);
-        assert_eq!(r.read_word(0x2C), 0x0017_0200);
+        // TX CONF0 default 0x0071_0200 (DIV_CNT=2, MEM_SIZE=1, carrier bits
+        // 20/21/22 set). Decoded field-by-field so a transposed constant
+        // cannot pass unnoticed again.
+        assert_eq!(r.read_word(0x20), 0x0071_0200);
+        assert_eq!(r.read_word(0x2C), 0x0071_0200);
+        let c0 = r.read_word(0x20);
+        assert_eq!((c0 >> 8) & 0xFF, 2, "DIV_CNT=2");
+        assert_eq!((c0 >> 16) & 0xF, 1, "MEM_SIZE=1 block");
+        assert_eq!((c0 >> 20) & 1, 1, "CARRIER_EFF_EN");
+        assert_eq!((c0 >> 21) & 1, 1, "CARRIER_EN");
+        assert_eq!((c0 >> 22) & 1, 1, "CARRIER_OUT_LV");
         // RX CONF0 default.
         let rx0 = 2u32 | (0x7FFF << 8) | (1 << 24) | (1 << 28) | (1 << 29);
         assert_eq!(r.read_word(0x30), rx0);
@@ -776,9 +878,11 @@ mod tests {
         assert_eq!(r.read_word(0x08), 0x1111_2222, "read sees last write");
         r.write_word(0x08, 0x3333_4444);
         assert_eq!(r.read_word(0x08), 0x3333_4444, "read sees newest write");
-        // Both words landed in CH2's RAM in write order via the auto-incr ptr.
-        assert_eq!(r.ch_mem[2][0], 0x1111_2222, "first word at slot 0");
-        assert_eq!(r.ch_mem[2][1], 0x3333_4444, "second word at slot 1");
+        // Both words landed in CH2's RMTMEM window in write order via the
+        // auto-incrementing pointer (CH2 base = 2 * 48 = word 96).
+        let base = 2 * RMT_BLOCK_WORDS;
+        assert_eq!(r.mem[base], 0x1111_2222, "first word at slot 0");
+        assert_eq!(r.mem[base + 1], 0x3333_4444, "second word at slot 1");
         assert_eq!(r.ch_wr[2], 2, "write pointer advanced twice");
     }
 
@@ -804,13 +908,12 @@ mod tests {
             r.write_word(0x00, 0xD000_0000 | i);
         }
         // Slot 0 was overwritten by entry 48; slot 1 by entry 49.
-        assert_eq!(r.ch_mem[0][0], 0xD000_0000 | 48);
-        assert_eq!(r.ch_mem[0][1], 0xD000_0000 | 49);
-        assert_eq!(
-            r.ch_mem[0][2],
-            0xD000_0000 | 2,
-            "untouched since first pass"
-        );
+        assert_eq!(r.mem[0], 0xD000_0000 | 48);
+        assert_eq!(r.mem[1], 0xD000_0000 | 49);
+        assert_eq!(r.mem[2], 0xD000_0000 | 2, "untouched since first pass");
+        // The wrap stayed inside CH0's one-block window: CH1's block (word 48)
+        // was never touched.
+        assert_eq!(r.mem[RMT_BLOCK_WORDS], 0, "did not spill into CH1");
         // Last write (entry 49) is what a read returns.
         assert_eq!(r.read_word(0x00), 0xD000_0000 | 49);
     }
@@ -838,11 +941,210 @@ mod tests {
             "final assembled word readable"
         );
         assert_eq!(
-            r.ch_mem[1][3], 0xDEAD_BEEF,
-            "complete word landed at slot 3"
+            r.mem[RMT_BLOCK_WORDS + 3],
+            0xDEAD_BEEF,
+            "complete word landed at CH1 slot 3"
         );
         // Four byte-writes → four pushes of the evolving entry; the pointer is
         // sane and no index ever went out of range.
         assert_eq!(r.ch_wr[1], 4, "one push per byte-write RMW");
+    }
+
+    // ── RMTMEM symbol RAM (0x400..0xA00) ──────────────────────────────────
+    //
+    // The parent maps this peripheral with a 0x1000-byte window, so these
+    // offsets route here. Before RMTMEM was backed they fell through
+    // `write_word`'s catch-all and were silently discarded — which broke
+    // modern ESP-IDF `rmt_tx`, since it composes symbols directly into RMTMEM
+    // rather than through the CHnDATA FIFO.
+
+    /// Word offset of RMTMEM word `n` within the peripheral window.
+    const fn rmtmem_off(n: usize) -> u64 {
+        RMTMEM_START + (n as u64) * 4
+    }
+
+    #[test]
+    fn rmtmem_direct_write_reads_back() {
+        let mut r = rmt();
+        // A symbol written straight into RMTMEM must survive (this is the bug).
+        r.write_word(rmtmem_off(0), 0x8010_0010);
+        assert_eq!(r.read_word(rmtmem_off(0)), 0x8010_0010, "word 0 persists");
+
+        // Works across the whole 384-word store, including the last word.
+        r.write_word(rmtmem_off(383), 0xCAFE_F00D);
+        assert_eq!(r.read_word(rmtmem_off(383)), 0xCAFE_F00D, "last word");
+
+        // Untouched words still read 0.
+        assert_eq!(r.read_word(rmtmem_off(1)), 0, "unwritten word reads 0");
+    }
+
+    #[test]
+    fn rmtmem_and_chndata_alias_the_same_store() {
+        // The core of the fix: the APB-FIFO port and the direct aperture are
+        // two views of ONE backing store, not two separate buffers.
+        let mut r = rmt();
+
+        // FIFO → RMTMEM. CH0's window starts at word 0.
+        r.write_word(0x00, 0x1234_5678);
+        assert_eq!(
+            r.read_word(rmtmem_off(0)),
+            0x1234_5678,
+            "CH0DATA push visible at RMTMEM word 0"
+        );
+
+        // CH3's window starts at word 3 * 48 = 144.
+        r.write_word(0x0C, 0xA5A5_1111);
+        assert_eq!(
+            r.read_word(rmtmem_off(3 * RMT_BLOCK_WORDS)),
+            0xA5A5_1111,
+            "CH3DATA push visible at RMTMEM word 144"
+        );
+
+        // RMTMEM → FIFO read port. A direct write to the slot the CH1 pointer
+        // last used is what the CH1DATA read returns.
+        r.write_word(0x04, 0x0000_0000); // advance CH1's pointer to slot 1
+        r.write_word(rmtmem_off(RMT_BLOCK_WORDS), 0xBEEF_0001);
+        assert_eq!(
+            r.read_word(0x04),
+            0xBEEF_0001,
+            "CH1DATA read sees the direct RMTMEM write at its last slot"
+        );
+    }
+
+    #[test]
+    fn rmtmem_channel_windows_are_isolated() {
+        let mut r = rmt();
+        // Fill channel 1's whole default block through the direct aperture.
+        for i in 0..RMT_BLOCK_WORDS {
+            r.write_word(rmtmem_off(RMT_BLOCK_WORDS + i), 0x1100_0000 | i as u32);
+        }
+        // Channel 0's block is untouched.
+        for i in 0..RMT_BLOCK_WORDS {
+            assert_eq!(r.read_word(rmtmem_off(i)), 0, "CH0 word {i} undisturbed");
+        }
+        // And channel 0's FIFO port still sees an empty channel.
+        assert_eq!(r.read_word(0x00), 0, "CH0DATA still empty");
+
+        // Pushing on CH0 does not disturb channel 1's contents.
+        r.write_word(0x00, 0xDEAD_0000);
+        assert_eq!(
+            r.read_word(rmtmem_off(RMT_BLOCK_WORDS)),
+            0x1100_0000,
+            "CH1 word 0 survives a CH0 push"
+        );
+    }
+
+    #[test]
+    fn mem_size_two_lets_channel0_borrow_the_second_block() {
+        let mut r = rmt();
+        // Default MEM_SIZE=1 → CH0 owns 48 words.
+        assert_eq!(r.mem_window_words(0), RMT_BLOCK_WORDS, "default 1 block");
+
+        // Set CH0CONF0 MEM_SIZE (bits[19:16]) = 2 → CH0 owns 96 words.
+        r.write_word(0x20, 2 << 16);
+        assert_eq!(r.mem_size_blocks(0), 2, "MEM_SIZE decoded");
+        assert_eq!(r.mem_window_words(0), 2 * RMT_BLOCK_WORDS, "96 words");
+
+        // Push 50 entries: with a 96-word window entry 48 lands in the SECOND
+        // block (word 48) instead of wrapping onto word 0.
+        for i in 0..50u32 {
+            r.write_word(0x00, 0xE000_0000 | i);
+        }
+        assert_eq!(r.mem[0], 0xE000_0000, "word 0 NOT overwritten");
+        assert_eq!(
+            r.mem[RMT_BLOCK_WORDS],
+            0xE000_0000 | 48,
+            "entry 48 borrowed into the second block"
+        );
+        assert_eq!(r.mem[RMT_BLOCK_WORDS + 1], 0xE000_0000 | 49);
+        // The borrowed block is visible through the direct aperture too.
+        assert_eq!(
+            r.read_word(rmtmem_off(RMT_BLOCK_WORDS)),
+            0xE000_0000 | 48,
+            "borrowed word readable at RMTMEM"
+        );
+
+        // Now it wraps at 96, not 48.
+        for i in 50..97u32 {
+            r.write_word(0x00, 0xE000_0000 | i);
+        }
+        assert_eq!(r.mem[0], 0xE000_0000 | 96, "wrapped at the 96-word window");
+    }
+
+    #[test]
+    fn mem_size_window_is_clamped_to_the_end_of_rmtmem() {
+        let mut r = rmt();
+        // MEM_SIZE=0 is illegal on silicon; treated as one block so the FIFO
+        // modulus is never zero (a `% 0` would panic).
+        r.write_word(0x20, 0);
+        assert_eq!(r.mem_size_blocks(0), 1, "MEM_SIZE=0 → 1 block");
+        r.write_word(0x00, 0xABCD_0000);
+        assert_eq!(r.mem[0], 0xABCD_0000, "MEM_SIZE=0 channel still usable");
+
+        // An over-large MEM_SIZE on the LAST channel is clamped to the end of
+        // the 384-word store rather than indexing out of bounds.
+        r.write_word(0x48, 0xF << 24); // CH7 CONF0, MEM_SIZE=15
+        assert_eq!(r.mem_size_blocks(7), 15);
+        assert_eq!(
+            r.mem_window_words(7),
+            RMT_BLOCK_WORDS,
+            "CH7 clamped to the single block that fits"
+        );
+        // Hammer the FIFO: must stay in bounds and never panic.
+        for i in 0..200u32 {
+            r.write_word(0x1C, i);
+        }
+        assert_eq!(r.read_word(0x1C), 199, "CH7 FIFO still sane");
+    }
+
+    #[test]
+    fn rmtmem_byte_and_halfword_writes_are_panic_free() {
+        // RMTMEM is word-accessed by real drivers, but sub-word access must
+        // stay panic-free under panic=abort (mirrors the CHnDATA byte test).
+        // Unlike CHnDATA there is no write pointer, so the byte-lane RMW
+        // assembles in place and the final word is exact.
+        let mut r = rmt();
+        let off = rmtmem_off(5);
+        r.write(off, 0xEF).unwrap();
+        r.write(off + 1, 0xBE).unwrap();
+        r.write(off + 2, 0xAD).unwrap();
+        r.write(off + 3, 0xDE).unwrap();
+        assert_eq!(
+            r.read_word(off),
+            0xDEAD_BEEF,
+            "byte lanes assemble in place"
+        );
+
+        // Byte reads return the matching lane.
+        assert_eq!(r.read(off).unwrap(), 0xEF);
+        assert_eq!(r.read(off + 3).unwrap(), 0xDE);
+
+        // Halfword-ish access (two byte writes) into the last word, and an
+        // unaligned offset inside the aperture — neither may panic.
+        let last = rmtmem_off(383);
+        r.write(last, 0x34).unwrap();
+        r.write(last + 1, 0x12).unwrap();
+        assert_eq!(r.read_word(last), 0x0000_1234);
+    }
+
+    #[test]
+    fn unmapped_offsets_in_the_1000_window_are_sane() {
+        let mut r = rmt();
+        // The parent maps 0x1000 bytes; the holes between the register file
+        // (ends 0xD0), RMTMEM (0x400..0xA00) and the end of the window must
+        // read 0 and swallow writes without panicking or aliasing RMTMEM.
+        for off in [0xD0u64, 0x100, 0x3FC, 0xA00, 0xC00, 0xFFC] {
+            assert_eq!(r.read_word(off), 0, "unmapped {off:#x} reads 0");
+            r.write_word(off, 0xFFFF_FFFF);
+            assert_eq!(r.read_word(off), 0, "unmapped {off:#x} still reads 0");
+        }
+        // Crucially, those writes did not land anywhere in RMTMEM.
+        assert!(r.mem.iter().all(|&w| w == 0), "RMTMEM untouched by holes");
+
+        // Byte access to the holes is equally harmless.
+        r.write(0x3FF, 0xAA).unwrap();
+        r.write(0xFFF, 0xAA).unwrap();
+        assert_eq!(r.read(0x3FF).unwrap(), 0);
+        assert!(r.mem.iter().all(|&w| w == 0), "RMTMEM still untouched");
     }
 }
