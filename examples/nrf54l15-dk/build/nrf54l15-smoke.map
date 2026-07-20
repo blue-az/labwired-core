@@ -135,22 +135,22 @@ LOAD linker stubs
  .debug_rnglists
                 0x00000019       0x37 build/main.o
 
-.debug_macro    0x00000000      0xf11
+.debug_macro    0x00000000      0xf17
  .debug_macro   0x00000000       0x24 build/startup.o
  .debug_macro   0x00000024      0xae4 build/startup.o
  .debug_macro   0x00000b08      0x34e build/startup.o
  .debug_macro   0x00000e56       0x2d build/main.o
- .debug_macro   0x00000e83       0x8e build/main.o
+ .debug_macro   0x00000e83       0x94 build/main.o
 
 .debug_line     0x00000000      0x2ea
  .debug_line    0x00000000      0x113 build/startup.o
  .debug_line    0x00000113      0x1d7 build/main.o
 
-.debug_str      0x00000000     0x3bb5
- .debug_str     0x00000000     0x3bb5 build/startup.o
+.debug_str      0x00000000     0x3bd4
+ .debug_str     0x00000000     0x3bd4 build/startup.o
                                0x39cb (size before relaxing)
- .debug_str     0x00003bb5        0x0 build/main.o
-                               0x3c9c (size before relaxing)
+ .debug_str     0x00003bd4        0x0 build/main.o
+                               0x3cbb (size before relaxing)
 
 .comment        0x00000000       0x12
  .comment       0x00000000       0x12 build/startup.o

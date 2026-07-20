@@ -24,10 +24,14 @@ OBJS := $(patsubst src/%.c,$(BUILD)/%.o,$(SRCS))
 # soft-float keeps the ELF free of FPU state the profile need not model yet.
 ARCHFLAGS := -mcpu=cortex-m33 -mthumb -mfloat-abi=soft
 
+# -MMD -MP emits a .d file per object listing its header dependencies, which are
+# included below. Without this, editing nrf54l15.h does not rebuild main.o and
+# you debug a stale binary — which is exactly what happened while writing this.
 CFLAGS  := $(ARCHFLAGS) -std=c11 -Os -g3 \
            -Wall -Wextra -Wpedantic -Werror \
            -ffreestanding -fno-common \
-           -ffunction-sections -fdata-sections
+           -ffunction-sections -fdata-sections \
+           -MMD -MP
 
 LDFLAGS := $(ARCHFLAGS) -T nrf54l15.ld -nostdlib -nostartfiles \
            -Wl,--gc-sections -Wl,-Map=$(BUILD)/$(TARGET).map
@@ -50,5 +54,7 @@ publish: $(BUILD)/$(TARGET).elf
 
 clean:
 	rm -rf $(BUILD)
+
+-include $(OBJS:.o=.d)
 
 .PHONY: all publish clean

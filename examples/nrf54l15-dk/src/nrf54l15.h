@@ -39,10 +39,23 @@
 #define UARTE20_PIN_TXD         PSEL(1, 4)
 #define UARTE20_PIN_RXD         PSEL(1, 5)
 
-/* ── GPIO P2 — DK LED0 is P2.09 (DT: gpio2 @ 0x50400, +0x50000000) ───────── */
-#define GPIO_P2_BASE            0x50050400UL
-#define GPIO_OUTSET(b)          REG32((b) + 0x008)
-#define GPIO_OUTCLR(b)          REG32((b) + 0x00C)
+/*
+ * ── GPIO P2 — DK LED0 is P2.09 ───────────────────────────────────────────
+ *
+ * The devicetree says gpio2@50400, i.e. absolute 0x50050400 — but that address
+ * is the OUT register, NOT the peripheral base. Nordic GPIO peripherals put
+ * OUT at base + 0x500, and the DT node points straight at it. So the
+ * peripheral base is 0x50050400 - 0x500 = 0x5004FF00, and the register offsets
+ * below are base-relative in the datasheet's numbering.
+ *
+ * Mixing the two conventions (DT address + peripheral-relative offsets) is the
+ * easy mistake here, and it is a quiet one: the UART still works, the board
+ * still boots, and only the LED silently fails.
+ */
+#define GPIO_P2_BASE            0x5004FF00UL
+#define GPIO_OUT(b)             REG32((b) + 0x504)
+#define GPIO_OUTSET(b)          REG32((b) + 0x508)
+#define GPIO_OUTCLR(b)          REG32((b) + 0x50C)
 #define GPIO_DIRSET(b)          REG32((b) + 0x518)
 #define LED0_PIN                9u
 

@@ -104,23 +104,35 @@ peripherals:
   # Port widths are NOT uniform on this part (DT `ngpios`): P0=7, P1=17, P2=11.
   # The DK's LEDs are on P2 and P1, so a wrong width here silently breaks the
   # board_io bindings rather than faulting.
+  #
+  # BASE ADDRESS SUBTLETY — read before "fixing" these values:
+  # A Nordic GPIO devicetree node points at the OUT register, which sits at
+  # peripheral_base + 0x500, NOT at the peripheral base. The DT gives
+  # gpio0@10a000 / gpio1@d8200 / gpio2@50400 (absolute 0x5010A000 / 0x500D8200 /
+  # 0x50050400), so the peripheral bases mapped here are those minus 0x500. The
+  # gpio model uses peripheral-relative offsets (OUT 0x504, OUTSET 0x508,
+  # IN 0x510, DIR 0x514, DIRSET 0x518), so this is what makes a firmware write
+  # to the DT address land on the right register.
+  # Mapping the DT address directly instead puts every GPIO register 0x500 too
+  # high; UART still works, so the mistake survives a boot test and only shows
+  # up as an LED that never lights.
   - id: "gpio0"
     type: "gpio"
-    base_address: 0x5010A000
+    base_address: 0x50109B00
     size: "4KB"
     config:
       profile: "nrf52"
       num_pins: 7
   - id: "gpio1"
     type: "gpio"
-    base_address: 0x500D8200
+    base_address: 0x500D7D00
     size: "4KB"
     config:
       profile: "nrf52"
       num_pins: 17
   - id: "gpio2"
     type: "gpio"
-    base_address: 0x50050400
+    base_address: 0x5004FF00
     size: "4KB"
     config:
       profile: "nrf52"
