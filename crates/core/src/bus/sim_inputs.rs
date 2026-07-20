@@ -147,6 +147,12 @@ impl SystemBus {
                 return;
             }
         }
+        for encoder in self.rotary_encoders.iter_mut() {
+            let id = encoder.id.clone();
+            if f(&id, encoder) {
+                return;
+            }
+        }
         for analog in self.analog_inputs.iter_mut() {
             let connection = analog.connection.clone();
             if f(&connection, analog.source.as_mut()) {

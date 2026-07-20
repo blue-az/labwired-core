@@ -165,6 +165,50 @@ impl SystemBus {
         }
     }
 
+    /// Per-tick pass for rotary encoders: advance each toward its target detent
+    /// and drive the CLK/DT input registers. No-op when none are wired. Like the
+    /// HC-SR04/DHT22 passes it only touches the bus on a level transition.
+    pub(crate) fn service_rotary_encoders(&mut self) {
+        if self.rotary_encoders.is_empty() {
+            return;
+        }
+        for i in 0..self.rotary_encoders.len() {
+            self.drive_rotary_encoder(i);
+        }
+    }
+
+    /// Advance encoder `i` to `self.current_cycle` and drive whichever of its
+    /// CLK/DT input-register bits changed. Two independent pins, same
+    /// transition-only IDR write as [`drive_dht22_line`](Self::drive_dht22_line).
+    fn drive_rotary_encoder(&mut self, i: usize) {
+        let now = self.current_cycle;
+        let ((clk_high, dt_high), (clk_changed, dt_changed)) = self.rotary_encoders[i].service(now);
+        if clk_changed {
+            let addr = self.rotary_encoders[i].clk_idr_addr;
+            let bit = self.rotary_encoders[i].clk_bit;
+            self.drive_idr_bit(addr, bit, clk_high);
+        }
+        if dt_changed {
+            let addr = self.rotary_encoders[i].dt_idr_addr;
+            let bit = self.rotary_encoders[i].dt_bit;
+            self.drive_idr_bit(addr, bit, dt_high);
+        }
+    }
+
+    /// Set or clear a single bit of a GPIO input (IDR) register, writing back
+    /// only when the bit actually changes. Shared by the encoder's two channels.
+    fn drive_idr_bit(&mut self, idr_addr: u64, bit: u8, high: bool) {
+        let idr = self.read_u32(idr_addr).unwrap_or(0);
+        let new_idr = if high {
+            idr | (1 << bit)
+        } else {
+            idr & !(1 << bit)
+        };
+        if new_idr != idr {
+            let _ = self.write_u32(idr_addr, new_idr);
+        }
+    }
+
     /// Drive sensor `i`'s data pin input register to the level its armed
     /// schedule implies at `self.current_cycle`, touching the bus only on a
     /// transition. Single choke point (as with

@@ -81,6 +81,7 @@ impl SystemBus {
             legacy_walk_disabled: false,
             hcsr04: Vec::new(),
             dht22: Vec::new(),
+            rotary_encoders: Vec::new(),
             tm1637: Vec::new(),
             seven_segment: Vec::new(),
             analog_inputs: Vec::new(),
@@ -671,6 +672,60 @@ impl SystemBus {
                             temperature_c,
                             humidity_pct,
                         ));
+                }
+                "rotary-encoder" | "rotary_encoder" => {
+                    // Incremental quadrature knob. Like the HC-SR04/DHT22 it
+                    // DRIVES pins the MCU samples as inputs (CLK/DT), so it lives
+                    // directly on the bus and the per-tick pass
+                    // (`service_rotary_encoders`) walks the Gray sequence onto the
+                    // two input registers. Rotation is host-controlled through the
+                    // standard `position` stimulus channel. The push switch (SW)
+                    // is a plain board_io button, emitted separately.
+                    let clk = ext
+                        .config
+                        .get("clk_pin")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("PA0")
+                        .to_string();
+                    let dt = ext
+                        .config
+                        .get("dt_pin")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("PA1")
+                        .to_string();
+                    let cpu_hz = ext
+                        .config
+                        .get("cpu_hz")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(80_000_000);
+
+                    let (clk_idr_addr, clk_bit) =
+                        Self::resolve_pin_idr(&bus, &clk).ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "rotary-encoder '{}' clk_pin '{}' could not be resolved to a GPIO input",
+                                ext.id,
+                                clk
+                            )
+                        })?;
+                    let (dt_idr_addr, dt_bit) =
+                        Self::resolve_pin_idr(&bus, &dt).ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "rotary-encoder '{}' dt_pin '{}' could not be resolved to a GPIO input",
+                                ext.id,
+                                dt
+                            )
+                        })?;
+
+                    bus.rotary_encoders.push(
+                        crate::peripherals::components::rotary_encoder::RotaryEncoder::new(
+                            ext.id.clone(),
+                            clk_idr_addr,
+                            clk_bit,
+                            dt_idr_addr,
+                            dt_bit,
+                            cpu_hz,
+                        ),
+                    );
                 }
                 "can-diagnostic-tester" | "uds-diagnostic-tester" => {
                     if bus.find_peripheral_index_by_name(&ext.connection).is_none() {

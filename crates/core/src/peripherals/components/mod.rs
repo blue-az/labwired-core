@@ -38,6 +38,7 @@ pub mod ntc_thermistor;
 pub mod pca9685;
 pub mod pcd8544;
 pub mod potentiometer;
+pub mod rotary_encoder;
 pub mod scd41;
 pub mod sensirion;
 pub mod servo;

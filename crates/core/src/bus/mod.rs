@@ -305,6 +305,12 @@ pub struct SystemBus {
     /// drives the wired-AND pad level onto the pin's input register, touching
     /// the bus only on a transition. Empty by default -> zero cost.
     pub dht22: Vec<crate::peripherals::components::dht22::Dht22>,
+    /// Incremental rotary encoders wired to CLK/DT GPIO input pins. A cheap
+    /// per-tick pass (`service_rotary_encoders`) walks each encoder's target
+    /// position through the quadrature Gray sequence, driving CLK/DT input
+    /// registers and touching the bus only on a transition. Empty by default →
+    /// zero cost.
+    pub rotary_encoders: Vec<crate::peripherals::components::rotary_encoder::RotaryEncoder>,
     /// TM1637 4-digit 7-segment displays bit-banged over two GPIO lines. Each is
     /// driven by the CLK/DIO GPIO write-hook (`maybe_clock_tm1637`), which feeds
     /// line transitions to the display's protocol state machine. Purely
