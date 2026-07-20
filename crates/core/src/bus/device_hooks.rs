@@ -182,8 +182,7 @@ impl SystemBus {
     /// transition-only IDR write as [`drive_dht22_line`](Self::drive_dht22_line).
     fn drive_rotary_encoder(&mut self, i: usize) {
         let now = self.current_cycle;
-        let ((clk_high, dt_high), (clk_changed, dt_changed)) =
-            self.rotary_encoders[i].service(now);
+        let ((clk_high, dt_high), (clk_changed, dt_changed)) = self.rotary_encoders[i].service(now);
         if clk_changed {
             let addr = self.rotary_encoders[i].clk_idr_addr;
             let bit = self.rotary_encoders[i].clk_bit;

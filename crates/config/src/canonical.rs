@@ -2236,8 +2236,16 @@ board_io:
             ("ultrasonic", FIXTURE_ULTRASONIC, EXPECTED_ULTRASONIC),
             ("dht22", FIXTURE_DHT22, EXPECTED_DHT22),
             ("rotary", FIXTURE_ROTARY, EXPECTED_ROTARY),
-            ("rotary-esp32c3", FIXTURE_ROTARY_ESP32C3, EXPECTED_ROTARY_ESP32C3),
-            ("rotary-sw-only", FIXTURE_ROTARY_SW_ONLY, EXPECTED_ROTARY_SW_ONLY),
+            (
+                "rotary-esp32c3",
+                FIXTURE_ROTARY_ESP32C3,
+                EXPECTED_ROTARY_ESP32C3,
+            ),
+            (
+                "rotary-sw-only",
+                FIXTURE_ROTARY_SW_ONLY,
+                EXPECTED_ROTARY_SW_ONLY,
+            ),
             ("dht22-attrs", FIXTURE_DHT22_ATTRS, EXPECTED_DHT22_ATTRS),
             (
                 "dht22-esp32c3",

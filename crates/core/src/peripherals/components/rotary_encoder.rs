@@ -165,9 +165,14 @@ impl RotaryEncoder {
             self.last_step_cycle = now;
         }
         let interval = self.edge_interval_cycles();
-        while self.phase != self.target_phase && now.saturating_sub(self.last_step_cycle) >= interval
+        while self.phase != self.target_phase
+            && now.saturating_sub(self.last_step_cycle) >= interval
         {
-            self.phase += if self.target_phase > self.phase { 1 } else { -1 };
+            self.phase += if self.target_phase > self.phase {
+                1
+            } else {
+                -1
+            };
             self.last_step_cycle = self.last_step_cycle.saturating_add(interval);
         }
         if self.phase == self.target_phase {
@@ -278,7 +283,11 @@ mod tests {
         e.set_position_detents(1);
         e.service(0);
         // Half an interval later: still at rest, no phase change.
-        assert_eq!(e.service(step / 2).0, (true, true), "no edge before interval");
+        assert_eq!(
+            e.service(step / 2).0,
+            (true, true),
+            "no edge before interval"
+        );
         assert_eq!(e.service(step).0, (false, true), "edge exactly at interval");
     }
 
@@ -320,7 +329,10 @@ mod tests {
         assert_eq!(e.target_phase, 3 * PHASES_PER_DETENT);
         e.set_input("position", -2.0).unwrap();
         assert_eq!(e.target_phase, -2 * PHASES_PER_DETENT);
-        assert!(e.set_input("angle", 1.0).is_err(), "unknown channel rejected");
+        assert!(
+            e.set_input("angle", 1.0).is_err(),
+            "unknown channel rejected"
+        );
     }
 
     /// End-to-end through the bus with a standard firmware-style quadrature
