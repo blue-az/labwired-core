@@ -821,7 +821,29 @@ boards:
     # no register read/write path changed. Reset values, register layout and
     # byte paths are unchanged; the mmio/conformance diffs pass unchanged.
     # Drift is the shared-file commit date only. No live re-capture.
-    drift_ack: 2026-07-19
+    # 2026-07-20: RMT — RMTMEM is now backed by real memory. The parent maps a
+    # 0x1000 window, so offsets 0x400..0xA00 already routed into the peripheral
+    # and fell through the read/write catch-alls, silently DISCARDING every
+    # ESP-IDF rmt_tx symbol write. Those writes now persist in a flat [u32;384]
+    # store that the APB CHnDATA FIFO port and direct RMTMEM access alias, as
+    # silicon does. Purely additive for anything previously observable: no
+    # existing register's behaviour changed and TX_START still latches
+    # CHn_TX_END synchronously (no waveform playback, no GPIO, no clock change).
+    # One reset value DID change: TX CONF0 was 0x0017_0200, a nibble
+    # transposition of 0x0071_0200 that contradicted its own comment on two
+    # fields (it decoded to MEM_SIZE=7 and left CARRIER_OUT_LV/bit22 clear,
+    # while the comment named MEM_SIZE=1 and CARRIER_OUT_LV=1). Harmless while
+    # MEM_SIZE was unused; load-bearing once MEM_SIZE drives windowing, where it
+    # gave every TX channel a 336-word window at reset and let a CH0 FIFO burst
+    # overwrite channels 1-6. This is NOT covered by the silicon anchor: the
+    # 2026-07-15 capture recorded RESET-STATE windows, and the RMT block is
+    # clock-gated at reset so silicon reads 0 across 0x60016000..0x600160ff
+    # (chip_conformance excludes exactly that range on that basis) — the
+    # constant is only observable after the clock is ungated. Verified this
+    # session, not asserted: hw-oracle esp32s3_reset_values_match_silicon passes
+    # (1 passed, 0 filtered) and chip_conformance_ratchet passes, both unchanged.
+    # No S3 board attached; no live re-capture warranted.
+    drift_ack: 2026-07-20
     models:
       - crates/core/src/peripherals/esp32s3
       - crates/core/src/peripherals/esp_xtensa_common
