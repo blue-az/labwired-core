@@ -195,6 +195,42 @@ impl SystemBus {
         }
     }
 
+    /// Per-tick pass for 4×4 matrix keypads: read each keypad's four ROW output
+    /// (ODR) bits, recompute the four COLUMN levels for the pressed key, and
+    /// drive the COLUMN input (IDR) registers. No-op when none are wired. Like
+    /// the encoder/DHT22 passes it only touches the bus on a level transition.
+    pub(crate) fn service_keypads(&mut self) {
+        if self.keypads.is_empty() {
+            return;
+        }
+        for i in 0..self.keypads.len() {
+            self.drive_keypad(i);
+        }
+    }
+
+    /// Drive keypad `i`'s COLUMN input registers to the levels its pressed key
+    /// implies for the ROW output levels the firmware is currently driving,
+    /// touching the bus only on a transition. Reads the four ROW ODR bits (an
+    /// unreadable one defaults HIGH — an undriven row is not selecting anything),
+    /// then reuses [`drive_idr_bit`](Self::drive_idr_bit) for each changed
+    /// column — the same transition-only IDR write the rotary encoder uses.
+    fn drive_keypad(&mut self, i: usize) {
+        use crate::peripherals::components::keypad::{COLS, ROWS};
+        let row_outputs: [bool; ROWS] = std::array::from_fn(|r| {
+            let (addr, bit) = self.keypads[i].row_odr[r];
+            self.read_u32(addr)
+                .map(|v| (v >> bit) & 1 != 0)
+                .unwrap_or(true)
+        });
+        let cols = self.keypads[i].service(row_outputs);
+        for (c, &(high, changed)) in cols.iter().enumerate().take(COLS) {
+            if changed {
+                let (addr, bit) = self.keypads[i].col_idr[c];
+                self.drive_idr_bit(addr, bit, high);
+            }
+        }
+    }
+
     /// Set or clear a single bit of a GPIO input (IDR) register, writing back
     /// only when the bit actually changes. Shared by the encoder's two channels.
     fn drive_idr_bit(&mut self, idr_addr: u64, bit: u8, high: bool) {

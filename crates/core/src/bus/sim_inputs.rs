@@ -153,6 +153,12 @@ impl SystemBus {
                 return;
             }
         }
+        for keypad in self.keypads.iter_mut() {
+            let id = keypad.id.clone();
+            if f(&id, keypad) {
+                return;
+            }
+        }
         for analog in self.analog_inputs.iter_mut() {
             let connection = analog.connection.clone();
             if f(&connection, analog.source.as_mut()) {
