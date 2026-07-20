@@ -485,6 +485,7 @@ impl SystemBus {
                 self.service_hcsr04();
             }
             self.service_dht22();
+            self.service_rotary_encoders();
             self.service_can_diagnostic_testers();
             self.service_can_uds_testers();
             self.service_can_log_players();

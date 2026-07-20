@@ -290,6 +290,13 @@ impl CanonicalConfig {
                     push(ext, bio);
                 }
             }
+            // 1b1. Rotary encoder: CLK/DT quadrature device + SW button.
+            for part in non_mcu() {
+                if part.r#type == "rotary-encoder" {
+                    let (ext, bio) = emit_rotary_encoder(&board, &wires, mcu_id, part);
+                    push(ext, bio);
+                }
+            }
             // 1b. Direct-drive seven-segment (nine GPIO pins).
             for part in non_mcu() {
                 if part.r#type == "seven-segment" {
@@ -1018,6 +1025,54 @@ fn emit_dht22(
     (Some(ext), None)
 }
 
+/// Emit the `external_devices` + `board_io` fragments for a `rotary-encoder`
+/// (port of `emitRotaryEncoder`).
+///
+/// The quadrature knob's CLK/DT channels can't be plain `board_io` buttons: a
+/// button hands firmware one static level, but a decoder needs the two channels
+/// to walk a phase-shifted Gray sequence. So CLK/DT become a dedicated bus
+/// device (driven through the standard `position` stimulus), exactly as the
+/// DHT22's data pin does. The push switch (SW) IS a plain momentary button, so
+/// it is emitted as an ordinary `board_io` input alongside the device.
+///
+/// CLK and DT are both required (an unwired one emits no device); SW is optional
+/// (omitted when unwired). `cpu_hz` comes from [`sim_cpu_hz`] — the encoder times
+/// its own edge spacing off it, so it must be the firmware clock (see the DHT22
+/// note above), NOT the HC-SR04 echo-pacing override.
+fn emit_rotary_encoder(
+    board: &str,
+    wires: &[Wire],
+    mcu_id: &str,
+    part: &CanonicalPart,
+) -> (Option<String>, Option<String>) {
+    let clk = mcu_pin_for_part_pin(wires, mcu_id, &part.id, "CLK");
+    let dt = mcu_pin_for_part_pin(wires, mcu_id, &part.id, "DT");
+
+    let ext = match (clk, dt) {
+        (Some(clk), Some(dt)) => {
+            let cpu_hz = sim_cpu_hz(board);
+            Some(format!(
+                "  - id: \"{}\"\n    type: \"rotary-encoder\"\n    connection: \"gpio\"\n    config:\n      clk_pin: \"{clk}\"\n      dt_pin: \"{dt}\"\n      cpu_hz: {cpu_hz}",
+                part.id
+            ))
+        }
+        _ => None,
+    };
+
+    // SW push switch → a plain board_io button (same shape emit_board_io_from_wires
+    // gives any button), driven by the standard set_board_io_input host toggle.
+    let sw_bio = mcu_pin_for_part_pin(wires, mcu_id, &part.id, "SW")
+        .and_then(parse_mcu_pin)
+        .map(|(peripheral, pin)| {
+            format!(
+                "  - id: \"{}\"\n    kind: \"button\"\n    peripheral: \"{peripheral}\"\n    pin: {pin}\n    signal: \"input\"\n    active_high: true",
+                part.id
+            )
+        });
+
+    (ext, sw_bio)
+}
+
 /// Emit the `external_devices` fragment for a direct-drive `seven-segment` part
 /// (port of `emitSevenSegment`).
 ///
@@ -1241,6 +1296,7 @@ fn emit_board_io_from_wires(
     const SKIP_TYPES: &[&str] = &[
         "ultrasonic",
         "dht22",
+        "rotary-encoder",
         "pcd8544",
         "sn74hc165",
         "iolink-master",
@@ -1814,6 +1870,96 @@ board_io:
   []
 "#;
 
+    /// Full rotary encoder on STM32: CLK/DT become the quadrature device, SW
+    /// becomes a plain board_io button.
+    const FIXTURE_ROTARY: &str = r#"{
+      "version": 1,
+      "parts": [
+        { "id": "mcu", "type": "nucleo-f401re" },
+        { "id": "enc", "type": "rotary-encoder" }
+      ],
+      "connections": [
+        ["mcu:PA0", "enc:CLK"],
+        ["mcu:PA1", "enc:DT"],
+        ["mcu:PA2", "enc:SW"]
+      ]
+    }"#;
+
+    const EXPECTED_ROTARY: &str = r#"name: "playground-board"
+chip: "inline"
+external_devices:
+  - id: "enc"
+    type: "rotary-encoder"
+    connection: "gpio"
+    config:
+      clk_pin: "PA0"
+      dt_pin: "PA1"
+      cpu_hz: 80000000
+board_io:
+  - id: "enc"
+    kind: "button"
+    peripheral: "gpioa"
+    pin: 2
+    signal: "input"
+    active_high: true
+"#;
+
+    /// esp32c3 encoder with no push switch: exercises the top-level 160 MHz
+    /// pacing line and the CLK/DT-only path (empty board_io).
+    const FIXTURE_ROTARY_ESP32C3: &str = r#"{
+      "version": 1,
+      "parts": [
+        { "id": "mcu", "type": "esp32-c3-supermini" },
+        { "id": "enc", "type": "rotary-encoder" }
+      ],
+      "connections": [
+        ["mcu:GPIO2", "enc:CLK"],
+        ["mcu:GPIO3", "enc:DT"]
+      ]
+    }"#;
+
+    const EXPECTED_ROTARY_ESP32C3: &str = r#"name: "playground-board"
+chip: "inline"
+cpu_hz: 160_000_000
+external_devices:
+  - id: "enc"
+    type: "rotary-encoder"
+    connection: "gpio"
+    config:
+      clk_pin: "GPIO2"
+      dt_pin: "GPIO3"
+      cpu_hz: 160000000
+board_io:
+  []
+"#;
+
+    /// Missing CLK: no quadrature device is emitted (CLK and DT are both
+    /// required), but a wired SW still yields its button.
+    const FIXTURE_ROTARY_SW_ONLY: &str = r#"{
+      "version": 1,
+      "parts": [
+        { "id": "mcu", "type": "nucleo-f401re" },
+        { "id": "enc", "type": "rotary-encoder" }
+      ],
+      "connections": [
+        ["mcu:PA1", "enc:DT"],
+        ["mcu:PA2", "enc:SW"]
+      ]
+    }"#;
+
+    const EXPECTED_ROTARY_SW_ONLY: &str = r#"name: "playground-board"
+chip: "inline"
+external_devices:
+  []
+board_io:
+  - id: "enc"
+    kind: "button"
+    peripheral: "gpioa"
+    pin: 2
+    signal: "input"
+    active_high: true
+"#;
+
     const FIXTURE_PCD8544: &str = r#"{
       "version": 1,
       "parts": [
@@ -2089,6 +2235,9 @@ board_io:
             ("spi-ssd1680", FIXTURE_SPI_SSD1680, EXPECTED_SPI_SSD1680),
             ("ultrasonic", FIXTURE_ULTRASONIC, EXPECTED_ULTRASONIC),
             ("dht22", FIXTURE_DHT22, EXPECTED_DHT22),
+            ("rotary", FIXTURE_ROTARY, EXPECTED_ROTARY),
+            ("rotary-esp32c3", FIXTURE_ROTARY_ESP32C3, EXPECTED_ROTARY_ESP32C3),
+            ("rotary-sw-only", FIXTURE_ROTARY_SW_ONLY, EXPECTED_ROTARY_SW_ONLY),
             ("dht22-attrs", FIXTURE_DHT22_ATTRS, EXPECTED_DHT22_ATTRS),
             (
                 "dht22-esp32c3",
