@@ -68,6 +68,26 @@ peripherals:
     size: "4KB"
     irq: 260
 
+  # ── TWIM (I²C master) ──────────────────────────────────────────────────
+  # Same personality caveat as UARTE20: uart21/spi21/twi21 are one instance at
+  # 0x500C7000, and uart22/spi22/twi22 are one instance at 0x500C8000. The TWIM
+  # personality is mapped for both, because a sensor-carrying board needs I²C
+  # far more than it needs a third and fourth UART. Enabling a UARTE model at
+  # either base instead would collide.
+  #
+  # EasyDMA TWIM is register-compatible with nRF52, so the nRF52 TWIM model is
+  # reused at these bases.
+  - id: "twi21"
+    type: "nrf52840_twim"
+    base_address: 0x500C7000
+    size: "4KB"
+    irq: 199
+  - id: "twi22"
+    type: "nrf52840_twim"
+    base_address: 0x500C8000
+    size: "4KB"
+    irq: 200
+
   # ── TIMER ──────────────────────────────────────────────────────────────
   # cc-num differs per instance on this family (DT `cc-num`): TIMER10 has 8,
   # TIMER20..22 have 6. The nRF52 model defaults to 4, so both are explicit.
@@ -168,16 +188,39 @@ peripherals:
     base_address: 0x5010C000
     size: "4KB"
 
-  # ── Benign stub windows ────────────────────────────────────────────────
-  # GRTC — the Global RTC replaces RTC0/RTC1 on this family and is what Zephyr
-  # drives the kernel tick from. A stub is sufficient for a bare-metal boot
-  # that does not use it, and is NOT sufficient for a Zephyr boot: the tick
-  # init polls SYSCOUNTER. Promoting this to a behavioural model is the next
-  # step for Zephyr support, and is called out in docs/boards/nrf54l15.md.
+  # ── GRTC ───────────────────────────────────────────────────────────────
+  # The Global RTC replaces RTC0/RTC1 on this family and is what Zephyr drives
+  # the kernel tick from, so it is a real behavioural model rather than a stub.
+  #
+  # Modelled: the free-running 52-bit SYSCOUNTER at 1 MHz (nrfx
+  # NRF_GRTC_SYSCOUNTER_MAIN_FREQUENCY_HZ), its four per-domain register views,
+  # the SYSCOUNTERL-read-latches-SYSCOUNTERH anti-tearing pair, TASKS_START /
+  # STOP / CLEAR / CAPTURE[n], MODE.SYSCOUNTEREN (the enable nrfx actually
+  # uses), the 12 CC channels with CCL/CCH/CCADD/CCEN, EVENTS_COMPARE[n], and
+  # all four INTEN/INTENSET/INTENCLR/INTPEND groups.
+  #
+  # Not modelled: the low-frequency timer (RTCOUNTER/RTCOMPARE), the PWM block,
+  # CLKOUT generation, DPPI SUBSCRIBE/PUBLISH routing, and the sleep/wake
+  # arbitration behind TIMEOUT / WAKETIME / SYSCOUNTER.ACTIVE. Those registers
+  # accept writes and read back, and STATUS reads READY, so a driver's
+  # configure-then-verify pass makes progress rather than hanging.
+  #
+  # cc-num = 12 comes from the Zephyr DT node `grtc@e2000` and matches the MDK
+  # `GRTC_CC_MaxCount`.
+  #
+  # IRQ: the MDK IRQn table gives GRTC_0..GRTC_3 = 226..229. The Zephyr DT node
+  # carries no `interrupts` property (the per-CPU group is picked by
+  # GRTC_IRQ_GROUP in the nrfx config), so GRTC_0 is mapped here and the model
+  # collapses all four interrupt groups onto it. Needs bench confirmation.
   - id: "grtc"
-    type: "nrf54l_grtc_stub"
+    type: "nrf54l_grtc"
     base_address: 0x500E2000
     size: "4KB"
+    irq: 226
+    config:
+      num_cc: 12
+
+  # ── Benign stub windows ────────────────────────────────────────────────
 
   # CLOCK / POWER share peripheral id 0x10E000. The nRF54L clock block is not
   # register-compatible with the nRF52 CLOCK (different oscillator control), so

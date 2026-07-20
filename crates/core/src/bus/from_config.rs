@@ -182,7 +182,18 @@ impl SystemBus {
                 // so mark them here so the kit registry pass below does not
                 // try to attach them a second time (which would fail because
                 // Nrf52SerialInstance is not an I2c/Esp32c3I2c).
-                if canonical_type == "nrf52_serial_instance" {
+                //
+                // The standalone TWIM model does the same thing in its own
+                // factory arm and needs the same bookkeeping. Without it a
+                // device on a TWIM bus is attached twice when its type is in
+                // the kit registry (mpu6050), and emits a bogus "Unsupported
+                // external device" WARN when it is not (max30102, cap1188,
+                // drv2605) — despite having been attached correctly. Found
+                // while bringing up the nRF54L15 smart-ring system.
+                if canonical_type == "nrf52_serial_instance"
+                    || canonical_type == "nrf52840_twim"
+                    || canonical_type == "nrf52_twim"
+                {
                     for ext in &manifest.external_devices {
                         if ext.connection == p_cfg.id {
                             attached_i2c_ext_ids.insert(ext.id.as_str());
