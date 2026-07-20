@@ -119,18 +119,24 @@ fn peripherals_mapped_at_secure_alias() {
     let mut bus = nrf54l15_bus();
 
     // A UARTE write/readback proves the window is mapped and the model is live.
-    bus.write_u32(UARTE20 + UARTE_ENABLE, UARTE_ENABLE_UARTE).unwrap();
+    bus.write_u32(UARTE20 + UARTE_ENABLE, UARTE_ENABLE_UARTE)
+        .unwrap();
     assert_eq!(
         bus.read_u32(UARTE20 + UARTE_ENABLE).unwrap(),
         UARTE_ENABLE_UARTE,
         "UARTE20 must be reachable at the secure alias 0x500C_6000"
     );
 
-    bus.write_u32(UARTE30 + UARTE_ENABLE, UARTE_ENABLE_UARTE).unwrap();
-    assert_eq!(bus.read_u32(UARTE30 + UARTE_ENABLE).unwrap(), UARTE_ENABLE_UARTE);
+    bus.write_u32(UARTE30 + UARTE_ENABLE, UARTE_ENABLE_UARTE)
+        .unwrap();
+    assert_eq!(
+        bus.read_u32(UARTE30 + UARTE_ENABLE).unwrap(),
+        UARTE_ENABLE_UARTE
+    );
 
     // BAUDRATE and PSEL round-trip (the console init sequence).
-    bus.write_u32(UARTE20 + UARTE_BAUDRATE, 0x01D7_E000).unwrap();
+    bus.write_u32(UARTE20 + UARTE_BAUDRATE, 0x01D7_E000)
+        .unwrap();
     assert_eq!(bus.read_u32(UARTE20 + UARTE_BAUDRATE).unwrap(), 0x01D7_E000);
     bus.write_u32(UARTE20 + UARTE_PSEL_TXD, 0x24).unwrap(); // P1.04
     assert_eq!(bus.read_u32(UARTE20 + UARTE_PSEL_TXD).unwrap(), 0x24);
@@ -209,8 +215,8 @@ fn timer_and_temp_and_grtc_windows_are_reachable() {
 /// its LEDs cannot be driven either.
 #[test]
 fn nrf5340_gpio_base_follows_the_same_plus_0x500_rule() {
-    let path =
-        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../configs/chips/nrf5340.yaml");
+    let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../configs/chips/nrf5340.yaml");
     let chip = ChipDescriptor::from_file(&path).expect("load nrf5340 chip");
     let gpio0 = chip
         .peripherals
@@ -330,7 +336,8 @@ fn uarte_zero_length_tx_still_raises_txstopped() {
     bus.write_u32(UARTE20 + UARTE_DMA_TX_PTR, 0x2000_0100)
         .unwrap();
     bus.write_u32(UARTE20 + UARTE_DMA_TX_MAXCNT, 0).unwrap();
-    bus.write_u32(UARTE20 + UARTE_TASKS_DMA_TX_START, 1).unwrap();
+    bus.write_u32(UARTE20 + UARTE_TASKS_DMA_TX_START, 1)
+        .unwrap();
 
     bus.tick_peripherals_fully();
 

@@ -222,7 +222,9 @@ impl crate::Peripheral for Nrf54lClock {
             OFF_EVENTS_PLLSTARTED if value == 0 => self.events_pllstarted = 0,
             OFF_EVENTS_LFCLKSTARTED if value == 0 => self.events_lfclkstarted = 0,
             OFF_EVENTS_DONE if value == 0 => self.events_done = 0,
-            OFF_EVENTS_XOSTARTED | OFF_EVENTS_PLLSTARTED | OFF_EVENTS_LFCLKSTARTED
+            OFF_EVENTS_XOSTARTED
+            | OFF_EVENTS_PLLSTARTED
+            | OFF_EVENTS_LFCLKSTARTED
             | OFF_EVENTS_DONE => {}
 
             OFF_INTEN => self.inten = value,

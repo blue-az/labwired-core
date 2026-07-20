@@ -260,8 +260,13 @@ impl crate::Peripheral for Nrf54lTwim {
 
     fn read_u32(&self, offset: u64) -> SimResult<u32> {
         Ok(match offset {
-            OFF_TASKS_STOP | OFF_TASKS_SUSPEND | OFF_TASKS_RESUME | OFF_TASKS_DMA_RX_START
-            | OFF_TASKS_DMA_RX_STOP | OFF_TASKS_DMA_TX_START | OFF_TASKS_DMA_TX_STOP => 0,
+            OFF_TASKS_STOP
+            | OFF_TASKS_SUSPEND
+            | OFF_TASKS_RESUME
+            | OFF_TASKS_DMA_RX_START
+            | OFF_TASKS_DMA_RX_STOP
+            | OFF_TASKS_DMA_TX_START
+            | OFF_TASKS_DMA_TX_STOP => 0,
 
             OFF_EVENTS_STOPPED => self.events_stopped,
             OFF_EVENTS_ERROR => self.events_error,
@@ -298,8 +303,13 @@ impl crate::Peripheral for Nrf54lTwim {
             }
             OFF_TASKS_SUSPEND if value & 1 != 0 => self.events_suspended = 1,
             OFF_TASKS_RESUME if value & 1 != 0 => self.events_suspended = 0,
-            OFF_TASKS_STOP | OFF_TASKS_SUSPEND | OFF_TASKS_RESUME | OFF_TASKS_DMA_RX_START
-            | OFF_TASKS_DMA_RX_STOP | OFF_TASKS_DMA_TX_START | OFF_TASKS_DMA_TX_STOP => {}
+            OFF_TASKS_STOP
+            | OFF_TASKS_SUSPEND
+            | OFF_TASKS_RESUME
+            | OFF_TASKS_DMA_RX_START
+            | OFF_TASKS_DMA_RX_STOP
+            | OFF_TASKS_DMA_TX_START
+            | OFF_TASKS_DMA_TX_STOP => {}
 
             // EVENTS: SW write-1 ignored, write-0 clears.
             OFF_EVENTS_STOPPED if value == 0 => self.events_stopped = 0,

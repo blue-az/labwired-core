@@ -182,7 +182,6 @@ impl Nrf52Uarte {
 }
 
 impl Peripheral for Nrf52Uarte {
-
     /// Not in the per-cycle walk: this model overrides neither `tick()` nor
     /// `tick_elapsed()`, so every visit ran the default no-op and returned a
     /// default `PeripheralTickResult`. Skipping it removes dispatch, never an

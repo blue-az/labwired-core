@@ -37,7 +37,6 @@ impl Nrf52Egu {
 }
 
 impl Peripheral for Nrf52Egu {
-
     /// Not in the per-cycle walk while idle. `tick()` above early-returns a
     /// default `PeripheralTickResult` in exactly this state, so skipping the
     /// visit removes dispatch and never an effect — byte-identical.

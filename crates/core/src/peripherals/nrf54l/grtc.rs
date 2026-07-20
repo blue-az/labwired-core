@@ -730,7 +730,10 @@ mod tests {
         g.set_counter(0xFFFF_FFFF);
 
         g.read_u32(SYSCOUNTERL).unwrap();
-        assert_eq!(g.read_u32(SYSCOUNTERH).unwrap() & SYSCOUNTERH_OVERFLOW_BIT, 0);
+        assert_eq!(
+            g.read_u32(SYSCOUNTERH).unwrap() & SYSCOUNTERH_OVERFLOW_BIT,
+            0
+        );
 
         g.tick(); // rolls into the high word
         g.read_u32(SYSCOUNTERL).unwrap();
@@ -876,7 +879,8 @@ mod tests {
         g.write_u32(cc_reg(0, 0x8), 50).unwrap();
         assert_eq!(g.read_u32(cc_reg(0, 0x0)).unwrap(), 150);
         // REFERENCE=CC (bit 31 set): CC[0] += 25.
-        g.write_u32(cc_reg(0, 0x8), CCADD_REFERENCE_CC | 25).unwrap();
+        g.write_u32(cc_reg(0, 0x8), CCADD_REFERENCE_CC | 25)
+            .unwrap();
         assert_eq!(g.read_u32(cc_reg(0, 0x0)).unwrap(), 175);
         // CCADD is write-only.
         assert_eq!(g.read_u32(cc_reg(0, 0x8)).unwrap(), 0);
@@ -970,7 +974,16 @@ mod tests {
     #[test]
     fn unimplemented_offsets_read_zero_without_faulting() {
         let g = Nrf54lGrtc::new();
-        for off in [0x030u64, 0x0C0, 0x160, 0x1F0, 0x204, 0x400 + 0x40, 0x500, 0xFFC] {
+        for off in [
+            0x030u64,
+            0x0C0,
+            0x160,
+            0x1F0,
+            0x204,
+            0x400 + 0x40,
+            0x500,
+            0xFFC,
+        ] {
             assert_eq!(g.read_u32(off).unwrap(), 0, "offset {off:#05x}");
         }
     }
