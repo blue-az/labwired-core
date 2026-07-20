@@ -50,6 +50,12 @@
 //! The peripheral notifies registered observers synchronously on every
 //! pin transition. Observers receive `(pin, from, to, sim_cycle)` and
 //! must not panic.
+//!
+//! Both the firmware OUT-register write path (`apply_out`) and the
+//! peripheral-driven `drive_pad_output` seam (RMT Stage 1 — what a timed
+//! WS2812/RMT playback engine will call) funnel through the SAME `apply_out`
+//! chokepoint, so an observer captures pad-level edges identically no matter
+//! which source flips the pad.
 
 use crate::{Peripheral, PeripheralTickResult, SimResult};
 use std::sync::Arc;
@@ -187,6 +193,35 @@ impl Esp32s3Gpio {
 
     pub fn add_observer(&mut self, obs: Arc<dyn GpioObserver>) {
         self.observers.push(obs);
+    }
+
+    /// Drive output pad `pin` (0..=31) to `level` from a *peripheral* source
+    /// (e.g. the RMT / LED-strip output matrix bit-banging a WS2812 line),
+    /// routing the transition through the SAME `apply_out` chokepoint — and
+    /// therefore the same [`GpioObserver`] notification — a firmware OUT-register
+    /// write takes. This is the RMT-Stage-1 output seam: a timed playback engine
+    /// (Stage 2) calls this at each scheduled edge cycle and the observer sees
+    /// `(pin, from, to, sim_cycle)` exactly as it would for a CPU-driven toggle.
+    ///
+    /// Costs nothing when `level` leaves the pad unchanged (`apply_out`
+    /// early-outs on `diff == 0`). Returns `false` for out-of-range pins.
+    ///
+    /// NOTE: this updates the OUT latch bit for `pin`, so a subsequent
+    /// `read_gpio_output`/`read_gpio_pad` reflects the peripheral-driven level.
+    /// It does not touch ENABLE — Stage 1 assumes the pad is already configured
+    /// as an output; GPIO-matrix `FUNCn_OUT_SEL` routing stays unmodeled.
+    pub fn drive_pad_output(&mut self, pin: u8, level: bool) -> bool {
+        if pin >= 32 {
+            return false;
+        }
+        let mask = 1u32 << pin;
+        let new_out = if level {
+            self.out | mask
+        } else {
+            self.out & !mask
+        };
+        self.apply_out(new_out);
+        true
     }
 
     /// Set the input level on `pin` (0..=31). Used by tests / future
@@ -702,6 +737,115 @@ mod tests {
             write_u32(&mut g, off, 0xFFFF_FFFF);
             assert_eq!(read_u32(&g, off), 0, "RO reg at {off:#x}");
         }
+    }
+
+    // ── RMT Stage 1: output pad edges reach the observer ─────────────────
+
+    /// Firmware-path proof: drive an output pad high→low→high the way firmware
+    /// would (byte writes to OUT_W1TS / OUT_W1TC, exactly the bus write path),
+    /// ticking the peripheral between edges, and assert the observer captured
+    /// the EXACT edge sequence WITH correct per-edge timing (sim_cycle stamps).
+    #[test]
+    fn output_register_edges_reach_observer_with_timing() {
+        let mut g = Esp32s3Gpio::new();
+        let obs = Arc::new(TestObserver::default());
+        g.add_observer(obs.clone());
+
+        // cycle 0: nothing. Advance to cycle 10, then rising edge on pin 4.
+        for _ in 0..10 {
+            g.tick();
+        }
+        write_u32(&mut g, OUT_W1TS, 1 << 4); // pin 4: 0->1 @ cycle 10
+
+        // Advance to cycle 25, falling edge.
+        for _ in 0..15 {
+            g.tick();
+        }
+        write_u32(&mut g, OUT_W1TC, 1 << 4); // pin 4: 1->0 @ cycle 25
+
+        // Advance to cycle 40, rising again.
+        for _ in 0..15 {
+            g.tick();
+        }
+        write_u32(&mut g, OUT_W1TS, 1 << 4); // pin 4: 0->1 @ cycle 40
+
+        let events = obs.events.lock().unwrap();
+        assert_eq!(
+            *events,
+            vec![
+                (4, false, true, 10),
+                (4, true, false, 25),
+                (4, false, true, 40)
+            ],
+            "exact pin-4 edge sequence with timing; got {events:?}"
+        );
+    }
+
+    /// Peripheral-path proof (RMT Stage 1 seam): a `drive_pad_output` caller —
+    /// standing in for a future timed RMT playback engine bit-banging a WS2812
+    /// line — flips pad 6 through a short bit pattern, and the SAME observer
+    /// mechanism captures the exact edge sequence with timing.
+    #[test]
+    fn drive_pad_output_edges_reach_observer_with_timing() {
+        let mut g = Esp32s3Gpio::new();
+        let obs = Arc::new(TestObserver::default());
+        g.add_observer(obs.clone());
+
+        // A 3-bit "waveform" on pin 6 at cycles 5, 8, 12.
+        for _ in 0..5 {
+            g.tick();
+        }
+        assert!(g.drive_pad_output(6, true)); // 0->1 @ 5
+        for _ in 0..3 {
+            g.tick();
+        }
+        assert!(g.drive_pad_output(6, false)); // 1->0 @ 8
+        for _ in 0..4 {
+            g.tick();
+        }
+        assert!(g.drive_pad_output(6, true)); // 0->1 @ 12
+
+        // Pad state is observable back through the output accessor.
+        assert_eq!(g.read_gpio_output(6), Some(true));
+
+        let events = obs.events.lock().unwrap();
+        assert_eq!(
+            *events,
+            vec![
+                (6, false, true, 5),
+                (6, true, false, 8),
+                (6, false, true, 12)
+            ],
+            "exact pin-6 edge sequence with timing; got {events:?}"
+        );
+    }
+
+    /// The peripheral seam must not double-fire on a redundant level: driving a
+    /// pad to the level it already holds is a no-op (WS2812 encoders emit long
+    /// same-level runs — those must not spam observers).
+    #[test]
+    fn drive_pad_output_same_level_does_not_fire() {
+        let mut g = Esp32s3Gpio::new();
+        g.drive_pad_output(3, true);
+        let obs = Arc::new(TestObserver::default());
+        g.add_observer(obs.clone());
+        assert!(g.drive_pad_output(3, true)); // already high
+        assert!(
+            obs.events.lock().unwrap().is_empty(),
+            "no observer event for an unchanged pad level"
+        );
+    }
+
+    /// Out-of-range pins are rejected without touching state or observers.
+    #[test]
+    fn drive_pad_output_rejects_out_of_range_pin() {
+        let mut g = Esp32s3Gpio::new();
+        let obs = Arc::new(TestObserver::default());
+        g.add_observer(obs.clone());
+        assert!(!g.drive_pad_output(32, true));
+        assert!(!g.drive_pad_output(200, false));
+        assert!(obs.events.lock().unwrap().is_empty());
+        assert_eq!(g.out, 0, "rejected drive must not alter OUT");
     }
 
     #[test]
