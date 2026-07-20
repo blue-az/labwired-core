@@ -311,6 +311,12 @@ pub struct SystemBus {
     /// registers and touching the bus only on a transition. Empty by default →
     /// zero cost.
     pub rotary_encoders: Vec<crate::peripherals::components::rotary_encoder::RotaryEncoder>,
+    /// 4×4 matrix keypads wired to four ROW output pins + four COLUMN input
+    /// pins. A cheap per-tick pass (`service_keypads`) reads the row ODR bits,
+    /// recomputes the column levels for the pressed key, and drives the COLUMN
+    /// input registers, touching the bus only on a transition. Empty by default
+    /// → zero cost.
+    pub keypads: Vec<crate::peripherals::components::keypad::Keypad>,
     /// TM1637 4-digit 7-segment displays bit-banged over two GPIO lines. Each is
     /// driven by the CLK/DIO GPIO write-hook (`maybe_clock_tm1637`), which feeds
     /// line transitions to the display's protocol state machine. Purely
