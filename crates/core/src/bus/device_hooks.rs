@@ -146,94 +146,39 @@ impl SystemBus {
         }
     }
 
-    /// Service all DHT22 sensors for one tick: compute each sensor's pad level
-    /// from its (write-hook-armed) transition schedule and drive it onto the
-    /// data pin's input register, touching the bus only on a level transition.
-    /// The host side is NOT polled here — `maybe_start_dht22` observes it on the
-    /// GPIO write, which is cycle-exact (see `Machine::step`). No-op when no
-    /// sensors are wired.
+    /// Service every bus-resident GPIO-stimulus device (DHT22 / rotary encoder /
+    /// keypad — the [`BusResidentDevice`](crate::bus::BusResidentDevice)s) for
+    /// one tick, in registration order, driving each device's input-register
+    /// pins for `self.current_cycle`. Each device touches the bus only on a
+    /// level transition (via [`drive_idr_bit`](Self::drive_idr_bit)), so an idle
+    /// device costs no bus accesses. No-op when none are wired.
     ///
-    /// Exact mirror of [`service_hcsr04`](Self::service_hcsr04); the DHT22 is
-    /// the same shape of device (drives a pin the MCU samples as an input), so
-    /// it reuses the same drive mechanism rather than inventing a parallel one.
-    pub(crate) fn service_dht22(&mut self) {
-        if self.dht22.is_empty() {
+    /// The devices need `&mut self` (the bus) to reach register IO while they
+    /// themselves live in `self.gpio_devices`, so the list is `mem::take`-n out
+    /// for the pass and put back afterwards — nothing serviced here mutates
+    /// `gpio_devices`, so the swap is transparent.
+    ///
+    /// Replaces the former three separate passes (`service_dht22` /
+    /// `service_rotary_encoders` / `service_keypads`); the three device types
+    /// drive DISJOINT pins, so merging their passes into one insertion-ordered
+    /// pass leaves every register's final value unchanged. The HC-SR04 keeps its
+    /// own `service_hcsr04` because it also rides the event-scheduler path.
+    pub(crate) fn service_gpio_devices(&mut self) {
+        if self.gpio_devices.is_empty() {
             return;
         }
-        for i in 0..self.dht22.len() {
-            self.drive_dht22_line(i);
-        }
-    }
-
-    /// Per-tick pass for rotary encoders: advance each toward its target detent
-    /// and drive the CLK/DT input registers. No-op when none are wired. Like the
-    /// HC-SR04/DHT22 passes it only touches the bus on a level transition.
-    pub(crate) fn service_rotary_encoders(&mut self) {
-        if self.rotary_encoders.is_empty() {
-            return;
-        }
-        for i in 0..self.rotary_encoders.len() {
-            self.drive_rotary_encoder(i);
-        }
-    }
-
-    /// Advance encoder `i` to `self.current_cycle` and drive whichever of its
-    /// CLK/DT input-register bits changed. Two independent pins, same
-    /// transition-only IDR write as [`drive_dht22_line`](Self::drive_dht22_line).
-    fn drive_rotary_encoder(&mut self, i: usize) {
         let now = self.current_cycle;
-        let ((clk_high, dt_high), (clk_changed, dt_changed)) = self.rotary_encoders[i].service(now);
-        if clk_changed {
-            let addr = self.rotary_encoders[i].clk_idr_addr;
-            let bit = self.rotary_encoders[i].clk_bit;
-            self.drive_idr_bit(addr, bit, clk_high);
+        let mut devices = std::mem::take(&mut self.gpio_devices);
+        for device in &mut devices {
+            device.service(self, now);
         }
-        if dt_changed {
-            let addr = self.rotary_encoders[i].dt_idr_addr;
-            let bit = self.rotary_encoders[i].dt_bit;
-            self.drive_idr_bit(addr, bit, dt_high);
-        }
-    }
-
-    /// Per-tick pass for 4×4 matrix keypads: read each keypad's four ROW output
-    /// (ODR) bits, recompute the four COLUMN levels for the pressed key, and
-    /// drive the COLUMN input (IDR) registers. No-op when none are wired. Like
-    /// the encoder/DHT22 passes it only touches the bus on a level transition.
-    pub(crate) fn service_keypads(&mut self) {
-        if self.keypads.is_empty() {
-            return;
-        }
-        for i in 0..self.keypads.len() {
-            self.drive_keypad(i);
-        }
-    }
-
-    /// Drive keypad `i`'s COLUMN input registers to the levels its pressed key
-    /// implies for the ROW output levels the firmware is currently driving,
-    /// touching the bus only on a transition. Reads the four ROW ODR bits (an
-    /// unreadable one defaults HIGH — an undriven row is not selecting anything),
-    /// then reuses [`drive_idr_bit`](Self::drive_idr_bit) for each changed
-    /// column — the same transition-only IDR write the rotary encoder uses.
-    fn drive_keypad(&mut self, i: usize) {
-        use crate::peripherals::components::keypad::{COLS, ROWS};
-        let row_outputs: [bool; ROWS] = std::array::from_fn(|r| {
-            let (addr, bit) = self.keypads[i].row_odr[r];
-            self.read_u32(addr)
-                .map(|v| (v >> bit) & 1 != 0)
-                .unwrap_or(true)
-        });
-        let cols = self.keypads[i].service(row_outputs);
-        for (c, &(high, changed)) in cols.iter().enumerate().take(COLS) {
-            if changed {
-                let (addr, bit) = self.keypads[i].col_idr[c];
-                self.drive_idr_bit(addr, bit, high);
-            }
-        }
+        self.gpio_devices = devices;
     }
 
     /// Set or clear a single bit of a GPIO input (IDR) register, writing back
-    /// only when the bit actually changes. Shared by the encoder's two channels.
-    fn drive_idr_bit(&mut self, idr_addr: u64, bit: u8, high: bool) {
+    /// only when the bit actually changes. Shared by every
+    /// [`BusResidentDevice`](crate::bus::BusResidentDevice)'s `service` impl.
+    pub(crate) fn drive_idr_bit(&mut self, idr_addr: u64, bit: u8, high: bool) {
         let idr = self.read_u32(idr_addr).unwrap_or(0);
         let new_idr = if high {
             idr | (1 << bit)
@@ -243,36 +188,6 @@ impl SystemBus {
         if new_idr != idr {
             let _ = self.write_u32(idr_addr, new_idr);
         }
-    }
-
-    /// Drive sensor `i`'s data pin input register to the level its armed
-    /// schedule implies at `self.current_cycle`, touching the bus only on a
-    /// transition. Single choke point (as with
-    /// [`drive_hcsr04_echo`](Self::drive_hcsr04_echo)) so logic-analyzer probe
-    /// capture on the data pad stays consistent.
-    ///
-    /// Note the level is the *wired-AND* of both drivers on this open-drain
-    /// line — see [`Dht22::pad_high_at`](crate::peripherals::components::dht22::Dht22::pad_high_at)
-    /// — so while the MCU holds the line low the pad reads low, and the firmware
-    /// reads back its own start pulse.
-    fn drive_dht22_line(&mut self, i: usize) {
-        let now = self.current_cycle;
-        let pad_high = self.dht22[i].pad_high_at(now);
-        if pad_high == self.dht22[i].last_pad_high() {
-            return;
-        }
-        let idr_addr = self.dht22[i].data_idr_addr;
-        let bit = self.dht22[i].data_bit;
-        let idr = self.read_u32(idr_addr).unwrap_or(0);
-        let new_idr = if pad_high {
-            idr | (1 << bit)
-        } else {
-            idr & !(1 << bit)
-        };
-        if new_idr != idr {
-            let _ = self.write_u32(idr_addr, new_idr);
-        }
-        self.dht22[i].set_last_pad_high(pad_high);
     }
 
     /// Write-hook sibling of [`maybe_arm_hcsr04`](Self::maybe_arm_hcsr04) for
@@ -288,37 +203,48 @@ impl SystemBus {
     /// line either by driving the bit high or by switching the pin to input, and
     /// the common `esp-hal`/HAL DHT drivers do the former.
     pub(crate) fn maybe_start_dht22(&mut self, idx: usize) {
-        if self.dht22.is_empty() {
+        use crate::peripherals::components::dht22::Dht22;
+        if self.gpio_devices.is_empty() {
             return;
         }
         let now = self.current_cycle;
-        for i in 0..self.dht22.len() {
+        for i in 0..self.gpio_devices.len() {
+            // Only DHT22 devices observe the host line; skip encoders/keypads.
+            // Pull the scalars out under a short shared borrow so the following
+            // `&self`/`&mut self` bus calls don't collide with it (NLL ends the
+            // borrow at the last field read below).
+            let Some(sensor) = self.gpio_devices[i].as_any().downcast_ref::<Dht22>() else {
+                continue;
+            };
+            let cached = sensor.data_peripheral_idx();
+            let odr_addr = sensor.data_odr_addr;
+            let bit = sensor.data_bit;
+
             // Resolve & cache the data GPIO's peripheral index on first use.
-            let data_idx = match self.dht22[i].data_peripheral_idx() {
+            let data_idx = match cached {
                 Some(t) => t,
-                None => {
-                    let addr = self.dht22[i].data_odr_addr;
-                    match self.find_peripheral_index(addr) {
-                        Some(t) => {
-                            self.dht22[i].set_data_peripheral_idx(t);
-                            t
+                None => match self.find_peripheral_index(odr_addr) {
+                    Some(t) => {
+                        if let Some(s) = self.gpio_devices[i].as_any_mut().downcast_mut::<Dht22>() {
+                            s.set_data_peripheral_idx(t);
                         }
-                        None => continue,
+                        t
                     }
-                }
+                    None => continue,
+                },
             };
             if data_idx != idx {
                 continue;
             }
-            let odr_addr = self.dht22[i].data_odr_addr;
-            let bit = self.dht22[i].data_bit;
             // Default high: an unreadable ODR means "released" (pull-up wins),
             // which is the safe idle state rather than a spurious start pulse.
             let host_high = self
                 .read_u32(odr_addr)
                 .map(|v| (v >> bit) & 1 != 0)
                 .unwrap_or(true);
-            self.dht22[i].observe_line(host_high, now);
+            if let Some(s) = self.gpio_devices[i].as_any_mut().downcast_mut::<Dht22>() {
+                s.observe_line(host_high, now);
+            }
         }
     }
 

@@ -80,9 +80,7 @@ impl SystemBus {
             side_effecting_mmio: Cell::new(0),
             legacy_walk_disabled: false,
             hcsr04: Vec::new(),
-            dht22: Vec::new(),
-            rotary_encoders: Vec::new(),
-            keypads: Vec::new(),
+            gpio_devices: Vec::new(),
             tm1637: Vec::new(),
             seven_segment: Vec::new(),
             analog_inputs: Vec::new(),
@@ -614,7 +612,7 @@ impl SystemBus {
                     // samples as an input, so it lives directly on the bus:
                     // the data pin's GPIO write-hook (`maybe_start_dht22`)
                     // watches for the >=1 ms start pulse, and the per-tick pass
-                    // (`service_dht22`) drives the reply frame onto the pin's
+                    // (`service_gpio_devices`) drives the reply frame onto the pin's
                     // input register. Both `temperature` and `humidity` are
                     // host-controlled through the standard stimulus API.
                     let data = ext
@@ -663,8 +661,8 @@ impl SystemBus {
                         "ODR and IDR of one pin must share a bit index"
                     );
 
-                    bus.dht22
-                        .push(crate::peripherals::components::dht22::Dht22::new(
+                    bus.gpio_devices.push(Box::new(
+                        crate::peripherals::components::dht22::Dht22::new(
                             ext.id.clone(),
                             odr_addr,
                             idr_addr,
@@ -672,13 +670,14 @@ impl SystemBus {
                             cpu_hz,
                             temperature_c,
                             humidity_pct,
-                        ));
+                        ),
+                    ));
                 }
                 "rotary-encoder" | "rotary_encoder" => {
                     // Incremental quadrature knob. Like the HC-SR04/DHT22 it
                     // DRIVES pins the MCU samples as inputs (CLK/DT), so it lives
                     // directly on the bus and the per-tick pass
-                    // (`service_rotary_encoders`) walks the Gray sequence onto the
+                    // (`service_gpio_devices`) walks the Gray sequence onto the
                     // two input registers. Rotation is host-controlled through the
                     // standard `position` stimulus channel. The push switch (SW)
                     // is a plain board_io button, emitted separately.
@@ -717,7 +716,7 @@ impl SystemBus {
                             )
                         })?;
 
-                    bus.rotary_encoders.push(
+                    bus.gpio_devices.push(Box::new(
                         crate::peripherals::components::rotary_encoder::RotaryEncoder::new(
                             ext.id.clone(),
                             clk_idr_addr,
@@ -726,14 +725,14 @@ impl SystemBus {
                             dt_bit,
                             cpu_hz,
                         ),
-                    );
+                    ));
                 }
                 "keypad" => {
                     // 4×4 matrix keypad. Like the rotary encoder / DHT22 it
                     // DRIVES pins the MCU samples as inputs (the columns) while
                     // OBSERVING pins the MCU drives as outputs (the rows), so it
                     // lives directly on the bus and the per-tick pass
-                    // (`service_keypads`) reads the row ODR bits and drives the
+                    // (`service_gpio_devices`) reads the row ODR bits and drives the
                     // column IDR bits. The pressed key is host-controlled through
                     // the standard `key` stimulus channel (index row*4+col).
                     let read_pins = |field: &str| -> anyhow::Result<Vec<String>> {
@@ -785,12 +784,13 @@ impl SystemBus {
                         })?;
                     }
 
-                    bus.keypads
-                        .push(crate::peripherals::components::keypad::Keypad::new(
+                    bus.gpio_devices.push(Box::new(
+                        crate::peripherals::components::keypad::Keypad::new(
                             ext.id.clone(),
                             row_odr,
                             col_idr,
-                        ));
+                        ),
+                    ));
                 }
                 "can-diagnostic-tester" | "uds-diagnostic-tester" => {
                     if bus.find_peripheral_index_by_name(&ext.connection).is_none() {
