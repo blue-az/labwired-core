@@ -30,11 +30,13 @@ mod mmio_activity;
 mod mmio_words;
 mod policy;
 mod profiles;
+mod resident_device;
 mod routing;
 pub mod sim_inputs;
 mod tick;
 
 pub use can_devices::*;
+pub use resident_device::BusResidentDevice;
 
 pub use bus_trace::{new_log, BusPayload, BusTraceEvent, BusTraceLog, I2cSym};
 
@@ -299,18 +301,17 @@ pub struct SystemBus {
     /// per-tick pass (`service_hcsr04`) drives the computed ECHO input level,
     /// touching the bus only on a transition. Empty by default → zero cost.
     pub hcsr04: Vec<crate::peripherals::hc_sr04::HcSr04>,
-    /// DHT22 / AM2302 one-wire temperature+humidity sensors. The frame is armed
-    /// by the data-pin GPIO write-hook (`maybe_start_dht22`) when the firmware
-    /// closes a >=1 ms start pulse; a cheap per-tick pass (`service_dht22`)
-    /// drives the wired-AND pad level onto the pin's input register, touching
-    /// the bus only on a transition. Empty by default -> zero cost.
-    pub dht22: Vec<crate::peripherals::components::dht22::Dht22>,
-    /// Incremental rotary encoders wired to CLK/DT GPIO input pins. A cheap
-    /// per-tick pass (`service_rotary_encoders`) walks each encoder's target
-    /// position through the quadrature Gray sequence, driving CLK/DT input
-    /// registers and touching the bus only on a transition. Empty by default →
-    /// zero cost.
-    pub rotary_encoders: Vec<crate::peripherals::components::rotary_encoder::RotaryEncoder>,
+    /// Tick-driven GPIO-stimulus devices that live directly on the bus and
+    /// drive input-register pins the MCU samples — the DHT22 one-wire sensor,
+    /// the incremental rotary encoder, and the 4×4 matrix keypad. Each is a
+    /// [`BusResidentDevice`]; a single per-tick pass ([`service_gpio_devices`])
+    /// drives them all in registration order, touching the bus only on a
+    /// transition. Empty by default → zero cost. (The HC-SR04 keeps its own
+    /// field above because it also rides the event-scheduler edge-deadline
+    /// path.)
+    ///
+    /// [`service_gpio_devices`]: Self::service_gpio_devices
+    pub gpio_devices: Vec<Box<dyn BusResidentDevice>>,
     /// WS2812 / NeoPixel strips. Each is installed as a GPIO observer on its data
     /// pin (ESP32-S3 only today — the RMT drives the pad), so decode is fully
     /// edge-driven with no per-tick pass. Held here as `Arc` clones purely so the

@@ -297,6 +297,14 @@ impl CanonicalConfig {
                     push(ext, bio);
                 }
             }
+            // 1b2. 4×4 matrix keypad: eight GPIO pins (4 rows + 4 cols) scanned
+            // as a real matrix, NOT collapsed to a single board_io button.
+            for part in non_mcu() {
+                if part.r#type == "keypad" {
+                    let (ext, bio) = emit_keypad(&board, &wires, mcu_id, part);
+                    push(ext, bio);
+                }
+            }
             // 1b. Direct-drive seven-segment (nine GPIO pins).
             for part in non_mcu() {
                 if part.r#type == "seven-segment" {
@@ -1123,6 +1131,67 @@ fn emit_rotary_encoder(
     (ext, sw_bio)
 }
 
+/// Emit the `external_devices` fragment for a 4×4 matrix `keypad` (port of
+/// `emitKeypad`).
+///
+/// A membrane keypad is sixteen passive switches at row/column crossings, not a
+/// chip, and firmware reads it by *animating* the matrix: it drives the four ROW
+/// outputs one LOW at a time and reads the four COLUMN inputs. A plain `board_io`
+/// "button" hands firmware one static level — it cannot represent the
+/// row-drive/column-read scan — so, like the rotary encoder, the keypad becomes a
+/// dedicated bus device (driven through the standard `key` stimulus) and is
+/// listed in the wire-emitter skip set instead.
+///
+/// All eight pins (`R1`..`R4`, `C1`..`C4`) are required: an unwired matrix cannot
+/// be scanned, so a partially-wired keypad emits nothing. The keypad does not
+/// self-time (it is combinational — it never clocks anything out on its own), so
+/// unlike the DHT22/encoder it carries NO device-level `cpu_hz`.
+fn emit_keypad(
+    board: &str,
+    wires: &[Wire],
+    mcu_id: &str,
+    part: &CanonicalPart,
+) -> (Option<String>, Option<String>) {
+    let _ = board; // no board-dependent timing — kept for signature symmetry.
+
+    let mut row_pins: Vec<&str> = Vec::with_capacity(ROWS);
+    for pin_id in ["R1", "R2", "R3", "R4"] {
+        let Some(pin) = mcu_pin_for_part_pin(wires, mcu_id, &part.id, pin_id) else {
+            return (None, None);
+        };
+        row_pins.push(pin);
+    }
+    let mut col_pins: Vec<&str> = Vec::with_capacity(COLS);
+    for pin_id in ["C1", "C2", "C3", "C4"] {
+        let Some(pin) = mcu_pin_for_part_pin(wires, mcu_id, &part.id, pin_id) else {
+            return (None, None);
+        };
+        col_pins.push(pin);
+    }
+
+    let row_list = row_pins
+        .iter()
+        .map(|p| format!("\"{p}\""))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let col_list = col_pins
+        .iter()
+        .map(|p| format!("\"{p}\""))
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    let ext = format!(
+        "  - id: \"{}\"\n    type: \"keypad\"\n    connection: \"gpio\"\n    config:\n      row_pins: [{row_list}]\n      col_pins: [{col_list}]",
+        part.id
+    );
+    (Some(ext), None)
+}
+
+/// Rows / columns in the matrix keypad; mirrors the engine's
+/// `keypad::{ROWS, COLS}` so the emitter and model agree on the pin count.
+const ROWS: usize = 4;
+const COLS: usize = 4;
+
 /// Emit the `external_devices` fragment for a direct-drive `seven-segment` part
 /// (port of `emitSevenSegment`).
 ///
@@ -1347,6 +1416,7 @@ fn emit_board_io_from_wires(
         "ultrasonic",
         "dht22",
         "rotary-encoder",
+        "keypad",
         "pcd8544",
         "sn74hc165",
         "iolink-master",
@@ -2015,6 +2085,104 @@ board_io:
     active_high: true
 "#;
 
+    /// Full stm32 4×4 keypad: eight GPIO pins (R1..R4 = PA0..PA3, C1..C4 =
+    /// PA4..PA7) become ONE `keypad` external device — a real matrix scan, not
+    /// a collapsed board_io button (which is what the wire emitter would have
+    /// produced before this device existed).
+    const FIXTURE_KEYPAD: &str = r#"{
+      "version": 1,
+      "parts": [
+        { "id": "mcu", "type": "nucleo-f401re" },
+        { "id": "kp", "type": "keypad" }
+      ],
+      "connections": [
+        ["mcu:PA0", "kp:R1"],
+        ["mcu:PA1", "kp:R2"],
+        ["mcu:PA2", "kp:R3"],
+        ["mcu:PA3", "kp:R4"],
+        ["mcu:PA4", "kp:C1"],
+        ["mcu:PA5", "kp:C2"],
+        ["mcu:PA6", "kp:C3"],
+        ["mcu:PA7", "kp:C4"]
+      ]
+    }"#;
+
+    const EXPECTED_KEYPAD: &str = r#"name: "playground-board"
+chip: "inline"
+external_devices:
+  - id: "kp"
+    type: "keypad"
+    connection: "gpio"
+    config:
+      row_pins: ["PA0", "PA1", "PA2", "PA3"]
+      col_pins: ["PA4", "PA5", "PA6", "PA7"]
+board_io:
+  []
+"#;
+
+    /// esp32c3 keypad: exercises the top-level 160 MHz pacing line (the keypad
+    /// itself carries NO device-level `cpu_hz` — it does not self-time).
+    const FIXTURE_KEYPAD_ESP32C3: &str = r#"{
+      "version": 1,
+      "parts": [
+        { "id": "mcu", "type": "esp32-c3-supermini" },
+        { "id": "kp", "type": "keypad" }
+      ],
+      "connections": [
+        ["mcu:GPIO2", "kp:R1"],
+        ["mcu:GPIO3", "kp:R2"],
+        ["mcu:GPIO4", "kp:R3"],
+        ["mcu:GPIO5", "kp:R4"],
+        ["mcu:GPIO6", "kp:C1"],
+        ["mcu:GPIO7", "kp:C2"],
+        ["mcu:GPIO8", "kp:C3"],
+        ["mcu:GPIO10", "kp:C4"]
+      ]
+    }"#;
+
+    const EXPECTED_KEYPAD_ESP32C3: &str = r#"name: "playground-board"
+chip: "inline"
+cpu_hz: 160_000_000
+external_devices:
+  - id: "kp"
+    type: "keypad"
+    connection: "gpio"
+    config:
+      row_pins: ["GPIO2", "GPIO3", "GPIO4", "GPIO5"]
+      col_pins: ["GPIO6", "GPIO7", "GPIO8", "GPIO10"]
+board_io:
+  []
+"#;
+
+    /// A partially-wired keypad (column C4 missing): all eight pins are required
+    /// to scan a matrix, so the device emits NOTHING rather than a degraded
+    /// half-keypad — and, being in the skip set, produces no board_io button
+    /// either.
+    const FIXTURE_KEYPAD_PARTIAL: &str = r#"{
+      "version": 1,
+      "parts": [
+        { "id": "mcu", "type": "nucleo-f401re" },
+        { "id": "kp", "type": "keypad" }
+      ],
+      "connections": [
+        ["mcu:PA0", "kp:R1"],
+        ["mcu:PA1", "kp:R2"],
+        ["mcu:PA2", "kp:R3"],
+        ["mcu:PA3", "kp:R4"],
+        ["mcu:PA4", "kp:C1"],
+        ["mcu:PA5", "kp:C2"],
+        ["mcu:PA6", "kp:C3"]
+      ]
+    }"#;
+
+    const EXPECTED_KEYPAD_PARTIAL: &str = r#"name: "playground-board"
+chip: "inline"
+external_devices:
+  []
+board_io:
+  []
+"#;
+
     const FIXTURE_PCD8544: &str = r#"{
       "version": 1,
       "parts": [
@@ -2358,6 +2526,17 @@ board_io:
                 "rotary-sw-only",
                 FIXTURE_ROTARY_SW_ONLY,
                 EXPECTED_ROTARY_SW_ONLY,
+            ),
+            ("keypad", FIXTURE_KEYPAD, EXPECTED_KEYPAD),
+            (
+                "keypad-esp32c3",
+                FIXTURE_KEYPAD_ESP32C3,
+                EXPECTED_KEYPAD_ESP32C3,
+            ),
+            (
+                "keypad-partial",
+                FIXTURE_KEYPAD_PARTIAL,
+                EXPECTED_KEYPAD_PARTIAL,
             ),
             ("dht22-attrs", FIXTURE_DHT22_ATTRS, EXPECTED_DHT22_ATTRS),
             (

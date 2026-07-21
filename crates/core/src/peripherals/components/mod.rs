@@ -25,6 +25,7 @@ pub mod iolink_station;
 pub mod ir_component;
 pub mod ir_core;
 pub mod ir_spi_component;
+pub mod keypad;
 pub mod lcd1602;
 pub mod ldr;
 pub mod max30102;
