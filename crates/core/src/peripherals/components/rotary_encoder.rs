@@ -200,7 +200,7 @@ impl RotaryEncoder {
 }
 
 /// Drivable target position, in detents from the origin. Rotary encoders live
-/// directly on the bus (`SystemBus::rotary_encoders`), so the bus input walk
+/// directly on the bus (`SystemBus::gpio_devices`), so the bus input walk
 /// reaches this impl and reports each encoder under its `id`.
 impl crate::sim_input::SimInput for RotaryEncoder {
     fn input_channels(&self) -> &'static [crate::sim_input::InputChannel] {
@@ -225,6 +225,41 @@ impl crate::sim_input::SimInput for RotaryEncoder {
 
     fn component_id(&self) -> Option<&str> {
         Some(&self.id)
+    }
+}
+
+impl crate::bus::BusResidentDevice for RotaryEncoder {
+    /// Advance the shaft to `now` and drive whichever of its CLK/DT input-register
+    /// bits changed. This is the body of the former
+    /// `SystemBus::drive_rotary_encoder`, moved onto the device; the register IO
+    /// stays on the bus via [`drive_idr_bit`](crate::bus::SystemBus). Two
+    /// independent pins, each a transition-only IDR write.
+    fn service(&mut self, bus: &mut crate::bus::SystemBus, now: u64) {
+        // Inherent `RotaryEncoder::service` (chosen over the trait method here —
+        // inherent methods win resolution) does the phase advance + change flags.
+        let ((clk_high, dt_high), (clk_changed, dt_changed)) = self.service(now);
+        if clk_changed {
+            bus.drive_idr_bit(self.clk_idr_addr, self.clk_bit, clk_high);
+        }
+        if dt_changed {
+            bus.drive_idr_bit(self.dt_idr_addr, self.dt_bit, dt_high);
+        }
+    }
+
+    fn as_sim_input(&mut self) -> &mut dyn crate::sim_input::SimInput {
+        self
+    }
+
+    fn id(&self) -> &str {
+        &self.id
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
     }
 }
 
@@ -358,14 +393,14 @@ mod tests {
             None,
             Box::new(GpioPort::new_with_layout(GpioRegisterLayout::Stm32V2)),
         );
-        bus.rotary_encoders.push(RotaryEncoder::new(
+        bus.gpio_devices.push(Box::new(RotaryEncoder::new(
             "knob".into(),
             IDR,
             clk_bit,
             IDR,
             dt_bit,
             1_000_000, // 1 MHz → EDGE_INTERVAL_US cycles per phase
-        ));
+        )));
 
         // Standard 2-bit Gray quadrature decoder: sums quarter-steps, one detent
         // per 4. `AB` packed as (clk<<1)|dt. CW visits 11→01→00→10 as A leads.
@@ -389,14 +424,17 @@ mod tests {
 
         // Drive `detents`, poll-decode across `cycles`, return recovered detents.
         let drive_and_decode = |bus: &mut SystemBus, detents: i64, start: u64, cycles: u64| {
-            bus.rotary_encoders[0].set_position_detents(detents);
+            bus.gpio_devices_of_mut::<RotaryEncoder>()
+                .next()
+                .unwrap()
+                .set_position_detents(detents);
             let mut last = sample(bus, clk_bit, dt_bit);
             let mut quarter = 0i32;
             let poll = 200u64; // ~10x oversample of the 2000-cycle edge interval
             let mut c = start;
             while c <= start + cycles {
                 bus.set_current_cycle(c);
-                bus.service_rotary_encoders();
+                bus.service_gpio_devices();
                 let s = sample(bus, clk_bit, dt_bit);
                 quarter += qstep(last, s);
                 last = s;
@@ -407,20 +445,32 @@ mod tests {
 
         // Settle at rest first (both pins high).
         bus.set_current_cycle(0);
-        bus.service_rotary_encoders();
+        bus.service_gpio_devices();
         assert_eq!(sample(&bus, clk_bit, dt_bit), 0b11, "rest = both high");
 
         // +3 detents CW, then reverse by 5 to net -2. One detent = 4*2000 cycles;
         // give generous headroom.
         let cw = drive_and_decode(&mut bus, 3, 1_000, 40_000);
         assert_eq!(cw, 3, "decoder recovers +3 CW detents");
-        assert_eq!(bus.rotary_encoders[0].position_detents(), 3);
+        assert_eq!(
+            bus.gpio_devices_of::<RotaryEncoder>()
+                .next()
+                .unwrap()
+                .position_detents(),
+            3
+        );
 
         // Reverse to position -2: a delta of -5 detents from +3. The decoder
         // recovers the motion (-5); the encoder lands at absolute position -2.
         let delta = drive_and_decode(&mut bus, -2, 60_000, 60_000);
         assert_eq!(delta, -5, "decoder recovers the -5 detent reversal");
-        assert_eq!(bus.rotary_encoders[0].position_detents(), -2);
+        assert_eq!(
+            bus.gpio_devices_of::<RotaryEncoder>()
+                .next()
+                .unwrap()
+                .position_detents(),
+            -2
+        );
     }
 
     #[test]

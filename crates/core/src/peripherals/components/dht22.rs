@@ -37,7 +37,7 @@
 //!   polling every cycle — and cycle-exact, because `current_cycle` at the
 //!   write equals what the following tick would have seen.
 //! * **Driving the pad** — a cheap per-tick pass
-//!   ([`SystemBus::service_dht22`](crate::bus::SystemBus)) computes
+//!   ([`SystemBus::service_gpio_devices`](crate::bus::SystemBus)) computes
 //!   [`pad_high_at`](Dht22::pad_high_at) and writes it into the pin's **IDR**
 //!   bit, touching the bus only when the level actually changes. Same
 //!   mechanism `HcSr04` uses to drive ECHO.
@@ -361,7 +361,7 @@ impl Dht22 {
 /// kit already uses (`temperature` in °C, `humidity` in %RH) so an agent driving
 /// a weather demo does not have to learn a second spelling per part.
 ///
-/// DHT22 sensors live directly on the bus (`SystemBus::dht22`), not behind a
+/// DHT22 sensors live directly on the bus (`SystemBus::gpio_devices`), not behind a
 /// transport trait, so the bus input walk reaches this impl directly and reports
 /// each sensor under its `id` — same as [`HcSr04`](crate::peripherals::hc_sr04::HcSr04).
 pub const INPUT_CHANNELS: &[crate::sim_input::InputChannel] = &[
@@ -399,6 +399,42 @@ impl crate::sim_input::SimInput for Dht22 {
     fn component_id(&self) -> Option<&str> {
         // Constructed with its system.yaml id (from_config) — already identity.
         Some(&self.id)
+    }
+}
+
+impl crate::bus::BusResidentDevice for Dht22 {
+    /// Drive the data pin's input register to the wired-AND pad level its armed
+    /// schedule implies at `now`, touching the bus only on a transition. This is
+    /// the body of the former `SystemBus::drive_dht22_line`, moved onto the
+    /// device; the register IO stays on the bus via
+    /// [`drive_idr_bit`](crate::bus::SystemBus). Same choke point as the
+    /// HC-SR04 ECHO drive, so logic-analyzer probe capture on the data pad stays
+    /// consistent. The level is the wired-AND of both drivers on this open-drain
+    /// line (see [`Dht22::pad_high_at`]), so while the MCU holds the line low the
+    /// pad reads low and the firmware reads back its own start pulse.
+    fn service(&mut self, bus: &mut crate::bus::SystemBus, now: u64) {
+        let pad_high = self.pad_high_at(now);
+        if pad_high == self.last_pad_high() {
+            return;
+        }
+        bus.drive_idr_bit(self.data_idr_addr, self.data_bit, pad_high);
+        self.set_last_pad_high(pad_high);
+    }
+
+    fn as_sim_input(&mut self) -> &mut dyn crate::sim_input::SimInput {
+        self
+    }
+
+    fn id(&self) -> &str {
+        &self.id
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
     }
 }
 
@@ -693,7 +729,7 @@ mod tests {
             None,
             Box::new(GpioPort::new_with_layout(GpioRegisterLayout::Stm32V2)),
         );
-        bus.dht22.push(Dht22::new(
+        bus.gpio_devices.push(Box::new(Dht22::new(
             "env".into(),
             GPIOA + 0x14,
             GPIOA + 0x10,
@@ -701,45 +737,58 @@ mod tests {
             HZ,
             23.4,
             65.3,
-        ));
+        )));
 
         let pad = |bus: &SystemBus| (bus.read_u32(GPIOA + 0x10).unwrap() >> bit) & 1;
 
         // Idle: the first service tick drives the pull-up level high.
         bus.set_current_cycle(0);
         bus.write_u32(GPIOA + 0x18, 1 << bit).unwrap(); // release (BSRR set)
-        bus.service_dht22();
+        bus.service_gpio_devices();
         assert_eq!(pad(&bus), 1, "line idles high via the pull-up");
 
         // MCU pulls the line low for 1.1 ms (BSRR reset bit).
         bus.set_current_cycle(100);
         bus.write_u32(GPIOA + 0x18, 1 << (bit + 16)).unwrap();
-        bus.service_dht22();
+        bus.service_gpio_devices();
         assert_eq!(pad(&bus), 0, "host start pulse reads back low");
 
         // Release at cycle 1_200 → frame armed.
         bus.set_current_cycle(1_200);
         bus.write_u32(GPIOA + 0x18, 1 << bit).unwrap();
-        bus.service_dht22();
+        bus.service_gpio_devices();
         assert_eq!(pad(&bus), 1, "pull-up gap before the sensor answers");
-        assert!(bus.dht22[0].is_transmitting(), "write-hook armed the frame");
+        assert!(
+            bus.gpio_devices_of::<Dht22>()
+                .next()
+                .unwrap()
+                .is_transmitting(),
+            "write-hook armed the frame"
+        );
 
         // 30 µs later the sensor pulls low for its 80 µs response.
         bus.set_current_cycle(1_200 + 30);
-        bus.service_dht22();
+        bus.service_gpio_devices();
         assert_eq!(pad(&bus), 0, "sensor response LOW");
 
         bus.set_current_cycle(1_200 + 30 + 80);
-        bus.service_dht22();
+        bus.service_gpio_devices();
         assert_eq!(pad(&bus), 1, "sensor response HIGH");
 
         // Sample the whole frame at 1-cycle (=1 µs) resolution and decode it
         // the way firmware does, by timing HIGH pulses after each LOW slot.
-        let end = bus.dht22[0].transitions().last().unwrap().0;
+        let end = bus
+            .gpio_devices_of::<Dht22>()
+            .next()
+            .unwrap()
+            .transitions()
+            .last()
+            .unwrap()
+            .0;
         let mut levels = Vec::new();
         for c in (1_200 + 30)..=end {
             bus.set_current_cycle(c);
-            bus.service_dht22();
+            bus.service_gpio_devices();
             levels.push(pad(&bus) == 1);
         }
         // Walk the sampled waveform: skip the response pair, then each
@@ -772,7 +821,7 @@ mod tests {
         use crate::bus::SystemBus;
 
         let mut bus = SystemBus::empty();
-        bus.dht22.push(Dht22::new(
+        bus.gpio_devices.push(Box::new(Dht22::new(
             "env".into(),
             0x4800_0014,
             0x4800_0010,
@@ -780,7 +829,7 @@ mod tests {
             HZ,
             23.4,
             65.3,
-        ));
+        )));
 
         let channels = bus.list_inputs();
         assert!(

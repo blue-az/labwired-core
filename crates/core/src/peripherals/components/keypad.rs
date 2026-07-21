@@ -149,7 +149,7 @@ impl Keypad {
 
 /// Drivable pressed key, as the linear index `row*4 + col` (0..15); a negative
 /// value releases (no key pressed). Keypads live directly on the bus
-/// (`SystemBus::keypads`), so the bus input walk reaches this impl and reports
+/// (`SystemBus::gpio_devices`), so the bus input walk reaches this impl and reports
 /// each keypad under its `id` — same as the rotary encoder and DHT22.
 impl crate::sim_input::SimInput for Keypad {
     fn input_channels(&self) -> &'static [crate::sim_input::InputChannel] {
@@ -178,6 +178,50 @@ impl crate::sim_input::SimInput for Keypad {
 
     fn component_id(&self) -> Option<&str> {
         Some(&self.id)
+    }
+}
+
+impl crate::bus::BusResidentDevice for Keypad {
+    /// Read the four ROW output (ODR) bits, recompute the four COLUMN levels for
+    /// the pressed key, and drive each changed COLUMN input (IDR) bit. This is
+    /// the body of the former `SystemBus::drive_keypad`, moved onto the device;
+    /// the register IO stays on the bus via
+    /// [`drive_idr_bit`](crate::bus::SystemBus). An unreadable row defaults HIGH
+    /// (an undriven row selects nothing). The keypad is combinational, so `now`
+    /// is unused.
+    fn service(&mut self, bus: &mut crate::bus::SystemBus, _now: u64) {
+        use crate::Bus; // `read_u32` is a Bus-trait method
+        let row_outputs: [bool; ROWS] = std::array::from_fn(|r| {
+            let (addr, bit) = self.row_odr[r];
+            bus.read_u32(addr)
+                .map(|v| (v >> bit) & 1 != 0)
+                .unwrap_or(true)
+        });
+        // Inherent `Keypad::service` (chosen over the trait method — inherent
+        // methods win resolution) recomputes the columns + change flags.
+        let cols = self.service(row_outputs);
+        for (c, &(high, changed)) in cols.iter().enumerate().take(COLS) {
+            if changed {
+                let (addr, bit) = self.col_idr[c];
+                bus.drive_idr_bit(addr, bit, high);
+            }
+        }
+    }
+
+    fn as_sim_input(&mut self) -> &mut dyn crate::sim_input::SimInput {
+        self
+    }
+
+    fn id(&self) -> &str {
+        &self.id
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
     }
 }
 
@@ -340,10 +384,14 @@ mod tests {
         // Rows R1..R4 → ODR bits 0..3; columns C1..C4 → IDR bits 0..3.
         let row_odr: [(u64, u8); ROWS] = std::array::from_fn(|r| (ODR, r as u8));
         let col_idr: [(u64, u8); COLS] = std::array::from_fn(|c| (IDR, c as u8));
-        bus.keypads.push(Keypad::new("kp".into(), row_odr, col_idr));
+        bus.gpio_devices
+            .push(Box::new(Keypad::new("kp".into(), row_odr, col_idr)));
 
         // Firmware presses key (2, 1) via the component (as a stimulus would).
-        bus.keypads[0].set_pressed(Some((2, 1)));
+        bus.gpio_devices_of_mut::<Keypad>()
+            .next()
+            .unwrap()
+            .set_pressed(Some((2, 1)));
 
         // Read column `c`'s input bit.
         let read_col = |bus: &SystemBus, c: u8| (bus.read_u32(IDR).unwrap() >> c) & 1 != 0;
@@ -355,7 +403,7 @@ mod tests {
             let odr = (0b1111u32) & !(1 << row);
             bus.write_u32(ODR, odr).unwrap();
             bus.set_current_cycle(row as u64);
-            bus.service_keypads();
+            bus.service_gpio_devices();
             for col in 0..COLS as u8 {
                 if !read_col(&bus, col) {
                     found = Some((row, col));
@@ -365,12 +413,15 @@ mod tests {
         assert_eq!(found, Some((2, 1)), "scan recovers the pressed key");
 
         // Release → a full scan finds nothing.
-        bus.keypads[0].set_pressed(None);
+        bus.gpio_devices_of_mut::<Keypad>()
+            .next()
+            .unwrap()
+            .set_pressed(None);
         for row in 0..ROWS as u8 {
             let odr = (0b1111u32) & !(1 << row);
             bus.write_u32(ODR, odr).unwrap();
             bus.set_current_cycle(100 + row as u64);
-            bus.service_keypads();
+            bus.service_gpio_devices();
             for col in 0..COLS as u8 {
                 assert!(
                     read_col(&bus, col),
@@ -387,7 +438,7 @@ mod tests {
         use crate::bus::SystemBus;
 
         let mut bus = SystemBus::empty();
-        bus.keypads.push(pad());
+        bus.gpio_devices.push(Box::new(pad()));
 
         let channels = bus.list_inputs();
         assert!(
