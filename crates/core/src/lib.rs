@@ -1069,6 +1069,9 @@ pub trait DebugControl {
         name: &str,
     ) -> Option<labwired_config::PeripheralDescriptor>;
     fn reset(&mut self) -> SimResult<()>;
+    fn set_vl53l1x_distance(&mut self, _name: &str, _distance_mm: u16) -> bool {
+        false
+    }
 
     // State Management
     fn snapshot(&self) -> snapshot::MachineSnapshot;
@@ -2310,5 +2313,23 @@ impl<C: Cpu> DebugControl for Machine<C> {
 
     fn restore(&mut self, snapshot: &snapshot::MachineSnapshot) -> SimResult<()> {
         self.apply_snapshot(snapshot.clone())
+    }
+
+    fn set_vl53l1x_distance(&mut self, name: &str, distance_mm: u16) -> bool {
+        use crate::peripherals::i2c::I2c;
+        use crate::peripherals::components::vl53l1x::Vl53l1x;
+
+        if let Some(entry) = self.bus.peripherals.iter_mut().find(|p| p.name == name) {
+            if let Some(i2c_periph) = entry.dev.as_any_mut().and_then(|any| any.downcast_mut::<I2c>()) {
+                for dev_cell in i2c_periph.attached_devices() {
+                    let mut dev_borrow = dev_cell.borrow_mut();
+                    if let Some(vl) = dev_borrow.as_any_mut().and_then(|any| any.downcast_mut::<Vl53l1x>()) {
+                        vl.set_distance_mm(distance_mm);
+                        return true;
+                    }
+                }
+            }
+        }
+        false
     }
 }

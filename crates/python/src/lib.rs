@@ -233,6 +233,20 @@ impl Machine {
             .map_err(Into::into)
     }
 
+    /// Set the distance of a VL53L1X Time-of-Flight sensor attached to an I2C bus.
+    ///
+    /// Args:
+    ///     name (str): The name of the I2C peripheral (e.g. "i2c1").
+    ///     distance_mm (int): The distance to set, in millimetres.
+    ///
+    /// Returns:
+    ///     bool: True if the sensor was found and updated, False otherwise.
+    fn set_vl53l1x_distance(&mut self, name: String, distance_mm: u16) -> PyResult<bool> {
+        let mut guard = self.inner.lock().unwrap();
+        let ok = guard.set_vl53l1x_distance(&name, distance_mm);
+        Ok(ok)
+    }
+
     /// Get the current Program Counter (PC).
     fn get_pc(&self) -> u32 {
         let guard = self.inner.lock().unwrap();
