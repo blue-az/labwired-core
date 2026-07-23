@@ -136,6 +136,7 @@ impl SystemBus {
             hcsr04: Vec::new(),
             gpio_devices: Vec::new(),
             ws2812: Vec::new(),
+            servos: Vec::new(),
             tm1637: Vec::new(),
             seven_segment: Vec::new(),
             analog_inputs: Vec::new(),
@@ -672,6 +673,85 @@ impl SystemBus {
                         }
                     }
                     bus.ws2812.push(strip);
+                }
+                "servo" => {
+                    // Hobby PWM servo twin. Driven by GPIO edges (when the pad
+                    // actually toggles) and/or classic-ESP32 LEDC duty observers
+                    // (when firmware uses ledcWrite). Angle is polled by the
+                    // WASM `get_actuator_states` export for canvas animation.
+                    let signal = ext
+                        .config
+                        .get("signal_pin")
+                        .or_else(|| ext.config.get("pin"))
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("GPIO0");
+                    let pin = Self::parse_esp32_gpio_pin(signal)
+                        .or_else(|| Self::parse_esp32s3_gpio_pin(signal))
+                        .unwrap_or(0);
+                    let cal = match ext
+                        .config
+                        .get("model")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("standard")
+                    {
+                        "sg90" => crate::peripherals::components::servo::ServoCal::sg90(),
+                        "mg996r" => crate::peripherals::components::servo::ServoCal::mg996r(),
+                        _ => crate::peripherals::components::servo::ServoCal::standard(),
+                    };
+                    let servo = std::sync::Arc::new(
+                        crate::peripherals::components::servo::Servo::with_id(
+                            ext.id.clone(),
+                            cal,
+                            pin,
+                        ),
+                    );
+                    // GPIO edge path (ESP32 classic + S3).
+                    if let Some(idx) = bus.find_peripheral_index_by_name("gpio") {
+                        if let Some(gpio) = bus.peripherals[idx].dev.as_any_mut().and_then(|a| {
+                            a.downcast_mut::<crate::peripherals::esp32s3::gpio::Esp32s3Gpio>()
+                        }) {
+                            gpio.add_observer(servo.clone());
+                        } else if let Some(gpio) = bus.peripherals[idx].dev.as_any_mut().and_then(|a| {
+                            a.downcast_mut::<crate::peripherals::esp32::gpio::Esp32Gpio>()
+                        }) {
+                            gpio.add_observer(servo.clone());
+                        }
+                    }
+                    // LEDC duty path (classic ESP32). Optional `ledc_channel`
+                    // binds one channel; otherwise every channel notifies this
+                    // servo (fine for single-servo boards; multi-servo diagrams
+                    // should set ledc_channel per part).
+                    let ledc_channel = ext
+                        .config
+                        .get("ledc_channel")
+                        .and_then(|v| v.as_u64());
+                    for name in ["ledc", "LEDC"] {
+                        if let Some(idx) = bus.find_peripheral_index_by_name(name) {
+                            if let Some(ledc) = bus.peripherals[idx].dev.as_any_mut().and_then(|a| {
+                                a.downcast_mut::<crate::peripherals::esp32::ledc::Ledc>()
+                            }) {
+                                if let Some(ch) = ledc_channel {
+                                    ledc.add_duty_observer(std::sync::Arc::new(
+                                        crate::peripherals::components::servo::LedcServoDriver::new(
+                                            ch,
+                                            servo.clone(),
+                                        ),
+                                    ));
+                                } else {
+                                    // Fan-out: any channel duty drives this twin.
+                                    for ch in 0..16u64 {
+                                        ledc.add_duty_observer(std::sync::Arc::new(
+                                            crate::peripherals::components::servo::LedcServoDriver::new(
+                                                ch,
+                                                servo.clone(),
+                                            ),
+                                        ));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    bus.servos.push(servo);
                 }
                 "can-diagnostic-tester" | "uds-diagnostic-tester" => {
                     if bus.find_peripheral_index_by_name(&ext.connection).is_none() {
