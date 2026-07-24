@@ -58,6 +58,7 @@ pub static KITS: &[&'static dyn PeripheralKit] = &[
     &components::iolink_master::IOLINK_MASTER_KIT,
     &components::ntc_thermistor::NTC_THERMISTOR_KIT,
     &components::potentiometer::POTENTIOMETER_KIT,
+    &components::lipo_charger::LIPO_CHARGER_KIT,
     &components::ldr::LDR_KIT,
     &components::mq6::MQ6_KIT,
     &components::soil_moisture::SOIL_MOISTURE_KIT,
