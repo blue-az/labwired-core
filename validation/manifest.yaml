@@ -293,7 +293,8 @@ boards:
     # oracle/mmio/conformance suites pass unchanged. No live re-capture.
     # 2026-07-21: shared rcc.rs / pwr.rs gained the ADDITIVE STM32H7 RCC layout + PwrH7 (new enum variants for the stm32h735 onboarding). This board's RCC/PWR family structs are byte-for-byte untouched; the h735 work also added Cortex-M7 double-precision VFP decode (previously Unknown32), which no existing decode path uses. Its conformance/survival gates + 2189 core lib tests pass unchanged. No silicon re-capture.
     # 2026-07-24: I2C digital-twin (F1 SR2.TRA + level EV IRQ; L4 TXIS/DataPending). Register surface of non-I2C oracles unchanged; re-capture tracked.
-    drift_ack: 2026-07-24
+    # 2026-07-25: I2C shared-model regression fix — F1 STOP keeps RXNE (0x40) for poll-mode master-receive; F1 NACK branch no longer sets SR2.TRA on a NACKed address; L4 CR2 START/STOP kept pending until consumed + NBYTES>0-write address phase deferred to first TXDR. firmware_survival (incl. this board) + e2e_stm32f407_i2c + i2c walk-identity differentials green; register surface of non-I2C oracles unchanged. Re-capture tracked.
+    drift_ack: 2026-07-25
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
@@ -640,7 +641,8 @@ boards:
     # oracle/mmio/conformance suites pass unchanged. No live re-capture.
     # 2026-07-21: shared rcc.rs / pwr.rs gained the ADDITIVE STM32H7 RCC layout + PwrH7 (new enum variants for the stm32h735 onboarding). This board's RCC/PWR family structs are byte-for-byte untouched; the h735 work also added Cortex-M7 double-precision VFP decode (previously Unknown32), which no existing decode path uses. Its conformance/survival gates + 2189 core lib tests pass unchanged. No silicon re-capture.
     # 2026-07-24: I2C digital-twin (F1 SR2.TRA + level EV IRQ; L4 TXIS/DataPending). Register surface of non-I2C oracles unchanged; re-capture tracked.
-    drift_ack: 2026-07-24
+    # 2026-07-25: I2C shared-model regression fix — F1 STOP keeps RXNE (0x40) for poll-mode master-receive; F1 NACK branch no longer sets SR2.TRA on a NACKed address; L4 CR2 START/STOP kept pending until consumed + NBYTES>0-write address phase deferred to first TXDR. firmware_survival (incl. this board) + e2e_stm32f407_i2c + i2c walk-identity differentials green; register surface of non-I2C oracles unchanged. Re-capture tracked.
+    drift_ack: 2026-07-25
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
@@ -823,7 +825,8 @@ boards:
     # oracle/mmio/conformance suites pass unchanged. No live re-capture.
     # 2026-07-21: shared rcc.rs / pwr.rs gained the ADDITIVE STM32H7 RCC layout + PwrH7 (new enum variants for the stm32h735 onboarding). This board's RCC/PWR family structs are byte-for-byte untouched; the h735 work also added Cortex-M7 double-precision VFP decode (previously Unknown32), which no existing decode path uses. Its conformance/survival gates + 2189 core lib tests pass unchanged. No silicon re-capture.
     # 2026-07-24: I2C digital-twin (F1 SR2.TRA + level EV IRQ; L4 TXIS/DataPending). Register surface of non-I2C oracles unchanged; re-capture tracked.
-    drift_ack: 2026-07-24
+    # 2026-07-25: I2C shared-model regression fix — F1 STOP keeps RXNE (0x40) for poll-mode master-receive; F1 NACK branch no longer sets SR2.TRA on a NACKed address; L4 CR2 START/STOP kept pending until consumed + NBYTES>0-write address phase deferred to first TXDR. firmware_survival (incl. this board) + e2e_stm32f407_i2c + i2c walk-identity differentials green; register surface of non-I2C oracles unchanged. Re-capture tracked.
+    drift_ack: 2026-07-25
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/afio.rs
@@ -917,7 +920,8 @@ boards:
     # oracle/mmio/conformance suites pass unchanged. No live re-capture.
     # 2026-07-21: shared rcc.rs / pwr.rs gained the ADDITIVE STM32H7 RCC layout + PwrH7 (new enum variants for the stm32h735 onboarding). This board's RCC/PWR family structs are byte-for-byte untouched; the h735 work also added Cortex-M7 double-precision VFP decode (previously Unknown32), which no existing decode path uses. Its conformance/survival gates + 2189 core lib tests pass unchanged. No silicon re-capture.
     # 2026-07-24: I2C digital-twin (F1 SR2.TRA + level EV IRQ; L4 TXIS/DataPending). Register surface of non-I2C oracles unchanged; re-capture tracked.
-    drift_ack: 2026-07-24
+    # 2026-07-25: I2C shared-model regression fix — F1 STOP keeps RXNE (0x40) for poll-mode master-receive; F1 NACK branch no longer sets SR2.TRA on a NACKed address; L4 CR2 START/STOP kept pending until consumed + NBYTES>0-write address phase deferred to first TXDR. firmware_survival (incl. this board) + e2e_stm32f407_i2c + i2c walk-identity differentials green; register surface of non-I2C oracles unchanged. Re-capture tracked.
+    drift_ack: 2026-07-25
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
