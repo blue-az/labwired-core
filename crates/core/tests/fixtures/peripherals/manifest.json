@@ -1150,6 +1150,38 @@
       ]
     },
     {
+      "device_type": "lipo_charger",
+      "label": "LiPo battery + charger",
+      "summary": "Single-cell LiPo pack + TP4056-class analog charger on an ADC channel.",
+      "detail": "Analog battery gauge: the LiPo terminal voltage (3300 mV empty → 4200 mV full, linear in state of charge) is read through a ÷2 resistor divider so a 4.2 V pack stays inside the 3.3 V ADC range. Drive `soc_pct` (0..100 %) and `usb_present` (0/1) at runtime; the ADC channel follows through the real divider math, and `usb_present` adds a small charging offset clamped to 4200 mV. No I²C — the only observable is the divided pin voltage.",
+      "transport": "analog",
+      "category": "analog",
+      "config_keys": [
+        {
+          "name": "channel",
+          "ty": "int",
+          "doc": "ADC channel index (0..N) the divided battery voltage is wired to. Defaults to 0."
+        }
+      ],
+      "labs": [],
+      "inputs": [
+        {
+          "key": "soc_pct",
+          "label": "State of charge",
+          "unit": "%",
+          "min": 0.0,
+          "max": 100.0
+        },
+        {
+          "key": "usb_present",
+          "label": "Charger connected",
+          "unit": "",
+          "min": 0.0,
+          "max": 1.0
+        }
+      ]
+    },
+    {
       "device_type": "ldr",
       "label": "Photoresistor (LDR)",
       "summary": "CdS photoresistor + voltage divider on an ADC channel.",
