@@ -294,8 +294,14 @@ impl F1I2c {
                         self.cr1 &= !0x0200;
                         // STOP clears master/busy/TRA (RM0008 SR2).
                         self.sr2 &= !0x0007;
-                        // Drop bus-event flags so the level EV line deasserts.
-                        self.sr1 &= !0x00C7; // TXE|RXNE|BTF|ADDR|SB
+                        // Drop the transmitter/bus-event flags so the level EV
+                        // line deasserts — but NOT RXNE. A master-receive latches
+                        // RXNE with the byte in DR and clears it only on the DR
+                        // read (RM0090 §27.6.7); STOP releases the bus, it does
+                        // not discard an already-received byte. Clearing RXNE here
+                        // wiped the byte before a poll-mode 1-byte NACK read (set
+                        // ACK=0+STOP, then poll RXNE) could observe it → hang.
+                        self.sr1 &= !0x0087; // TXE|BTF|ADDR|SB (keep RXNE 0x40)
                         self.addr_cleared.set(false);
                         self.addr_sr1_seen.set(false);
                         if let Some(idx) = self.current_target {
@@ -428,12 +434,13 @@ impl F1I2c {
                             self.sr1 |= 0x0400; // AF
                             self.sr2 |= 0x0001; // MSL
                             self.sr2 |= 0x0002; // BUSY
-                                                // TRA follows R/W of the address byte (write → TRA=1).
-                            if !self.is_reading {
-                                self.sr2 |= 0x0004; // TRA
-                            } else {
-                                self.sr2 &= !0x0004;
-                            }
+                                                // TRA is NOT set on a NACKed address: TRA latches the
+                                                // transmitter/receiver direction only "at the end of
+                                                // the address phase" (RM0090 §27.6.7), which requires
+                                                // an ACK (ADDR event). When the address is NACKed
+                                                // (AF, no ADDR) the direction is never latched — real
+                                                // NUCLEO-F407 silicon reads SR2=0x03 (MSL|BUSY) here,
+                                                // not 0x07. Leave TRA at its reset/STOP-cleared 0.
                             self.state = I2cState::Idle;
                             if (self.cr2 & (1 << 8)) != 0 {
                                 irq = true; // ITERR
@@ -481,7 +488,10 @@ impl F1I2c {
                             self.stop_requested = false;
                             self.cr1 &= !0x0200;
                             self.sr2 &= !0x0007; // MSL|BUSY|TRA
-                            self.sr1 &= !0x00C7;
+                                                 // Keep RXNE (0x40): a deferred STOP on a master
+                                                 // receive tears the bus down only after the byte has
+                                                 // latched into DR; the firmware still has to read it.
+                            self.sr1 &= !0x0087; // TXE|BTF|ADDR|SB
                             self.addr_cleared.set(false);
                             self.addr_sr1_seen.set(false);
                             if let Some(idx) = self.current_target {
@@ -638,16 +648,21 @@ impl L4I2c {
         match offset {
             0x00 => self.cr1 = value & 0x00FF_E1FF,
             0x04 => {
-                // START (bit13) and STOP (bit14) are write-triggers that
-                // self-clear in silicon. Storing them latched makes every
-                // subsequent RMW (Zephyr LL_I2C_SetTransferSize etc.) re-fire
-                // START and abort the transfer with a spurious NACK/EIO.
-                self.cr2 = value & !((1 << 13) | (1 << 14));
+                // START (bit13) / STOP (bit14) self-clear in silicon — but only
+                // once the corresponding condition is actually generated on the
+                // bus, NOT at the instant of the CR2 write. Firmware that polls
+                // CR2 immediately after arming a transfer reads START still set
+                // (real NUCLEO-L476RG: CR2=0x000120A0 with START high in the
+                // "start pending" window). So store CR2 verbatim here and clear
+                // each trigger only when it is consumed: START when the address
+                // phase runs, STOP in the STOP handler below. By then any Zephyr
+                // LL_I2C_SetTransferSize RMW happens with START already cleared,
+                // so the RMW cannot re-fire it.
+                self.cr2 = value;
                 if (value & (1 << 13)) != 0 {
                     // START: latch BUSY and arm a master transfer. Capture the
                     // addressed slave (SADD[7:1] in 7-bit mode), direction
                     // (RD_WRN), NBYTES and AUTOEND.
-                    // Instant engine: Wire/HAL polls ISR.NACKF|STOPF after START.
                     if (self.cr1 & 1) != 0 {
                         self.isr |= 1 << 15; // BUSY
                         let addr = ((value >> 1) & 0x7F) as u8;
@@ -662,19 +677,28 @@ impl L4I2c {
                         if let Some(idx) = self.current_target {
                             self.attached_devices[idx].borrow_mut().start();
                         }
-                        // Always run the address phase immediately. On a write
-                        // with NBYTES>0 the engine then asserts TXIS and waits
-                        // in DataPending for TXDR (matches L4 silicon + HAL
-                        // Master_Transmit_IT). Read / NBYTES=0 complete in tick.
-                        self.start_armed = false;
-                        self.state = I2cState::AddressPending;
-                        self.cycles_remaining = 0;
-                        let _ = self.tick();
+                        self.start_armed = true;
+                        // A master WRITE with NBYTES>0 must NOT run the address
+                        // phase (and its NACK/ACK verdict) until firmware commits
+                        // the first data byte via TXDR: until then the transfer
+                        // is only "start pending" — BUSY latched, no NACKF, START
+                        // still readable in CR2 (the register fingerprint real
+                        // silicon shows, and what this restores). Read / NBYTES=0
+                        // (IsDeviceReady) have no data byte to wait for, so their
+                        // address phase runs now and START is consumed.
+                        if self.is_reading || (self.nbytes == 0 && self.autoend) {
+                            self.cr2 &= !(1 << 13); // START consumed
+                            self.start_armed = false;
+                            self.state = I2cState::AddressPending;
+                            self.cycles_remaining = 0;
+                            let _ = self.tick();
+                        }
                     }
                 }
                 if (value & (1 << 14)) != 0 {
                     // STOP (software, AUTOEND=0 path — Zephyr stm32 v2 poll):
                     // silicon sets STOPF and clears BUSY when the stop is done.
+                    self.cr2 &= !(1 << 14); // STOP consumed
                     self.isr |= 1 << 5; // STOPF
                     self.isr &= !(1 << 15); // clear BUSY
                     if let Some(idx) = self.current_target {
@@ -733,7 +757,11 @@ impl L4I2c {
                     // re-checks level flags below. Also pulse via active BUSY
                     // window so the walk doesn't skip us before ISR runs.
                 } else if self.start_armed && self.state == I2cState::Idle {
-                    // Legacy test path: TXDR before address phase completes.
+                    // Master WRITE, NBYTES>0: the first TXDR commit is what
+                    // launches the deferred address phase (the START-pending
+                    // window closes here). Consume START from CR2 now that the
+                    // condition is generated.
+                    self.cr2 &= !(1 << 13);
                     self.state = I2cState::AddressPending;
                     self.cycles_remaining = 0;
                     self.start_armed = false;
