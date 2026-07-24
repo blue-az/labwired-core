@@ -956,13 +956,47 @@ pub(crate) fn run_one_c3_wifi(
     m.bus.refresh_peripheral_index();
 
     let limit = args.max_steps.unwrap_or(u64::MAX);
+    // Measurement/parity path (env LABWIRED_WIFI_FF=1): drive the station via
+    // the authoritative `advance(run)` loop with scheduler-safe idle
+    // fast-forward enabled — exactly what the browser bridge does for a heavy
+    // C3 chip (`isHeavyBrowserChip` → `set_idle_fast_forward_enabled(true)`).
+    // The default `step()` loop stays the faithful per-instruction reference so
+    // the two can be diffed for byte-identical WiFi output.
+    if std::env::var("LABWIRED_WIFI_FF").is_ok() {
+        use labwired_core::AdvanceRequest;
+        m.config.idle_fast_forward_enabled = true;
+        eprintln!("[solo] idle fast-forward ENABLED (advance/run path)");
+        let mut done: u64 = 0;
+        while done < limit {
+            let chunk = (limit - done).min(2_000_000);
+            match m.advance(AdvanceRequest::run(Some(chunk))) {
+                Ok(_report) => {}
+                Err(e) => {
+                    eprintln!("[solo] station halted after {done} cycles: {e}");
+                    break;
+                }
+            }
+            done = done.saturating_add(chunk);
+            if m.total_cycles == 0 {
+                break;
+            }
+        }
+        eprintln!(
+            "[solo] run complete — total_cycles={} idle_ff_cycles_skipped={}",
+            m.total_cycles, m.idle_fast_forward_cycles_skipped
+        );
+        return ExitCode::SUCCESS;
+    }
     for i in 0..limit {
         if let Err(e) = m.step() {
             eprintln!("[solo] station halted at step {i}: {e}");
             break;
         }
     }
-    eprintln!("[solo] run complete");
+    eprintln!(
+        "[solo] run complete — total_cycles={} (no idle-ff)",
+        m.total_cycles
+    );
     ExitCode::SUCCESS
 }
 
