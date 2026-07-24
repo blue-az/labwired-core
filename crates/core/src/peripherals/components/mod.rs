@@ -37,6 +37,7 @@ pub mod iolink_station;
 pub mod keypad;
 pub mod lcd1602;
 pub mod ldr;
+pub mod lipo_charger;
 pub mod lora_sx1278;
 pub mod max30102;
 pub mod max7219;
