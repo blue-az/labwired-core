@@ -245,23 +245,43 @@ mod tests {
     #[test]
     fn test_empty_battery() {
         let bat = LipoCharger::new(0, 0.0, false);
-        assert_eq!(bat.battery_mv(), 3300, "expected 3300 mV terminal at 0% SoC");
+        assert_eq!(
+            bat.battery_mv(),
+            3300,
+            "expected 3300 mV terminal at 0% SoC"
+        );
         assert_eq!(bat.adc_pin_mv(), 1650, "expected 1650 mV at pin (÷2) at 0%");
-        assert_eq!(bat.output_mv(), 1650, "output_mv is the divided pin voltage");
+        assert_eq!(
+            bat.output_mv(),
+            1650,
+            "output_mv is the divided pin voltage"
+        );
     }
 
     #[test]
     fn test_full_battery() {
         let bat = LipoCharger::new(0, 100.0, false);
-        assert_eq!(bat.battery_mv(), 4200, "expected 4200 mV terminal at 100% SoC");
-        assert_eq!(bat.adc_pin_mv(), 2100, "expected 2100 mV at pin (÷2) at 100%");
+        assert_eq!(
+            bat.battery_mv(),
+            4200,
+            "expected 4200 mV terminal at 100% SoC"
+        );
+        assert_eq!(
+            bat.adc_pin_mv(),
+            2100,
+            "expected 2100 mV at pin (÷2) at 100%"
+        );
     }
 
     #[test]
     fn test_midpoint_linear() {
         let bat = LipoCharger::new(0, 50.0, false);
         // 3300 + 900*0.5 = 3750 mV terminal.
-        assert_eq!(bat.battery_mv(), 3750, "expected 3750 mV terminal at 50% SoC");
+        assert_eq!(
+            bat.battery_mv(),
+            3750,
+            "expected 3750 mV terminal at 50% SoC"
+        );
         assert_eq!(bat.adc_pin_mv(), 1875, "expected 1875 mV at pin at 50%");
     }
 
@@ -274,7 +294,11 @@ mod tests {
             charging.battery_mv() > idle.battery_mv(),
             "usb_present should raise the terminal voltage"
         );
-        assert_eq!(charging.battery_mv(), 3900, "expected 3750 + 150 mV under charge");
+        assert_eq!(
+            charging.battery_mv(),
+            3900,
+            "expected 3750 + 150 mV under charge"
+        );
 
         // Near-full + charge would exceed 4200; must clamp to the ceiling.
         let topping = LipoCharger::new(0, 95.0, true);
@@ -299,16 +323,22 @@ mod tests {
 
         // Drive SoC to full through the generic SimInput API.
         bat.set_input("soc_pct", 100.0).expect("soc_pct in range");
-        assert_eq!(bat.output_mv(), 2100, "set_input soc_pct should move the pin voltage");
+        assert_eq!(
+            bat.output_mv(),
+            2100,
+            "set_input soc_pct should move the pin voltage"
+        );
 
         // Drive the charger on and confirm the offset (clamped at full).
-        bat.set_input("usb_present", 1.0).expect("usb_present in range");
+        bat.set_input("usb_present", 1.0)
+            .expect("usb_present in range");
         assert!(bat.usb_present());
         assert_eq!(bat.battery_mv(), 4200, "full + charge clamps at 4200 mV");
 
         // Back down to empty and unplugged.
         bat.set_input("soc_pct", 0.0).expect("soc_pct in range");
-        bat.set_input("usb_present", 0.0).expect("usb_present in range");
+        bat.set_input("usb_present", 0.0)
+            .expect("usb_present in range");
         assert!(!bat.usb_present());
         assert_eq!(bat.output_mv(), 1650, "empty + unplugged → 1650 mV at pin");
     }
@@ -316,8 +346,17 @@ mod tests {
     #[test]
     fn test_set_input_rejects_out_of_range() {
         let mut bat = LipoCharger::default();
-        assert!(bat.set_input("soc_pct", 150.0).is_err(), "150% is out of range");
-        assert!(bat.set_input("usb_present", 5.0).is_err(), "usb_present > 1 is out of range");
-        assert!(bat.set_input("bogus", 1.0).is_err(), "unknown channel rejected");
+        assert!(
+            bat.set_input("soc_pct", 150.0).is_err(),
+            "150% is out of range"
+        );
+        assert!(
+            bat.set_input("usb_present", 5.0).is_err(),
+            "usb_present > 1 is out of range"
+        );
+        assert!(
+            bat.set_input("bogus", 1.0).is_err(),
+            "unknown channel rejected"
+        );
     }
 }
