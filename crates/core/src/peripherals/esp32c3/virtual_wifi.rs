@@ -23,6 +23,8 @@
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex, OnceLock};
 
+use crate::network::sim::{HttpResponse, HttpServer, SimServer};
+
 /// AP identity.
 const AP_BSSID: [u8; 6] = [0x02, 0x00, 0x00, 0x00, 0x00, 0x01];
 const AP_MAC_L2: [u8; 6] = AP_BSSID;
@@ -34,6 +36,40 @@ const FIRST_HOST: u8 = 2;
 /// UDP echo-server port the AP hosts (matches the firmware probe).
 const UDP_ECHO_PORT: u16 = 9999;
 
+/// TCP flag bits.
+const TCP_FIN: u8 = 0x01;
+const TCP_SYN: u8 = 0x02;
+const TCP_RST: u8 = 0x04;
+const TCP_PSH: u8 = 0x08;
+const TCP_ACK: u8 = 0x10;
+/// Receive window the AP advertises to the STA (ample for a small HTTP GET).
+const TCP_WINDOW: u16 = 0x2000;
+
+/// The AP's HTTP server response body — a real snapshot of the live
+/// `GET https://api.labwired.com/v1/public-stats`, baked in at authoring time.
+/// The sim is deterministic and air-gapped, so the "origin" is this modeled
+/// peer serving a genuine captured snapshot — every 802.11/IP/TCP/HTTP byte is
+/// still really produced and parsed by the real firmware + esp-wifi/lwIP stack.
+const STATS_SNAPSHOT: &str = concat!(
+    "{\"generated_at\":\"2026-07-24T19:39:15.804Z\",\"window_days\":90,",
+    "\"boards_supported\":9,\"parts_supported\":82,",
+    "\"labs_opened\":69,\"simulations_run\":3200,\"active_sessions\":4900}"
+);
+
+/// Minimal per-connection TCP state for the AP's HTTP server. Enough for lwIP's
+/// `esp_http_client` to complete a short in-order GET (no reordering, no SACK).
+#[derive(Debug, Default)]
+struct TcpConn {
+    /// Next sequence number expected from the station.
+    rcv_nxt: u32,
+    /// Next sequence number the AP will send.
+    snd_nxt: u32,
+    /// Whether the AP has already sent its FIN.
+    fin_sent: bool,
+    /// Request bytes accumulated until a full HTTP request head is seen.
+    req: Vec<u8>,
+}
+
 /// Per-station state the AP tracks.
 #[derive(Debug, Default)]
 struct StaState {
@@ -43,12 +79,35 @@ struct StaState {
     ip: [u8; 4],
     /// 802.11 sequence counter for AP→this-STA frames (receiver dedups by it).
     ap_seq: u16,
+    /// Open TCP connections to the AP's HTTP port, keyed by the station's port.
+    conns: HashMap<u16, TcpConn>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct VirtualWifi {
     stas: HashMap<[u8; 6], StaState>,
     next_host: u8,
+    /// Deterministic seed for TCP initial sequence numbers.
+    next_isn: u32,
+    /// The AP's HTTP origin. Reuses the L4 [`HttpServer`] router + HTTP/1.1
+    /// encoder so the TCP layer only moves bytes — one source of truth for HTTP.
+    http: Arc<dyn SimServer>,
+}
+
+impl Default for VirtualWifi {
+    fn default() -> Self {
+        // Serves the public-stats snapshot; the device GETs /v1/public-stats.
+        let http = HttpServer::new().get(
+            "/v1/public-stats",
+            HttpResponse::json(STATS_SNAPSHOT.as_bytes().to_vec()),
+        );
+        Self {
+            stas: HashMap::new(),
+            next_host: 0,
+            next_isn: 0,
+            http: Arc::new(http),
+        }
+    }
 }
 
 /// A shared WiFi medium — the infrastructure AP plus every associated station.
@@ -218,11 +277,13 @@ impl VirtualWifi {
             return;
         }
         // IPv4: route to the destination station if we know it, else drop.
-        if let Some((dst_ip, _proto)) = parse_ipv4_dst(frame) {
+        if let Some((dst_ip, proto)) = parse_ipv4_dst(frame) {
             if dst_ip == AP_IP {
-                // The AP hosts a UDP echo server on UDP_ECHO_PORT (proves an
-                // app-data round-trip); other traffic to the AP is dropped.
-                if let Some(echo) = build_udp_echo(src, frame) {
+                // TCP → the AP's HTTP server (real handshake + segments); else a
+                // UDP echo (proves an app-data round-trip). Other traffic dropped.
+                if proto == 6 {
+                    self.handle_tcp(src, frame);
+                } else if let Some(echo) = build_udp_echo(src, frame) {
                     self.enqueue(src, echo);
                 }
                 return;
@@ -235,6 +296,199 @@ impl VirtualWifi {
                 }
             }
         }
+    }
+
+    /// Terminate a TCP connection from a station to the AP's HTTP port: drive the
+    /// handshake, reassemble the HTTP request, hand it to the L4 HTTP server, and
+    /// stream the response back, then FIN. Minimal and in-order — enough for
+    /// lwIP's `esp_http_client` to complete a short GET. The station runs the
+    /// real TCP stack; the AP is the peer that terminates it (no thunks).
+    fn handle_tcp(&mut self, src_mac: [u8; 6], frame: &[u8]) {
+        let ipoff = snap_off(frame);
+        if frame.len() < ipoff + 20 {
+            return;
+        }
+        let ihl = (frame[ipoff] & 0x0F) as usize * 4;
+        let total_len = u16::from_be_bytes([frame[ipoff + 2], frame[ipoff + 3]]) as usize;
+        let mut src_ip = [0u8; 4];
+        src_ip.copy_from_slice(&frame[ipoff + 12..ipoff + 16]);
+        let tcpoff = ipoff + ihl;
+        let seg_end = (ipoff + total_len).min(frame.len());
+        if ihl < 20 || tcpoff + 20 > seg_end {
+            return;
+        }
+        let seg = &frame[tcpoff..seg_end];
+        let client_port = u16::from_be_bytes([seg[0], seg[1]]);
+        let server_port = u16::from_be_bytes([seg[2], seg[3]]);
+        let seq = u32::from_be_bytes([seg[4], seg[5], seg[6], seg[7]]);
+        let data_off = (seg[12] >> 4) as usize * 4;
+        if data_off < 20 || data_off > seg.len() {
+            return;
+        }
+        let flags = seg[13];
+        let payload = seg[data_off..].to_vec();
+
+        let dbg = std::env::var("LABWIRED_TCP_DEBUG").is_ok();
+        if dbg {
+            eprintln!(
+                "[tcp] rx sport={client_port} dport={server_port} flags={flags:#04x} seq={seq} paylen={}",
+                payload.len()
+            );
+        }
+
+        // RST tears the connection down.
+        if flags & TCP_RST != 0 {
+            if let Some(s) = self.stas.get_mut(&src_mac) {
+                s.conns.remove(&client_port);
+            }
+            return;
+        }
+
+        // SYN (no ACK) opens a connection; reply SYN-ACK.
+        if flags & TCP_SYN != 0 && flags & TCP_ACK == 0 {
+            let isn = 0x0001_0000u32.wrapping_add(self.next_isn);
+            self.next_isn = self.next_isn.wrapping_add(0x0001_0000);
+            let rcv_nxt = seq.wrapping_add(1);
+            *self.conn_mut(src_mac, client_port) = TcpConn {
+                rcv_nxt,
+                snd_nxt: isn.wrapping_add(1),
+                fin_sent: false,
+                req: Vec::new(),
+            };
+            let synack = build_tcp_to_sta(
+                src_mac,
+                src_ip,
+                server_port,
+                client_port,
+                isn,
+                rcv_nxt,
+                TCP_SYN | TCP_ACK,
+                &[],
+            );
+            if dbg {
+                eprintln!("[tcp] SYN -> SYN-ACK isn={isn} ack={rcv_nxt}");
+            }
+            self.enqueue(src_mac, synack);
+            return;
+        }
+
+        // Established: process in-order data (→ HTTP response) and FIN.
+        let http = Arc::clone(&self.http);
+        let mut out: Vec<Vec<u8>> = Vec::new();
+        let mut close = false;
+        {
+            let conn = match self
+                .stas
+                .get_mut(&src_mac)
+                .and_then(|s| s.conns.get_mut(&client_port))
+            {
+                Some(c) => c,
+                None => {
+                    if dbg {
+                        eprintln!("[tcp] no conn for port {client_port} (seq={seq})");
+                    }
+                    return;
+                }
+            };
+            if dbg {
+                eprintln!(
+                    "[tcp] conn port={client_port} rcv_nxt={} snd_nxt={} (seq={seq} paylen={})",
+                    conn.rcv_nxt,
+                    conn.snd_nxt,
+                    payload.len()
+                );
+            }
+            if !payload.is_empty() && seq == conn.rcv_nxt {
+                conn.req.extend_from_slice(&payload);
+                conn.rcv_nxt = conn.rcv_nxt.wrapping_add(payload.len() as u32);
+                if dbg {
+                    eprintln!(
+                        "[tcp] data += {} (req now {} bytes, complete={})",
+                        payload.len(),
+                        conn.req.len(),
+                        http_req_complete(&conn.req)
+                    );
+                }
+                if http_req_complete(&conn.req) && !conn.fin_sent {
+                    // Full request → let the shared HTTP server produce the
+                    // complete HTTP/1.1 response; we just segment it.
+                    let resp = http.on_data(0, &conn.req);
+                    if dbg {
+                        eprintln!("[tcp] -> HTTP response {} bytes + FIN", resp.len());
+                    }
+                    out.push(build_tcp_to_sta(
+                        src_mac,
+                        src_ip,
+                        server_port,
+                        client_port,
+                        conn.snd_nxt,
+                        conn.rcv_nxt,
+                        TCP_PSH | TCP_ACK,
+                        &resp,
+                    ));
+                    conn.snd_nxt = conn.snd_nxt.wrapping_add(resp.len() as u32);
+                    out.push(build_tcp_to_sta(
+                        src_mac,
+                        src_ip,
+                        server_port,
+                        client_port,
+                        conn.snd_nxt,
+                        conn.rcv_nxt,
+                        TCP_FIN | TCP_ACK,
+                        &[],
+                    ));
+                    conn.snd_nxt = conn.snd_nxt.wrapping_add(1);
+                    conn.fin_sent = true;
+                } else {
+                    // Partial request: acknowledge what we have so far.
+                    out.push(build_tcp_to_sta(
+                        src_mac,
+                        src_ip,
+                        server_port,
+                        client_port,
+                        conn.snd_nxt,
+                        conn.rcv_nxt,
+                        TCP_ACK,
+                        &[],
+                    ));
+                }
+            }
+            // A station FIN consumes one sequence number; acknowledge it. Once our
+            // own FIN has also been sent, the connection is fully closed.
+            if flags & TCP_FIN != 0 && seq.wrapping_add(payload.len() as u32) == conn.rcv_nxt {
+                conn.rcv_nxt = conn.rcv_nxt.wrapping_add(1);
+                out.push(build_tcp_to_sta(
+                    src_mac,
+                    src_ip,
+                    server_port,
+                    client_port,
+                    conn.snd_nxt,
+                    conn.rcv_nxt,
+                    TCP_ACK,
+                    &[],
+                ));
+                if conn.fin_sent {
+                    close = true;
+                }
+            }
+        }
+        for f in out {
+            self.enqueue(src_mac, f);
+        }
+        if close {
+            if let Some(s) = self.stas.get_mut(&src_mac) {
+                s.conns.remove(&client_port);
+            }
+        }
+    }
+
+    fn conn_mut(&mut self, mac: [u8; 6], port: u16) -> &mut TcpConn {
+        self.stas
+            .entry(mac)
+            .or_default()
+            .conns
+            .entry(port)
+            .or_default()
     }
 }
 
@@ -511,6 +765,77 @@ fn build_udp_echo(da: [u8; 6], frame: &[u8]) -> Option<Vec<u8>> {
     Some(data_frame(da, 0x0800, &iph))
 }
 
+/// Build an AP→STA from-DS data frame carrying a TCP segment over IPv4 (both
+/// IPv4 and TCP checksums computed) from the AP's HTTP port to the station.
+#[allow(clippy::too_many_arguments)]
+fn build_tcp_to_sta(
+    da: [u8; 6],
+    client_ip: [u8; 4],
+    sport: u16,
+    dport: u16,
+    seq: u32,
+    ack: u32,
+    flags: u8,
+    payload: &[u8],
+) -> Vec<u8> {
+    let mut tcp = Vec::with_capacity(20 + payload.len());
+    tcp.extend_from_slice(&sport.to_be_bytes());
+    tcp.extend_from_slice(&dport.to_be_bytes());
+    tcp.extend_from_slice(&seq.to_be_bytes());
+    tcp.extend_from_slice(&ack.to_be_bytes());
+    tcp.push(0x50); // data offset = 5 words (20-byte header), reserved 0
+    tcp.push(flags);
+    tcp.extend_from_slice(&TCP_WINDOW.to_be_bytes());
+    tcp.extend_from_slice(&[0, 0]); // checksum (filled below)
+    tcp.extend_from_slice(&[0, 0]); // urgent pointer
+    tcp.extend_from_slice(payload);
+    let cks = tcp_checksum(&AP_IP, &client_ip, &tcp);
+    tcp[16] = (cks >> 8) as u8;
+    tcp[17] = cks as u8;
+
+    let ip_total = (20 + tcp.len()) as u16;
+    let mut ip = vec![
+        0x45,
+        0x00,
+        (ip_total >> 8) as u8,
+        ip_total as u8,
+        0x00,
+        0x00, // identification
+        0x40,
+        0x00, // flags: don't-fragment
+        0x40, // TTL 64
+        0x06, // protocol: TCP
+        0x00,
+        0x00, // header checksum (filled below)
+    ];
+    ip.extend_from_slice(&AP_IP);
+    ip.extend_from_slice(&client_ip);
+    let ipck = inet_checksum(&ip);
+    ip[10] = (ipck >> 8) as u8;
+    ip[11] = ipck as u8;
+    ip.extend_from_slice(&tcp);
+    data_frame(da, 0x0800, &ip)
+}
+
+/// TCP checksum over the IPv4 pseudo-header + segment. The segment's checksum
+/// field must be zero on entry.
+fn tcp_checksum(src_ip: &[u8; 4], dst_ip: &[u8; 4], tcp: &[u8]) -> u16 {
+    let mut buf = Vec::with_capacity(12 + tcp.len());
+    buf.extend_from_slice(src_ip);
+    buf.extend_from_slice(dst_ip);
+    buf.push(0);
+    buf.push(6); // protocol = TCP
+    buf.extend_from_slice(&(tcp.len() as u16).to_be_bytes());
+    buf.extend_from_slice(tcp);
+    inet_checksum(&buf)
+}
+
+/// Whether the accumulated bytes contain a complete HTTP request head (headers
+/// terminated by CRLFCRLF). Sufficient for GET (no body).
+fn http_req_complete(req: &[u8]) -> bool {
+    req.windows(4).any(|w| w == b"\r\n\r\n")
+}
+
 /// Re-wrap a station-transmitted IPv4 data frame as a from-DS frame to the
 /// destination station (the AP forwarding STA↔STA traffic). Copies the LLC/SNAP
 /// + IP bytes verbatim.
@@ -613,6 +938,179 @@ mod tests {
         assert!(
             other.take_inbox(b).is_empty(),
             "frame leaked across independent WiFi buses"
+        );
+    }
+
+    // ───────────────────── TCP / HTTP bridge ─────────────────────
+
+    const CLIENT_IP: [u8; 4] = [192, 168, 4, 2];
+
+    /// Build a station→AP to-DS 802.11 data frame carrying IPv4/TCP. RX-side
+    /// checksums are not validated by the AP, so they are left zero here.
+    #[allow(clippy::too_many_arguments)]
+    fn sta_tcp(
+        sta: [u8; 6],
+        sport: u16,
+        dport: u16,
+        seq: u32,
+        ack: u32,
+        flags: u8,
+        payload: &[u8],
+    ) -> Vec<u8> {
+        let mut tcp = Vec::new();
+        tcp.extend_from_slice(&sport.to_be_bytes());
+        tcp.extend_from_slice(&dport.to_be_bytes());
+        tcp.extend_from_slice(&seq.to_be_bytes());
+        tcp.extend_from_slice(&ack.to_be_bytes());
+        tcp.push(0x50);
+        tcp.push(flags);
+        tcp.extend_from_slice(&0x2000u16.to_be_bytes());
+        tcp.extend_from_slice(&[0, 0, 0, 0]); // checksum + urgent
+        tcp.extend_from_slice(payload);
+
+        let ip_total = (20 + tcp.len()) as u16;
+        let mut ip = vec![
+            0x45,
+            0x00,
+            (ip_total >> 8) as u8,
+            ip_total as u8,
+            0,
+            0,
+            0x40,
+            0x00,
+            0x40,
+            0x06,
+            0,
+            0,
+        ];
+        ip.extend_from_slice(&CLIENT_IP);
+        ip.extend_from_slice(&AP_IP);
+        ip.extend_from_slice(&tcp);
+
+        let mut f = vec![0x08, 0x01, 0x00, 0x00]; // data, to-DS
+        f.extend_from_slice(&AP_BSSID); // addr1 = BSSID
+        f.extend_from_slice(&sta); // addr2 = SA
+        f.extend_from_slice(&AP_BSSID); // addr3 = DA (the AP)
+        f.extend_from_slice(&[0x00, 0x00]);
+        f.extend_from_slice(&[0xAA, 0xAA, 0x03, 0x00, 0x00, 0x00, 0x08, 0x00]);
+        f.extend_from_slice(&ip);
+        f
+    }
+
+    /// (flags, seq, ack, payload) from an AP→STA TCP reply frame.
+    fn reply_tcp(frame: &[u8]) -> (u8, u32, u32, Vec<u8>) {
+        let ip = snap_off(frame);
+        let ihl = (frame[ip] & 0x0F) as usize * 4;
+        let t = ip + ihl;
+        let seq = u32::from_be_bytes([frame[t + 4], frame[t + 5], frame[t + 6], frame[t + 7]]);
+        let ack = u32::from_be_bytes([frame[t + 8], frame[t + 9], frame[t + 10], frame[t + 11]]);
+        let doff = (frame[t + 12] >> 4) as usize * 4;
+        (frame[t + 13], seq, ack, frame[t + doff..].to_vec())
+    }
+
+    /// Verify a reply's TCP checksum (0 == valid) and its IPv4 header checksum.
+    fn checksums_ok(frame: &[u8]) -> bool {
+        let ip = snap_off(frame);
+        let ihl = (frame[ip] & 0x0F) as usize * 4;
+        if inet_checksum(&frame[ip..ip + ihl]) != 0 {
+            return false;
+        }
+        let tcp = &frame[ip + ihl..];
+        // Pseudo-header uses AP_IP as source, CLIENT_IP as dest.
+        tcp_checksum(&AP_IP, &CLIENT_IP, tcp) == 0
+    }
+
+    #[test]
+    fn tcp_http_get_roundtrip() {
+        let bus = VirtualWifiBus::new();
+        let sta = sta_mac(2);
+        let (sport, dport) = (50000u16, 80u16);
+
+        // ── SYN → SYN-ACK ──
+        bus.submit(sta, &sta_tcp(sta, sport, dport, 1000, 0, TCP_SYN, &[]));
+        let rx = bus.take_inbox(sta);
+        assert_eq!(rx.len(), 1, "one SYN-ACK");
+        let (flags, srv_isn, ack, _) = reply_tcp(&rx[0]);
+        assert_eq!(flags, TCP_SYN | TCP_ACK, "SYN-ACK flags");
+        assert_eq!(ack, 1001, "acks client ISN+1");
+        assert!(checksums_ok(&rx[0]), "SYN-ACK checksums valid");
+
+        // ── ACK + GET (combined) → response + FIN ──
+        let get = b"GET /v1/public-stats HTTP/1.1\r\nHost: 192.168.4.1\r\n\r\n";
+        bus.submit(
+            sta,
+            &sta_tcp(sta, sport, dport, 1001, srv_isn + 1, TCP_PSH | TCP_ACK, get),
+        );
+        let rx = bus.take_inbox(sta);
+        assert_eq!(rx.len(), 2, "response segment + FIN");
+
+        let (f1, seq1, ack1, body) = reply_tcp(&rx[0]);
+        assert_eq!(f1 & TCP_PSH, TCP_PSH, "response is PSH");
+        assert_eq!(seq1, srv_isn + 1, "response seq follows SYN");
+        assert_eq!(ack1, 1001 + get.len() as u32, "acks the full request");
+        assert!(checksums_ok(&rx[0]), "response checksums valid");
+
+        let text = String::from_utf8_lossy(&body);
+        assert!(text.starts_with("HTTP/1.1 200"), "200 OK: {text}");
+        assert!(text.contains("application/json"), "json content-type");
+        assert!(
+            text.contains("\"boards_supported\":9"),
+            "carries the stats snapshot body: {text}"
+        );
+
+        let (f2, seq2, _, _) = reply_tcp(&rx[1]);
+        assert_eq!(f2 & TCP_FIN, TCP_FIN, "then FIN");
+        assert_eq!(seq2, srv_isn + 1 + body.len() as u32, "FIN seq after body");
+
+        // ── client FIN → ACK, connection closed ──
+        let client_fin_seq = 1001 + get.len() as u32;
+        bus.submit(
+            sta,
+            &sta_tcp(
+                sta,
+                sport,
+                dport,
+                client_fin_seq,
+                seq2 + 1,
+                TCP_FIN | TCP_ACK,
+                &[],
+            ),
+        );
+        let rx = bus.take_inbox(sta);
+        assert_eq!(rx.len(), 1, "ACK of client FIN");
+        let (f3, _, ack3, _) = reply_tcp(&rx[0]);
+        assert_eq!(f3 & TCP_ACK, TCP_ACK);
+        assert_eq!(ack3, client_fin_seq + 1, "acks client FIN");
+        // A further stray segment on the closed connection is ignored.
+        bus.submit(
+            sta,
+            &sta_tcp(sta, sport, dport, client_fin_seq + 1, 0, TCP_ACK, &[]),
+        );
+        assert!(
+            bus.take_inbox(sta).is_empty(),
+            "closed connection is silent"
+        );
+    }
+
+    #[test]
+    fn tcp_http_unknown_path_404() {
+        let bus = VirtualWifiBus::new();
+        let sta = sta_mac(2);
+        let (sport, dport) = (40001u16, 80u16);
+        bus.submit(sta, &sta_tcp(sta, sport, dport, 500, 0, TCP_SYN, &[]));
+        let (_, srv_isn, _, _) = reply_tcp(&bus.take_inbox(sta)[0]);
+
+        let get = b"GET /nope HTTP/1.1\r\n\r\n";
+        bus.submit(
+            sta,
+            &sta_tcp(sta, sport, dport, 501, srv_isn + 1, TCP_PSH | TCP_ACK, get),
+        );
+        let rx = bus.take_inbox(sta);
+        let (_, _, _, body) = reply_tcp(&rx[0]);
+        let text = String::from_utf8_lossy(&body);
+        assert!(
+            text.starts_with("HTTP/1.1 404"),
+            "unknown path → 404: {text}"
         );
     }
 }
