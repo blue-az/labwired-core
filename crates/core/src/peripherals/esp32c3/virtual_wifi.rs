@@ -1066,7 +1066,15 @@ mod tests {
         let client_fin_seq = 1001 + get.len() as u32;
         bus.submit(
             sta,
-            &sta_tcp(sta, sport, dport, client_fin_seq, seq2 + 1, TCP_FIN | TCP_ACK, &[]),
+            &sta_tcp(
+                sta,
+                sport,
+                dport,
+                client_fin_seq,
+                seq2 + 1,
+                TCP_FIN | TCP_ACK,
+                &[],
+            ),
         );
         let rx = bus.take_inbox(sta);
         assert_eq!(rx.len(), 1, "ACK of client FIN");
@@ -1074,8 +1082,14 @@ mod tests {
         assert_eq!(f3 & TCP_ACK, TCP_ACK);
         assert_eq!(ack3, client_fin_seq + 1, "acks client FIN");
         // A further stray segment on the closed connection is ignored.
-        bus.submit(sta, &sta_tcp(sta, sport, dport, client_fin_seq + 1, 0, TCP_ACK, &[]));
-        assert!(bus.take_inbox(sta).is_empty(), "closed connection is silent");
+        bus.submit(
+            sta,
+            &sta_tcp(sta, sport, dport, client_fin_seq + 1, 0, TCP_ACK, &[]),
+        );
+        assert!(
+            bus.take_inbox(sta).is_empty(),
+            "closed connection is silent"
+        );
     }
 
     #[test]
@@ -1094,6 +1108,9 @@ mod tests {
         let rx = bus.take_inbox(sta);
         let (_, _, _, body) = reply_tcp(&rx[0]);
         let text = String::from_utf8_lossy(&body);
-        assert!(text.starts_with("HTTP/1.1 404"), "unknown path → 404: {text}");
+        assert!(
+            text.starts_with("HTTP/1.1 404"),
+            "unknown path → 404: {text}"
+        );
     }
 }
