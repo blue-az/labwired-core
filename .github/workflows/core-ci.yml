@@ -129,6 +129,24 @@ jobs:
       - name: Unit tests (no fixtures)
         run: cargo test --workspace --lib
 
+      # Fixture-backed firmware regression suites. firmware_survival loads
+      # committed ELFs and asserts byte-exact UART traces against real silicon;
+      # e2e_stm32f407_i2c cross-builds the AHT20/BMP280 firmware from source and
+      # drives it through the I2C state machine. Together they catch model
+      # regressions the pure --lib unit run cannot (e.g. the STM32 F4/L4 I2C
+      # fidelity break). They used to run only in the nightly-gated `core-full`
+      # job, so a shared-model rework could land on main silently — pull them
+      # into the required push gate. The e2e firmware targets thumbv7em, so the
+      # target must be installed first (as `core-full` does).
+      - name: Install ARM target for the F407 e2e firmware build
+        run: rustup target add thumbv7em-none-eabi
+
+      - name: Firmware survival + F407 I2C e2e (fixtures)
+        run: >
+          cargo test -p labwired-core
+          --test firmware_survival
+          --test e2e_stm32f407_i2c
+
       - name: Board-coverage ratchet (static naming scan)
         run: cargo test -p labwired-core --test board_coverage_ratchet -- --nocapture
 

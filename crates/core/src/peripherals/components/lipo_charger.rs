@@ -21,6 +21,7 @@ use std::any::Any;
 ///   - SoC   0 % → 3300 mV (empty cutoff)
 ///   - SoC 100 % → 4200 mV (full)
 ///   - linear between the two.
+///
 /// When the charger is connected (`usb_present`) the terminal sits a little
 /// higher under charge — a fixed +150 mV bump, clamped at the 4200 mV ceiling.
 ///
