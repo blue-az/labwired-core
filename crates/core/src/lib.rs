@@ -603,6 +603,20 @@ pub trait Peripheral: std::fmt::Debug + Send {
     fn needs_bus_tick(&self) -> bool {
         false
     }
+    /// True if this peripheral's `tick_with_bus` must keep running at a bounded
+    /// cadence even while the CPU is idle-fast-forwarding — because it services
+    /// an *external* medium (a WiFi station polling a shared-AP inbox and
+    /// beaconing) whose frames would otherwise be starved for the whole skip
+    /// window, breaking association. Idle fast-forward caps its skip to a small
+    /// poll quantum and runs the bus-tick pass at the deadline when any bus
+    /// peripheral returns true here. Default false: every self-contained
+    /// peripheral drives entirely off CPU cycles / scheduler events and never
+    /// needs the idle window shortened. Peripherals that opt in MUST key their
+    /// internal cadence (beacons, timeouts) on device cycles — NOT on
+    /// tick_with_bus call count — since the call frequency now varies.
+    fn idle_poll_bus_tick(&self) -> bool {
+        false
+    }
     /// True if this peripheral needs the legacy per-tick `tick()` walk.
     ///
     /// The conservative default is true: hand-written behavioral peripherals
@@ -1166,6 +1180,15 @@ pub struct StepProfile {
     pub legacy_tick_entries: u64,
 }
 
+/// Maximum cycles CPU idle fast-forward may skip in one step while a bus
+/// peripheral needs bounded external-medium polling (a medium-mode WiFi MAC —
+/// see [`Peripheral::idle_poll_bus_tick`]). Each skip runs the medium pump at
+/// its deadline, so this sets the worst-case frame-delivery latency: ~8192
+/// cycles ≈ 51 µs at 160 MHz, far under any WiFi association/DHCP/socket
+/// timeout, while still collapsing the millions of idle cycles the CPU would
+/// otherwise execute one-by-one. Non-WiFi buses never consult this.
+const WIFI_MEDIUM_IDLE_POLL_QUANTUM: u64 = 8192;
+
 pub struct Machine<C: Cpu> {
     pub cpu: C,
     /// Secondary CPU instance — for dual-core SoCs (ESP32, ESP32-S3).
@@ -1680,6 +1703,17 @@ impl<C: Cpu> Machine<C> {
             }
             budget = budget.min(remaining);
 
+            // A bus peripheral servicing an external medium (a medium-mode WiFi
+            // MAC) must keep being pumped through the idle window or its inbound
+            // frames are starved for the whole skip — breaking WiFi association
+            // under fast-forward. Cap the skip to a small poll quantum and run
+            // the bus-tick pump at the deadline (below, after the skip commits).
+            // Gated on the tiny bus-tick set, so it is free on every other bus.
+            let idle_poll = self.bus.idle_poll_bus_tick_active();
+            if idle_poll {
+                budget = budget.min(WIFI_MEDIUM_IDLE_POLL_QUANTUM);
+            }
+
             if let Some(deadline_cycle) = self.sched.next_event_deadline() {
                 if deadline_cycle <= self.total_cycles {
                     return 0;
@@ -1713,6 +1747,14 @@ impl<C: Cpu> Machine<C> {
             }
             self.sched.advance_to(self.total_cycles);
             self.drain_scheduler_events();
+            // Pump the external-medium bus-tick peripherals at the poll deadline
+            // (current_cycle was published above), so a WiFi station pulls the
+            // AP's queued auth/assoc/data frames and beacons on schedule even
+            // though the CPU skipped the idle window. `idle_poll` bounded the
+            // skip to the quantum, keeping this cadence fine-grained.
+            if idle_poll {
+                self.bus.run_idle_poll_bus_tick();
+            }
             u64::from(skipped)
         }
     }
