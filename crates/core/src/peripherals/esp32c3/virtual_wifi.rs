@@ -328,6 +328,14 @@ impl VirtualWifi {
         let flags = seg[13];
         let payload = seg[data_off..].to_vec();
 
+        let dbg = std::env::var("LABWIRED_TCP_DEBUG").is_ok();
+        if dbg {
+            eprintln!(
+                "[tcp] rx sport={client_port} dport={server_port} flags={flags:#04x} seq={seq} paylen={}",
+                payload.len()
+            );
+        }
+
         // RST tears the connection down.
         if flags & TCP_RST != 0 {
             if let Some(s) = self.stas.get_mut(&src_mac) {
@@ -357,6 +365,9 @@ impl VirtualWifi {
                 TCP_SYN | TCP_ACK,
                 &[],
             );
+            if dbg {
+                eprintln!("[tcp] SYN -> SYN-ACK isn={isn} ack={rcv_nxt}");
+            }
             self.enqueue(src_mac, synack);
             return;
         }
@@ -372,15 +383,39 @@ impl VirtualWifi {
                 .and_then(|s| s.conns.get_mut(&client_port))
             {
                 Some(c) => c,
-                None => return,
+                None => {
+                    if dbg {
+                        eprintln!("[tcp] no conn for port {client_port} (seq={seq})");
+                    }
+                    return;
+                }
             };
+            if dbg {
+                eprintln!(
+                    "[tcp] conn port={client_port} rcv_nxt={} snd_nxt={} (seq={seq} paylen={})",
+                    conn.rcv_nxt,
+                    conn.snd_nxt,
+                    payload.len()
+                );
+            }
             if !payload.is_empty() && seq == conn.rcv_nxt {
                 conn.req.extend_from_slice(&payload);
                 conn.rcv_nxt = conn.rcv_nxt.wrapping_add(payload.len() as u32);
+                if dbg {
+                    eprintln!(
+                        "[tcp] data += {} (req now {} bytes, complete={})",
+                        payload.len(),
+                        conn.req.len(),
+                        http_req_complete(&conn.req)
+                    );
+                }
                 if http_req_complete(&conn.req) && !conn.fin_sent {
                     // Full request → let the shared HTTP server produce the
                     // complete HTTP/1.1 response; we just segment it.
                     let resp = http.on_data(0, &conn.req);
+                    if dbg {
+                        eprintln!("[tcp] -> HTTP response {} bytes + FIN", resp.len());
+                    }
                     out.push(build_tcp_to_sta(
                         src_mac,
                         src_ip,

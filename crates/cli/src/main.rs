@@ -915,6 +915,57 @@ fn run_two_c3_wifi(
     ExitCode::SUCCESS
 }
 
+/// Single-station WiFi run: one ESP32-C3 on the shared [`virtual_wifi`] medium.
+/// It associates with the virtual AP, gets a DHCP lease, and reaches the AP's
+/// DHCP + HTTP servers — the LBC3.1 stats-device demo path. Mirrors the dual
+/// harness (own minimal step loop, non-zero factory MAC, UART echo) rather than
+/// bolting medium mode onto the standard run loop, which does not keep the MAC
+/// resident (auth never completes).
+pub(crate) fn run_one_c3_wifi(
+    args: &RunArgs,
+    chip: &labwired_config::ChipDescriptor,
+    manifest: &labwired_config::SystemManifest,
+) -> ExitCode {
+    use labwired_core::bus::SystemBus;
+    use labwired_core::peripherals::esp32c3::{virtual_wifi, wifi_mac::Esp32c3WifiMac};
+
+    virtual_wifi::reset();
+    eprintln!("[solo] one C3 on VirtualWifi: STA=02:00:00:00:00:02 (AP hosts DHCP + HTTP)");
+
+    let bus = match SystemBus::from_config(chip, manifest) {
+        Ok(b) => b,
+        Err(e) => {
+            eprintln!("error: failed to build system bus: {e:#}");
+            return ExitCode::from(EXIT_CONFIG_ERROR);
+        }
+    };
+    let mut m = match build_c3_rom_boot_machine(bus, Some([0x02, 0, 0, 0, 0, 0x02])) {
+        Ok(m) => m,
+        Err(c) => return c,
+    };
+    for p in m.bus.peripherals.iter_mut() {
+        let Some(any) = p.dev.as_any_mut() else {
+            continue;
+        };
+        if let Some(mac) = any.downcast_mut::<Esp32c3WifiMac>() {
+            mac.attach_to_medium();
+        } else if let Some(uart) = any.downcast_mut::<labwired_core::peripherals::uart::Uart>() {
+            uart.set_stdout_prefix("");
+        }
+    }
+    m.bus.refresh_peripheral_index();
+
+    let limit = args.max_steps.unwrap_or(u64::MAX);
+    for i in 0..limit {
+        if let Err(e) = m.step() {
+            eprintln!("[solo] station halted at step {i}: {e}");
+            break;
+        }
+    }
+    eprintln!("[solo] run complete");
+    ExitCode::SUCCESS
+}
+
 fn run_asset(args: AssetArgs) -> ExitCode {
     match args.command {
         AssetCommands::ImportSvd(a) => commands::svd::run_import_svd(a),

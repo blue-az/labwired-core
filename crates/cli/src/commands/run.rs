@@ -82,6 +82,15 @@ pub(crate) fn run_firmware_riscv(args: RunArgs, _chip_yaml: String) -> ExitCode 
         return run_two_c3_wifi(&args, &chip, &manifest);
     }
 
+    // Single-station WiFi run (env LABWIRED_WIFI_SOLO): one C3 on the shared
+    // VirtualWifi medium — associates, gets a DHCP lease, and reaches the AP's
+    // DHCP + HTTP servers (the LBC3.1 stats-device demo). Uses its own minimal
+    // step loop like the dual path; bolting medium mode onto the standard run
+    // loop below does not keep the MAC resident (auth never completes).
+    if args.rom_boot && std::env::var("LABWIRED_WIFI_SOLO").is_ok() {
+        return crate::run_one_c3_wifi(&args, &chip, &manifest);
+    }
+
     let mut bus = match SystemBus::from_config(&chip, &manifest) {
         Ok(b) => b,
         Err(e) => {
