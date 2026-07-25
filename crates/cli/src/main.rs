@@ -927,10 +927,30 @@ pub(crate) fn run_one_c3_wifi(
     manifest: &labwired_config::SystemManifest,
 ) -> ExitCode {
     use labwired_core::bus::SystemBus;
+    use labwired_core::peripherals::esp32c3::virtual_wifi::{ApConfig, VirtualWifiBus};
     use labwired_core::peripherals::esp32c3::{virtual_wifi, wifi_mac::Esp32c3WifiMac};
 
     virtual_wifi::reset();
     eprintln!("[solo] one C3 on VirtualWifi: STA=02:00:00:00:00:02 (AP hosts DHCP + HTTP)");
+
+    // If the manifest declares a `wifi_ap`, host a medium with that config;
+    // otherwise the MACs bind the process-global default AP (byte-identical to
+    // the former hardcoded behaviour).
+    let configured_bus = manifest.wifi_ap.as_ref().map(|ap| {
+        let ip = {
+            let octets: Vec<u8> = ap
+                .ip
+                .split('.')
+                .filter_map(|o| o.parse::<u8>().ok())
+                .collect();
+            (octets.len() == 4).then(|| [octets[0], octets[1], octets[2], octets[3]])
+        };
+        VirtualWifiBus::with_config(ApConfig::from_parts(
+            Some(ap.ssid.clone()),
+            ip,
+            Some(&ap.serves),
+        ))
+    });
 
     let bus = match SystemBus::from_config(chip, manifest) {
         Ok(b) => b,
@@ -948,6 +968,9 @@ pub(crate) fn run_one_c3_wifi(
             continue;
         };
         if let Some(mac) = any.downcast_mut::<Esp32c3WifiMac>() {
+            if let Some(bus) = configured_bus.as_ref() {
+                mac.set_wifi_bus(bus.clone());
+            }
             mac.attach_to_medium();
         } else if let Some(uart) = any.downcast_mut::<labwired_core::peripherals::uart::Uart>() {
             uart.set_stdout_prefix("");

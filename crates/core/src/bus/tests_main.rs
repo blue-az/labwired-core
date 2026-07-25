@@ -592,6 +592,7 @@ fn test_from_config_attaches_adxl345_external_device_to_i2c() {
         }],
         board_io: Vec::new(),
         debug_uart: None,
+        wifi_ap: None,
         peripherals: Vec::new(),
     };
 
@@ -1010,6 +1011,7 @@ fn test_esp32c3_i2c_gpio_matrix_distinguishes_gpio45_from_gpio67() {
             }],
             board_io: Vec::new(),
             debug_uart: None,
+            wifi_ap: None,
             peripherals: Vec::new(),
         };
         let mut bus = SystemBus::from_config(&chip, &manifest).expect("construct C3 bus");
@@ -1183,6 +1185,7 @@ fn test_from_config_attaches_bmp280_to_esp32c3_i2c0() {
         }],
         board_io: Vec::new(),
         debug_uart: None,
+        wifi_ap: None,
         peripherals: Vec::new(),
     };
 
@@ -1332,6 +1335,7 @@ fn test_from_config_attaches_mlx90640_to_esp32c3_i2c0_and_reads_eeprom() {
         }],
         board_io: Vec::new(),
         debug_uart: None,
+        wifi_ap: None,
         peripherals: Vec::new(),
     };
 
@@ -2137,6 +2141,7 @@ fn empty_manifest() -> SystemManifest {
         external_devices: Vec::new(),
         board_io: Vec::new(),
         debug_uart: None,
+        wifi_ap: None,
         peripherals: Vec::new(),
     }
 }
@@ -2281,6 +2286,7 @@ fn manifest_with_external_device(
         }],
         board_io: Vec::new(),
         debug_uart: None,
+        wifi_ap: None,
         peripherals: Vec::new(),
     }
 }

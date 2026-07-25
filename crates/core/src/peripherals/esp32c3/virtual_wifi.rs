@@ -56,6 +56,78 @@ const STATS_SNAPSHOT: &str = concat!(
     "\"labs_opened\":69,\"simulations_run\":3200,\"active_sessions\":4900}"
 );
 
+/// What the AP's HTTP origin serves. Keeps the AP's L4 surface a small, explicit
+/// choice so a lab can host the baked stats snapshot (the default demo) or an
+/// empty origin (every path 404s).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ApServes {
+    /// Serve the baked `GET /v1/public-stats` snapshot (the default demo).
+    #[default]
+    LabwiredStats,
+    /// Serve nothing; the HTTP origin has no routes (every request 404s).
+    None,
+}
+
+impl ApServes {
+    /// Parse a manifest `serves` string. Unknown values fall back to the default
+    /// (`LabwiredStats`) so a typo degrades to the demo rather than a dead AP.
+    pub fn parse(s: &str) -> Self {
+        match s {
+            "labwired-stats" | "stats" | "public-stats" => ApServes::LabwiredStats,
+            "none" | "" => ApServes::None,
+            _ => ApServes::LabwiredStats,
+        }
+    }
+}
+
+/// Per-lab AP configuration. The former process-global consts (`AP_SSID`,
+/// `AP_IP`, and the stats origin) are the [`Default`], so an unconfigured AP is
+/// byte-identical to the old hardcoded one; a manifest `wifi_ap` overrides SSID,
+/// IP (its /24 is the DHCP pool), and what the HTTP origin serves. BSSID and
+/// netmask stay const (the driver never keys on them).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ApConfig {
+    pub ssid: String,
+    pub ip: [u8; 4],
+    pub serves: ApServes,
+}
+
+impl Default for ApConfig {
+    fn default() -> Self {
+        Self {
+            ssid: AP_SSID.to_string(),
+            ip: AP_IP,
+            serves: ApServes::LabwiredStats,
+        }
+    }
+}
+
+impl ApConfig {
+    /// Build a config from optional parts, filling any missing field from
+    /// [`Default`]. `serves` is parsed via [`ApServes::parse`].
+    pub fn from_parts(ssid: Option<String>, ip: Option<[u8; 4]>, serves: Option<&str>) -> Self {
+        let d = ApConfig::default();
+        Self {
+            ssid: ssid.unwrap_or(d.ssid),
+            ip: ip.unwrap_or(d.ip),
+            serves: serves.map(ApServes::parse).unwrap_or(d.serves),
+        }
+    }
+
+    /// The AP's HTTP origin for this config. `LabwiredStats` serves the baked
+    /// `/v1/public-stats` snapshot; `None` is an empty origin (every path 404s).
+    /// One source of truth for the AP's L4 routing.
+    fn http_origin(&self) -> Arc<dyn SimServer> {
+        match self.serves {
+            ApServes::LabwiredStats => Arc::new(HttpServer::new().get(
+                "/v1/public-stats",
+                HttpResponse::json(STATS_SNAPSHOT.as_bytes().to_vec()),
+            )),
+            ApServes::None => Arc::new(HttpServer::new()),
+        }
+    }
+}
+
 /// Minimal per-connection TCP state for the AP's HTTP server. Enough for lwIP's
 /// `esp_http_client` to complete a short in-order GET (no reordering, no SACK).
 #[derive(Debug, Default)]
@@ -89,24 +161,34 @@ struct VirtualWifi {
     next_host: u8,
     /// Deterministic seed for TCP initial sequence numbers.
     next_isn: u32,
+    /// This AP's identity + L4 config (SSID, IP, what it serves).
+    cfg: ApConfig,
     /// The AP's HTTP origin. Reuses the L4 [`HttpServer`] router + HTTP/1.1
     /// encoder so the TCP layer only moves bytes — one source of truth for HTTP.
+    /// Derived from `cfg.serves`.
     http: Arc<dyn SimServer>,
 }
 
-impl Default for VirtualWifi {
-    fn default() -> Self {
-        // Serves the public-stats snapshot; the device GETs /v1/public-stats.
-        let http = HttpServer::new().get(
-            "/v1/public-stats",
-            HttpResponse::json(STATS_SNAPSHOT.as_bytes().to_vec()),
-        );
+impl VirtualWifi {
+    /// Build an AP from an explicit config; its HTTP origin is derived from
+    /// `cfg.serves`.
+    fn with_config(cfg: ApConfig) -> Self {
+        let http = cfg.http_origin();
         Self {
             stas: HashMap::new(),
             next_host: 0,
             next_isn: 0,
-            http: Arc::new(http),
+            cfg,
+            http,
         }
+    }
+}
+
+impl Default for VirtualWifi {
+    fn default() -> Self {
+        // Default cfg = the former hardcoded AP (SSID "labwired-ap",
+        // 192.168.4.1, serving the public-stats snapshot).
+        Self::with_config(ApConfig::default())
     }
 }
 
@@ -125,6 +207,15 @@ pub struct VirtualWifiBus {
 impl VirtualWifiBus {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Build a medium whose AP uses an explicit [`ApConfig`] (SSID, IP, what it
+    /// serves). `new()`/`Default` use [`ApConfig::default`] — the former
+    /// hardcoded AP — so existing behaviour is byte-identical.
+    pub fn with_config(cfg: ApConfig) -> Self {
+        Self {
+            inner: Arc::new(Mutex::new(VirtualWifi::with_config(cfg))),
+        }
     }
 
     fn with<R>(&self, f: impl FnOnce(&mut VirtualWifi) -> R) -> R {
@@ -160,7 +251,7 @@ impl VirtualWifiBus {
     /// Called periodically by the MAC while not yet associated.
     pub fn queue_beacon(&self, mac: [u8; 6], channel: u8) {
         self.with(|m| {
-            let frame = build_beacon(channel);
+            let frame = build_beacon(&m.cfg.ssid, channel);
             m.enqueue(mac, frame);
         });
     }
@@ -203,7 +294,7 @@ impl VirtualWifi {
         }
         let host = FIRST_HOST + self.next_host;
         self.next_host += 1;
-        let ip = [192, 168, 4, host];
+        let ip = [self.cfg.ip[0], self.cfg.ip[1], self.cfg.ip[2], host];
         self.sta(mac).ip = ip;
         ip
     }
@@ -238,7 +329,7 @@ impl VirtualWifi {
         if ftype == 0 {
             // Management: respond to the transmitting station.
             match subtype {
-                0x4 => self.enqueue(src, build_probe_resp(src, 1)),
+                0x4 => self.enqueue(src, build_probe_resp(&self.cfg.ssid, src, 1)),
                 0xB => self.enqueue(src, build_auth_resp(src)),
                 0x0 | 0x2 => self.enqueue(src, build_assoc_resp(src)),
                 _ => {}
@@ -251,7 +342,7 @@ impl VirtualWifi {
         // Data frame.
         if let Some((xid, mtype)) = parse_dhcp(frame) {
             let ip = self.assign_ip(src);
-            let reply = build_dhcp_reply(src, ip, xid, mtype == 3);
+            let reply = build_dhcp_reply(self.cfg.ip, src, ip, xid, mtype == 3);
             self.enqueue(src, reply);
             return;
         }
@@ -263,7 +354,7 @@ impl VirtualWifi {
             if oper == 1 {
                 let own = self.stas.get(&src).map(|s| s.ip).unwrap_or_default();
                 if tpa != own {
-                    let who = if tpa == AP_IP {
+                    let who = if tpa == self.cfg.ip {
                         AP_MAC_L2
                     } else if let Some(m) = self.mac_for_ip(tpa) {
                         m
@@ -278,12 +369,12 @@ impl VirtualWifi {
         }
         // IPv4: route to the destination station if we know it, else drop.
         if let Some((dst_ip, proto)) = parse_ipv4_dst(frame) {
-            if dst_ip == AP_IP {
+            if dst_ip == self.cfg.ip {
                 // TCP → the AP's HTTP server (real handshake + segments); else a
                 // UDP echo (proves an app-data round-trip). Other traffic dropped.
                 if proto == 6 {
                     self.handle_tcp(src, frame);
-                } else if let Some(echo) = build_udp_echo(src, frame) {
+                } else if let Some(echo) = build_udp_echo(self.cfg.ip, src, frame) {
                     self.enqueue(src, echo);
                 }
                 return;
@@ -304,6 +395,7 @@ impl VirtualWifi {
     /// lwIP's `esp_http_client` to complete a short GET. The station runs the
     /// real TCP stack; the AP is the peer that terminates it (no thunks).
     fn handle_tcp(&mut self, src_mac: [u8; 6], frame: &[u8]) {
+        let ap_ip = self.cfg.ip;
         let ipoff = snap_off(frame);
         if frame.len() < ipoff + 20 {
             return;
@@ -356,6 +448,7 @@ impl VirtualWifi {
                 req: Vec::new(),
             };
             let synack = build_tcp_to_sta(
+                ap_ip,
                 src_mac,
                 src_ip,
                 server_port,
@@ -417,6 +510,7 @@ impl VirtualWifi {
                         eprintln!("[tcp] -> HTTP response {} bytes + FIN", resp.len());
                     }
                     out.push(build_tcp_to_sta(
+                        ap_ip,
                         src_mac,
                         src_ip,
                         server_port,
@@ -428,6 +522,7 @@ impl VirtualWifi {
                     ));
                     conn.snd_nxt = conn.snd_nxt.wrapping_add(resp.len() as u32);
                     out.push(build_tcp_to_sta(
+                        ap_ip,
                         src_mac,
                         src_ip,
                         server_port,
@@ -442,6 +537,7 @@ impl VirtualWifi {
                 } else {
                     // Partial request: acknowledge what we have so far.
                     out.push(build_tcp_to_sta(
+                        ap_ip,
                         src_mac,
                         src_ip,
                         server_port,
@@ -458,6 +554,7 @@ impl VirtualWifi {
             if flags & TCP_FIN != 0 && seq.wrapping_add(payload.len() as u32) == conn.rcv_nxt {
                 conn.rcv_nxt = conn.rcv_nxt.wrapping_add(1);
                 out.push(build_tcp_to_sta(
+                    ap_ip,
                     src_mac,
                     src_ip,
                     server_port,
@@ -582,21 +679,21 @@ fn mgmt_hdr(subtype_fc0: u8, da: [u8; 6]) -> Vec<u8> {
     f
 }
 
-fn build_beacon(channel: u8) -> Vec<u8> {
+fn build_beacon(ssid: &str, channel: u8) -> Vec<u8> {
     let mut f = mgmt_hdr(0x80, [0xFF; 6]);
     f.extend_from_slice(&[0u8; 8]); // timestamp
     f.extend_from_slice(&[0x64, 0x00]); // beacon interval
     f.extend_from_slice(&[0x01, 0x00]); // capability: ESS, OPEN
     f.push(0x00);
-    f.push(AP_SSID.len() as u8);
-    f.extend_from_slice(AP_SSID.as_bytes());
+    f.push(ssid.len() as u8);
+    f.extend_from_slice(ssid.as_bytes());
     f.extend_from_slice(&[0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24]);
     f.extend_from_slice(&[0x03, 0x01, channel]);
     f
 }
 
-fn build_probe_resp(da: [u8; 6], channel: u8) -> Vec<u8> {
-    let mut f = build_beacon(channel);
+fn build_probe_resp(ssid: &str, da: [u8; 6], channel: u8) -> Vec<u8> {
+    let mut f = build_beacon(ssid, channel);
     f[0] = 0x50; // probe response
     f[4..10].copy_from_slice(&da);
     f
@@ -645,13 +742,19 @@ fn data_frame(da: [u8; 6], ethertype: u16, l3: &[u8]) -> Vec<u8> {
     f
 }
 
-fn build_dhcp_reply(da: [u8; 6], yiaddr: [u8; 4], xid: [u8; 4], ack: bool) -> Vec<u8> {
+fn build_dhcp_reply(
+    ap_ip: [u8; 4],
+    da: [u8; 6],
+    yiaddr: [u8; 4],
+    xid: [u8; 4],
+    ack: bool,
+) -> Vec<u8> {
     let mut dhcp = vec![0x02, 0x01, 0x06, 0x00];
     dhcp.extend_from_slice(&xid);
     dhcp.extend_from_slice(&[0x00, 0x00, 0x80, 0x00]); // secs, broadcast flag
     dhcp.extend_from_slice(&[0, 0, 0, 0]); // ciaddr
     dhcp.extend_from_slice(&yiaddr);
-    dhcp.extend_from_slice(&AP_IP); // siaddr
+    dhcp.extend_from_slice(&ap_ip); // siaddr
     dhcp.extend_from_slice(&[0, 0, 0, 0]); // giaddr
     dhcp.extend_from_slice(&da); // chaddr (6)
     dhcp.extend_from_slice(&[0u8; 10]);
@@ -659,11 +762,11 @@ fn build_dhcp_reply(da: [u8; 6], yiaddr: [u8; 4], xid: [u8; 4], ack: bool) -> Ve
     dhcp.extend_from_slice(&[0u8; 128]); // file
     dhcp.extend_from_slice(&[0x63, 0x82, 0x53, 0x63]); // magic
     dhcp.extend_from_slice(&[53, 1, if ack { 5 } else { 2 }]);
-    dhcp.extend_from_slice(&[54, 4, AP_IP[0], AP_IP[1], AP_IP[2], AP_IP[3]]);
+    dhcp.extend_from_slice(&[54, 4, ap_ip[0], ap_ip[1], ap_ip[2], ap_ip[3]]);
     dhcp.extend_from_slice(&[51, 4, 0x00, 0x01, 0x51, 0x80]); // lease
     dhcp.extend_from_slice(&[1, 4, NETMASK[0], NETMASK[1], NETMASK[2], NETMASK[3]]);
-    dhcp.extend_from_slice(&[3, 4, AP_IP[0], AP_IP[1], AP_IP[2], AP_IP[3]]);
-    dhcp.extend_from_slice(&[6, 4, AP_IP[0], AP_IP[1], AP_IP[2], AP_IP[3]]);
+    dhcp.extend_from_slice(&[3, 4, ap_ip[0], ap_ip[1], ap_ip[2], ap_ip[3]]);
+    dhcp.extend_from_slice(&[6, 4, ap_ip[0], ap_ip[1], ap_ip[2], ap_ip[3]]);
     dhcp.push(255);
 
     let udp_len = (8 + dhcp.len()) as u16;
@@ -689,7 +792,7 @@ fn build_dhcp_reply(da: [u8; 6], yiaddr: [u8; 4], xid: [u8; 4], ack: bool) -> Ve
         0,
         0,
     ];
-    ip.extend_from_slice(&AP_IP);
+    ip.extend_from_slice(&ap_ip);
     ip.extend_from_slice(&[255, 255, 255, 255]);
     let cks = inet_checksum(&ip);
     ip[10] = (cks >> 8) as u8;
@@ -710,7 +813,7 @@ fn build_arp_reply(da: [u8; 6], who_mac: [u8; 6], who_ip: [u8; 4], target_ip: [u
 
 /// If `frame` is a UDP datagram to the AP's echo port, build the echoed reply
 /// (same payload, src/dst swapped) as a from-DS data frame to the sender `da`.
-fn build_udp_echo(da: [u8; 6], frame: &[u8]) -> Option<Vec<u8>> {
+fn build_udp_echo(ap_ip: [u8; 4], da: [u8; 6], frame: &[u8]) -> Option<Vec<u8>> {
     let ip = snap_off(frame);
     if frame.len() < ip + 20 || frame[ip] >> 4 != 4 || frame[ip + 9] != 17 {
         return None;
@@ -756,7 +859,7 @@ fn build_udp_echo(da: [u8; 6], frame: &[u8]) -> Option<Vec<u8>> {
         0,
         0,
     ];
-    iph.extend_from_slice(&AP_IP);
+    iph.extend_from_slice(&ap_ip);
     iph.extend_from_slice(&src_ip);
     let cks = inet_checksum(&iph);
     iph[10] = (cks >> 8) as u8;
@@ -769,6 +872,7 @@ fn build_udp_echo(da: [u8; 6], frame: &[u8]) -> Option<Vec<u8>> {
 /// IPv4 and TCP checksums computed) from the AP's HTTP port to the station.
 #[allow(clippy::too_many_arguments)]
 fn build_tcp_to_sta(
+    ap_ip: [u8; 4],
     da: [u8; 6],
     client_ip: [u8; 4],
     sport: u16,
@@ -789,7 +893,7 @@ fn build_tcp_to_sta(
     tcp.extend_from_slice(&[0, 0]); // checksum (filled below)
     tcp.extend_from_slice(&[0, 0]); // urgent pointer
     tcp.extend_from_slice(payload);
-    let cks = tcp_checksum(&AP_IP, &client_ip, &tcp);
+    let cks = tcp_checksum(&ap_ip, &client_ip, &tcp);
     tcp[16] = (cks >> 8) as u8;
     tcp[17] = cks as u8;
 
@@ -808,7 +912,7 @@ fn build_tcp_to_sta(
         0x00,
         0x00, // header checksum (filled below)
     ];
-    ip.extend_from_slice(&AP_IP);
+    ip.extend_from_slice(&ap_ip);
     ip.extend_from_slice(&client_ip);
     let ipck = inet_checksum(&ip);
     ip[10] = (ipck >> 8) as u8;
@@ -1111,6 +1215,50 @@ mod tests {
         assert!(
             text.starts_with("HTTP/1.1 404"),
             "unknown path → 404: {text}"
+        );
+    }
+
+    #[test]
+    fn with_config_ssid_carried_in_beacon() {
+        // A configured SSID must appear in the beacon the AP queues. Default cfg
+        // (SSID "labwired-ap") is byte-identical to the old hardcoded AP; here we
+        // override it and confirm the override propagates through the builder.
+        let cfg = ApConfig::from_parts(Some("myap".to_string()), None, None);
+        let bus = VirtualWifiBus::with_config(cfg);
+        let sta = sta_mac(2);
+        bus.queue_beacon(sta, 6);
+        let rx = bus.take_inbox(sta);
+        assert_eq!(rx.len(), 1, "one beacon queued");
+        let f = &rx[0];
+        assert_eq!(f[0], 0x80, "beacon subtype");
+        assert!(
+            f.windows(4).any(|w| w == b"myap"),
+            "beacon carries the configured SSID"
+        );
+    }
+
+    #[test]
+    fn serves_none_returns_404() {
+        // serves = None → the HTTP origin has no routes, so even the demo path
+        // 404s (nothing is served). Proves the L4 config is honored.
+        let cfg = ApConfig::from_parts(None, None, Some("none"));
+        assert_eq!(cfg.serves, ApServes::None);
+        let bus = VirtualWifiBus::with_config(cfg);
+        let sta = sta_mac(2);
+        let (sport, dport) = (45000u16, 80u16);
+        bus.submit(sta, &sta_tcp(sta, sport, dport, 100, 0, TCP_SYN, &[]));
+        let (_, srv_isn, _, _) = reply_tcp(&bus.take_inbox(sta)[0]);
+        let get = b"GET /v1/public-stats HTTP/1.1\r\n\r\n";
+        bus.submit(
+            sta,
+            &sta_tcp(sta, sport, dport, 101, srv_isn + 1, TCP_PSH | TCP_ACK, get),
+        );
+        let rx = bus.take_inbox(sta);
+        let (_, _, _, body) = reply_tcp(&rx[0]);
+        let text = String::from_utf8_lossy(&body);
+        assert!(
+            text.starts_with("HTTP/1.1 404"),
+            "serves=none → no /v1/public-stats route → 404: {text}"
         );
     }
 }

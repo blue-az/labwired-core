@@ -482,6 +482,7 @@ mod tests {
             }],
             board_io: vec![],
             debug_uart: None,
+            wifi_ap: None,
         };
         attach_esp32_external_devices(&mut bus, &manifest)
             .expect("attach TMP102 from manifest must succeed");
@@ -575,6 +576,7 @@ mod tests {
             }],
             board_io: vec![],
             debug_uart: None,
+            wifi_ap: None,
         };
 
         let mut bus = SystemBus::new();
@@ -649,6 +651,7 @@ mod tests {
             }],
             board_io: vec![],
             debug_uart: None,
+            wifi_ap: None,
         };
 
         // Register spi3_s3 exactly as the production S3 bring-up does
@@ -703,6 +706,7 @@ mod tests {
             }],
             board_io: vec![],
             debug_uart: None,
+            wifi_ap: None,
         };
 
         let mut bus = SystemBus::new();

@@ -55,6 +55,7 @@ fn validate_chip(path: &PathBuf) -> anyhow::Result<()> {
         cosim_models: Vec::new(),
         board_io: vec![],
         debug_uart: None,
+        wifi_ap: None,
         peripherals: vec![],
         memory_overrides: Default::default(),
     };
