@@ -5,8 +5,7 @@
 //! `labwired asset validate-component <spec.yaml> [--json]`
 //!
 //! Shape-validates a declarative device descriptor (a `configs/devices/*.yaml`
-//! entry, the modern single declarative stack — see
-//! `docs/specs/declarative_i2c_devices.md`). Exit code 0 when the file parses
+//! entry, the modern single declarative stack). Exit code 0 when the file parses
 //! as a [`DeviceDescriptor`], 1 when it is unreadable or malformed. `--json`
 //! emits `{ "ok": bool, "name": string|null, "diagnostics": [...] }` on stdout
 //! for the MCP server.

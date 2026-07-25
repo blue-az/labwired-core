@@ -36,9 +36,7 @@
 //! code; it refuses every block so the dispatcher falls back to the
 //! interpreter. The real Thumb-2 / RISC-V / Xtensa frontends (and the
 //! `wasmtime` / `js_sys` runtime backends) land in later phases, gated on
-//! the post-campaign CPU-share measurement. See
-//! `docs/engineering/universal-jit-framework.md` for the full design,
-//! ordering, and merge bar.
+//! the post-campaign CPU-share measurement.
 //!
 //! Everything here is behind the `jit-framework` cargo feature; the
 //! default build and the existing `jit` (Xtensa pilot) path are
