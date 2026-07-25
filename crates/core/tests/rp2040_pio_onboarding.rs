@@ -65,6 +65,7 @@ fn rp2040_chip() -> (ChipDescriptor, SystemManifest) {
         external_devices: vec![],
         board_io: vec![],
         debug_uart: None,
+        wifi_ap: None,
         peripherals: vec![],
         memory_overrides: Default::default(),
     };

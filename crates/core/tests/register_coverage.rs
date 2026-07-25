@@ -132,6 +132,7 @@ fn dummy_manifest(path: &str) -> labwired_config::SystemManifest {
         cosim_models: Vec::new(),
         board_io: vec![],
         debug_uart: None,
+        wifi_ap: None,
         peripherals: vec![],
         memory_overrides: Default::default(),
     }
