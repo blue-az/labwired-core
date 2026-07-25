@@ -239,7 +239,9 @@ impl SystemBus {
     /// being polled at a bounded cadence through a CPU idle skip (see
     /// [`Peripheral::idle_poll_bus_tick`]) — currently a medium-mode WiFi MAC.
     /// Only the tiny `bus_tick_indices` set is scanned (empty on every non-WiFi
-    /// bus, so this is ~free on the idle-fast-forward hot check).
+    /// bus, so this is ~free on the idle-fast-forward hot check). Only the
+    /// event-scheduler fast-forward path consults it.
+    #[cfg(feature = "event-scheduler")]
     pub(crate) fn idle_poll_bus_tick_active(&self) -> bool {
         self.bus_tick_indices
             .iter()
@@ -250,6 +252,7 @@ impl SystemBus {
     /// skip has advanced `current_cycle`, so an external medium's inbound frames
     /// (and device-cycle-keyed beacons) are serviced at the poll deadline
     /// instead of being starved for the whole idle window.
+    #[cfg(feature = "event-scheduler")]
     pub(crate) fn run_idle_poll_bus_tick(&mut self) {
         self.run_bus_tick_pass();
     }

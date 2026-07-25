@@ -556,7 +556,14 @@ boards:
     # agree_on_one_slow_rate. Reset oracle (esp32c3_reset_values_match_silicon)
     # unaffected — RTCCALICFG/RTCCALICFG1 are dynamic cal registers, not in the
     # asserted reset set.
-    drift_ack: 2026-07-24
+    # 2026-07-25: WiFi MAC medium keepalive under CPU idle fast-forward (#656,
+    # esp32c3/wifi_mac.rs) — the medium-mode AP beacon is re-keyed from a
+    # tick-call counter to device cycles (same 2,000,000-cycle cadence) and the
+    # medium opts into bounded idle-poll bus ticks so association survives
+    # fast-forward skip windows. Behavioural WiFi-medium timing only; register
+    # map, reset values, and the asserted reset-oracle set are untouched. No
+    # live re-capture warranted.
+    drift_ack: 2026-07-25
 
   - id: nucleo-l476rg
     doc: docs/boards/nucleo-l476rg.md

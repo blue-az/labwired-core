@@ -57,7 +57,6 @@ nav:
   - Home: index.md
   - Architecture Overview: architecture.md
   - Hardware-Sim Parity: golden_reference.md
-  - Hardware Matrix: supported_devices.md
   - AI Agent Manual: agents.md
 
   - Tutorials:
@@ -105,7 +104,6 @@ nav:
     - Release Strategy: release_strategy.md
     - Release Determinism: RELEASE_DETERMINISM.md
     - Verification Audit: labwired_audit_protocol.md
-    - Supported Devices: supported_devices.md
     - Coverage Scoreboard: coverage_scoreboard.md
     - Chip Conformance (live): coverage/chip-conformance.md
     - Tier-1 Matrix (live): coverage/tier1-scoreboard.md
