@@ -1186,7 +1186,9 @@ pub struct StepProfile {
 /// its deadline, so this sets the worst-case frame-delivery latency: ~8192
 /// cycles ≈ 51 µs at 160 MHz, far under any WiFi association/DHCP/socket
 /// timeout, while still collapsing the millions of idle cycles the CPU would
-/// otherwise execute one-by-one. Non-WiFi buses never consult this.
+/// otherwise execute one-by-one. Non-WiFi buses never consult this. Only the
+/// event-scheduler fast-forward path consults the medium poll quantum.
+#[cfg(feature = "event-scheduler")]
 const WIFI_MEDIUM_IDLE_POLL_QUANTUM: u64 = 8192;
 
 pub struct Machine<C: Cpu> {
