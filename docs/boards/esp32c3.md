@@ -15,8 +15,8 @@ external YAML descriptors under `configs/peripherals/esp32c3/`.
 | Chip yaml           | [`configs/chips/esp32c3.yaml`](../../configs/chips/esp32c3.yaml)                  |
 | System yaml         | [`configs/systems/esp32c3-devkit.yaml`](../../configs/systems/esp32c3-devkit.yaml) |
 | Reference firmware  | [`crates/firmware-esp32c3-demo/`](../../crates/firmware-esp32c3-demo/) (RISC-V `riscv32imc` demo) |
-| Validation          | reset-state conformance vs silicon — see [`docs/esp32c3_reset_conformance_audit.md`](../esp32c3_reset_conformance_audit.md) |
-| WiFi/lwIP           | full association → DHCP → UDP over the register-level MAC — see [`docs/esp32c3_wifi_mac_bridge.md`](../esp32c3_wifi_mac_bridge.md) |
+| Validation          | reset-state conformance vs silicon |
+| WiFi/lwIP           | full association → DHCP → UDP over the register-level MAC |
 | Tier                | full documented SVD estate wired + reset-state validated                          |
 
 ## Peripherals (from chip yaml)
@@ -35,8 +35,6 @@ bus faults). Wired blocks include:
 - **Misc:** `efuse`, `apb_saradc`, `usb_device` (USB-Serial/JTAG), `extmem`
 
 Authoritative bases come from the ESP32-C3 SVD
-(`tests/fixtures/real_world/esp32c3.svd`); see
-[`docs/esp32c3_reset_conformance_audit.md`](../esp32c3_reset_conformance_audit.md)
-for the silicon oracle diff and which registers are static vs ROM-configured.
+(`tests/fixtures/real_world/esp32c3.svd`).
 See [`docs/declarative_registers.md`](../declarative_registers.md) for how
 declarative peripheral descriptors work.

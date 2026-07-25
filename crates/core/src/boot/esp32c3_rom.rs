@@ -357,7 +357,7 @@ pub fn build_rom_boot_machine<C: crate::Cpu, F: FnOnce(crate::cpu::RiscV) -> C>(
     // MAC <-> SimNet bridge: register-backed bring-up, MAC-ready bit (0xD14
     // b0, polled by hal_init), RX descriptor-ring DMA + RX-frame injection,
     // and MAC interrupt (matrix source 0) on RX-done. Overrides the
-    // declarative wifi_mac window. See docs/esp32c3_wifi_mac_bridge.md.
+    // declarative wifi_mac window.
     bus.add_peripheral(
         "wifi_mac",
         0x6003_3000,

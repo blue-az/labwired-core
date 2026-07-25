@@ -259,7 +259,7 @@ const PERI_SEL_RESET: u32 = 0x3F;
 /// Peripheral targets GDMA can couple to.
 ///
 /// Values are per the ESP32-S3 TRM / `gdma_struct.h` PERI_IN_SEL / PERI_OUT_SEL
-/// encoding verified in `docs/esp32s3_gdma_peri_sel.md` (Task 0 ground truth).
+/// encoding verified against silicon (Task 0 ground truth).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum DmaPeripheral {
     /// GP-SPI2 master/slave (sel = 0)

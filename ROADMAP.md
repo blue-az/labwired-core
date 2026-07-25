@@ -3,8 +3,7 @@
 Where LabWired Core is heading as a production-ready environment for
 professional firmware simulation. Shipped work lives in
 [CHANGELOG.md](CHANGELOG.md); current model accuracy and known gaps live in
-[FIDELITY.md](FIDELITY.md) and
-[docs/boards/VALIDATION_STATUS.md](docs/boards/VALIDATION_STATUS.md).
+[FIDELITY.md](FIDELITY.md).
 
 ## Now — v0.19.x
 

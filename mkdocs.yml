@@ -76,6 +76,7 @@ nav:
     - Debugging: debugging.md
     - PlatformIO Integration: platformio_integration.md
     - Co-simulation Plugins: cosimulation_plugins.md
+    - CI Integration Templates: integration-templates/README.md
 
   - Reference:
     - Configuration (YAML): configuration_reference.md
@@ -105,8 +106,6 @@ nav:
     - nRF54L15: boards/nrf54l15.md
     - NUCLEO-L073RZ: boards/nucleo-l073rz.md
     - XIAO nRF52840 Sense: boards/seeed-xiao-nrf52840-sense.md
-    - Validation Status: boards/VALIDATION_STATUS.md
-    - Firmware Exercise Matrix: boards/FIRMWARE_EXERCISE_MATRIX.md
 
   - Operations:
     - Release Strategy: release_strategy.md

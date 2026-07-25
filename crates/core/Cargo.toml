@@ -76,7 +76,7 @@ jit = ["dep:wasmtime"]
 # extra deps — it carries the shared block cache, side-exit protocol,
 # per-ISA frontend trait, native/browser runtime abstraction, interpreter
 # fallback, and differential harness, but ZERO per-ISA codegen. Off by
-# default so nothing else changes. See docs/engineering/universal-jit-framework.md.
+# default so nothing else changes.
 jit-framework = []
 # Phase 2B.1 (issue #192): event-driven peripheral scheduler. The
 # scheduler types (`crates/core/src/sched/`) and the `Peripheral` trait
@@ -88,7 +88,7 @@ event-scheduler = []
 # stack behind a narrow bridge (`native/iolink_master_bridge.*`) into
 # `labwired-core`. Off by default and never enabled by the browser crate
 # (`labwired-wasm`) so wasm builds stay free of native C and GPL device-stack
-# linkage. See docs/engineering/iolink-device-stack-isolation.md.
+# linkage.
 iolink-native = []
 # MLX90640 round-trip decode test (plan 2026-06-20): compiles the REAL,
 # unmodified Melexis MLX90640 driver (third_party/mlx90640-library) behind a
