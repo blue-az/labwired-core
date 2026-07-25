@@ -71,6 +71,7 @@ pub(crate) fn run_firmware_riscv(args: RunArgs, _chip_yaml: String) -> ExitCode 
         cosim_models: Vec::new(),
         board_io: vec![],
         debug_uart: None,
+        wifi_ap: None,
         peripherals: vec![],
         walk_deleted: Some(false),
     };

@@ -227,6 +227,15 @@ impl Esp32c3WifiMac {
         self.medium_mode = true;
     }
 
+    /// Rebind this MAC to an explicit WiFi bus AFTER construction (the browser
+    /// path builds the machine first, then attaches the configured medium once
+    /// the manifest's `wifi_ap` is known). Does not touch medium mode or the
+    /// learned `medium_mac` — pair with [`Self::attach_to_medium`], exactly as
+    /// the CLI's post-build attach loop does.
+    pub fn set_wifi_bus(&mut self, bus: super::virtual_wifi::VirtualWifiBus) {
+        self.wifi = bus;
+    }
+
     /// Record a captured frame in the analyzer ring buffer (oldest dropped at
     /// `TRACE_CAP`). `dir` is `"tx"` or `"rx"` from this device's perspective.
     fn trace_push(&mut self, dir: &'static str, bytes: &[u8], rssi: i8) {

@@ -262,6 +262,35 @@ pub struct BoardIoBinding {
     pub device_type: Option<String>,
 }
 
+fn default_wifi_ap_ssid() -> String {
+    "labwired-ap".to_string()
+}
+
+fn default_wifi_ap_ip() -> String {
+    "192.168.4.1".to_string()
+}
+
+fn default_wifi_ap_serves() -> String {
+    "labwired-stats".to_string()
+}
+
+/// Manifest opt-in for the per-lab virtual WiFi Access Point. Emitted when a
+/// diagram contains a `wifi-ap` component. Absent ⇒ no AP (WiFi MACs stay
+/// unassociated — honest "no AP present"). Mirrors `debug_uart`'s optional
+/// pattern.
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct WifiApManifest {
+    /// Broadcast SSID of the AP.
+    #[serde(default = "default_wifi_ap_ssid")]
+    pub ssid: String,
+    /// AP's IPv4 address (dotted-quad); its /24 is the DHCP pool.
+    #[serde(default = "default_wifi_ap_ip")]
+    pub ip: String,
+    /// What the AP's HTTP origin serves: "labwired-stats" (default) or "none".
+    #[serde(default = "default_wifi_ap_serves")]
+    pub serves: String,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SystemManifest {
     #[serde(default = "default_schema_version")]
@@ -278,6 +307,10 @@ pub struct SystemManifest {
     pub board_io: Vec<BoardIoBinding>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub debug_uart: Option<String>,
+    /// Per-lab virtual WiFi AP config (present ⇒ a `wifi-ap` component is on the
+    /// diagram). Absent ⇒ no AP. See [`WifiApManifest`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wifi_ap: Option<WifiApManifest>,
     #[serde(default)]
     pub peripherals: Vec<PeripheralConfig>,
     /// Per-cycle peripheral-walk deletion (only consulted in `event-scheduler`

@@ -638,16 +638,60 @@ impl WasmSimulator {
         }
         let uart_rx_bufs = bus.attach_uart_rx_source();
 
-        let machine = build_rom_boot_machine(
+        // A station with a zero eFuse MAC associates but does not STAY associated
+        // (hard-won: the driver needs a real RD_MAC to hold the link). So when a
+        // `wifi-ap` is on the diagram, seed the same station MAC the CLI solo path
+        // uses (02:00:00:00:00:02). Absent ⇒ leave None (unchanged non-WiFi boot).
+        let efuse_mac = manifest
+            .wifi_ap
+            .as_ref()
+            .map(|_| [0x02, 0x00, 0x00, 0x00, 0x00, 0x02]);
+
+        let mut machine = build_rom_boot_machine(
             bus,
             flash_bytes,
             RomBootOpts {
-                efuse_mac: None,
+                efuse_mac,
                 usb_serial_sink: capture_usb_serial.then(|| uart_sink.clone()),
             },
             // WasmSimulator holds Machine<Box<dyn Cpu>>; box the concrete RiscV.
             |c| Box::new(c) as Box<dyn Cpu>,
         );
+
+        // Per-lab virtual WiFi AP: if the manifest declares `wifi_ap` (a `wifi-ap`
+        // component is on the diagram), build a medium with the configured
+        // ApConfig and attach every WiFi MAC to it — the browser analog of the
+        // CLI's post-build attach loop (`run_one_c3_wifi`). Absent ⇒ do nothing:
+        // the MAC stays non-medium, never associates, and there is honestly no AP.
+        if let Some(ap) = manifest.wifi_ap.as_ref() {
+            use labwired_core::peripherals::esp32c3::virtual_wifi::{ApConfig, VirtualWifiBus};
+            use labwired_core::peripherals::esp32c3::wifi_mac::Esp32c3WifiMac;
+            // Parse "a.b.c.d" → [u8;4]; on any parse failure fall back to the
+            // default AP IP (from_parts fills None from ApConfig::default()).
+            let ip = {
+                let octets: Vec<u8> = ap
+                    .ip
+                    .split('.')
+                    .filter_map(|o| o.parse::<u8>().ok())
+                    .collect();
+                (octets.len() == 4).then(|| [octets[0], octets[1], octets[2], octets[3]])
+            };
+            let cfg = ApConfig::from_parts(Some(ap.ssid.clone()), ip, Some(&ap.serves));
+            let bus = VirtualWifiBus::with_config(cfg);
+            for p in machine.bus.peripherals.iter_mut() {
+                let Some(any) = p.dev.as_any_mut() else {
+                    continue;
+                };
+                if let Some(mac) = any.downcast_mut::<Esp32c3WifiMac>() {
+                    mac.set_wifi_bus(bus.clone());
+                    mac.attach_to_medium();
+                }
+            }
+            // `attach_to_medium` is a non-MMIO toggle that flips the MAC's
+            // `needs_bus_tick()` on; rebuild the tick-index once so the MAC is
+            // resident (mirrors the CLI attach loop).
+            machine.bus.refresh_peripheral_index();
+        }
 
         let board_io = manifest.board_io.clone();
 

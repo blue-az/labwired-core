@@ -1150,6 +1150,7 @@ mod tests {
                 i2c_address: None,
             }],
             debug_uart: None,
+            wifi_ap: None,
             peripherals: Vec::new(),
         };
 
@@ -1221,6 +1222,7 @@ mod tests {
                 },
             ],
             debug_uart: None,
+            wifi_ap: None,
             peripherals: Vec::new(),
         };
 
@@ -1281,6 +1283,7 @@ mod tests {
                 i2c_address: None,
             }],
             debug_uart: None,
+            wifi_ap: None,
             peripherals: Vec::new(),
         };
 
