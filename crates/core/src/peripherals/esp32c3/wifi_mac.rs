@@ -6,8 +6,8 @@
 //! MAC ↔ SimNet bridge.
 //!
 //! Most of the MAC window is register-backed (the driver's bring-up does
-//! read-modify-write + driver-managed scratch). On top of that this model
-//! implements the
+//! read-modify-write + driver-managed scratch — see the Layer-2 RE in
+//! `docs/esp32c3_wifi_mac_bridge.md`). On top of that this model implements the
 //! pieces that need real behaviour to move frames:
 //!
 //! * **MAC-ready** (`0xD14` bit0): the HAL busy-polls it before `mac_txrx_init`;

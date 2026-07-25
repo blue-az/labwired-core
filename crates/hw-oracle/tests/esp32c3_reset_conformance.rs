@@ -158,7 +158,7 @@ const RESET_VALUES: &[(&str, u64, u32)] = &[
     ("GDMA (idle)", 0x6003_F000, 0x0000_0000),
     ("I2S0 (idle)", 0x6002_D000, 0x0000_0000),
     // --- Radio (WiFi/BT) register-backed model, REVERSE-ENGINEERED from live
-    // --- reverse-engineered from live silicon, not SVD. These
+    // --- silicon (docs/esp32c3_radio_reverse_engineering.md), not SVD. These
     // --- windows reset cold (pre-phy_enable); assert they map + return cold
     // --- state. The WiFi MAC carries 12 non-zero hardware reset defaults.
     ("RADIO_FE (cold)", 0x6000_6000, 0x0000_0000),

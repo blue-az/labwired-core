@@ -1,5 +1,5 @@
 # Reverse-engineered from live ESP32-C3 silicon (see
-# reverse-engineered from live silicon). Not from SVD/TRM --
+# docs/esp32c3_radio_reverse_engineering.md). Not from SVD/TRM --
 # register names are offset-derived; reset_value is the cold (pre-phy_enable)
 # silicon read. Register-backed: accepts driver config writes.
 peripheral: RADIO_NRX

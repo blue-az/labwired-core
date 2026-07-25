@@ -270,7 +270,7 @@ peripherals:
     config:
       path: "../peripherals/esp32c3/assist_debug.yaml"
   # --- Radio (WiFi/BT) register-backed model, REVERSE-ENGINEERED from live
-  # --- reverse-engineered from live silicon, not SVD/TRM.
+  # --- silicon (not SVD/TRM). See docs/esp32c3_radio_reverse_engineering.md.
   # --- Layer 1: config windows are register-backed so driver writes succeed
   # --- instead of faulting. reset_value = cold (pre-phy_enable) silicon read.
   # --- (Behavioral MAC status/DMA = layer 2, separate.)

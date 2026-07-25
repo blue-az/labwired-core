@@ -16,7 +16,7 @@ external YAML descriptors under `configs/peripherals/esp32c3/`.
 | System yaml         | [`configs/systems/esp32c3-devkit.yaml`](../../configs/systems/esp32c3-devkit.yaml) |
 | Reference firmware  | [`crates/firmware-esp32c3-demo/`](../../crates/firmware-esp32c3-demo/) (RISC-V `riscv32imc` demo) |
 | Validation          | reset-state conformance vs silicon |
-| WiFi/lwIP           | full association → DHCP → UDP over the register-level MAC |
+| WiFi/lwIP           | full association → DHCP → UDP over the register-level MAC — see [`docs/esp32c3_wifi_mac_bridge.md`](../esp32c3_wifi_mac_bridge.md) |
 | Tier                | full documented SVD estate wired + reset-state validated                          |
 
 ## Peripherals (from chip yaml)
