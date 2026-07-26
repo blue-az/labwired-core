@@ -22,7 +22,7 @@ jobs:
 
       - name: Run LabWired
         id: labwired
-        uses: w1ne/labwired-action@main
+        uses: labwired/firmware-test@v1
         with:
           script: examples/ci/dummy-max-steps.yaml
           version: v0.19.2
