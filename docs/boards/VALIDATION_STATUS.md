@@ -16,8 +16,8 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 | `stm32f103` | 🟢 silicon-verified | 2026-06-20 | 2026-07-26 | ⚠ drift acked 2026-07-26 (re-capture pending) |
 | `stm32f407` | 🟢 silicon-smoke | 2026-06-20 | 2026-07-26 | ⚠ drift acked 2026-07-26 (re-capture pending) |
 | `esp32s3` | 🟢 silicon-verified | 2026-07-15 | 2026-07-25 | ⚠ drift acked 2026-07-25 (re-capture pending) |
-| `stm32f401` | 🟡 smoke-manual | — | 2026-07-21 | no silicon capture |
-| `stm32wba52` | 🟡 smoke-manual | — | 2026-07-21 | no silicon capture |
+| `stm32f401` | 🟡 smoke-manual | — | 2026-07-18 | no silicon capture |
+| `stm32wba52` | 🟡 smoke-manual | — | 2026-06-27 | no silicon capture |
 | `nrf52832` | ⚪ structural | — | 2026-07-23 | no silicon capture |
 | `rp2040` | ⚪ structural | — | 2026-07-24 | no silicon capture |
 | `nrf5340` | 🔵 sim-validated (deep model, no HW diff) | — | 2026-07-24 | no silicon capture |
