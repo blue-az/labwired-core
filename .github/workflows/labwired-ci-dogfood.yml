@@ -28,6 +28,11 @@ jobs:
           pad=$(( (4 - ${#payload} % 4) % 4 ))
           padded_payload="${payload}$(printf '=%.0s' $(seq 1 $pad 2>/dev/null))"
           python3 -c "import base64, json; claims = json.loads(base64.urlsafe_b64decode('$padded_payload')); [print(k, '=', claims.get(k)) for k in ('repository', 'repository_visibility', 'aud', 'ref', 'sha', 'job_workflow_ref')]"
+          echo "--- raw POST to /v1/ci/runs ---"
+          curl -s -o /tmp/ci_runs_resp.json -w "HTTP:%{http_code}\n" -X POST https://api.labwired.com/v1/ci/runs \
+            -H "Content-Type: application/json" -H "Authorization: Bearer $token" \
+            -d '{"status":"pass","tests_passed":1,"tests_failed":0,"cli_version":"debug"}'
+          cat /tmp/ci_runs_resp.json
 
       - name: Run LabWired
         id: labwired
