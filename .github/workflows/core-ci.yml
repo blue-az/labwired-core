@@ -150,6 +150,27 @@ jobs:
       - name: Board-coverage ratchet (static naming scan)
         run: cargo test -p labwired-core --test board_coverage_ratchet -- --nocapture
 
+      # RELEASE-ONLY CODE — the lane that did not exist.
+      #
+      # Every other cargo step in this file builds DEBUG, so a
+      # `#[cfg(not(debug_assertions))]` block is not merely untested: the
+      # compiler never sees it. `crates/core/tests/event_scheduler.rs` rotted
+      # exactly that way — its release-only block called `drain_due(&[0u32])`
+      # against a 0-argument API, so `cargo test --release -p labwired-core`
+      # could not COMPILE, while every green lane above silently excluded the
+      # block. A gate is worth what it touches; this one touches release.
+      #
+      # It also RUNS the two release-gated scheduler tests, which have no debug
+      # twin by construction: `schedule`'s live-event ceiling panics via
+      # `debug_assert!` in debug and increments `live_event_ceiling_trips` in
+      # release, so the counter path is observable in this lane and nowhere
+      # else. `release_only_cfg_ratchet` (below) keeps the target list honest
+      # if a new release-only block is ever added elsewhere.
+      - name: Release-gated tests — cfg(not(debug_assertions))
+        run: >
+          cargo test --release -p labwired-core --features event-scheduler
+          --lib --test event_scheduler --test release_only_cfg_ratchet
+
       - name: Feature gate — scheduler IRQ delivery (jit + event-scheduler)
         run: >
           cargo test -p labwired-core --features jit,event-scheduler
