@@ -107,6 +107,7 @@ fn run_c3_rom_boot_no_elf(
     faults: &[labwired_config::FaultSpec],
     require_fault_fired: bool,
     stimuli: &[labwired_config::StimulusSpec],
+    uart_injections: &[labwired_config::UartInjectionSpec],
 ) -> ExitCode {
     // Build the from_config bus (peripherals + external devices) exactly as the
     // ELF rom-boot path does before build_c3_rom_boot_machine.
@@ -251,6 +252,7 @@ fn run_c3_rom_boot_no_elf(
         require_fault_fired,
         fault_evidence,
         stimuli,
+        uart_injections,
         // rom-boot is never JIT-eligible (it forces cycle-accurate stepping).
         false,
     )
@@ -497,6 +499,7 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
             &faults,
             require_fault_fired,
             &stimuli,
+            &uart_injections,
         );
         // Best-effort Pro-tier metering (no ELF → hash the empty program; the
         // no-key MCP path never meters). Mirrors the ELF paths' tail metering.
