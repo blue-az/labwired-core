@@ -1746,6 +1746,194 @@ mod tests {
         }
     }
 
+    /// EVERY attachable I²C device, scheduler path vs the per-cycle walk.
+    ///
+    /// The wake cadence is a property of the CONTROLLER, but what rides on it is
+    /// the attached device: a slave decides ACK/NACK and drives read bytes onto
+    /// SDA within bit timing, so a mis-timed wake shows up as a different
+    /// waveform, a different RX FIFO, or a different interrupt status — and
+    /// which of those it shows up as depends on the device.
+    ///
+    /// The two shipped OLED labs pin only SSD1306, and only its WRITE path.
+    /// This walks the whole `build_i2c_device` roster through a write-then-
+    /// repeated-START-read transaction, which is the shape every real sensor
+    /// driver uses and which the OLED never exercises. Reference is the LEGACY
+    /// PER-CYCLE WALK, which has no wakes and so cannot be wrong about them.
+    #[test]
+    fn every_attached_i2c_device_matches_the_per_cycle_walk() {
+        use crate::peripherals::components::i2c_factory::build_i2c_device;
+
+        // The full `build_i2c_device` roster reachable from a manifest, with the
+        // address each answers on. `shm_i2c` is excluded: it is backed by a
+        // shared-memory file, not a modelled device.
+        const DEVICES: &[(&str, u8)] = &[
+            ("tmp102", 0x48),
+            ("tmp117", 0x48),
+            ("pca9685", 0x40),
+            ("mpu6050", 0x68),
+            ("bmi270", 0x68),
+            ("fxos8700", 0x1E),
+            ("bme280", 0x76),
+            ("bmp280", 0x76),
+            ("aht20", 0x38),
+            ("ina219", 0x40),
+            ("max30102", 0x57),
+            ("cap1188", 0x29),
+            ("drv2605", 0x5A),
+            ("mlx90640", 0x33),
+        ];
+
+        // One SCL period at this timing is ~1600 CPU cycles, and the sequence is
+        // ~30 bits INCLUDING a restart from scratch after the FSM_RST, so the
+        // budget must cover roughly two full transactions. Sized empirically
+        // until the RX FIFO actually fills — see the non-vacuity assert below.
+        const PRE_RST: u64 = 1_500;
+        const TOTAL: u64 = 400_000;
+
+        let mut covered = 0usize;
+        let mut devices_with_rx = 0usize;
+        for (name, addr) in DEVICES {
+            let cfg = std::collections::HashMap::from([(
+                "i2c_address".to_string(),
+                serde_yaml::Value::from(*addr as u64),
+            )]);
+            let Some(_probe) = build_i2c_device(name, &cfg) else {
+                panic!(
+                    "build_i2c_device({name}) returned None — the roster in this \
+                     test has drifted from the factory"
+                );
+            };
+            covered += 1;
+
+            // addr+W, register pointer, addr+R — the classic sensor read prologue.
+            let tx_bytes: [u32; 3] = [u32::from(*addr) << 1, 0x00, (u32::from(*addr) << 1) | 1];
+            // Write a register pointer, then repeated-START read 4 bytes back.
+            let program = |write: &mut dyn FnMut(u64, u32)| {
+                write(REG_SCL_LOW_PERIOD, 200);
+                write(REG_SCL_HIGH_PERIOD, 200);
+                write(REG_SDA_HOLD, 40);
+                write(REG_SDA_SAMPLE, 40);
+                write(REG_SCL_RSTART_SETUP, 200);
+                write(REG_SCL_STOP_SETUP, 200);
+                write(REG_SCL_STOP_HOLD, 200);
+                write(REG_CMD0, cmd(CMD_RSTART, 0));
+                write(REG_CMD1_OFFSET, cmd(CMD_WRITE, 2));
+                write(REG_CMD1_OFFSET + 4, cmd(CMD_RSTART, 0));
+                write(REG_CMD1_OFFSET + 8, cmd(CMD_WRITE, 1));
+                write(REG_CMD1_OFFSET + 12, cmd(CMD_READ, 4));
+                write(REG_CMD1_OFFSET + 16, cmd(CMD_STOP, 0));
+                for b in tx_bytes {
+                    write(REG_DATA, b);
+                }
+            };
+
+            // ── reference: per-cycle walk ──
+            let mut walk = Esp32c3I2c::new();
+            walk.push_slave(build_i2c_device(name, &cfg).unwrap());
+            assert!(!walk.uses_scheduler());
+            let walk_lines = walk.line_levels_arc();
+            {
+                let mut w = |o: u64, v: u32| {
+                    walk.write_u32(o, v).unwrap();
+                };
+                program(&mut w);
+            }
+            walk.write_u32(REG_CTR, CTR_TRANS_START_BIT).unwrap();
+            let mut walk_wave = Vec::with_capacity(TOTAL as usize);
+            for c in 1..=TOTAL {
+                walk.tick_elapsed(1);
+                if c == PRE_RST {
+                    // What a real driver does on a bus reset: clear the FSM,
+                    // re-prime the TX FIFO (FSM_RST drains it), restart.
+                    walk.write_u32(REG_CTR, CTR_FSM_RST).unwrap();
+                    walk.write_u32(REG_INT_CLR, u32::MAX).unwrap();
+                    for b in tx_bytes {
+                        walk.write_u32(REG_DATA, b).unwrap();
+                    }
+                    walk.write_u32(REG_CTR, CTR_TRANS_START_BIT).unwrap();
+                }
+                walk_wave.push((walk_lines.scl(), walk_lines.sda()));
+            }
+
+            // ── under test: scheduler-driven ──
+            let mut sd = SchedDriver::new();
+            sd.dev.push_slave(build_i2c_device(name, &cfg).unwrap());
+            let sched_lines = sd.dev.line_levels_arc();
+            {
+                let mut pending: Vec<(u64, u32)> = Vec::new();
+                let mut w = |o: u64, v: u32| pending.push((o, v));
+                program(&mut w);
+                for (o, v) in pending {
+                    sd.write(o, v);
+                }
+            }
+            sd.write(REG_CTR, CTR_TRANS_START_BIT);
+            let mut sched_wave = Vec::with_capacity(TOTAL as usize);
+            for c in 1..=TOTAL {
+                sd.step();
+                if c == PRE_RST {
+                    sd.write(REG_CTR, CTR_FSM_RST);
+                    sd.write(REG_INT_CLR, u32::MAX);
+                    for b in tx_bytes {
+                        sd.write(REG_DATA, b);
+                    }
+                    sd.write(REG_CTR, CTR_TRANS_START_BIT);
+                }
+                sched_wave.push((sched_lines.scl(), sched_lines.sda()));
+            }
+
+            // A device that never got clocked proves nothing about wakes.
+            let edges = walk_wave.windows(2).filter(|w| w[0] != w[1]).count();
+            assert!(
+                edges > 8,
+                "{name}: reference waveform has only {edges} edges — the \
+                 transaction never clocked, so this row is vacuous"
+            );
+
+            if let Some(c) = (0..TOTAL as usize).find(|&i| walk_wave[i] != sched_wave[i]) {
+                panic!(
+                    "{name} @ {addr:#04x}: scheduler waveform diverges from the \
+                     per-cycle walk at cycle {}: walk={:?} sched={:?}",
+                    c + 1,
+                    walk_wave[c],
+                    sched_wave[c]
+                );
+            }
+
+            // The bytes the controller actually captured must match too — the
+            // waveform is what the pads saw, the FIFO is what firmware reads.
+            assert_eq!(
+                walk.read_u32(REG_SR).unwrap(),
+                sd.dev.read_u32(REG_SR).unwrap(),
+                "{name}: SR diverges"
+            );
+            assert_eq!(walk.int_raw, sd.dev.int_raw, "{name}: INT_RAW diverges");
+            let walk_rx: Vec<u8> = walk.rx_fifo.borrow().iter().copied().collect();
+            let sched_rx: Vec<u8> = sd.dev.rx_fifo.borrow().iter().copied().collect();
+            assert_eq!(walk_rx, sched_rx, "{name}: RX FIFO diverges");
+            if !walk_rx.is_empty() {
+                devices_with_rx += 1;
+            }
+        }
+
+        assert_eq!(
+            covered,
+            DEVICES.len(),
+            "every rostered device must have been exercised"
+        );
+        // NON-VACUITY. Comparing two empty RX FIFOs proves nothing about read
+        // timing, and that is exactly what this test did on its first draft —
+        // the budget was too small for the transaction to reach the READ at all,
+        // so all 14 rows compared `[] == []` and passed. Most of these devices
+        // answer a register read; require that the read path actually produced
+        // bytes for a solid majority of the roster.
+        assert!(
+            devices_with_rx * 2 >= DEVICES.len(),
+            "only {devices_with_rx}/{} devices returned any RX bytes — the READ              phase is not being reached, so the FIFO comparison is vacuous",
+            DEVICES.len()
+        );
+    }
+
     /// Program the same short write transaction into either engine.
     fn program_write_txn(write: &mut dyn FnMut(u64, u32)) {
         // ~100 kHz-shaped timing: long SCL half-periods, so one wire segment is
