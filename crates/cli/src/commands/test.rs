@@ -540,6 +540,20 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
                                         );
                                     }
                                 }
+                            } else {
+                                // No table → esp_partition's load_partitions finds
+                                // no MD5 entry and calls panic_abort BEFORE the
+                                // console is up, so the run looks like a silent
+                                // hang (~86k steps, zero UART) with nothing to go
+                                // on. Name the cause instead of leaving the
+                                // caller to bisect a firmware image.
+                                eprintln!(
+                                    "labwired-cli test: warn: no partitions.bin beside {} — an \
+                                     Arduino/ESP-IDF app will abort in esp_partition (\"No MD5 \
+                                     found in partition table\") before printing anything. Place \
+                                     the partition table (flash 0x8000) next to the ELF.",
+                                    firmware_path.display()
+                                );
                             }
                             // App magic 0xE9: identity used off 0x30000; factory
                             // MMU maps VA 0x3C03_0000 → phys page 4 (0x40000).
