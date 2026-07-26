@@ -110,17 +110,23 @@ fn run_c3_rom_boot_no_elf(
 ) -> ExitCode {
     // Build the from_config bus (peripherals + external devices) exactly as the
     // ELF rom-boot path does before build_c3_rom_boot_machine.
-    let mut bus = match labwired_core::system::builder::build_system_bus(
-        system_path.map(|p| p.as_path()),
-    ) {
-        Ok(bus) => bus,
-        Err(e) => {
-            let msg = format!("{:#}", e);
-            error!("{}", msg);
-            write_config_error_outputs(args, None, system_path, None, Some(resolved_limits), msg);
-            return ExitCode::from(EXIT_CONFIG_ERROR);
-        }
-    };
+    let mut bus =
+        match labwired_core::system::builder::build_system_bus(system_path.map(|p| p.as_path())) {
+            Ok(bus) => bus,
+            Err(e) => {
+                let msg = format!("{:#}", e);
+                error!("{}", msg);
+                write_config_error_outputs(
+                    args,
+                    None,
+                    system_path,
+                    None,
+                    Some(resolved_limits),
+                    msg,
+                );
+                return ExitCode::from(EXIT_CONFIG_ERROR);
+            }
+        };
 
     // UART capture, mirroring the main flow: honour debug_uart, else all UARTs,
     // plus the IO-Link master log sink.
@@ -161,16 +167,17 @@ fn run_c3_rom_boot_no_elf(
                 return ExitCode::from(EXIT_CONFIG_ERROR);
             }
         };
-        let snap =
-            match labwired_core::runtime_snapshot::MachineRuntimeSnapshot::from_bytes(&snap_bytes) {
-                Ok(s) => s,
-                Err(e) => {
-                    // Corrupt/version-mismatched blob → write NO result.json so the
-                    // caller cold-boots and refreshes the cache.
-                    error!("invalid resume snapshot {snap_path:?}: {e}; cold-boot required");
-                    return ExitCode::from(EXIT_CONFIG_ERROR);
-                }
-            };
+        let snap = match labwired_core::runtime_snapshot::MachineRuntimeSnapshot::from_bytes(
+            &snap_bytes,
+        ) {
+            Ok(s) => s,
+            Err(e) => {
+                // Corrupt/version-mismatched blob → write NO result.json so the
+                // caller cold-boots and refreshes the cache.
+                error!("invalid resume snapshot {snap_path:?}: {e}; cold-boot required");
+                return ExitCode::from(EXIT_CONFIG_ERROR);
+            }
+        };
         let (chip, fw_sha) = match crate::rom_boot_flash_self_key() {
             Some(v) => v,
             None => {
@@ -508,9 +515,8 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
     let firmware_path = match firmware_path_opt {
         Some(p) => p,
         None => {
-            let msg =
-                "Missing firmware path (provide --firmware or set inputs.firmware in script)"
-                    .to_string();
+            let msg = "Missing firmware path (provide --firmware or set inputs.firmware in script)"
+                .to_string();
             error!("{}", msg);
             write_config_error_outputs(
                 &args,

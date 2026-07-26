@@ -227,7 +227,11 @@ impl WasmSimulator {
             "uartWrite",
             "uartWriteBuf",
             "_Z14serialEventRunv",
-            "vListInsert",
+            // vListInsert is NOT nop'd: with the fake FreeRTOS create functions
+            // gone, real xQueueCreateMutex / scheduler code runs and depends on
+            // genuine list insertion. A nop'd vListInsert leaves those lists
+            // uninitialised — it was part of the same fake bundle as the create
+            // fakes (see e2e_labwired_ereader.rs) and must go with them.
         ] {
             push_named(&mut thunks, sym, rom_thunks::nop_return_zero);
         }
@@ -238,22 +242,18 @@ impl WasmSimulator {
             "esp_ota_get_running_partition",
             rom_thunks::nop_return_fake_ptr,
         );
-        // Return a non-NULL fake handle so callers' `assert(mutex != NULL)`
-        // passes. Mutex semantics aren't modeled — the firmware will treat
-        // the returned pointer as opaque and pass it to xSemaphoreTake/Give
-        // which are already stubbed to "success".
-        for sym in &[
-            "xQueueCreateMutex",
-            "xQueueCreateMutexStatic",
-            "xQueueGenericCreate",
-            "xSemaphoreCreateMutex",
-            "xSemaphoreCreateBinary",
-            "xSemaphoreCreateCounting",
-            "xQueueCreateCountingSemaphore",
-            "xEventGroupCreate",
-        ] {
-            push_named(&mut thunks, sym, rom_thunks::nop_return_fake_ptr);
-        }
+        // FreeRTOS queue/mutex/event-group create are NO LONGER faked. The
+        // firmware's own FreeRTOS runs on the emulated registers + real heap, so
+        // xQueueCreateMutex / xQueueGenericCreate / xSemaphoreCreate* /
+        // xEventGroupCreate return genuine, fully-initialised handles. The old
+        // fake-handle creates were pure debt: an opaque non-NULL pointer left the
+        // queue's list structures uninitialised, which forced faking every op
+        // built on them (xQueueSemaphoreTake/Send "always succeed") and dropped
+        // the SPI payload → blank render. Removing all of it lets the real SPI
+        // bus mutex and critical sections run, matching the proven e2e path in
+        // crates/core/tests/e2e_labwired_ereader.rs. (xQueueCreateMutexStatic
+        // keeps its echo thunk below — callers assert the returned handle equals
+        // the static buffer they passed in.)
         // Stub spi_flash_init_lock — the real impl creates a mutex via
         // xSemaphoreCreateMutex and asserts non-NULL; we don't need real
         // flash-op locking in the single-task sim.
@@ -290,23 +290,18 @@ impl WasmSimulator {
             "xTaskGetCurrentTaskHandle",
             rom_thunks::x_task_get_current_task_handle,
         );
-        push_named(
-            &mut thunks,
-            "xQueueSemaphoreTake",
-            rom_thunks::return_pd_true,
-        );
-        push_named(&mut thunks, "xQueueGenericSend", rom_thunks::return_pd_true);
-        push_named(
-            &mut thunks,
-            "ulTaskGenericNotifyTake",
-            rom_thunks::return_pd_true,
-        );
-        push_named(&mut thunks, "spiStartBus", rom_thunks::spi_start_bus_fake);
-        push_named(
-            &mut thunks,
-            "_ZN8SPIClass16beginTransactionE11SPISettings",
-            rom_thunks::spi_class_begin_transaction,
-        );
+        // NO SPI-bus lock shims and NO SPI init fakes. GxEPD2_EPD::init() calls
+        // SPI.begin() → the real compiled spiStartBus runs: it creates a real
+        // recursive bus mutex via xQueueCreateMutex (real, backed by the real
+        // heap), enables the SPI3 clock through DPORT, and configures USER/FIFO.
+        // SPIClass::beginTransaction then takes that real mutex. So
+        // spi_start_bus_fake, spi_class_begin_transaction, and the
+        // xQueueSemaphoreTake / xQueueGenericSend / ulTaskGenericNotifyTake
+        // "force pdTRUE" lock shims are all GONE — the bus mutex is a genuine
+        // FreeRTOS object and the SPI critical sections run for real, so the byte
+        // stream actually reaches the panel (the fakes matched the transaction
+        // count but dropped the payload → blank render). Mirrors the proven e2e
+        // path in crates/core/tests/e2e_labwired_ereader.rs.
 
         // No GxEPD2 cmd/data bypass. The real compiled _writeCommand/_writeData
         // run: digitalWrite(DC=GPIO17) → SPI.transfer → spiTransferByteNL writes
