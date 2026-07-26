@@ -563,7 +563,29 @@ boards:
     # fast-forward skip windows. Behavioural WiFi-medium timing only; register
     # map, reset values, and the asserted reset-oracle set are untouched. No
     # live re-capture warranted.
-    drift_ack: 2026-07-25
+    # 2026-07-26: I2C0 wake CADENCE only (esp32c3/i2c.rs) — the bit engine now
+    # arms its scheduler wake at the next wire-segment transition instead of
+    # every module tick, plus an `arm_seq` arming token so a wake armed before a
+    # CTR.FSM_RST / TRANS_START re-anchor is discarded on arrival rather than
+    # clocking the next transaction. WHAT THIS DOES NOT TOUCH: no register in the
+    # map, no reset value, no field layout, no FIFO semantic, no read/write path
+    # — only WHEN the host is asked to run the engine forward. `advance_engine`
+    # was already delta-based, so N ticks consumed in one call land on exactly
+    # the state N single-tick calls would, and every MMIO access still catches up
+    # through `sync_to` first. The asserted reset-oracle set is untouched, and
+    # esp32c3_reset_conformance::esp32c3_reset_values_match_silicon passes.
+    # PROVED BYTE-IDENTICAL against the LEGACY PER-CYCLE WALK (the reference with
+    # no wakes at all, so it cannot be wrong about them):
+    #   * esp32c3_walk_differential — 11 tests incl. the i2c0-pinned-to-walk case;
+    #   * rearm_after_fsm_rst_matches_the_per_cycle_walk — per-cycle SCL/SDA
+    #     comparison across the FSM_RST re-anchor (fails without the token fix);
+    #   * every_attached_i2c_device_matches_the_per_cycle_walk — all 14 devices
+    #     the C3 can attach, comparing waveform + SR + INT_RAW + RX FIFO;
+    #   * esp32c3_shipped_lab_batch_gate — both shipped labs reproduce identical
+    #     interpreted (3400255 / 3040236), lit_px (782 / 442) and final pc.
+    # Wire TIMING on the pads is unchanged; only host wake scheduling moved. No
+    # live USB-JTAG re-capture warranted.
+    drift_ack: 2026-07-26
 
   - id: nucleo-l476rg
     doc: docs/boards/nucleo-l476rg.md
