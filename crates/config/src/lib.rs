@@ -2175,9 +2175,13 @@ impl TestScript {
             );
         }
 
-        if self.inputs.firmware.trim().is_empty() {
-            anyhow::bail!("Input 'firmware' path cannot be empty");
-        }
+        // NOTE: an empty `inputs.firmware` is permitted. The schema requires the
+        // key, but the faithful ESP32-C3 rom-boot path carries no debug ELF (the
+        // flash image is the program the real mask ROM loads), so the builder
+        // emits `firmware: ""`. `labwired test` resolves this: empty + --rom-boot
+        // on an esp32c3 → the ELF-less rom-boot path; empty otherwise → a
+        // "Missing firmware path" config error. Rejecting it here would 500 every
+        // ELF-less rom-boot run before it starts.
 
         if self.limits.max_steps == 0 {
             anyhow::bail!("Limit 'max_steps' must be greater than zero");
@@ -3160,7 +3164,11 @@ limits:
     }
 
     #[test]
-    fn test_empty_firmware() {
+    fn test_empty_firmware_is_permitted_for_rom_boot() {
+        // An empty `inputs.firmware` is now VALID at the schema level: the
+        // faithful ESP32-C3 rom-boot path carries no debug ELF, so the builder
+        // emits `firmware: ""`. `labwired test` decides whether that is the
+        // ELF-less rom-boot path (--rom-boot on an esp32c3) or a config error.
         let yaml = r#"
 schema_version: "1.0"
 inputs:
@@ -3169,8 +3177,7 @@ limits:
   max_steps: 100
 "#;
         let script: TestScript = serde_yaml::from_str(yaml).unwrap();
-        let err = script.validate().unwrap_err();
-        assert!(err.to_string().contains("firmware"));
+        assert!(script.validate().is_ok());
     }
 
     #[test]
