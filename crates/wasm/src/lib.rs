@@ -370,7 +370,11 @@ impl WasmSimulator {
         use labwired_core::peripherals::esp32c3::wifi_mac::Esp32c3WifiMac;
         // Parse "a.b.c.d" → [u8;4]; parse failure falls back to the default AP IP.
         let ip = {
-            let octets: Vec<u8> = ap.ip.split('.').filter_map(|o| o.parse::<u8>().ok()).collect();
+            let octets: Vec<u8> = ap
+                .ip
+                .split('.')
+                .filter_map(|o| o.parse::<u8>().ok())
+                .collect();
             (octets.len() == 4).then(|| [octets[0], octets[1], octets[2], octets[3]])
         };
         let cfg = ApConfig::from_parts(Some(ap.ssid.clone()), ip, Some(&ap.serves));
@@ -2030,16 +2034,19 @@ mod romboot_tests {
         );
         blobs.insert(
             "esp32c3_drom".into(),
-            std::fs::read(manifest_dir.join("../core/roms/esp32c3/esp32c3_drom.bin")).expect("drom"),
+            std::fs::read(manifest_dir.join("../core/roms/esp32c3/esp32c3_drom.bin"))
+                .expect("drom"),
         );
-        blobs.insert("esp32c3_flash".into(), std::fs::read(&flash_path).expect("wifi flash"));
+        blobs.insert(
+            "esp32c3_flash".into(),
+            std::fs::read(&flash_path).expect("wifi flash"),
+        );
         // The marker the playground injects → dispatcher picks the fast-start
         // ctor (the browser default, the path that lacked WiFi attach).
         blobs.insert(crate::ESP32C3_FLASH_FAST_START_BLOB.to_string(), Vec::new());
 
-        let mut sim =
-            WasmSimulator::new_from_config_riscv_flash_fastboot(&chip, &manifest, &blobs)
-                .expect("build fast-start C3 sim");
+        let mut sim = WasmSimulator::new_from_config_riscv_flash_fastboot(&chip, &manifest, &blobs)
+            .expect("build fast-start C3 sim");
         let rec = sim.recommended_tick_interval();
         eprintln!("recommended_tick_interval = {rec}");
         apply_browser_c3_policy(&mut sim, rec);

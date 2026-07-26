@@ -39,7 +39,6 @@ pub mod xtensa_jit_bytes;
 // on `jit`) into `Machine<RiscV>`'s dispatch, so the production `jit` build
 // needs this module present too. Both features are off by default, so the
 // default build is unaffected. See
-// `docs/engineering/universal-jit-framework.md`.
 #[cfg(any(feature = "jit", feature = "jit-framework"))]
 pub mod jit_framework;
 
