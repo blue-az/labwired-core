@@ -234,7 +234,15 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
     // gets a proportionally higher ceiling (wall-clock caps still apply).
     const MAX_ALLOWED_STEPS: u64 = 50_000_000;
     const MAX_ALLOWED_STEPS_ROM_BOOT: u64 = 500_000_000;
-    let max_allowed_steps = if args.rom_boot {
+    // `--capture-app-entry` and `--resume-snapshot` are rom-boot runs too (the
+    // same predicate the machine build below uses): capture replays the mask ROM
+    // while snapshotting app entry, resume restarts from that snapshot. Judging
+    // the ceiling on `--rom-boot` alone gave a resumed run the fast-boot cap, so
+    // any budget between the two ceilings — e.g. the hosted ESP32-S3 default of
+    // 100M — was rejected the moment the snapshot cache had an entry to resume.
+    let rom_boot_run =
+        args.rom_boot || args.capture_app_entry.is_some() || args.resume_snapshot.is_some();
+    let max_allowed_steps = if rom_boot_run {
         MAX_ALLOWED_STEPS_ROM_BOOT
     } else {
         MAX_ALLOWED_STEPS
