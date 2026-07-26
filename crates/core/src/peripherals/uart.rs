@@ -1472,7 +1472,11 @@ mod tests {
         uart.write(0x0C, (1 << 2) | (1 << 3)).unwrap(); // RE|TE
         uart.write(0x0D, 1 << 5).unwrap(); // UE (CR1 bit 13)
         assert_eq!(uart.read(0x00).unwrap() & (1 << 5), 1 << 5);
-        assert_eq!(uart.read(0x04).unwrap(), b'Z', "the early byte is still there");
+        assert_eq!(
+            uart.read(0x04).unwrap(),
+            b'Z',
+            "the early byte is still there"
+        );
         assert_eq!(
             uart.read(0x00).unwrap() & (1 << 5),
             0,
