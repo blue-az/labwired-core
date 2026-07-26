@@ -212,7 +212,8 @@ fn esp32c3_oled_native_baseline() {
         "C3_OLED_PROFILE wall_s={:.4} total_cycles={} idle_ff_cycles={} interpreted={} \
          idle_pct={:.3} interp_mips={:.3} guest_cycles_per_sec={:.0} rtf={:.4} \
          cpu_batches={} mean_batch={:.3} peripheral_ticks={} peripheral_ticked_entries={} \
-         bus_tick_entries={} legacy_tick_entries={} lit_px={} serial_bytes={} pc={:#x}",
+         bus_tick_entries={} legacy_tick_entries={} lit_px={} serial_bytes={} pc={:#x} \
+         max_queued_events={} max_live_per_peripheral={}",
         secs,
         total,
         idle,
@@ -230,6 +231,8 @@ fn esp32c3_oled_native_baseline() {
         lit_pixels(&fb),
         serial_len,
         lab.machine.cpu.pc,
+        lab.machine.sched.stats().max_queued_events,
+        lab.machine.sched.stats().max_live_events_per_peripheral,
     );
 }
 
