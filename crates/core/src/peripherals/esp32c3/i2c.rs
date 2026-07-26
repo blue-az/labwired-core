@@ -1687,6 +1687,13 @@ mod tests {
     /// `EventScheduler`, mirroring exactly what `SystemBus`/`Machine` do:
     /// publish the clock, arm from `take_scheduled_events` at
     /// `now + 1 + delay`, deliver due events, and honour `reschedule_delay`.
+    // Gated on `event-scheduler`: `uses_scheduler()` is
+    // `cfg!(feature = "event-scheduler") && clock.is_some()`, so with the
+    // feature off there is no scheduler path to compare the walk against and
+    // `SchedDriver::new` would trip its own assert. `core-integrity` runs
+    // these via `cargo test --release -p labwired-core --features
+    // event-scheduler --lib`.
+    #[cfg(feature = "event-scheduler")]
     struct SchedDriver {
         dev: Esp32c3I2c,
         sched: crate::sched::EventScheduler,
@@ -1695,6 +1702,7 @@ mod tests {
         now: u64,
     }
 
+    #[cfg(feature = "event-scheduler")]
     impl SchedDriver {
         fn new() -> Self {
             let mut dev = Esp32c3I2c::new();
@@ -1759,6 +1767,7 @@ mod tests {
     /// repeated-START-read transaction, which is the shape every real sensor
     /// driver uses and which the OLED never exercises. Reference is the LEGACY
     /// PER-CYCLE WALK, which has no wakes and so cannot be wrong about them.
+    #[cfg(feature = "event-scheduler")]
     #[test]
     fn every_attached_i2c_device_matches_the_per_cycle_walk() {
         use crate::peripherals::components::i2c_factory::build_i2c_device;
@@ -1935,6 +1944,7 @@ mod tests {
     }
 
     /// Program the same short write transaction into either engine.
+    #[cfg(feature = "event-scheduler")]
     fn program_write_txn(write: &mut dyn FnMut(u64, u32)) {
         // ~100 kHz-shaped timing: long SCL half-periods, so one wire segment is
         // ~200 module ticks (~800 CPU cycles at module clk = CPU/4). Default
@@ -1957,6 +1967,7 @@ mod tests {
     /// The SCL/SDA waveform, sampled every cycle, is the observable this gate
     /// compares: it is what the GPIO matrix publishes to routed pads and what
     /// the logic analyzer captures.
+    #[cfg(feature = "event-scheduler")]
     #[test]
     fn rearm_after_fsm_rst_matches_the_per_cycle_walk() {
         const PRE_RST: u64 = 1_500;
