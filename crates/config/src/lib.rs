@@ -2125,6 +2125,50 @@ pub struct StimulusSpec {
     pub value: f64,
 }
 
+/// The bytes an [`UartInjectionSpec`] delivers: either a UTF-8 string (the
+/// common case — command text, a line to echo) or an explicit byte array for
+/// binary payloads that aren't valid UTF-8. Untagged so a script author writes
+/// whichever is natural: `bytes: "hello\n"` or `bytes: [0x01, 0xFF, 0x00]`.
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(untagged)]
+pub enum UartInjectionBytes {
+    Text(String),
+    Raw(Vec<u8>),
+}
+
+impl UartInjectionBytes {
+    /// Lower to the raw bytes that get pushed into the UART's RX queue.
+    pub fn as_bytes(&self) -> Vec<u8> {
+        match self {
+            UartInjectionBytes::Text(s) => s.as_bytes().to_vec(),
+            UartInjectionBytes::Raw(b) => b.clone(),
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        match self {
+            UartInjectionBytes::Text(s) => s.is_empty(),
+            UartInjectionBytes::Raw(b) => b.is_empty(),
+        }
+    }
+}
+
+/// A declarative UART RX injection (schema_version 1.2+): push `bytes` into
+/// the named `uart` peripheral's receive queue when `trigger` fires. Reuses
+/// the [`FaultTrigger`] vocabulary; only the time-based triggers (`at_start`,
+/// `after_cycles`) are wired today, mirroring [`StimulusSpec`].
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct UartInjectionSpec {
+    /// The UART peripheral's bus name (e.g. `"uart1"`), resolved against the
+    /// built machine when the run starts.
+    pub uart: String,
+    /// The bytes to deliver.
+    pub bytes: UartInjectionBytes,
+    #[serde(default)]
+    pub trigger: FaultTrigger,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct TestScript {
@@ -2142,6 +2186,9 @@ pub struct TestScript {
     /// Input stimuli to drive during the run (schema_version 1.2+).
     #[serde(default)]
     pub stimuli: Vec<StimulusSpec>,
+    /// UART RX byte injections to deliver during the run (schema_version 1.2+).
+    #[serde(default)]
+    pub uart_injections: Vec<UartInjectionSpec>,
 }
 
 fn reject_explicit_memory_nodes(assertions: &[TestAssertion], script_kind: &str) -> Result<()> {
@@ -2221,6 +2268,35 @@ impl TestScript {
             }
         }
 
+        // UART RX injections require schema_version 1.2+.
+        if !self.uart_injections.is_empty() && matches!(self.schema_version.as_str(), "1.0" | "1.1")
+        {
+            anyhow::bail!(
+                "'uart_injections' require schema_version '1.2' (got '{}')",
+                self.schema_version
+            );
+        }
+        for (i, u) in self.uart_injections.iter().enumerate() {
+            if u.uart.trim().is_empty() {
+                anyhow::bail!("uart_injections[{}]: 'uart' cannot be empty", i);
+            }
+            if u.bytes.is_empty() {
+                anyhow::bail!("uart_injections[{}]: 'bytes' cannot be empty", i);
+            }
+            // Only the time-based triggers are wired for injections today; the
+            // register-access triggers need a write/read hook we haven't added
+            // for the input path. Fail loud rather than silently never firing.
+            match &u.trigger {
+                FaultTrigger::AtStart | FaultTrigger::AfterCycles { .. } => {}
+                other => anyhow::bail!(
+                    "uart_injections[{}]: trigger {:?} is not yet supported for uart_injections \
+                     (use at_start or after_cycles)",
+                    i,
+                    other
+                ),
+            }
+        }
+
         // Structural fault-compiler guardrails. Deeper checks that need the
         // built chip (target resolution, bit-within-register) run when the bus
         // is available; these catch malformed specs up front.
@@ -2253,6 +2329,7 @@ pub struct EnvTestScript {
     pub faults: Vec<FaultSpec>,
     pub verdict: Option<Verdict>,
     pub stimuli: Vec<StimulusSpec>,
+    pub uart_injections: Vec<UartInjectionSpec>,
     explicit_limits: EnvExplicitLimits,
     explicit_unsupported_fields: EnvExplicitUnsupportedFields,
 }
@@ -2307,6 +2384,7 @@ struct EnvExplicitUnsupportedFields {
     faults: FieldPresence<Vec<FaultSpec>>,
     verdict: FieldPresence<Verdict>,
     stimuli: FieldPresence<Vec<StimulusSpec>>,
+    uart_injections: FieldPresence<Vec<UartInjectionSpec>>,
 }
 
 /// Serialization keeps the user-visible environment contract strict in both
@@ -2325,6 +2403,8 @@ struct SerializableEnvTestScript<'a> {
     verdict: Option<Option<&'a Verdict>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     stimuli: Option<Option<&'a [StimulusSpec]>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    uart_injections: Option<Option<&'a [UartInjectionSpec]>>,
 }
 
 #[derive(Serialize)]
@@ -2465,6 +2545,10 @@ impl Serialize for EnvTestScript {
                 &self.explicit_unsupported_fields.stimuli,
                 &self.stimuli,
             ),
+            uart_injections: serialize_unsupported_sequence(
+                &self.explicit_unsupported_fields.uart_injections,
+                &self.uart_injections,
+            ),
         }
         .serialize(serializer)
     }
@@ -2542,6 +2626,8 @@ struct EnvTestScriptWire {
     verdict: FieldPresence<Verdict>,
     #[serde(default)]
     stimuli: FieldPresence<Vec<StimulusSpec>>,
+    #[serde(default)]
+    uart_injections: FieldPresence<Vec<UartInjectionSpec>>,
 }
 
 impl<'de> Deserialize<'de> for EnvTestScript {
@@ -2558,12 +2644,14 @@ impl<'de> Deserialize<'de> for EnvTestScript {
             faults,
             verdict,
             stimuli,
+            uart_injections,
         } = wire;
         let (limits, explicit_limits) = wire_limits.into_parts();
         let explicit_unsupported_fields = EnvExplicitUnsupportedFields {
             faults: faults.clone(),
             verdict: verdict.clone(),
             stimuli: stimuli.clone(),
+            uart_injections: uart_injections.clone(),
         };
         Ok(Self {
             schema_version,
@@ -2573,6 +2661,7 @@ impl<'de> Deserialize<'de> for EnvTestScript {
             faults: faults.into_value().unwrap_or_default(),
             verdict: verdict.into_value(),
             stimuli: stimuli.into_value().unwrap_or_default(),
+            uart_injections: uart_injections.into_value().unwrap_or_default(),
             explicit_limits,
             explicit_unsupported_fields,
         })
@@ -2636,6 +2725,14 @@ impl EnvTestScript {
         }
         if self.explicit_unsupported_fields.stimuli.is_present() || !self.stimuli.is_empty() {
             anyhow::bail!("Environment test scripts do not support 'stimuli'");
+        }
+        if self
+            .explicit_unsupported_fields
+            .uart_injections
+            .is_present()
+            || !self.uart_injections.is_empty()
+        {
+            anyhow::bail!("Environment test scripts do not support 'uart_injections'");
         }
 
         if self.assertions.is_empty() {
@@ -3001,6 +3098,137 @@ limits:
             .unwrap_err()
             .to_string()
             .contains("not yet supported for stimuli"));
+    }
+}
+
+#[cfg(test)]
+mod uart_injection_tests {
+    use super::*;
+
+    fn script(schema: &str, block: &str) -> String {
+        format!(
+            r#"
+schema_version: "{schema}"
+inputs:
+  firmware: "cow.elf"
+  system: "sys.yaml"
+limits:
+  max_steps: 1000
+{block}
+"#
+        )
+    }
+
+    #[test]
+    fn parses_text_and_raw_bytes_on_1_2() {
+        let yaml = script(
+            "1.2",
+            r#"uart_injections:
+  - uart: "uart1"
+    bytes: "AB"
+    trigger: !after_cycles { cycles: 500 }
+  - uart: "uart2"
+    bytes: [0x51, 0x00, 0xFF]
+"#,
+        );
+        let s: TestScript = serde_yaml::from_str(&yaml).unwrap();
+        s.validate().unwrap();
+        assert_eq!(s.uart_injections.len(), 2);
+        assert_eq!(s.uart_injections[0].uart, "uart1");
+        assert_eq!(s.uart_injections[0].bytes.as_bytes(), b"AB".to_vec());
+        assert!(matches!(
+            s.uart_injections[0].trigger,
+            FaultTrigger::AfterCycles { cycles: 500 }
+        ));
+        // Default trigger is at_start.
+        assert!(matches!(
+            s.uart_injections[1].trigger,
+            FaultTrigger::AtStart
+        ));
+        assert_eq!(
+            s.uart_injections[1].bytes.as_bytes(),
+            vec![0x51, 0x00, 0xFF]
+        );
+    }
+
+    #[test]
+    fn requires_schema_1_2() {
+        for schema in ["1.0", "1.1"] {
+            let yaml = script(
+                schema,
+                "uart_injections:\n  - uart: \"uart1\"\n    bytes: \"A\"\n",
+            );
+            let s: TestScript = serde_yaml::from_str(&yaml).unwrap();
+            let err = s.validate().unwrap_err().to_string();
+            assert!(err.contains("require schema_version '1.2'"), "{err}");
+        }
+    }
+
+    #[test]
+    fn empty_uart_id_rejected() {
+        let yaml = script(
+            "1.2",
+            "uart_injections:\n  - uart: \"\"\n    bytes: \"A\"\n",
+        );
+        let s: TestScript = serde_yaml::from_str(&yaml).unwrap();
+        assert!(s
+            .validate()
+            .unwrap_err()
+            .to_string()
+            .contains("'uart' cannot be empty"));
+    }
+
+    #[test]
+    fn empty_bytes_rejected() {
+        let yaml = script(
+            "1.2",
+            "uart_injections:\n  - uart: \"uart1\"\n    bytes: \"\"\n",
+        );
+        let s: TestScript = serde_yaml::from_str(&yaml).unwrap();
+        assert!(s
+            .validate()
+            .unwrap_err()
+            .to_string()
+            .contains("'bytes' cannot be empty"));
+    }
+
+    #[test]
+    fn register_triggers_rejected() {
+        let yaml = script(
+            "1.2",
+            r#"uart_injections:
+  - uart: "uart1"
+    bytes: "A"
+    trigger: !on_write { register: "FOO" }
+"#,
+        );
+        let s: TestScript = serde_yaml::from_str(&yaml).unwrap();
+        assert!(s
+            .validate()
+            .unwrap_err()
+            .to_string()
+            .contains("not yet supported for uart_injections"));
+    }
+
+    #[test]
+    fn malformed_bytes_rejected_at_parse() {
+        // `bytes` must be either a string or an array of numbers; a mapping
+        // matches neither untagged variant and fails to parse.
+        let yaml = script(
+            "1.2",
+            "uart_injections:\n  - uart: \"uart1\"\n    bytes: { nope: true }\n",
+        );
+        assert!(serde_yaml::from_str::<TestScript>(&yaml).is_err());
+    }
+
+    #[test]
+    fn absent_field_parses_and_behaves_like_before() {
+        // A script written before this field existed must still parse, with
+        // `uart_injections` defaulting to empty (schema unaffected).
+        let yaml = script("1.0", "assertions: []");
+        let s: TestScript = serde_yaml::from_str(&yaml).unwrap();
+        s.validate().unwrap();
+        assert!(s.uart_injections.is_empty());
     }
 }
 
@@ -3594,6 +3822,20 @@ value: 1.0
                 .unwrap(),
             )
         });
+        assert_rejected_and_round_trips_invalid!(
+            "uart_injections",
+            |script: &mut EnvTestScript| {
+                script.uart_injections.push(
+                    serde_yaml::from_str(
+                        r#"
+uart: "uart1"
+bytes: "A"
+"#,
+                    )
+                    .unwrap(),
+                )
+            }
+        );
     }
 
     #[test]
@@ -3616,6 +3858,18 @@ value: 1.0
             ("", "verdict: null", "verdict: null", "verdict"),
             ("", "stimuli: null", "stimuli: null", "stimuli"),
             ("", "stimuli: []", "stimuli: []", "stimuli"),
+            (
+                "",
+                "uart_injections: null",
+                "uart_injections: null",
+                "uart_injections",
+            ),
+            (
+                "",
+                "uart_injections: []",
+                "uart_injections: []",
+                "uart_injections",
+            ),
         ] {
             let yaml = format!(
                 r#"
@@ -3961,6 +4215,21 @@ assertions:
             ),
             ("stimuli-empty", "stimuli: []", "stimuli"),
             ("stimuli-null", "stimuli: null", "stimuli"),
+            (
+                "uart-injections",
+                "uart_injections:\n  - uart: uart1\n    bytes: \"A\"",
+                "uart_injections",
+            ),
+            (
+                "uart-injections-empty",
+                "uart_injections: []",
+                "uart_injections",
+            ),
+            (
+                "uart-injections-null",
+                "uart_injections: null",
+                "uart_injections",
+            ),
         ] {
             let script_path = write_temp_file(
                 name,

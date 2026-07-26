@@ -143,6 +143,7 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
         faults,
         verdict,
         stimuli,
+        uart_injections,
     ) = match loaded {
         LoadedTestScript::V1_0(script) => (
             Some(script.inputs.firmware),
@@ -160,6 +161,7 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
             script.faults,
             script.verdict,
             script.stimuli,
+            script.uart_injections,
         ),
         LoadedTestScript::LegacyV1(script) => {
             tracing::warn!(
@@ -180,6 +182,7 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
                 script.assertions,
                 Vec::new(),
                 None,
+                Vec::new(),
                 Vec::new(),
             )
         }
@@ -774,6 +777,7 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
                 require_fault_fired,
                 fault_evidence,
                 &stimuli,
+                &uart_injections,
                 // Xtensa (ESP32) path: never JIT-eligible (the RV32IMC JIT is
                 // RISC-V only), so keep the exact current observer-based metrics.
                 false,
@@ -975,6 +979,7 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
                 require_fault_fired,
                 fault_evidence,
                 &stimuli,
+                &uart_injections,
                 jit_eligible,
             )
         }};

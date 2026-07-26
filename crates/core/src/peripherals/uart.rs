@@ -1451,6 +1451,35 @@ mod tests {
         assert_eq!(uart.read(0x06).unwrap(), 0xC0, "RDRF clears once drained");
     }
 
+    /// Injected RX bytes are BUFFERED, not dropped, when they arrive before
+    /// the firmware has configured/enabled the receiver. This is the semantic
+    /// the test-script `uart_injections` field depends on: an `at_start`
+    /// injection is delivered before the firmware executes its first
+    /// instruction, so if the queue were gated on the enable bits the byte
+    /// would vanish and a script would silently pass on no input at all.
+    #[test]
+    fn rx_bytes_injected_before_any_configuration_are_buffered_not_dropped() {
+        let mut uart = Uart::new_with_layout(UartRegisterLayout::Stm32F1);
+        // Nothing configured yet: CR1 is 0 (UE/TE/RE all clear).
+        assert_eq!(uart.cr1, 0);
+        uart.rx_buffer().lock().unwrap().push_back(b'Z');
+
+        // RXNE (SR bit 5) already reads set — presence is derived from the
+        // queue, with no enable gating.
+        assert_eq!(uart.read(0x00).unwrap() & (1 << 5), 1 << 5);
+
+        // The firmware now enables the USART (UE|TE|RE) — the byte survived.
+        uart.write(0x0C, (1 << 2) | (1 << 3)).unwrap(); // RE|TE
+        uart.write(0x0D, 1 << 5).unwrap(); // UE (CR1 bit 13)
+        assert_eq!(uart.read(0x00).unwrap() & (1 << 5), 1 << 5);
+        assert_eq!(uart.read(0x04).unwrap(), b'Z', "the early byte is still there");
+        assert_eq!(
+            uart.read(0x00).unwrap() & (1 << 5),
+            0,
+            "RXNE clears once the queue drains"
+        );
+    }
+
     #[test]
     fn test_uart_tick_raises_irq_for_tcie() {
         let mut uart = Uart::new_with_layout(UartRegisterLayout::Stm32F1);
