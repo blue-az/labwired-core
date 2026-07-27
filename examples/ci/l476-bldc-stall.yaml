@@ -32,6 +32,8 @@ assertions:
       control_state: "off:external-enable"
       fault_contains: stalled
   - shutdown_latency:
-      from_cycle: 1500000
+      from_stimulus:
+        component: drive_motor
+        channel: stall
       to_uart: "INVERTER OFF"
       max_cycles: 310000

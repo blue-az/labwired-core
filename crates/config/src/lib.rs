@@ -2967,9 +2967,19 @@ pub struct MotorStateAssertion {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ShutdownLatencyDetails {
-    pub from_cycle: u64,
+    pub from_stimulus: StimulusTarget,
+    /// One-based successful application occurrence for `from_stimulus`.
+    #[serde(default = "default_first_occurrence")]
+    pub stimulus_occurrence: u32,
     pub to_uart: String,
+    /// One-based matching UART occurrence at or after the selected stimulus.
+    #[serde(default = "default_first_occurrence")]
+    pub uart_occurrence: u32,
     pub max_cycles: u64,
+}
+
+fn default_first_occurrence() -> u32 {
+    1
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -4462,7 +4472,10 @@ assertions:
   - uart_ordered: ["READY", "TARGET", "FAULT", "OFF"]
   - motor_speed_reached: { id: drive, min_abs_rpm: 100.0, max_abs_rpm: 4000.0 }
   - motor_state: { id: drive, control_state: "off:external-enable", fault_contains: stalled }
-  - shutdown_latency: { from_cycle: 1500000, to_uart: "OFF", max_cycles: 300000 }
+  - shutdown_latency:
+      from_stimulus: { component: drive, channel: stall }
+      to_uart: "OFF"
+      max_cycles: 300000
 "#;
         let script: TestScript = serde_yaml::from_str(yaml).unwrap();
         assert!(matches!(

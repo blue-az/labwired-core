@@ -40,7 +40,8 @@ use std::sync::{Arc, Mutex};
 use tracing::{error, info};
 
 use artifacts::{
-    AssertionResult, NamedU64, Snapshot, StimulusOutcome, StopReasonDetails, TestConfig, TestResult,
+    AssertionEvidence, AssertionResult, NamedU64, Snapshot, StimulusOutcome, StopReasonDetails,
+    TestConfig, TestResult,
 };
 use labwired_config::{
     load_test_script, LoadedTestScript, StopReason, TestAssertion, TestLimits, UdsTesterDetails,
@@ -1554,12 +1555,9 @@ fn assertion_currently_passes(
                     .as_ref()
                     .is_none_or(|fault| motor.faults.contains(fault))
         }),
-        TestAssertion::ShutdownLatency(a) => {
-            let observed_cycle = machine.bus.current_cycle;
-            uart_text.contains(&a.shutdown_latency.to_uart)
-                && observed_cycle >= a.shutdown_latency.from_cycle
-                && observed_cycle - a.shutdown_latency.from_cycle <= a.shutdown_latency.max_cycles
-        }
+        // This assertion requires immutable event-cycle evidence collected by
+        // the runner; accumulated text alone is deliberately insufficient.
+        TestAssertion::ShutdownLatency(_) => false,
         TestAssertion::ExpectedStopReason(_) => true,
         TestAssertion::MemoryValue(a) => {
             let size = a.memory_value.size.unwrap_or(32);
@@ -1587,6 +1585,115 @@ fn assertion_currently_passes(
     }
 }
 
+fn requires_fine_grained_observation(assertions: &[TestAssertion]) -> bool {
+    assertions
+        .iter()
+        .any(|assertion| matches!(assertion, TestAssertion::ShutdownLatency(_)))
+}
+
+fn assertion_observation_batch_size(
+    otherwise_batch_eligible: bool,
+    stop_when_assertions_pass: bool,
+    assertions: &[TestAssertion],
+    max_steps: u64,
+) -> u64 {
+    if otherwise_batch_eligible
+        && !stop_when_assertions_pass
+        && !requires_fine_grained_observation(assertions)
+    {
+        10_000.min(max_steps)
+    } else {
+        1
+    }
+}
+
+fn assertion_compatible_jit_eligibility(
+    otherwise_jit_eligible: bool,
+    assertions: &[TestAssertion],
+) -> bool {
+    otherwise_jit_eligible && !requires_fine_grained_observation(assertions)
+}
+
+#[derive(Debug)]
+struct UartMilestoneCycles {
+    occurrences: std::collections::HashMap<String, Vec<(usize, u64)>>,
+}
+
+impl UartMilestoneCycles {
+    fn new(tokens: impl IntoIterator<Item = String>) -> Self {
+        Self {
+            occurrences: tokens
+                .into_iter()
+                .map(|token| (token, Vec::new()))
+                .collect(),
+        }
+    }
+
+    fn observe(&mut self, accumulated_uart: &[u8], cycle: u64) {
+        for (token, occurrences) in &mut self.occurrences {
+            let bytes = token.as_bytes();
+            if bytes.is_empty() || accumulated_uart.len() < bytes.len() {
+                continue;
+            }
+            for (start, window) in accumulated_uart.windows(bytes.len()).enumerate() {
+                if window == bytes && !occurrences.iter().any(|(seen, _)| *seen == start) {
+                    occurrences.push((start, cycle));
+                }
+            }
+        }
+    }
+
+    fn cycles(&self, token: &str) -> impl Iterator<Item = u64> + '_ {
+        self.occurrences
+            .get(token)
+            .into_iter()
+            .flatten()
+            .map(|(_, cycle)| *cycle)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct StimulusApplication {
+    cycle: u64,
+    value: f64,
+    sequence: u64,
+}
+
+type StimulusCycles = std::collections::HashMap<(Option<String>, String), Vec<StimulusApplication>>;
+
+fn stimulus_key(target: &labwired_config::StimulusTarget) -> (Option<String>, String) {
+    (target.component.clone(), target.channel.clone())
+}
+
+fn shutdown_latency_passes(
+    details: &labwired_config::ShutdownLatencyDetails,
+    stimulus_cycles: &StimulusCycles,
+    uart_cycles: &UartMilestoneCycles,
+) -> bool {
+    shutdown_latency_cycles(details, stimulus_cycles, uart_cycles)
+        .is_some_and(|(_, _, latency)| latency <= details.max_cycles)
+}
+
+fn shutdown_latency_cycles(
+    details: &labwired_config::ShutdownLatencyDetails,
+    stimulus_cycles: &StimulusCycles,
+    uart_cycles: &UartMilestoneCycles,
+) -> Option<(u64, u64, u64)> {
+    let stimulus_index = usize::try_from(details.stimulus_occurrence.checked_sub(1)?).ok()?;
+    let uart_index = usize::try_from(details.uart_occurrence.checked_sub(1)?).ok()?;
+    let stimulus = stimulus_cycles
+        .get(&stimulus_key(&details.from_stimulus))?
+        .get(stimulus_index)?;
+    // Preserve value and global application sequence in the retained event
+    // record even though latency pairing is selected by target occurrence.
+    let _application_identity = (stimulus.value, stimulus.sequence);
+    let token_cycle = uart_cycles
+        .cycles(&details.to_uart)
+        .filter(|cycle| *cycle >= stimulus.cycle)
+        .nth(uart_index)?;
+    Some((stimulus.cycle, token_cycle, token_cycle - stimulus.cycle))
+}
+
 /// Does this `labwired test` run qualify for the RV32IMC wasm-JIT fast path?
 ///
 /// True ⇔ the target is RISC-V (ESP32-C3), batch mode is on, and NONE of the
@@ -1605,6 +1712,7 @@ fn assertion_currently_passes(
 fn riscv_jit_test_eligible<C: labwired_core::Cpu>(
     args: &TestArgs,
     limits: &TestLimits,
+    assertions: &[TestAssertion],
     machine: &labwired_core::Machine<C>,
     arch: labwired_core::Arch,
 ) -> bool {
@@ -1613,7 +1721,7 @@ fn riscv_jit_test_eligible<C: labwired_core::Cpu>(
     // regardless of that flag — indeed the C3 rom-boot machine turns it OFF (its
     // fixed-width step_batch loop freezes FreeRTOS), which is exactly the case we
     // want to accelerate.
-    matches!(arch, labwired_core::Arch::RiscV)
+    let otherwise_jit_eligible = matches!(arch, labwired_core::Arch::RiscV)
         && !args.trace
         && !args.coverage
         && args.vcd.is_none()
@@ -1623,8 +1731,11 @@ fn riscv_jit_test_eligible<C: labwired_core::Cpu>(
         && limits.no_progress_steps.is_none()
         && !limits.stop_when_assertions_pass
         && !machine.bus.requires_cycle_accurate()
-        && !machine.logic_poll_active()
+        && !machine.logic_poll_active();
+    assertion_compatible_jit_eligibility(otherwise_jit_eligible, assertions)
 }
+
+
 
 /// Map a core `SimulationError` to the CLI `StopReason` so a halt or fault from
 /// `Machine::advance` ends the run with the CLI's established reason.
@@ -1814,24 +1925,21 @@ fn execute_test_loop<C: labwired_core::Cpu>(
         machine.bus.config.peripheral_tick_interval = interval;
     }
 
-    let batch_size = if machine.config.batch_mode_enabled
+        let otherwise_batch_eligible = machine.config.batch_mode_enabled
         && args.breakpoint.is_empty()
         && detect_stuck.is_none()
-        && !resolved_limits.stop_when_assertions_pass
         // Cycle-tight GPIO-timing devices (e.g. HC-SR04 ECHO pulse) only behave
         // correctly when peripherals tick between every instruction; instruction
         // batching freezes them across the batch and the firmware measures 0.
-        && !machine.bus.requires_cycle_accurate()
-        // A logic-analyzer POLL-mode channel must be sampled at EVERY cycle
-        // boundary, so clamp the batch to one instruction while one is armed
-        // (mirrors `Machine::advance`). Push-mode channels report their own edges
-        // from the write sites and keep the full batch width.
-        && !machine.logic_poll_active()
-    {
-        10000.min(max_steps)
-    } else {
-        1
-    };
+        // Push-mode channels report their own edges from the write sites and keep
+        // the full batch width.
+        && !machine.logic_poll_active();
+    let batch_size = assertion_observation_batch_size(
+        otherwise_batch_eligible,
+        resolved_limits.stop_when_assertions_pass,
+        assertions,
+        max_steps,
+    );
 
     // Declarative input stimuli (schema_version 1.2). Applied via the generic
     // `Machine::set_input` path (see `labwired_core::sim_input`), so no per-type
@@ -1878,9 +1986,30 @@ fn execute_test_loop<C: labwired_core::Cpu>(
             error,
         }
     };
+    let mut stimulus_cycles: StimulusCycles = std::collections::HashMap::new();
+    let mut stimulus_sequence = 0u64;
+    let mut uart_milestone_cycles = UartMilestoneCycles::new(assertions.iter().filter_map(|a| {
+        if let TestAssertion::ShutdownLatency(a) = a {
+            Some(a.shutdown_latency.to_uart.clone())
+        } else {
+            None
+        }
+    }));
     for s in stimuli {
         if matches!(s.trigger, labwired_config::FaultTrigger::AtStart) {
-            stimulus_outcomes.push(apply_stimulus(machine, s));
+            let outcome = apply_stimulus(machine, s);
+            if outcome.error.is_none() {
+                stimulus_sequence += 1;
+                stimulus_cycles
+                    .entry(stimulus_key(&s.target))
+                    .or_default()
+                    .push(StimulusApplication {
+                        cycle: machine.total_cycles,
+                        value: s.value,
+                        sequence: stimulus_sequence,
+                    });
+            }
+            stimulus_outcomes.push(outcome);
         }
     }
     // Time-triggered stimuli, each tagged with whether it has fired yet.
@@ -2047,7 +2176,19 @@ fn execute_test_loop<C: labwired_core::Cpu>(
                 if let labwired_config::FaultTrigger::AfterCycles { cycles: threshold } = s.trigger
                 {
                     if cycles >= threshold {
-                        stimulus_outcomes.push(apply_stimulus(machine, s));
+                        let outcome = apply_stimulus(machine, s);
+                        if outcome.error.is_none() {
+                            stimulus_sequence += 1;
+                            stimulus_cycles
+                                .entry(stimulus_key(&s.target))
+                                .or_default()
+                                .push(StimulusApplication {
+                                    cycle: machine.total_cycles,
+                                    value: s.value,
+                                    sequence: stimulus_sequence,
+                                });
+                        }
+                        stimulus_outcomes.push(outcome);
                         *fired = true;
                     }
                 }
@@ -2177,6 +2318,11 @@ fn execute_test_loop<C: labwired_core::Cpu>(
             }
         }
 
+        if !uart_milestone_cycles.occurrences.is_empty() {
+            let uart_bytes = uart_tx.lock().map(|g| g.clone()).unwrap_or_default();
+            uart_milestone_cycles.observe(&uart_bytes, machine.total_cycles);
+        }
+
         if resolved_limits.stop_when_assertions_pass {
             let has_runtime_assertions = assertions
                 .iter()
@@ -2188,13 +2334,6 @@ fn execute_test_loop<C: labwired_core::Cpu>(
                 };
                 for (index, assertion) in assertions.iter().enumerate() {
                     let milestone_observed = match assertion {
-                        TestAssertion::ShutdownLatency(a) => {
-                            let cycle = metrics.get_cycles();
-                            uart_text.contains(&a.shutdown_latency.to_uart)
-                                && cycle >= a.shutdown_latency.from_cycle
-                                && cycle - a.shutdown_latency.from_cycle
-                                    <= a.shutdown_latency.max_cycles
-                        }
                         TestAssertion::MotorSpeedReached(_) => {
                             assertion_currently_passes(assertion, &uart_text, machine)
                         }
@@ -2206,10 +2345,14 @@ fn execute_test_loop<C: labwired_core::Cpu>(
                 }
                 let all_pass = assertions.iter().enumerate().all(|(index, assertion)| {
                     matches!(assertion, TestAssertion::ExpectedStopReason(_))
-                        || (matches!(
-                            assertion,
-                            TestAssertion::MotorSpeedReached(_) | TestAssertion::ShutdownLatency(_)
-                        ) && assertion_latched[index])
+                        || (matches!(assertion, TestAssertion::MotorSpeedReached(_))
+                            && assertion_latched[index])
+                        || matches!(assertion, TestAssertion::ShutdownLatency(a)
+                            if shutdown_latency_passes(
+                                &a.shutdown_latency,
+                                &stimulus_cycles,
+                                &uart_milestone_cycles,
+                            ))
                         || assertion_currently_passes(assertion, &uart_text, machine)
                 });
                 if all_pass {
@@ -2278,10 +2421,15 @@ fn execute_test_loop<C: labwired_core::Cpu>(
             TestAssertion::UartOrdered(_) | TestAssertion::MotorState(_) => {
                 assertion_currently_passes(&assertion, &uart_text, machine)
             }
-            TestAssertion::MotorSpeedReached(_) | TestAssertion::ShutdownLatency(_) => {
+            TestAssertion::MotorSpeedReached(_) => {
                 assertion_latched[assertion_index]
                     || assertion_currently_passes(&assertion, &uart_text, machine)
             }
+            TestAssertion::ShutdownLatency(a) => shutdown_latency_passes(
+                &a.shutdown_latency,
+                &stimulus_cycles,
+                &uart_milestone_cycles,
+            ),
             TestAssertion::ExpectedStopReason(a) => a.expected_stop_reason == stop_reason,
             TestAssertion::MemoryValue(a) => {
                 // `size` is the value width. Accept either bytes (1/2/4) or
@@ -2354,9 +2502,26 @@ fn execute_test_loop<C: labwired_core::Cpu>(
             );
         }
 
+        let evidence = match &assertion {
+            TestAssertion::ShutdownLatency(a) => shutdown_latency_cycles(
+                &a.shutdown_latency,
+                &stimulus_cycles,
+                &uart_milestone_cycles,
+            )
+            .map(|(stimulus_cycle, token_cycle, latency_cycles)| {
+                AssertionEvidence::ShutdownLatency {
+                    stimulus_cycle,
+                    token_cycle,
+                    latency_cycles,
+                    configured_max_cycles: a.shutdown_latency.max_cycles,
+                }
+            }),
+            _ => None,
+        };
         assertion_results.push(AssertionResult {
             assertion: assertion.clone(),
             passed,
+            evidence,
         });
     }
 
@@ -3330,7 +3495,218 @@ mod tests {
     }
 
     #[test]
-    fn evaluate_uds_tester_done_passes() {
+    fn shutdown_details(max_cycles: u64) -> labwired_config::ShutdownLatencyDetails {
+        labwired_config::ShutdownLatencyDetails {
+            from_stimulus: labwired_config::StimulusTarget {
+                component: Some("drive_motor".to_owned()),
+                channel: "stall".to_owned(),
+            },
+            stimulus_occurrence: 1,
+            to_uart: "INVERTER OFF".to_owned(),
+            uart_occurrence: 1,
+            max_cycles,
+        }
+    }
+
+    fn application(cycle: u64, value: f64, sequence: u64) -> StimulusApplication {
+        StimulusApplication {
+            cycle,
+            value,
+            sequence,
+        }
+    }
+
+    #[test]
+    fn shutdown_latency_ignores_pre_trigger_token_and_selects_post_trigger_occurrence() {
+        let details = shutdown_details(100);
+        let mut uart = UartMilestoneCycles::new([details.to_uart.clone()]);
+        uart.observe(b"INVERTER OFF", 90);
+        uart.observe(b"INVERTER OFF then INVERTER OFF", 220);
+        let stimuli = std::collections::HashMap::from([(
+            stimulus_key(&details.from_stimulus),
+            vec![application(200, 1.0, 1)],
+        )]);
+
+        assert_eq!(uart.cycles("INVERTER OFF").collect::<Vec<_>>(), [90, 220]);
+        assert!(shutdown_latency_passes(&details, &stimuli, &uart));
+    }
+
+    #[test]
+    fn shutdown_latency_records_split_token_once_at_completion_cycle() {
+        let mut uart = UartMilestoneCycles::new(["INVERTER OFF".to_owned()]);
+        uart.observe(b"INVERTER O", 120);
+        assert_eq!(uart.cycles("INVERTER OFF").next(), None);
+        uart.observe(b"INVERTER OFF", 130);
+        uart.observe(b"INVERTER OFF later", 180);
+
+        assert_eq!(uart.cycles("INVERTER OFF").collect::<Vec<_>>(), [130]);
+    }
+
+    #[test]
+    fn shutdown_latency_accepts_within_bound_and_rejects_beyond_bound() {
+        let details = shutdown_details(100);
+        let stimuli = std::collections::HashMap::from([(
+            stimulus_key(&details.from_stimulus),
+            vec![application(200, 1.0, 1)],
+        )]);
+        let mut within = UartMilestoneCycles::new([details.to_uart.clone()]);
+        within.observe(b"INVERTER OFF", 300);
+        assert!(shutdown_latency_passes(&details, &stimuli, &within));
+
+        let mut beyond = UartMilestoneCycles::new([details.to_uart.clone()]);
+        beyond.observe(b"INVERTER OFF", 301);
+        assert!(!shutdown_latency_passes(&details, &stimuli, &beyond));
+    }
+
+    #[test]
+    fn shutdown_latency_uses_actual_matching_stimulus_application_cycle() {
+        let details = shutdown_details(50);
+        let stimuli = std::collections::HashMap::from([
+            (
+                stimulus_key(&details.from_stimulus),
+                vec![application(1_025, 1.0, 2)],
+            ),
+            (
+                (Some("other".to_owned()), "stall".to_owned()),
+                vec![application(900, 1.0, 1)],
+            ),
+        ]);
+        let mut uart = UartMilestoneCycles::new([details.to_uart.clone()]);
+        uart.observe(b"INVERTER OFF", 1_070);
+
+        assert!(shutdown_latency_passes(&details, &stimuli, &uart));
+    }
+
+    #[test]
+    fn shutdown_latency_selects_repeated_stimulus_and_uart_occurrences() {
+        let mut details = shutdown_details(50);
+        details.stimulus_occurrence = 2;
+        details.uart_occurrence = 2;
+        let stimuli = std::collections::HashMap::from([(
+            stimulus_key(&details.from_stimulus),
+            vec![application(100, 0.0, 1), application(300, 1.0, 2)],
+        )]);
+        let mut uart = UartMilestoneCycles::new([details.to_uart.clone()]);
+        uart.observe(b"INVERTER OFF", 90);
+        uart.observe(b"INVERTER OFF x INVERTER OFF", 330);
+        uart.observe(b"INVERTER OFF x INVERTER OFF y INVERTER OFF", 340);
+
+        assert_eq!(
+            shutdown_latency_cycles(&details, &stimuli, &uart),
+            Some((300, 340, 40))
+        );
+        assert_eq!(stimuli.values().next().unwrap()[1].value, 1.0);
+        assert_eq!(stimuli.values().next().unwrap()[1].sequence, 2);
+    }
+
+    #[test]
+    fn shutdown_latency_missing_selected_occurrence_fails() {
+        let mut details = shutdown_details(100);
+        details.stimulus_occurrence = 2;
+        let stimuli = std::collections::HashMap::from([(
+            stimulus_key(&details.from_stimulus),
+            vec![application(100, 1.0, 1)],
+        )]);
+        let mut uart = UartMilestoneCycles::new([details.to_uart.clone()]);
+        uart.observe(b"INVERTER OFF", 120);
+        assert!(!shutdown_latency_passes(&details, &stimuli, &uart));
+    }
+
+    #[test]
+    fn shutdown_latency_final_evaluation_does_not_depend_on_early_stop() {
+        let details = shutdown_details(25);
+        let stimuli = std::collections::HashMap::from([(
+            stimulus_key(&details.from_stimulus),
+            vec![application(500, 1.0, 1)],
+        )]);
+        let mut uart = UartMilestoneCycles::new([details.to_uart.clone()]);
+        uart.observe(b"INVERTER OFF", 520);
+
+        // This is the same direct evaluator used by final result construction;
+        // no assertions-pass latch or early-stop state participates.
+        assert!(shutdown_latency_passes(&details, &stimuli, &uart));
+        uart.observe(b"INVERTER OFF then INVERTER OFF", 600);
+        let mut second = details.clone();
+        second.uart_occurrence = 2;
+        assert!(!shutdown_latency_passes(&second, &stimuli, &uart));
+    }
+
+    #[test]
+    fn shutdown_latency_evidence_serializes_into_assertion_result() {
+        let result = AssertionResult {
+            assertion: TestAssertion::ShutdownLatency(labwired_config::ShutdownLatencyAssertion {
+                shutdown_latency: shutdown_details(25),
+            }),
+            passed: true,
+            evidence: Some(AssertionEvidence::ShutdownLatency {
+                stimulus_cycle: 500,
+                token_cycle: 520,
+                latency_cycles: 20,
+                configured_max_cycles: 25,
+            }),
+        };
+        let json = serde_json::to_value(result).unwrap();
+        assert_eq!(json["evidence"]["type"], "shutdown_latency");
+        assert_eq!(json["evidence"]["stimulus_cycle"], 500);
+        assert_eq!(json["evidence"]["token_cycle"], 520);
+        assert_eq!(json["evidence"]["latency_cycles"], 20);
+        assert_eq!(json["evidence"]["configured_max_cycles"], 25);
+    }
+
+    #[test]
+    fn shutdown_latency_forces_instruction_boundary_run_loop_observation() {
+        let assertion = TestAssertion::ShutdownLatency(labwired_config::ShutdownLatencyAssertion {
+            shutdown_latency: shutdown_details(3),
+        });
+        let assertions = [assertion];
+        assert!(requires_fine_grained_observation(&assertions));
+        assert_eq!(
+            assertion_observation_batch_size(true, false, &assertions, 50_000),
+            1
+        );
+
+        // Model two runner observations after separate retired instructions.
+        // Under the old 10k batch both would have been stamped at batch end.
+        let mut uart = UartMilestoneCycles::new(["INVERTER OFF".to_owned()]);
+        uart.observe(b"INVERTER OFF", 101);
+        uart.observe(b"INVERTER OFF x INVERTER OFF", 103);
+        assert_eq!(uart.cycles("INVERTER OFF").collect::<Vec<_>>(), [101, 103]);
+        let details = shutdown_details(3);
+        let stimuli = std::collections::HashMap::from([(
+            stimulus_key(&details.from_stimulus),
+            vec![application(100, 1.0, 1)],
+        )]);
+        assert!(shutdown_latency_passes(&details, &stimuli, &uart));
+    }
+
+    #[test]
+    fn jit_request_selection_respects_latency_observation_policy() {
+        let latency = [TestAssertion::ShutdownLatency(
+            labwired_config::ShutdownLatencyAssertion {
+                shutdown_latency: shutdown_details(3),
+            },
+        )];
+        assert!(!assertion_compatible_jit_eligibility(true, &latency));
+        assert_eq!(
+            assertion_observation_batch_size(true, false, &latency, 1_000_000),
+            1
+        );
+
+        let ordinary = [TestAssertion::UartContains(
+            labwired_config::UartContainsAssertion {
+                uart_contains: "OK".to_owned(),
+            },
+        )];
+        assert!(assertion_compatible_jit_eligibility(true, &ordinary));
+        assert_eq!(
+            assertion_observation_batch_size(true, false, &ordinary, 1_000_000),
+            10_000
+        );
+    }
+
+    #[test]
+
+        fn evaluate_uds_tester_done_passes() {
         let testers = vec![make_tester("my-tester", CanUdsTesterState::Done, None)];
         let details = UdsTesterDetails {
             id: "my-tester".to_string(),

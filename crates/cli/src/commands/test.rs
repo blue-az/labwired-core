@@ -1378,7 +1378,7 @@ pub(crate) fn run_test(
             // not by the scheduler. In a plain build `cfg!` is false, so every
             // run keeps the exact current observer-based, single-step behavior.
             let jit_eligible = cfg!(feature = "jit-core")
-                && riscv_jit_test_eligible(&args, &resolved_limits, &machine, program.arch);
+                && riscv_jit_test_eligible(&args, &resolved_limits, &assertions, &machine, program.arch);
             if !jit_eligible {
                 machine.observers.push(metrics.clone());
             }

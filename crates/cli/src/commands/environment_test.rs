@@ -620,6 +620,7 @@ fn evaluate_assertions(assertions: &[TestAssertion], world: &World) -> Vec<Asser
             AssertionResult {
                 assertion: assertion.clone(),
                 passed,
+                evidence: None,
             }
         })
         .collect()
