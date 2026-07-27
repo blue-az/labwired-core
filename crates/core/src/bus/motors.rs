@@ -83,6 +83,11 @@ impl SystemBus {
         })
     }
 
+    #[cfg(test)]
+    pub(crate) fn motor_service_anchor(&self) -> u64 {
+        self.motor_cycle_anchor
+    }
+
     pub(super) fn install_motor_models(&mut self, manifest: &SystemManifest) -> anyhow::Result<()> {
         for config in manifest.resolved_motor_models()? {
             self.motors.push(match config {
@@ -253,7 +258,7 @@ impl SystemBus {
             .set_gpio_input(pin.bit, level);
     }
 
-    pub(super) fn service_motor_models(&mut self) {
+    pub(crate) fn service_motor_models(&mut self) {
         let elapsed = self.current_cycle.saturating_sub(self.motor_cycle_anchor);
         if elapsed == 0 || self.motors.is_empty() {
             return;
@@ -594,9 +599,10 @@ fn for_each_pwm_segment(
     let normalized_edges = normalized_pwm_edges(pwm);
     let mut remaining = elapsed_cycles;
     let mut phase_cycles = start.rem_euclid(period_cycles);
+    let mut edges = Vec::with_capacity(normalized_edges.len() + 2);
     while remaining > 0.0 {
         let window_end = (phase_cycles + remaining).min(period_cycles);
-        let mut edges = Vec::with_capacity(normalized_edges.len() + 2);
+        edges.clear();
         edges.push(phase_cycles);
         edges.extend(
             normalized_edges

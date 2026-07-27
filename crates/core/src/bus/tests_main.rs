@@ -2564,6 +2564,42 @@ motor_models:
     frozen.tick_peripherals_with_costs();
     assert_eq!(frozen.read_u32(0x4001_2c24).unwrap(), 1);
     assert_eq!(frozen.motor_pwm_phase("spindle").unwrap(), (1, 0));
+
+    let mut machine = crate::Machine::new(PcCpu::default(), build());
+    machine.config.peripheral_tick_interval = 10_000;
+    machine.bus.config.peripheral_tick_interval = 10_000;
+    for (start, cycles, expected_anchor) in
+        [(0, 4096, 4096), (4096, 4096, 8192), (8192, 1808, 10_000)]
+    {
+        machine
+            .commit_advance_boundary(
+                crate::machine::ExecutionMode::RunBatch,
+                start,
+                crate::machine::CoreProgress {
+                    primary_steps: cycles,
+                    secondary_steps: 0,
+                },
+            )
+            .unwrap();
+        assert_eq!(machine.bus.motor_service_anchor(), expected_anchor);
+    }
+
+    let mut coincident = crate::Machine::new(PcCpu::default(), build());
+    coincident.config.peripheral_tick_interval = 8192;
+    coincident.bus.config.peripheral_tick_interval = 8192;
+    for (start, expected_anchor) in [(0, 4096), (4096, 8192)] {
+        coincident
+            .commit_advance_boundary(
+                crate::machine::ExecutionMode::RunBatch,
+                start,
+                crate::machine::CoreProgress {
+                    primary_steps: 4096,
+                    secondary_steps: 0,
+                },
+            )
+            .unwrap();
+        assert_eq!(coincident.bus.motor_service_anchor(), expected_anchor);
+    }
 }
 
 /// Cortex-M33 parts (STM32H5/WBA) have no bit-band feature and map real

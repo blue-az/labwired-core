@@ -166,6 +166,14 @@ impl<C: Cpu> Machine<C> {
 
         let logic_boundary = self.total_cycles;
         let tick_interval = u64::from(self.config.peripheral_tick_interval.max(1));
+        if self
+            .bus
+            .next_motor_service_deadline_cycle()
+            .is_some_and(|deadline| self.total_cycles >= deadline)
+        {
+            self.bus.set_current_cycle(self.total_cycles);
+            self.bus.service_motor_models();
+        }
         // Dual-core WAITI coalesced batch: primary advanced N cycles while APP
         // was parked; peripherals must advance by N, not by tick_interval once.
         // Detected via secondary_steps == primary_steps from the parked path.
@@ -178,6 +186,7 @@ impl<C: Cpu> Machine<C> {
             self.total_cycles % tick_interval == 0
         };
         if should_tick {
+            self.bus.set_current_cycle(self.total_cycles);
             let saved_m = self.config.peripheral_tick_interval;
             let saved_b = self.bus.config.peripheral_tick_interval;
             if coalesced_dual_idle {
