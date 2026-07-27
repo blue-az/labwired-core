@@ -447,16 +447,18 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
     const MAX_ALLOWED_STEPS: u64 = 50_000_000;
     const MAX_ALLOWED_STEPS_ROM_BOOT: u64 = 500_000_000;
     // A run boots the real ROM (and needs the higher ceiling) not only when
-    // --rom-boot is set, but whenever it resumes an app-entry snapshot OR a
-    // flash-image env is present: the compiled-source ESP32-C3/S3 path supplies
-    // the merged flash image via LABWIRED_ESP32{C3,S3}_FLASH and boots the ROM
-    // from it, yet did not always carry the --rom-boot flag — so it wrongly got
-    // the 50M ceiling and a full boot + WiFi + display run (boot ROM alone is
-    // ~150M steps) could never finish. Key the ceiling off EFFECTIVE rom-boot so
-    // headless device proving has the budget it needs (acceptance markers still
-    // halt early; wall-clock caps still bound runaway sims).
+    // --rom-boot is set, but whenever it captures/resumes an app-entry snapshot
+    // OR a flash-image env is present: the compiled-source ESP32-C3/S3 path
+    // supplies the merged flash image via LABWIRED_ESP32{C3,S3}_FLASH and boots
+    // the ROM from it, yet did not always carry the --rom-boot flag — so it
+    // wrongly got the 50M ceiling. `--capture-app-entry` and `--resume-snapshot`
+    // are rom-boot runs too (same predicate the machine build uses). Key the
+    // ceiling off EFFECTIVE rom-boot so headless device proving has the budget
+    // it needs (acceptance markers still halt early; wall-clock caps still
+    // bound runaway sims).
     let flash_env_present = |k: &str| std::env::var(k).map(|v| !v.is_empty()).unwrap_or(false);
     let rom_boot_effective = args.rom_boot
+        || args.capture_app_entry.is_some()
         || args.resume_snapshot.is_some()
         || flash_env_present("LABWIRED_ESP32C3_FLASH")
         || flash_env_present("LABWIRED_ESP32S3_FLASH");
@@ -810,6 +812,20 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
                                         );
                                     }
                                 }
+                            } else {
+                                // No table → esp_partition's load_partitions finds
+                                // no MD5 entry and calls panic_abort BEFORE the
+                                // console is up, so the run looks like a silent
+                                // hang (~86k steps, zero UART) with nothing to go
+                                // on. Name the cause instead of leaving the
+                                // caller to bisect a firmware image.
+                                eprintln!(
+                                    "labwired-cli test: warn: no partitions.bin beside {} — an \
+                                     Arduino/ESP-IDF app will abort in esp_partition (\"No MD5 \
+                                     found in partition table\") before printing anything. Place \
+                                     the partition table (flash 0x8000) next to the ELF.",
+                                    firmware_path.display()
+                                );
                             }
                             // App magic 0xE9: identity used off 0x30000; factory
                             // MMU maps VA 0x3C03_0000 → phys page 4 (0x40000).

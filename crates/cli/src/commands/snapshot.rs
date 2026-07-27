@@ -89,6 +89,13 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
     }
     bus.refresh_peripheral_index();
 
+    // Drain UART TX so a sketch's own Serial output is recoverable. Without a
+    // sink nothing reads the peripheral and this path could only ever report a
+    // panel paint — a sketch that proves itself by printing had no evidence at
+    // all. Written beside the snapshot as `<output>.uart.log`.
+    let uart_tx = std::sync::Arc::new(std::sync::Mutex::new(Vec::<u8>::new()));
+    bus.attach_uart_tx_sink(uart_tx.clone(), false);
+
     let boxed: Box<dyn Cpu> = Box::new(cpu);
     let mut machine = Machine::new(boxed, bus);
     // Arduino-ESP32 sketches reach `xTaskCreatePinnedToCore(..., 1)`
@@ -406,6 +413,13 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
         // drawPixel (the display.print render path) keeps working. The
         // original spin was in HardwareSerial::write's buffer-available
         // wait, not in Print or Stream.
+        //
+        // Removing these (and the ::begin stub below) is PROVEN not to regress
+        // the panel paint — the ereader e2e stays green — but it is NOT enough
+        // to get serial out of this path either: with both unstubbed a printing
+        // sketch still emitted 0 UART bytes in 8M steps, so something further
+        // down swallows the write. Left in place until that is found; the
+        // uart.log this command now writes is the instrument for finding it.
         "_ZN14HardwareSerial5writeEh",
         "_ZN14HardwareSerial5writeEPKhj",
         "_ZN14HardwareSerial9availableEv",
@@ -895,6 +909,21 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
     if let Err(e) = std::fs::write(&args.output, &bytes) {
         eprintln!("error: write {:?}: {e}", args.output);
         return ExitCode::from(EXIT_RUNTIME_ERROR);
+    }
+
+    // Persist whatever the sketch printed, and report the byte count so a caller
+    // parsing stderr knows a log exists without stat-ing for it.
+    {
+        let bytes = uart_tx.lock().map(|b| b.clone()).unwrap_or_default();
+        let uart_path = args.output.with_extension("uart.log");
+        match std::fs::write(&uart_path, &bytes) {
+            Ok(()) => eprintln!(
+                "labwired-cli snapshot: uart {} bytes -> {:?}",
+                bytes.len(),
+                uart_path
+            ),
+            Err(e) => eprintln!("labwired-cli snapshot: warn: write {uart_path:?}: {e}"),
+        }
     }
 
     eprintln!(
