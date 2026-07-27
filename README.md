@@ -157,6 +157,11 @@ Additional workflows publish narrower signals:
   validation.
 - [`core-validate-hw-targets.yml`](.github/workflows/core-validate-hw-targets.yml):
   onboarding target sweep and catalog metadata.
+- [`core-perf.yml`](.github/workflows/core-perf.yml): per-board simulator
+  throughput. Measures host instructions retired per simulated CPU step under
+  callgrind and files an issue when a board regresses — see
+  [`scripts/perf/board_perf.py`](scripts/perf/board_perf.py) for the metric and
+  how to re-baseline.
 
 For release mechanics, see [RELEASE_PROCESS.md](RELEASE_PROCESS.md) and
 [RELEASE_READINESS_CHECKLIST.md](RELEASE_READINESS_CHECKLIST.md).
