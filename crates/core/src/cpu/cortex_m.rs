@@ -10,6 +10,21 @@ use crate::{Bus, Cpu, SimResult, SimulationConfig, SimulationObserver};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 
+/// `LABWIRED_TRACE_INSN` / `LABWIRED_TRACE_EXC` are developer trace gates read
+/// once per process. They used to be `std::env::var` calls evaluated on EVERY
+/// retired instruction, which cost ~830 host instructions per simulated one
+/// (environ walk + strncmp). Hoisted into `OnceLock` so the hot path pays a
+/// single atomic load.
+fn trace_insn_enabled() -> bool {
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| std::env::var("LABWIRED_TRACE_INSN").is_ok())
+}
+
+fn trace_exc_enabled() -> bool {
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| std::env::var("LABWIRED_TRACE_EXC").is_ok())
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct DecodeCacheEntry {
     pub tag: u32,
@@ -575,7 +590,7 @@ impl Cpu for CortexM {
         self.sync_sp_to_bank();
     }
     fn set_exception_pending(&mut self, exception_num: u32) {
-        if std::env::var("LABWIRED_TRACE_EXC").is_ok() {
+        if trace_exc_enabled() {
             eprintln!("EXC pend num={} pc=0x{:08X}", exception_num, self.pc);
         }
         if exception_num < 256 {
@@ -911,7 +926,7 @@ impl CortexM {
                     // Jump to ISR handler
                     let vtor = self.vtor.load(Ordering::SeqCst);
                     let vector_addr = vtor + (exception_num * 4);
-                    if std::env::var("LABWIRED_TRACE_EXC").is_ok() {
+                    if trace_exc_enabled() {
                         eprintln!(
                             "EXC take num={} vtor=0x{:08X} vec=0x{:08X} fetch={:?}",
                             exception_num,
@@ -983,7 +998,7 @@ impl CortexM {
         // Per-instruction PC trace gated on LABWIRED_TRACE_INSN env var.
         // Use only for short runs — VERY chatty. Format suitable for grepping:
         //   INSN pc=0xPPPPPPPP op=0xOOOOOOOO
-        if std::env::var("LABWIRED_TRACE_INSN").is_ok() {
+        if trace_insn_enabled() {
             eprintln!("INSN pc=0x{:08X} op=0x{:08X}", self.pc, opcode);
         }
 
