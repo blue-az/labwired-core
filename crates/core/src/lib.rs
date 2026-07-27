@@ -2430,7 +2430,31 @@ impl<C: Cpu> Machine<C> {
             .peripherals
             .iter()
             .filter(|entry| filter.is_none_or(|f| entry.name == f))
-            .map(|entry| entry.dev.inspect(entry.base, &entry.name, opts))
+            .map(|entry| {
+                let inspected = entry.dev.inspect(entry.base, &entry.name, opts);
+                // A peripheral that describes itself always wins — the schema is
+                // a fallback for NATIVE peripherals, which have none, and must
+                // never override a model's own account of its registers.
+                if !inspected.registers.is_empty() {
+                    return inspected;
+                }
+                match self.bus.debug_schemas.get(&entry.name) {
+                    Some(schema) => {
+                        let mut named = crate::inspect::inspect_with_schema(
+                            entry.dev.as_ref(),
+                            entry.base,
+                            &entry.name,
+                            schema,
+                        );
+                        // Preserve any artifacts (framebuffers, uart rings, pin
+                        // state) the peripheral produced; only its registers
+                        // were missing.
+                        named.artifacts = inspected.artifacts;
+                        named
+                    }
+                    None => inspected,
+                }
+            })
             .collect();
         crate::inspect::MachineInspect { peripherals }
     }

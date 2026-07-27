@@ -395,6 +395,228 @@ pub fn lookup(descriptor_path: &str) -> Option<&'static str> {
         "nrf52832/wdt.yaml" => Some(include_str!(
             "../../../../configs/peripherals/nrf52832/wdt.yaml"
         )),
+        "nrf52840/aar.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/aar.yaml"
+        )),
+        "nrf52840/acl.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/acl.yaml"
+        )),
+        "nrf52840/approtect.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/approtect.yaml"
+        )),
+        "nrf52840/cc_host_rgf.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/cc_host_rgf.yaml"
+        )),
+        "nrf52840/ccm.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/ccm.yaml"
+        )),
+        "nrf52840/clock.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/clock.yaml"
+        )),
+        "nrf52840/comp.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/comp.yaml"
+        )),
+        "nrf52840/cryptocell.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/cryptocell.yaml"
+        )),
+        "nrf52840/ecb.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/ecb.yaml"
+        )),
+        "nrf52840/egu0.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/egu0.yaml"
+        )),
+        "nrf52840/egu1.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/egu1.yaml"
+        )),
+        "nrf52840/egu2.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/egu2.yaml"
+        )),
+        "nrf52840/egu3.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/egu3.yaml"
+        )),
+        "nrf52840/egu4.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/egu4.yaml"
+        )),
+        "nrf52840/egu5.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/egu5.yaml"
+        )),
+        "nrf52840/ficr.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/ficr.yaml"
+        )),
+        "nrf52840/fpu.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/fpu.yaml"
+        )),
+        "nrf52840/gpiote.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/gpiote.yaml"
+        )),
+        "nrf52840/i2s.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/i2s.yaml"
+        )),
+        "nrf52840/lpcomp.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/lpcomp.yaml"
+        )),
+        "nrf52840/mwu.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/mwu.yaml"
+        )),
+        "nrf52840/nfct.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/nfct.yaml"
+        )),
+        "nrf52840/nvmc.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/nvmc.yaml"
+        )),
+        "nrf52840/p0.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/p0.yaml"
+        )),
+        "nrf52840/p1.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/p1.yaml"
+        )),
+        "nrf52840/pdm.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/pdm.yaml"
+        )),
+        "nrf52840/power.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/power.yaml"
+        )),
+        "nrf52840/ppi.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/ppi.yaml"
+        )),
+        "nrf52840/pwm0.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/pwm0.yaml"
+        )),
+        "nrf52840/pwm1.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/pwm1.yaml"
+        )),
+        "nrf52840/pwm2.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/pwm2.yaml"
+        )),
+        "nrf52840/pwm3.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/pwm3.yaml"
+        )),
+        "nrf52840/qdec.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/qdec.yaml"
+        )),
+        "nrf52840/qspi.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/qspi.yaml"
+        )),
+        "nrf52840/radio.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/radio.yaml"
+        )),
+        "nrf52840/rng.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/rng.yaml"
+        )),
+        "nrf52840/rtc0.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/rtc0.yaml"
+        )),
+        "nrf52840/rtc1.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/rtc1.yaml"
+        )),
+        "nrf52840/rtc2.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/rtc2.yaml"
+        )),
+        "nrf52840/saadc.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/saadc.yaml"
+        )),
+        "nrf52840/spi0.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/spi0.yaml"
+        )),
+        "nrf52840/spi1.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/spi1.yaml"
+        )),
+        "nrf52840/spi2.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/spi2.yaml"
+        )),
+        "nrf52840/spim0.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/spim0.yaml"
+        )),
+        "nrf52840/spim1.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/spim1.yaml"
+        )),
+        "nrf52840/spim2.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/spim2.yaml"
+        )),
+        "nrf52840/spim3.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/spim3.yaml"
+        )),
+        "nrf52840/spis0.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/spis0.yaml"
+        )),
+        "nrf52840/spis1.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/spis1.yaml"
+        )),
+        "nrf52840/spis2.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/spis2.yaml"
+        )),
+        "nrf52840/swi0.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/swi0.yaml"
+        )),
+        "nrf52840/swi1.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/swi1.yaml"
+        )),
+        "nrf52840/swi2.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/swi2.yaml"
+        )),
+        "nrf52840/swi3.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/swi3.yaml"
+        )),
+        "nrf52840/swi4.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/swi4.yaml"
+        )),
+        "nrf52840/swi5.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/swi5.yaml"
+        )),
+        "nrf52840/temp.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/temp.yaml"
+        )),
+        "nrf52840/timer0.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/timer0.yaml"
+        )),
+        "nrf52840/timer1.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/timer1.yaml"
+        )),
+        "nrf52840/timer2.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/timer2.yaml"
+        )),
+        "nrf52840/timer3.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/timer3.yaml"
+        )),
+        "nrf52840/timer4.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/timer4.yaml"
+        )),
+        "nrf52840/twi0.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/twi0.yaml"
+        )),
+        "nrf52840/twi1.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/twi1.yaml"
+        )),
+        "nrf52840/twim0.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/twim0.yaml"
+        )),
+        "nrf52840/twim1.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/twim1.yaml"
+        )),
+        "nrf52840/twis0.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/twis0.yaml"
+        )),
+        "nrf52840/twis1.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/twis1.yaml"
+        )),
+        "nrf52840/uart0.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/uart0.yaml"
+        )),
+        "nrf52840/uarte0.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/uarte0.yaml"
+        )),
+        "nrf52840/uarte1.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/uarte1.yaml"
+        )),
+        "nrf52840/uicr.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/uicr.yaml"
+        )),
+        "nrf52840/usbd.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/usbd.yaml"
+        )),
+        "nrf52840/wdt.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf52840/wdt.yaml"
+        )),
         "rp2040/adc.yaml" => Some(include_str!(
             "../../../../configs/peripherals/rp2040/adc.yaml"
         )),
