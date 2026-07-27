@@ -4,8 +4,13 @@
 // This software is released under the MIT License.
 // See the LICENSE file in the project root for full license information.
 
+mod brushed;
 mod encoder;
 mod shaft;
 
+pub use brushed::{
+    BrushedDcMotor, BrushedMotorParams, BrushedMotorSnapshot, HBridgeCommand, HBridgeState,
+    MotorFaults,
+};
 pub use encoder::{EncoderPins, QuadratureEncoder};
 pub use shaft::{ModelError, Shaft, ShaftParams, ShaftSnapshot};

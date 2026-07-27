@@ -157,6 +157,12 @@ impl Shaft {
         Ok(())
     }
 
+    /// Holds the current position while clearing dynamic shaft state.
+    pub(crate) fn hold_still(&mut self) {
+        self.angular_velocity_rad_s = 0.0;
+        self.net_torque_nm = 0.0;
+    }
+
     /// Advances the shaft by one fixed semi-implicit Euler step.
     ///
     /// The viscous term uses the angular velocity at the start of the step. For
@@ -246,6 +252,19 @@ mod tests {
 
         assert!((shaft.angular_velocity_rad_s() + 10.0).abs() < 1e-9);
         assert!((shaft.position_rad() + 1.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn hold_still_preserves_position_and_clears_velocity_and_torque() {
+        let mut shaft = unloaded_shaft();
+        shaft.step(1.0, 0.1).unwrap();
+        let position_rad = shaft.position_rad();
+
+        shaft.hold_still();
+
+        assert_eq!(shaft.position_rad(), position_rad);
+        assert_eq!(shaft.angular_velocity_rad_s(), 0.0);
+        assert_eq!(shaft.net_torque_nm(), 0.0);
     }
 
     #[test]
