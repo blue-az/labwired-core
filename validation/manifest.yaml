@@ -126,7 +126,8 @@ boards:
     # `type: ir` SPI escape-hatch branch from nrf52/factory.rs. No register
     # read/write path, reset value or layout touched — drift is the shared nrf52
     # file commit date only. No live re-capture.
-    drift_ack: 2026-07-24
+    # 2026-07-27: configs/chips/nrf52840.yaml corrected three NVIC numbers against tests/fixtures/real_world/nrf52840.svd — PDM 31->29 (31 is unassigned), PWM1 29->33 (29 was PDM's vector), PWM2 30->34 (30 is unassigned) — surfaced by the new SVD conformance gate. Numbers only; no peripheral model, register layout or base address changed, and the ACL / GPIO P1 base deviations were reviewed and left as recorded modelling limitations rather than silently 'fixed'. Evidence re-run on this commit: full cargo test -p labwired-core green, including this board's conformance, onboarding and firmware_survival cases. No live re-capture.
+    drift_ack: 2026-07-27
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -183,7 +184,8 @@ boards:
     # 2026-07-24: rides the nrf52840 IR-component-engine retirement (dead
     # `type: ir` SPI escape-hatch removed from nrf52/factory.rs); byte-identical,
     # same silicon. See the nrf52840 drift_ack note.
-    drift_ack: 2026-07-24
+    # 2026-07-27: configs/chips/nrf52840.yaml corrected three NVIC numbers against tests/fixtures/real_world/nrf52840.svd — PDM 31->29 (31 is unassigned), PWM1 29->33 (29 was PDM's vector), PWM2 30->34 (30 is unassigned) — surfaced by the new SVD conformance gate. Numbers only; no peripheral model, register layout or base address changed, and the ACL / GPIO P1 base deviations were reviewed and left as recorded modelling limitations rather than silently 'fixed'. Evidence re-run on this commit: full cargo test -p labwired-core green, including this board's conformance, onboarding and firmware_survival cases. No live re-capture.
+    drift_ack: 2026-07-27
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
