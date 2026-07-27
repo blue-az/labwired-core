@@ -75,11 +75,20 @@ pub const MODEL_TYPES: &[&str] = &[
     "comp",
     "tsc",
     "fmc",
-    // RP2040 native peripherals (built here).
+    // RP2040 native peripherals (built here). `rp2040_adc` and `rp2040_rtc`
+    // MUST be listed: the fuzzy fallbacks below match `contains("adc")` and
+    // `contains("rtc")`, so without membership here they would be coerced onto
+    // the STM32 ADC / RTC register maps — a silently wrong model, not an error.
     "rp2040_timer",
     "rp2040_dma",
     "rp2040_spi",
     "rp2040_i2c",
+    "rp2040_pwm",
+    "rp2040_adc",
+    "rp2040_rtc",
+    "rp2040_watchdog",
+    "rp2040_sio",
+    "rp2040_clkrst",
     "rp2040_xip_ssi",
     "rp2040_usb",
     // ESP32-C3 behavioral models (esp32 factory).
@@ -308,6 +317,9 @@ pub fn try_build(
         "rp2040_spi" => Box::new(crate::peripherals::rp2040::spi::Rp2040Spi::new()),
         "rp2040_i2c" => Box::new(crate::peripherals::rp2040::i2c::Rp2040I2c::new()),
         "rp2040_pwm" => Box::new(crate::peripherals::rp2040::pwm::Rp2040Pwm::new()),
+        "rp2040_adc" => Box::new(crate::peripherals::rp2040::adc::Rp2040Adc::new()),
+        "rp2040_rtc" => Box::new(crate::peripherals::rp2040::rtc::Rp2040Rtc::new()),
+        "rp2040_watchdog" => Box::new(crate::peripherals::rp2040::watchdog::Rp2040Watchdog::new()),
         "rp2040_xip_ssi" => Box::new(crate::peripherals::rp2040::xip_ssi::Rp2040XipSsi::new()),
         "rp2040_usb" => Box::new(crate::peripherals::rp2040::usb::Rp2040Usb::new()),
         "crc" => {
