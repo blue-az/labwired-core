@@ -66,7 +66,7 @@
 //! [`MAX_LIVE_EVENTS_PER_PERIPHERAL`].
 
 use std::cmp::Reverse;
-use std::collections::{BinaryHeap, HashMap, HashSet};
+use std::collections::BinaryHeap;
 
 pub type SimCycle = u64;
 
@@ -92,6 +92,14 @@ pub const SUBSYSTEM_PERIPHERAL_IDX: u32 = u32::MAX;
 /// across the peripheral set) and far below any pathological growth.
 pub const MAX_LIVE_EVENTS_PER_PERIPHERAL: u32 = 8;
 
+/// Sanity cap on a `peripheral_idx` used to index `live_per_peripheral`
+/// directly. Not a limit on the bus — a plausibility check that the value is a
+/// real `SystemBus::peripherals` slot and not a sentinel like
+/// [`SUBSYSTEM_PERIPHERAL_IDX`]. The richest chips model a few dozen
+/// peripherals, so 4096 is far above any real bus and far below a `u32`
+/// sentinel. Debug-asserted in [`EventScheduler::schedule`].
+const MAX_TRACKED_PERIPHERAL_SLOTS: usize = 4096;
+
 #[derive(Debug, Default, Clone)]
 pub struct SchedulerStats {
     /// Count of `schedule()` calls in release mode whose `deadline < now`
@@ -106,6 +114,11 @@ pub struct SchedulerStats {
     /// above [`MAX_LIVE_EVENTS_PER_PERIPHERAL`]. Non-zero means a peripheral
     /// is leaking wakes; debug builds panic via `debug_assert!` instead.
     pub live_event_ceiling_trips: u64,
+    /// High-water mark of TOTAL simultaneously-queued events (heap length).
+    /// The whole-scheduler twin of `max_live_events_per_peripheral`, and the
+    /// number the dedup index's data-structure choice is sized against — see
+    /// the `queued` field.
+    pub max_queued_events: u32,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -153,11 +166,36 @@ pub struct EventScheduler {
     /// a different deadline, e.g. the initial bootstrap arm vs a write-path arm,
     /// or a period rollover) is still enqueued and still fires at its exact
     /// cycle. Only exact duplicates of an already-queued wake are dropped.
-    queued: HashSet<(u32, u32, SimCycle)>,
+    ///
+    /// A LINEARLY-SCANNED `Vec`, not a hash set. The set it indexes is tiny:
+    /// its length equals the heap length, whose high-water mark on the shipped
+    /// ESP32-C3 OLED lab is **3** (`SchedulerStats::max_queued_events`), and
+    /// which the cancellation contract bounds structurally at
+    /// [`MAX_LIVE_EVENTS_PER_PERIPHERAL`] per scheduler-driven peripheral. At
+    /// that size a scan of contiguous 16-byte keys beats any hash: it is a few
+    /// compares against data already in L1, where hashing was measured at 27%
+    /// of total simulator run time (`sample`, 2026-07-26) — SipHash over the
+    /// 16-byte key was the top non-idle leaf frame in the whole simulator,
+    /// above the RISC-V interpreter — with hashbrown's table probe a further
+    /// ~10% on top of that.
+    ///
+    /// Semantics are identical to the `HashSet` this replaces: exact-key
+    /// membership, no iteration, no order dependence (removal is
+    /// `swap_remove`). `max_queued_events` makes the sizing assumption
+    /// observable — if some future peripheral pushes it into the hundreds, this
+    /// is the field that says so.
+    queued: Vec<(u32, u32, SimCycle)>,
     /// Live event count per `peripheral_idx`, kept in lockstep with `heap`.
-    /// Backs the [`MAX_LIVE_EVENTS_PER_PERIPHERAL`] invariant. An idx is
-    /// absent rather than zero once it drains to nothing.
-    live_per_peripheral: HashMap<u32, u32>,
+    /// Backs the [`MAX_LIVE_EVENTS_PER_PERIPHERAL`] invariant.
+    ///
+    /// A DENSE `Vec` indexed by `peripheral_idx`, not a map: bus peripheral
+    /// indices are small contiguous slot numbers, so the direct index costs one
+    /// bounds check where the previous `HashMap<u32, u32>` cost a SipHash of the
+    /// key on every arm AND every fire. Slots for indices that have never
+    /// scheduled read as 0, which is the same answer the absent-key case gave.
+    /// `SUBSYSTEM_PERIPHERAL_IDX` (`u32::MAX`) never reaches here — the callers
+    /// exclude it, as they did before — so the vector cannot be grown to that.
+    live_per_peripheral: Vec<u32>,
 }
 
 impl EventScheduler {
@@ -203,17 +241,35 @@ impl EventScheduler {
         // would otherwise pile redundant entries into `heap` unbounded (see the
         // `queued` field). The retained entry fires at the identical cycle, so
         // delivery is unchanged; only the redundant copies are dropped.
-        if !self.queued.insert((peripheral_idx, event_token, clamped)) {
+        let key = (peripheral_idx, event_token, clamped);
+        if self.queued.contains(&key) {
             // Already queued — return the id the caller ignores anyway.
             return self.next_event_id;
         }
+        self.queued.push(key);
         // Track live events per peripheral and enforce the residency ceiling.
         // A peripheral past the ceiling is re-arming at ever-changing deadlines
         // without superseding its old wakes — the #570 unbounded-heap class.
         if peripheral_idx != SUBSYSTEM_PERIPHERAL_IDX {
-            let live = self.live_per_peripheral.entry(peripheral_idx).or_insert(0);
-            *live += 1;
-            let live = *live;
+            let slot = peripheral_idx as usize;
+            // `live_per_peripheral` is indexed DIRECTLY by slot, so the index
+            // must stay a real `SystemBus::peripherals` position. Today the only
+            // non-slot value is `SUBSYSTEM_PERIPHERAL_IDX`, excluded just above;
+            // a second sentinel added without the same exclusion would resize
+            // this vector to its numeric value. The map this replaced absorbed
+            // that silently — make it loud in debug instead.
+            debug_assert!(
+                slot < MAX_TRACKED_PERIPHERAL_SLOTS,
+                "peripheral_idx {peripheral_idx} is not a bus peripheral slot: either it is a \
+                 new sentinel that must be exempted alongside SUBSYSTEM_PERIPHERAL_IDX, or the \
+                 bus really has more than {MAX_TRACKED_PERIPHERAL_SLOTS} peripherals and this \
+                 cap should be raised"
+            );
+            if slot >= self.live_per_peripheral.len() {
+                self.live_per_peripheral.resize(slot + 1, 0);
+            }
+            self.live_per_peripheral[slot] += 1;
+            let live = self.live_per_peripheral[slot];
             if live > self.stats.max_live_events_per_peripheral {
                 self.stats.max_live_events_per_peripheral = live;
             }
@@ -236,6 +292,9 @@ impl EventScheduler {
             peripheral_idx,
             event_token,
         }));
+        if self.heap.len() as u32 > self.stats.max_queued_events {
+            self.stats.max_queued_events = self.heap.len() as u32;
+        }
         event_id
     }
 
@@ -279,14 +338,13 @@ impl EventScheduler {
             let Reverse(ev) = self.heap.pop().unwrap();
             // Keep the dedup index in lockstep with the heap: this key leaves the
             // heap now, so an identical wake may be re-armed after it fires.
-            self.queued
-                .remove(&(ev.peripheral_idx, ev.event_token, ev.deadline));
+            let key = (ev.peripheral_idx, ev.event_token, ev.deadline);
+            if let Some(pos) = self.queued.iter().position(|k| *k == key) {
+                self.queued.swap_remove(pos);
+            }
             if ev.peripheral_idx != SUBSYSTEM_PERIPHERAL_IDX {
-                if let Some(live) = self.live_per_peripheral.get_mut(&ev.peripheral_idx) {
-                    *live -= 1;
-                    if *live == 0 {
-                        self.live_per_peripheral.remove(&ev.peripheral_idx);
-                    }
+                if let Some(live) = self.live_per_peripheral.get_mut(ev.peripheral_idx as usize) {
+                    *live = live.saturating_sub(1);
                 }
             }
             out.push(ev);

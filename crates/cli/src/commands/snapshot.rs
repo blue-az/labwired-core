@@ -225,27 +225,14 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
     // falls back to the hand-curated address list.
     let resolve =
         |sym: &str, fallback: u32| -> u32 { symbol_addrs.get(sym).copied().unwrap_or(fallback) };
+    // heap_caps_* are NO LONGER thunked. The firmware's real ESP-IDF multi_heap
+    // (TLSF) allocator runs on the emulated DRAM — same as the wasm boot path and
+    // the e-reader e2e (crates/core/tests/e2e_labwired_ereader.rs, which paints
+    // identically with the real heap: refresh_gen=1, 1429 ink bytes). The old
+    // bump-allocator thunks were debt; the "real heap walls" symptom was an
+    // APP_CPU dual-core bring-up bug (fixed by the real second core), not an
+    // allocator bug.
     let mut thunks: Vec<(u32, rom_thunks::RomThunkFn)> = vec![
-        (
-            resolve("heap_caps_init", 0x400e_e3b0),
-            rom_thunks::esp_idf_heap_caps_init,
-        ),
-        (
-            resolve("heap_caps_malloc", 0x4008_2904),
-            rom_thunks::esp_idf_heap_caps_malloc,
-        ),
-        (
-            resolve("heap_caps_calloc", 0x4008_2a70),
-            rom_thunks::esp_idf_heap_caps_calloc,
-        ),
-        (
-            resolve("heap_caps_free", 0x4008_25dc),
-            rom_thunks::esp_idf_heap_caps_free,
-        ),
-        (
-            resolve("heap_caps_realloc", 0x4008_29f0),
-            rom_thunks::esp_idf_heap_caps_realloc,
-        ),
         (
             resolve("esp_timer_init", 0x4012_9034),
             rom_thunks::nop_return_zero,
@@ -294,9 +281,21 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
         ),
         (resolve("delay", 0x400e_5c28), rom_thunks::nop_return_zero),
     ];
-    // HardwareSerial::begin only exists when the sketch called Serial.begin().
-    if let Some(&pc) = symbol_addrs.get("HardwareSerial::begin(unsigned long, unsigned int, signed char, signed char, bool, unsigned long, unsigned char)") {
-        thunks.push((pc, rom_thunks::nop_return_zero));
+    // HardwareSerial::begin / _get_effective_baudrate — the serial-init chain
+    // divides by getApbFrequency(), which returns 0 in the sim → divide-by-zero
+    // exception (Xtensa cause 6). The sim has no UART model the firmware can
+    // observe, so stub the whole begin plus the leaf. These are keyed by the
+    // MANGLED symbol name because extract_arduino_esp32_thunks returns mangled
+    // names (goblin) — the old demangled placeholder key never resolved, a latent
+    // gap the fake-heap path masked by never reaching the baudrate calc. Same
+    // stubs the proven e2e path installs (crates/core/tests/e2e_labwired_ereader.rs).
+    for sym in &[
+        "_ZN14HardwareSerial5beginEmjaabmh",
+        "_get_effective_baudrate",
+    ] {
+        if let Some(&pc) = symbol_addrs.get(*sym) {
+            thunks.push((pc, rom_thunks::nop_return_zero));
+        }
     }
     // Real-silicon noreturn functions — abort_halt prints diagnostics and
     // halts the CPU instead of returning. Without this, stubbing them as
@@ -436,10 +435,13 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
         // null-queue assertion problem. Stub since sim is effectively
         // single-threaded on the panel-render path. xQueueCreateMutexStatic
         // gets a separate echo_arg0 thunk below (callers assert the returned
-        // handle equals the static buffer they passed in).
+        // handle equals the static buffer they passed in). xQueueCreateMutex is
+        // NOT stubbed — the SPI bus mutex is a real FreeRTOS object (see the
+        // spiStartBus note below); faking its create returned an uninitialised
+        // handle that forced faking every lock op on top of it and dropped the
+        // SPI payload to the panel.
         "xQueueGiveMutexRecursive",
         "xQueueTakeMutexRecursive",
-        "xQueueCreateMutex",
         "__sfvwrite_r",
         "__swsetup_r",
         "__sflush_r",
@@ -525,35 +527,19 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
     if let Some(&pc) = symbol_addrs.get("xTaskGetCurrentTaskHandle") {
         thunks.push((pc, rom_thunks::x_task_get_current_task_handle));
     }
-    // xQueueSemaphoreTake on the NULL mutex returned by our stubbed
-    // xQueueCreateMutex would assert. Force pdTRUE so SPIClass /
-    // beginTransaction etc. proceed as if they got the lock.
-    if let Some(&pc) = symbol_addrs.get("xQueueSemaphoreTake") {
-        thunks.push((pc, rom_thunks::return_pd_true));
-    }
-    if let Some(&pc) = symbol_addrs.get("xQueueGenericSend") {
-        thunks.push((pc, rom_thunks::return_pd_true));
-    }
-    // ulTaskGenericNotifyTake — force pdTRUE so the lock-acquire's
-    // "block-then-wake" wait returns immediately in the single-render-path sim.
-    if let Some(&pc) = symbol_addrs.get("ulTaskGenericNotifyTake") {
-        thunks.push((pc, rom_thunks::return_pd_true));
-    }
-    if let Some(&pc) = symbol_addrs.get("spiStartBus") {
-        thunks.push((pc, rom_thunks::spi_start_bus_fake));
-    }
-    // Pre-initialize the Arduino global SPI object's _spi field. The
-    // sketch never calls SPI.begin() — GxEPD2 just assumes SPI is up.
-    // SPIClass layout: offset 0 = _spi_num (u8), offset 4 = _spi (spi_t*).
-    // Our fake spi_t lives at 0x3FFDF020 with dev=0x3FF65000 (SPI3 base);
-    // see rom_thunks::spi_start_bus_fake.
-    // SPIClass::beginTransaction lazy-init: the sketch never calls
-    // SPI.begin() so SPI._spi is NULL at first use. The thunk replaces
-    // beginTransaction with one that lazy-allocates a fake spi_t pointing
-    // at the correct SPI peripheral base, then returns pdTRUE.
-    if let Some(&pc) = symbol_addrs.get("_ZN8SPIClass16beginTransactionE11SPISettings") {
-        thunks.push((pc, rom_thunks::spi_class_begin_transaction));
-    }
+    // NO SPI-bus lock shims and NO SPI init fakes. GxEPD2_EPD::init() calls
+    // SPI.begin() → the real compiled spiStartBus runs: it creates a real
+    // recursive bus mutex via xQueueCreateMutex (real, backed by the real heap),
+    // enables the SPI3 peripheral clock through DPORT, and configures USER/FIFO.
+    // SPIClass::beginTransaction then takes that real mutex. So spi_start_bus_fake,
+    // spi_class_begin_transaction, and the xQueueSemaphoreTake / xQueueGenericSend /
+    // ulTaskGenericNotifyTake "force pdTRUE" lock shims are all GONE — the bus
+    // mutex is a genuine FreeRTOS object and the SPI critical sections run for
+    // real, so the byte stream actually reaches the panel (the fakes matched the
+    // transaction count but dropped the payload → blank render). Mirrors the
+    // proven e2e path in crates/core/tests/e2e_labwired_ereader.rs.
+    // xQueueCreateMutexStatic is still echoed above (idle-task static mutex); the
+    // SPI bus uses the dynamic xQueueCreateMutex, which is real.
     // No GxEPD2 _writeCommand / _writeData bypass. The real compiled
     // GxEPD2_EPD::_writeCommand/_writeData run: digitalWrite(DC=GPIO17) →
     // SPI.transfer(byte) → spiTransferByteNL writes the SPI3 FIFO/MOSI_DLEN/

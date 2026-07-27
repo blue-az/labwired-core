@@ -21,7 +21,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 fn root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -212,7 +212,8 @@ fn esp32c3_oled_native_baseline() {
         "C3_OLED_PROFILE wall_s={:.4} total_cycles={} idle_ff_cycles={} interpreted={} \
          idle_pct={:.3} interp_mips={:.3} guest_cycles_per_sec={:.0} rtf={:.4} \
          cpu_batches={} mean_batch={:.3} peripheral_ticks={} peripheral_ticked_entries={} \
-         bus_tick_entries={} legacy_tick_entries={} lit_px={} serial_bytes={} pc={:#x}",
+         bus_tick_entries={} legacy_tick_entries={} lit_px={} serial_bytes={} pc={:#x} \
+         max_queued_events={} max_live_per_peripheral={}",
         secs,
         total,
         idle,
@@ -230,6 +231,8 @@ fn esp32c3_oled_native_baseline() {
         lit_pixels(&fb),
         serial_len,
         lab.machine.cpu.pc,
+        lab.machine.sched.stats().max_queued_events,
+        lab.machine.sched.stats().max_live_events_per_peripheral,
     );
 }
 
@@ -308,15 +311,35 @@ fn esp32c3_oled_phase_decomposition() {
     }
 }
 
-/// Long-running variant for `sample`: no budget, runs until killed.
-/// This is STEADY STATE (post-paint, idle-FF dominated).
+/// Wall-clock ceiling for the `sample`(1) targets below.
+///
+/// These used to `loop {}` until killed, which made them two landmines:
+/// `cargo test -- --include-ignored` never terminated (it wedges here, and ~77
+/// later test binaries are then never even built), and a sampling run detached
+/// from its shell left a core pegged at 100% indefinitely — which happened, and
+/// poisoned an unrelated benchmark until the stray process was found and
+/// reaped. Ten minutes is far longer than any `sample` session needs and still
+/// guarantees the process ends on its own. Override with
+/// `LABWIRED_C3_SAMPLE_SECS`.
+fn sample_target_budget() -> Duration {
+    Duration::from_secs(
+        std::env::var("LABWIRED_C3_SAMPLE_SECS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(600),
+    )
+}
+
+/// Long-running variant for `sample`: runs until [`sample_target_budget`]
+/// elapses. This is STEADY STATE (post-paint, idle-FF dominated).
 #[test]
-#[ignore = "sampling target; run with --release --ignored and kill after sampling"]
+#[ignore = "sampling target; run with --release --ignored and sample it while it runs"]
 fn esp32c3_oled_sample_target() {
     let mut lab = build_oled_lab();
     let started = Instant::now();
+    let budget = sample_target_budget();
     let mut fuel: u64 = 0;
-    loop {
+    while started.elapsed() < budget {
         lab.machine.run(Some(1_000_000)).expect("run C3 OLED");
         fuel += 1_000_000;
         if fuel.is_multiple_of(500_000_000) {
@@ -335,15 +358,16 @@ fn esp32c3_oled_sample_target() {
 /// interpretation-bound phase of this workload. Rebuild cost shows as
 /// `build_oled_lab` frames in the sample and is excluded when reading it.
 #[test]
-#[ignore = "boot-loop sampling target; run with --release --ignored and kill after sampling"]
+#[ignore = "boot-loop sampling target; run with --release --ignored and sample it while it runs"]
 fn esp32c3_oled_boot_loop_sample_target() {
     let boot_fuel: u64 = std::env::var("LABWIRED_C3_BOOT_FUEL")
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(2_000_000);
     let started = Instant::now();
+    let budget = sample_target_budget();
     let mut iters = 0u64;
-    loop {
+    while started.elapsed() < budget {
         let mut lab = build_oled_lab();
         let mut fuel = 0u64;
         while fuel < boot_fuel {

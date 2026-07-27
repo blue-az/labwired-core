@@ -83,7 +83,7 @@ fn past_deadline_clamps_in_release_and_counts() {
     {
         sched.schedule(50, 0, 1);
         assert_eq!(sched.stats().past_schedule_clamps, 1);
-        let out = sched.drain_due(&[0u32]);
+        let out = sched.drain_due();
         assert_eq!(out.len(), 1);
         assert_eq!(out[0].deadline, 100, "clamped to now");
     }

@@ -188,13 +188,10 @@ stalls cannot block merges; they still run every night and on main.
 `scripts/pre-push.sh`: fmt, clippy (core+cli), walk-deletion + RP2040 vector
 tests, LogicTap unit smokes. Full workspace: `LABWIRED_PREPUSH_FULL=1`.
 
-Work log: [`test_harness_reorg_log.md`](test_harness_reorg_log.md).
-
 ---
 
 ## Related docs
 
 - `validation/arduino-matrix/README.md` / `PROBLEMS.md`
 - `validation/zephyr-matrix/README.md`
-- `docs/walk_free_plan.md` — walk vs scheduler strategy
 - `docs/coverage_scoreboard.md` — coverage matrix (separate from Arduino matrix)

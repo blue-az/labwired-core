@@ -126,7 +126,8 @@ boards:
     # `type: ir` SPI escape-hatch branch from nrf52/factory.rs. No register
     # read/write path, reset value or layout touched — drift is the shared nrf52
     # file commit date only. No live re-capture.
-    drift_ack: 2026-07-24
+    # 2026-07-27: configs/chips/nrf52840.yaml corrected three NVIC numbers against tests/fixtures/real_world/nrf52840.svd — PDM 31->29 (31 is unassigned), PWM1 29->33 (29 was PDM's vector), PWM2 30->34 (30 is unassigned) — surfaced by the new SVD conformance gate. Numbers only; no peripheral model, register layout or base address changed, and the ACL / GPIO P1 base deviations were reviewed and left as recorded modelling limitations rather than silently 'fixed'. Evidence re-run on this commit: full cargo test -p labwired-core green, including this board's conformance, onboarding and firmware_survival cases. No live re-capture.
+    drift_ack: 2026-07-27
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -183,7 +184,8 @@ boards:
     # 2026-07-24: rides the nrf52840 IR-component-engine retirement (dead
     # `type: ir` SPI escape-hatch removed from nrf52/factory.rs); byte-identical,
     # same silicon. See the nrf52840 drift_ack note.
-    drift_ack: 2026-07-24
+    # 2026-07-27: configs/chips/nrf52840.yaml corrected three NVIC numbers against tests/fixtures/real_world/nrf52840.svd — PDM 31->29 (31 is unassigned), PWM1 29->33 (29 was PDM's vector), PWM2 30->34 (30 is unassigned) — surfaced by the new SVD conformance gate. Numbers only; no peripheral model, register layout or base address changed, and the ACL / GPIO P1 base deviations were reviewed and left as recorded modelling limitations rather than silently 'fixed'. Evidence re-run on this commit: full cargo test -p labwired-core green, including this board's conformance, onboarding and firmware_survival cases. No live re-capture.
+    drift_ack: 2026-07-27
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -294,7 +296,8 @@ boards:
     # 2026-07-21: shared rcc.rs / pwr.rs gained the ADDITIVE STM32H7 RCC layout + PwrH7 (new enum variants for the stm32h735 onboarding). This board's RCC/PWR family structs are byte-for-byte untouched; the h735 work also added Cortex-M7 double-precision VFP decode (previously Unknown32), which no existing decode path uses. Its conformance/survival gates + 2189 core lib tests pass unchanged. No silicon re-capture.
     # 2026-07-24: I2C digital-twin (F1 SR2.TRA + level EV IRQ; L4 TXIS/DataPending). Register surface of non-I2C oracles unchanged; re-capture tracked.
     # 2026-07-25: I2C shared-model regression fix — F1 STOP keeps RXNE (0x40) for poll-mode master-receive; F1 NACK branch no longer sets SR2.TRA on a NACKed address; L4 CR2 START/STOP kept pending until consumed + NBYTES>0-write address phase deferred to first TXDR. firmware_survival (incl. this board) + e2e_stm32f407_i2c + i2c walk-identity differentials green; register surface of non-I2C oracles unchanged. Re-capture tracked.
-    drift_ack: 2026-07-25
+    # 2026-07-27: shared rcc.rs gained the STM32WB enable-register layout (RM0434 §6.4) — WB's clock-enable block moved off the H5-style 0x8C/0x9C/0xA4 slots onto 0x4C/0x58/0x60, where silicon actually puts it (0x9C is RCC_HSECR on WB). The change is confined to the new Stm32Wb layout variant plus a construction-time offset table on V2Rcc whose default is byte-identical to the previous hardcoded H5 placement; only WB55 selects the new table. This board's own RCC family struct is untouched — no shared behaviour was edited, only where two WB registers are decoded. Evidence re-run on this commit: 2332 core lib tests, firmware_survival 51/51, register_coverage, chip_conformance, strict_onboarding and board_coverage_ratchet all pass unchanged, and the tier-1 matrix is unchanged for every board except WB55 (which went from 6 clock-gated classes reachable only via the wrong register to 12/12 pass). No live re-capture.
+    drift_ack: 2026-07-27
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
@@ -563,7 +566,29 @@ boards:
     # fast-forward skip windows. Behavioural WiFi-medium timing only; register
     # map, reset values, and the asserted reset-oracle set are untouched. No
     # live re-capture warranted.
-    drift_ack: 2026-07-25
+    # 2026-07-26: I2C0 wake CADENCE only (esp32c3/i2c.rs) — the bit engine now
+    # arms its scheduler wake at the next wire-segment transition instead of
+    # every module tick, plus an `arm_seq` arming token so a wake armed before a
+    # CTR.FSM_RST / TRANS_START re-anchor is discarded on arrival rather than
+    # clocking the next transaction. WHAT THIS DOES NOT TOUCH: no register in the
+    # map, no reset value, no field layout, no FIFO semantic, no read/write path
+    # — only WHEN the host is asked to run the engine forward. `advance_engine`
+    # was already delta-based, so N ticks consumed in one call land on exactly
+    # the state N single-tick calls would, and every MMIO access still catches up
+    # through `sync_to` first. The asserted reset-oracle set is untouched, and
+    # esp32c3_reset_conformance::esp32c3_reset_values_match_silicon passes.
+    # PROVED BYTE-IDENTICAL against the LEGACY PER-CYCLE WALK (the reference with
+    # no wakes at all, so it cannot be wrong about them):
+    #   * esp32c3_walk_differential — 11 tests incl. the i2c0-pinned-to-walk case;
+    #   * rearm_after_fsm_rst_matches_the_per_cycle_walk — per-cycle SCL/SDA
+    #     comparison across the FSM_RST re-anchor (fails without the token fix);
+    #   * every_attached_i2c_device_matches_the_per_cycle_walk — all 14 devices
+    #     the C3 can attach, comparing waveform + SR + INT_RAW + RX FIFO;
+    #   * esp32c3_shipped_lab_batch_gate — both shipped labs reproduce identical
+    #     interpreted (3400255 / 3040236), lit_px (782 / 442) and final pc.
+    # Wire TIMING on the pads is unchanged; only host wake scheduling moved. No
+    # live USB-JTAG re-capture warranted.
+    drift_ack: 2026-07-26
 
   - id: nucleo-l476rg
     doc: docs/boards/nucleo-l476rg.md
@@ -649,7 +674,9 @@ boards:
     # 2026-07-21: shared rcc.rs / pwr.rs gained the ADDITIVE STM32H7 RCC layout + PwrH7 (new enum variants for the stm32h735 onboarding). This board's RCC/PWR family structs are byte-for-byte untouched; the h735 work also added Cortex-M7 double-precision VFP decode (previously Unknown32), which no existing decode path uses. Its conformance/survival gates + 2189 core lib tests pass unchanged. No silicon re-capture.
     # 2026-07-24: I2C digital-twin (F1 SR2.TRA + level EV IRQ; L4 TXIS/DataPending). Register surface of non-I2C oracles unchanged; re-capture tracked.
     # 2026-07-25: I2C shared-model regression fix — F1 STOP keeps RXNE (0x40) for poll-mode master-receive; F1 NACK branch no longer sets SR2.TRA on a NACKed address; L4 CR2 START/STOP kept pending until consumed + NBYTES>0-write address phase deferred to first TXDR. firmware_survival (incl. this board) + e2e_stm32f407_i2c + i2c walk-identity differentials green; register surface of non-I2C oracles unchanged. Re-capture tracked.
-    drift_ack: 2026-07-25
+    # 2026-07-26: exti.rs gained a `tick_elapsed_forced` override so the hardware-oracle forced walk sees level-triggered EXTI IRQs. The `scheduler_mode()` no-op in `tick()` was swallowing the forced call, so the bare-CPU oracle got NO interrupt at all (exti0_interrupt_delivery_sim read mem[0x20000300] == 0x00000000); it was invisible except under `cargo test --workspace`, where Cargo feature unification switches `event-scheduler` on for a crate that does not request it. The legacy non-scheduler `tick()` path is behaviourally IDENTICAL — the same `pending_irqs()` body, now reached through a shared helper — so no register read/write path, reset value or register layout changed. Evidence re-run on this commit in BOTH configurations (default features and `--features labwired-core/event-scheduler`): l476_mmio_diff::{l476_mmio_sim_only,l476_parity_sim_only} 2/2, 0 divergence; plus firmware_survival 51/51 (incl. this board's cases). No live re-capture.
+    # 2026-07-27: shared rcc.rs gained the STM32WB enable-register layout (RM0434 §6.4) — WB's clock-enable block moved off the H5-style 0x8C/0x9C/0xA4 slots onto 0x4C/0x58/0x60, where silicon actually puts it (0x9C is RCC_HSECR on WB). The change is confined to the new Stm32Wb layout variant plus a construction-time offset table on V2Rcc whose default is byte-identical to the previous hardcoded H5 placement; only WB55 selects the new table. This board's own RCC family struct is untouched — no shared behaviour was edited, only where two WB registers are decoded. Evidence re-run on this commit: 2332 core lib tests, firmware_survival 51/51, register_coverage, chip_conformance, strict_onboarding and board_coverage_ratchet all pass unchanged, and the tier-1 matrix is unchanged for every board except WB55 (which went from 6 clock-gated classes reachable only via the wrong register to 12/12 pass). No live re-capture.
+    drift_ack: 2026-07-27
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
@@ -741,7 +768,8 @@ boards:
     # board's L0Rcc struct is byte-for-byte untouched — same rationale as the
     # 2026-07-21 H7-layout entry above. l0_mmio_diff/conformance unchanged.
     # No live re-capture.
-    drift_ack: 2026-07-25
+    # 2026-07-27: shared rcc.rs gained the STM32WB enable-register layout (RM0434 §6.4) — WB's clock-enable block moved off the H5-style 0x8C/0x9C/0xA4 slots onto 0x4C/0x58/0x60, where silicon actually puts it (0x9C is RCC_HSECR on WB). The change is confined to the new Stm32Wb layout variant plus a construction-time offset table on V2Rcc whose default is byte-identical to the previous hardcoded H5 placement; only WB55 selects the new table. This board's own RCC family struct is untouched — no shared behaviour was edited, only where two WB registers are decoded. Evidence re-run on this commit: 2332 core lib tests, firmware_survival 51/51, register_coverage, chip_conformance, strict_onboarding and board_coverage_ratchet all pass unchanged, and the tier-1 matrix is unchanged for every board except WB55 (which went from 6 clock-gated classes reachable only via the wrong register to 12/12 pass). No live re-capture.
+    drift_ack: 2026-07-27
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
@@ -838,7 +866,9 @@ boards:
     # 2026-07-21: shared rcc.rs / pwr.rs gained the ADDITIVE STM32H7 RCC layout + PwrH7 (new enum variants for the stm32h735 onboarding). This board's RCC/PWR family structs are byte-for-byte untouched; the h735 work also added Cortex-M7 double-precision VFP decode (previously Unknown32), which no existing decode path uses. Its conformance/survival gates + 2189 core lib tests pass unchanged. No silicon re-capture.
     # 2026-07-24: I2C digital-twin (F1 SR2.TRA + level EV IRQ; L4 TXIS/DataPending). Register surface of non-I2C oracles unchanged; re-capture tracked.
     # 2026-07-25: I2C shared-model regression fix — F1 STOP keeps RXNE (0x40) for poll-mode master-receive; F1 NACK branch no longer sets SR2.TRA on a NACKed address; L4 CR2 START/STOP kept pending until consumed + NBYTES>0-write address phase deferred to first TXDR. firmware_survival (incl. this board) + e2e_stm32f407_i2c + i2c walk-identity differentials green; register surface of non-I2C oracles unchanged. Re-capture tracked.
-    drift_ack: 2026-07-25
+    # 2026-07-26: exti.rs gained a `tick_elapsed_forced` override so the hardware-oracle forced walk sees level-triggered EXTI IRQs. The `scheduler_mode()` no-op in `tick()` was swallowing the forced call, so the bare-CPU oracle got NO interrupt at all (exti0_interrupt_delivery_sim read mem[0x20000300] == 0x00000000); it was invisible except under `cargo test --workspace`, where Cargo feature unification switches `event-scheduler` on for a crate that does not request it. The legacy non-scheduler `tick()` path is behaviourally IDENTICAL — the same `pending_irqs()` body, now reached through a shared helper — so no register read/write path, reset value or register layout changed. Evidence re-run on this commit in BOTH configurations (default features and `--features labwired-core/event-scheduler`): stm32f1_mmio_diff::{f1_reset_sim_only,f1_mmio_sim_only,f1_parity_sim_only,f1_sweep_sim_only} 4/4 and f103_conformance::conformance_sim (digest) pass, 0 divergence; plus firmware_survival 51/51 (incl. this board's cases). No live re-capture.
+    # 2026-07-27: shared rcc.rs gained the STM32WB enable-register layout (RM0434 §6.4) — WB's clock-enable block moved off the H5-style 0x8C/0x9C/0xA4 slots onto 0x4C/0x58/0x60, where silicon actually puts it (0x9C is RCC_HSECR on WB). The change is confined to the new Stm32Wb layout variant plus a construction-time offset table on V2Rcc whose default is byte-identical to the previous hardcoded H5 placement; only WB55 selects the new table. This board's own RCC family struct is untouched — no shared behaviour was edited, only where two WB registers are decoded. Evidence re-run on this commit: 2332 core lib tests, firmware_survival 51/51, register_coverage, chip_conformance, strict_onboarding and board_coverage_ratchet all pass unchanged, and the tier-1 matrix is unchanged for every board except WB55 (which went from 6 clock-gated classes reachable only via the wrong register to 12/12 pass). No live re-capture.
+    drift_ack: 2026-07-27
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/afio.rs
@@ -933,7 +963,8 @@ boards:
     # 2026-07-21: shared rcc.rs / pwr.rs gained the ADDITIVE STM32H7 RCC layout + PwrH7 (new enum variants for the stm32h735 onboarding). This board's RCC/PWR family structs are byte-for-byte untouched; the h735 work also added Cortex-M7 double-precision VFP decode (previously Unknown32), which no existing decode path uses. Its conformance/survival gates + 2189 core lib tests pass unchanged. No silicon re-capture.
     # 2026-07-24: I2C digital-twin (F1 SR2.TRA + level EV IRQ; L4 TXIS/DataPending). Register surface of non-I2C oracles unchanged; re-capture tracked.
     # 2026-07-25: I2C shared-model regression fix — F1 STOP keeps RXNE (0x40) for poll-mode master-receive; F1 NACK branch no longer sets SR2.TRA on a NACKed address; L4 CR2 START/STOP kept pending until consumed + NBYTES>0-write address phase deferred to first TXDR. firmware_survival (incl. this board) + e2e_stm32f407_i2c + i2c walk-identity differentials green; register surface of non-I2C oracles unchanged. Re-capture tracked.
-    drift_ack: 2026-07-25
+    # 2026-07-27: shared rcc.rs gained the STM32WB enable-register layout (RM0434 §6.4) — WB's clock-enable block moved off the H5-style 0x8C/0x9C/0xA4 slots onto 0x4C/0x58/0x60, where silicon actually puts it (0x9C is RCC_HSECR on WB). The change is confined to the new Stm32Wb layout variant plus a construction-time offset table on V2Rcc whose default is byte-identical to the previous hardcoded H5 placement; only WB55 selects the new table. This board's own RCC family struct is untouched — no shared behaviour was edited, only where two WB registers are decoded. Evidence re-run on this commit: 2332 core lib tests, firmware_survival 51/51, register_coverage, chip_conformance, strict_onboarding and board_coverage_ratchet all pass unchanged, and the tier-1 matrix is unchanged for every board except WB55 (which went from 6 clock-gated classes reachable only via the wrong register to 12/12 pass). No live re-capture.
+    drift_ack: 2026-07-27
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
