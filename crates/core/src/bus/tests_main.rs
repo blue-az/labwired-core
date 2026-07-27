@@ -2454,6 +2454,88 @@ motor_models:
         external_off.motor_snapshots()[0].control_state,
         "off:external-enable"
     );
+
+    fn batching_fixture(mut bus: SystemBus) -> SystemBus {
+        configure_pwm(&mut bus);
+        bus.write_u32(0x4001_2c2c, 9).unwrap(); // ARR: 10 timer ticks
+        bus.write_u32(0x4001_2c28, 3).unwrap(); // PSC: 4 CPU cycles/timer tick
+        bus.write_u32(0x4001_2c24, 1).unwrap(); // nonzero CNT
+        bus.write_u32(0x4001_2c34, 2).unwrap(); // CH1 edge
+        bus.write_u32(0x4001_2c38, 5).unwrap(); // CH2 edge
+        bus.write_u32(0x4001_2c3c, 8).unwrap(); // CH3 edge
+        bus.write_u32(0x4001_2c44, 1 << 15).unwrap(); // MOE
+        bus.write_u32(0x4800_0014, 0).unwrap(); // hold external enable off
+        bus.set_current_cycle(3);
+        bus.tick_peripherals_with_costs(); // establish nonzero PSC phase
+        bus.write_u32(0x4800_0014, 1).unwrap();
+        bus
+    }
+
+    let mut lumped = batching_fixture(build());
+    let mut partitioned = batching_fixture(build());
+    lumped.set_current_cycle(lumped.current_cycle + 97);
+    lumped.tick_peripherals_with_costs();
+    for cycles in [13, 29, 55] {
+        partitioned.set_current_cycle(partitioned.current_cycle + cycles);
+        partitioned.tick_peripherals_with_costs();
+    }
+    let lumped = lumped.motor_snapshots().remove(0);
+    let partitioned = partitioned.motor_snapshots().remove(0);
+    assert_eq!(lumped.control_state, partitioned.control_state);
+    assert_eq!(lumped.faults, partitioned.faults);
+    const BATCHING_TOLERANCE: f64 = 1e-7;
+    for (left, right) in lumped
+        .phase_currents_a
+        .unwrap()
+        .into_iter()
+        .zip(partitioned.phase_currents_a.unwrap())
+        .chain([
+            (lumped.position_rad, partitioned.position_rad),
+            (lumped.speed_rpm, partitioned.speed_rpm),
+            (lumped.torque_nm, partitioned.torque_nm),
+        ])
+    {
+        assert!(
+            (left - right).abs() <= BATCHING_TOLERANCE,
+            "lumped {left} != partitioned {right}"
+        );
+    }
+
+    let mut resync_a = batching_fixture(build());
+    let mut resync_b = batching_fixture(build());
+    resync_a.write_u32(0x4800_0014, 0).unwrap();
+    resync_b.write_u32(0x4800_0014, 0).unwrap();
+    resync_a.set_current_cycle(resync_a.current_cycle + 5);
+    resync_a.tick_peripherals_with_costs();
+    resync_b.set_current_cycle(resync_b.current_cycle + 11);
+    resync_b.tick_peripherals_with_costs();
+    for bus in [&mut resync_a, &mut resync_b] {
+        bus.write_u32(0x4001_2c28, 1).unwrap(); // new PSC
+        bus.write_u32(0x4001_2c2c, 11).unwrap(); // new ARR
+        bus.write_u32(0x4001_2c14, 1).unwrap(); // UG resets prescaler phase
+        bus.write_u32(0x4001_2c24, 7).unwrap(); // explicit nonzero CNT
+        bus.write_u32(0x4800_0014, 1).unwrap();
+        bus.set_current_cycle(bus.current_cycle + 41);
+        bus.tick_peripherals_with_costs();
+    }
+    let resync_a = resync_a.motor_snapshots().remove(0);
+    let resync_b = resync_b.motor_snapshots().remove(0);
+    for (left, right) in resync_a
+        .phase_currents_a
+        .unwrap()
+        .into_iter()
+        .zip(resync_b.phase_currents_a.unwrap())
+        .chain([
+            (resync_a.position_rad, resync_b.position_rad),
+            (resync_a.speed_rpm, resync_b.speed_rpm),
+            (resync_a.torque_nm, resync_b.torque_nm),
+        ])
+    {
+        assert!(
+            (left - right).abs() <= BATCHING_TOLERANCE,
+            "phase reconfiguration failed to resync: {left} != {right}"
+        );
+    }
 }
 
 /// Cortex-M33 parts (STM32H5/WBA) have no bit-band feature and map real

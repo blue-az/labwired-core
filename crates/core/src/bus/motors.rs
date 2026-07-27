@@ -15,6 +15,13 @@ pub(super) struct ResolvedPin {
     bit: u8,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub(super) struct PwmPhaseCursor {
+    revision: u64,
+    counter_ticks: u32,
+    prescaler_phase: u32,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct MotorSnapshot {
     pub id: String,
@@ -59,6 +66,7 @@ pub(super) enum MotorRuntime {
         simulation_clock_hz: u64,
         control_state: String,
         inverter_fault_active: bool,
+        pwm_phase_cursor: Option<Box<PwmPhaseCursor>>,
     },
 }
 
@@ -216,6 +224,7 @@ impl SystemBus {
             simulation_clock_hz: c.simulation_clock_hz,
             control_state: "off:timer-stopped".to_owned(),
             inverter_fault_active: false,
+            pwm_phase_cursor: None,
         })
     }
 
@@ -311,14 +320,39 @@ impl SystemBus {
                     simulation_clock_hz,
                     control_state,
                     inverter_fault_active,
+                    pwm_phase_cursor,
                     ..
                 } => {
                     let dt_s = elapsed as f64 / *simulation_clock_hz as f64;
-                    let timer_output = self.peripherals[*timer]
+                    let mut timer_output = self.peripherals[*timer]
                         .dev
                         .as_any()
                         .and_then(|a| a.downcast_ref::<crate::peripherals::timer::Timer>())
                         .map(crate::peripherals::timer::Timer::output_snapshot);
+                    if let Some(pwm) = &mut timer_output {
+                        let cursor = pwm_phase_cursor.get_or_insert_with(|| {
+                            Box::new(PwmPhaseCursor {
+                                revision: pwm.phase_revision,
+                                counter_ticks: pwm.counter_ticks,
+                                prescaler_phase: pwm.prescaler_phase,
+                            })
+                        });
+                        if cursor.revision != pwm.phase_revision {
+                            **cursor = PwmPhaseCursor {
+                                revision: pwm.phase_revision,
+                                counter_ticks: pwm.counter_ticks,
+                                prescaler_phase: pwm.prescaler_phase,
+                            };
+                        } else {
+                            pwm.counter_ticks = cursor.counter_ticks;
+                            pwm.prescaler_phase = cursor.prescaler_phase;
+                        }
+                        if pwm.counter_enabled {
+                            advance_pwm_phase_cursor(cursor.as_mut(), *pwm, elapsed);
+                        }
+                    } else {
+                        *pwm_phase_cursor = None;
+                    }
                     let external_enabled = self.pin_output(*enable);
                     let valid_pwm = timer_output.is_some_and(|pwm| {
                         pwm.channels[..3].iter().all(|channel| {
@@ -563,6 +597,20 @@ fn pwm_interval_schedule(
         .collect()
 }
 
+fn advance_pwm_phase_cursor(
+    cursor: &mut PwmPhaseCursor,
+    pwm: crate::peripherals::timer::TimerOutputSnapshot,
+    elapsed_cycles: u64,
+) {
+    let divisor = pwm.prescaler_divisor;
+    let phase = u64::from(cursor.prescaler_phase).min(divisor - 1);
+    let timer_cycles = phase + elapsed_cycles;
+    let increments = timer_cycles / divisor;
+    cursor.prescaler_phase = (timer_cycles % divisor) as u32;
+    cursor.counter_ticks =
+        ((u64::from(cursor.counter_ticks) + increments) % pwm.period_ticks) as u32;
+}
+
 fn sampled_gate_pair(
     channel: crate::peripherals::timer::TimerChannelOutputSnapshot,
     phase: f64,
@@ -625,6 +673,7 @@ mod tests {
             counter_ticks: 0,
             prescaler_divisor: 1,
             prescaler_phase: 0,
+            phase_revision: 0,
         }
     }
 
@@ -643,6 +692,7 @@ mod tests {
             counter_ticks: 0,
             prescaler_divisor: 1,
             prescaler_phase: 0,
+            phase_revision: 0,
         };
         let mut motor = BldcMotor::new(BldcMotorParams {
             resistance_ohm: 1.0,

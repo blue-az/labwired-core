@@ -152,6 +152,10 @@ pub struct Timer {
     /// arrival (token mismatch) instead of racing the fresh chain.
     #[serde(skip)]
     arm_seq: u32,
+    /// Changes only when firmware rewrites timer state that invalidates an
+    /// external phase cursor. Natural counter advancement does not bump it.
+    #[serde(default)]
+    phase_revision: u64,
     /// Bus-published cycle clock (walk-free plan Part 1). `Some` once the bus
     /// registration choke attaches it; `None` keeps the model on the legacy
     /// walk path.
@@ -193,6 +197,7 @@ pub struct TimerOutputSnapshot {
     pub counter_ticks: u32,
     pub prescaler_divisor: u64,
     pub prescaler_phase: u32,
+    pub phase_revision: u64,
 }
 
 impl Timer {
@@ -240,6 +245,7 @@ impl Timer {
             psc_cnt: Cell::new(0),
             anchor: Cell::new(0),
             arm_seq: 0,
+            phase_revision: 0,
             clock: None,
         }
     }
@@ -311,6 +317,7 @@ impl Timer {
             counter_ticks: self.cnt.get(),
             prescaler_divisor: u64::from(self.psc) + 1,
             prescaler_phase: self.psc_cnt.get(),
+            phase_revision: self.phase_revision,
         }
     }
 
@@ -629,6 +636,15 @@ impl Timer {
     }
 
     fn write_reg(&mut self, offset: u64, value: u32) {
+        let phase_mapping_before = (
+            self.cr1 & 1,
+            self.ccmr1,
+            self.ccmr2,
+            self.cnt.get(),
+            self.psc,
+            self.arr,
+        );
+        let explicit_update = offset == 0x14 && (value & 1) != 0;
         match offset {
             0x00 => self.cr1 = value & 0x3FF,
             // CR2 writable bits differ by layout. General-purpose (TIM2-5):
@@ -723,6 +739,17 @@ impl Timer {
             0x5C if self.advanced => self.ccr6 = value,
             0x60 if self.advanced => self.or2 = value,
             _ => {}
+        }
+        let phase_mapping_after = (
+            self.cr1 & 1,
+            self.ccmr1,
+            self.ccmr2,
+            self.cnt.get(),
+            self.psc,
+            self.arr,
+        );
+        if explicit_update || phase_mapping_before != phase_mapping_after {
+            self.phase_revision = self.phase_revision.wrapping_add(1);
         }
     }
 }
@@ -1060,6 +1087,36 @@ mod tests {
         assert_eq!(output.prescaler_phase, 2);
         assert_eq!(output.period_ticks, 100);
         assert_eq!(output.channels[0].mode, TimerChannelOutputMode::Pwm1);
+    }
+
+    #[test]
+    fn timer_phase_revision_tracks_only_phase_mapping_writes() {
+        let mut tim = Timer::new_with_layout(16, true);
+        assert_eq!(tim.output_snapshot().phase_revision, 0);
+        tim.write_u32(0x34, 25).unwrap(); // CCR is a live waveform change.
+        tim.write_u32(0x20, 1).unwrap(); // CCER/polarity is live too.
+        tim.write_u32(0x44, 1 << 15).unwrap(); // MOE does not remap phase.
+        assert_eq!(tim.output_snapshot().phase_revision, 0);
+
+        for (offset, value) in [
+            (0x24, 7),    // CNT
+            (0x28, 3),    // PSC
+            (0x2c, 99),   // ARR
+            (0x18, 0x60), // PWM mode
+            (0x00, 1),    // CEN transition
+            (0x14, 1),    // explicit update/reset
+        ] {
+            let before = tim.output_snapshot().phase_revision;
+            tim.write_u32(offset, value).unwrap();
+            assert!(tim.output_snapshot().phase_revision > before);
+        }
+        let revision = tim.output_snapshot().phase_revision;
+        assert!(!tim.tick().irq);
+        assert_eq!(
+            tim.output_snapshot().phase_revision,
+            revision,
+            "natural timer advancement must not invalidate an external cursor"
+        );
     }
 
     #[test]
