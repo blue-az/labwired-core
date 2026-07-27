@@ -31,7 +31,6 @@ motor_models:
     encoder_a_pin: PC3
     encoder_b_pin: PC4
     encoder_index_pin: PC5
-    motor_fault_pin: PC6
     inverter_fault_pin: PB7
     overcurrent_fault_pin: PB6
     undervoltage_fault_pin: PC7

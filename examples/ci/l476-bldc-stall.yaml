@@ -35,5 +35,7 @@ assertions:
       from_stimulus:
         component: drive_motor
         channel: stall
+      stimulus_occurrence: 1
       to_uart: "INVERTER OFF"
+      uart_occurrence: 1
       max_cycles: 310000

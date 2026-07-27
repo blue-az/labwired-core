@@ -222,7 +222,7 @@ pub extern "C" fn Reset() -> ! {
             0
         };
         if motor_fault_ms >= 20 {
-            fault(b"FAULT STALL\r\n");
+            fault(b"FAULT MOTOR\r\n");
         }
         if overcurrent_ms >= 20 {
             fault(b"FAULT OVERCURRENT\r\n");
@@ -285,7 +285,7 @@ pub extern "C" fn Reset() -> ! {
             }
         } else {
             stall_ms += 1;
-            if hall_mode && stall_ms >= 500 {
+            if stall_ms >= 20 {
                 fault(b"FAULT STALL\r\n");
             }
         }

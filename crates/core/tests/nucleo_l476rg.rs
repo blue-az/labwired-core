@@ -2,9 +2,46 @@
 // Copyright (C) 2026 Andrii Shylenko
 // SPDX-License-Identifier: MIT
 
+use labwired_config::{MotorModelConfig, SystemManifest};
 use labwired_core::system::cortex_m::configure_cortex_m;
 use labwired_core::{Bus, Machine};
+use std::path::PathBuf;
+use std::process::Command;
+use std::sync::OnceLock;
 use std::sync::{Arc, Mutex};
+
+fn ensure_bldc_firmware_built() -> PathBuf {
+    static ELF: OnceLock<PathBuf> = OnceLock::new();
+    ELF.get_or_init(|| {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .to_path_buf();
+        let status = Command::new("cargo")
+            .args([
+                "build",
+                "--release",
+                "-p",
+                "firmware-l476-demo",
+                "--bin",
+                "firmware-l476-bldc-six-step",
+                "--target",
+                "thumbv7em-none-eabihf",
+            ])
+            .env_remove("CARGO_ENCODED_RUSTFLAGS")
+            .env_remove("RUSTFLAGS")
+            .current_dir(&root)
+            .status()
+            .expect("invoke cargo build for STM32L476 BLDC fixture");
+        assert!(status.success(), "STM32L476 BLDC firmware build failed");
+        let elf = root.join("target/thumbv7em-none-eabihf/release/firmware-l476-bldc-six-step");
+        assert!(elf.is_file(), "firmware ELF was not produced at {elf:?}");
+        elf
+    })
+    .clone()
+}
 
 fn fixture(
     stalled: bool,
@@ -25,7 +62,7 @@ fn fixture(
     bus.attach_uart_tx_sink(uart.clone(), false);
     let (cpu, _) = configure_cortex_m(&mut bus);
     let mut machine = Machine::new(cpu, bus);
-    let elf = root.join("target/thumbv7em-none-eabihf/release/firmware-l476-bldc-six-step");
+    let elf = ensure_bldc_firmware_built();
     let image = labwired_loader::load_elf(&elf)
         .unwrap_or_else(|error| panic!("build firmware fixture first ({elf:?}): {error}"));
     machine.load_firmware(&image).unwrap();
@@ -40,6 +77,23 @@ fn contains(uart: &Arc<Mutex<Vec<u8>>>, token: &[u8]) -> bool {
         .unwrap()
         .windows(token.len())
         .any(|bytes| bytes == token)
+}
+
+#[test]
+fn l476_showcase_does_not_bind_aggregate_motor_fault_as_stall() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .to_path_buf();
+    let manifest =
+        SystemManifest::from_file(root.join("examples/nucleo-l476rg-bldc/system.yaml")).unwrap();
+    let models = manifest.resolved_motor_models().unwrap();
+    let MotorModelConfig::Bldc(motor) = &models[0] else {
+        panic!("expected BLDC model")
+    };
+    assert_eq!(motor.motor_fault_pin, None);
 }
 
 #[test]

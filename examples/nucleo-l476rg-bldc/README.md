@@ -8,8 +8,10 @@ The plant uses 24 V, 0.35 Ω phase resistance, 180 µH phase inductance,
 0.04 N·m/A torque constant, 0.04 V/(rad/s) back-EMF constant, 0.1 µkg·m² rotor
 inertia, seven pole pairs, and a 2048-count encoder. Encoder A/B/index feed
 PC3..PC5 and Hall A/B/C feed PC0..PC2. The distinct
-active-high safety inputs are motor/stall PC6, undervoltage PC7, overcurrent
-PB6, and inverter/driver PB7. TIM1 main outputs use PA8/PA9/PA10 and their
+active-high safety inputs are undervoltage PC7, overcurrent PB6, and
+inverter/driver PB7. PC6 is reserved for a future aggregate motor fault but is
+deliberately unbound: mechanical stall is diagnosed from missing Hall motion,
+so an open-phase/aggregate fault cannot be mislabeled as `FAULT STALL`. TIM1 main outputs use PA8/PA9/PA10 and their
 complementary outputs use PB13/PB14/PB15.
 
 The firmware begins with open-loop duty, selects a six-step row from the Hall
@@ -34,8 +36,11 @@ The UART sequence is `BLDC READY`, `TARGET REACHED`, `FAULT STALL`, and
 `INVERTER OFF`. The CI script injects a real mechanical stall through the
 generic motor input after target acquisition; it does not forge UART output.
 The run has a 310,000-cycle (3.875 ms) post-injection ceiling; the reference run
-shuts down well inside that bound (the acceptance artifact records the exact
-cycle count for each run).
+shuts down well inside that bound. The scenario selects one-based stimulus and
+UART occurrences explicitly. Its `result.json` assertion evidence records the
+actual successful stimulus cycle, first qualifying UART-token cycle, measured
+latency, and configured maximum; this remains valid when assertion early-stop
+is disabled.
 
 For robotics startups this moves repeatable commutation, startup, Hall-order,
 and shutdown regressions into CI while retaining the same MCU binary and

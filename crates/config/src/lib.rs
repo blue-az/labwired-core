@@ -3463,6 +3463,31 @@ impl TestScript {
                 anyhow::bail!("stimuli[{}]: value must be a finite number", i);
             }
         }
+        for (index, assertion) in self.assertions.iter().enumerate() {
+            if let TestAssertion::ShutdownLatency(assertion) = assertion {
+                let details = &assertion.shutdown_latency;
+                if details.stimulus_occurrence == 0 || details.uart_occurrence == 0 {
+                    anyhow::bail!(
+                        "assertions[{index}]: shutdown_latency occurrences are one-based"
+                    );
+                }
+                if details.to_uart.is_empty() {
+                    anyhow::bail!("assertions[{index}]: shutdown_latency.to_uart cannot be empty");
+                }
+                let available = self
+                    .stimuli
+                    .iter()
+                    .filter(|stimulus| stimulus.target == details.from_stimulus)
+                    .count();
+                if available < details.stimulus_occurrence as usize {
+                    anyhow::bail!(
+                        "assertions[{index}]: shutdown_latency selects stimulus occurrence {} but only {} matching stimuli are configured",
+                        details.stimulus_occurrence,
+                        available
+                    );
+                }
+            }
+        }
 
         // UART RX injections require schema_version 1.2+.
         if !self.uart_injections.is_empty() && matches!(self.schema_version.as_str(), "1.0" | "1.1")
@@ -4468,6 +4493,10 @@ assertions:
 schema_version: "1.2"
 inputs: { firmware: "motor.elf" }
 limits: { max_steps: 1000 }
+stimuli:
+  - target: { component: drive, channel: stall }
+    trigger: !after_cycles { cycles: 500 }
+    value: 1.0
 assertions:
   - uart_ordered: ["READY", "TARGET", "FAULT", "OFF"]
   - motor_speed_reached: { id: drive, min_abs_rpm: 100.0, max_abs_rpm: 4000.0 }
@@ -4478,6 +4507,7 @@ assertions:
       max_cycles: 300000
 "#;
         let script: TestScript = serde_yaml::from_str(yaml).unwrap();
+        script.validate().unwrap();
         assert!(matches!(
             &script.assertions[0],
             TestAssertion::UartOrdered(a) if a.uart_ordered.len() == 4
@@ -4494,7 +4524,10 @@ assertions:
         ));
         assert!(matches!(
             &script.assertions[3],
-            TestAssertion::ShutdownLatency(a) if a.shutdown_latency.max_cycles == 300_000
+            TestAssertion::ShutdownLatency(a)
+                if a.shutdown_latency.max_cycles == 300_000
+                    && a.shutdown_latency.stimulus_occurrence == 1
+                    && a.shutdown_latency.uart_occurrence == 1
         ));
     }
 
