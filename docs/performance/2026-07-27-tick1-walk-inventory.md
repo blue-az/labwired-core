@@ -291,19 +291,52 @@ inventory until Stage-3 factory parity lands.
 | **Class-A inert** | `ficr`, `uicr`, `nvmc`, `acl`, `cryptocell`, `mwu`, `aar`, `comp`, `qdec`, `i2s`, `pdm`, `qspi`, `nfct`, `usbd`, `usbregulator`, `ppi`, `temp`, `uarte` (uart0/1), `pwm0–3`, `saadc`, … | `needs_legacy_walk = false` (no time-driven `tick()`; EasyDMA rides `bus_tick_indices`) |
 | **Class-B scheduler** | `timer0–4`, `rtc0–2`, `wdt`, `rng`, `clock`, `egu0–5`, `gpiote`, `twim`/`serial` (i2c0, twi1), `ecb`, `radio` | `uses_scheduler` + `take_scheduled_events` / `on_event` (CycleClock where counters advance) |
 
-Featureless builds still report `max_safe=1` (honest). Gate:
-`nrf52840_dk_is_walk_free_and_tick_512` in `tick_interval_inventory.rs`.
+Featureless builds still report `max_safe=1` (honest). Gates:
+
+- Inventory: `nrf52840_dk_is_walk_free_and_tick_512` in `tick_interval_inventory.rs`
+- Machine TIMER@512: `nrf52840_machine_timer0_compare_fires_at_tick_512` in
+  `nrf52840_timer_machine_gate.rs` — programs TIMER0 with a short CC[0], runs
+  through `Machine::advance` at `peripheral_tick_interval=512`, asserts
+  `EVENTS_COMPARE[0]` (not `tick_peripherals_fully_forced`)
+
+### EasyDMA Class-A lag under `rec_tick=512` (accepted interim)
+
+**Honest inventory truth** (code comments that say “byte-identical” for these
+models are aspirational walk-deletion claims, not batch-fidelity certificates):
+
+- **UARTE / SAADC / PWM / SPIM** EasyDMA still complete via `bus_tick_indices`,
+  **not** delay-0 scheduler events.
+- At `peripheral_tick_interval = 512`, EasyDMA completion can lag by **up to one
+  tick batch** after the task write that starts the transfer (observed on the
+  next `tick_with_bus` / bus-tick drain, not at the exact cycle of the task).
+- This is an **accepted interim fidelity trade** for the walk-free inventory
+  unlock: Class-A models clear the forcer set so `max_safe=512` without a full
+  EasyDMA→scheduler migration in PR-B.
+- **Follow-up:** promote UARTE / SAADC / PWM / SPIM EasyDMA completions to
+  delay-0 (or exact-cycle) scheduler events so batch interval no longer
+  quantises transfer end. That is a larger PR and is **not** required to keep
+  `max_safe=512`.
+
+Class-B counters (`timer*`, `rtc*`, …) already ride the scheduler; the
+Machine TIMER@512 gate above is the proof that path works under batching.
+
+### RTC COUNTER read path (not yet certified)
+
+RTC `COUNTER` advances on write/`sync_to` (scheduler), not via interior
+mutability on bare MMIO read. **COUNTER-poll-only firmware is not yet
+certified** at `rec_tick=512` (no dedicated poll-only differential gate);
+compare-event / IRQ-driven RTC shapes are the supported surface today.
 
 ### Full peripheral status (representative)
 
 | name | role | `needs_legacy_walk` | `uses_scheduler` |
 |------|------|---------------------|------------------|
-| uart0/1 | inert (EasyDMA via bus_tick) | false | false |
+| uart0/1 | inert (EasyDMA via bus_tick; ≤1-batch lag @512) | false | false |
 | i2c0, twi1 | scheduler | false | true |
 | gpio0/1 | inert | false | false |
 | rtc0–2, timer0–4, wdt, rng | scheduler | false | true |
 | clock, egu0–5, gpiote, radio, ecb | scheduler | false | true |
-| ppi, temp, saadc, pwm*, ficr, … | inert | false | false |
+| ppi, temp, saadc, pwm*, ficr, … | inert (EasyDMA via bus_tick where applicable) | false | false |
 | spi2, scb, dwt | scheduler | true | true |
 | nvic | inert | false | false |
 
@@ -313,7 +346,7 @@ Featureless builds still report `max_safe=1` (honest). Gate:
 
 | PR | Family focus | Status / blockers |
 |----|--------------|-------------------|
-| **PR-B** | **nrf52840** | **DONE** — empty forcers, `max_safe=512` under `event-scheduler` |
+| **PR-B** | **nrf52840** | **DONE** — empty forcers, `max_safe=512` under `event-scheduler`; Machine TIMER@512 gate; EasyDMA still bus_tick-lagged (documented interim) |
 | PR-C | rp2040 | `dma`, `pio0`, `timer`, `spi0`, `i2c0`, `sio`, `xip_ssi`, `usbctrl` |
 | PR-D | stm32h563 | `gpdma1`, `fdcan1`, `rtc`, `pwr` + **`flash_models_ops` policy** |
 | PR-E | esp32s3 | 38 forcers on `configure_xtensa_esp32s3` production bank (not YAML stubs) |
