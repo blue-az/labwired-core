@@ -69,10 +69,11 @@ jobs:
           # (the .labwired/lab.yaml contract CI and the VS Code Run button share),
           # and labwired-dap is the Debug Adapter the VS Code extension spawns for
           # F5. Shipping only the CLI is what made editor debugging source-build-only.
-          for bin in labwired labwired-dap; do
-            cp "target/${{ matrix.target }}/release/${bin}" "dist/${bin}"
-            chmod +x "dist/${bin}"
-          done
+          # These lines are pinned by scripts/ci/verify-release-runner-contract.sh.
+          cp "target/${{ matrix.target }}/release/labwired" dist/labwired
+          chmod +x dist/labwired
+          cp "target/${{ matrix.target }}/release/labwired-dap" dist/labwired-dap
+          chmod +x dist/labwired-dap
 
           tar -czf "${ARCHIVE}" -C dist labwired labwired-dap
           echo "ARCHIVE=${ARCHIVE}" >> "$GITHUB_ENV"

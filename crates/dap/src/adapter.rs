@@ -1640,7 +1640,9 @@ mod tests {
         for _ in 0..50 {
             let peripherals = adapter.get_peripherals_json();
             assert!(
-                peripherals["peripherals"].as_array().is_some_and(|p| !p.is_empty()),
+                peripherals["peripherals"]
+                    .as_array()
+                    .is_some_and(|p| !p.is_empty()),
                 "fixture should enumerate peripherals; got {peripherals}"
             );
         }
@@ -1683,7 +1685,10 @@ mod tests {
         );
         assert!(register["offset"].is_number(), "register needs an offset");
         assert!(register["value"].is_number(), "register needs a value");
-        assert!(register["fields"].is_array(), "register needs a fields array");
+        assert!(
+            register["fields"].is_array(),
+            "register needs a fields array"
+        );
 
         // `kind` is passed through from inspect so the UI can say "native" rather
         // than implying a peripheral has no registers at all.
