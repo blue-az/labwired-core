@@ -286,6 +286,17 @@ impl Exti {
     }
 
     #[inline]
+    /// The level-triggered tick result: every masked, pending EXTI line routed
+    /// to its NVIC IRQ. Shared by the legacy walk and the hardware-oracle forced
+    /// walk so the two can never drift apart.
+    fn level_tick_result(&mut self) -> PeripheralTickResult {
+        let irqs = self.pending_irqs();
+        PeripheralTickResult {
+            explicit_irqs: (!irqs.is_empty()).then_some(irqs),
+            ..Default::default()
+        }
+    }
+
     fn scheduler_mode(&self) -> bool {
         let clock = match self {
             Self::Stm32F1(e) => &e.clock,
@@ -361,11 +372,28 @@ impl Peripheral for Exti {
         if self.scheduler_mode() {
             return PeripheralTickResult::default();
         }
-        let irqs = self.pending_irqs();
-        PeripheralTickResult {
-            explicit_irqs: (!irqs.is_empty()).then_some(irqs),
-            ..Default::default()
-        }
+        self.level_tick_result()
+    }
+
+    /// Hardware-oracle settle mode freezes the CPU and deliberately asks for the
+    /// pre-scheduler one-tick level emission, so the `scheduler_mode()` no-op in
+    /// [`Self::tick`] must NOT apply here — that guard exists to catch a stray
+    /// walk call in production, and a forced tick is the opposite of stray.
+    ///
+    /// Without this override the guard silently swallowed the forced call and
+    /// EXTI delivered NO interrupt to the bare-CPU oracle: `exti0_interrupt_
+    /// delivery_sim` read `mem[0x20000300] == 0` because the ISR never ran. It
+    /// was invisible except under `cargo test --workspace`, where Cargo's
+    /// feature unification switches `event-scheduler` on for a crate that does
+    /// not request it itself — so `-p labwired-hw-oracle` passed and the
+    /// workspace lane failed. Same contract as the DMA models, which already
+    /// override this for the same reason.
+    ///
+    /// This never runs from production `Machine` execution; there the event
+    /// chain (`take_scheduled_events` / `on_event`) remains the sole owner of
+    /// scheduler-mode EXTI delivery.
+    fn tick_elapsed_forced(&mut self, _cycles: u64) -> PeripheralTickResult {
+        self.level_tick_result()
     }
 
     fn uses_scheduler(&self) -> bool {

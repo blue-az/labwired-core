@@ -11,9 +11,9 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 | `seeed-xiao-nrf52840-sense` | 🟢 silicon-verified | 2026-06-17 | 2026-07-24 | ⚠ drift acked 2026-07-24 (re-capture pending) |
 | `stm32h563` | 🟢 silicon-verified | 2026-06-22 | 2026-07-25 | ⚠ drift acked 2026-07-25 (re-capture pending) |
 | `esp32c3` | 🟢 silicon-verified | 2026-06-17 | 2026-07-26 | ⚠ drift acked 2026-07-26 (re-capture pending) |
-| `nucleo-l476rg` | 🟢 silicon-verified | 2026-06-20 | 2026-07-25 | ⚠ drift acked 2026-07-25 (re-capture pending) |
+| `nucleo-l476rg` | 🟢 silicon-verified | 2026-06-20 | 2026-07-26 | ⚠ drift acked 2026-07-26 (re-capture pending) |
 | `nucleo-l073rz` | 🟢 silicon-verified | 2026-06-20 | 2026-07-25 | ⚠ drift acked 2026-07-25 (re-capture pending) |
-| `stm32f103` | 🟢 silicon-verified | 2026-06-20 | 2026-07-25 | ⚠ drift acked 2026-07-25 (re-capture pending) |
+| `stm32f103` | 🟢 silicon-verified | 2026-06-20 | 2026-07-26 | ⚠ drift acked 2026-07-26 (re-capture pending) |
 | `stm32f407` | 🟢 silicon-smoke | 2026-06-20 | 2026-07-25 | ⚠ drift acked 2026-07-25 (re-capture pending) |
 | `esp32s3` | 🟢 silicon-verified | 2026-07-15 | 2026-07-25 | ⚠ drift acked 2026-07-25 (re-capture pending) |
 | `stm32f401` | 🟡 smoke-manual | — | 2026-07-18 | no silicon capture |
@@ -62,7 +62,7 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 - Silicon: **2026-06-20** on STLINK-V2.1 (USB 0483:374b serial 0670FF…1747, NUCLEO-L476RG onboard) — Live re-capture after the v0.17.0 merge: l476_mmio_diff + l476_parity_diff pass (15 mmio + 104 parity), 0 divergence. Supersedes the 2026-06-19 drift_ack.
   - offline (CI): l476_mmio_diff::{l476_mmio_sim_only,l476_parity_sim_only}
   - offline (CI): firmware_survival L476 cases (UART byte stream)
-- Drift status: **⚠ drift acked 2026-07-25 (re-capture pending)**
+- Drift status: **⚠ drift acked 2026-07-26 (re-capture pending)**
 
 ## `nucleo-l073rz` — 🟢 silicon-verified
 
@@ -80,7 +80,7 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 - Silicon: **2026-06-20** on ST-LINK V2.1 (USB 0483:374b), genuine STM32F103 — Live re-capture after the v0.17.0 bxcan/clock-gating merge: stm32f1_mmio_diff 102/102 (24 reset + 26 R/W + 52 sweep), 0 divergence, and f103_conformance digest matches silicon. Supersedes the 2026-06-19 drift_ack. (Earlier capture caught + fixed a classic SPI CR1 bug masking CRCNEXT bit 12 — 0xEFFF vs silicon 0xFFFF.)
   - offline (CI): stm32f1_mmio_diff::{f1_reset_sim_only,f1_mmio_sim_only,f1_parity_sim_only,f1_sweep_sim_only}
   - offline (CI): f103_conformance::conformance_sim (digest)
-- Drift status: **⚠ drift acked 2026-07-25 (re-capture pending)**
+- Drift status: **⚠ drift acked 2026-07-26 (re-capture pending)**
 
 ## `stm32f407` — 🟢 silicon-smoke
 
