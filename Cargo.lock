@@ -1215,6 +1215,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "firmware-perf-spin"
+version = "0.19.2"
+dependencies = [
+ "cortex-m-rt",
+ "panic-halt",
+]
+
+[[package]]
 name = "firmware-rp2040-demo"
 version = "0.1.0"
 dependencies = [
