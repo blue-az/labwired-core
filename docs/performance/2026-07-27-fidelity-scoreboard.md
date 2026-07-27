@@ -31,7 +31,7 @@ Legend:
 | PWM SEQSTART EasyDMA @512 | **green** | delay-0 dual-path; same fidelity test |
 | SPIM EasyDMA (nRF) @512 | **green** | delay-0 in `spi.rs` + serial_instance mux |
 | TWIM / ECB | **green** | already dual-path / scheduler before this work |
-| RTC COUNTER poll-only | **interim** | advances on write/`sync_to`; compare IRQ path certified above (poll gates may exist separately — do not over-claim here) |
+| RTC COUNTER poll-only | **green** | read-side `CycleClock` + `Cell` advance (`sync_from_clock` on COUNTER read); gates: `rtc_counter_poll_advances_under_sched_tick512`, `rtc_counter_poll_walk1_vs_sched512_identity` (Δ ≤ 1 tick) — commit `15b1b436` |
 | Class-A inert (walk-independence) | **green** | FICR/UICR/GPIOTE-adjacent pure banks with `needs_legacy_walk=false` — no time-driven `tick()`; walk-free holds because inert |
 | Thin / unmodelled silicon (stubs) | **blocked** (silicon model) | NVMC erase fake, thin USBD, crypto/AAR/COMP shells, etc. — **not** functional fidelity; do not claim behaviour beyond register presence |
 
@@ -78,8 +78,9 @@ Legend:
 | Surface | Status | Notes / gates |
 |---------|--------|---------------|
 | Forcer emptiness / `max_safe=512` | **green** | inventory on `configure_xtensa_esp32s3` + recompute |
-| Class-B engines (timers, GDMA, …) | **interim** / **green** per engine | see inventory Class-B notes; no single EasyDMA@512 matrix |
-| WiFi / radio | **blocked** / **interim** | not a walk-free fidelity certificate |
+| SYSTIMER / alarm walk≡sched | **green** | `esp32s3_walk_differential` (alarm byte-identical @1, exact count @ interval 8) |
+| Class-B engines (TIMG, GDMA, UART, …) | **interim** | models on scheduler; no single family EasyDMA@512 matrix like nRF — do not over-claim |
+| WiFi / 802.11 | **blocked** | not modelled for walk-free fidelity |
 
 ---
 
