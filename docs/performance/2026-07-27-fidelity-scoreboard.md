@@ -21,13 +21,16 @@ Legend:
 |---------|--------|---------------|
 | Forcer emptiness / `max_safe=512` | **green** | `tick_interval_inventory::nrf52840_dk_is_walk_free_and_tick_512` |
 | TIMER COMPARE via Machine@512 | **green** | `nrf52840_timer_machine_gate` |
+| TIMER walk@1≡sched@512 | **green** | `nrf52_timer_walk_differential::timer0_compare_walk1_vs_sched512_cycle_identity` |
+| RTC COMPARE (EVTEN+INTEN) walk@1≡sched@512 | **green** | `nrf52_timer_walk_differential::rtc0_compare_walk1_vs_sched512_cycle_identity` |
+| RADIO TX→END walk@1≡sched@512 | **green** | `nrf52_timer_walk_differential::radio_tx_end_walk1_vs_sched512_cycle_identity` (SHORTS READY_START + short countdown) |
 | UARTE EasyDMA TX @512 | **green** | delay-0 dual-path; `nrf52_easydma_tick512_fidelity` (≤8 cycles; walk@1≡sched@512 within 1) |
 | SAADC EasyDMA SAMPLE @512 | **green** | delay-0 dual-path; same fidelity test |
 | PWM SEQSTART EasyDMA @512 | **green** | delay-0 dual-path; same fidelity test |
 | SPIM EasyDMA (nRF) @512 | **green** | delay-0 in `spi.rs` + serial_instance mux |
-| TWIM / ECB / RADIO | **green** | already dual-path / scheduler before this work |
-| RTC COUNTER poll-only | **interim** | advances on write/`sync_to`; no poll-only differential gate |
-| RADIO bit-rate timing | **interim** | model present; not a dedicated tick-512 fidelity gate |
+| TWIM / ECB | **green** | already dual-path / scheduler before this work |
+| RTC COUNTER poll-only | **interim** | advances on write/`sync_to`; no poll-only differential gate (compare IRQ path certified above) |
+| RADIO bit-rate timing | **interim** | TX→END cycle identity green; full MODE/length bit-rate matrix not claimed |
 | Analog / unmodelled blocks | **interim** | FICR/UICR/stubs etc. — inert Class-A |
 
 **Before (EasyDMA):** completion via `bus_tick_indices` only → lag up to one
