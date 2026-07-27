@@ -161,6 +161,24 @@ pub struct SystemBus {
     /// `memory_regions`. Checked after `ram`/`flash`, before peripherals.
     pub extra_mem: Vec<LinearMemory>,
     pub peripherals: Vec<PeripheralEntry>,
+    /// Debugger-only register schemas for NATIVE peripherals, keyed by
+    /// peripheral name. Populated from a chip YAML's optional
+    /// `config.debug_schema` path.
+    ///
+    /// Native peripherals model behaviour in hand-written Rust and advertise no
+    /// `describe_registers()`, so they inspect as `registers: []` — which reads
+    /// in a debugger as "this peripheral has no registers" when the truth is
+    /// "nobody told the debugger their names". On nRF52840 that was all 52.
+    ///
+    /// This is a side map rather than a `PeripheralEntry` field on purpose: it
+    /// is debugger metadata, not part of a peripheral's identity on the bus, and
+    /// keeping it out of the entry keeps it structurally impossible for it to
+    /// influence dispatch.
+    ///
+    /// It confers NO fidelity. Nothing here changes what the bus does, and the
+    /// `register_coverage` gate measures live bus behaviour, not schema.
+    /// See [`crate::inspect::inspect_with_schema`].
+    pub debug_schemas: std::collections::HashMap<String, Vec<crate::inspect::RegisterSchema>>,
     pub nvic: Option<Arc<NvicState>>,
     pub observers: Vec<Arc<dyn crate::SimulationObserver>>,
     pub config: crate::SimulationConfig,

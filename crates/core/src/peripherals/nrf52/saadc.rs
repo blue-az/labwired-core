@@ -83,7 +83,15 @@ const OFF_EVENTS_CALIBRATEDONE: u64 = 0x110;
 const OFF_EVENTS_STOPPED: u64 = 0x114;
 // EVENTS_CH[i].LIMITH at 0x118 + 0x10*i, .LIMITL at 0x11C + 0x10*i.
 const OFF_EVENTS_CH_FIRST: u64 = 0x118;
-const OFF_EVENTS_CH_LAST: u64 = 0x184; // CH[7].LIMITL
+// CH[n].LIMITH = 0x118 + n*8, CH[n].LIMITL = 0x11C + n*8, for n = 0..=7.
+// The last one is therefore CH[7].LIMITL at 0x154 — 16 words, matching
+// `events_ch: [u32; 16]`.
+//
+// This was 0x184, which spans 28 words. Offsets 0x158..=0x184 indexed past the
+// end of the array and panicked the whole simulator, on the READ path, for any
+// firmware that touched them. Reads there now fall through to the default arm
+// like any other unmodeled offset.
+const OFF_EVENTS_CH_LAST: u64 = 0x154; // CH[7].LIMITL
 
 const OFF_INTEN: u64 = 0x300;
 const OFF_INTENSET: u64 = 0x304;

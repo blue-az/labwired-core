@@ -45,6 +45,61 @@ fn default_region_image_path(env: &str) -> Option<PathBuf> {
 }
 
 impl SystemBus {
+    /// Collect debugger-only register schemas from each peripheral's optional
+    /// `config.debug_schema` path.
+    ///
+    /// This is for NATIVE peripherals — those modeled in hand-written Rust,
+    /// which advertise no `describe_registers()` and therefore inspect as
+    /// `registers: []`. The schema names what the model already holds; it never
+    /// changes what the bus does. See [`SystemBus::debug_schemas`].
+    ///
+    /// A `debug_schema` on a `declarative` peripheral is redundant (it already
+    /// describes itself from its own descriptor) and simply loses to
+    /// `describe_registers()` at inspect time.
+    ///
+    /// Resolution mirrors the declarative descriptor path exactly: embedded
+    /// first (wasm32 has no `std::fs`), filesystem second. A path that resolves
+    /// to neither is skipped with a warning rather than failing the build —
+    /// a missing debugger convenience must never stop a simulation from running.
+    fn load_debug_schemas(
+        chip: &ChipDescriptor,
+        manifest: &SystemManifest,
+    ) -> std::collections::HashMap<String, Vec<crate::inspect::RegisterSchema>> {
+        let mut out = std::collections::HashMap::new();
+
+        for p_cfg in &chip.peripherals {
+            let Some(path) = p_cfg.config.get("debug_schema").and_then(|v| v.as_str()) else {
+                continue;
+            };
+
+            let descriptor = if let Some(embedded) = super::embedded_descriptors::lookup(path) {
+                labwired_config::PeripheralDescriptor::from_yaml(embedded).ok()
+            } else {
+                let resolved = Self::resolve_peripheral_path(manifest, path);
+                labwired_config::PeripheralDescriptor::from_file(&resolved).ok()
+            };
+
+            match descriptor {
+                Some(descriptor) => {
+                    out.insert(
+                        p_cfg.id.clone(),
+                        crate::inspect::schema_from_descriptor(&descriptor),
+                    );
+                }
+                None => {
+                    tracing::warn!(
+                        "debug_schema '{}' for peripheral '{}' could not be loaded; \
+                         its registers will inspect unnamed",
+                        path,
+                        p_cfg.id
+                    );
+                }
+            }
+        }
+
+        out
+    }
+
     pub fn from_config(chip: &ChipDescriptor, manifest: &SystemManifest) -> anyhow::Result<Self> {
         let flash_size = parse_size(&chip.flash.size)?;
         let ram_size = parse_size(&chip.ram.size)?;
@@ -115,6 +170,7 @@ impl SystemBus {
             ram: LinearMemory::new(ram_size as usize, chip.ram.base),
             extra_mem,
             peripherals: Vec::new(),
+            debug_schemas: Self::load_debug_schemas(chip, manifest),
             nvic: None,
             observers: Vec::new(),
             config: crate::SimulationConfig::default(),
