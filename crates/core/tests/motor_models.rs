@@ -337,6 +337,47 @@ fn step_bldc_commutated(motor: &mut BldcMotor, reverse: bool, steps: usize) {
     }
 }
 
+fn snapshot_torque(motor: &BldcMotor) -> f64 {
+    let snapshot = motor.snapshot();
+    let params = motor.params();
+    let shapes = phase_back_emf_shapes(snapshot.electrical_angle_rad).unwrap();
+    if snapshot.angular_velocity_rad_s.abs() <= 1e-9 {
+        params.torque_constant_nm_per_a
+            * shapes
+                .into_iter()
+                .zip(snapshot.phase_currents_a)
+                .map(|(shape, current)| shape * current)
+                .sum::<f64>()
+    } else {
+        snapshot
+            .phase_back_emf_v
+            .into_iter()
+            .zip(snapshot.phase_currents_a)
+            .map(|(emf, current)| emf * current)
+            .sum::<f64>()
+            / snapshot.angular_velocity_rad_s
+    }
+}
+
+fn snapshot_bus_current(motor: &BldcMotor, command: InverterCommand) -> f64 {
+    let snapshot = motor.snapshot();
+    let gates = [command.phase_a, command.phase_b, command.phase_c];
+    gates
+        .into_iter()
+        .enumerate()
+        .filter(|(index, gates)| {
+            gates.high
+                && !gates.low
+                && snapshot.faults.open_phase.map(|phase| match phase {
+                    Phase::A => 0,
+                    Phase::B => 1,
+                    Phase::C => 2,
+                }) != Some(*index)
+        })
+        .map(|(index, _)| snapshot.phase_currents_a[index])
+        .sum()
+}
+
 #[test]
 fn bldc_trapezoid_is_normalized_periodic_and_phase_shifted() {
     let pi = std::f64::consts::PI;
@@ -503,7 +544,7 @@ fn canonical_six_step_commutation_starts_and_visits_every_hall_state() {
     let mut hall_seen = [false; 8];
     let mut maximum_current_a = 0.0_f64;
 
-    for _ in 0..30_000 {
+    for _ in 0..200_000 {
         let snapshot = motor.snapshot();
         hall_seen[usize::from(snapshot.hall_state)] = true;
         maximum_current_a = maximum_current_a.max(
@@ -577,6 +618,49 @@ fn bldc_supply_voltage_can_be_lowered_atomically() {
 }
 
 #[test]
+fn bldc_undervoltage_fault_controls_effective_bus_and_response() {
+    let mut nominal = BldcMotor::new(bldc_params(0.0)).unwrap();
+    let mut undervoltage = BldcMotor::new(bldc_params(0.0)).unwrap();
+    undervoltage
+        .set_faults(BldcFaults {
+            undervoltage_v: Some(1.0),
+            ..BldcFaults::default()
+        })
+        .unwrap();
+    assert_eq!(undervoltage.snapshot().dc_bus_voltage_v, 1.0);
+    assert_eq!(undervoltage.snapshot().faults.undervoltage_v, Some(1.0));
+
+    step_bldc_commutated(&mut nominal, false, 30_000);
+    step_bldc_commutated(&mut undervoltage, false, 30_000);
+    assert!(
+        undervoltage.snapshot().angular_velocity_rad_s < nominal.snapshot().angular_velocity_rad_s
+    );
+
+    undervoltage.set_faults(BldcFaults::default()).unwrap();
+    assert_eq!(undervoltage.snapshot().dc_bus_voltage_v, 6.0);
+    assert_eq!(undervoltage.snapshot().faults.undervoltage_v, None);
+}
+
+#[test]
+fn invalid_undervoltage_faults_leave_snapshot_unchanged() {
+    let mut motor = BldcMotor::new(bldc_params(0.0)).unwrap();
+    let before = motor.snapshot();
+    for undervoltage_v in [0.0, f64::NAN, 7.0] {
+        assert_eq!(
+            motor
+                .set_faults(BldcFaults {
+                    undervoltage_v: Some(undervoltage_v),
+                    ..BldcFaults::default()
+                })
+                .unwrap_err()
+                .field,
+            "undervoltage_v"
+        );
+        assert_eq!(motor.snapshot(), before);
+    }
+}
+
+#[test]
 fn bldc_stall_holds_position_and_releases_from_zero() {
     let mut motor = BldcMotor::new(bldc_params(0.0)).unwrap();
     step_bldc_commutated(&mut motor, false, 2_000);
@@ -603,16 +687,48 @@ fn bldc_stall_holds_position_and_releases_from_zero() {
 fn bldc_open_phase_is_zero_and_other_currents_balance() {
     let mut motor = BldcMotor::new(bldc_params(0.0)).unwrap();
     step_bldc_commutated(&mut motor, false, 2_000);
+    let command = InverterCommand::six_step(motor.snapshot().commutation_sector).unwrap();
+    motor.step(command, DT_S).unwrap();
     motor
         .set_faults(BldcFaults {
             open_phase: Some(Phase::A),
             ..BldcFaults::default()
         })
         .unwrap();
-    step_bldc_commutated(&mut motor, false, 2_000);
-    let currents = motor.snapshot().phase_currents_a;
+    let snapshot = motor.snapshot();
+    let currents = snapshot.phase_currents_a;
     assert_eq!(currents[0], 0.0);
     assert!((currents[1] + currents[2]).abs() < 1e-12);
+    assert_eq!(snapshot.electromagnetic_torque_nm, snapshot_torque(&motor));
+    assert_eq!(
+        snapshot.dc_bus_current_a,
+        snapshot_bus_current(&motor, command)
+    );
+}
+
+#[test]
+fn engaging_stall_immediately_recomputes_derived_motor_values() {
+    let mut motor = BldcMotor::new(bldc_params(0.0)).unwrap();
+    step_bldc_commutated(&mut motor, false, 2_000);
+    let command = InverterCommand::six_step(motor.snapshot().commutation_sector).unwrap();
+    motor.step(command, DT_S).unwrap();
+
+    motor
+        .set_faults(BldcFaults {
+            stalled: true,
+            ..BldcFaults::default()
+        })
+        .unwrap();
+
+    let snapshot = motor.snapshot();
+    assert_eq!(snapshot.angular_velocity_rad_s, 0.0);
+    assert_eq!(snapshot.speed_rpm, 0.0);
+    assert_eq!(snapshot.phase_back_emf_v, [0.0; 3]);
+    assert_eq!(snapshot.electromagnetic_torque_nm, snapshot_torque(&motor));
+    assert_eq!(
+        snapshot.dc_bus_current_a,
+        snapshot_bus_current(&motor, command)
+    );
 }
 
 #[test]

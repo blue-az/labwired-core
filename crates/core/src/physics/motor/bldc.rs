@@ -313,12 +313,17 @@ pub struct BldcMotorParams {
 }
 
 /// Active motor and sensor faults.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct BldcFaults {
     pub stalled: bool,
     pub open_phase: Option<Phase>,
     pub forced_hall_state: Option<u8>,
     pub hall_line_low: Option<Phase>,
+    /// Effective fault-injected DC bus voltage.
+    ///
+    /// Values must be finite, positive, and no greater than the configured
+    /// runtime supply voltage.
+    pub undervoltage_v: Option<f64>,
 }
 
 /// Observable state after a completed fixed integration step.
@@ -329,6 +334,7 @@ pub struct BldcMotorSnapshot {
     pub electromagnetic_torque_nm: f64,
     /// Positive current flows out of the DC bus through enabled high-side legs.
     pub dc_bus_current_a: f64,
+    /// Effective bus voltage after applying any undervoltage fault.
     pub dc_bus_voltage_v: f64,
     pub position_rad: f64,
     pub wrapped_position_rad: f64,
@@ -360,6 +366,7 @@ pub struct BldcMotor {
     hall_state: u8,
     commutation_sector: u8,
     inverter_faults: Vec<InverterFault>,
+    last_terminals: [PhaseTerminal; 3],
     faults: BldcFaults,
 }
 
@@ -390,6 +397,7 @@ impl BldcMotor {
             hall_state,
             commutation_sector: 0,
             inverter_faults: Vec::new(),
+            last_terminals: [PhaseTerminal::Floating; 3],
             faults: BldcFaults::default(),
         })
     }
@@ -409,7 +417,7 @@ impl BldcMotor {
             phase_back_emf_v: self.phase_back_emf_v,
             electromagnetic_torque_nm: self.electromagnetic_torque_nm,
             dc_bus_current_a: self.dc_bus_current_a,
-            dc_bus_voltage_v: self.params.supply_voltage_v,
+            dc_bus_voltage_v: self.effective_bus_voltage_v(),
             position_rad: shaft.position_rad,
             wrapped_position_rad: shaft.wrapped_position_rad,
             angular_velocity_rad_s: shaft.angular_velocity_rad_s,
@@ -424,17 +432,18 @@ impl BldcMotor {
 
     /// Atomically replaces active motor and Hall faults.
     pub fn set_faults(&mut self, faults: BldcFaults) -> Result<(), ModelError> {
-        validate_faults(faults)?;
+        validate_faults(faults, self.params.supply_voltage_v)?;
         let mut candidate = self.clone();
         candidate.faults = faults;
         if let Some(open_phase) = faults.open_phase {
             candidate.phase_currents_a[open_phase.index()] = 0.0;
             project_zero_sum(&mut candidate.phase_currents_a, faults.open_phase);
         }
+        validate_array("phase_currents_a", candidate.phase_currents_a)?;
         if faults.stalled {
             candidate.shaft.hold_still();
         }
-        candidate.refresh_observables()?;
+        candidate.refresh_derived_state()?;
         *self = candidate;
         Ok(())
     }
@@ -453,6 +462,7 @@ impl BldcMotor {
         validate_positive("supply_voltage_v", supply_voltage_v)?;
         let mut candidate = self.clone();
         candidate.params.supply_voltage_v = supply_voltage_v;
+        validate_faults(candidate.faults, supply_voltage_v)?;
         *self = candidate;
         Ok(())
     }
@@ -474,7 +484,7 @@ impl BldcMotor {
     pub fn step(&mut self, command: InverterCommand, dt_s: f64) -> Result<(), ModelError> {
         validate_positive("dt_s", dt_s)?;
         validate_timestep(self.params, dt_s)?;
-        let resolution = Inverter::resolve(command, self.params.supply_voltage_v)?;
+        let resolution = Inverter::resolve(command, self.effective_bus_voltage_v())?;
         let terminals = resolution.terminals();
 
         let mut candidate = self.clone();
@@ -550,15 +560,8 @@ impl BldcMotor {
         candidate.phase_currents_a = phase_currents_a;
         candidate.electromagnetic_torque_nm = torque_nm;
         candidate.inverter_faults = resolution.faults;
-        candidate.dc_bus_current_a = terminals
-            .iter()
-            .enumerate()
-            .filter(|(index, terminal)| {
-                matches!(terminal, PhaseTerminal::Bus(_))
-                    && open_phase.map(Phase::index) != Some(*index)
-            })
-            .map(|(index, _)| phase_currents_a[index])
-            .sum();
+        candidate.last_terminals = terminals;
+        candidate.dc_bus_current_a = conducted_bus_current(terminals, phase_currents_a, open_phase);
         validate_finite("dc_bus_current_a", candidate.dc_bus_current_a)?;
 
         if !candidate.faults.stalled {
@@ -566,6 +569,32 @@ impl BldcMotor {
         }
         candidate.refresh_observables()?;
         *self = candidate;
+        Ok(())
+    }
+
+    fn effective_bus_voltage_v(&self) -> f64 {
+        self.faults
+            .undervoltage_v
+            .unwrap_or(self.params.supply_voltage_v)
+    }
+
+    fn refresh_derived_state(&mut self) -> Result<(), ModelError> {
+        self.refresh_observables()?;
+        let shapes = phase_back_emf_shapes(self.electrical_angle_rad)?;
+        self.electromagnetic_torque_nm = calculate_electromagnetic_torque(
+            self.params.torque_constant_nm_per_a,
+            self.shaft.angular_velocity_rad_s(),
+            shapes,
+            self.phase_back_emf_v,
+            self.phase_currents_a,
+        );
+        validate_finite("electromagnetic_torque_nm", self.electromagnetic_torque_nm)?;
+        self.dc_bus_current_a = conducted_bus_current(
+            self.last_terminals,
+            self.phase_currents_a,
+            self.faults.open_phase,
+        );
+        validate_finite("dc_bus_current_a", self.dc_bus_current_a)?;
         Ok(())
     }
 
@@ -598,6 +627,22 @@ fn terminal_voltage(terminal: PhaseTerminal) -> f64 {
         PhaseTerminal::Bus(voltage) => voltage,
         PhaseTerminal::Low | PhaseTerminal::Floating => 0.0,
     }
+}
+
+fn conducted_bus_current(
+    terminals: [PhaseTerminal; 3],
+    currents_a: [f64; 3],
+    open_phase: Option<Phase>,
+) -> f64 {
+    terminals
+        .iter()
+        .enumerate()
+        .filter(|(index, terminal)| {
+            matches!(terminal, PhaseTerminal::Bus(_))
+                && open_phase.map(Phase::index) != Some(*index)
+        })
+        .map(|(index, _)| currents_a[index])
+        .sum()
 }
 
 fn commutation_sector(electrical_angle_rad: f64) -> u8 {
@@ -660,7 +705,7 @@ fn project_zero_sum(currents: &mut [f64; 3], open_phase: Option<Phase>) {
     currents[correction_index] -= residual;
 }
 
-fn validate_faults(faults: BldcFaults) -> Result<(), ModelError> {
+fn validate_faults(faults: BldcFaults, supply_voltage_v: f64) -> Result<(), ModelError> {
     if faults
         .forced_hall_state
         .is_some_and(|hall_state| hall_state > 0b111)
@@ -669,6 +714,16 @@ fn validate_faults(faults: BldcFaults) -> Result<(), ModelError> {
             field: "forced_hall_state",
             message: "must be a three-bit value between 0 and 7".to_owned(),
         });
+    }
+    if let Some(undervoltage_v) = faults.undervoltage_v {
+        if !undervoltage_v.is_finite() || undervoltage_v <= 0.0 || undervoltage_v > supply_voltage_v
+        {
+            return Err(ModelError {
+                field: "undervoltage_v",
+                message: "must be finite, greater than zero, and no greater than the runtime supply voltage"
+                    .to_owned(),
+            });
+        }
     }
     Ok(())
 }
