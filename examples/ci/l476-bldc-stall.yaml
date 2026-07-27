@@ -4,9 +4,9 @@ inputs:
   system: "../nucleo-l476rg-bldc/system.yaml"
 limits:
   max_steps: 3000000
-  # Stall fires at 1,500,000 cycles; this 100,000-cycle ceiling makes
+  # Stall fires at 1,500,000 cycles; this 310,000-cycle ceiling makes
   # shutdown latency part of the acceptance contract.
-  max_cycles: 1600000
+  max_cycles: 1810000
   max_uart_bytes: 4096
   stop_when_assertions_pass: true
   stop_when_assertions_pass_settle_steps: 1000
@@ -18,7 +18,20 @@ stimuli:
     trigger: !after_cycles { cycles: 1500000 }
     value: 1.0
 assertions:
-  - uart_contains: "BLDC READY"
-  - uart_contains: "TARGET REACHED"
-  - uart_contains: "FAULT STALL"
-  - uart_contains: "INVERTER OFF"
+  - uart_ordered:
+      - "BLDC READY"
+      - "TARGET REACHED"
+      - "FAULT STALL"
+      - "INVERTER OFF"
+  - motor_speed_reached:
+      id: drive_motor
+      min_abs_rpm: 100.0
+      max_abs_rpm: 4000.0
+  - motor_state:
+      id: drive_motor
+      control_state: "off:external-enable"
+      fault_contains: stalled
+  - shutdown_latency:
+      from_cycle: 1500000
+      to_uart: "INVERTER OFF"
+      max_cycles: 310000

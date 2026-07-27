@@ -327,6 +327,67 @@ fn bldc_params(load_torque_nm: f64) -> BldcMotorParams {
     }
 }
 
+#[test]
+fn bldc_overcurrent_requires_consecutive_steps_latches_and_clears_explicitly() {
+    let mut fixture = bldc_params(0.0);
+    fixture.current_limit_a = Some(0.01);
+    fixture.overcurrent_trip_steps = 3;
+    let mut motor = BldcMotor::new(fixture).unwrap();
+    let drive = InverterCommand::six_step(0).unwrap();
+
+    motor.step(drive, DT_S).unwrap();
+    assert!(!motor.snapshot().faults.overcurrent);
+    motor.step(drive, DT_S).unwrap();
+    assert!(!motor.snapshot().faults.overcurrent);
+    motor.step(drive, DT_S).unwrap();
+    assert!(motor.snapshot().faults.overcurrent);
+
+    motor.step(InverterCommand::off(), DT_S).unwrap();
+    assert!(
+        motor.snapshot().faults.overcurrent,
+        "trip must remain latched"
+    );
+
+    motor.set_faults(BldcFaults::default()).unwrap();
+    assert!(!motor.snapshot().faults.overcurrent);
+    motor.step(drive, DT_S).unwrap();
+    assert!(!motor.snapshot().faults.overcurrent);
+}
+
+#[test]
+fn bldc_overcurrent_counter_resets_below_threshold() {
+    let mut fixture = bldc_params(0.0);
+    fixture.current_limit_a = Some(0.05);
+    fixture.overcurrent_trip_steps = 3;
+    let mut motor = BldcMotor::new(fixture).unwrap();
+    let drive = InverterCommand::six_step(0).unwrap();
+
+    motor.step(drive, DT_S).unwrap();
+    motor.step(InverterCommand::off(), 0.0004).unwrap();
+    for _ in 0..2 {
+        motor.step(drive, DT_S).unwrap();
+    }
+
+    assert!(!motor.snapshot().faults.overcurrent);
+}
+
+#[test]
+fn bldc_overcurrent_configuration_rejects_invalid_thresholds() {
+    let mut fixture = bldc_params(0.0);
+    fixture.current_limit_a = Some(0.0);
+    assert_eq!(
+        BldcMotor::new(fixture).unwrap_err().field,
+        "current_limit_a"
+    );
+
+    fixture.current_limit_a = Some(1.0);
+    fixture.overcurrent_trip_steps = 0;
+    assert_eq!(
+        BldcMotor::new(fixture).unwrap_err().field,
+        "overcurrent_trip_steps"
+    );
+}
+
 fn step_bldc_commutated(motor: &mut BldcMotor, reverse: bool, steps: usize) {
     for _ in 0..steps {
         let sector = motor.snapshot().commutation_sector;

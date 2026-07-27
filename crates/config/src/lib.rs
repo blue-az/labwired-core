@@ -2931,6 +2931,55 @@ pub struct UartRegexAssertion {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
+pub struct UartOrderedAssertion {
+    pub uart_ordered: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct MotorSpeedReachedDetails {
+    pub id: String,
+    pub min_abs_rpm: f64,
+    pub max_abs_rpm: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct MotorSpeedReachedAssertion {
+    pub motor_speed_reached: MotorSpeedReachedDetails,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct MotorStateDetails {
+    pub id: String,
+    pub control_state: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fault_contains: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct MotorStateAssertion {
+    pub motor_state: MotorStateDetails,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct ShutdownLatencyDetails {
+    pub from_cycle: u64,
+    pub to_uart: String,
+    pub max_cycles: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct ShutdownLatencyAssertion {
+    pub shutdown_latency: ShutdownLatencyDetails,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct StopReasonAssertion {
     pub expected_stop_reason: StopReason,
 }
@@ -3070,6 +3119,10 @@ pub struct UdsTesterAssertion {
 pub enum TestAssertion {
     UartContains(UartContainsAssertion),
     UartRegex(UartRegexAssertion),
+    UartOrdered(UartOrderedAssertion),
+    MotorSpeedReached(MotorSpeedReachedAssertion),
+    MotorState(MotorStateAssertion),
+    ShutdownLatency(ShutdownLatencyAssertion),
     ExpectedStopReason(StopReasonAssertion),
     MemoryValue(MemoryValueAssertion),
     UdsTester(UdsTesterAssertion),
@@ -4397,6 +4450,39 @@ assertions:
         assert_eq!(script.inputs.firmware, "path/to/fw.elf");
         assert_eq!(script.limits.max_steps, 1000);
         assert_eq!(script.assertions.len(), 2);
+    }
+
+    #[test]
+    fn motor_showcase_assertions_parse_with_typed_payloads() {
+        let yaml = r#"
+schema_version: "1.2"
+inputs: { firmware: "motor.elf" }
+limits: { max_steps: 1000 }
+assertions:
+  - uart_ordered: ["READY", "TARGET", "FAULT", "OFF"]
+  - motor_speed_reached: { id: drive, min_abs_rpm: 100.0, max_abs_rpm: 4000.0 }
+  - motor_state: { id: drive, control_state: "off:external-enable", fault_contains: stalled }
+  - shutdown_latency: { from_cycle: 1500000, to_uart: "OFF", max_cycles: 300000 }
+"#;
+        let script: TestScript = serde_yaml::from_str(yaml).unwrap();
+        assert!(matches!(
+            &script.assertions[0],
+            TestAssertion::UartOrdered(a) if a.uart_ordered.len() == 4
+        ));
+        assert!(matches!(
+            &script.assertions[1],
+            TestAssertion::MotorSpeedReached(a)
+                if a.motor_speed_reached.min_abs_rpm == 100.0
+        ));
+        assert!(matches!(
+            &script.assertions[2],
+            TestAssertion::MotorState(a)
+                if a.motor_state.control_state == "off:external-enable"
+        ));
+        assert!(matches!(
+            &script.assertions[3],
+            TestAssertion::ShutdownLatency(a) if a.shutdown_latency.max_cycles == 300_000
+        ));
     }
 
     #[test]

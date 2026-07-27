@@ -210,6 +210,8 @@ supply_voltage_v: 24.0
 load_torque_nm: 0.015
 encoder_cpr: 2048
 pole_pairs: 7
+current_limit_a: 40.0
+overcurrent_trip_steps: 4
 phase_a_high_pin: PA8
 phase_a_low_pin: PA7
 phase_b_high_pin: PA9
@@ -222,6 +224,8 @@ hall_b_pin: PC1
 hall_c_pin: PC2
 encoder_a_pin: PC6
 encoder_b_pin: PC7
+overcurrent_fault_pin: PB6
+undervoltage_fault_pin: PB5
 "#;
     let model: MotorModelConfig = serde_yaml::from_str(yaml).unwrap();
     let MotorModelConfig::Bldc(BldcMotorConfig {
@@ -231,6 +235,10 @@ encoder_b_pin: PC7
         simulation_clock_hz,
         motor_fault_pin,
         inverter_fault_pin,
+        current_limit_a,
+        overcurrent_trip_steps,
+        overcurrent_fault_pin,
+        undervoltage_fault_pin,
         ..
     }) = &model
     else {
@@ -242,6 +250,10 @@ encoder_b_pin: PC7
     assert_eq!(*simulation_clock_hz, 80_000_000);
     assert_eq!(motor_fault_pin, &None);
     assert_eq!(inverter_fault_pin, &None);
+    assert_eq!(*current_limit_a, Some(40.0));
+    assert_eq!(*overcurrent_trip_steps, 4);
+    assert_eq!(overcurrent_fault_pin.as_deref(), Some("PB6"));
+    assert_eq!(undervoltage_fault_pin.as_deref(), Some("PB5"));
     assert!(model.validate().is_empty());
     assert_eq!(
         serde_yaml::from_str::<MotorModelConfig>(&serde_yaml::to_string(&model).unwrap()).unwrap(),
@@ -288,6 +300,44 @@ fn motor_model_bldc_rejects_invalid_pole_pairs() {
         .validate()
         .iter()
         .any(|issue| issue.contains("motor_models[drive_motor].pole_pairs")));
+}
+
+#[test]
+fn motor_model_bldc_rejects_invalid_overcurrent_configuration() {
+    let yaml = r#"
+kind: bldc
+id: spindle
+resistance_ohm: 0.35
+inductance_h: 0.00018
+torque_constant_nm_per_a: 0.04
+back_emf_constant_v_per_rad_s: 0.04
+rotor_inertia_kg_m2: 0.00002
+viscous_friction_nm_per_rad_s: 0.000003
+supply_voltage_v: 24.0
+load_torque_nm: 0.0
+encoder_cpr: 2048
+pole_pairs: 7
+current_limit_a: 0.0
+overcurrent_trip_steps: 0
+phase_a_high_pin: PA8
+phase_a_low_pin: PB13
+phase_b_high_pin: PA9
+phase_b_low_pin: PB14
+phase_c_high_pin: PA10
+phase_c_low_pin: PB15
+enable_pin: PB0
+hall_a_pin: PC0
+hall_b_pin: PC1
+hall_c_pin: PC2
+encoder_a_pin: PC3
+encoder_b_pin: PC4
+"#;
+    let model: MotorModelConfig = serde_yaml::from_str(yaml).unwrap();
+    let issues = model.validate();
+    assert!(issues.iter().any(|issue| issue.contains("current_limit_a")));
+    assert!(issues
+        .iter()
+        .any(|issue| issue.contains("overcurrent_trip_steps")));
 }
 
 #[test]
@@ -359,6 +409,14 @@ fn motor_model_descriptors_define_unambiguous_required_pin_contracts() {
         .config
         .iter()
         .any(|entry| entry.key == "inverter_fault_pin" && !entry.required));
+    assert!(emit
+        .config
+        .iter()
+        .any(|entry| entry.key == "overcurrent_fault_pin" && !entry.required));
+    assert!(emit
+        .config
+        .iter()
+        .any(|entry| entry.key == "undervoltage_fault_pin" && !entry.required));
 }
 
 #[test]

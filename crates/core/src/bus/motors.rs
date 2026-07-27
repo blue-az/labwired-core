@@ -476,8 +476,6 @@ impl SystemBus {
                     }
                     if *inverter_fault_active {
                         *control_state = "fault:inverter".to_owned();
-                    } else if snapshot.faults.stalled || snapshot.faults.open_phase.is_some() {
-                        *control_state = "fault:motor".to_owned();
                     }
                 }
             }

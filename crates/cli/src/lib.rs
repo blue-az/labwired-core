@@ -1530,6 +1530,36 @@ fn assertion_currently_passes(
     match assertion {
         TestAssertion::UartContains(a) => uart_text.contains(&a.uart_contains),
         TestAssertion::UartRegex(a) => simple_regex_is_match(&a.uart_regex, uart_text),
+        TestAssertion::UartOrdered(a) => {
+            let mut offset = 0;
+            a.uart_ordered.iter().all(|token| {
+                let Some(found) = uart_text[offset..].find(token) else {
+                    return false;
+                };
+                offset += found + token.len();
+                true
+            })
+        }
+        TestAssertion::MotorSpeedReached(a) => machine.bus.motor_snapshots().iter().any(|motor| {
+            let speed = motor.speed_rpm.abs();
+            motor.id == a.motor_speed_reached.id
+                && speed >= a.motor_speed_reached.min_abs_rpm
+                && speed <= a.motor_speed_reached.max_abs_rpm
+        }),
+        TestAssertion::MotorState(a) => machine.bus.motor_snapshots().iter().any(|motor| {
+            motor.id == a.motor_state.id
+                && motor.control_state == a.motor_state.control_state
+                && a.motor_state
+                    .fault_contains
+                    .as_ref()
+                    .is_none_or(|fault| motor.faults.contains(fault))
+        }),
+        TestAssertion::ShutdownLatency(a) => {
+            let observed_cycle = machine.bus.current_cycle;
+            uart_text.contains(&a.shutdown_latency.to_uart)
+                && observed_cycle >= a.shutdown_latency.from_cycle
+                && observed_cycle - a.shutdown_latency.from_cycle <= a.shutdown_latency.max_cycles
+        }
         TestAssertion::ExpectedStopReason(_) => true,
         TestAssertion::MemoryValue(a) => {
             let size = a.memory_value.size.unwrap_or(32);
@@ -1923,6 +1953,10 @@ fn execute_test_loop<C: labwired_core::Cpu>(
     // instead of certifying as passed. A regression (assertions stop passing)
     // resets it, so the pass must be durable.
     let mut assertions_first_passed_at: Option<u64> = None;
+    // Milestone assertions describe state observed before a later injected
+    // fault. Once the requested speed band has genuinely been observed in the
+    // plant, retain that evidence through the shutdown phase.
+    let mut assertion_latched = vec![false; assertions.len()];
 
     // ── --capture-app-entry: cache a genuine faithful-boot state ─────────
     // While the REAL rom-boot runs, snapshot the machine the instant control
@@ -2152,10 +2186,32 @@ fn execute_test_loop<C: labwired_core::Cpu>(
                     let bytes = uart_tx.lock().map(|g| g.clone()).unwrap_or_default();
                     String::from_utf8_lossy(&bytes).to_string()
                 };
-                let all_pass = assertions
-                    .iter()
-                    .filter(|a| !matches!(a, TestAssertion::ExpectedStopReason(_)))
-                    .all(|a| assertion_currently_passes(a, &uart_text, machine));
+                for (index, assertion) in assertions.iter().enumerate() {
+                    let milestone_observed = match assertion {
+                        TestAssertion::ShutdownLatency(a) => {
+                            let cycle = metrics.get_cycles();
+                            uart_text.contains(&a.shutdown_latency.to_uart)
+                                && cycle >= a.shutdown_latency.from_cycle
+                                && cycle - a.shutdown_latency.from_cycle
+                                    <= a.shutdown_latency.max_cycles
+                        }
+                        TestAssertion::MotorSpeedReached(_) => {
+                            assertion_currently_passes(assertion, &uart_text, machine)
+                        }
+                        _ => false,
+                    };
+                    if milestone_observed {
+                        assertion_latched[index] = true;
+                    }
+                }
+                let all_pass = assertions.iter().enumerate().all(|(index, assertion)| {
+                    matches!(assertion, TestAssertion::ExpectedStopReason(_))
+                        || (matches!(
+                            assertion,
+                            TestAssertion::MotorSpeedReached(_) | TestAssertion::ShutdownLatency(_)
+                        ) && assertion_latched[index])
+                        || assertion_currently_passes(assertion, &uart_text, machine)
+                });
                 if all_pass {
                     // Latch the first all-pass step, but not before the absolute
                     // minimum-steps floor: assertions that satisfy trivially early
@@ -2215,10 +2271,17 @@ fn execute_test_loop<C: labwired_core::Cpu>(
     let mut all_passed = true;
     let mut expected_stop_reason_matched = false;
 
-    for assertion in assertions {
+    for (assertion_index, assertion) in assertions.into_iter().enumerate() {
         let passed = match &assertion {
             TestAssertion::UartContains(a) => uart_text.contains(&a.uart_contains),
             TestAssertion::UartRegex(a) => simple_regex_is_match(&a.uart_regex, &uart_text),
+            TestAssertion::UartOrdered(_) | TestAssertion::MotorState(_) => {
+                assertion_currently_passes(&assertion, &uart_text, machine)
+            }
+            TestAssertion::MotorSpeedReached(_) | TestAssertion::ShutdownLatency(_) => {
+                assertion_latched[assertion_index]
+                    || assertion_currently_passes(&assertion, &uart_text, machine)
+            }
             TestAssertion::ExpectedStopReason(a) => a.expected_stop_reason == stop_reason,
             TestAssertion::MemoryValue(a) => {
                 // `size` is the value width. Accept either bytes (1/2/4) or
@@ -3141,6 +3204,21 @@ fn assertion_short_name(assertion: &TestAssertion) -> String {
     let s = match assertion {
         TestAssertion::UartContains(a) => format!("uart_contains: {}", a.uart_contains),
         TestAssertion::UartRegex(a) => format!("uart_regex: {}", a.uart_regex),
+        TestAssertion::UartOrdered(a) => format!("uart_ordered: {:?}", a.uart_ordered),
+        TestAssertion::MotorSpeedReached(a) => format!(
+            "motor_speed_reached: {} {}..={} rpm",
+            a.motor_speed_reached.id,
+            a.motor_speed_reached.min_abs_rpm,
+            a.motor_speed_reached.max_abs_rpm
+        ),
+        TestAssertion::MotorState(a) => format!(
+            "motor_state: {} state={}",
+            a.motor_state.id, a.motor_state.control_state
+        ),
+        TestAssertion::ShutdownLatency(a) => format!(
+            "shutdown_latency: {} <= {} cycles",
+            a.shutdown_latency.to_uart, a.shutdown_latency.max_cycles
+        ),
         TestAssertion::ExpectedStopReason(a) => {
             format!("expected_stop_reason: {:?}", a.expected_stop_reason)
         }

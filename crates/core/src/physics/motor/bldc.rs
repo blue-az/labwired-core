@@ -451,6 +451,9 @@ impl BldcMotor {
         validate_faults(faults, self.params.supply_voltage_v)?;
         let mut candidate = self.clone();
         candidate.faults = faults;
+        if !faults.overcurrent {
+            candidate.overcurrent_steps = 0;
+        }
         if let Some(open_phase) = faults.open_phase {
             candidate.phase_currents_a[open_phase.index()] = 0.0;
             project_zero_sum(&mut candidate.phase_currents_a, faults.open_phase);
