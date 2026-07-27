@@ -210,9 +210,21 @@ fn bus_nrf52840() -> SystemBus {
 }
 
 fn bus_esp32s3() -> SystemBus {
-    let chip = load_chip("configs/chips/esp32s3.yaml");
-    let manifest = load_manifest("configs/systems/esp32s3-zero.yaml");
-    SystemBus::from_config(&chip, &manifest).expect("build esp32s3 bus")
+    // Production / WASM path — NOT SystemBus::from_config on chip YAML.
+    // from_config stubs rmt/gdma/systimer (and other S3 models) with generic
+    // placeholders, which previously produced a false walk-free inventory.
+    // WasmSimulator::new_from_config_xtensa_esp32s3 and the firmware e2e /
+    // oracle buses all call configure_xtensa_esp32s3 (→ register_esp32s3_
+    // peripherals). Mirror that, then auto-derive walk deletion the same
+    // way from_config does under walk_deleted = None so forcer emptiness
+    // lines up with legacy_walk_disabled / max_safe for the inventory.
+    let mut bus = SystemBus::new();
+    let _ = labwired_core::system::xtensa::configure_xtensa_esp32s3(
+        &mut bus,
+        &labwired_core::system::xtensa::Esp32s3Opts::default(),
+    );
+    bus.recompute_walk_deletable();
+    bus
 }
 
 /// Regression: C3 + F103 already flip walk-deletion and raise max_safe to 512
