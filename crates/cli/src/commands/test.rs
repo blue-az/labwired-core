@@ -128,12 +128,21 @@ fn run_c3_rom_boot_no_elf(
             }
         };
 
+    // Load the manifest once: it drives both the UART sink selection (debug_uart)
+    // and — the universal WiFi adapter — the `wifi_ap` attach below.
+    let manifest_opt =
+        system_path.and_then(|path| labwired_config::SystemManifest::from_file(path).ok());
+    let debug_uart = manifest_opt.as_ref().and_then(|m| m.debug_uart.clone());
+    // Seed the station eFuse MAC when a `wifi_ap` is present so the C3 stays
+    // associated (a zero eFuse MAC associates but drops); None otherwise keeps
+    // non-WiFi rom-boot byte-identical.
+    let wifi_station_mac = manifest_opt
+        .as_ref()
+        .and_then(labwired_core::system::wifi::wifi_ap_station_mac);
+
     // UART capture, mirroring the main flow: honour debug_uart, else all UARTs,
     // plus the IO-Link master log sink.
     let uart_tx = Arc::new(Mutex::new(Vec::new()));
-    let debug_uart = system_path
-        .and_then(|path| labwired_config::SystemManifest::from_file(path).ok())
-        .and_then(|manifest| manifest.debug_uart);
     if let Some(debug_uart) = debug_uart.as_deref() {
         if !bus.attach_uart_tx_sink_named(debug_uart, uart_tx.clone(), !args.no_uart_stdout) {
             warn!(
@@ -201,7 +210,7 @@ fn run_c3_rom_boot_no_elf(
             error!("resume snapshot self-key mismatch ({e}); cold-boot required");
             return ExitCode::from(EXIT_CONFIG_ERROR);
         }
-        let mut machine = match crate::build_c3_rom_boot_machine(bus, None) {
+        let mut machine = match crate::build_c3_rom_boot_machine(bus, wifi_station_mac) {
             Ok(m) => m,
             Err(code) => return code,
         };
@@ -223,11 +232,19 @@ fn run_c3_rom_boot_no_elf(
         // Cold faithful rom-boot. --capture-app-entry (the cache-miss path) is
         // handled inside execute_test_loop; with no ELF the app-entry PC falls
         // back to the XIP app-window detector.
-        match crate::build_c3_rom_boot_machine(bus, None) {
+        match crate::build_c3_rom_boot_machine(bus, wifi_station_mac) {
             Ok(m) => m,
             Err(code) => return code,
         }
     };
+
+    // Universal WiFi adapter: if the diagram carries a `wifi_ap`, attach every
+    // real WiFi MAC to a per-lab virtual-WiFi medium so the device associates →
+    // DHCP → HTTP under the hosted `test` path exactly like the CLI solo path and
+    // the browser. No-op when there is no `wifi_ap`.
+    if let Some(manifest) = manifest_opt.as_ref() {
+        labwired_core::system::wifi::attach_configured_wifi_ap(&mut machine.bus, manifest);
+    }
 
     let metrics = std::sync::Arc::new(labwired_core::metrics::PerformanceMetrics::new());
     apply_matrix_speed_opts(&mut machine);
@@ -424,7 +441,21 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
     // gets a proportionally higher ceiling (wall-clock caps still apply).
     const MAX_ALLOWED_STEPS: u64 = 50_000_000;
     const MAX_ALLOWED_STEPS_ROM_BOOT: u64 = 500_000_000;
-    let max_allowed_steps = if args.rom_boot {
+    // A run boots the real ROM (and needs the higher ceiling) not only when
+    // --rom-boot is set, but whenever it resumes an app-entry snapshot OR a
+    // flash-image env is present: the compiled-source ESP32-C3/S3 path supplies
+    // the merged flash image via LABWIRED_ESP32{C3,S3}_FLASH and boots the ROM
+    // from it, yet did not always carry the --rom-boot flag — so it wrongly got
+    // the 50M ceiling and a full boot + WiFi + display run (boot ROM alone is
+    // ~150M steps) could never finish. Key the ceiling off EFFECTIVE rom-boot so
+    // headless device proving has the budget it needs (acceptance markers still
+    // halt early; wall-clock caps still bound runaway sims).
+    let flash_env_present = |k: &str| std::env::var(k).map(|v| !v.is_empty()).unwrap_or(false);
+    let rom_boot_effective = args.rom_boot
+        || args.resume_snapshot.is_some()
+        || flash_env_present("LABWIRED_ESP32C3_FLASH")
+        || flash_env_present("LABWIRED_ESP32S3_FLASH");
+    let max_allowed_steps = if rom_boot_effective {
         MAX_ALLOWED_STEPS_ROM_BOOT
     } else {
         MAX_ALLOWED_STEPS
