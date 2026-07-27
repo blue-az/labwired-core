@@ -60,8 +60,8 @@
     "source_rev": "e8a9047f7917bd6c5bc8d160e98c6d6e1c74fdac"
   },
   "stm32wb55.elf": {
-    "sha256": "c070a55a3d68751ddfdeeded571960a91531fe1da1821d13b43c6e8e3e8f8be8",
-    "source_rev": "e8a9047f7917bd6c5bc8d160e98c6d6e1c74fdac"
+    "sha256": "c521bb95257f1e179f3d38400aebc3180997ad8e8f6f63e906d20f9e6fdb5c00",
+    "source_rev": "6f023362a1b188021ddf424dcc31f899cd9cb9a6"
   },
   "stm32wba52.elf": {
     "sha256": "cfd2468b0522754f570c3af8a92b612d6224700a59512d0cd8adca8fb0122742",
