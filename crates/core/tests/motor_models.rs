@@ -97,17 +97,37 @@ fn brake_opposes_rotation_while_coast_only_decays_current() {
 }
 
 #[test]
+fn coast_uses_exact_exponential_current_decay() {
+    let mut coast_fixture = params(0.0);
+    coast_fixture.resistance_ohm = 1.0;
+    coast_fixture.inductance_h = 1.0;
+    let mut motor = BrushedDcMotor::new(coast_fixture).unwrap();
+    motor.set_faults(MotorFaults { stalled: true });
+    motor
+        .step(HBridgeCommand::forward(1.0).unwrap(), 0.1)
+        .unwrap();
+    let current_before_coast = motor.snapshot().current_a;
+
+    motor.step(HBridgeCommand::coast(), 1.0).unwrap();
+
+    let expected_current_a = current_before_coast * (-1.0_f64).exp();
+    assert!((motor.snapshot().current_a - expected_current_a).abs() < 1e-12);
+}
+
+#[test]
 fn stall_allows_current_but_holds_position_and_release_starts_from_zero() {
     let mut motor = BrushedDcMotor::new(params(0.0)).unwrap();
     let command = HBridgeCommand::forward(1.0).unwrap();
     step_many(&mut motor, command, 2_000);
     let moving = motor.snapshot();
     assert!(moving.angular_velocity_rad_s > 0.0);
+    assert!(moving.back_emf_v > 0.0);
 
     motor.set_faults(MotorFaults { stalled: true });
     let engaged = motor.snapshot();
     assert_eq!(engaged.position_rad, moving.position_rad);
     assert_eq!(engaged.angular_velocity_rad_s, 0.0);
+    assert_eq!(engaged.back_emf_v, 0.0);
 
     step_many(&mut motor, command, 1_000);
     let stalled = motor.snapshot();
@@ -137,14 +157,18 @@ fn rejected_steps_leave_the_entire_snapshot_unchanged() {
     assert_eq!(motor.snapshot(), before);
 
     let mut overflowing_current = params(0.0);
-    overflowing_current.resistance_ohm = f64::MIN_POSITIVE;
-    overflowing_current.inductance_h = f64::MIN_POSITIVE;
+    overflowing_current.resistance_ohm = 0.5;
+    overflowing_current.inductance_h = 1.0;
+    overflowing_current.torque_constant_nm_per_a = f64::MIN_POSITIVE;
+    overflowing_current.back_emf_constant_v_per_rad_s = f64::MIN_POSITIVE;
     overflowing_current.supply_voltage_v = f64::MAX;
+    overflowing_current.shaft.inertia_kg_m2 = 1.0;
+    overflowing_current.shaft.viscous_friction_nm_per_rad_s = 0.1;
     let mut overflowing_current = BrushedDcMotor::new(overflowing_current).unwrap();
     let before_overflow = overflowing_current.snapshot();
     assert_eq!(
         overflowing_current
-            .step(HBridgeCommand::forward(1.0).unwrap(), 1.0)
+            .step(HBridgeCommand::forward(1.0).unwrap(), 1.5)
             .unwrap_err()
             .field,
         "current_a"
@@ -155,9 +179,9 @@ fn rejected_steps_leave_the_entire_snapshot_unchanged() {
     tiny_inertia.resistance_ohm = 1.0;
     tiny_inertia.inductance_h = 100.0;
     tiny_inertia.torque_constant_nm_per_a = 1.0;
-    tiny_inertia.back_emf_constant_v_per_rad_s = 1.0;
-    tiny_inertia.supply_voltage_v = 1.0;
-    tiny_inertia.shaft.inertia_kg_m2 = f64::MIN_POSITIVE;
+    tiny_inertia.back_emf_constant_v_per_rad_s = f64::MIN_POSITIVE;
+    tiny_inertia.supply_voltage_v = 100.0;
+    tiny_inertia.shaft.inertia_kg_m2 = 5e-307;
     tiny_inertia.shaft.viscous_friction_nm_per_rad_s = 0.0;
     let mut motor = BrushedDcMotor::new(tiny_inertia).unwrap();
     let before = motor.snapshot();
@@ -208,6 +232,59 @@ fn mechanical_timestep_outside_stability_envelope_is_rejected_atomically() {
     assert_eq!(error.field, "dt_s");
     assert!(error.message.contains("mechanical"));
     assert_eq!(motor.snapshot(), before);
+}
+
+#[test]
+fn coupled_closed_winding_instability_is_rejected_atomically() {
+    let mut high_coupling = params(0.0);
+    high_coupling.resistance_ohm = 1.0;
+    high_coupling.inductance_h = 1.0;
+    high_coupling.torque_constant_nm_per_a = 100.0;
+    high_coupling.back_emf_constant_v_per_rad_s = 100.0;
+    high_coupling.shaft.inertia_kg_m2 = 1.0;
+    high_coupling.shaft.viscous_friction_nm_per_rad_s = 0.0;
+    let mut motor = BrushedDcMotor::new(high_coupling).unwrap();
+    let before = motor.snapshot();
+
+    let error = motor
+        .step(HBridgeCommand::forward(1.0).unwrap(), 0.1)
+        .unwrap_err();
+
+    assert_eq!(error.field, "dt_s");
+    assert!(error.message.contains("coupled"));
+    assert_eq!(motor.snapshot(), before);
+}
+
+#[test]
+fn non_finite_rpm_conversion_is_rejected_atomically() {
+    let mut extreme_speed = params(0.0);
+    extreme_speed.resistance_ohm = 1.0;
+    extreme_speed.inductance_h = 1.0;
+    extreme_speed.torque_constant_nm_per_a = 1.0;
+    extreme_speed.back_emf_constant_v_per_rad_s = f64::MIN_POSITIVE;
+    extreme_speed.supply_voltage_v = 1.0;
+    extreme_speed.shaft.inertia_kg_m2 = 5e-308;
+    extreme_speed.shaft.viscous_friction_nm_per_rad_s = 0.0;
+    let mut motor = BrushedDcMotor::new(extreme_speed).unwrap();
+    let before = motor.snapshot();
+
+    let error = motor
+        .step(HBridgeCommand::forward(1.0).unwrap(), 1.0)
+        .unwrap_err();
+
+    assert_eq!(error.field, "speed_rpm");
+    assert_eq!(motor.snapshot(), before);
+}
+
+#[test]
+fn normal_fixture_is_inside_coupled_stability_envelope() {
+    let mut motor = BrushedDcMotor::new(params(0.0)).unwrap();
+
+    motor
+        .step(HBridgeCommand::forward(1.0).unwrap(), DT_S)
+        .unwrap();
+
+    assert!(motor.snapshot().current_a > 0.0);
 }
 
 #[test]
