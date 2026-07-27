@@ -207,6 +207,202 @@ pub struct ExternalDevice {
     pub config: HashMap<String, serde_yaml::Value>,
 }
 
+/// Typed, unit-explicit configuration for deterministic motor plants.
+///
+/// These DTOs live in `labwired-config` because the physics crate already
+/// depends on this crate. The engine converts them to its `*MotorParams` types
+/// at the construction boundary; raw YAML maps never reach the plant models.
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(tag = "kind", rename_all = "kebab-case")]
+pub enum MotorModelConfig {
+    Dc(BrushedMotorConfig),
+    Bldc(BldcMotorConfig),
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct BrushedMotorConfig {
+    pub id: String,
+    pub resistance_ohm: f64,
+    pub inductance_h: f64,
+    pub torque_constant_nm_per_a: f64,
+    pub back_emf_constant_v_per_rad_s: f64,
+    pub rotor_inertia_kg_m2: f64,
+    pub viscous_friction_nm_per_rad_s: f64,
+    pub supply_voltage_v: f64,
+    pub load_torque_nm: f64,
+    pub encoder_cpr: u32,
+    pub pwm_pin: String,
+    pub direction_pin: String,
+    pub brake_pin: String,
+    pub enable_pin: String,
+    pub encoder_a_pin: String,
+    pub encoder_b_pin: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub encoder_index_pin: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct BldcMotorConfig {
+    pub id: String,
+    pub resistance_ohm: f64,
+    pub inductance_h: f64,
+    pub torque_constant_nm_per_a: f64,
+    pub back_emf_constant_v_per_rad_s: f64,
+    pub rotor_inertia_kg_m2: f64,
+    pub viscous_friction_nm_per_rad_s: f64,
+    pub supply_voltage_v: f64,
+    pub load_torque_nm: f64,
+    pub encoder_cpr: u32,
+    pub pole_pairs: u8,
+    pub phase_a_high_pin: String,
+    pub phase_a_low_pin: String,
+    pub phase_b_high_pin: String,
+    pub phase_b_low_pin: String,
+    pub phase_c_high_pin: String,
+    pub phase_c_low_pin: String,
+    pub enable_pin: String,
+    pub hall_a_pin: String,
+    pub hall_b_pin: String,
+    pub hall_c_pin: String,
+    pub encoder_a_pin: String,
+    pub encoder_b_pin: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub encoder_index_pin: Option<String>,
+}
+
+impl MotorModelConfig {
+    /// Converts the canonical `external_devices` representation at the loader
+    /// boundary into the typed plant DTO consumed by the engine.
+    pub fn from_external_device(device: &ExternalDevice) -> Result<Option<Self>> {
+        let kind = match device.r#type.as_str() {
+            "dc-motor" | "dc_motor" => "dc",
+            "bldc-motor" | "bldc_motor" => "bldc",
+            _ => return Ok(None),
+        };
+        let mut mapping = serde_yaml::Mapping::new();
+        mapping.insert(
+            serde_yaml::Value::String("kind".to_owned()),
+            serde_yaml::Value::String(kind.to_owned()),
+        );
+        mapping.insert(
+            serde_yaml::Value::String("id".to_owned()),
+            serde_yaml::Value::String(device.id.clone()),
+        );
+        for (key, value) in &device.config {
+            mapping.insert(serde_yaml::Value::String(key.clone()), value.clone());
+        }
+        let config: Self = serde_yaml::from_value(serde_yaml::Value::Mapping(mapping))
+            .with_context(|| format!("invalid {} motor config '{}'", kind, device.id))?;
+        let issues = config.validate();
+        if issues.is_empty() {
+            Ok(Some(config))
+        } else {
+            Err(anyhow::anyhow!(issues.join("; ")))
+        }
+    }
+
+    pub fn id(&self) -> &str {
+        match self {
+            Self::Dc(config) => &config.id,
+            Self::Bldc(config) => &config.id,
+        }
+    }
+
+    /// Returns every configuration issue with a stable, field-qualified path.
+    pub fn validate(&self) -> Vec<String> {
+        let mut issues = Vec::new();
+        match self {
+            Self::Dc(config) => validate_motor_common(
+                &config.id,
+                config.resistance_ohm,
+                config.inductance_h,
+                config.torque_constant_nm_per_a,
+                config.back_emf_constant_v_per_rad_s,
+                config.rotor_inertia_kg_m2,
+                config.viscous_friction_nm_per_rad_s,
+                config.supply_voltage_v,
+                config.load_torque_nm,
+                config.encoder_cpr,
+                &mut issues,
+            ),
+            Self::Bldc(config) => {
+                validate_motor_common(
+                    &config.id,
+                    config.resistance_ohm,
+                    config.inductance_h,
+                    config.torque_constant_nm_per_a,
+                    config.back_emf_constant_v_per_rad_s,
+                    config.rotor_inertia_kg_m2,
+                    config.viscous_friction_nm_per_rad_s,
+                    config.supply_voltage_v,
+                    config.load_torque_nm,
+                    config.encoder_cpr,
+                    &mut issues,
+                );
+                if config.pole_pairs == 0 {
+                    issues.push(format!(
+                        "motor_models[{}].pole_pairs must be between 1 and 255 inclusive",
+                        config.id
+                    ));
+                }
+            }
+        }
+        issues
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn validate_motor_common(
+    id: &str,
+    resistance_ohm: f64,
+    inductance_h: f64,
+    torque_constant_nm_per_a: f64,
+    back_emf_constant_v_per_rad_s: f64,
+    rotor_inertia_kg_m2: f64,
+    viscous_friction_nm_per_rad_s: f64,
+    supply_voltage_v: f64,
+    load_torque_nm: f64,
+    encoder_cpr: u32,
+    issues: &mut Vec<String>,
+) {
+    let path = |field: &str| format!("motor_models[{id}].{field}");
+    for (field, value) in [
+        ("resistance_ohm", resistance_ohm),
+        ("inductance_h", inductance_h),
+        ("torque_constant_nm_per_a", torque_constant_nm_per_a),
+        (
+            "back_emf_constant_v_per_rad_s",
+            back_emf_constant_v_per_rad_s,
+        ),
+        ("rotor_inertia_kg_m2", rotor_inertia_kg_m2),
+        ("supply_voltage_v", supply_voltage_v),
+    ] {
+        if !value.is_finite() || value <= 0.0 {
+            issues.push(format!(
+                "{} must be finite and greater than zero",
+                path(field)
+            ));
+        }
+    }
+    if !viscous_friction_nm_per_rad_s.is_finite() || viscous_friction_nm_per_rad_s < 0.0 {
+        issues.push(format!(
+            "{} must be finite and non-negative",
+            path("viscous_friction_nm_per_rad_s")
+        ));
+    }
+    if !load_torque_nm.is_finite() {
+        issues.push(format!("{} must be finite", path("load_torque_nm")));
+    }
+    if !(1..=1_000_000).contains(&encoder_cpr) {
+        issues.push(format!(
+            "{} must be between 1 and 1000000 inclusive",
+            path("encoder_cpr")
+        ));
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum CosimAdapter {
@@ -344,6 +540,8 @@ pub struct SystemManifest {
     pub parts: Vec<PartPack>,
     #[serde(default)]
     pub cosim_models: Vec<CosimModelConfig>,
+    #[serde(default)]
+    pub motor_models: Vec<MotorModelConfig>,
     #[serde(default)]
     pub board_io: Vec<BoardIoBinding>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -920,6 +1118,23 @@ impl SystemManifest {
         }
 
         issues
+    }
+
+    /// Resolves both explicitly typed plants and canonical external-device
+    /// entries through one typed validation boundary.
+    pub fn resolved_motor_models(&self) -> Result<Vec<MotorModelConfig>> {
+        let mut models = self.motor_models.clone();
+        for device in &self.external_devices {
+            if let Some(model) = MotorModelConfig::from_external_device(device)? {
+                models.push(model);
+            }
+        }
+        let issues: Vec<_> = models.iter().flat_map(MotorModelConfig::validate).collect();
+        if issues.is_empty() {
+            Ok(models)
+        } else {
+            Err(anyhow::anyhow!(issues.join("; ")))
+        }
     }
 }
 
@@ -2044,6 +2259,10 @@ pub struct EmitConfig {
     /// Fallback for `from_attr` when the attribute is absent or non-numeric.
     #[serde(default)]
     pub default: Option<f64>,
+    /// Whether a missing pin binding suppresses the whole device. Defaults to
+    /// true; optional feedback signals such as encoder index set this false.
+    #[serde(default = "default_true")]
+    pub required: bool,
 }
 
 /// One auxiliary `board_io` entry emitted alongside the device (e.g. a rotary
@@ -2179,6 +2398,10 @@ pub fn embedded_device_yaml(device_type: &str) -> Option<&'static str> {
         "vcnl4010" => Some(include_str!("../../../configs/devices/vcnl4010.yaml")),
         "vl53l0x" => Some(include_str!("../../../configs/devices/vl53l0x.yaml")),
         "gp2y0a21" => Some(include_str!("../../../configs/devices/gp2y0a21.yaml")),
+        "dc-motor" | "dc_motor" => Some(include_str!("../../../configs/devices/dc_motor.yaml")),
+        "bldc-motor" | "bldc_motor" => {
+            Some(include_str!("../../../configs/devices/bldc_motor.yaml"))
+        }
         _ => None,
     }
 }

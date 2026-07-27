@@ -287,6 +287,8 @@ impl CanonicalConfig {
                     "dht22" => Some("dht22"),
                     "rotary-encoder" => Some("rotary_encoder"),
                     "keypad" => Some("keypad"),
+                    "dc-motor" => Some("dc-motor"),
+                    "bldc-motor" => Some("bldc-motor"),
                     _ => None,
                 };
                 if let Some(desc_type) = desc_type {
@@ -995,6 +997,7 @@ fn emit_from_descriptor(
         let value = if let Some(names) = &c.from_part_pin {
             match first_wired(names) {
                 Some(pin) => format!("\"{pin}\""),
+                None if !c.required => continue,
                 None => {
                     ext_ok = false;
                     break;
@@ -1005,6 +1008,10 @@ fn emit_from_descriptor(
             for n in names {
                 match mcu_pin_for_part_pin(wires, mcu_id, &part.id, n) {
                     Some(p) => pins.push(p.to_string()),
+                    None if !c.required => {
+                        pins.clear();
+                        break;
+                    }
                     None => {
                         ext_ok = false;
                         break;
@@ -1013,6 +1020,9 @@ fn emit_from_descriptor(
             }
             if !ext_ok {
                 break;
+            }
+            if pins.is_empty() && !c.required {
+                continue;
             }
             format!("[\"{}\"]", pins.join("\", \""))
         } else if let Some(source) = &c.from {
@@ -1476,6 +1486,36 @@ fn build_system_yaml(external_devices: &[String], board_io: &[String], board: &s
 #[cfg(test)]
 mod canonical_tests {
     use super::*;
+
+    #[test]
+    fn motor_model_descriptor_emits_typed_dc_config_with_optional_index_unwired() {
+        let json = r#"{
+          "version": 1,
+          "parts": [
+            { "id": "mcu", "type": "nucleo-l476rg" },
+            { "id": "motor", "type": "dc-motor", "attrs": {
+              "resistance_ohm": "1.5", "encoder_cpr": "4096"
+            } }
+          ],
+          "connections": [
+            ["mcu:PA8", "motor:PWM"],
+            ["mcu:PA9", "motor:DIRECTION"],
+            ["mcu:PA10", "motor:BRAKE"],
+            ["mcu:PA11", "motor:ENABLE"],
+            ["mcu:PB6", "motor:ENC_A"],
+            ["mcu:PB7", "motor:ENC_B"]
+          ]
+        }"#;
+        let yaml = CanonicalConfig::from_json(json).unwrap().resolve().unwrap();
+        let manifest: crate::SystemManifest = serde_yaml::from_str(&yaml).unwrap();
+        let models = manifest.resolved_motor_models().unwrap();
+        let crate::MotorModelConfig::Dc(config) = &models[0] else {
+            panic!("expected dc motor")
+        };
+        assert_eq!(config.resistance_ohm, 1.5);
+        assert_eq!(config.encoder_cpr, 4096);
+        assert_eq!(config.encoder_index_pin, None);
+    }
 
     const EXAMPLE: &str = r#"
     {

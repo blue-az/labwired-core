@@ -1,0 +1,61 @@
+type: bldc-motor
+
+behavior:
+  primitive: bldc_motor
+  pins:
+    phase_a_high: phase_a_high_pin
+    phase_a_low: phase_a_low_pin
+    phase_b_high: phase_b_high_pin
+    phase_b_low: phase_b_low_pin
+    phase_c_high: phase_c_high_pin
+    phase_c_low: phase_c_low_pin
+    enable: enable_pin
+    hall_a: hall_a_pin
+    hall_b: hall_b_pin
+    hall_c: hall_c_pin
+    encoder_a: encoder_a_pin
+    encoder_b: encoder_b_pin
+    encoder_index: encoder_index_pin
+  params:
+    resistance_ohm: { key: resistance_ohm, default: 0.35 }
+    inductance_h: { key: inductance_h, default: 0.00018 }
+    torque_constant_nm_per_a: { key: torque_constant_nm_per_a, default: 0.04 }
+    back_emf_constant_v_per_rad_s: { key: back_emf_constant_v_per_rad_s, default: 0.04 }
+    rotor_inertia_kg_m2: { key: rotor_inertia_kg_m2, default: 0.00002 }
+    viscous_friction_nm_per_rad_s: { key: viscous_friction_nm_per_rad_s, default: 0.000003 }
+    supply_voltage_v: { key: supply_voltage_v, default: 24.0 }
+    load_torque_nm: { key: load_torque_nm, default: 0.0 }
+    encoder_cpr: { key: encoder_cpr, default: 2048 }
+    pole_pairs: { key: pole_pairs, default: 7 }
+
+metadata:
+  label: "Brushless DC motor"
+  summary: "Configurable deterministic three-phase BLDC motor plant"
+  category: robotics
+
+emit:
+  connection: gpio
+  config:
+    - { key: phase_a_high_pin, from_part_pin: [AH] }
+    - { key: phase_a_low_pin, from_part_pin: [AL] }
+    - { key: phase_b_high_pin, from_part_pin: [BH] }
+    - { key: phase_b_low_pin, from_part_pin: [BL] }
+    - { key: phase_c_high_pin, from_part_pin: [CH] }
+    - { key: phase_c_low_pin, from_part_pin: [CL] }
+    - { key: enable_pin, from_part_pin: [ENABLE] }
+    - { key: hall_a_pin, from_part_pin: [HALL_A] }
+    - { key: hall_b_pin, from_part_pin: [HALL_B] }
+    - { key: hall_c_pin, from_part_pin: [HALL_C] }
+    - { key: encoder_a_pin, from_part_pin: [ENC_A] }
+    - { key: encoder_b_pin, from_part_pin: [ENC_B] }
+    - { key: encoder_index_pin, from_part_pin: [INDEX], required: false }
+    - { key: resistance_ohm, from_attr: resistance_ohm, default: 0.35 }
+    - { key: inductance_h, from_attr: inductance_h, default: 0.00018 }
+    - { key: torque_constant_nm_per_a, from_attr: torque_constant_nm_per_a, default: 0.04 }
+    - { key: back_emf_constant_v_per_rad_s, from_attr: back_emf_constant_v_per_rad_s, default: 0.04 }
+    - { key: rotor_inertia_kg_m2, from_attr: rotor_inertia_kg_m2, default: 0.00002 }
+    - { key: viscous_friction_nm_per_rad_s, from_attr: viscous_friction_nm_per_rad_s, default: 0.000003 }
+    - { key: supply_voltage_v, from_attr: supply_voltage_v, default: 24.0 }
+    - { key: load_torque_nm, from_attr: load_torque_nm, default: 0.0 }
+    - { key: encoder_cpr, from_attr: encoder_cpr, default: 2048 }
+    - { key: pole_pairs, from_attr: pole_pairs, default: 7 }
