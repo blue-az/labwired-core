@@ -39,6 +39,7 @@
 //!   byte-identical to the historical model.
 
 use crate::{CycleClock, Peripheral, PeripheralTickResult, SimResult};
+use std::any::Any;
 
 /// Bus ticks per BCD calendar second (matches a 32.768 kHz LSE fed
 /// one-tick-per-cycle; deterministic for tests and trace replay).
@@ -576,6 +577,13 @@ impl Peripheral for RtcV3 {
             reschedule_delay: next.map(|c| c.saturating_sub(1)),
             ..Default::default()
         }
+    }
+
+    fn as_any(&self) -> Option<&dyn Any> {
+        Some(self)
+    }
+    fn as_any_mut(&mut self) -> Option<&mut dyn Any> {
+        Some(self)
     }
 
     fn snapshot(&self) -> serde_json::Value {

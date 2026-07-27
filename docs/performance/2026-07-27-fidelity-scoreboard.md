@@ -55,7 +55,12 @@ Legend:
 
 | Surface | Status | Notes / gates |
 |---------|--------|---------------|
-| Forcer emptiness / `max_safe=512` | **green** | inventory gate (flash_models_ops does not pin tick interval) |
+| Forcer emptiness / `max_safe=512` | **green** | `tick_interval_inventory::h563_is_walk_free_and_tick_512` (`flash_models_ops` does not pin tick interval) |
+| Zephyr boot (SysTick + console) | **green** | `stm32h563_zephyr_boot_walk_vs_scheduler_is_byte_identical` |
+| GPDMA mem2mem TC @ interval 1 | **green** | `gpdma_mem2mem_tcie_is_byte_identical_at_interval_1` — walk≡sched per-instruction (dst bytes, CSR TCF, TC ISR) |
+| GPDMA mem2mem @ interval 512 | **green** | `gpdma_mem2mem_is_byte_identical_at_interval_512` — both lanes @512 batched final state identical (relative delay-1 paces N× in both lanes) |
+| RTC second + Alarm A @ interval 1 | **green** | `rtc_second_and_alarm_is_byte_identical_at_interval_1` — TR advance + ALRAF/ISR byte-identical |
+| RTC second/alarm count @ interval 512 | **green** | `rtc_second_count_is_exact_at_interval_512` — absolute second deadlines; final TR + ISR count exact vs walk@1 |
 | `flash_models_ops` | **interim** | still forces CPU quantum 1 (not tick interval) |
 | FDCAN + CanBus attached | **interim** | walk may return when interconnect attached |
 | SPI wire timing | **interim** | bit engine on scheduler; family-wide EasyDMA@512 not claimed |
