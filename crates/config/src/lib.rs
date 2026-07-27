@@ -624,6 +624,13 @@ impl ChipDescriptor {
 }
 
 impl SystemManifest {
+    /// Parse a System Manifest from a YAML string. Unlike [`Self::from_file`]
+    /// this does no filesystem-relative `can-player` `path:` inlining (there is
+    /// no base directory), so it is wasm-safe and handy for tests/embedding.
+    pub fn from_yaml(yaml: &str) -> Result<Self> {
+        serde_yaml::from_str(yaml).context("Failed to parse System Manifest")
+    }
+
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
         let path = path.as_ref();
         let f = std::fs::File::open(path)?;
