@@ -146,7 +146,12 @@ for platform in linux-x86_64 linux-aarch64 darwin-x86_64 darwin-aarch64; do
 done
 require_literal "$workflow" 'ARCHIVE="labwired-${VERSION}-${PLATFORM}.tar.gz"' 'archive names include the release version and platform'
 require_literal "$workflow" 'cp "target/${{ matrix.target }}/release/labwired" dist/labwired' 'archive package copies the labwired binary'
-require_literal "$workflow" 'tar -czf "${ARCHIVE}" -C dist labwired' 'archive package contains the labwired binary'
+# The DAP is the binary VS Code spawns for F5. It was absent from every release
+# through v0.19.2, which made editor debugging work only on machines that had
+# built core from source. Pin it so it cannot be dropped again unnoticed.
+require_literal "$workflow" 'cargo build -p labwired-cli -p labwired-dap --release --target ${{ matrix.target }}' 'release builds both the CLI and the debug adapter'
+require_literal "$workflow" 'cp "target/${{ matrix.target }}/release/labwired-dap" dist/labwired-dap' 'archive package copies the labwired-dap binary'
+require_literal "$workflow" 'tar -czf "${ARCHIVE}" -C dist labwired labwired-dap' 'archive package contains both the CLI and the debug adapter'
 require_literal "$workflow" 'name: labwired-${{ matrix.platform }}' 'archive artifact names follow the platform matrix'
 
 release_block=$(job_block release)

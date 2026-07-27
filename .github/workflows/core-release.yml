@@ -51,11 +51,11 @@ jobs:
 
       - name: Build (cross)
         if: matrix.cross == true
-        run: cross build -p labwired-cli --release --target ${{ matrix.target }}
+        run: cross build -p labwired-cli -p labwired-dap --release --target ${{ matrix.target }}
 
       - name: Build (native)
         if: matrix.cross != true
-        run: cargo build -p labwired-cli --release --target ${{ matrix.target }}
+        run: cargo build -p labwired-cli -p labwired-dap --release --target ${{ matrix.target }}
 
       - name: Package binary
         shell: bash
@@ -65,10 +65,17 @@ jobs:
           ARCHIVE="labwired-${VERSION}-${PLATFORM}.tar.gz"
 
           mkdir -p dist
+          # Both binaries ship in the one tarball: the CLI runs `labwired test`
+          # (the .labwired/lab.yaml contract CI and the VS Code Run button share),
+          # and labwired-dap is the Debug Adapter the VS Code extension spawns for
+          # F5. Shipping only the CLI is what made editor debugging source-build-only.
+          # These lines are pinned by scripts/ci/verify-release-runner-contract.sh.
           cp "target/${{ matrix.target }}/release/labwired" dist/labwired
           chmod +x dist/labwired
+          cp "target/${{ matrix.target }}/release/labwired-dap" dist/labwired-dap
+          chmod +x dist/labwired-dap
 
-          tar -czf "${ARCHIVE}" -C dist labwired
+          tar -czf "${ARCHIVE}" -C dist labwired labwired-dap
           echo "ARCHIVE=${ARCHIVE}" >> "$GITHUB_ENV"
 
       - name: Upload artifact
