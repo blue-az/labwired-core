@@ -595,7 +595,12 @@ boards:
     #     interpreted (3400255 / 3040236), lit_px (782 / 442) and final pc.
     # Wire TIMING on the pads is unchanged; only host wake scheduling moved. No
     # live USB-JTAG re-capture warranted.
-    drift_ack: 2026-07-26
+    # 2026-07-27: walk-free / idle-FF / IRAM fetch-window / SYSTIMER word-path and
+    # I2C segment-wake cadence work under event-scheduler (wasm real-time fidelity
+    # stack). Reset-oracle registers and layout untouched; esp32c3_walk_differential
+    # (incl. framebuffer @ tick 512) and reset conformance remain the offline gates.
+    # No live USB-JTAG re-capture this session.
+    drift_ack: 2026-07-27
 
   - id: nucleo-l476rg
     doc: docs/boards/nucleo-l476rg.md
@@ -1148,7 +1153,12 @@ boards:
     # branches (encodings pinned by xtensa-esp32s3-elf-as HW oracle). Register
     # maps, reset values and MMIO paths untouched; S3/C3 silicon differentials,
     # ws2812_rmt, ssd1306 + 316 Xtensa CPU tests pass. No live re-capture.
-    drift_ack: 2026-07-25
+    # 2026-07-27: production-path walk-free (configure_xtensa_esp32s3 +
+    # recompute_walk_deletable) and Class-B scheduler migration for the S3
+    # peripheral bank (tick-512 inventory). Reset-state windows and RMT
+    # clock-gated anchor unchanged; esp32s3_walk_differential + reset
+    # conformance remain offline gates. No S3 board attached; no live re-capture.
+    drift_ack: 2026-07-27
     models:
       - crates/core/src/peripherals/esp32s3
       - crates/core/src/peripherals/esp_xtensa_common

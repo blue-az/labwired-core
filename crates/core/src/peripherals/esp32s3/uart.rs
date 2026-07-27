@@ -51,7 +51,9 @@
 //! HW-verified (JTAG): after the same firmware runs, UART0 CLKDIV/CONF0/CONF1
 //! read back byte-identical to real ESP32-S3 silicon.
 
-use crate::{Peripheral, PeripheralTickResult, SimResult};
+use crate::{CycleClock, Peripheral, PeripheralTickResult, SimResult};
+
+const UART_WAKE_TOKEN: u32 = 1;
 use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::io::{self, Write};
@@ -233,6 +235,10 @@ pub struct Esp32s3Uart {
     drain_accum: u64,
     /// True while TX bytes are in flight (so emptying is a TX_DONE edge).
     tx_active: bool,
+    /// Bus-published cycle clock (walk-free).
+    clock: Option<CycleClock>,
+    /// True while a TX-drain event is armed on the scheduler.
+    scheduled: bool,
 }
 
 impl std::fmt::Debug for Esp32s3Uart {
@@ -267,6 +273,9 @@ impl Esp32s3Uart {
             int_raw_sticky: 0,
             drain_accum: 0,
             tx_active: false,
+
+            clock: None,
+            scheduled: false,
         }
     }
 
@@ -497,6 +506,61 @@ impl Peripheral for Esp32s3Uart {
                 None
             },
             ..PeripheralTickResult::default()
+        }
+    }
+
+    fn uses_scheduler(&self) -> bool {
+        cfg!(feature = "event-scheduler") && self.clock.is_some()
+    }
+
+    fn needs_legacy_walk(&self) -> bool {
+        !self.uses_scheduler()
+    }
+
+    fn attach_cycle_clock(&mut self, clock: CycleClock) {
+        self.clock = Some(clock);
+    }
+
+    fn matrix_irq_sources_into(&self, out: &mut Vec<u32>) {
+        if self.int_raw() & self.reg(OFF_INT_ENA) != 0 {
+            out.push(self.source_id);
+        }
+    }
+
+    fn take_scheduled_events(&mut self) -> Vec<(u64, u32)> {
+        if !self.uses_scheduler() {
+            return Vec::new();
+        }
+        // Pace TX while the FIFO has data; level IRQs ride matrix export.
+        if !self.tx_fifo.is_empty() && !self.scheduled {
+            self.scheduled = true;
+            let delay = self.cycles_per_byte().max(1);
+            return vec![(delay, UART_WAKE_TOKEN)];
+        }
+        Vec::new()
+    }
+
+    fn on_event(
+        &mut self,
+        _event_token: u32,
+        _sched: &mut crate::sched::EventScheduler,
+        _bus: &mut dyn crate::Bus,
+    ) -> crate::sched::EventResult {
+        // Drain one byte (or whatever tick would drain at this cadence).
+        let per_byte = self.cycles_per_byte().max(1);
+        // Simulate `per_byte` cycles of drain accum so one byte shifts out.
+        self.drain_accum = per_byte;
+        let _ = self.tick();
+        let keep = !self.tx_fifo.is_empty();
+        self.scheduled = keep;
+        let mut explicit_irqs = Vec::new();
+        if self.int_raw() & self.reg(OFF_INT_ENA) != 0 {
+            explicit_irqs.push(self.source_id);
+        }
+        crate::sched::EventResult {
+            explicit_irqs,
+            reschedule_delay: keep.then_some(per_byte),
+            ..Default::default()
         }
     }
 
