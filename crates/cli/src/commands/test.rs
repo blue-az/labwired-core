@@ -70,19 +70,8 @@ use super::esp32_boot_state::resolve_esp_partitions_bin;
 /// chip family with an ELF-less faithful rom-boot machine). Reads the manifest
 /// and its referenced chip descriptor; any load failure → false (fall back to
 /// requiring firmware). Mirrors the C3 detection used on the fast-boot path.
-fn system_manifest_is_esp32c3(sys_path: &std::path::Path) -> bool {
-    labwired_config::SystemManifest::from_file(sys_path)
-        .ok()
-        .and_then(|m| {
-            let chip_path = sys_path
-                .parent()
-                .unwrap_or_else(|| std::path::Path::new("."))
-                .join(&m.chip);
-            labwired_config::ChipDescriptor::from_file(&chip_path)
-                .ok()
-                .map(|c| c.name == "esp32c3")
-        })
-        == Some(true)
+fn system_is_esp32c3(system: &labwired_config::ResolvedSystem) -> bool {
+    system.chip().map(|c| c.name == "esp32c3").unwrap_or(false)
 }
 
 /// Faithful ESP32-C3 (RISC-V) rom-boot with NO debug ELF. The flash image
@@ -103,6 +92,7 @@ fn run_c3_rom_boot_no_elf(
     args: &TestArgs,
     resolved_limits: &TestLimits,
     system_path: Option<&std::path::PathBuf>,
+    system: Option<&labwired_config::ResolvedSystem>,
     assertions: &[TestAssertion],
     faults: &[labwired_config::FaultSpec],
     require_fault_fired: bool,
@@ -111,28 +101,19 @@ fn run_c3_rom_boot_no_elf(
 ) -> ExitCode {
     // Build the from_config bus (peripherals + external devices) exactly as the
     // ELF rom-boot path does before build_c3_rom_boot_machine.
-    let mut bus =
-        match labwired_core::system::builder::build_system_bus(system_path.map(|p| p.as_path())) {
-            Ok(bus) => bus,
-            Err(e) => {
-                let msg = format!("{:#}", e);
-                error!("{}", msg);
-                write_config_error_outputs(
-                    args,
-                    None,
-                    system_path,
-                    None,
-                    Some(resolved_limits),
-                    msg,
-                );
-                return ExitCode::from(EXIT_CONFIG_ERROR);
-            }
-        };
+    let mut bus = match labwired_core::system::builder::build_system_bus(system) {
+        Ok(bus) => bus,
+        Err(e) => {
+            let msg = format!("{:#}", e);
+            error!("{}", msg);
+            write_config_error_outputs(args, None, system_path, None, Some(resolved_limits), msg);
+            return ExitCode::from(EXIT_CONFIG_ERROR);
+        }
+    };
 
     // Load the manifest once: it drives both the UART sink selection (debug_uart)
     // and — the universal WiFi adapter — the `wifi_ap` attach below.
-    let manifest_opt =
-        system_path.and_then(|path| labwired_config::SystemManifest::from_file(path).ok());
+    let manifest_opt = system.map(|s| s.manifest.clone());
     let debug_uart = manifest_opt.as_ref().and_then(|m| m.debug_uart.clone());
     // Seed the station eFuse MAC when a `wifi_ap` is present so the C3 stays
     // associated (a zero eFuse MAC associates but drops); None otherwise keeps
@@ -336,6 +317,13 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
         }
     };
 
+    // `inputs.chip` names a built-in chip for firmware with nothing wired to it.
+    // It is read before the destructuring match because only the 1.0 schema has it.
+    let script_chip = match &loaded {
+        LoadedTestScript::V1_0(script) => script.inputs.chip.clone(),
+        _ => None,
+    };
+
     let (
         script_firmware,
         script_system,
@@ -493,6 +481,31 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
             .map(|s| resolve_script_path(&args.script, s))
     });
 
+    // Resolve the system once, from either a manifest file or an `inputs.chip`
+    // name. Every site below that needs the chip, the debug UART, or the wifi
+    // AP reads it from here instead of re-parsing the manifest.
+    let resolved_system = match (&system_path, &script_chip) {
+        (Some(path), _) => match labwired_config::ResolvedSystem::from_manifest_file(path) {
+            Ok(s) => Some(s),
+            Err(e) => {
+                let msg = format!("Failed to load system manifest {path:?}: {e:#}");
+                error!("{}", msg);
+                write_config_error_outputs(&args, None, Some(path), None, None, msg);
+                return ExitCode::from(EXIT_CONFIG_ERROR);
+            }
+        },
+        (None, Some(chip)) => match labwired_config::ResolvedSystem::from_builtin_chip(chip) {
+            Ok(s) => Some(s),
+            Err(e) => {
+                let msg = format!("{e:#}");
+                error!("{}", msg);
+                write_config_error_outputs(&args, None, None, None, None, msg);
+                return ExitCode::from(EXIT_CONFIG_ERROR);
+            }
+        },
+        (None, None) => None,
+    };
+
     // Resolve the firmware source. Normally an ELF is required (via --firmware or
     // inputs.firmware). The ONE exception is the faithful ESP32-C3 (RISC-V)
     // rom-boot path: the flash image (LABWIRED_ESP32C3_FLASH) is the program the
@@ -514,9 +527,9 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
     let no_elf_rom_boot = firmware_path_opt.is_none()
         && (args.rom_boot || args.resume_snapshot.is_some())
         && std::env::var("LABWIRED_ESP32C3_FLASH").is_ok()
-        && system_path
-            .as_deref()
-            .map(system_manifest_is_esp32c3)
+        && resolved_system
+            .as_ref()
+            .map(system_is_esp32c3)
             .unwrap_or(false);
 
     if no_elf_rom_boot {
@@ -528,6 +541,7 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
             &args,
             &resolved_limits,
             system_path.as_ref(),
+            resolved_system.as_ref(),
             &assertions,
             &faults,
             require_fault_fired,
@@ -594,22 +608,14 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
     // `build_esp32_system_from_manifest` path that calls configure + attach
     // together, before falling through to `build_system_bus` for all other
     // architectures. The parsed manifest is reused so the file is read only once.
-    let esp32_manifest: Option<labwired_config::SystemManifest> =
-        if let Some(sys_path) = system_path.as_deref() {
-            labwired_config::SystemManifest::from_file(sys_path)
-                .ok()
-                .filter(|m| {
-                    let chip_path = sys_path
-                        .parent()
-                        .unwrap_or_else(|| std::path::Path::new("."))
-                        .join(&m.chip);
-                    labwired_config::ChipDescriptor::from_file(&chip_path)
-                        .map(|c| c.arch == labwired_config::Arch::Xtensa)
-                        .unwrap_or(false)
-                })
-        } else {
-            None
-        };
+    let esp32_manifest: Option<labwired_config::SystemManifest> = resolved_system
+        .as_ref()
+        .filter(|s| {
+            s.chip()
+                .map(|c| c.arch == labwired_config::Arch::Xtensa)
+                .unwrap_or(false)
+        })
+        .map(|s| s.manifest.clone());
     let is_xtensa = esp32_manifest.is_some();
 
     // For Xtensa, short-circuit: build bus + CPU together via build_esp32_system_from_manifest.
@@ -666,11 +672,10 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
             // classic ESP32 stays on the legacy fast-boot (its rom-boot is a
             // separate task).
             let is_esp32s3 = {
-                let chip_path = sys_path
+                let chip_dir = sys_path
                     .parent()
-                    .unwrap_or_else(|| std::path::Path::new("."))
-                    .join(&manifest.chip);
-                labwired_config::ChipDescriptor::from_file(&chip_path)
+                    .unwrap_or_else(|| std::path::Path::new("."));
+                labwired_config::ChipDescriptor::resolve(&manifest.chip, chip_dir)
                     .map(|c| c.name == "esp32s3")
                     .unwrap_or(false)
             };
@@ -1133,7 +1138,7 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
         }
     }
 
-    let mut bus = match labwired_core::system::builder::build_system_bus(system_path.as_deref()) {
+    let mut bus = match labwired_core::system::builder::build_system_bus(resolved_system.as_ref()) {
         Ok(bus) => bus,
         Err(e) => {
             let msg = format!("{:#}", e);
@@ -1172,11 +1177,10 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
             labwired_config::SystemManifest::from_file(sys_path)
                 .ok()
                 .and_then(|m| {
-                    let chip_path = sys_path
+                    let chip_dir = sys_path
                         .parent()
-                        .unwrap_or_else(|| std::path::Path::new("."))
-                        .join(&m.chip);
-                    labwired_config::ChipDescriptor::from_file(&chip_path)
+                        .unwrap_or_else(|| std::path::Path::new("."));
+                    labwired_config::ChipDescriptor::resolve(&m.chip, chip_dir)
                         .ok()
                         .map(|c| c.name == "esp32c3")
                 })
@@ -1331,11 +1335,11 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
                 }
                 if let Some(sys_path) = system_path.as_ref() {
                     if let Ok(manifest) = labwired_config::SystemManifest::from_file(sys_path) {
-                        let chip_path = sys_path
+                        let chip_dir = sys_path
                             .parent()
                             .unwrap_or_else(|| std::path::Path::new("."))
-                            .join(&manifest.chip);
-                        if let Ok(chip) = labwired_config::ChipDescriptor::from_file(&chip_path) {
+                            ;
+                        if let Ok(chip) = labwired_config::ChipDescriptor::resolve(&manifest.chip, chip_dir) {
                             if let Ok(ram_sz) = labwired_config::parse_size(&chip.ram.size) {
                                 let mut sp_top = (chip.ram.base + ram_sz) as u32;
                                 // ESP32-C3 boot stack placement:

@@ -982,7 +982,24 @@ pub(crate) fn run_interactive(cli: Cli) -> ExitCode {
     };
 
     let system_path = cli.system.clone();
-    let bus = match labwired_core::system::builder::build_system_bus(system_path.as_deref()) {
+    let resolved_system = match system_path
+        .as_deref()
+        .map(labwired_config::ResolvedSystem::from_manifest_file)
+        .transpose()
+    {
+        Ok(s) => s,
+        Err(e) => {
+            emit_error(
+                cli.json,
+                "ConfigError",
+                format!("Failed to load system manifest: {e:#}"),
+                None,
+                EXIT_CONFIG_ERROR,
+            );
+            return ExitCode::from(EXIT_CONFIG_ERROR);
+        }
+    };
+    let bus = match labwired_core::system::builder::build_system_bus(resolved_system.as_ref()) {
         Ok(bus) => bus,
         Err(e) => {
             emit_error(
@@ -1023,11 +1040,8 @@ pub(crate) fn run_interactive(cli: Cli) -> ExitCode {
     let cpu_arch = if let Some(sys_path) = &system_path {
         match labwired_config::SystemManifest::from_file(sys_path) {
             Ok(manifest) => {
-                let chip_path = sys_path
-                    .parent()
-                    .unwrap_or_else(|| Path::new("."))
-                    .join(&manifest.chip);
-                match labwired_config::ChipDescriptor::from_file(&chip_path) {
+                let chip_dir = sys_path.parent().unwrap_or_else(|| Path::new("."));
+                match labwired_config::ChipDescriptor::resolve(&manifest.chip, chip_dir) {
                     Ok(c) => c.arch,
                     Err(e) => {
                         emit_error(
@@ -1035,7 +1049,7 @@ pub(crate) fn run_interactive(cli: Cli) -> ExitCode {
                             "ConfigError",
                             format!("Failed to parse chip descriptor: {:#}", e),
                             Some(serde_json::json!({
-                                "chip_path": chip_path.display().to_string(),
+                                "chip": manifest.chip.clone(),
                             })),
                             EXIT_CONFIG_ERROR,
                         );

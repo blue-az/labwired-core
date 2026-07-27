@@ -24,7 +24,7 @@ mod can_devices;
 mod construct;
 mod declarative_device;
 mod device_hooks;
-mod embedded_descriptors;
+pub(crate) mod embedded_descriptors;
 mod faults;
 mod from_config;
 mod mmio_activity;
