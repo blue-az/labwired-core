@@ -107,6 +107,7 @@ fn run_c3_rom_boot_no_elf(
     faults: &[labwired_config::FaultSpec],
     require_fault_fired: bool,
     stimuli: &[labwired_config::StimulusSpec],
+    uart_injections: &[labwired_config::UartInjectionSpec],
 ) -> ExitCode {
     // Build the from_config bus (peripherals + external devices) exactly as the
     // ELF rom-boot path does before build_c3_rom_boot_machine.
@@ -268,6 +269,7 @@ fn run_c3_rom_boot_no_elf(
         require_fault_fired,
         fault_evidence,
         stimuli,
+        uart_injections,
         // rom-boot is never JIT-eligible (it forces cycle-accurate stepping).
         false,
     )
@@ -350,6 +352,7 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
         faults,
         verdict,
         stimuli,
+        uart_injections,
     ) = match loaded {
         LoadedTestScript::V1_0(script) => (
             Some(script.inputs.firmware),
@@ -367,6 +370,7 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
             script.faults,
             script.verdict,
             script.stimuli,
+            script.uart_injections,
         ),
         LoadedTestScript::LegacyV1(script) => {
             tracing::warn!(
@@ -387,6 +391,7 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
                 script.assertions,
                 Vec::new(),
                 None,
+                Vec::new(),
                 Vec::new(),
             )
         }
@@ -527,6 +532,7 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
             &faults,
             require_fault_fired,
             &stimuli,
+            &uart_injections,
         );
         // Best-effort Pro-tier metering (no ELF → hash the empty program; the
         // no-key MCP path never meters). Mirrors the ELF paths' tail metering.
@@ -1062,6 +1068,7 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
                 require_fault_fired,
                 fault_evidence,
                 &stimuli,
+                &uart_injections,
                 // Xtensa (ESP32) path: never JIT-eligible (the RV32IMC JIT is
                 // RISC-V only), so keep the exact current observer-based metrics.
                 false,
@@ -1263,6 +1270,7 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
                 require_fault_fired,
                 fault_evidence,
                 &stimuli,
+                &uart_injections,
                 jit_eligible,
             )
         }};
