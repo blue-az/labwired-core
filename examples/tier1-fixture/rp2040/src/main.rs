@@ -76,6 +76,18 @@ const SR_RNE: u32 = 1 << 2; // RX FIFO not empty
 
 // ── I2C0 (rp2040_i2c, DW_apb_i2c, datasheet §4.3, base 0x40044000) ────────
 const I2C0_BASE: u32 = 0x4004_4000;
+
+// PWM (datasheet §4.5): 8 slices, 5 words each at stride 0x14, then the global
+// EN / INT registers. Offsets straight from the datasheet register map.
+const PWM_BASE: u32 = 0x4005_0000;
+const PWM_CH0_CSR: u32 = PWM_BASE;
+const PWM_CH0_DIV: u32 = PWM_BASE + 0x04;
+const PWM_CH0_CTR: u32 = PWM_BASE + 0x08;
+const PWM_CH0_CC: u32 = PWM_BASE + 0x0C;
+const PWM_CH0_TOP: u32 = PWM_BASE + 0x10;
+const PWM_CH1_CSR: u32 = PWM_BASE + 0x14;
+const PWM_EN: u32 = PWM_BASE + 0xA0;
+const PWM_INTR: u32 = PWM_BASE + 0xA4;
 const IC_DATA_CMD: u32 = I2C0_BASE + 0x10;
 const IC_RAW_INTR_STAT: u32 = I2C0_BASE + 0x34;
 const IC_ENABLE: u32 = I2C0_BASE + 0x6c;
@@ -107,6 +119,59 @@ fn uart_write_str(s: &str) {
 fn uart_write_line(s: &str) {
     uart_write_str(s);
     uart_write_str("\r\n");
+}
+
+// ── pwm: a slice counts on its divided clock, wraps at TOP and latches INTR ──
+fn check_pwm() -> Result<(), &'static str> {
+    // Reset values first: TOP all-ones and DIV = 1.0 (datasheet §4.5.3).
+    if reg_read(PWM_CH0_TOP) != 0xFFFF {
+        return Err("pwm-top-reset");
+    }
+    if reg_read(PWM_CH0_DIV) != 0x010 {
+        return Err("pwm-div-reset");
+    }
+
+    // A disabled slice must not count.
+    let idle = reg_read(PWM_CH0_CTR);
+    for _ in 0..64 {
+        core::hint::spin_loop();
+    }
+    if reg_read(PWM_CH0_CTR) != idle {
+        return Err("pwm-counts-while-disabled");
+    }
+
+    // Compare + wrap values must round-trip so duty-cycle maths is meaningful.
+    reg_write(PWM_CH0_CC, 0x0004_0008);
+    if reg_read(PWM_CH0_CC) != 0x0004_0008 {
+        return Err("pwm-cc-readback");
+    }
+
+    // Arm slice 0 with a short wrap, enable via the EN alias, and require both
+    // a moving counter and a latched wrap interrupt.
+    reg_write(PWM_CH0_TOP, 0x000F);
+    reg_write(PWM_INTR, 0xFF);
+    reg_write(PWM_EN, 1 << 0);
+    if reg_read(PWM_CH0_CSR) & 1 == 0 {
+        return Err("pwm-en-alias");
+    }
+    for _ in 0..512 {
+        core::hint::spin_loop();
+    }
+    if reg_read(PWM_CH0_CTR) > 0x000F {
+        return Err("pwm-ctr-above-top");
+    }
+    if reg_read(PWM_INTR) & 1 == 0 {
+        return Err("pwm-no-wrap");
+    }
+
+    // Slice 1 was never enabled, so it must be untouched — proving the slices
+    // are independent rather than one shared counter.
+    if reg_read(PWM_CH1_CSR) & 1 != 0 {
+        return Err("pwm-slice-bleed");
+    }
+
+    reg_write(PWM_EN, 0);
+    Ok(())
 }
 
 fn report(class: &str, result: Result<(), &'static str>) {
@@ -222,6 +287,7 @@ fn main() -> ! {
     report("gpio", check_gpio());
     report("spi", check_spi());
     report("i2c", check_i2c());
+    report("pwm", check_pwm());
 
     // uart: implicit via TIER1 done — no explicit line needed.
     uart_write_line("TIER1 done");

@@ -76,6 +76,15 @@ peripherals:
     type: "stub"
     base_address: 0x40058000
     size: "4KB"
+  # PWM: 8 independent slices (datasheet §4.5). Behavioural model — each slice
+  # counts on its own 8.4 fixed-point divided clock, wraps at TOP and latches
+  # its INTR bit; PWM_IRQ_WRAP (NVIC 4) is held while a masked wrap is pending.
+  # Phase-correct mode ramps up and back down with period 2*TOP.
+  - id: "pwm"
+    type: "rp2040_pwm"
+    base_address: 0x40050000
+    size: "4KB"
+    irq: 4
   # TIMER: 64-bit free-running microsecond timer (datasheet §4.6). Behavioural
   # model — the counter advances on every tick, sampled via TIMERAWL/TIMERAWH
   # (and TIMELR/TIMEHR); PAUSE freezes it.

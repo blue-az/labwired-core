@@ -24,8 +24,8 @@
     "source_rev": "0f6c3f549f73eefb0adc4fc958490786fb646ac4"
   },
   "rp2040.elf": {
-    "sha256": "ce1865dcb9b6f581ea662642972aa809f09dea36e659b16eb92e4d74c92750d2",
-    "source_rev": "e8a9047f7917bd6c5bc8d160e98c6d6e1c74fdac"
+    "sha256": "49e30c56fb68d34eee04c6dc548fae71a21a69d5c495aa93024bdcde1d5adb14",
+    "source_rev": "cbb517466dee65e18a4bb14ad3ae5d324db8d7be"
   },
   "stm32f103.elf": {
     "sha256": "754633e2eabb4df988dd2a1bb5a63eab727e1cd209c433778bce603e91bdb6e2",
