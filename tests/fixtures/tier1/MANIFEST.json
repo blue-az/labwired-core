@@ -24,8 +24,8 @@
     "source_rev": "0f6c3f549f73eefb0adc4fc958490786fb646ac4"
   },
   "rp2040.elf": {
-    "sha256": "ce1865dcb9b6f581ea662642972aa809f09dea36e659b16eb92e4d74c92750d2",
-    "source_rev": "e8a9047f7917bd6c5bc8d160e98c6d6e1c74fdac"
+    "sha256": "da58a9c8bbc45a30b7aabcfa8e06672a1a28f077dffc137b8549ff7ed62a4493",
+    "source_rev": "deffb92f00d2d9ddb561d36b8ce371662d630674"
   },
   "stm32f103.elf": {
     "sha256": "754633e2eabb4df988dd2a1bb5a63eab727e1cd209c433778bce603e91bdb6e2",
@@ -40,8 +40,8 @@
     "source_rev": "e8a9047f7917bd6c5bc8d160e98c6d6e1c74fdac"
   },
   "stm32g474re.elf": {
-    "sha256": "ed0dd6c5757be6702a168602674238acc8237a662a791c8a327d91adc16d3eed",
-    "source_rev": "e8a9047f7917bd6c5bc8d160e98c6d6e1c74fdac"
+    "sha256": "2d50d07e99b66886d42745520825128c06cc5e3c0d1652227ef23eb34ef58f71",
+    "source_rev": "6f023362a1b188021ddf424dcc31f899cd9cb9a6"
   },
   "stm32h563.elf": {
     "sha256": "56bd825219605f6dafaf38ca105917e5dd358c4c5b5f8a340e8cba564f0368fa",
@@ -60,8 +60,8 @@
     "source_rev": "e8a9047f7917bd6c5bc8d160e98c6d6e1c74fdac"
   },
   "stm32wb55.elf": {
-    "sha256": "c070a55a3d68751ddfdeeded571960a91531fe1da1821d13b43c6e8e3e8f8be8",
-    "source_rev": "e8a9047f7917bd6c5bc8d160e98c6d6e1c74fdac"
+    "sha256": "c521bb95257f1e179f3d38400aebc3180997ad8e8f6f63e906d20f9e6fdb5c00",
+    "source_rev": "6f023362a1b188021ddf424dcc31f899cd9cb9a6"
   },
   "stm32wba52.elf": {
     "sha256": "cfd2468b0522754f570c3af8a92b612d6224700a59512d0cd8adca8fb0122742",

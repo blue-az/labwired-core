@@ -53,10 +53,18 @@ const DMA1_BASE: u32 = 0x4002_0000; // type dma (Dma1, 7ch)
 const IWDG_BASE: u32 = 0x4000_3000; // type iwdg
 const RTC_BASE: u32 = 0x4000_2800; // type rtc (stm32l4 layout)
 
-// V2 RCC clock-enable registers (offsets the stm32v2 RCC model exposes).
-const RCC_AHB2ENR: u32 = RCC_BASE + 0x8C;
-const RCC_APB1ENR: u32 = RCC_BASE + 0x9C; // APB1LENR
-const RCC_APB2ENR: u32 = RCC_BASE + 0xA4;
+// G4 RCC clock-enable registers — RM0440 §7.4 / CMSIS stm32g474xx.h.
+//
+// These used to be the H5-style stm32v2 offsets (0x8C/0x9C/0xA4) because the
+// chip yaml wrongly gave g474 the `stm32v2` RCC profile, and this fixture was
+// written to match the MODEL rather than the datasheet. #660 gave G4 its own
+// RM0440 layout, at which point the fixture was writing clock enables to
+// addresses that are not enable registers on real G4 silicon: nothing got
+// clocked and clock/timer/pwm/i2c/spi/adc/rtc all failed. The datasheet is the
+// oracle, so the fixture moves — not the model.
+const RCC_AHB2ENR: u32 = RCC_BASE + 0x4C;
+const RCC_APB1ENR: u32 = RCC_BASE + 0x58; // APB1ENR1
+const RCC_APB2ENR: u32 = RCC_BASE + 0x60;
 
 // NVIC (installed for every Cortex-M chip; declared in the yaml as `nvic`).
 const NVIC_ISER0: u32 = 0xE000_E100;
@@ -126,10 +134,10 @@ fn report(class: &[u8], result: Result<(), &'static [u8]>) {
 
 // ── Checks ──────────────────────────────────────────────────────────────────
 
-/// clock: V2 (H5-style) RCC. HSI is on+ready out of reset; HSEON (bit 16)
+/// clock: G4 RCC (RM0440 §7.4). HSI is on+ready out of reset; HSEON (bit 16)
 /// must latch HSERDY (bit 17); SW→SWS in CFGR @ 0x08 is gated on the source
 /// being ready (the RCC completes the SYSCLK switch only once HSERDY is set);
-/// AHB2ENR @ 0x8C
+/// AHB2ENR @ 0x4C
 /// round-trips GPIO port enables.
 fn check_clock() -> Result<(), &'static [u8]> {
     if rd32(RCC_BASE) & (1 << 1) == 0 {
