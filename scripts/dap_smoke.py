@@ -147,10 +147,20 @@ def main() -> int:
     client.close()
 
     # ── Assertions ────────────────────────────────────────────────────────────
-    register_names = {name for name, _ in cpu_registers}
-    for required in ("PC", "SP"):
-        if required not in register_names:
-            failures.append(f"CPU register {required} missing from the Registers scope")
+    # Register naming is architecture-specific: Cortex-M exposes R0..R12/SP/LR/PC,
+    # RISC-V exposes x0..x31/pc (x2 being the stack pointer). Assert the two
+    # registers a debugger is useless without, by any of their spellings.
+    register_names = {name.lower() for name, _ in cpu_registers}
+    required_any = {
+        "program counter": {"pc"},
+        "stack pointer": {"sp", "x2"},
+    }
+    for label, spellings in required_any.items():
+        if not (register_names & spellings):
+            failures.append(
+                f"{label} missing from the Registers scope "
+                f"(looked for {'/'.join(sorted(spellings))}; got {len(cpu_registers)} registers)"
+            )
 
     if not saw_peripheral_response:
         failures.append("no readPeripherals response")
