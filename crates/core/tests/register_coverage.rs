@@ -169,7 +169,7 @@ fn probe_register(bus: &mut SystemBus, addr: u64, reset: u32) -> Probe {
 /// Returns `None` if the SVD is missing or svd-parser cannot read it.
 fn svd_registers(svd_path: &str) -> Option<Vec<(u64, u32)>> {
     let xml = std::fs::read_to_string(root(svd_path)).ok()?;
-    let device = svd_parser::parse(&xml).ok()?;
+    let device = svd_ingestor::parse_svd(&xml).ok()?;
     let mut out = Vec::new();
     for peripheral in &device.peripherals {
         let base = peripheral.base_address;

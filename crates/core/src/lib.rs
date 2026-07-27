@@ -1138,6 +1138,25 @@ pub trait DebugControl {
     fn read_memory(&self, addr: u32, len: usize) -> SimResult<Vec<u8>>;
     fn write_memory(&mut self, addr: u32, data: &[u8]) -> SimResult<()>;
 
+    /// Side-effect-free decode of peripheral state, for debugger and agent views.
+    ///
+    /// Prefer this over [`Self::read_memory`] for anything a *human is merely
+    /// looking at*. `read_memory` goes through the real bus read path, so it
+    /// fires read side effects — a read-to-clear status register is cleared by
+    /// the act of displaying it, and the firmware under test then misses the
+    /// event. `inspect` uses `peek` throughout and cannot perturb the run.
+    fn inspect(
+        &self,
+        name: Option<&str>,
+        opts: &crate::inspect::InspectOpts,
+    ) -> crate::inspect::MachineInspect;
+
+    /// Side-effect-free raw read. Bytes outside any mapped region or peripheral
+    /// window come back as [`crate::inspect::PeekByte::Unmapped`] rather than a
+    /// silent zero, so a debugger can render unmodeled space honestly instead of
+    /// showing a convincing `0x00000000`.
+    fn peek(&self, addr: u64, len: usize) -> crate::inspect::PeekResult;
+
     fn get_pc(&self) -> u32;
     fn set_pc(&mut self, addr: u32);
     fn get_register_names(&self) -> Vec<String>;
@@ -2480,6 +2499,21 @@ impl<C: Cpu> DebugControl for Machine<C> {
             self.bus.write_u8((addr as u64) + (i as u64), *byte)?;
         }
         Ok(())
+    }
+
+    // Both forward to the inherent methods of the same name. Exposing them on
+    // the trait is what lets a `Box<dyn DebugControl>` holder (the DAP server)
+    // reach the side-effect-free surface that MCP and the playground already use.
+    fn inspect(
+        &self,
+        name: Option<&str>,
+        opts: &crate::inspect::InspectOpts,
+    ) -> crate::inspect::MachineInspect {
+        Machine::inspect(self, name, opts)
+    }
+
+    fn peek(&self, addr: u64, len: usize) -> crate::inspect::PeekResult {
+        Machine::peek(self, addr, len)
     }
 
     fn get_pc(&self) -> u32 {
