@@ -1019,21 +1019,31 @@ impl Peripheral for Nrf52Radio {
         _sched: &mut crate::sched::EventScheduler,
         bus: &mut dyn crate::Bus,
     ) -> crate::sched::EventResult {
+        // EasyDMA path (token 1, or any event that still has a pending DMA).
+        // Machine may also run `tick_with_bus` via `bus_tick_indices` in the
+        // same boundary *before* this drain — so the countdown can already be
+        // armed when we enter here with pending_tx_dma cleared.
         if event_token == 1 || self.pending_tx_dma || self.pending_rx_dma {
-            // Run EasyDMA first (mirrors bus_tick-before-tick ordering).
             self.tick_with_bus(bus);
         }
-        // Advance countdown / drain pending event flags (one tick's worth,
-        // or the full remaining countdown when the deadline has arrived).
-        let res = if let Some(n) = self.tx_or_rx_cycles_remaining {
+
+        // Multi-cycle bit-rate air time: commit the END deadline and return.
+        // Pin remaining to 1 so the delayed wake fires ADDRESS/PAYLOAD/END
+        // via `tick()` without re-arming another (n-1) forever. Collapsing
+        // on this same event used to make END fire immediately and hide
+        // MODE/length timing under the scheduler.
+        if let Some(n) = self.tx_or_rx_cycles_remaining {
             if n > 1 {
-                // Jump to the deadline in one step so ADDRESS/PAYLOAD/END fire.
                 self.tx_or_rx_cycles_remaining = Some(1);
+                return crate::sched::EventResult {
+                    reschedule_delay: Some((n as u64).saturating_sub(1)),
+                    ..Default::default()
+                };
             }
-            self.tick()
-        } else {
-            self.tick()
-        };
+        }
+
+        // remaining is None or 1: drain READY / DISABLED / final air tick.
+        let res = self.tick();
         let more = self.pending_tx_dma
             || self.pending_rx_dma
             || self.tx_or_rx_cycles_remaining.is_some()

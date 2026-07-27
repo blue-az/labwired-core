@@ -20,8 +20,9 @@
 //! 2. RTC0 COMPARE[0] — EVTEN+INTEN compare path.
 //! 3. RTC0 COUNTER poll-only — no INTEN/EVTEN; read-side CycleClock sync must
 //!    advance COUNTER under tick-512 batching and match walk@1 within one tick.
-//! 4. RADIO TXEN → START → END — delay-0 / short countdown identity (bit-rate
-//!    full matrix remains interim on the scoreboard).
+//! 4. RADIO TXEN → START → END — walk@1≡sched@512 cycle identity.
+//! 5. RADIO Ble_1Mbit bit-time — END at model air cycles (±1) and length
+//!    scaling; other MODEs remain interim on the scoreboard.
 //!
 //! Requires `--features event-scheduler`.
 
@@ -416,19 +417,31 @@ const RADIO_PREFIX0: u64 = RADIO + 0x524;
 // SHORTS bit 0 = READY_START (PS table 224).
 const SHORT_READY_START: u32 = 1 << 0;
 
-fn plant_radio_tx_buf(bus: &mut SystemBus, base: u64) {
-    // Minimal S0 + LENGTH=1 + 1 payload byte (BLE-like layout).
+/// Model constants (see `Nrf52Radio::cycles_for_packet`): BLE_1Mbit = MODE 3
+/// → 8 cycles/byte; air time uses payload LENGTH + 3 CRC bytes.
+const RADIO_MODE_BLE_1MBIT: u32 = 0x3;
+const BLE_1MBIT_CYCLES_PER_BYTE: u64 = 8;
+/// Fixed overhead: TXEN→READY (1) + EasyDMA arm (1) before the air countdown.
+const RADIO_TX_CHAIN_OVERHEAD: u64 = 2;
+
+fn plant_radio_tx_buf_len(bus: &mut SystemBus, base: u64, payload_len: u8) {
+    // S0 + LENGTH + payload (BLE-like layout; matches unit-test PCNF0).
     bus.write_u8(base, 0x40).unwrap(); // S0
-    bus.write_u8(base + 1, 1).unwrap(); // LENGTH
-    bus.write_u8(base + 2, 0xA5).unwrap(); // payload
+    bus.write_u8(base + 1, payload_len).unwrap();
+    for i in 0..payload_len {
+        bus.write_u8(base + 2 + u64::from(i), 0xA5u8.wrapping_add(i))
+            .unwrap();
+    }
 }
 
-fn arm_radio_tx(machine: &mut Machine<CycleCpu>, buf: u64) {
-    plant_radio_tx_buf(&mut machine.bus, buf);
+fn arm_radio_tx_with_len(machine: &mut Machine<CycleCpu>, buf: u64, payload_len: u8) {
+    plant_radio_tx_buf_len(&mut machine.bus, buf, payload_len);
     machine.bus.write_u32(RADIO_FREQUENCY, 0x4E).unwrap(); // BLE adv ch 37
-    machine.bus.write_u32(RADIO_MODE, 0x3).unwrap(); // BLE_1Mbit
-    machine.bus.write_u32(RADIO_PCNF0, 0x0000_0108).unwrap(); // LFLEN=8 S0LEN=1
-    machine.bus.write_u32(RADIO_PCNF1, 0x0003_00FF).unwrap();
+    machine.bus.write_u32(RADIO_MODE, RADIO_MODE_BLE_1MBIT).unwrap();
+    // LFLEN=8, S0LEN=1 (same encoding as `nrf52/radio.rs` unit tests).
+    machine.bus.write_u32(RADIO_PCNF0, 0x0000_0108).unwrap();
+    // MAXLEN=0xFF, STATLEN=0 — air bytes = LENGTH + 3 CRC.
+    machine.bus.write_u32(RADIO_PCNF1, 0x0000_00FF).unwrap();
     machine.bus.write_u32(RADIO_BASE0, 0xCAFE_BABE).unwrap();
     machine.bus.write_u32(RADIO_PREFIX0, 0xDEAD).unwrap();
     machine.bus.write_u32(RADIO_PACKETPTR, buf as u32).unwrap();
@@ -438,16 +451,25 @@ fn arm_radio_tx(machine: &mut Machine<CycleCpu>, buf: u64) {
     machine.bus.write_u32(RADIO_TASKS_TXEN, 1).unwrap();
 }
 
+fn arm_radio_tx(machine: &mut Machine<CycleCpu>, buf: u64) {
+    arm_radio_tx_with_len(machine, buf, 1);
+}
+
+/// Model air time for BLE_1Mbit: `(payload_len + 3 CRC) × 8` cycles.
+fn ble_1mbit_air_cycles(payload_len: u8) -> u64 {
+    (u64::from(payload_len) + 3) * BLE_1MBIT_CYCLES_PER_BYTE
+}
+
 fn radio_end_done(m: &Machine<CycleCpu>) -> bool {
     m.bus.read_u32(RADIO_EVENTS_END).unwrap_or(0) != 0
 }
 
 /// RADIO TX start chain: TXEN + READY_START short → EVENTS_END.
-/// Interval 1 vs 512 must raise END and agree on completion cycle within 1
-/// for the default/short countdown path. Full bit-rate matrix is interim.
+/// Interval 1 vs 512 must raise END and agree on completion cycle within 1.
+/// Bit-rate scaling for fixed MODE is certified separately below.
 #[test]
 fn radio_tx_end_walk1_vs_sched512_cycle_identity() {
-    // Delay-0 READY + DMA + short bit-rate countdown → END well under 64.
+    // READY + DMA + BLE_1Mbit air for L=1 → (1+3)*8 = 32 + overhead.
     const BUDGET: u64 = 128;
     let buf = 0x2000_2000u64;
 
@@ -470,4 +492,62 @@ fn radio_tx_end_walk1_vs_sched512_cycle_identity() {
         "both lanes must latch EVENTS_END"
     );
     assert_cycle_identity(at_a, at_b, "RADIO TX→END");
+}
+
+/// Bit-time fidelity for **fixed MODE = Ble_1Mbit** only:
+/// 1. EVENTS_END at model air time ±1 cycle (plus fixed TXEN chain overhead).
+/// 2. Two payload lengths: Δcycles proportional to Δlength × 8 (±1).
+///
+/// Does **not** claim the full MODE matrix (2Mbit / LR / 802.15.4 remain interim).
+#[test]
+fn radio_ble_1mbit_bit_time_scales_with_length() {
+    const L1: u8 = 1;
+    const L2: u8 = 8;
+    // Overhead + air for L2: 2 + (8+3)*8 = 90; keep headroom.
+    const BUDGET: u64 = 256;
+    let buf = 0x2000_2000u64;
+
+    let run = |payload_len: u8, interval: u32| -> u64 {
+        let mut m = machine_at_interval(interval);
+        arm_radio_tx_with_len(&mut m, buf, payload_len);
+        let _ = m.bus.write_u32(RADIO_TASKS_START, 1);
+        advance_until(&mut m, BUDGET, radio_end_done).unwrap_or_else(|| {
+            panic!(
+                "EVENTS_END missing for L={payload_len} interval={interval} within {BUDGET}"
+            )
+        })
+    };
+
+    // Absolute model: END ≈ overhead + (L+3)*8, within ±1.
+    let at_l1_i1 = run(L1, 1);
+    let expected_l1 = RADIO_TX_CHAIN_OVERHEAD + ble_1mbit_air_cycles(L1);
+    let delta_abs = at_l1_i1.abs_diff(expected_l1);
+    assert!(
+        delta_abs <= 1,
+        "Ble_1Mbit L={L1}: END at {at_l1_i1}, model expected {expected_l1} (±1); \
+         air=(L+3)*{BLE_1MBIT_CYCLES_PER_BYTE}, overhead={RADIO_TX_CHAIN_OVERHEAD}"
+    );
+
+    // Walk@1 ≡ sched@512 for the same length (bit-time path, not just short).
+    let at_l1_i512 = run(L1, RECOMMENDED_TICK_INTERVAL);
+    assert_cycle_identity(at_l1_i1, at_l1_i512, "RADIO Ble_1Mbit L1 bit-time");
+
+    // Length scaling: ΔEND = (L2−L1)*8 within ±1.
+    let at_l2_i1 = run(L2, 1);
+    let expected_l2 = RADIO_TX_CHAIN_OVERHEAD + ble_1mbit_air_cycles(L2);
+    assert!(
+        at_l2_i1.abs_diff(expected_l2) <= 1,
+        "Ble_1Mbit L={L2}: END at {at_l2_i1}, model expected {expected_l2} (±1)"
+    );
+    let delta = at_l2_i1 as i64 - at_l1_i1 as i64;
+    let expected_delta = ((L2 - L1) as i64) * BLE_1MBIT_CYCLES_PER_BYTE as i64;
+    assert!(
+        (delta - expected_delta).unsigned_abs() <= 1,
+        "Ble_1Mbit length scaling: Δcycles L{L2}−L{L1} = {delta}, \
+         expected {expected_delta} (±1); at_l1={at_l1_i1} at_l2={at_l2_i1}"
+    );
+
+    // Sched@512 must scale the same way.
+    let at_l2_i512 = run(L2, RECOMMENDED_TICK_INTERVAL);
+    assert_cycle_identity(at_l2_i1, at_l2_i512, "RADIO Ble_1Mbit L2 bit-time");
 }
