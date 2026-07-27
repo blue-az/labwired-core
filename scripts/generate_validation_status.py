@@ -55,6 +55,18 @@ TIER_BADGE = {
 }
 
 
+def parse_iso(v: str) -> datetime:
+    """datetime.fromisoformat, but accepting the trailing 'Z' git emits for UTC.
+
+    `git log --format=%cI` renders UTC as '...T00:11:20Z'. Only Python 3.11+
+    accepts that suffix, so on the macOS system interpreter (3.9) every local
+    run of this script died in newest_commit_date() while CI's 3.12 passed —
+    the regeneration command the error message itself tells you to run was
+    impossible to run on a stock Mac. Normalise instead of requiring 3.11.
+    """
+    return datetime.fromisoformat(v[:-1] + "+00:00" if v.endswith("Z") else v)
+
+
 def newest_commit_date(paths: list[str]) -> date | None:
     """Newest committer date (YYYY-MM-DD) across the given repo paths, or None."""
     newest: date | None = None
@@ -73,7 +85,7 @@ def newest_commit_date(paths: list[str]) -> date | None:
         iso = out.stdout.strip()
         if not iso:
             continue
-        d = datetime.fromisoformat(iso).date()
+        d = parse_iso(iso).date()
         if newest is None or d > newest:
             newest = d
     return newest
@@ -84,7 +96,7 @@ def as_date(v) -> date | None:
         return None
     if isinstance(v, date):
         return v
-    return datetime.fromisoformat(str(v)).date()
+    return parse_iso(str(v)).date()
 
 
 def evaluate(board: dict) -> dict:
