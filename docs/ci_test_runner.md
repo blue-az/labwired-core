@@ -23,12 +23,31 @@ labwired test --firmware path/to/fw.elf --system system.yaml --script test.yaml
 schema_version: "1.0"
 inputs:
   firmware: "relative/or/absolute/path/to/fw.elf"
-  system: "optional/path/to/system.yaml"
+  chip: "stm32f103"
 limits:
   max_steps: 100000
 assertions:
   - uart_contains: "Hello"
 ```
+
+`inputs.chip` names one of the chips bundled with the CLI, for firmware with
+nothing wired to it. This is the whole configuration — there is no manifest to
+write and no chip descriptor to copy into your repository, so your test tracks
+our silicon model instead of freezing a copy of it. Run `labwired chips` for
+the available names.
+
+Firmware with external devices or board I/O uses `inputs.system` instead,
+pointing at a manifest:
+
+```yaml
+inputs:
+  firmware: "path/to/fw.elf"
+  system: "path/to/system.yaml"
+```
+
+A manifest's `chip:` field takes the same two forms: a built-in name, or a path
+to your own descriptor for silicon we do not ship. Setting both `inputs.chip`
+and `inputs.system` is an error.
 
 `--firmware` and `--system` are single-machine overrides only. They are not
 valid with an environment script.

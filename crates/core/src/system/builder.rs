@@ -9,19 +9,25 @@ use crate::cpu::xtensa_lx7::XtensaLx7;
 use std::path::Path;
 use tracing::info;
 
-/// Builds a SystemBus from a given system manifest path.
-/// If no path is provided, returns a default (empty/default) SystemBus.
-pub fn build_system_bus(system_path: Option<&Path>) -> anyhow::Result<SystemBus> {
-    let bus = if let Some(sys_path) = system_path {
-        info!("Loading system manifest: {:?}", sys_path);
-        let mut manifest = labwired_config::SystemManifest::from_file(sys_path)?;
-        let chip_path = sys_path
-            .parent()
-            .unwrap_or_else(|| Path::new("."))
-            .join(&manifest.chip);
-        manifest.chip = chip_path.to_string_lossy().into_owned();
-        info!("Loading chip descriptor: {:?}", chip_path);
-        let chip = labwired_config::ChipDescriptor::from_file(&chip_path)?;
+/// Builds a SystemBus from an already-resolved system.
+/// If none is provided, returns a default (empty/default) SystemBus.
+pub fn build_system_bus(
+    system: Option<&labwired_config::ResolvedSystem>,
+) -> anyhow::Result<SystemBus> {
+    let bus = if let Some(system) = system {
+        info!("Loading chip descriptor: {}", system.manifest.chip);
+        let chip = system.chip()?;
+        let mut manifest = system.manifest.clone();
+        // Peripheral descriptor paths inside a chip file are resolved relative
+        // to it, so a file-backed chip keeps its full path. A built-in name has
+        // no directory and is left as the name — its descriptors are embedded.
+        if !labwired_config::is_builtin_chip_spec(&manifest.chip) {
+            manifest.chip = system
+                .base_dir()
+                .join(&manifest.chip)
+                .to_string_lossy()
+                .into_owned();
+        }
         SystemBus::from_config(&chip, &manifest)?
     } else {
         info!("Using default hardware configuration");
@@ -62,12 +68,9 @@ pub fn build_esp32_system_from_manifest(
     manifest: &labwired_config::SystemManifest,
     system_path: &Path,
 ) -> anyhow::Result<(SystemBus, XtensaLx7, XtensaLx7)> {
-    let chip_path = system_path
-        .parent()
-        .unwrap_or_else(|| Path::new("."))
-        .join(&manifest.chip);
-    info!("Loading chip descriptor: {:?}", chip_path);
-    let _chip = labwired_config::ChipDescriptor::from_file(&chip_path)?;
+    let chip_dir = system_path.parent().unwrap_or_else(|| Path::new("."));
+    info!("Loading chip descriptor: {}", manifest.chip);
+    let _chip = labwired_config::ChipDescriptor::resolve(&manifest.chip, chip_dir)?;
 
     let mut bus = SystemBus::new();
     let pro_cpu = crate::system::xtensa::configure_xtensa_esp32(&mut bus);

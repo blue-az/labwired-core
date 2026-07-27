@@ -7,7 +7,7 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// Canonical device config v1 — the single JSON shape the agent builds and both
 /// engines load directly (Phase 1: parse + structural validation; resolve() is
@@ -291,7 +291,7 @@ pub struct WifiApManifest {
     pub serves: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct SystemManifest {
     #[serde(default = "default_schema_version")]
     pub schema_version: String,
@@ -621,6 +621,94 @@ impl ChipDescriptor {
             serde_yaml::from_str(&content).context("Failed to parse Chip Descriptor YAML")
         }
     }
+
+    /// Resolve a `chip:` field. A bare name (`stm32f103`) is one of the chips
+    /// bundled with the CLI; anything containing a separator or a YAML
+    /// extension is a path relative to `base_dir`, for custom silicon.
+    ///
+    /// Built-in names exist so a project onboarding LabWired does not have to
+    /// vendor a copy of our chip descriptor — a copy that silently keeps the
+    /// bugs we have since fixed.
+    pub fn resolve(spec: &str, base_dir: &Path) -> Result<Self> {
+        if is_builtin_chip_spec(spec) {
+            let yaml = embedded_chip_yaml(spec).ok_or_else(|| {
+                anyhow::anyhow!(
+                    "unknown built-in chip '{spec}'. Available: {}. \
+                     To use your own descriptor, give a path such as './chip.yaml'.",
+                    BUILTIN_CHIP_NAMES.join(", ")
+                )
+            })?;
+            return serde_yaml::from_str(yaml)
+                .with_context(|| format!("Failed to parse built-in chip descriptor '{spec}'"));
+        }
+        Self::from_file(base_dir.join(spec))
+    }
+}
+
+/// True when `spec` names a built-in chip rather than a descriptor file.
+pub fn is_builtin_chip_spec(spec: &str) -> bool {
+    !spec.contains('/')
+        && !spec.contains('\\')
+        && !spec.ends_with(".yaml")
+        && !spec.ends_with(".yml")
+        && !spec.ends_with(".json")
+}
+
+/// The chips bundled with the CLI, in the spelling a `chip:` field accepts.
+pub const BUILTIN_CHIP_NAMES: &[&str] = &[
+    "esp32",
+    "esp32c3",
+    "esp32s3",
+    "esp32s3-zero",
+    "mkw41z4",
+    "nrf52832",
+    "nrf52840",
+    "nrf5340",
+    "nrf54l15",
+    "rp2040",
+    "stm32f103",
+    "stm32f401",
+    "stm32f401cdu6",
+    "stm32f407",
+    "stm32f411ceu6",
+    "stm32g474re",
+    "stm32h563",
+    "stm32h735",
+    "stm32l073",
+    "stm32l476",
+    "stm32wb55",
+    "stm32wba52",
+];
+
+/// The embedded `configs/chips/*.yaml` descriptors, keyed by built-in name.
+/// `include_str!` bundles them so a released binary carries them and wasm
+/// builds (no `std::fs`) resolve them too.
+pub fn embedded_chip_yaml(name: &str) -> Option<&'static str> {
+    Some(match name {
+        "esp32" => include_str!("../../../configs/chips/esp32.yaml"),
+        "esp32c3" => include_str!("../../../configs/chips/esp32c3.yaml"),
+        "esp32s3" => include_str!("../../../configs/chips/esp32s3.yaml"),
+        "esp32s3-zero" => include_str!("../../../configs/chips/esp32s3-zero.yaml"),
+        "mkw41z4" => include_str!("../../../configs/chips/mkw41z4.yaml"),
+        "nrf52832" => include_str!("../../../configs/chips/nrf52832.yaml"),
+        "nrf52840" => include_str!("../../../configs/chips/nrf52840.yaml"),
+        "nrf5340" => include_str!("../../../configs/chips/nrf5340.yaml"),
+        "nrf54l15" => include_str!("../../../configs/chips/nrf54l15.yaml"),
+        "rp2040" => include_str!("../../../configs/chips/rp2040.yaml"),
+        "stm32f103" => include_str!("../../../configs/chips/stm32f103.yaml"),
+        "stm32f401" => include_str!("../../../configs/chips/stm32f401.yaml"),
+        "stm32f401cdu6" => include_str!("../../../configs/chips/stm32f401cdu6.yaml"),
+        "stm32f407" => include_str!("../../../configs/chips/stm32f407.yaml"),
+        "stm32f411ceu6" => include_str!("../../../configs/chips/stm32f411ceu6.yaml"),
+        "stm32g474re" => include_str!("../../../configs/chips/stm32g474re.yaml"),
+        "stm32h563" => include_str!("../../../configs/chips/stm32h563.yaml"),
+        "stm32h735" => include_str!("../../../configs/chips/stm32h735.yaml"),
+        "stm32l073" => include_str!("../../../configs/chips/stm32l073.yaml"),
+        "stm32l476" => include_str!("../../../configs/chips/stm32l476.yaml"),
+        "stm32wb55" => include_str!("../../../configs/chips/stm32wb55.yaml"),
+        "stm32wba52" => include_str!("../../../configs/chips/stm32wba52.yaml"),
+        _ => return None,
+    })
 }
 
 impl SystemManifest {
@@ -1755,6 +1843,71 @@ impl From<labwired_ir::IrDevice> for ChipDescriptor {
 pub struct TestInputs {
     pub firmware: String,
     pub system: Option<String>,
+    /// A bare chip name (`stm32f103`), for firmware with no external devices
+    /// or board I/O. Mutually exclusive with `system`; it saves authoring a
+    /// manifest whose entire content would be a chip pointer and two empty
+    /// lists. Anything with a device attached needs `system`.
+    pub chip: Option<String>,
+}
+
+/// A system, resolved once: the manifest plus the directory that relative
+/// paths inside it (chip descriptor, firmware, peripheral schemas) resolve
+/// against.
+///
+/// Runners take this rather than a manifest path so a run described only by
+/// `inputs.chip` — a built-in chip with nothing attached — is a first-class
+/// case instead of a file that has to be conjured on disk. It also means the
+/// manifest is parsed once per run rather than re-read at every site that
+/// needs to know the chip.
+#[derive(Debug, Clone)]
+pub struct ResolvedSystem {
+    pub manifest: SystemManifest,
+    base_dir: PathBuf,
+    /// The manifest file this came from, if any. `None` for a built-in chip,
+    /// where no such file exists — artifacts report it that way rather than
+    /// inventing a path.
+    source_path: Option<PathBuf>,
+}
+
+impl ResolvedSystem {
+    pub fn from_manifest_file(path: &Path) -> Result<Self> {
+        let manifest = SystemManifest::from_file(path)?;
+        Ok(Self {
+            manifest,
+            base_dir: path.parent().unwrap_or(Path::new(".")).to_path_buf(),
+            source_path: Some(path.to_path_buf()),
+        })
+    }
+
+    /// A bare MCU: the named built-in chip, no external devices, no board I/O.
+    pub fn from_builtin_chip(chip: &str) -> Result<Self> {
+        // Fail here rather than at first use, so an unknown name is a config
+        // error before the run starts.
+        ChipDescriptor::resolve(chip, Path::new("."))?;
+        Ok(Self {
+            manifest: SystemManifest {
+                schema_version: default_schema_version(),
+                name: chip.to_string(),
+                chip: chip.to_string(),
+                ..SystemManifest::default()
+            },
+            base_dir: PathBuf::from("."),
+            source_path: None,
+        })
+    }
+
+    /// The chip descriptor this system runs on.
+    pub fn chip(&self) -> Result<ChipDescriptor> {
+        ChipDescriptor::resolve(&self.manifest.chip, &self.base_dir)
+    }
+
+    pub fn base_dir(&self) -> &Path {
+        &self.base_dir
+    }
+
+    pub fn source_path(&self) -> Option<&Path> {
+        self.source_path.as_deref()
+    }
 }
 
 /// Inputs for a multi-node environment test. Environment scripts are selected
@@ -2239,6 +2392,27 @@ impl TestScript {
 
         if self.limits.max_steps == 0 {
             anyhow::bail!("Limit 'max_steps' must be greater than zero");
+        }
+
+        if self.inputs.system.is_some() && self.inputs.chip.is_some() {
+            anyhow::bail!(
+                "inputs may set 'system' or 'chip', not both. Use 'chip' for a bare MCU \
+                 and 'system' when external devices or board I/O are wired up."
+            );
+        }
+        if let Some(chip) = &self.inputs.chip {
+            if !is_builtin_chip_spec(chip) {
+                anyhow::bail!(
+                    "inputs.chip takes a built-in chip name such as 'stm32f103', not a path. \
+                     Use 'system' with a manifest to point at your own descriptor."
+                );
+            }
+            if embedded_chip_yaml(chip).is_none() {
+                anyhow::bail!(
+                    "unknown built-in chip '{chip}'. Available: {}",
+                    BUILTIN_CHIP_NAMES.join(", ")
+                );
+            }
         }
 
         reject_explicit_memory_nodes(&self.assertions, "single-node")?;
@@ -4518,5 +4692,108 @@ metadata:
             signed: false,
             fields: vec![],
         };
+    }
+}
+
+#[cfg(test)]
+mod builtin_chip_tests {
+    use super::*;
+    use std::path::Path;
+
+    #[test]
+    fn a_bare_name_resolves_to_the_bundled_descriptor() {
+        let chip = ChipDescriptor::resolve("stm32f103", Path::new("/nonexistent"))
+            .expect("built-in chip resolves without touching the filesystem");
+        assert_eq!(chip.name, "stm32f103c8");
+    }
+
+    /// Guards the drift between `BUILTIN_CHIP_NAMES` and the `include_str!`
+    /// arms: a name advertised in an error message must actually load.
+    #[test]
+    fn every_advertised_builtin_name_loads_and_parses() {
+        for name in BUILTIN_CHIP_NAMES {
+            ChipDescriptor::resolve(name, Path::new("/nonexistent"))
+                .unwrap_or_else(|e| panic!("built-in chip '{name}' failed to load: {e:#}"));
+        }
+    }
+
+    #[test]
+    fn a_path_still_resolves_relative_to_the_manifest() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("custom.yaml"),
+            embedded_chip_yaml("stm32f103").unwrap(),
+        )
+        .unwrap();
+        let chip = ChipDescriptor::resolve("./custom.yaml", dir.path()).unwrap();
+        assert_eq!(chip.name, "stm32f103c8");
+    }
+
+    #[test]
+    fn an_unknown_builtin_names_the_available_ones() {
+        let err = ChipDescriptor::resolve("stm32f999", Path::new(".")).unwrap_err();
+        let msg = format!("{err:#}");
+        assert!(msg.contains("unknown built-in chip 'stm32f999'"), "{msg}");
+        assert!(msg.contains("stm32f103"), "{msg}");
+    }
+
+    #[test]
+    fn a_yaml_extension_is_treated_as_a_path_not_a_builtin() {
+        assert!(!is_builtin_chip_spec("stm32f103.yaml"));
+        assert!(!is_builtin_chip_spec("chips/stm32f103"));
+        assert!(is_builtin_chip_spec("stm32f103"));
+    }
+
+    fn script_with_inputs(inputs: &str) -> Result<TestScript> {
+        let yaml = format!(
+            "schema_version: \"1.2\"\ninputs:\n{inputs}limits:\n  max_steps: 10\nassertions: []\n"
+        );
+        let script: TestScript = serde_yaml::from_str(&yaml)?;
+        script.validate()?;
+        Ok(script)
+    }
+
+    #[test]
+    fn chip_alone_is_accepted() {
+        let script = script_with_inputs("  firmware: \"fw.elf\"\n  chip: \"stm32f103\"\n").unwrap();
+        assert_eq!(script.inputs.chip.as_deref(), Some("stm32f103"));
+        assert!(script.inputs.system.is_none());
+    }
+
+    #[test]
+    fn chip_and_system_together_are_rejected() {
+        let err = script_with_inputs(
+            "  firmware: \"fw.elf\"\n  chip: \"stm32f103\"\n  system: \"./system.yaml\"\n",
+        )
+        .unwrap_err();
+        assert!(format!("{err:#}").contains("not both"), "{err:#}");
+    }
+
+    #[test]
+    fn a_path_in_inputs_chip_is_rejected() {
+        let err =
+            script_with_inputs("  firmware: \"fw.elf\"\n  chip: \"./chip.yaml\"\n").unwrap_err();
+        assert!(format!("{err:#}").contains("built-in chip name"), "{err:#}");
+    }
+
+    #[test]
+    fn an_unknown_chip_in_inputs_is_rejected_before_the_run() {
+        let err =
+            script_with_inputs("  firmware: \"fw.elf\"\n  chip: \"stm32f999\"\n").unwrap_err();
+        assert!(
+            format!("{err:#}").contains("unknown built-in chip"),
+            "{err:#}"
+        );
+    }
+
+    #[test]
+    fn the_synthetic_manifest_has_nothing_attached() {
+        let m = ResolvedSystem::from_builtin_chip("stm32f103")
+            .unwrap()
+            .manifest;
+        assert_eq!(m.chip, "stm32f103");
+        assert!(m.external_devices.is_empty());
+        assert!(m.board_io.is_empty());
+        assert!(!m.schema_version.is_empty());
     }
 }

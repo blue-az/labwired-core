@@ -210,11 +210,10 @@ impl LabwiredAdapter {
         let mut resolved_board_io_bindings = Vec::new();
         let mut bus = if let Some(sys_path) = &system_path {
             let manifest = labwired_config::SystemManifest::from_file(sys_path)?;
-            let chip_path = sys_path
+            let chip_dir = sys_path
                 .parent()
-                .unwrap_or_else(|| std::path::Path::new("."))
-                .join(&manifest.chip);
-            let chip = labwired_config::ChipDescriptor::from_file(&chip_path)?;
+                .unwrap_or_else(|| std::path::Path::new("."));
+            let chip = labwired_config::ChipDescriptor::resolve(&manifest.chip, chip_dir)?;
             resolved_board_io_bindings = resolve_board_io_bindings(&chip, &manifest);
             labwired_core::bus::SystemBus::from_config(&chip, &manifest)?
         } else {

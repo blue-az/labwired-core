@@ -120,6 +120,10 @@ enum Commands {
     /// Deterministic, CI-friendly runner mode driven by a test script (YAML).
     Test(TestArgs),
 
+    /// List the chips bundled with this CLI, usable as `inputs.chip` in a test
+    /// script or as a manifest's `chip:` field without copying any YAML.
+    Chips,
+
     /// Machine control operations (load, etc.)
     Machine(MachineArgs),
 
@@ -728,6 +732,12 @@ fn main() -> ExitCode {
     }
 
     match cli.command {
+        Some(Commands::Chips) => {
+            for name in labwired_config::BUILTIN_CHIP_NAMES {
+                println!("{name}");
+            }
+            ExitCode::SUCCESS
+        }
         Some(Commands::Test(args)) => commands::test::run_test(args),
         Some(Commands::Machine(args)) => run_machine(args),
         Some(Commands::Asset(args)) => run_asset(args),
