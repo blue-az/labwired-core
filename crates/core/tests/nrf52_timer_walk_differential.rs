@@ -17,8 +17,10 @@
 //! Surfaces:
 //! 1. TIMER0 COMPARE[0] — program CC/START/INTEN, assert same fire cycle
 //!    (within 1) and EVENTS_COMPARE[0] on both lanes.
-//! 2. RTC0 COMPARE[0] — EVTEN+INTEN compare path (not COUNTER poll-only).
-//! 3. RADIO TXEN → START → END — delay-0 / short countdown identity (bit-rate
+//! 2. RTC0 COMPARE[0] — EVTEN+INTEN compare path.
+//! 3. RTC0 COUNTER poll-only — no INTEN/EVTEN; read-side CycleClock sync must
+//!    advance COUNTER under tick-512 batching and match walk@1 within one tick.
+//! 4. RADIO TXEN → START → END — delay-0 / short countdown identity (bit-rate
 //!    full matrix remains interim on the scoreboard).
 //!
 //! Requires `--features event-scheduler`.
@@ -286,9 +288,6 @@ fn rtc_compare_done(m: &Machine<CycleCpu>) -> bool {
 
 /// RTC0 COMPARE[0] (EVTEN+INTEN): interval 1 vs 512 — same fire cycle within 1.
 ///
-/// COUNTER poll-only is deliberately not certified here (see scoreboard
-/// interim); this gate covers the compare / IRQ-driven shape only.
-///
 /// Real LFCLK ratio (~1953 CPU cycles per RTC tick) with CC[0]=2 needs
 /// ~3906 cycles; budget keeps clear of batch-edge ambiguity.
 #[test]
@@ -312,6 +311,91 @@ fn rtc0_compare_walk1_vs_sched512_cycle_identity() {
         "both lanes must latch EVENTS_COMPARE[0] (EVTEN compare path)"
     );
     assert_cycle_identity(at_a, at_b, "RTC0 COMPARE[0]");
+}
+
+// ── RTC0 COUNTER poll-only (no INTEN/EVTEN) ──────────────────────────────────
+
+const RTC_COUNTER: u64 = RTC0 + 0x504;
+
+fn arm_rtc0_counter_poll(machine: &mut Machine<CycleCpu>) {
+    // PRESCALER must be written while stopped. No INTEN / EVTEN — pure COUNTER
+    // poll fidelity under walk-free batching.
+    machine.bus.write_u32(RTC_PRESCALER, 0).unwrap();
+    machine.bus.write_u32(RTC_TASKS_CLEAR, 1).unwrap();
+    machine.bus.write_u32(RTC_TASKS_START, 1).unwrap();
+}
+
+/// Real LFCLK: ~1953.125 CPU cycles per COUNTER increment at PRESCALER=0.
+const RTC_CYCLES_PER_TICK: u64 = 1954;
+
+/// RTC0 COUNTER poll under Machine@512: after many cycles the free-running
+/// COUNTER must advance proportionally (not stick at 0 mid-batch). Read-side
+/// CycleClock sync supplies batch-boundary freshness.
+#[test]
+fn rtc_counter_poll_advances_under_sched_tick512() {
+    // Budget: enough for ≥ 4 COUNTER ticks at real LFCLK (~7816 cycles).
+    const BUDGET: u64 = 10_000;
+    let mut m = machine_at_interval(RECOMMENDED_TICK_INTERVAL);
+    arm_rtc0_counter_poll(&mut m);
+
+    m.advance(
+        AdvanceRequest::run(Some(BUDGET)).with_breakpoints(BreakpointPolicy::Ignore),
+    )
+    .expect("Machine::advance");
+
+    let counter = m.bus.read_u32(RTC_COUNTER).unwrap_or(0);
+    let expected_min = (BUDGET / RTC_CYCLES_PER_TICK).saturating_sub(1) as u32;
+    assert!(
+        counter >= expected_min && counter > 0,
+        "COUNTER must advance under tick-512 batching with no INTEN/EVTEN \
+         (got {counter}, expected ≥ {expected_min} after {BUDGET} cycles)"
+    );
+}
+
+/// RTC0 COUNTER poll: interval 1 vs 512 after the same cycle budget must agree
+/// within documented batch-boundary freshness (≤ one interval of quantisation).
+/// Single-cycle advance steps make the published clock exact on both lanes;
+/// a coarser advance of 512 on lane B may trail by ≤ RECOMMENDED_TICK_INTERVAL
+/// CPU cycles of LFCLK quantisation (≤ 1 COUNTER tick at PRESCALER=0).
+#[test]
+fn rtc_counter_poll_walk1_vs_sched512_identity() {
+    // Same budget as the advance gate — several COUNTER ticks of headroom.
+    const BUDGET: u64 = 10_000;
+
+    let mut lane_a = machine_at_interval(1);
+    arm_rtc0_counter_poll(&mut lane_a);
+    // Single-cycle steps: published clock is exact at every boundary.
+    for _ in 0..BUDGET {
+        lane_a
+            .advance(
+                AdvanceRequest::run(Some(1)).with_breakpoints(BreakpointPolicy::Ignore),
+            )
+            .expect("lane A advance");
+    }
+    let counter_a = lane_a.bus.read_u32(RTC_COUNTER).unwrap_or(0);
+
+    let mut lane_b = machine_at_interval(RECOMMENDED_TICK_INTERVAL);
+    arm_rtc0_counter_poll(&mut lane_b);
+    // Same absolute cycle budget; batch size = interval for the sched lane.
+    lane_b
+        .advance(
+            AdvanceRequest::run(Some(BUDGET)).with_breakpoints(BreakpointPolicy::Ignore),
+        )
+        .expect("lane B advance");
+    let counter_b = lane_b.bus.read_u32(RTC_COUNTER).unwrap_or(0);
+
+    assert!(
+        counter_a > 0 && counter_b > 0,
+        "both lanes must observe a non-zero COUNTER (a={counter_a}, b={counter_b})"
+    );
+    // Batch-boundary freshness: at most one COUNTER tick of LFCLK quantisation
+    // (interval 512 << ~1953 cycles/tick → typically exact COUNTER match).
+    let delta = counter_a.abs_diff(counter_b);
+    assert!(
+        delta <= 1,
+        "COUNTER poll walk@1 vs sched@512 must agree within ≤1 tick \
+         (batch-boundary freshness); got a={counter_a} b={counter_b} delta={delta}"
+    );
 }
 
 // ── RADIO TXEN → START → END (minimal) ──────────────────────────────────────
@@ -343,7 +427,7 @@ fn arm_radio_tx(machine: &mut Machine<CycleCpu>, buf: u64) {
     plant_radio_tx_buf(&mut machine.bus, buf);
     machine.bus.write_u32(RADIO_FREQUENCY, 0x4E).unwrap(); // BLE adv ch 37
     machine.bus.write_u32(RADIO_MODE, 0x3).unwrap(); // BLE_1Mbit
-    machine.bus.write_u32(RADIO_PCNF0, 0x0001_0008).unwrap();
+    machine.bus.write_u32(RADIO_PCNF0, 0x0000_0108).unwrap(); // LFLEN=8 S0LEN=1
     machine.bus.write_u32(RADIO_PCNF1, 0x0003_00FF).unwrap();
     machine.bus.write_u32(RADIO_BASE0, 0xCAFE_BABE).unwrap();
     machine.bus.write_u32(RADIO_PREFIX0, 0xDEAD).unwrap();
