@@ -10,6 +10,12 @@ use std::process::Command;
 use std::sync::OnceLock;
 use std::sync::{Arc, Mutex};
 
+fn bldc_fixture_target_dir() -> PathBuf {
+    std::env::temp_dir()
+        .join("labwired-fixtures")
+        .join("stm32l476-bldc")
+}
+
 fn ensure_bldc_firmware_built() -> PathBuf {
     static ELF: OnceLock<PathBuf> = OnceLock::new();
     ELF.get_or_init(|| {
@@ -19,6 +25,7 @@ fn ensure_bldc_firmware_built() -> PathBuf {
             .parent()
             .unwrap()
             .to_path_buf();
+        let target_dir = bldc_fixture_target_dir();
         let status = Command::new("cargo")
             .args([
                 "build",
@@ -29,18 +36,32 @@ fn ensure_bldc_firmware_built() -> PathBuf {
                 "firmware-l476-bldc-six-step",
                 "--target",
                 "thumbv7em-none-eabihf",
+                "--target-dir",
             ])
+            .arg(&target_dir)
+            .env_remove("CARGO_TARGET_DIR")
             .env_remove("CARGO_ENCODED_RUSTFLAGS")
             .env_remove("RUSTFLAGS")
             .current_dir(&root)
             .status()
             .expect("invoke cargo build for STM32L476 BLDC fixture");
         assert!(status.success(), "STM32L476 BLDC firmware build failed");
-        let elf = root.join("target/thumbv7em-none-eabihf/release/firmware-l476-bldc-six-step");
+        let elf = target_dir.join("thumbv7em-none-eabihf/release/firmware-l476-bldc-six-step");
         assert!(elf.is_file(), "firmware ELF was not produced at {elf:?}");
         elf
     })
     .clone()
+}
+
+#[test]
+fn l476_fixture_target_is_independent_of_outer_cargo_target_dir() {
+    let dedicated = bldc_fixture_target_dir();
+    let inherited = PathBuf::from("/tmp/custom-outer-cargo-target");
+    assert_ne!(dedicated, inherited);
+    assert!(dedicated.ends_with("labwired-fixtures/stm32l476-bldc"));
+    assert!(dedicated
+        .join("thumbv7em-none-eabihf/release/firmware-l476-bldc-six-step")
+        .starts_with(&dedicated));
 }
 
 fn fixture(

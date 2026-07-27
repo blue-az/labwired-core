@@ -40,7 +40,9 @@ shuts down well inside that bound. The scenario selects one-based stimulus and
 UART occurrences explicitly. Its `result.json` assertion evidence records the
 actual successful stimulus cycle, first qualifying UART-token cycle, measured
 latency, and configured maximum; this remains valid when assertion early-stop
-is disabled.
+is disabled. Latency assertions force UART observation after every retired
+instruction, so event cycles are instruction-boundary observations rather than
+an overclaim about the exact internal peripheral write cycle.
 
 For robotics startups this moves repeatable commutation, startup, Hall-order,
 and shutdown regressions into CI while retaining the same MCU binary and
