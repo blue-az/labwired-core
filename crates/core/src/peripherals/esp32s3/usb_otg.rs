@@ -223,7 +223,7 @@ impl Esp32s3UsbOtg {
             other: HashMap::new(),
             pending_reset_seq: false,
             enumdone_latched: false,
-        
+
             clock: None,
             scheduled: false,
         }
@@ -355,7 +355,6 @@ impl Peripheral for Esp32s3UsbOtg {
             ..PeripheralTickResult::default()
         }
     }
-
 
     fn uses_scheduler(&self) -> bool {
         cfg!(feature = "event-scheduler") && self.clock.is_some()

@@ -316,7 +316,10 @@ fn esp32_classic_ereader_idle_ff_batch_does_not_fault() {
                 advanced += step;
             }
             Err(e) => {
-                dump_cores(&machine, &format!("FAIL idle-ff advanced={advanced} err={e}"));
+                dump_cores(
+                    &machine,
+                    &format!("FAIL idle-ff advanced={advanced} err={e}"),
+                );
                 panic!("idle FF batch fault: {e}");
             }
         }

@@ -84,10 +84,7 @@ impl SystemBus {
         #[cfg(feature = "event-scheduler")]
         {
             let hcsr04_forced_legacy = !self.hcsr04.is_empty() && self.hcsr04_scheduling_disabled;
-            if self.legacy_walk_disabled
-                && !self.has_iolink_master()
-                && !hcsr04_forced_legacy
-            {
+            if self.legacy_walk_disabled && !self.has_iolink_master() && !hcsr04_forced_legacy {
                 return RECOMMENDED_TICK_INTERVAL;
             }
         }

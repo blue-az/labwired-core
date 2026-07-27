@@ -353,7 +353,6 @@ impl Peripheral for Esp32s3LcdCam {
         }
     }
 
-
     fn uses_scheduler(&self) -> bool {
         cfg!(feature = "event-scheduler") && self.clock.is_some()
     }

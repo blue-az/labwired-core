@@ -201,7 +201,7 @@ impl Esp32s3Ds {
             key_wrong: 0,
             check: 0,
             date: DS_DATE_RESET,
-        
+
             clock: None,
             scheduled: false,
         }
@@ -332,7 +332,6 @@ impl Peripheral for Esp32s3Ds {
         PeripheralTickResult::default()
     }
 
-
     fn uses_scheduler(&self) -> bool {
         cfg!(feature = "event-scheduler") && self.clock.is_some()
     }
@@ -344,7 +343,6 @@ impl Peripheral for Esp32s3Ds {
     fn attach_cycle_clock(&mut self, clock: CycleClock) {
         self.clock = Some(clock);
     }
-
 
     fn take_scheduled_events(&mut self) -> Vec<(u64, u32)> {
         if !self.uses_scheduler() {

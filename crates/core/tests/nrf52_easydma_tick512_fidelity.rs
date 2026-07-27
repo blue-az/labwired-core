@@ -135,8 +135,7 @@ fn bus_nrf52840_walk_free() -> SystemBus {
     let chip = ChipDescriptor::from_file(&root("configs/chips/nrf52840.yaml"))
         .expect("load nrf52840 chip");
     let system_path = root("configs/systems/nrf52840-dk.yaml");
-    let mut manifest =
-        SystemManifest::from_file(&system_path).expect("load nrf52840-dk system");
+    let mut manifest = SystemManifest::from_file(&system_path).expect("load nrf52840-dk system");
     let anchored = system_path
         .parent()
         .expect("system parent")
@@ -187,9 +186,7 @@ where
 {
     while machine.total_cycles < max_cycles {
         machine
-            .advance(
-                AdvanceRequest::run(Some(batch)).with_breakpoints(BreakpointPolicy::Ignore),
-            )
+            .advance(AdvanceRequest::run(Some(batch)).with_breakpoints(BreakpointPolicy::Ignore))
             .expect("Machine::advance");
         if done(machine) {
             return Some(machine.total_cycles);

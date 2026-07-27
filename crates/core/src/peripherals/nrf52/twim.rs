@@ -374,15 +374,26 @@ impl Nrf52Twim {
     }
 }
 
-
 impl Nrf52Twim {
     fn irq_from_events(&self) -> PeripheralTickResult {
         let events: &[(&u32, u32, u64)] = &[
             (&self.events_stopped, INTEN_STOPPED, OFF_EVENTS_STOPPED),
             (&self.events_error, INTEN_ERROR, OFF_EVENTS_ERROR),
-            (&self.events_suspended, INTEN_SUSPENDED, OFF_EVENTS_SUSPENDED),
-            (&self.events_rxstarted, INTEN_RXSTARTED, OFF_EVENTS_RXSTARTED),
-            (&self.events_txstarted, INTEN_TXSTARTED, OFF_EVENTS_TXSTARTED),
+            (
+                &self.events_suspended,
+                INTEN_SUSPENDED,
+                OFF_EVENTS_SUSPENDED,
+            ),
+            (
+                &self.events_rxstarted,
+                INTEN_RXSTARTED,
+                OFF_EVENTS_RXSTARTED,
+            ),
+            (
+                &self.events_txstarted,
+                INTEN_TXSTARTED,
+                OFF_EVENTS_TXSTARTED,
+            ),
             (&self.events_lastrx, INTEN_LASTRX, OFF_EVENTS_LASTRX),
             (&self.events_lasttx, INTEN_LASTTX, OFF_EVENTS_LASTTX),
         ];

@@ -160,7 +160,6 @@ impl Peripheral for Esp32s3Extmem {
         false
     }
 
-
     fn read(&self, offset: u64) -> SimResult<u8> {
         let word = self.reg(offset & !3);
         Ok(((word >> ((offset & 3) * 8)) & 0xFF) as u8)

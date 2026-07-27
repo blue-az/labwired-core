@@ -380,7 +380,6 @@ impl Peripheral for Esp32s3System {
         false
     }
 
-
     fn read(&self, offset: u64) -> SimResult<u8> {
         let abs = offset + self.window_base;
         let word = self.word_value(abs);

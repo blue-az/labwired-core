@@ -216,7 +216,7 @@ impl Esp32s3Pcnt {
             int_ena: 0,
             ctrl: CTRL_RESET,
             source_id,
-        
+
             clock: None,
         }
     }
@@ -468,7 +468,6 @@ impl Peripheral for Esp32s3Pcnt {
         let word = self.read_word(word_off);
         Some(((word >> byte_off) & 0xFF) as u8)
     }
-
 
     /// Walk-free: once the bus attaches a cycle clock under `event-scheduler`,
     /// level IRQs export via [`Self::matrix_irq_sources_into`] and the per-cycle

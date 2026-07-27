@@ -206,7 +206,7 @@ impl Esp32s3I2c {
             reg_scl_sp_conf: 0x0000_0000,
             reg_scl_stretch_conf: 0x0000_0000,
             reg_date: 0x2007_0201,
-        
+
             clock: None,
         }
     }
@@ -465,7 +465,6 @@ impl Peripheral for Esp32s3I2c {
             ..Default::default()
         }
     }
-
 
     /// Walk-free: once the bus attaches a cycle clock under `event-scheduler`,
     /// level IRQs export via [`Self::matrix_irq_sources_into`] and the per-cycle

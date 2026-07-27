@@ -196,7 +196,11 @@ impl Peripheral for Nrf52Wdt {
             return Vec::new();
         }
         // Fire when counter would hit 0: need `counter` ticks (or 1 if already 0).
-        let d = if self.counter == 0 { 1u64 } else { self.counter as u64 };
+        let d = if self.counter == 0 {
+            1u64
+        } else {
+            self.counter as u64
+        };
         self.arm_seq = self.arm_seq.wrapping_add(1);
         vec![(d.saturating_sub(1), self.arm_seq)]
     }
@@ -219,7 +223,11 @@ impl Peripheral for Nrf52Wdt {
             self.advance_cycles(1)
         };
         let next = if self.running() && !self.bitten {
-            Some(if self.counter == 0 { 1u64 } else { self.counter as u64 })
+            Some(if self.counter == 0 {
+                1u64
+            } else {
+                self.counter as u64
+            })
         } else {
             None
         };

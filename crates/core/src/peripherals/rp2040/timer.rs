@@ -257,7 +257,9 @@ impl Peripheral for Rp2040Timer {
             TIMELW => self.pending_low = value,
             // Writing the high word commits the staged low word as the new
             // counter base (datasheet: write TIMELW then TIMEHW).
-            TIMEHW => self.counter.set(((value as u64) << 32) | self.pending_low as u64),
+            TIMEHW => self
+                .counter
+                .set(((value as u64) << 32) | self.pending_low as u64),
             // Writing a target arms the corresponding alarm.
             ALARM0..=ALARM3 => {
                 let idx = ((offset - ALARM0) / 4) as usize;

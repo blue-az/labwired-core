@@ -238,7 +238,7 @@ impl Esp32s3SarAdc {
             lfsr: 0xACE1_5EED,
 
             source_id,
-        
+
             clock: None,
         }
     }
@@ -458,7 +458,6 @@ impl Peripheral for Esp32s3SarAdc {
             PeripheralTickResult::default()
         }
     }
-
 
     /// Walk-free: once the bus attaches a cycle clock under `event-scheduler`,
     /// level IRQs export via [`Self::matrix_irq_sources_into`] and the per-cycle

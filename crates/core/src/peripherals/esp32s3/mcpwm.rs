@@ -408,7 +408,7 @@ impl Esp32s3Mcpwm {
             int_raw: 0,
             int_ena: 0,
             extras,
-        
+
             clock: None,
             last_tick: 0,
             scheduled: false,
@@ -754,7 +754,6 @@ impl Peripheral for Esp32s3Mcpwm {
             ..Default::default()
         }
     }
-
 
     fn uses_scheduler(&self) -> bool {
         cfg!(feature = "event-scheduler") && self.clock.is_some()

@@ -211,11 +211,9 @@ pub struct Esp32s3Gpio {
 }
 
 impl Esp32s3Gpio {
-
     fn stamp_cycle(&self) -> u64 {
         self.clock.as_ref().map(|c| c.now()).unwrap_or(self.cycle)
     }
-
 
     pub fn new() -> Self {
         let mut regs = [0u32; NWORDS];
@@ -487,7 +485,6 @@ impl Peripheral for Esp32s3Gpio {
     fn attach_cycle_clock(&mut self, clock: CycleClock) {
         self.clock = Some(clock);
     }
-
 
     fn read(&self, offset: u64) -> SimResult<u8> {
         let word_off = offset & !3;

@@ -235,8 +235,6 @@ impl Nrf52Timer {
         }
         best
     }
-
-
 }
 
 impl Peripheral for Nrf52Timer {

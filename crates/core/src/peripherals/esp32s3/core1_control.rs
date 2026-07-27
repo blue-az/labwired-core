@@ -61,7 +61,6 @@ impl Peripheral for Esp32s3Core1Control {
         false
     }
 
-
     fn read(&self, offset: u64) -> SimResult<u8> {
         let word = Self::idx(offset).map(|i| self.regs[i]).unwrap_or(0);
         Ok(((word >> ((offset & 3) * 8)) & 0xFF) as u8)

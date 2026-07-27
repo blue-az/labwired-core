@@ -286,7 +286,6 @@ impl Peripheral for Esp32s3Hmac {
         false
     }
 
-
     fn read(&self, _offset: u64) -> SimResult<u8> {
         // The driver only uses word accesses; stray byte reads return 0.
         Ok(0)

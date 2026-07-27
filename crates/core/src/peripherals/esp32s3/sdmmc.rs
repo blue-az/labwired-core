@@ -280,7 +280,7 @@ impl Esp32s3Sdmmc {
             rint_sts: 0,
             resp: [0; 4],
             pending_cmd: None,
-        
+
             clock: None,
             scheduled: false,
         }
@@ -424,7 +424,6 @@ impl Peripheral for Esp32s3Sdmmc {
             ..PeripheralTickResult::default()
         }
     }
-
 
     fn uses_scheduler(&self) -> bool {
         cfg!(feature = "event-scheduler") && self.clock.is_some()

@@ -111,9 +111,15 @@ fn print_inventory(inv: &Inventory) {
     let hcsr04_forced_legacy = inv.hcsr04_count > 0 && inv.hcsr04_scheduling_disabled;
     println!("=== {} ===", inv.chip);
     println!("  walk_deletable (empty forcers): {}", inv.walk_deletable);
-    println!("  legacy_walk_disabled:           {}", inv.legacy_walk_disabled);
+    println!(
+        "  legacy_walk_disabled:           {}",
+        inv.legacy_walk_disabled
+    );
     println!("  flash_models_ops:               {}", inv.flash_models_ops);
-    println!("  has_iolink_master:              {}", inv.has_iolink_master);
+    println!(
+        "  has_iolink_master:              {}",
+        inv.has_iolink_master
+    );
     println!(
         "  hcsr04_count / forced_legacy:    {} / {}",
         inv.hcsr04_count, hcsr04_forced_legacy
@@ -149,10 +155,9 @@ fn print_inventory(inv: &Inventory) {
 
 fn load_manifest(system_rel: &str) -> SystemManifest {
     let system_path = root(system_rel);
-    let mut manifest =
-        SystemManifest::from_file(&system_path).unwrap_or_else(|e| {
-            panic!("load system manifest {system_path:?}: {e}");
-        });
+    let mut manifest = SystemManifest::from_file(&system_path).unwrap_or_else(|e| {
+        panic!("load system manifest {system_path:?}: {e}");
+    });
     // Anchor chip path so resolve_peripheral_path finds descriptors regardless
     // of cargo-test CWD.
     let anchored = system_path
@@ -265,10 +270,7 @@ fn nrf52840_dk_is_walk_free_and_tick_512() {
 
     #[cfg(not(feature = "event-scheduler"))]
     {
-        assert_eq!(
-            inv.max_safe, 1,
-            "featureless build must keep max_safe=1"
-        );
+        assert_eq!(inv.max_safe, 1, "featureless build must keep max_safe=1");
     }
 }
 
@@ -308,10 +310,7 @@ fn rp2040_pico_is_walk_free_and_tick_512() {
 
     #[cfg(not(feature = "event-scheduler"))]
     {
-        assert_eq!(
-            inv.max_safe, 1,
-            "featureless build must keep max_safe=1"
-        );
+        assert_eq!(inv.max_safe, 1, "featureless build must keep max_safe=1");
     }
 }
 
@@ -360,10 +359,7 @@ fn h563_is_walk_free_and_tick_512() {
 
     #[cfg(not(feature = "event-scheduler"))]
     {
-        assert_eq!(
-            inv.max_safe, 1,
-            "featureless build must keep max_safe=1"
-        );
+        assert_eq!(inv.max_safe, 1, "featureless build must keep max_safe=1");
     }
 }
 
@@ -402,10 +398,7 @@ fn esp32s3_is_walk_free_and_tick_512() {
 
     #[cfg(not(feature = "event-scheduler"))]
     {
-        assert_eq!(
-            inv.max_safe, 1,
-            "featureless build must keep max_safe=1"
-        );
+        assert_eq!(inv.max_safe, 1, "featureless build must keep max_safe=1");
     }
 }
 
@@ -473,20 +466,14 @@ fn tick_interval_inventory_all_families() {
                 "{name}: expected legacy_walk_disabled"
             );
             if name != "stm32h563" {
-                assert!(
-                    !inv.flash_models_ops,
-                    "{name}: unexpected flash_models_ops"
-                );
+                assert!(!inv.flash_models_ops, "{name}: unexpected flash_models_ops");
             } else {
                 assert!(
                     inv.flash_models_ops,
                     "stm32h563: expected flash_models_ops (CPU quantum still 1)"
                 );
             }
-            assert!(
-                !inv.has_iolink_master,
-                "{name}: unexpected iolink blocker"
-            );
+            assert!(!inv.has_iolink_master, "{name}: unexpected iolink blocker");
             assert_eq!(
                 inv.max_safe, RECOMMENDED_TICK_INTERVAL,
                 "{name}: expected max_safe={RECOMMENDED_TICK_INTERVAL}, got {}",

@@ -546,7 +546,9 @@ impl Esp32s3TimerGroup {
         }
         // Remaining sim ticks in the current divider bucket + full counts after.
         let remaining_in_bucket = cpu_per_count.saturating_sub(timer.accum);
-        let extra = counts_needed.saturating_sub(1).saturating_mul(cpu_per_count);
+        let extra = counts_needed
+            .saturating_sub(1)
+            .saturating_mul(cpu_per_count);
         Some(remaining_in_bucket.saturating_add(extra).max(1))
     }
 
@@ -641,7 +643,6 @@ impl Peripheral for Esp32s3TimerGroup {
             ..PeripheralTickResult::default()
         }
     }
-
 
     fn uses_scheduler(&self) -> bool {
         cfg!(feature = "event-scheduler") && self.clock.is_some()

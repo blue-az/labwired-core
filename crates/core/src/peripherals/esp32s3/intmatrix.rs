@@ -117,7 +117,6 @@ impl Peripheral for Esp32s3IntMatrix {
         false
     }
 
-
     fn read(&self, offset: u64) -> SimResult<u8> {
         // Layout (each core's half is 0x800 apart on the shared base):
         //   CORE0: 0x000..0x18C — per-source map registers (route slot).

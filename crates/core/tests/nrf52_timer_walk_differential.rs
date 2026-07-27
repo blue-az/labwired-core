@@ -146,8 +146,7 @@ fn bus_nrf52840_walk_free() -> SystemBus {
     let chip = ChipDescriptor::from_file(&root("configs/chips/nrf52840.yaml"))
         .expect("load nrf52840 chip");
     let system_path = root("configs/systems/nrf52840-dk.yaml");
-    let mut manifest =
-        SystemManifest::from_file(&system_path).expect("load nrf52840-dk system");
+    let mut manifest = SystemManifest::from_file(&system_path).expect("load nrf52840-dk system");
     let anchored = system_path
         .parent()
         .expect("system parent")
@@ -179,19 +178,13 @@ fn machine_at_interval(interval: u32) -> Machine<CycleCpu> {
 
 /// Advance ≤ `max_cycles` one cycle at a time; return total_cycles when
 /// `done` returns true, or None if the budget is exhausted.
-fn advance_until<F>(
-    machine: &mut Machine<CycleCpu>,
-    max_cycles: u64,
-    mut done: F,
-) -> Option<u64>
+fn advance_until<F>(machine: &mut Machine<CycleCpu>, max_cycles: u64, mut done: F) -> Option<u64>
 where
     F: FnMut(&Machine<CycleCpu>) -> bool,
 {
     while machine.total_cycles < max_cycles {
         machine
-            .advance(
-                AdvanceRequest::run(Some(1)).with_breakpoints(BreakpointPolicy::Ignore),
-            )
+            .advance(AdvanceRequest::run(Some(1)).with_breakpoints(BreakpointPolicy::Ignore))
             .expect("Machine::advance");
         if done(machine) {
             return Some(machine.total_cycles);
@@ -249,9 +242,8 @@ fn timer0_compare_walk1_vs_sched512_cycle_identity() {
 
     let mut lane_b = machine_at_interval(RECOMMENDED_TICK_INTERVAL);
     arm_timer0_compare(&mut lane_b, CC);
-    let at_b = advance_until(&mut lane_b, BUDGET, timer_compare_done).expect(
-        "lane B (interval=512) must fire TIMER0 COMPARE[0] via scheduler",
-    );
+    let at_b = advance_until(&mut lane_b, BUDGET, timer_compare_done)
+        .expect("lane B (interval=512) must fire TIMER0 COMPARE[0] via scheduler");
 
     assert!(
         timer_compare_done(&lane_a) && timer_compare_done(&lane_b),
@@ -339,10 +331,8 @@ fn rtc_counter_poll_advances_under_sched_tick512() {
     let mut m = machine_at_interval(RECOMMENDED_TICK_INTERVAL);
     arm_rtc0_counter_poll(&mut m);
 
-    m.advance(
-        AdvanceRequest::run(Some(BUDGET)).with_breakpoints(BreakpointPolicy::Ignore),
-    )
-    .expect("Machine::advance");
+    m.advance(AdvanceRequest::run(Some(BUDGET)).with_breakpoints(BreakpointPolicy::Ignore))
+        .expect("Machine::advance");
 
     let counter = m.bus.read_u32(RTC_COUNTER).unwrap_or(0);
     let expected_min = (BUDGET / RTC_CYCLES_PER_TICK).saturating_sub(1) as u32;
@@ -368,9 +358,7 @@ fn rtc_counter_poll_walk1_vs_sched512_identity() {
     // Single-cycle steps: published clock is exact at every boundary.
     for _ in 0..BUDGET {
         lane_a
-            .advance(
-                AdvanceRequest::run(Some(1)).with_breakpoints(BreakpointPolicy::Ignore),
-            )
+            .advance(AdvanceRequest::run(Some(1)).with_breakpoints(BreakpointPolicy::Ignore))
             .expect("lane A advance");
     }
     let counter_a = lane_a.bus.read_u32(RTC_COUNTER).unwrap_or(0);
@@ -379,9 +367,7 @@ fn rtc_counter_poll_walk1_vs_sched512_identity() {
     arm_rtc0_counter_poll(&mut lane_b);
     // Same absolute cycle budget; batch size = interval for the sched lane.
     lane_b
-        .advance(
-            AdvanceRequest::run(Some(BUDGET)).with_breakpoints(BreakpointPolicy::Ignore),
-        )
+        .advance(AdvanceRequest::run(Some(BUDGET)).with_breakpoints(BreakpointPolicy::Ignore))
         .expect("lane B advance");
     let counter_b = lane_b.bus.read_u32(RTC_COUNTER).unwrap_or(0);
 
@@ -437,7 +423,10 @@ fn plant_radio_tx_buf_len(bus: &mut SystemBus, base: u64, payload_len: u8) {
 fn arm_radio_tx_with_len(machine: &mut Machine<CycleCpu>, buf: u64, payload_len: u8) {
     plant_radio_tx_buf_len(&mut machine.bus, buf, payload_len);
     machine.bus.write_u32(RADIO_FREQUENCY, 0x4E).unwrap(); // BLE adv ch 37
-    machine.bus.write_u32(RADIO_MODE, RADIO_MODE_BLE_1MBIT).unwrap();
+    machine
+        .bus
+        .write_u32(RADIO_MODE, RADIO_MODE_BLE_1MBIT)
+        .unwrap();
     // LFLEN=8, S0LEN=1 (same encoding as `nrf52/radio.rs` unit tests).
     machine.bus.write_u32(RADIO_PCNF0, 0x0000_0108).unwrap();
     // MAXLEN=0xFF, STATLEN=0 — air bytes = LENGTH + 3 CRC.
@@ -445,7 +434,10 @@ fn arm_radio_tx_with_len(machine: &mut Machine<CycleCpu>, buf: u64, payload_len:
     machine.bus.write_u32(RADIO_BASE0, 0xCAFE_BABE).unwrap();
     machine.bus.write_u32(RADIO_PREFIX0, 0xDEAD).unwrap();
     machine.bus.write_u32(RADIO_PACKETPTR, buf as u32).unwrap();
-    machine.bus.write_u32(RADIO_SHORTS, SHORT_READY_START).unwrap();
+    machine
+        .bus
+        .write_u32(RADIO_SHORTS, SHORT_READY_START)
+        .unwrap();
     machine.bus.write_u32(RADIO_EVENTS_READY, 0).unwrap();
     machine.bus.write_u32(RADIO_EVENTS_END, 0).unwrap();
     machine.bus.write_u32(RADIO_TASKS_TXEN, 1).unwrap();
@@ -512,9 +504,7 @@ fn radio_ble_1mbit_bit_time_scales_with_length() {
         arm_radio_tx_with_len(&mut m, buf, payload_len);
         let _ = m.bus.write_u32(RADIO_TASKS_START, 1);
         advance_until(&mut m, BUDGET, radio_end_done).unwrap_or_else(|| {
-            panic!(
-                "EVENTS_END missing for L={payload_len} interval={interval} within {BUDGET}"
-            )
+            panic!("EVENTS_END missing for L={payload_len} interval={interval} within {BUDGET}")
         })
     };
 

@@ -243,7 +243,7 @@ impl Esp32s3Spi {
             int_raw: 0,
             pending_dma: None,
             attached_devices: Vec::new(),
-        
+
             clock: None,
         }
     }
@@ -498,7 +498,6 @@ impl Peripheral for Esp32s3Spi {
             ..PeripheralTickResult::default()
         }
     }
-
 
     /// Walk-free: once the bus attaches a cycle clock under `event-scheduler`,
     /// level IRQs export via [`Self::matrix_irq_sources_into`] and the per-cycle

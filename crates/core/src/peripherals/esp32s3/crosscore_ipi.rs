@@ -110,7 +110,6 @@ impl Peripheral for Esp32s3CrossCoreIpi {
         }
     }
 
-
     /// Walk-free: once the bus attaches a cycle clock under `event-scheduler`,
     /// level IRQs export via [`Self::matrix_irq_sources_into`] and the per-cycle
     /// walk is unnecessary (work settles on MMIO writes / `tick_with_bus`).

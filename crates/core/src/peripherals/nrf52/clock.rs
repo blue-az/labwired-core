@@ -185,8 +185,8 @@ impl Peripheral for Nrf52Clock {
                 // HFCLKSTAT.STATE = running; SRC = bit 0 reflects LFCLKSRC bits — for
                 // our purposes (Zephyr clock_init), reporting 1<<16 is sufficient.
                 self.hfclkstat = (1 << 16) | 1; // xtal source, running
-                // Instantaneous start (matches module doc + Zephyr busy-poll on
-                // EVENTS_HFCLKSTARTED). No deferred walk work remains.
+                                                // Instantaneous start (matches module doc + Zephyr busy-poll on
+                                                // EVENTS_HFCLKSTARTED). No deferred walk work remains.
                 self.events_hfclkstarted = 1;
                 self.pending_hfclk_started = false;
             }

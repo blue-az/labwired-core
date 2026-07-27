@@ -351,7 +351,9 @@ impl Nrf52Rtc {
             best_steps = Some(best_steps.map_or(steps, |b| b.min(steps)));
         }
         let steps = best_steps.unwrap_or(1);
-        Some(cpu_to_lfclk + (steps.saturating_sub(1)) * (lfclk_period.div_ceil(lfclk_inc) * divider))
+        Some(
+            cpu_to_lfclk + (steps.saturating_sub(1)) * (lfclk_period.div_ceil(lfclk_inc) * divider),
+        )
     }
 }
 
@@ -714,10 +716,7 @@ mod tests {
         #[test]
         fn without_clock_stays_on_legacy_tick_path() {
             let r = Nrf52Rtc::new();
-            assert!(
-                !r.uses_scheduler(),
-                "no cycle clock attached → legacy walk"
-            );
+            assert!(!r.uses_scheduler(), "no cycle clock attached → legacy walk");
         }
     }
 }

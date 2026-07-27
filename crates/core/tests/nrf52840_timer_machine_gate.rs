@@ -131,8 +131,7 @@ fn bus_nrf52840_walk_free() -> SystemBus {
     let chip = ChipDescriptor::from_file(&root("configs/chips/nrf52840.yaml"))
         .expect("load nrf52840 chip");
     let system_path = root("configs/systems/nrf52840-dk.yaml");
-    let mut manifest =
-        SystemManifest::from_file(&system_path).expect("load nrf52840-dk system");
+    let mut manifest = SystemManifest::from_file(&system_path).expect("load nrf52840-dk system");
     let anchored = system_path
         .parent()
         .expect("system parent")
@@ -194,9 +193,7 @@ fn nrf52840_machine_timer0_compare_fires_at_tick_512() {
 
     while machine.total_cycles < CYCLE_BUDGET {
         machine
-            .advance(
-                AdvanceRequest::run(Some(512)).with_breakpoints(BreakpointPolicy::Ignore),
-            )
+            .advance(AdvanceRequest::run(Some(512)).with_breakpoints(BreakpointPolicy::Ignore))
             .expect("Machine::advance");
 
         if machine.bus.read_u32(EVENTS_COMPARE0).unwrap_or(0) != 0 {
@@ -212,8 +209,7 @@ fn nrf52840_machine_timer0_compare_fires_at_tick_512() {
          under Machine + peripheral_tick_interval={RECOMMENDED_TICK_INTERVAL} \
          (total_cycles={}, legacy_walk_disabled={}). \
          Scheduler path must deliver the compare without forced walk.",
-        machine.total_cycles,
-        machine.bus.legacy_walk_disabled,
+        machine.total_cycles, machine.bus.legacy_walk_disabled,
     );
     let at = cycles_at_fire.expect("cycles_at_fire set when compare_fired");
     assert!(

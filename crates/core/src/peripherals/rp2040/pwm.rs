@@ -194,9 +194,7 @@ impl Rp2040Pwm {
     }
 
     fn free_running_active(&self) -> bool {
-        self.slices
-            .iter()
-            .any(|s| s.enabled() && s.free_running())
+        self.slices.iter().any(|s| s.enabled() && s.free_running())
     }
 
     fn needs_scheduler_wake(&self) -> bool {

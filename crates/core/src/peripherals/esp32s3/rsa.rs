@@ -167,7 +167,7 @@ impl Esp32s3Rsa {
             search_pos: 0,
             int_ena: false,
             done: false,
-        
+
             clock: None,
         }
     }
@@ -307,7 +307,6 @@ impl Peripheral for Esp32s3Rsa {
             PeripheralTickResult::default()
         }
     }
-
 
     /// Walk-free: once the bus attaches a cycle clock under `event-scheduler`,
     /// level IRQs export via [`Self::matrix_irq_sources_into`] and the per-cycle

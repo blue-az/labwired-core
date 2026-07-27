@@ -133,8 +133,7 @@ fn bus_rp2040_walk_free() -> SystemBus {
     std::env::set_var("LABWIRED_RP2040_BOOTROM", "");
     let chip = ChipDescriptor::from_file(&root("configs/chips/rp2040.yaml")).expect("load rp2040");
     let system_path = root("configs/systems/rp2040-pico.yaml");
-    let mut manifest =
-        SystemManifest::from_file(&system_path).expect("load rp2040-pico system");
+    let mut manifest = SystemManifest::from_file(&system_path).expect("load rp2040-pico system");
     let anchored = system_path
         .parent()
         .expect("system parent")
@@ -185,9 +184,7 @@ fn rp2040_machine_timer_alarm0_fires_at_tick_512() {
 
     while machine.total_cycles < CYCLE_BUDGET {
         machine
-            .advance(
-                AdvanceRequest::run(Some(512)).with_breakpoints(BreakpointPolicy::Ignore),
-            )
+            .advance(AdvanceRequest::run(Some(512)).with_breakpoints(BreakpointPolicy::Ignore))
             .expect("Machine::advance");
 
         if machine.bus.read_u32(INTR).unwrap_or(0) & 1 != 0 {

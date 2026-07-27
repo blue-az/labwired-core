@@ -166,7 +166,7 @@
 
 use crate::peripherals::esp32s3::gpspi::Esp32s3Spi;
 use crate::peripherals::esp32s3::i2s::Esp32s3I2s;
-use crate::{CycleClock, Bus, Peripheral, PeripheralTickResult, SimResult};
+use crate::{Bus, CycleClock, Peripheral, PeripheralTickResult, SimResult};
 
 /// Number of GDMA channels on the ESP32-S3.
 const NUM_CHANNELS: usize = 5;
@@ -521,7 +521,7 @@ impl Esp32s3Gdma {
             channels: [Channel::default(); NUM_CHANNELS],
             misc_conf: 0,
             dma_in_ch0_source,
-        
+
             clock: None,
         }
     }
@@ -1455,7 +1455,6 @@ impl Peripheral for Esp32s3Gdma {
     fn tick_with_bus(&mut self, bus: &mut dyn Bus) {
         Esp32s3Gdma::do_tick_with_bus(self, bus);
     }
-
 
     /// Walk-free: once the bus attaches a cycle clock under `event-scheduler`,
     /// level IRQs export via [`Self::matrix_irq_sources_into`] and the per-cycle

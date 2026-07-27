@@ -179,7 +179,11 @@ fn load_gpdma_isr(bus: &mut SystemBus) {
     write_word(bus, 0x90, CH0_CFCR);
     write_word(bus, 0x94, 0x0000_0300);
     write_word(bus, 0x98, ISR_COUNT_ADDR as u32);
-    write_word(bus, (16 + GPDMA_IRQ) as u64 * 4, (GPDMA_ISR_BASE as u32) | 1);
+    write_word(
+        bus,
+        (16 + GPDMA_IRQ) as u64 * 4,
+        (GPDMA_ISR_BASE as u32) | 1,
+    );
 }
 
 /// Host programs CTR1/CTR2/CBR1/CSAR/CDAR (transfer not yet enabled). Firmware
@@ -215,8 +219,8 @@ fn load_gpdma_memcpy(bus: &mut SystemBus) {
         bus,
         GPDMA_FW_BASE,
         &[
-            0x4808, 0x4909, 0x6001, 0x4809, 0x4909, 0x6001, 0x4809, 0x4A0A, 0x2300, 0x3301,
-            0x6013, 0x6804, 0xE7FB,
+            0x4808, 0x4909, 0x6001, 0x4809, 0x4909, 0x6001, 0x4809, 0x4A0A, 0x2300, 0x3301, 0x6013,
+            0x6804, 0xE7FB,
         ],
     );
     write_word(bus, 0x64, NVIC_ISER0);
@@ -305,7 +309,11 @@ fn gpdma_mem2mem_tcie_is_byte_identical_at_interval_1() {
     let last = walk_probes.last().unwrap();
     assert_eq!(last.isr_count, 1, "TC ISR must fire exactly once");
     assert!(last.main_count > 50, "main loop must run");
-    assert_eq!(last.dst, expected_gpdma_dst(), "mem2mem must copy source bytes");
+    assert_eq!(
+        last.dst,
+        expected_gpdma_dst(),
+        "mem2mem must copy source bytes"
+    );
     // Completion CSR: IDLEF | TCF | HTF = 0x301 (or 0x001 after ISR CFCR clear).
     assert!(
         walk_probes.iter().any(|p| p.csr & 0x100 != 0),
@@ -450,8 +458,7 @@ fn load_rtc_poll_firmware(bus: &mut SystemBus) {
         bus,
         RTC_FW_BASE,
         &[
-            0x4807, 0x4908, 0x6001, 0x4808, 0x4A08, 0x2300, 0x3301, 0x6013, 0x6804, 0x6D05,
-            0xE7FA,
+            0x4807, 0x4908, 0x6001, 0x4808, 0x4A08, 0x2300, 0x3301, 0x6013, 0x6804, 0x6D05, 0xE7FA,
         ],
     );
     write_word(bus, 0x60, NVIC_ISER0);

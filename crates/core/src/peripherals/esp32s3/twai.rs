@@ -190,7 +190,7 @@ impl Esp32s3Twai {
             status: STATUS_TX_BUF | STATUS_TX_COMPLETE,
             rx_msg_count: 0,
             int_latch: Cell::new(0),
-        
+
             clock: None,
         }
     }
@@ -349,7 +349,6 @@ impl Peripheral for Esp32s3Twai {
             ..PeripheralTickResult::default()
         }
     }
-
 
     /// Walk-free: once the bus attaches a cycle clock under `event-scheduler`,
     /// level IRQs export via [`Self::matrix_irq_sources_into`] and the per-cycle

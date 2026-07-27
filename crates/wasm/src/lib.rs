@@ -2245,8 +2245,9 @@ external_devices:
             eprintln!("[skip] no ereader elf");
             return;
         };
-        let mut sim = WasmSimulator::new_from_config(&system_yaml(), &chip_yaml(), &fw, JsValue::NULL)
-            .expect("new_from_config esp32");
+        let mut sim =
+            WasmSimulator::new_from_config(&system_yaml(), &chip_yaml(), &fw, JsValue::NULL)
+                .expect("new_from_config esp32");
         sim.install_arduino_esp32_quirks(&fw)
             .expect("install quirks");
         sim.set_idle_fast_forward_enabled(true);
@@ -2290,8 +2291,9 @@ external_devices:
             eprintln!("[skip] no ereader elf");
             return;
         };
-        let mut sim = WasmSimulator::new_from_config(&system_yaml(), &chip_yaml(), &fw, JsValue::NULL)
-            .expect("new_from_config");
+        let mut sim =
+            WasmSimulator::new_from_config(&system_yaml(), &chip_yaml(), &fw, JsValue::NULL)
+                .expect("new_from_config");
         sim.install_arduino_esp32_quirks(&fw).expect("quirks");
         sim.set_idle_fast_forward_enabled(true);
         let rec = sim.recommended_tick_interval();

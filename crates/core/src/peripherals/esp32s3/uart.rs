@@ -241,7 +241,6 @@ pub struct Esp32s3Uart {
     scheduled: bool,
 }
 
-
 impl std::fmt::Debug for Esp32s3Uart {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -274,7 +273,7 @@ impl Esp32s3Uart {
             int_raw_sticky: 0,
             drain_accum: 0,
             tx_active: false,
-        
+
             clock: None,
             scheduled: false,
         }
@@ -509,7 +508,6 @@ impl Peripheral for Esp32s3Uart {
             ..PeripheralTickResult::default()
         }
     }
-
 
     fn uses_scheduler(&self) -> bool {
         cfg!(feature = "event-scheduler") && self.clock.is_some()

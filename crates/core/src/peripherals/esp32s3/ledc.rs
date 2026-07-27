@@ -167,7 +167,7 @@ impl Esp32s3Ledc {
             int_ena: 0,
             conf: 0,
             date: DATE_RESET,
-        
+
             clock: None,
         }
     }
@@ -325,7 +325,6 @@ impl Peripheral for Esp32s3Ledc {
             ..Default::default()
         }
     }
-
 
     /// Walk-free: once the bus attaches a cycle clock under `event-scheduler`,
     /// level IRQs export via [`Self::matrix_irq_sources_into`] and the per-cycle
