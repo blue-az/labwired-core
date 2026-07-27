@@ -400,11 +400,17 @@ fn every_shipped_descriptor_is_ratcheted() {
         "esp32",         // classic Xtensa, separate e2e lane, not a catalog board
         "esp32s3-zero",  // board variant of esp32s3 (covered by esp32s3)
         "stm32f401cdu6", // BlackPill variant of stm32f401 (covered by stm32f401)
-        "stm32g474re",   // G4 peripheral models in progress, not shipped
-        "stm32wb55",     // BLE not modelled, not shipped
-        "stm32wba52",    // WBA early onboarding, not shipped
-        "nrf52832",      // covered by nrf52840 family; not a catalog board
-        "nrf5340",       // dual-core, not a shipped catalog board
+        // WeAct F411 Black Pill. Has a tier-1 fixture + io-smoke and rides the
+        // shared stm32f4 peripheral models, but it is not a bundled-configs.ts
+        // catalog board and carries NO executing-fidelity test of its own (no
+        // walk-vs-scheduler differential, no silicon oracle — there is no F411
+        // bench part). Promote to SHIPPED only when both of those exist.
+        "stm32f411ceu6",
+        "stm32g474re", // G4 peripheral models in progress, not shipped
+        "stm32wb55",   // BLE not modelled, not shipped
+        "stm32wba52",  // WBA early onboarding, not shipped
+        "nrf52832",    // covered by nrf52840 family; not a catalog board
+        "nrf5340",     // dual-core, not a shipped catalog board
         // Boots unmodified upstream Zephyr and has bus-level conformance +
         // survival coverage, but NOT the executing-fidelity class this gate
         // requires for SHIPPED: there is no walk-vs-scheduler differential and

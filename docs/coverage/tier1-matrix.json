@@ -194,7 +194,7 @@
   },
   "rp2040": {
     "adc": {
-      "status": "na"
+      "status": "pass"
     },
     "clock": {
       "status": "pass"
@@ -209,13 +209,13 @@
       "status": "pass"
     },
     "irq": {
-      "status": "na"
+      "status": "pass"
     },
     "pwm": {
-      "status": "na"
+      "status": "pass"
     },
     "rtc": {
-      "status": "na"
+      "status": "pass"
     },
     "spi": {
       "status": "pass"
@@ -227,7 +227,7 @@
       "status": "pass"
     },
     "wdt": {
-      "status": "na"
+      "status": "pass"
     }
   },
   "stm32f103": {
@@ -307,6 +307,44 @@
     }
   },
   "stm32f407": {
+    "adc": {
+      "status": "pass"
+    },
+    "clock": {
+      "status": "pass"
+    },
+    "dma": {
+      "status": "unrecorded"
+    },
+    "gpio": {
+      "status": "pass"
+    },
+    "i2c": {
+      "status": "pass"
+    },
+    "irq": {
+      "status": "na"
+    },
+    "pwm": {
+      "status": "na"
+    },
+    "rtc": {
+      "status": "pass"
+    },
+    "spi": {
+      "status": "pass"
+    },
+    "timer": {
+      "status": "pass"
+    },
+    "uart": {
+      "status": "pass"
+    },
+    "wdt": {
+      "status": "pass"
+    }
+  },
+  "stm32f411": {
     "adc": {
       "status": "pass"
     },

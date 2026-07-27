@@ -107,6 +107,7 @@ fn rp2040_bus() -> SystemBus {
         external_devices: vec![],
         board_io: vec![],
         debug_uart: None,
+        wifi_ap: None,
         peripherals: vec![],
         memory_overrides: Default::default(),
     };

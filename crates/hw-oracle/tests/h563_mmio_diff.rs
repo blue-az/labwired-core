@@ -3,7 +3,7 @@
 
 //! STM32H563 (NUCLEO-H563ZI) GPIO MMIO diff oracle.
 //!
-//! Closes pending-silicon-verification entry #1: bit-band alias translation
+//! Bit-band alias translation
 //! is gated on cores that implement it (Cortex-M3/M4 only — `ee1133c`), so
 //! on the M33-based H563 word accesses to the GPIO ports at `0x4202_xxxx`
 //! must reach the GPIO model un-shadowed instead of being rewritten into
@@ -996,6 +996,7 @@ fn build_sim_bus() -> SystemBus {
         cosim_models: Vec::new(),
         board_io: vec![],
         debug_uart: None,
+        wifi_ap: None,
         peripherals: vec![],
         memory_overrides: Default::default(),
     };

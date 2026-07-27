@@ -85,6 +85,16 @@ const CHIPS: &[ChipConf] = &[
         behavior_gate: Some("onboarding-stm32f401cdu6"),
     },
     ChipConf {
+        // WeAct F411 Black Pill. Sim-derived from ST's CMSIS header + the modm
+        // F411 SVD; there is no bench part, so no reset_oracle. Behaviour is
+        // asserted by the tier-1 fixture self-tests (clock/gpio/timer/i2c/spi/
+        // adc/wdt/rtc PASS + UART), which is also what its io-smoke runs.
+        name: "stm32f411ceu6",
+        yaml: "configs/chips/stm32f411ceu6.yaml",
+        reset_oracle: None,
+        behavior_gate: Some("tier1::stm32f411"),
+    },
+    ChipConf {
         name: "nrf52832",
         yaml: "configs/chips/nrf52832.yaml",
         reset_oracle: None,
@@ -293,6 +303,7 @@ fn dummy_manifest(path: &str) -> SystemManifest {
         cosim_models: Vec::new(),
         board_io: vec![],
         debug_uart: None,
+        wifi_ap: None,
         peripherals: vec![],
         memory_overrides: Default::default(),
     }
@@ -469,7 +480,39 @@ fn chip_conformance_ratchet() {
         rows.push((c.name.to_string(), lvl, r));
     }
 
-    std::fs::write(root("docs/coverage/chip-conformance.md"), &board).ok();
+    // The board is a COMMITTED artifact, so regenerate it only when explicitly
+    // asked and otherwise CHECK it — the same contract
+    // `scripts/generate_validation_status.py --check` holds.
+    //
+    // This used to be an unconditional `fs::write(..).ok()`: running the test
+    // silently rewrote a tracked file and passed, so the committed board could
+    // (and did) drift from reality — nrf52832 read 10 verified registers when
+    // the model reproduced 16, stm32f407 read 29 against 31. Drift in the
+    // OPTIMISTIC direction at that: the doc UNDER-sold the chips, and nothing
+    // failed to say so. A generator that overwrites its own expectation cannot
+    // be a gate.
+    let board_path = root("docs/coverage/chip-conformance.md");
+    if std::env::var("UPDATE_CONFORMANCE_BASELINE").is_ok() {
+        std::fs::write(&board_path, &board).expect("write conformance board");
+        println!("updated conformance board: {}", board_path.display());
+    } else {
+        let committed = std::fs::read_to_string(&board_path).unwrap_or_else(|e| {
+            panic!(
+                "read {}: {e} — regenerate with UPDATE_CONFORMANCE_BASELINE=1",
+                board_path.display()
+            )
+        });
+        assert_eq!(
+            committed.trim_end(),
+            board.trim_end(),
+            "docs/coverage/chip-conformance.md is stale — the measured board no \
+             longer matches the committed one. Regenerate in this commit with \
+             `UPDATE_CONFORMANCE_BASELINE=1 cargo test -p labwired-core --test \
+             chip_conformance` and review the diff: a FALLING reg-match count is \
+             a model regression (the ratchet below fails on it), a RISING one is \
+             coverage the doc has not been told about yet."
+        );
+    }
 
     // Ratchet against the committed baseline: estate may not break, level may not
     // drop, reg-match count may not fall.

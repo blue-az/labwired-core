@@ -343,6 +343,22 @@ impl WasmSimulator {
         Self::new_from_config_riscv_program_image(chip, manifest, &program_image, blobs)
     }
 
+    /// Station eFuse MAC seeded when a `wifi_ap` is on the diagram. Delegates to
+    /// the shared core helper so the browser ctors, CLI `test`, and CLI `run`
+    /// all seed the identical station MAC (one source of truth). Absent
+    /// `wifi_ap` ⇒ None (unchanged non-WiFi boot).
+    fn wifi_ap_efuse_mac(manifest: &SystemManifest) -> Option<[u8; 6]> {
+        labwired_core::system::wifi::wifi_ap_station_mac(manifest)
+    }
+
+    /// Attach every real WiFi MAC to a per-lab virtual-WiFi medium built from the
+    /// manifest's `wifi_ap`. Delegates to the shared, CPU-generic core helper so
+    /// the browser ctors and the CLI `test`/`run` paths attach identically — the
+    /// universal-WiFi-adapter plumbing lives in exactly one place.
+    fn attach_wifi_ap(machine: &mut Machine<Box<dyn Cpu>>, manifest: &SystemManifest) {
+        labwired_core::system::wifi::attach_configured_wifi_ap(&mut machine.bus, manifest);
+    }
+
     fn new_from_config_riscv_flash_fastboot(
         chip: &ChipDescriptor,
         manifest: &SystemManifest,
@@ -410,7 +426,9 @@ impl WasmSimulator {
             bus,
             flash.clone(),
             RomBootOpts {
-                efuse_mac: None,
+                // Seed the station MAC when a wifi-ap is present, exactly like the
+                // rom-boot path — a zero eFuse MAC won't stay associated.
+                efuse_mac: Self::wifi_ap_efuse_mac(manifest),
                 usb_serial_sink: capture_usb_serial.then(|| uart_sink.clone()),
             },
             |c| Box::new(c) as Box<dyn Cpu>,
@@ -422,6 +440,11 @@ impl WasmSimulator {
             (chip.ram.base + labwired_config::parse_size(&chip.ram.size).unwrap_or(0)) as u32;
         machine.cpu.set_sp(sp_top & !0xF);
         machine.cpu.set_pc(bootloader_image.entry_point as u32);
+
+        // Attach the per-lab virtual-WiFi AP if the diagram declares one. This is
+        // the fix for the fast-start path silently lacking WiFi (the browser's
+        // default C3 path) while rom-boot had it.
+        Self::attach_wifi_ap(&mut machine, manifest);
 
         let board_io = manifest.board_io.clone();
 
@@ -638,16 +661,22 @@ impl WasmSimulator {
         }
         let uart_rx_bufs = bus.attach_uart_rx_source();
 
-        let machine = build_rom_boot_machine(
+        let mut machine = build_rom_boot_machine(
             bus,
             flash_bytes,
             RomBootOpts {
-                efuse_mac: None,
+                // Seed the station MAC when a wifi-ap is present (a zero eFuse MAC
+                // won't stay associated). Shared with the fast-start path.
+                efuse_mac: Self::wifi_ap_efuse_mac(manifest),
                 usb_serial_sink: capture_usb_serial.then(|| uart_sink.clone()),
             },
             // WasmSimulator holds Machine<Box<dyn Cpu>>; box the concrete RiscV.
             |c| Box::new(c) as Box<dyn Cpu>,
         );
+
+        // Attach the per-lab virtual-WiFi AP if the diagram declares one (shared
+        // with the flash-fast-start path — ONE source of truth).
+        Self::attach_wifi_ap(&mut machine, manifest);
 
         let board_io = manifest.board_io.clone();
 
@@ -1962,6 +1991,89 @@ mod romboot_tests {
         assert!(
             mips > 1.0,
             "host throughput too low ({mips:.3} MIPS) — web MCU effectively not running"
+        );
+    }
+
+    // Regression guard for the prod bug where the browser's C3 flash-fast-start
+    // boot path never attached the WiFi medium (only the slow rom-boot path did),
+    // so `WiFi.begin()` timed out on app.labwired.com while the CLI (rom-boot)
+    // associated. Drives the EXACT browser path — fast-start ctor + wifi_ap
+    // manifest + recommended (512) tick interval + idle fast-forward — against a
+    // real Arduino WiFi flash (esp32c3-wifi-stats-flash.bin, the LBC3.1 sketch
+    // built with pio). Must reach STA CONNECTED, exercising the real 802.11 →
+    // DHCP association through the modeled AP (no thunks).
+    #[test]
+    fn browser_c3_fast_start_wifi_associates() {
+        let manifest_dir = root();
+        let flash_path = manifest_dir.join("tests/fixtures/esp32c3-wifi-stats-flash.bin");
+        let chip: ChipDescriptor = serde_yaml::from_str(
+            &std::fs::read_to_string(manifest_dir.join("../../configs/chips/esp32c3.yaml"))
+                .expect("chip yaml"),
+        )
+        .expect("parse chip");
+        // A system manifest WITH a wifi_ap block — exactly what the playground
+        // emits for a diagram carrying a `wifi-ap` component.
+        let manifest: SystemManifest = serde_yaml::from_str(
+            "name: \"lbc31-wifi\"\nchip: \"esp32c3.yaml\"\nwifi_ap:\n  ssid: \"labwired-ap\"\n  ip: \"192.168.4.1\"\n  serves: \"labwired-stats\"\nexternal_devices: []\nboard_io: []\n",
+        )
+        .expect("parse system with wifi_ap");
+
+        let mut blobs: HashMap<String, Vec<u8>> = HashMap::new();
+        blobs.insert(
+            "esp32c3_irom".into(),
+            std::fs::read(manifest_dir.join("../core/roms/esp32c3/esp32c3_rom.bin")).expect("irom"),
+        );
+        blobs.insert(
+            "esp32c3_drom".into(),
+            std::fs::read(manifest_dir.join("../core/roms/esp32c3/esp32c3_drom.bin"))
+                .expect("drom"),
+        );
+        blobs.insert(
+            "esp32c3_flash".into(),
+            std::fs::read(&flash_path).expect("wifi flash"),
+        );
+        // The marker the playground injects → dispatcher picks the fast-start
+        // ctor (the browser default, the path that lacked WiFi attach).
+        blobs.insert(crate::ESP32C3_FLASH_FAST_START_BLOB.to_string(), Vec::new());
+
+        let mut sim = WasmSimulator::new_from_config_riscv_flash_fastboot(&chip, &manifest, &blobs)
+            .expect("build fast-start C3 sim");
+        let rec = sim.recommended_tick_interval();
+        eprintln!("recommended_tick_interval = {rec}");
+        apply_browser_c3_policy(&mut sim, rec);
+
+        // Run the whole device pipeline: associate → DHCP → TCP → HTTP fetch of
+        // the AP's /v1/public-stats. Success = the real stats body arrives (the
+        // firmware would then paint it), not just association — the full "it
+        // works" the user builds the device for.
+        let mut total: u64 = 0;
+        let mut fetched = false;
+        while total < 12_000_000_000 {
+            let n = sim.step_batch(2_000_000).expect("step");
+            if n == 0 {
+                break;
+            }
+            total += u64::from(n);
+            let out = String::from_utf8_lossy(&sim.uart_sink.lock().unwrap()).into_owned();
+            // The AP serves the stats snapshot (boards_supported:9); the LBC3.1
+            // sketch logs the fetched JSON body verbatim.
+            if out.contains("boards_supported") {
+                fetched = true;
+                break;
+            }
+            if out.contains("WiFi connect timeout") || out.contains("stats fetch failed") {
+                break;
+            }
+        }
+        let out = String::from_utf8_lossy(&sim.uart_sink.lock().unwrap()).into_owned();
+        eprintln!("--- serial ---\n{out}\n--- end ({total} cycles) ---");
+        assert!(
+            out.contains("STA CONNECTED"),
+            "C3 must associate to the wifi-ap on the fast-start (browser) path"
+        );
+        assert!(
+            fetched,
+            "C3 must fetch /v1/public-stats over the modeled AP (full pipeline) on fast-start"
         );
     }
 

@@ -685,30 +685,7 @@ impl Peripheral for GenericPeripheral {
     /// whole ESP32-C3/S3 register wall — decode named registers + bitfields for
     /// free (see [`crate::inspect::default_inspect`]).
     fn describe_registers(&self) -> Option<Vec<crate::inspect::RegisterSchema>> {
-        Some(
-            self.descriptor
-                .registers
-                .iter()
-                .map(|reg| crate::inspect::RegisterSchema {
-                    name: reg.id.clone(),
-                    offset: reg.address_offset,
-                    size: reg.size,
-                    access: match reg.access {
-                        labwired_config::Access::ReadWrite => "rw",
-                        labwired_config::Access::ReadOnly => "ro",
-                        labwired_config::Access::WriteOnly => "wo",
-                    },
-                    fields: reg
-                        .fields
-                        .iter()
-                        .map(|f| crate::inspect::FieldSchema {
-                            name: f.name.clone(),
-                            bits: f.bit_range,
-                        })
-                        .collect(),
-                })
-                .collect(),
-        )
+        Some(crate::inspect::schema_from_descriptor(&self.descriptor))
     }
 }
 

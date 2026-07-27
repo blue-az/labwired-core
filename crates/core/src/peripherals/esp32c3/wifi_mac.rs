@@ -50,6 +50,14 @@ pub(crate) fn rxbuf_trace_enabled() -> bool {
     *ENABLED.get_or_init(|| std::env::var("LABWIRED_RXBUF_TRACE").is_ok())
 }
 
+/// Device-cycle interval between medium-mode AP beacons. Matches the previous
+/// call-counter cadence (one beacon per 2,000,000 per-cycle ticks) but is now
+/// expressed in device cycles so it holds under CPU idle fast-forward, where
+/// `tick_with_bus` no longer runs once per cycle. At 160 MHz this is ~12.5 ms —
+/// well inside the STA's beacon-timeout, and far shorter than association /
+/// DHCP / socket timeouts, so association survives fast-forward.
+const MEDIUM_BEACON_INTERVAL_CYCLES: u64 = 2_000_000;
+
 const MAC_READY: u64 = 0xD14; // bit0 polled by hal_init
 const RX_RING_BASE: u64 = 0x88; // driver writes the RX descriptor-list head here
 /// RX descriptor-reload handshake (`hal_mac_rx_*_dscr_reload`): the driver sets
@@ -132,8 +140,12 @@ pub struct Esp32c3WifiMac {
     /// it transmits — so we needn't predict the eFuse byte order. Used to pull
     /// this station's medium inbox and to beacon it.
     medium_mac: Option<[u8; 6]>,
-    /// Tick counter for periodic beacon injection in medium mode.
-    medium_beacon_ctr: u32,
+    /// Next DEVICE cycle at which to inject a periodic beacon in medium mode.
+    /// Keyed on `clock.now()` (not a tick-call counter) so the beacon cadence is
+    /// invariant to how often `tick_with_bus` runs — per cycle in normal
+    /// execution, once per idle-poll quantum under CPU idle fast-forward. 0 means
+    /// "not yet armed"; armed lazily on the first medium tick.
+    medium_next_beacon_cycle: u64,
     /// Bus-published cycle clock (walk-free plan). `Some` once
     /// [`SystemBus::add_peripheral`](crate::bus::SystemBus) attaches it (under
     /// the `event-scheduler` feature); its presence flips the model onto the
@@ -174,7 +186,7 @@ impl Esp32c3WifiMac {
             trace_seq: 0,
             medium_mode: false,
             medium_mac: None,
-            medium_beacon_ctr: 0,
+            medium_next_beacon_cycle: 0,
             clock: None,
             wifi: super::virtual_wifi::default_medium(),
         }
@@ -213,6 +225,15 @@ impl Esp32c3WifiMac {
     /// ring each tick. Two C3 instances both attached share one virtual AP.
     pub fn attach_to_medium(&mut self) {
         self.medium_mode = true;
+    }
+
+    /// Rebind this MAC to an explicit WiFi bus AFTER construction (the browser
+    /// path builds the machine first, then attaches the configured medium once
+    /// the manifest's `wifi_ap` is known). Does not touch medium mode or the
+    /// learned `medium_mac` — pair with [`Self::attach_to_medium`], exactly as
+    /// the CLI's post-build attach loop does.
+    pub fn set_wifi_bus(&mut self, bus: super::virtual_wifi::VirtualWifiBus) {
+        self.wifi = bus;
     }
 
     /// Record a captured frame in the analyzer ring buffer (oldest dropped at
@@ -519,6 +540,17 @@ impl Peripheral for Esp32c3WifiMac {
         self.rx_ring != 0 || !self.pending_tx.is_empty() || self.medium_mode
     }
 
+    /// Medium mode services an EXTERNAL shared-AP inbox and beacons the station;
+    /// its frames would be starved for a whole CPU-idle skip window without a
+    /// bounded poll. Opt in so idle fast-forward caps its skip to a poll quantum
+    /// and runs the bus-tick pass at the deadline. The beacon is device-cycle
+    /// keyed (see [`MEDIUM_BEACON_INTERVAL_CYCLES`]), so the varying tick cadence
+    /// is safe. Non-medium single-device runs (CLI bridge) stay false — their RX
+    /// is driven by explicit `queue_rx_*` calls, not a live medium.
+    fn idle_poll_bus_tick(&self) -> bool {
+        self.medium_mode
+    }
+
     fn tick_with_bus(&mut self, bus: &mut dyn Bus) {
         // Capture any transmitted frame + signal TX-complete (in medium mode this
         // submits to the shared AP), then in medium mode pull any frames the AP
@@ -527,9 +559,21 @@ impl Peripheral for Esp32c3WifiMac {
         if self.medium_mode {
             if let Some(mac) = self.medium_mac {
                 // Periodic beacon so the scanning station keeps seeing the AP.
-                self.medium_beacon_ctr = self.medium_beacon_ctr.wrapping_add(1);
-                if self.medium_beacon_ctr % 2_000_000 == 0 {
+                // Cadence is keyed on the DEVICE cycle (`clock.now()`), not on
+                // tick-call count, so it stays regular even when idle
+                // fast-forward makes this tick run once per poll quantum instead
+                // of once per cycle. The `while` catches up if a single skip
+                // crossed more than one beacon boundary.
+                let now = self.clock.as_ref().map(|c| c.now()).unwrap_or(0);
+                if self.medium_next_beacon_cycle == 0 {
+                    self.medium_next_beacon_cycle =
+                        now.saturating_add(MEDIUM_BEACON_INTERVAL_CYCLES);
+                }
+                while now >= self.medium_next_beacon_cycle {
                     self.wifi.queue_beacon(mac, 1);
+                    self.medium_next_beacon_cycle = self
+                        .medium_next_beacon_cycle
+                        .saturating_add(MEDIUM_BEACON_INTERVAL_CYCLES);
                 }
                 for frame in self.wifi.take_inbox(mac) {
                     self.pending_rx.push_back(frame);
@@ -729,6 +773,66 @@ mod tests {
         assert_eq!(
             mac.tick().explicit_irqs.as_deref(),
             Some(&[MAC_INTR_SOURCE][..])
+        );
+    }
+
+    #[test]
+    fn idle_poll_bus_tick_tracks_medium_mode() {
+        // Only a medium-attached station needs the CPU idle fast-forward path to
+        // keep pumping it (its inbox is fed by an external AP). A single-device
+        // MAC drains RX from explicit `queue_rx_*` calls, so it must NOT shorten
+        // the idle window — doing so would needlessly slow every non-medium run.
+        let mut m = Esp32c3WifiMac::new();
+        assert!(
+            !m.idle_poll_bus_tick(),
+            "single-device MAC must not force bounded idle polling"
+        );
+        m.attach_to_medium();
+        assert!(
+            m.idle_poll_bus_tick(),
+            "medium-mode MAC must opt into bounded idle polling so fast-forward \
+             cannot starve its inbox and break association"
+        );
+    }
+
+    #[test]
+    fn beacon_cadence_is_device_cycle_keyed_not_call_count() {
+        // Regression for the WiFi-under-fast-forward fix: the AP beacon fires on
+        // DEVICE cycles, so the number a station sees over a fixed cycle span is
+        // invariant to how often `tick_with_bus` runs. Idle fast-forward calls it
+        // once per poll quantum instead of once per cycle; if the cadence were
+        // keyed on call count (as it was), beacons would all but stop and the
+        // station would deauth.
+        fn beacons_over(call_stride: u64, total_cycles: u64) -> usize {
+            let wifi = super::super::virtual_wifi::VirtualWifiBus::new();
+            let mut m = Esp32c3WifiMac::with_wifi(wifi);
+            let clock = CycleClock::default();
+            m.medium_mode = true;
+            m.medium_mac = Some([0x02, 0, 0, 0, 0, 0x02]);
+            m.clock = Some(clock.clone());
+            let mut bus = SystemBus::new();
+            // No RX ring configured (rx_ring == 0), so `deliver_one_rx` is a
+            // no-op and every beacon the tick pulls from the medium stays parked
+            // in `pending_rx` — a direct count of beacons injected.
+            let mut cyc = 0u64;
+            while cyc <= total_cycles {
+                clock.publish(cyc);
+                m.tick_with_bus(&mut bus);
+                cyc += call_stride;
+            }
+            m.pending_rx.len()
+        }
+
+        // ~10 beacons expected over 20M cycles at a 2M-cycle interval.
+        let dense = beacons_over(1_000, 20_000_000); // ~per-cycle execution
+        let sparse = beacons_over(8_000, 20_000_000); // ~one idle poll quantum
+        assert_eq!(
+            dense, sparse,
+            "beacon count must depend on device cycles, not tick-call frequency"
+        );
+        assert!(
+            dense >= 9,
+            "expected ~10 beacons over 20M cycles / {MEDIUM_BEACON_INTERVAL_CYCLES}-cycle interval, got {dense}"
         );
     }
 }

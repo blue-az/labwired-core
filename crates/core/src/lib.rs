@@ -603,6 +603,20 @@ pub trait Peripheral: std::fmt::Debug + Send {
     fn needs_bus_tick(&self) -> bool {
         false
     }
+    /// True if this peripheral's `tick_with_bus` must keep running at a bounded
+    /// cadence even while the CPU is idle-fast-forwarding — because it services
+    /// an *external* medium (a WiFi station polling a shared-AP inbox and
+    /// beaconing) whose frames would otherwise be starved for the whole skip
+    /// window, breaking association. Idle fast-forward caps its skip to a small
+    /// poll quantum and runs the bus-tick pass at the deadline when any bus
+    /// peripheral returns true here. Default false: every self-contained
+    /// peripheral drives entirely off CPU cycles / scheduler events and never
+    /// needs the idle window shortened. Peripherals that opt in MUST key their
+    /// internal cadence (beacons, timeouts) on device cycles — NOT on
+    /// tick_with_bus call count — since the call frequency now varies.
+    fn idle_poll_bus_tick(&self) -> bool {
+        false
+    }
     /// True if this peripheral needs the legacy per-tick `tick()` walk.
     ///
     /// The conservative default is true: hand-written behavioral peripherals
@@ -684,6 +698,58 @@ pub trait Peripheral: std::fmt::Debug + Send {
     ) -> bool {
         false
     }
+
+    /// Authoritative simulated wall-clock, in microseconds, if this peripheral
+    /// is a system time source firmware reads for *elapsed time*.
+    ///
+    /// This is the honest generalization of what the nRF54L TWIM already does by
+    /// hand — reading the GRTC SYSCOUNTER (µs) over the bus before servicing a
+    /// slave. Instead of a hardcoded register address, the machine asks every
+    /// peripheral this question and uses the answer to drive attached I²C
+    /// devices' `advance_time_us` data-ready clocks (see
+    /// [`Machine::advance`] / `SystemBus::advance_central_i2c_time`).
+    ///
+    /// Only implemented by peripherals that model a genuine *absolute* µs-grade
+    /// counter firmware uses to measure elapsed time — the ESP32 SYSTIMER (a
+    /// silicon 16 MHz free-running counter). A wrapping down-counter (Cortex-M
+    /// SysTick) or a wrap-at-ARR timer (STM32 TIMx) does NOT qualify: it holds
+    /// no absolute time, and fabricating one from a per-board core frequency
+    /// would be a pinned-clock cheat. Those families return `None` (default), so
+    /// a `delay_us` device on them stays effectively always-ready, exactly as
+    /// before this hook existed — no observable behavior changes for them.
+    ///
+    /// The value MUST be monotonic within a run except across an explicit
+    /// counter reload (the machine re-anchors on a backward jump rather than
+    /// advancing devices by a negative delta).
+    fn sim_time_us(&self) -> Option<u64> {
+        None
+    }
+
+    /// True if this controller hosts I²C slaves whose data-ready clocks the
+    /// machine's central time drive should advance (see
+    /// [`Self::advance_attached_i2c_us`]). Default `false`.
+    ///
+    /// The nRF54L TWIM deliberately does NOT opt in: it drives its slaves'
+    /// `advance_time_us` itself off the GRTC, per transaction, so opting into
+    /// the central drive too would advance time twice. Every other I²C
+    /// controller that hosts attachable slaves returns `true`, and the bus
+    /// caches their indices at assembly so the per-slice drive is O(controllers)
+    /// with no per-tick peripheral walk.
+    fn drives_central_i2c_time(&self) -> bool {
+        false
+    }
+
+    /// Advance every attached I²C slave's free-running sample/measurement clock
+    /// by `us` microseconds (see [`crate::peripherals::i2c::I2cDevice::advance_time_us`]).
+    ///
+    /// The machine calls this once per scheduler slice on each controller that
+    /// [`drives_central_i2c_time`](Self::drives_central_i2c_time), handing over
+    /// the microseconds that elapsed on the chip's authoritative
+    /// [`sim_time_us`](Self::sim_time_us) source since the previous slice. A
+    /// controller overriding this walks its attached-device list and forwards
+    /// `us` to each. Default no-op (non-I²C peripherals, and the self-driving
+    /// nRF54L TWIM).
+    fn advance_attached_i2c_us(&mut self, _us: u64) {}
 
     fn dma_request(&mut self, _request_id: u32) {}
     fn snapshot(&self) -> serde_json::Value {
@@ -1072,6 +1138,25 @@ pub trait DebugControl {
     fn read_memory(&self, addr: u32, len: usize) -> SimResult<Vec<u8>>;
     fn write_memory(&mut self, addr: u32, data: &[u8]) -> SimResult<()>;
 
+    /// Side-effect-free decode of peripheral state, for debugger and agent views.
+    ///
+    /// Prefer this over [`Self::read_memory`] for anything a *human is merely
+    /// looking at*. `read_memory` goes through the real bus read path, so it
+    /// fires read side effects — a read-to-clear status register is cleared by
+    /// the act of displaying it, and the firmware under test then misses the
+    /// event. `inspect` uses `peek` throughout and cannot perturb the run.
+    fn inspect(
+        &self,
+        name: Option<&str>,
+        opts: &crate::inspect::InspectOpts,
+    ) -> crate::inspect::MachineInspect;
+
+    /// Side-effect-free raw read. Bytes outside any mapped region or peripheral
+    /// window come back as [`crate::inspect::PeekByte::Unmapped`] rather than a
+    /// silent zero, so a debugger can render unmodeled space honestly instead of
+    /// showing a convincing `0x00000000`.
+    fn peek(&self, addr: u64, len: usize) -> crate::inspect::PeekResult;
+
     fn get_pc(&self) -> u32;
     fn set_pc(&mut self, addr: u32);
     fn get_register_names(&self) -> Vec<String>;
@@ -1113,6 +1198,17 @@ pub struct StepProfile {
     pub bus_tick_entries: u64,
     pub legacy_tick_entries: u64,
 }
+
+/// Maximum cycles CPU idle fast-forward may skip in one step while a bus
+/// peripheral needs bounded external-medium polling (a medium-mode WiFi MAC —
+/// see [`Peripheral::idle_poll_bus_tick`]). Each skip runs the medium pump at
+/// its deadline, so this sets the worst-case frame-delivery latency: ~8192
+/// cycles ≈ 51 µs at 160 MHz, far under any WiFi association/DHCP/socket
+/// timeout, while still collapsing the millions of idle cycles the CPU would
+/// otherwise execute one-by-one. Non-WiFi buses never consult this. Only the
+/// event-scheduler fast-forward path consults the medium poll quantum.
+#[cfg(feature = "event-scheduler")]
+const WIFI_MEDIUM_IDLE_POLL_QUANTUM: u64 = 8192;
 
 pub struct Machine<C: Cpu> {
     pub cpu: C,
@@ -1226,6 +1322,24 @@ pub struct Machine<C: Cpu> {
     /// differential oracle tests use to compare the two capture modes; it is
     /// NOT user-facing configuration.
     logic_force_poll: bool,
+
+    /// Cached bus index of the chip's authoritative simulated-µs source (first
+    /// peripheral whose [`Peripheral::sim_time_us`] answers `Some` — the ESP32
+    /// SYSTIMER). `None` on families with no absolute-µs counter (Cortex-M
+    /// SysTick/TIM, nRF52), where declarative `delay_us` devices stay
+    /// effectively always-ready exactly as before this hook. Resolved once at
+    /// construction, like [`Self::rtc_cntl_index`].
+    i2c_time_source_index: Option<usize>,
+    /// Cached bus indices of I²C controllers that opt into the central time
+    /// drive ([`Peripheral::drives_central_i2c_time`]). Excludes the nRF54L
+    /// TWIM, which drives its slaves' `advance_time_us` itself off the GRTC —
+    /// so time is advanced exactly once. Empty ⇒ the drive short-circuits.
+    i2c_time_controller_indices: Vec<usize>,
+    /// Last authoritative µs the I²C slaves were advanced to. `u64::MAX` seeds
+    /// "not yet anchored" so the first drive sets the mark without advancing
+    /// (mirrors the nRF54L TWIM `last_us` seeding). A backward jump (SYSTIMER
+    /// LOAD) re-anchors rather than advancing by a negative delta.
+    last_i2c_time_us: u64,
 }
 
 impl<C: Cpu> Machine<C> {
@@ -1438,6 +1552,22 @@ impl<C: Cpu> Machine<C> {
                 .and_then(|a| a.downcast_ref::<crate::peripherals::scb::Scb>())
                 .is_some()
         });
+        // Central I²C data-ready time drive (Option A): the authoritative µs
+        // source is the first peripheral that reports one (ESP32 SYSTIMER); the
+        // fan-out targets are the opted-in I²C controllers. Both are stable for
+        // the life of the bus (chip peripherals are added at assembly; slaves
+        // attach to already-present controllers), so resolve once here.
+        let i2c_time_source_index = bus
+            .peripherals
+            .iter()
+            .position(|p| p.dev.sim_time_us().is_some());
+        let i2c_time_controller_indices = bus
+            .peripherals
+            .iter()
+            .enumerate()
+            .filter(|(_, p)| p.dev.drives_central_i2c_time())
+            .map(|(i, _)| i)
+            .collect();
         Self {
             cpu,
             cpu_secondary: None,
@@ -1463,7 +1593,52 @@ impl<C: Cpu> Machine<C> {
             event_placeholder: Some(Box::new(crate::peripherals::stub::StubPeripheral::new(0))),
             logic_capture: logic_capture::LogicCapture::new(),
             logic_force_poll: false,
+            i2c_time_source_index,
+            i2c_time_controller_indices,
+            last_i2c_time_us: u64::MAX,
         }
+    }
+
+    /// Advance every centrally-driven I²C slave's data-ready clock to the chip's
+    /// authoritative simulated-µs "now" (Option A). Called once per scheduler
+    /// slice from [`Self::commit_advance_boundary`].
+    ///
+    /// This is the honest generalization of the nRF54L TWIM's per-transaction
+    /// GRTC advance: instead of a hardcoded µs register, the machine reads
+    /// whichever peripheral models an absolute-µs counter ([`Peripheral::sim_time_us`])
+    /// and hands the elapsed delta to each opted-in controller. Families with no
+    /// such source (Cortex-M, nRF52) short-circuit here, so their behavior is
+    /// unchanged. The nRF54L TWIM is never in the controller list (it does not
+    /// opt in), so its slaves are advanced exactly once — by TWIM itself.
+    fn advance_central_i2c_time(&mut self) {
+        let Some(src) = self.i2c_time_source_index else {
+            return;
+        };
+        if self.i2c_time_controller_indices.is_empty() {
+            return;
+        }
+        let now = match self.bus.peripherals[src].dev.sim_time_us() {
+            Some(now) => now,
+            None => return,
+        };
+        let last = self.last_i2c_time_us;
+        if last == u64::MAX || now < last {
+            // First slice, or a counter reload jumped time backward: re-anchor
+            // without advancing (never hand a slave a negative delta).
+            self.last_i2c_time_us = now;
+            return;
+        }
+        if now == last {
+            return;
+        }
+        let delta = now - last;
+        // Index by value so the immutable read of the cached list and the
+        // mutable peripheral borrow don't overlap.
+        for i in 0..self.i2c_time_controller_indices.len() {
+            let idx = self.i2c_time_controller_indices[i];
+            self.bus.peripherals[idx].dev.advance_attached_i2c_us(delta);
+        }
+        self.last_i2c_time_us = now;
     }
 
     /// Enable dual-core mode by attaching a secondary CPU instance.
@@ -1549,6 +1724,17 @@ impl<C: Cpu> Machine<C> {
             }
             budget = budget.min(remaining);
 
+            // A bus peripheral servicing an external medium (a medium-mode WiFi
+            // MAC) must keep being pumped through the idle window or its inbound
+            // frames are starved for the whole skip — breaking WiFi association
+            // under fast-forward. Cap the skip to a small poll quantum and run
+            // the bus-tick pump at the deadline (below, after the skip commits).
+            // Gated on the tiny bus-tick set, so it is free on every other bus.
+            let idle_poll = self.bus.idle_poll_bus_tick_active();
+            if idle_poll {
+                budget = budget.min(WIFI_MEDIUM_IDLE_POLL_QUANTUM);
+            }
+
             if let Some(deadline_cycle) = self.sched.next_event_deadline() {
                 if deadline_cycle <= self.total_cycles {
                     return 0;
@@ -1582,6 +1768,14 @@ impl<C: Cpu> Machine<C> {
             }
             self.sched.advance_to(self.total_cycles);
             self.drain_scheduler_events();
+            // Pump the external-medium bus-tick peripherals at the poll deadline
+            // (current_cycle was published above), so a WiFi station pulls the
+            // AP's queued auth/assoc/data frames and beacons on schedule even
+            // though the CPU skipped the idle window. `idle_poll` bounded the
+            // skip to the quantum, keeping this cadence fine-grained.
+            if idle_poll {
+                self.bus.run_idle_poll_bus_tick();
+            }
             u64::from(skipped)
         }
     }
@@ -2236,7 +2430,31 @@ impl<C: Cpu> Machine<C> {
             .peripherals
             .iter()
             .filter(|entry| filter.is_none_or(|f| entry.name == f))
-            .map(|entry| entry.dev.inspect(entry.base, &entry.name, opts))
+            .map(|entry| {
+                let inspected = entry.dev.inspect(entry.base, &entry.name, opts);
+                // A peripheral that describes itself always wins — the schema is
+                // a fallback for NATIVE peripherals, which have none, and must
+                // never override a model's own account of its registers.
+                if !inspected.registers.is_empty() {
+                    return inspected;
+                }
+                match self.bus.debug_schemas.get(&entry.name) {
+                    Some(schema) => {
+                        let mut named = crate::inspect::inspect_with_schema(
+                            entry.dev.as_ref(),
+                            entry.base,
+                            &entry.name,
+                            schema,
+                        );
+                        // Preserve any artifacts (framebuffers, uart rings, pin
+                        // state) the peripheral produced; only its registers
+                        // were missing.
+                        named.artifacts = inspected.artifacts;
+                        named
+                    }
+                    None => inspected,
+                }
+            })
             .collect();
         crate::inspect::MachineInspect { peripherals }
     }
@@ -2305,6 +2523,21 @@ impl<C: Cpu> DebugControl for Machine<C> {
             self.bus.write_u8((addr as u64) + (i as u64), *byte)?;
         }
         Ok(())
+    }
+
+    // Both forward to the inherent methods of the same name. Exposing them on
+    // the trait is what lets a `Box<dyn DebugControl>` holder (the DAP server)
+    // reach the side-effect-free surface that MCP and the playground already use.
+    fn inspect(
+        &self,
+        name: Option<&str>,
+        opts: &crate::inspect::InspectOpts,
+    ) -> crate::inspect::MachineInspect {
+        Machine::inspect(self, name, opts)
+    }
+
+    fn peek(&self, addr: u64, len: usize) -> crate::inspect::PeekResult {
+        Machine::peek(self, addr, len)
     }
 
     fn get_pc(&self) -> u32 {

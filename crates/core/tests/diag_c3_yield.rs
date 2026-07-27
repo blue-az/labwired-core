@@ -44,7 +44,8 @@ fn diag_c3_first_yield() {
     let elf = core.join("validation/arduino-matrix/out/esp32c3/L0_serial_boot/firmware.elf");
     let syms = load_syms(&elf);
 
-    let mut bus = build_system_bus(Some(&sys)).expect("bus");
+    let resolved = labwired_config::ResolvedSystem::from_manifest_file(&sys).expect("system");
+    let mut bus = build_system_bus(Some(&resolved)).expect("bus");
     let mut flash_img = vec![0xFFu8; 4 * 1024 * 1024];
     for p in [
         core.join("validation/arduino-matrix/out/_pio_work/esp32c3__L0_serial_boot/.pio/build/matrix/partitions.bin"),

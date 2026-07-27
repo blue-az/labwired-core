@@ -32,7 +32,7 @@ examples. Check the per-board docs before assuming a peripheral is modeled:
 Pinned release:
 
 ```sh
-curl -fsSL https://labwired.com/install.sh | LABWIRED_VERSION=v0.19.2 sh
+curl -fsSL https://labwired.com/install.sh | LABWIRED_VERSION=v0.21.0 sh
 labwired --version
 ```
 
@@ -41,7 +41,7 @@ Prefer to inspect the installer first:
 ```sh
 curl -fsSL https://labwired.com/install.sh -o install.sh
 # review install.sh, then:
-LABWIRED_VERSION=v0.19.2 sh install.sh
+LABWIRED_VERSION=v0.21.0 sh install.sh
 ```
 
 Supported host environments:
@@ -52,7 +52,7 @@ Supported host environments:
 
 Install options:
 
-- `LABWIRED_VERSION=v0.19.2` pins the current documented release for a
+- `LABWIRED_VERSION=v0.21.0` pins the current documented release for a
   reproducible install.
 - `LABWIRED_FROM_SOURCE=1` forces a source build.
 - `LABWIRED_INSTALL_DIR=~/.local/bin` changes the install directory.
@@ -157,6 +157,11 @@ Additional workflows publish narrower signals:
   validation.
 - [`core-validate-hw-targets.yml`](.github/workflows/core-validate-hw-targets.yml):
   onboarding target sweep and catalog metadata.
+- [`core-perf.yml`](.github/workflows/core-perf.yml): per-board simulator
+  throughput. Measures host instructions retired per simulated CPU step under
+  callgrind and files an issue when a board regresses — see
+  [`scripts/perf/board_perf.py`](scripts/perf/board_perf.py) for the metric and
+  how to re-baseline.
 
 For release mechanics, see [RELEASE_PROCESS.md](RELEASE_PROCESS.md) and
 [RELEASE_READINESS_CHECKLIST.md](RELEASE_READINESS_CHECKLIST.md).

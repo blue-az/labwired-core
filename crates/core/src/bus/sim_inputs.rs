@@ -32,11 +32,12 @@ pub struct AnalogInputSource {
 impl SystemBus {
     /// Write `millivolts` into `channel` of the ADC named `connection`.
     ///
-    /// Two unrelated ADC controller models exist ([`crate::peripherals::adc::Adc`]
-    /// for STM32-class parts, `Esp32s3Sens` for the ESP32-S3 SAR ADC), so this
-    /// is the single choke point that hides which one a given system.yaml
-    /// wired up — the analog kits are controller-agnostic, exactly as the I²C
-    /// kits are via `attach_i2c_slave_with_route`.
+    /// Several unrelated ADC controller models exist
+    /// ([`crate::peripherals::adc::Adc`] for STM32-class parts, `Esp32s3Sens`
+    /// for the ESP32-S3 SAR ADC, `Rp2040Adc` for the RP2040), so this is the
+    /// single choke point that hides which one a given system.yaml wired up —
+    /// the analog kits are controller-agnostic, exactly as the I²C kits are via
+    /// `attach_i2c_slave_with_route`.
     ///
     /// Falls back to a bus scan when `connection` names no ADC: S3 manifests
     /// declare `connection: "sar_adc_s3"` while the peripheral is registered as
@@ -70,6 +71,11 @@ impl SystemBus {
         }
         if let Some(sens) = any.downcast_mut::<crate::peripherals::esp32s3::sens::Esp32s3Sens>() {
             sens.set_channel_input(channel, millivolts);
+            return true;
+        }
+        if let Some(adc) = any.downcast_mut::<crate::peripherals::rp2040::adc::Rp2040Adc>() {
+            // RP2040 inputs 0..3 are GPIO26..29; 4 is the temperature sensor.
+            adc.set_channel_input(channel, millivolts);
             return true;
         }
         false
@@ -138,6 +144,13 @@ impl SystemBus {
         for sensor in self.hcsr04.iter_mut() {
             let id = sensor.id.clone();
             if f(&id, sensor) {
+                return;
+            }
+        }
+        for scale in self.hx711.iter_mut() {
+            use crate::sim_input::SimInput;
+            let id = scale.component_id().unwrap_or("hx711").to_string();
+            if f(&id, scale) {
                 return;
             }
         }

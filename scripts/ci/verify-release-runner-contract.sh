@@ -111,14 +111,26 @@ core_integrity_block=$(awk '
 if [[ -z "$core_integrity_block" ]]; then
   fail 'core-integrity job is present in Core CI'
 fi
-require_block_literal "$core_integrity_block" 'docker build --pull' 'required Core integrity builds the runner image from fresh base layers'
-require_block_literal "$core_integrity_block" '--file Dockerfile.ci' 'required Core integrity uses the CI runner Dockerfile'
-require_block_literal "$core_integrity_block" 'labwired-ci-smoke:local' 'required Core integrity gives the local image a stable tag'
-require_block_literal "$core_integrity_block" 'VERSION=ci-smoke' 'required Core integrity provides OCI version metadata'
-require_block_literal "$core_integrity_block" 'REVISION="$GITHUB_SHA"' 'required Core integrity provides OCI revision metadata'
-require_block_literal "$core_integrity_block" 'docker run --rm labwired-ci-smoke:local --version' 'required Core integrity executes the final image entrypoint'
+# Docker runner smoke lives in a separate non-required job so PR integrity
+# stays lean (CI roast 2026-07-23). Still forbid registry publish from integrity.
 require_block_absent_literal "$core_integrity_block" 'docker/login-action@v3' 'required Core integrity does not need registry credentials'
 require_block_absent_literal "$core_integrity_block" 'docker/build-push-action@v6' 'required Core integrity does not publish an untagged PR image'
+require_block_absent_literal "$core_integrity_block" 'docker build --pull' 'required Core integrity does not embed Docker image smoke (see ci-runner-image)'
+
+ci_runner_image_block=$(awk '
+  $0 == "  ci-runner-image:" { inside = 1; next }
+  inside && $0 ~ /^  [[:alnum:]_-]+:$/ { exit }
+  inside { print }
+' "$core_ci_workflow")
+if [[ -z "$ci_runner_image_block" ]]; then
+  fail 'ci-runner-image job is present in Core CI'
+fi
+require_block_literal "$ci_runner_image_block" 'docker build --pull' 'ci-runner-image builds the runner image from fresh base layers'
+require_block_literal "$ci_runner_image_block" '--file Dockerfile.ci' 'ci-runner-image uses the CI runner Dockerfile'
+require_block_literal "$ci_runner_image_block" 'labwired-ci-smoke:local' 'ci-runner-image gives the local image a stable tag'
+require_block_literal "$ci_runner_image_block" 'VERSION=ci-smoke' 'ci-runner-image provides OCI version metadata'
+require_block_literal "$ci_runner_image_block" 'REVISION="$GITHUB_SHA"' 'ci-runner-image provides OCI revision metadata'
+require_block_literal "$ci_runner_image_block" 'docker run --rm labwired-ci-smoke:local --version' 'ci-runner-image executes the final image entrypoint'
 
 require_literal "$workflow" 'tags:' 'release workflow declares a tag trigger'
 require_literal "$workflow" "'v[0-9]+.[0-9]+.[0-9]+'" 'release workflow triggers vMAJOR.MINOR.PATCH tags'
@@ -134,7 +146,12 @@ for platform in linux-x86_64 linux-aarch64 darwin-x86_64 darwin-aarch64; do
 done
 require_literal "$workflow" 'ARCHIVE="labwired-${VERSION}-${PLATFORM}.tar.gz"' 'archive names include the release version and platform'
 require_literal "$workflow" 'cp "target/${{ matrix.target }}/release/labwired" dist/labwired' 'archive package copies the labwired binary'
-require_literal "$workflow" 'tar -czf "${ARCHIVE}" -C dist labwired' 'archive package contains the labwired binary'
+# The DAP is the binary VS Code spawns for F5. It was absent from every release
+# through v0.19.2, which made editor debugging work only on machines that had
+# built core from source. Pin it so it cannot be dropped again unnoticed.
+require_literal "$workflow" 'cargo build -p labwired-cli -p labwired-dap --release --target ${{ matrix.target }}' 'release builds both the CLI and the debug adapter'
+require_literal "$workflow" 'cp "target/${{ matrix.target }}/release/labwired-dap" dist/labwired-dap' 'archive package copies the labwired-dap binary'
+require_literal "$workflow" 'tar -czf "${ARCHIVE}" -C dist labwired labwired-dap' 'archive package contains both the CLI and the debug adapter'
 require_literal "$workflow" 'name: labwired-${{ matrix.platform }}' 'archive artifact names follow the platform matrix'
 
 release_block=$(job_block release)
@@ -237,7 +254,7 @@ if [[ -f "$dockerignore" ]]; then
   done
 fi
 
-require_literal "$action" 'default: "v0.19.2"' 'core action defaults to the supported public release'
+require_literal "$action" 'default: "v0.21.0"' 'core action defaults to the supported public release'
 action_inputs=$(awk '
   /^inputs:$/ { inside = 1; next }
   inside && /^[^[:space:]]/ { exit }
@@ -366,8 +383,8 @@ require_literal "$backfill_workflow" 'examples/ci/dummy-max-steps.yaml' 'runner 
 require_literal RELEASE_PROCESS.md 'core-backfill-runner-image.yml' 'release process documents the one-time runner image backfill workflow'
 require_literal RELEASE_PROCESS.md 'v0.18.0' 'release process documents the initial v0.18.0 runner image backfill'
 
-safe_action_sha=0cadd18fc9a3c0cbd1ecb0a6ddcd8ce66d56283d
-safe_action_version=v0.19.2
+safe_action_sha=bfd879522914b586223081c4c89ba315db4a97ed
+safe_action_version=v0.21.0
 safe_action_ref="w1ne/labwired-core/.github/actions/labwired-test@${safe_action_sha}"
 for doc in docs/ci_integration.md docs/ci_test_runner.md docs/integration-templates/github-actions.yml docs/integration-templates/gitlab-ci.yml docs/integration-templates/README.md docs/reference_client_flows.md .github/actions/labwired-test/README.md; do
   require_absent_literal "$doc" 'ghcr.io/w1ne/labwired:latest' "$doc does not recommend a mutable runner image tag"
@@ -377,7 +394,7 @@ for doc in docs/ci_integration.md docs/ci_test_runner.md docs/integration-templa
   require_absent_literal "$doc" 'fda6a7bfb0328d9909ee07ba53ed05c84901f627' "$doc does not retain the superseded action pin"
   require_absent_literal "$doc" 'version: v0.18.0' "$doc does not retain the superseded Core release version"
   require_absent_literal "$doc" 'version: v0.19.0' "$doc does not retain the superseded Core release version"
-  require_absent_literal "$doc" 'v0.19.1' "$doc does not retain the superseded Core release version"
+  require_absent_literal "$doc" 'v0.20.0' "$doc does not retain the superseded Core release version"
 done
 for doc in docs/ci_integration.md docs/ci_test_runner.md docs/integration-templates/README.md; do
   require_literal "$doc" '--user "$(id -u):$(id -g)"' "$doc keeps bind-mounted container artifacts writable by the caller"
@@ -419,7 +436,7 @@ else
     fail "immutable action-source commit $safe_action_sha contains its action README"
   fi
   if [[ -n "$pinned_action" ]]; then
-    require_block_literal "$pinned_action" 'default: "v0.19.2"' 'pinned action defaults to the supported public release'
+    require_block_literal "$pinned_action" 'default: "v0.21.0"' 'pinned action defaults to the supported public release'
     require_block_literal "$pinned_action" 'https://github.com/w1ne/labwired-core/releases/download/${version}/${asset}' 'pinned action downloads the public release archive'
     pinned_action_inputs=$(awk '
       /^inputs:$/ { inside = 1; next }
@@ -440,7 +457,7 @@ else
     require_block_literal "$pinned_action" 'name: labwired-${{ github.job }}-${{ github.run_id }}-${{ github.action }}' 'pinned action gives each invocation a unique artifact name'
   fi
   if [[ -n "$pinned_action_readme" ]]; then
-    require_block_literal "$pinned_action_readme" 'defaults to `v0.19.2`' 'pinned action README states the supported public release'
+    require_block_literal "$pinned_action_readme" 'defaults to `v0.21.0`' 'pinned action README states the supported public release'
     require_block_literal "$pinned_action_readme" '[CI integration guide](../../../docs/ci_integration.md)' 'pinned action README links the canonical consumer guide'
     require_block_literal "$pinned_action_readme" 'intentionally documents the action beside its implementation' 'pinned action README explains its source-local contract'
     require_block_absent_literal "$pinned_action_readme" 'uses: w1ne/labwired-core/.github/actions/labwired-test@' 'pinned action README does not recursively choose its own SHA'
@@ -486,10 +503,10 @@ require_literal docs/configuration_reference.md 'including `{}` and `null`' 'con
 require_literal docs/configuration_reference.md 'stop_when_assertions_pass' 'configuration reference documents world assertion completion'
 require_literal examples/egress-demo/README.md 'config` is a closed mapping' 'egress example documents its closed config mapping'
 require_literal examples/egress-demo/README.md 'positive integer' 'egress example documents buffer_max type validation'
-require_literal Cargo.toml 'version = "0.19.2"' 'workspace metadata uses the current release version'
-require_literal CHANGELOG.md '## [0.19.2] - 2026-07-15' 'changelog records the current release version'
-require_literal README.md 'LABWIRED_VERSION=v0.19.2' 'public README pins the current release version'
-require_absent_literal README.md 'LABWIRED_VERSION=v0.19.1' 'public README does not retain the superseded release version'
+require_literal Cargo.toml 'version = "0.21.0"' 'workspace metadata uses the current release version'
+require_literal CHANGELOG.md '## [0.21.0] - 2026-07-27' 'changelog records the current release version'
+require_literal README.md 'LABWIRED_VERSION=v0.21.0' 'public README pins the current release version'
+require_absent_literal README.md 'LABWIRED_VERSION=v0.20.0' 'public README does not retain the superseded release version'
 
 if (( failures > 0 )); then
   printf 'Release runner contract failed with %d issue(s).\n' "$failures" >&2

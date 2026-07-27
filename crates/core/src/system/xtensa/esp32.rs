@@ -20,6 +20,13 @@ use crate::Bus;
 fn build_i2c_external_device(
     ext: &labwired_config::ExternalDevice,
 ) -> Option<Box<dyn crate::peripherals::i2c::I2cDevice>> {
+    // Prefer the shared factory (includes kit types like ina219) so ESP classic
+    // and S3 stay in lockstep with the generic from_config attach path.
+    if let Some(dev) =
+        crate::peripherals::components::build_external_i2c_device(&ext.r#type, &ext.id, &ext.config)
+    {
+        return Some(dev);
+    }
     let addr = |default: u8| {
         ext.config
             .get("i2c_address")
@@ -34,10 +41,8 @@ fn build_i2c_external_device(
         "oled-ssd1306" => Some(Box::new(crate::peripherals::components::Ssd1306::new(
             addr(0x3C),
         ))),
-        "tmp102" => Some(Box::new(crate::peripherals::esp32s3::tmp102::Tmp102::new())),
-        "pca9685" => Some(Box::new(
-            crate::peripherals::components::pca9685::Pca9685::new(),
-        )),
+        // tmp102 / pca9685 are declarative devices handled by the shared factory
+        // (`build_external_i2c_device`) above — no local arm needed.
         _ => None,
     }
 }
@@ -608,6 +613,7 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
         Box::new(crate::peripherals::components::Bmp280::new(0x76)),
     )
     .expect("i2c0 just registered as Esp32I2c");
+    // AHB TX FIFO alias registered after wifi_mac_phy (see below).
 
     // SYSCON (TRM §13.2) — system controller. Owns SYSCLK_CONF, TICK_CONF,
     // SARADC_CTRL, FRONT_END_MEM_PD, and the RND_DATA TRNG output the BROM
@@ -710,6 +716,19 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
     // here (uart_ll_write_txfifo); STATUS/INT live on APB. Registered *after*
     // wifi_mac_phy so equal-start last-wins gives the 4-byte AHB windows
     // priority at 0x6000_0000 / 0x6001_0000 / 0x6002_E000.
+    //
+    // I2C0 TX FIFO AHB window: esp-idf `i2c_ll_write_txfifo` stores at
+    // 0x6001_301c (not the APB DATA reg). Same last-wins priority over wifi stub.
+    if let Some(idx) = bus.find_peripheral_index_by_name("i2c0") {
+        if let Some(i2c) = bus.peripherals[idx]
+            .dev
+            .as_any()
+            .and_then(|a| a.downcast_ref::<crate::peripherals::esp32::i2c::Esp32I2c>())
+        {
+            let ahb = i2c.ahb_tx_fifo_alias();
+            bus.add_peripheral("i2c0_ahb_fifo", 0x6001_301c, 4, None, Box::new(ahb));
+        }
+    }
     for (name, ahb_base) in [
         ("uart0", 0x6000_0000u64),
         ("uart1", 0x6001_0000u64),

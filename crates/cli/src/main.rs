@@ -120,6 +120,10 @@ enum Commands {
     /// Deterministic, CI-friendly runner mode driven by a test script (YAML).
     Test(TestArgs),
 
+    /// List the chips bundled with this CLI, usable as `inputs.chip` in a test
+    /// script or as a manifest's `chip:` field without copying any YAML.
+    Chips,
+
     /// Machine control operations (load, etc.)
     Machine(MachineArgs),
 
@@ -728,6 +732,12 @@ fn main() -> ExitCode {
     }
 
     match cli.command {
+        Some(Commands::Chips) => {
+            for name in labwired_config::BUILTIN_CHIP_NAMES {
+                println!("{name}");
+            }
+            ExitCode::SUCCESS
+        }
         Some(Commands::Test(args)) => commands::test::run_test(args),
         Some(Commands::Machine(args)) => run_machine(args),
         Some(Commands::Asset(args)) => run_asset(args),
@@ -912,6 +922,114 @@ fn run_two_c3_wifi(
         }
     }
     eprintln!("[dual] run complete");
+    ExitCode::SUCCESS
+}
+
+/// Single-station WiFi run: one ESP32-C3 on the shared [`virtual_wifi`] medium.
+/// It associates with the virtual AP, gets a DHCP lease, and reaches the AP's
+/// DHCP + HTTP servers — the LBC3.1 stats-device demo path. Mirrors the dual
+/// harness (own minimal step loop, non-zero factory MAC, UART echo) rather than
+/// bolting medium mode onto the standard run loop, which does not keep the MAC
+/// resident (auth never completes).
+pub(crate) fn run_one_c3_wifi(
+    args: &RunArgs,
+    chip: &labwired_config::ChipDescriptor,
+    manifest: &labwired_config::SystemManifest,
+) -> ExitCode {
+    use labwired_core::bus::SystemBus;
+    use labwired_core::peripherals::esp32c3::virtual_wifi::{ApConfig, VirtualWifiBus};
+    use labwired_core::peripherals::esp32c3::{virtual_wifi, wifi_mac::Esp32c3WifiMac};
+
+    virtual_wifi::reset();
+    eprintln!("[solo] one C3 on VirtualWifi: STA=02:00:00:00:00:02 (AP hosts DHCP + HTTP)");
+
+    // If the manifest declares a `wifi_ap`, host a medium with that config;
+    // otherwise the MACs bind the process-global default AP (byte-identical to
+    // the former hardcoded behaviour).
+    let configured_bus = manifest.wifi_ap.as_ref().map(|ap| {
+        let ip = {
+            let octets: Vec<u8> = ap
+                .ip
+                .split('.')
+                .filter_map(|o| o.parse::<u8>().ok())
+                .collect();
+            (octets.len() == 4).then(|| [octets[0], octets[1], octets[2], octets[3]])
+        };
+        VirtualWifiBus::with_config(ApConfig::from_parts(
+            Some(ap.ssid.clone()),
+            ip,
+            Some(&ap.serves),
+        ))
+    });
+
+    let bus = match SystemBus::from_config(chip, manifest) {
+        Ok(b) => b,
+        Err(e) => {
+            eprintln!("error: failed to build system bus: {e:#}");
+            return ExitCode::from(EXIT_CONFIG_ERROR);
+        }
+    };
+    let mut m = match build_c3_rom_boot_machine(bus, Some([0x02, 0, 0, 0, 0, 0x02])) {
+        Ok(m) => m,
+        Err(c) => return c,
+    };
+    for p in m.bus.peripherals.iter_mut() {
+        let Some(any) = p.dev.as_any_mut() else {
+            continue;
+        };
+        if let Some(mac) = any.downcast_mut::<Esp32c3WifiMac>() {
+            if let Some(bus) = configured_bus.as_ref() {
+                mac.set_wifi_bus(bus.clone());
+            }
+            mac.attach_to_medium();
+        } else if let Some(uart) = any.downcast_mut::<labwired_core::peripherals::uart::Uart>() {
+            uart.set_stdout_prefix("");
+        }
+    }
+    m.bus.refresh_peripheral_index();
+
+    let limit = args.max_steps.unwrap_or(u64::MAX);
+    // Measurement/parity path (env LABWIRED_WIFI_FF=1): drive the station via
+    // the authoritative `advance(run)` loop with scheduler-safe idle
+    // fast-forward enabled — exactly what the browser bridge does for a heavy
+    // C3 chip (`isHeavyBrowserChip` → `set_idle_fast_forward_enabled(true)`).
+    // The default `step()` loop stays the faithful per-instruction reference so
+    // the two can be diffed for byte-identical WiFi output.
+    if std::env::var("LABWIRED_WIFI_FF").is_ok() {
+        use labwired_core::AdvanceRequest;
+        m.config.idle_fast_forward_enabled = true;
+        eprintln!("[solo] idle fast-forward ENABLED (advance/run path)");
+        let mut done: u64 = 0;
+        while done < limit {
+            let chunk = (limit - done).min(2_000_000);
+            match m.advance(AdvanceRequest::run(Some(chunk))) {
+                Ok(_report) => {}
+                Err(e) => {
+                    eprintln!("[solo] station halted after {done} cycles: {e}");
+                    break;
+                }
+            }
+            done = done.saturating_add(chunk);
+            if m.total_cycles == 0 {
+                break;
+            }
+        }
+        eprintln!(
+            "[solo] run complete — total_cycles={} idle_ff_cycles_skipped={}",
+            m.total_cycles, m.idle_fast_forward_cycles_skipped
+        );
+        return ExitCode::SUCCESS;
+    }
+    for i in 0..limit {
+        if let Err(e) = m.step() {
+            eprintln!("[solo] station halted at step {i}: {e}");
+            break;
+        }
+    }
+    eprintln!(
+        "[solo] run complete — total_cycles={} (no idle-ff)",
+        m.total_cycles
+    );
     ExitCode::SUCCESS
 }
 
@@ -1312,6 +1430,7 @@ fn execute_test_loop<C: labwired_core::Cpu>(
     require_fault_fired: bool,
     mut fault_evidence: Vec<labwired_cli::faults::FaultEvidence>,
     stimuli: &[labwired_config::StimulusSpec],
+    uart_injections: &[labwired_config::UartInjectionSpec],
     // True when this run qualifies for the RV32IMC wasm-JIT fast path (decided
     // by `riscv_jit_test_eligible` in the caller): RiscV arch, batch mode, and
     // NONE of the per-instruction-visibility features that gate the JIT off.
@@ -1510,6 +1629,62 @@ fn execute_test_loop<C: labwired_core::Cpu>(
         .map(|s| (s, false))
         .collect();
 
+    // Declarative UART RX injections (schema_version 1.2). Resolved against
+    // the built bus by peripheral name via the same `attach_uart_rx_source`
+    // family used by the wasm bridge (`attach_uart_rx_source_named`), then
+    // pushed straight into the UART's RX `VecDeque` — the shared mechanism
+    // that already backs interactive serial input. A byte pushed before the
+    // firmware configures/reads the UART is buffered, not dropped: RX
+    // presence is derived from the queue being non-empty (see
+    // `Uart::read`), with no enable-bit gating. `at_start` delivers
+    // immediately (before the firmware executes its first instruction);
+    // `after_cycles` delivers the first loop iteration at or past its cycle
+    // threshold, mirroring `apply_stimulus` above. A named UART that isn't
+    // found on the bus is a hard config error — silently dropping serial
+    // input a script depends on would be a false pass.
+    let mut uart_injection_error = false;
+    let apply_uart_injection =
+        |machine: &mut labwired_core::Machine<C>, u: &labwired_config::UartInjectionSpec| {
+            match machine.bus.attach_uart_rx_source_named(&u.uart) {
+                Some(rx) => {
+                    let bytes = u.bytes.as_bytes();
+                    match rx.lock() {
+                        Ok(mut guard) => {
+                            guard.extend(bytes.iter().copied());
+                            info!(
+                                "uart_injection: {} byte(s) delivered to '{}'",
+                                bytes.len(),
+                                u.uart
+                            );
+                        }
+                        Err(e) => error!("uart_injection '{}': RX buffer poisoned: {e}", u.uart),
+                    }
+                    None
+                }
+                None => Some(format!(
+                    "uart_injection: UART peripheral '{}' not found on the bus",
+                    u.uart
+                )),
+            }
+        };
+    for u in uart_injections {
+        if matches!(u.trigger, labwired_config::FaultTrigger::AtStart) {
+            if let Some(err) = apply_uart_injection(machine, u) {
+                error!("{err}");
+                uart_injection_error = true;
+            }
+        }
+    }
+    if uart_injection_error {
+        return ExitCode::from(EXIT_CONFIG_ERROR);
+    }
+    let mut pending_uart_injections: Vec<(&labwired_config::UartInjectionSpec, bool)> =
+        uart_injections
+            .iter()
+            .filter(|u| matches!(u.trigger, labwired_config::FaultTrigger::AfterCycles { .. }))
+            .map(|u| (u, false))
+            .collect();
+
     // Tracks the step at which all runtime assertions first passed. The
     // `stop_when_assertions_pass` early-stop is only accepted after the machine
     // keeps executing for a settling window past this point WITHOUT faulting —
@@ -1613,6 +1788,24 @@ fn execute_test_loop<C: labwired_core::Cpu>(
                 }
             }
         }
+        // Fire any `after_cycles` UART injection whose threshold has been reached.
+        if !pending_uart_injections.is_empty() {
+            let cycles = metrics.get_cycles();
+            for (u, fired) in pending_uart_injections.iter_mut() {
+                if *fired {
+                    continue;
+                }
+                if let labwired_config::FaultTrigger::AfterCycles { cycles: threshold } = u.trigger
+                {
+                    if cycles >= threshold {
+                        if let Some(err) = apply_uart_injection(machine, u) {
+                            error!("{err}");
+                        }
+                        *fired = true;
+                    }
+                }
+            }
+        }
         if !args.breakpoint.is_empty() && args.breakpoint.contains(&machine.cpu.get_pc()) {
             stop_reason = StopReason::Halt;
             steps_executed = step;
@@ -1656,6 +1849,15 @@ fn execute_test_loop<C: labwired_core::Cpu>(
         for (stimulus, fired) in &pending_stimuli {
             if !*fired {
                 if let labwired_config::FaultTrigger::AfterCycles { cycles } = stimulus.trigger {
+                    if cycles > current_cycle {
+                        limit = limit.min(cycles - current_cycle);
+                    }
+                }
+            }
+        }
+        for (injection, fired) in &pending_uart_injections {
+            if !*fired {
+                if let labwired_config::FaultTrigger::AfterCycles { cycles } = injection.trigger {
                     if cycles > current_cycle {
                         limit = limit.min(cycles - current_cycle);
                     }

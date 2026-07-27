@@ -66,6 +66,196 @@ fn metering_exit_status(exit_code: &ExitCode) -> i32 {
 
 use super::esp32_boot_state::resolve_esp_partitions_bin;
 
+/// True when the system manifest at `sys_path` targets the ESP32-C3 (the only
+/// chip family with an ELF-less faithful rom-boot machine). Reads the manifest
+/// and its referenced chip descriptor; any load failure → false (fall back to
+/// requiring firmware). Mirrors the C3 detection used on the fast-boot path.
+fn system_is_esp32c3(system: &labwired_config::ResolvedSystem) -> bool {
+    system.chip().map(|c| c.name == "esp32c3").unwrap_or(false)
+}
+
+/// Faithful ESP32-C3 (RISC-V) rom-boot with NO debug ELF. The flash image
+/// (LABWIRED_ESP32C3_FLASH) IS the program the real mask ROM loads, so no ELF is
+/// needed — the hosted compile deliberately ships flash images but no
+/// firmware_ref for rom-boot chips (a multi-MB ELF overflows the D1 blob row).
+///
+/// This mirrors the ELF `Arch::RiscV` rom-boot / resume arms in `run_test`, but
+/// builds the bus + machine directly instead of dispatching on `program.arch`
+/// (there is no ELF to read the arch from). Symbol-dependent diagnostics degrade
+/// gracefully: `execute_test_loop` is handed an empty firmware slice, so
+/// `resolve_symbol_in_elf` returns `None` and `--capture-app-entry` falls back
+/// to the XIP app-window detector. Snapshot-invalid resume errors deliberately
+/// write NO result.json so the builder falls back to a cold `--rom-boot` (the
+/// same fallback contract the ELF resume arm relies on).
+#[allow(clippy::too_many_arguments)]
+fn run_c3_rom_boot_no_elf(
+    args: &TestArgs,
+    resolved_limits: &TestLimits,
+    system_path: Option<&std::path::PathBuf>,
+    system: Option<&labwired_config::ResolvedSystem>,
+    assertions: &[TestAssertion],
+    faults: &[labwired_config::FaultSpec],
+    require_fault_fired: bool,
+    stimuli: &[labwired_config::StimulusSpec],
+    uart_injections: &[labwired_config::UartInjectionSpec],
+) -> ExitCode {
+    // Build the from_config bus (peripherals + external devices) exactly as the
+    // ELF rom-boot path does before build_c3_rom_boot_machine.
+    let mut bus = match labwired_core::system::builder::build_system_bus(system) {
+        Ok(bus) => bus,
+        Err(e) => {
+            let msg = format!("{:#}", e);
+            error!("{}", msg);
+            write_config_error_outputs(args, None, system_path, None, Some(resolved_limits), msg);
+            return ExitCode::from(EXIT_CONFIG_ERROR);
+        }
+    };
+
+    // Load the manifest once: it drives both the UART sink selection (debug_uart)
+    // and — the universal WiFi adapter — the `wifi_ap` attach below.
+    let manifest_opt = system.map(|s| s.manifest.clone());
+    let debug_uart = manifest_opt.as_ref().and_then(|m| m.debug_uart.clone());
+    // Seed the station eFuse MAC when a `wifi_ap` is present so the C3 stays
+    // associated (a zero eFuse MAC associates but drops); None otherwise keeps
+    // non-WiFi rom-boot byte-identical.
+    let wifi_station_mac = manifest_opt
+        .as_ref()
+        .and_then(labwired_core::system::wifi::wifi_ap_station_mac);
+
+    // UART capture, mirroring the main flow: honour debug_uart, else all UARTs,
+    // plus the IO-Link master log sink.
+    let uart_tx = Arc::new(Mutex::new(Vec::new()));
+    if let Some(debug_uart) = debug_uart.as_deref() {
+        if !bus.attach_uart_tx_sink_named(debug_uart, uart_tx.clone(), !args.no_uart_stdout) {
+            warn!(
+                "debug_uart '{}' did not resolve to a UART peripheral; falling back to all UARTs",
+                debug_uart
+            );
+            bus.attach_uart_tx_sink(uart_tx.clone(), !args.no_uart_stdout);
+        }
+    } else {
+        bus.attach_uart_tx_sink(uart_tx.clone(), !args.no_uart_stdout);
+    }
+    bus.attach_iolink_master_log_sink(uart_tx.clone());
+
+    // Resume from a captured app-entry snapshot when requested (the cache-hit
+    // path), else cold rom-boot. The ELF is never needed: the snapshot self-key
+    // is keyed on the chip + flash SHA-256, not the ELF.
+    let mut machine = if let Some(snap_path) = &args.resume_snapshot {
+        let snap_bytes = match std::fs::read(snap_path) {
+            Ok(b) => b,
+            Err(e) => {
+                let msg = format!("cannot read resume snapshot {snap_path:?}: {e}");
+                error!("{}", msg);
+                write_config_error_outputs(
+                    args,
+                    None,
+                    system_path,
+                    None,
+                    Some(resolved_limits),
+                    msg,
+                );
+                return ExitCode::from(EXIT_CONFIG_ERROR);
+            }
+        };
+        let snap = match labwired_core::runtime_snapshot::MachineRuntimeSnapshot::from_bytes(
+            &snap_bytes,
+        ) {
+            Ok(s) => s,
+            Err(e) => {
+                // Corrupt/version-mismatched blob → write NO result.json so the
+                // caller cold-boots and refreshes the cache.
+                error!("invalid resume snapshot {snap_path:?}: {e}; cold-boot required");
+                return ExitCode::from(EXIT_CONFIG_ERROR);
+            }
+        };
+        let (chip, fw_sha) = match crate::rom_boot_flash_self_key() {
+            Some(v) => v,
+            None => {
+                let msg = "--resume-snapshot needs LABWIRED_ESP32C3_FLASH set (the same flash \
+                           image the snapshot was captured against)"
+                    .to_string();
+                error!("{}", msg);
+                write_config_error_outputs(
+                    args,
+                    None,
+                    system_path,
+                    None,
+                    Some(resolved_limits),
+                    msg,
+                );
+                return ExitCode::from(EXIT_CONFIG_ERROR);
+            }
+        };
+        if let Err(e) = snap.validate_self_key(chip, &fw_sha) {
+            // Stale/foreign snapshot → write NO result.json (cold-boot fallback).
+            error!("resume snapshot self-key mismatch ({e}); cold-boot required");
+            return ExitCode::from(EXIT_CONFIG_ERROR);
+        }
+        let mut machine = match crate::build_c3_rom_boot_machine(bus, wifi_station_mac) {
+            Ok(m) => m,
+            Err(code) => return code,
+        };
+        if let Err(e) = machine.apply_runtime_snapshot(&snap) {
+            // Structurally incompatible snapshot → write NO result.json so the
+            // caller cold-boots and refreshes the cache with a compatible capture.
+            error!(
+                "resume snapshot incompatible with this machine ({e}); \
+                 cold-boot required (stale/foreign snapshot)"
+            );
+            return ExitCode::from(EXIT_CONFIG_ERROR);
+        }
+        eprintln!(
+            "labwired-riscv: resumed from app-entry snapshot {snap_path:?} (chip {chip}); \
+             mask-ROM replay skipped (ELF-less)"
+        );
+        machine
+    } else {
+        // Cold faithful rom-boot. --capture-app-entry (the cache-miss path) is
+        // handled inside execute_test_loop; with no ELF the app-entry PC falls
+        // back to the XIP app-window detector.
+        match crate::build_c3_rom_boot_machine(bus, wifi_station_mac) {
+            Ok(m) => m,
+            Err(code) => return code,
+        }
+    };
+
+    // Universal WiFi adapter: if the diagram carries a `wifi_ap`, attach every
+    // real WiFi MAC to a per-lab virtual-WiFi medium so the device associates →
+    // DHCP → HTTP under the hosted `test` path exactly like the CLI solo path and
+    // the browser. No-op when there is no `wifi_ap`.
+    if let Some(manifest) = manifest_opt.as_ref() {
+        labwired_core::system::wifi::attach_configured_wifi_ap(&mut machine.bus, manifest);
+    }
+
+    let metrics = std::sync::Arc::new(labwired_core::metrics::PerformanceMetrics::new());
+    apply_matrix_speed_opts(&mut machine);
+    machine.observers.push(metrics.clone());
+    let fault_evidence = handle_faults(&mut machine.bus, faults);
+
+    // No ELF: empty firmware bytes degrade symbol/hash diagnostics gracefully; a
+    // placeholder path is recorded as config.firmware in result.json.
+    let placeholder = std::path::PathBuf::from("<flash-image>");
+    execute_test_loop(
+        args,
+        &mut machine,
+        resolved_limits,
+        assertions,
+        &[],
+        &uart_tx,
+        &metrics,
+        &placeholder,
+        system_path,
+        faults,
+        require_fault_fired,
+        fault_evidence,
+        stimuli,
+        uart_injections,
+        // rom-boot is never JIT-eligible (it forces cycle-accurate stepping).
+        false,
+    )
+}
+
 pub(crate) fn run_test(args: TestArgs) -> ExitCode {
     // ── API key validation (Pro tier gate) ──────────────────────────────
     // If LABWIRED_API_KEY is set and --no-key is not passed, validate before
@@ -127,6 +317,13 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
         }
     };
 
+    // `inputs.chip` names a built-in chip for firmware with nothing wired to it.
+    // It is read before the destructuring match because only the 1.0 schema has it.
+    let script_chip = match &loaded {
+        LoadedTestScript::V1_0(script) => script.inputs.chip.clone(),
+        _ => None,
+    };
+
     let (
         script_firmware,
         script_system,
@@ -143,6 +340,7 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
         faults,
         verdict,
         stimuli,
+        uart_injections,
     ) = match loaded {
         LoadedTestScript::V1_0(script) => (
             Some(script.inputs.firmware),
@@ -160,6 +358,7 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
             script.faults,
             script.verdict,
             script.stimuli,
+            script.uart_injections,
         ),
         LoadedTestScript::LegacyV1(script) => {
             tracing::warn!(
@@ -180,6 +379,7 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
                 script.assertions,
                 Vec::new(),
                 None,
+                Vec::new(),
                 Vec::new(),
             )
         }
@@ -234,7 +434,23 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
     // gets a proportionally higher ceiling (wall-clock caps still apply).
     const MAX_ALLOWED_STEPS: u64 = 50_000_000;
     const MAX_ALLOWED_STEPS_ROM_BOOT: u64 = 500_000_000;
-    let max_allowed_steps = if args.rom_boot {
+    // A run boots the real ROM (and needs the higher ceiling) not only when
+    // --rom-boot is set, but whenever it captures/resumes an app-entry snapshot
+    // OR a flash-image env is present: the compiled-source ESP32-C3/S3 path
+    // supplies the merged flash image via LABWIRED_ESP32{C3,S3}_FLASH and boots
+    // the ROM from it, yet did not always carry the --rom-boot flag — so it
+    // wrongly got the 50M ceiling. `--capture-app-entry` and `--resume-snapshot`
+    // are rom-boot runs too (same predicate the machine build uses). Key the
+    // ceiling off EFFECTIVE rom-boot so headless device proving has the budget
+    // it needs (acceptance markers still halt early; wall-clock caps still
+    // bound runaway sims).
+    let flash_env_present = |k: &str| std::env::var(k).map(|v| !v.is_empty()).unwrap_or(false);
+    let rom_boot_effective = args.rom_boot
+        || args.capture_app_entry.is_some()
+        || args.resume_snapshot.is_some()
+        || flash_env_present("LABWIRED_ESP32C3_FLASH")
+        || flash_env_present("LABWIRED_ESP32S3_FLASH");
+    let max_allowed_steps = if rom_boot_effective {
         MAX_ALLOWED_STEPS_ROM_BOOT
     } else {
         MAX_ALLOWED_STEPS
@@ -256,38 +472,116 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
         return ExitCode::from(EXIT_CONFIG_ERROR);
     }
 
-    let firmware_path = match args.firmware.clone() {
-        Some(p) => p,
-        None => match script_firmware
-            .as_deref()
-            .filter(|s| !s.trim().is_empty())
-            .map(|s| resolve_script_path(&args.script, s))
-        {
-            Some(p) => p,
-            None => {
-                let msg =
-                    "Missing firmware path (provide --firmware or set inputs.firmware in script)"
-                        .to_string();
-                error!("{}", msg);
-                write_config_error_outputs(
-                    &args,
-                    None,
-                    args.system.as_ref(),
-                    None,
-                    Some(&resolved_limits),
-                    msg,
-                );
-                return ExitCode::from(EXIT_CONFIG_ERROR);
-            }
-        },
-    };
-
+    // system_path is resolved first: when no ELF is provided we must inspect the
+    // manifest's chip to decide whether the ELF-less C3 rom-boot path applies.
     let system_path = args.system.clone().or_else(|| {
         script_system
             .as_deref()
             .filter(|s| !s.trim().is_empty())
             .map(|s| resolve_script_path(&args.script, s))
     });
+
+    // Resolve the system once, from either a manifest file or an `inputs.chip`
+    // name. Every site below that needs the chip, the debug UART, or the wifi
+    // AP reads it from here instead of re-parsing the manifest.
+    let resolved_system = match (&system_path, &script_chip) {
+        (Some(path), _) => match labwired_config::ResolvedSystem::from_manifest_file(path) {
+            Ok(s) => Some(s),
+            Err(e) => {
+                let msg = format!("Failed to load system manifest {path:?}: {e:#}");
+                error!("{}", msg);
+                write_config_error_outputs(&args, None, Some(path), None, None, msg);
+                return ExitCode::from(EXIT_CONFIG_ERROR);
+            }
+        },
+        (None, Some(chip)) => match labwired_config::ResolvedSystem::from_builtin_chip(chip) {
+            Ok(s) => Some(s),
+            Err(e) => {
+                let msg = format!("{e:#}");
+                error!("{}", msg);
+                write_config_error_outputs(&args, None, None, None, None, msg);
+                return ExitCode::from(EXIT_CONFIG_ERROR);
+            }
+        },
+        (None, None) => None,
+    };
+
+    // Resolve the firmware source. Normally an ELF is required (via --firmware or
+    // inputs.firmware). The ONE exception is the faithful ESP32-C3 (RISC-V)
+    // rom-boot path: the flash image (LABWIRED_ESP32C3_FLASH) is the program the
+    // real mask ROM loads, so no debug ELF is needed — the hosted compile
+    // deliberately withholds it (a multi-MB ELF overflows the D1 blob row →
+    // SQLITE_TOOBIG). See run_c3_rom_boot_no_elf.
+    let firmware_path_opt: Option<std::path::PathBuf> = match args.firmware.clone() {
+        Some(p) => Some(p),
+        None => script_firmware
+            .as_deref()
+            .filter(|s| !s.trim().is_empty())
+            .map(|s| resolve_script_path(&args.script, s)),
+    };
+
+    // ELF-less C3 rom-boot: no firmware given, --rom-boot (or a --resume-snapshot
+    // cache-hit) requested, the flash image env pin is set, and the manifest's
+    // chip is esp32c3. Every other missing-firmware case is still a config error,
+    // and no other chip family has an ELF-less rom-boot machine.
+    let no_elf_rom_boot = firmware_path_opt.is_none()
+        && (args.rom_boot || args.resume_snapshot.is_some())
+        && std::env::var("LABWIRED_ESP32C3_FLASH").is_ok()
+        && resolved_system
+            .as_ref()
+            .map(system_is_esp32c3)
+            .unwrap_or(false);
+
+    if no_elf_rom_boot {
+        eprintln!(
+            "labwired-cli test: no --firmware provided; faithful ESP32-C3 rom-boot from \
+             LABWIRED_ESP32C3_FLASH (the flash image is the program; ELF-less)"
+        );
+        let exit_code = run_c3_rom_boot_no_elf(
+            &args,
+            &resolved_limits,
+            system_path.as_ref(),
+            resolved_system.as_ref(),
+            &assertions,
+            &faults,
+            require_fault_fired,
+            &stimuli,
+            &uart_injections,
+        );
+        // Best-effort Pro-tier metering (no ELF → hash the empty program; the
+        // no-key MCP path never meters). Mirrors the ELF paths' tail metering.
+        if let Some(ref key) = api_key_opt {
+            use sha2::{Digest, Sha256};
+            let firmware_hash = format!("{:x}", Sha256::new().finalize());
+            let duration_ms = run_start.elapsed().as_millis() as u64;
+            api_client::record_run(
+                key,
+                &firmware_hash,
+                0,
+                duration_ms,
+                metering_exit_status(&exit_code),
+            );
+        }
+        return exit_code;
+    }
+
+    let firmware_path = match firmware_path_opt {
+        Some(p) => p,
+        None => {
+            let msg = "Missing firmware path (provide --firmware or set inputs.firmware in script)"
+                .to_string();
+            error!("{}", msg);
+            write_config_error_outputs(
+                &args,
+                None,
+                system_path.as_ref(),
+                None,
+                Some(&resolved_limits),
+                msg,
+            );
+            return ExitCode::from(EXIT_CONFIG_ERROR);
+        }
+    };
 
     let firmware_bytes = match std::fs::read(&firmware_path) {
         Ok(b) => b,
@@ -314,22 +608,14 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
     // `build_esp32_system_from_manifest` path that calls configure + attach
     // together, before falling through to `build_system_bus` for all other
     // architectures. The parsed manifest is reused so the file is read only once.
-    let esp32_manifest: Option<labwired_config::SystemManifest> =
-        if let Some(sys_path) = system_path.as_deref() {
-            labwired_config::SystemManifest::from_file(sys_path)
-                .ok()
-                .filter(|m| {
-                    let chip_path = sys_path
-                        .parent()
-                        .unwrap_or_else(|| std::path::Path::new("."))
-                        .join(&m.chip);
-                    labwired_config::ChipDescriptor::from_file(&chip_path)
-                        .map(|c| c.arch == labwired_config::Arch::Xtensa)
-                        .unwrap_or(false)
-                })
-        } else {
-            None
-        };
+    let esp32_manifest: Option<labwired_config::SystemManifest> = resolved_system
+        .as_ref()
+        .filter(|s| {
+            s.chip()
+                .map(|c| c.arch == labwired_config::Arch::Xtensa)
+                .unwrap_or(false)
+        })
+        .map(|s| s.manifest.clone());
     let is_xtensa = esp32_manifest.is_some();
 
     // For Xtensa, short-circuit: build bus + CPU together via build_esp32_system_from_manifest.
@@ -386,11 +672,10 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
             // classic ESP32 stays on the legacy fast-boot (its rom-boot is a
             // separate task).
             let is_esp32s3 = {
-                let chip_path = sys_path
+                let chip_dir = sys_path
                     .parent()
-                    .unwrap_or_else(|| std::path::Path::new("."))
-                    .join(&manifest.chip);
-                labwired_config::ChipDescriptor::from_file(&chip_path)
+                    .unwrap_or_else(|| std::path::Path::new("."));
+                labwired_config::ChipDescriptor::resolve(&manifest.chip, chip_dir)
                     .map(|c| c.name == "esp32s3")
                     .unwrap_or(false)
             };
@@ -427,6 +712,23 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
                         ..Esp32s3Opts::default()
                     };
                     let wiring = configure_xtensa_esp32s3(&mut bus, &opts);
+                    // Wire matrix kits (INA219, OLED, …) the same way classic ESP32 does.
+                    if let Err(e) = labwired_core::system::xtensa::attach_esp32_external_devices(
+                        &mut bus, manifest,
+                    ) {
+                        let msg = format!("ESP32-S3 external_devices attach: {e:#}");
+                        error!("{}", msg);
+                        write_config_error_outputs(
+                            &args,
+                            Some(&firmware_path),
+                            system_path.as_ref(),
+                            Some(&firmware_bytes),
+                            Some(&resolved_limits),
+                            msg,
+                        );
+                        return ExitCode::from(EXIT_CONFIG_ERROR);
+                    }
+                    bus.refresh_peripheral_index();
                     if wiring.boot_mode != Esp32s3BootMode::Faithful {
                         let msg =
                             "--rom-boot needs the real ESP32-S3 boot ROM, but none was found. \
@@ -462,11 +764,41 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
                     // Scoped: provision_rom_images checks this once.
                     let _fast = std::env::var_os("LABWIRED_ESP32S3_FASTBOOT");
                     std::env::set_var("LABWIRED_ESP32S3_FASTBOOT", "1");
+                    // The matrix loads the app at the factory partition
+                    // (`factory_flash_base` below) and seeds the flash MMU via
+                    // `seed_factory_mmu_for_cache2phys` so `spi_flash_mmap` /
+                    // `cache2phys` resolve — that requires the MMU-XIP window, so
+                    // request it explicitly (FASTBOOT alone no longer implies it,
+                    // to keep bare fast_boot fixtures on identity XIP).
+                    let _mmu_xip = std::env::var_os("LABWIRED_ESP32S3_MMU_XIP");
+                    std::env::set_var("LABWIRED_ESP32S3_MMU_XIP", "1");
                     let opts = Esp32s3Opts::default();
                     let wiring = configure_xtensa_esp32s3(&mut bus, &opts);
                     if _fast.is_none() {
                         std::env::remove_var("LABWIRED_ESP32S3_FASTBOOT");
                     }
+                    if _mmu_xip.is_none() {
+                        std::env::remove_var("LABWIRED_ESP32S3_MMU_XIP");
+                    }
+                    // Matrix L3 kits live in system.yaml external_devices — attach
+                    // after the SoC bank is registered (classic path does this in
+                    // build_esp32_system_from_manifest; S3 must do it here too).
+                    if let Err(e) = labwired_core::system::xtensa::attach_esp32_external_devices(
+                        &mut bus, manifest,
+                    ) {
+                        let msg = format!("ESP32-S3 external_devices attach: {e:#}");
+                        error!("{}", msg);
+                        write_config_error_outputs(
+                            &args,
+                            Some(&firmware_path),
+                            system_path.as_ref(),
+                            Some(&firmware_bytes),
+                            Some(&resolved_limits),
+                            msg,
+                        );
+                        return ExitCode::from(EXIT_CONFIG_ERROR);
+                    }
+                    bus.refresh_peripheral_index();
                     // Seed partition table + app image magic into D-cache
                     // identity window (VA 0x3C00_0000 → dcache[off]).
                     {
@@ -485,6 +817,20 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
                                         );
                                     }
                                 }
+                            } else {
+                                // No table → esp_partition's load_partitions finds
+                                // no MD5 entry and calls panic_abort BEFORE the
+                                // console is up, so the run looks like a silent
+                                // hang (~86k steps, zero UART) with nothing to go
+                                // on. Name the cause instead of leaving the
+                                // caller to bisect a firmware image.
+                                eprintln!(
+                                    "labwired-cli test: warn: no partitions.bin beside {} — an \
+                                     Arduino/ESP-IDF app will abort in esp_partition (\"No MD5 \
+                                     found in partition table\") before printing anything. Place \
+                                     the partition table (flash 0x8000) next to the ELF.",
+                                    firmware_path.display()
+                                );
                             }
                             // App magic 0xE9: identity used off 0x30000; factory
                             // MMU maps VA 0x3C03_0000 → phys page 4 (0x40000).
@@ -542,6 +888,15 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
                     );
                     eprintln!(
                         "labwired-cli test: seeded S3 factory MMU for cache2phys (app0 @ 0x10000)"
+                    );
+                    // Post-BROM flash-attach state: the ROM's flash-attach fills
+                    // `rom_spiflash_legacy_data->chip.chip_size`; fast-boot skips
+                    // it, so `spi_flash_mmap` (partition-table load) rejects every
+                    // mmap with ESP_ERR_INVALID_ARG (0x102) and `load_partitions`
+                    // aborts. Seed the descriptor with the configured flash size.
+                    labwired_core::boot::esp32s3::seed_esp32s3_rom_flashchip(
+                        &mut bus,
+                        4 * 1024 * 1024,
                     );
                     // Arduino dual-core: `system_early_init` calls
                     // `ets_set_appcpu_boot_addr(call_start_cpu1)` then spins on
@@ -718,6 +1073,7 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
                 require_fault_fired,
                 fault_evidence,
                 &stimuli,
+                &uart_injections,
                 // Xtensa (ESP32) path: never JIT-eligible (the RV32IMC JIT is
                 // RISC-V only), so keep the exact current observer-based metrics.
                 false,
@@ -782,7 +1138,7 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
         }
     }
 
-    let mut bus = match labwired_core::system::builder::build_system_bus(system_path.as_deref()) {
+    let mut bus = match labwired_core::system::builder::build_system_bus(resolved_system.as_ref()) {
         Ok(bus) => bus,
         Err(e) => {
             let msg = format!("{:#}", e);
@@ -803,16 +1159,28 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
     // stubs can't supply — same set `build_rom_boot_machine` / wasm C3 path
     // install. Without them, ROM clock bring-up faults on unmapped ANA_I2C
     // (0x6000_E000) and cache invalidate busy-polls forever.
-    {
+    //
+    // These stubs are the ELF-app-entry ALTERNATIVE to the faithful rom-boot
+    // machine: `build_c3_rom_boot_machine` (below) installs the same set,
+    // including the real 512-entry MMU table. On the rom-boot / capture /
+    // resume paths that machine is built on THIS bus, so installing the
+    // fast-boot stubs here would double-register `mmu_table` (a 128-entry
+    // ELF-app-entry stub + the 512-entry rom-boot table). A resume snapshot
+    // then carries two `mmu_table` blobs, and `apply_runtime_snapshot` — which
+    // resolves peripherals by name to the FIRST match — misroutes the 512-entry
+    // blob onto the 128-entry stub and fails ("snapshot has 512 entries, table
+    // has 128"). Only install the fast-boot stubs on the plain ELF path.
+    let rom_boot_path =
+        args.rom_boot || args.capture_app_entry.is_some() || args.resume_snapshot.is_some();
+    if !rom_boot_path {
         let is_c3 = system_path.as_ref().and_then(|sys_path| {
             labwired_config::SystemManifest::from_file(sys_path)
                 .ok()
                 .and_then(|m| {
-                    let chip_path = sys_path
+                    let chip_dir = sys_path
                         .parent()
-                        .unwrap_or_else(|| std::path::Path::new("."))
-                        .join(&m.chip);
-                    labwired_config::ChipDescriptor::from_file(&chip_path)
+                        .unwrap_or_else(|| std::path::Path::new("."));
+                    labwired_config::ChipDescriptor::resolve(&m.chip, chip_dir)
                         .ok()
                         .map(|c| c.name == "esp32c3")
                 })
@@ -906,6 +1274,7 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
                 require_fault_fired,
                 fault_evidence,
                 &stimuli,
+                &uart_injections,
                 jit_eligible,
             )
         }};
@@ -966,11 +1335,11 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
                 }
                 if let Some(sys_path) = system_path.as_ref() {
                     if let Ok(manifest) = labwired_config::SystemManifest::from_file(sys_path) {
-                        let chip_path = sys_path
+                        let chip_dir = sys_path
                             .parent()
                             .unwrap_or_else(|| std::path::Path::new("."))
-                            .join(&manifest.chip);
-                        if let Ok(chip) = labwired_config::ChipDescriptor::from_file(&chip_path) {
+                            ;
+                        if let Ok(chip) = labwired_config::ChipDescriptor::resolve(&manifest.chip, chip_dir) {
                             if let Ok(ram_sz) = labwired_config::parse_size(&chip.ram.size) {
                                 let mut sp_top = (chip.ram.base + ram_sz) as u32;
                                 // ESP32-C3 boot stack placement:
@@ -1183,16 +1552,10 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
                 ) {
                     Ok(s) => s,
                     Err(e) => {
-                        let msg = format!("invalid resume snapshot {snap_path:?}: {e}");
-                        error!("{}", msg);
-                        write_config_error_outputs(
-                            &args,
-                            Some(&firmware_path),
-                            system_path.as_ref(),
-                            Some(&firmware_bytes),
-                            Some(&resolved_limits),
-                            msg,
-                        );
+                        // Corrupt or version-mismatched blob. Snapshot-invalid:
+                        // write NO result.json so the caller cold-boots and
+                        // refreshes the cache.
+                        error!("invalid resume snapshot {snap_path:?}: {e}; cold-boot required");
                         return ExitCode::from(EXIT_CONFIG_ERROR);
                     }
                 };
@@ -1215,17 +1578,12 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
                     }
                 };
                 if let Err(e) = snap.validate_self_key(chip, &fw_sha) {
-                    let msg =
-                        format!("resume snapshot self-key mismatch ({e}); cold-boot required");
-                    error!("{}", msg);
-                    write_config_error_outputs(
-                        &args,
-                        Some(&firmware_path),
-                        system_path.as_ref(),
-                        Some(&firmware_bytes),
-                        Some(&resolved_limits),
-                        msg,
-                    );
+                    // Stale/foreign snapshot (captured against a different chip or
+                    // firmware). Write NO result.json so a cache-backed caller
+                    // treats it as "resume did not run" and cold-boots to refresh
+                    // the cache — the snapshot-invalid contract the resume-error
+                    // fallback in the run service depends on.
+                    error!("resume snapshot self-key mismatch ({e}); cold-boot required");
                     return ExitCode::from(EXIT_CONFIG_ERROR);
                 }
                 let mut machine = match crate::build_c3_rom_boot_machine(bus, None) {
@@ -1233,17 +1591,20 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
                     Err(code) => return code,
                 };
                 if let Err(e) = machine.apply_runtime_snapshot(&snap) {
-                    let msg = format!("failed to apply resume snapshot: {e}");
-                    error!("{}", msg);
-                    write_config_error_outputs(
-                        &args,
-                        Some(&firmware_path),
-                        system_path.as_ref(),
-                        Some(&firmware_bytes),
-                        Some(&resolved_limits),
-                        msg,
+                    // The snapshot self-keyed clean (same chip + firmware) but is
+                    // structurally incompatible with the freshly-built machine —
+                    // e.g. a stale blob captured by an older, buggy core whose bus
+                    // topology differs (the C3 double-`mmu_table` window). This is
+                    // a snapshot-invalid signal, NOT a firmware fault: deliberately
+                    // write NO result.json so the caller (which resumes from a
+                    // cache) sees the resume did not run and falls back to a cold
+                    // `--rom-boot`, refreshing the cache with a compatible capture.
+                    // Same contract as a self-key mismatch above.
+                    error!(
+                        "resume snapshot incompatible with this machine ({e}); \
+                         cold-boot required (stale/foreign snapshot)"
                     );
-                    return ExitCode::from(EXIT_RUNTIME_ERROR);
+                    return ExitCode::from(EXIT_CONFIG_ERROR);
                 }
                 eprintln!(
                     "labwired-riscv: resumed from app-entry snapshot {snap_path:?} (chip {chip}); \

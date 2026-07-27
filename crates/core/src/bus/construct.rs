@@ -52,6 +52,7 @@ impl SystemBus {
                     clock_gate: None,
                 },
             ],
+            debug_schemas: std::collections::HashMap::new(),
             nvic: None,
             observers: Vec::new(),
             config: crate::SimulationConfig::default(),
@@ -82,7 +83,11 @@ impl SystemBus {
             gpio_devices: Vec::new(),
             ws2812: Vec::new(),
             servos: Vec::new(),
+            step_dir_motors: Vec::new(),
+            h_bridge_motors: Vec::new(),
+            unipolar_steppers: Vec::new(),
             tm1637: Vec::new(),
+            hx711: Vec::new(),
             seven_segment: Vec::new(),
             analog_inputs: Vec::new(),
             can_diagnostic_testers: Vec::new(),
@@ -124,6 +129,7 @@ impl SystemBus {
             ram: LinearMemory::new(0, 0),
             extra_mem: Vec::new(),
             peripherals: Vec::new(),
+            debug_schemas: std::collections::HashMap::new(),
             nvic: None,
             observers: Vec::new(),
             config: crate::SimulationConfig::default(),
@@ -154,7 +160,11 @@ impl SystemBus {
             gpio_devices: Vec::new(),
             ws2812: Vec::new(),
             servos: Vec::new(),
+            step_dir_motors: Vec::new(),
+            h_bridge_motors: Vec::new(),
+            unipolar_steppers: Vec::new(),
             tm1637: Vec::new(),
+            hx711: Vec::new(),
             seven_segment: Vec::new(),
             analog_inputs: Vec::new(),
             can_diagnostic_testers: Vec::new(),
@@ -503,6 +513,25 @@ impl SystemBus {
             sources.push(uart.rx_buffer());
         }
         sources
+    }
+
+    /// Get the shared RX buffer handle for one named UART peripheral. Returns
+    /// `None` when no matching UART peripheral exists on this bus — mirrors
+    /// `attach_uart_tx_sink_named`'s by-name resolution. The caller can push
+    /// bytes into the returned buffer to inject serial input at any time; a
+    /// byte pushed before the firmware has configured or read the UART sits
+    /// in the queue rather than being dropped (see `Uart::read`: RX presence
+    /// is derived from the queue being non-empty, with no enable gating).
+    pub fn attach_uart_rx_source_named(&self, name: &str) -> Option<Arc<Mutex<VecDeque<u8>>>> {
+        for p in &self.peripherals {
+            if p.name != name {
+                continue;
+            }
+            let any = p.dev.as_any()?;
+            let uart = any.downcast_ref::<Uart>()?;
+            return Some(uart.rx_buffer());
+        }
+        None
     }
 
     /// Whether this chip's core implements the Cortex-M bit-band feature.

@@ -188,13 +188,14 @@ fn validate_system(path: &PathBuf) -> ExitCode {
 
     // 2. Load Referenced Chip
     // Resolving chip path relative to system file
-    let chip_path_resolved = if let Some(parent) = path.parent() {
-        parent.join(&system.chip)
-    } else {
+    let chip_dir = path.parent().unwrap_or_else(|| std::path::Path::new("."));
+    let chip_path_resolved = if labwired_config::is_builtin_chip_spec(&system.chip) {
         PathBuf::from(&system.chip)
+    } else {
+        chip_dir.join(&system.chip)
     };
 
-    let chip = match ChipDescriptor::from_file(&chip_path_resolved) {
+    let chip = match ChipDescriptor::resolve(&system.chip, chip_dir) {
         Ok(c) => c,
         Err(e) => {
             result.add_error(

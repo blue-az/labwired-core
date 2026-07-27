@@ -7,21 +7,22 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 
 | Board | Tier | Last silicon capture | Newest model | Status |
 |-------|------|----------------------|--------------|--------|
-| `nrf52840` | 🟢 silicon-verified | 2026-06-17 | 2026-07-22 | ⚠ drift acked 2026-07-22 (re-capture pending) |
-| `seeed-xiao-nrf52840-sense` | 🟢 silicon-verified | 2026-06-17 | 2026-07-22 | ⚠ drift acked 2026-07-22 (re-capture pending) |
-| `stm32h563` | 🟢 silicon-verified | 2026-06-22 | 2026-07-23 | ⚠ drift acked 2026-07-23 (re-capture pending) |
-| `esp32c3` | 🟢 silicon-verified | 2026-06-17 | 2026-07-23 | ⚠ drift acked 2026-07-23 (re-capture pending) |
-| `nucleo-l476rg` | 🟢 silicon-verified | 2026-06-20 | 2026-07-23 | ⚠ drift acked 2026-07-23 (re-capture pending) |
-| `nucleo-l073rz` | 🟢 silicon-verified | 2026-06-20 | 2026-07-23 | ⚠ drift acked 2026-07-23 (re-capture pending) |
-| `stm32f103` | 🟢 silicon-verified | 2026-06-20 | 2026-07-23 | ⚠ drift acked 2026-07-23 (re-capture pending) |
-| `stm32f407` | 🟢 silicon-smoke | 2026-06-20 | 2026-07-23 | ⚠ drift acked 2026-07-23 (re-capture pending) |
-| `esp32s3` | 🟢 silicon-verified | 2026-07-15 | 2026-07-23 | ⚠ drift acked 2026-07-23 (re-capture pending) |
+| `nrf52840` | 🟢 silicon-verified | 2026-06-17 | 2026-07-27 | ⚠ drift acked 2026-07-27 (re-capture pending) |
+| `seeed-xiao-nrf52840-sense` | 🟢 silicon-verified | 2026-06-17 | 2026-07-27 | ⚠ drift acked 2026-07-27 (re-capture pending) |
+| `stm32h563` | 🟢 silicon-verified | 2026-06-22 | 2026-07-27 | ⚠ drift acked 2026-07-27 (re-capture pending) |
+| `esp32c3` | 🟢 silicon-verified | 2026-06-17 | 2026-07-26 | ⚠ drift acked 2026-07-26 (re-capture pending) |
+| `nucleo-l476rg` | 🟢 silicon-verified | 2026-06-20 | 2026-07-27 | ⚠ drift acked 2026-07-27 (re-capture pending) |
+| `nucleo-l073rz` | 🟢 silicon-verified | 2026-06-20 | 2026-07-27 | ⚠ drift acked 2026-07-27 (re-capture pending) |
+| `stm32f103` | 🟢 silicon-verified | 2026-06-20 | 2026-07-27 | ⚠ drift acked 2026-07-27 (re-capture pending) |
+| `stm32f407` | 🟢 silicon-smoke | 2026-06-20 | 2026-07-27 | ⚠ drift acked 2026-07-27 (re-capture pending) |
+| `esp32s3` | 🟢 silicon-verified | 2026-07-15 | 2026-07-25 | ⚠ drift acked 2026-07-25 (re-capture pending) |
 | `stm32f401` | 🟡 smoke-manual | — | 2026-07-18 | no silicon capture |
-| `stm32wba52` | 🟡 smoke-manual | — | 2026-06-27 | no silicon capture |
+| `stm32wba52` | 🟡 smoke-manual | — | 2026-07-27 | no silicon capture |
 | `nrf52832` | ⚪ structural | — | 2026-07-23 | no silicon capture |
-| `rp2040` | ⚪ structural | — | 2026-07-23 | no silicon capture |
-| `nrf5340` | 🔵 sim-validated (deep model, no HW diff) | — | 2026-07-22 | no silicon capture |
-| `stm32h735` | 🔵 sim-validated (deep model, no HW diff) | — | 2026-07-23 | no silicon capture |
+| `rp2040` | ⚪ structural | — | 2026-07-27 | no silicon capture |
+| `nrf5340` | 🔵 sim-validated (deep model, no HW diff) | — | 2026-07-27 | no silicon capture |
+| `stm32h735` | 🔵 sim-validated (deep model, no HW diff) | — | 2026-07-27 | no silicon capture |
+| `stm32f411ceu6` | 🔵 sim-validated (deep model, no HW diff) | — | 2026-07-27 | no silicon capture |
 
 ## `nrf52840` — 🟢 silicon-verified
 
@@ -29,7 +30,7 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 - Silicon: **2026-06-17** on ST-LINK V2 (J37S7) — conformance 16/16; mmio 16/16; GPIO P0 22/0, P1 23/0; onboarding 22/22; POWER 10/0, SPIS 19/0, TWIS 20/0, RTC0 12/0, TIMER0 16/0; SPIM0/CCM/full-register clean
   - offline (CI): nrf52_conformance::conformance_sim (digest vs frozen 2026-06-09 capture)
   - offline (CI): nrf52_mmio_diff / nrf52_gpio_conformance (sim halves)
-- Drift status: **⚠ drift acked 2026-07-22 (re-capture pending)**
+- Drift status: **⚠ drift acked 2026-07-27 (re-capture pending)**
 
 ## `seeed-xiao-nrf52840-sense` — 🟢 silicon-verified
 
@@ -37,7 +38,7 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 - Note: Same silicon as nrf52840 (the bench board IS a Seeed XIAO nRF52840 Sense).
 - Silicon: **2026-06-17** on ST-LINK V2 (J37S7) — rides the nrf52840 full register sweep (16/16) re-confirmed 2026-06-17
   - offline (CI): nrf52.rs xiao_* (manifest build, GPIO task regs, SPIM0 EasyDMA)
-- Drift status: **⚠ drift acked 2026-07-22 (re-capture pending)**
+- Drift status: **⚠ drift acked 2026-07-27 (re-capture pending)**
 
 ## `stm32h563` — 🟢 silicon-verified
 
@@ -45,7 +46,7 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 - Silicon: **2026-06-22** on STLINK-V3 (USB 0483:374e, NUCLEO-H563ZI, dapdirect AP1 recipe) — FLASH program-behaviour live-diff run on the board 2026-06-22 (drives real program/erase over SWD): write buffer (NSSR.WBNE) accumulates a 16-byte quad-word, commits + sets EOP only on completion; a misaligned quad-word raises INCERR alone and commits nothing; program-over-not-erased is permitted and ANDs the bits (no PGSERR); flags clear via NSCCR (0x30), not by writing NSSR. The sim H5 flash error-flag + read-while-write fidelity gates were CORRECTED to match this capture (earlier datasheet model was wrong on all four points). Prior MMIO/reset diff (h563_mmio_diff + h563_parity_diff + h563_class_diff, 0 divergence) still holds.
   - offline (CI): h563_conformance (5 tests vs frozen 2026-06-10..12 captures)
   - offline (CI): h563_mmio_diff::{h563_mmio_sim_only,h563_parity_sim_only,h563_class_sim_only}
-- Drift status: **⚠ drift acked 2026-07-23 (re-capture pending)**
+- Drift status: **⚠ drift acked 2026-07-27 (re-capture pending)**
 
 ## `esp32c3` — 🟢 silicon-verified
 
@@ -53,7 +54,7 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 - Note: Reset-state oracle, not behavioural. ~40 peripherals declared (NOT 6 as the prose doc says).
 - Silicon: **2026-06-17** on USB-JTAG (built-in, openocd-esp32) — re-verified live — reset oracle re-captured live 2026-06-17: 1123/1123 static registers match committed baseline (13 deltas all in per-chip efuse + live USB-device state, none in the asserted set); esp32c3_reset_values_match_silicon passes
   - offline (CI): esp32c3_reset_conformance::esp32c3_reset_values_match_silicon (79 regs; 366/423 overlap matched silicon)
-- Drift status: **⚠ drift acked 2026-07-23 (re-capture pending)**
+- Drift status: **⚠ drift acked 2026-07-26 (re-capture pending)**
 
 ## `nucleo-l476rg` — 🟢 silicon-verified
 
@@ -62,7 +63,7 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 - Silicon: **2026-06-20** on STLINK-V2.1 (USB 0483:374b serial 0670FF…1747, NUCLEO-L476RG onboard) — Live re-capture after the v0.17.0 merge: l476_mmio_diff + l476_parity_diff pass (15 mmio + 104 parity), 0 divergence. Supersedes the 2026-06-19 drift_ack.
   - offline (CI): l476_mmio_diff::{l476_mmio_sim_only,l476_parity_sim_only}
   - offline (CI): firmware_survival L476 cases (UART byte stream)
-- Drift status: **⚠ drift acked 2026-07-23 (re-capture pending)**
+- Drift status: **⚠ drift acked 2026-07-27 (re-capture pending)**
 
 ## `nucleo-l073rz` — 🟢 silicon-verified
 
@@ -71,7 +72,7 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 - Silicon: **2026-06-20** on ST-LINK V2.1 (NUCLEO-L073RZ over SWD) — Live re-capture after the v0.17.0 merge: l0_mmio_diff 20/20, 0 divergence (RCC/GPIO/SPI1/TIM2/TIM21, incl. the TIM2-16-bit fix). Supersedes the 2026-06-19 drift_ack.
   - offline (CI): stm32l0_mmio_diff::{l0_mmio_sim_only,l0_parity_sim_only}
   - offline (CI): firmware_survival L073 smoke case
-- Drift status: **⚠ drift acked 2026-07-23 (re-capture pending)**
+- Drift status: **⚠ drift acked 2026-07-27 (re-capture pending)**
 
 ## `stm32f103` — 🟢 silicon-verified
 
@@ -80,7 +81,7 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 - Silicon: **2026-06-20** on ST-LINK V2.1 (USB 0483:374b), genuine STM32F103 — Live re-capture after the v0.17.0 bxcan/clock-gating merge: stm32f1_mmio_diff 102/102 (24 reset + 26 R/W + 52 sweep), 0 divergence, and f103_conformance digest matches silicon. Supersedes the 2026-06-19 drift_ack. (Earlier capture caught + fixed a classic SPI CR1 bug masking CRCNEXT bit 12 — 0xEFFF vs silicon 0xFFFF.)
   - offline (CI): stm32f1_mmio_diff::{f1_reset_sim_only,f1_mmio_sim_only,f1_parity_sim_only,f1_sweep_sim_only}
   - offline (CI): f103_conformance::conformance_sim (digest)
-- Drift status: **⚠ drift acked 2026-07-23 (re-capture pending)**
+- Drift status: **⚠ drift acked 2026-07-27 (re-capture pending)**
 
 ## `stm32f407` — 🟢 silicon-smoke
 
@@ -89,7 +90,7 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 - Silicon: **2026-06-20** on ST-LINK/V2 (USB 0483:3748, IDCODE 0x10016413) — connect-under-reset (firmware was holding SWD), adapter 480 kHz — Live re-capture after the v0.17.0 merge: stm32f4_mmio_diff 37/37 (2 reset + 31 sweep + 4 behaviour), 0 divergence. Caught + fixed a real model bug: F407 silicon does NOT latch SPI1 CR1 bit 12 (CRCNEXT) — writes 0xFFFF, reads 0xEFFF — vs F103 which keeps it writable; spi.rs now applies a per-part cr1_mask (F4 0xEFFF). Supersedes the 2026-06-19 drift_ack. (I²C/UART models still smoke-tier — not in the mmio diff.)
   - offline (CI): stm32f4_mmio_diff::{f4_reset_sim_only,f4_sweep_sim_only,f4_behavior_sim_only}
   - offline (CI): firmware_survival F407 smoke + i2c cases (sim-self-pinned)
-- Drift status: **⚠ drift acked 2026-07-23 (re-capture pending)**
+- Drift status: **⚠ drift acked 2026-07-27 (re-capture pending)**
 
 ## `esp32s3` — 🟢 silicon-verified
 
@@ -98,7 +99,7 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 - Silicon: **2026-07-15** on USB-JTAG built-in (ESP32-S3-Zero, USB 303a:1001, openocd-esp32, Tensilica tap 0x120034e5) — Live OpenOCD re-capture on 2026-07-15: connected ESP32-S3 rev 0.2 (MAC 9c:13:9e:f4:40:c0), both Xtensa JTAG taps examined, and reset-state windows captured for UART0, GPIO, I2C0, RMT, MCPWM0, TIMG0, SYSTIMER, GDMA, SYSTEM, and RTC_CNTL.
   - offline (CI): esp32s3_reset_conformance (9 reset regs vs live silicon, firmware-path bus)
   - offline (CI): e2e_i2c_tmp102 / e2e_hello_world / xtensa_exec / e2e_esp32_epaper (sim)
-- Drift status: **⚠ drift acked 2026-07-23 (re-capture pending)**
+- Drift status: **⚠ drift acked 2026-07-25 (re-capture pending)**
 
 ## `stm32f401` — 🟡 smoke-manual
 
@@ -145,4 +146,15 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
   - offline (CI): tier1 fixture (clock/gpio/timer/pwm/i2c/spi/wdt/irq PASS + uart via TIER1 done)
   - offline (CI): io-smoke (examples/stm32h735-smoke: asserts the TIER1 transcript over UART)
   - offline (CI): chip_conformance (estate OK — no peripheral window faults)
+- Drift status: **no silicon capture**
+
+## `stm32f411ceu6` — 🔵 sim-validated (deep model, no HW diff)
+
+- Doc: [`docs/boards/stm32f411.md`](stm32f411.md)  ·  Chip: `configs/chips/stm32f411ceu6.yaml`
+- Note: STM32F411CEU6 (WeAct Black Pill) — same silicon row as the STM32F401 (RM0383 vs RM0368: identical peripheral bases and IRQ numbers) with three deltas: 512 KiB flash, 128 KiB SRAM, and the extra SPI5 instance @ 0x4001_5000 IRQ 85. Required NO new peripheral model and NO new RCC layout: the F411 RCC offsets (AHB1ENR 0x30, APB1ENR 0x40, APB2ENR 0x44) were read out of the vendored SVD and are byte-identical to the shipped stm32f4 profile, and SPI5 reuses the existing classic-SPI IP. The tier-1 fixture (tests/fixtures/tier1/stm32f411.elf) drives raw-register self-tests and reports clock/gpio/timer/i2c/spi/adc/wdt/rtc PASS plus a working UART over USART2; its spi check covers SPI1 AND SPI5. SIM-DERIVED: there is NO F411 bench part, NO ST-Link capture and NO silicon diff — every value comes from ST's CMSIS header (stm32f411xe.h) and modm-io's F411 SVD. THREE THINGS ARE EXPLICITLY UNVERIFIED AND MUST NOT BE READ AS CLAIMS: (1) the DBGMCU IDCODE is in neither source, so dbg ships as a stub with NO IDCODE and none was invented (F401CDU6's 0x10016433 is F401's); (2) the Black Pill LED PC13 / button PA0 pinout is carried over from the F401 board and is a board-level fact no chip source can settle; (3) the 100 MHz max SYSCLK is unrepresentable in the schema (the stm32f4 RCC model derives no frequency) and is documentation only. Clock gating is declared only for TIM2/ADC1/SPI1/SPI5 — the four gates the fixture proves; every other block responds unclocked, the same modelling gap the F401 descriptors carry. DMA1/2 stay stubs because the F4 stream controller is not the modelled F1/L4 channel IP. SPI5's clock-gate bit (RCC_APB2ENR bit 20) is header-only: no public F411 SVD declares an SPI5EN field, so the fixture's spi check is its only executable evidence.
+- Silicon: none — not validated against real hardware.
+  - offline (CI): tier1 fixture (clock/gpio/timer/i2c/spi/adc/wdt/rtc PASS + uart via TIER1 done)
+  - offline (CI): io-smoke (examples/stm32f411ceu6-blackpill: asserts the TIER1 transcript over USART2)
+  - offline (CI): chip_conformance (estate OK — no peripheral window faults)
+  - offline (CI): register_coverage (scanned against the vendored modm-io SVD, 56 IRQs)
 - Drift status: **no silicon capture**

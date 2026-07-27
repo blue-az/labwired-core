@@ -75,11 +75,20 @@ pub const MODEL_TYPES: &[&str] = &[
     "comp",
     "tsc",
     "fmc",
-    // RP2040 native peripherals (built here).
+    // RP2040 native peripherals (built here). `rp2040_adc` and `rp2040_rtc`
+    // MUST be listed: the fuzzy fallbacks below match `contains("adc")` and
+    // `contains("rtc")`, so without membership here they would be coerced onto
+    // the STM32 ADC / RTC register maps — a silently wrong model, not an error.
     "rp2040_timer",
     "rp2040_dma",
     "rp2040_spi",
     "rp2040_i2c",
+    "rp2040_pwm",
+    "rp2040_adc",
+    "rp2040_rtc",
+    "rp2040_watchdog",
+    "rp2040_sio",
+    "rp2040_clkrst",
     "rp2040_xip_ssi",
     "rp2040_usb",
     // ESP32-C3 behavioral models (esp32 factory).
@@ -115,8 +124,8 @@ pub fn is_canonical_model_type(t: &str) -> bool {
 pub fn try_build(
     canonical_type: &str,
     p_cfg: &PeripheralConfig,
-    manifest: &SystemManifest,
-    bus_trace: &crate::bus::bus_trace::BusTrace,
+    _manifest: &SystemManifest,
+    _bus_trace: &crate::bus::bus_trace::BusTrace,
 ) -> anyhow::Result<Option<Box<dyn Peripheral>>> {
     let dev: Box<dyn Peripheral> = match canonical_type {
         "systick" | "arm_generictimer" => {
@@ -244,32 +253,8 @@ pub fn try_build(
             if let Some(cr1_mask) = p_cfg.config.get("cr1_mask").and_then(|v| v.as_u64()) {
                 spi.set_cr1_mask(cr1_mask as u16);
             }
-            // Declarative IR SPI devices (`type: ir`) attach here,
-            // mirroring the I2C path. Hand-written SPI devices attach via
-            // the PeripheralKit registry pass, which ignores `type: ir`,
-            // so the two dispatch paths never double-attach the same bus.
-            for ext in &manifest.external_devices {
-                if ext.connection != p_cfg.id || !ext.r#type.eq_ignore_ascii_case("ir") {
-                    continue;
-                }
-                match crate::peripherals::components::build_spi_device(&ext.r#type, &ext.config) {
-                    Some(device) => {
-                        tracing::info!("spi attach: '{}' (type=ir) -> '{}'", ext.id, p_cfg.id);
-                        // Wrap through the single trace helper (this factory
-                        // attaches before the peripheral is on the bus).
-                        spi.push_device(crate::bus::bus_trace::wrap_spi(
-                            &p_cfg.id, bus_trace, device,
-                        ));
-                    }
-                    None => {
-                        tracing::warn!(
-                            "spi attach skipped: invalid ir spec for external id '{}' on bus '{}'",
-                            ext.id,
-                            p_cfg.id
-                        );
-                    }
-                }
-            }
+            // Hand-written SPI devices attach via the PeripheralKit registry
+            // pass, so no external-device attach loop is needed here.
             Box::new(spi)
         }
         "pwr" => {
@@ -331,6 +316,10 @@ pub fn try_build(
         "rp2040_sio" => Box::new(crate::peripherals::rp2040::sio::Rp2040Sio::new()),
         "rp2040_spi" => Box::new(crate::peripherals::rp2040::spi::Rp2040Spi::new()),
         "rp2040_i2c" => Box::new(crate::peripherals::rp2040::i2c::Rp2040I2c::new()),
+        "rp2040_pwm" => Box::new(crate::peripherals::rp2040::pwm::Rp2040Pwm::new()),
+        "rp2040_adc" => Box::new(crate::peripherals::rp2040::adc::Rp2040Adc::new()),
+        "rp2040_rtc" => Box::new(crate::peripherals::rp2040::rtc::Rp2040Rtc::new()),
+        "rp2040_watchdog" => Box::new(crate::peripherals::rp2040::watchdog::Rp2040Watchdog::new()),
         "rp2040_xip_ssi" => Box::new(crate::peripherals::rp2040::xip_ssi::Rp2040XipSsi::new()),
         "rp2040_usb" => Box::new(crate::peripherals::rp2040::usb::Rp2040Usb::new()),
         "crc" => {
@@ -431,9 +420,25 @@ pub fn try_build(
             }
             Box::new(pio)
         }
-        "esp32_timg" => Box::new(crate::peripherals::esp32::timg::Timg::new(
-            p_cfg.base_address as u32,
-        )),
+        "esp32_timg" => {
+            // The only config-driven consumer of `esp32_timg` is the ESP32-C3
+            // (ESP32-classic builds its TIMGs from the embedded descriptor
+            // table via esp32/factory.rs, which stays on the canned-ratio
+            // path). Give the C3 TIMGs the silicon-faithful RTC_SLOW cal
+            // profile so IDF's `rtc_clk_cal` recovers exactly the same
+            // RTC_SLOW rate the RTC_CNTL counter ticks at — one constant,
+            // no second pin. (Only TIMG0 is ever calibrated by IDF; handing
+            // TIMG1 the same profile is harmless and keeps the path uniform.)
+            use crate::peripherals::esp32c3::rtc_timer::{C3_XTAL_HZ, RTC_SLOW_HZ_MEASURED};
+            Box::new(
+                crate::peripherals::esp32::timg::Timg::new(p_cfg.base_address as u32).with_rtc_cal(
+                    crate::peripherals::esp32::timg::RtcCalProfile {
+                        xtal_hz: C3_XTAL_HZ,
+                        slow_hz: RTC_SLOW_HZ_MEASURED,
+                    },
+                ),
+            )
+        }
         // Instruction/data cache controllers (H5, WBA, U5…). Zephyr's SoC init
         // enables the cache via ICACHE_CR.EN and never polls a completion flag,
         // so a read-as-zero stub keeps the enable sequence from bus-faulting.

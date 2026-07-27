@@ -45,6 +45,61 @@ fn default_region_image_path(env: &str) -> Option<PathBuf> {
 }
 
 impl SystemBus {
+    /// Collect debugger-only register schemas from each peripheral's optional
+    /// `config.debug_schema` path.
+    ///
+    /// This is for NATIVE peripherals — those modeled in hand-written Rust,
+    /// which advertise no `describe_registers()` and therefore inspect as
+    /// `registers: []`. The schema names what the model already holds; it never
+    /// changes what the bus does. See [`SystemBus::debug_schemas`].
+    ///
+    /// A `debug_schema` on a `declarative` peripheral is redundant (it already
+    /// describes itself from its own descriptor) and simply loses to
+    /// `describe_registers()` at inspect time.
+    ///
+    /// Resolution mirrors the declarative descriptor path exactly: embedded
+    /// first (wasm32 has no `std::fs`), filesystem second. A path that resolves
+    /// to neither is skipped with a warning rather than failing the build —
+    /// a missing debugger convenience must never stop a simulation from running.
+    fn load_debug_schemas(
+        chip: &ChipDescriptor,
+        manifest: &SystemManifest,
+    ) -> std::collections::HashMap<String, Vec<crate::inspect::RegisterSchema>> {
+        let mut out = std::collections::HashMap::new();
+
+        for p_cfg in &chip.peripherals {
+            let Some(path) = p_cfg.config.get("debug_schema").and_then(|v| v.as_str()) else {
+                continue;
+            };
+
+            let descriptor = if let Some(embedded) = super::embedded_descriptors::lookup(path) {
+                labwired_config::PeripheralDescriptor::from_yaml(embedded).ok()
+            } else {
+                let resolved = Self::resolve_peripheral_path(manifest, path);
+                labwired_config::PeripheralDescriptor::from_file(&resolved).ok()
+            };
+
+            match descriptor {
+                Some(descriptor) => {
+                    out.insert(
+                        p_cfg.id.clone(),
+                        crate::inspect::schema_from_descriptor(&descriptor),
+                    );
+                }
+                None => {
+                    tracing::warn!(
+                        "debug_schema '{}' for peripheral '{}' could not be loaded; \
+                         its registers will inspect unnamed",
+                        path,
+                        p_cfg.id
+                    );
+                }
+            }
+        }
+
+        out
+    }
+
     pub fn from_config(chip: &ChipDescriptor, manifest: &SystemManifest) -> anyhow::Result<Self> {
         let flash_size = parse_size(&chip.flash.size)?;
         let ram_size = parse_size(&chip.ram.size)?;
@@ -115,6 +170,7 @@ impl SystemBus {
             ram: LinearMemory::new(ram_size as usize, chip.ram.base),
             extra_mem,
             peripherals: Vec::new(),
+            debug_schemas: Self::load_debug_schemas(chip, manifest),
             nvic: None,
             observers: Vec::new(),
             config: crate::SimulationConfig::default(),
@@ -145,7 +201,11 @@ impl SystemBus {
             gpio_devices: Vec::new(),
             ws2812: Vec::new(),
             servos: Vec::new(),
+            step_dir_motors: Vec::new(),
+            h_bridge_motors: Vec::new(),
+            unipolar_steppers: Vec::new(),
             tm1637: Vec::new(),
+            hx711: Vec::new(),
             seven_segment: Vec::new(),
             analog_inputs: Vec::new(),
             can_diagnostic_testers: Vec::new(),
@@ -265,7 +325,22 @@ impl SystemBus {
                     || canonical_type == "nrf54l_twim"
                 {
                     for ext in &manifest.external_devices {
-                        if ext.connection == p_cfg.id {
+                        if ext.connection != p_cfg.id {
+                            continue;
+                        }
+                        // Only suppress the kit pass when the family factory
+                        // actually can build this type. Kit-only devices were
+                        // previously marked attached even when the factory
+                        // warned "unknown device type" and skipped them —
+                        // leaving the bus empty (matrix L3 nRF ANACK on INA219).
+                        let factory_handles =
+                            crate::peripherals::components::build_external_i2c_device(
+                                &ext.r#type,
+                                &ext.id,
+                                &ext.config,
+                            )
+                            .is_some();
+                        if factory_handles {
                             attached_i2c_ext_ids.insert(ext.id.as_str());
                         }
                     }
@@ -682,62 +757,57 @@ impl SystemBus {
                     }
                     bus.ws2812.push(strip);
                 }
-                "servo" => {
-                    // Hobby PWM servo twin. Driven by GPIO edges (when the pad
-                    // actually toggles) and/or classic-ESP32 LEDC duty observers
-                    // (when firmware uses ledcWrite). Angle is polled by the
-                    // WASM `get_actuator_states` export for canvas animation.
-                    let signal = ext
+                "servo" | "sg90" | "mg996r" => {
+                    // Hobby PWM servo twin. Driven by GPIO edges and/or LEDC
+                    // duty observers (ledcWrite path). Part id is stored so
+                    // WASM `get_actuator_states` can key canvas animation.
+                    let pin_label = ext
                         .config
                         .get("signal_pin")
+                        .or_else(|| ext.config.get("control_pin"))
+                        .or_else(|| ext.config.get("pwm_pin"))
                         .or_else(|| ext.config.get("pin"))
                         .and_then(|v| v.as_str())
-                        .unwrap_or("GPIO0");
-                    let pin = Self::parse_esp32_gpio_pin(signal)
-                        .or_else(|| Self::parse_esp32s3_gpio_pin(signal))
-                        .unwrap_or(0);
-                    let cal = match ext
+                        .unwrap_or("GPIO18");
+                    let pin = Self::parse_esp32s3_gpio_pin(pin_label)
+                        .or_else(|| Self::parse_esp32_gpio_pin(pin_label))
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "servo '{}' control/signal pin '{}' is not a parseable GPIO",
+                                ext.id,
+                                pin_label
+                            )
+                        })?;
+                    // Prefer explicit config.model; fall back to the type alias
+                    // (sg90/mg996r as top-level type) then standard cal.
+                    let model = ext
                         .config
                         .get("model")
                         .and_then(|v| v.as_str())
-                        .unwrap_or("standard")
-                    {
+                        .unwrap_or(ext.r#type.as_str());
+                    let cal = match model {
                         "sg90" => crate::peripherals::components::servo::ServoCal::sg90(),
                         "mg996r" => crate::peripherals::components::servo::ServoCal::mg996r(),
                         _ => crate::peripherals::components::servo::ServoCal::standard(),
                     };
-                    let servo = std::sync::Arc::new(
-                        crate::peripherals::components::servo::Servo::with_id(
+                    let servo =
+                        std::sync::Arc::new(crate::peripherals::components::servo::Servo::with_id(
                             ext.id.clone(),
                             cal,
                             pin,
-                        ),
-                    );
-                    // GPIO edge path (ESP32 classic + S3).
-                    if let Some(idx) = bus.find_peripheral_index_by_name("gpio") {
-                        if let Some(gpio) = bus.peripherals[idx].dev.as_any_mut().and_then(|a| {
-                            a.downcast_mut::<crate::peripherals::esp32s3::gpio::Esp32s3Gpio>()
-                        }) {
-                            gpio.add_observer(servo.clone());
-                        } else if let Some(gpio) = bus.peripherals[idx].dev.as_any_mut().and_then(|a| {
-                            a.downcast_mut::<crate::peripherals::esp32::gpio::Esp32Gpio>()
-                        }) {
-                            gpio.add_observer(servo.clone());
-                        }
-                    }
+                        ));
+                    Self::install_gpio_observer(&mut bus, servo.clone());
                     // LEDC duty path (classic ESP32). Optional `ledc_channel`
-                    // binds one channel; otherwise every channel notifies this
-                    // servo (fine for single-servo boards; multi-servo diagrams
-                    // should set ledc_channel per part).
-                    let ledc_channel = ext
-                        .config
-                        .get("ledc_channel")
-                        .and_then(|v| v.as_u64());
+                    // binds one channel; otherwise fan out to all channels
+                    // (fine for single-servo boards).
+                    let ledc_channel = ext.config.get("ledc_channel").and_then(|v| v.as_u64());
                     for name in ["ledc", "LEDC"] {
                         if let Some(idx) = bus.find_peripheral_index_by_name(name) {
-                            if let Some(ledc) = bus.peripherals[idx].dev.as_any_mut().and_then(|a| {
-                                a.downcast_mut::<crate::peripherals::esp32::ledc::Ledc>()
-                            }) {
+                            if let Some(ledc) =
+                                bus.peripherals[idx].dev.as_any_mut().and_then(|a| {
+                                    a.downcast_mut::<crate::peripherals::esp32::ledc::Ledc>()
+                                })
+                            {
                                 if let Some(ch) = ledc_channel {
                                     ledc.add_duty_observer(std::sync::Arc::new(
                                         crate::peripherals::components::servo::LedcServoDriver::new(
@@ -746,7 +816,6 @@ impl SystemBus {
                                         ),
                                     ));
                                 } else {
-                                    // Fan-out: any channel duty drives this twin.
                                     for ch in 0..16u64 {
                                         ledc.add_duty_observer(std::sync::Arc::new(
                                             crate::peripherals::components::servo::LedcServoDriver::new(
@@ -760,6 +829,90 @@ impl SystemBus {
                         }
                     }
                     bus.servos.push(servo);
+                }
+                "a4988" | "drv8825" | "tmc2209" => {
+                    let step = Self::gpio_from_config(ext, "step_pin", "STEP", "GPIO16")?;
+                    let dir = Self::gpio_from_config(ext, "dir_pin", "DIR", "GPIO17")?;
+                    let en = Self::optional_gpio_from_config(ext, "en_pin", "EN");
+                    let mut motor =
+                        crate::peripherals::components::step_dir_motor::StepDirMotor::new(
+                            &ext.id, step, dir, en,
+                        );
+                    if ext.r#type == "tmc2209" {
+                        // SilentStepStick often 1/16 microstep default → treat as 1.8/16
+                        motor = motor.with_config(
+                            crate::peripherals::components::step_dir_motor::StepDirConfig {
+                                degrees_per_step: 1.8 / 16.0,
+                                enable_active_low: true,
+                            },
+                        );
+                    }
+                    let motor = std::sync::Arc::new(motor);
+                    Self::install_gpio_observer(&mut bus, motor.clone());
+                    bus.step_dir_motors.push(motor);
+                }
+                "l298n" | "tb6612" | "l293d" => {
+                    // First motor channel (A)
+                    let in1 = Self::gpio_from_config(ext, "in1_pin", "IN1", "GPIO16")
+                        .or_else(|_| Self::gpio_from_config(ext, "ain1_pin", "AIN1", "GPIO16"))?;
+                    let in2 = Self::gpio_from_config(ext, "in2_pin", "IN2", "GPIO17")
+                        .or_else(|_| Self::gpio_from_config(ext, "ain2_pin", "AIN2", "GPIO17"))?;
+                    let en = Self::optional_gpio_from_config(ext, "en_pin", "ENA")
+                        .or_else(|| Self::optional_gpio_from_config(ext, "pwma_pin", "PWMA"));
+                    let motor = std::sync::Arc::new(
+                        crate::peripherals::components::h_bridge_motor::HBridgeMotor::new(
+                            format!("{}-a", ext.id),
+                            in1,
+                            in2,
+                            en,
+                        ),
+                    );
+                    Self::install_gpio_observer(&mut bus, motor.clone());
+                    bus.h_bridge_motors.push(motor);
+                    // Optional B channel when IN3/IN4 (or BIN*) are configured.
+                    let has_b = ext.config.contains_key("in3_pin")
+                        || ext.config.contains_key("IN3")
+                        || ext.config.contains_key("bin1_pin")
+                        || ext.config.contains_key("BIN1");
+                    if has_b {
+                        if let (Ok(b1), Ok(b2)) = (
+                            Self::gpio_from_config(ext, "in3_pin", "IN3", "GPIO18").or_else(|_| {
+                                Self::gpio_from_config(ext, "bin1_pin", "BIN1", "GPIO18")
+                            }),
+                            Self::gpio_from_config(ext, "in4_pin", "IN4", "GPIO19").or_else(|_| {
+                                Self::gpio_from_config(ext, "bin2_pin", "BIN2", "GPIO19")
+                            }),
+                        ) {
+                            let enb = Self::optional_gpio_from_config(ext, "enb_pin", "ENB")
+                                .or_else(|| {
+                                    Self::optional_gpio_from_config(ext, "pwmb_pin", "PWMB")
+                                });
+                            let motor_b = std::sync::Arc::new(
+                                crate::peripherals::components::h_bridge_motor::HBridgeMotor::new(
+                                    format!("{}-b", ext.id),
+                                    b1,
+                                    b2,
+                                    enb,
+                                ),
+                            );
+                            Self::install_gpio_observer(&mut bus, motor_b.clone());
+                            bus.h_bridge_motors.push(motor_b);
+                        }
+                    }
+                }
+                "uln2003" | "stepper-28byj48" => {
+                    let p1 = Self::gpio_from_config(ext, "in1_pin", "IN1", "GPIO16")?;
+                    let p2 = Self::gpio_from_config(ext, "in2_pin", "IN2", "GPIO17")?;
+                    let p3 = Self::gpio_from_config(ext, "in3_pin", "IN3", "GPIO18")?;
+                    let p4 = Self::gpio_from_config(ext, "in4_pin", "IN4", "GPIO19")?;
+                    let motor = std::sync::Arc::new(
+                        crate::peripherals::components::unipolar_stepper::UnipolarStepper::new_28byj48(
+                            &ext.id,
+                            [p1, p2, p3, p4],
+                        ),
+                    );
+                    Self::install_gpio_observer(&mut bus, motor.clone());
+                    bus.unipolar_steppers.push(motor);
                 }
                 "can-diagnostic-tester" | "uds-diagnostic-tester" => {
                     if bus.find_peripheral_index_by_name(&ext.connection).is_none() {
@@ -926,6 +1079,140 @@ impl SystemBus {
             None => bus.derive_walk_deletable(),
         };
         Ok(bus)
+    }
+
+    /// Install a GPIO edge observer on ESP32 / ESP32-S3 GPIO models when present.
+    fn install_gpio_observer<T>(bus: &mut SystemBus, observer: std::sync::Arc<T>)
+    where
+        T: crate::peripherals::esp32s3::gpio::GpioObserver
+            + crate::peripherals::esp32::gpio::GpioObserver
+            + 'static,
+    {
+        if let Some(idx) = bus.find_peripheral_index_by_name("gpio") {
+            let any = bus.peripherals[idx].dev.as_any_mut();
+            if let Some(gpio) =
+                any.and_then(|a| a.downcast_mut::<crate::peripherals::esp32s3::gpio::Esp32s3Gpio>())
+            {
+                gpio.add_observer(observer);
+                return;
+            }
+        }
+        // Classic ESP32 GPIO (separate type).
+        if let Some(idx) = bus.find_peripheral_index_by_name("gpio") {
+            if let Some(gpio) = bus.peripherals[idx]
+                .dev
+                .as_any_mut()
+                .and_then(|a| a.downcast_mut::<crate::peripherals::esp32::gpio::Esp32Gpio>())
+            {
+                gpio.add_observer(observer);
+            }
+        }
+    }
+
+    fn gpio_from_config(
+        ext: &labwired_config::ExternalDevice,
+        key: &str,
+        alt_key: &str,
+        default: &str,
+    ) -> anyhow::Result<u8> {
+        let label = ext
+            .config
+            .get(key)
+            .or_else(|| ext.config.get(alt_key))
+            .and_then(|v| v.as_str())
+            .unwrap_or(default);
+        Self::parse_esp32s3_gpio_pin(label)
+            .or_else(|| Self::parse_esp32_gpio_pin(label))
+            .ok_or_else(|| {
+                anyhow::anyhow!(
+                    "{}: pin '{}' (config {}/{}) is not a parseable GPIO",
+                    ext.id,
+                    label,
+                    key,
+                    alt_key
+                )
+            })
+    }
+
+    fn optional_gpio_from_config(
+        ext: &labwired_config::ExternalDevice,
+        key: &str,
+        alt_key: &str,
+    ) -> Option<u8> {
+        let label = ext
+            .config
+            .get(key)
+            .or_else(|| ext.config.get(alt_key))
+            .and_then(|v| v.as_str())?;
+        Self::parse_esp32s3_gpio_pin(label).or_else(|| Self::parse_esp32_gpio_pin(label))
+    }
+}
+
+#[cfg(test)]
+mod image_env_region_tests {
+    use super::*;
+
+    /// A nonzero-based `image_env` region with no loadable image must still be
+    /// installed (zero-filled) so a later filler — `inject_rom_regions` on the
+    /// wasm/browser fast-start path — has a slot to copy the ROM blobs into.
+    /// Only a region based at address 0 (the RP2040 bootrom, which would shadow
+    /// the Cortex-M flash boot alias) is dropped when empty.
+    ///
+    /// Regression for the browser "C3 flash fast-start: chip YAML declares no
+    /// IROM region at 0x40000000" failure: with no filesystem to preload from,
+    /// `from_config` used to drop the C3 IROM window entirely, leaving
+    /// `inject_rom_regions` nothing to fill.
+    #[test]
+    fn empty_image_env_region_kept_unless_based_at_zero() {
+        // `LABWIRED_TEST_MISSING_ROM` has no default image path and is never
+        // set, so both regions below fail to load an image — exactly the
+        // wasm/browser condition — without touching any real env var or file.
+        let chip_yaml = r#"
+name: "test-image-env"
+arch: "riscv"
+flash:
+  base: 0x42000000
+  size: "1KB"
+ram:
+  base: 0x3FC80000
+  size: "1KB"
+memory_regions:
+  - name: "irom"
+    base: 0x40000000
+    size: "1KB"
+    image_env: "LABWIRED_TEST_MISSING_ROM"
+  - name: "bootrom_at_zero"
+    base: 0x0
+    size: "1KB"
+    image_env: "LABWIRED_TEST_MISSING_ROM"
+peripherals: []
+"#;
+        let manifest_yaml = r#"
+name: "test-image-env-system"
+chip: "test-image-env"
+"#;
+        let chip: ChipDescriptor = serde_yaml::from_str(chip_yaml).expect("parse chip");
+        let manifest: SystemManifest = serde_yaml::from_str(manifest_yaml).expect("parse manifest");
+
+        // Guard the hermeticity assumption: if some ambient env ever defines
+        // this name, the test would silently stop exercising the empty path.
+        assert!(
+            std::env::var("LABWIRED_TEST_MISSING_ROM").is_err(),
+            "test env var must be unset for this regression to be meaningful"
+        );
+
+        let bus = SystemBus::from_config(&chip, &manifest).expect("build bus");
+
+        assert!(
+            bus.extra_mem.iter().any(|m| m.base_addr == 0x4000_0000),
+            "nonzero-based empty image_env region must be installed so \
+             inject_rom_regions can fill it (was dropped → browser IROM error)"
+        );
+        assert!(
+            !bus.extra_mem.iter().any(|m| m.base_addr == 0),
+            "empty image_env region based at 0 must be dropped so it can't \
+             shadow the flash boot alias"
+        );
     }
 }
 

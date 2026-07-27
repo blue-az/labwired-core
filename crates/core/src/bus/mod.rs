@@ -24,7 +24,7 @@ mod can_devices;
 mod construct;
 mod declarative_device;
 mod device_hooks;
-mod embedded_descriptors;
+pub(crate) mod embedded_descriptors;
 mod faults;
 mod from_config;
 mod mmio_activity;
@@ -161,6 +161,24 @@ pub struct SystemBus {
     /// `memory_regions`. Checked after `ram`/`flash`, before peripherals.
     pub extra_mem: Vec<LinearMemory>,
     pub peripherals: Vec<PeripheralEntry>,
+    /// Debugger-only register schemas for NATIVE peripherals, keyed by
+    /// peripheral name. Populated from a chip YAML's optional
+    /// `config.debug_schema` path.
+    ///
+    /// Native peripherals model behaviour in hand-written Rust and advertise no
+    /// `describe_registers()`, so they inspect as `registers: []` — which reads
+    /// in a debugger as "this peripheral has no registers" when the truth is
+    /// "nobody told the debugger their names". On nRF52840 that was all 52.
+    ///
+    /// This is a side map rather than a `PeripheralEntry` field on purpose: it
+    /// is debugger metadata, not part of a peripheral's identity on the bus, and
+    /// keeping it out of the entry keeps it structurally impossible for it to
+    /// influence dispatch.
+    ///
+    /// It confers NO fidelity. Nothing here changes what the bus does, and the
+    /// `register_coverage` gate measures live bus behaviour, not schema.
+    /// See [`crate::inspect::inspect_with_schema`].
+    pub debug_schemas: std::collections::HashMap<String, Vec<crate::inspect::RegisterSchema>>,
     pub nvic: Option<Arc<NvicState>>,
     pub observers: Vec<Arc<dyn crate::SimulationObserver>>,
     pub config: crate::SimulationConfig,
@@ -322,11 +340,23 @@ pub struct SystemBus {
     /// duty observers; held as `Arc` clones so the UI can poll shaft angle via
     /// `get_actuator_states`. Empty by default → zero cost.
     pub servos: Vec<std::sync::Arc<crate::peripherals::components::servo::Servo>>,
+    /// STEP/DIR steppers (A4988/DRV8825/TMC2209). GPIO-observer driven.
+    pub step_dir_motors:
+        Vec<std::sync::Arc<crate::peripherals::components::step_dir_motor::StepDirMotor>>,
+    /// H-bridge channels (L298N/TB6612). GPIO-observer driven.
+    pub h_bridge_motors:
+        Vec<std::sync::Arc<crate::peripherals::components::h_bridge_motor::HBridgeMotor>>,
+    /// 4-phase unipolar steppers (28BYJ-48 + ULN2003). GPIO-observer driven.
+    pub unipolar_steppers:
+        Vec<std::sync::Arc<crate::peripherals::components::unipolar_stepper::UnipolarStepper>>,
     /// TM1637 4-digit 7-segment displays bit-banged over two GPIO lines. Each is
     /// driven by the CLK/DIO GPIO write-hook (`maybe_clock_tm1637`), which feeds
     /// line transitions to the display's protocol state machine. Purely
     /// write-driven (no per-tick pass). Empty by default → zero cost.
     pub tm1637: Vec<crate::peripherals::components::tm1637_7seg::Tm1637>,
+    /// HX711 load-cell amps bit-banged over SCK/DT. Write-hook clocks data out;
+    /// DT level is driven onto the MCU input register. Empty → zero cost.
+    pub hx711: Vec<crate::peripherals::components::hx711::Hx711>,
     /// Direct-drive single-digit 7-segment displays: eight segment GPIOs plus a
     /// common pin, no driver chip. Sampled by the GPIO write-hook
     /// (`maybe_sample_seven_segment`), which recomputes the lit segments

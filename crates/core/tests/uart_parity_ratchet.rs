@@ -38,6 +38,7 @@ fn dummy_manifest(path: &str) -> SystemManifest {
         peripherals: vec![],
         memory_overrides: Default::default(),
         debug_uart: None,
+        wifi_ap: None,
     }
 }
 

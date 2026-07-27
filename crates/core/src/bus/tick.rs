@@ -210,6 +210,53 @@ impl SystemBus {
         }
     }
 
+    /// Pre-tick bus-aware pass: lend `&mut self` into every `tick_with_bus`
+    /// peripheral (RADIO Easy-DMA, the WiFi descriptor-ring/medium pump). The
+    /// swap dance temporarily removes each peripheral so it can borrow the bus;
+    /// a no-op stub stands in for the duration. Extracted so the CPU idle
+    /// fast-forward path can run exactly the same pump at the poll deadline (via
+    /// [`Self::run_idle_poll_bus_tick`]) instead of duplicating it.
+    pub(crate) fn run_bus_tick_pass(&mut self) {
+        let mut bus_tick_pos = 0;
+        while bus_tick_pos < self.bus_tick_indices.len() {
+            let i = self.bus_tick_indices[bus_tick_pos];
+            let placeholder: Box<dyn Peripheral> =
+                Box::new(crate::peripherals::stub::StubPeripheral::new(0));
+            let mut dev = std::mem::replace(&mut self.peripherals[i].dev, placeholder);
+            dev.tick_with_bus(self);
+            self.peripherals[i].dev = dev;
+            let still_needs_bus_tick = self.refresh_bus_tick_index(i);
+            if self.peripherals[i].dev.legacy_tick_dynamic() {
+                self.refresh_legacy_tick_index(i);
+            }
+            if still_needs_bus_tick {
+                bus_tick_pos += 1;
+            }
+        }
+    }
+
+    /// True when a bus peripheral services an external medium that must keep
+    /// being polled at a bounded cadence through a CPU idle skip (see
+    /// [`Peripheral::idle_poll_bus_tick`]) — currently a medium-mode WiFi MAC.
+    /// Only the tiny `bus_tick_indices` set is scanned (empty on every non-WiFi
+    /// bus, so this is ~free on the idle-fast-forward hot check). Only the
+    /// event-scheduler fast-forward path consults it.
+    #[cfg(feature = "event-scheduler")]
+    pub(crate) fn idle_poll_bus_tick_active(&self) -> bool {
+        self.bus_tick_indices
+            .iter()
+            .any(|&i| self.peripherals[i].dev.idle_poll_bus_tick())
+    }
+
+    /// Run the bus-tick pump once from the CPU idle fast-forward path, after the
+    /// skip has advanced `current_cycle`, so an external medium's inbound frames
+    /// (and device-cycle-keyed beacons) are serviced at the poll deadline
+    /// instead of being starved for the whole idle window.
+    #[cfg(feature = "event-scheduler")]
+    pub(crate) fn run_idle_poll_bus_tick(&mut self) {
+        self.run_bus_tick_pass();
+    }
+
     #[allow(clippy::type_complexity)]
     fn tick_peripherals_phase1(
         &mut self,
@@ -243,22 +290,7 @@ impl SystemBus {
         // `&mut self` into `tick_with_bus`; a no-op stub stands in for the
         // duration. `needs_bus_tick` returning false skips this for
         // everyone else at near-zero cost.
-        let mut bus_tick_pos = 0;
-        while bus_tick_pos < self.bus_tick_indices.len() {
-            let i = self.bus_tick_indices[bus_tick_pos];
-            let placeholder: Box<dyn Peripheral> =
-                Box::new(crate::peripherals::stub::StubPeripheral::new(0));
-            let mut dev = std::mem::replace(&mut self.peripherals[i].dev, placeholder);
-            dev.tick_with_bus(self);
-            self.peripherals[i].dev = dev;
-            let still_needs_bus_tick = self.refresh_bus_tick_index(i);
-            if self.peripherals[i].dev.legacy_tick_dynamic() {
-                self.refresh_legacy_tick_index(i);
-            }
-            if still_needs_bus_tick {
-                bus_tick_pos += 1;
-            }
-        }
+        self.run_bus_tick_pass();
 
         // Plan 3: collect ESP32-S3 explicit_irq source IDs during pass 1 so
         // they can be routed through the intmatrix in a follow-up pass that

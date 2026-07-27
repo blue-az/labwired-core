@@ -7,7 +7,7 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// Canonical device config v1 — the single JSON shape the agent builds and both
 /// engines load directly (Phase 1: parse + structural validation; resolve() is
@@ -262,7 +262,36 @@ pub struct BoardIoBinding {
     pub device_type: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+fn default_wifi_ap_ssid() -> String {
+    "labwired-ap".to_string()
+}
+
+fn default_wifi_ap_ip() -> String {
+    "192.168.4.1".to_string()
+}
+
+fn default_wifi_ap_serves() -> String {
+    "labwired-stats".to_string()
+}
+
+/// Manifest opt-in for the per-lab virtual WiFi Access Point. Emitted when a
+/// diagram contains a `wifi-ap` component. Absent ⇒ no AP (WiFi MACs stay
+/// unassociated — honest "no AP present"). Mirrors `debug_uart`'s optional
+/// pattern.
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct WifiApManifest {
+    /// Broadcast SSID of the AP.
+    #[serde(default = "default_wifi_ap_ssid")]
+    pub ssid: String,
+    /// AP's IPv4 address (dotted-quad); its /24 is the DHCP pool.
+    #[serde(default = "default_wifi_ap_ip")]
+    pub ip: String,
+    /// What the AP's HTTP origin serves: "labwired-stats" (default) or "none".
+    #[serde(default = "default_wifi_ap_serves")]
+    pub serves: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct SystemManifest {
     #[serde(default = "default_schema_version")]
     pub schema_version: String,
@@ -278,6 +307,10 @@ pub struct SystemManifest {
     pub board_io: Vec<BoardIoBinding>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub debug_uart: Option<String>,
+    /// Per-lab virtual WiFi AP config (present ⇒ a `wifi-ap` component is on the
+    /// diagram). Absent ⇒ no AP. See [`WifiApManifest`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wifi_ap: Option<WifiApManifest>,
     #[serde(default)]
     pub peripherals: Vec<PeripheralConfig>,
     /// Per-cycle peripheral-walk deletion (only consulted in `event-scheduler`
@@ -588,9 +621,104 @@ impl ChipDescriptor {
             serde_yaml::from_str(&content).context("Failed to parse Chip Descriptor YAML")
         }
     }
+
+    /// Resolve a `chip:` field. A bare name (`stm32f103`) is one of the chips
+    /// bundled with the CLI; anything containing a separator or a YAML
+    /// extension is a path relative to `base_dir`, for custom silicon.
+    ///
+    /// Built-in names exist so a project onboarding LabWired does not have to
+    /// vendor a copy of our chip descriptor — a copy that silently keeps the
+    /// bugs we have since fixed.
+    pub fn resolve(spec: &str, base_dir: &Path) -> Result<Self> {
+        if is_builtin_chip_spec(spec) {
+            let yaml = embedded_chip_yaml(spec).ok_or_else(|| {
+                anyhow::anyhow!(
+                    "unknown built-in chip '{spec}'. Available: {}. \
+                     To use your own descriptor, give a path such as './chip.yaml'.",
+                    BUILTIN_CHIP_NAMES.join(", ")
+                )
+            })?;
+            return serde_yaml::from_str(yaml)
+                .with_context(|| format!("Failed to parse built-in chip descriptor '{spec}'"));
+        }
+        Self::from_file(base_dir.join(spec))
+    }
+}
+
+/// True when `spec` names a built-in chip rather than a descriptor file.
+pub fn is_builtin_chip_spec(spec: &str) -> bool {
+    !spec.contains('/')
+        && !spec.contains('\\')
+        && !spec.ends_with(".yaml")
+        && !spec.ends_with(".yml")
+        && !spec.ends_with(".json")
+}
+
+/// The chips bundled with the CLI, in the spelling a `chip:` field accepts.
+pub const BUILTIN_CHIP_NAMES: &[&str] = &[
+    "esp32",
+    "esp32c3",
+    "esp32s3",
+    "esp32s3-zero",
+    "mkw41z4",
+    "nrf52832",
+    "nrf52840",
+    "nrf5340",
+    "nrf54l15",
+    "rp2040",
+    "stm32f103",
+    "stm32f401",
+    "stm32f401cdu6",
+    "stm32f407",
+    "stm32f411ceu6",
+    "stm32g474re",
+    "stm32h563",
+    "stm32h735",
+    "stm32l073",
+    "stm32l476",
+    "stm32wb55",
+    "stm32wba52",
+];
+
+/// The embedded `configs/chips/*.yaml` descriptors, keyed by built-in name.
+/// `include_str!` bundles them so a released binary carries them and wasm
+/// builds (no `std::fs`) resolve them too.
+pub fn embedded_chip_yaml(name: &str) -> Option<&'static str> {
+    Some(match name {
+        "esp32" => include_str!("../../../configs/chips/esp32.yaml"),
+        "esp32c3" => include_str!("../../../configs/chips/esp32c3.yaml"),
+        "esp32s3" => include_str!("../../../configs/chips/esp32s3.yaml"),
+        "esp32s3-zero" => include_str!("../../../configs/chips/esp32s3-zero.yaml"),
+        "mkw41z4" => include_str!("../../../configs/chips/mkw41z4.yaml"),
+        "nrf52832" => include_str!("../../../configs/chips/nrf52832.yaml"),
+        "nrf52840" => include_str!("../../../configs/chips/nrf52840.yaml"),
+        "nrf5340" => include_str!("../../../configs/chips/nrf5340.yaml"),
+        "nrf54l15" => include_str!("../../../configs/chips/nrf54l15.yaml"),
+        "rp2040" => include_str!("../../../configs/chips/rp2040.yaml"),
+        "stm32f103" => include_str!("../../../configs/chips/stm32f103.yaml"),
+        "stm32f401" => include_str!("../../../configs/chips/stm32f401.yaml"),
+        "stm32f401cdu6" => include_str!("../../../configs/chips/stm32f401cdu6.yaml"),
+        "stm32f407" => include_str!("../../../configs/chips/stm32f407.yaml"),
+        "stm32f411ceu6" => include_str!("../../../configs/chips/stm32f411ceu6.yaml"),
+        "stm32g474re" => include_str!("../../../configs/chips/stm32g474re.yaml"),
+        "stm32h563" => include_str!("../../../configs/chips/stm32h563.yaml"),
+        "stm32h735" => include_str!("../../../configs/chips/stm32h735.yaml"),
+        "stm32l073" => include_str!("../../../configs/chips/stm32l073.yaml"),
+        "stm32l476" => include_str!("../../../configs/chips/stm32l476.yaml"),
+        "stm32wb55" => include_str!("../../../configs/chips/stm32wb55.yaml"),
+        "stm32wba52" => include_str!("../../../configs/chips/stm32wba52.yaml"),
+        _ => return None,
+    })
 }
 
 impl SystemManifest {
+    /// Parse a System Manifest from a YAML string. Unlike [`Self::from_file`]
+    /// this does no filesystem-relative `can-player` `path:` inlining (there is
+    /// no base directory), so it is wasm-safe and handy for tests/embedding.
+    pub fn from_yaml(yaml: &str) -> Result<Self> {
+        serde_yaml::from_str(yaml).context("Failed to parse System Manifest")
+    }
+
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
         let path = path.as_ref();
         let f = std::fs::File::open(path)?;
@@ -794,6 +922,610 @@ pub struct DeviceDescriptor {
     /// block from this single spec instead of a hand-mirrored pair.
     #[serde(default)]
     pub emit: Option<DeviceEmit>,
+    /// Display + runtime metadata. `metadata.inputs` is load-bearing: it defines
+    /// the [`crate`]-external stimulus channels the device accepts (the same
+    /// channels the engine's generic device serves through `SimInput`). The
+    /// remaining display fields are carried for the phase-2 `KitMetadata`
+    /// derivation. Optional so the GPIO descriptors that predate the typed
+    /// schema still parse.
+    #[serde(default)]
+    pub metadata: Option<DeviceMetadata>,
+}
+
+/// Display + runtime metadata for a declarative device. Only `inputs` is
+/// consumed by the engine today; the display fields document phase-2 intent.
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct DeviceMetadata {
+    #[serde(default)]
+    pub label: Option<String>,
+    #[serde(default)]
+    pub summary: Option<String>,
+    /// Long-form description shown in the library detail view. Absent ⇒ the kit
+    /// falls back to `summary` (the pre-existing declarative-kit behaviour).
+    #[serde(default)]
+    pub detail: Option<String>,
+    #[serde(default)]
+    pub category: Option<String>,
+    /// Extra `config:` keys this device accepts beyond `i2c_address`, mirrored
+    /// verbatim into the peripheral manifest. When present this list is taken as
+    /// the COMPLETE set of config keys (list `i2c_address` explicitly if the
+    /// device accepts it); when absent the kit synthesises the lone
+    /// `i2c_address` key. Carrying these lets a declarative descriptor reproduce
+    /// a hand-written kit's manifest entry byte-for-byte.
+    #[serde(default)]
+    pub config_keys: Vec<ConfigKeySpec>,
+    /// The named stimulus channels this device accepts. For an `i2c_device`
+    /// primitive these are the measurement slots that register/response
+    /// `source:` keys read; each `default` seeds the value the part reports
+    /// until something drives it, and `min`/`max` bound accepted stimuli.
+    #[serde(default)]
+    pub inputs: Vec<InputSpec>,
+    /// Starter labs that ship a one-click demo using this device, mirrored into
+    /// the manifest exactly like a hand-written kit's `labs` (mirrors
+    /// `kit::LabRef`). Absent ⇒ the kit advertises no labs.
+    #[serde(default)]
+    pub labs: Vec<LabDescriptor>,
+}
+
+/// A demo lab a declarative device advertises (mirrors `kit::LabRef`). Optional;
+/// absent ⇒ the kit advertises no labs.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LabDescriptor {
+    pub board_id: String,
+    pub chip: String,
+    pub example_dir: String,
+    pub demo_elf: String,
+}
+
+/// A `config:` key advertised in the peripheral manifest. Mirrors the engine's
+/// `KitMetadata::config_keys` entries so a declarative descriptor can reproduce
+/// a hand-written kit's manifest documentation.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ConfigKeySpec {
+    pub name: String,
+    /// One of `str` | `int` | `bool` | `float`.
+    pub ty: String,
+    pub doc: String,
+}
+
+/// One drivable stimulus channel (a measurement slot). Datasheet-facing
+/// engineering units; the engine owns the conversion to raw register form.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct InputSpec {
+    /// Stable key both `source:` fields and the runtime stimulus API address.
+    pub key: String,
+    pub label: String,
+    /// Engineering unit (e.g. `lx`, `ppm`, `°C`).
+    pub unit: String,
+    /// Inclusive accepted range.
+    pub min: f64,
+    pub max: f64,
+    /// Value the slot holds until driven. Absent ⇒ 0.0.
+    #[serde(default)]
+    pub default: Option<f64>,
+}
+
+/// The `behavior.i2c` section of a declarative `i2c_device` — a datasheet-shaped
+/// description of an I²C sensor's wire protocol, interpreted by the engine's
+/// generic device. Two device shapes are covered, and a descriptor is exactly
+/// one of them (see `registers` vs `commands`):
+///   * **register-pointer** devices (`registers:`) — the master writes a 1-byte
+///     pointer, then streams a fixed-width LE/BE word (VEML7700-style);
+///   * **command** devices (`commands:`) — the master writes a 16-bit big-endian
+///     command, then reads N words each followed by a CRC-8 byte
+///     (Sensirion-style).
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct I2cSpec {
+    /// 7-bit slave address used when the `external_devices` entry omits
+    /// `i2c_address`.
+    pub default_address: u8,
+    /// Command-code width in bytes for a command device. `2` (the default) is
+    /// the Sensirion 16-bit big-endian opcode; `1` is a single-byte opcode
+    /// device (BH1750-style, where each measurement mode / power command is one
+    /// byte). A command dispatches the instant the master has written
+    /// `code_width` bytes. Ignored by register devices.
+    #[serde(default = "default_code_width")]
+    pub code_width: u8,
+    /// CRC-8 parameters for command-response framing. Absent ⇒ responses carry
+    /// no per-word checksum.
+    #[serde(default)]
+    pub crc8: Option<Crc8Spec>,
+    /// Pointer-addressable registers. Present ⇒ this is a register device.
+    #[serde(default)]
+    pub registers: Vec<RegisterSpec>,
+    /// Command set. Present ⇒ this is a command device.
+    #[serde(default)]
+    pub commands: Vec<I2cCommand>,
+    /// Mask applied to the pointer byte the master writes in **register-pointer**
+    /// mode (`registers:`). Absent ⇒ `0xFF` (no masking). A part whose pointer is
+    /// only a few low bits (TMP102 uses `0x03`) sets it so a write of an
+    /// out-of-range pointer aliases into the register file exactly as silicon does.
+    #[serde(default)]
+    pub pointer_mask: Option<u8>,
+    /// **Byte-addressable register file** mode. Present ⇒ this is a register-file
+    /// device (256 one-byte registers with a write-pointer that walks on
+    /// auto-increment, PCA9685-style). Mutually exclusive with `registers:` and
+    /// `commands:`.
+    #[serde(default)]
+    pub register_file: Option<RegisterFileSpec>,
+    /// Self-driving state updates fired by bus activity (e.g. the TMP102's
+    /// +0.5 °C-per-read drift). Each fires when a full multi-byte read of its
+    /// target register completes. Applies to the `registers:` (wide) mode.
+    #[serde(default)]
+    pub updates: Vec<UpdateRule>,
+    /// Engineering-unit values derived from the register file, readable by Rust
+    /// consumers/tests through the engine's `observable()` API (e.g. the PCA9685
+    /// `servo_angle` per channel). Applies to the `register_file:` mode.
+    #[serde(default)]
+    pub observables: Vec<ObservableSpec>,
+}
+
+/// **Byte-addressable register file** for the `register_file` I²C mode: `size`
+/// one-byte registers, a write-pointer selected by the first post-START byte,
+/// and an auto-increment policy that walks the pointer after each data byte.
+/// This is the datasheet shape for PWM expanders / GPIO expanders (PCA9685)
+/// whose block writes stream consecutive registers. Mutually exclusive with the
+/// named `registers:`/`commands:` shapes.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RegisterFileSpec {
+    /// Number of one-byte registers (typically 256).
+    pub size: usize,
+    /// Sparse non-zero power-on reset values, keyed by register offset.
+    #[serde(default)]
+    pub reset: BTreeMap<u8, u8>,
+    /// Mask applied to the pointer byte. Absent ⇒ `0xFF`.
+    #[serde(default = "default_pointer_mask")]
+    pub pointer_mask: u8,
+    /// The first byte written after START selects the pointer. Default true.
+    #[serde(default = "default_true")]
+    pub first_write_after_start_sets_pointer: bool,
+    /// When the pointer advances after a data byte read/written.
+    #[serde(default)]
+    pub auto_increment: AutoIncrement,
+}
+
+fn default_pointer_mask() -> u8 {
+    0xFF
+}
+
+/// Auto-increment policy for a register-file write-pointer. Checked **live**
+/// (after the enabling byte is stored), so the very write that sets the enable
+/// field also advances the pointer — matching PCA9685 silicon.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub enum AutoIncrement {
+    /// Pointer never advances automatically.
+    #[default]
+    Never,
+    /// Pointer advances after every data byte.
+    Always,
+    /// Pointer advances while `regs[addr] & mask != 0` (PCA9685 MODE1.AI).
+    WhenFieldSet {
+        /// Register offset holding the enable field.
+        addr: u8,
+        /// Bit mask of the enable field.
+        mask: u8,
+    },
+}
+
+/// Serde helper for the `when_field_set` map form of [`AutoIncrement`].
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct WhenFieldSetFields {
+    addr: u8,
+    mask: u8,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct AutoIncrementMap {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    when_field_set: Option<WhenFieldSetFields>,
+}
+
+impl Serialize for AutoIncrement {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            AutoIncrement::Never => serializer.serialize_str("never"),
+            AutoIncrement::Always => serializer.serialize_str("always"),
+            AutoIncrement::WhenFieldSet { addr, mask } => AutoIncrementMap {
+                when_field_set: Some(WhenFieldSetFields {
+                    addr: *addr,
+                    mask: *mask,
+                }),
+            }
+            .serialize(serializer),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for AutoIncrement {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        use serde::de::Error;
+        let value = serde_yaml::Value::deserialize(deserializer)?;
+        match &value {
+            serde_yaml::Value::String(s) => match s.as_str() {
+                "never" => Ok(AutoIncrement::Never),
+                "always" => Ok(AutoIncrement::Always),
+                other => Err(D::Error::unknown_variant(
+                    other,
+                    &["never", "always", "when_field_set"],
+                )),
+            },
+            serde_yaml::Value::Mapping(_) => {
+                let m: AutoIncrementMap =
+                    serde_yaml::from_value(value).map_err(D::Error::custom)?;
+                match m.when_field_set {
+                    Some(f) => Ok(AutoIncrement::WhenFieldSet {
+                        addr: f.addr,
+                        mask: f.mask,
+                    }),
+                    None => Err(D::Error::custom("unknown auto_increment variant")),
+                }
+            }
+            _ => Err(D::Error::custom(
+                "expected string or map for auto_increment",
+            )),
+        }
+    }
+}
+
+/// One self-driving update: a trigger paired with an action. See
+/// [`I2cSpec::updates`].
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct UpdateRule {
+    pub trigger: UpdateTrigger,
+    pub action: UpdateAction,
+}
+
+/// What fires an [`UpdateRule`]. Currently only `read_complete` — a full
+/// multi-byte read of the identified register finished.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct UpdateTrigger {
+    pub read_complete: ReadComplete,
+}
+
+/// Identify the register a `read_complete` trigger watches: exactly one of a
+/// register `name` or a `pointer` value.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ReadComplete {
+    #[serde(default)]
+    pub register: Option<String>,
+    #[serde(default)]
+    pub pointer: Option<u8>,
+}
+
+/// What an [`UpdateRule`] does. Currently only `add_wrap`.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct UpdateAction {
+    pub add_wrap: AddWrap,
+}
+
+/// `value = value.wrapping_add(add) as i16; if value > max { value = reset }`
+/// applied to the triggering register's stored word (signed i16 semantics).
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AddWrap {
+    pub add: i16,
+    pub max: i16,
+    pub reset: i16,
+}
+
+/// A named, channel-indexed engineering-unit value derived from the register
+/// file. See [`I2cSpec::observables`].
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ObservableSpec {
+    pub name: String,
+    /// Number of channels (1 for a scalar observable).
+    pub channels: u8,
+    /// Register offset of channel 0's block.
+    pub base: u8,
+    /// Offset between consecutive channel blocks.
+    pub stride: u8,
+    /// How the raw value is composed from the channel block.
+    pub value: ObservableValue,
+    /// Optional raw → engineering-units mapping.
+    #[serde(default)]
+    pub map: Option<ObservableMap>,
+}
+
+/// Raw-value composition for an [`ObservableSpec`].
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ObservableValue {
+    pub u12_compose: U12Compose,
+}
+
+/// `((regs[base+hi_rel] & hi_mask) << 8) | regs[base+lo_rel]`.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct U12Compose {
+    pub lo_rel: u8,
+    pub hi_rel: u8,
+    pub hi_mask: u8,
+}
+
+/// Raw → engineering-units mapping for an [`ObservableSpec`].
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ObservableMap {
+    pub linear: LinearMap,
+    /// Return `None` while the raw value is exactly 0 (channel never written).
+    #[serde(default)]
+    pub none_when_raw_zero: bool,
+}
+
+/// `eng = clamp(raw * scale + offset)`.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LinearMap {
+    pub scale: f64,
+    pub offset: f64,
+    /// Optional inclusive `[lo, hi]` clamp.
+    #[serde(default)]
+    pub clamp: Option<(f64, f64)>,
+}
+
+/// The `behavior.spi` section of a declarative `spi_device` — datasheet-shaped
+/// wire framing for a register-style SPI sensor, interpreted by the engine's
+/// generic device. The measurement→word machinery (`endian`/`source`/`encode`/
+/// `scale_from` on each [`RegisterSpec`]) is shared verbatim with the I²C
+/// primitive; only the leading-command framing differs.
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct SpiSpec {
+    /// How the leading command byte encodes read/write + register address.
+    #[serde(default)]
+    pub framing: SpiFraming,
+    /// Register map addressed by the command byte.
+    #[serde(default)]
+    pub registers: Vec<RegisterSpec>,
+}
+
+/// SPI command-byte framing. Defaults are the ADXL345 convention: one command
+/// byte, bit 7 = read/write, bits [5:0] = register address, multi-byte bursts
+/// auto-increment the address.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SpiFraming {
+    /// Width of the leading command word in bytes. `0` = read-only part with no
+    /// command (MAX31855: CS↓, clock out register 0); `1` = ADXL345-style.
+    #[serde(default = "default_command_bytes")]
+    pub command_bytes: u8,
+    /// Bit position in the command byte selecting read vs write. `None` ⇒
+    /// direction is fixed by each register's `access`.
+    #[serde(default = "default_rw_bit")]
+    pub rw_bit: Option<u8>,
+    /// If true, `rw_bit` set (=1) means READ (ADXL345). If false, set means write.
+    #[serde(default = "default_true")]
+    pub rw_read_high: bool,
+    /// Mask applied (after `addr_shift`) to the command byte to get the address.
+    #[serde(default = "default_addr_mask")]
+    pub addr_mask: u8,
+    #[serde(default)]
+    pub addr_shift: u8,
+    /// A multi-byte burst walks ascending register addresses from the selected
+    /// one; false ⇒ only the selected register is served.
+    #[serde(default = "default_true")]
+    pub auto_increment: bool,
+}
+
+impl Default for SpiFraming {
+    fn default() -> Self {
+        Self {
+            command_bytes: default_command_bytes(),
+            rw_bit: default_rw_bit(),
+            rw_read_high: true,
+            addr_mask: default_addr_mask(),
+            addr_shift: 0,
+            auto_increment: true,
+        }
+    }
+}
+
+fn default_command_bytes() -> u8 {
+    1
+}
+fn default_rw_bit() -> Option<u8> {
+    Some(7)
+}
+fn default_addr_mask() -> u8 {
+    0x3F
+}
+
+/// CRC-8 parameters. Sensirion parts use `poly 0x31`, `init 0xFF`, no final XOR.
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+pub struct Crc8Spec {
+    pub poly: u8,
+    pub init: u8,
+}
+
+/// Byte order of a register's on-wire word.
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum Endian {
+    Le,
+    Be,
+}
+
+/// Register access. `r` = read-only (the master only reads it); `rw` = the
+/// master may also write it, and the model accumulates + echoes those writes.
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum RegisterAccess {
+    R,
+    Rw,
+}
+
+/// Back-compat aliases: the register/access structs were originally I²C-named.
+/// Both declarative engines (I²C register-pointer, SPI CS-framed) share one
+/// definition; these keep every existing `I2c*` reference compiling.
+pub type I2cRegister = RegisterSpec;
+pub type I2cAccess = RegisterAccess;
+
+/// A pointer-addressable register.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RegisterSpec {
+    pub name: String,
+    /// Pointer byte the master writes to select this register.
+    pub addr: u8,
+    /// Width in bytes streamed on read / accumulated on write.
+    pub width: u8,
+    pub endian: Endian,
+    pub access: RegisterAccess,
+    /// Power-on value (also the value read back before any write / measurement).
+    #[serde(default)]
+    pub reset: u32,
+    /// Input-channel key whose (encoded) value this register reports on read.
+    /// Absent ⇒ a plain storage register (reads back its written value / reset).
+    #[serde(default)]
+    pub source: Option<String>,
+    /// Linear encoding applied to the sourced measurement before it is placed
+    /// in the register word.
+    #[serde(default)]
+    pub encode: Option<Encode>,
+    /// A constant the sourced value is multiplied by *before* encoding, applied
+    /// as its own floating-point step (not folded into `encode.scale`). This is
+    /// a datasheet responsivity ratio — e.g. the VEML7700 white channel reads
+    /// `1.15 ×` the visible ALS illuminance. Absent ⇒ 1.0 (no pre-scale). It is
+    /// a distinct multiply so the intermediate rounds byte-identically to a
+    /// reference model that scales the measurement before converting it.
+    #[serde(default)]
+    pub source_scale: Option<f64>,
+    /// Zero or more bit-field-selected scale factors, each read from another
+    /// register's field and **multiplied together** (a single mapping or a YAML
+    /// list are both accepted). In the default (multiply) mode these compound
+    /// the counts-per-unit — e.g. a gain field ×1/×2/×4. In `resolution` mode
+    /// they compound the resolution divisor instead (gain **and**
+    /// integration-time fields together, which one field alone cannot express).
+    #[serde(default, deserialize_with = "de_scale_from_list")]
+    pub scale_from: Vec<ScaleFrom>,
+    /// Resolution-divide mode. When present, the register reports
+    /// `round((value × source_scale) ÷ resolution)`, where
+    /// `resolution = <this base> × Π(scale_from factors)` folded left-to-right.
+    /// This is the datasheet form for parts whose count = illuminance ÷
+    /// resolution and whose resolution scales with programmed gain and
+    /// integration time (VEML7700). Absent ⇒ the register uses the multiply
+    /// encoding (`value × encode.scale × Π factors`). Mutually exclusive with a
+    /// `source`-less register.
+    #[serde(default)]
+    pub resolution: Option<f64>,
+    /// The register word is a signed two's-complement quantity of `width`
+    /// bytes. A negative sourced measurement is encoded as its two's-complement
+    /// bit pattern rather than clamped to zero. Default false (unsigned).
+    #[serde(default)]
+    pub signed: bool,
+    /// Bit-field composition: when non-empty, the register word is ASSEMBLED
+    /// from these fields (each a sourced measurement placed at a bit offset)
+    /// rather than from the single top-level `source`. Used by parts like the
+    /// MAX31855 whose 32-bit frame packs temperature + status sub-fields.
+    #[serde(default)]
+    pub fields: Vec<FieldSpec>,
+}
+
+/// One sourced bit-field within a composite register word (see
+/// [`RegisterSpec::fields`]). The encoded value occupies `width_bits` bits at
+/// bit offset `shift`; `signed` packs negatives as two's-complement within
+/// those bits.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FieldSpec {
+    pub source: String,
+    pub shift: u8,
+    pub width_bits: u8,
+    #[serde(default)]
+    pub signed: bool,
+    #[serde(default)]
+    pub encode: Option<Encode>,
+}
+
+/// Accept either a single `scale_from` mapping or a YAML list of them, yielding
+/// a `Vec`. A bare mapping is the common single-field case (backward-compatible
+/// with descriptors written before compounding fields existed); a list is used
+/// when several bit-fields multiply together (e.g. gain × integration time).
+fn de_scale_from_list<'de, D>(deserializer: D) -> Result<Vec<ScaleFrom>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum OneOrMany {
+        One(ScaleFrom),
+        Many(Vec<ScaleFrom>),
+    }
+    Ok(match OneOrMany::deserialize(deserializer)? {
+        OneOrMany::One(s) => vec![s],
+        OneOrMany::Many(v) => v,
+    })
+}
+
+/// Linear measurement encoding: `raw = value * scale + offset`, clamped to the
+/// optional `[clamp_min, clamp_max]` window (in raw units) before it is packed
+/// into the word. `scale` defaults to 1.0, `offset` to 0.0.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Encode {
+    #[serde(default = "one_f64")]
+    pub scale: f64,
+    #[serde(default)]
+    pub offset: f64,
+    #[serde(default)]
+    pub clamp_min: Option<f64>,
+    #[serde(default)]
+    pub clamp_max: Option<f64>,
+}
+
+fn one_f64() -> f64 {
+    1.0
+}
+
+/// A register-bit-field-keyed scale map. The engine extracts
+/// `(value(register) >> shift) & mask` and multiplies the encode scale by
+/// `map[field]` (or 1.0 when the field value is absent from the map).
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ScaleFrom {
+    /// Name of the register whose bit-field selects the factor.
+    pub register: String,
+    /// Mask applied after `shift`.
+    pub mask: u32,
+    #[serde(default)]
+    pub shift: u8,
+    /// Extracted field value → scale factor.
+    pub map: std::collections::BTreeMap<u32, f64>,
+}
+
+/// One command in a command device's command set.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct I2cCommand {
+    pub name: String,
+    /// 16-bit command code, big-endian on the wire.
+    pub code: u16,
+    /// Microseconds the part needs after the command before its response is
+    /// ready. Reads before this elapses return not-ready bytes. Absent ⇒ ready
+    /// immediately. Gated on simulated wall-clock (`advance_time_us`).
+    #[serde(default)]
+    pub delay_us: Option<u64>,
+    /// Response words in clock-out order. Empty ⇒ a write-only command.
+    #[serde(default)]
+    pub response: Vec<ResponseWord>,
+    /// Count of parameter words the master writes after the code (each a 16-bit
+    /// word plus CRC on the wire). Accepted and ignored.
+    #[serde(default)]
+    pub params_words: u8,
+}
+
+/// One word of a command response — either a live measurement (`source`) or a
+/// fixed constant (`const`). Exactly one of the two applies.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ResponseWord {
+    /// Input-channel key whose encoded value fills this word.
+    #[serde(default)]
+    pub source: Option<String>,
+    /// A fixed value (e.g. a data-ready flag or serial-number word).
+    #[serde(rename = "const", default)]
+    pub const_value: Option<u32>,
+    /// Word width in bytes (big-endian on the wire). Default 2.
+    #[serde(default = "default_response_width")]
+    pub width: u8,
+    /// Linear encoding for a `source` word.
+    #[serde(default)]
+    pub encode: Option<Encode>,
+}
+
+fn default_response_width() -> u8 {
+    2
+}
+
+fn default_code_width() -> u8 {
+    2
 }
 
 /// The canvas-compiler emit spec for a declarative device — the single source
@@ -879,6 +1611,15 @@ pub struct DeviceBehavior {
     /// the primitive decides the concrete type.
     #[serde(default)]
     pub params: std::collections::BTreeMap<String, serde_yaml::Value>,
+    /// For the `i2c_device` primitive: the datasheet-shaped wire-protocol spec
+    /// the engine's generic I²C device interprets. Absent for the GPIO
+    /// primitives (quadrature / matrix / one-wire / pulse-echo).
+    #[serde(default)]
+    pub i2c: Option<I2cSpec>,
+    /// For the `spi_device` primitive: the datasheet-shaped SPI wire framing the
+    /// engine's generic SPI device interprets. Absent for non-SPI primitives.
+    #[serde(default)]
+    pub spi: Option<SpiSpec>,
 }
 
 impl DeviceDescriptor {
@@ -912,6 +1653,13 @@ pub fn embedded_device_yaml(device_type: &str) -> Option<&'static str> {
         "keypad" => Some(include_str!("../../../configs/devices/keypad.yaml")),
         "dht22" | "am2302" => Some(include_str!("../../../configs/devices/dht22.yaml")),
         "hc-sr04" | "hcsr04" => Some(include_str!("../../../configs/devices/hc_sr04.yaml")),
+        "sht31" => Some(include_str!("../../../configs/devices/sht31.yaml")),
+        "adxl345_spi" => Some(include_str!("../../../configs/devices/adxl345_spi.yaml")),
+        "max31855" => Some(include_str!("../../../configs/devices/max31855.yaml")),
+        "bh1750" => Some(include_str!("../../../configs/devices/bh1750.yaml")),
+        "veml7700" => Some(include_str!("../../../configs/devices/veml7700.yaml")),
+        "tmp102" => Some(include_str!("../../../configs/devices/tmp102.yaml")),
+        "pca9685" => Some(include_str!("../../../configs/devices/pca9685.yaml")),
         _ => None,
     }
 }
@@ -1095,6 +1843,71 @@ impl From<labwired_ir::IrDevice> for ChipDescriptor {
 pub struct TestInputs {
     pub firmware: String,
     pub system: Option<String>,
+    /// A bare chip name (`stm32f103`), for firmware with no external devices
+    /// or board I/O. Mutually exclusive with `system`; it saves authoring a
+    /// manifest whose entire content would be a chip pointer and two empty
+    /// lists. Anything with a device attached needs `system`.
+    pub chip: Option<String>,
+}
+
+/// A system, resolved once: the manifest plus the directory that relative
+/// paths inside it (chip descriptor, firmware, peripheral schemas) resolve
+/// against.
+///
+/// Runners take this rather than a manifest path so a run described only by
+/// `inputs.chip` — a built-in chip with nothing attached — is a first-class
+/// case instead of a file that has to be conjured on disk. It also means the
+/// manifest is parsed once per run rather than re-read at every site that
+/// needs to know the chip.
+#[derive(Debug, Clone)]
+pub struct ResolvedSystem {
+    pub manifest: SystemManifest,
+    base_dir: PathBuf,
+    /// The manifest file this came from, if any. `None` for a built-in chip,
+    /// where no such file exists — artifacts report it that way rather than
+    /// inventing a path.
+    source_path: Option<PathBuf>,
+}
+
+impl ResolvedSystem {
+    pub fn from_manifest_file(path: &Path) -> Result<Self> {
+        let manifest = SystemManifest::from_file(path)?;
+        Ok(Self {
+            manifest,
+            base_dir: path.parent().unwrap_or(Path::new(".")).to_path_buf(),
+            source_path: Some(path.to_path_buf()),
+        })
+    }
+
+    /// A bare MCU: the named built-in chip, no external devices, no board I/O.
+    pub fn from_builtin_chip(chip: &str) -> Result<Self> {
+        // Fail here rather than at first use, so an unknown name is a config
+        // error before the run starts.
+        ChipDescriptor::resolve(chip, Path::new("."))?;
+        Ok(Self {
+            manifest: SystemManifest {
+                schema_version: default_schema_version(),
+                name: chip.to_string(),
+                chip: chip.to_string(),
+                ..SystemManifest::default()
+            },
+            base_dir: PathBuf::from("."),
+            source_path: None,
+        })
+    }
+
+    /// The chip descriptor this system runs on.
+    pub fn chip(&self) -> Result<ChipDescriptor> {
+        ChipDescriptor::resolve(&self.manifest.chip, &self.base_dir)
+    }
+
+    pub fn base_dir(&self) -> &Path {
+        &self.base_dir
+    }
+
+    pub fn source_path(&self) -> Option<&Path> {
+        self.source_path.as_deref()
+    }
 }
 
 /// Inputs for a multi-node environment test. Environment scripts are selected
@@ -1472,6 +2285,50 @@ pub struct StimulusSpec {
     pub value: f64,
 }
 
+/// The bytes an [`UartInjectionSpec`] delivers: either a UTF-8 string (the
+/// common case — command text, a line to echo) or an explicit byte array for
+/// binary payloads that aren't valid UTF-8. Untagged so a script author writes
+/// whichever is natural: `bytes: "hello\n"` or `bytes: [0x01, 0xFF, 0x00]`.
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(untagged)]
+pub enum UartInjectionBytes {
+    Text(String),
+    Raw(Vec<u8>),
+}
+
+impl UartInjectionBytes {
+    /// Lower to the raw bytes that get pushed into the UART's RX queue.
+    pub fn as_bytes(&self) -> Vec<u8> {
+        match self {
+            UartInjectionBytes::Text(s) => s.as_bytes().to_vec(),
+            UartInjectionBytes::Raw(b) => b.clone(),
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        match self {
+            UartInjectionBytes::Text(s) => s.is_empty(),
+            UartInjectionBytes::Raw(b) => b.is_empty(),
+        }
+    }
+}
+
+/// A declarative UART RX injection (schema_version 1.2+): push `bytes` into
+/// the named `uart` peripheral's receive queue when `trigger` fires. Reuses
+/// the [`FaultTrigger`] vocabulary; only the time-based triggers (`at_start`,
+/// `after_cycles`) are wired today, mirroring [`StimulusSpec`].
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct UartInjectionSpec {
+    /// The UART peripheral's bus name (e.g. `"uart1"`), resolved against the
+    /// built machine when the run starts.
+    pub uart: String,
+    /// The bytes to deliver.
+    pub bytes: UartInjectionBytes,
+    #[serde(default)]
+    pub trigger: FaultTrigger,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct TestScript {
@@ -1489,6 +2346,9 @@ pub struct TestScript {
     /// Input stimuli to drive during the run (schema_version 1.2+).
     #[serde(default)]
     pub stimuli: Vec<StimulusSpec>,
+    /// UART RX byte injections to deliver during the run (schema_version 1.2+).
+    #[serde(default)]
+    pub uart_injections: Vec<UartInjectionSpec>,
 }
 
 fn reject_explicit_memory_nodes(assertions: &[TestAssertion], script_kind: &str) -> Result<()> {
@@ -1522,12 +2382,37 @@ impl TestScript {
             );
         }
 
-        if self.inputs.firmware.trim().is_empty() {
-            anyhow::bail!("Input 'firmware' path cannot be empty");
-        }
+        // NOTE: an empty `inputs.firmware` is permitted. The schema requires the
+        // key, but the faithful ESP32-C3 rom-boot path carries no debug ELF (the
+        // flash image is the program the real mask ROM loads), so the builder
+        // emits `firmware: ""`. `labwired test` resolves this: empty + --rom-boot
+        // on an esp32c3 → the ELF-less rom-boot path; empty otherwise → a
+        // "Missing firmware path" config error. Rejecting it here would 500 every
+        // ELF-less rom-boot run before it starts.
 
         if self.limits.max_steps == 0 {
             anyhow::bail!("Limit 'max_steps' must be greater than zero");
+        }
+
+        if self.inputs.system.is_some() && self.inputs.chip.is_some() {
+            anyhow::bail!(
+                "inputs may set 'system' or 'chip', not both. Use 'chip' for a bare MCU \
+                 and 'system' when external devices or board I/O are wired up."
+            );
+        }
+        if let Some(chip) = &self.inputs.chip {
+            if !is_builtin_chip_spec(chip) {
+                anyhow::bail!(
+                    "inputs.chip takes a built-in chip name such as 'stm32f103', not a path. \
+                     Use 'system' with a manifest to point at your own descriptor."
+                );
+            }
+            if embedded_chip_yaml(chip).is_none() {
+                anyhow::bail!(
+                    "unknown built-in chip '{chip}'. Available: {}",
+                    BUILTIN_CHIP_NAMES.join(", ")
+                );
+            }
         }
 
         reject_explicit_memory_nodes(&self.assertions, "single-node")?;
@@ -1568,6 +2453,35 @@ impl TestScript {
             }
         }
 
+        // UART RX injections require schema_version 1.2+.
+        if !self.uart_injections.is_empty() && matches!(self.schema_version.as_str(), "1.0" | "1.1")
+        {
+            anyhow::bail!(
+                "'uart_injections' require schema_version '1.2' (got '{}')",
+                self.schema_version
+            );
+        }
+        for (i, u) in self.uart_injections.iter().enumerate() {
+            if u.uart.trim().is_empty() {
+                anyhow::bail!("uart_injections[{}]: 'uart' cannot be empty", i);
+            }
+            if u.bytes.is_empty() {
+                anyhow::bail!("uart_injections[{}]: 'bytes' cannot be empty", i);
+            }
+            // Only the time-based triggers are wired for injections today; the
+            // register-access triggers need a write/read hook we haven't added
+            // for the input path. Fail loud rather than silently never firing.
+            match &u.trigger {
+                FaultTrigger::AtStart | FaultTrigger::AfterCycles { .. } => {}
+                other => anyhow::bail!(
+                    "uart_injections[{}]: trigger {:?} is not yet supported for uart_injections \
+                     (use at_start or after_cycles)",
+                    i,
+                    other
+                ),
+            }
+        }
+
         // Structural fault-compiler guardrails. Deeper checks that need the
         // built chip (target resolution, bit-within-register) run when the bus
         // is available; these catch malformed specs up front.
@@ -1600,6 +2514,7 @@ pub struct EnvTestScript {
     pub faults: Vec<FaultSpec>,
     pub verdict: Option<Verdict>,
     pub stimuli: Vec<StimulusSpec>,
+    pub uart_injections: Vec<UartInjectionSpec>,
     explicit_limits: EnvExplicitLimits,
     explicit_unsupported_fields: EnvExplicitUnsupportedFields,
 }
@@ -1654,6 +2569,7 @@ struct EnvExplicitUnsupportedFields {
     faults: FieldPresence<Vec<FaultSpec>>,
     verdict: FieldPresence<Verdict>,
     stimuli: FieldPresence<Vec<StimulusSpec>>,
+    uart_injections: FieldPresence<Vec<UartInjectionSpec>>,
 }
 
 /// Serialization keeps the user-visible environment contract strict in both
@@ -1672,6 +2588,8 @@ struct SerializableEnvTestScript<'a> {
     verdict: Option<Option<&'a Verdict>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     stimuli: Option<Option<&'a [StimulusSpec]>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    uart_injections: Option<Option<&'a [UartInjectionSpec]>>,
 }
 
 #[derive(Serialize)]
@@ -1812,6 +2730,10 @@ impl Serialize for EnvTestScript {
                 &self.explicit_unsupported_fields.stimuli,
                 &self.stimuli,
             ),
+            uart_injections: serialize_unsupported_sequence(
+                &self.explicit_unsupported_fields.uart_injections,
+                &self.uart_injections,
+            ),
         }
         .serialize(serializer)
     }
@@ -1889,6 +2811,8 @@ struct EnvTestScriptWire {
     verdict: FieldPresence<Verdict>,
     #[serde(default)]
     stimuli: FieldPresence<Vec<StimulusSpec>>,
+    #[serde(default)]
+    uart_injections: FieldPresence<Vec<UartInjectionSpec>>,
 }
 
 impl<'de> Deserialize<'de> for EnvTestScript {
@@ -1905,12 +2829,14 @@ impl<'de> Deserialize<'de> for EnvTestScript {
             faults,
             verdict,
             stimuli,
+            uart_injections,
         } = wire;
         let (limits, explicit_limits) = wire_limits.into_parts();
         let explicit_unsupported_fields = EnvExplicitUnsupportedFields {
             faults: faults.clone(),
             verdict: verdict.clone(),
             stimuli: stimuli.clone(),
+            uart_injections: uart_injections.clone(),
         };
         Ok(Self {
             schema_version,
@@ -1920,6 +2846,7 @@ impl<'de> Deserialize<'de> for EnvTestScript {
             faults: faults.into_value().unwrap_or_default(),
             verdict: verdict.into_value(),
             stimuli: stimuli.into_value().unwrap_or_default(),
+            uart_injections: uart_injections.into_value().unwrap_or_default(),
             explicit_limits,
             explicit_unsupported_fields,
         })
@@ -1983,6 +2910,14 @@ impl EnvTestScript {
         }
         if self.explicit_unsupported_fields.stimuli.is_present() || !self.stimuli.is_empty() {
             anyhow::bail!("Environment test scripts do not support 'stimuli'");
+        }
+        if self
+            .explicit_unsupported_fields
+            .uart_injections
+            .is_present()
+            || !self.uart_injections.is_empty()
+        {
+            anyhow::bail!("Environment test scripts do not support 'uart_injections'");
         }
 
         if self.assertions.is_empty() {
@@ -2352,6 +3287,137 @@ limits:
 }
 
 #[cfg(test)]
+mod uart_injection_tests {
+    use super::*;
+
+    fn script(schema: &str, block: &str) -> String {
+        format!(
+            r#"
+schema_version: "{schema}"
+inputs:
+  firmware: "cow.elf"
+  system: "sys.yaml"
+limits:
+  max_steps: 1000
+{block}
+"#
+        )
+    }
+
+    #[test]
+    fn parses_text_and_raw_bytes_on_1_2() {
+        let yaml = script(
+            "1.2",
+            r#"uart_injections:
+  - uart: "uart1"
+    bytes: "AB"
+    trigger: !after_cycles { cycles: 500 }
+  - uart: "uart2"
+    bytes: [0x51, 0x00, 0xFF]
+"#,
+        );
+        let s: TestScript = serde_yaml::from_str(&yaml).unwrap();
+        s.validate().unwrap();
+        assert_eq!(s.uart_injections.len(), 2);
+        assert_eq!(s.uart_injections[0].uart, "uart1");
+        assert_eq!(s.uart_injections[0].bytes.as_bytes(), b"AB".to_vec());
+        assert!(matches!(
+            s.uart_injections[0].trigger,
+            FaultTrigger::AfterCycles { cycles: 500 }
+        ));
+        // Default trigger is at_start.
+        assert!(matches!(
+            s.uart_injections[1].trigger,
+            FaultTrigger::AtStart
+        ));
+        assert_eq!(
+            s.uart_injections[1].bytes.as_bytes(),
+            vec![0x51, 0x00, 0xFF]
+        );
+    }
+
+    #[test]
+    fn requires_schema_1_2() {
+        for schema in ["1.0", "1.1"] {
+            let yaml = script(
+                schema,
+                "uart_injections:\n  - uart: \"uart1\"\n    bytes: \"A\"\n",
+            );
+            let s: TestScript = serde_yaml::from_str(&yaml).unwrap();
+            let err = s.validate().unwrap_err().to_string();
+            assert!(err.contains("require schema_version '1.2'"), "{err}");
+        }
+    }
+
+    #[test]
+    fn empty_uart_id_rejected() {
+        let yaml = script(
+            "1.2",
+            "uart_injections:\n  - uart: \"\"\n    bytes: \"A\"\n",
+        );
+        let s: TestScript = serde_yaml::from_str(&yaml).unwrap();
+        assert!(s
+            .validate()
+            .unwrap_err()
+            .to_string()
+            .contains("'uart' cannot be empty"));
+    }
+
+    #[test]
+    fn empty_bytes_rejected() {
+        let yaml = script(
+            "1.2",
+            "uart_injections:\n  - uart: \"uart1\"\n    bytes: \"\"\n",
+        );
+        let s: TestScript = serde_yaml::from_str(&yaml).unwrap();
+        assert!(s
+            .validate()
+            .unwrap_err()
+            .to_string()
+            .contains("'bytes' cannot be empty"));
+    }
+
+    #[test]
+    fn register_triggers_rejected() {
+        let yaml = script(
+            "1.2",
+            r#"uart_injections:
+  - uart: "uart1"
+    bytes: "A"
+    trigger: !on_write { register: "FOO" }
+"#,
+        );
+        let s: TestScript = serde_yaml::from_str(&yaml).unwrap();
+        assert!(s
+            .validate()
+            .unwrap_err()
+            .to_string()
+            .contains("not yet supported for uart_injections"));
+    }
+
+    #[test]
+    fn malformed_bytes_rejected_at_parse() {
+        // `bytes` must be either a string or an array of numbers; a mapping
+        // matches neither untagged variant and fails to parse.
+        let yaml = script(
+            "1.2",
+            "uart_injections:\n  - uart: \"uart1\"\n    bytes: { nope: true }\n",
+        );
+        assert!(serde_yaml::from_str::<TestScript>(&yaml).is_err());
+    }
+
+    #[test]
+    fn absent_field_parses_and_behaves_like_before() {
+        // A script written before this field existed must still parse, with
+        // `uart_injections` defaulting to empty (schema unaffected).
+        let yaml = script("1.0", "assertions: []");
+        let s: TestScript = serde_yaml::from_str(&yaml).unwrap();
+        s.validate().unwrap();
+        assert!(s.uart_injections.is_empty());
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -2507,7 +3573,11 @@ limits:
     }
 
     #[test]
-    fn test_empty_firmware() {
+    fn test_empty_firmware_is_permitted_for_rom_boot() {
+        // An empty `inputs.firmware` is now VALID at the schema level: the
+        // faithful ESP32-C3 rom-boot path carries no debug ELF, so the builder
+        // emits `firmware: ""`. `labwired test` decides whether that is the
+        // ELF-less rom-boot path (--rom-boot on an esp32c3) or a config error.
         let yaml = r#"
 schema_version: "1.0"
 inputs:
@@ -2516,8 +3586,7 @@ limits:
   max_steps: 100
 "#;
         let script: TestScript = serde_yaml::from_str(yaml).unwrap();
-        let err = script.validate().unwrap_err();
-        assert!(err.to_string().contains("firmware"));
+        assert!(script.validate().is_ok());
     }
 
     #[test]
@@ -2941,6 +4010,20 @@ value: 1.0
                 .unwrap(),
             )
         });
+        assert_rejected_and_round_trips_invalid!(
+            "uart_injections",
+            |script: &mut EnvTestScript| {
+                script.uart_injections.push(
+                    serde_yaml::from_str(
+                        r#"
+uart: "uart1"
+bytes: "A"
+"#,
+                    )
+                    .unwrap(),
+                )
+            }
+        );
     }
 
     #[test]
@@ -2963,6 +4046,18 @@ value: 1.0
             ("", "verdict: null", "verdict: null", "verdict"),
             ("", "stimuli: null", "stimuli: null", "stimuli"),
             ("", "stimuli: []", "stimuli: []", "stimuli"),
+            (
+                "",
+                "uart_injections: null",
+                "uart_injections: null",
+                "uart_injections",
+            ),
+            (
+                "",
+                "uart_injections: []",
+                "uart_injections: []",
+                "uart_injections",
+            ),
         ] {
             let yaml = format!(
                 r#"
@@ -3308,6 +4403,21 @@ assertions:
             ),
             ("stimuli-empty", "stimuli: []", "stimuli"),
             ("stimuli-null", "stimuli: null", "stimuli"),
+            (
+                "uart-injections",
+                "uart_injections:\n  - uart: uart1\n    bytes: \"A\"",
+                "uart_injections",
+            ),
+            (
+                "uart-injections-empty",
+                "uart_injections: []",
+                "uart_injections",
+            ),
+            (
+                "uart-injections-null",
+                "uart_injections: null",
+                "uart_injections",
+            ),
         ] {
             let script_path = write_temp_file(
                 name,
@@ -3528,5 +4638,162 @@ board_io: []
         let err = SystemManifest::from_file(&sys_path).unwrap_err();
         let msg = err.to_string();
         assert!(msg.contains("'p'"), "unexpected error: {msg}");
+    }
+
+    #[test]
+    fn spi_device_descriptor_parses_framing_and_registers() {
+        let yaml = r#"
+type: test_spi
+behavior:
+  primitive: spi_device
+  spi:
+    framing: { command_bytes: 1, rw_bit: 7, rw_read_high: true, addr_mask: 0x3F, auto_increment: true }
+    registers:
+      - { name: WHOAMI, addr: 0x00, width: 1, endian: le, access: r, reset: 0xE5 }
+      - { name: DATA, addr: 0x32, width: 2, endian: le, access: r, source: accel }
+metadata:
+  inputs:
+    - { key: accel, label: "Accel X", unit: g, min: -16, max: 16, default: 0 }
+"#;
+        let d = DeviceDescriptor::from_yaml(yaml).unwrap();
+        let spi = d.behavior.spi.as_ref().expect("behavior.spi present");
+        assert_eq!(spi.framing.command_bytes, 1);
+        assert_eq!(spi.framing.rw_bit, Some(7));
+        assert_eq!(spi.registers.len(), 2);
+        assert_eq!(spi.registers[0].reset, 0xE5);
+    }
+
+    #[test]
+    fn spi_framing_defaults_are_adxl_shaped() {
+        let f = SpiFraming::default();
+        assert_eq!(f.command_bytes, 1);
+        assert_eq!(f.rw_bit, Some(7));
+        assert!(f.rw_read_high);
+        assert_eq!(f.addr_mask, 0x3F);
+        assert_eq!(f.addr_shift, 0);
+        assert!(f.auto_increment);
+    }
+
+    #[test]
+    fn i2c_register_alias_still_names_the_shared_struct() {
+        // The rename must not break existing I2c-named references.
+        let _r: I2cRegister = RegisterSpec {
+            name: "R".into(),
+            addr: 0,
+            width: 1,
+            endian: Endian::Le,
+            access: I2cAccess::R,
+            reset: 0,
+            source: None,
+            encode: None,
+            scale_from: vec![],
+            source_scale: None,
+            resolution: None,
+            signed: false,
+            fields: vec![],
+        };
+    }
+}
+
+#[cfg(test)]
+mod builtin_chip_tests {
+    use super::*;
+    use std::path::Path;
+
+    #[test]
+    fn a_bare_name_resolves_to_the_bundled_descriptor() {
+        let chip = ChipDescriptor::resolve("stm32f103", Path::new("/nonexistent"))
+            .expect("built-in chip resolves without touching the filesystem");
+        assert_eq!(chip.name, "stm32f103c8");
+    }
+
+    /// Guards the drift between `BUILTIN_CHIP_NAMES` and the `include_str!`
+    /// arms: a name advertised in an error message must actually load.
+    #[test]
+    fn every_advertised_builtin_name_loads_and_parses() {
+        for name in BUILTIN_CHIP_NAMES {
+            ChipDescriptor::resolve(name, Path::new("/nonexistent"))
+                .unwrap_or_else(|e| panic!("built-in chip '{name}' failed to load: {e:#}"));
+        }
+    }
+
+    #[test]
+    fn a_path_still_resolves_relative_to_the_manifest() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("custom.yaml"),
+            embedded_chip_yaml("stm32f103").unwrap(),
+        )
+        .unwrap();
+        let chip = ChipDescriptor::resolve("./custom.yaml", dir.path()).unwrap();
+        assert_eq!(chip.name, "stm32f103c8");
+    }
+
+    #[test]
+    fn an_unknown_builtin_names_the_available_ones() {
+        let err = ChipDescriptor::resolve("stm32f999", Path::new(".")).unwrap_err();
+        let msg = format!("{err:#}");
+        assert!(msg.contains("unknown built-in chip 'stm32f999'"), "{msg}");
+        assert!(msg.contains("stm32f103"), "{msg}");
+    }
+
+    #[test]
+    fn a_yaml_extension_is_treated_as_a_path_not_a_builtin() {
+        assert!(!is_builtin_chip_spec("stm32f103.yaml"));
+        assert!(!is_builtin_chip_spec("chips/stm32f103"));
+        assert!(is_builtin_chip_spec("stm32f103"));
+    }
+
+    fn script_with_inputs(inputs: &str) -> Result<TestScript> {
+        let yaml = format!(
+            "schema_version: \"1.2\"\ninputs:\n{inputs}limits:\n  max_steps: 10\nassertions: []\n"
+        );
+        let script: TestScript = serde_yaml::from_str(&yaml)?;
+        script.validate()?;
+        Ok(script)
+    }
+
+    #[test]
+    fn chip_alone_is_accepted() {
+        let script = script_with_inputs("  firmware: \"fw.elf\"\n  chip: \"stm32f103\"\n").unwrap();
+        assert_eq!(script.inputs.chip.as_deref(), Some("stm32f103"));
+        assert!(script.inputs.system.is_none());
+    }
+
+    #[test]
+    fn chip_and_system_together_are_rejected() {
+        let err = script_with_inputs(
+            "  firmware: \"fw.elf\"\n  chip: \"stm32f103\"\n  system: \"./system.yaml\"\n",
+        )
+        .unwrap_err();
+        assert!(format!("{err:#}").contains("not both"), "{err:#}");
+    }
+
+    #[test]
+    fn a_path_in_inputs_chip_is_rejected() {
+        let err =
+            script_with_inputs("  firmware: \"fw.elf\"\n  chip: \"./chip.yaml\"\n").unwrap_err();
+        assert!(format!("{err:#}").contains("built-in chip name"), "{err:#}");
+    }
+
+    #[test]
+    fn an_unknown_chip_in_inputs_is_rejected_before_the_run() {
+        let err =
+            script_with_inputs("  firmware: \"fw.elf\"\n  chip: \"stm32f999\"\n").unwrap_err();
+        assert!(
+            format!("{err:#}").contains("unknown built-in chip"),
+            "{err:#}"
+        );
+    }
+
+    #[test]
+    fn the_synthetic_manifest_has_nothing_attached() {
+        let m = ResolvedSystem::from_builtin_chip("stm32f103")
+            .unwrap()
+            .manifest;
+        assert_eq!(m.chip, "stm32f103");
+        assert!(m.external_devices.is_empty());
+        assert!(m.board_io.is_empty());
+        assert!(!m.schema_version.is_empty());
     }
 }

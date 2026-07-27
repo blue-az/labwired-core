@@ -1,7 +1,7 @@
 # CI Integration
 
 LabWired CI runs the same labwired test command locally, in GitHub Actions, and
-in GitLab. Pin the runner release to v0.19.2 so a firmware change is tested
+in GitLab. Pin the runner release to v0.21.0 so a firmware change is tested
 against a reproducible simulator version.
 
 ## GitHub Actions
@@ -25,10 +25,10 @@ jobs:
 
       - id: labwired
         name: Run LabWired
-        uses: w1ne/labwired-core/.github/actions/labwired-test@0cadd18fc9a3c0cbd1ecb0a6ddcd8ce66d56283d
+        uses: w1ne/labwired-core/.github/actions/labwired-test@bfd879522914b586223081c4c89ba315db4a97ed
         with:
           script: tests/firmware-test.yaml
-          version: v0.19.2
+          version: v0.21.0
           output-dir: out/labwired
           args: --no-uart-stdout
 
@@ -38,8 +38,8 @@ jobs:
 ~~~
 
 The public action reference is an immutable action-source pin to
-`0cadd18fc9a3c0cbd1ecb0a6ddcd8ce66d56283d`. Its only inputs are `script`
-(required), `version` (default `v0.19.2`), `output-dir`, and `args`; it downloads
+`bfd879522914b586223081c4c89ba315db4a97ed`. Its only inputs are `script`
+(required), `version` (default `v0.21.0`), `output-dir`, and `args`; it downloads
 the selected public CLI release archive with `curl`. The action writes JUnit to
 `output-dir/junit.xml`, appends `summary.md` to the job summary, and always
 uploads the entire output directory, even when the test fails. Its `status`,
@@ -56,7 +56,7 @@ docker run --rm \
   --user "$(id -u):$(id -g)" \
   --volume "$PWD:/workspace" \
   --workdir /workspace \
-  ghcr.io/w1ne/labwired:v0.19.2 \
+  ghcr.io/w1ne/labwired:v0.21.0 \
   test --script tests/firmware-test.yaml \
        --output-dir out/labwired \
        --no-uart-stdout
@@ -76,7 +76,7 @@ uses the pinned image and then invokes labwired test.
 ~~~yaml
 test:firmware:
   image:
-    name: ghcr.io/w1ne/labwired:v0.19.2
+    name: ghcr.io/w1ne/labwired:v0.21.0
     entrypoint: [""]
   script:
     - labwired test --script tests/firmware-test.yaml --output-dir out/labwired --no-uart-stdout

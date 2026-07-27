@@ -98,6 +98,7 @@ fn two_potentiometers_are_individually_addressable() {
         external_devices: vec![pot("knob", 0), pot("fader", 1)],
         board_io: vec![],
         debug_uart: None,
+        wifi_ap: None,
         peripherals: vec![],
         memory_overrides: Default::default(),
     };

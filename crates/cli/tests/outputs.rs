@@ -505,6 +505,49 @@ limits:
     assert_eq!(output.status.code(), Some(2)); // EXIT_CONFIG_ERROR
 }
 
+// A resume run IS a rom-boot run — it restarts from a snapshot the rom-boot
+// path captured — so it must get the rom-boot step ceiling, not the fast-boot
+// one. The hosted ESP32-S3 budget (100M) sits between the two, so applying the
+// wrong ceiling here rejects every cached S3 run before it executes a step.
+#[test]
+fn test_cli_resume_snapshot_uses_rom_boot_step_ceiling() {
+    let fw_abs = std::fs::canonicalize("../../tests/fixtures/uart-ok-thumbv7m.elf").unwrap();
+    let script = write_temp_file(
+        "script-resume-huge",
+        &format!(
+            r#"
+schema_version: "1.0"
+inputs:
+  firmware: "{}"
+limits:
+  max_steps: 100000000
+  wall_time_ms: 1000
+"#,
+            fw_abs.to_str().unwrap()
+        ),
+    );
+    // The snapshot itself need not be loadable: the step-ceiling check runs
+    // before any snapshot is read, so its rejection is what this asserts on.
+    let missing_snapshot = std::env::temp_dir().join("labwired-no-such-snapshot.lwrs");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_labwired"))
+        .args([
+            "test",
+            "--script",
+            script.to_str().unwrap(),
+            "--resume-snapshot",
+            missing_snapshot.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute command");
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        !stderr.contains("exceeds MAX_ALLOWED_STEPS"),
+        "a resume run must use the rom-boot ceiling; got: {stderr}"
+    );
+}
+
 #[test]
 fn test_cli_test_mode_regex_fail() {
     let fw_abs = std::fs::canonicalize("../../tests/fixtures/uart-ok-thumbv7m.elf").unwrap();

@@ -193,6 +193,10 @@ const CLASS_MARKERS: &[(&str, &str)] = &[
     ("iwdg", "wdt"),
     ("wwdg", "wdt"),
     ("wdt", "wdt"),
+    // RP2040 names its block `watchdog` outright, which contains none of the
+    // abbreviations above — without this marker the class read `na` even with a
+    // behavioural model wired up.
+    ("watchdog", "wdt"),
     // Deliberately "fdcan", not "can": bxCAN instances (stm32f103
     // `bxcan1`, stm32l476 `can1`) must not declare the class until
     // their fixtures actually check it.
@@ -383,6 +387,13 @@ pub const TIER1_TARGETS: &[Tier1Target] = &[
         "stm32f407",
         "configs/chips/stm32f407.yaml",
         "tests/fixtures/tier1/stm32f407.elf",
+    ),
+    // WeAct F411 Black Pill. Same silicon row as the F401 plus SPI5 (the `spi`
+    // check covers both instances); sim-derived, no bench part.
+    fast_boot(
+        "stm32f411",
+        "configs/chips/stm32f411ceu6.yaml",
+        "tests/fixtures/tier1/stm32f411.elf",
     ),
     fast_boot(
         "stm32g474re",

@@ -440,6 +440,7 @@ pub mod integration_tests {
             cosim_models: Vec::new(),
             board_io: Vec::new(),
             debug_uart: None,
+            wifi_ap: None,
             peripherals: Vec::new(),
         };
 
@@ -616,6 +617,7 @@ pub mod integration_tests {
             cosim_models: Vec::new(),
             board_io: Vec::new(),
             debug_uart: None,
+            wifi_ap: None,
             peripherals: Vec::new(),
         };
 
@@ -680,6 +682,7 @@ pub mod integration_tests {
             cosim_models: Vec::new(),
             board_io: Vec::new(),
             debug_uart: None,
+            wifi_ap: None,
             peripherals: Vec::new(),
         };
 
@@ -739,6 +742,7 @@ pub mod integration_tests {
             cosim_models: Vec::new(),
             board_io: Vec::new(),
             debug_uart: None,
+            wifi_ap: None,
             peripherals: Vec::new(),
         };
 
@@ -804,6 +808,7 @@ pub mod integration_tests {
             cosim_models: Vec::new(),
             board_io: Vec::new(),
             debug_uart: None,
+            wifi_ap: None,
             peripherals: Vec::new(),
         };
 
@@ -957,6 +962,7 @@ pub mod integration_tests {
             cosim_models: Vec::new(),
             board_io: Vec::new(),
             debug_uart: Some("uart1".to_string()),
+            wifi_ap: None,
             peripherals: Vec::new(),
         };
 
@@ -1017,6 +1023,7 @@ pub mod integration_tests {
             cosim_models: Vec::new(),
             board_io: Vec::new(),
             debug_uart: None,
+            wifi_ap: None,
             peripherals: Vec::new(),
         };
 
@@ -1079,6 +1086,7 @@ pub mod integration_tests {
             cosim_models: Vec::new(),
             board_io: Vec::new(),
             debug_uart: None,
+            wifi_ap: None,
             peripherals: Vec::new(),
         };
 
@@ -1141,6 +1149,7 @@ pub mod integration_tests {
             cosim_models: Vec::new(),
             board_io: Vec::new(),
             debug_uart: None,
+            wifi_ap: None,
             peripherals: Vec::new(),
         };
 
@@ -2356,6 +2365,7 @@ pub mod integration_tests {
             cosim_models: Vec::new(),
             board_io: Vec::new(),
             debug_uart: None,
+            wifi_ap: None,
             peripherals: Vec::new(),
         };
 
@@ -2445,6 +2455,7 @@ pub mod integration_tests {
             external_devices: Vec::new(),
             board_io: Vec::new(),
             debug_uart: None,
+            wifi_ap: None,
             peripherals: Vec::new(),
         };
 
@@ -2518,6 +2529,7 @@ pub mod integration_tests {
             external_devices: Vec::new(),
             board_io: Vec::new(),
             debug_uart: None,
+            wifi_ap: None,
             peripherals: Vec::new(),
         };
 
@@ -2739,6 +2751,7 @@ pub mod integration_tests {
             }],
             board_io: Vec::new(),
             debug_uart: None,
+            wifi_ap: None,
             peripherals: Vec::new(),
         };
 
@@ -2877,6 +2890,7 @@ pub mod integration_tests {
                 }],
                 board_io: Vec::new(),
                 debug_uart: None,
+                wifi_ap: None,
                 peripherals: Vec::new(),
             };
             crate::bus::SystemBus::from_config(&chip, &manifest).unwrap()

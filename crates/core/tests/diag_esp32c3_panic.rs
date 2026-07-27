@@ -11,7 +11,8 @@ fn diag_c3_panic_message() {
     let sys = core.join("validation/arduino-matrix/systems/esp32c3.yaml");
     let elf = core.join("validation/arduino-matrix/out/esp32c3/L0_serial_boot/firmware.elf");
     assert!(elf.exists(), "missing {elf:?}");
-    let mut bus = build_system_bus(Some(&sys)).expect("bus");
+    let resolved = labwired_config::ResolvedSystem::from_manifest_file(&sys).expect("system");
+    let mut bus = build_system_bus(Some(&resolved)).expect("bus");
     let flash = Arc::new(Mutex::new(vec![0xFFu8; 4 * 1024 * 1024]));
     bus.add_peripheral(
         "spimem1_flash",

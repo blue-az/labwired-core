@@ -143,6 +143,304 @@
       ]
     },
     {
+      "device_type": "ina219",
+      "label": "INA219 Power Monitor",
+      "summary": "High-side current and bus voltage sensor over I²C.",
+      "detail": "Texas Instruments INA219 (default 7-bit address 0x40). Host stimulus sets bus voltage and load current; firmware reads config/shunt/bus/current/power/cal registers on the simulated I²C bus.",
+      "transport": "i2c",
+      "category": "i2c",
+      "config_keys": [
+        {
+          "name": "i2c_address",
+          "ty": "int",
+          "doc": "7-bit slave address. Defaults to 0x40 (A0/A1 ground)."
+        }
+      ],
+      "labs": [],
+      "inputs": [
+        {
+          "key": "bus_voltage",
+          "label": "Bus voltage",
+          "unit": "V",
+          "min": 0.0,
+          "max": 32.0
+        },
+        {
+          "key": "current",
+          "label": "Current",
+          "unit": "A",
+          "min": -3.2,
+          "max": 3.2
+        }
+      ]
+    },
+    {
+      "device_type": "ads1115",
+      "label": "ADS1115 16-bit ADC",
+      "summary": "4-channel 16-bit I²C ADC (TI ADS1115).",
+      "detail": "Texas Instruments ADS1115 (default address 0x48). Host stimulus sets A0–A3 voltages; firmware reads conversion/config over I²C with the standard pointer protocol used by Arduino ADS1X15 drivers.",
+      "transport": "i2c",
+      "category": "i2c",
+      "config_keys": [
+        {
+          "name": "i2c_address",
+          "ty": "int",
+          "doc": "7-bit slave address. Defaults to 0x48 (ADDR→GND)."
+        }
+      ],
+      "labs": [],
+      "inputs": [
+        {
+          "key": "a0",
+          "label": "A0",
+          "unit": "V",
+          "min": -4.096,
+          "max": 4.096
+        },
+        {
+          "key": "a1",
+          "label": "A1",
+          "unit": "V",
+          "min": -4.096,
+          "max": 4.096
+        },
+        {
+          "key": "a2",
+          "label": "A2",
+          "unit": "V",
+          "min": -4.096,
+          "max": 4.096
+        },
+        {
+          "key": "a3",
+          "label": "A3",
+          "unit": "V",
+          "min": -4.096,
+          "max": 4.096
+        }
+      ]
+    },
+    {
+      "device_type": "ds3231",
+      "label": "DS3231 RTC",
+      "summary": "I²C real-time clock with temperature-compensated crystal.",
+      "detail": "Maxim DS3231 (address 0x68). BCD time registers 0x00–0x06 and control/status for common Arduino RTC libraries. Host can set unix_time or temperature via SimInput.",
+      "transport": "i2c",
+      "category": "i2c",
+      "config_keys": [
+        {
+          "name": "i2c_address",
+          "ty": "int",
+          "doc": "7-bit slave address. Defaults to 0x68."
+        }
+      ],
+      "labs": [],
+      "inputs": [
+        {
+          "key": "unix_time",
+          "label": "Unix time",
+          "unit": "s",
+          "min": 0.0,
+          "max": 4102444800.0
+        },
+        {
+          "key": "temperature",
+          "label": "Temperature",
+          "unit": "C",
+          "min": -40.0,
+          "max": 85.0
+        }
+      ]
+    },
+    {
+      "device_type": "hx711",
+      "label": "HX711 Load Cell",
+      "summary": "24-bit load-cell amplifier (DT/SCK bit-bang).",
+      "detail": "Avia HX711. Firmware bit-bangs SCK while reading DT; host sets weight (g) or raw counts via SimInput. Gain/channel selection pulses after bit 24 are accepted.",
+      "transport": "gpio_group",
+      "category": "gpio",
+      "config_keys": [
+        {
+          "name": "sck_pin",
+          "ty": "str",
+          "doc": "SCK GPIO pin (e.g. \"PA8\"). Defaults to PA8."
+        },
+        {
+          "name": "dt_pin",
+          "ty": "str",
+          "doc": "DT (DOUT) GPIO pin (e.g. \"PA9\"). Defaults to PA9."
+        }
+      ],
+      "labs": [],
+      "inputs": [
+        {
+          "key": "weight",
+          "label": "Weight",
+          "unit": "g",
+          "min": -50000.0,
+          "max": 50000.0
+        },
+        {
+          "key": "raw",
+          "label": "Raw counts",
+          "unit": "counts",
+          "min": -8388608.0,
+          "max": 8388607.0
+        }
+      ]
+    },
+    {
+      "device_type": "as5600",
+      "label": "AS5600 Magnetic Encoder",
+      "summary": "12-bit contactless magnetic rotary position sensor over I²C.",
+      "detail": "ams AS5600 (default address 0x36). Host sets angle in degrees; firmware reads RAW_ANGLE / ANGLE (12-bit) and STATUS magnet-detected bit.",
+      "transport": "i2c",
+      "category": "i2c",
+      "config_keys": [
+        {
+          "name": "i2c_address",
+          "ty": "int",
+          "doc": "7-bit slave address. Defaults to 0x36."
+        }
+      ],
+      "labs": [],
+      "inputs": [
+        {
+          "key": "angle",
+          "label": "Angle",
+          "unit": "deg",
+          "min": 0.0,
+          "max": 360.0
+        }
+      ]
+    },
+    {
+      "device_type": "vl53l0x",
+      "label": "VL53L0X ToF",
+      "summary": "Laser time-of-flight distance sensor over I²C (ST VL53L0X).",
+      "detail": "STMicroelectronics VL53L0X at 0x29. Identification + range result registers for common Arduino drivers; host sets distance in mm via SimInput.",
+      "transport": "i2c",
+      "category": "i2c",
+      "config_keys": [
+        {
+          "name": "i2c_address",
+          "ty": "int",
+          "doc": "7-bit slave address. Defaults to 0x29."
+        }
+      ],
+      "labs": [],
+      "inputs": [
+        {
+          "key": "distance",
+          "label": "Distance",
+          "unit": "mm",
+          "min": 0.0,
+          "max": 2000.0
+        }
+      ]
+    },
+    {
+      "device_type": "bno055",
+      "label": "BNO055 IMU",
+      "summary": "9-DoF absolute orientation sensor (Bosch BNO055) over I²C.",
+      "detail": "CHIP_ID 0xA0, operation mode, and Euler heading/roll/pitch registers for Adafruit BNO055 sketches. Host sets euler angles via SimInput; fusion is not simulated.",
+      "transport": "i2c",
+      "category": "i2c",
+      "config_keys": [
+        {
+          "name": "i2c_address",
+          "ty": "int",
+          "doc": "7-bit slave address. Defaults to 0x28 (COM3 low)."
+        }
+      ],
+      "labs": [],
+      "inputs": [
+        {
+          "key": "heading",
+          "label": "Heading",
+          "unit": "deg",
+          "min": 0.0,
+          "max": 360.0
+        },
+        {
+          "key": "roll",
+          "label": "Roll",
+          "unit": "deg",
+          "min": -180.0,
+          "max": 180.0
+        },
+        {
+          "key": "pitch",
+          "label": "Pitch",
+          "unit": "deg",
+          "min": -180.0,
+          "max": 180.0
+        }
+      ]
+    },
+    {
+      "device_type": "hc-05",
+      "label": "HC-05 Bluetooth",
+      "summary": "Bluetooth SPP module with AT command shell over UART.",
+      "detail": "Thin AT echo model (OK to AT/AT+…). No RF pairing or wireless data path.",
+      "transport": "uart",
+      "category": "uart",
+      "config_keys": [],
+      "labs": [],
+      "inputs": []
+    },
+    {
+      "device_type": "nrf24l01",
+      "label": "nRF24L01+",
+      "summary": "2.4 GHz SPI transceiver register shell (no air link).",
+      "detail": "Nordic nRF24L01+ SPI R_REGISTER/W_REGISTER model for CONFIG/STATUS and companion registers. RF packet radio is not simulated.",
+      "transport": "spi",
+      "category": "spi",
+      "config_keys": [
+        {
+          "name": "cs_pin",
+          "ty": "str",
+          "doc": "CSN GPIO pin (e.g. \"PA4\"). Defaults to PA4."
+        }
+      ],
+      "labs": [],
+      "inputs": []
+    },
+    {
+      "device_type": "microsd",
+      "label": "microSD (SPI)",
+      "summary": "SPI SD card command shell (init + single-block read zeros).",
+      "detail": "CMD0/8/55/41/58/17 shell for common Arduino card-init paths. No real filesystem; CMD17 returns a 512-byte zero block.",
+      "transport": "spi",
+      "category": "spi",
+      "config_keys": [
+        {
+          "name": "cs_pin",
+          "ty": "str",
+          "doc": "Card CS GPIO pin (e.g. \"PA4\"). Defaults to PA4."
+        }
+      ],
+      "labs": [],
+      "inputs": []
+    },
+    {
+      "device_type": "mcp2515",
+      "label": "MCP2515 CAN",
+      "summary": "SPI CAN controller register shell (no bus frames).",
+      "detail": "Microchip MCP2515 RESET/READ/WRITE/BIT_MODIFY for CANCTRL/CANSTAT and friends. CAN wire protocol is not simulated in this thin shell.",
+      "transport": "spi",
+      "category": "spi",
+      "config_keys": [
+        {
+          "name": "cs_pin",
+          "ty": "str",
+          "doc": "Chip-select GPIO pin (e.g. \"PA4\"). Defaults to PA4."
+        }
+      ],
+      "labs": [],
+      "inputs": []
+    },
+    {
       "device_type": "mpu6050",
       "label": "MPU6050 IMU",
       "summary": "6-axis gyro + accelerometer over I2C.",
@@ -256,6 +554,176 @@
       ]
     },
     {
+      "device_type": "aht20",
+      "label": "AHT20 Temp/Humidity",
+      "summary": "Aosong AHT20 I²C temperature and humidity sensor.",
+      "detail": "Command-stream protocol at 0x38 with fixed 25 °C / 50 %RH measurement and BUSY-poll semantics for firmware that triggers then reads.",
+      "transport": "i2c",
+      "category": "i2c",
+      "config_keys": [
+        {
+          "name": "i2c_address",
+          "ty": "int",
+          "doc": "7-bit slave address. Defaults to 0x38 (fixed on real silicon)."
+        }
+      ],
+      "labs": [],
+      "inputs": []
+    },
+    {
+      "device_type": "bmp280",
+      "label": "BMP280 Pressure",
+      "summary": "Bosch BMP280 I²C pressure + temperature sensor (no humidity).",
+      "detail": "Register map compatible with common Arduino BMP280 libraries. CHIP_ID 0x58 at 0xD0; fixed ADC sample data for deterministic labs.",
+      "transport": "i2c",
+      "category": "i2c",
+      "config_keys": [
+        {
+          "name": "i2c_address",
+          "ty": "int",
+          "doc": "7-bit slave address. Defaults to 0x76 (0x77 alternate)."
+        }
+      ],
+      "labs": [],
+      "inputs": []
+    },
+    {
+      "device_type": "pcf8574",
+      "label": "PCF8574 I/O Expander",
+      "summary": "NXP PCF8574 8-bit I²C quasi-bidirectional port expander.",
+      "detail": "Default address 0x20. Write one byte to latch outputs; read returns the port value (host may override via SimInput port).",
+      "transport": "i2c",
+      "category": "i2c",
+      "config_keys": [
+        {
+          "name": "i2c_address",
+          "ty": "int",
+          "doc": "7-bit slave address. Defaults to 0x20."
+        }
+      ],
+      "labs": [],
+      "inputs": [
+        {
+          "key": "port",
+          "label": "Port",
+          "unit": "byte",
+          "min": 0.0,
+          "max": 255.0
+        }
+      ]
+    },
+    {
+      "device_type": "rc522",
+      "label": "RC522 RFID",
+      "summary": "MFRC522 SPI RFID reader register shell (no RF).",
+      "detail": "VersionReg 0x37 returns 0x92. Soft reset via CommandReg is accepted. ISO14443 card UID / crypto is not simulated.",
+      "transport": "spi",
+      "category": "spi",
+      "config_keys": [
+        {
+          "name": "cs_pin",
+          "ty": "str",
+          "doc": "SPI CS GPIO pin name (module SDA/NSS). Defaults to PA4."
+        }
+      ],
+      "labs": [],
+      "inputs": []
+    },
+    {
+      "device_type": "sht30",
+      "label": "SHT30 Temp/Humidity",
+      "summary": "Sensirion SHT30 I²C temperature and humidity sensor.",
+      "detail": "Default address 0x44. Single-shot high-repeatability framing with CRC. Host sets temperature (°C) and humidity (%RH).",
+      "transport": "i2c",
+      "category": "i2c",
+      "config_keys": [
+        {
+          "name": "i2c_address",
+          "ty": "int",
+          "doc": "7-bit slave address. Defaults to 0x44."
+        }
+      ],
+      "labs": [],
+      "inputs": [
+        {
+          "key": "temperature",
+          "label": "Temperature",
+          "unit": "C",
+          "min": -40.0,
+          "max": 125.0
+        },
+        {
+          "key": "humidity",
+          "label": "Humidity",
+          "unit": "%RH",
+          "min": 0.0,
+          "max": 100.0
+        }
+      ]
+    },
+    {
+      "device_type": "at24c256",
+      "label": "AT24C256 EEPROM",
+      "summary": "I²C 32 KiB EEPROM shell (256-byte sim window).",
+      "detail": "Default address 0x50. Two-byte address pointer then sequential R/W. Simulated memory is 256 bytes wrapping for compactness.",
+      "transport": "i2c",
+      "category": "i2c",
+      "config_keys": [
+        {
+          "name": "i2c_address",
+          "ty": "int",
+          "doc": "7-bit slave address. Defaults to 0x50."
+        }
+      ],
+      "labs": [],
+      "inputs": []
+    },
+    {
+      "device_type": "pn532",
+      "label": "PN532 NFC",
+      "summary": "NXP PN532 I²C NFC controller probe shell (no RF).",
+      "detail": "Responds to GetFirmwareVersion so library init succeeds. ISO14443 card UID / peer-to-peer is not simulated.",
+      "transport": "i2c",
+      "category": "i2c",
+      "config_keys": [
+        {
+          "name": "i2c_address",
+          "ty": "int",
+          "doc": "7-bit slave address. Defaults to 0x24."
+        }
+      ],
+      "labs": [],
+      "inputs": []
+    },
+    {
+      "device_type": "lora-sx1278",
+      "label": "LoRa SX1278 / RA-02",
+      "summary": "Semtech SX1278 SPI LoRa register shell (no RF).",
+      "detail": "Version reg 0x42 = 0x12. OpMode and companion regs R/W. Packet air interface is not simulated.",
+      "transport": "spi",
+      "category": "spi",
+      "config_keys": [
+        {
+          "name": "cs_pin",
+          "ty": "str",
+          "doc": "SPI NSS GPIO pin. Defaults to PA4."
+        }
+      ],
+      "labs": [],
+      "inputs": []
+    },
+    {
+      "device_type": "sim800l",
+      "label": "SIM800L GSM",
+      "summary": "SIM800L UART AT command shell (no cellular RF).",
+      "detail": "Responds OK to AT/AT+…; CGMI/CGMM/CSQ/CREG stubs for init sequences. SMS/GPRS air interface is not simulated.",
+      "transport": "uart",
+      "category": "uart",
+      "config_keys": [],
+      "labs": [],
+      "inputs": []
+    },
+    {
       "device_type": "oled-ssd1306",
       "label": "SSD1306 OLED",
       "summary": "128×64 monochrome OLED display over I2C with a paged framebuffer.",
@@ -343,45 +811,6 @@
         }
       ],
       "inputs": []
-    },
-    {
-      "device_type": "max31855",
-      "label": "MAX31855 Thermocouple",
-      "summary": "Cold-junction-compensated K-type thermocouple amplifier (read-only SPI).",
-      "detail": "Returns the 32-bit MAX31855 response on every CS-framed transaction. Host stimulus seeds thermocouple + cold-junction temperatures; bit layout matches the real silicon's datasheet exactly.",
-      "transport": "spi",
-      "category": "spi",
-      "config_keys": [
-        {
-          "name": "cs_pin",
-          "ty": "str",
-          "doc": "Chip-select GPIO pin (e.g. \"PA4\"). Defaults to PA4."
-        }
-      ],
-      "labs": [
-        {
-          "board_id": "max31855-thermocouple-lab",
-          "chip": "stm32f103",
-          "example_dir": "max31855-thermocouple-lab",
-          "demo_elf": "demo-max31855-thermocouple-lab.elf"
-        }
-      ],
-      "inputs": [
-        {
-          "key": "temperature",
-          "label": "Thermocouple",
-          "unit": "°C",
-          "min": -200.0,
-          "max": 1350.0
-        },
-        {
-          "key": "internal",
-          "label": "Internal",
-          "unit": "°C",
-          "min": -55.0,
-          "max": 125.0
-        }
-      ]
     },
     {
       "device_type": "ssd1680_tricolor_290",
@@ -721,6 +1150,38 @@
       ]
     },
     {
+      "device_type": "lipo_charger",
+      "label": "LiPo battery + charger",
+      "summary": "Single-cell LiPo pack + TP4056-class analog charger on an ADC channel.",
+      "detail": "Analog battery gauge: the LiPo terminal voltage (3300 mV empty → 4200 mV full, linear in state of charge) is read through a ÷2 resistor divider so a 4.2 V pack stays inside the 3.3 V ADC range. Drive `soc_pct` (0..100 %) and `usb_present` (0/1) at runtime; the ADC channel follows through the real divider math, and `usb_present` adds a small charging offset clamped to 4200 mV. No I²C — the only observable is the divided pin voltage.",
+      "transport": "analog",
+      "category": "analog",
+      "config_keys": [
+        {
+          "name": "channel",
+          "ty": "int",
+          "doc": "ADC channel index (0..N) the divided battery voltage is wired to. Defaults to 0."
+        }
+      ],
+      "labs": [],
+      "inputs": [
+        {
+          "key": "soc_pct",
+          "label": "State of charge",
+          "unit": "%",
+          "min": 0.0,
+          "max": 100.0
+        },
+        {
+          "key": "usb_present",
+          "label": "Charger connected",
+          "unit": "",
+          "min": 0.0,
+          "max": 1.0
+        }
+      ]
+    },
+    {
       "device_type": "ldr",
       "label": "Photoresistor (LDR)",
       "summary": "CdS photoresistor + voltage divider on an ADC channel.",
@@ -742,6 +1203,56 @@
           "unit": "lx",
           "min": 0.0,
           "max": 100000.0
+        }
+      ]
+    },
+    {
+      "device_type": "mq-6",
+      "label": "MQ-6 Gas Sensor",
+      "summary": "Hanwei MQ-6 LPG/propane semiconductor gas sensor module (AOUT on ADC).",
+      "detail": "Module-level model of the common MQ-6 breakout: AOUT is a 0..Vref voltage that rises with LPG-equivalent concentration. Drive the `ppm` channel (0..10 000 ppm) at runtime and the ADC channel follows through a linear full-scale map. Starts at 0 ppm (clean air → ground rail). DOUT (comparator trip) is not modelled — compare AOUT in firmware.",
+      "transport": "analog",
+      "category": "analog",
+      "config_keys": [
+        {
+          "name": "channel",
+          "ty": "int",
+          "doc": "ADC channel index (0..N). Defaults to 0."
+        }
+      ],
+      "labs": [],
+      "inputs": [
+        {
+          "key": "ppm",
+          "label": "LPG concentration",
+          "unit": "ppm",
+          "min": 0.0,
+          "max": 10000.0
+        }
+      ]
+    },
+    {
+      "device_type": "soil-moisture",
+      "label": "Soil Moisture Sensor",
+      "summary": "Capacitive soil moisture probe module (AOUT on ADC; wetter → lower voltage).",
+      "detail": "Module-level model of the common capacitive soil-moisture breakout: AOUT is a 0..Vref voltage that falls as the soil gets wetter. Drive the `moisture` channel (0..100 %) at runtime and the ADC channel follows. Starts at 40 % (slightly damp). DOUT (comparator trip) is not modelled — compare AOUT in firmware.",
+      "transport": "analog",
+      "category": "analog",
+      "config_keys": [
+        {
+          "name": "channel",
+          "ty": "int",
+          "doc": "ADC channel index (0..N). Defaults to 0."
+        }
+      ],
+      "labs": [],
+      "inputs": [
+        {
+          "key": "moisture",
+          "label": "Soil moisture",
+          "unit": "%",
+          "min": 0.0,
+          "max": 100.0
         }
       ]
     },
@@ -963,43 +1474,6 @@
       ]
     },
     {
-      "device_type": "veml7700",
-      "label": "Vishay VEML7700 Light",
-      "summary": "Ambient-light sensor (lux) over I2C.",
-      "detail": "Vishay VEML7700 at fixed address 0x10, a register-pointer device with 16-bit little-endian words. Reports a raw ALS count the firmware scales to lux at the default gain ×1 / 100 ms resolution (0.0576 lux/count). The illuminance is an externally driven input (channel lux); config only seeds its initial value.",
-      "transport": "i2c",
-      "category": "i2c",
-      "config_keys": [
-        {
-          "name": "i2c_address",
-          "ty": "int",
-          "doc": "7-bit slave address. Defaults to the VEML7700 fixed address 0x10."
-        },
-        {
-          "name": "lux",
-          "ty": "float",
-          "doc": "Initial illuminance, lux. Default 450 (daylit room). Drive it at runtime with the `lux` input channel."
-        }
-      ],
-      "labs": [
-        {
-          "board_id": "esp32c3-leo-airquality",
-          "chip": "esp32c3",
-          "example_dir": "esp32c3-leo-airquality",
-          "demo_elf": "demo-esp32c3-leo-airquality.elf"
-        }
-      ],
-      "inputs": [
-        {
-          "key": "lux",
-          "label": "Illuminance",
-          "unit": "lx",
-          "min": 0.0,
-          "max": 120000.0
-        }
-      ]
-    },
-    {
       "device_type": "mlx90614",
       "label": "Melexis MLX90614 IR Temp",
       "summary": "Single-point IR (non-contact) thermometer over SMBus/I2C.",
@@ -1081,6 +1555,212 @@
       ],
       "labs": [],
       "inputs": []
+    },
+    {
+      "device_type": "sht31",
+      "label": "Sensirion SHT31",
+      "summary": "Temperature + humidity sensor over I²C (Sensirion CRC-8).",
+      "detail": "Temperature + humidity sensor over I²C (Sensirion CRC-8).",
+      "transport": "i2c",
+      "category": "i2c",
+      "config_keys": [
+        {
+          "name": "i2c_address",
+          "ty": "int",
+          "doc": "7-bit slave address. Defaults to 0x44."
+        }
+      ],
+      "labs": [],
+      "inputs": [
+        {
+          "key": "temperature",
+          "label": "Temperature",
+          "unit": "°C",
+          "min": -40.0,
+          "max": 125.0
+        },
+        {
+          "key": "humidity",
+          "label": "Relative humidity",
+          "unit": "%",
+          "min": 0.0,
+          "max": 100.0
+        }
+      ]
+    },
+    {
+      "device_type": "bh1750",
+      "label": "ROHM BH1750",
+      "summary": "Ambient-light sensor over I²C (single-byte opcodes).",
+      "detail": "Ambient-light sensor over I²C (single-byte opcodes).",
+      "transport": "i2c",
+      "category": "i2c",
+      "config_keys": [
+        {
+          "name": "i2c_address",
+          "ty": "int",
+          "doc": "7-bit slave address. Defaults to 0x23."
+        }
+      ],
+      "labs": [],
+      "inputs": [
+        {
+          "key": "lux",
+          "label": "Illuminance",
+          "unit": "lx",
+          "min": 0.0,
+          "max": 65535.0
+        }
+      ]
+    },
+    {
+      "device_type": "veml7700",
+      "label": "Vishay VEML7700 Light",
+      "summary": "Ambient-light sensor (lux) over I2C.",
+      "detail": "Vishay VEML7700 at fixed address 0x10, a register-pointer device with 16-bit little-endian words. Reports a raw ALS count the firmware scales to lux at the default gain ×1 / 100 ms resolution (0.0576 lux/count). The illuminance is an externally driven input (channel lux); config only seeds its initial value.",
+      "transport": "i2c",
+      "category": "i2c",
+      "config_keys": [
+        {
+          "name": "i2c_address",
+          "ty": "int",
+          "doc": "7-bit slave address. Defaults to the VEML7700 fixed address 0x10."
+        },
+        {
+          "name": "lux",
+          "ty": "float",
+          "doc": "Initial illuminance, lux. Default 450 (daylit room). Drive it at runtime with the `lux` input channel."
+        }
+      ],
+      "labs": [
+        {
+          "board_id": "esp32c3-leo-airquality",
+          "chip": "esp32c3",
+          "example_dir": "esp32c3-leo-airquality",
+          "demo_elf": "demo-esp32c3-leo-airquality.elf"
+        }
+      ],
+      "inputs": [
+        {
+          "key": "lux",
+          "label": "Illuminance",
+          "unit": "lx",
+          "min": 0.0,
+          "max": 120000.0
+        }
+      ]
+    },
+    {
+      "device_type": "tmp102",
+      "label": "TI TMP102 Temperature",
+      "summary": "12-bit I²C temperature sensor (self-drifting demo).",
+      "detail": "Texas Instruments TMP102 at default address 0x48, a register-pointer device with 16-bit big-endian words (pointer decodes only the low two bits). The temperature register starts at 25 °C and self-drifts +0.5 °C per read, wrapping 35 °C → 20 °C — a deterministic demo stimulus that needs no external input. Config / T_LOW / T_HIGH are read-only storage.",
+      "transport": "i2c",
+      "category": "i2c",
+      "config_keys": [
+        {
+          "name": "i2c_address",
+          "ty": "int",
+          "doc": "7-bit slave address. Defaults to the TMP102 address 0x48 (ADD0 = GND)."
+        }
+      ],
+      "labs": [],
+      "inputs": []
+    },
+    {
+      "device_type": "pca9685",
+      "label": "NXP PCA9685 PWM/Servo",
+      "summary": "16-channel 12-bit I²C PWM / servo controller.",
+      "detail": "NXP PCA9685 at default address 0x40, a 256-byte register-file device with a write-pointer and MODE1.AI auto-increment. Drives up to 16 servo/LED PWM channels; the servo_angle observable reports each channel's commanded angle in degrees. Power-on MODE1 reads back 0x11 (SLEEP | ALLCALL), matching silicon.",
+      "transport": "i2c",
+      "category": "i2c",
+      "config_keys": [
+        {
+          "name": "i2c_address",
+          "ty": "int",
+          "doc": "7-bit slave address. Defaults to the PCA9685 address 0x40 (A0..A5 tied low)."
+        }
+      ],
+      "labs": [],
+      "inputs": []
+    },
+    {
+      "device_type": "adxl345_spi",
+      "label": "ADXL345 accelerometer",
+      "summary": "3-axis ±16 g accelerometer over SPI (full-resolution, 256 LSB/g).",
+      "detail": "3-axis ±16 g accelerometer over SPI (full-resolution, 256 LSB/g).",
+      "transport": "spi",
+      "category": "spi",
+      "config_keys": [
+        {
+          "name": "cs_pin",
+          "ty": "str",
+          "doc": "CS GPIO pin wired as SPI chip-select (e.g. \"PA4\")."
+        }
+      ],
+      "labs": [],
+      "inputs": [
+        {
+          "key": "accel_x",
+          "label": "Accel X",
+          "unit": "g",
+          "min": -16.0,
+          "max": 16.0
+        },
+        {
+          "key": "accel_y",
+          "label": "Accel Y",
+          "unit": "g",
+          "min": -16.0,
+          "max": 16.0
+        },
+        {
+          "key": "accel_z",
+          "label": "Accel Z",
+          "unit": "g",
+          "min": -16.0,
+          "max": 16.0
+        }
+      ]
+    },
+    {
+      "device_type": "max31855",
+      "label": "MAX31855 thermocouple",
+      "summary": "K-type thermocouple-to-digital converter over SPI (read-only 32-bit frame).",
+      "detail": "K-type thermocouple-to-digital converter over SPI (read-only 32-bit frame).",
+      "transport": "spi",
+      "category": "spi",
+      "config_keys": [
+        {
+          "name": "cs_pin",
+          "ty": "str",
+          "doc": "CS GPIO pin wired as SPI chip-select (e.g. \"PA4\")."
+        }
+      ],
+      "labs": [
+        {
+          "board_id": "max31855-thermocouple-lab",
+          "chip": "stm32f103",
+          "example_dir": "max31855-thermocouple-lab",
+          "demo_elf": "demo-max31855-thermocouple-lab.elf"
+        }
+      ],
+      "inputs": [
+        {
+          "key": "temperature",
+          "label": "Thermocouple temp",
+          "unit": "°C",
+          "min": -270.0,
+          "max": 1372.0
+        },
+        {
+          "key": "internal",
+          "label": "Internal (cold-junction) temp",
+          "unit": "°C",
+          "min": -40.0,
+          "max": 125.0
+        }
+      ]
     }
   ]
 }
