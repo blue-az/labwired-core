@@ -415,21 +415,21 @@ configuration; these produce `status: "error"` with `stop_reason:
 
 ## CI release runners
 
-Use the pinned v0.20.0 release runner in CI. It runs the same `labwired test`
+Use the pinned v0.21.0 release runner in CI. It runs the same `labwired test`
 command described above and writes the same artifact contract.
 
 ### GitHub Actions
 
 Use the public Core action and pin the Core CLI with its version input. Its
 only inputs are required `script`, optional `version` (default
-`v0.20.0`), `output-dir`, and `args`:
+`v0.21.0`), `output-dir`, and `args`:
 
 ~~~yaml
 - id: labwired
   name: Run LabWired tests
-  uses: w1ne/labwired-core/.github/actions/labwired-test@02952bd33b18dd6527a2ad4875157fe4d94f0a79
+  uses: w1ne/labwired-core/.github/actions/labwired-test@bfd879522914b586223081c4c89ba315db4a97ed
   with:
-    version: v0.20.0
+    version: v0.21.0
     script: examples/ci/dummy-max-steps.yaml
     output-dir: out/artifacts
     args: --no-uart-stdout
@@ -440,7 +440,7 @@ only inputs are required `script`, optional `version` (default
 ~~~
 
 The Core action is an immutable action-source pin to
-`02952bd33b18dd6527a2ad4875157fe4d94f0a79`; `version: v0.20.0` independently
+`bfd879522914b586223081c4c89ba315db4a97ed`; `version: v0.21.0` independently
 pins the immutable Core CLI release. It downloads that public release archive
 with `curl`, creates `output-dir/junit.xml` plus Markdown and HTML reports,
 appends the Markdown report to the job summary, and always uploads the entire
@@ -456,7 +456,7 @@ use either a single-machine script or an `inputs.env` world script.
 
 ~~~bash
 docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/workspace" -w /workspace \
-  ghcr.io/w1ne/labwired:v0.20.0 \
+  ghcr.io/w1ne/labwired:v0.21.0 \
   test --script examples/ci/dummy-max-steps.yaml \
        --output-dir out/artifacts \
        --no-uart-stdout
@@ -466,7 +466,7 @@ GitLab should clear that entrypoint and invoke labwired from its job shell:
 
 ~~~yaml
 image:
-  name: ghcr.io/w1ne/labwired:v0.20.0
+  name: ghcr.io/w1ne/labwired:v0.21.0
   entrypoint: [""]
 script:
   - labwired test --script examples/ci/dummy-max-steps.yaml --output-dir out/artifacts --no-uart-stdout
