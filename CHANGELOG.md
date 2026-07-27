@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-07-27
+
+### Added
+- **Built-in chips**: the chip descriptors in `configs/chips/` are bundled with
+  the CLI and addressable by name, so a project no longer copies one into its
+  repository. `inputs.chip: "stm32f103"` is the whole configuration for firmware
+  with nothing wired to it — no manifest, no descriptor copy — and a manifest's
+  `chip:` field accepts the same bare names. Anything with a separator or a YAML
+  extension is still a path, so existing scripts are unaffected.
+- **`labwired chips`** lists the bundled chips.
+
+### Changed
+- Systems resolve once into a `ResolvedSystem` passed to the runners, replacing
+  five sites that each re-read and re-parsed the manifest. A built-in-chip run
+  reports `system: null` in its artifacts, because there is no system file.
+
 ## [0.20.0] - 2026-07-27
 
 ### Added
