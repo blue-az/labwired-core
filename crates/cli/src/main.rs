@@ -1420,6 +1420,7 @@ fn execute_test_loop<C: labwired_core::Cpu>(
     require_fault_fired: bool,
     mut fault_evidence: Vec<labwired_cli::faults::FaultEvidence>,
     stimuli: &[labwired_config::StimulusSpec],
+    uart_injections: &[labwired_config::UartInjectionSpec],
     // True when this run qualifies for the RV32IMC wasm-JIT fast path (decided
     // by `riscv_jit_test_eligible` in the caller): RiscV arch, batch mode, and
     // NONE of the per-instruction-visibility features that gate the JIT off.
@@ -1618,6 +1619,62 @@ fn execute_test_loop<C: labwired_core::Cpu>(
         .map(|s| (s, false))
         .collect();
 
+    // Declarative UART RX injections (schema_version 1.2). Resolved against
+    // the built bus by peripheral name via the same `attach_uart_rx_source`
+    // family used by the wasm bridge (`attach_uart_rx_source_named`), then
+    // pushed straight into the UART's RX `VecDeque` — the shared mechanism
+    // that already backs interactive serial input. A byte pushed before the
+    // firmware configures/reads the UART is buffered, not dropped: RX
+    // presence is derived from the queue being non-empty (see
+    // `Uart::read`), with no enable-bit gating. `at_start` delivers
+    // immediately (before the firmware executes its first instruction);
+    // `after_cycles` delivers the first loop iteration at or past its cycle
+    // threshold, mirroring `apply_stimulus` above. A named UART that isn't
+    // found on the bus is a hard config error — silently dropping serial
+    // input a script depends on would be a false pass.
+    let mut uart_injection_error = false;
+    let apply_uart_injection =
+        |machine: &mut labwired_core::Machine<C>, u: &labwired_config::UartInjectionSpec| {
+            match machine.bus.attach_uart_rx_source_named(&u.uart) {
+                Some(rx) => {
+                    let bytes = u.bytes.as_bytes();
+                    match rx.lock() {
+                        Ok(mut guard) => {
+                            guard.extend(bytes.iter().copied());
+                            info!(
+                                "uart_injection: {} byte(s) delivered to '{}'",
+                                bytes.len(),
+                                u.uart
+                            );
+                        }
+                        Err(e) => error!("uart_injection '{}': RX buffer poisoned: {e}", u.uart),
+                    }
+                    None
+                }
+                None => Some(format!(
+                    "uart_injection: UART peripheral '{}' not found on the bus",
+                    u.uart
+                )),
+            }
+        };
+    for u in uart_injections {
+        if matches!(u.trigger, labwired_config::FaultTrigger::AtStart) {
+            if let Some(err) = apply_uart_injection(machine, u) {
+                error!("{err}");
+                uart_injection_error = true;
+            }
+        }
+    }
+    if uart_injection_error {
+        return ExitCode::from(EXIT_CONFIG_ERROR);
+    }
+    let mut pending_uart_injections: Vec<(&labwired_config::UartInjectionSpec, bool)> =
+        uart_injections
+            .iter()
+            .filter(|u| matches!(u.trigger, labwired_config::FaultTrigger::AfterCycles { .. }))
+            .map(|u| (u, false))
+            .collect();
+
     // Tracks the step at which all runtime assertions first passed. The
     // `stop_when_assertions_pass` early-stop is only accepted after the machine
     // keeps executing for a settling window past this point WITHOUT faulting —
@@ -1721,6 +1778,24 @@ fn execute_test_loop<C: labwired_core::Cpu>(
                 }
             }
         }
+        // Fire any `after_cycles` UART injection whose threshold has been reached.
+        if !pending_uart_injections.is_empty() {
+            let cycles = metrics.get_cycles();
+            for (u, fired) in pending_uart_injections.iter_mut() {
+                if *fired {
+                    continue;
+                }
+                if let labwired_config::FaultTrigger::AfterCycles { cycles: threshold } = u.trigger
+                {
+                    if cycles >= threshold {
+                        if let Some(err) = apply_uart_injection(machine, u) {
+                            error!("{err}");
+                        }
+                        *fired = true;
+                    }
+                }
+            }
+        }
         if !args.breakpoint.is_empty() && args.breakpoint.contains(&machine.cpu.get_pc()) {
             stop_reason = StopReason::Halt;
             steps_executed = step;
@@ -1764,6 +1839,15 @@ fn execute_test_loop<C: labwired_core::Cpu>(
         for (stimulus, fired) in &pending_stimuli {
             if !*fired {
                 if let labwired_config::FaultTrigger::AfterCycles { cycles } = stimulus.trigger {
+                    if cycles > current_cycle {
+                        limit = limit.min(cycles - current_cycle);
+                    }
+                }
+            }
+        }
+        for (injection, fired) in &pending_uart_injections {
+            if !*fired {
+                if let labwired_config::FaultTrigger::AfterCycles { cycles } = injection.trigger {
                     if cycles > current_cycle {
                         limit = limit.min(cycles - current_cycle);
                     }

@@ -45,6 +45,13 @@
     "behavior": true,
     "excluded": 0,
     "level": 1,
+    "name": "stm32f411ceu6",
+    "reg_match": 0
+  },
+  {
+    "behavior": true,
+    "excluded": 0,
+    "level": 1,
     "name": "nrf52832",
     "reg_match": 0
   },
