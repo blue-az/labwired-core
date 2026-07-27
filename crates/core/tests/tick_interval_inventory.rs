@@ -1,13 +1,15 @@
 //! Inventory: why `max_safe_tick_interval` stays 1 on each shipped WASM family.
 //!
 //! `max_safe_tick_interval` returns [`RECOMMENDED_TICK_INTERVAL`] (512) only when
-//! `legacy_walk_disabled && !iolink && !flash_models_ops && !hcsr04_forced_legacy`
-//! (see `bus/policy.rs`). Under `event-scheduler`, walk deletion auto-derives
-//! when every peripheral is `uses_scheduler() || !needs_legacy_walk()`.
+//! `legacy_walk_disabled && !iolink && !hcsr04_forced_legacy` (see
+//! `bus/policy.rs`). H5 `flash_models_ops` still forces CPU quantum 1 via
+//! `requires_cycle_accurate` but no longer pins the peripheral tick interval.
+//! Under `event-scheduler`, walk deletion auto-derives when every peripheral is
+//! `uses_scheduler() || !needs_legacy_walk()`.
 //!
 //! This test builds each family's real chip+system bus with `walk_deleted =
 //! None` (auto-derive), prints the walk-forcing set and non-forcer blockers,
-//! and guards the already-green C3 / F103 paths. Inventory only — no migrations.
+//! and guards the green families (C3 / F103 / nRF / RP2040 / H563).
 
 use labwired_config::{ChipDescriptor, SystemManifest};
 use labwired_core::bus::{SystemBus, RECOMMENDED_TICK_INTERVAL};
@@ -313,8 +315,58 @@ fn rp2040_pico_is_walk_free_and_tick_512() {
     }
 }
 
-/// Regression: C3 + F103 already flip walk-deletion and raise max_safe to 512
-/// under `event-scheduler`. The remaining four families document forcer lists.
+/// PR-D gate: NUCLEO-H563ZI demo auto-derives walk deletion under
+/// `event-scheduler` with `walk_deleted = None` and reaches
+/// `RECOMMENDED_TICK_INTERVAL` (512).
+///
+/// Inventory forcers (Task 1): gpdma1, fdcan1, rtc, pwr. Class-A: PwrH5.
+/// Class-B: GPDMA / RtcV3 / FDCAN (TX+IRQ events; FDCAN forces walk only with
+/// an attached CanBus interconnect, absent on this bus). H5 FLASH still sets
+/// `flash_models_ops` (CPU quantum 1 via `requires_cycle_accurate`) but no
+/// longer blocks max_safe. No `walk_deleted` YAML hatch.
+#[test]
+fn h563_is_walk_free_and_tick_512() {
+    let bus = bus_h563();
+    let inv = inventory("stm32h563", &bus);
+    print_inventory(&inv);
+
+    #[cfg(feature = "event-scheduler")]
+    {
+        let forcing: Vec<&str> = inv.forcers.iter().map(|f| f.name.as_str()).collect();
+        assert!(
+            forcing.is_empty(),
+            "nucleo-h563zi-demo still has walk-forcers under event-scheduler: {forcing:?}"
+        );
+        assert!(
+            inv.legacy_walk_disabled,
+            "h563: expected legacy_walk_disabled after auto-derive"
+        );
+        assert!(
+            inv.flash_models_ops,
+            "h563: expected flash_models_ops (H5 FLASH erase/bank-swap drain)"
+        );
+        assert!(
+            !inv.has_iolink_master,
+            "h563: unexpected iolink max_safe blocker"
+        );
+        assert_eq!(
+            inv.max_safe, RECOMMENDED_TICK_INTERVAL,
+            "h563: expected max_safe={RECOMMENDED_TICK_INTERVAL} (flash_models_ops must not pin tick interval), got {}",
+            inv.max_safe
+        );
+    }
+
+    #[cfg(not(feature = "event-scheduler"))]
+    {
+        assert_eq!(
+            inv.max_safe, 1,
+            "featureless build must keep max_safe=1"
+        );
+    }
+}
+
+/// Regression: green families flip walk-deletion and raise max_safe to 512
+/// under `event-scheduler`. ESP32-S3 remains the open inventory surface.
 #[test]
 fn tick_interval_inventory_all_families() {
     let rows = [
@@ -349,7 +401,9 @@ fn tick_interval_inventory_all_families() {
     #[cfg(feature = "event-scheduler")]
     {
         // Green families: max_safe must already be RECOMMENDED_TICK_INTERVAL.
-        for name in ["stm32f103", "esp32c3", "nrf52840", "rp2040"] {
+        // H563 keeps flash_models_ops (CPU quantum 1) but that no longer
+        // pins the peripheral tick interval.
+        for name in ["stm32f103", "esp32c3", "nrf52840", "rp2040", "stm32h563"] {
             let inv = inventories
                 .iter()
                 .find(|i| i.chip == name)
@@ -366,10 +420,17 @@ fn tick_interval_inventory_all_families() {
                 inv.legacy_walk_disabled,
                 "{name}: expected legacy_walk_disabled"
             );
-            assert!(
-                !inv.flash_models_ops,
-                "{name}: unexpected flash_models_ops blocker"
-            );
+            if name != "stm32h563" {
+                assert!(
+                    !inv.flash_models_ops,
+                    "{name}: unexpected flash_models_ops"
+                );
+            } else {
+                assert!(
+                    inv.flash_models_ops,
+                    "stm32h563: expected flash_models_ops (CPU quantum still 1)"
+                );
+            }
             assert!(
                 !inv.has_iolink_master,
                 "{name}: unexpected iolink blocker"
@@ -381,37 +442,31 @@ fn tick_interval_inventory_all_families() {
             );
         }
 
-        // Failing families: under event-scheduler, max_safe is 1 OR already 512
-        // (if someone migrated them). Either way, print full forcer lists.
-        // Assert max_safe is 1 when forcers or non-forcer blockers are present;
-        // allow 512 only when fully clear.
-        for name in ["stm32h563", "esp32s3"] {
+        // Open inventory: ESP32-S3 production bank still has walk-forcers.
+        {
+            let name = "esp32s3";
             let inv = inventories
                 .iter()
                 .find(|i| i.chip == name)
                 .expect("family present");
             let blocked = !inv.legacy_walk_disabled
-                || inv.flash_models_ops
                 || inv.has_iolink_master
                 || (inv.hcsr04_count > 0 && inv.hcsr04_scheduling_disabled);
             if blocked {
                 assert_eq!(
                     inv.max_safe, 1,
                     "{name}: blocked bus must keep max_safe=1 (got {}). \
-                     forcers={:?} flash_models_ops={} iolink={} walk_off={}",
+                     forcers={:?} iolink={} walk_off={}",
                     inv.max_safe,
                     inv.forcers
                         .iter()
                         .map(|f| f.name.as_str())
                         .collect::<Vec<_>>(),
-                    inv.flash_models_ops,
                     inv.has_iolink_master,
                     !inv.legacy_walk_disabled,
                 );
-                // Document: either non-empty forcers OR a clear non-forcer blocker.
                 assert!(
                     !inv.forcers.is_empty()
-                        || inv.flash_models_ops
                         || inv.has_iolink_master
                         || (inv.hcsr04_count > 0 && inv.hcsr04_scheduling_disabled),
                     "{name}: max_safe=1 with empty forcers and no non-forcer blockers — unexpected"

@@ -46,8 +46,18 @@
 //!   ANMF set). Dedicated RX buffers and FIFO1 routing by filter are
 //!   not modeled; RX FIFO1 only overflows-counts.
 //! - bit timing is not simulated; transmission completes on the tick
-//!   after TXBAR. DBTP/NBTP/CKDIV are storage with silicon reset
-//!   values.
+//!   after TXBAR (or on the delay-0 scheduler event that stands in for
+//!   that next tick under walk-free). DBTP/NBTP/CKDIV are storage with
+//!   silicon reset values.
+//!
+//! ## Drive modes (walk-free H5 campaign)
+//!
+//! * **Scheduler mode** (`event-scheduler` and no `CanBus` interconnect):
+//!   TXBAR-deferred completion and level IRQ re-assert ride a delay-0/1
+//!   event chain. `needs_legacy_walk` is false so the demo bus can flip.
+//! * **Legacy / interconnect mode**: with a `CanBus` `bus_rx` attached the
+//!   tick must poll mpsc (same contract as bxCAN); the walk stays on.
+//!   Feature-off builds also use the walk for TX + IRQ.
 //! - interrupt line 1 (ILS routing, FDCAN1_IT1) is not modeled; all
 //!   enabled interrupts assert the configured line (FDCAN1_IT0) when
 //!   ILE.EINT0 is set.
@@ -218,6 +228,9 @@ pub struct Fdcan {
     bus_tx: Option<Sender<CanFrame>>,
     #[serde(skip)]
     bus_rx: Option<Receiver<CanFrame>>,
+    /// Scheduler mode: one live TX/IRQ event chain is outstanding.
+    #[serde(skip)]
+    chain_live: bool,
 }
 
 impl Fdcan {
@@ -261,7 +274,32 @@ impl Fdcan {
             bus_tx: None,
             bus_rx: None,
             pending_tx: VecDeque::new(),
+            chain_live: false,
         }
+    }
+
+    #[inline]
+    fn scheduler_mode(&self) -> bool {
+        // Scheduler covers TX defer + level IRQ. An attached CanBus
+        // interconnect still needs the walk to poll `bus_rx` (bxCAN pattern).
+        cfg!(feature = "event-scheduler") && self.bus_rx.is_none()
+    }
+
+    #[inline]
+    fn irq_level_held(&self) -> bool {
+        self.ile & ILE_EINT0 != 0 && self.ir & self.ie != 0
+    }
+
+    /// One tick of TX completion + interconnect RX + level IRQ.
+    fn service_once(&mut self) -> bool {
+        self.drain_pending_tx();
+        if let Some(rx) = self.bus_rx.take() {
+            while let Ok(frame) = rx.try_recv() {
+                self.receive_frame(frame);
+            }
+            self.bus_rx = Some(rx);
+        }
+        self.irq_level_held()
     }
 
     /// Attach to a `CanBus` interconnect: transmitted frames go out on
@@ -676,17 +714,58 @@ impl Peripheral for Fdcan {
         // is the earliest point at which TXBRP can be cleared and
         // IR.TC/TFE posted — one tick after the TXBAR write, so firmware
         // polling `while (TXBRP & 1) {}` actually blocks.
-        self.drain_pending_tx();
-        // Drain the interconnect into the receiver.
-        if let Some(rx) = self.bus_rx.take() {
-            while let Ok(frame) = rx.try_recv() {
-                self.receive_frame(frame);
-            }
-            self.bus_rx = Some(rx);
-        }
+        //
+        // The walk skips `uses_scheduler()` peripherals, so production
+        // scheduler mode rides `on_event` instead. Direct `tick()` calls
+        // (unit tests, force-walk oracle path) still need this body.
         // Level interrupt on the configured line (FDCAN1_IT0); line 1
         // routing via ILS is not modeled.
-        PeripheralTickResult::with_irq(self.ile & ILE_EINT0 != 0 && self.ir & self.ie != 0)
+        PeripheralTickResult::with_irq(self.service_once())
+    }
+
+    fn uses_scheduler(&self) -> bool {
+        self.scheduler_mode()
+    }
+
+    fn needs_legacy_walk(&self) -> bool {
+        // Interconnect forces the walk (RX poll). Feature-off / non-scheduler
+        // builds also walk for TX completion + level IRQ. Scheduler mode
+        // covers those without a walk when no CanBus is attached.
+        !self.scheduler_mode()
+    }
+
+    fn take_scheduled_events(&mut self) -> Vec<(u64, u32)> {
+        if !self.scheduler_mode() || self.chain_live {
+            return Vec::new();
+        }
+        // Arm delay-0 when TX is pending or a level IRQ is held — bus
+        // converts to deadline `current_cycle + 1` (one tick after TXBAR).
+        if !self.pending_tx.is_empty() || self.irq_level_held() {
+            self.chain_live = true;
+            vec![(0, 0)]
+        } else {
+            Vec::new()
+        }
+    }
+
+    fn on_event(
+        &mut self,
+        _event_token: u32,
+        _sched: &mut crate::sched::EventScheduler,
+        _bus: &mut dyn crate::Bus,
+    ) -> crate::sched::EventResult {
+        if !self.scheduler_mode() {
+            self.chain_live = false;
+            return crate::sched::EventResult::default();
+        }
+        let irq = self.service_once();
+        let reschedule = !self.pending_tx.is_empty() || self.irq_level_held();
+        self.chain_live = reschedule;
+        crate::sched::EventResult {
+            raise_own_irq: irq,
+            reschedule_delay: reschedule.then_some(1),
+            ..Default::default()
+        }
     }
 
     fn snapshot(&self) -> serde_json::Value {

@@ -14,8 +14,12 @@ h563 / rp2040 / nrf / s3, while c3 / f103 already reach **512**.
 
 1. `legacy_walk_disabled` (walk auto-deleted or hand-flagged)
 2. `!has_iolink_master()`
-3. `!flash_models_ops`
-4. `!hcsr04_forced_legacy` (test-only override; unused on these systems)
+3. `!hcsr04_forced_legacy` (test-only override; unused on these systems)
+
+**H5 `flash_models_ops` is no longer a max_safe arm** (PR-D): erase/bank-swap
+ops still force CPU quantum 1 via `requires_cycle_accurate` /
+`Machine::apply_pending_flash_op`, but that is orthogonal to the peripheral
+tick interval.
 
 Under `event-scheduler`, `legacy_walk_disabled` auto-derives when every
 peripheral satisfies `uses_scheduler() || !needs_legacy_walk()`. The walk-forcing
@@ -49,14 +53,14 @@ Each case builds with `walk_deleted = None` (auto-derive).
 | **esp32c3** | `configs/systems/esp32c3-devkit.yaml` | true | false | false | **0** | **512** |
 | **nrf52840** | `configs/systems/nrf52840-dk.yaml` + `configure_cortex_m` | true | false | false | **0** | **512** |
 | **rp2040** | `configs/systems/rp2040-pico.yaml` + `configure_cortex_m` | true | false | false | **0** | **512** |
+| **stm32h563** | `configs/systems/nucleo-h563zi-demo.yaml` + `configure_cortex_m` | true | **true** (CPU q=1 only) | false | **0** | **512** |
 | **esp32s3** | `configure_xtensa_esp32s3` (WASM / production) | false | false | false | **38** | **1** |
-| **stm32h563** | `configs/systems/nucleo-h563zi-demo.yaml` | false | **true** | false | **4** | **1** |
 
 Notes:
 
-- **C3 / F103 / nRF52840 / RP2040** are regression-green (asserted in the
-  inventory test and the PR-B/C gates `nrf52840_dk_is_walk_free_and_tick_512` /
-  `rp2040_pico_is_walk_free_and_tick_512`).
+- **C3 / F103 / nRF52840 / RP2040 / H563** are regression-green (asserted in the
+  inventory test and the PR-B/C/D gates `nrf52840_dk_is_walk_free_and_tick_512` /
+  `rp2040_pico_is_walk_free_and_tick_512` / `h563_is_walk_free_and_tick_512`).
 - **S3 is NOT walk-free on the production path** (`max_safe=1`, **38 forcers**).
   An earlier inventory revision used `SystemBus::from_config` on
   `esp32s3.yaml` / `esp32s3-zero.yaml`, which **stubs** real S3 models
@@ -64,9 +68,8 @@ Notes:
   Production WASM (`WasmSimulator::new_from_config_xtensa_esp32s3`) and
   firmware e2e/oracle buses call `configure_xtensa_esp32s3` →
   `register_esp32s3_peripherals`; the inventory now mirrors that factory.
-- **H563** is double-blocked: even if the 4 forcers migrate, `flash_models_ops`
-  (H5 FLASH pending erase/bank-swap ops) still forces `max_safe=1` until that
-  policy arm is relaxed or ops become batch-safe.
+- **H563** still has `flash_models_ops=true` so CPU batches stay quantum-1
+  (`requires_cycle_accurate`), but the peripheral tick interval is 512.
 
 ---
 
@@ -178,23 +181,30 @@ inventory until Stage-3 factory parity lands.
 
 ---
 
-## stm32h563 — max_safe=1 (forcers + flash_models_ops)
+## stm32h563 — already 512 (PR-D)
 
 - Chip: `configs/chips/stm32h563.yaml`
 - System: `configs/systems/nucleo-h563zi-demo.yaml` + `configure_cortex_m`
-- `max_safe_tick_interval`: **1**
-- `legacy_walk_disabled`: **false**
-- `flash_models_ops`: **true** (H5 `flash_iface` models erase/bank-swap pending ops)
+- `walk_deleted = None` (auto-derive)
+- `max_safe_tick_interval`: **512**
+- `legacy_walk_disabled`: **true**
+- `flash_models_ops`: **true** — H5 `flash_iface` still records erase/bank-swap
+  pending ops drained per instruction (`requires_cycle_accurate` → CPU quantum 1).
+  **Does not pin max_safe** (policy decoupled in PR-D).
 - iolink: false · hcsr04: none
+- **Forcers:** _(none)_
 
-### Walk-forcers (4)
+### Migration summary (4 → 0)
 
-| name | `needs_legacy_walk` | `uses_scheduler` |
-|------|---------------------|------------------|
-| **gpdma1** | true | false |
-| **fdcan1** | true | false |
-| **rtc** | true | false |
-| **pwr** | true | false |
+| Class | Models | Mechanism |
+|-------|--------|-----------|
+| **Class-A inert** | `pwr` (`PwrH5`) | `needs_legacy_walk = false` — pure register bank; VOSRDY tracks VOSCR writes |
+| **Class-B scheduler** | `gpdma1`, `rtc` (`RtcV3`), `fdcan1` | `uses_scheduler` + `take_scheduled_events` / `on_event` (GPDMA Dma1-style element chain; RTC second-boundary delays; FDCAN TX-defer + level IRQ; FDCAN forces walk only with attached CanBus interconnect) |
+
+Featureless builds still report `max_safe=1` (honest). Gates:
+
+- Inventory: `h563_is_walk_free_and_tick_512` in `tick_interval_inventory.rs`
+- Walk differential: `stm32h563_zephyr_boot_walk_vs_scheduler_is_byte_identical`
 
 ### Full peripheral status
 
@@ -204,28 +214,20 @@ inventory until Stage-3 factory parity lands.
 | gpioa–g | inert | false | false |
 | systick | scheduler | true | true |
 | uart3 | scheduler | true | true |
-| **gpdma1** | **FORCER** | true | false |
-| **fdcan1** | **FORCER** | true | false |
+| gpdma1 | scheduler | false | true |
+| fdcan1 | scheduler | false | true |
 | tim1_pwm, tim2, tim3, tim12, tim6 | scheduler | false | true |
 | i2c1/2 | scheduler | false | true |
 | uart1/2, lpuart1 | scheduler | true | true |
 | wwdg, iwdg, rng, crc, lptim1 | inert | false | false |
 | spi1/2/3 | scheduler | true | true |
 | adc1 | scheduler | false | true |
-| **rtc** | **FORCER** | true | false |
+| rtc | scheduler | false | true |
 | nvic | inert | false | false |
-| **pwr** | **FORCER** | true | false |
-| flash_iface | inert (but sets `flash_models_ops`) | false | false |
+| pwr | inert | false | false |
+| flash_iface | inert (`flash_models_ops` → CPU q=1 only) | false | false |
 | dbgmcu, icache | inert | false | false |
 | scb, dwt | scheduler | true | true |
-
-**Unblock path for PR planning:**
-
-1. Migrate **gpdma1, fdcan1, rtc, pwr** off the walk (`uses_scheduler` or
-   `!needs_legacy_walk` with proof).
-2. Separately address **`flash_models_ops`**: today any H5 FLASH that models
-   ops pins `max_safe` to 1 even on a walk-deleted bus. That is a policy /
-   batching problem, not a walk-forcer.
 
 ---
 
@@ -367,5 +369,5 @@ compare-event / IRQ-driven RTC shapes are the supported surface today.
 |----|--------------|-------------------|
 | **PR-B** | **nrf52840** | **DONE** — empty forcers, `max_safe=512` under `event-scheduler`; Machine TIMER@512 gate; EasyDMA still bus_tick-lagged (documented interim) |
 | **PR-C** | **rp2040** | **DONE** — empty forcers, `max_safe=512` under `event-scheduler`; Machine TIMER ALARM0@512 gate |
-| PR-D | stm32h563 | `gpdma1`, `fdcan1`, `rtc`, `pwr` + **`flash_models_ops` policy** |
+| **PR-D** | **stm32h563** | **DONE** — empty forcers, `max_safe=512`; `flash_models_ops` still forces CPU quantum 1 (not tick interval); FDCAN walk returns if CanBus interconnect is attached |
 | PR-E | esp32s3 | 38 forcers on `configure_xtensa_esp32s3` production bank (not YAML stubs) |

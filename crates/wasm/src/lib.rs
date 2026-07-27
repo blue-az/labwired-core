@@ -1154,9 +1154,11 @@ impl WasmSimulator {
     /// The largest `peripheral_tick_interval` this machine's bus can run at
     /// without losing fidelity (see `SystemBus::max_safe_tick_interval`): a
     /// batching interval when every peripheral is scheduler-driven, `1` when
-    /// anything non-relaxable (IO-Link master, op-modeling FLASH, a live
-    /// legacy walk) is present. The TS side calls this once at engine init
-    /// and feeds the answer straight into `set_peripheral_tick_interval`.
+    /// anything non-relaxable (IO-Link master, a live legacy walk, forced
+    /// HC-SR04 legacy path) is present. H5 op-modeling FLASH still clamps
+    /// CPU quantum via `requires_cycle_accurate` but does not pin this
+    /// interval. The TS side calls this once at engine init and feeds the
+    /// answer straight into `set_peripheral_tick_interval`.
     #[wasm_bindgen]
     pub fn recommended_tick_interval(&mut self) -> u32 {
         self.machine().bus.max_safe_tick_interval()
