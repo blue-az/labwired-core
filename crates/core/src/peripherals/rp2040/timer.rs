@@ -122,7 +122,7 @@ impl Rp2040Timer {
     }
 
     fn scheduler_mode(&self) -> bool {
-        self.clock.is_some()
+        cfg!(feature = "event-scheduler") && self.clock.is_some()
     }
 
     /// Lazy advance of the free-running counter only (no alarm latch — that

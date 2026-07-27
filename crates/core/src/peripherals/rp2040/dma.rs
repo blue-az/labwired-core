@@ -224,7 +224,7 @@ impl Rp2040Dma {
     }
 
     fn scheduler_mode(&self) -> bool {
-        self.clock.is_some()
+        cfg!(feature = "event-scheduler") && self.clock.is_some()
     }
 
     /// True while there is transfer work or a held IRQ level to re-pend.
