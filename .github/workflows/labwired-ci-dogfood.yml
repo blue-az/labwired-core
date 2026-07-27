@@ -25,7 +25,7 @@ jobs:
         uses: labwired/firmware-test@v1
         with:
           script: examples/ci/dummy-max-steps.yaml
-          version: v0.20.0
+          version: v0.19.2
 
       - name: Assert the run was actually ingested
         run: |
