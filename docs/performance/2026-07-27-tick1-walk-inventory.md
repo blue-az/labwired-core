@@ -299,8 +299,8 @@ Featureless builds still report `max_safe=1` (honest). Gates:
 
 | Class | Models | Mechanism |
 |-------|--------|-----------|
-| **Class-A inert** | `ficr`, `uicr`, `nvmc`, `acl`, `cryptocell`, `mwu`, `aar`, `comp`, `qdec`, `i2s`, `pdm`, `qspi`, `nfct`, `usbd`, `usbregulator`, `ppi`, `temp`, `uarte` (uart0/1), `pwm0–3`, `saadc`, … | `needs_legacy_walk = false` (no time-driven `tick()`; EasyDMA rides `bus_tick_indices`) |
-| **Class-B scheduler** | `timer0–4`, `rtc0–2`, `wdt`, `rng`, `clock`, `egu0–5`, `gpiote`, `twim`/`serial` (i2c0, twi1), `ecb`, `radio` | `uses_scheduler` + `take_scheduled_events` / `on_event` (CycleClock where counters advance) |
+| **Class-A inert** | `ficr`, `uicr`, `nvmc`, `acl`, `cryptocell`, `mwu`, `aar`, `comp`, `qdec`, `i2s`, `pdm`, `qspi`, `nfct`, `usbd`, `usbregulator`, `ppi`, `temp`, … | `needs_legacy_walk = false` (no time-driven `tick()`) |
+| **Class-B scheduler** | `timer0–4`, `rtc0–2`, `wdt`, `rng`, `clock`, `egu0–5`, `gpiote`, `twim`/`serial` (i2c0, twi1), `ecb`, `radio`, **`uarte` (uart0/1), `saadc`, `pwm0–3`, `spi2` (nRF SPIM EasyDMA)** | `uses_scheduler` + `take_scheduled_events` / `on_event` (CycleClock where counters advance; EasyDMA delay-0 dual-path with `tick_with_bus`) |
 
 Featureless builds still report `max_safe=1` (honest). Gates:
 
@@ -309,27 +309,34 @@ Featureless builds still report `max_safe=1` (honest). Gates:
   `nrf52840_timer_machine_gate.rs` — programs TIMER0 with a short CC[0], runs
   through `Machine::advance` at `peripheral_tick_interval=512`, asserts
   `EVENTS_COMPARE[0]` (not `tick_peripherals_fully_forced`)
+- EasyDMA@512: `nrf52_easydma_tick512_fidelity.rs` — UARTE/SAADC/PWM complete
+  within ≤8 device cycles at interval 512; UARTE walk@1 vs sched@512 completion
+  cycle identity within 1
 
-### EasyDMA Class-A lag under `rec_tick=512` (accepted interim)
+### EasyDMA lag under `rec_tick=512` — **CLOSED**
 
-**Honest inventory truth** (code comments that say “byte-identical” for these
-models are aspirational walk-deletion claims, not batch-fidelity certificates):
+**Previously (accepted interim):** UARTE / SAADC / PWM / SPIM EasyDMA completed
+only via `bus_tick_indices`, so at `peripheral_tick_interval = 512` completion
+could lag by up to one tick batch (~511 instructions) after STARTTX / SAMPLE /
+SEQSTART / TASKS_START.
 
-- **UARTE / SAADC / PWM / SPIM** EasyDMA still complete via `bus_tick_indices`,
-  **not** delay-0 scheduler events.
-- At `peripheral_tick_interval = 512`, EasyDMA completion can lag by **up to one
-  tick batch** after the task write that starts the transfer (observed on the
-  next `tick_with_bus` / bus-tick drain, not at the exact cycle of the task).
-- This is an **accepted interim fidelity trade** for the walk-free inventory
-  unlock: Class-A models clear the forcer set so `max_safe=512` without a full
-  EasyDMA→scheduler migration in PR-B.
-- **Follow-up:** promote UARTE / SAADC / PWM / SPIM EasyDMA completions to
-  delay-0 (or exact-cycle) scheduler events so batch interval no longer
-  quantises transfer end. That is a larger PR and is **not** required to keep
-  `max_safe=512`.
+**Now:** dual-path scheduler promotions (same pattern as ECB / TWIM):
+
+| Model | `uses_scheduler` | delay-0 token | Shared engine | `tick_with_bus` kept |
+|-------|------------------|---------------|---------------|----------------------|
+| UARTE | true | STARTTX → `(0, 1)` | `do_easydma_tx` | yes (bare-bus tests) |
+| SAADC | true | SAMPLE → `(0, 1)` | `do_easydma_sample` | yes |
+| PWM | true | SEQSTART → `(0, 1)` | `do_easydma_seq` | yes |
+| SPIM (nRF) | true (already) | TASKS_START → `(0, 1)` | `do_nrf52_easydma` | yes |
+
+Under Machine + walk-free + tick 512, completion happens on the **next cycle**
+after the task write (delay-0 event), not after the 512-cycle peripheral tick
+quantum. Busy-wait drivers that poll ENDTX / END / SEQEND no longer see the
+batch lag.
 
 Class-B counters (`timer*`, `rtc*`, …) already ride the scheduler; the
 Machine TIMER@512 gate above is the proof that path works under batching.
+See also `docs/performance/2026-07-27-fidelity-scoreboard.md`.
 
 ### RTC COUNTER read path (not yet certified)
 
@@ -342,13 +349,15 @@ compare-event / IRQ-driven RTC shapes are the supported surface today.
 
 | name | role | `needs_legacy_walk` | `uses_scheduler` |
 |------|------|---------------------|------------------|
-| uart0/1 | inert (EasyDMA via bus_tick; ≤1-batch lag @512) | false | false |
+| uart0/1 | scheduler (EasyDMA delay-0 dual-path) | false | true |
 | i2c0, twi1 | scheduler | false | true |
 | gpio0/1 | inert | false | false |
 | rtc0–2, timer0–4, wdt, rng | scheduler | false | true |
 | clock, egu0–5, gpiote, radio, ecb | scheduler | false | true |
-| ppi, temp, saadc, pwm*, ficr, … | inert (EasyDMA via bus_tick where applicable) | false | false |
-| spi2, scb, dwt | scheduler | true | true |
+| saadc, pwm* | scheduler (EasyDMA delay-0 dual-path) | false | true |
+| ppi, temp, ficr, … | inert | false | false |
+| spi2 | scheduler (nRF SPIM EasyDMA delay-0 + STM32 wire) | true | true |
+| scb, dwt | scheduler | true | true |
 | nvic | inert | false | false |
 
 ---
@@ -357,7 +366,7 @@ compare-event / IRQ-driven RTC shapes are the supported surface today.
 
 | PR | Family focus | Status / blockers |
 |----|--------------|-------------------|
-| **PR-B** | **nrf52840** | **DONE** — empty forcers, `max_safe=512` under `event-scheduler`; Machine TIMER@512 gate; EasyDMA still bus_tick-lagged (documented interim) |
+| **PR-B** | **nrf52840** | **DONE** — empty forcers, `max_safe=512` under `event-scheduler`; Machine TIMER@512 gate; **EasyDMA delay-0 closed** (UARTE/SAADC/PWM/SPIM) |
 | **PR-C** | **rp2040** | **DONE** — empty forcers, `max_safe=512` under `event-scheduler`; Machine TIMER ALARM0@512 gate |
 | **PR-D** | **stm32h563** | **DONE** — empty forcers, `max_safe=512`; `flash_models_ops` still forces CPU quantum 1 (not tick interval); FDCAN walk returns if CanBus interconnect is attached |
 | **PR-E** | **esp32s3** | **DONE** — empty forcers, `max_safe=512` under `event-scheduler` on `configure_xtensa_esp32s3` + recompute; Class-A inert + Class-B level-export / scheduled engines |
