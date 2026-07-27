@@ -156,6 +156,8 @@ pub struct Timer {
     /// external phase cursor. Natural counter advancement does not bump it.
     #[serde(default)]
     phase_revision: u64,
+    #[serde(skip)]
+    freeze_revision: Cell<u64>,
     /// Bus-published cycle clock (walk-free plan Part 1). `Some` once the bus
     /// registration choke attaches it; `None` keeps the model on the legacy
     /// walk path.
@@ -198,6 +200,8 @@ pub struct TimerOutputSnapshot {
     pub prescaler_divisor: u64,
     pub prescaler_phase: u32,
     pub phase_revision: u64,
+    pub counter_frozen: bool,
+    pub freeze_revision: u64,
 }
 
 impl Timer {
@@ -246,6 +250,7 @@ impl Timer {
             anchor: Cell::new(0),
             arm_seq: 0,
             phase_revision: 0,
+            freeze_revision: Cell::new(0),
             clock: None,
         }
     }
@@ -275,10 +280,6 @@ impl Timer {
     }
 
     /// Read-only PWM state derived from the timer's register-owned truth.
-    ///
-    /// Duty is the cycle-average `CCR/(ARR+1)`, clamped to one. This intentionally
-    /// does not invent a second edge-phase clock: motor plants sample the
-    /// deterministic average command at their integration boundary.
     pub fn output_snapshot(&self) -> TimerOutputSnapshot {
         let period = u64::from(self.arr) + 1;
         let ccr = [self.ccr1, self.ccr2, self.ccr3, self.ccr4];
@@ -318,6 +319,8 @@ impl Timer {
             prescaler_divisor: u64::from(self.psc) + 1,
             prescaler_phase: self.psc_cnt.get(),
             phase_revision: self.phase_revision,
+            counter_frozen: self.irq_level_held(),
+            freeze_revision: self.freeze_revision.get(),
         }
     }
 
@@ -501,6 +504,7 @@ impl Timer {
     /// choke), so settings changes never straddle a window. Replays the walk
     /// EXACTLY, including the enabled-flag counter freeze.
     fn advance_to(&self, now: u64) {
+        let frozen_before = self.irq_level_held();
         let anchor = self.anchor.get();
         if now <= anchor {
             return;
@@ -567,6 +571,10 @@ impl Timer {
             }
         }
         self.sr.set(sr);
+        if frozen_before != self.irq_level_held() {
+            self.freeze_revision
+                .set(self.freeze_revision.get().wrapping_add(1));
+        }
         self.cnt.set(self.value_after_increments(v, m));
         // Prescaler phase: an increment tick resets it to 0; if the walk
         // froze at increment `m` it stays 0 for the rest of the window,
@@ -636,6 +644,7 @@ impl Timer {
     }
 
     fn write_reg(&mut self, offset: u64, value: u32) {
+        let frozen_before = self.irq_level_held();
         let phase_mapping_before = (
             self.cr1 & 1,
             self.ccmr1,
@@ -751,6 +760,10 @@ impl Timer {
         if explicit_update || phase_mapping_before != phase_mapping_after {
             self.phase_revision = self.phase_revision.wrapping_add(1);
         }
+        if frozen_before != self.irq_level_held() {
+            self.freeze_revision
+                .set(self.freeze_revision.get().wrapping_add(1));
+        }
     }
 }
 
@@ -789,6 +802,7 @@ impl crate::Peripheral for Timer {
     }
 
     fn tick(&mut self) -> crate::PeripheralTickResult {
+        let frozen_before = self.irq_level_held();
         // Never runs in scheduler mode (the walk skips `uses_scheduler()`
         // peripherals; the guard keeps a stray direct call from corrupting
         // the lazily-anchored state).
@@ -831,6 +845,10 @@ impl crate::Peripheral for Timer {
                 }
 
                 // Return true if Update Interrupt Enable (UIE) is set
+                if frozen_before != self.irq_level_held() {
+                    self.freeze_revision
+                        .set(self.freeze_revision.get().wrapping_add(1));
+                }
                 return crate::PeripheralTickResult {
                     irq: (self.dier & 1) != 0,
                     cycles: 0,
@@ -847,6 +865,10 @@ impl crate::Peripheral for Timer {
             }
         }
 
+        if frozen_before != self.irq_level_held() {
+            self.freeze_revision
+                .set(self.freeze_revision.get().wrapping_add(1));
+        }
         crate::PeripheralTickResult {
             irq: false,
             cycles: 0,

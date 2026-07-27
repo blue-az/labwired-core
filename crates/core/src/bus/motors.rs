@@ -5,6 +5,10 @@ use crate::physics::motor::{
 };
 use labwired_config::{BldcMotorConfig, BrushedMotorConfig, MotorModelConfig, SystemManifest};
 
+/// Maximum production gap between motor services. This bounds exact PWM edge
+/// streaming work while leaving direct diagnostic calls exact for any delta.
+pub(super) const MOTOR_SERVICE_QUANTUM_CYCLES: u64 = 4096;
+
 /// Motor physics timebase until chip descriptors expose one authoritative CPU
 /// frequency. Simulator cycle deltas are deterministic; this conversion never
 /// observes host time. Keep this named and isolated so a future descriptor
@@ -18,6 +22,7 @@ pub(super) struct ResolvedPin {
 #[derive(Debug, Clone, Copy)]
 pub(super) struct PwmPhaseCursor {
     revision: u64,
+    freeze_revision: u64,
     counter_ticks: u32,
     prescaler_phase: u32,
 }
@@ -71,6 +76,13 @@ pub(super) enum MotorRuntime {
 }
 
 impl SystemBus {
+    pub(crate) fn next_motor_service_deadline_cycle(&self) -> Option<u64> {
+        (!self.motors.is_empty()).then(|| {
+            self.motor_cycle_anchor
+                .saturating_add(MOTOR_SERVICE_QUANTUM_CYCLES)
+        })
+    }
+
     pub(super) fn install_motor_models(&mut self, manifest: &SystemManifest) -> anyhow::Result<()> {
         for config in manifest.resolved_motor_models()? {
             self.motors.push(match config {
@@ -333,13 +345,17 @@ impl SystemBus {
                         let cursor = pwm_phase_cursor.get_or_insert_with(|| {
                             Box::new(PwmPhaseCursor {
                                 revision: pwm.phase_revision,
+                                freeze_revision: pwm.freeze_revision,
                                 counter_ticks: pwm.counter_ticks,
                                 prescaler_phase: pwm.prescaler_phase,
                             })
                         });
-                        if cursor.revision != pwm.phase_revision {
+                        if cursor.revision != pwm.phase_revision
+                            || cursor.freeze_revision != pwm.freeze_revision
+                        {
                             **cursor = PwmPhaseCursor {
                                 revision: pwm.phase_revision,
+                                freeze_revision: pwm.freeze_revision,
                                 counter_ticks: pwm.counter_ticks,
                                 prescaler_phase: pwm.prescaler_phase,
                             };
@@ -347,7 +363,7 @@ impl SystemBus {
                             pwm.counter_ticks = cursor.counter_ticks;
                             pwm.prescaler_phase = cursor.prescaler_phase;
                         }
-                        if pwm.counter_enabled {
+                        if pwm.counter_enabled && !pwm.counter_frozen {
                             advance_pwm_phase_cursor(cursor.as_mut(), *pwm, elapsed);
                         }
                     } else {
@@ -380,8 +396,7 @@ impl SystemBus {
                             && pwm.main_output_enabled
                             && valid_pwm
                     }) {
-                        for (command, duration_cycles) in pwm_interval_schedule(pwm, elapsed as f64)
-                        {
+                        for_each_pwm_segment(pwm, elapsed as f64, |command, duration_cycles| {
                             for step_s in stable_substeps(
                                 duration_cycles / *simulation_clock_hz as f64,
                                 0.25 * params.inductance_h / params.resistance_ohm,
@@ -392,7 +407,7 @@ impl SystemBus {
                                 *inverter_fault_active |=
                                     !plant.snapshot().inverter_faults.is_empty();
                             }
-                        }
+                        });
                     } else {
                         for step_s in stable_substeps(
                             dt_s,
@@ -523,6 +538,18 @@ impl SystemBus {
         }
         Ok(())
     }
+
+    #[cfg(test)]
+    pub(crate) fn motor_pwm_phase(&self, id: &str) -> Option<(u32, u32)> {
+        self.motors.iter().find_map(|motor| match motor {
+            MotorRuntime::Bldc {
+                id: motor_id,
+                pwm_phase_cursor: Some(cursor),
+                ..
+            } if motor_id == id => Some((cursor.counter_ticks, cursor.prescaler_phase)),
+            _ => None,
+        })
+    }
 }
 
 #[cfg(test)]
@@ -536,10 +563,26 @@ fn pwm_edge_schedule(
         .collect()
 }
 
+#[cfg(test)]
 fn pwm_interval_schedule(
     pwm: crate::peripherals::timer::TimerOutputSnapshot,
     elapsed_cycles: f64,
 ) -> Vec<(InverterCommand, f64)> {
+    let mut segments = Vec::new();
+    for_each_pwm_segment(pwm, elapsed_cycles, |command, duration| {
+        segments.push((command, duration));
+    });
+    segments
+}
+
+/// Streams at most one PWM period's edge table at a time. Memory is bounded by
+/// the 14 possible boundaries (start/end plus four per phase), independent of
+/// the elapsed period count.
+fn for_each_pwm_segment(
+    pwm: crate::peripherals::timer::TimerOutputSnapshot,
+    elapsed_cycles: f64,
+    mut emit: impl FnMut(InverterCommand, f64),
+) {
     let dead = (f64::from(pwm.dead_time_ticks) / pwm.period_ticks as f64).clamp(0.0, 1.0);
     let period_cycles = (pwm.period_ticks * pwm.prescaler_divisor) as f64;
     // A PSC rewrite may leave the timer's raw phase above the new divisor;
@@ -548,8 +591,48 @@ fn pwm_interval_schedule(
     let prescaler_phase = u64::from(pwm.prescaler_phase).min(pwm.prescaler_divisor - 1);
     let start =
         f64::from(pwm.counter_ticks) * pwm.prescaler_divisor as f64 + prescaler_phase as f64;
-    let end = start + elapsed_cycles;
-    let mut normalized_edges = vec![0.0, 1.0];
+    let normalized_edges = normalized_pwm_edges(pwm);
+    let mut remaining = elapsed_cycles;
+    let mut phase_cycles = start.rem_euclid(period_cycles);
+    while remaining > 0.0 {
+        let window_end = (phase_cycles + remaining).min(period_cycles);
+        let mut edges = Vec::with_capacity(normalized_edges.len() + 2);
+        edges.push(phase_cycles);
+        edges.extend(
+            normalized_edges
+                .iter()
+                .map(|edge| edge * period_cycles)
+                .filter(|edge| *edge > phase_cycles && *edge < window_end),
+        );
+        edges.push(window_end);
+        for window in edges.windows(2) {
+            let duration_cycles = window[1] - window[0];
+            if duration_cycles > 0.0 {
+                let phase = ((window[0] + window[1]) / 2.0) / period_cycles;
+                let gates: [GatePair; 3] = std::array::from_fn(|index| {
+                    sampled_gate_pair(pwm.channels[index], phase, dead)
+                });
+                emit(
+                    InverterCommand {
+                        enabled: true,
+                        phase_a: gates[0],
+                        phase_b: gates[1],
+                        phase_c: gates[2],
+                    },
+                    duration_cycles,
+                );
+            }
+        }
+        let consumed = window_end - phase_cycles;
+        remaining -= consumed;
+        phase_cycles = 0.0;
+    }
+}
+
+fn normalized_pwm_edges(pwm: crate::peripherals::timer::TimerOutputSnapshot) -> Vec<f64> {
+    let dead = (f64::from(pwm.dead_time_ticks) / pwm.period_ticks as f64).clamp(0.0, 1.0);
+    let mut normalized_edges = Vec::with_capacity(14);
+    normalized_edges.extend([0.0, 1.0]);
     for channel in &pwm.channels[..3] {
         let duty = channel.duty_fraction;
         normalized_edges.push((dead / 2.0).clamp(0.0, 1.0));
@@ -559,42 +642,7 @@ fn pwm_interval_schedule(
     }
     normalized_edges.sort_by(f64::total_cmp);
     normalized_edges.dedup();
-    let mut edges = vec![start, end];
-    let first_period = (start / period_cycles).floor() as i64;
-    let last_period = (end / period_cycles).floor() as i64;
-    for period in first_period..=last_period {
-        let base = period as f64 * period_cycles;
-        edges.extend(
-            normalized_edges
-                .iter()
-                .map(|edge| base + edge * period_cycles)
-                .filter(|edge| *edge > start && *edge < end),
-        );
-    }
-    edges.sort_by(f64::total_cmp);
-    edges.dedup();
-    edges
-        .windows(2)
-        .filter_map(|window| {
-            let duration_cycles = window[1] - window[0];
-            (duration_cycles > 0.0).then(|| {
-                let phase =
-                    ((window[0] + window[1]) / 2.0).rem_euclid(period_cycles) / period_cycles;
-                let gates: [GatePair; 3] = std::array::from_fn(|index| {
-                    sampled_gate_pair(pwm.channels[index], phase, dead)
-                });
-                (
-                    InverterCommand {
-                        enabled: true,
-                        phase_a: gates[0],
-                        phase_b: gates[1],
-                        phase_c: gates[2],
-                    },
-                    duration_cycles,
-                )
-            })
-        })
-        .collect()
+    normalized_edges
 }
 
 fn advance_pwm_phase_cursor(
@@ -674,6 +722,8 @@ mod tests {
             prescaler_divisor: 1,
             prescaler_phase: 0,
             phase_revision: 0,
+            counter_frozen: false,
+            freeze_revision: 0,
         }
     }
 
@@ -693,6 +743,8 @@ mod tests {
             prescaler_divisor: 1,
             prescaler_phase: 0,
             phase_revision: 0,
+            counter_frozen: false,
+            freeze_revision: 0,
         };
         let mut motor = BldcMotor::new(BldcMotorParams {
             resistance_ohm: 1.0,
@@ -850,6 +902,22 @@ mod tests {
                 && one_shot.last().unwrap().0.phase_a.high,
             "the interval must cross CCR and then the timer wrap"
         );
+    }
+
+    #[test]
+    fn pwm_streaming_large_minimum_period_uses_constant_memory_and_preserves_time() {
+        let mut snapshot = pwm(0.0, 0);
+        snapshot.period_ticks = 1;
+        snapshot.channels = [channel(0.0); 4];
+        let mut segments = 0usize;
+        let mut elapsed = 0.0;
+        for_each_pwm_segment(snapshot, 1_000_000.0, |_, duration| {
+            segments += 1;
+            elapsed += duration;
+        });
+        assert_eq!(segments, 1_000_000);
+        assert_eq!(elapsed, 1_000_000.0);
+        assert_eq!(normalized_pwm_edges(snapshot).capacity(), 14);
     }
 
     #[test]

@@ -2394,6 +2394,11 @@ motor_models:
 
     let mut first = build();
     let mut second = build();
+    assert_eq!(
+        first.next_motor_service_deadline_cycle(),
+        Some(first.current_cycle + 4096),
+        "active motors must bound batching and idle fast-forward"
+    );
     configure_pwm(&mut first);
     first.set_current_cycle(100);
     first.tick_peripherals_with_costs();
@@ -2536,6 +2541,29 @@ motor_models:
             "phase reconfiguration failed to resync: {left} != {right}"
         );
     }
+
+    let mut frozen = batching_fixture(build());
+    frozen.write_u32(0x4001_2c28, 0).unwrap();
+    frozen.write_u32(0x4001_2c2c, 9).unwrap();
+    frozen.write_u32(0x4001_2c24, 9).unwrap();
+    frozen.write_u32(0x4001_2c0c, 1).unwrap(); // UIE
+    frozen.set_current_cycle(frozen.current_cycle + 1);
+    frozen.tick_peripherals_with_costs(); // timer wraps and UIF freezes it
+    frozen.set_current_cycle(frozen.current_cycle + 1);
+    frozen.tick_peripherals_with_costs(); // runtime observes freeze transition
+    assert_eq!(frozen.read_u32(0x4001_2c24).unwrap(), 0);
+    let held_phase = frozen.motor_pwm_phase("spindle").unwrap();
+    for _ in 0..3 {
+        frozen.set_current_cycle(frozen.current_cycle + 7);
+        frozen.tick_peripherals_with_costs();
+        assert_eq!(frozen.read_u32(0x4001_2c24).unwrap(), 0);
+        assert_eq!(frozen.motor_pwm_phase("spindle").unwrap(), held_phase);
+    }
+    frozen.write_u32(0x4001_2c10, 0).unwrap(); // clear UIF
+    frozen.set_current_cycle(frozen.current_cycle + 1);
+    frozen.tick_peripherals_with_costs();
+    assert_eq!(frozen.read_u32(0x4001_2c24).unwrap(), 1);
+    assert_eq!(frozen.motor_pwm_phase("spindle").unwrap(), (1, 0));
 }
 
 /// Cortex-M33 parts (STM32H5/WBA) have no bit-band feature and map real
