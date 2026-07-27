@@ -281,6 +281,14 @@ impl MotorModelConfig {
             "bldc-motor" | "bldc_motor" => "bldc",
             _ => return Ok(None),
         };
+        for reserved in ["kind", "id"] {
+            if device.config.contains_key(reserved) {
+                return Err(anyhow::anyhow!(
+                    "external_devices[{}].config.{reserved} is reserved; motor identity and type come from the external device",
+                    device.id
+                ));
+            }
+        }
         let mut mapping = serde_yaml::Mapping::new();
         mapping.insert(
             serde_yaml::Value::String("kind".to_owned()),
@@ -314,19 +322,34 @@ impl MotorModelConfig {
     pub fn validate(&self) -> Vec<String> {
         let mut issues = Vec::new();
         match self {
-            Self::Dc(config) => validate_motor_common(
-                &config.id,
-                config.resistance_ohm,
-                config.inductance_h,
-                config.torque_constant_nm_per_a,
-                config.back_emf_constant_v_per_rad_s,
-                config.rotor_inertia_kg_m2,
-                config.viscous_friction_nm_per_rad_s,
-                config.supply_voltage_v,
-                config.load_torque_nm,
-                config.encoder_cpr,
-                &mut issues,
-            ),
+            Self::Dc(config) => {
+                validate_motor_common(
+                    &config.id,
+                    config.resistance_ohm,
+                    config.inductance_h,
+                    config.torque_constant_nm_per_a,
+                    config.back_emf_constant_v_per_rad_s,
+                    config.rotor_inertia_kg_m2,
+                    config.viscous_friction_nm_per_rad_s,
+                    config.supply_voltage_v,
+                    config.load_torque_nm,
+                    config.encoder_cpr,
+                    &mut issues,
+                );
+                validate_required_motor_pins(
+                    &config.id,
+                    [
+                        ("pwm_pin", config.pwm_pin.as_str()),
+                        ("direction_pin", config.direction_pin.as_str()),
+                        ("brake_pin", config.brake_pin.as_str()),
+                        ("enable_pin", config.enable_pin.as_str()),
+                        ("encoder_a_pin", config.encoder_a_pin.as_str()),
+                        ("encoder_b_pin", config.encoder_b_pin.as_str()),
+                    ],
+                    config.encoder_index_pin.as_deref(),
+                    &mut issues,
+                );
+            }
             Self::Bldc(config) => {
                 validate_motor_common(
                     &config.id,
@@ -347,6 +370,25 @@ impl MotorModelConfig {
                         config.id
                     ));
                 }
+                validate_required_motor_pins(
+                    &config.id,
+                    [
+                        ("phase_a_high_pin", config.phase_a_high_pin.as_str()),
+                        ("phase_a_low_pin", config.phase_a_low_pin.as_str()),
+                        ("phase_b_high_pin", config.phase_b_high_pin.as_str()),
+                        ("phase_b_low_pin", config.phase_b_low_pin.as_str()),
+                        ("phase_c_high_pin", config.phase_c_high_pin.as_str()),
+                        ("phase_c_low_pin", config.phase_c_low_pin.as_str()),
+                        ("enable_pin", config.enable_pin.as_str()),
+                        ("hall_a_pin", config.hall_a_pin.as_str()),
+                        ("hall_b_pin", config.hall_b_pin.as_str()),
+                        ("hall_c_pin", config.hall_c_pin.as_str()),
+                        ("encoder_a_pin", config.encoder_a_pin.as_str()),
+                        ("encoder_b_pin", config.encoder_b_pin.as_str()),
+                    ],
+                    config.encoder_index_pin.as_deref(),
+                    &mut issues,
+                );
             }
         }
         issues
@@ -368,6 +410,9 @@ fn validate_motor_common(
     issues: &mut Vec<String>,
 ) {
     let path = |field: &str| format!("motor_models[{id}].{field}");
+    if id.trim().is_empty() {
+        issues.push(format!("{} must be nonblank", path("id")));
+    }
     for (field, value) in [
         ("resistance_ohm", resistance_ohm),
         ("inductance_h", inductance_h),
@@ -399,6 +444,24 @@ fn validate_motor_common(
         issues.push(format!(
             "{} must be between 1 and 1000000 inclusive",
             path("encoder_cpr")
+        ));
+    }
+}
+
+fn validate_required_motor_pins<'a>(
+    id: &str,
+    pins: impl IntoIterator<Item = (&'a str, &'a str)>,
+    encoder_index_pin: Option<&str>,
+    issues: &mut Vec<String>,
+) {
+    for (field, pin) in pins {
+        if pin.trim().is_empty() {
+            issues.push(format!("motor_models[{id}].{field} must be nonblank"));
+        }
+    }
+    if encoder_index_pin.is_some_and(|pin| pin.trim().is_empty()) {
+        issues.push(format!(
+            "motor_models[{id}].encoder_index_pin must be nonblank when present"
         ));
     }
 }
@@ -1123,9 +1186,25 @@ impl SystemManifest {
     /// Resolves both explicitly typed plants and canonical external-device
     /// entries through one typed validation boundary.
     pub fn resolved_motor_models(&self) -> Result<Vec<MotorModelConfig>> {
-        let mut models = self.motor_models.clone();
-        for device in &self.external_devices {
+        let mut models = Vec::new();
+        let mut locations = HashMap::<String, String>::new();
+        for (index, model) in self.motor_models.iter().enumerate() {
+            let location = format!("motor_models[{index}].id");
+            if let Some(previous) = locations.insert(model.id().to_owned(), location.clone()) {
+                return Err(anyhow::anyhow!(
+                    "{location} duplicates motor id declared at {previous}"
+                ));
+            }
+            models.push(model.clone());
+        }
+        for (index, device) in self.external_devices.iter().enumerate() {
             if let Some(model) = MotorModelConfig::from_external_device(device)? {
+                let location = format!("external_devices[{index}].id");
+                if let Some(previous) = locations.insert(model.id().to_owned(), location.clone()) {
+                    return Err(anyhow::anyhow!(
+                        "{location} duplicates motor id declared at {previous}"
+                    ));
+                }
                 models.push(model);
             }
         }

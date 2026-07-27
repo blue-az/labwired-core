@@ -372,6 +372,137 @@ external_devices:
 }
 
 #[test]
+fn external_motor_rejects_reserved_identity_keys_for_dc_and_bldc() {
+    for (device_type, reserved_key) in [("dc-motor", "id"), ("bldc-motor", "kind")] {
+        let yaml = format!(
+            r#"
+id: authoritative
+type: {device_type}
+connection: gpio
+config:
+  {reserved_key}: attacker-controlled
+"#
+        );
+        let device: labwired_config::ExternalDevice = serde_yaml::from_str(&yaml).unwrap();
+        let error = MotorModelConfig::from_external_device(&device)
+            .unwrap_err()
+            .to_string();
+        assert!(
+            error.contains(&format!(
+                "external_devices[authoritative].config.{reserved_key}"
+            )),
+            "{error}"
+        );
+    }
+}
+
+#[test]
+fn resolved_motor_models_rejects_duplicate_ids_with_source_qualified_errors() {
+    let typed = serde_yaml::to_string(
+        &serde_yaml::from_str::<MotorModelConfig>(valid_dc_motor_yaml()).unwrap(),
+    )
+    .unwrap();
+    let duplicate_top_level = format!(
+        "name: duplicate\nchip: inline\nmotor_models:\n{}{}\n",
+        typed
+            .lines()
+            .map(|line| format!("  - {line}\n"))
+            .collect::<String>()
+            .replace("\n  - ", "\n    "),
+        typed
+            .lines()
+            .map(|line| format!("  - {line}\n"))
+            .collect::<String>()
+            .replace("\n  - ", "\n    ")
+    );
+    let manifest: SystemManifest = serde_yaml::from_str(&duplicate_top_level).unwrap();
+    let error = manifest.resolved_motor_models().unwrap_err().to_string();
+    assert!(error.contains("motor_models[1].id"), "{error}");
+    assert!(error.contains("motor_models[0].id"), "{error}");
+
+    let external_entry = valid_dc_motor_yaml()
+        .lines()
+        .filter(|line| !line.starts_with("kind:") && !line.starts_with("id:"))
+        .map(|line| format!("        {line}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let duplicate_external = format!(
+        r#"
+name: duplicate
+chip: inline
+external_devices:
+  - id: drive_motor
+    type: dc-motor
+    connection: gpio
+    config:
+{external_entry}
+  - id: drive_motor
+    type: dc-motor
+    connection: gpio
+    config:
+{external_entry}
+"#
+    );
+    let manifest: SystemManifest = serde_yaml::from_str(&duplicate_external).unwrap();
+    let error = manifest.resolved_motor_models().unwrap_err().to_string();
+    assert!(error.contains("external_devices[1].id"), "{error}");
+    assert!(error.contains("external_devices[0].id"), "{error}");
+}
+
+#[test]
+fn resolved_motor_models_rejects_cross_source_duplicate_ids() {
+    let typed = valid_dc_motor_yaml()
+        .lines()
+        .map(|line| format!("    {line}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let external = valid_dc_motor_yaml()
+        .lines()
+        .filter(|line| !line.starts_with("kind:") && !line.starts_with("id:"))
+        .map(|line| format!("        {line}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let yaml = format!(
+        r#"
+name: duplicate
+chip: inline
+motor_models:
+  -
+{typed}
+external_devices:
+  - id: drive_motor
+    type: dc-motor
+    connection: gpio
+    config:
+{external}
+"#
+    );
+    let manifest: SystemManifest = serde_yaml::from_str(&yaml).unwrap();
+    let error = manifest.resolved_motor_models().unwrap_err().to_string();
+    assert!(error.contains("external_devices[0].id"), "{error}");
+    assert!(error.contains("motor_models[0].id"), "{error}");
+}
+
+#[test]
+fn motor_model_validation_rejects_blank_identity_and_bindings() {
+    let mut model: MotorModelConfig = serde_yaml::from_str(valid_dc_motor_yaml()).unwrap();
+    let MotorModelConfig::Dc(config) = &mut model else {
+        unreachable!()
+    };
+    config.id = " ".to_owned();
+    config.pwm_pin = "\t".to_owned();
+    config.encoder_b_pin.clear();
+    config.encoder_index_pin = Some(" ".to_owned());
+    let issues = model.validate();
+    for field in ["id", "pwm_pin", "encoder_b_pin", "encoder_index_pin"] {
+        assert!(
+            issues.iter().any(|issue| issue.contains(field)),
+            "missing {field}: {issues:?}"
+        );
+    }
+}
+
+#[test]
 fn memory_value_details_public_fields_remain_struct_literal_constructible() {
     // This is compiled as a downstream crate. Keep the public struct shape
     // usable by callers that construct a memory assertion directly.

@@ -1517,6 +1517,40 @@ mod canonical_tests {
         assert_eq!(config.encoder_index_pin, None);
     }
 
+    #[test]
+    fn motor_model_numeric_attrs_use_strict_finite_f64_parsing() {
+        let json = r#"{
+          "version": 1,
+          "parts": [
+            { "id": "mcu", "type": "nucleo-l476rg" },
+            { "id": "motor", "type": "dc-motor", "attrs": {
+              "resistance_ohm": " 1e1 ",
+              "inductance_h": "0x10",
+              "rotor_inertia_kg_m2": "9e-5kg",
+              "supply_voltage_v": "Infinity"
+            } }
+          ],
+          "connections": [
+            ["mcu:PA8", "motor:PWM"],
+            ["mcu:PA9", "motor:DIRECTION"],
+            ["mcu:PA10", "motor:BRAKE"],
+            ["mcu:PA11", "motor:ENABLE"],
+            ["mcu:PB6", "motor:ENC_A"],
+            ["mcu:PB7", "motor:ENC_B"]
+          ]
+        }"#;
+        let yaml = CanonicalConfig::from_json(json).unwrap().resolve().unwrap();
+        let manifest: crate::SystemManifest = serde_yaml::from_str(&yaml).unwrap();
+        let models = manifest.resolved_motor_models().unwrap();
+        let crate::MotorModelConfig::Dc(config) = &models[0] else {
+            panic!("expected dc motor")
+        };
+        assert_eq!(config.resistance_ohm, 10.0);
+        assert_eq!(config.inductance_h, 0.002);
+        assert_eq!(config.rotor_inertia_kg_m2, 0.00004);
+        assert_eq!(config.supply_voltage_v, 12.0);
+    }
+
     const EXAMPLE: &str = r#"
     {
       "version": 1,
