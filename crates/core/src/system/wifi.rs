@@ -77,7 +77,6 @@ pub fn attach_configured_wifi_ap(bus: &mut SystemBus, manifest: &SystemManifest)
 mod tests {
     use super::*;
     use crate::bus::{PeripheralEntry, SystemBus};
-    use crate::Peripheral;
 
     fn bus_with_c3_mac() -> SystemBus {
         let mut bus = SystemBus::new();
