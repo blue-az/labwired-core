@@ -466,7 +466,8 @@ impl SystemBus {
                     if let Some(pin) = motor_fault {
                         self.drive_input(
                             *pin,
-                            snapshot.faults.stalled || snapshot.faults.open_phase.is_some(),
+                            snapshot.faults.stalled
+                                || snapshot.faults.open_phases.iter().any(|is_open| *is_open),
                         );
                     }
                     if let Some(pin) = inverter_fault {
@@ -539,15 +540,14 @@ impl SystemBus {
                     if s.faults.undervoltage_v.is_some() {
                         faults.push("undervoltage".to_owned());
                     }
-                    if let Some(phase) = s.faults.open_phase {
-                        faults.push(
-                            match phase {
-                                Phase::A => "open-phase-a",
-                                Phase::B => "open-phase-b",
-                                Phase::C => "open-phase-c",
-                            }
-                            .to_owned(),
-                        );
+                    for (phase, is_open) in [
+                        ("open-phase-a", s.faults.open_phases[0]),
+                        ("open-phase-b", s.faults.open_phases[1]),
+                        ("open-phase-c", s.faults.open_phases[2]),
+                    ] {
+                        if is_open {
+                            faults.push(phase.to_owned());
+                        }
                     }
                     if s.faults.hall_line_low == Some(Phase::B) {
                         faults.push("hall-b-low".to_owned());
@@ -677,13 +677,13 @@ impl SystemBus {
                 match fault {
                     "stall" => faults.stalled = active,
                     "open-phase-a" => {
-                        faults.open_phase = active.then_some(Phase::A);
+                        faults.open_phases[0] = active;
                     }
                     "open-phase-b" => {
-                        faults.open_phase = active.then_some(Phase::B);
+                        faults.open_phases[1] = active;
                     }
                     "open-phase-c" => {
-                        faults.open_phase = active.then_some(Phase::C);
+                        faults.open_phases[2] = active;
                     }
                     "undervoltage" => {
                         faults.undervoltage_v =

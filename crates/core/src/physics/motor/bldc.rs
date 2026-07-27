@@ -321,7 +321,7 @@ pub struct BldcMotorParams {
 pub struct BldcFaults {
     pub stalled: bool,
     pub overcurrent: bool,
-    pub open_phase: Option<Phase>,
+    pub open_phases: [bool; 3],
     pub forced_hall_state: Option<u8>,
     pub hall_line_low: Option<Phase>,
     /// Effective fault-injected DC bus voltage.
@@ -454,10 +454,12 @@ impl BldcMotor {
         if !faults.overcurrent {
             candidate.overcurrent_steps = 0;
         }
-        if let Some(open_phase) = faults.open_phase {
-            candidate.phase_currents_a[open_phase.index()] = 0.0;
-            project_zero_sum(&mut candidate.phase_currents_a, faults.open_phase);
+        for (index, is_open) in faults.open_phases.into_iter().enumerate() {
+            if is_open {
+                candidate.phase_currents_a[index] = 0.0;
+            }
         }
+        project_zero_sum(&mut candidate.phase_currents_a, faults.open_phases);
         validate_array("phase_currents_a", candidate.phase_currents_a)?;
         if faults.stalled {
             candidate.shaft.hold_still();
@@ -517,22 +519,19 @@ impl BldcMotor {
             .map(|shape| candidate.params.back_emf_constant_v_per_rad_s * pre_step_omega * shape);
         validate_array("phase_back_emf_v", pre_step_emf)?;
 
-        let open_phase = candidate.faults.open_phase;
+        let open_phases = candidate.faults.open_phases;
         let connected = terminals.map(|terminal| !matches!(terminal, PhaseTerminal::Floating));
         let connected_count = connected
             .iter()
             .enumerate()
-            .filter(|(index, is_connected)| {
-                **is_connected && open_phase.map(Phase::index) != Some(*index)
-            })
+            .filter(|(index, is_connected)| **is_connected && !open_phases[*index])
             .count();
         let neutral_voltage_v = if connected_count >= 2 {
             let sum = terminals
                 .iter()
                 .enumerate()
                 .filter(|(index, terminal)| {
-                    !matches!(terminal, PhaseTerminal::Floating)
-                        && open_phase.map(Phase::index) != Some(*index)
+                    !matches!(terminal, PhaseTerminal::Floating) && !open_phases[*index]
                 })
                 .map(|(index, terminal)| {
                     terminal_voltage(*terminal)
@@ -550,7 +549,7 @@ impl BldcMotor {
         validate_finite("open_phase_current_decay", decay)?;
         let mut phase_currents_a = candidate.phase_currents_a;
         for index in 0..3 {
-            if open_phase.map(Phase::index) == Some(index) {
+            if open_phases[index] {
                 phase_currents_a[index] = 0.0;
             } else if connected[index] && connected_count >= 2 {
                 let derivative_a_per_s = (terminal_voltage(terminals[index])
@@ -564,7 +563,7 @@ impl BldcMotor {
                 phase_currents_a[index] = candidate.phase_currents_a[index] * decay;
             }
         }
-        project_zero_sum(&mut phase_currents_a, open_phase);
+        project_zero_sum(&mut phase_currents_a, open_phases);
         validate_array("phase_currents_a", phase_currents_a)?;
 
         let torque_nm = calculate_electromagnetic_torque(
@@ -592,7 +591,8 @@ impl BldcMotor {
         candidate.electromagnetic_torque_nm = torque_nm;
         candidate.inverter_faults = resolution.faults;
         candidate.last_terminals = terminals;
-        candidate.dc_bus_current_a = conducted_bus_current(terminals, phase_currents_a, open_phase);
+        candidate.dc_bus_current_a =
+            conducted_bus_current(terminals, phase_currents_a, open_phases);
         validate_finite("dc_bus_current_a", candidate.dc_bus_current_a)?;
 
         if !candidate.faults.stalled {
@@ -623,7 +623,7 @@ impl BldcMotor {
         self.dc_bus_current_a = conducted_bus_current(
             self.last_terminals,
             self.phase_currents_a,
-            self.faults.open_phase,
+            self.faults.open_phases,
         );
         validate_finite("dc_bus_current_a", self.dc_bus_current_a)?;
         Ok(())
@@ -663,14 +663,13 @@ fn terminal_voltage(terminal: PhaseTerminal) -> f64 {
 fn conducted_bus_current(
     terminals: [PhaseTerminal; 3],
     currents_a: [f64; 3],
-    open_phase: Option<Phase>,
+    open_phases: [bool; 3],
 ) -> f64 {
     terminals
         .iter()
         .enumerate()
         .filter(|(index, terminal)| {
-            matches!(terminal, PhaseTerminal::Bus(_))
-                && open_phase.map(Phase::index) != Some(*index)
+            matches!(terminal, PhaseTerminal::Bus(_)) && !open_phases[*index]
         })
         .map(|(index, _)| currents_a[index])
         .sum()
@@ -709,18 +708,21 @@ fn calculate_electromagnetic_torque(
     }
 }
 
-fn project_zero_sum(currents: &mut [f64; 3], open_phase: Option<Phase>) {
-    let open_index = open_phase.map(Phase::index);
-    let active_count = 3 - usize::from(open_index.is_some());
+fn project_zero_sum(currents: &mut [f64; 3], open_phases: [bool; 3]) {
+    let active_count = open_phases.iter().filter(|is_open| !**is_open).count();
+    if active_count == 0 {
+        *currents = [0.0; 3];
+        return;
+    }
     let mean = currents
         .iter()
         .enumerate()
-        .filter(|(index, _)| Some(*index) != open_index)
+        .filter(|(index, _)| !open_phases[*index])
         .map(|(_, current)| *current)
         .sum::<f64>()
         / active_count as f64;
     for (index, current) in currents.iter_mut().enumerate() {
-        if Some(index) == open_index {
+        if open_phases[index] {
             *current = 0.0;
         } else {
             *current -= mean;
@@ -731,8 +733,8 @@ fn project_zero_sum(currents: &mut [f64; 3], open_phase: Option<Phase>) {
     let residual = currents.iter().sum::<f64>();
     let correction_index = (0..3)
         .rev()
-        .find(|index| Some(*index) != open_index)
-        .expect("at least two phases remain");
+        .find(|index| !open_phases[*index])
+        .expect("at least one phase remains");
     currents[correction_index] -= residual;
 }
 

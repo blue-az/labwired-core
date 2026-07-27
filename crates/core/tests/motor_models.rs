@@ -428,15 +428,7 @@ fn snapshot_bus_current(motor: &BldcMotor, command: InverterCommand) -> f64 {
     gates
         .into_iter()
         .enumerate()
-        .filter(|(index, gates)| {
-            gates.high
-                && !gates.low
-                && snapshot.faults.open_phase.map(|phase| match phase {
-                    Phase::A => 0,
-                    Phase::B => 1,
-                    Phase::C => 2,
-                }) != Some(*index)
-        })
+        .filter(|(index, gates)| gates.high && !gates.low && !snapshot.faults.open_phases[*index])
         .map(|(index, _)| snapshot.phase_currents_a[index])
         .sum()
 }
@@ -754,7 +746,7 @@ fn bldc_open_phase_is_zero_and_other_currents_balance() {
     motor.step(command, DT_S).unwrap();
     motor
         .set_faults(BldcFaults {
-            open_phase: Some(Phase::A),
+            open_phases: [true, false, false],
             ..BldcFaults::default()
         })
         .unwrap();
@@ -767,6 +759,26 @@ fn bldc_open_phase_is_zero_and_other_currents_balance() {
         snapshot.dc_bus_current_a,
         snapshot_bus_current(&motor, command)
     );
+}
+
+#[test]
+fn bldc_multiple_open_phases_are_all_held_at_zero() {
+    let mut motor = BldcMotor::new(bldc_params(0.0)).unwrap();
+    step_bldc_commutated(&mut motor, false, 2_000);
+    motor
+        .set_faults(BldcFaults {
+            open_phases: [true, true, false],
+            ..BldcFaults::default()
+        })
+        .unwrap();
+
+    let snapshot = motor.snapshot();
+    assert_eq!(snapshot.faults.open_phases, [true, true, false]);
+    assert_eq!(snapshot.phase_currents_a, [0.0; 3]);
+
+    let command = InverterCommand::six_step(snapshot.commutation_sector).unwrap();
+    motor.step(command, DT_S).unwrap();
+    assert_eq!(motor.snapshot().phase_currents_a, [0.0; 3]);
 }
 
 #[test]

@@ -677,6 +677,35 @@ motor_models:
     }
 
     #[test]
+    fn bldc_open_phase_faults_are_independent_and_order_independent() {
+        for (first, second) in [
+            ("open-phase-a", "open-phase-b"),
+            ("open-phase-b", "open-phase-a"),
+        ] {
+            let mut bus = bldc_bus();
+            bus.set_motor_named_fault("drive_motor", first, true)
+                .unwrap();
+            bus.set_motor_named_fault("drive_motor", second, true)
+                .unwrap();
+            assert_eq!(
+                bus.motor_snapshots()[0].faults,
+                ["open-phase-a", "open-phase-b"]
+            );
+
+            bus.set_motor_named_fault("drive_motor", first, false)
+                .unwrap();
+            assert_eq!(bus.motor_snapshots()[0].faults, [second]);
+            bus.set_motor_named_fault("drive_motor", first, false)
+                .unwrap();
+            assert_eq!(bus.motor_snapshots()[0].faults, [second]);
+
+            bus.set_motor_named_fault("drive_motor", second, false)
+                .unwrap();
+            assert!(bus.motor_snapshots()[0].faults.is_empty());
+        }
+    }
+
+    #[test]
     fn injected_inverter_and_hall_faults_persist_until_explicit_clear() {
         let mut bus = bldc_bus();
         bus.set_motor_named_fault("drive_motor", "inverter", true)
