@@ -256,7 +256,6 @@ impl Nrf52Wdt {
                 self.counter = 0;
             } else {
                 self.counter -= left as u32;
-                left = 0;
                 break;
             }
             if self.counter == 0 {

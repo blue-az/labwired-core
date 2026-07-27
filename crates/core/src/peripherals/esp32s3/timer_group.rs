@@ -530,16 +530,10 @@ impl Esp32s3TimerGroup {
         }
         let cpu_per_count = timer.divider().saturating_mul(cpu_per_apb).max(1);
         let counts_needed = if timer.increasing() {
-            if timer.counter >= timer.alarm {
-                // Already at/past target without edge latch — fire ASAP.
-                0
-            } else {
-                timer.alarm - timer.counter
-            }
-        } else if timer.counter <= timer.alarm {
-            0
+            // Already at/past target without edge latch — saturating_sub → 0 (fire ASAP).
+            timer.alarm.saturating_sub(timer.counter)
         } else {
-            timer.counter - timer.alarm
+            timer.counter.saturating_sub(timer.alarm)
         };
         if counts_needed == 0 {
             return Some(0);

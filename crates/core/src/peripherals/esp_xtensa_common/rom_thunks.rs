@@ -1218,8 +1218,9 @@ pub fn monotonic_counter_32(cpu: &mut XtensaLx7, _bus: &mut dyn Bus) -> SimResul
 /// - a non-zero [`MONOTONIC_TICKS`] (fake `esp_timer` already advanced),
 /// - leftover [`APPCPU_BOOT_ADDR`] / handshake flag lists,
 /// - the bump-allocator cursor if any heap thunk is still wired,
-/// and the second session can die with `Memory access violation at 0x33xxxx`
-/// while the first session was fine.
+///
+/// Without the reset, the second session can die with
+/// `Memory access violation at 0x33xxxx` while the first session was fine.
 pub fn reset_esp32_session_state() {
     use core::sync::atomic::Ordering;
     MONOTONIC_TICKS.store(0, Ordering::Relaxed);
