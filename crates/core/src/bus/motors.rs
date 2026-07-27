@@ -346,9 +346,10 @@ impl SystemBus {
                             && pwm.main_output_enabled
                             && valid_pwm
                     }) {
-                        for (command, fraction) in pwm_edge_schedule(pwm) {
+                        for (command, duration_cycles) in pwm_interval_schedule(pwm, elapsed as f64)
+                        {
                             for step_s in stable_substeps(
-                                dt_s * fraction,
+                                duration_cycles / *simulation_clock_hz as f64,
                                 0.25 * params.inductance_h / params.resistance_ohm,
                             ) {
                                 if plant.step(command, step_s).is_err() {
@@ -490,26 +491,61 @@ impl SystemBus {
     }
 }
 
+#[cfg(test)]
 fn pwm_edge_schedule(
     pwm: crate::peripherals::timer::TimerOutputSnapshot,
 ) -> Vec<(InverterCommand, f64)> {
+    let period_cycles = (pwm.period_ticks * pwm.prescaler_divisor) as f64;
+    pwm_interval_schedule(pwm, period_cycles)
+        .into_iter()
+        .map(|(command, cycles)| (command, cycles / period_cycles))
+        .collect()
+}
+
+fn pwm_interval_schedule(
+    pwm: crate::peripherals::timer::TimerOutputSnapshot,
+    elapsed_cycles: f64,
+) -> Vec<(InverterCommand, f64)> {
     let dead = (f64::from(pwm.dead_time_ticks) / pwm.period_ticks as f64).clamp(0.0, 1.0);
-    let mut edges = vec![0.0, 1.0];
+    let period_cycles = (pwm.period_ticks * pwm.prescaler_divisor) as f64;
+    // A PSC rewrite may leave the timer's raw phase above the new divisor;
+    // the timer then increments once on the next CPU cycle. Represent that
+    // state as the final subcycle rather than inventing extra increments.
+    let prescaler_phase = u64::from(pwm.prescaler_phase).min(pwm.prescaler_divisor - 1);
+    let start =
+        f64::from(pwm.counter_ticks) * pwm.prescaler_divisor as f64 + prescaler_phase as f64;
+    let end = start + elapsed_cycles;
+    let mut normalized_edges = vec![0.0, 1.0];
     for channel in &pwm.channels[..3] {
         let duty = channel.duty_fraction;
-        edges.push((dead / 2.0).clamp(0.0, 1.0));
-        edges.push((duty - dead / 2.0).clamp(0.0, 1.0));
-        edges.push((duty + dead / 2.0).clamp(0.0, 1.0));
-        edges.push((1.0 - dead / 2.0).clamp(0.0, 1.0));
+        normalized_edges.push((dead / 2.0).clamp(0.0, 1.0));
+        normalized_edges.push((duty - dead / 2.0).clamp(0.0, 1.0));
+        normalized_edges.push((duty + dead / 2.0).clamp(0.0, 1.0));
+        normalized_edges.push((1.0 - dead / 2.0).clamp(0.0, 1.0));
+    }
+    normalized_edges.sort_by(f64::total_cmp);
+    normalized_edges.dedup();
+    let mut edges = vec![start, end];
+    let first_period = (start / period_cycles).floor() as i64;
+    let last_period = (end / period_cycles).floor() as i64;
+    for period in first_period..=last_period {
+        let base = period as f64 * period_cycles;
+        edges.extend(
+            normalized_edges
+                .iter()
+                .map(|edge| base + edge * period_cycles)
+                .filter(|edge| *edge > start && *edge < end),
+        );
     }
     edges.sort_by(f64::total_cmp);
     edges.dedup();
     edges
         .windows(2)
         .filter_map(|window| {
-            let fraction = window[1] - window[0];
-            (fraction > 0.0).then(|| {
-                let phase = (window[0] + window[1]) / 2.0;
+            let duration_cycles = window[1] - window[0];
+            (duration_cycles > 0.0).then(|| {
+                let phase =
+                    ((window[0] + window[1]) / 2.0).rem_euclid(period_cycles) / period_cycles;
                 let gates: [GatePair; 3] = std::array::from_fn(|index| {
                     sampled_gate_pair(pwm.channels[index], phase, dead)
                 });
@@ -520,7 +556,7 @@ fn pwm_edge_schedule(
                         phase_b: gates[1],
                         phase_c: gates[2],
                     },
-                    fraction,
+                    duration_cycles,
                 )
             })
         })
@@ -586,6 +622,9 @@ mod tests {
             main_output_enabled: true,
             counter_enabled: true,
             period_ticks: 1000,
+            counter_ticks: 0,
+            prescaler_divisor: 1,
+            prescaler_phase: 0,
         }
     }
 
@@ -601,6 +640,9 @@ mod tests {
             main_output_enabled: true,
             counter_enabled: true,
             period_ticks: 1000,
+            counter_ticks: 0,
+            prescaler_divisor: 1,
+            prescaler_phase: 0,
         };
         let mut motor = BldcMotor::new(BldcMotorParams {
             resistance_ohm: 1.0,
@@ -628,6 +670,136 @@ mod tests {
             .filter(|(command, _)| command.phase_a.high)
             .map(|(_, fraction)| fraction)
             .sum()
+    }
+
+    fn advance_phase(mut snapshot: TimerOutputSnapshot, cycles: u64) -> TimerOutputSnapshot {
+        let divisor = snapshot.prescaler_divisor;
+        let timer_cycles = u64::from(snapshot.prescaler_phase) + cycles;
+        let increments = timer_cycles / divisor;
+        snapshot.prescaler_phase = (timer_cycles % divisor) as u32;
+        snapshot.counter_ticks =
+            ((u64::from(snapshot.counter_ticks) + increments) % snapshot.period_ticks) as u32;
+        snapshot
+    }
+
+    fn schedule_signature(
+        snapshot: TimerOutputSnapshot,
+        partitions: &[u64],
+    ) -> Vec<(InverterCommand, f64)> {
+        let mut snapshot = snapshot;
+        let mut result: Vec<(InverterCommand, f64)> = Vec::new();
+        for &cycles in partitions {
+            for (command, duration) in pwm_interval_schedule(snapshot, cycles as f64) {
+                if let Some((previous, previous_duration)) = result.last_mut() {
+                    if *previous == command {
+                        *previous_duration += duration;
+                        continue;
+                    }
+                }
+                result.push((command, duration));
+            }
+            snapshot = advance_phase(snapshot, cycles);
+        }
+        result
+    }
+
+    fn partitioned_motor_snapshot(
+        snapshot: TimerOutputSnapshot,
+        partitions: &[u64],
+    ) -> crate::physics::motor::BldcMotorSnapshot {
+        let mut motor = BldcMotor::new(BldcMotorParams {
+            resistance_ohm: 1.0,
+            inductance_h: 0.001,
+            torque_constant_nm_per_a: 0.1,
+            back_emf_constant_v_per_rad_s: 0.1,
+            supply_voltage_v: 24.0,
+            pole_pairs: 2,
+            shaft: ShaftParams {
+                inertia_kg_m2: 0.01,
+                viscous_friction_nm_per_rad_s: 0.0,
+                load_torque_nm: 0.0,
+            },
+        })
+        .unwrap();
+        let mut snapshot = snapshot;
+        for &cycles in partitions {
+            for (command, duration) in pwm_interval_schedule(snapshot, cycles as f64) {
+                motor.step(command, duration / 80_000_000.0).unwrap();
+            }
+            snapshot = advance_phase(snapshot, cycles);
+        }
+        motor.snapshot()
+    }
+
+    fn assert_motor_snapshots_close(
+        left: crate::physics::motor::BldcMotorSnapshot,
+        right: crate::physics::motor::BldcMotorSnapshot,
+    ) {
+        // Partition boundaries can split one ODE step while preserving the
+        // exact command sequence. Keep the tolerance near floating roundoff;
+        // this is intentionally local instead of weakening snapshot equality.
+        const TOLERANCE: f64 = 1e-7;
+        for (left, right) in left
+            .phase_currents_a
+            .into_iter()
+            .zip(right.phase_currents_a)
+            .chain([
+                (left.position_rad, right.position_rad),
+                (left.speed_rpm, right.speed_rpm),
+                (
+                    left.electromagnetic_torque_nm,
+                    right.electromagnetic_torque_nm,
+                ),
+            ])
+        {
+            assert!((left - right).abs() <= TOLERANCE, "{left} != {right}");
+        }
+    }
+
+    #[test]
+    fn pwm_interval_schedule_is_batching_invariant_across_periods_and_partials() {
+        let mut snapshot = pwm(0.25, 0);
+        snapshot.period_ticks = 10;
+        snapshot.prescaler_divisor = 4;
+        assert_eq!(
+            schedule_signature(snapshot, &[97]),
+            schedule_signature(snapshot, &[13, 29, 55]),
+            "multi-period integration must retain the actual PWM period"
+        );
+        assert_eq!(
+            schedule_signature(snapshot, &[31]),
+            schedule_signature(snapshot, &[7, 11, 13]),
+            "partial-period integration must retain the same command ordering"
+        );
+        assert_motor_snapshots_close(
+            partitioned_motor_snapshot(snapshot, &[97]),
+            partitioned_motor_snapshot(snapshot, &[13, 29, 55]),
+        );
+        assert_motor_snapshots_close(
+            partitioned_motor_snapshot(snapshot, &[31]),
+            partitioned_motor_snapshot(snapshot, &[7, 11, 13]),
+        );
+    }
+
+    #[test]
+    fn pwm_interval_schedule_starts_at_nonzero_counter_and_prescaler_phase() {
+        let mut snapshot = pwm(0.25, 0);
+        snapshot.period_ticks = 10;
+        snapshot.prescaler_divisor = 4;
+        snapshot.counter_ticks = 1;
+        snapshot.prescaler_phase = 3;
+        let one_shot = schedule_signature(snapshot, &[35]);
+        let partitioned = schedule_signature(snapshot, &[1, 8, 17, 9]);
+        assert_eq!(one_shot, partitioned);
+        assert!(
+            one_shot.first().unwrap().0.phase_a.high,
+            "the nonzero start phase is before CCR and starts with phase A high"
+        );
+        assert!(
+            one_shot.iter().any(|(command, _)| !command.phase_a.high)
+                && one_shot.last().unwrap().0.phase_a.high,
+            "the interval must cross CCR and then the timer wrap"
+        );
     }
 
     #[test]

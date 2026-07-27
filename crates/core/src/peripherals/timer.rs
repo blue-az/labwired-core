@@ -187,6 +187,12 @@ pub struct TimerOutputSnapshot {
     pub main_output_enabled: bool,
     pub counter_enabled: bool,
     pub period_ticks: u64,
+    /// Authoritative current counter and prescaler phase. Motor service samples
+    /// this before the timer advances the interval. The timer model currently
+    /// implements edge-aligned up-counting.
+    pub counter_ticks: u32,
+    pub prescaler_divisor: u64,
+    pub prescaler_phase: u32,
 }
 
 impl Timer {
@@ -302,6 +308,9 @@ impl Timer {
             main_output_enabled: self.advanced && (self.bdtr & (1 << 15)) != 0,
             counter_enabled: (self.cr1 & 1) != 0,
             period_ticks: period,
+            counter_ticks: self.cnt.get(),
+            prescaler_divisor: u64::from(self.psc) + 1,
+            prescaler_phase: self.psc_cnt.get(),
         }
     }
 
@@ -1034,7 +1043,10 @@ mod tests {
         tim.write_u32(0x20, 0x000F).unwrap(); // E/P/NE/NP
         tim.write_u32(0x18, 0x0060).unwrap(); // OC1M = PWM mode 1
         tim.write_u32(0x44, (1 << 15) | 0x40).unwrap();
+        tim.write_u32(0x28, 3).unwrap(); // PSC=3: four CPU cycles per timer tick
         tim.write_u32(0x00, 1).unwrap(); // CEN
+        assert!(!tim.tick().irq);
+        assert!(!tim.tick().irq);
 
         let output = tim.output_snapshot();
         assert!(output.main_output_enabled);
@@ -1043,6 +1055,10 @@ mod tests {
         assert!(output.channels[0].active_low);
         assert!(output.channels[0].complementary_active_low);
         assert!(output.counter_enabled);
+        assert_eq!(output.counter_ticks, 0);
+        assert_eq!(output.prescaler_divisor, 4);
+        assert_eq!(output.prescaler_phase, 2);
+        assert_eq!(output.period_ticks, 100);
         assert_eq!(output.channels[0].mode, TimerChannelOutputMode::Pwm1);
     }
 
