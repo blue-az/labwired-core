@@ -9,7 +9,7 @@
 //!
 //! This test builds each family's real chip+system bus with `walk_deleted =
 //! None` (auto-derive), prints the walk-forcing set and non-forcer blockers,
-//! and guards the green families (C3 / F103 / nRF / RP2040 / H563).
+//! and guards the green families (C3 / F103 / nRF / RP2040 / H563 / S3).
 
 use labwired_config::{ChipDescriptor, SystemManifest};
 use labwired_core::bus::{SystemBus, RECOMMENDED_TICK_INTERVAL};
@@ -365,8 +365,50 @@ fn h563_is_walk_free_and_tick_512() {
     }
 }
 
+/// PR-E gate: ESP32-S3 production bus (`configure_xtensa_esp32s3`) auto-derives
+/// walk deletion under `event-scheduler` and reaches `RECOMMENDED_TICK_INTERVAL`
+/// (512). Class-A inert models clear `needs_legacy_walk`; Class-B models take
+/// scheduler / matrix level export (or bus_tick for GDMA/RMT). No hand
+/// `walk_deleted` hatch — `configure` ends with `recompute_walk_deletable`.
+#[test]
+fn esp32s3_is_walk_free_and_tick_512() {
+    let bus = bus_esp32s3();
+    let inv = inventory("esp32s3", &bus);
+    print_inventory(&inv);
+
+    #[cfg(feature = "event-scheduler")]
+    {
+        let forcing: Vec<&str> = inv.forcers.iter().map(|f| f.name.as_str()).collect();
+        assert!(
+            forcing.is_empty(),
+            "esp32s3 still has walk-forcers under event-scheduler: {forcing:?}"
+        );
+        assert!(
+            inv.legacy_walk_disabled,
+            "esp32s3: expected legacy_walk_disabled after configure + recompute"
+        );
+        assert!(
+            !inv.flash_models_ops && !inv.has_iolink_master,
+            "esp32s3: unexpected non-forcer max_safe blocker"
+        );
+        assert_eq!(
+            inv.max_safe, RECOMMENDED_TICK_INTERVAL,
+            "esp32s3: expected max_safe={RECOMMENDED_TICK_INTERVAL}, got {}",
+            inv.max_safe
+        );
+    }
+
+    #[cfg(not(feature = "event-scheduler"))]
+    {
+        assert_eq!(
+            inv.max_safe, 1,
+            "featureless build must keep max_safe=1"
+        );
+    }
+}
+
 /// Regression: green families flip walk-deletion and raise max_safe to 512
-/// under `event-scheduler`. ESP32-S3 remains the open inventory surface.
+/// under `event-scheduler`.
 #[test]
 fn tick_interval_inventory_all_families() {
     let rows = [
@@ -402,8 +444,16 @@ fn tick_interval_inventory_all_families() {
     {
         // Green families: max_safe must already be RECOMMENDED_TICK_INTERVAL.
         // H563 keeps flash_models_ops (CPU quantum 1) but that no longer
-        // pins the peripheral tick interval.
-        for name in ["stm32f103", "esp32c3", "nrf52840", "rp2040", "stm32h563"] {
+        // pins the peripheral tick interval. ESP32-S3 (PR-E) is production
+        // `configure_xtensa_esp32s3` + recompute.
+        for name in [
+            "stm32f103",
+            "esp32c3",
+            "nrf52840",
+            "rp2040",
+            "stm32h563",
+            "esp32s3",
+        ] {
             let inv = inventories
                 .iter()
                 .find(|i| i.chip == name)
@@ -440,43 +490,6 @@ fn tick_interval_inventory_all_families() {
                 "{name}: expected max_safe={RECOMMENDED_TICK_INTERVAL}, got {}",
                 inv.max_safe
             );
-        }
-
-        // Open inventory: ESP32-S3 production bank still has walk-forcers.
-        {
-            let name = "esp32s3";
-            let inv = inventories
-                .iter()
-                .find(|i| i.chip == name)
-                .expect("family present");
-            let blocked = !inv.legacy_walk_disabled
-                || inv.has_iolink_master
-                || (inv.hcsr04_count > 0 && inv.hcsr04_scheduling_disabled);
-            if blocked {
-                assert_eq!(
-                    inv.max_safe, 1,
-                    "{name}: blocked bus must keep max_safe=1 (got {}). \
-                     forcers={:?} iolink={} walk_off={}",
-                    inv.max_safe,
-                    inv.forcers
-                        .iter()
-                        .map(|f| f.name.as_str())
-                        .collect::<Vec<_>>(),
-                    inv.has_iolink_master,
-                    !inv.legacy_walk_disabled,
-                );
-                assert!(
-                    !inv.forcers.is_empty()
-                        || inv.has_iolink_master
-                        || (inv.hcsr04_count > 0 && inv.hcsr04_scheduling_disabled),
-                    "{name}: max_safe=1 with empty forcers and no non-forcer blockers — unexpected"
-                );
-            } else {
-                assert_eq!(
-                    inv.max_safe, RECOMMENDED_TICK_INTERVAL,
-                    "{name}: unblocked bus should already report max_safe={RECOMMENDED_TICK_INTERVAL}"
-                );
-            }
         }
     }
 

@@ -89,12 +89,14 @@ pub fn try_build(canonical_type: &str, p_cfg: &PeripheralConfig) -> Option<Box<d
                 .get("cpu_clock_hz")
                 .and_then(|v| v.as_u64())
                 .unwrap_or(240_000_000) as u32;
-            // Stay on the per-cycle walk. `Systimer::new` defaults to
-            // scheduler-driven mode; without the `event-scheduler` feature the
-            // walk skips `uses_scheduler()` models, so the FreeRTOS tick alarm
-            // never advances → idle/`vTaskDelay` hang, loopTask stuck after
-            // first `delay()` (Arduino setup never runs).
-            Box::new(systimer::Systimer::new_with_source_legacy_tick(
+            // Scheduler-driven by default (`Systimer::new_with_source`). Under
+            // `event-scheduler` the bus attaches a cycle clock and alarms ride
+            // `take_scheduled_events` / `on_event`; without the feature the
+            // walk still visits `uses_scheduler()` models (see
+            // `legacy_tick_index_active`), so FreeRTOS tick keeps advancing.
+            // Prefer scheduler mode on the production path so the S3 bus can
+            // derive walk-deletion once every other forcer is migrated.
+            Box::new(systimer::Systimer::new_with_source(
                 cpu_clock_hz,
                 57, // ETS_SYSTIMER_TARGET0_INTR_SOURCE
             ))

@@ -96,7 +96,7 @@ use crate::bus::SystemBus;
 use crate::peripherals::esp32s3::gpio::{
     Esp32s3Gpio, RMT_SIG_OUT0, RMT_SIG_OUT1, RMT_SIG_OUT2, RMT_SIG_OUT3,
 };
-use crate::{Bus, Peripheral, PeripheralTickResult, SimResult};
+use crate::{Bus, CycleClock, Peripheral, PeripheralTickResult, SimResult};
 
 /// Number of TX channels (0..3).
 const TX_CHANNELS: usize = 4;
@@ -272,6 +272,8 @@ pub struct Esp32s3Rmt {
     irq_holdoff_cycles: u32,
     /// Count of TX_START pulses (rgbLedWrite / RMT TX). Matrix L2 oracle.
     tx_start_count: u32,
+    /// Bus-published cycle clock (walk-free level export).
+    clock: Option<CycleClock>,
 }
 
 impl Esp32s3Rmt {
@@ -317,6 +319,7 @@ impl Esp32s3Rmt {
             playback: None,
             irq_holdoff_cycles: 0,
             tx_start_count: 0,
+            clock: None,
         }
     }
 
@@ -743,13 +746,31 @@ impl Peripheral for Esp32s3Rmt {
         }
     }
 
-    /// Bus-tick opt-in: active while a timed playback is in flight.
+    /// Bus-tick opt-in: active while a timed playback is in flight OR the
+    /// post-TX_START IRQ holdoff is counting down (holdoff used to ride the
+    /// legacy walk; with the walk deleted it must still advance).
     fn needs_bus_tick(&self) -> bool {
-        self.playback.is_some()
+        self.playback.is_some() || self.irq_holdoff_cycles > 0
+    }
+
+    /// Walk-free: TX playback + holdoff ride `tick_with_bus`; level IRQs export
+    /// via `matrix_irq_sources_into`. Without a cycle clock stay on the walk.
+    fn uses_scheduler(&self) -> bool {
+        cfg!(feature = "event-scheduler") && self.clock.is_some()
     }
 
     fn needs_legacy_walk(&self) -> bool {
-        true
+        !self.uses_scheduler()
+    }
+
+    fn attach_cycle_clock(&mut self, clock: CycleClock) {
+        self.clock = Some(clock);
+    }
+
+    fn matrix_irq_sources_into(&self, out: &mut Vec<u32>) {
+        if self.irq_holdoff_cycles == 0 && self.int_st() != 0 {
+            out.push(self.source_id);
+        }
     }
 
     /// Play out the armed TX waveform onto the routed GPIO pad(s), one bus tick
@@ -760,6 +781,11 @@ impl Peripheral for Esp32s3Rmt {
     /// [`Esp32s3Gpio::drive_pad_output`], reaching every registered
     /// `GpioObserver` with the correct sim-cycle timing.
     fn tick_with_bus(&mut self, bus: &mut dyn Bus) {
+        // Holdoff used to decrement in `tick()`; when the walk is deleted that
+        // path no longer runs, so the bus-tick path owns the countdown.
+        if self.irq_holdoff_cycles > 0 {
+            self.irq_holdoff_cycles = self.irq_holdoff_cycles.saturating_sub(1);
+        }
         if self.playback.is_none() {
             return;
         }

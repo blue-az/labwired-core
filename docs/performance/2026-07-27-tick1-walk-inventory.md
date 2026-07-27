@@ -33,7 +33,8 @@ This document records that set per family so PR-B–E of the monorepo WASM
 real-time plan can migrate forcers (or clear non-forcer blockers) without
 guessing.
 
-**Inventory only** — no walk migrations, no `max_safe` changes.
+Originally inventory-only; PR-B–E then migrated forcers so every shipped WASM
+family now auto-derives walk-deletion and `max_safe=512` under `event-scheduler`.
 
 ## How to reproduce
 
@@ -54,20 +55,18 @@ Each case builds with `walk_deleted = None` (auto-derive).
 | **nrf52840** | `configs/systems/nrf52840-dk.yaml` + `configure_cortex_m` | true | false | false | **0** | **512** |
 | **rp2040** | `configs/systems/rp2040-pico.yaml` + `configure_cortex_m` | true | false | false | **0** | **512** |
 | **stm32h563** | `configs/systems/nucleo-h563zi-demo.yaml` + `configure_cortex_m` | true | **true** (CPU q=1 only) | false | **0** | **512** |
-| **esp32s3** | `configure_xtensa_esp32s3` (WASM / production) | false | false | false | **38** | **1** |
+| **esp32s3** | `configure_xtensa_esp32s3` (WASM / production) | true | false | false | **0** | **512** |
 
 Notes:
 
-- **C3 / F103 / nRF52840 / RP2040 / H563** are regression-green (asserted in the
-  inventory test and the PR-B/C/D gates `nrf52840_dk_is_walk_free_and_tick_512` /
-  `rp2040_pico_is_walk_free_and_tick_512` / `h563_is_walk_free_and_tick_512`).
-- **S3 is NOT walk-free on the production path** (`max_safe=1`, **38 forcers**).
-  An earlier inventory revision used `SystemBus::from_config` on
-  `esp32s3.yaml` / `esp32s3-zero.yaml`, which **stubs** real S3 models
-  (rmt/gdma/systimer/…) and falsely reported walk-free / `max_safe=512`.
-  Production WASM (`WasmSimulator::new_from_config_xtensa_esp32s3`) and
-  firmware e2e/oracle buses call `configure_xtensa_esp32s3` →
-  `register_esp32s3_peripherals`; the inventory now mirrors that factory.
+- **C3 / F103 / nRF52840 / RP2040 / H563 / S3** are regression-green (asserted in the
+  inventory test and the PR-B/C/D/E gates `nrf52840_dk_is_walk_free_and_tick_512` /
+  `rp2040_pico_is_walk_free_and_tick_512` / `h563_is_walk_free_and_tick_512` /
+  `esp32s3_is_walk_free_and_tick_512`).
+- **S3** uses production `configure_xtensa_esp32s3` (not chip-YAML
+  `from_config` stubs) and ends with `recompute_walk_deletable()` so WASM gets
+  `max_safe=512` without a hand hatch. Featureless builds still report
+  `max_safe=1`.
 - **H563** still has `flash_models_ops=true` so CPU batches stay quantum-1
   (`requires_cycle_accurate`), but the peripheral tick interval is 512.
 
@@ -131,53 +130,44 @@ Notes:
 
 ---
 
-## esp32s3 — max_safe=1 (38 forcers on production path)
+## esp32s3 — already 512 (PR-E)
 
 - **Bus path:** `SystemBus::new()` + `configure_xtensa_esp32s3(&Esp32s3Opts::default())`
-  + `recompute_walk_deletable()` (inventory auto-derive; same predicate as
-  `from_config` with `walk_deleted: null`)
+  (ends with `recompute_walk_deletable()` on the production path; inventory
+  also recomputes for symmetry)
 - **Not** `SystemBus::from_config` on chip YAML — that path stubs the coded S3
   models and previously produced a **false walk-free** inventory
 - Mirrors: `WasmSimulator::new_from_config_xtensa_esp32s3`,
   `esp32s3_reset_conformance`, S3 e2e / walk-differential tests
-- `max_safe_tick_interval`: **1**
-- `legacy_walk_disabled`: **false**
+- `max_safe_tick_interval`: **512**
+- `legacy_walk_disabled`: **true**
 - `flash_models_ops`: false · iolink: false · hcsr04: none
+- **Forcers:** _(none)_
 
-### Walk-forcers (38)
+### Migration summary (38 → 0)
 
-All with `needs_legacy_walk=true`, `uses_scheduler=false`:
+| Class | Models | Mechanism |
+|-------|--------|-----------|
+| **Class-A inert** | `intmatrix`, `core1_control`, `extmem`, `system_regs`/`system_regs_hi`, `rtc_cntl`, `gpio`, `sens_s3`, `rng`, `sha`, `hmac` | `needs_legacy_walk=false` — pure register banks / write-settled engines; `tick()` is trait-default or observer-only |
+| **Class-B level-export** | `crosscore_ipi`, `pcnt`, `ledc`, `spi2/3_s3`, `i2s0/1_s3`, `twai`, `aes`, `rsa`, `sar_adc_s3`, `i2c0/1`, `gdma` | `uses_scheduler` when clock attached + `matrix_irq_sources_into` (C3 SPI pattern); GDMA transfer work stays on `tick_with_bus` |
+| **Class-B real schedule** | `systimer` (factory now scheduler-mode), `timg0/1_s3`, `uart0/1/2_s3`, `rmt_s3`, `mcpwm0/1`, `ds`, `sdmmc`, `lcd_cam`, `usb_otg` | `take_scheduled_events` / `on_event` (or RMT holdoff+playback via `bus_tick` + matrix level) |
 
-```text
-intmatrix, crosscore_ipi, core1_control, extmem, system_regs, system_regs_hi,
-rtc_cntl, systimer, gpio, sens_s3, rng, sha, pcnt, ledc, timg0_s3, timg1_s3,
-rmt_s3, spi2_s3, spi3_s3, sar_adc_s3, gdma, i2s0_s3, i2s1_s3, twai, aes, rsa,
-hmac, ds, mcpwm0, mcpwm1, sdmmc, lcd_cam, usb_otg, i2c1, uart0_s3, uart1_s3,
-uart2_s3, i2c0
-```
+Featureless builds still report `max_safe=1` (honest). Gates:
 
-Notable real models that the `from_config` stub path had mis-classified (or
-omitted) include **systimer**, **gdma**, **rmt_s3**, **gpio**, **uart\*_s3**,
-**timg\*_s3**, **i2c0/1**, **spi2/3_s3** — these force the walk on the production
-bank even when YAML stubs looked scheduler/inert.
+- Inventory: `esp32s3_is_walk_free_and_tick_512` in `tick_interval_inventory.rs`
+- Production configure auto-recomputes so WASM inherits tick 512 without a hatch
 
-### Non-forcers on this bus (memory map / stubs)
+### Full peripheral status (production bank)
 
 | name | role | `needs_legacy_walk` | `uses_scheduler` |
 |------|------|---------------------|------------------|
-| iram, dram, rtc_slow, rtc_fast | inert | false | false |
-| flash_icache, flash_dcache | inert | false | false |
-| rom, drom | inert | false | false |
-| spimem1 | inert | false | false |
-| system (catch-all stub) | inert | false | false |
-| efuse, low_mmio, mmio_rest | inert | false | false |
-| usb_serial_jtag | inert | false | false |
-| io_mux | inert | false | false |
-
-**Unblock path for PR planning:** migrate the 38 forcers (Class-A inert sweep
-where `tick()` is empty / default-true, else real scheduler + differential
-gates — same pattern as C3). Do **not** trust chip-YAML `from_config` S3
-inventory until Stage-3 factory parity lands.
+| iram/dram/rtc_*/flash_*/rom/drom | inert | false | false |
+| intmatrix, core1_control, extmem, system* | inert | false | false |
+| rtc_cntl, gpio, sens_s3, rng, sha, hmac | inert | false | false |
+| crosscore_ipi, pcnt, ledc, spi*, i2s*, twai, aes, rsa, sar_adc, i2c*, gdma | scheduler (level export) | false | true |
+| systimer | scheduler | true | true |
+| timg*, uart*, rmt, mcpwm*, ds, sdmmc, lcd_cam, usb_otg | scheduler | false | true |
+| usb_serial_jtag, io_mux, efuse, stubs | inert | false | false |
 
 ---
 
@@ -370,4 +360,4 @@ compare-event / IRQ-driven RTC shapes are the supported surface today.
 | **PR-B** | **nrf52840** | **DONE** — empty forcers, `max_safe=512` under `event-scheduler`; Machine TIMER@512 gate; EasyDMA still bus_tick-lagged (documented interim) |
 | **PR-C** | **rp2040** | **DONE** — empty forcers, `max_safe=512` under `event-scheduler`; Machine TIMER ALARM0@512 gate |
 | **PR-D** | **stm32h563** | **DONE** — empty forcers, `max_safe=512`; `flash_models_ops` still forces CPU quantum 1 (not tick interval); FDCAN walk returns if CanBus interconnect is attached |
-| PR-E | esp32s3 | 38 forcers on `configure_xtensa_esp32s3` production bank (not YAML stubs) |
+| **PR-E** | **esp32s3** | **DONE** — empty forcers, `max_safe=512` under `event-scheduler` on `configure_xtensa_esp32s3` + recompute; Class-A inert + Class-B level-export / scheduled engines |
