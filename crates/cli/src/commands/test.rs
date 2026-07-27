@@ -128,12 +128,21 @@ fn run_c3_rom_boot_no_elf(
             }
         };
 
+    // Load the manifest once: it drives both the UART sink selection (debug_uart)
+    // and — the universal WiFi adapter — the `wifi_ap` attach below.
+    let manifest_opt =
+        system_path.and_then(|path| labwired_config::SystemManifest::from_file(path).ok());
+    let debug_uart = manifest_opt.as_ref().and_then(|m| m.debug_uart.clone());
+    // Seed the station eFuse MAC when a `wifi_ap` is present so the C3 stays
+    // associated (a zero eFuse MAC associates but drops); None otherwise keeps
+    // non-WiFi rom-boot byte-identical.
+    let wifi_station_mac = manifest_opt
+        .as_ref()
+        .and_then(labwired_core::system::wifi::wifi_ap_station_mac);
+
     // UART capture, mirroring the main flow: honour debug_uart, else all UARTs,
     // plus the IO-Link master log sink.
     let uart_tx = Arc::new(Mutex::new(Vec::new()));
-    let debug_uart = system_path
-        .and_then(|path| labwired_config::SystemManifest::from_file(path).ok())
-        .and_then(|manifest| manifest.debug_uart);
     if let Some(debug_uart) = debug_uart.as_deref() {
         if !bus.attach_uart_tx_sink_named(debug_uart, uart_tx.clone(), !args.no_uart_stdout) {
             warn!(
@@ -201,7 +210,7 @@ fn run_c3_rom_boot_no_elf(
             error!("resume snapshot self-key mismatch ({e}); cold-boot required");
             return ExitCode::from(EXIT_CONFIG_ERROR);
         }
-        let mut machine = match crate::build_c3_rom_boot_machine(bus, None) {
+        let mut machine = match crate::build_c3_rom_boot_machine(bus, wifi_station_mac) {
             Ok(m) => m,
             Err(code) => return code,
         };
@@ -223,11 +232,19 @@ fn run_c3_rom_boot_no_elf(
         // Cold faithful rom-boot. --capture-app-entry (the cache-miss path) is
         // handled inside execute_test_loop; with no ELF the app-entry PC falls
         // back to the XIP app-window detector.
-        match crate::build_c3_rom_boot_machine(bus, None) {
+        match crate::build_c3_rom_boot_machine(bus, wifi_station_mac) {
             Ok(m) => m,
             Err(code) => return code,
         }
     };
+
+    // Universal WiFi adapter: if the diagram carries a `wifi_ap`, attach every
+    // real WiFi MAC to a per-lab virtual-WiFi medium so the device associates →
+    // DHCP → HTTP under the hosted `test` path exactly like the CLI solo path and
+    // the browser. No-op when there is no `wifi_ap`.
+    if let Some(manifest) = manifest_opt.as_ref() {
+        labwired_core::system::wifi::attach_configured_wifi_ap(&mut machine.bus, manifest);
+    }
 
     let metrics = std::sync::Arc::new(labwired_core::metrics::PerformanceMetrics::new());
     apply_matrix_speed_opts(&mut machine);
