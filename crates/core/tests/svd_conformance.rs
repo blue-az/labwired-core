@@ -165,11 +165,7 @@ fn normalize(name: &str) -> String {
 fn aliases(id: &str) -> Vec<String> {
     let p = id.to_ascii_uppercase();
     // `tim1_pwm` declares the pwm class alongside timer; the block is TIM1.
-    let stem = p
-        .split('_')
-        .next()
-        .unwrap_or(&p)
-        .to_string();
+    let stem = p.split('_').next().unwrap_or(&p).to_string();
     let mut out = vec![p.clone(), stem.clone()];
     for base in [p, stem] {
         // Nordic: UART0→UARTE0, TWI1→TWIM1, SPI2→SPIM2, GPIO0→P0.
@@ -210,14 +206,16 @@ fn load_svd(rel: &str) -> SvdFacts {
     // Shared with the CLI importer and the coverage scan — see
     // `svd_ingestor::parse_svd`. A parse failure is a hard error here: silently
     // skipping an unparseable SVD is how a gate quietly stops covering a chip.
-    let device =
-        svd_ingestor::parse_svd(&xml).unwrap_or_else(|e| panic!("parse {rel}: {e}"));
+    let device = svd_ingestor::parse_svd(&xml).unwrap_or_else(|e| panic!("parse {rel}: {e}"));
     let mut bases: HashMap<String, HashSet<u64>> = HashMap::new();
     let mut irqs: HashMap<String, HashSet<u32>> = HashMap::new();
     let mut names = HashSet::new();
     for p in &device.peripherals {
         let name = normalize(&p.name);
-        bases.entry(name.clone()).or_default().insert(p.base_address);
+        bases
+            .entry(name.clone())
+            .or_default()
+            .insert(p.base_address);
         names.insert(name);
     }
 
