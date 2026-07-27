@@ -9,12 +9,14 @@ motor_models:
     inductance_h: 0.00018
     torque_constant_nm_per_a: 0.04
     back_emf_constant_v_per_rad_s: 0.04
-    rotor_inertia_kg_m2: 0.00002
+    rotor_inertia_kg_m2: 0.0000001
     viscous_friction_nm_per_rad_s: 0.000003
     supply_voltage_v: 24.0
-    load_torque_nm: 0.001
+    load_torque_nm: 0.0
     encoder_cpr: 2048
     pole_pairs: 7
+    current_limit_a: 40.0
+    overcurrent_trip_steps: 3
     simulation_clock_hz: 80000000
     phase_a_high_pin: PA8
     phase_a_low_pin: PB13
@@ -22,12 +24,14 @@ motor_models:
     phase_b_low_pin: PB14
     phase_c_high_pin: PA10
     phase_c_low_pin: PB15
-    enable_pin: PA0
-    hall_a_pin: PA1
-    hall_b_pin: PA2
-    hall_c_pin: PA3
-    encoder_a_pin: PA4
-    encoder_b_pin: PA5
-    encoder_index_pin: PA6
-    motor_fault_pin: PA7
+    enable_pin: PB0
+    hall_a_pin: PC0
+    hall_b_pin: PC1
+    hall_c_pin: PC2
+    encoder_a_pin: PC3
+    encoder_b_pin: PC4
+    encoder_index_pin: PC5
+    motor_fault_pin: PC6
     inverter_fault_pin: PB7
+    overcurrent_fault_pin: PB6
+    undervoltage_fault_pin: PC7

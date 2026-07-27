@@ -317,6 +317,8 @@ fn bldc_params(load_torque_nm: f64) -> BldcMotorParams {
         back_emf_constant_v_per_rad_s: 0.02,
         supply_voltage_v: 6.0,
         pole_pairs: 1,
+        current_limit_a: None,
+        overcurrent_trip_steps: 3,
         shaft: ShaftParams {
             inertia_kg_m2: 0.0001,
             viscous_friction_nm_per_rad_s: 0.00001,

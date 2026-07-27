@@ -309,6 +309,10 @@ pub struct BldcMotorParams {
     pub back_emf_constant_v_per_rad_s: f64,
     pub supply_voltage_v: f64,
     pub pole_pairs: u8,
+    /// Per-phase absolute current threshold. `None` disables overcurrent trip.
+    pub current_limit_a: Option<f64>,
+    /// Consecutive integration steps above the limit before latching.
+    pub overcurrent_trip_steps: u32,
     pub shaft: ShaftParams,
 }
 
@@ -316,6 +320,7 @@ pub struct BldcMotorParams {
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct BldcFaults {
     pub stalled: bool,
+    pub overcurrent: bool,
     pub open_phase: Option<Phase>,
     pub forced_hall_state: Option<u8>,
     pub hall_line_low: Option<Phase>,
@@ -368,6 +373,7 @@ pub struct BldcMotor {
     inverter_faults: Vec<InverterFault>,
     last_terminals: [PhaseTerminal; 3],
     faults: BldcFaults,
+    overcurrent_steps: u32,
 }
 
 impl BldcMotor {
@@ -380,6 +386,15 @@ impl BldcMotor {
             params.back_emf_constant_v_per_rad_s,
         )?;
         validate_positive("supply_voltage_v", params.supply_voltage_v)?;
+        if let Some(limit) = params.current_limit_a {
+            validate_positive("current_limit_a", limit)?;
+            if params.overcurrent_trip_steps == 0 {
+                return Err(ModelError {
+                    field: "overcurrent_trip_steps",
+                    message: "must be greater than zero when current_limit_a is set".into(),
+                });
+            }
+        }
         let hall_sensors = HallSensors::new(params.pole_pairs)?;
         let shaft = Shaft::new(params.shaft)?;
         let hall_state = hall_sensors.sample(0.0)?;
@@ -399,6 +414,7 @@ impl BldcMotor {
             inverter_faults: Vec::new(),
             last_terminals: [PhaseTerminal::Floating; 3],
             faults: BldcFaults::default(),
+            overcurrent_steps: 0,
         })
     }
 
@@ -558,6 +574,18 @@ impl BldcMotor {
         validate_finite("electromagnetic_torque_nm", torque_nm)?;
 
         candidate.phase_currents_a = phase_currents_a;
+        if candidate
+            .params
+            .current_limit_a
+            .is_some_and(|limit| phase_currents_a.iter().any(|current| current.abs() > limit))
+        {
+            candidate.overcurrent_steps = candidate.overcurrent_steps.saturating_add(1);
+            if candidate.overcurrent_steps >= candidate.params.overcurrent_trip_steps {
+                candidate.faults.overcurrent = true;
+            }
+        } else {
+            candidate.overcurrent_steps = 0;
+        }
         candidate.electromagnetic_torque_nm = torque_nm;
         candidate.inverter_faults = resolution.faults;
         candidate.last_terminals = terminals;

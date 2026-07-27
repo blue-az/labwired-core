@@ -77,6 +77,8 @@ pub(super) enum MotorRuntime {
         index: Option<ResolvedPin>,
         motor_fault: Option<ResolvedPin>,
         inverter_fault: Option<ResolvedPin>,
+        overcurrent_fault: Option<ResolvedPin>,
+        undervoltage_fault: Option<ResolvedPin>,
         simulation_clock_hz: u64,
         control_state: String,
         inverter_fault_active: bool,
@@ -211,6 +213,8 @@ impl SystemBus {
             back_emf_constant_v_per_rad_s: c.back_emf_constant_v_per_rad_s,
             supply_voltage_v: c.supply_voltage_v,
             pole_pairs: c.pole_pairs,
+            current_limit_a: c.current_limit_a,
+            overcurrent_trip_steps: c.overcurrent_trip_steps,
             shaft: ShaftParams {
                 inertia_kg_m2: c.rotor_inertia_kg_m2,
                 viscous_friction_nm_per_rad_s: c.viscous_friction_nm_per_rad_s,
@@ -246,6 +250,16 @@ impl SystemBus {
                 .inverter_fault_pin
                 .as_deref()
                 .map(|p| self.resolve_motor_input(&c.id, "inverter fault", p))
+                .transpose()?,
+            overcurrent_fault: c
+                .overcurrent_fault_pin
+                .as_deref()
+                .map(|p| self.resolve_motor_input(&c.id, "overcurrent fault", p))
+                .transpose()?,
+            undervoltage_fault: c
+                .undervoltage_fault_pin
+                .as_deref()
+                .map(|p| self.resolve_motor_input(&c.id, "undervoltage fault", p))
                 .transpose()?,
             simulation_clock_hz: c.simulation_clock_hz,
             control_state: "off:timer-stopped".to_owned(),
@@ -343,6 +357,8 @@ impl SystemBus {
                     index,
                     motor_fault,
                     inverter_fault,
+                    overcurrent_fault,
+                    undervoltage_fault,
                     simulation_clock_hz,
                     control_state,
                     inverter_fault_active,
@@ -452,6 +468,12 @@ impl SystemBus {
                     if let Some(pin) = inverter_fault {
                         self.drive_input(*pin, *inverter_fault_active);
                     }
+                    if let Some(pin) = overcurrent_fault {
+                        self.drive_input(*pin, snapshot.faults.overcurrent);
+                    }
+                    if let Some(pin) = undervoltage_fault {
+                        self.drive_input(*pin, snapshot.faults.undervoltage_v.is_some());
+                    }
                     if *inverter_fault_active {
                         *control_state = "fault:inverter".to_owned();
                     } else if snapshot.faults.stalled || snapshot.faults.open_phase.is_some() {
@@ -504,6 +526,12 @@ impl SystemBus {
                     let mut faults = Vec::new();
                     if s.faults.stalled {
                         faults.push("stalled".to_owned());
+                    }
+                    if s.faults.overcurrent {
+                        faults.push("overcurrent".to_owned());
+                    }
+                    if s.faults.undervoltage_v.is_some() {
+                        faults.push("undervoltage".to_owned());
                     }
                     if s.faults.open_phase.is_some() {
                         faults.push("open-phase".to_owned());
@@ -822,6 +850,8 @@ mod tests {
             back_emf_constant_v_per_rad_s: 0.1,
             supply_voltage_v: 24.0,
             pole_pairs: 2,
+            current_limit_a: None,
+            overcurrent_trip_steps: 3,
             shaft: ShaftParams {
                 inertia_kg_m2: 0.01,
                 viscous_friction_nm_per_rad_s: 0.0,
@@ -885,6 +915,8 @@ mod tests {
             back_emf_constant_v_per_rad_s: 0.1,
             supply_voltage_v: 24.0,
             pole_pairs: 2,
+            current_limit_a: None,
+            overcurrent_trip_steps: 3,
             shaft: ShaftParams {
                 inertia_kg_m2: 0.01,
                 viscous_friction_nm_per_rad_s: 0.0,

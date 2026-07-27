@@ -2,50 +2,105 @@
 // Copyright (C) 2026 Andrii Shylenko
 // SPDX-License-Identifier: MIT
 
-use labwired_core::system::builder::build_system_bus;
-use labwired_core::Bus;
+use labwired_core::system::cortex_m::configure_cortex_m;
+use labwired_core::{Bus, Machine};
+use std::sync::{Arc, Mutex};
 
-#[test]
-fn l476_bldc_stall_is_firmware_visible_and_moe_shutdown_disables_inverter() {
+fn fixture(
+    stalled: bool,
+) -> (
+    Machine<labwired_core::cpu::cortex_m::CortexM>,
+    Arc<Mutex<Vec<u8>>>,
+) {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap()
         .parent()
         .unwrap();
-    let mut bus =
-        build_system_bus(Some(&root.join("examples/nucleo-l476rg-bldc/system.yaml"))).unwrap();
+    let mut bus = labwired_core::system::builder::build_system_bus(Some(
+        &root.join("examples/nucleo-l476rg-bldc/system.yaml"),
+    ))
+    .unwrap();
+    let uart = Arc::new(Mutex::new(Vec::new()));
+    bus.attach_uart_tx_sink(uart.clone(), false);
+    let (cpu, _) = configure_cortex_m(&mut bus);
+    let mut machine = Machine::new(cpu, bus);
+    let elf = root.join("target/thumbv7em-none-eabihf/release/firmware-l476-bldc-six-step");
+    let image = labwired_loader::load_elf(&elf)
+        .unwrap_or_else(|error| panic!("build firmware fixture first ({elf:?}): {error}"));
+    machine.load_firmware(&image).unwrap();
+    if stalled {
+        machine.set_input_on("drive_motor", "stall", 1.0).unwrap();
+    }
+    (machine, uart)
+}
 
-    bus.write_u32(0x4002_104c, 1).unwrap(); // RCC GPIOA clock
-    bus.write_u32(0x4002_1060, 1 << 11).unwrap(); // RCC TIM1 clock
-    bus.write_u32(0x4800_0014, 1).unwrap(); // PA0 external enable
-    bus.write_u32(0x4001_2c2c, 999).unwrap();
-    bus.write_u32(0x4001_2c34, 300).unwrap();
-    bus.write_u32(0x4001_2c38, 300).unwrap();
-    bus.write_u32(0x4001_2c3c, 300).unwrap();
-    bus.write_u32(0x4001_2c18, 0x6868).unwrap();
-    bus.write_u32(0x4001_2c1c, 0x0068).unwrap();
-    bus.write_u32(0x4001_2c20, (1 << 0) | (1 << 6)).unwrap();
-    bus.write_u32(0x4001_2c44, (1 << 15) | 0x30).unwrap();
-    bus.write_u32(0x4001_2c00, 1).unwrap();
+fn contains(uart: &Arc<Mutex<Vec<u8>>>, token: &[u8]) -> bool {
+    uart.lock()
+        .unwrap()
+        .windows(token.len())
+        .any(|bytes| bytes == token)
+}
 
-    bus.set_input(Some("drive_motor"), "stall", 1.0).unwrap();
-    bus.set_current_cycle(4096);
-    bus.tick_peripherals_with_costs();
-    assert_ne!(
-        bus.read_u32(0x4800_0010).unwrap() & (1 << 7),
-        0,
-        "motor fault must reach PA7"
+#[test]
+fn l476_bldc_stall_runs_real_firmware_and_disables_real_inverter() {
+    let (mut machine, uart) = fixture(false);
+    for _ in 0..500_000 {
+        machine.step().unwrap();
+        if contains(&uart, b"TARGET REACHED") {
+            break;
+        }
+    }
+    assert!(
+        contains(&uart, b"TARGET REACHED"),
+        "uart={}",
+        format!(
+            "{} snapshot={:?}",
+            String::from_utf8_lossy(&uart.lock().unwrap()),
+            (
+                machine.bus.motor_snapshots(),
+                machine.bus.current_cycle,
+                machine.bus.read_u32(0x4001_2c20).unwrap(),
+                machine.bus.read_u32(0x4001_2c34).unwrap(),
+                machine.bus.read_u32(0x4001_2c3c).unwrap(),
+                machine.bus.read_u32(0xe000_e010).unwrap()
+            )
+        )
+    );
+    let acquired = machine.bus.motor_snapshots().remove(0);
+    assert!(
+        acquired.speed_rpm.abs() > 1.0,
+        "target token requires plant motion"
     );
 
-    // The firmware fault path performs these writes in this order.
-    bus.write_u32(0x4001_2c44, 0x30).unwrap(); // clear BDTR.MOE
-    bus.write_u32(0x4001_2c20, 0).unwrap(); // no commanded leg
-    bus.write_u32(0x4800_0014, 0).unwrap(); // external enable low
-    bus.set_current_cycle(8192);
-    bus.tick_peripherals_with_costs();
-    let snapshot = bus.motor_snapshots().remove(0);
-    assert_eq!(snapshot.control_state, "fault:motor");
-    assert!(snapshot.faults.iter().any(|fault| fault == "stalled"));
-    assert_eq!(bus.read_u32(0x4001_2c44).unwrap() & (1 << 15), 0);
-    assert_eq!(bus.read_u32(0x4800_0014).unwrap() & 1, 0);
+    let injected_cycle = machine.bus.current_cycle;
+    machine.set_input_on("drive_motor", "stall", 1.0).unwrap();
+    for _ in 0..500_000 {
+        machine.step().unwrap();
+        if contains(&uart, b"INVERTER OFF") {
+            break;
+        }
+    }
+    let shutdown_cycle = machine.bus.current_cycle;
+    assert!(contains(&uart, b"FAULT STALL"));
+    assert!(contains(&uart, b"INVERTER OFF"));
+    assert!(shutdown_cycle - injected_cycle <= 300_000);
+    let stopped = machine.bus.motor_snapshots().remove(0);
+    assert!(stopped.faults.iter().any(|fault| fault == "stalled"));
+    assert_eq!(machine.bus.read_u32(0x4001_2c44).unwrap() & (1 << 15), 0);
+    assert_eq!(machine.bus.read_u32(0x4800_0414).unwrap() & 1, 0);
+}
+
+#[test]
+fn l476_bldc_never_reports_target_without_rotor_motion() {
+    let (mut machine, uart) = fixture(true);
+    for _ in 0..500_000 {
+        machine.step().unwrap();
+        if contains(&uart, b"INVERTER OFF") {
+            break;
+        }
+    }
+    assert!(contains(&uart, b"FAULT STALL"));
+    assert!(!contains(&uart, b"TARGET REACHED"));
+    assert_eq!(machine.bus.motor_snapshots()[0].speed_rpm, 0.0);
 }

@@ -18,6 +18,8 @@ behavior:
     encoder_index: encoder_index_pin
     motor_fault: motor_fault_pin
     inverter_fault: inverter_fault_pin
+    overcurrent_fault: overcurrent_fault_pin
+    undervoltage_fault: undervoltage_fault_pin
   params:
     resistance_ohm: { key: resistance_ohm, default: 0.35 }
     inductance_h: { key: inductance_h, default: 0.00018 }
@@ -29,6 +31,8 @@ behavior:
     load_torque_nm: { key: load_torque_nm, default: 0.0 }
     encoder_cpr: { key: encoder_cpr, default: 2048 }
     pole_pairs: { key: pole_pairs, default: 7 }
+    current_limit_a: { key: current_limit_a, default: 40.0 }
+    overcurrent_trip_steps: { key: overcurrent_trip_steps, default: 3 }
     simulation_clock_hz: { key: simulation_clock_hz, default: 80000000 }
 
 metadata:
@@ -54,6 +58,8 @@ emit:
     - { key: encoder_index_pin, from_part_pin: [INDEX], required: false }
     - { key: motor_fault_pin, from_part_pin: [MOTOR_FAULT], required: false }
     - { key: inverter_fault_pin, from_part_pin: [INVERTER_FAULT], required: false }
+    - { key: overcurrent_fault_pin, from_part_pin: [OVERCURRENT_FAULT], required: false }
+    - { key: undervoltage_fault_pin, from_part_pin: [UNDERVOLTAGE_FAULT], required: false }
     - { key: simulation_clock_hz, from: sim_cpu_hz }
     - { key: resistance_ohm, from_attr: resistance_ohm, default: 0.35 }
     - { key: inductance_h, from_attr: inductance_h, default: 0.00018 }
@@ -65,3 +71,5 @@ emit:
     - { key: load_torque_nm, from_attr: load_torque_nm, default: 0.0 }
     - { key: encoder_cpr, from_attr: encoder_cpr, default: 2048 }
     - { key: pole_pairs, from_attr: pole_pairs, default: 7 }
+    - { key: current_limit_a, from_attr: current_limit_a, default: 40.0 }
+    - { key: overcurrent_trip_steps, from_attr: overcurrent_trip_steps, default: 3 }

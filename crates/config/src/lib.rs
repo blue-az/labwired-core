@@ -260,6 +260,10 @@ pub struct BldcMotorConfig {
     pub load_torque_nm: f64,
     pub encoder_cpr: u32,
     pub pole_pairs: u8,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub current_limit_a: Option<f64>,
+    #[serde(default = "default_overcurrent_trip_steps")]
+    pub overcurrent_trip_steps: u32,
     #[serde(default = "default_motor_simulation_clock_hz")]
     pub simulation_clock_hz: u64,
     pub phase_a_high_pin: String,
@@ -280,10 +284,18 @@ pub struct BldcMotorConfig {
     pub motor_fault_pin: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub inverter_fault_pin: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub overcurrent_fault_pin: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub undervoltage_fault_pin: Option<String>,
 }
 
 fn default_motor_simulation_clock_hz() -> u64 {
     80_000_000
+}
+
+fn default_overcurrent_trip_steps() -> u32 {
+    3
 }
 
 impl MotorModelConfig {
@@ -396,6 +408,21 @@ impl MotorModelConfig {
                         config.id
                     ));
                 }
+                if config
+                    .current_limit_a
+                    .is_some_and(|limit| !limit.is_finite() || limit <= 0.0)
+                {
+                    issues.push(format!(
+                        "motor_models[{}].current_limit_a must be finite and greater than zero",
+                        config.id
+                    ));
+                }
+                if config.current_limit_a.is_some() && config.overcurrent_trip_steps == 0 {
+                    issues.push(format!(
+                        "motor_models[{}].overcurrent_trip_steps must be greater than zero",
+                        config.id
+                    ));
+                }
                 validate_required_motor_pins(
                     &config.id,
                     [
@@ -419,6 +446,18 @@ impl MotorModelConfig {
                     &config.id,
                     "motor_fault_pin",
                     config.motor_fault_pin.as_deref(),
+                    &mut issues,
+                );
+                validate_optional_motor_pin(
+                    &config.id,
+                    "overcurrent_fault_pin",
+                    config.overcurrent_fault_pin.as_deref(),
+                    &mut issues,
+                );
+                validate_optional_motor_pin(
+                    &config.id,
+                    "undervoltage_fault_pin",
+                    config.undervoltage_fault_pin.as_deref(),
                     &mut issues,
                 );
                 validate_optional_motor_pin(

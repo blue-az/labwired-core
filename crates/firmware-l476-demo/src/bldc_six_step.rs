@@ -22,9 +22,14 @@ const RCC_APB1ENR1: *mut u32 = (RCC + 0x58) as *mut u32;
 const RCC_APB2ENR: *mut u32 = (RCC + 0x60) as *mut u32;
 const GPIOA: u32 = 0x4800_0000;
 const GPIOA_MODER: *mut u32 = GPIOA as *mut u32;
-const GPIOA_ODR: *mut u32 = (GPIOA + 0x14) as *mut u32;
-const GPIOA_IDR: *const u32 = (GPIOA + 0x10) as *const u32;
+const GPIOA_AFRL: *mut u32 = (GPIOA + 0x20) as *mut u32;
+const GPIOA_AFRH: *mut u32 = (GPIOA + 0x24) as *mut u32;
+const GPIOB_MODER: *mut u32 = 0x4800_0400 as *mut u32;
 const GPIOB_IDR: *const u32 = 0x4800_0410 as *const u32;
+const GPIOB_ODR: *mut u32 = 0x4800_0414 as *mut u32;
+const GPIOB_AFRH: *mut u32 = 0x4800_0424 as *mut u32;
+const GPIOC_MODER: *mut u32 = 0x4800_0800 as *mut u32;
+const GPIOC_IDR: *const u32 = 0x4800_0810 as *const u32;
 const USART2: u32 = 0x4000_4400;
 const USART2_CR1: *mut u32 = USART2 as *mut u32;
 const USART2_BRR: *mut u32 = (USART2 + 0x0c) as *mut u32;
@@ -48,8 +53,6 @@ const SYST_CVR: *mut u32 = 0xe000_e018 as *mut u32;
 
 const MOE: u32 = 1 << 15;
 const MOTOR_ENABLE: u32 = 1;
-const MOTOR_FAULT: u32 = 1 << 7;
-const HALL_MASK: u32 = 0b111 << 1;
 const PWM_PERIOD: u32 = 999;
 const MIN_DUTY: u32 = 180;
 const MAX_DUTY: u32 = 720;
@@ -58,12 +61,12 @@ const MAX_DUTY: u32 = 720;
 // Hall order is the conventional 001, 101, 100, 110, 010, 011 sequence.
 const COMMUTATION: [u32; 8] = [
     0,                    // invalid 000
-    (1 << 0) | (1 << 6),  // A+ B-
-    (1 << 4) | (1 << 10), // B+ C-
+    (1 << 8) | (1 << 6),  // C+ B-
     (1 << 4) | (1 << 2),  // B+ A-
     (1 << 8) | (1 << 2),  // C+ A-
     (1 << 0) | (1 << 10), // A+ C-
-    (1 << 8) | (1 << 6),  // C+ B-
+    (1 << 0) | (1 << 6),  // A+ B-
+    (1 << 4) | (1 << 10), // B+ C-
     0,                    // invalid 111
 ];
 const STARTUP_HALL_ORDER: [u32; 6] = [1, 5, 4, 6, 2, 3];
@@ -89,7 +92,7 @@ fn shutdown() {
     // Safety invariant: hardware output gating precedes diagnostics.
     write(TIM1_BDTR, read(TIM1_BDTR) & !MOE);
     write(TIM1_CCER, 0);
-    write(GPIOA_ODR, read(GPIOA_ODR) & !MOTOR_ENABLE);
+    write(GPIOB_ODR, read(GPIOB_ODR) & !MOTOR_ENABLE);
 }
 
 fn fault(message: &[u8]) -> ! {
@@ -101,17 +104,54 @@ fn fault(message: &[u8]) -> ! {
     }
 }
 
+fn commutate(hall: u32, duty: u32) {
+    let low_edge = PWM_PERIOD - duty;
+    let (a, b, c) = match hall {
+        1 => (0, low_edge, duty), // C+ B-
+        2 => (low_edge, duty, 0), // B+ A-
+        3 => (low_edge, 0, duty), // C+ A-
+        4 => (duty, 0, low_edge), // A+ C-
+        5 => (duty, low_edge, 0), // A+ B-
+        6 => (0, duty, low_edge), // B+ C-
+        _ => (0, 0, 0),
+    };
+    write(TIM1_CCR1, a);
+    write(TIM1_CCR2, b);
+    write(TIM1_CCR3, c);
+    write(TIM1_CCER, COMMUTATION[hall as usize]);
+}
+
 fn init() {
-    write(RCC_AHB2ENR, read(RCC_AHB2ENR) | 0b11);
+    write(RCC_AHB2ENR, read(RCC_AHB2ENR) | 0b111);
     write(RCC_APB1ENR1, read(RCC_APB1ENR1) | (1 << 17));
     write(RCC_APB2ENR, read(RCC_APB2ENR) | (1 << 11));
 
-    // PA0 external enable output; PA1..PA7 Hall/encoder/fault inputs.
-    write(GPIOA_MODER, (read(GPIOA_MODER) & !0xffff) | 1);
-    write(GPIOA_ODR, MOTOR_ENABLE);
+    // Real STM32 alternate-function routing:
+    // PA2 USART2_TX AF7; PA8/9/10 TIM1 CH1/2/3 AF1.
+    let a_clear = (0b11 << 4) | (0b11 << 16) | (0b11 << 18) | (0b11 << 20);
+    write(
+        GPIOA_MODER,
+        (read(GPIOA_MODER) & !a_clear) | (0b10 << 4) | (0b10 << 16) | (0b10 << 18) | (0b10 << 20),
+    );
+    write(GPIOA_AFRL, (read(GPIOA_AFRL) & !(0xf << 8)) | (7 << 8));
+    write(GPIOA_AFRH, (read(GPIOA_AFRH) & !0xfff) | 0x111);
+    // PB13/14/15 TIM1 CH1N/2N/3N AF1, PB0 external enable, PB6/7 fault inputs.
+    let b_clear =
+        (0b11 << 0) | (0b11 << 12) | (0b11 << 14) | (0b11 << 26) | (0b11 << 28) | (0b11 << 30);
+    write(
+        GPIOB_MODER,
+        (read(GPIOB_MODER) & !b_clear) | 1 | (0b10 << 26) | (0b10 << 28) | (0b10 << 30),
+    );
+    write(
+        GPIOB_AFRH,
+        (read(GPIOB_AFRH) & !(0xfff << 20)) | (0x111 << 20),
+    );
+    // PC0..2 Hall, PC3..5 encoder, PC6 motor fault, PC7 undervoltage.
+    write(GPIOC_MODER, read(GPIOC_MODER) & !0xffff);
+    write(GPIOB_ODR, MOTOR_ENABLE);
     write(USART2_BRR, 35);
     write(USART2_CR1, (1 << 0) | (1 << 3));
-    write(SYST_RVR, 79_999); // 1 ms heartbeat at 80 MHz.
+    write(SYST_RVR, 7_999); // 100 us control tick at 80 MHz.
     write(SYST_CVR, 0);
     write(SYST_CSR, (1 << 2) | 1); // core clock + enable, polled controller.
 
@@ -136,73 +176,132 @@ pub extern "C" fn Reset() -> ! {
     init();
     uart_puts(b"BLDC READY\r\n");
 
-    let mut previous_hall = 0u32;
-    let mut since_edge = 0u32;
-    let mut invalid_hall = 0u32;
-    let mut stationary = 0u32;
-    let mut edges = 0u32;
-    let mut duty = 300u32;
-    let mut startup_ticks = 0u32;
+    let mut previous_hall = read(GPIOC_IDR) & 7;
+    let mut previous_encoder = (read(GPIOC_IDR) >> 3) & 3;
+    let mut edge_period_ms = 0u32;
+    let mut startup_ms = 0u32;
     let mut startup_step = 0usize;
-    let mut target_reported = false;
+    let mut valid_sequence_edges = 0u32;
+    let mut in_band_edges = 0u32;
+    let mut stall_ms = 0u32;
+    let mut invalid_ms = 0u32;
+    let mut motor_fault_ms = 0u32;
+    let mut driver_fault_ms = 0u32;
+    let mut overcurrent_ms = 0u32;
+    let mut undervoltage_ms = 0u32;
+    let mut encoder_edges = 0u32;
+    let mut duty = 700u32;
+    let mut hall_mode = false;
 
     loop {
-        let inputs = read(GPIOA_IDR);
-        if inputs & MOTOR_FAULT != 0 {
+        // The control and all debounce counters advance only on the
+        // authoritative 100 us SysTick COUNTFLAG.
+        if read(SYST_CSR) & (1 << 16) == 0 {
+            continue;
+        }
+        let c = read(GPIOC_IDR);
+        let b = read(GPIOB_IDR);
+        motor_fault_ms = if c & (1 << 6) != 0 {
+            motor_fault_ms + 1
+        } else {
+            0
+        };
+        undervoltage_ms = if c & (1 << 7) != 0 {
+            undervoltage_ms + 1
+        } else {
+            0
+        };
+        overcurrent_ms = if b & (1 << 6) != 0 {
+            overcurrent_ms + 1
+        } else {
+            0
+        };
+        driver_fault_ms = if b & (1 << 7) != 0 {
+            driver_fault_ms + 1
+        } else {
+            0
+        };
+        if motor_fault_ms >= 20 {
             fault(b"FAULT STALL\r\n");
         }
-        if read(GPIOB_IDR) & (1 << 7) != 0 {
-            fault(b"FAULT CURRENT\r\n");
+        if overcurrent_ms >= 20 {
+            fault(b"FAULT OVERCURRENT\r\n");
         }
-        let hall = (inputs & HALL_MASK) >> 1;
-        // Open-loop alignment and ramp: advance the canonical electrical
-        // sequence at a fixed, bounded cadence. Hall control takes over after
-        // eight electrical revolutions; this avoids requiring rotor motion to
-        // discover the first sector.
-        if startup_step < 48 {
-            startup_ticks += 1;
-            if startup_ticks >= 100 {
-                startup_ticks = 0;
-                startup_step += 1;
-                let commanded = STARTUP_HALL_ORDER[startup_step % 6];
-                write(TIM1_CCER, COMMUTATION[commanded as usize]);
-            }
-            if startup_step == 48 && !target_reported {
-                target_reported = true;
-                uart_puts(b"TARGET REACHED\r\n");
+        if undervoltage_ms >= 20 {
+            fault(b"FAULT UNDERVOLTAGE\r\n");
+        }
+        if driver_fault_ms >= 20 {
+            fault(b"FAULT DRIVER\r\n");
+        }
+        let hall = c & 7;
+        let encoder = (c >> 3) & 3;
+        encoder_edges += u32::from(encoder != previous_encoder);
+        previous_encoder = encoder;
+        edge_period_ms = edge_period_ms.saturating_add(1);
+        startup_ms += 1;
+
+        if hall == 0 || hall == 7 {
+            invalid_ms += 1;
+            if invalid_ms >= 100 {
+                fault(b"FAULT HALL\r\n");
             }
             continue;
         }
-        if hall == 0 || hall == 7 {
-            invalid_hall += 1;
-            if invalid_hall > 20_000 {
-                fault(b"FAULT HALL\r\n");
+        invalid_ms = 0;
+        if hall != previous_hall {
+            let previous_index = STARTUP_HALL_ORDER
+                .iter()
+                .position(|state| *state == previous_hall);
+            let next_index = STARTUP_HALL_ORDER.iter().position(|state| *state == hall);
+            if previous_index
+                .zip(next_index)
+                .is_some_and(|(old, new)| new == (old + 1) % 6)
+            {
+                valid_sequence_edges += 1;
+            } else {
+                valid_sequence_edges = 0;
             }
-        } else {
-            invalid_hall = 0;
-            write(TIM1_CCER, COMMUTATION[hall as usize]);
-            if hall != previous_hall {
-                previous_hall = hall;
-                edges += 1;
-                stationary = 0;
-                // Bounded P regulator: short edge period means faster motor.
-                let error = 14_000i32 - since_edge.min(28_000) as i32;
-                duty = (duty as i32 + error / 256).clamp(MIN_DUTY as i32, MAX_DUTY as i32) as u32;
-                write(TIM1_CCR1, duty);
-                write(TIM1_CCR2, duty);
-                write(TIM1_CCR3, duty);
-                since_edge = 0;
-                if edges == 8 && !target_reported {
-                    target_reported = true;
+            previous_hall = hall;
+            let period = edge_period_ms;
+            edge_period_ms = 0;
+            stall_ms = 0;
+            if valid_sequence_edges >= 3 {
+                hall_mode = true;
+            }
+            if hall_mode {
+                // Target is a 0.4..1.2 ms Hall period. Slower (larger period)
+                // raises duty; faster lowers it.
+                let error = period.min(300) as i32 - 8;
+                duty = (duty as i32 + error / 3).clamp(MIN_DUTY as i32, MAX_DUTY as i32) as u32;
+                commutate(hall, duty);
+                in_band_edges = if (4..=12).contains(&period) {
+                    in_band_edges + 1
+                } else {
+                    0
+                };
+                if in_band_edges == 2 && encoder_edges > 0 {
                     uart_puts(b"TARGET REACHED\r\n");
                 }
-            } else {
-                stationary += 1;
-                if edges >= 8 && stationary > 4_000_000 {
-                    fault(b"FAULT STALL\r\n");
-                }
+            }
+        } else {
+            stall_ms += 1;
+            if hall_mode && stall_ms >= 500 {
+                fault(b"FAULT STALL\r\n");
             }
         }
-        since_edge = since_edge.saturating_add(1);
+        if hall_mode {
+            commutate(hall, duty);
+        } else {
+            // Open-loop startup continues only until three valid sequential
+            // Hall edges have proved rotor motion.
+            if startup_ms % 5 == 0 {
+                startup_step += 1;
+                let commanded = STARTUP_HALL_ORDER[startup_step % 6];
+                commutate(commanded, duty);
+            }
+            if startup_ms >= 5_000 {
+                fault(b"FAULT STARTUP\r\n");
+            }
+        }
     }
 }
