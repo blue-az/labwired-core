@@ -2248,6 +2248,7 @@ motor_models:
     encoder_a_pin: PA4
     encoder_b_pin: PA5
     encoder_index_pin: PA6
+    fault_pin: PA7
 "#,
     )
     .unwrap();
@@ -2295,6 +2296,29 @@ motor_models:
     bus.set_current_cycle(400);
     bus.tick_peripherals_with_costs();
     assert_eq!(bus.motor_snapshots()[0].control_state, "coast");
+    bus.set_motor_stalled("wheel", true).unwrap();
+    bus.set_current_cycle(500);
+    bus.tick_peripherals_with_costs();
+    assert_ne!(
+        bus.read_u32(0x4800_0010).unwrap() & (1 << 7),
+        0,
+        "stalled motor fault must be firmware-visible"
+    );
+
+    let mut slower_clock_manifest = manifest.clone();
+    let labwired_config::MotorModelConfig::Dc(config) = &mut slower_clock_manifest.motor_models[0]
+    else {
+        unreachable!()
+    };
+    config.simulation_clock_hz = 40_000_000;
+    let mut slower_clock = SystemBus::from_config(&chip, &slower_clock_manifest).unwrap();
+    slower_clock.write_u32(0x4800_0014, 0b1011).unwrap();
+    slower_clock.set_current_cycle(100);
+    slower_clock.tick_peripherals_with_costs();
+    assert!(
+        slower_clock.motor_snapshots()[0].current_a.unwrap() > advanced[0].current_a.unwrap() * 1.9,
+        "the authoritative configured clock must scale simulator delta"
+    );
 }
 
 #[test]
@@ -2344,17 +2368,25 @@ motor_models:
     encoder_a_pin: PA4
     encoder_b_pin: PA5
     encoder_index_pin: PA6
+    motor_fault_pin: PA7
+    inverter_fault_pin: PB7
 "#,
         )
         .unwrap();
         SystemBus::from_config(&chip, &manifest).unwrap()
     }
-    fn drive(bus: &mut SystemBus) {
+    fn configure_pwm(bus: &mut SystemBus) {
         bus.write_u32(0x4800_0014, 1).unwrap(); // inverter enable
         bus.write_u32(0x4001_2c2c, 99).unwrap(); // ARR
         bus.write_u32(0x4001_2c38, 25).unwrap(); // CH2: complementary low
         bus.write_u32(0x4001_2c3c, 75).unwrap(); // CH3: main high
+        bus.write_u32(0x4001_2c18, 0x6060).unwrap(); // CH1/2 PWM1
+        bus.write_u32(0x4001_2c1c, 0x0060).unwrap(); // CH3 PWM1
         bus.write_u32(0x4001_2c20, 0x0550).unwrap(); // CH2/3 + complements
+        bus.write_u32(0x4001_2c00, 1).unwrap(); // CEN
+    }
+    fn drive(bus: &mut SystemBus) {
+        configure_pwm(bus);
         bus.write_u32(0x4001_2c44, 1 << 15).unwrap(); // MOE
         bus.set_current_cycle(bus.current_cycle + 100);
         bus.tick_peripherals_with_costs();
@@ -2362,7 +2394,7 @@ motor_models:
 
     let mut first = build();
     let mut second = build();
-    first.write_u32(0x4800_0014, 1).unwrap();
+    configure_pwm(&mut first);
     first.set_current_cycle(100);
     first.tick_peripherals_with_costs();
     assert_eq!(
@@ -2370,7 +2402,8 @@ motor_models:
         Some([0.0; 3]),
         "MOE-off inverter must not drive the plant"
     );
-    second.write_u32(0x4800_0014, 1).unwrap();
+    assert_eq!(first.motor_snapshots()[0].control_state, "off:moe");
+    configure_pwm(&mut second);
     second.set_current_cycle(100);
     second.tick_peripherals_with_costs();
     drive(&mut first);
@@ -2379,6 +2412,48 @@ motor_models:
     let snapshot = first.motor_snapshots().remove(0);
     assert!(snapshot.phase_currents_a.unwrap().iter().any(|i| *i != 0.0));
     assert_ne!(first.read_u32(0x4800_0010).unwrap() & 0b1110, 0);
+    first.write_u32(0x4001_2c20, 0x0d50).unwrap(); // CH3 complementary polarity overlap
+    first.set_current_cycle(first.current_cycle + 100);
+    first.tick_peripherals_with_costs();
+    assert_ne!(
+        first.read_u32(0x4800_0410).unwrap() & (1 << 7),
+        0,
+        "inverter fault must be firmware-visible"
+    );
+    assert_eq!(first.motor_snapshots()[0].control_state, "fault:inverter");
+
+    let mut stopped = build();
+    configure_pwm(&mut stopped);
+    stopped.write_u32(0x4001_2c00, 0).unwrap();
+    stopped.write_u32(0x4001_2c44, 1 << 15).unwrap();
+    stopped.set_current_cycle(100);
+    stopped.tick_peripherals_with_costs();
+    assert_eq!(
+        stopped.motor_snapshots()[0].control_state,
+        "off:timer-stopped"
+    );
+
+    let mut unsupported = build();
+    configure_pwm(&mut unsupported);
+    unsupported.write_u32(0x4001_2c18, 0).unwrap();
+    unsupported.write_u32(0x4001_2c44, 1 << 15).unwrap();
+    unsupported.set_current_cycle(100);
+    unsupported.tick_peripherals_with_costs();
+    assert_eq!(
+        unsupported.motor_snapshots()[0].control_state,
+        "off:unsupported-mode"
+    );
+
+    let mut external_off = build();
+    configure_pwm(&mut external_off);
+    external_off.write_u32(0x4800_0014, 0).unwrap();
+    external_off.write_u32(0x4001_2c44, 1 << 15).unwrap();
+    external_off.set_current_cycle(100);
+    external_off.tick_peripherals_with_costs();
+    assert_eq!(
+        external_off.motor_snapshots()[0].control_state,
+        "off:external-enable"
+    );
 }
 
 /// Cortex-M33 parts (STM32H5/WBA) have no bit-band feature and map real

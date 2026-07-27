@@ -170,6 +170,14 @@ pub struct TimerChannelOutputSnapshot {
     pub active_low: bool,
     pub complementary_active_low: bool,
     pub duty_fraction: f64,
+    pub mode: TimerChannelOutputMode,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TimerChannelOutputMode {
+    Unsupported,
+    Pwm1,
+    Pwm2,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -177,6 +185,8 @@ pub struct TimerOutputSnapshot {
     pub channels: [TimerChannelOutputSnapshot; 4],
     pub dead_time_ticks: u16,
     pub main_output_enabled: bool,
+    pub counter_enabled: bool,
+    pub period_ticks: u64,
 }
 
 impl Timer {
@@ -262,18 +272,36 @@ impl Timer {
         let ccr = [self.ccr1, self.ccr2, self.ccr3, self.ccr4];
         let channels = std::array::from_fn(|channel| {
             let shift = channel * 4;
+            let (ccmr, lane_shift) = match channel {
+                0 => (self.ccmr1, 0),
+                1 => (self.ccmr1, 8),
+                2 => (self.ccmr2, 0),
+                _ => (self.ccmr2, 8),
+            };
+            let output_mode = if ((ccmr >> lane_shift) & 0x3) != 0 {
+                TimerChannelOutputMode::Unsupported
+            } else {
+                match (ccmr >> (lane_shift + 4)) & 0x7 {
+                    0b110 => TimerChannelOutputMode::Pwm1,
+                    0b111 => TimerChannelOutputMode::Pwm2,
+                    _ => TimerChannelOutputMode::Unsupported,
+                }
+            };
             TimerChannelOutputSnapshot {
                 enabled: (self.ccer & (1 << shift)) != 0,
                 active_low: (self.ccer & (1 << (shift + 1))) != 0,
                 complementary_enabled: self.advanced && (self.ccer & (1 << (shift + 2))) != 0,
                 complementary_active_low: self.advanced && (self.ccer & (1 << (shift + 3))) != 0,
                 duty_fraction: (f64::from(ccr[channel]) / period as f64).clamp(0.0, 1.0),
+                mode: output_mode,
             }
         });
         TimerOutputSnapshot {
             channels,
             dead_time_ticks: decode_dead_time_ticks((self.bdtr & 0xff) as u8),
             main_output_enabled: self.advanced && (self.bdtr & (1 << 15)) != 0,
+            counter_enabled: (self.cr1 & 1) != 0,
+            period_ticks: period,
         }
     }
 
@@ -895,7 +923,7 @@ impl crate::Peripheral for Timer {
 
 #[cfg(test)]
 mod tests {
-    use super::Timer;
+    use super::{Timer, TimerChannelOutputMode};
     use crate::Peripheral;
 
     #[test]
@@ -993,6 +1021,9 @@ mod tests {
         assert_eq!(output.channels[0].duty_fraction, 0.25);
         assert!(output.channels[0].enabled);
         assert!(output.channels[0].complementary_enabled);
+        assert!(!output.counter_enabled);
+        assert_eq!(output.period_ticks, 1000);
+        assert_eq!(output.channels[0].mode, TimerChannelOutputMode::Unsupported);
     }
 
     #[test]
@@ -1001,7 +1032,9 @@ mod tests {
         tim.write_u32(0x2C, 99).unwrap();
         tim.write_u32(0x34, 75).unwrap();
         tim.write_u32(0x20, 0x000F).unwrap(); // E/P/NE/NP
+        tim.write_u32(0x18, 0x0060).unwrap(); // OC1M = PWM mode 1
         tim.write_u32(0x44, (1 << 15) | 0x40).unwrap();
+        tim.write_u32(0x00, 1).unwrap(); // CEN
 
         let output = tim.output_snapshot();
         assert!(output.main_output_enabled);
@@ -1009,6 +1042,8 @@ mod tests {
         assert_eq!(output.channels[0].duty_fraction, 0.75);
         assert!(output.channels[0].active_low);
         assert!(output.channels[0].complementary_active_low);
+        assert!(output.counter_enabled);
+        assert_eq!(output.channels[0].mode, TimerChannelOutputMode::Pwm1);
     }
 
     #[test]

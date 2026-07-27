@@ -9,8 +9,6 @@ use labwired_config::{BldcMotorConfig, BrushedMotorConfig, MotorModelConfig, Sys
 /// frequency. Simulator cycle deltas are deterministic; this conversion never
 /// observes host time. Keep this named and isolated so a future descriptor
 /// clock can replace it at construction.
-const MOTOR_SIM_CYCLES_PER_SECOND: f64 = 1_000_000.0;
-
 #[derive(Debug, Clone, Copy)]
 pub(super) struct ResolvedPin {
     peripheral: usize,
@@ -43,6 +41,9 @@ pub(super) enum MotorRuntime {
         enable: ResolvedPin,
         feedback: [ResolvedPin; 2],
         index: Option<ResolvedPin>,
+        fault: Option<ResolvedPin>,
+        simulation_clock_hz: u64,
+        control_state: String,
     },
     Bldc {
         id: String,
@@ -53,6 +54,11 @@ pub(super) enum MotorRuntime {
         hall: [ResolvedPin; 3],
         feedback: [ResolvedPin; 2],
         index: Option<ResolvedPin>,
+        motor_fault: Option<ResolvedPin>,
+        inverter_fault: Option<ResolvedPin>,
+        simulation_clock_hz: u64,
+        control_state: String,
+        inverter_fault_active: bool,
     },
 }
 
@@ -126,6 +132,13 @@ impl SystemBus {
                 .as_deref()
                 .map(|p| self.resolve_motor_input(&c.id, "encoder index", p))
                 .transpose()?,
+            fault: c
+                .fault_pin
+                .as_deref()
+                .map(|p| self.resolve_motor_input(&c.id, "fault", p))
+                .transpose()?,
+            simulation_clock_hz: c.simulation_clock_hz,
+            control_state: "coast".to_owned(),
             encoder: QuadratureEncoder::new(c.encoder_cpr)?,
             id: c.id,
             plant,
@@ -190,6 +203,19 @@ impl SystemBus {
                 .as_deref()
                 .map(|p| self.resolve_motor_input(&c.id, "encoder index", p))
                 .transpose()?,
+            motor_fault: c
+                .motor_fault_pin
+                .as_deref()
+                .map(|p| self.resolve_motor_input(&c.id, "motor fault", p))
+                .transpose()?,
+            inverter_fault: c
+                .inverter_fault_pin
+                .as_deref()
+                .map(|p| self.resolve_motor_input(&c.id, "inverter fault", p))
+                .transpose()?,
+            simulation_clock_hz: c.simulation_clock_hz,
+            control_state: "off:timer-stopped".to_owned(),
+            inverter_fault_active: false,
         })
     }
 
@@ -212,7 +238,6 @@ impl SystemBus {
             return;
         }
         self.motor_cycle_anchor = self.current_cycle;
-        let dt_s = elapsed as f64 / MOTOR_SIM_CYCLES_PER_SECOND;
         let mut motors = std::mem::take(&mut self.motors);
         for motor in &mut motors {
             match motor {
@@ -225,8 +250,12 @@ impl SystemBus {
                     enable,
                     feedback,
                     index,
+                    fault,
+                    simulation_clock_hz,
+                    control_state,
                     ..
                 } => {
+                    let dt_s = elapsed as f64 / *simulation_clock_hz as f64;
                     let enabled = self.pin_output(*enable);
                     let braking = self.pin_output(*brake);
                     let duty = f64::from(self.pin_output(*pwm));
@@ -245,6 +274,7 @@ impl SystemBus {
                         HBridgeState::Brake => Ok(HBridgeCommand::brake()),
                         HBridgeState::Coast => Ok(HBridgeCommand::coast()),
                     };
+                    *control_state = format!("{state:?}").to_ascii_lowercase();
                     if let Ok(command) = command {
                         let params = plant.params();
                         for step_s in stable_substeps(
@@ -264,6 +294,9 @@ impl SystemBus {
                             self.drive_input(*index, pins.index);
                         }
                     }
+                    if let Some(fault) = fault {
+                        self.drive_input(*fault, plant.faults().stalled);
+                    }
                 }
                 MotorRuntime::Bldc {
                     plant,
@@ -273,28 +306,66 @@ impl SystemBus {
                     hall,
                     feedback,
                     index,
+                    motor_fault,
+                    inverter_fault,
+                    simulation_clock_hz,
+                    control_state,
+                    inverter_fault_active,
                     ..
                 } => {
+                    let dt_s = elapsed as f64 / *simulation_clock_hz as f64;
                     let timer_output = self.peripherals[*timer]
                         .dev
                         .as_any()
                         .and_then(|a| a.downcast_ref::<crate::peripherals::timer::Timer>())
                         .map(crate::peripherals::timer::Timer::output_snapshot);
-                    let command = timer_output
-                        .filter(|pwm| pwm.main_output_enabled && self.pin_output(*enable))
-                        .map(|pwm| InverterCommand {
-                            enabled: true,
-                            phase_a: sampled_gate_pair(pwm.channels[0]),
-                            phase_b: sampled_gate_pair(pwm.channels[1]),
-                            phase_c: sampled_gate_pair(pwm.channels[2]),
+                    let external_enabled = self.pin_output(*enable);
+                    let valid_pwm = timer_output.is_some_and(|pwm| {
+                        pwm.channels[..3].iter().all(|channel| {
+                            matches!(
+                                channel.mode,
+                                crate::peripherals::timer::TimerChannelOutputMode::Pwm1
+                                    | crate::peripherals::timer::TimerChannelOutputMode::Pwm2
+                            )
                         })
-                        .unwrap_or_else(InverterCommand::off);
+                    });
+                    *control_state = match timer_output {
+                        Some(_) if !external_enabled => "off:external-enable",
+                        Some(pwm) if !pwm.counter_enabled => "off:timer-stopped",
+                        Some(pwm) if !pwm.main_output_enabled => "off:moe",
+                        Some(_) if !valid_pwm => "off:unsupported-mode",
+                        Some(_) => "inverter",
+                        None => "off:no-timer",
+                    }
+                    .to_owned();
                     let params = plant.params();
-                    for step_s in
-                        stable_substeps(dt_s, 0.25 * params.inductance_h / params.resistance_ohm)
-                    {
-                        if plant.step(command, step_s).is_err() {
-                            break;
+                    *inverter_fault_active = false;
+                    if let Some(pwm) = timer_output.filter(|pwm| {
+                        external_enabled
+                            && pwm.counter_enabled
+                            && pwm.main_output_enabled
+                            && valid_pwm
+                    }) {
+                        for (command, fraction) in pwm_edge_schedule(pwm) {
+                            for step_s in stable_substeps(
+                                dt_s * fraction,
+                                0.25 * params.inductance_h / params.resistance_ohm,
+                            ) {
+                                if plant.step(command, step_s).is_err() {
+                                    break;
+                                }
+                                *inverter_fault_active |=
+                                    !plant.snapshot().inverter_faults.is_empty();
+                            }
+                        }
+                    } else {
+                        for step_s in stable_substeps(
+                            dt_s,
+                            0.25 * params.inductance_h / params.resistance_ohm,
+                        ) {
+                            if plant.step(InverterCommand::off(), step_s).is_err() {
+                                break;
+                            }
                         }
                     }
                     let snapshot = plant.snapshot();
@@ -308,6 +379,20 @@ impl SystemBus {
                             self.drive_input(*index, pins.index);
                         }
                     }
+                    if let Some(pin) = motor_fault {
+                        self.drive_input(
+                            *pin,
+                            snapshot.faults.stalled || snapshot.faults.open_phase.is_some(),
+                        );
+                    }
+                    if let Some(pin) = inverter_fault {
+                        self.drive_input(*pin, *inverter_fault_active);
+                    }
+                    if *inverter_fault_active {
+                        *control_state = "fault:inverter".to_owned();
+                    } else if snapshot.faults.stalled || snapshot.faults.open_phase.is_some() {
+                        *control_state = "fault:motor".to_owned();
+                    }
                 }
             }
         }
@@ -318,7 +403,12 @@ impl SystemBus {
         self.motors
             .iter()
             .map(|motor| match motor {
-                MotorRuntime::Dc { id, plant, .. } => {
+                MotorRuntime::Dc {
+                    id,
+                    plant,
+                    control_state,
+                    ..
+                } => {
                     let s = plant.snapshot();
                     MotorSnapshot {
                         id: id.clone(),
@@ -330,7 +420,7 @@ impl SystemBus {
                         phase_currents_a: None,
                         bus_voltage_v: plant.params().supply_voltage_v,
                         commutation_sector: None,
-                        control_state: format!("{:?}", s.bridge_state).to_ascii_lowercase(),
+                        control_state: control_state.clone(),
                         faults: s
                             .faults
                             .stalled
@@ -339,7 +429,13 @@ impl SystemBus {
                             .collect(),
                     }
                 }
-                MotorRuntime::Bldc { id, plant, .. } => {
+                MotorRuntime::Bldc {
+                    id,
+                    plant,
+                    control_state,
+                    inverter_fault_active,
+                    ..
+                } => {
                     let s = plant.snapshot();
                     let mut faults = Vec::new();
                     if s.faults.stalled {
@@ -348,7 +444,7 @@ impl SystemBus {
                     if s.faults.open_phase.is_some() {
                         faults.push("open-phase".to_owned());
                     }
-                    if !s.inverter_faults.is_empty() {
+                    if *inverter_fault_active {
                         faults.push("inverter".to_owned());
                     }
                     MotorSnapshot {
@@ -361,34 +457,211 @@ impl SystemBus {
                         phase_currents_a: Some(s.phase_currents_a),
                         bus_voltage_v: s.dc_bus_voltage_v,
                         commutation_sector: Some(s.commutation_sector),
-                        control_state: if s.dc_bus_voltage_v > 0.0 {
-                            "inverter".to_owned()
-                        } else {
-                            "off".to_owned()
-                        },
+                        control_state: control_state.clone(),
                         faults,
                     }
                 }
             })
             .collect()
     }
+
+    pub fn set_motor_stalled(&mut self, id: &str, stalled: bool) -> Result<(), String> {
+        let motor =
+            self.motors
+                .iter_mut()
+                .find(|motor| match motor {
+                    MotorRuntime::Dc { id: motor_id, .. }
+                    | MotorRuntime::Bldc { id: motor_id, .. } => motor_id == id,
+                })
+                .ok_or_else(|| format!("unknown motor '{id}'"))?;
+        match motor {
+            MotorRuntime::Dc { plant, .. } => {
+                plant.set_faults(crate::physics::motor::MotorFaults { stalled });
+            }
+            MotorRuntime::Bldc { plant, .. } => {
+                let mut faults = plant.faults();
+                faults.stalled = stalled;
+                plant
+                    .set_faults(faults)
+                    .map_err(|error| error.to_string())?;
+            }
+        }
+        Ok(())
+    }
 }
 
-/// Cycle-average PWM is sampled at normalized phase 0.5. This is deterministic
-/// and honors duty/polarity/complementary enable without pretending the reduced
-/// motor model resolves switching edges. Dead-time remains observable in the
-/// timer snapshot but cannot be represented by the plant's boolean gate API.
-fn sampled_gate_pair(channel: crate::peripherals::timer::TimerChannelOutputSnapshot) -> GatePair {
-    let main_level = channel.enabled && ((0.5 < channel.duty_fraction) ^ channel.active_low);
-    let complementary_level = channel.complementary_enabled
-        && ((0.5 >= channel.duty_fraction) ^ channel.complementary_active_low);
+fn pwm_edge_schedule(
+    pwm: crate::peripherals::timer::TimerOutputSnapshot,
+) -> Vec<(InverterCommand, f64)> {
+    let dead = (f64::from(pwm.dead_time_ticks) / pwm.period_ticks as f64).clamp(0.0, 1.0);
+    let mut edges = vec![0.0, 1.0];
+    for channel in &pwm.channels[..3] {
+        let duty = channel.duty_fraction;
+        edges.push((dead / 2.0).clamp(0.0, 1.0));
+        edges.push((duty - dead / 2.0).clamp(0.0, 1.0));
+        edges.push((duty + dead / 2.0).clamp(0.0, 1.0));
+        edges.push((1.0 - dead / 2.0).clamp(0.0, 1.0));
+    }
+    edges.sort_by(f64::total_cmp);
+    edges.dedup();
+    edges
+        .windows(2)
+        .filter_map(|window| {
+            let fraction = window[1] - window[0];
+            (fraction > 0.0).then(|| {
+                let phase = (window[0] + window[1]) / 2.0;
+                let gates: [GatePair; 3] = std::array::from_fn(|index| {
+                    sampled_gate_pair(pwm.channels[index], phase, dead)
+                });
+                (
+                    InverterCommand {
+                        enabled: true,
+                        phase_a: gates[0],
+                        phase_b: gates[1],
+                        phase_c: gates[2],
+                    },
+                    fraction,
+                )
+            })
+        })
+        .collect()
+}
+
+fn sampled_gate_pair(
+    channel: crate::peripherals::timer::TimerChannelOutputSnapshot,
+    phase: f64,
+    dead: f64,
+) -> GatePair {
+    use crate::peripherals::timer::TimerChannelOutputMode;
+    let low_edge = (channel.duty_fraction - dead / 2.0).clamp(0.0, 1.0);
+    let high_edge = (channel.duty_fraction + dead / 2.0).clamp(0.0, 1.0);
+    let wrap_start = (dead / 2.0).clamp(0.0, 1.0);
+    let wrap_end = (1.0 - dead / 2.0).clamp(0.0, 1.0);
+    let (main_raw, complementary_raw) = match channel.mode {
+        TimerChannelOutputMode::Pwm1 => (
+            phase >= wrap_start && phase < low_edge,
+            phase >= high_edge && phase < wrap_end,
+        ),
+        TimerChannelOutputMode::Pwm2 => (
+            phase >= high_edge && phase < wrap_end,
+            phase >= wrap_start && phase < low_edge,
+        ),
+        TimerChannelOutputMode::Unsupported => (false, false),
+    };
     GatePair {
-        high: main_level,
-        low: complementary_level,
+        high: channel.enabled && (main_raw ^ channel.active_low),
+        low: channel.complementary_enabled
+            && (complementary_raw ^ channel.complementary_active_low),
     }
 }
 
 fn stable_substeps(total_s: f64, max_step_s: f64) -> impl Iterator<Item = f64> {
     let count = (total_s / max_step_s).ceil().max(1.0) as u64;
     std::iter::repeat_n(total_s / count as f64, count as usize)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::peripherals::timer::{
+        TimerChannelOutputMode, TimerChannelOutputSnapshot, TimerOutputSnapshot,
+    };
+    use crate::physics::motor::{BldcMotorParams, ShaftParams};
+
+    fn channel(duty: f64) -> TimerChannelOutputSnapshot {
+        TimerChannelOutputSnapshot {
+            enabled: true,
+            complementary_enabled: true,
+            active_low: false,
+            complementary_active_low: false,
+            duty_fraction: duty,
+            mode: TimerChannelOutputMode::Pwm1,
+        }
+    }
+
+    fn pwm(duty: f64, dead_time_ticks: u16) -> TimerOutputSnapshot {
+        TimerOutputSnapshot {
+            channels: [channel(duty), channel(0.5), channel(0.5), channel(0.0)],
+            dead_time_ticks,
+            main_output_enabled: true,
+            counter_enabled: true,
+            period_ticks: 1000,
+        }
+    }
+
+    fn motor_response(duty: f64, dead_time_ticks: u16) -> f64 {
+        let mut phase_b = channel(0.0);
+        phase_b.enabled = false;
+        let mut phase_c = channel(0.0);
+        phase_c.enabled = false;
+        phase_c.complementary_enabled = false;
+        let snapshot = TimerOutputSnapshot {
+            channels: [channel(duty), phase_b, phase_c, channel(0.0)],
+            dead_time_ticks,
+            main_output_enabled: true,
+            counter_enabled: true,
+            period_ticks: 1000,
+        };
+        let mut motor = BldcMotor::new(BldcMotorParams {
+            resistance_ohm: 1.0,
+            inductance_h: 0.001,
+            torque_constant_nm_per_a: 0.1,
+            back_emf_constant_v_per_rad_s: 0.1,
+            supply_voltage_v: 24.0,
+            pole_pairs: 2,
+            shaft: ShaftParams {
+                inertia_kg_m2: 0.01,
+                viscous_friction_nm_per_rad_s: 0.0,
+                load_torque_nm: 0.0,
+            },
+        })
+        .unwrap();
+        for (command, fraction) in pwm_edge_schedule(snapshot) {
+            motor.step(command, 1e-6 * fraction).unwrap();
+        }
+        motor.snapshot().phase_currents_a[0].abs()
+    }
+
+    fn phase_a_high_fraction(snapshot: TimerOutputSnapshot) -> f64 {
+        pwm_edge_schedule(snapshot)
+            .into_iter()
+            .filter(|(command, _)| command.phase_a.high)
+            .map(|(_, fraction)| fraction)
+            .sum()
+    }
+
+    #[test]
+    fn pwm_edge_schedule_preserves_fractional_duty_proportionally() {
+        assert!((phase_a_high_fraction(pwm(0.25, 0)) - 0.25).abs() < 1e-12);
+        assert!((phase_a_high_fraction(pwm(0.75, 0)) - 0.75).abs() < 1e-12);
+        let low = motor_response(0.25, 0);
+        let high = motor_response(0.75, 0);
+        assert!(high > low * 2.9 && high < low * 3.1);
+    }
+
+    #[test]
+    fn pwm_edge_schedule_dead_time_reduces_effective_conduction_deterministically() {
+        let without_dead_time = phase_a_high_fraction(pwm(0.75, 0));
+        let first = phase_a_high_fraction(pwm(0.75, 100));
+        let second = phase_a_high_fraction(pwm(0.75, 100));
+        assert!(first < without_dead_time);
+        assert_eq!(first, second);
+        assert!((first - 0.65).abs() < 1e-12);
+        assert!(motor_response(0.75, 100) < motor_response(0.75, 0));
+        let channel = channel(0.75);
+        assert!(!sampled_gate_pair(channel, 0.01, 0.1).high);
+        assert!(!sampled_gate_pair(channel, 0.99, 0.1).low);
+    }
+
+    #[test]
+    fn sampled_gate_pair_honors_complementary_polarity() {
+        let mut output = channel(0.25);
+        output.complementary_active_low = true;
+        let before_edge = sampled_gate_pair(output, 0.1, 0.0);
+        let after_edge = sampled_gate_pair(output, 0.9, 0.0);
+        assert!(before_edge.high);
+        assert!(before_edge.low, "active-low complement is inverted");
+        assert!(!after_edge.high);
+        assert!(!after_edge.low);
+    }
 }
