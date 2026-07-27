@@ -150,6 +150,16 @@ jobs:
       - name: Board-coverage ratchet (static naming scan)
         run: cargo test -p labwired-core --test board_coverage_ratchet -- --nocapture
 
+      # Chip configs vs the vendored SVDs — peripheral base addresses and NVIC
+      # numbers. Pure data (~20s, no firmware build, no toolchain), and it is
+      # the only gate that reads the silicon's own register map: `register_
+      # coverage` counts how many SVD registers respond, which a WRONG offset
+      # also satisfies. Living only in the nightly `core-full` job is how the
+      # WB55 RCC misplacement and the WBA52 LPUART1/SPI1 vector collision both
+      # sat on main for months, so it runs on every push.
+      - name: SVD conformance (config addresses + IRQs vs silicon)
+        run: cargo test -p labwired-core --test svd_conformance -- --nocapture
+
       # RELEASE-ONLY CODE — the lane that did not exist.
       #
       # Every other cargo step in this file builds DEBUG, so a

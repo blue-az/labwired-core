@@ -127,7 +127,8 @@ peripherals:
     type: "nrf52840_pdm"
     base_address: 0x4001d000
     size: "4KB"
-    irq: 31
+    # nRF52840 PDM_IRQn = 29 (SVD); 31 is unassigned.
+    irq: 29
   - id: "radio"
     type: "nrf52840_radio"
     base_address: 0x40001000
@@ -162,12 +163,14 @@ peripherals:
     type: "nrf52840_pwm"
     base_address: 0x40021000
     size: "4KB"
-    irq: 29
+    # nRF52840 PWM1_IRQn = 33 (SVD); 29 is PDM.
+    irq: 33
   - id: "pwm2"
     type: "nrf52840_pwm"
     base_address: 0x40022000
     size: "4KB"
-    irq: 30
+    # nRF52840 PWM2_IRQn = 34 (SVD); 30 is unassigned.
+    irq: 34
   - id: "pwm3"
     type: "nrf52840_pwm"
     base_address: 0x4002d000
