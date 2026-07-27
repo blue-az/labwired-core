@@ -8,6 +8,7 @@
 
 use crate::*;
 use labwired_core::inspect::artifact_format as F;
+use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
 pub(crate) fn motor_states_json(
@@ -667,7 +668,9 @@ impl WasmSimulator {
         }
         states.extend(motor_states_json(machine.bus.motor_snapshots()));
 
-        serde_wasm_bindgen::to_value(&states).unwrap_or(JsValue::NULL)
+        states
+            .serialize(&serde_wasm_bindgen::Serializer::json_compatible())
+            .unwrap_or(JsValue::NULL)
     }
 
     /// **THE door.** Whatever the display called `device_id` is showing — any
@@ -1134,7 +1137,7 @@ mod motor_state_tests {
                 bus_voltage_v: 24.0,
                 commutation_sector: Some(4),
                 control_state: "sector:4".into(),
-                faults: vec!["open-phase".into()],
+                faults: vec!["open-phase-a".into()],
             },
         ]);
 
@@ -1149,6 +1152,6 @@ mod motor_state_tests {
             serde_json::json!([1.0, -0.25, -0.75])
         );
         assert_eq!(states[1]["commutation_sector"], 4);
-        assert_eq!(states[1]["faults"], serde_json::json!(["open-phase"]));
+        assert_eq!(states[1]["faults"], serde_json::json!(["open-phase-a"]));
     }
 }

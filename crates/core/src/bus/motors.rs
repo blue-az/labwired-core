@@ -81,7 +81,8 @@ pub(super) enum MotorRuntime {
         undervoltage_fault: Option<ResolvedPin>,
         simulation_clock_hz: u64,
         control_state: String,
-        inverter_fault_active: bool,
+        injected_inverter_fault: bool,
+        computed_inverter_fault: bool,
         pwm_phase_cursor: Option<Box<PwmPhaseCursor>>,
     },
 }
@@ -263,7 +264,8 @@ impl SystemBus {
                 .transpose()?,
             simulation_clock_hz: c.simulation_clock_hz,
             control_state: "off:timer-stopped".to_owned(),
-            inverter_fault_active: false,
+            injected_inverter_fault: false,
+            computed_inverter_fault: false,
             pwm_phase_cursor: None,
         })
     }
@@ -361,7 +363,8 @@ impl SystemBus {
                     undervoltage_fault,
                     simulation_clock_hz,
                     control_state,
-                    inverter_fault_active,
+                    injected_inverter_fault,
+                    computed_inverter_fault,
                     pwm_phase_cursor,
                     ..
                 } => {
@@ -419,12 +422,13 @@ impl SystemBus {
                     }
                     .to_owned();
                     let params = plant.params();
-                    *inverter_fault_active = false;
+                    *computed_inverter_fault = false;
                     if let Some(pwm) = timer_output.filter(|pwm| {
                         external_enabled
                             && pwm.counter_enabled
                             && pwm.main_output_enabled
                             && valid_pwm
+                            && !*injected_inverter_fault
                     }) {
                         for_each_pwm_segment(pwm, elapsed as f64, |command, duration_cycles| {
                             for step_s in stable_substeps(
@@ -434,7 +438,7 @@ impl SystemBus {
                                 if plant.step(command, step_s).is_err() {
                                     break;
                                 }
-                                *inverter_fault_active |=
+                                *computed_inverter_fault |=
                                     !plant.snapshot().inverter_faults.is_empty();
                             }
                         });
@@ -466,7 +470,10 @@ impl SystemBus {
                         );
                     }
                     if let Some(pin) = inverter_fault {
-                        self.drive_input(*pin, *inverter_fault_active);
+                        self.drive_input(
+                            *pin,
+                            *injected_inverter_fault || *computed_inverter_fault,
+                        );
                     }
                     if let Some(pin) = overcurrent_fault {
                         self.drive_input(*pin, snapshot.faults.overcurrent);
@@ -474,7 +481,7 @@ impl SystemBus {
                     if let Some(pin) = undervoltage_fault {
                         self.drive_input(*pin, snapshot.faults.undervoltage_v.is_some());
                     }
-                    if *inverter_fault_active {
+                    if *injected_inverter_fault || *computed_inverter_fault {
                         *control_state = "fault:inverter".to_owned();
                     }
                 }
@@ -517,7 +524,8 @@ impl SystemBus {
                     id,
                     plant,
                     control_state,
-                    inverter_fault_active,
+                    injected_inverter_fault,
+                    computed_inverter_fault,
                     ..
                 } => {
                     let s = plant.snapshot();
@@ -531,10 +539,23 @@ impl SystemBus {
                     if s.faults.undervoltage_v.is_some() {
                         faults.push("undervoltage".to_owned());
                     }
-                    if s.faults.open_phase.is_some() {
-                        faults.push("open-phase".to_owned());
+                    if let Some(phase) = s.faults.open_phase {
+                        faults.push(
+                            match phase {
+                                Phase::A => "open-phase-a",
+                                Phase::B => "open-phase-b",
+                                Phase::C => "open-phase-c",
+                            }
+                            .to_owned(),
+                        );
                     }
-                    if *inverter_fault_active {
+                    if s.faults.hall_line_low == Some(Phase::B) {
+                        faults.push("hall-b-low".to_owned());
+                    }
+                    if s.faults.forced_hall_state == Some(0) {
+                        faults.push("invalid-hall".to_owned());
+                    }
+                    if *injected_inverter_fault || *computed_inverter_fault {
                         faults.push("inverter".to_owned());
                     }
                     MotorSnapshot {
@@ -645,11 +666,11 @@ impl SystemBus {
             }
             MotorRuntime::Bldc {
                 plant,
-                inverter_fault_active,
+                injected_inverter_fault,
                 ..
             } => {
                 if fault == "inverter" {
-                    *inverter_fault_active = active;
+                    *injected_inverter_fault = active;
                     return Ok(());
                 }
                 let mut faults = plant.faults();
@@ -668,6 +689,8 @@ impl SystemBus {
                         faults.undervoltage_v =
                             active.then(|| plant.params().supply_voltage_v * 0.5);
                     }
+                    "hall-b-low" => faults.hall_line_low = active.then_some(Phase::B),
+                    "invalid-hall" => faults.forced_hall_state = active.then_some(0),
                     "overcurrent" if active => faults.overcurrent = true,
                     "overcurrent" => {
                         return Err("overcurrent is latched and cannot be cleared".to_owned())

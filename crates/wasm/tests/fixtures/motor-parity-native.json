@@ -1,0 +1,67 @@
+[
+  {
+    "id": "drive_motor",
+    "kind": "bldc-motor",
+    "position_rad": 0.2759676030563203,
+    "speed_rpm": 3018.2824068036257,
+    "torque_nm": -0.1918496998800404,
+    "current_a": -0.0,
+    "phase_currents_a": [-2.529089594137879, 0.37996958115658425, 2.1491200129812946],
+    "bus_voltage_v": 24.0,
+    "commutation_sector": 1,
+    "control_state": "inverter",
+    "faults": []
+  },
+  {
+    "id": "drive_motor",
+    "kind": "bldc-motor",
+    "position_rad": 0.44573630069110615,
+    "speed_rpm": 3273.8087686571066,
+    "torque_nm": 0.027807219018221474,
+    "current_a": 0.3475902377277684,
+    "phase_currents_a": [0.0, 0.3475902377277684, -0.3475902377277684],
+    "bus_voltage_v": 24.0,
+    "commutation_sector": 2,
+    "control_state": "inverter",
+    "faults": ["open-phase-a"]
+  },
+  {
+    "id": "drive_motor",
+    "kind": "bldc-motor",
+    "position_rad": 0.64251083311879,
+    "speed_rpm": 2670.110766007277,
+    "torque_nm": 0.01082071640667112,
+    "current_a": -0.0,
+    "phase_currents_a": [-0.15056026674159748, 0.07597604591328203, 0.07458422082831545],
+    "bus_voltage_v": 24.0,
+    "commutation_sector": 4,
+    "control_state": "inverter",
+    "faults": ["hall-b-low"]
+  },
+  {
+    "id": "drive_motor",
+    "kind": "bldc-motor",
+    "position_rad": 0.8300796459620786,
+    "speed_rpm": 2960.0650143239586,
+    "torque_nm": 0.001596088926740241,
+    "current_a": -0.0,
+    "phase_currents_a": [-0.04466033152619475, 0.02253659263476173, 0.02212373889143302],
+    "bus_voltage_v": 24.0,
+    "commutation_sector": 5,
+    "control_state": "fault:inverter",
+    "faults": ["inverter"]
+  },
+  {
+    "id": "drive_motor",
+    "kind": "bldc-motor",
+    "position_rad": 1.0192648692091237,
+    "speed_rpm": 3032.405863835205,
+    "torque_nm": 0.0032756338361339867,
+    "current_a": -0.0,
+    "phase_currents_a": [0.034714329222305294, -0.04378773210712039, 0.009073402884815097],
+    "bus_voltage_v": 24.0,
+    "commutation_sector": 0,
+    "control_state": "inverter",
+    "faults": []
+  }
+]

@@ -93,6 +93,8 @@ fn validate_motor_fault(
             | "undervoltage"
             | "overcurrent"
             | "inverter"
+            | "hall-b-low"
+            | "invalid-hall"
     );
     if !known {
         return Err(MotorControlError::named(
@@ -623,7 +625,11 @@ motor_models:
         assert!(validate_motor_fault("dc", "wheel", "stall", false).is_ok());
         let error = validate_motor_fault("dc", "wheel", "open-phase-a", true).unwrap_err();
         assert_eq!(error.code, "wrong-motor-kind");
+        let error = validate_motor_fault("dc", "wheel", "hall-b-low", true).unwrap_err();
+        assert_eq!(error.code, "wrong-motor-kind");
         assert!(validate_motor_fault("bldc", "spindle", "open-phase-c", false).is_ok());
+        assert!(validate_motor_fault("bldc", "spindle", "hall-b-low", false).is_ok());
+        assert!(validate_motor_fault("bldc", "spindle", "invalid-hall", false).is_ok());
         let error = validate_motor_fault("bldc", "spindle", "overcurrent", false).unwrap_err();
         assert_eq!(error.code, "unsupported-clear");
     }
@@ -657,7 +663,7 @@ motor_models:
             .unwrap();
         bus.set_motor_named_fault("drive_motor", "open-phase-b", true)
             .unwrap();
-        assert_eq!(bus.motor_snapshots()[0].faults, ["open-phase"]);
+        assert_eq!(bus.motor_snapshots()[0].faults, ["open-phase-b"]);
         bus.set_motor_named_fault("drive_motor", "open-phase-b", false)
             .unwrap();
         assert!(bus.motor_snapshots()[0].faults.is_empty());
@@ -668,6 +674,57 @@ motor_models:
         bus.set_motor_named_fault("drive_motor", "undervoltage", false)
             .unwrap();
         assert_eq!(bus.motor_snapshots()[0].bus_voltage_v, 24.0);
+    }
+
+    #[test]
+    fn injected_inverter_and_hall_faults_persist_until_explicit_clear() {
+        let mut bus = bldc_bus();
+        bus.set_motor_named_fault("drive_motor", "inverter", true)
+            .unwrap();
+        bus.set_motor_named_fault("drive_motor", "hall-b-low", true)
+            .unwrap();
+        let before = bus.motor_snapshots();
+        assert!(before[0].faults.contains(&"inverter".to_owned()));
+        assert!(before[0].faults.contains(&"hall-b-low".to_owned()));
+
+        bus.tick_peripherals_with_costs();
+        assert_eq!(
+            bus.motor_snapshots(),
+            before,
+            "zero delta must retain injected faults"
+        );
+        bus.set_current_cycle(100);
+        bus.tick_peripherals_with_costs();
+        let active = bus.motor_snapshots();
+        assert!(active[0].faults.contains(&"inverter".to_owned()));
+        assert!(active[0].faults.contains(&"hall-b-low".to_owned()));
+        assert_eq!(active[0].control_state, "fault:inverter");
+        assert_eq!(
+            bus.read_u32(0x4800_0810).unwrap() & (1 << 1),
+            0,
+            "Hall B must be held low at the firmware GPIO"
+        );
+
+        bus.set_motor_named_fault("drive_motor", "inverter", false)
+            .unwrap();
+        bus.set_motor_named_fault("drive_motor", "hall-b-low", false)
+            .unwrap();
+        bus.set_current_cycle(200);
+        bus.tick_peripherals_with_costs();
+        let cleared = bus.motor_snapshots();
+        assert!(!cleared[0].faults.contains(&"inverter".to_owned()));
+        assert!(!cleared[0].faults.contains(&"hall-b-low".to_owned()));
+
+        bus.set_motor_named_fault("drive_motor", "invalid-hall", true)
+            .unwrap();
+        bus.set_current_cycle(300);
+        bus.tick_peripherals_with_costs();
+        assert!(bus.motor_snapshots()[0]
+            .faults
+            .contains(&"invalid-hall".to_owned()));
+        assert_eq!(bus.read_u32(0x4800_0810).unwrap() & 0b111, 0);
+        bus.set_motor_named_fault("drive_motor", "invalid-hall", false)
+            .unwrap();
     }
 
     #[test]
