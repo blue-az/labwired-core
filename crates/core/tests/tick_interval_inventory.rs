@@ -320,10 +320,12 @@ fn rp2040_pico_is_walk_free_and_tick_512() {
 /// `RECOMMENDED_TICK_INTERVAL` (512).
 ///
 /// Inventory forcers (Task 1): gpdma1, fdcan1, rtc, pwr. Class-A: PwrH5.
-/// Class-B: GPDMA / RtcV3 / FDCAN (TX+IRQ events; FDCAN forces walk only with
-/// an attached CanBus interconnect, absent on this bus). H5 FLASH still sets
-/// `flash_models_ops` (CPU quantum 1 via `requires_cycle_accurate`) but no
-/// longer blocks max_safe. No `walk_deleted` YAML hatch.
+/// Class-B: GPDMA / RtcV3 / FDCAN. **Single-node** FDCAN is intentional
+/// walk-free (TX+IRQ events). **Multi-node** with CanBus `bus_rx` attached
+/// forces the walk (absent on this demo bus) — honest interim, not a hatch.
+/// H5 FLASH still sets `flash_models_ops` (CPU quantum 1 via
+/// `requires_cycle_accurate`) but no longer blocks max_safe. No
+/// `walk_deleted` YAML hatch.
 #[test]
 fn h563_is_walk_free_and_tick_512() {
     let bus = bus_h563();

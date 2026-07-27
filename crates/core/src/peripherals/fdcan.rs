@@ -54,9 +54,15 @@
 //!
 //! * **Scheduler mode** (`event-scheduler` and no `CanBus` interconnect):
 //!   TXBAR-deferred completion and level IRQ re-assert ride a delay-0/1
-//!   event chain. `needs_legacy_walk` is false so the demo bus can flip.
+//!   event chain. `needs_legacy_walk` is false so the single-node demo bus
+//!   can flip (`max_safe=512`). This is the intentional green path.
 //! * **Legacy / interconnect mode**: with a `CanBus` `bus_rx` attached the
-//!   tick must poll mpsc (same contract as bxCAN); the walk stays on.
+//!   tick must poll mpsc (same contract as bxCAN); the walk stays on and
+//!   multi-node buses correctly pin `max_safe=1`. **Do not hatch walk-free
+//!   while `bus_rx` is polled only from the walk** — that starves multi-node
+//!   RX. Event-driven CanBus drain (delay-0 / push-into-scheduler with a
+//!   dual-lane walk@1 ≡ sched@512 fidelity gate) is a follow-up; until then
+//!   multi-node is an honest interim, not a certificate.
 //!   Feature-off builds also use the walk for TX + IRQ.
 //! - interrupt line 1 (ILS routing, FDCAN1_IT1) is not modeled; all
 //!   enabled interrupts assert the configured line (FDCAN1_IT0) when
@@ -280,8 +286,10 @@ impl Fdcan {
 
     #[inline]
     fn scheduler_mode(&self) -> bool {
-        // Scheduler covers TX defer + level IRQ. An attached CanBus
-        // interconnect still needs the walk to poll `bus_rx` (bxCAN pattern).
+        // Scheduler covers TX defer + level IRQ on the single-node path.
+        // An attached CanBus interconnect still needs the walk to poll
+        // `bus_rx` (bxCAN pattern). Do not clear this gate to chase
+        // walk-free multi-node — mpsc RX is not event-driven yet.
         cfg!(feature = "event-scheduler") && self.bus_rx.is_none()
     }
 
@@ -728,9 +736,11 @@ impl Peripheral for Fdcan {
     }
 
     fn needs_legacy_walk(&self) -> bool {
-        // Interconnect forces the walk (RX poll). Feature-off / non-scheduler
+        // Interconnect forces the walk (RX poll) — intentional multi-node
+        // interim until bus_rx is event-driven. Feature-off / non-scheduler
         // builds also walk for TX completion + level IRQ. Scheduler mode
-        // covers those without a walk when no CanBus is attached.
+        // covers those without a walk when no CanBus is attached (single-node
+        // green path for the H563 demo bus).
         !self.scheduler_mode()
     }
 
@@ -1039,5 +1049,85 @@ mod tests {
         // Out of window: reads 0, write doesn't panic.
         wr(&mut dev, RAM_BASE + 0x6A0, 0xFFFF_FFFF);
         assert_eq!(rd(&dev, RAM_BASE + 0x6A0), 0);
+    }
+
+    /// Single-node H5 demo path: no CanBus → scheduler owns TX/IRQ under
+    /// `event-scheduler`, so the peripheral is not a walk forcer.
+    #[test]
+    fn single_node_is_walk_free_under_event_scheduler() {
+        let dev = Fdcan::new();
+        #[cfg(feature = "event-scheduler")]
+        {
+            assert!(
+                dev.uses_scheduler(),
+                "single-node FDCAN must ride the scheduler"
+            );
+            assert!(
+                !dev.needs_legacy_walk(),
+                "single-node FDCAN must not force the legacy walk"
+            );
+        }
+        #[cfg(not(feature = "event-scheduler"))]
+        {
+            assert!(!dev.uses_scheduler());
+            assert!(
+                dev.needs_legacy_walk(),
+                "feature-off builds keep TX/IRQ on the walk"
+            );
+        }
+    }
+
+    /// Multi-node CanBus attach forces the walk so `bus_rx` keeps draining.
+    /// Do not clear this without an event-driven drain + dual-lane fidelity
+    /// gate — silent walk-free multi-node starves RX.
+    #[test]
+    fn canbus_attach_forces_legacy_walk_for_rx_poll() {
+        use std::sync::mpsc::channel;
+        let (out_tx, _out_rx) = channel::<CanFrame>();
+        let (_in_tx, in_rx) = channel::<CanFrame>();
+        let dev = Fdcan::new_with_bus(out_tx, in_rx);
+        assert!(
+            !dev.uses_scheduler(),
+            "attached CanBus must leave scheduler mode (RX is walk-polled)"
+        );
+        assert!(
+            dev.needs_legacy_walk(),
+            "attached CanBus must force legacy walk so bus_rx is not starved"
+        );
+    }
+
+    /// End-to-end CanBus mpsc path still works under the walk (TX A → RX B
+    /// via tick). Proves multi-node fidelity for the interim walk mode.
+    #[test]
+    fn canbus_path_tx_sends_and_rx_drains_on_tick() {
+        use std::sync::mpsc::channel;
+        let (out_tx, out_rx) = channel::<CanFrame>();
+        let (in_tx, in_rx) = channel::<CanFrame>();
+        let mut dev = Fdcan::new_with_bus(out_tx, in_rx);
+
+        // Leave INIT; no loopback — frames go to bus_tx / bus_rx.
+        wr(&mut dev, REG_CCCR, 0x3);
+        wr(&mut dev, REG_CCCR, 0x0);
+        wr(&mut dev, RAM_BASE + 0x278, 0x123 << 18);
+        wr(&mut dev, RAM_BASE + 0x27C, 2 << 16);
+        wr(&mut dev, RAM_BASE + 0x280, 0x0000_BEEF);
+        wr(&mut dev, REG_TXBAR, 0x1);
+        assert_ne!(rd(&dev, REG_TXBRP), 0, "pending before tick");
+        dev.tick();
+        assert_eq!(rd(&dev, REG_TXBRP), 0);
+        let sent = out_rx.try_recv().expect("frame on CanBus TX");
+        assert_eq!(sent.id, 0x123);
+        assert_eq!(sent.data, vec![0xEF, 0xBE]);
+
+        // Peer injects a frame; walk tick drains bus_rx into RX FIFO0.
+        in_tx
+            .send(CanFrame::classic(0x456, vec![0xCA, 0xFE]))
+            .unwrap();
+        assert_eq!(rd(&dev, REG_RXF0S) & 0x7F, 0, "not delivered before tick");
+        dev.tick();
+        assert_eq!(rd(&dev, REG_RXF0S) & 0x7F, 1);
+        assert_eq!((rd(&dev, RAM_BASE + 0xB0) >> 18) & 0x7FF, 0x456);
+        assert_eq!(rd(&dev, RAM_BASE + 0xB8) & 0xFFFF, 0xFECA);
+        assert_ne!(rd(&dev, REG_IR) & IR_RF0N, 0);
     }
 }

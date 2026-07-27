@@ -189,7 +189,7 @@ Featureless builds still report `max_safe=1` (honest). Gates:
 | Class | Models | Mechanism |
 |-------|--------|-----------|
 | **Class-A inert** | `pwr` (`PwrH5`) | `needs_legacy_walk = false` — pure register bank; VOSRDY tracks VOSCR writes |
-| **Class-B scheduler** | `gpdma1`, `rtc` (`RtcV3`), `fdcan1` | `uses_scheduler` + `take_scheduled_events` / `on_event` (GPDMA Dma1-style element chain; RTC second-boundary delays; FDCAN TX-defer + level IRQ; FDCAN forces walk only with attached CanBus interconnect) |
+| **Class-B scheduler** | `gpdma1`, `rtc` (`RtcV3`), `fdcan1` | `uses_scheduler` + `take_scheduled_events` / `on_event` (GPDMA Dma1-style element chain; RTC second-boundary delays; FDCAN TX-defer + level IRQ). **Single-node** FDCAN is walk-free by design; **multi-node** with CanBus `bus_rx` attached forces the walk (intentional interim — not a hatch) |
 
 Featureless builds still report `max_safe=1` (honest). Gates:
 
@@ -205,7 +205,7 @@ Featureless builds still report `max_safe=1` (honest). Gates:
 | systick | scheduler | true | true |
 | uart3 | scheduler | true | true |
 | gpdma1 | scheduler | false | true |
-| fdcan1 | scheduler | false | true |
+| fdcan1 | scheduler (single-node); walk when CanBus attached | false (true with `bus_rx`) | true (false with `bus_rx`) |
 | tim1_pwm, tim2, tim3, tim12, tim6 | scheduler | false | true |
 | i2c1/2 | scheduler | false | true |
 | uart1/2, lpuart1 | scheduler | true | true |
@@ -236,8 +236,9 @@ Featureless builds still report `max_safe=1` (honest). Gates:
 
 | Class | Models | Mechanism |
 |-------|--------|-----------|
-| **Class-A inert** | `spi0`, `i2c0`, `sio`, `xip_ssi` | `needs_legacy_walk = false` — pure MMIO engines; `tick()` is the default no-op (loopback/abort/SSI shift complete inside register writes) |
+| **Class-A inert** | `spi0`, `i2c0`, `sio`, `xip_ssi` | `needs_legacy_walk = false` — pure MMIO engines; `tick()` is the default no-op (loopback/abort/SSI shift complete inside register writes). **Walk-free Class-A is green intentional**; not a paced-SPI/I2C@512 EasyDMA certificate |
 | **Class-B scheduler** | `timer`, `dma`, `pio0`, `usbctrl` | `uses_scheduler` + `take_scheduled_events` / `on_event` (CycleClock on timer/dma; delay-1 SM/host chains on pio/usb) |
+| **Class-B / thin** | `uart0` | scheduler on the pico bus; baud / paced-transfer tick-512 fidelity is **interim** only (no EasyDMA-style differential gate) |
 
 Featureless builds still report `max_safe=1` (honest). Gates:
 
@@ -367,6 +368,6 @@ compare-event / IRQ-driven RTC shapes are the supported surface today.
 | PR | Family focus | Status / blockers |
 |----|--------------|-------------------|
 | **PR-B** | **nrf52840** | **DONE** — empty forcers, `max_safe=512` under `event-scheduler`; Machine TIMER@512 gate; **EasyDMA delay-0 closed** (UARTE/SAADC/PWM/SPIM) |
-| **PR-C** | **rp2040** | **DONE** — empty forcers, `max_safe=512` under `event-scheduler`; Machine TIMER ALARM0@512 gate |
-| **PR-D** | **stm32h563** | **DONE** — empty forcers, `max_safe=512`; `flash_models_ops` still forces CPU quantum 1 (not tick interval); FDCAN walk returns if CanBus interconnect is attached |
+| **PR-C** | **rp2040** | **DONE** — empty forcers, `max_safe=512` under `event-scheduler`; Machine TIMER ALARM0@512 gate; SPI/I2C Class-A walk-free green; UART baud@512 interim |
+| **PR-D** | **stm32h563** | **DONE** (single-node) — empty forcers, `max_safe=512`; `flash_models_ops` still forces CPU quantum 1 (not tick interval); **FDCAN multi-node CanBus remains intentional walk / max_safe=1 interim** until bus_rx is event-driven |
 | **PR-E** | **esp32s3** | **DONE** — empty forcers, `max_safe=512` under `event-scheduler` on `configure_xtensa_esp32s3` + recompute; Class-A inert + Class-B level-export / scheduled engines |

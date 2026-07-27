@@ -47,7 +47,9 @@ Legend:
 | Forcer emptiness / `max_safe=512` | **green** | `rp2040_pico_is_walk_free_and_tick_512` |
 | TIMER ALARM0 via Machine@512 | **green** | `rp2040_timer_machine_gate` |
 | DMA / PIO / USBCTRL | **green** | Class-B scheduler chains (delay-1 where noted in inventory) |
-| UART / SPI / I2C detail | **interim** | not all paths have tick-512 EasyDMA-style differential gates |
+| SPI Class-A (write-side PL022) | **green** | inert walk-free; loopback completes inside `SSPDR` writes (`needs_legacy_walk=false`) — not an EasyDMA timing certificate |
+| I2C Class-A (write-side DW) | **green** | inert walk-free; address-NACK abort inside `IC_DATA_CMD` writes — not a multi-slave/timing certificate |
+| UART baud / paced DMA detail | **interim** | scheduler model present on the pico bus; no tick-512 baud or paced-transfer differential gate (honest thin model) |
 
 ---
 
@@ -62,7 +64,8 @@ Legend:
 | RTC second + Alarm A @ interval 1 | **green** | `rtc_second_and_alarm_is_byte_identical_at_interval_1` — TR advance + ALRAF/ISR byte-identical |
 | RTC second/alarm count @ interval 512 | **green** | `rtc_second_count_is_exact_at_interval_512` — absolute second deadlines; final TR + ISR count exact vs walk@1 |
 | `flash_models_ops` | **interim** | still forces CPU quantum 1 (not tick interval) |
-| FDCAN + CanBus attached | **interim** | walk may return when interconnect attached |
+| FDCAN single-node (no CanBus) | **green** | intentional: TX-defer + level IRQ via scheduler; `needs_legacy_walk=false` so demo bus stays walk-free (`h563_is_walk_free_and_tick_512`; unit: `fdcan::single_node_is_walk_free_under_event_scheduler`) |
+| FDCAN multi-node (CanBus `bus_rx` attached) | **interim** | **blocked for walk-free / 512**: `needs_legacy_walk` returns true (mpsc RX polled on the walk, bxCAN contract). Multi-node buses pin `max_safe=1` until `bus_rx` is event-driven with dual-lane walk@1≡sched@512 proof. Do **not** hatch walk-free — that starves RX. Gates: `fdcan::canbus_attach_forces_legacy_walk_for_rx_poll`, `fdcan::canbus_path_tx_sends_and_rx_drains_on_tick` |
 | SPI wire timing | **interim** | bit engine on scheduler; family-wide EasyDMA@512 not claimed |
 
 ---
