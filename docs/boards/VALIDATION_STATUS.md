@@ -22,6 +22,7 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 | `rp2040` | ⚪ structural | — | 2026-07-24 | no silicon capture |
 | `nrf5340` | 🔵 sim-validated (deep model, no HW diff) | — | 2026-07-24 | no silicon capture |
 | `stm32h735` | 🔵 sim-validated (deep model, no HW diff) | — | 2026-07-25 | no silicon capture |
+| `stm32f411ceu6` | 🔵 sim-validated (deep model, no HW diff) | — | 2026-07-25 | no silicon capture |
 
 ## `nrf52840` — 🟢 silicon-verified
 
@@ -145,4 +146,15 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
   - offline (CI): tier1 fixture (clock/gpio/timer/pwm/i2c/spi/wdt/irq PASS + uart via TIER1 done)
   - offline (CI): io-smoke (examples/stm32h735-smoke: asserts the TIER1 transcript over UART)
   - offline (CI): chip_conformance (estate OK — no peripheral window faults)
+- Drift status: **no silicon capture**
+
+## `stm32f411ceu6` — 🔵 sim-validated (deep model, no HW diff)
+
+- Doc: [`docs/boards/stm32f411.md`](stm32f411.md)  ·  Chip: `configs/chips/stm32f411ceu6.yaml`
+- Note: STM32F411CEU6 (WeAct Black Pill) — same silicon row as the STM32F401 (RM0383 vs RM0368: identical peripheral bases and IRQ numbers) with three deltas: 512 KiB flash, 128 KiB SRAM, and the extra SPI5 instance @ 0x4001_5000 IRQ 85. Required NO new peripheral model and NO new RCC layout: the F411 RCC offsets (AHB1ENR 0x30, APB1ENR 0x40, APB2ENR 0x44) were read out of the vendored SVD and are byte-identical to the shipped stm32f4 profile, and SPI5 reuses the existing classic-SPI IP. The tier-1 fixture (tests/fixtures/tier1/stm32f411.elf) drives raw-register self-tests and reports clock/gpio/timer/i2c/spi/adc/wdt/rtc PASS plus a working UART over USART2; its spi check covers SPI1 AND SPI5. SIM-DERIVED: there is NO F411 bench part, NO ST-Link capture and NO silicon diff — every value comes from ST's CMSIS header (stm32f411xe.h) and modm-io's F411 SVD. THREE THINGS ARE EXPLICITLY UNVERIFIED AND MUST NOT BE READ AS CLAIMS: (1) the DBGMCU IDCODE is in neither source, so dbg ships as a stub with NO IDCODE and none was invented (F401CDU6's 0x10016433 is F401's); (2) the Black Pill LED PC13 / button PA0 pinout is carried over from the F401 board and is a board-level fact no chip source can settle; (3) the 100 MHz max SYSCLK is unrepresentable in the schema (the stm32f4 RCC model derives no frequency) and is documentation only. Clock gating is declared only for TIM2/ADC1/SPI1/SPI5 — the four gates the fixture proves; every other block responds unclocked, the same modelling gap the F401 descriptors carry. DMA1/2 stay stubs because the F4 stream controller is not the modelled F1/L4 channel IP. SPI5's clock-gate bit (RCC_APB2ENR bit 20) is header-only: no public F411 SVD declares an SPI5EN field, so the fixture's spi check is its only executable evidence.
+- Silicon: none — not validated against real hardware.
+  - offline (CI): tier1 fixture (clock/gpio/timer/i2c/spi/adc/wdt/rtc PASS + uart via TIER1 done)
+  - offline (CI): io-smoke (examples/stm32f411ceu6-blackpill: asserts the TIER1 transcript over USART2)
+  - offline (CI): chip_conformance (estate OK — no peripheral window faults)
+  - offline (CI): register_coverage (scanned against the vendored modm-io SVD, 56 IRQs)
 - Drift status: **no silicon capture**

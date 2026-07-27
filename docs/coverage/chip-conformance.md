@@ -12,6 +12,7 @@ Reg match = verifiable cold-reset registers reproduced. "Excluded" = registers a
 | esp32s3 | **L0** | ✓ | 10 | — | — | — |
 | esp32s3-zero | **L0** | ✓ | 17 | — | — | — |
 | stm32f401cdu6 | **L1** | ✓ | 45 | — | — | onboarding-stm32f401cdu6 |
+| stm32f411ceu6 | **L1** | ✓ | 46 | — | — | tier1::stm32f411 |
 | nrf52832 | **L1** | ✓ | 16 | — | — | firmware_survival::test_nrf52832_demo_survival |
 | nrf52840 | **L1** | ✓ | 49 | — | — | firmware_survival::test_nrf52840_demo_survival |
 | nrf5340 | **L1** | ✓ | 20 | — | — | firmware_survival::test_nrf5340_zephyr_survival |
