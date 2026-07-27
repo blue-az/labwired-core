@@ -283,7 +283,8 @@ peripherals:
     type: "rng"
     base_address: 0x48021800
     size: "1KB"
-    irq: 141
+    # STM32H735 RNG shares HASH_RNG_IRQn = 80 (SVD); 141 is LPTIM5.
+    irq: 80
   # DBGMCU (RM0468 §60) @ 0x5C001000. DEV_ID 0x483 (H72x/73x). Nominal IDCODE.
   - id: "dbgmcu"
     type: "dbgmcu"

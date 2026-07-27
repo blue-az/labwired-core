@@ -150,6 +150,16 @@ jobs:
       - name: Board-coverage ratchet (static naming scan)
         run: cargo test -p labwired-core --test board_coverage_ratchet -- --nocapture
 
+      # Chip configs vs the vendored SVDs — peripheral base addresses and NVIC
+      # numbers. Pure data (~20s, no firmware build, no toolchain), and it is
+      # the only gate that reads the silicon's own register map: `register_
+      # coverage` counts how many SVD registers respond, which a WRONG offset
+      # also satisfies. Living only in the nightly `core-full` job is how the
+      # WB55 RCC misplacement and the WBA52 LPUART1/SPI1 vector collision both
+      # sat on main for months, so it runs on every push.
+      - name: SVD conformance (config addresses + IRQs vs silicon)
+        run: cargo test -p labwired-core --test svd_conformance -- --nocapture
+
       # RELEASE-ONLY CODE — the lane that did not exist.
       #
       # Every other cargo step in this file builds DEBUG, so a
@@ -181,6 +191,28 @@ jobs:
           --test stm32_dma_walk_differential
           --test kw41z_walk_free_differential
           --lib
+
+      # HARDWARE ORACLE UNDER THE SCHEDULER FEATURE — the configuration that
+      # single-crate commands cannot reproduce.
+      #
+      # `labwired-hw-oracle` does not request `event-scheduler` itself, so
+      # `cargo test -p labwired-hw-oracle` builds it OFF. Cargo's feature
+      # unification switches it ON only under `cargo test --workspace`, which
+      # runs solely in the dispatch-gated `core-full` job. `exti0_interrupt_
+      # delivery_sim` failed in exactly that gap for as long as EXTI had a
+      # scheduler mode: `Exti::tick()` no-ops under the scheduler (correct —
+      # the event chain owns delivery), but the oracle forces the compatibility
+      # walk through `tick_elapsed_forced`, which EXTI did not override, so the
+      # guard swallowed the forced call and NO interrupt was delivered.
+      #
+      # The hole is structural, not EXTI-specific: any peripheral whose `tick`
+      # self-guards on `scheduler_mode()` without overriding
+      # `tick_elapsed_forced` has it. This step runs the oracle in the
+      # configuration that exposes it, on every push to main.
+      - name: Feature gate — hardware oracle under event-scheduler
+        run: >
+          cargo test -p labwired-hw-oracle
+          --features labwired-core/event-scheduler
 
   # ── CI runner OCI smoke (NOT a PR required check) ──────────────────────────
   ci-runner-image:

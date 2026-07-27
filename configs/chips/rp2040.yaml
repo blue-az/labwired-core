@@ -70,12 +70,59 @@ peripherals:
     type: "rp2040_clkrst"
     base_address: 0x40060000
     size: "4KB"
-  # WATCHDOG: Zephyr writes the tick generator once during boot; storage is
-  # enough (it is not polled before the console comes up).
+  # WATCHDOG + tick generator (datasheet §4.7). Behavioural model — TICK.CYCLES
+  # divides the reference clock into watchdog ticks (RUNNING needs a non-zero
+  # ratio, which is why the reset state reads 0x200), and the counter decrements
+  # TWICE per tick per errata RP2040-E1, so a LOAD is in half-microseconds. That
+  # quirk is why pico-sdk's watchdog_enable() multiplies milliseconds by 2000,
+  # and firmware that assumes 1 us must be wrong here too. An expiry latches
+  # REASON.TIMER and stops the dog rather than resetting the CPU (the same
+  # convention the Nordic WDT model uses); CTRL.TRIGGER latches REASON.FORCE.
+  # The block has no interrupt line on this silicon.
   - id: "watchdog"
-    type: "stub"
+    type: "rp2040_watchdog"
     base_address: 0x40058000
     size: "4KB"
+  # ADC + temperature sensor (datasheet §4.9). Behavioural model — a 12-bit SAR
+  # over five inputs (0..3 = GPIO26..29, 4 = the on-die sensor) with the 8-entry
+  # sample FIFO, the round-robin sequencer and DIV-paced free-running mode.
+  # Inputs 0..3 carry whatever a component/`set_input` drives onto them and 0
+  # otherwise (nothing is wired to a bare Pico's ADC pins); input 4 converts the
+  # datasheet transfer function T = 27 - (V - 0.706)/0.001721, so 27 C reads 876
+  # — derived, not a hardcoded constant. ADC_IRQ_FIFO (NVIC 22) is held while
+  # the FIFO is at or above FCS.THRESH; INTR is a level, not a latch.
+  - id: "adc"
+    type: "rp2040_adc"
+    base_address: 0x4004c000
+    size: "4KB"
+    irq: 22
+  # RTC (datasheet §4.8). Behavioural model — a real calendar (year/month/day/
+  # dotw/hour/min/sec) clocked at one second per CLKDIV_M1+1 ticks, with the
+  # RP2040's own leap rule (year % 4, hence CTRL.FORCE_NOTLEAPYEAR) and the
+  # per-field alarm on RTC_IRQ (NVIC 25). It models the datasheet's read
+  # ordering: RTC_1 latches the date+time pair and RTC_0 returns the latch, so
+  # firmware that reads RTC_0 first gets a stale time here exactly as it does on
+  # silicon.
+  - id: "rtc"
+    type: "rp2040_rtc"
+    base_address: 0x4005c000
+    size: "4KB"
+    irq: 25
+  # NVIC — installed unconditionally for Cortex-M (see system/cortex_m.rs);
+  # declared here so the tier1 irq class is claimed rather than reading `na`.
+  - id: "nvic"
+    type: "nvic"
+    base_address: 0xE000E100
+    size: "1KB"
+  # PWM: 8 independent slices (datasheet §4.5). Behavioural model — each slice
+  # counts on its own 8.4 fixed-point divided clock, wraps at TOP and latches
+  # its INTR bit; PWM_IRQ_WRAP (NVIC 4) is held while a masked wrap is pending.
+  # Phase-correct mode ramps up and back down with period 2*TOP.
+  - id: "pwm"
+    type: "rp2040_pwm"
+    base_address: 0x40050000
+    size: "4KB"
+    irq: 4
   # TIMER: 64-bit free-running microsecond timer (datasheet §4.6). Behavioural
   # model — the counter advances on every tick, sampled via TIMERAWL/TIMERAWH
   # (and TIMELR/TIMEHR); PAUSE freezes it.

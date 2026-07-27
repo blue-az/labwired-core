@@ -44,6 +44,16 @@ pub enum RccRegisterLayout {
     /// H5-style V2 layout (APB1LENR@0x9C). Offsets verified against the
     /// vendored CMSIS `stm32g474xx.h`.
     Stm32G4,
+    /// STM32WB family (RM0434). Shares the whole modern-V2 clock tree with
+    /// WBA/H5 — CR/ICSCR/CFGR/PLLCFGR/BDCR@0x90/CSR@0x94/CRRCR@0x98/
+    /// EXTCFGR@0x108 are identical — but places its enable/reset registers in
+    /// the L4-shaped block (AHB2ENR@0x4C, APB1ENR1@0x58, APB2ENR@0x60), NOT
+    /// the H5-style block at 0x8C/0x9C/0xA4. Offsets from the vendored
+    /// `tests/fixtures/real_world/stm32wb55.svd` and ST's CMSIS
+    /// `stm32wb55xx.h`. On WB, 0x9C is RCC_HSECR — a real register with
+    /// unrelated semantics — so the H5 placement did not merely miss the
+    /// enable bits, it aliased them onto silicon that means something else.
+    Stm32Wb,
 }
 
 impl FromStr for RccRegisterLayout {
@@ -60,8 +70,9 @@ impl FromStr for RccRegisterLayout {
             "stm32l4" | "l4" => Ok(Self::Stm32L4),
             "stm32l0" | "l0" => Ok(Self::Stm32L0),
             "stm32g4" | "g4" => Ok(Self::Stm32G4),
+            "stm32wb" | "wb" => Ok(Self::Stm32Wb),
             _ => Err(format!(
-                "unsupported RCC register layout '{}'; supported: stm32f1, stm32f4, stm32v2, stm32h5, stm32h7, stm32l4, stm32l0, stm32g4",
+                "unsupported RCC register layout '{}'; supported: stm32f1, stm32f4, stm32v2, stm32h5, stm32h7, stm32l4, stm32l0, stm32g4, stm32wb",
                 value
             )),
         }
@@ -326,18 +337,78 @@ impl RccModel for F4Rcc {
 }
 
 // ── STM32V2 (H5-style) ──────────────────────────────────────────────────────
+
+/// Where a V2-family part puts its enable/reset register block.
+///
+/// Everything else in the modern-V2 clock tree (CR, ICSCR, CFGR, PLLCFGR,
+/// BDCR@0x90, CSR@0x94, CRRCR@0x98, EXTCFGR@0x108) is genuinely shared across
+/// WBA/H5 and WB, so the behaviour below is ONE implementation. Only this
+/// six-offset block moves between families, so only it is a table.
+///
+/// Keeping it a table rather than forking `V2Rcc` matters for more than
+/// tidiness: [`Rcc::enable_reg_offset`] — which resolves a peripheral's
+/// `clock: { reg }` gate — reads the SAME table the register decode does, so
+/// the gate and the decode cannot drift onto different offsets. That drift is
+/// exactly the defect this type is being fixed for.
+#[derive(Debug, Clone, Copy, serde::Serialize)]
+pub struct V2EnrMap {
+    ahbrstr: u64,
+    apb1rstr: u64,
+    apb2rstr: u64,
+    ahbenr: u64,
+    apb1enr: u64,
+    apb2enr: u64,
+}
+
+impl V2EnrMap {
+    /// H5 / WBA layout (RM0481 §11.8, RM0493 §11.8): AHB2ENR@0x8C,
+    /// APB1ENR1(L)@0x9C, APB2ENR@0xA4. Verified against
+    /// `tests/fixtures/real_world/stm32wba52.svd`.
+    const H5_STYLE: Self = Self {
+        ahbrstr: 0x6C,
+        apb1rstr: 0x7C,
+        apb2rstr: 0x84,
+        ahbenr: 0x8C,
+        apb1enr: 0x9C,
+        apb2enr: 0xA4,
+    };
+    /// STM32WB layout (RM0434 §6.4): the L4-shaped block — AHB2RSTR@0x2C,
+    /// APB1RSTR1@0x38, APB2RSTR@0x40, AHB2ENR@0x4C, APB1ENR1@0x58,
+    /// APB2ENR@0x60. Verified against `tests/fixtures/real_world/stm32wb55.svd`
+    /// and ST's CMSIS `stm32wb55xx.h`.
+    const WB: Self = Self {
+        ahbrstr: 0x2C,
+        apb1rstr: 0x38,
+        apb2rstr: 0x40,
+        ahbenr: 0x4C,
+        apb1enr: 0x58,
+        apb2enr: 0x60,
+    };
+}
+
+impl Default for V2EnrMap {
+    fn default() -> Self {
+        Self::H5_STYLE
+    }
+}
+
 #[derive(Debug, Default, serde::Serialize)]
 pub struct V2Rcc {
     cr: u32,
-    icscr: u32,    // 0x04 — G4/WB MSI/HSI calibration (storage)
-    cfgr: u32,     // 0x08 (G4/WB RM0440/RM0434: CR=0x00, ICSCR=0x04, CFGR=0x08)
-    pllcfgr: u32,  // 0x0C — G4/WB PLL config (HAL_RCC_GetSysClockFreq reads it)
-    ahbenr: u32,   // AHB2ENR 0x8C
-    apb1enr: u32,  // APB1LENR 0x9C
-    apb2enr: u32,  // 0xA4
-    ahbrstr: u32,  // 0x6C
-    apb1rstr: u32, // 0x7C
-    apb2rstr: u32, // 0x84
+    icscr: u32,   // 0x04 — G4/WB MSI/HSI calibration (storage)
+    cfgr: u32,    // 0x08 (G4/WB RM0440/RM0434: CR=0x00, ICSCR=0x04, CFGR=0x08)
+    pllcfgr: u32, // 0x0C — G4/WB PLL config (HAL_RCC_GetSysClockFreq reads it)
+    /// Enable/reset block placement — H5/WBA at 0x8C/0x9C/0xA4, WB at
+    /// 0x4C/0x58/0x60. Skipped in the snapshot: it is fixed configuration,
+    /// not simulated state, and emitting it would churn every V2 snapshot.
+    #[serde(skip)]
+    map: V2EnrMap,
+    ahbenr: u32,   // AHB2ENR — `map.ahbenr`
+    apb1enr: u32,  // APB1ENR1 / APB1LENR — `map.apb1enr`
+    apb2enr: u32,  // APB2ENR — `map.apb2enr`
+    ahbrstr: u32,  // `map.ahbrstr`
+    apb1rstr: u32, // `map.apb1rstr`
+    apb2rstr: u32, // `map.apb2rstr`
     bdcr: u32,     // 0x90 — WB/G4 backup domain: LSEON bit0 → LSERDY bit1
     csr: u32,      // 0x94 — LSION bit0 → LSIRDY bit1
     crrcr: u32,    // 0x98 — HSI48ON bit0 → HSI48RDY bit1
@@ -356,6 +427,13 @@ impl V2Rcc {
             ..Default::default()
         }
     }
+    /// Same model, STM32WB enable/reset placement (RM0434 §6.4).
+    fn new_wb() -> Self {
+        Self {
+            map: V2EnrMap::WB,
+            ..Self::new()
+        }
+    }
     /// G4/WB/WBA CR ready rule: the classic HSI(0)/HSE(16)/PLL(24) bits plus
     /// HSI16 at bit8→bit10 (these families gate the kernel clock on HSI16RDY,
     /// e.g. WBA's stm32_clock_control_init).
@@ -372,6 +450,23 @@ impl V2Rcc {
 
 impl RccModel for V2Rcc {
     fn read_reg(&self, offset: u64) -> u32 {
+        // Family-placed enable/reset block first. On both layouts these six
+        // offsets are disjoint from the fixed arms below, so order is a
+        // readability choice, not a correctness one.
+        let m = self.map;
+        if offset == m.ahbrstr {
+            return self.ahbrstr;
+        } else if offset == m.apb1rstr {
+            return self.apb1rstr;
+        } else if offset == m.apb2rstr {
+            return self.apb2rstr;
+        } else if offset == m.ahbenr {
+            return self.ahbenr;
+        } else if offset == m.apb1enr {
+            return self.apb1enr;
+        } else if offset == m.apb2enr {
+            return self.apb2enr;
+        }
         match offset {
             0x00 => self.cr,
             0x04 => self.icscr,
@@ -387,15 +482,9 @@ impl RccModel for V2Rcc {
                     self.reg28 & !(1 << 22)
                 }
             }
-            0x6C => self.ahbrstr,
-            0x7C => self.apb1rstr,
-            0x84 => self.apb2rstr,
-            0x8C => self.ahbenr,
             0x90 => self.bdcr,
             0x94 => self.csr,
             0x98 => self.crrcr,
-            0x9C => self.apb1enr,
-            0xA4 => self.apb2enr,
             0xF0 => self.bdcr1,
             // STM32WB EXTCFGR — dual-core AHB prescalers (CPU2 / shared domain).
             0x108 => self.extcfgr,
@@ -403,6 +492,27 @@ impl RccModel for V2Rcc {
         }
     }
     fn write_reg(&mut self, offset: u64, value: u32) {
+        // Family-placed enable/reset block — see `read_reg`.
+        let m = self.map;
+        if offset == m.ahbrstr {
+            self.ahbrstr = value;
+            return;
+        } else if offset == m.apb1rstr {
+            self.apb1rstr = value;
+            return;
+        } else if offset == m.apb2rstr {
+            self.apb2rstr = value;
+            return;
+        } else if offset == m.ahbenr {
+            self.ahbenr = value;
+            return;
+        } else if offset == m.apb1enr {
+            self.apb1enr = value;
+            return;
+        } else if offset == m.apb2enr {
+            self.apb2enr = value;
+            return;
+        }
         match offset {
             0x00 => self.cr = Self::ready(value),
             0x04 => self.icscr = value,
@@ -453,10 +563,6 @@ impl RccModel for V2Rcc {
                     value & !(1 << 1)
                 };
             }
-            0x6C => self.ahbrstr = value,
-            0x7C => self.apb1rstr = value,
-            0x84 => self.apb2rstr = value,
-            0x8C => self.ahbenr = value,
             // CSR: LSION (bit0) → LSIRDY (bit1); reset flags (31:23) are storage.
             0x94 => {
                 self.csr = if value & 1 != 0 {
@@ -473,8 +579,6 @@ impl RccModel for V2Rcc {
                     value & !(1 << 1)
                 };
             }
-            0x9C => self.apb1enr = value,
-            0xA4 => self.apb2enr = value,
             // BDCR1 (WBA backup domain, RM0493): the LSI / LSESYS / LSE2
             // enable→ready handshakes Zephyr's clock init polls — LSION(0)→
             // LSIRDY(1), LSESYSEN(7)→LSESYSRDY(11), and the bit26→bit27 pair.
@@ -1407,6 +1511,8 @@ impl Rcc {
             RccRegisterLayout::Stm32L4 => Self::Stm32L4(L4Rcc::new()),
             RccRegisterLayout::Stm32L0 => Self::Stm32L0(L0Rcc::new()),
             RccRegisterLayout::Stm32G4 => Self::Stm32G4(G4Rcc::new()),
+            // Same V2 model, RM0434 enable/reset placement.
+            RccRegisterLayout::Stm32Wb => Self::Stm32V2(V2Rcc::new_wb()),
         }
     }
 
@@ -1462,11 +1568,13 @@ impl Rcc {
                 "apb1enr" => Some(0x38),
                 _ => None,
             },
-            // V2 (H5-style): AHB2ENR@0x8C, APB1LENR@0x9C, APB2ENR@0xA4.
-            Self::Stm32V2(_) => match r.as_str() {
-                "ahbenr" | "ahb2enr" => Some(0x8C),
-                "apb1enr" | "apb1lenr" => Some(0x9C),
-                "apb2enr" => Some(0xA4),
+            // V2: H5/WBA at 0x8C/0x9C/0xA4, WB (RM0434) at 0x4C/0x58/0x60.
+            // Read straight off the instance's own map so a gate can never
+            // resolve to an offset the register decode does not honour.
+            Self::Stm32V2(v2) => match r.as_str() {
+                "ahbenr" | "ahb2enr" => Some(v2.map.ahbenr),
+                "apb1enr" | "apb1enr1" | "apb1lenr" => Some(v2.map.apb1enr),
+                "apb2enr" => Some(v2.map.apb2enr),
                 _ => None,
             },
             // H5: AHB1ENR@0x88, AHB2ENR@0x8C, APB1LENR@0x9C, APB1HENR@0xA0,
@@ -1763,6 +1871,67 @@ mod tests {
         assert_eq!(rcc.read(0xA4).unwrap(), 0xCC);
         assert_eq!(rcc.read(0x9C).unwrap(), 0x33);
         assert_eq!(rcc.read(0x18).unwrap(), 0x00);
+    }
+
+    /// STM32WB (RM0434 §6.4) puts the enable registers in the L4-shaped block —
+    /// AHB2ENR@0x4C, APB1ENR1@0x58, APB2ENR@0x60 — NOT the H5-style V2 slots.
+    /// Every number below is read off `tests/fixtures/real_world/stm32wb55.svd`
+    /// and ST's CMSIS `stm32wb55xx.h`, never off the model.
+    ///
+    /// This part shipped on the H5-style layout, which meant the clock-enable
+    /// write every STM32Cube / Zephyr / Arduino WB55 build performs went to an
+    /// offset the model did not decode and was dropped on the floor, leaving
+    /// TIM1/TIM2/I2C1/SPI1/ADC1/RTC permanently gated off. It survived because
+    /// WB55's GPIO and both UARTs are ungated, so blinky and every UART-trace
+    /// validation passed regardless.
+    #[test]
+    fn test_rcc_wb_offsets_match_rm0434() {
+        let mut rcc = Rcc::new_with_layout(RccRegisterLayout::Stm32Wb);
+
+        // The gate resolver and the register decode must agree, and both must
+        // agree with the SVD.
+        assert_eq!(rcc.enable_reg_offset("ahb2enr"), Some(0x4C));
+        assert_eq!(rcc.enable_reg_offset("apb1enr"), Some(0x58));
+        assert_eq!(rcc.enable_reg_offset("apb1enr1"), Some(0x58));
+        assert_eq!(rcc.enable_reg_offset("apb2enr"), Some(0x60));
+
+        for (off, val) in [
+            (0x4Cu64, 0x0002_00F0u32),
+            (0x58, 0x0000_2001),
+            (0x60, 0x0000_1800),
+        ] {
+            rcc.write_u32(off, val).unwrap();
+            assert_eq!(
+                rcc.read_u32(off).unwrap(),
+                val,
+                "RM0434 enable register @ {off:#X} must latch"
+            );
+        }
+
+        // 0x9C is RCC_HSECR on this part — a real register with unrelated
+        // semantics. It must NOT behave as APB1ENR1: writing it must not
+        // disturb the enable register the clock gate actually reads.
+        rcc.write_u32(0x9C, 0xFFFF_FFFF).unwrap();
+        assert_eq!(
+            rcc.read_u32(0x58).unwrap(),
+            0x0000_2001,
+            "a write to HSECR@0x9C must not touch APB1ENR1@0x58"
+        );
+
+        // And the H5-style slots must not answer as enable registers here.
+        assert_eq!(rcc.read_u32(0x8C).unwrap(), 0x00);
+        assert_eq!(rcc.read_u32(0xA4).unwrap(), 0x00);
+    }
+
+    /// The H5/WBA placement is unchanged by the WB fix — stm32wba52 and
+    /// stm32h563 keep resolving to 0x8C/0x9C/0xA4. Guards the shared `V2Rcc`
+    /// against a WB-shaped regression leaking into the other V2 parts.
+    #[test]
+    fn test_rcc_v2_h5_placement_unchanged() {
+        let rcc = Rcc::new_with_layout(RccRegisterLayout::Stm32V2);
+        assert_eq!(rcc.enable_reg_offset("ahb2enr"), Some(0x8C));
+        assert_eq!(rcc.enable_reg_offset("apb1enr"), Some(0x9C));
+        assert_eq!(rcc.enable_reg_offset("apb2enr"), Some(0xA4));
     }
 
     /// G4 (RM0440) puts the enable registers at the L4 offsets — APB1ENR1@0x58,

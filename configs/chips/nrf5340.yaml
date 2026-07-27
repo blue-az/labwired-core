@@ -119,13 +119,20 @@ peripherals:
     type: "nrf5340_dcnf_stub"
     base_address: 0x50000000
     size: "4KB"
+  # FPU's event registers live INSIDE the DCNF page on silicon (both are based
+  # at 0x50000000), and the bus maps one peripheral per address range, so this
+  # inert stub gets a private window. 0x50002000 is reserved on silicon, which
+  # makes it the honest place to park an artifact — see ALLOWED in
+  # crates/core/tests/svd_conformance.rs.
   - id: "fpu"
     type: "nrf5340_fpu_stub"
-    base_address: 0x50001000
+    base_address: 0x50002000
     size: "4KB"
+  # CACHE is at 0x50001000 (SVD). It previously sat at 0x50002000 because the
+  # fpu stub had taken this address, so neither stub was where its silicon is.
   - id: "cache"
     type: "nrf5340_cache_stub"
-    base_address: 0x50002000
+    base_address: 0x50001000
     size: "4KB"
   - id: "spu"
     type: "nrf5340_spu_stub"
