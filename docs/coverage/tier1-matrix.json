@@ -344,6 +344,44 @@
       "status": "pass"
     }
   },
+  "stm32f411": {
+    "adc": {
+      "status": "pass"
+    },
+    "clock": {
+      "status": "pass"
+    },
+    "dma": {
+      "status": "unrecorded"
+    },
+    "gpio": {
+      "status": "pass"
+    },
+    "i2c": {
+      "status": "pass"
+    },
+    "irq": {
+      "status": "na"
+    },
+    "pwm": {
+      "status": "na"
+    },
+    "rtc": {
+      "status": "pass"
+    },
+    "spi": {
+      "status": "pass"
+    },
+    "timer": {
+      "status": "pass"
+    },
+    "uart": {
+      "status": "pass"
+    },
+    "wdt": {
+      "status": "pass"
+    }
+  },
   "stm32g474re": {
     "adc": {
       "status": "pass"

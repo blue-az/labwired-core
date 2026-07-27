@@ -85,6 +85,16 @@ const CHIPS: &[ChipConf] = &[
         behavior_gate: Some("onboarding-stm32f401cdu6"),
     },
     ChipConf {
+        // WeAct F411 Black Pill. Sim-derived from ST's CMSIS header + the modm
+        // F411 SVD; there is no bench part, so no reset_oracle. Behaviour is
+        // asserted by the tier-1 fixture self-tests (clock/gpio/timer/i2c/spi/
+        // adc/wdt/rtc PASS + UART), which is also what its io-smoke runs.
+        name: "stm32f411ceu6",
+        yaml: "configs/chips/stm32f411ceu6.yaml",
+        reset_oracle: None,
+        behavior_gate: Some("tier1::stm32f411"),
+    },
+    ChipConf {
         name: "nrf52832",
         yaml: "configs/chips/nrf52832.yaml",
         reset_oracle: None,

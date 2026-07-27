@@ -388,6 +388,13 @@ pub const TIER1_TARGETS: &[Tier1Target] = &[
         "configs/chips/stm32f407.yaml",
         "tests/fixtures/tier1/stm32f407.elf",
     ),
+    // WeAct F411 Black Pill. Same silicon row as the F401 plus SPI5 (the `spi`
+    // check covers both instances); sim-derived, no bench part.
+    fast_boot(
+        "stm32f411",
+        "configs/chips/stm32f411ceu6.yaml",
+        "tests/fixtures/tier1/stm32f411.elf",
+    ),
     fast_boot(
         "stm32g474re",
         "configs/chips/stm32g474re.yaml",

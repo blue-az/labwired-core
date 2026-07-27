@@ -21,6 +21,7 @@ Each chip's Tier-1 fixture is **real firmware** that drives these peripheral cla
 | `stm32f103` | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | · | 🟢 | 🟢 | 🟢 | · | 🟢 | 🟢 |  |  | **10** |
 | `stm32f401` | 🟢 | 🟢 | 🟢 | 🟢 | · | · | 🟢 | 🟢 | 🟢 | · | 🟢 | 🟢 |  |  | **9** |
 | `stm32f407` | 🟢 | 🟢 | 🟢 | 🟢 | 🟠 | · | 🟢 | 🟢 | 🟢 | · | 🟢 | 🟢 |  |  | **9** |
+| `stm32f411` | 🟢 | 🟢 | 🟢 | 🟢 | 🟠 | · | 🟢 | 🟢 | 🟢 | · | 🟢 | 🟢 |  |  | **9** |
 | `stm32g474re` | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 |  |  | **12** |
 | `stm32h563` | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 |  | **13** |
 | `stm32h735` | 🟢 | 🟢 | 🟢 | 🟢 | · | 🟢 | 🟢 | 🟢 | · | 🟢 | 🟢 | · |  |  | **9** |
@@ -29,9 +30,9 @@ Each chip's Tier-1 fixture is **real firmware** that drives these peripheral cla
 | `stm32wb55` | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 |  |  | **12** |
 | `stm32wba52` | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | · | 🟢 | 🟢 | 🟢 |  |  | **11** |
 
-> **162 rubric cells are driven by real firmware** across 16 chips; 4 are modeled-but-unrecorded (see below). Most chips drive 9–13 of the common peripheral classes — the STM32 family included.
+> **171 rubric cells are driven by real firmware** across 17 chips; 5 are modeled-but-unrecorded (see below). Most chips drive 9–13 of the common peripheral classes — the STM32 family included.
 
-**Unrecorded rubric cells (modeled, fixture does not drive them):** `esp32c3`/clock, `esp32c3`/dma, `rp2040`/dma, `stm32f407`/dma.
+**Unrecorded rubric cells (modeled, fixture does not drive them):** `esp32c3`/clock, `esp32c3`/dma, `rp2040`/dma, `stm32f407`/dma, `stm32f411`/dma.
 
 ## Beyond the rubric — functional reads, advanced peripherals, shims
 
