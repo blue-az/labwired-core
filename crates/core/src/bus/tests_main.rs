@@ -2394,6 +2394,17 @@ motor_models:
 
     let mut first = build();
     let mut second = build();
+    assert!(
+        first
+            .list_inputs()
+            .iter()
+            .any(|(component, channel)| component == "spindle" && channel.key == "stall"),
+        "BLDC stall injection must be discoverable through the generic input API"
+    );
+    first.set_input(Some("spindle"), "stall", 1.0).unwrap();
+    assert_eq!(first.motor_snapshots()[0].faults, ["stalled"]);
+    first.set_input(Some("spindle"), "stall", 0.0).unwrap();
+    assert!(first.motor_snapshots()[0].faults.is_empty());
     assert_eq!(
         first.next_motor_service_deadline_cycle(),
         Some(first.current_cycle + 4096),

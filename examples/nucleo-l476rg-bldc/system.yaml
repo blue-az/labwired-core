@@ -1,0 +1,33 @@
+schema_version: "1.0"
+name: "nucleo-l476rg-bldc"
+chip: "../../configs/chips/stm32l476.yaml"
+debug_uart: uart2
+motor_models:
+  - kind: bldc
+    id: drive_motor
+    resistance_ohm: 0.35
+    inductance_h: 0.00018
+    torque_constant_nm_per_a: 0.04
+    back_emf_constant_v_per_rad_s: 0.04
+    rotor_inertia_kg_m2: 0.00002
+    viscous_friction_nm_per_rad_s: 0.000003
+    supply_voltage_v: 24.0
+    load_torque_nm: 0.001
+    encoder_cpr: 2048
+    pole_pairs: 7
+    simulation_clock_hz: 80000000
+    phase_a_high_pin: PA8
+    phase_a_low_pin: PB13
+    phase_b_high_pin: PA9
+    phase_b_low_pin: PB14
+    phase_c_high_pin: PA10
+    phase_c_low_pin: PB15
+    enable_pin: PA0
+    hall_a_pin: PA1
+    hall_b_pin: PA2
+    hall_c_pin: PA3
+    encoder_a_pin: PA4
+    encoder_b_pin: PA5
+    encoder_index_pin: PA6
+    motor_fault_pin: PA7
+    inverter_fault_pin: PB7

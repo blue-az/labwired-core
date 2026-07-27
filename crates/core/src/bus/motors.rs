@@ -5,6 +5,15 @@ use crate::physics::motor::{
 };
 use labwired_config::{BldcMotorConfig, BrushedMotorConfig, MotorModelConfig, SystemManifest};
 
+pub(super) const MOTOR_STALL_INPUT: crate::sim_input::InputChannel =
+    crate::sim_input::InputChannel {
+        key: "stall",
+        label: "Mechanical stall",
+        unit: "boolean",
+        min: 0.0,
+        max: 1.0,
+    };
+
 /// Maximum production gap between motor services. This bounds exact PWM edge
 /// streaming work while leaving direct diagnostic calls exact for any delta.
 pub(super) const MOTOR_SERVICE_QUANTUM_CYCLES: u64 = 4096;
@@ -542,6 +551,60 @@ impl SystemBus {
             }
         }
         Ok(())
+    }
+
+    pub(super) fn matching_motor_stall_inputs(
+        &self,
+        component: Option<&str>,
+        channel: &str,
+    ) -> usize {
+        if channel != MOTOR_STALL_INPUT.key {
+            return 0;
+        }
+        self.motors
+            .iter()
+            .filter(|motor| {
+                let id = match motor {
+                    MotorRuntime::Dc { id, .. } | MotorRuntime::Bldc { id, .. } => id,
+                };
+                component.is_none_or(|component| component == id)
+            })
+            .count()
+    }
+
+    pub(super) fn set_motor_input(
+        &mut self,
+        component: Option<&str>,
+        channel: &str,
+        value: f64,
+    ) -> Result<bool, crate::sim_input::SimInputError> {
+        use crate::sim_input::SimInputError;
+        if self.matching_motor_stall_inputs(component, channel) != 1 {
+            return Ok(false);
+        }
+        if !(MOTOR_STALL_INPUT.min..=MOTOR_STALL_INPUT.max).contains(&value) {
+            return Err(SimInputError::OutOfRange {
+                key: channel.to_owned(),
+                value,
+                min: MOTOR_STALL_INPUT.min,
+                max: MOTOR_STALL_INPUT.max,
+            });
+        }
+        let id = self
+            .motors
+            .iter()
+            .find_map(|motor| {
+                let id = match motor {
+                    MotorRuntime::Dc { id, .. } | MotorRuntime::Bldc { id, .. } => id,
+                };
+                component
+                    .is_none_or(|component| component == id)
+                    .then(|| id.clone())
+            })
+            .expect("exactly one matching motor was counted");
+        self.set_motor_stalled(&id, value >= 0.5)
+            .map_err(|_| SimInputError::NoDevice(format!("{id}/{channel}")))?;
+        Ok(true)
     }
 
     #[cfg(test)]
