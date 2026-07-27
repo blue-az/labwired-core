@@ -163,6 +163,22 @@ pub struct Timer {
 /// fire, so the counter free-runs mod 2^32 with no update events.
 const ARR_NEVER_WRAPS: u32 = u32::MAX;
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TimerChannelOutputSnapshot {
+    pub enabled: bool,
+    pub complementary_enabled: bool,
+    pub active_low: bool,
+    pub complementary_active_low: bool,
+    pub duty_fraction: f64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TimerOutputSnapshot {
+    pub channels: [TimerChannelOutputSnapshot; 4],
+    pub dead_time_ticks: u16,
+    pub main_output_enabled: bool,
+}
+
 impl Timer {
     pub fn new() -> Self {
         Self::new_with_width(16)
@@ -234,6 +250,31 @@ impl Timer {
     /// from the same bus assembly.
     pub fn force_legacy_walk(&mut self) {
         self.clock = None;
+    }
+
+    /// Read-only PWM state derived from the timer's register-owned truth.
+    ///
+    /// Duty is the cycle-average `CCR/(ARR+1)`, clamped to one. This intentionally
+    /// does not invent a second edge-phase clock: motor plants sample the
+    /// deterministic average command at their integration boundary.
+    pub fn output_snapshot(&self) -> TimerOutputSnapshot {
+        let period = u64::from(self.arr) + 1;
+        let ccr = [self.ccr1, self.ccr2, self.ccr3, self.ccr4];
+        let channels = std::array::from_fn(|channel| {
+            let shift = channel * 4;
+            TimerChannelOutputSnapshot {
+                enabled: (self.ccer & (1 << shift)) != 0,
+                active_low: (self.ccer & (1 << (shift + 1))) != 0,
+                complementary_enabled: self.advanced && (self.ccer & (1 << (shift + 2))) != 0,
+                complementary_active_low: self.advanced && (self.ccer & (1 << (shift + 3))) != 0,
+                duty_fraction: (f64::from(ccr[channel]) / period as f64).clamp(0.0, 1.0),
+            }
+        });
+        TimerOutputSnapshot {
+            channels,
+            dead_time_ticks: decode_dead_time_ticks((self.bdtr & 0xff) as u8),
+            main_output_enabled: self.advanced && (self.bdtr & (1 << 15)) != 0,
+        }
     }
 
     /// IRQ-level / counter-freeze predicate: the legacy `tick()` returns the
@@ -649,6 +690,15 @@ impl Timer {
     }
 }
 
+fn decode_dead_time_ticks(dtg: u8) -> u16 {
+    match dtg {
+        0x00..=0x7f => u16::from(dtg),
+        0x80..=0xbf => (64 + u16::from(dtg & 0x3f)) * 2,
+        0xc0..=0xdf => (32 + u16::from(dtg & 0x1f)) * 8,
+        _ => (32 + u16::from(dtg & 0x1f)) * 16,
+    }
+}
+
 impl crate::Peripheral for Timer {
     fn read(&self, offset: u64) -> SimResult<u8> {
         // Scheduler mode: advance the lazy counter to the published "now"
@@ -929,6 +979,36 @@ mod tests {
         let bdtr_hi = tim.read(0x45).unwrap();
         assert_eq!(bdtr_lo, 0x40);
         assert_eq!(bdtr_hi, 0x80);
+    }
+
+    #[test]
+    fn timer_output_snapshot_reports_disabled_outputs_and_moe() {
+        let mut tim = Timer::new_with_layout(16, true);
+        tim.write_u32(0x2C, 999).unwrap();
+        tim.write_u32(0x34, 250).unwrap();
+        tim.write_u32(0x20, 0x0005).unwrap(); // CC1E | CC1NE
+
+        let output = tim.output_snapshot();
+        assert!(!output.main_output_enabled);
+        assert_eq!(output.channels[0].duty_fraction, 0.25);
+        assert!(output.channels[0].enabled);
+        assert!(output.channels[0].complementary_enabled);
+    }
+
+    #[test]
+    fn timer_output_snapshot_reports_polarity_duty_and_dead_time() {
+        let mut tim = Timer::new_with_layout(16, true);
+        tim.write_u32(0x2C, 99).unwrap();
+        tim.write_u32(0x34, 75).unwrap();
+        tim.write_u32(0x20, 0x000F).unwrap(); // E/P/NE/NP
+        tim.write_u32(0x44, (1 << 15) | 0x40).unwrap();
+
+        let output = tim.output_snapshot();
+        assert!(output.main_output_enabled);
+        assert_eq!(output.dead_time_ticks, 64);
+        assert_eq!(output.channels[0].duty_fraction, 0.75);
+        assert!(output.channels[0].active_low);
+        assert!(output.channels[0].complementary_active_low);
     }
 
     #[test]

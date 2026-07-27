@@ -59,6 +59,7 @@ fn rp2040_chip() -> (ChipDescriptor, SystemManifest) {
     let manifest = SystemManifest {
         parts: Vec::new(),
         cosim_models: Vec::new(),
+        motor_models: Vec::new(),
         walk_deleted: Some(false),
         schema_version: "1.0".to_string(),
         name: "rp2040-pio-onboarding".to_string(),

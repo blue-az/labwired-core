@@ -472,6 +472,7 @@ mod tests {
         let manifest = labwired_config::SystemManifest {
             parts: Vec::new(),
             cosim_models: Vec::new(),
+            motor_models: Vec::new(),
             walk_deleted: Some(false),
             schema_version: "1.0".to_string(),
             name: "test-s3-tmp102".to_string(),
@@ -568,6 +569,7 @@ mod tests {
         let manifest = SystemManifest {
             parts: Vec::new(),
             cosim_models: Vec::new(),
+            motor_models: Vec::new(),
             walk_deleted: Some(false),
             schema_version: "1.0".to_string(),
             name: "test-esp32-epaper".to_string(),
@@ -645,6 +647,7 @@ mod tests {
         let manifest = SystemManifest {
             parts: Vec::new(),
             cosim_models: Vec::new(),
+            motor_models: Vec::new(),
             walk_deleted: Some(false),
             schema_version: "1.0".to_string(),
             name: "test-esp32s3-epaper".to_string(),
@@ -702,6 +705,7 @@ mod tests {
         let manifest = SystemManifest {
             parts: Vec::new(),
             cosim_models: Vec::new(),
+            motor_models: Vec::new(),
             walk_deleted: Some(false),
             schema_version: "1.0".to_string(),
             name: "test".to_string(),

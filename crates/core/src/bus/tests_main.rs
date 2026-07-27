@@ -579,6 +579,7 @@ fn test_from_config_attaches_adxl345_external_device_to_i2c() {
     let manifest = SystemManifest {
         parts: Vec::new(),
         cosim_models: Vec::new(),
+        motor_models: Vec::new(),
         walk_deleted: Some(false),
         schema_version: "1.0".to_string(),
         name: "adxl345-test".to_string(),
@@ -1000,6 +1001,7 @@ fn test_esp32c3_i2c_gpio_matrix_distinguishes_gpio45_from_gpio67() {
         let manifest = SystemManifest {
             parts: Vec::new(),
             cosim_models: Vec::new(),
+            motor_models: Vec::new(),
             walk_deleted: Some(false),
             schema_version: "1.0".to_string(),
             name: "c3-physical-i2c-route".to_string(),
@@ -1220,6 +1222,7 @@ fn test_from_config_attaches_bmp280_to_esp32c3_i2c0() {
     let manifest = SystemManifest {
         parts: Vec::new(),
         cosim_models: Vec::new(),
+        motor_models: Vec::new(),
         walk_deleted: Some(false),
         schema_version: "1.0".to_string(),
         name: "esp32c3-bmp280-test".to_string(),
@@ -1372,6 +1375,7 @@ fn test_from_config_attaches_mlx90640_to_esp32c3_i2c0_and_reads_eeprom() {
     let manifest = SystemManifest {
         parts: Vec::new(),
         cosim_models: Vec::new(),
+        motor_models: Vec::new(),
         walk_deleted: Some(false),
         schema_version: "1.0".to_string(),
         name: "esp32c3-mlx90640-test".to_string(),
@@ -2189,6 +2193,7 @@ fn empty_manifest() -> SystemManifest {
     SystemManifest {
         parts: Vec::new(),
         cosim_models: Vec::new(),
+        motor_models: Vec::new(),
         walk_deleted: Some(false),
         schema_version: "1.0".to_string(),
         name: "bit-band-test".to_string(),
@@ -2200,6 +2205,180 @@ fn empty_manifest() -> SystemManifest {
         wifi_ap: None,
         peripherals: Vec::new(),
     }
+}
+
+#[test]
+fn bus_motor_dc_samples_gpio_and_advances_only_with_simulated_time() {
+    let chip: ChipDescriptor = serde_yaml::from_str(
+        r#"
+name: motor-test
+arch: arm
+core: cortex-m4
+flash: { base: 0x08000000, size: "64KB" }
+ram: { base: 0x20000000, size: "32KB" }
+peripherals:
+  - id: gpioa
+    type: gpio
+    base_address: 0x48000000
+    size: "1KB"
+    config: { profile: stm32v2 }
+"#,
+    )
+    .unwrap();
+    let manifest: SystemManifest = serde_yaml::from_str(
+        r#"
+name: dc-motor-test
+chip: unused
+motor_models:
+  - kind: dc
+    id: wheel
+    resistance_ohm: 1.0
+    inductance_h: 0.001
+    torque_constant_nm_per_a: 0.1
+    back_emf_constant_v_per_rad_s: 0.1
+    rotor_inertia_kg_m2: 0.01
+    viscous_friction_nm_per_rad_s: 0.001
+    supply_voltage_v: 12.0
+    load_torque_nm: 0.0
+    encoder_cpr: 16
+    pwm_pin: PA0
+    direction_pin: PA1
+    brake_pin: PA2
+    enable_pin: PA3
+    encoder_a_pin: PA4
+    encoder_b_pin: PA5
+    encoder_index_pin: PA6
+"#,
+    )
+    .unwrap();
+    let mut invalid = manifest.clone();
+    let labwired_config::MotorModelConfig::Dc(config) = &mut invalid.motor_models[0] else {
+        unreachable!()
+    };
+    config.pwm_pin = "PZ99".to_owned();
+    let error = match SystemBus::from_config(&chip, &invalid) {
+        Ok(_) => panic!("unresolved motor pin must fail construction"),
+        Err(error) => error,
+    };
+    assert!(error.to_string().contains("pwm pin 'PZ99'"));
+
+    let mut bus = SystemBus::from_config(&chip, &manifest).unwrap();
+    bus.write_u32(0x4800_0014, 0b1011).unwrap(); // PWM, direction, enable
+
+    let initial = bus.motor_snapshots();
+    bus.tick_peripherals_with_costs();
+    assert_eq!(initial, bus.motor_snapshots(), "zero delta must be paused");
+
+    bus.set_current_cycle(100);
+    let (mut interrupts, mut costs) = (Vec::new(), Vec::new());
+    bus.tick_peripherals_fully_into(&mut interrupts, &mut costs);
+    let advanced = bus.motor_snapshots();
+    assert!(advanced[0].speed_rpm > 0.0);
+    assert_eq!(advanced[0].control_state, "forward");
+    assert_eq!(
+        bus.read_u32(0x4800_0010).unwrap() & (1 << 6),
+        1 << 6,
+        "encoder index must be visible through GPIO IDR"
+    );
+
+    bus.write_u32(0x4800_0014, 0b1001).unwrap(); // reverse
+    bus.set_current_cycle(200);
+    bus.tick_peripherals_with_costs();
+    assert_eq!(bus.motor_snapshots()[0].control_state, "reverse");
+
+    bus.write_u32(0x4800_0014, 0b1101).unwrap(); // brake wins
+    bus.set_current_cycle(300);
+    bus.tick_peripherals_with_costs();
+    assert_eq!(bus.motor_snapshots()[0].control_state, "brake");
+
+    bus.write_u32(0x4800_0014, 0b0001).unwrap(); // disabled
+    bus.set_current_cycle(400);
+    bus.tick_peripherals_with_costs();
+    assert_eq!(bus.motor_snapshots()[0].control_state, "coast");
+}
+
+#[test]
+fn bus_motor_bldc_samples_tim1_six_gates_and_is_deterministic() {
+    fn build() -> SystemBus {
+        let chip: ChipDescriptor = serde_yaml::from_str(
+            r#"
+name: bldc-test
+arch: arm
+core: cortex-m4
+flash: { base: 0x08000000, size: "64KB" }
+ram: { base: 0x20000000, size: "32KB" }
+peripherals:
+  - { id: gpioa, type: gpio, base_address: 0x48000000, size: "1KB", config: { profile: stm32v2 } }
+  - { id: gpiob, type: gpio, base_address: 0x48000400, size: "1KB", config: { profile: stm32v2 } }
+  - { id: tim1, type: timer, base_address: 0x40012c00, size: "1KB", config: { advanced: true } }
+"#,
+        )
+        .unwrap();
+        let manifest: SystemManifest = serde_yaml::from_str(
+            r#"
+name: bldc
+chip: unused
+motor_models:
+  - kind: bldc
+    id: spindle
+    resistance_ohm: 1.0
+    inductance_h: 0.001
+    torque_constant_nm_per_a: 0.1
+    back_emf_constant_v_per_rad_s: 0.1
+    rotor_inertia_kg_m2: 0.01
+    viscous_friction_nm_per_rad_s: 0.001
+    supply_voltage_v: 24.0
+    load_torque_nm: 0.0
+    encoder_cpr: 16
+    pole_pairs: 2
+    phase_a_high_pin: PA8
+    phase_a_low_pin: PB13
+    phase_b_high_pin: PA9
+    phase_b_low_pin: PB14
+    phase_c_high_pin: PA10
+    phase_c_low_pin: PB15
+    enable_pin: PA0
+    hall_a_pin: PA1
+    hall_b_pin: PA2
+    hall_c_pin: PA3
+    encoder_a_pin: PA4
+    encoder_b_pin: PA5
+    encoder_index_pin: PA6
+"#,
+        )
+        .unwrap();
+        SystemBus::from_config(&chip, &manifest).unwrap()
+    }
+    fn drive(bus: &mut SystemBus) {
+        bus.write_u32(0x4800_0014, 1).unwrap(); // inverter enable
+        bus.write_u32(0x4001_2c2c, 99).unwrap(); // ARR
+        bus.write_u32(0x4001_2c38, 25).unwrap(); // CH2: complementary low
+        bus.write_u32(0x4001_2c3c, 75).unwrap(); // CH3: main high
+        bus.write_u32(0x4001_2c20, 0x0550).unwrap(); // CH2/3 + complements
+        bus.write_u32(0x4001_2c44, 1 << 15).unwrap(); // MOE
+        bus.set_current_cycle(bus.current_cycle + 100);
+        bus.tick_peripherals_with_costs();
+    }
+
+    let mut first = build();
+    let mut second = build();
+    first.write_u32(0x4800_0014, 1).unwrap();
+    first.set_current_cycle(100);
+    first.tick_peripherals_with_costs();
+    assert_eq!(
+        first.motor_snapshots()[0].phase_currents_a,
+        Some([0.0; 3]),
+        "MOE-off inverter must not drive the plant"
+    );
+    second.write_u32(0x4800_0014, 1).unwrap();
+    second.set_current_cycle(100);
+    second.tick_peripherals_with_costs();
+    drive(&mut first);
+    drive(&mut second);
+    assert_eq!(first.motor_snapshots(), second.motor_snapshots());
+    let snapshot = first.motor_snapshots().remove(0);
+    assert!(snapshot.phase_currents_a.unwrap().iter().any(|i| *i != 0.0));
+    assert_ne!(first.read_u32(0x4800_0010).unwrap() & 0b1110, 0);
 }
 
 /// Cortex-M33 parts (STM32H5/WBA) have no bit-band feature and map real
@@ -2329,6 +2508,7 @@ fn manifest_with_external_device(
     labwired_config::SystemManifest {
         parts: Vec::new(),
         cosim_models: Vec::new(),
+        motor_models: Vec::new(),
         walk_deleted: Some(false),
         schema_version: "1.0".to_string(),
         name: "adxl345-test".to_string(),
@@ -2522,6 +2702,8 @@ fn test_flash_boot_alias_read_and_write() {
         servos: Vec::new(),
         step_dir_motors: Vec::new(),
         h_bridge_motors: Vec::new(),
+        motors: Vec::new(),
+        motor_cycle_anchor: 0,
         unipolar_steppers: Vec::new(),
         tm1637: Vec::new(),
         hx711: Vec::new(),
@@ -2624,6 +2806,8 @@ fn h5_flash_bus(gate: bool) -> SystemBus {
         servos: Vec::new(),
         step_dir_motors: Vec::new(),
         h_bridge_motors: Vec::new(),
+        motors: Vec::new(),
+        motor_cycle_anchor: 0,
         unipolar_steppers: Vec::new(),
         tm1637: Vec::new(),
         hx711: Vec::new(),
@@ -2877,6 +3061,8 @@ fn h5_rww_bus(gate: bool) -> SystemBus {
         servos: Vec::new(),
         step_dir_motors: Vec::new(),
         h_bridge_motors: Vec::new(),
+        motors: Vec::new(),
+        motor_cycle_anchor: 0,
         unipolar_steppers: Vec::new(),
         tm1637: Vec::new(),
         hx711: Vec::new(),
@@ -3128,6 +3314,8 @@ fn test_peripheral_range_index_lookup() {
         servos: Vec::new(),
         step_dir_motors: Vec::new(),
         h_bridge_motors: Vec::new(),
+        motors: Vec::new(),
+        motor_cycle_anchor: 0,
         unipolar_steppers: Vec::new(),
         tm1637: Vec::new(),
         hx711: Vec::new(),
@@ -3234,6 +3422,8 @@ fn test_dma_tick_executes_copy_and_raises_irq() {
         servos: Vec::new(),
         step_dir_motors: Vec::new(),
         h_bridge_motors: Vec::new(),
+        motors: Vec::new(),
+        motor_cycle_anchor: 0,
         unipolar_steppers: Vec::new(),
         tm1637: Vec::new(),
         hx711: Vec::new(),

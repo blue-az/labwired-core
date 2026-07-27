@@ -79,6 +79,7 @@ fn f407_bus() -> SystemBus {
     let manifest = SystemManifest {
         parts: Vec::new(),
         cosim_models: Vec::new(),
+        motor_models: Vec::new(),
         walk_deleted: Some(false),
         schema_version: "1.0".to_string(),
         name: "f407-dma".to_string(),
