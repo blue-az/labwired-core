@@ -23,7 +23,7 @@
 //! counter reaches CC[i]. Each event raises the configured NVIC IRQ if
 //! the corresponding INTEN bit is set.
 
-use crate::{Peripheral, PeripheralTickResult, SimResult};
+use crate::{CycleClock, Peripheral, PeripheralTickResult, SimResult};
 
 // ── Register offsets (PS §6.21.13) ───────────────────────────────────────────
 
@@ -94,6 +94,9 @@ pub struct Nrf52Rtc {
     lfclk_accum: u32,
     lfclk_inc: u32,
     lfclk_period: u32,
+    clock: Option<CycleClock>,
+    anchor: u64,
+    arm_seq: u32,
 }
 
 impl Default for Nrf52Rtc {
@@ -113,6 +116,9 @@ impl Default for Nrf52Rtc {
             lfclk_accum: 0,
             lfclk_inc: LFCLK_ACCUM_INC_DEFAULT,
             lfclk_period: LFCLK_ACCUM_PERIOD_DEFAULT,
+            clock: None,
+            anchor: 0,
+            arm_seq: 0,
         }
     }
 }
@@ -266,77 +272,172 @@ impl Peripheral for Nrf52Rtc {
     }
 
     fn tick(&mut self) -> PeripheralTickResult {
-        if !self.running {
+        self.advance_cycles(1)
+    }
+
+    fn uses_scheduler(&self) -> bool {
+        self.clock.is_some()
+    }
+
+    fn needs_legacy_walk(&self) -> bool {
+        self.clock.is_none()
+    }
+
+    fn attach_cycle_clock(&mut self, clock: CycleClock) {
+        self.clock = Some(clock);
+    }
+
+    fn sync_to(&mut self, now_cycle: u64) {
+        if self.clock.is_none() || now_cycle <= self.anchor {
+            return;
+        }
+        let delta = now_cycle - self.anchor;
+        self.anchor = now_cycle;
+        let _ = self.advance_cycles(delta);
+    }
+
+    fn take_scheduled_events(&mut self) -> Vec<(u64, u32)> {
+        if self.clock.is_none() || !self.running {
+            return Vec::new();
+        }
+        let Some(d) = self.cycles_until_next_event() else {
+            return Vec::new();
+        };
+        self.arm_seq = self.arm_seq.wrapping_add(1);
+        vec![(d.saturating_sub(1), self.arm_seq)]
+    }
+
+    fn on_event(
+        &mut self,
+        event_token: u32,
+        sched: &mut crate::sched::EventScheduler,
+        _bus: &mut dyn crate::Bus,
+    ) -> crate::sched::EventResult {
+        if self.clock.is_none() || event_token != self.arm_seq {
+            return crate::sched::EventResult::default();
+        }
+        let now = sched.now();
+        let res = if now > self.anchor {
+            let d = now - self.anchor;
+            self.anchor = now;
+            self.advance_cycles(d)
+        } else {
+            self.advance_cycles(1)
+        };
+        let next = self.cycles_until_next_event();
+        crate::sched::EventResult {
+            raise_own_irq: res.irq,
+            fired_events: res.fired_events,
+            reschedule_delay: next.map(|d| d.saturating_sub(1)),
+            ..Default::default()
+        }
+    }
+}
+
+impl Nrf52Rtc {
+    fn advance_cycles(&mut self, cycles: u64) -> PeripheralTickResult {
+        if !self.running || cycles == 0 {
             return PeripheralTickResult::default();
         }
-
-        // Advance the CPU→LFCLK fractional accumulator. Only proceed with a
-        // counter tick when a LFCLK base-clock edge fires.
-        if !self.advance_lfclk() {
-            return PeripheralTickResult {
-                cycles: 1,
-                ..Default::default()
-            };
-        }
-
-        // PRESCALER+1 base-clock cycles per counter increment.
-        let divider = (self.prescaler & PRESCALER_MASK) + 1;
-        self.prescaler_accum = self.prescaler_accum.wrapping_add(1);
-        if self.prescaler_accum < divider {
-            return PeripheralTickResult {
-                cycles: 1,
-                ..Default::default()
-            };
-        }
-        self.prescaler_accum = 0;
-
-        let prev = self.counter;
-        self.counter = (self.counter.wrapping_add(1)) & COUNTER_MASK;
-
         let mut irq = false;
         let mut fired_events = Vec::new();
-
-        // EVENTS_TICK fires on every increment when EVTEN.TICK is set.
-        // Per PS §6.21.4, the pulse re-fires on every counter advance
-        // independent of whether the register is still latched.
-        if self.evten & EN_TICK != 0 {
-            self.events_tick = 1;
-            fired_events.push(OFF_EVENTS_TICK as u32);
-        }
-        if self.inten & EN_TICK != 0 {
-            irq = true;
-        }
-
-        // EVENTS_OVRFLW on wrap.
-        if prev == COUNTER_MASK && self.counter == 0 {
-            if self.evten & EN_OVRFLW != 0 {
-                self.events_ovrflw = 1;
-                fired_events.push(OFF_EVENTS_OVRFLW as u32);
+        for _ in 0..cycles {
+            if !self.advance_lfclk() {
+                continue;
             }
-            if self.inten & EN_OVRFLW != 0 {
+            let divider = (self.prescaler & PRESCALER_MASK) + 1;
+            self.prescaler_accum = self.prescaler_accum.wrapping_add(1);
+            if self.prescaler_accum < divider {
+                continue;
+            }
+            self.prescaler_accum = 0;
+            let prev = self.counter;
+            self.counter = (self.counter.wrapping_add(1)) & COUNTER_MASK;
+            if self.evten & EN_TICK != 0 {
+                self.events_tick = 1;
+                fired_events.push(OFF_EVENTS_TICK as u32);
+            }
+            if self.inten & EN_TICK != 0 {
                 irq = true;
             }
-        }
-
-        for i in 0..self.num_cc {
-            if self.counter == (self.cc[i] & COUNTER_MASK) {
-                let bit = EN_COMPARE_SHIFT + i as u32;
-                if self.evten & (1 << bit) != 0 {
-                    self.events_compare[i] = 1;
-                    fired_events.push(OFF_EVENTS_COMPARE0 as u32 + 4 * i as u32);
+            if prev == COUNTER_MASK && self.counter == 0 {
+                if self.evten & EN_OVRFLW != 0 {
+                    self.events_ovrflw = 1;
+                    fired_events.push(OFF_EVENTS_OVRFLW as u32);
                 }
-                if self.inten & (1 << bit) != 0 {
+                if self.inten & EN_OVRFLW != 0 {
                     irq = true;
                 }
             }
+            for i in 0..self.num_cc {
+                if self.counter == (self.cc[i] & COUNTER_MASK) {
+                    let bit = EN_COMPARE_SHIFT + i as u32;
+                    if self.evten & (1 << bit) != 0 {
+                        self.events_compare[i] = 1;
+                        fired_events.push(OFF_EVENTS_COMPARE0 as u32 + 4 * i as u32);
+                    }
+                    if self.inten & (1 << bit) != 0 {
+                        irq = true;
+                    }
+                }
+            }
         }
-
         PeripheralTickResult {
             irq,
             cycles: 1,
             fired_events,
             ..Default::default()
         }
+    }
+
+    /// Conservative upper bound: next counter increment that can fire any
+    /// enabled compare / overflow / tick. Uses the LFCLK ratio + prescaler.
+    fn cycles_until_next_event(&self) -> Option<u64> {
+        if !self.running {
+            return None;
+        }
+        // CPU cycles per LFCLK edge (approx ceil of period/inc).
+        let lfclk_period = self.lfclk_period.max(1) as u64;
+        let lfclk_inc = self.lfclk_inc.max(1) as u64;
+        // Remaining LFCLK fractional units until next edge.
+        let remain_frac = if self.lfclk_accum >= self.lfclk_period {
+            lfclk_period
+        } else {
+            (self.lfclk_period - self.lfclk_accum) as u64
+        };
+        let cpu_to_lfclk = remain_frac.div_ceil(lfclk_inc).max(1);
+        let divider = ((self.prescaler & PRESCALER_MASK) + 1) as u64;
+        let lfclk_to_counter = if self.prescaler_accum >= divider as u32 {
+            1u64
+        } else {
+            (divider - self.prescaler_accum as u64).max(1)
+        };
+        // If TICK is enabled (INTEN or EVTEN), next counter tick is the deadline.
+        if self.inten & EN_TICK != 0 || self.evten & EN_TICK != 0 {
+            return Some(cpu_to_lfclk * lfclk_to_counter);
+        }
+        // Else next compare or overflow.
+        let mut best_steps: Option<u64> = None;
+        for i in 0..self.num_cc {
+            let bit = EN_COMPARE_SHIFT + i as u32;
+            if self.inten & (1 << bit) == 0 && self.evten & (1 << bit) == 0 {
+                continue;
+            }
+            let target = self.cc[i] & COUNTER_MASK;
+            let cur = self.counter & COUNTER_MASK;
+            let steps = if target > cur {
+                (target - cur) as u64
+            } else {
+                (COUNTER_MASK as u64 + 1) - cur as u64 + target as u64
+            };
+            best_steps = Some(best_steps.map_or(steps, |b| b.min(steps)));
+        }
+        if self.inten & EN_OVRFLW != 0 || self.evten & EN_OVRFLW != 0 {
+            let steps = (COUNTER_MASK - (self.counter & COUNTER_MASK)) as u64 + 1;
+            best_steps = Some(best_steps.map_or(steps, |b| b.min(steps)));
+        }
+        let steps = best_steps.unwrap_or(1);
+        Some(cpu_to_lfclk + (steps.saturating_sub(1)) * (lfclk_period.div_ceil(lfclk_inc) * divider))
     }
 }
 

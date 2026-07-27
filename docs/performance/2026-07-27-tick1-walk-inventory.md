@@ -47,14 +47,15 @@ Each case builds with `walk_deleted = None` (auto-derive).
 |--------|-------------------|------------------------|--------------------|--------|---------|------------|
 | **stm32f103** | `examples/ssd1306-hello-lab` + `configure_cortex_m` | true | false | false | **0** | **512** |
 | **esp32c3** | `configs/systems/esp32c3-devkit.yaml` | true | false | false | **0** | **512** |
+| **nrf52840** | `configs/systems/nrf52840-dk.yaml` + `configure_cortex_m` | true | false | false | **0** | **512** |
 | **esp32s3** | `configure_xtensa_esp32s3` (WASM / production) | false | false | false | **38** | **1** |
 | **stm32h563** | `configs/systems/nucleo-h563zi-demo.yaml` | false | **true** | false | **4** | **1** |
 | **rp2040** | `configs/systems/rp2040-pico.yaml` | false | false | false | **8** | **1** |
-| **nrf52840** | `configs/systems/nrf52840-dk.yaml` | false | false | false | **46** | **1** |
 
 Notes:
 
-- **C3 / F103** are regression-green (asserted in the inventory test).
+- **C3 / F103 / nRF52840** are regression-green (asserted in the inventory test
+  and the PR-B gate `nrf52840_dk_is_walk_free_and_tick_512`).
 - **S3 is NOT walk-free on the production path** (`max_safe=1`, **38 forcers**).
   An earlier inventory revision used `SystemBus::from_config` on
   `esp32s3.yaml` / `esp32s3-zero.yaml`, which **stubs** real S3 models
@@ -273,52 +274,46 @@ inventory until Stage-3 factory parity lands.
 
 ---
 
-## nrf52840 — max_safe=1 (46 forcers)
+## nrf52840 — already 512 (PR-B)
 
 - Chip: `configs/chips/nrf52840.yaml`
 - System: `configs/systems/nrf52840-dk.yaml` + `configure_cortex_m`
-- `max_safe_tick_interval`: **1**
-- `legacy_walk_disabled`: **false**
+- `walk_deleted = None` (auto-derive)
+- `max_safe_tick_interval`: **512**
+- `legacy_walk_disabled`: **true**
 - `flash_models_ops`: false · iolink: false · hcsr04: none
+- **Forcers:** _(none)_
 
-### Walk-forcers (46)
+### Migration summary (46 → 0)
 
-All with `needs_legacy_walk=true`, `uses_scheduler=false`:
+| Class | Models | Mechanism |
+|-------|--------|-----------|
+| **Class-A inert** | `ficr`, `uicr`, `nvmc`, `acl`, `cryptocell`, `mwu`, `aar`, `comp`, `qdec`, `i2s`, `pdm`, `qspi`, `nfct`, `usbd`, `usbregulator`, `ppi`, `temp`, `uarte` (uart0/1), `pwm0–3`, `saadc`, … | `needs_legacy_walk = false` (no time-driven `tick()`; EasyDMA rides `bus_tick_indices`) |
+| **Class-B scheduler** | `timer0–4`, `rtc0–2`, `wdt`, `rng`, `clock`, `egu0–5`, `gpiote`, `twim`/`serial` (i2c0, twi1), `ecb`, `radio` | `uses_scheduler` + `take_scheduled_events` / `on_event` (CycleClock where counters advance) |
 
-```text
-uart0, i2c0, uart1, rtc0, rtc1, rtc2, wdt, ppi, clock, gpiote, twi1,
-timer0, timer1, timer2, timer3, timer4, i2s, pdm, radio, rng, ecb, temp,
-saadc, pwm0, pwm1, pwm2, pwm3, qspi, nfct, ficr, uicr, nvmc, comp, qdec,
-egu0, egu1, egu2, egu3, egu4, egu5, mwu, aar, usbd, usbregulator, acl,
-cryptocell
-```
+Featureless builds still report `max_safe=1` (honest). Gate:
+`nrf52840_dk_is_walk_free_and_tick_512` in `tick_interval_inventory.rs`.
 
-### Non-forcers on this bus
+### Full peripheral status (representative)
 
 | name | role | `needs_legacy_walk` | `uses_scheduler` |
 |------|------|---------------------|------------------|
-| gpio0, gpio1 | inert | false | false |
-| spi2 | scheduler | true | true |
-| scb, dwt | scheduler | true | true |
+| uart0/1 | inert (EasyDMA via bus_tick) | false | false |
+| i2c0, twi1 | scheduler | false | true |
+| gpio0/1 | inert | false | false |
+| rtc0–2, timer0–4, wdt, rng | scheduler | false | true |
+| clock, egu0–5, gpiote, radio, ecb | scheduler | false | true |
+| ppi, temp, saadc, pwm*, ficr, … | inert | false | false |
+| spi2, scb, dwt | scheduler | true | true |
 | nvic | inert | false | false |
-
-> Many “forcers” may be **default-true** stubs that never do walk work. Class-A
-> inert sweeps (`needs_legacy_walk → false`) are the cheapest path for those
-> (same pattern as C3 / F103 campaigns). Do not migrate without a real
-> walk-vs-scheduler differential when the model has non-trivial `tick()`.
 
 ---
 
 ## Mapping to monorepo plan (PR-B–E)
 
-This inventory **unblocks** the remaining WASM real-time PRs:
-
-| PR | Likely family focus | Primary blockers from this inventory |
-|----|---------------------|--------------------------------------|
-| PR-B | stm32h563 | `gpdma1`, `fdcan1`, `rtc`, `pwr` + **`flash_models_ops` policy** |
+| PR | Family focus | Status / blockers |
+|----|--------------|-------------------|
+| **PR-B** | **nrf52840** | **DONE** — empty forcers, `max_safe=512` under `event-scheduler` |
 | PR-C | rp2040 | `dma`, `pio0`, `timer`, `spi0`, `i2c0`, `sio`, `xip_ssi`, `usbctrl` |
-| PR-D | nrf52840 | 46-name forcer list (inert-sweep first, then real walkers) |
+| PR-D | stm32h563 | `gpdma1`, `fdcan1`, `rtc`, `pwr` + **`flash_models_ops` policy** |
 | PR-E | esp32s3 | 38 forcers on `configure_xtensa_esp32s3` production bank (not YAML stubs) |
-
-No code changes to `max_safe_tick_interval` or walk migrations in this PR
-(PR-A = inventory only).

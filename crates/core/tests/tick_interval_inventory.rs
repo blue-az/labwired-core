@@ -227,6 +227,49 @@ fn bus_esp32s3() -> SystemBus {
     bus
 }
 
+/// PR-B gate: nRF52840 DK auto-derives walk deletion under `event-scheduler`
+/// with `walk_deleted = None` and reaches `RECOMMENDED_TICK_INTERVAL` (512).
+///
+/// When migration is partial this test still fails with the remaining forcer
+/// list — pin that set as EXPECTED only if the campaign cannot finish empty
+/// in one PR (see docs/performance inventory).
+#[test]
+fn nrf52840_dk_is_walk_free_and_tick_512() {
+    let bus = bus_nrf52840();
+    let inv = inventory("nrf52840", &bus);
+    print_inventory(&inv);
+
+    #[cfg(feature = "event-scheduler")]
+    {
+        let forcing: Vec<&str> = inv.forcers.iter().map(|f| f.name.as_str()).collect();
+        assert!(
+            forcing.is_empty(),
+            "nrf52840-dk still has walk-forcers under event-scheduler: {forcing:?}"
+        );
+        assert!(
+            inv.legacy_walk_disabled,
+            "nrf52840-dk: expected legacy_walk_disabled after auto-derive"
+        );
+        assert!(
+            !inv.flash_models_ops && !inv.has_iolink_master,
+            "nrf52840-dk: unexpected non-forcer max_safe blocker"
+        );
+        assert_eq!(
+            inv.max_safe, RECOMMENDED_TICK_INTERVAL,
+            "nrf52840-dk: expected max_safe={RECOMMENDED_TICK_INTERVAL}, got {}",
+            inv.max_safe
+        );
+    }
+
+    #[cfg(not(feature = "event-scheduler"))]
+    {
+        assert_eq!(
+            inv.max_safe, 1,
+            "featureless build must keep max_safe=1"
+        );
+    }
+}
+
 /// Regression: C3 + F103 already flip walk-deletion and raise max_safe to 512
 /// under `event-scheduler`. The remaining four families document forcer lists.
 #[test]
@@ -263,7 +306,7 @@ fn tick_interval_inventory_all_families() {
     #[cfg(feature = "event-scheduler")]
     {
         // Green families: max_safe must already be RECOMMENDED_TICK_INTERVAL.
-        for name in ["stm32f103", "esp32c3"] {
+        for name in ["stm32f103", "esp32c3", "nrf52840"] {
             let inv = inventories
                 .iter()
                 .find(|i| i.chip == name)
@@ -299,7 +342,7 @@ fn tick_interval_inventory_all_families() {
         // (if someone migrated them). Either way, print full forcer lists.
         // Assert max_safe is 1 when forcers or non-forcer blockers are present;
         // allow 512 only when fully clear.
-        for name in ["stm32h563", "rp2040", "nrf52840", "esp32s3"] {
+        for name in ["stm32h563", "rp2040", "esp32s3"] {
             let inv = inventories
                 .iter()
                 .find(|i| i.chip == name)
