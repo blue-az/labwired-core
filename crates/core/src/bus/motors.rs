@@ -1,7 +1,7 @@
 use super::*;
 use crate::physics::motor::{
     BldcMotor, BldcMotorParams, BrushedDcMotor, BrushedMotorParams, GatePair, HBridgeCommand,
-    HBridgeState, InverterCommand, QuadratureEncoder, ShaftParams,
+    HBridgeState, InverterCommand, Phase, QuadratureEncoder, ShaftParams,
 };
 use labwired_config::{BldcMotorConfig, BrushedMotorConfig, MotorModelConfig, SystemManifest};
 
@@ -577,6 +577,106 @@ impl SystemBus {
             }
         }
         Ok(())
+    }
+
+    /// Returns the stable core kind name for a configured motor.
+    pub fn motor_kind(&self, id: &str) -> Option<&'static str> {
+        self.motors.iter().find_map(|motor| match motor {
+            MotorRuntime::Dc { id: motor_id, .. } if motor_id == id => Some("dc"),
+            MotorRuntime::Bldc { id: motor_id, .. } if motor_id == id => Some("bldc"),
+            _ => None,
+        })
+    }
+
+    /// Updates a named, explicitly allowlisted motor plant input.
+    pub fn set_motor_named_input(
+        &mut self,
+        id: &str,
+        name: &str,
+        value: f64,
+    ) -> Result<(), String> {
+        if !value.is_finite() {
+            return Err(format!("motor '{id}': {name} must be finite"));
+        }
+        let motor =
+            self.motors
+                .iter_mut()
+                .find(|motor| match motor {
+                    MotorRuntime::Dc { id: motor_id, .. }
+                    | MotorRuntime::Bldc { id: motor_id, .. } => motor_id == id,
+                })
+                .ok_or_else(|| format!("unknown motor '{id}'"))?;
+        match (motor, name) {
+            (MotorRuntime::Dc { plant, .. }, "load-torque-nm") => plant.set_load_torque_nm(value),
+            (MotorRuntime::Bldc { plant, .. }, "load-torque-nm") => plant.set_load_torque_nm(value),
+            (MotorRuntime::Dc { plant, .. }, "supply-voltage-v") => {
+                plant.set_supply_voltage_v(value)
+            }
+            (MotorRuntime::Bldc { plant, .. }, "supply-voltage-v") => {
+                plant.set_supply_voltage_v(value)
+            }
+            (_, _) => return Err(format!("unknown motor input '{name}'")),
+        }
+        .map_err(|error| error.to_string())
+    }
+
+    /// Updates one explicitly supported injected fault.
+    pub fn set_motor_named_fault(
+        &mut self,
+        id: &str,
+        fault: &str,
+        active: bool,
+    ) -> Result<(), String> {
+        let motor =
+            self.motors
+                .iter_mut()
+                .find(|motor| match motor {
+                    MotorRuntime::Dc { id: motor_id, .. }
+                    | MotorRuntime::Bldc { id: motor_id, .. } => motor_id == id,
+                })
+                .ok_or_else(|| format!("unknown motor '{id}'"))?;
+        match motor {
+            MotorRuntime::Dc { plant, .. } => {
+                if fault != "stall" {
+                    return Err(format!("fault '{fault}' requires a BLDC motor"));
+                }
+                plant.set_faults(crate::physics::motor::MotorFaults { stalled: active });
+                Ok(())
+            }
+            MotorRuntime::Bldc {
+                plant,
+                inverter_fault_active,
+                ..
+            } => {
+                if fault == "inverter" {
+                    *inverter_fault_active = active;
+                    return Ok(());
+                }
+                let mut faults = plant.faults();
+                match fault {
+                    "stall" => faults.stalled = active,
+                    "open-phase-a" => {
+                        faults.open_phase = active.then_some(Phase::A);
+                    }
+                    "open-phase-b" => {
+                        faults.open_phase = active.then_some(Phase::B);
+                    }
+                    "open-phase-c" => {
+                        faults.open_phase = active.then_some(Phase::C);
+                    }
+                    "undervoltage" => {
+                        faults.undervoltage_v =
+                            active.then(|| plant.params().supply_voltage_v * 0.5);
+                    }
+                    "overcurrent" if active => faults.overcurrent = true,
+                    "overcurrent" => {
+                        return Err("overcurrent is latched and cannot be cleared".to_owned())
+                    }
+                    _ => return Err(format!("unknown motor fault '{fault}'")),
+                }
+                plant.set_faults(faults).map_err(|error| error.to_string())
+            }
+        }
     }
 
     pub(super) fn matching_motor_stall_inputs(

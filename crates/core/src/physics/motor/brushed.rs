@@ -178,6 +178,22 @@ impl BrushedDcMotor {
         self.faults = faults;
     }
 
+    /// Atomically updates signed shaft load torque.
+    pub fn set_load_torque_nm(&mut self, load_torque_nm: f64) -> Result<(), ModelError> {
+        let mut candidate = self.clone();
+        candidate.shaft.set_load_torque_nm(load_torque_nm)?;
+        candidate.params.shaft.load_torque_nm = load_torque_nm;
+        *self = candidate;
+        Ok(())
+    }
+
+    /// Atomically updates the DC supply used by subsequent bridge steps.
+    pub fn set_supply_voltage_v(&mut self, supply_voltage_v: f64) -> Result<(), ModelError> {
+        validate_positive("supply_voltage_v", supply_voltage_v)?;
+        self.params.supply_voltage_v = supply_voltage_v;
+        Ok(())
+    }
+
     pub fn snapshot(&self) -> BrushedMotorSnapshot {
         let shaft = self.shaft.snapshot();
         BrushedMotorSnapshot {

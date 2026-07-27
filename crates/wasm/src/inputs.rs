@@ -13,8 +13,160 @@
 use crate::*;
 use wasm_bindgen::prelude::*;
 
+#[derive(Debug, serde::Serialize)]
+struct MotorControlError {
+    code: &'static str,
+    message: String,
+    motor_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    name: Option<String>,
+}
+
+impl MotorControlError {
+    fn unknown_motor(id: &str) -> Self {
+        Self {
+            code: "unknown-motor",
+            message: format!("unknown motor '{id}'"),
+            motor_id: id.to_owned(),
+            name: None,
+        }
+    }
+
+    fn unknown_input(id: &str, name: &str) -> Self {
+        Self {
+            code: "unknown-input",
+            message: format!("unknown motor input '{name}'"),
+            motor_id: id.to_owned(),
+            name: Some(name.to_owned()),
+        }
+    }
+
+    fn named(code: &'static str, id: &str, name: &str, message: impl Into<String>) -> Self {
+        Self {
+            code,
+            message: message.into(),
+            motor_id: id.to_owned(),
+            name: Some(name.to_owned()),
+        }
+    }
+}
+
+fn motor_error_to_js(error: MotorControlError) -> JsValue {
+    serde_wasm_bindgen::to_value(&error)
+        .unwrap_or_else(|_| JsValue::from_str(&format!("{}: {}", error.code, error.message)))
+}
+
+fn validate_motor_input(id: &str, name: &str, value: f64) -> Result<(), MotorControlError> {
+    if !matches!(name, "load-torque-nm" | "supply-voltage-v") {
+        return Err(MotorControlError::unknown_input(id, name));
+    }
+    if !value.is_finite() || (name == "supply-voltage-v" && value <= 0.0) {
+        return Err(MotorControlError::named(
+            "invalid-value",
+            id,
+            name,
+            format!(
+                "{name} must be {}",
+                if name == "supply-voltage-v" {
+                    "positive and finite"
+                } else {
+                    "finite"
+                }
+            ),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_motor_fault(
+    kind: &str,
+    id: &str,
+    fault: &str,
+    active: bool,
+) -> Result<(), MotorControlError> {
+    let known = matches!(
+        fault,
+        "stall"
+            | "open-phase-a"
+            | "open-phase-b"
+            | "open-phase-c"
+            | "undervoltage"
+            | "overcurrent"
+            | "inverter"
+    );
+    if !known {
+        return Err(MotorControlError::named(
+            "unknown-fault",
+            id,
+            fault,
+            format!("unknown motor fault '{fault}'"),
+        ));
+    }
+    if kind == "dc" && fault != "stall" {
+        return Err(MotorControlError::named(
+            "wrong-motor-kind",
+            id,
+            fault,
+            format!("fault '{fault}' requires a BLDC motor"),
+        ));
+    }
+    if fault == "overcurrent" && !active {
+        return Err(MotorControlError::named(
+            "unsupported-clear",
+            id,
+            fault,
+            "overcurrent is latched and cannot be cleared",
+        ));
+    }
+    Ok(())
+}
+
 #[wasm_bindgen]
 impl WasmSimulator {
+    /// Apply one allowlisted motor-plant input in SI units.
+    #[wasm_bindgen]
+    pub fn set_motor_input(&mut self, id: &str, name: &str, value: f64) -> Result<(), JsValue> {
+        validate_motor_input(id, name, value).map_err(motor_error_to_js)?;
+        let machine = self
+            .machine
+            .as_mut()
+            .ok_or_else(|| JsValue::from_str("simulator not initialized"))?;
+        if machine.bus.motor_kind(id).is_none() {
+            return Err(motor_error_to_js(MotorControlError::unknown_motor(id)));
+        }
+        machine
+            .bus
+            .set_motor_named_input(id, name, value)
+            .map_err(|message| {
+                motor_error_to_js(MotorControlError::named("invalid-value", id, name, message))
+            })
+    }
+
+    /// Toggle one allowlisted injected motor fault.
+    #[wasm_bindgen]
+    pub fn set_motor_fault(&mut self, id: &str, fault: &str, active: bool) -> Result<(), JsValue> {
+        let machine = self
+            .machine
+            .as_mut()
+            .ok_or_else(|| JsValue::from_str("simulator not initialized"))?;
+        let kind = machine
+            .bus
+            .motor_kind(id)
+            .ok_or_else(|| motor_error_to_js(MotorControlError::unknown_motor(id)))?;
+        validate_motor_fault(kind, id, fault, active).map_err(motor_error_to_js)?;
+        machine
+            .bus
+            .set_motor_named_fault(id, fault, active)
+            .map_err(|message| {
+                motor_error_to_js(MotorControlError::named(
+                    "fault-rejected",
+                    id,
+                    fault,
+                    message,
+                ))
+            })
+    }
+
     /// Generic input-scripting entry point: drive `channel` to `value` (in the
     /// channel's engineering unit — g, cm, °C …) on the unique attached input
     /// device that exposes it. Type-agnostic (see `labwired_core::sim_input`),
@@ -381,6 +533,167 @@ impl WasmSimulator {
             }
         }
         -1
+    }
+}
+
+#[cfg(test)]
+mod motor_control_tests {
+    use super::*;
+    use labwired_config::{ChipDescriptor, SystemManifest};
+    use labwired_core::bus::SystemBus;
+
+    fn dc_bus() -> SystemBus {
+        let chip: ChipDescriptor = serde_yaml::from_str(
+            r#"
+name: wasm-motor-test
+arch: arm
+core: cortex-m4
+flash: { base: 0x08000000, size: "64KB" }
+ram: { base: 0x20000000, size: "32KB" }
+peripherals:
+  - id: gpioa
+    type: gpio
+    base_address: 0x48000000
+    size: "1KB"
+    config: { profile: stm32v2 }
+"#,
+        )
+        .unwrap();
+        let manifest: SystemManifest = serde_yaml::from_str(
+            r#"
+name: wasm-dc-motor
+chip: unused
+motor_models:
+  - kind: dc
+    id: wheel
+    resistance_ohm: 1.0
+    inductance_h: 0.001
+    torque_constant_nm_per_a: 0.1
+    back_emf_constant_v_per_rad_s: 0.1
+    rotor_inertia_kg_m2: 0.01
+    viscous_friction_nm_per_rad_s: 0.001
+    supply_voltage_v: 12.0
+    load_torque_nm: 0.0
+    encoder_cpr: 16
+    pwm_pin: PA0
+    direction_pin: PA1
+    brake_pin: PA2
+    enable_pin: PA3
+    encoder_a_pin: PA4
+    encoder_b_pin: PA5
+"#,
+        )
+        .unwrap();
+        SystemBus::from_config(&chip, &manifest).unwrap()
+    }
+
+    fn bldc_bus() -> SystemBus {
+        let chip: ChipDescriptor =
+            serde_yaml::from_str(include_str!("../../../configs/chips/stm32l476.yaml")).unwrap();
+        let manifest: SystemManifest = serde_yaml::from_str(include_str!(
+            "../../../examples/nucleo-l476rg-bldc/system.yaml"
+        ))
+        .unwrap();
+        SystemBus::from_config(&chip, &manifest).unwrap()
+    }
+
+    #[test]
+    fn motor_control_errors_are_stable_and_structured() {
+        let error = MotorControlError::unknown_motor("missing");
+        let json = serde_json::to_value(error).unwrap();
+        assert_eq!(json["code"], "unknown-motor");
+        assert_eq!(json["motor_id"], "missing");
+
+        let error = MotorControlError::unknown_input("wheel", "raw-map-key");
+        let json = serde_json::to_value(error).unwrap();
+        assert_eq!(json["code"], "unknown-input");
+        assert_eq!(json["name"], "raw-map-key");
+    }
+
+    #[test]
+    fn motor_inputs_reject_non_finite_values_before_mutation() {
+        let error = validate_motor_input("wheel", "load-torque-nm", f64::NAN).unwrap_err();
+        assert_eq!(error.code, "invalid-value");
+        let error = validate_motor_input("wheel", "supply-voltage-v", f64::INFINITY).unwrap_err();
+        assert_eq!(error.code, "invalid-value");
+    }
+
+    #[test]
+    fn motor_fault_allowlist_is_kind_specific() {
+        assert!(validate_motor_fault("dc", "wheel", "stall", false).is_ok());
+        let error = validate_motor_fault("dc", "wheel", "open-phase-a", true).unwrap_err();
+        assert_eq!(error.code, "wrong-motor-kind");
+        assert!(validate_motor_fault("bldc", "spindle", "open-phase-c", false).is_ok());
+        let error = validate_motor_fault("bldc", "spindle", "overcurrent", false).unwrap_err();
+        assert_eq!(error.code, "unsupported-clear");
+    }
+
+    #[test]
+    fn typed_inputs_and_faults_mutate_snapshots_and_clear_without_advancing_time() {
+        let mut bus = dc_bus();
+        let initial = bus.motor_snapshots();
+        bus.set_motor_named_input("wheel", "supply-voltage-v", 6.0)
+            .unwrap();
+        assert_eq!(bus.motor_snapshots()[0].bus_voltage_v, 6.0);
+        assert_eq!(
+            bus.motor_snapshots()[0].position_rad,
+            initial[0].position_rad,
+            "input mutation must not invent elapsed simulation time"
+        );
+
+        bus.set_motor_named_fault("wheel", "stall", true).unwrap();
+        assert_eq!(bus.motor_snapshots()[0].faults, ["stalled"]);
+        bus.set_motor_named_fault("wheel", "stall", false).unwrap();
+        assert!(bus.motor_snapshots()[0].faults.is_empty());
+        assert!(bus
+            .set_motor_named_input("wheel", "raw-map-key", 1.0)
+            .is_err());
+    }
+
+    #[test]
+    fn bldc_faults_and_inputs_round_trip_through_the_typed_core_path() {
+        let mut bus = bldc_bus();
+        bus.set_motor_named_input("drive_motor", "load-torque-nm", -0.02)
+            .unwrap();
+        bus.set_motor_named_fault("drive_motor", "open-phase-b", true)
+            .unwrap();
+        assert_eq!(bus.motor_snapshots()[0].faults, ["open-phase"]);
+        bus.set_motor_named_fault("drive_motor", "open-phase-b", false)
+            .unwrap();
+        assert!(bus.motor_snapshots()[0].faults.is_empty());
+
+        bus.set_motor_named_fault("drive_motor", "undervoltage", true)
+            .unwrap();
+        assert_eq!(bus.motor_snapshots()[0].bus_voltage_v, 12.0);
+        bus.set_motor_named_fault("drive_motor", "undervoltage", false)
+            .unwrap();
+        assert_eq!(bus.motor_snapshots()[0].bus_voltage_v, 24.0);
+    }
+
+    #[test]
+    fn wasm_snapshot_projection_is_exact_and_repeatable_for_a_fixed_trace() {
+        fn run_trace() -> Vec<labwired_core::bus::MotorSnapshot> {
+            let mut bus = dc_bus();
+            bus.write_u32(0x4800_0014, 0b1011).unwrap();
+            for cycle in [100_u64, 250, 700] {
+                bus.set_current_cycle(cycle);
+                bus.tick_peripherals_with_costs();
+            }
+            bus.motor_snapshots()
+        }
+
+        let native = run_trace();
+        let repeated = run_trace();
+        assert_eq!(native, repeated, "fixed traces must be bit-repeatable");
+        let projected = crate::inspect::motor_states_json(native.clone());
+        // Projection does no numeric conversion: native/WASM telemetry parity
+        // is exact (absolute tolerance 0.0) at the public serialization seam.
+        assert_eq!(projected[0]["position_rad"], native[0].position_rad);
+        assert_eq!(projected[0]["speed_rpm"], native[0].speed_rpm);
+        assert_eq!(projected[0]["torque_nm"], native[0].torque_nm);
+        assert_eq!(projected[0]["current_a"], native[0].current_a.unwrap());
+        assert_eq!(projected[0]["kind"], "dc-motor");
+        assert_eq!(projected[0]["control_state"], native[0].control_state);
     }
 }
 
