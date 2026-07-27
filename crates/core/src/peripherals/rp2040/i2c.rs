@@ -65,6 +65,12 @@ impl Rp2040I2c {
 }
 
 impl Peripheral for Rp2040I2c {
+    /// Pure write-driven abort engine — `tick()` is the default no-op.
+    /// Address-NACK fires inside `IC_DATA_CMD` writes; no per-cycle work.
+    fn needs_legacy_walk(&self) -> bool {
+        false
+    }
+
     fn read_u32(&self, offset: u64) -> SimResult<u32> {
         let val = match offset {
             IC_ENABLE => self.enable,

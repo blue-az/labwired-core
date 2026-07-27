@@ -48,14 +48,15 @@ Each case builds with `walk_deleted = None` (auto-derive).
 | **stm32f103** | `examples/ssd1306-hello-lab` + `configure_cortex_m` | true | false | false | **0** | **512** |
 | **esp32c3** | `configs/systems/esp32c3-devkit.yaml` | true | false | false | **0** | **512** |
 | **nrf52840** | `configs/systems/nrf52840-dk.yaml` + `configure_cortex_m` | true | false | false | **0** | **512** |
+| **rp2040** | `configs/systems/rp2040-pico.yaml` + `configure_cortex_m` | true | false | false | **0** | **512** |
 | **esp32s3** | `configure_xtensa_esp32s3` (WASM / production) | false | false | false | **38** | **1** |
 | **stm32h563** | `configs/systems/nucleo-h563zi-demo.yaml` | false | **true** | false | **4** | **1** |
-| **rp2040** | `configs/systems/rp2040-pico.yaml` | false | false | false | **8** | **1** |
 
 Notes:
 
-- **C3 / F103 / nRF52840** are regression-green (asserted in the inventory test
-  and the PR-B gate `nrf52840_dk_is_walk_free_and_tick_512`).
+- **C3 / F103 / nRF52840 / RP2040** are regression-green (asserted in the
+  inventory test and the PR-B/C gates `nrf52840_dk_is_walk_free_and_tick_512` /
+  `rp2040_pico_is_walk_free_and_tick_512`).
 - **S3 is NOT walk-free on the production path** (`max_safe=1`, **38 forcers**).
   An earlier inventory revision used `SystemBus::from_config` on
   `esp32s3.yaml` / `esp32s3-zero.yaml`, which **stubs** real S3 models
@@ -228,45 +229,63 @@ inventory until Stage-3 factory parity lands.
 
 ---
 
-## rp2040 — max_safe=1 (8 forcers)
+## rp2040 — already 512 (PR-C)
 
 - Chip: `configs/chips/rp2040.yaml`
 - System: `configs/systems/rp2040-pico.yaml` + `configure_cortex_m`
 - `LABWIRED_RP2040_BOOTROM=""` (same as other RP2040 tests; bootrom is not a forcer)
-- `max_safe_tick_interval`: **1**
-- `legacy_walk_disabled`: **false**
+- `walk_deleted = None` (auto-derive)
+- `max_safe_tick_interval`: **512**
+- `legacy_walk_disabled`: **true**
 - `flash_models_ops`: false · iolink: false · hcsr04: none
+- **Forcers:** _(none)_
 
-### Walk-forcers (8)
+### Migration summary (8 → 0)
 
-| name | `needs_legacy_walk` | `uses_scheduler` |
-|------|---------------------|------------------|
-| **dma** | true | false |
-| **pio0** | true | false |
-| **timer** | true | false |
-| **spi0** | true | false |
-| **i2c0** | true | false |
-| **sio** | true | false |
-| **xip_ssi** | true | false |
-| **usbctrl** | true | false |
+| Class | Models | Mechanism |
+|-------|--------|-----------|
+| **Class-A inert** | `spi0`, `i2c0`, `sio`, `xip_ssi` | `needs_legacy_walk = false` — pure MMIO engines; `tick()` is the default no-op (loopback/abort/SSI shift complete inside register writes) |
+| **Class-B scheduler** | `timer`, `dma`, `pio0`, `usbctrl` | `uses_scheduler` + `take_scheduled_events` / `on_event` (CycleClock on timer/dma; delay-1 SM/host chains on pio/usb) |
+
+Featureless builds still report `max_safe=1` (honest). Gates:
+
+- Inventory: `rp2040_pico_is_walk_free_and_tick_512` in `tick_interval_inventory.rs`
+- Machine TIMER@512: `rp2040_machine_timer_alarm0_fires_at_tick_512` in
+  `rp2040_timer_machine_gate.rs` — arms ALARM0 with a short target, runs through
+  `Machine::advance` at `peripheral_tick_interval=512`, asserts `INTR` bit 0
+  (not `tick_peripherals_fully_forced`)
+
+### Class-B notes under `rec_tick=512`
+
+- **TIMER**: free-running counter advances lazily via `sync_to` / read-side
+  CycleClock; alarm matches fire at exact cycle deadlines; held level IRQ
+  re-emits at delay 1 while `INTS != 0`.
+- **DMA**: permanent-TREQ beats + level IRQ ride a delay-1 event chain (not
+  `bus_tick_indices` when scheduler-owned); one beat per event cycle matches
+  the walk's `BEATS_PER_TICK`.
+- **PIO**: SM steps self-perpetuate at delay 1 while any SM is enabled;
+  MMIO enable re-arms via `collect_scheduled_events`.
+- **USB**: attach debounce / enumeration / bulk service + held `USBCTRL_IRQ`
+  ride a delay-1 chain; attach countdown still counts host_poll steps (not
+  wall-clock µs) — same model as pre-migration, now event-paced.
 
 ### Full peripheral status
 
 | name | role | `needs_legacy_walk` | `uses_scheduler` |
 |------|------|---------------------|------------------|
 | sysinfo | inert | false | false |
-| **dma** | **FORCER** | true | false |
-| **pio0** | **FORCER** | true | false |
+| dma | scheduler | false | true |
+| pio0 | scheduler | false | true |
 | clk_rst | inert | false | false |
 | uart0 | scheduler | true | true |
 | rosc, watchdog | inert | false | false |
-| **timer** | **FORCER** | true | false |
-| **spi0** | **FORCER** | true | false |
-| **i2c0** | **FORCER** | true | false |
+| timer | scheduler | false | true |
+| spi0 | inert | false | false |
+| i2c0 | inert | false | false |
 | systick | scheduler | true | true |
-| **sio** | **FORCER** | true | false |
-| **xip_ssi** | **FORCER** | true | false |
-| **usbctrl** | **FORCER** | true | false |
+| sio | inert | false | false |
+| xip_ssi | inert | false | false |
+| usbctrl | scheduler | false | true |
 | tbman | inert | false | false |
 | scb | scheduler | true | true |
 | nvic | inert | false | false |
@@ -347,6 +366,6 @@ compare-event / IRQ-driven RTC shapes are the supported surface today.
 | PR | Family focus | Status / blockers |
 |----|--------------|-------------------|
 | **PR-B** | **nrf52840** | **DONE** — empty forcers, `max_safe=512` under `event-scheduler`; Machine TIMER@512 gate; EasyDMA still bus_tick-lagged (documented interim) |
-| PR-C | rp2040 | `dma`, `pio0`, `timer`, `spi0`, `i2c0`, `sio`, `xip_ssi`, `usbctrl` |
+| **PR-C** | **rp2040** | **DONE** — empty forcers, `max_safe=512` under `event-scheduler`; Machine TIMER ALARM0@512 gate |
 | PR-D | stm32h563 | `gpdma1`, `fdcan1`, `rtc`, `pwr` + **`flash_models_ops` policy** |
 | PR-E | esp32s3 | 38 forcers on `configure_xtensa_esp32s3` production bank (not YAML stubs) |
