@@ -297,6 +297,13 @@ boards:
     # 2026-07-24: I2C digital-twin (F1 SR2.TRA + level EV IRQ; L4 TXIS/DataPending). Register surface of non-I2C oracles unchanged; re-capture tracked.
     # 2026-07-25: I2C shared-model regression fix — F1 STOP keeps RXNE (0x40) for poll-mode master-receive; F1 NACK branch no longer sets SR2.TRA on a NACKed address; L4 CR2 START/STOP kept pending until consumed + NBYTES>0-write address phase deferred to first TXDR. firmware_survival (incl. this board) + e2e_stm32f407_i2c + i2c walk-identity differentials green; register surface of non-I2C oracles unchanged. Re-capture tracked.
     # 2026-07-27: shared rcc.rs gained the STM32WB enable-register layout (RM0434 §6.4) — WB's clock-enable block moved off the H5-style 0x8C/0x9C/0xA4 slots onto 0x4C/0x58/0x60, where silicon actually puts it (0x9C is RCC_HSECR on WB). The change is confined to the new Stm32Wb layout variant plus a construction-time offset table on V2Rcc whose default is byte-identical to the previous hardcoded H5 placement; only WB55 selects the new table. This board's own RCC family struct is untouched — no shared behaviour was edited, only where two WB registers are decoded. Evidence re-run on this commit: 2332 core lib tests, firmware_survival 51/51, register_coverage, chip_conformance, strict_onboarding and board_coverage_ratchet all pass unchanged, and the tier-1 matrix is unchanged for every board except WB55 (which went from 6 clock-gated classes reachable only via the wrong register to 12/12 pass). No live re-capture.
+    # 2026-07-26: UART RX injection for test scripts (#674). The only change
+    # to a listed model here is uart.rs, and it is confined to `mod tests`
+    # (+33 lines inside `#[cfg(test)]`, 0 removed) — a unit test pinning that
+    # an RX byte pushed while CR1 == 0 is buffered, not dropped. No register
+    # read/write path, reset value or layout was touched; the drift gate keys
+    # on the model file's commit date, not its content. No live re-capture
+    # warranted.
     drift_ack: 2026-07-27
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -676,6 +683,13 @@ boards:
     # 2026-07-25: I2C shared-model regression fix — F1 STOP keeps RXNE (0x40) for poll-mode master-receive; F1 NACK branch no longer sets SR2.TRA on a NACKed address; L4 CR2 START/STOP kept pending until consumed + NBYTES>0-write address phase deferred to first TXDR. firmware_survival (incl. this board) + e2e_stm32f407_i2c + i2c walk-identity differentials green; register surface of non-I2C oracles unchanged. Re-capture tracked.
     # 2026-07-26: exti.rs gained a `tick_elapsed_forced` override so the hardware-oracle forced walk sees level-triggered EXTI IRQs. The `scheduler_mode()` no-op in `tick()` was swallowing the forced call, so the bare-CPU oracle got NO interrupt at all (exti0_interrupt_delivery_sim read mem[0x20000300] == 0x00000000); it was invisible except under `cargo test --workspace`, where Cargo feature unification switches `event-scheduler` on for a crate that does not request it. The legacy non-scheduler `tick()` path is behaviourally IDENTICAL — the same `pending_irqs()` body, now reached through a shared helper — so no register read/write path, reset value or register layout changed. Evidence re-run on this commit in BOTH configurations (default features and `--features labwired-core/event-scheduler`): l476_mmio_diff::{l476_mmio_sim_only,l476_parity_sim_only} 2/2, 0 divergence; plus firmware_survival 51/51 (incl. this board's cases). No live re-capture.
     # 2026-07-27: shared rcc.rs gained the STM32WB enable-register layout (RM0434 §6.4) — WB's clock-enable block moved off the H5-style 0x8C/0x9C/0xA4 slots onto 0x4C/0x58/0x60, where silicon actually puts it (0x9C is RCC_HSECR on WB). The change is confined to the new Stm32Wb layout variant plus a construction-time offset table on V2Rcc whose default is byte-identical to the previous hardcoded H5 placement; only WB55 selects the new table. This board's own RCC family struct is untouched — no shared behaviour was edited, only where two WB registers are decoded. Evidence re-run on this commit: 2332 core lib tests, firmware_survival 51/51, register_coverage, chip_conformance, strict_onboarding and board_coverage_ratchet all pass unchanged, and the tier-1 matrix is unchanged for every board except WB55 (which went from 6 clock-gated classes reachable only via the wrong register to 12/12 pass). No live re-capture.
+    # 2026-07-26: UART RX injection for test scripts (#674). The only change
+    # to a listed model here is uart.rs, and it is confined to `mod tests`
+    # (+33 lines inside `#[cfg(test)]`, 0 removed) — a unit test pinning that
+    # an RX byte pushed while CR1 == 0 is buffered, not dropped. No register
+    # read/write path, reset value or layout was touched; the drift gate keys
+    # on the model file's commit date, not its content. No live re-capture
+    # warranted.
     drift_ack: 2026-07-27
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -769,6 +783,13 @@ boards:
     # 2026-07-21 H7-layout entry above. l0_mmio_diff/conformance unchanged.
     # No live re-capture.
     # 2026-07-27: shared rcc.rs gained the STM32WB enable-register layout (RM0434 §6.4) — WB's clock-enable block moved off the H5-style 0x8C/0x9C/0xA4 slots onto 0x4C/0x58/0x60, where silicon actually puts it (0x9C is RCC_HSECR on WB). The change is confined to the new Stm32Wb layout variant plus a construction-time offset table on V2Rcc whose default is byte-identical to the previous hardcoded H5 placement; only WB55 selects the new table. This board's own RCC family struct is untouched — no shared behaviour was edited, only where two WB registers are decoded. Evidence re-run on this commit: 2332 core lib tests, firmware_survival 51/51, register_coverage, chip_conformance, strict_onboarding and board_coverage_ratchet all pass unchanged, and the tier-1 matrix is unchanged for every board except WB55 (which went from 6 clock-gated classes reachable only via the wrong register to 12/12 pass). No live re-capture.
+    # 2026-07-26: UART RX injection for test scripts (#674). The only change
+    # to a listed model here is uart.rs, and it is confined to `mod tests`
+    # (+33 lines inside `#[cfg(test)]`, 0 removed) — a unit test pinning that
+    # an RX byte pushed while CR1 == 0 is buffered, not dropped. No register
+    # read/write path, reset value or layout was touched; the drift gate keys
+    # on the model file's commit date, not its content. No live re-capture
+    # warranted.
     drift_ack: 2026-07-27
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -868,6 +889,13 @@ boards:
     # 2026-07-25: I2C shared-model regression fix — F1 STOP keeps RXNE (0x40) for poll-mode master-receive; F1 NACK branch no longer sets SR2.TRA on a NACKed address; L4 CR2 START/STOP kept pending until consumed + NBYTES>0-write address phase deferred to first TXDR. firmware_survival (incl. this board) + e2e_stm32f407_i2c + i2c walk-identity differentials green; register surface of non-I2C oracles unchanged. Re-capture tracked.
     # 2026-07-26: exti.rs gained a `tick_elapsed_forced` override so the hardware-oracle forced walk sees level-triggered EXTI IRQs. The `scheduler_mode()` no-op in `tick()` was swallowing the forced call, so the bare-CPU oracle got NO interrupt at all (exti0_interrupt_delivery_sim read mem[0x20000300] == 0x00000000); it was invisible except under `cargo test --workspace`, where Cargo feature unification switches `event-scheduler` on for a crate that does not request it. The legacy non-scheduler `tick()` path is behaviourally IDENTICAL — the same `pending_irqs()` body, now reached through a shared helper — so no register read/write path, reset value or register layout changed. Evidence re-run on this commit in BOTH configurations (default features and `--features labwired-core/event-scheduler`): stm32f1_mmio_diff::{f1_reset_sim_only,f1_mmio_sim_only,f1_parity_sim_only,f1_sweep_sim_only} 4/4 and f103_conformance::conformance_sim (digest) pass, 0 divergence; plus firmware_survival 51/51 (incl. this board's cases). No live re-capture.
     # 2026-07-27: shared rcc.rs gained the STM32WB enable-register layout (RM0434 §6.4) — WB's clock-enable block moved off the H5-style 0x8C/0x9C/0xA4 slots onto 0x4C/0x58/0x60, where silicon actually puts it (0x9C is RCC_HSECR on WB). The change is confined to the new Stm32Wb layout variant plus a construction-time offset table on V2Rcc whose default is byte-identical to the previous hardcoded H5 placement; only WB55 selects the new table. This board's own RCC family struct is untouched — no shared behaviour was edited, only where two WB registers are decoded. Evidence re-run on this commit: 2332 core lib tests, firmware_survival 51/51, register_coverage, chip_conformance, strict_onboarding and board_coverage_ratchet all pass unchanged, and the tier-1 matrix is unchanged for every board except WB55 (which went from 6 clock-gated classes reachable only via the wrong register to 12/12 pass). No live re-capture.
+    # 2026-07-26: UART RX injection for test scripts (#674). The only change
+    # to a listed model here is uart.rs, and it is confined to `mod tests`
+    # (+33 lines inside `#[cfg(test)]`, 0 removed) — a unit test pinning that
+    # an RX byte pushed while CR1 == 0 is buffered, not dropped. No register
+    # read/write path, reset value or layout was touched; the drift gate keys
+    # on the model file's commit date, not its content. No live re-capture
+    # warranted.
     drift_ack: 2026-07-27
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -964,6 +992,13 @@ boards:
     # 2026-07-24: I2C digital-twin (F1 SR2.TRA + level EV IRQ; L4 TXIS/DataPending). Register surface of non-I2C oracles unchanged; re-capture tracked.
     # 2026-07-25: I2C shared-model regression fix — F1 STOP keeps RXNE (0x40) for poll-mode master-receive; F1 NACK branch no longer sets SR2.TRA on a NACKed address; L4 CR2 START/STOP kept pending until consumed + NBYTES>0-write address phase deferred to first TXDR. firmware_survival (incl. this board) + e2e_stm32f407_i2c + i2c walk-identity differentials green; register surface of non-I2C oracles unchanged. Re-capture tracked.
     # 2026-07-27: shared rcc.rs gained the STM32WB enable-register layout (RM0434 §6.4) — WB's clock-enable block moved off the H5-style 0x8C/0x9C/0xA4 slots onto 0x4C/0x58/0x60, where silicon actually puts it (0x9C is RCC_HSECR on WB). The change is confined to the new Stm32Wb layout variant plus a construction-time offset table on V2Rcc whose default is byte-identical to the previous hardcoded H5 placement; only WB55 selects the new table. This board's own RCC family struct is untouched — no shared behaviour was edited, only where two WB registers are decoded. Evidence re-run on this commit: 2332 core lib tests, firmware_survival 51/51, register_coverage, chip_conformance, strict_onboarding and board_coverage_ratchet all pass unchanged, and the tier-1 matrix is unchanged for every board except WB55 (which went from 6 clock-gated classes reachable only via the wrong register to 12/12 pass). No live re-capture.
+    # 2026-07-26: UART RX injection for test scripts (#674). The only change
+    # to a listed model here is uart.rs, and it is confined to `mod tests`
+    # (+33 lines inside `#[cfg(test)]`, 0 removed) — a unit test pinning that
+    # an RX byte pushed while CR1 == 0 is buffered, not dropped. No register
+    # read/write path, reset value or layout was touched; the drift gate keys
+    # on the model file's commit date, not its content. No live re-capture
+    # warranted.
     drift_ack: 2026-07-27
     models:
       - crates/core/src/peripherals/rcc.rs

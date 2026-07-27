@@ -1241,6 +1241,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "firmware-uart-echo-fixture"
+version = "0.19.2"
+dependencies = [
+ "cortex-m",
+ "panic-halt",
+]
+
+[[package]]
 name = "fixedbitset"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
