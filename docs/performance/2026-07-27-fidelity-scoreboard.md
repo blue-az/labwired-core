@@ -23,15 +23,17 @@ Legend:
 | TIMER COMPARE via Machine@512 | **green** | `nrf52840_timer_machine_gate` |
 | TIMER walk@1≡sched@512 | **green** | `nrf52_timer_walk_differential::timer0_compare_walk1_vs_sched512_cycle_identity` |
 | RTC COMPARE (EVTEN+INTEN) walk@1≡sched@512 | **green** | `nrf52_timer_walk_differential::rtc0_compare_walk1_vs_sched512_cycle_identity` |
-| RADIO TX→END walk@1≡sched@512 | **green** | `nrf52_timer_walk_differential::radio_tx_end_walk1_vs_sched512_cycle_identity` (SHORTS READY_START + short countdown) |
+| RADIO TX→END walk@1≡sched@512 | **green** | `nrf52_timer_walk_differential::radio_tx_end_walk1_vs_sched512_cycle_identity` (SHORTS READY_START) |
+| RADIO bit-time MODE=Ble_1Mbit | **green** | `radio_ble_1mbit_bit_time_scales_with_length` — END at model air `(L+3)×8` ±1 + fixed TXEN chain overhead; L1 vs L2 Δcycles ∝ ΔL; walk@1≡sched@512. Scheduler `on_event` commits air-time deadline (does not collapse countdown same-event as DMA) |
+| RADIO bit-time other MODEs | **interim** | 2Mbit / LR / 802.15.4 matrix not gated; model constants exist in `cycles_for_packet` only |
 | UARTE EasyDMA TX @512 | **green** | delay-0 dual-path; `nrf52_easydma_tick512_fidelity` (≤8 cycles; walk@1≡sched@512 within 1) |
 | SAADC EasyDMA SAMPLE @512 | **green** | delay-0 dual-path; same fidelity test |
 | PWM SEQSTART EasyDMA @512 | **green** | delay-0 dual-path; same fidelity test |
 | SPIM EasyDMA (nRF) @512 | **green** | delay-0 in `spi.rs` + serial_instance mux |
 | TWIM / ECB | **green** | already dual-path / scheduler before this work |
-| RTC COUNTER poll-only | **interim** | advances on write/`sync_to`; no poll-only differential gate (compare IRQ path certified above) |
-| RADIO bit-rate timing | **interim** | TX→END cycle identity green; full MODE/length bit-rate matrix not claimed |
-| Analog / unmodelled blocks | **interim** | FICR/UICR/stubs etc. — inert Class-A |
+| RTC COUNTER poll-only | **interim** | advances on write/`sync_to`; compare IRQ path certified above (poll gates may exist separately — do not over-claim here) |
+| Class-A inert (walk-independence) | **green** | FICR/UICR/GPIOTE-adjacent pure banks with `needs_legacy_walk=false` — no time-driven `tick()`; walk-free holds because inert |
+| Thin / unmodelled silicon (stubs) | **blocked** (silicon model) | NVMC erase fake, thin USBD, crypto/AAR/COMP shells, etc. — **not** functional fidelity; do not claim behaviour beyond register presence |
 
 **Before (EasyDMA):** completion via `bus_tick_indices` only → lag up to one
 512-cycle batch after STARTTX/SAMPLE/SEQSTART.  
@@ -63,10 +65,11 @@ Legend:
 | GPDMA mem2mem @ interval 512 | **green** | `gpdma_mem2mem_is_byte_identical_at_interval_512` — both lanes @512 batched final state identical (relative delay-1 paces N× in both lanes) |
 | RTC second + Alarm A @ interval 1 | **green** | `rtc_second_and_alarm_is_byte_identical_at_interval_1` — TR advance + ALRAF/ISR byte-identical |
 | RTC second/alarm count @ interval 512 | **green** | `rtc_second_count_is_exact_at_interval_512` — absolute second deadlines; final TR + ISR count exact vs walk@1 |
-| `flash_models_ops` | **interim** | still forces CPU quantum 1 (not tick interval) |
+| `flash_models_ops` | **green** (intentional) | `requires_cycle_accurate` keeps **CPU quantum 1** for erase/bank-swap drain — not a bug, not a tick-interval forcer; peripheral `max_safe=512` remains. See inventory H5 notes |
 | FDCAN single-node (no CanBus) | **green** | intentional: TX-defer + level IRQ via scheduler; `needs_legacy_walk=false` so demo bus stays walk-free (`h563_is_walk_free_and_tick_512`; unit: `fdcan::single_node_is_walk_free_under_event_scheduler`) |
 | FDCAN multi-node (CanBus `bus_rx` attached) | **interim** | **blocked for walk-free / 512**: `needs_legacy_walk` returns true (mpsc RX polled on the walk, bxCAN contract). Multi-node buses pin `max_safe=1` until `bus_rx` is event-driven with dual-lane walk@1≡sched@512 proof. Do **not** hatch walk-free — that starves RX. Gates: `fdcan::canbus_attach_forces_legacy_walk_for_rx_poll`, `fdcan::canbus_path_tx_sends_and_rx_drains_on_tick` |
-| SPI wire timing | **interim** | bit engine on scheduler; family-wide EasyDMA@512 not claimed |
+| SPI walk-independence | **green** | H5 SPI v3 is write-settled (TXDR→frame under SPE+CSTART); no forcer; Class-A-style for walk-free |
+| SPI bit / wire timing | **blocked** (silicon model) | H563 uses `SpiRegisterLayout::Stm32H5` — **no** classic STM32 bit engine; frames complete on TXDR write (TX-only, no baud-derived half-periods). Do **not** claim walk@1≡sched@512 wire timing or EasyDMA@512; classic/FIFO STM32 bit engine is a different layout |
 
 ---
 
