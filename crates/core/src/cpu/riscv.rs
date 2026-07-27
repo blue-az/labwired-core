@@ -2468,9 +2468,10 @@ mod tests {
         let addi_x7_99: u32 = 0x0630_0393;
         // LUI rd, imm20: imm20 sits in [31:12].
         let lui_x6 = (0x40370u32 << 12) | (6 << 7) | 0x37; // x6 = 0x4037_0000
-        let addi_x6 = (0x014u32 << 20) | (6 << 15) | (0 << 12) | (6 << 7) | 0x13; // +0x14
+                                                           // funct3 = 0 for ADDI is intentional encoding (identity `0 << 12` would trip clippy).
+        let addi_x6 = (0x014u32 << 20) | (6 << 15) | (6 << 7) | 0x13; // +0x14
         let lui_x5 = ((addi_x7_1 >> 12) << 12) | (5 << 7) | 0x37;
-        let addi_x5 = ((addi_x7_1 & 0xfff) << 20) | (5 << 15) | (0 << 12) | (5 << 7) | 0x13;
+        let addi_x5 = ((addi_x7_1 & 0xfff) << 20) | (5 << 15) | (5 << 7) | 0x13;
         // SW rs2, 0(rs1): funct3=010, imm=0, opcode=0x23
         let sw_x5 = (5u32 << 20) | (6 << 15) | (0x2 << 12) | 0x23;
 

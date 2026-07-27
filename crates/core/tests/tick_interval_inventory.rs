@@ -12,7 +12,9 @@
 //! and guards the green families (C3 / F103 / nRF / RP2040 / H563 / S3).
 
 use labwired_config::{ChipDescriptor, SystemManifest};
-use labwired_core::bus::{SystemBus, RECOMMENDED_TICK_INTERVAL};
+use labwired_core::bus::SystemBus;
+#[cfg(feature = "event-scheduler")]
+use labwired_core::bus::RECOMMENDED_TICK_INTERVAL;
 use labwired_core::peripherals::components::IolinkMaster;
 use labwired_core::peripherals::flash::Flash;
 use labwired_core::peripherals::uart::Uart;

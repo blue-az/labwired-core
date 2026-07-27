@@ -143,8 +143,8 @@ impl Cpu for CycleCpu {
 }
 
 fn bus_nrf52840_walk_free() -> SystemBus {
-    let chip = ChipDescriptor::from_file(&root("configs/chips/nrf52840.yaml"))
-        .expect("load nrf52840 chip");
+    let chip =
+        ChipDescriptor::from_file(root("configs/chips/nrf52840.yaml")).expect("load nrf52840 chip");
     let system_path = root("configs/systems/nrf52840-dk.yaml");
     let mut manifest = SystemManifest::from_file(&system_path).expect("load nrf52840-dk system");
     let anchored = system_path

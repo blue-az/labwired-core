@@ -131,7 +131,7 @@ fn bus_rp2040_walk_free() -> SystemBus {
     // Opt out of in-tree bootrom so the peripheral set matches inventory /
     // production assembly (bootrom is not a walk forcer).
     std::env::set_var("LABWIRED_RP2040_BOOTROM", "");
-    let chip = ChipDescriptor::from_file(&root("configs/chips/rp2040.yaml")).expect("load rp2040");
+    let chip = ChipDescriptor::from_file(root("configs/chips/rp2040.yaml")).expect("load rp2040");
     let system_path = root("configs/systems/rp2040-pico.yaml");
     let mut manifest = SystemManifest::from_file(&system_path).expect("load rp2040-pico system");
     let anchored = system_path

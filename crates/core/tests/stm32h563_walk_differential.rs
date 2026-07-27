@@ -22,7 +22,7 @@
 //!   destination bytes, CSR TCF/HTF, NVIC TC ISR count, registers).
 //! * Interval 512: both lanes at 512, one batched `run` — final architectural
 //!   + memory state identical. Relative delay-1 pacing is N× slower at interval
-//!   N in *both* lanes (same as classic DMA mem2mem).
+//!     N in *both* lanes (same as classic DMA mem2mem).
 //!
 //! ## 3. RTC v3 second boundary + alarm compare (hand-built)
 //!
