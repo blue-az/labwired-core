@@ -232,6 +232,8 @@ pub struct BrushedMotorConfig {
     pub supply_voltage_v: f64,
     pub load_torque_nm: f64,
     pub encoder_cpr: u32,
+    #[serde(default = "default_motor_simulation_clock_hz")]
+    pub simulation_clock_hz: u64,
     pub pwm_pin: String,
     pub direction_pin: String,
     pub brake_pin: String,
@@ -240,6 +242,8 @@ pub struct BrushedMotorConfig {
     pub encoder_b_pin: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub encoder_index_pin: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fault_pin: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -256,6 +260,8 @@ pub struct BldcMotorConfig {
     pub load_torque_nm: f64,
     pub encoder_cpr: u32,
     pub pole_pairs: u8,
+    #[serde(default = "default_motor_simulation_clock_hz")]
+    pub simulation_clock_hz: u64,
     pub phase_a_high_pin: String,
     pub phase_a_low_pin: String,
     pub phase_b_high_pin: String,
@@ -270,6 +276,14 @@ pub struct BldcMotorConfig {
     pub encoder_b_pin: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub encoder_index_pin: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub motor_fault_pin: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub inverter_fault_pin: Option<String>,
+}
+
+fn default_motor_simulation_clock_hz() -> u64 {
+    80_000_000
 }
 
 impl MotorModelConfig {
@@ -349,6 +363,18 @@ impl MotorModelConfig {
                     config.encoder_index_pin.as_deref(),
                     &mut issues,
                 );
+                validate_optional_motor_pin(
+                    &config.id,
+                    "fault_pin",
+                    config.fault_pin.as_deref(),
+                    &mut issues,
+                );
+                if config.simulation_clock_hz == 0 {
+                    issues.push(format!(
+                        "motor_models[{}].simulation_clock_hz must be greater than zero",
+                        config.id
+                    ));
+                }
             }
             Self::Bldc(config) => {
                 validate_motor_common(
@@ -389,9 +415,35 @@ impl MotorModelConfig {
                     config.encoder_index_pin.as_deref(),
                     &mut issues,
                 );
+                validate_optional_motor_pin(
+                    &config.id,
+                    "motor_fault_pin",
+                    config.motor_fault_pin.as_deref(),
+                    &mut issues,
+                );
+                validate_optional_motor_pin(
+                    &config.id,
+                    "inverter_fault_pin",
+                    config.inverter_fault_pin.as_deref(),
+                    &mut issues,
+                );
+                if config.simulation_clock_hz == 0 {
+                    issues.push(format!(
+                        "motor_models[{}].simulation_clock_hz must be greater than zero",
+                        config.id
+                    ));
+                }
             }
         }
         issues
+    }
+}
+
+fn validate_optional_motor_pin(id: &str, field: &str, pin: Option<&str>, issues: &mut Vec<String>) {
+    if pin.is_some_and(|pin| pin.trim().is_empty()) {
+        issues.push(format!(
+            "motor_models[{id}].{field} must be nonblank when present"
+        ));
     }
 }
 

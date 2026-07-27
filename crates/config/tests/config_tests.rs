@@ -173,6 +173,8 @@ fn motor_model_parses_valid_dc_and_roundtrips_stably() {
         id,
         encoder_cpr,
         encoder_index_pin,
+        simulation_clock_hz,
+        fault_pin,
         ..
     }) = &model
     else {
@@ -181,6 +183,8 @@ fn motor_model_parses_valid_dc_and_roundtrips_stably() {
     assert_eq!(id, "drive_motor");
     assert_eq!(*encoder_cpr, 1024);
     assert_eq!(encoder_index_pin.as_deref(), Some("PB8"));
+    assert_eq!(*simulation_clock_hz, 80_000_000);
+    assert_eq!(fault_pin, &None);
     assert!(model.validate().is_empty());
 
     let yaml = serde_yaml::to_string(&model).unwrap();
@@ -224,6 +228,9 @@ encoder_b_pin: PC7
         id,
         pole_pairs,
         encoder_index_pin,
+        simulation_clock_hz,
+        motor_fault_pin,
+        inverter_fault_pin,
         ..
     }) = &model
     else {
@@ -232,6 +239,9 @@ encoder_b_pin: PC7
     assert_eq!(id, "spindle");
     assert_eq!(*pole_pairs, 7);
     assert_eq!(encoder_index_pin, &None);
+    assert_eq!(*simulation_clock_hz, 80_000_000);
+    assert_eq!(motor_fault_pin, &None);
+    assert_eq!(inverter_fault_pin, &None);
     assert!(model.validate().is_empty());
     assert_eq!(
         serde_yaml::from_str::<MotorModelConfig>(&serde_yaml::to_string(&model).unwrap()).unwrap(),
@@ -306,6 +316,7 @@ fn motor_model_descriptors_define_unambiguous_required_pin_contracts() {
             ("encoder_a_pin", "ENC_A", true),
             ("encoder_b_pin", "ENC_B", true),
             ("encoder_index_pin", "INDEX", false),
+            ("fault_pin", "FAULT", false),
         ]
     );
 
@@ -340,6 +351,14 @@ fn motor_model_descriptors_define_unambiguous_required_pin_contracts() {
         .config
         .iter()
         .any(|entry| entry.key == "encoder_index_pin" && !entry.required));
+    assert!(emit
+        .config
+        .iter()
+        .any(|entry| entry.key == "motor_fault_pin" && !entry.required));
+    assert!(emit
+        .config
+        .iter()
+        .any(|entry| entry.key == "inverter_fault_pin" && !entry.required));
 }
 
 #[test]

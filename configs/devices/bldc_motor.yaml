@@ -16,6 +16,8 @@ behavior:
     encoder_a: encoder_a_pin
     encoder_b: encoder_b_pin
     encoder_index: encoder_index_pin
+    motor_fault: motor_fault_pin
+    inverter_fault: inverter_fault_pin
   params:
     resistance_ohm: { key: resistance_ohm, default: 0.35 }
     inductance_h: { key: inductance_h, default: 0.00018 }
@@ -27,6 +29,7 @@ behavior:
     load_torque_nm: { key: load_torque_nm, default: 0.0 }
     encoder_cpr: { key: encoder_cpr, default: 2048 }
     pole_pairs: { key: pole_pairs, default: 7 }
+    simulation_clock_hz: { key: simulation_clock_hz, default: 80000000 }
 
 metadata:
   label: "Brushless DC motor"
@@ -49,6 +52,9 @@ emit:
     - { key: encoder_a_pin, from_part_pin: [ENC_A] }
     - { key: encoder_b_pin, from_part_pin: [ENC_B] }
     - { key: encoder_index_pin, from_part_pin: [INDEX], required: false }
+    - { key: motor_fault_pin, from_part_pin: [MOTOR_FAULT], required: false }
+    - { key: inverter_fault_pin, from_part_pin: [INVERTER_FAULT], required: false }
+    - { key: simulation_clock_hz, from: sim_cpu_hz }
     - { key: resistance_ohm, from_attr: resistance_ohm, default: 0.35 }
     - { key: inductance_h, from_attr: inductance_h, default: 0.00018 }
     - { key: torque_constant_nm_per_a, from_attr: torque_constant_nm_per_a, default: 0.04 }

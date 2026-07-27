@@ -10,6 +10,7 @@ behavior:
     encoder_a: encoder_a_pin
     encoder_b: encoder_b_pin
     encoder_index: encoder_index_pin
+    fault: fault_pin
   params:
     resistance_ohm: { key: resistance_ohm, default: 1.2 }
     inductance_h: { key: inductance_h, default: 0.002 }
@@ -20,6 +21,7 @@ behavior:
     supply_voltage_v: { key: supply_voltage_v, default: 12.0 }
     load_torque_nm: { key: load_torque_nm, default: 0.0 }
     encoder_cpr: { key: encoder_cpr, default: 1024 }
+    simulation_clock_hz: { key: simulation_clock_hz, default: 80000000 }
 
 metadata:
   label: "Brushed DC motor"
@@ -36,6 +38,8 @@ emit:
     - { key: encoder_a_pin, from_part_pin: [ENC_A] }
     - { key: encoder_b_pin, from_part_pin: [ENC_B] }
     - { key: encoder_index_pin, from_part_pin: [INDEX], required: false }
+    - { key: fault_pin, from_part_pin: [FAULT], required: false }
+    - { key: simulation_clock_hz, from: sim_cpu_hz }
     - { key: resistance_ohm, from_attr: resistance_ohm, default: 1.2 }
     - { key: inductance_h, from_attr: inductance_h, default: 0.002 }
     - { key: torque_constant_nm_per_a, from_attr: torque_constant_nm_per_a, default: 0.08 }
