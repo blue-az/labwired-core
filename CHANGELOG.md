@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-07-27
+
+### Added
+- **Declarative UART RX injection**: test scripts (schema 1.2) accept
+  `uart_injections`, pushing bytes into a named UART's receive queue at
+  `at_start` or `after_cycles`. Firmware that blocks on a read — loopback
+  examples, command parsers, GPS/modem drivers — is now testable in CI without
+  physical wiring. Bytes injected before the firmware configures the UART are
+  buffered, not dropped; an unknown UART name is a hard error rather than a
+  silent pass.
+- **RP2040 peripherals** and an **ESP32 ROM-boot path** that runs images
+  without an ELF.
+- **SVD conformance gate** for register-map drift, and a Wi-Fi AP component
+  with a universal test.
+
+### Fixed
+- Tier-1 register-map corrections for STM32WB55, WBA52 (LPUART1 IRQ), and
+  G474.
+- EXTI forced-tick delivery under the scheduler, and ROM-boot step-ceiling
+  resume.
+
+v0.20.0 is the first release carrying `uart_injections`; the documented runner
+pins move to it in a follow-up once the release assets are published.
+
 ## [0.19.2] - 2026-07-15
 
 ### Fixed
