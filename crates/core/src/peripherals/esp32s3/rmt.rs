@@ -1500,7 +1500,11 @@ mod tests {
             .unwrap();
 
         // One bus tick per sim cycle; edge at offset D lands at sim cycle D.
-        for _ in 0..12 {
+        // GPIO stamps via the bus CycleClock (walk-free path), so the test must
+        // publish the cycle the way Machine::commit_advance_boundary does —
+        // bare tick_peripherals does not advance current_cycle on its own.
+        for c in 0..12u64 {
+            bus.set_current_cycle(c);
             bus.tick_peripherals();
         }
 
@@ -1514,15 +1518,29 @@ mod tests {
             ],
             "RMT must drive GPIO48 with the exact timed edge sequence"
         );
-        // Playback drained → the RMT drops off the bus-tick pass (idle cost 0).
+        // Playback schedule drained after the last edge. Walk-free RMT still
+        // rides bus_tick while the post-TX_START IRQ holdoff counts down; once
+        // that is retired the bus-tick opt-out must re-engage (idle cost 0).
         let idx = bus.find_peripheral_index_by_name("rmt").unwrap();
         let r = bus.peripherals[idx]
             .dev
-            .as_any()
+            .as_any_mut()
             .unwrap()
-            .downcast_ref::<Esp32s3Rmt>()
+            .downcast_mut::<Esp32s3Rmt>()
             .unwrap();
-        assert!(!r.needs_bus_tick(), "playback finished → no more bus ticks");
+        assert!(
+            r.playback.is_none(),
+            "timed pad schedule must finish within the 12-cycle window"
+        );
+        assert!(
+            r.needs_bus_tick(),
+            "post-TX holdoff keeps bus_tick live until retired"
+        );
+        r.irq_holdoff_cycles = 0;
+        assert!(
+            !r.needs_bus_tick(),
+            "idle RMT (no playback, no holdoff) must leave the bus-tick pass"
+        );
     }
 
     /// An unrouted TX channel (no pad selects its signal) plays nothing: the
