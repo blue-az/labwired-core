@@ -34,6 +34,9 @@ struct HostNetState {
     http_pending: VecDeque<PendingHttp>,
     /// Filled HTTP responses (id → raw HTTP/1.1 response bytes).
     http_answers: HashMap<u32, Vec<u8>>,
+    /// Reverse map: resolved A → hostname (client DNS used the real name;
+    /// later TCP to the IP must reconstruct `https://name/...` for host fetch).
+    ip_to_name: HashMap<[u8; 4], String>,
 }
 
 #[derive(Clone, Debug)]
@@ -123,6 +126,14 @@ pub fn poll_dns_requests() -> Vec<PendingDns> {
 pub fn fulfill_dns(id: u32, ips: Vec<[u8; 4]>) {
     let mut s = state().lock().unwrap();
     if let Some(ctx) = s.dns_ctx.remove(&id) {
+        // Remember IP → name so TCP NAT to that A can build a proper URL
+        // (client's own browser then fetches that host — any host, not one API).
+        let name = dns_qname(&ctx.query).unwrap_or_default();
+        if !name.is_empty() {
+            for ip in &ips {
+                s.ip_to_name.insert(*ip, name.clone());
+            }
+        }
         let udp_payload = build_dns_response_from_query(&ctx.query, &ips);
         s.dns_replies.push_back(DnsReplyOut {
             sta_mac: ctx.sta_mac,
@@ -134,6 +145,23 @@ pub fn fulfill_dns(id: u32, ips: Vec<[u8; 4]>) {
     } else {
         s.dns_answers.insert(id, ips);
     }
+}
+
+/// Look up a hostname previously resolved for this IP (browser client DNS).
+pub fn name_for_ip(ip: [u8; 4]) -> Option<String> {
+    state().lock().unwrap().ip_to_name.get(&ip).cloned()
+}
+
+/// Record a name→IP binding (also used when the station uses Host: name).
+pub fn remember_ip_name(ip: [u8; 4], name: &str) {
+    if name.is_empty() {
+        return;
+    }
+    state()
+        .lock()
+        .unwrap()
+        .ip_to_name
+        .insert(ip, name.to_string());
 }
 
 /// DNS replies ready to inject into station inboxes.
@@ -293,6 +321,10 @@ mod tests {
         let replies = take_dns_replies();
         assert_eq!(replies.len(), 1);
         assert!(replies[0].udp_payload.len() > 12);
+        assert_eq!(
+            name_for_ip([93, 184, 216, 34]).as_deref(),
+            Some("example.com")
+        );
         set_bridge_active(false);
     }
 
