@@ -16,6 +16,8 @@ use std::path::Path;
 use std::sync::Arc;
 use tracing::{debug, info, warn};
 
+pub mod multi_image;
+
 pub fn load_elf(path: &Path) -> Result<ProgramImage> {
     let buffer = fs::read(path).with_context(|| format!("Failed to read ELF file: {:?}", path))?;
     load_elf_bytes(&buffer)
