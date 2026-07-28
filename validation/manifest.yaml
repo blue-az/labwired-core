@@ -1182,7 +1182,32 @@ boards:
     # peripheral bank (tick-512 inventory). Reset-state windows and RMT
     # clock-gated anchor unchanged; esp32s3_walk_differential + reset
     # conformance remain offline gates. No S3 board attached; no live re-capture.
-    drift_ack: 2026-07-27
+    # 2026-07-28: the UART twin moved from peripherals/esp32s3/uart.rs to the
+    # chip-neutral peripherals/esp_uart.rs (struct Esp32s3Uart -> EspUart, with
+    # esp32s3::uart re-exporting the old name so every S3 call site is
+    # unchanged). The ESP32-C3 carries the identical UART IP and now wires the
+    # same model, and the arch-isolation gate forbids a chip module reaching
+    # into another chip's — hence chip-neutral rather than an allow-list entry.
+    # TWO BEHAVIOURAL DELTAS, both shared with the S3:
+    #   * TX drain is measured in CYCLES, not tick calls. It was `drain_accum
+    #     += 1` per tick(), so the baud rate silently scaled with
+    #     peripheral_tick_interval (64x slow at interval 64, 512x at the
+    #     browser's 512) and the walk disagreed with the scheduler by the event
+    #     phase. Now the walk takes the batched interval via tick_elapsed() and
+    #     the scheduler anchors to absolute cycles from the push that filled the
+    #     FIFO. Caught by esp32c3_walk_differential's uart0 gate, which diverged
+    #     on ONE character of the boot log (an ESP-IDF timestamp, 4696 vs 4697
+    #     ms) — that gate is now byte-identical at interval 1 and framebuffer-
+    #     identical at 64. cycles_per_byte() also takes the core clock as a
+    #     constructor argument (S3 240 MHz unchanged, C3 160 MHz).
+    #   * rx_buffer() added, so attach_uart_rx_source[_named] resolve the twin
+    #     and `uart_injections:` reaches it; and attach_uart_tx_sink[_named] can
+    #     now SILENCE the stdout echo (never enable it — console-ness is still
+    #     decided at construction), so capture-only callers stop double-echoing.
+    # Register map, reset values and the 9-reg reset-state anchor are untouched;
+    # esp32s3 reset conformance + the GDMA UART-TX descriptor tests pass. No S3
+    # board attached; no live re-capture.
+    drift_ack: 2026-07-28
     models:
       - crates/core/src/peripherals/esp32s3
       - crates/core/src/peripherals/esp_xtensa_common

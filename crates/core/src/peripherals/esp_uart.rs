@@ -250,8 +250,16 @@ pub struct EspUart {
     rx_fifo: RefCell<VecDeque<u8>>,
     /// Latched edge interrupt bits (TX_DONE, RXFIFO_OVF, RXFIFO_TOUT …).
     int_raw_sticky: u32,
-    /// Sub-byte cycle accumulator for baud-rate draining.
+    /// Sub-byte remainder of the baud-rate drain, in CYCLES rather than tick
+    /// calls. Both drive paths feed it real elapsed time — the legacy walk via
+    /// `tick_elapsed(interval)`, the scheduler via [`EspUart::advance_to`] —
+    /// so the baud rate does not move with `peripheral_tick_interval` and the
+    /// two paths agree on when each byte leaves.
     drain_accum: u64,
+    /// Absolute cycle the scheduler path has drained up to, set when the TX
+    /// FIFO goes non-empty. `None` on the walk path and on a clockless bus,
+    /// which measure elapsed time from `tick_elapsed` instead.
+    drain_anchor: Option<u64>,
     /// True while TX bytes are in flight (so emptying is a TX_DONE edge).
     tx_active: bool,
     /// Bus-published cycle clock (walk-free).
@@ -306,6 +314,7 @@ impl EspUart {
             rx_fifo: RefCell::new(VecDeque::new()),
             int_raw_sticky: 0,
             drain_accum: 0,
+            drain_anchor: None,
             tx_active: false,
 
             clock: None,
@@ -319,6 +328,14 @@ impl EspUart {
     /// delivered to the RX FIFO; mirrors `Uart::rx_buffer`.
     pub fn rx_buffer(&self) -> Arc<Mutex<VecDeque<u8>>> {
         Arc::clone(&self.rx_source)
+    }
+
+    /// Drop the cycle clock so `uses_scheduler()` goes false and this instance
+    /// falls back to the legacy per-cycle walk. Used by the walk-vs-scheduler
+    /// differentials to build the reference config from the same bus assembly
+    /// (mirrors `Esp32c3Spi::force_legacy_walk`).
+    pub fn force_legacy_walk(&mut self) {
+        self.clock = None;
     }
 
     /// Move any externally-injected bytes into the RX FIFO, returning how many
@@ -467,8 +484,62 @@ impl EspUart {
 
     fn push_tx(&mut self, byte: u8) {
         if self.tx_fifo.len() < FIFO_LEN {
+            let was_idle = self.tx_fifo.is_empty();
             self.tx_fifo.push_back(byte);
             self.tx_active = true;
+            // Anchor the shift register the cycle the FIFO goes non-empty, so
+            // the first byte leaves exactly `cycles_per_byte()` later no matter
+            // which path (walk tick or scheduled event) does the draining.
+            if was_idle {
+                self.drain_anchor = self.clock.as_ref().map(|c| c.now());
+            }
+        }
+    }
+
+    /// Advance the shift register to absolute cycle `now`, emitting whatever
+    /// bytes have finished their 10-bit frame in the elapsed window. Idempotent
+    /// and monotonic: a `now` at or behind the anchor drains nothing.
+    fn advance_to(&mut self, now: u64) {
+        let anchor = match self.drain_anchor {
+            Some(a) => a,
+            None => {
+                self.drain_anchor = Some(now);
+                return;
+            }
+        };
+        if now <= anchor {
+            return;
+        }
+        self.drain_anchor = Some(now);
+        self.drain_cycles(now - anchor);
+    }
+
+    /// Feed `cycles` of elapsed time to the shift register and emit each byte
+    /// whose frame completes. The one place a TX byte reaches the sink.
+    fn drain_cycles(&mut self, cycles: u64) {
+        if self.tx_fifo.is_empty() {
+            self.drain_accum = 0;
+            return;
+        }
+        self.drain_accum += cycles;
+        let per_byte = self.cycles_per_byte();
+        while self.drain_accum >= per_byte && !self.tx_fifo.is_empty() {
+            self.drain_accum -= per_byte;
+            if let Some(byte) = self.tx_fifo.pop_front() {
+                if let Some(sink) = &self.sink {
+                    if let Ok(mut g) = sink.lock() {
+                        g.push(byte);
+                    }
+                }
+                if self.echo_stdout {
+                    let _ = io::stdout().write_all(&[byte]);
+                    let _ = io::stdout().flush();
+                }
+            }
+            if self.tx_fifo.is_empty() && self.tx_active {
+                self.int_raw_sticky |= INT_TX_DONE; // last byte shifted out
+                self.tx_active = false;
+            }
         }
     }
 
@@ -556,32 +627,21 @@ impl Peripheral for EspUart {
     }
 
     fn tick(&mut self) -> PeripheralTickResult {
+        self.tick_elapsed(1)
+    }
+
+    /// Shift TX bytes out at the baud rate over `cycles` of elapsed time.
+    ///
+    /// The drain is measured in CYCLES, never in tick calls, so the baud rate
+    /// is independent of `peripheral_tick_interval` — the bus hands the batched
+    /// interval in here. Deliberately does NOT consult the cycle clock: the
+    /// walk is the caller, and a caller that drives `tick()` directly (the GDMA
+    /// UART-TX descriptor tests) advances no bus cycles, so a clock-derived
+    /// delta would be zero and nothing would ever shift out. The scheduler path
+    /// (`on_event`) is the one that anchors to absolute cycles.
+    fn tick_elapsed(&mut self, cycles: u64) -> PeripheralTickResult {
         self.ingest_rx_source_mut();
-        // Shift TX bytes out at the baud rate.
-        if !self.tx_fifo.is_empty() {
-            self.drain_accum += 1;
-            let per_byte = self.cycles_per_byte();
-            while self.drain_accum >= per_byte && !self.tx_fifo.is_empty() {
-                self.drain_accum -= per_byte;
-                if let Some(byte) = self.tx_fifo.pop_front() {
-                    if let Some(sink) = &self.sink {
-                        if let Ok(mut g) = sink.lock() {
-                            g.push(byte);
-                        }
-                    }
-                    if self.echo_stdout {
-                        let _ = io::stdout().write_all(&[byte]);
-                        let _ = io::stdout().flush();
-                    }
-                }
-                if self.tx_fifo.is_empty() && self.tx_active {
-                    self.int_raw_sticky |= INT_TX_DONE; // last byte shifted out
-                    self.tx_active = false;
-                }
-            }
-        } else {
-            self.drain_accum = 0;
-        }
+        self.drain_cycles(cycles);
 
         let asserting = self.int_raw() & self.reg(OFF_INT_ENA);
         PeripheralTickResult {
@@ -617,10 +677,19 @@ impl Peripheral for EspUart {
             return Vec::new();
         }
         // Pace TX while the FIFO has data; level IRQs ride matrix export.
+        // The wake lands on the cycle the in-flight byte's frame completes,
+        // measured from the anchor set when the FIFO went non-empty — not
+        // `per_byte` from whenever the bus happened to poll us. That is what
+        // keeps the scheduler byte-identical to the per-cycle walk.
         if !self.tx_fifo.is_empty() && !self.scheduled {
             self.scheduled = true;
-            let delay = self.cycles_per_byte().max(1);
-            return vec![(delay, UART_WAKE_TOKEN)];
+            let per_byte = self.cycles_per_byte().max(1);
+            let elapsed = self
+                .drain_anchor
+                .and_then(|a| self.clock.as_ref().map(|c| c.now().saturating_sub(a)))
+                .unwrap_or(0);
+            let done = self.drain_accum + elapsed;
+            return vec![(per_byte.saturating_sub(done).max(1), UART_WAKE_TOKEN)];
         }
         Vec::new()
     }
@@ -631,20 +700,29 @@ impl Peripheral for EspUart {
         _sched: &mut crate::sched::EventScheduler,
         _bus: &mut dyn crate::Bus,
     ) -> crate::sched::EventResult {
-        // Drain one byte (or whatever tick would drain at this cadence).
+        // Drain by REAL elapsed cycles, anchored at the push that filled the
+        // FIFO — not "one byte per event". That is what puts each byte on the
+        // same absolute cycle the per-cycle walk would, keeping the two paths
+        // byte-identical instead of drifting by the event phase.
         let per_byte = self.cycles_per_byte().max(1);
-        // Simulate `per_byte` cycles of drain accum so one byte shifts out.
-        self.drain_accum = per_byte;
-        let _ = self.tick();
+        self.ingest_rx_source_mut();
+        if let Some(now) = self.clock.as_ref().map(|c| c.now()) {
+            self.advance_to(now);
+        } else {
+            self.drain_cycles(per_byte);
+        }
         let keep = !self.tx_fifo.is_empty();
         self.scheduled = keep;
         let mut explicit_irqs = Vec::new();
         if self.int_raw() & self.reg(OFF_INT_ENA) != 0 {
             explicit_irqs.push(self.source_id);
         }
+        // Re-arm on the NEXT frame boundary: `drain_accum` carries whatever
+        // sub-frame remainder survived this drain, so the byte cadence stays
+        // locked to the anchor instead of drifting a cycle per event.
         crate::sched::EventResult {
             explicit_irqs,
-            reschedule_delay: keep.then_some(per_byte),
+            reschedule_delay: keep.then_some(per_byte.saturating_sub(self.drain_accum).max(1)),
             ..Default::default()
         }
     }
