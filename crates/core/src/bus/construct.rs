@@ -483,9 +483,7 @@ impl SystemBus {
             };
             if let Some(uart) = any.downcast_mut::<Uart>() {
                 uart.set_sink(None, false);
-            } else if let Some(uart) =
-                any.downcast_mut::<crate::peripherals::esp_uart::EspUart>()
-            {
+            } else if let Some(uart) = any.downcast_mut::<crate::peripherals::esp_uart::EspUart>() {
                 uart.set_sink(None);
             }
         }
@@ -504,8 +502,7 @@ impl SystemBus {
             // The Espressif twin (S3 UART0/1/2, C3 UART0/1) decides at
             // construction whether it is a console, so `echo_stdout` can only
             // silence it here — same as the by-type `attach_uart_tx_sink` path.
-            if let Some(uart) = any.downcast_mut::<crate::peripherals::esp_uart::EspUart>()
-            {
+            if let Some(uart) = any.downcast_mut::<crate::peripherals::esp_uart::EspUart>() {
                 uart.set_sink(Some(sink));
                 uart.silence_stdout_echo_if(echo_stdout);
                 return true;
@@ -525,9 +522,7 @@ impl SystemBus {
             };
             if let Some(uart) = any.downcast_ref::<Uart>() {
                 sources.push(uart.rx_buffer());
-            } else if let Some(uart) =
-                any.downcast_ref::<crate::peripherals::esp_uart::EspUart>()
-            {
+            } else if let Some(uart) = any.downcast_ref::<crate::peripherals::esp_uart::EspUart>() {
                 // The Espressif twin (ESP32-S3 UART0/1/2, and the ESP32-C3's
                 // UART0/1, which are the same IP) exposes the same handle.
                 sources.push(uart.rx_buffer());
