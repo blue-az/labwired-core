@@ -677,6 +677,33 @@ pub enum Instruction {
         sn: u8,
         sm: u8,
     },
+    /// VFMA.F32 Sd, Sn, Sm — fused multiply-accumulate: Sd = fused(Sn*Sm) + Sd.
+    VfmaF32 {
+        sd: u8,
+        sn: u8,
+        sm: u8,
+    },
+    /// VFMS.F32 Sd, Sn, Sm — fused negated-multiply-accumulate:
+    /// Sd = fused(-Sn*Sm) + Sd.
+    VfmsF32 {
+        sd: u8,
+        sn: u8,
+        sm: u8,
+    },
+    /// VFNMA.F32 Sd, Sn, Sm — fused multiply-subtract:
+    /// Sd = fused(Sn*Sm) - Sd.
+    VfnmaF32 {
+        sd: u8,
+        sn: u8,
+        sm: u8,
+    },
+    /// VFNMS.F32 Sd, Sn, Sm — fused negated-multiply-subtract:
+    /// Sd = fused(-Sn*Sm) - Sd.
+    VfnmsF32 {
+        sd: u8,
+        sn: u8,
+        sm: u8,
+    },
     /// VMOV Sn, Rt — single-precision FPU register from GP register.
     VmovSnRt {
         sn: u8,
@@ -1489,6 +1516,50 @@ pub fn decode_thumb_32(h1: u16, h2: u16) -> Instruction {
         let sn = (vn << 1) | (n as u8);
         let sm = (vm << 1) | (m as u8);
         return Instruction::VdivF32 { sd, sn, sm };
+    }
+
+    // VFMA.F32 / VFMS.F32 — fused multiply-accumulate (T2):
+    //   1110 1110 0D10 nnnn dddd 1010 N0M0 mmmm
+    // opc1[23:20] = 1D10 (D free); opc3 = h2[6] selects VFMA (0) / VFMS (1).
+    // These are FUSED: the product is not rounded before the addition —
+    // see execute() where `f32::mul_add` is used, not `a * b + c`.
+    if (h1 & 0xFFB0) == 0xEEA0 && (h2 & 0x0F10) == 0x0A00 {
+        let d = (h1 >> 6) & 1;
+        let n = (h2 >> 7) & 1;
+        let m = (h2 >> 5) & 1;
+        let opc3 = (h2 >> 6) & 1;
+        let vn = (h1 & 0xF) as u8;
+        let vd = ((h2 >> 12) & 0xF) as u8;
+        let vm = (h2 & 0xF) as u8;
+        let sd = (vd << 1) | (d as u8);
+        let sn = (vn << 1) | (n as u8);
+        let sm = (vm << 1) | (m as u8);
+        return if opc3 == 0 {
+            Instruction::VfmaF32 { sd, sn, sm }
+        } else {
+            Instruction::VfmsF32 { sd, sn, sm }
+        };
+    }
+
+    // VFNMA.F32 / VFNMS.F32 — fused negated multiply-accumulate/subtract (T2):
+    //   1110 1110 0D01 nnnn dddd 1010 N0M0 mmmm
+    // opc1[23:20] = 1D01 (D free); opc3 = h2[6] selects VFNMA (0) / VFNMS (1).
+    if (h1 & 0xFFB0) == 0xEE90 && (h2 & 0x0F10) == 0x0A00 {
+        let d = (h1 >> 6) & 1;
+        let n = (h2 >> 7) & 1;
+        let m = (h2 >> 5) & 1;
+        let opc3 = (h2 >> 6) & 1;
+        let vn = (h1 & 0xF) as u8;
+        let vd = ((h2 >> 12) & 0xF) as u8;
+        let vm = (h2 & 0xF) as u8;
+        let sd = (vd << 1) | (d as u8);
+        let sn = (vn << 1) | (n as u8);
+        let sm = (vm << 1) | (m as u8);
+        return if opc3 == 0 {
+            Instruction::VfnmaF32 { sd, sn, sm }
+        } else {
+            Instruction::VfnmsF32 { sd, sn, sm }
+        };
     }
 
     // VMOV (single, GP register ↔ S register) — T1:

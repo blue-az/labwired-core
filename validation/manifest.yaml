@@ -304,7 +304,21 @@ boards:
     # read/write path, reset value or layout was touched; the drift gate keys
     # on the model file's commit date, not its content. No live re-capture
     # warranted.
-    drift_ack: 2026-07-27
+    # 2026-07-28: three model corrections toward silicon, all found by running
+    # real Arduino-core firmware on the sim (not by a fixture):
+    #   gpio.rs  - IDR now reports the PIN level, so a push-pull output reads
+    #              back the level it drives, instead of a private latch.
+    #   i2c.rs   - optional ERROR-line NVIC vector, plus correct SR1 rc_w0 and
+    #              read-only SR2 write semantics (a raw SR1 assignment had let
+    #              a HAL flag-clear SET every other flag).
+    #   spi.rs   - full-duplex frames now always complete the receive (RXNE/RXP
+    #              + data register) instead of gating on an attached slave.
+    # None of these paths are pinned by this board's frozen capture, which
+    # covers reset values and register sweeps rather than output-pin readback
+    # or full-duplex RX events: labwired-hw-oracle (27/27) and chip_conformance
+    # pass unchanged. No live re-capture this session; re-capturing IDR readback
+    # and SPI RX behaviour is tracked.
+    drift_ack: 2026-07-28
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
@@ -719,7 +733,21 @@ boards:
     # read/write path, reset value or layout was touched; the drift gate keys
     # on the model file's commit date, not its content. No live re-capture
     # warranted.
-    drift_ack: 2026-07-27
+    # 2026-07-28: three model corrections toward silicon, all found by running
+    # real Arduino-core firmware on the sim (not by a fixture):
+    #   gpio.rs  - IDR now reports the PIN level, so a push-pull output reads
+    #              back the level it drives, instead of a private latch.
+    #   i2c.rs   - optional ERROR-line NVIC vector, plus correct SR1 rc_w0 and
+    #              read-only SR2 write semantics (a raw SR1 assignment had let
+    #              a HAL flag-clear SET every other flag).
+    #   spi.rs   - full-duplex frames now always complete the receive (RXNE/RXP
+    #              + data register) instead of gating on an attached slave.
+    # None of these paths are pinned by this board's frozen capture, which
+    # covers reset values and register sweeps rather than output-pin readback
+    # or full-duplex RX events: labwired-hw-oracle (27/27) and chip_conformance
+    # pass unchanged. No live re-capture this session; re-capturing IDR readback
+    # and SPI RX behaviour is tracked.
+    drift_ack: 2026-07-28
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
@@ -819,7 +847,21 @@ boards:
     # read/write path, reset value or layout was touched; the drift gate keys
     # on the model file's commit date, not its content. No live re-capture
     # warranted.
-    drift_ack: 2026-07-27
+    # 2026-07-28: three model corrections toward silicon, all found by running
+    # real Arduino-core firmware on the sim (not by a fixture):
+    #   gpio.rs  - IDR now reports the PIN level, so a push-pull output reads
+    #              back the level it drives, instead of a private latch.
+    #   i2c.rs   - optional ERROR-line NVIC vector, plus correct SR1 rc_w0 and
+    #              read-only SR2 write semantics (a raw SR1 assignment had let
+    #              a HAL flag-clear SET every other flag).
+    #   spi.rs   - full-duplex frames now always complete the receive (RXNE/RXP
+    #              + data register) instead of gating on an attached slave.
+    # None of these paths are pinned by this board's frozen capture, which
+    # covers reset values and register sweeps rather than output-pin readback
+    # or full-duplex RX events: labwired-hw-oracle (27/27) and chip_conformance
+    # pass unchanged. No live re-capture this session; re-capturing IDR readback
+    # and SPI RX behaviour is tracked.
+    drift_ack: 2026-07-28
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
@@ -925,7 +967,21 @@ boards:
     # read/write path, reset value or layout was touched; the drift gate keys
     # on the model file's commit date, not its content. No live re-capture
     # warranted.
-    drift_ack: 2026-07-27
+    # 2026-07-28: three model corrections toward silicon, all found by running
+    # real Arduino-core firmware on the sim (not by a fixture):
+    #   gpio.rs  - IDR now reports the PIN level, so a push-pull output reads
+    #              back the level it drives, instead of a private latch.
+    #   i2c.rs   - optional ERROR-line NVIC vector, plus correct SR1 rc_w0 and
+    #              read-only SR2 write semantics (a raw SR1 assignment had let
+    #              a HAL flag-clear SET every other flag).
+    #   spi.rs   - full-duplex frames now always complete the receive (RXNE/RXP
+    #              + data register) instead of gating on an attached slave.
+    # None of these paths are pinned by this board's frozen capture, which
+    # covers reset values and register sweeps rather than output-pin readback
+    # or full-duplex RX events: labwired-hw-oracle (27/27) and chip_conformance
+    # pass unchanged. No live re-capture this session; re-capturing IDR readback
+    # and SPI RX behaviour is tracked.
+    drift_ack: 2026-07-28
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/afio.rs
@@ -1284,6 +1340,21 @@ boards:
       - "tier1 fixture (clock/gpio/timer/pwm/i2c/spi/wdt/irq PASS + uart via TIER1 done)"
       - "io-smoke (examples/stm32h735-smoke: asserts the TIER1 transcript over UART)"
       - "chip_conformance (estate OK — no peripheral window faults)"
+    # 2026-07-28: three model corrections toward silicon, all found by running
+    # real Arduino-core firmware on the sim (not by a fixture):
+    #   gpio.rs  - IDR now reports the PIN level, so a push-pull output reads
+    #              back the level it drives, instead of a private latch.
+    #   i2c.rs   - optional ERROR-line NVIC vector, plus correct SR1 rc_w0 and
+    #              read-only SR2 write semantics (a raw SR1 assignment had let
+    #              a HAL flag-clear SET every other flag).
+    #   spi.rs   - full-duplex frames now always complete the receive (RXNE/RXP
+    #              + data register) instead of gating on an attached slave.
+    # None of these paths are pinned by this board's frozen capture, which
+    # covers reset values and register sweeps rather than output-pin readback
+    # or full-duplex RX events: labwired-hw-oracle (27/27) and chip_conformance
+    # pass unchanged. No live re-capture this session; re-capturing IDR readback
+    # and SPI RX behaviour is tracked.
+    drift_ack: 2026-07-28
     models:
       - configs/chips/stm32h735.yaml
       - crates/core/src/peripherals/rcc.rs
@@ -1303,6 +1374,21 @@ boards:
       - "io-smoke (examples/stm32f411ceu6-blackpill: asserts the TIER1 transcript over USART2)"
       - "chip_conformance (estate OK — no peripheral window faults)"
       - "register_coverage (scanned against the vendored modm-io SVD, 56 IRQs)"
+    # 2026-07-28: three model corrections toward silicon, all found by running
+    # real Arduino-core firmware on the sim (not by a fixture):
+    #   gpio.rs  - IDR now reports the PIN level, so a push-pull output reads
+    #              back the level it drives, instead of a private latch.
+    #   i2c.rs   - optional ERROR-line NVIC vector, plus correct SR1 rc_w0 and
+    #              read-only SR2 write semantics (a raw SR1 assignment had let
+    #              a HAL flag-clear SET every other flag).
+    #   spi.rs   - full-duplex frames now always complete the receive (RXNE/RXP
+    #              + data register) instead of gating on an attached slave.
+    # None of these paths are pinned by this board's frozen capture, which
+    # covers reset values and register sweeps rather than output-pin readback
+    # or full-duplex RX events: labwired-hw-oracle (27/27) and chip_conformance
+    # pass unchanged. No live re-capture this session; re-capturing IDR readback
+    # and SPI RX behaviour is tracked.
+    drift_ack: 2026-07-28
     models:
       - configs/chips/stm32f411ceu6.yaml
       - crates/core/src/peripherals/rcc.rs
@@ -1333,6 +1419,21 @@ boards:
     offline_tests:
       - "firmware_survival::kw41z_smoke / kw41z_nxp / kw41z_zephyr / kw41z_zephyr_fxos8700 / kw41z_lcd_activity"
       - "kw41z_clock_boot (MCG/RSIM clock bring-up, register-level)"
+    # 2026-07-28: three model corrections toward silicon, all found by running
+    # real Arduino-core firmware on the sim (not by a fixture):
+    #   gpio.rs  - IDR now reports the PIN level, so a push-pull output reads
+    #              back the level it drives, instead of a private latch.
+    #   i2c.rs   - optional ERROR-line NVIC vector, plus correct SR1 rc_w0 and
+    #              read-only SR2 write semantics (a raw SR1 assignment had let
+    #              a HAL flag-clear SET every other flag).
+    #   spi.rs   - full-duplex frames now always complete the receive (RXNE/RXP
+    #              + data register) instead of gating on an attached slave.
+    # None of these paths are pinned by this board's frozen capture, which
+    # covers reset values and register sweeps rather than output-pin readback
+    # or full-duplex RX events: labwired-hw-oracle (27/27) and chip_conformance
+    # pass unchanged. No live re-capture this session; re-capturing IDR readback
+    # and SPI RX behaviour is tracked.
+    drift_ack: 2026-07-28
     models:
       - configs/chips/mkw41z4.yaml
       - crates/core/src/peripherals/i2c.rs
