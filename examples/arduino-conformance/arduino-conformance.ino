@@ -43,6 +43,26 @@
 #define LW_HAS_WIRE 1
 #define LW_HAS_SPI 1
 
+// Which object is the *hardware UART* console.
+//
+// On cores with native USB (arduino-pico, Adafruit nRF52) `Serial` is a USB CDC
+// endpoint, not a UART — it only produces bytes once a host enumerates the
+// device and asserts DTR. The simulator watches the chip's UART peripheral, so
+// a sketch that prints to USB CDC there looks completely silent even though it
+// ran perfectly. On those cores the hardware UART is `Serial1`.
+//
+// This is a report-channel choice, not a capability claim: `LW_CONSOLE` only
+// decides where the LWCONF lines are written.
+// Gate on the parts that actually HAVE native USB, not on the architecture:
+// the nRF52832 has no USB peripheral at all, so its `Serial` is already a UART
+// and it does not even declare a `Serial1` (referencing one is a compile
+// error). nRF52840 and RP2040 do have USB and put the UART on `Serial1`.
+#if defined(ARDUINO_ARCH_RP2040) || defined(NRF52840_XXAA)
+#define LW_CONSOLE Serial1
+#else
+#define LW_CONSOLE Serial
+#endif
+
 // The pin driven by the gpio check. LED_BUILTIN is defined by every core's
 // variant for its own board, which is exactly the per-board indirection we
 // want — no board table to maintain here.
@@ -63,16 +83,16 @@
 #endif
 
 static void report(const char *cls, const char *verdict, const char *code) {
-  Serial.print("LWCONF ");
-  Serial.print(cls);
-  Serial.print(' ');
-  Serial.print(verdict);
+  LW_CONSOLE.print("LWCONF ");
+  LW_CONSOLE.print(cls);
+  LW_CONSOLE.print(' ');
+  LW_CONSOLE.print(verdict);
   if (code) {
-    Serial.print(" code=");
-    Serial.print(code);
+    LW_CONSOLE.print(" code=");
+    LW_CONSOLE.print(code);
   }
-  Serial.print('\n');
-  Serial.flush();
+  LW_CONSOLE.print('\n');
+  LW_CONSOLE.flush();
 }
 
 // gpio: drive the pin both ways and read it back. Reading back an OUTPUT pin
@@ -183,12 +203,12 @@ static void check_timer(void) {
 // the bytes it claims to. The console carrying these very lines already proves
 // the wire works; this catches a driver that reports a full/absent buffer.
 static void check_uart(void) {
-  int room = Serial.availableForWrite();
+  int room = LW_CONSOLE.availableForWrite();
   if (room <= 0) {
     report("uart", "FAIL", "no-tx-room");
     return;
   }
-  size_t n = Serial.write((const uint8_t *)"", 0);
+  size_t n = LW_CONSOLE.write((const uint8_t *)"", 0);
   if (n != 0) {
     report("uart", "FAIL", "write-count");
     return;
@@ -197,16 +217,16 @@ static void check_uart(void) {
 }
 
 void setup(void) {
-  Serial.begin(115200);
+  LW_CONSOLE.begin(115200);
 
   // Bounded wait for the port. Cores with native USB (RP2040, nRF52840)
   // return false from `!Serial` until the simulated host asserts DTR; cores
   // with a plain UART are ready immediately. Bounded so neither class hangs.
-  for (int i = 0; i < 10000 && !Serial; i++) {
+  for (int i = 0; i < 10000 && !LW_CONSOLE; i++) {
     // Intentionally empty: the loop bound IS the timeout.
   }
 
-  Serial.print("LWCONF begin\n");
+  LW_CONSOLE.print("LWCONF begin\n");
 
   check_uart();
   check_gpio();
@@ -214,8 +234,8 @@ void setup(void) {
   check_i2c();
   check_spi();
 
-  Serial.print("LWCONF done\n");
-  Serial.flush();
+  LW_CONSOLE.print("LWCONF done\n");
+  LW_CONSOLE.flush();
 }
 
 void loop(void) {
