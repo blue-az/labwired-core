@@ -77,6 +77,23 @@ pub struct WasmSimulator {
     jit_browser_cache: Option<Box<jit_browser::BrowserJitCache>>,
 }
 
+/// Inject the JSON body the virtual WiFi AP serves for
+/// `GET /v1/public-stats` (LBC3.1 stats lab). The browser playground should
+/// `fetch('https://api.labwired.com/v1/public-stats')` and pass the text here
+/// **before** constructing the simulator so the device twin receives live
+/// product numbers. Pass an empty string to clear the override (baked
+/// fallback). Wasm has no sockets; native CLI fetches live itself.
+#[wasm_bindgen]
+pub fn set_wifi_ap_public_stats_json(json: &str) {
+    if json.is_empty() {
+        labwired_core::peripherals::esp32c3::virtual_wifi::set_public_stats_body(None);
+    } else {
+        labwired_core::peripherals::esp32c3::virtual_wifi::set_public_stats_body(Some(
+            json.as_bytes().to_vec(),
+        ));
+    }
+}
+
 /// Public shape returned by `step_batch_profile`.
 ///
 /// The six execution counters intentionally mirror `StepProfile` exactly.
@@ -2004,6 +2021,20 @@ mod romboot_tests {
     // DHCP association through the modeled AP (no thunks).
     #[test]
     fn browser_c3_fast_start_wifi_associates() {
+        // Hermetic body: live API numbers move; this gate pins the long JSON
+        // that exercises the UART TX-FIFO path (165-byte body → PANEL UPDATED).
+        labwired_core::peripherals::esp32c3::virtual_wifi::set_public_stats_body(Some(
+            br#"{"generated_at":"2026-07-24T19:39:15.804Z","window_days":90,"boards_supported":9,"parts_supported":82,"labs_opened":69,"simulations_run":3200,"active_sessions":4900}"#
+                .to_vec(),
+        ));
+        struct ClearStats;
+        impl Drop for ClearStats {
+            fn drop(&mut self) {
+                labwired_core::peripherals::esp32c3::virtual_wifi::set_public_stats_body(None);
+            }
+        }
+        let _clear = ClearStats;
+
         let manifest_dir = root();
         let flash_path = manifest_dir.join("tests/fixtures/esp32c3-wifi-stats-flash.bin");
         let chip: ChipDescriptor = serde_yaml::from_str(

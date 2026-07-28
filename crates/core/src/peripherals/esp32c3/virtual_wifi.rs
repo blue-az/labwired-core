@@ -45,23 +45,180 @@ const TCP_ACK: u8 = 0x10;
 /// Receive window the AP advertises to the STA (ample for a small HTTP GET).
 const TCP_WINDOW: u16 = 0x2000;
 
-/// The AP's HTTP server response body — a real snapshot of the live
-/// `GET https://api.labwired.com/v1/public-stats`, baked in at authoring time.
-/// The sim is deterministic and air-gapped, so the "origin" is this modeled
-/// peer serving a genuine captured snapshot — every 802.11/IP/TCP/HTTP byte is
-/// still really produced and parsed by the real firmware + esp-wifi/lwIP stack.
+/// Offline/CI fallback body for `GET /v1/public-stats` — a real captured
+/// snapshot of the live API. Used when live fetch is unavailable (wasm without
+/// host inject, offline CI, network error). Prefer live data when possible.
 const STATS_SNAPSHOT: &str = concat!(
     "{\"generated_at\":\"2026-07-24T19:39:15.804Z\",\"window_days\":90,",
     "\"boards_supported\":9,\"parts_supported\":82,",
     "\"labs_opened\":69,\"simulations_run\":3200,\"active_sessions\":4900}"
 );
 
+/// Live origin for the LBC3.1 stats lab: `https://api.labwired.com/v1/public-stats`
+/// (plain HTTP on :80 also works). The station talks to the AP gateway
+/// (`192.168.4.1`); the AP reverse-proxies that path to the real LabWired API
+/// so the twin sees **live** product numbers, not only a baked snapshot.
+const PUBLIC_STATS_HOST: &str = "api.labwired.com";
+const PUBLIC_STATS_PATH: &str = "/v1/public-stats";
+
+/// Optional host-injected body (browser playground fetches the live API via
+/// `fetch()` then calls [`set_public_stats_body`]). When set, the AP serves
+/// this instead of attempting a native socket fetch. Cleared with
+/// [`set_public_stats_body`]`(None)`.
+fn public_stats_override() -> &'static Mutex<Option<Vec<u8>>> {
+    static BODY: OnceLock<Mutex<Option<Vec<u8>>>> = OnceLock::new();
+    BODY.get_or_init(|| Mutex::new(None))
+}
+
+/// Inject (or clear) the JSON body the virtual AP serves for
+/// `GET /v1/public-stats`. Used by the browser playground so wasm can deliver
+/// live API data without sockets; tests use it for determinism.
+pub fn set_public_stats_body(body: Option<Vec<u8>>) {
+    *public_stats_override().lock().unwrap() = body;
+}
+
+/// Snapshot of the current override (if any). Test helper.
+#[cfg(test)]
+pub fn public_stats_body_override() -> Option<Vec<u8>> {
+    public_stats_override().lock().unwrap().clone()
+}
+
+/// Resolve the body the AP will serve for `/v1/public-stats`:
+/// 1. host/test override (if set),
+/// 2. live HTTP GET to `api.labwired.com` (native only),
+/// 3. baked [`STATS_SNAPSHOT`] fallback.
+pub fn resolve_public_stats_body() -> Vec<u8> {
+    if let Some(body) = public_stats_override().lock().unwrap().clone() {
+        return body;
+    }
+    if let Some(body) = fetch_live_public_stats() {
+        return body;
+    }
+    STATS_SNAPSHOT.as_bytes().to_vec()
+}
+
+/// Native host: open a short TCP connection to the real LabWired API and return
+/// the response body. Wasm always returns `None` (no sockets) — the playground
+/// must inject via [`set_public_stats_body`].
+#[cfg(not(target_arch = "wasm32"))]
+fn fetch_live_public_stats() -> Option<Vec<u8>> {
+    use std::io::{Read, Write};
+    use std::net::TcpStream;
+    use std::time::Duration;
+
+    // Offline / hermetic CI: force the baked snapshot (no network).
+    if std::env::var_os("LABWIRED_WIFI_STATS_OFFLINE").is_some() {
+        return None;
+    }
+
+    let addr = format!("{PUBLIC_STATS_HOST}:80");
+    let mut stream = TcpStream::connect_timeout(
+        &addr.parse().ok()?,
+        Duration::from_secs(3),
+    )
+    .ok()?;
+    let _ = stream.set_read_timeout(Some(Duration::from_secs(3)));
+    let _ = stream.set_write_timeout(Some(Duration::from_secs(3)));
+
+    let req = format!(
+        "GET {PUBLIC_STATS_PATH} HTTP/1.1\r\n\
+         Host: {PUBLIC_STATS_HOST}\r\n\
+         Connection: close\r\n\
+         Accept: application/json\r\n\
+         User-Agent: labwired-virtual-ap/1\r\n\
+         \r\n"
+    );
+    stream.write_all(req.as_bytes()).ok()?;
+
+    let mut buf = Vec::new();
+    stream.read_to_end(&mut buf).ok()?;
+    parse_http_200_body(&buf)
+}
+
+#[cfg(target_arch = "wasm32")]
+fn fetch_live_public_stats() -> Option<Vec<u8>> {
+    None
+}
+
+/// Extract the body from a raw HTTP/1.x response. Requires status 200 and a
+/// body that looks like our public-stats JSON.
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))] // used by native live fetch only
+fn parse_http_200_body(raw: &[u8]) -> Option<Vec<u8>> {
+    let sep = raw.windows(4).position(|w| w == b"\r\n\r\n")?;
+    let head = std::str::from_utf8(&raw[..sep]).ok()?;
+    let status_ok = head
+        .lines()
+        .next()
+        .map(|line| line.contains(" 200"))
+        .unwrap_or(false);
+    if !status_ok {
+        return None;
+    }
+    let body = raw[sep + 4..].to_vec();
+    // Strip optional chunked/trailer noise: require the public-stats marker.
+    if !body.windows(b"boards_supported".len()).any(|w| w == b"boards_supported") {
+        return None;
+    }
+    Some(body)
+}
+
+/// HTTP origin that reverse-proxies `/v1/public-stats` to the live LabWired API
+/// (or override / baked fallback). Implements [`SimServer`] so the AP's TCP
+/// terminator stays unchanged.
+#[derive(Debug, Default)]
+struct LabwiredStatsServer {
+    /// Per-AP cache: first request resolves live/override/baked; later requests
+    /// reuse so a lab run doesn't thrash the origin on every poll.
+    cached: Mutex<Option<Vec<u8>>>,
+}
+
+impl LabwiredStatsServer {
+    fn body(&self) -> Vec<u8> {
+        let mut guard = self.cached.lock().unwrap();
+        if let Some(ref b) = *guard {
+            return b.clone();
+        }
+        let body = resolve_public_stats_body();
+        *guard = Some(body.clone());
+        body
+    }
+
+    /// Test / inject helper: pre-fill the per-AP cache so the first request
+    /// does not race on the process-global override.
+    #[cfg(test)]
+    fn with_cached_body(body: Vec<u8>) -> Self {
+        Self {
+            cached: Mutex::new(Some(body)),
+        }
+    }
+}
+
+impl SimServer for LabwiredStatsServer {
+    fn on_data(&self, _conn: u32, data: &[u8]) -> Vec<u8> {
+        let path_ok = HttpServer::parse_request_line(data)
+            .map(|(method, path)| method == "GET" && path == PUBLIC_STATS_PATH)
+            .unwrap_or(false);
+        if path_ok {
+            HttpResponse::json(self.body()).encode()
+        } else {
+            HttpResponse {
+                status: 404,
+                reason: "Not Found".into(),
+                content_type: "text/plain".into(),
+                body: b"not found".to_vec(),
+            }
+            .encode()
+        }
+    }
+}
+
 /// What the AP's HTTP origin serves. Keeps the AP's L4 surface a small, explicit
-/// choice so a lab can host the baked stats snapshot (the default demo) or an
-/// empty origin (every path 404s).
+/// choice so a lab can host the live LabWired stats origin (the default demo)
+/// or an empty origin (every path 404s).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ApServes {
-    /// Serve the baked `GET /v1/public-stats` snapshot (the default demo).
+    /// Reverse-proxy `GET /v1/public-stats` to the live LabWired API (with
+    /// host-inject / baked fallback). Default demo for the LBC3.1 stats lab.
     #[default]
     LabwiredStats,
     /// Serve nothing; the HTTP origin has no routes (every request 404s).
@@ -114,15 +271,13 @@ impl ApConfig {
         }
     }
 
-    /// The AP's HTTP origin for this config. `LabwiredStats` serves the baked
-    /// `/v1/public-stats` snapshot; `None` is an empty origin (every path 404s).
-    /// One source of truth for the AP's L4 routing.
+    /// The AP's HTTP origin for this config. `LabwiredStats` reverse-proxies
+    /// `/v1/public-stats` to the live LabWired API (override / baked fallback);
+    /// `None` is an empty origin (every path 404s). One source of truth for the
+    /// AP's L4 routing.
     fn http_origin(&self) -> Arc<dyn SimServer> {
         match self.serves {
-            ApServes::LabwiredStats => Arc::new(HttpServer::new().get(
-                "/v1/public-stats",
-                HttpResponse::json(STATS_SNAPSHOT.as_bytes().to_vec()),
-            )),
+            ApServes::LabwiredStats => Arc::new(LabwiredStatsServer::default()),
             ApServes::None => Arc::new(HttpServer::new()),
         }
     }
@@ -1126,6 +1281,7 @@ mod tests {
 
     #[test]
     fn tcp_http_get_roundtrip() {
+        // Live API numbers move; only require a public-stats-shaped JSON body.
         let bus = VirtualWifiBus::new();
         let sta = sta_mac(2);
         let (sport, dport) = (50000u16, 80u16);
@@ -1158,8 +1314,8 @@ mod tests {
         assert!(text.starts_with("HTTP/1.1 200"), "200 OK: {text}");
         assert!(text.contains("application/json"), "json content-type");
         assert!(
-            text.contains("\"boards_supported\":9"),
-            "carries the stats snapshot body: {text}"
+            text.contains("boards_supported"),
+            "carries public-stats JSON (live or baked): {text}"
         );
 
         let (f2, seq2, _, _) = reply_tcp(&rx[1]);
@@ -1260,5 +1416,47 @@ mod tests {
             text.starts_with("HTTP/1.1 404"),
             "serves=none → no /v1/public-stats route → 404: {text}"
         );
+    }
+
+    #[test]
+    fn parse_http_200_body_extracts_json() {
+        let raw = b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n{\"boards_supported\":11}";
+        let body = parse_http_200_body(raw).expect("200 body");
+        assert_eq!(body, br#"{"boards_supported":11}"#);
+        assert!(parse_http_200_body(b"HTTP/1.1 500 err\r\n\r\nnope").is_none());
+        assert!(parse_http_200_body(b"HTTP/1.1 200 OK\r\n\r\nnot-json").is_none());
+    }
+
+    #[test]
+    fn resolve_public_stats_body_honors_override() {
+        // Serialize against other tests that touch the process-global override.
+        let _gate = public_stats_override().lock().unwrap();
+        // Hold the lock only for the set/get dance — re-enter via set_ which
+        // also locks, so do the set without nested lock by writing directly.
+        drop(_gate);
+        set_public_stats_body(Some(b"{\"boards_supported\":42}".to_vec()));
+        let body = resolve_public_stats_body();
+        assert_eq!(body, b"{\"boards_supported\":42}");
+        set_public_stats_body(None);
+        // Without override: live (if online) or baked fallback — always has marker.
+        let body = resolve_public_stats_body();
+        assert!(
+            body.windows(b"boards_supported".len())
+                .any(|w| w == b"boards_supported"),
+            "live or baked body must carry boards_supported: {}",
+            String::from_utf8_lossy(&body)
+        );
+    }
+
+    #[test]
+    fn labwired_stats_server_serves_cached_body() {
+        let srv = LabwiredStatsServer::with_cached_body(
+            br#"{"boards_supported":7,"parts_supported":1,"labs_opened":1,"simulations_run":1,"active_sessions":1}"#
+                .to_vec(),
+        );
+        let resp = srv.on_data(0, b"GET /v1/public-stats HTTP/1.1\r\n\r\n");
+        let text = String::from_utf8_lossy(&resp);
+        assert!(text.starts_with("HTTP/1.1 200"), "{text}");
+        assert!(text.contains("\"boards_supported\":7"), "{text}");
     }
 }
