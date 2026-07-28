@@ -1,9 +1,9 @@
-//! Virtual AP internet egress — DNS + TCP NAT so a station on the modeled AP
-//! can reach the real network.
+//! Universal internet egress for the virtual AP — **any host**, not one URL.
 //!
-//! * **Native:** UDP/53 DNS via host resolver; TCP via real `TcpStream`.
-//! * **Browser (wasm):** host-net bridge — JS does DoH + `fetch` for HTTP(S);
-//!   enable with [`crate::peripherals::esp32c3::virtual_wifi_host_net::set_bridge_active`].
+//! * **DNS (any name):** host resolver (native) or DoH via host-net (browser)
+//! * **TCP off-LAN (any IP:port):** NAT via `TcpStream` (native); browser uses
+//!   host `fetch` when the station speaks cleartext HTTP
+//! * **TCP to AP:80 with any `Host:`:** reverse-proxied in `virtual_wifi`
 //!
 //! Set `LABWIRED_WIFI_NO_INTERNET=1` to force offline on native.
 
