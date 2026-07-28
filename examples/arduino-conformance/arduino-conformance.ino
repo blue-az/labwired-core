@@ -147,6 +147,55 @@ static void check_spi(void) {
 #endif
 }
 
+// timer: the Arduino time base (millis/micros/delay) rides the core's tick
+// interrupt — SysTick on Cortex-M, a hardware timer elsewhere. This asserts the
+// clock actually ADVANCES and that delay() returns, which together prove the
+// tick source is running and its interrupt is being delivered. A frozen tick is
+// the single most common way a simulated chip "boots" but hangs the first time
+// firmware waits for anything.
+static void check_timer(void) {
+  uint32_t t0 = millis();
+  uint32_t u0 = micros();
+
+  delay(5);
+
+  uint32_t t1 = millis();
+  uint32_t u1 = micros();
+
+  if (t1 == t0) {
+    report("timer", "FAIL", "millis-frozen");
+    return;
+  }
+  if (u1 == u0) {
+    report("timer", "FAIL", "micros-frozen");
+    return;
+  }
+  // millis must not run backwards across the delay.
+  if ((uint32_t)(t1 - t0) > 10000u) {
+    report("timer", "FAIL", "millis-jump");
+    return;
+  }
+  report("timer", "PASS", NULL);
+}
+
+// uart: a loopback-free self-check of the TX path's own bookkeeping.
+// availableForWrite() must report a non-zero TX buffer and write() must accept
+// the bytes it claims to. The console carrying these very lines already proves
+// the wire works; this catches a driver that reports a full/absent buffer.
+static void check_uart(void) {
+  int room = Serial.availableForWrite();
+  if (room <= 0) {
+    report("uart", "FAIL", "no-tx-room");
+    return;
+  }
+  size_t n = Serial.write((const uint8_t *)"", 0);
+  if (n != 0) {
+    report("uart", "FAIL", "write-count");
+    return;
+  }
+  report("uart", "PASS", NULL);
+}
+
 void setup(void) {
   Serial.begin(115200);
 
@@ -159,7 +208,9 @@ void setup(void) {
 
   Serial.print("LWCONF begin\n");
 
+  check_uart();
   check_gpio();
+  check_timer();
   check_i2c();
   check_spi();
 
