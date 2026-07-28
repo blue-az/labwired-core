@@ -1,0 +1,9 @@
+{
+  "additionalFiles": "",
+  "compiler.optimization_flags": "-Os",
+  "customBuildProperties": "",
+  "fqbn": "esp32:esp32:esp32c3",
+  "hardwareFolders": "/home/andrii/.arduino15/packages/esp32/hardware/esp32/3.3.11,/home/andrii/.arduino15/packages/esp32/hardware/esp32/3.3.11",
+  "otherLibrariesFolders": "/home/andrii/Arduino/libraries",
+  "sketchLocation": "/home/andrii/projects/labwired-f4-onboarding/examples/arduino-conformance"
+}

@@ -109,6 +109,14 @@ pub struct F1I2c {
     dr: u32,
     sr1: u32,
     sr2: u32,
+    /// NVIC vector for this instance's ERROR interrupt (e.g. I2C1_ER_IRQn = 32
+    /// on STM32F4), distinct from the EVENT vector carried by the peripheral's
+    /// `irq:` field. AF/BERR/ARLO/OVR are error conditions: silicon raises them
+    /// on the ER line under CR2.ITERREN, and the HAL's ERROR handler is what
+    /// clears AF and completes a NACKed transfer. Without this vector an
+    /// interrupt-mode driver (STM32duino 3.x uses HAL_I2C_Master_Transmit_IT)
+    /// never learns the address was NACKed and spins until its 100 ms timeout.
+    irq_error: Option<u32>,
     ccr: u32,
     trise: u32,
 
@@ -160,6 +168,7 @@ impl Default for F1I2c {
             dr: 0,
             sr1: 0,
             sr2: 0,
+            irq_error: None,
             ccr: 0,
             // TRISE reset value is 0x0002 (RM0008 §26.6.9) — silicon-confirmed
             // on STM32F103 over SWD (reads 0x00000002 after RCC clock enable,
@@ -206,6 +215,26 @@ impl F1I2c {
             || self.stop_requested
             // Level EV must keep walking while ITEVTEN/ITBUFEN flags are live.
             || self.irq_level()
+    }
+
+    /// Set the ERROR-line NVIC vector for this instance.
+    pub fn set_error_irq(&mut self, irq: u32) {
+        self.irq_error = Some(irq);
+    }
+
+    /// Vectors to pend on the ERROR line this cycle.
+    ///
+    /// SR1 error bits (RM0090 §27.6.6): BERR 8, ARLO 9, AF 10, OVR 11,
+    /// PECERR 12, TIMEOUT 14, SMBALERT 15. Bit 13 is reserved. Gated on
+    /// CR2.ITERREN (bit 8), exactly as silicon gates the ER line.
+    fn error_irqs(&self) -> Option<Vec<u32>> {
+        const ERR_MASK: u32 =
+            (1 << 8) | (1 << 9) | (1 << 10) | (1 << 11) | (1 << 12) | (1 << 14) | (1 << 15);
+        if (self.cr2 & (1 << 8)) != 0 && (self.sr1 & ERR_MASK) != 0 {
+            self.irq_error.map(|n| vec![n])
+        } else {
+            None
+        }
     }
 
     /// SR1 with ADDR masked once the SR1→SR2 clear sequence has completed.
@@ -350,8 +379,25 @@ impl F1I2c {
                     }
                 }
             }
-            0x14 => self.sr1 = value as u32,
-            0x18 => self.sr2 = value as u32,
+            0x14 => {
+                // SR1 is NOT a plain register. The error bits (BERR 8, ARLO 9,
+                // AF 10, OVR 11, PECERR 12, TIMEOUT 14, SMBALERT 15) are rc_w0
+                // — writing 0 clears them — and every other bit is read-only,
+                // set by hardware alone (RM0090 §27.6.6).
+                //
+                // A raw `self.sr1 = value` was catastrophic with real firmware:
+                // the HAL clears a flag with `SR1 = ~FLAG` (e.g. 0xFFFFFBFF for
+                // AF), which under a raw assignment SET every other flag at
+                // once — SB, ADDR, BTF, TXE — and the driver's state machine
+                // then chased events that never happened.
+                const CLEARABLE: u32 =
+                    (1 << 8) | (1 << 9) | (1 << 10) | (1 << 11) | (1 << 12) | (1 << 14) | (1 << 15);
+                let cleared = CLEARABLE & !(value as u32);
+                self.sr1 &= !cleared;
+            }
+            // SR2 is entirely read-only (MSL/BUSY/TRA/GENCALL/DUALF and PEC).
+            // Writes are discarded by hardware.
+            0x18 => {}
             // CCR 0xCFFF (12-bit divider + DUTY + F/S), TRISE 0x3F (6-bit) —
             // silicon-confirmed on F103.
             0x1C => self.ccr = (value as u32) & 0xCFFF,
@@ -1229,6 +1275,15 @@ impl I2c {
         Self::default()
     }
 
+    /// Forward an ERROR-line NVIC vector to the variant that models one.
+    /// Only the STM32 legacy peripheral splits EV/ER this way; other families
+    /// carry a single vector and ignore this.
+    pub fn set_error_irq(&mut self, irq: u32) {
+        if let Self::Stm32F1(i) = self {
+            i.set_error_irq(irq);
+        }
+    }
+
     pub fn new_with_layout(layout: I2cRegisterLayout) -> Self {
         match layout {
             I2cRegisterLayout::Stm32F1 => Self::Stm32F1(F1I2c::default()),
@@ -1376,9 +1431,15 @@ impl crate::Peripheral for I2c {
             Self::Stm32L4(i) => i.tick(),
             Self::Kinetis(i) => i.tick(),
         };
+        // Errors ride the ER vector, not the EV vector the `irq` flag pends.
+        let explicit_irqs = match self {
+            Self::Stm32F1(i) => i.error_irqs(),
+            _ => None,
+        };
         crate::PeripheralTickResult {
             irq,
             cycles: 0,
+            explicit_irqs,
             ..Default::default()
         }
     }

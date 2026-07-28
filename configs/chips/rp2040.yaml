@@ -193,6 +193,27 @@ peripherals:
   # TBMAN.PLATFORM in running_on_fpga()/running_on_asic() during clock bring-up.
   # Storage stub: PLATFORM reads 0, so the FPGA bit (bit 1) is clear and the
   # runtime takes the ASIC path — the correct behaviour for the simulated part.
+  # XIP_CTRL (datasheet 2.6.3) — the flash-cache control block, distinct from
+  # the SSI at 0x18000000. pico-sdk's runtime writes CTRL here during boot to
+  # enable the cache; an unmodelled block made that a bus write fault, which
+  # halted the sim before a single Arduino sketch line ran. Descriptor already
+  # existed in configs/peripherals/rp2040 and was simply never wired up.
+  - id: "xip_ctrl"
+    type: "declarative"
+    base_address: 0x14000000
+    size: "4KB"
+    config:
+      path: "../peripherals/rp2040/xip_ctrl.yaml"
+  # VREG_AND_CHIP_RESET (datasheet 2.10) — on-chip voltage regulator + reset
+  # reason. Declared 16KB, not 4KB, so the RP2040 atomic register aliases
+  # (+0x1000 XOR, +0x2000 SET, +0x3000 CLR) fall inside the window: the
+  # observed fault was a write to 0x40065000, i.e. the SET alias.
+  - id: "vreg_and_chip_reset"
+    type: "declarative"
+    base_address: 0x40064000
+    size: "16KB"
+    config:
+      path: "../peripherals/rp2040/vreg_and_chip_reset.yaml"
   - id: "tbman"
     type: "stub"
     base_address: 0x4006c000

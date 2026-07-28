@@ -87,11 +87,60 @@ impl F1Gpio {
             ..Default::default()
         }
     }
+    /// Mask of pins configured as an output (push-pull or open-drain).
+    ///
+    /// CRL covers pins 0..7, CRH pins 8..15; each pin owns a nibble whose low
+    /// two bits are MODE (00 = input, non-zero = output at some speed) and
+    /// whose high two bits are CNF (RM0008 §9.2.1/9.2.2).
+    fn output_mask(&self) -> u32 {
+        let mut mask = 0u32;
+        for pin in 0..16u32 {
+            let cr = if pin < 8 { self.crl } else { self.crh };
+            let nibble = (cr >> ((pin % 8) * 4)) & 0xF;
+            if nibble & 0x3 != 0 {
+                mask |= 1 << pin;
+            }
+        }
+        mask
+    }
+
+    /// Mask of output pins in open-drain mode (CNF bit 2 set, i.e. nibble 0b01xx
+    /// with MODE != 00 — RM0008 §9.2.1 table 20).
+    fn open_drain_mask(&self) -> u32 {
+        let mut mask = 0u32;
+        for pin in 0..16u32 {
+            let cr = if pin < 8 { self.crl } else { self.crh };
+            let nibble = (cr >> ((pin % 8) * 4)) & 0xF;
+            if nibble & 0x3 != 0 && nibble & 0x4 != 0 {
+                mask |= 1 << pin;
+            }
+        }
+        mask
+    }
+
+    /// IDR as silicon presents it: the *pin* level, not a separate latch.
+    ///
+    /// A push-pull output drives its pin, so reading IDR returns what ODR is
+    /// driving. Returning a bare latch instead makes `digitalRead()` on an
+    /// OUTPUT pin — one of the most common Arduino idioms — read 0 forever.
+    /// Open-drain outputs only pull LOW; driving a 1 releases the pin, so the
+    /// level is whatever the external world / pull-up decides, which is what
+    /// the latched `idr` represents here.
+    fn effective_idr(&self) -> u32 {
+        let out = self.output_mask();
+        let od = self.open_drain_mask();
+        let push_pull = out & !od;
+        // Open-drain pins read as driven only while ODR is 0.
+        let od_driven_low = od & !self.odr;
+        let driven = push_pull | od_driven_low;
+        ((self.odr & push_pull) | (self.idr & !driven)) & 0xFFFF
+    }
+
     fn read_reg(&self, offset: u64) -> u32 {
         match offset {
             0x00 => self.crl,
             0x04 => self.crh,
-            0x08 => self.idr,
+            0x08 => self.effective_idr(),
             0x0C => self.odr,
             0x18 => self.lckr,
             _ => 0,
@@ -134,13 +183,42 @@ pub struct V2Gpio {
 }
 
 impl V2Gpio {
+    /// Mask of pins whose MODER field selects general-purpose output (0b01).
+    /// Two bits per pin (RM0368 §8.4.1).
+    fn output_mask(&self) -> u32 {
+        let mut mask = 0u32;
+        for pin in 0..16u32 {
+            if (self.moder >> (pin * 2)) & 0x3 == 0b01 {
+                mask |= 1 << pin;
+            }
+        }
+        mask
+    }
+
+    /// IDR as silicon presents it: the *pin* level, not a separate latch.
+    ///
+    /// A push-pull output drives its pin, so reading IDR returns what ODR is
+    /// driving. Returning a bare latch instead makes `digitalRead()` on an
+    /// OUTPUT pin — one of the most common Arduino idioms — read 0 forever.
+    /// OTYPER bit set = open-drain: the pin is only driven while ODR is 0;
+    /// a 1 releases it, leaving the level to the external world / pull-up,
+    /// which is what the latched `idr` represents here.
+    fn effective_idr(&self) -> u32 {
+        let out = self.output_mask();
+        let open_drain = out & self.otyper;
+        let push_pull = out & !self.otyper;
+        let od_driven_low = open_drain & !self.odr;
+        let driven = push_pull | od_driven_low;
+        ((self.odr & push_pull) | (self.idr & !driven)) & 0xFFFF
+    }
+
     fn read_reg(&self, offset: u64) -> u32 {
         match offset {
             0x00 => self.moder,
             0x04 => self.otyper,
             0x08 => self.ospeedr,
             0x0C => self.pupdr,
-            0x10 => self.idr,
+            0x10 => self.effective_idr(),
             0x14 => self.odr,
             0x1C => self.lckr,
             0x20 => self.afrl,
@@ -1076,5 +1154,93 @@ mod tests {
         // BRR @ 0x28 (reset pin 0)
         gpio.write(0x28, 0x01).unwrap();
         assert_eq!(rd32(&gpio, 0x14) & 0x0001, 0x0000);
+    }
+}
+
+#[cfg(test)]
+mod idr_pin_level_tests {
+    use super::{GpioPort, GpioRegisterLayout};
+    use crate::Peripheral;
+
+    fn v2() -> GpioPort {
+        GpioPort::new_with_layout(GpioRegisterLayout::Stm32V2)
+    }
+
+    fn rd32(gpio: &GpioPort, off: u64) -> u32 {
+        gpio.read_u32(off).unwrap()
+    }
+
+    /// On silicon, IDR reports the PIN level, not a private latch. A push-pull
+    /// output drives its pin, so IDR must read back what ODR is driving.
+    ///
+    /// Regression test for a bug found by running the Arduino conformance
+    /// sketch on STM32F401: `digitalRead()` on an OUTPUT pin read 0 forever,
+    /// because V2Gpio returned its bare `idr` field. No Tier-1 fixture caught
+    /// it — they all read back through ODR (0x14), which was always correct.
+    #[test]
+    fn v2_idr_reflects_push_pull_output_level() {
+        let mut gpio = v2();
+
+        // PA5 as general-purpose output (MODER 0b01), push-pull (OTYPER 0).
+        gpio.write_u32(0x00, 0x1 << 10).unwrap();
+
+        gpio.write_u32(0x18, 1 << 5).unwrap(); // BSRR set PA5
+        assert_eq!(
+            rd32(&gpio, 0x14) & (1 << 5),
+            1 << 5,
+            "ODR must latch the set"
+        );
+        assert_eq!(
+            rd32(&gpio, 0x10) & (1 << 5),
+            1 << 5,
+            "IDR must report the driven HIGH level of a push-pull output"
+        );
+
+        gpio.write_u32(0x18, 1 << (5 + 16)).unwrap(); // BSRR reset PA5
+        assert_eq!(
+            rd32(&gpio, 0x10) & (1 << 5),
+            0,
+            "IDR must report the driven LOW level of a push-pull output"
+        );
+    }
+
+    /// An open-drain output only pulls LOW. Driving a 1 releases the pin, so
+    /// its level comes from the outside world rather than from ODR — the model
+    /// must NOT mirror ODR in that direction.
+    #[test]
+    fn v2_idr_open_drain_only_mirrors_low() {
+        let mut gpio = v2();
+
+        // PA5 output, open-drain (OTYPER bit 5 set).
+        gpio.write_u32(0x00, 0x1 << 10).unwrap();
+        gpio.write_u32(0x04, 1 << 5).unwrap();
+
+        gpio.write_u32(0x18, 1 << 5).unwrap(); // release (ODR=1)
+        assert_eq!(
+            rd32(&gpio, 0x10) & (1 << 5),
+            0,
+            "released open-drain pin must not mirror ODR; it floats to the latched input"
+        );
+
+        gpio.write_u32(0x18, 1 << (5 + 16)).unwrap(); // pull low (ODR=0)
+        assert_eq!(
+            rd32(&gpio, 0x10) & (1 << 5),
+            0,
+            "open-drain driving LOW reads LOW"
+        );
+    }
+
+    /// A pin left as an input must keep reporting the latched input value, not
+    /// ODR — otherwise the mirror would fabricate levels on undriven pins.
+    #[test]
+    fn v2_idr_input_pin_ignores_odr() {
+        let mut gpio = v2();
+        // MODER left at 0 => PA5 is an input. Write ODR anyway.
+        gpio.write_u32(0x14, 1 << 5).unwrap();
+        assert_eq!(
+            rd32(&gpio, 0x10) & (1 << 5),
+            0,
+            "input pin must not take its level from ODR"
+        );
     }
 }

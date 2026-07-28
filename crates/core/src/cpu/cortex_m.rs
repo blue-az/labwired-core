@@ -2970,6 +2970,31 @@ impl CortexM {
                     self.fpu_s[sd as usize] = (a / b).to_bits();
                     pc_increment = 4;
                 }
+                Instruction::VfmaF32 { sd, sn, sm } => {
+                    let a = f32::from_bits(self.fpu_s[sn as usize]);
+                    let b = f32::from_bits(self.fpu_s[sm as usize]);
+                    let c = f32::from_bits(self.fpu_s[sd as usize]);
+                    // Fused: single rounding of (a*b)+c, not a*b rounded then +c.
+                    self.fpu_s[sd as usize] = a.mul_add(b, c).to_bits();
+                }
+                Instruction::VfmsF32 { sd, sn, sm } => {
+                    let a = f32::from_bits(self.fpu_s[sn as usize]);
+                    let b = f32::from_bits(self.fpu_s[sm as usize]);
+                    let c = f32::from_bits(self.fpu_s[sd as usize]);
+                    self.fpu_s[sd as usize] = (-a).mul_add(b, c).to_bits();
+                }
+                Instruction::VfnmaF32 { sd, sn, sm } => {
+                    let a = f32::from_bits(self.fpu_s[sn as usize]);
+                    let b = f32::from_bits(self.fpu_s[sm as usize]);
+                    let c = f32::from_bits(self.fpu_s[sd as usize]);
+                    self.fpu_s[sd as usize] = a.mul_add(b, -c).to_bits();
+                }
+                Instruction::VfnmsF32 { sd, sn, sm } => {
+                    let a = f32::from_bits(self.fpu_s[sn as usize]);
+                    let b = f32::from_bits(self.fpu_s[sm as usize]);
+                    let c = f32::from_bits(self.fpu_s[sd as usize]);
+                    self.fpu_s[sd as usize] = (-a).mul_add(b, -c).to_bits();
+                }
                 Instruction::VmovSnRt { sn, rt } => {
                     self.fpu_s[sn as usize] = self.read_reg(rt);
                     pc_increment = 4;
@@ -4167,6 +4192,122 @@ mod tests {
             true,
         );
         assert_eq!(cpu.fpu_s[2], (12.0_f32).to_bits(), "VMUL: 6 * 2 = 12");
+    }
+
+    fn vfp_fma_encoding(h1_base: u16, sd: u8, sn: u8, sm: u8, opc3: u32) -> u32 {
+        // Build the 32-bit Thumb encoding for VFMA/VFMS/VFNMA/VFNMS.F32.
+        // h1_base is 0xEEA0 (VFMA/VFMS group) or 0xEE90 (VFNMA/VFNMS group)
+        // with D and Vn cleared; opc3 selects the h2[6] bit.
+        let vd = (sd >> 1) & 0xF;
+        let d = (sd & 1) as u32;
+        let vn = (sn >> 1) & 0xF;
+        let n = (sn & 1) as u32;
+        let vm = (sm >> 1) & 0xF;
+        let m = (sm & 1) as u32;
+        let h1 = h1_base | ((d as u16) << 6) | (vn as u16);
+        let h2 = ((vd as u16) << 12)
+            | 0x0A00
+            | ((n as u16) << 7)
+            | ((opc3 as u16) << 6)
+            | ((m as u16) << 5)
+            | (vm as u16);
+        ((h1 as u32) << 16) | (h2 as u32)
+    }
+
+    #[test]
+    fn test_thumb2_vfma_decodes_the_real_h563_opcode() {
+        // The exact bytes logged from stm32h563 firmware: 0xeee7 0x7a06.
+        // Register-number assembly is Sx = (Vx << 1) | bit, where the D/N/M
+        // bits live in different halfwords than the Vd/Vn/Vm fields — with
+        // D=1 (h1 bit6), Vn=7 (h1[3:0]), Vd=7 (h2[15:12]), N=0 (h2 bit7),
+        // M=0 (h2 bit5), Vm=6 (h2[3:0]) this decodes to
+        // VFMA.F32 S15, S14, S12 (not S7,S7,S6 — Vd/Vn/Vm are only half of
+        // each register number).
+        let mut cpu = CortexM::new();
+        let mut bus = MockBus::new();
+        cpu.fpu_s[14] = (2.0_f32).to_bits();
+        cpu.fpu_s[12] = (3.0_f32).to_bits();
+        cpu.fpu_s[15] = (2.0_f32).to_bits();
+        run_test_instr(&mut cpu, &mut bus, 0xEEE7_7A06, true);
+        // S15 = fused(S14 * S12) + S15 = fused(2*3) + 2 = 8
+        assert_eq!(cpu.fpu_s[15], (8.0_f32).to_bits());
+    }
+
+    #[test]
+    fn test_thumb2_vfma_is_truly_fused_not_double_rounded() {
+        // Choose operands where round(a*b) then +c differs from the fused
+        // single-rounding result. This proves mul_add (fused) is used
+        // rather than `a * b + c` (which would round the product first).
+        let a: f32 = 1.134_364_2;
+        let b: f32 = 1.847_433_7;
+        let c: f32 = -2.095_662_8;
+        let unfused = (a * b) + c;
+        let fused = a.mul_add(b, c);
+        assert_ne!(
+            unfused.to_bits(),
+            fused.to_bits(),
+            "test operands must actually exercise the fused/unfused difference"
+        );
+
+        let mut cpu = CortexM::new();
+        let mut bus = MockBus::new();
+        cpu.fpu_s[0] = a.to_bits();
+        cpu.fpu_s[1] = b.to_bits();
+        cpu.fpu_s[2] = c.to_bits();
+        // VFMA.F32 S2, S0, S1
+        run_test_instr(
+            &mut cpu,
+            &mut bus,
+            vfp_fma_encoding(0xEEA0, 2, 0, 1, 0),
+            true,
+        );
+        assert_eq!(
+            cpu.fpu_s[2],
+            fused.to_bits(),
+            "VFMA must use fused multiply-add (single rounding), not a*b+c"
+        );
+    }
+
+    #[test]
+    fn test_thumb2_vfms_vfnma_vfnms_sign_handling() {
+        let mut cpu = CortexM::new();
+        let mut bus = MockBus::new();
+        cpu.fpu_s[0] = (6.0_f32).to_bits(); // Sn
+        cpu.fpu_s[1] = (2.0_f32).to_bits(); // Sm
+        cpu.fpu_s[2] = (5.0_f32).to_bits(); // Sd (accumulator)
+
+        // VFMS.F32 S2, S0, S1 = fused(-6*2) + 5 = -12 + 5 = -7
+        run_test_instr(
+            &mut cpu,
+            &mut bus,
+            vfp_fma_encoding(0xEEA0, 2, 0, 1, 1),
+            true,
+        );
+        assert_eq!(cpu.fpu_s[2], (-7.0_f32).to_bits(), "VFMS: -(6*2)+5 = -7");
+
+        cpu.fpu_s[0] = (6.0_f32).to_bits();
+        cpu.fpu_s[1] = (2.0_f32).to_bits();
+        cpu.fpu_s[2] = (5.0_f32).to_bits();
+        // VFNMA.F32 S2, S0, S1 = fused(6*2) - 5 = 12 - 5 = 7
+        run_test_instr(
+            &mut cpu,
+            &mut bus,
+            vfp_fma_encoding(0xEE90, 2, 0, 1, 0),
+            true,
+        );
+        assert_eq!(cpu.fpu_s[2], (7.0_f32).to_bits(), "VFNMA: (6*2)-5 = 7");
+
+        cpu.fpu_s[0] = (6.0_f32).to_bits();
+        cpu.fpu_s[1] = (2.0_f32).to_bits();
+        cpu.fpu_s[2] = (5.0_f32).to_bits();
+        // VFNMS.F32 S2, S0, S1 = fused(-6*2) - 5 = -12 - 5 = -17
+        run_test_instr(
+            &mut cpu,
+            &mut bus,
+            vfp_fma_encoding(0xEE90, 2, 0, 1, 1),
+            true,
+        );
+        assert_eq!(cpu.fpu_s[2], (-17.0_f32).to_bits(), "VFNMS: -(6*2)-5 = -17");
     }
 
     #[test]
