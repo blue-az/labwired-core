@@ -176,12 +176,19 @@ impl Rp2040Sio {
         } else {
             let dividend = self.div_dividend;
             let divisor = self.div_divisor;
-            if divisor == 0 {
-                self.div_quotient = 0xffff_ffff;
-                self.div_remainder = dividend;
-            } else {
-                self.div_quotient = dividend / divisor;
-                self.div_remainder = dividend % divisor;
+            // Divide-by-zero is DEFINED on this hardware (datasheet 2.3.1.7):
+            // quotient reads all-ones and the remainder is the dividend. Written
+            // with checked_div so the zero case is expressed once, in the type,
+            // rather than as a separate guard clippy flags as manual_checked_ops.
+            match (dividend.checked_div(divisor), dividend.checked_rem(divisor)) {
+                (Some(q), Some(r)) => {
+                    self.div_quotient = q;
+                    self.div_remainder = r;
+                }
+                _ => {
+                    self.div_quotient = 0xffff_ffff;
+                    self.div_remainder = dividend;
+                }
             }
         }
         self.div_dirty = true;
