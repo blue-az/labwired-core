@@ -700,6 +700,16 @@ impl Default for SpiRegs {
 pub struct Spi {
     regs: SpiRegs,
 
+    /// True for the FIFO-equipped STM32 SPI (L4/F7/G4). On those parts RXNE
+    /// asserts only when the RX FIFO reaches the CR2.FRXTH threshold, so a
+    /// single 8-bit frame with FRXTH=0 (the reset default, threshold = 16 bit)
+    /// leaves RXNE CLEAR. Verified against a real NUCLEO-L476RG: SR reads
+    /// 0x0002 after a transmit with no slave wired. The classic F1/F4 port has
+    /// no FIFO and sets RXNE on every completed frame.
+    rx_fifo: bool,
+    /// Bytes sitting in the modelled RX FIFO (FIFO layout only).
+    rx_fifo_level: u8,
+
     // STM32 bit-engine state (classic/FIFO layout only; the other register
     // families keep their own transfer semantics).
     /// The frame currently clocking on the wire, if any.
@@ -773,6 +783,7 @@ impl Spi {
     /// Like [`new_with_layout`] but with an explicit classic-SPI CR2 writable
     /// mask — the per-part delta (F1 `0xE7`, F4 `0xF7` for the FRF bit).
     pub fn new_with_layout_cr2(layout: SpiRegisterLayout, cr2_mask: u32) -> Self {
+        let rx_fifo = matches!(layout, SpiRegisterLayout::Stm32Fifo);
         let regs = match layout {
             // CR2 reset is silicon-verified over SWD:
             //   FIFO SPI (L4/F7): CR2 = 0x0700 (DS=0b0111 8-bit + FRXTH).
@@ -795,6 +806,8 @@ impl Spi {
         };
         Self {
             regs,
+            rx_fifo,
+            rx_fifo_level: 0,
             cr2_mask,
             ..Default::default()
         }
@@ -1329,9 +1342,25 @@ impl Spi {
         // driver hang forever waiting for a flag that could never arrive
         // (`SPI.transfer()` on an unpopulated bus, which is the common case in
         // a simulator); found by the Arduino conformance sketch on F401.
+        let rx_fifo = self.rx_fifo;
+        let level = &mut self.rx_fifo_level;
         if let SpiRegs::Stm32(r) = &mut self.regs {
             r.dr = f.miso;
-            r.sr |= 0x0001; // RXNE
+            if !rx_fifo {
+                // Classic F1/F4 port: no FIFO, RXNE on every frame.
+                r.sr |= 0x0001;
+            } else {
+                // FIFO port: RXNE follows CR2.FRXTH (bit 12). FRXTH=1 → the
+                // threshold is 8 bit, so one frame asserts it; FRXTH=0 (reset)
+                // → 16 bit, so a single 8-bit frame must NOT assert it. This is
+                // what a real NUCLEO-L476RG reports (SR=0x0002 after TX), and
+                // is why STM32duino sets FRXTH before 8-bit transfers.
+                *level = level.saturating_add(1);
+                let frxth = r.cr2 & (1 << 12) != 0;
+                if frxth || *level >= 2 {
+                    r.sr |= 0x0001;
+                }
+            }
         }
         if !self.tx_queue.is_empty() {
             // Back-to-back: the next queued frame starts on the very next
@@ -1911,7 +1940,15 @@ mod tests {
         // HAL_SPI_TransmitReceive and therefore Arduino's SPI.transfer() do —
         // hung forever on an unpopulated bus. Corrected when the Arduino
         // conformance sketch on F401 hung in SPI.transfer().
-        assert_ne!(sr & 0x01, 0, "RXNE set after every full-duplex frame");
+        // CLASSIC (F1/F4) port — no RX FIFO, so a completed full-duplex frame
+        // always asserts RXNE, slave or no slave: silicon samples MISO every
+        // frame and the captured value is simply the idle level.
+        //
+        // This is the opposite of the FIFO port (L4/F7/G4), where RXNE follows
+        // CR2.FRXTH and a single 8-bit frame at the reset threshold (16 bit)
+        // leaves RXNE clear — verified on a real NUCLEO-L476RG, SR=0x0002.
+        // Both behaviours are now modelled; do not "unify" them.
+        assert_ne!(sr & 0x01, 0, "classic port sets RXNE on every frame");
         assert_eq!(
             spi.read(0x0C).unwrap(),
             0x00,
