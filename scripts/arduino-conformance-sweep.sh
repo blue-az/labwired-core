@@ -44,6 +44,7 @@ stm32l073	STMicroelectronics:stm32:Nucleo_64:pnum=NUCLEO_L073RZ
 stm32h563	STMicroelectronics:stm32:Nucleo_144:pnum=NUCLEO_H563ZI
 esp32c3	esp32:esp32:esp32c3
 esp32s3	esp32:esp32:esp32s3
+rp2040	rp2040:rp2040:rpipico
 EOF
 )
 
