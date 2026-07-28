@@ -1296,15 +1296,19 @@ impl Spi {
             self.stm32_drive_levels();
             return;
         }
-        // Frame complete: exchange lands in the RX path. A wired slave drove
-        // its byte onto MISO during the frame; loopback mirrors MOSI. Without
-        // either, RXNE stays clear (real silicon: no MISO data).
-        let deliver_rx = self.loopback || !self.attached_devices.is_empty();
+        // Frame complete: the exchange lands in the RX path.
+        //
+        // In full-duplex master mode silicon ALWAYS completes the receive: the
+        // shift register samples the MISO line every frame and RXNE asserts
+        // when the RX buffer fills, whether or not a slave is driving. With no
+        // slave the captured value is just the idle line level — it is not an
+        // absent event. Gating RXNE on an attached device made every polling
+        // driver hang forever waiting for a flag that could never arrive
+        // (`SPI.transfer()` on an unpopulated bus, which is the common case in
+        // a simulator); found by the Arduino conformance sketch on F401.
         if let SpiRegs::Stm32(r) = &mut self.regs {
-            if deliver_rx {
-                r.dr = f.miso;
-                r.sr |= 0x0001; // RXNE
-            }
+            r.dr = f.miso;
+            r.sr |= 0x0001; // RXNE
         }
         if !self.tx_queue.is_empty() {
             // Back-to-back: the next queued frame starts on the very next
@@ -1873,9 +1877,23 @@ mod tests {
         let sr = spi.read(0x08).unwrap();
         assert_eq!(sr & 0x80, 0, "BSY cleared after transfer");
         assert_ne!(sr & 0x02, 0, "TXE set after transfer");
-        // No slave wired → no MISO data → RXNE stays clear, DR reads 0.
-        assert_eq!(sr & 0x01, 0, "RXNE NOT set without a slave");
-        assert_eq!(spi.read(0x0C).unwrap(), 0x00, "DR=0 with no MISO data");
+        // Full-duplex master: the receive ALWAYS completes. Silicon samples the
+        // MISO line every frame and asserts RXNE when the RX buffer fills, slave
+        // or no slave — with nothing driving, the captured value is simply the
+        // idle line level (0x00 here), which is data, not a missing event.
+        //
+        // This assertion previously read `RXNE NOT set without a slave`, pinning
+        // the opposite. That was wrong about the hardware and had a real cost:
+        // any polling driver that writes DR then waits for RXNE — which is what
+        // HAL_SPI_TransmitReceive and therefore Arduino's SPI.transfer() do —
+        // hung forever on an unpopulated bus. Corrected when the Arduino
+        // conformance sketch on F401 hung in SPI.transfer().
+        assert_ne!(sr & 0x01, 0, "RXNE set after every full-duplex frame");
+        assert_eq!(
+            spi.read(0x0C).unwrap(),
+            0x00,
+            "DR holds the idle MISO level when no slave drives"
+        );
     }
 
     /// Analytic wire time: a frame completes at EXACTLY `bits × 2^(BR+1)`

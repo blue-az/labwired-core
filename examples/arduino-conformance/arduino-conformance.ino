@@ -132,8 +132,14 @@ static void check_i2c(void) {
 static void check_spi(void) {
 #ifdef LW_HAS_SPI
   SPI.begin();
+  // beginTransaction is REQUIRED, not decoration: on STM32duino `SPI.begin()`
+  // alone leaves the peripheral disabled (CR1 reads 0 — no SPE), and a
+  // transfer against a disabled peripheral polls a status flag that can never
+  // arrive. Every real sketch brackets transfers this way.
+  SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
   (void)SPI.transfer(0x5A);
   (void)SPI.transfer(0xA5);
+  SPI.endTransaction();
   SPI.end();
   report("spi", "PASS", NULL);
 #else

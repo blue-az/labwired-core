@@ -383,7 +383,17 @@ impl SystemBus {
                 } else {
                     let layout: crate::peripherals::i2c::I2cRegisterLayout =
                         Self::parse_profile_or_default(p_cfg, "I2C")?;
-                    Box::new(crate::peripherals::i2c::I2c::new_with_layout(layout))
+                    let mut ctl = crate::peripherals::i2c::I2c::new_with_layout(layout);
+                    // Optional ERROR-line vector. STM32 splits I2C into two NVIC
+                    // lines: EVENT (the peripheral's `irq:`) and ERROR. AF/BERR/
+                    // ARLO/OVR raise ERROR, and an interrupt-mode HAL only learns
+                    // an address was NACKed via that handler, so a chip that
+                    // declares only the EVENT vector makes every NACK look like a
+                    // 100 ms timeout to real firmware.
+                    if let Some(err_irq) = p_cfg.config.get("irq_error").and_then(|v| v.as_u64()) {
+                        ctl.set_error_irq(err_irq as u32);
+                    }
+                    Box::new(ctl)
                 };
                 bus.push_peripheral(p_cfg, controller)?;
                 for ext in &manifest.external_devices {
