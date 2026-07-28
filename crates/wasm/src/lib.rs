@@ -129,21 +129,53 @@ pub fn wifi_host_fulfill_dns(id: u32, ips_json: &str) {
 }
 
 /// Pending HTTP proxy requests. JSON array of
-/// `{ "id", "url", "method" }`.
+/// `{ "id", "url", "method", "body_b64" }` — any host URL; body is the
+/// request entity after headers (client-side `fetch` uses the user's network).
 #[wasm_bindgen]
 pub fn wifi_host_poll_http_requests() -> String {
     let reqs = labwired_core::peripherals::esp32c3::virtual_wifi_host_net::poll_http_requests();
     let v: Vec<serde_json::Value> = reqs
         .into_iter()
         .map(|r| {
+            let body = r
+                .raw_request
+                .windows(4)
+                .position(|w| w == b"\r\n\r\n")
+                .map(|i| r.raw_request[i + 4..].to_vec())
+                .unwrap_or_default();
             serde_json::json!({
                 "id": r.id,
                 "url": r.url,
                 "method": r.method,
+                "body_b64": b64_encode(&body),
             })
         })
         .collect();
     serde_json::to_string(&v).unwrap_or_else(|_| "[]".into())
+}
+
+fn b64_encode(data: &[u8]) -> String {
+    const T: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity((data.len() + 2) / 3 * 4);
+    for chunk in data.chunks(3) {
+        let b0 = chunk[0] as u32;
+        let b1 = chunk.get(1).copied().unwrap_or(0) as u32;
+        let b2 = chunk.get(2).copied().unwrap_or(0) as u32;
+        let n = (b0 << 16) | (b1 << 8) | b2;
+        out.push(T[((n >> 18) & 63) as usize] as char);
+        out.push(T[((n >> 12) & 63) as usize] as char);
+        out.push(if chunk.len() > 1 {
+            T[((n >> 6) & 63) as usize] as char
+        } else {
+            '='
+        });
+        out.push(if chunk.len() > 2 {
+            T[(n & 63) as usize] as char
+        } else {
+            '='
+        });
+    }
+    out
 }
 
 /// Fulfill an HTTP proxy request with a raw HTTP/1.1 response body (status
