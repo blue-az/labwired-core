@@ -77,6 +77,82 @@ pub struct WasmSimulator {
     jit_browser_cache: Option<Box<jit_browser::BrowserJitCache>>,
 }
 
+/// Inject the JSON body the virtual WiFi AP serves for
+/// `GET /v1/public-stats` (LBC3.1 stats lab). The browser playground should
+/// `fetch('https://api.labwired.com/v1/public-stats')` and pass the text here
+/// **before** constructing the simulator so the device twin receives live
+/// product numbers. Pass an empty string to clear the override (baked
+/// fallback). Wasm has no sockets; native CLI fetches live itself.
+#[wasm_bindgen]
+pub fn set_wifi_ap_public_stats_json(json: &str) {
+    if json.is_empty() {
+        labwired_core::peripherals::esp32c3::virtual_wifi::set_public_stats_body(None);
+    } else {
+        labwired_core::peripherals::esp32c3::virtual_wifi::set_public_stats_body(Some(
+            json.as_bytes().to_vec(),
+        ));
+    }
+}
+
+/// Enable browser host-network bridge so the virtual AP grants stations
+/// internet via JS (DoH + `fetch`). Call once after loading the wasm module.
+#[wasm_bindgen]
+pub fn wifi_host_net_set_active(active: bool) {
+    labwired_core::peripherals::esp32c3::virtual_wifi_host_net::set_bridge_active(active);
+}
+
+/// Pending DNS names the host must resolve (DoH). JSON array of
+/// `{ "id": number, "name": string }`.
+#[wasm_bindgen]
+pub fn wifi_host_poll_dns_requests() -> String {
+    let reqs = labwired_core::peripherals::esp32c3::virtual_wifi_host_net::poll_dns_requests();
+    let v: Vec<serde_json::Value> = reqs
+        .into_iter()
+        .map(|r| serde_json::json!({ "id": r.id, "name": r.name }))
+        .collect();
+    serde_json::to_string(&v).unwrap_or_else(|_| "[]".into())
+}
+
+/// Fulfill a DNS request with A records. `ips_json` is a JSON array of
+/// dotted-quads, e.g. `["93.184.216.34"]`.
+#[wasm_bindgen]
+pub fn wifi_host_fulfill_dns(id: u32, ips_json: &str) {
+    let ips: Vec<[u8; 4]> = serde_json::from_str::<Vec<String>>(ips_json)
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|s| {
+            let parts: Vec<u8> = s.split('.').filter_map(|p| p.parse().ok()).collect();
+            (parts.len() == 4).then(|| [parts[0], parts[1], parts[2], parts[3]])
+        })
+        .collect();
+    labwired_core::peripherals::esp32c3::virtual_wifi_host_net::fulfill_dns(id, ips);
+}
+
+/// Pending HTTP proxy requests. JSON array of
+/// `{ "id", "url", "method" }`.
+#[wasm_bindgen]
+pub fn wifi_host_poll_http_requests() -> String {
+    let reqs = labwired_core::peripherals::esp32c3::virtual_wifi_host_net::poll_http_requests();
+    let v: Vec<serde_json::Value> = reqs
+        .into_iter()
+        .map(|r| {
+            serde_json::json!({
+                "id": r.id,
+                "url": r.url,
+                "method": r.method,
+            })
+        })
+        .collect();
+    serde_json::to_string(&v).unwrap_or_else(|_| "[]".into())
+}
+
+/// Fulfill an HTTP proxy request with a raw HTTP/1.1 response body (status
+/// line + headers + body), as UTF-8 or binary string via byte array from JS.
+#[wasm_bindgen]
+pub fn wifi_host_fulfill_http(id: u32, response: &[u8]) {
+    labwired_core::peripherals::esp32c3::virtual_wifi_host_net::fulfill_http(id, response.to_vec());
+}
+
 /// Public shape returned by `step_batch_profile`.
 ///
 /// The six execution counters intentionally mirror `StepProfile` exactly.
@@ -2004,6 +2080,20 @@ mod romboot_tests {
     // DHCP association through the modeled AP (no thunks).
     #[test]
     fn browser_c3_fast_start_wifi_associates() {
+        // Hermetic body: live API numbers move; this gate pins the long JSON
+        // that exercises the UART TX-FIFO path (165-byte body → PANEL UPDATED).
+        labwired_core::peripherals::esp32c3::virtual_wifi::set_public_stats_body(Some(
+            br#"{"generated_at":"2026-07-24T19:39:15.804Z","window_days":90,"boards_supported":9,"parts_supported":82,"labs_opened":69,"simulations_run":3200,"active_sessions":4900}"#
+                .to_vec(),
+        ));
+        struct ClearStats;
+        impl Drop for ClearStats {
+            fn drop(&mut self) {
+                labwired_core::peripherals::esp32c3::virtual_wifi::set_public_stats_body(None);
+            }
+        }
+        let _clear = ClearStats;
+
         let manifest_dir = root();
         let flash_path = manifest_dir.join("tests/fixtures/esp32c3-wifi-stats-flash.bin");
         let chip: ChipDescriptor = serde_yaml::from_str(

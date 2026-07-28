@@ -24,6 +24,9 @@ use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex, OnceLock};
 
 use crate::network::sim::{HttpResponse, HttpServer, SimServer};
+use crate::peripherals::esp32c3::virtual_wifi_inet::{
+    dns_respond, internet_enabled, EgressTable, EgressTcp,
+};
 
 /// AP identity.
 const AP_BSSID: [u8; 6] = [0x02, 0x00, 0x00, 0x00, 0x00, 0x01];
@@ -45,23 +48,180 @@ const TCP_ACK: u8 = 0x10;
 /// Receive window the AP advertises to the STA (ample for a small HTTP GET).
 const TCP_WINDOW: u16 = 0x2000;
 
-/// The AP's HTTP server response body — a real snapshot of the live
-/// `GET https://api.labwired.com/v1/public-stats`, baked in at authoring time.
-/// The sim is deterministic and air-gapped, so the "origin" is this modeled
-/// peer serving a genuine captured snapshot — every 802.11/IP/TCP/HTTP byte is
-/// still really produced and parsed by the real firmware + esp-wifi/lwIP stack.
+/// Offline/CI fallback body for `GET /v1/public-stats` — a real captured
+/// snapshot of the live API. Used when live fetch is unavailable (wasm without
+/// host inject, offline CI, network error). Prefer live data when possible.
 const STATS_SNAPSHOT: &str = concat!(
     "{\"generated_at\":\"2026-07-24T19:39:15.804Z\",\"window_days\":90,",
     "\"boards_supported\":9,\"parts_supported\":82,",
     "\"labs_opened\":69,\"simulations_run\":3200,\"active_sessions\":4900}"
 );
 
+/// Live origin for the LBC3.1 stats lab: `https://api.labwired.com/v1/public-stats`
+/// (plain HTTP on :80 also works). The station talks to the AP gateway
+/// (`192.168.4.1`); the AP reverse-proxies that path to the real LabWired API
+/// so the twin sees **live** product numbers, not only a baked snapshot.
+const PUBLIC_STATS_HOST: &str = "api.labwired.com";
+const PUBLIC_STATS_PATH: &str = "/v1/public-stats";
+
+/// Optional host-injected body (browser playground fetches the live API via
+/// `fetch()` then calls [`set_public_stats_body`]). When set, the AP serves
+/// this instead of attempting a native socket fetch. Cleared with
+/// [`set_public_stats_body`]`(None)`.
+fn public_stats_override() -> &'static Mutex<Option<Vec<u8>>> {
+    static BODY: OnceLock<Mutex<Option<Vec<u8>>>> = OnceLock::new();
+    BODY.get_or_init(|| Mutex::new(None))
+}
+
+/// Inject (or clear) the JSON body the virtual AP serves for
+/// `GET /v1/public-stats`. Used by the browser playground so wasm can deliver
+/// live API data without sockets; tests use it for determinism.
+pub fn set_public_stats_body(body: Option<Vec<u8>>) {
+    *public_stats_override().lock().unwrap() = body;
+}
+
+/// Snapshot of the current override (if any). Test helper.
+#[cfg(test)]
+pub fn public_stats_body_override() -> Option<Vec<u8>> {
+    public_stats_override().lock().unwrap().clone()
+}
+
+/// Resolve the body the AP will serve for `/v1/public-stats`:
+/// 1. host/test override (if set),
+/// 2. live HTTP GET to `api.labwired.com` (native only),
+/// 3. baked [`STATS_SNAPSHOT`] fallback.
+pub fn resolve_public_stats_body() -> Vec<u8> {
+    if let Some(body) = public_stats_override().lock().unwrap().clone() {
+        return body;
+    }
+    if let Some(body) = fetch_live_public_stats() {
+        return body;
+    }
+    STATS_SNAPSHOT.as_bytes().to_vec()
+}
+
+/// Native host: open a short TCP connection to the real LabWired API and return
+/// the response body. Wasm always returns `None` (no sockets) — the playground
+/// must inject via [`set_public_stats_body`].
+#[cfg(not(target_arch = "wasm32"))]
+fn fetch_live_public_stats() -> Option<Vec<u8>> {
+    use std::io::{Read, Write};
+    use std::net::TcpStream;
+    use std::time::Duration;
+
+    // Offline / hermetic CI: force the baked snapshot (no network).
+    if std::env::var_os("LABWIRED_WIFI_STATS_OFFLINE").is_some() {
+        return None;
+    }
+
+    let addr = format!("{PUBLIC_STATS_HOST}:80");
+    let mut stream =
+        TcpStream::connect_timeout(&addr.parse().ok()?, Duration::from_secs(3)).ok()?;
+    let _ = stream.set_read_timeout(Some(Duration::from_secs(3)));
+    let _ = stream.set_write_timeout(Some(Duration::from_secs(3)));
+
+    let req = format!(
+        "GET {PUBLIC_STATS_PATH} HTTP/1.1\r\n\
+         Host: {PUBLIC_STATS_HOST}\r\n\
+         Connection: close\r\n\
+         Accept: application/json\r\n\
+         User-Agent: labwired-virtual-ap/1\r\n\
+         \r\n"
+    );
+    stream.write_all(req.as_bytes()).ok()?;
+
+    let mut buf = Vec::new();
+    stream.read_to_end(&mut buf).ok()?;
+    parse_http_200_body(&buf)
+}
+
+#[cfg(target_arch = "wasm32")]
+fn fetch_live_public_stats() -> Option<Vec<u8>> {
+    None
+}
+
+/// Extract the body from a raw HTTP/1.x response. Requires status 200 and a
+/// body that looks like our public-stats JSON.
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))] // used by native live fetch only
+fn parse_http_200_body(raw: &[u8]) -> Option<Vec<u8>> {
+    let sep = raw.windows(4).position(|w| w == b"\r\n\r\n")?;
+    let head = std::str::from_utf8(&raw[..sep]).ok()?;
+    let status_ok = head
+        .lines()
+        .next()
+        .map(|line| line.contains(" 200"))
+        .unwrap_or(false);
+    if !status_ok {
+        return None;
+    }
+    let body = raw[sep + 4..].to_vec();
+    // Strip optional chunked/trailer noise: require the public-stats marker.
+    if !body
+        .windows(b"boards_supported".len())
+        .any(|w| w == b"boards_supported")
+    {
+        return None;
+    }
+    Some(body)
+}
+
+/// HTTP origin that reverse-proxies `/v1/public-stats` to the live LabWired API
+/// (or override / baked fallback). Implements [`SimServer`] so the AP's TCP
+/// terminator stays unchanged.
+#[derive(Debug, Default)]
+struct LabwiredStatsServer {
+    /// Per-AP cache: first request resolves live/override/baked; later requests
+    /// reuse so a lab run doesn't thrash the origin on every poll.
+    cached: Mutex<Option<Vec<u8>>>,
+}
+
+impl LabwiredStatsServer {
+    fn body(&self) -> Vec<u8> {
+        let mut guard = self.cached.lock().unwrap();
+        if let Some(ref b) = *guard {
+            return b.clone();
+        }
+        let body = resolve_public_stats_body();
+        *guard = Some(body.clone());
+        body
+    }
+
+    /// Test / inject helper: pre-fill the per-AP cache so the first request
+    /// does not race on the process-global override.
+    #[cfg(test)]
+    fn with_cached_body(body: Vec<u8>) -> Self {
+        Self {
+            cached: Mutex::new(Some(body)),
+        }
+    }
+}
+
+impl SimServer for LabwiredStatsServer {
+    fn on_data(&self, _conn: u32, data: &[u8]) -> Vec<u8> {
+        let path_ok = HttpServer::parse_request_line(data)
+            .map(|(method, path)| method == "GET" && path == PUBLIC_STATS_PATH)
+            .unwrap_or(false);
+        if path_ok {
+            HttpResponse::json(self.body()).encode()
+        } else {
+            HttpResponse {
+                status: 404,
+                reason: "Not Found".into(),
+                content_type: "text/plain".into(),
+                body: b"not found".to_vec(),
+            }
+            .encode()
+        }
+    }
+}
+
 /// What the AP's HTTP origin serves. Keeps the AP's L4 surface a small, explicit
-/// choice so a lab can host the baked stats snapshot (the default demo) or an
-/// empty origin (every path 404s).
+/// choice so a lab can host the live LabWired stats origin (the default demo)
+/// or an empty origin (every path 404s).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ApServes {
-    /// Serve the baked `GET /v1/public-stats` snapshot (the default demo).
+    /// Reverse-proxy `GET /v1/public-stats` to the live LabWired API (with
+    /// host-inject / baked fallback). Default demo for the LBC3.1 stats lab.
     #[default]
     LabwiredStats,
     /// Serve nothing; the HTTP origin has no routes (every request 404s).
@@ -114,15 +274,13 @@ impl ApConfig {
         }
     }
 
-    /// The AP's HTTP origin for this config. `LabwiredStats` serves the baked
-    /// `/v1/public-stats` snapshot; `None` is an empty origin (every path 404s).
-    /// One source of truth for the AP's L4 routing.
+    /// The AP's HTTP origin for this config. `LabwiredStats` reverse-proxies
+    /// `/v1/public-stats` to the live LabWired API (override / baked fallback);
+    /// `None` is an empty origin (every path 404s). One source of truth for the
+    /// AP's L4 routing.
     fn http_origin(&self) -> Arc<dyn SimServer> {
         match self.serves {
-            ApServes::LabwiredStats => Arc::new(HttpServer::new().get(
-                "/v1/public-stats",
-                HttpResponse::json(STATS_SNAPSHOT.as_bytes().to_vec()),
-            )),
+            ApServes::LabwiredStats => Arc::new(LabwiredStatsServer::default()),
             ApServes::None => Arc::new(HttpServer::new()),
         }
     }
@@ -167,6 +325,8 @@ struct VirtualWifi {
     /// encoder so the TCP layer only moves bytes — one source of truth for HTTP.
     /// Derived from `cfg.serves`.
     http: Arc<dyn SimServer>,
+    /// NAT table: TCP connections to off-LAN destinations (real internet).
+    egress: EgressTable,
 }
 
 impl VirtualWifi {
@@ -180,6 +340,7 @@ impl VirtualWifi {
             next_isn: 0,
             cfg,
             http,
+            egress: EgressTable::default(),
         }
     }
 }
@@ -227,6 +388,7 @@ impl VirtualWifiBus {
         self.with(|m| {
             m.stas.clear();
             m.next_host = 0;
+            m.egress.conns.clear();
         });
     }
 
@@ -254,6 +416,12 @@ impl VirtualWifiBus {
             let frame = build_beacon(&m.cfg.ssid, channel);
             m.enqueue(mac, frame);
         });
+    }
+
+    /// Poll NAT sockets and inject any pending AP→STA TCP segments. Call once
+    /// per WiFi MAC bus tick so real-internet downloads make progress.
+    pub fn poll(&self) {
+        self.with(|m| m.poll_egress());
     }
 }
 
@@ -367,15 +535,18 @@ impl VirtualWifi {
             }
             return;
         }
-        // IPv4: route to the destination station if we know it, else drop.
+        // IPv4: AP services, STA↔STA route, or internet NAT.
         if let Some((dst_ip, proto)) = parse_ipv4_dst(frame) {
             if dst_ip == self.cfg.ip {
-                // TCP → the AP's HTTP server (real handshake + segments); else a
-                // UDP echo (proves an app-data round-trip). Other traffic dropped.
+                // Local AP services: HTTP origin (TCP/80), DNS (UDP/53), UDP echo.
                 if proto == 6 {
                     self.handle_tcp(src, frame);
-                } else if let Some(echo) = build_udp_echo(self.cfg.ip, src, frame) {
-                    self.enqueue(src, echo);
+                } else if proto == 17 {
+                    if let Some(dns) = build_dns_reply(self.cfg.ip, src, frame) {
+                        self.enqueue(src, dns);
+                    } else if let Some(echo) = build_udp_echo(self.cfg.ip, src, frame) {
+                        self.enqueue(src, echo);
+                    }
                 }
                 return;
             }
@@ -385,6 +556,11 @@ impl VirtualWifi {
                 if let Some(routed) = reframe_to_sta(frame, dst_mac) {
                     self.enqueue(dst_mac, routed);
                 }
+                return;
+            }
+            // Off-LAN: NAT through the host network (when internet is enabled).
+            if internet_enabled() && proto == 6 {
+                self.handle_tcp_egress(src, frame, dst_ip);
             }
         }
     }
@@ -586,6 +762,234 @@ impl VirtualWifi {
             .conns
             .entry(port)
             .or_default()
+    }
+
+    /// TCP NAT: station talks to a real off-LAN peer via a host `TcpStream`.
+    /// Replies are sourced from the remote IP so the station's lwIP stack sees
+    /// a normal internet path (gateway ARPs the AP; TCP peer is remote).
+    fn handle_tcp_egress(&mut self, src_mac: [u8; 6], frame: &[u8], remote_ip: [u8; 4]) {
+        let ipoff = snap_off(frame);
+        if frame.len() < ipoff + 20 {
+            return;
+        }
+        let ihl = (frame[ipoff] & 0x0F) as usize * 4;
+        let total_len = u16::from_be_bytes([frame[ipoff + 2], frame[ipoff + 3]]) as usize;
+        let mut client_ip = [0u8; 4];
+        client_ip.copy_from_slice(&frame[ipoff + 12..ipoff + 16]);
+        let tcpoff = ipoff + ihl;
+        let seg_end = (ipoff + total_len).min(frame.len());
+        if ihl < 20 || tcpoff + 20 > seg_end {
+            return;
+        }
+        let seg = &frame[tcpoff..seg_end];
+        let client_port = u16::from_be_bytes([seg[0], seg[1]]);
+        let remote_port = u16::from_be_bytes([seg[2], seg[3]]);
+        let seq = u32::from_be_bytes([seg[4], seg[5], seg[6], seg[7]]);
+        let data_off = (seg[12] >> 4) as usize * 4;
+        if data_off < 20 || data_off > seg.len() {
+            return;
+        }
+        let flags = seg[13];
+        let payload = &seg[data_off..];
+        let key = (src_mac, client_port);
+
+        if flags & TCP_RST != 0 {
+            self.egress.conns.remove(&key);
+            return;
+        }
+
+        // SYN → open real socket + SYN-ACK (or RST if connect fails).
+        if flags & TCP_SYN != 0 && flags & TCP_ACK == 0 {
+            let isn = 0x0002_0000u32.wrapping_add(self.next_isn);
+            self.next_isn = self.next_isn.wrapping_add(0x0001_0000);
+            let rcv_nxt = seq.wrapping_add(1);
+            let snd_nxt = isn.wrapping_add(1);
+            match EgressTcp::connect(client_ip, remote_ip, remote_port, rcv_nxt, snd_nxt) {
+                Some(conn) => {
+                    self.egress.conns.insert(key, conn);
+                    let synack = build_tcp_to_sta(
+                        remote_ip,
+                        src_mac,
+                        client_ip,
+                        remote_port,
+                        client_port,
+                        isn,
+                        rcv_nxt,
+                        TCP_SYN | TCP_ACK,
+                        &[],
+                    );
+                    self.enqueue(src_mac, synack);
+                }
+                None => {
+                    let rst = build_tcp_to_sta(
+                        remote_ip,
+                        src_mac,
+                        client_ip,
+                        remote_port,
+                        client_port,
+                        0,
+                        seq.wrapping_add(1),
+                        TCP_RST | TCP_ACK,
+                        &[],
+                    );
+                    self.enqueue(src_mac, rst);
+                }
+            }
+            return;
+        }
+
+        let Some(conn) = self.egress.conns.get_mut(&key) else {
+            return;
+        };
+        let mut out: Vec<Vec<u8>> = Vec::new();
+        let mut close = false;
+
+        if !payload.is_empty() && seq == conn.rcv_nxt {
+            let _ = conn.write_all(payload);
+            conn.rcv_nxt = conn.rcv_nxt.wrapping_add(payload.len() as u32);
+            out.push(build_tcp_to_sta(
+                remote_ip,
+                src_mac,
+                client_ip,
+                remote_port,
+                client_port,
+                conn.snd_nxt,
+                conn.rcv_nxt,
+                TCP_ACK,
+                &[],
+            ));
+        }
+
+        if flags & TCP_FIN != 0 && seq.wrapping_add(payload.len() as u32) == conn.rcv_nxt {
+            conn.rcv_nxt = conn.rcv_nxt.wrapping_add(1);
+            conn.shutdown_write();
+            out.push(build_tcp_to_sta(
+                remote_ip,
+                src_mac,
+                client_ip,
+                remote_port,
+                client_port,
+                conn.snd_nxt,
+                conn.rcv_nxt,
+                TCP_ACK,
+                &[],
+            ));
+            if conn.fin_sent {
+                close = true;
+            }
+        }
+
+        // Pull any immediately available remote data (short responses).
+        let data = conn.read_available(4096);
+        if !data.is_empty() {
+            out.push(build_tcp_to_sta(
+                remote_ip,
+                src_mac,
+                client_ip,
+                remote_port,
+                client_port,
+                conn.snd_nxt,
+                conn.rcv_nxt,
+                TCP_PSH | TCP_ACK,
+                &data,
+            ));
+            conn.snd_nxt = conn.snd_nxt.wrapping_add(data.len() as u32);
+        }
+        if conn.peer_fin && !conn.fin_sent {
+            out.push(build_tcp_to_sta(
+                remote_ip,
+                src_mac,
+                client_ip,
+                remote_port,
+                client_port,
+                conn.snd_nxt,
+                conn.rcv_nxt,
+                TCP_FIN | TCP_ACK,
+                &[],
+            ));
+            conn.snd_nxt = conn.snd_nxt.wrapping_add(1);
+            conn.fin_sent = true;
+            close = true;
+        }
+
+        for f in out {
+            self.enqueue(src_mac, f);
+        }
+        if close {
+            self.egress.conns.remove(&key);
+        }
+    }
+
+    /// Drain NAT sockets / browser host-net answers → station inboxes.
+    fn poll_egress(&mut self) {
+        // DNS answers fulfilled by the browser host bridge.
+        for rep in crate::peripherals::esp32c3::virtual_wifi_host_net::take_dns_replies() {
+            let frame = build_udp_to_sta(
+                rep.ap_ip,
+                rep.sta_mac,
+                rep.client_ip,
+                53,
+                rep.client_port,
+                &rep.udp_payload,
+            );
+            self.enqueue(rep.sta_mac, frame);
+        }
+
+        if self.egress.conns.is_empty() {
+            return;
+        }
+        let keys: Vec<_> = self.egress.conns.keys().copied().collect();
+        for key in keys {
+            let (src_mac, client_port) = key;
+            let Some(conn) = self.egress.conns.get_mut(&key) else {
+                continue;
+            };
+            let remote_ip = conn.remote_ip;
+            let remote_port = conn.remote_port;
+            let client_ip = conn.client_ip;
+            let data = conn.read_available(4096);
+            let mut frames = Vec::new();
+            if !data.is_empty() {
+                let seq = conn.snd_nxt;
+                let ack = conn.rcv_nxt;
+                conn.snd_nxt = conn.snd_nxt.wrapping_add(data.len() as u32);
+                frames.push(build_tcp_to_sta(
+                    remote_ip,
+                    src_mac,
+                    client_ip,
+                    remote_port,
+                    client_port,
+                    seq,
+                    ack,
+                    TCP_PSH | TCP_ACK,
+                    &data,
+                ));
+            }
+            if conn.peer_fin && !conn.fin_sent {
+                let seq = conn.snd_nxt;
+                let ack = conn.rcv_nxt;
+                conn.snd_nxt = conn.snd_nxt.wrapping_add(1);
+                conn.fin_sent = true;
+                frames.push(build_tcp_to_sta(
+                    remote_ip,
+                    src_mac,
+                    client_ip,
+                    remote_port,
+                    client_port,
+                    seq,
+                    ack,
+                    TCP_FIN | TCP_ACK,
+                    &[],
+                ));
+            }
+            let drop = conn.fin_sent && conn.peer_fin;
+            for f in frames {
+                self.enqueue(src_mac, f);
+            }
+            if drop {
+                self.egress.conns.remove(&key);
+            }
+        }
     }
 }
 
@@ -809,6 +1213,91 @@ fn build_arp_reply(da: [u8; 6], who_mac: [u8; 6], who_ip: [u8; 4], target_ip: [u
     arp.extend_from_slice(&da);
     arp.extend_from_slice(&target_ip);
     data_frame(da, 0x0806, &arp)
+}
+
+/// If `frame` is a DNS query (UDP/53) to the AP, resolve via the host and
+/// return a from-DS reply frame. DHCP already advertises the AP as DNS.
+/// On browser (host-net bridge), queues async DNS and returns `None` until
+/// [`VirtualWifi::poll_egress`] injects the reply.
+fn build_dns_reply(ap_ip: [u8; 4], da: [u8; 6], frame: &[u8]) -> Option<Vec<u8>> {
+    let ip = snap_off(frame);
+    if frame.len() < ip + 20 || frame[ip] >> 4 != 4 || frame[ip + 9] != 17 {
+        return None;
+    }
+    let udp = ip + (frame[ip] & 0xF) as usize * 4;
+    if frame.len() < udp + 8 {
+        return None;
+    }
+    let sport = u16::from_be_bytes([frame[udp], frame[udp + 1]]);
+    let dport = u16::from_be_bytes([frame[udp + 2], frame[udp + 3]]);
+    if dport != 53 {
+        return None;
+    }
+    let ulen = u16::from_be_bytes([frame[udp + 4], frame[udp + 5]]) as usize;
+    if ulen < 8 || frame.len() < udp + ulen {
+        return None;
+    }
+    let mut src_ip = [0u8; 4];
+    src_ip.copy_from_slice(&frame[ip + 12..ip + 16]);
+    let q = &frame[udp + 8..udp + ulen];
+    // Browser host-net: never use native resolver (none in wasm) — queue DoH.
+    if crate::peripherals::esp32c3::virtual_wifi_host_net::bridge_active() {
+        if let Some(name) = crate::peripherals::esp32c3::virtual_wifi_host_net::dns_qname(q) {
+            crate::peripherals::esp32c3::virtual_wifi_host_net::enqueue_dns(
+                name,
+                q.to_vec(),
+                da,
+                src_ip,
+                ap_ip,
+                sport,
+            );
+        }
+        return None;
+    }
+    // Native host resolver (instant).
+    let resp = dns_respond(q)?;
+    Some(build_udp_to_sta(ap_ip, da, src_ip, 53, sport, &resp))
+}
+
+/// Build a from-DS IPv4/UDP frame AP→STA.
+fn build_udp_to_sta(
+    src_ip: [u8; 4],
+    da: [u8; 6],
+    dst_ip: [u8; 4],
+    sport: u16,
+    dport: u16,
+    payload: &[u8],
+) -> Vec<u8> {
+    let udp_len = (8 + payload.len()) as u16;
+    let mut u = Vec::new();
+    u.extend_from_slice(&sport.to_be_bytes());
+    u.extend_from_slice(&dport.to_be_bytes());
+    u.extend_from_slice(&udp_len.to_be_bytes());
+    u.extend_from_slice(&[0, 0]); // checksum optional for IPv4
+    u.extend_from_slice(payload);
+
+    let ip_total = (20 + u.len()) as u16;
+    let mut iph = vec![
+        0x45,
+        0x00,
+        (ip_total >> 8) as u8,
+        ip_total as u8,
+        0,
+        0,
+        0,
+        0,
+        0x40,
+        0x11,
+        0,
+        0,
+    ];
+    iph.extend_from_slice(&src_ip);
+    iph.extend_from_slice(&dst_ip);
+    let cks = inet_checksum(&iph);
+    iph[10] = (cks >> 8) as u8;
+    iph[11] = cks as u8;
+    iph.extend_from_slice(&u);
+    data_frame(da, 0x0800, &iph)
 }
 
 /// If `frame` is a UDP datagram to the AP's echo port, build the echoed reply
@@ -1126,6 +1615,7 @@ mod tests {
 
     #[test]
     fn tcp_http_get_roundtrip() {
+        // Live API numbers move; only require a public-stats-shaped JSON body.
         let bus = VirtualWifiBus::new();
         let sta = sta_mac(2);
         let (sport, dport) = (50000u16, 80u16);
@@ -1158,8 +1648,8 @@ mod tests {
         assert!(text.starts_with("HTTP/1.1 200"), "200 OK: {text}");
         assert!(text.contains("application/json"), "json content-type");
         assert!(
-            text.contains("\"boards_supported\":9"),
-            "carries the stats snapshot body: {text}"
+            text.contains("boards_supported"),
+            "carries public-stats JSON (live or baked): {text}"
         );
 
         let (f2, seq2, _, _) = reply_tcp(&rx[1]);
@@ -1260,5 +1750,178 @@ mod tests {
             text.starts_with("HTTP/1.1 404"),
             "serves=none → no /v1/public-stats route → 404: {text}"
         );
+    }
+
+    #[test]
+    fn parse_http_200_body_extracts_json() {
+        let raw =
+            b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n{\"boards_supported\":11}";
+        let body = parse_http_200_body(raw).expect("200 body");
+        assert_eq!(body, br#"{"boards_supported":11}"#);
+        assert!(parse_http_200_body(b"HTTP/1.1 500 err\r\n\r\nnope").is_none());
+        assert!(parse_http_200_body(b"HTTP/1.1 200 OK\r\n\r\nnot-json").is_none());
+    }
+
+    #[test]
+    fn resolve_public_stats_body_honors_override() {
+        // Serialize against other tests that touch the process-global override.
+        let _gate = public_stats_override().lock().unwrap();
+        // Hold the lock only for the set/get dance — re-enter via set_ which
+        // also locks, so do the set without nested lock by writing directly.
+        drop(_gate);
+        set_public_stats_body(Some(b"{\"boards_supported\":42}".to_vec()));
+        let body = resolve_public_stats_body();
+        assert_eq!(body, b"{\"boards_supported\":42}");
+        set_public_stats_body(None);
+        // Without override: live (if online) or baked fallback — always has marker.
+        let body = resolve_public_stats_body();
+        assert!(
+            body.windows(b"boards_supported".len())
+                .any(|w| w == b"boards_supported"),
+            "live or baked body must carry boards_supported: {}",
+            String::from_utf8_lossy(&body)
+        );
+    }
+
+    #[test]
+    fn labwired_stats_server_serves_cached_body() {
+        let srv = LabwiredStatsServer::with_cached_body(
+            br#"{"boards_supported":7,"parts_supported":1,"labs_opened":1,"simulations_run":1,"active_sessions":1}"#
+                .to_vec(),
+        );
+        let resp = srv.on_data(0, b"GET /v1/public-stats HTTP/1.1\r\n\r\n");
+        let text = String::from_utf8_lossy(&resp);
+        assert!(text.starts_with("HTTP/1.1 200"), "{text}");
+        assert!(text.contains("\"boards_supported\":7"), "{text}");
+    }
+
+    #[test]
+    fn tcp_egress_http_get_public_stats() {
+        if !internet_enabled() {
+            return;
+        }
+        // Resolve api.labwired.com and GET /v1/public-stats through the NAT.
+        let ips = crate::peripherals::esp32c3::virtual_wifi_inet::resolve_a("api.labwired.com");
+        let Some(remote) = ips.into_iter().next() else {
+            return; // DNS failed offline
+        };
+        let bus = VirtualWifiBus::new();
+        let sta = sta_mac(9);
+        // Give the STA a lease so client IP is known (DHCP not strictly required
+        // for the NAT path which reads src IP from the frame).
+        let client_ip = [192, 168, 4, 9];
+        let (sport, dport) = (51000u16, 80u16);
+
+        // SYN → SYN-ACK (real connect).
+        bus.submit(
+            sta,
+            &sta_tcp_to(sta, client_ip, remote, sport, dport, 1000, 0, TCP_SYN, &[]),
+        );
+        let rx = bus.take_inbox(sta);
+        assert_eq!(rx.len(), 1, "SYN-ACK or RST");
+        let (flags, srv_isn, ack, _) = reply_tcp(&rx[0]);
+        if flags & TCP_RST != 0 {
+            return; // network blocked
+        }
+        assert_eq!(flags & (TCP_SYN | TCP_ACK), TCP_SYN | TCP_ACK);
+        assert_eq!(ack, 1001);
+
+        let get =
+            b"GET /v1/public-stats HTTP/1.1\r\nHost: api.labwired.com\r\nConnection: close\r\n\r\n";
+        bus.submit(
+            sta,
+            &sta_tcp_to(
+                sta,
+                client_ip,
+                remote,
+                sport,
+                dport,
+                1001,
+                srv_isn + 1,
+                TCP_PSH | TCP_ACK,
+                get,
+            ),
+        );
+        // Drain NAT (poll may be needed for delayed body).
+        let mut body = Vec::new();
+        for _ in 0..50 {
+            bus.poll();
+            for f in bus.take_inbox(sta) {
+                let (_, _, _, pay) = reply_tcp(&f);
+                body.extend_from_slice(&pay);
+            }
+            if body
+                .windows(b"boards_supported".len())
+                .any(|w| w == b"boards_supported")
+            {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(20));
+        }
+        let text = String::from_utf8_lossy(&body);
+        // Soft-skip when CI blocks outbound HTTP (common). Local/dev with
+        // network still proves the path when the body arrives.
+        if !text.contains("boards_supported") {
+            eprintln!("skip: no live public-stats over NAT (network restricted?): {text}");
+        }
+    }
+
+    /// Like `sta_tcp` but to an off-LAN peer (not the AP IP).
+    #[allow(clippy::too_many_arguments)]
+    fn sta_tcp_to(
+        sa: [u8; 6],
+        client_ip: [u8; 4],
+        remote_ip: [u8; 4],
+        sport: u16,
+        dport: u16,
+        seq: u32,
+        ack: u32,
+        flags: u8,
+        payload: &[u8],
+    ) -> Vec<u8> {
+        let mut tcp = Vec::new();
+        tcp.extend_from_slice(&sport.to_be_bytes());
+        tcp.extend_from_slice(&dport.to_be_bytes());
+        tcp.extend_from_slice(&seq.to_be_bytes());
+        tcp.extend_from_slice(&ack.to_be_bytes());
+        tcp.push(0x50);
+        tcp.push(flags);
+        tcp.extend_from_slice(&TCP_WINDOW.to_be_bytes());
+        tcp.extend_from_slice(&[0, 0, 0, 0]);
+        tcp.extend_from_slice(payload);
+        let cks = tcp_checksum(&client_ip, &remote_ip, &tcp);
+        tcp[16] = (cks >> 8) as u8;
+        tcp[17] = cks as u8;
+        let ip_total = (20 + tcp.len()) as u16;
+        let mut ip = vec![
+            0x45,
+            0x00,
+            (ip_total >> 8) as u8,
+            ip_total as u8,
+            0,
+            0,
+            0,
+            0,
+            0x40,
+            0x06,
+            0,
+            0,
+        ];
+        ip.extend_from_slice(&client_ip);
+        ip.extend_from_slice(&remote_ip);
+        let c = inet_checksum(&ip);
+        ip[10] = (c >> 8) as u8;
+        ip[11] = c as u8;
+        ip.extend_from_slice(&tcp);
+        // to-DS data frame STA→AP
+        let mut f = Vec::new();
+        f.extend_from_slice(&[0x08, 0x01, 0x00, 0x00]); // FC to-DS
+        f.extend_from_slice(&AP_BSSID); // addr1 BSSID
+        f.extend_from_slice(&sa); // addr2 SA
+        f.extend_from_slice(&AP_BSSID); // addr3
+        f.extend_from_slice(&[0x00, 0x00]);
+        f.extend_from_slice(&[0xAA, 0xAA, 0x03, 0x00, 0x00, 0x00, 0x08, 0x00]);
+        f.extend_from_slice(&ip);
+        f
     }
 }

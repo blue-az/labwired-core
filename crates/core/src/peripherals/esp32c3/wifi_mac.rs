@@ -575,6 +575,8 @@ impl Peripheral for Esp32c3WifiMac {
                         .medium_next_beacon_cycle
                         .saturating_add(MEDIUM_BEACON_INTERVAL_CYCLES);
                 }
+                // NAT sockets (real internet) → station inbox before we drain.
+                self.wifi.poll();
                 for frame in self.wifi.take_inbox(mac) {
                     self.pending_rx.push_back(frame);
                 }
