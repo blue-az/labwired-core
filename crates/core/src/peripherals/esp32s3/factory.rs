@@ -42,7 +42,10 @@ pub fn try_build(canonical_type: &str, p_cfg: &PeripheralConfig) -> Option<Box<d
                 .get("echo_stdout")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(true);
-            Box::new(uart::Esp32s3Uart::new(echo, src(27)))
+            Box::new(uart::Esp32s3Uart::new(
+                echo,
+                src(uart::UART0_INTR_SOURCE_ID),
+            ))
         }
         "esp32s3_timer_group" => {
             // TIMG0 base source id 50, TIMG1 = 53; CPU clock drives the

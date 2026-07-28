@@ -2043,12 +2043,18 @@ mod romboot_tests {
         apply_browser_c3_policy(&mut sim, rec);
 
         // Run the whole device pipeline: associate → DHCP → TCP → HTTP fetch of
-        // the AP's /v1/public-stats. Success = the real stats body arrives (the
-        // firmware would then paint it), not just association — the full "it
-        // works" the user builds the device for.
+        // the AP's /v1/public-stats → parse → repaint the e-paper panel. The
+        // success line is `PANEL UPDATED` AFTER `PARSED`, not the arrival of
+        // the body: stopping at the body is what let the UART-wedge bug ship.
+        // The sketch's `HTTP BODY:` line is 165 bytes, longer than the C3's
+        // 128-byte TX FIFO, so this only completes if the UART model reports
+        // real FIFO occupancy and raises TXFIFO_EMPTY (see
+        // `peripherals::esp32c3::uart`). Without that the device wedges here
+        // forever with the panel still reading "FETCHING STATS".
         let mut total: u64 = 0;
         let mut fetched = false;
-        while total < 12_000_000_000 {
+        let mut painted = false;
+        while total < 24_000_000_000 {
             let n = sim.step_batch(2_000_000).expect("step");
             if n == 0 {
                 break;
@@ -2057,11 +2063,20 @@ mod romboot_tests {
             let out = String::from_utf8_lossy(&sim.uart_sink.lock().unwrap()).into_owned();
             // The AP serves the stats snapshot (boards_supported:9); the LBC3.1
             // sketch logs the fetched JSON body verbatim.
-            if out.contains("boards_supported") {
-                fetched = true;
-                break;
+            fetched |= out.contains("boards_supported");
+            // The sketch prints PARSED once the body is decoded, then repaints
+            // the panel and prints PANEL UPDATED — the third one is the stats
+            // paint (boot splash and "FETCHING STATS" are the first two).
+            if let Some(parsed_at) = out.find("PARSED boards=") {
+                if out[parsed_at..].contains("PANEL UPDATED") {
+                    painted = true;
+                    break;
+                }
             }
-            if out.contains("WiFi connect timeout") || out.contains("stats fetch failed") {
+            if out.contains("WiFi connect timeout")
+                || out.contains("stats fetch failed")
+                || out.contains("STATS FETCH FAILED")
+            {
                 break;
             }
         }
@@ -2074,6 +2089,18 @@ mod romboot_tests {
         assert!(
             fetched,
             "C3 must fetch /v1/public-stats over the modeled AP (full pipeline) on fast-start"
+        );
+        // The whole 165-byte body must make it out of the UART, not just the
+        // first FIFO-full of it.
+        assert!(
+            out.contains("\"active_sessions\":4900}"),
+            "the full stats body must reach the console — a truncated line means \
+             the TX FIFO never drained; serial:\n{out}"
+        );
+        assert!(
+            painted,
+            "C3 must parse the stats and repaint the panel — the device is only \
+             'working' once the panel shows the numbers; serial:\n{out}"
         );
     }
 
