@@ -4216,15 +4216,21 @@ mod tests {
 
     #[test]
     fn test_thumb2_vfma_decodes_the_real_h563_opcode() {
-        // The exact bytes logged from stm32h563 firmware:
-        //   0xeee7 0x7a06 -> VFMA.F32 S7, S7, S6
+        // The exact bytes logged from stm32h563 firmware: 0xeee7 0x7a06.
+        // Register-number assembly is Sx = (Vx << 1) | bit, where the D/N/M
+        // bits live in different halfwords than the Vd/Vn/Vm fields — with
+        // D=1 (h1 bit6), Vn=7 (h1[3:0]), Vd=7 (h2[15:12]), N=0 (h2 bit7),
+        // M=0 (h2 bit5), Vm=6 (h2[3:0]) this decodes to
+        // VFMA.F32 S15, S14, S12 (not S7,S7,S6 — Vd/Vn/Vm are only half of
+        // each register number).
         let mut cpu = CortexM::new();
         let mut bus = MockBus::new();
-        cpu.fpu_s[7] = (2.0_f32).to_bits();
-        cpu.fpu_s[6] = (3.0_f32).to_bits();
+        cpu.fpu_s[14] = (2.0_f32).to_bits();
+        cpu.fpu_s[12] = (3.0_f32).to_bits();
+        cpu.fpu_s[15] = (2.0_f32).to_bits();
         run_test_instr(&mut cpu, &mut bus, 0xEEE7_7A06, true);
-        // S7 = fused(S7 * S6) + S7 = fused(2*3) + 2 = 8
-        assert_eq!(cpu.fpu_s[7], (8.0_f32).to_bits());
+        // S15 = fused(S14 * S12) + S15 = fused(2*3) + 2 = 8
+        assert_eq!(cpu.fpu_s[15], (8.0_f32).to_bits());
     }
 
     #[test]
@@ -4232,9 +4238,9 @@ mod tests {
         // Choose operands where round(a*b) then +c differs from the fused
         // single-rounding result. This proves mul_add (fused) is used
         // rather than `a * b + c` (which would round the product first).
-        let a: f32 = 1.000_000_1;
-        let b: f32 = 1.000_000_1;
-        let c: f32 = -1.0;
+        let a: f32 = 1.134_364_2;
+        let b: f32 = 1.847_433_7;
+        let c: f32 = -2.095_662_8;
         let unfused = (a * b) + c;
         let fused = a.mul_add(b, c);
         assert_ne!(
