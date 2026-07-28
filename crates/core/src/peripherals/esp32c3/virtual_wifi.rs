@@ -1863,7 +1863,6 @@ mod tests {
         // network still proves the path when the body arrives.
         if !text.contains("boards_supported") {
             eprintln!("skip: no live public-stats over NAT (network restricted?): {text}");
-            return;
         }
     }
 
