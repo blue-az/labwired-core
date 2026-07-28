@@ -379,6 +379,8 @@ struct Stm32H5SpiRegs {
     sr: u32,
     /// SR.CTSIZE — remaining-frame count, loaded from CR2.TSIZE at SPE set.
     ctsize: u32,
+    /// RXDR — the frame captured on MISO by the most recent transfer.
+    rxdr: u32,
     crcpoly: u32,
     txcrc: u32,
     rxcrc: u32,
@@ -399,6 +401,7 @@ const H5_CR1_SSI: u32 = 1 << 12;
 const H5_CR1_WRITABLE: u32 = 0x0001_FB01;
 
 /// SR: TX-packet space available — always set (sim TX path is bottomless).
+const H5_SR_RXP: u32 = 1 << 0;
 const H5_SR_TXP: u32 = 1 << 1;
 /// SR: end of transfer (CTSIZE reached 0).
 const H5_SR_EOT: u32 = 1 << 3;
@@ -454,9 +457,10 @@ impl Stm32H5SpiRegs {
             0x10 => self.ier,
             // SR[31:16] = CTSIZE remaining-frame count, flags below.
             0x14 => (self.ctsize << 16) | self.sr,
-            // IFCR (0x18) and TXDR (0x20) are write-only and read 0; RXDR
-            // (0x30) reads 0 in the TX-only model (see struct docs).
-            0x18 | 0x20 | 0x30 => 0,
+            // IFCR (0x18) and TXDR (0x20) are write-only and read 0.
+            0x18 | 0x20 => 0,
+            // RXDR: the captured MISO frame.
+            0x30 => self.rxdr,
             0x40 => self.crcpoly,
             0x44 => self.txcrc,
             0x48 => self.rxcrc,
@@ -1086,8 +1090,27 @@ impl Spi {
                     // but not consumed by the TX-only engine: the low byte is
                     // broadcast, matching the v1 byte-wide device routing.
                     let mosi = (value & 0xFF) as u8;
+                    // Full-duplex: every transmitted frame simultaneously
+                    // clocks one IN. Silicon fills RXDR and raises SR.RXP
+                    // whether or not a slave drives MISO — with nothing
+                    // driving, the captured value is just the idle line level.
+                    // Without this the peripheral was TX-only, and any driver
+                    // that writes TXDR then waits for RXP (which is what
+                    // HAL_SPI_TransmitReceive, and therefore Arduino's
+                    // SPI.transfer(), does) hung forever.
+                    let mut miso: u8 = 0;
                     for dev in &mut self.attached_devices {
-                        dev.transfer(mosi);
+                        let r = dev.transfer(mosi);
+                        if r != 0 {
+                            miso = r;
+                        }
+                    }
+                    if self.loopback && self.attached_devices.is_empty() {
+                        miso = mosi;
+                    }
+                    if let SpiRegs::Stm32H5(r) = &mut self.regs {
+                        r.rxdr = miso as u32;
+                        r.sr |= H5_SR_RXP;
                     }
                     if let SpiRegs::Stm32H5(r) = &mut self.regs {
                         if r.ctsize > 0 {
@@ -2608,12 +2631,22 @@ mod tests {
         spi.push_device(Box::new(Capture { rx: Vec::new() }));
         h5_write(&mut spi, 0x00, (1 << 0) | (1 << 9) | (1 << 12)); // SPE|CSTART|SSI
         h5_write(&mut spi, 0x20, 0x11);
-        assert_eq!(h5_read(&spi, 0x14), 0x0001_0012, "CTSIZE 2→1, TXP|TXTF");
+        assert_eq!(
+            h5_read(&spi, 0x14),
+            0x0001_0013,
+            "CTSIZE 2->1, TXP|TXTF|RXP (each frame clocks one in)"
+        );
         h5_write(&mut spi, 0x20, 0x22);
         assert_eq!(captured(&spi), vec![0x11, 0x22], "both frames on the bus");
-        assert_eq!(h5_read(&spi, 0x14), 0x0000_101A, "EOT|TXC at CTSIZE=0");
+        assert_eq!(h5_read(&spi, 0x14), 0x0000_101B, "EOT|TXC|RXP at CTSIZE=0");
         assert_eq!(h5_read(&spi, 0x00), 0x0000_1001, "CSTART HW-cleared");
-        assert_eq!(h5_read(&spi, 0x30), 0, "RXDR TX-only: reads 0");
+        // Full duplex: each transmitted frame clocks one in. With no slave
+        // attached the captured value is the idle line level (0), but RXP is
+        // set and RXDR is readable — the receive EVENT happens regardless.
+        // This previously asserted a TX-only engine, which hung every driver
+        // that writes TXDR then waits on RXP (HAL_SPI_TransmitReceive, and so
+        // Arduino SPI.transfer()).
+        assert_eq!(h5_read(&spi, 0x30), 0, "RXDR holds the idle MISO level");
     }
 
     /// TXDR writes are inert while SPE=0: no TXTF, nothing transmitted.
