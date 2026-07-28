@@ -142,15 +142,22 @@ impl EgressTcp {
                 req_buf.extend_from_slice(data);
                 if pending_id.is_none() && http_req_complete(req_buf) {
                     if let Some((method, path, host)) = parse_http_request_line_host(req_buf) {
-                        let scheme = if self.remote_port == 443 { "https" } else { "http" };
+                        let scheme = if self.remote_port == 443 {
+                            "https"
+                        } else {
+                            "http"
+                        };
                         let host = host.split(':').next().unwrap_or(&host);
                         let url = if path.starts_with("http://") || path.starts_with("https://") {
                             path.clone()
                         } else {
                             format!("{scheme}://{host}{path}")
                         };
-                        *pending_id =
-                            Some(virtual_wifi_host_net::enqueue_http(url, method, req_buf.clone()));
+                        *pending_id = Some(virtual_wifi_host_net::enqueue_http(
+                            url,
+                            method,
+                            req_buf.clone(),
+                        ));
                     }
                 }
                 true
@@ -308,14 +315,18 @@ pub fn dns_respond(udp_payload: &[u8]) -> Option<Vec<u8>> {
     out.extend_from_slice(id);
     // QR=1, AA=1, RD copied, RA=1
     let rd = flags & 0x0100;
-    let rcode: u16 = if answers.is_empty() && qtype == 1 { 3 } else { 0 }; // NXDOMAIN if no A
+    let rcode: u16 = if answers.is_empty() && qtype == 1 {
+        3
+    } else {
+        0
+    }; // NXDOMAIN if no A
     let rflags = 0x8000 | 0x0400 | rd | 0x0080 | rcode;
     out.extend_from_slice(&rflags.to_be_bytes());
     out.extend_from_slice(&1u16.to_be_bytes()); // QDCOUNT
     out.extend_from_slice(&(answers.len() as u16).to_be_bytes()); // ANCOUNT
     out.extend_from_slice(&0u16.to_be_bytes()); // NSCOUNT
     out.extend_from_slice(&0u16.to_be_bytes()); // ARCOUNT
-    // Question section copy
+                                                // Question section copy
     out.extend_from_slice(&udp_payload[12..i]);
     // Answers: pointer to name at offset 12
     for ip in answers {

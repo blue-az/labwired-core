@@ -105,8 +105,7 @@ pub fn wifi_host_net_set_active(active: bool) {
 /// `{ "id": number, "name": string }`.
 #[wasm_bindgen]
 pub fn wifi_host_poll_dns_requests() -> String {
-    let reqs =
-        labwired_core::peripherals::esp32c3::virtual_wifi_host_net::poll_dns_requests();
+    let reqs = labwired_core::peripherals::esp32c3::virtual_wifi_host_net::poll_dns_requests();
     let v: Vec<serde_json::Value> = reqs
         .into_iter()
         .map(|r| serde_json::json!({ "id": r.id, "name": r.name }))
@@ -133,8 +132,7 @@ pub fn wifi_host_fulfill_dns(id: u32, ips_json: &str) {
 /// `{ "id", "url", "method" }`.
 #[wasm_bindgen]
 pub fn wifi_host_poll_http_requests() -> String {
-    let reqs =
-        labwired_core::peripherals::esp32c3::virtual_wifi_host_net::poll_http_requests();
+    let reqs = labwired_core::peripherals::esp32c3::virtual_wifi_host_net::poll_http_requests();
     let v: Vec<serde_json::Value> = reqs
         .into_iter()
         .map(|r| {
@@ -152,10 +150,7 @@ pub fn wifi_host_poll_http_requests() -> String {
 /// line + headers + body), as UTF-8 or binary string via byte array from JS.
 #[wasm_bindgen]
 pub fn wifi_host_fulfill_http(id: u32, response: &[u8]) {
-    labwired_core::peripherals::esp32c3::virtual_wifi_host_net::fulfill_http(
-        id,
-        response.to_vec(),
-    );
+    labwired_core::peripherals::esp32c3::virtual_wifi_host_net::fulfill_http(id, response.to_vec());
 }
 
 /// Public shape returned by `step_batch_profile`.

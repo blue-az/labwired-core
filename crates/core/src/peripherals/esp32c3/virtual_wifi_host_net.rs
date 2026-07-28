@@ -270,7 +270,9 @@ mod tests {
         let id = enqueue_dns(
             "example.com".into(),
             {
-                let mut q = vec![0x12, 0x34, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+                let mut q = vec![
+                    0x12, 0x34, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                ];
                 for lab in ["example", "com"] {
                     q.push(lab.len() as u8);
                     q.extend_from_slice(lab.as_bytes());

@@ -115,11 +115,8 @@ fn fetch_live_public_stats() -> Option<Vec<u8>> {
     }
 
     let addr = format!("{PUBLIC_STATS_HOST}:80");
-    let mut stream = TcpStream::connect_timeout(
-        &addr.parse().ok()?,
-        Duration::from_secs(3),
-    )
-    .ok()?;
+    let mut stream =
+        TcpStream::connect_timeout(&addr.parse().ok()?, Duration::from_secs(3)).ok()?;
     let _ = stream.set_read_timeout(Some(Duration::from_secs(3)));
     let _ = stream.set_write_timeout(Some(Duration::from_secs(3)));
 
@@ -159,7 +156,10 @@ fn parse_http_200_body(raw: &[u8]) -> Option<Vec<u8>> {
     }
     let body = raw[sep + 4..].to_vec();
     // Strip optional chunked/trailer noise: require the public-stats marker.
-    if !body.windows(b"boards_supported".len()).any(|w| w == b"boards_supported") {
+    if !body
+        .windows(b"boards_supported".len())
+        .any(|w| w == b"boards_supported")
+    {
         return None;
     }
     Some(body)
@@ -1242,9 +1242,7 @@ fn build_dns_reply(ap_ip: [u8; 4], da: [u8; 6], frame: &[u8]) -> Option<Vec<u8>>
     let q = &frame[udp + 8..udp + ulen];
     // Browser host-net: never use native resolver (none in wasm) — queue DoH.
     if crate::peripherals::esp32c3::virtual_wifi_host_net::bridge_active() {
-        if let Some(name) =
-            crate::peripherals::esp32c3::virtual_wifi_host_net::dns_qname(q)
-        {
+        if let Some(name) = crate::peripherals::esp32c3::virtual_wifi_host_net::dns_qname(q) {
             crate::peripherals::esp32c3::virtual_wifi_host_net::enqueue_dns(
                 name,
                 q.to_vec(),
@@ -1756,7 +1754,8 @@ mod tests {
 
     #[test]
     fn parse_http_200_body_extracts_json() {
-        let raw = b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n{\"boards_supported\":11}";
+        let raw =
+            b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n{\"boards_supported\":11}";
         let body = parse_http_200_body(raw).expect("200 body");
         assert_eq!(body, br#"{"boards_supported":11}"#);
         assert!(parse_http_200_body(b"HTTP/1.1 500 err\r\n\r\nnope").is_none());
@@ -1827,7 +1826,8 @@ mod tests {
         assert_eq!(flags & (TCP_SYN | TCP_ACK), TCP_SYN | TCP_ACK);
         assert_eq!(ack, 1001);
 
-        let get = b"GET /v1/public-stats HTTP/1.1\r\nHost: api.labwired.com\r\nConnection: close\r\n\r\n";
+        let get =
+            b"GET /v1/public-stats HTTP/1.1\r\nHost: api.labwired.com\r\nConnection: close\r\n\r\n";
         bus.submit(
             sta,
             &sta_tcp_to(
@@ -1850,7 +1850,10 @@ mod tests {
                 let (_, _, _, pay) = reply_tcp(&f);
                 body.extend_from_slice(&pay);
             }
-            if body.windows(b"boards_supported".len()).any(|w| w == b"boards_supported") {
+            if body
+                .windows(b"boards_supported".len())
+                .any(|w| w == b"boards_supported")
+            {
                 break;
             }
             std::thread::sleep(std::time::Duration::from_millis(20));
@@ -1889,7 +1892,18 @@ mod tests {
         tcp[17] = cks as u8;
         let ip_total = (20 + tcp.len()) as u16;
         let mut ip = vec![
-            0x45, 0x00, (ip_total >> 8) as u8, ip_total as u8, 0, 0, 0, 0, 0x40, 0x06, 0, 0,
+            0x45,
+            0x00,
+            (ip_total >> 8) as u8,
+            ip_total as u8,
+            0,
+            0,
+            0,
+            0,
+            0x40,
+            0x06,
+            0,
+            0,
         ];
         ip.extend_from_slice(&client_ip);
         ip.extend_from_slice(&remote_ip);
