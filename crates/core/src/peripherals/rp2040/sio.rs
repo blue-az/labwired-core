@@ -159,7 +159,11 @@ impl Rp2040Sio {
             let dividend = self.div_dividend as i32;
             let divisor = self.div_divisor as i32;
             if divisor == 0 {
-                self.div_quotient = if dividend < 0 { 1i32 as u32 } else { (-1i32) as u32 };
+                self.div_quotient = if dividend < 0 {
+                    1i32 as u32
+                } else {
+                    (-1i32) as u32
+                };
                 self.div_remainder = dividend as u32;
             } else if dividend == i32::MIN && divisor == -1 {
                 // Overflow case: matches the hardware divider's saturation.

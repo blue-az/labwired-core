@@ -124,7 +124,11 @@ impl Peripheral for Rp2040Spi {
             // model) the RX byte is the undefined/idle MISO level (`0x00`) —
             // see the module doc comment for why this must still happen.
             SSPDR if self.enabled() => {
-                let rx_byte = if self.loopback() { (value & 0xffff) as u16 } else { 0 };
+                let rx_byte = if self.loopback() {
+                    (value & 0xffff) as u16
+                } else {
+                    0
+                };
                 let mut rx = self.rx_fifo.borrow_mut();
                 if rx.len() < FIFO_DEPTH {
                     rx.push_back(rx_byte);
