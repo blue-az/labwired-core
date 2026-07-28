@@ -1,24 +1,27 @@
-//! Virtual WiFi medium + infrastructure AP — the shared "air" that lets two (or
-//! more) ESP32-C3 stations communicate over simulated 802.11, the WiFi analog of
-//! the BLE `VirtualAir` (`nrf52::radio`).
+//! Virtual WiFi medium + infrastructure **internet gateway** for simulated
+//! stations (ESP32-C3 WiFi MAC).
 //!
-//! A process-global [`VirtualWifi`] holds, per associated station (keyed by its
-//! MAC), an inbox of 802.11 frames awaiting delivery, plus the infrastructure
-//! AP's state (assigned IPs). Each `wifi_mac` model:
-//!   * submits every transmitted frame via [`submit`] (the AP processes it and
-//!     queues any reply / routes data to the destination station), and
-//!   * polls [`take_inbox`] each tick for frames addressed to its own MAC.
+//! # Universal bridge (not a single URL)
 //!
-//! Because the medium is a global shared across `Machine`/`WasmSimulator`
-//! instances in the same process (exactly like the BLE virtual air), two C3
-//! firmwares — each its own simulator instance with a distinct eFuse MAC — can
-//! associate to the same virtual AP, get distinct DHCP leases, and exchange real
-//! IP traffic, with the AP forwarding station-to-station data frames.
+//! Once a station associates, the AP behaves like a real SoftAP router:
 //!
-//! The AP is OPEN (no WPA): beacon → probe/auth/assoc → DHCP DORA → ARP → routed
-//! data. It models only what the real driver requires; the air-gap (radio) is
-//! the single intentional cut. This is the same behaviour the single-device CLI
-//! bridge proved, lifted into core and made MAC-aware so it scales to N stations.
+//! 1. **DHCP** — lease + gateway + DNS = AP IP (`192.168.4.1`)
+//! 2. **DNS (UDP/53)** — resolve **any** hostname (native resolver / browser DoH)
+//! 3. **TCP off-LAN** — **NAT** to **any** destination IP:port (native sockets;
+//!    browser: HTTP(S) via host `fetch` for cleartext HTTP clients)
+//! 4. **TCP to AP:80** — **HTTP reverse proxy for any `Host:`** (and a small
+//!    optional local `/v1/public-stats` convenience for the LBC3.1 demo sketch)
+//! 5. **STA↔STA** — L2/L3 forward between associated stations
+//!
+//! Internet is not limited to `api.labwired.com`. That host is only one of many
+//! possible destinations, plus an optional local demo origin when firmware
+//! still talks to `192.168.4.1` with an empty Host.
+//!
+//! # Medium model
+//!
+//! Each `wifi_mac` submits TX frames via [`VirtualWifiBus::submit`] and pulls
+//! its inbox each tick. The air-gap (no RF) is the intentional cut; L3/L4 to
+//! the host network is real.
 
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex, OnceLock};
@@ -48,21 +51,118 @@ const TCP_ACK: u8 = 0x10;
 /// Receive window the AP advertises to the STA (ample for a small HTTP GET).
 const TCP_WINDOW: u16 = 0x2000;
 
-/// Offline/CI fallback body for `GET /v1/public-stats` — a real captured
-/// snapshot of the live API. Used when live fetch is unavailable (wasm without
-/// host inject, offline CI, network error). Prefer live data when possible.
+/// Optional local convenience origin only (LBC3.1 demo still GETs
+/// `192.168.4.1/v1/public-stats`). General internet is DNS + NAT / Host proxy
+/// for **any** host — not this constant.
 const STATS_SNAPSHOT: &str = concat!(
     "{\"generated_at\":\"2026-07-24T19:39:15.804Z\",\"window_days\":90,",
     "\"boards_supported\":9,\"parts_supported\":82,",
     "\"labs_opened\":69,\"simulations_run\":3200,\"active_sessions\":4900}"
 );
 
-/// Live origin for the LBC3.1 stats lab: `https://api.labwired.com/v1/public-stats`
-/// (plain HTTP on :80 also works). The station talks to the AP gateway
-/// (`192.168.4.1`); the AP reverse-proxies that path to the real LabWired API
-/// so the twin sees **live** product numbers, not only a baked snapshot.
+/// Used only when resolving the optional local `/v1/public-stats` convenience.
 const PUBLIC_STATS_HOST: &str = "api.labwired.com";
 const PUBLIC_STATS_PATH: &str = "/v1/public-stats";
+
+/// Result of handling an HTTP request on the AP (:80).
+enum HttpServeResult {
+    /// Response bytes ready immediately (local origin or native proxy).
+    Ready(Vec<u8>),
+    /// Browser host-net is fetching; `poll_egress` will finish later.
+    Pending(u32),
+}
+
+/// True when `Host` refers to the AP itself (or is missing) — local origin
+/// path. Any other Host is reverse-proxied to the internet (universal).
+fn is_local_http_host(host: &str, ap_ip: [u8; 4]) -> bool {
+    let h = host.trim().to_ascii_lowercase();
+    if h.is_empty() {
+        return true;
+    }
+    let host_only = h.split(':').next().unwrap_or(&h);
+    if host_only == "localhost" || host_only == "labwired-ap" {
+        return true;
+    }
+    let ap = format!("{}.{}.{}.{}", ap_ip[0], ap_ip[1], ap_ip[2], ap_ip[3]);
+    host_only == ap
+}
+
+/// Universal HTTP on the AP: reverse-proxy **any** non-local `Host` to the
+/// real network; keep optional local `/v1/public-stats` for the demo sketch.
+fn serve_or_proxy_http(local: &Arc<dyn SimServer>, req: &[u8]) -> HttpServeResult {
+    use crate::peripherals::esp32c3::virtual_wifi_host_net::{
+        enqueue_http, parse_http_request_line_host,
+    };
+
+    let parsed = parse_http_request_line_host(req);
+    if let Some((method, path, host)) = parsed {
+        if !is_local_http_host(&host, AP_IP) {
+            // Any Host on the internet — not limited to one API.
+            let host_only = host.split(':').next().unwrap_or(&host);
+            let port: u16 = host
+                .split(':')
+                .nth(1)
+                .and_then(|p| p.parse().ok())
+                .unwrap_or(80);
+            let scheme = if port == 443 { "https" } else { "http" };
+            let url = if path.starts_with("http://") || path.starts_with("https://") {
+                path
+            } else {
+                format!("{scheme}://{host_only}{path}")
+            };
+            // Native: synchronous TCP proxy to that host (any host).
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                if let Some(resp) = native_http_proxy_raw(req, host_only, port) {
+                    return HttpServeResult::Ready(resp);
+                }
+            }
+            // Browser host-net: async fetch of any URL.
+            if crate::peripherals::esp32c3::virtual_wifi_host_net::bridge_active() {
+                let id = enqueue_http(url, method, req.to_vec());
+                return HttpServeResult::Pending(id);
+            }
+            // No upstream: 502 (offline / bridge off).
+            let _ = (url, method, port); // silence unused on native-no-bridge path
+            return HttpServeResult::Ready(
+                HttpResponse {
+                    status: 502,
+                    reason: "Bad Gateway".into(),
+                    content_type: "text/plain".into(),
+                    body: b"upstream fetch failed".to_vec(),
+                }
+                .encode(),
+            );
+        }
+    }
+    // Local Host / empty: optional demo origin (LabwiredStats or empty).
+    HttpServeResult::Ready(local.on_data(0, req))
+}
+
+/// Native: open TCP to host:port, write the raw request, read the response.
+#[cfg(not(target_arch = "wasm32"))]
+fn native_http_proxy_raw(req: &[u8], host: &str, port: u16) -> Option<Vec<u8>> {
+    use std::io::{Read, Write};
+    use std::net::TcpStream;
+    use std::time::Duration;
+
+    if !internet_enabled() {
+        return None;
+    }
+    let addr = format!("{host}:{port}");
+    let mut stream =
+        TcpStream::connect_timeout(&addr.parse().ok()?, Duration::from_secs(5)).ok()?;
+    let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
+    let _ = stream.set_write_timeout(Some(Duration::from_secs(5)));
+    stream.write_all(req).ok()?;
+    let _ = stream.shutdown(std::net::Shutdown::Write);
+    let mut buf = Vec::new();
+    stream.read_to_end(&mut buf).ok()?;
+    if buf.is_empty() {
+        return None;
+    }
+    Some(buf)
+}
 
 /// Optional host-injected body (browser playground fetches the live API via
 /// `fetch()` then calls [`set_public_stats_body`]). When set, the AP serves
@@ -298,6 +398,12 @@ struct TcpConn {
     fin_sent: bool,
     /// Request bytes accumulated until a full HTTP request head is seen.
     req: Vec<u8>,
+    /// Browser/async reverse-proxy: host-net request id waiting for a response.
+    proxy_pending: Option<u32>,
+    /// Client IP captured at SYN (needed when completing a proxy later).
+    client_ip: [u8; 4],
+    /// Server port (usually 80) for replies.
+    server_port: u16,
 }
 
 /// Per-station state the AP tracks.
@@ -622,6 +728,9 @@ impl VirtualWifi {
                 snd_nxt: isn.wrapping_add(1),
                 fin_sent: false,
                 req: Vec::new(),
+                proxy_pending: None,
+                client_ip: src_ip,
+                server_port,
             };
             let synack = build_tcp_to_sta(
                 ap_ip,
@@ -678,39 +787,60 @@ impl VirtualWifi {
                         http_req_complete(&conn.req)
                     );
                 }
-                if http_req_complete(&conn.req) && !conn.fin_sent {
-                    // Full request → let the shared HTTP server produce the
-                    // complete HTTP/1.1 response; we just segment it.
-                    let resp = http.on_data(0, &conn.req);
-                    if dbg {
-                        eprintln!("[tcp] -> HTTP response {} bytes + FIN", resp.len());
+                if http_req_complete(&conn.req) && !conn.fin_sent && conn.proxy_pending.is_none() {
+                    // Universal HTTP reverse proxy on the AP:
+                    //   Host: example.com  → fetch any origin on the internet
+                    //   Host: empty / AP IP + /v1/public-stats → local demo origin
+                    match serve_or_proxy_http(&http, &conn.req) {
+                        HttpServeResult::Ready(resp) => {
+                            if dbg {
+                                eprintln!("[tcp] -> HTTP response {} bytes + FIN", resp.len());
+                            }
+                            out.push(build_tcp_to_sta(
+                                ap_ip,
+                                src_mac,
+                                src_ip,
+                                server_port,
+                                client_port,
+                                conn.snd_nxt,
+                                conn.rcv_nxt,
+                                TCP_PSH | TCP_ACK,
+                                &resp,
+                            ));
+                            conn.snd_nxt = conn.snd_nxt.wrapping_add(resp.len() as u32);
+                            out.push(build_tcp_to_sta(
+                                ap_ip,
+                                src_mac,
+                                src_ip,
+                                server_port,
+                                client_port,
+                                conn.snd_nxt,
+                                conn.rcv_nxt,
+                                TCP_FIN | TCP_ACK,
+                                &[],
+                            ));
+                            conn.snd_nxt = conn.snd_nxt.wrapping_add(1);
+                            conn.fin_sent = true;
+                        }
+                        HttpServeResult::Pending(id) => {
+                            // Browser host-net will fulfill; poll_egress finishes.
+                            conn.proxy_pending = Some(id);
+                            conn.client_ip = src_ip;
+                            conn.server_port = server_port;
+                            out.push(build_tcp_to_sta(
+                                ap_ip,
+                                src_mac,
+                                src_ip,
+                                server_port,
+                                client_port,
+                                conn.snd_nxt,
+                                conn.rcv_nxt,
+                                TCP_ACK,
+                                &[],
+                            ));
+                        }
                     }
-                    out.push(build_tcp_to_sta(
-                        ap_ip,
-                        src_mac,
-                        src_ip,
-                        server_port,
-                        client_port,
-                        conn.snd_nxt,
-                        conn.rcv_nxt,
-                        TCP_PSH | TCP_ACK,
-                        &resp,
-                    ));
-                    conn.snd_nxt = conn.snd_nxt.wrapping_add(resp.len() as u32);
-                    out.push(build_tcp_to_sta(
-                        ap_ip,
-                        src_mac,
-                        src_ip,
-                        server_port,
-                        client_port,
-                        conn.snd_nxt,
-                        conn.rcv_nxt,
-                        TCP_FIN | TCP_ACK,
-                        &[],
-                    ));
-                    conn.snd_nxt = conn.snd_nxt.wrapping_add(1);
-                    conn.fin_sent = true;
-                } else {
+                } else if !http_req_complete(&conn.req) && !conn.fin_sent {
                     // Partial request: acknowledge what we have so far.
                     out.push(build_tcp_to_sta(
                         ap_ip,
@@ -933,6 +1063,62 @@ impl VirtualWifi {
                 &rep.udp_payload,
             );
             self.enqueue(rep.sta_mac, frame);
+        }
+
+        // Local AP:80 reverse-proxy (any Host) pending browser fetches.
+        let ap_ip = self.cfg.ip;
+        let mut proxy_done: Vec<([u8; 6], u16, Vec<u8>)> = Vec::new();
+        for (mac, sta) in self.stas.iter_mut() {
+            for (port, conn) in sta.conns.iter_mut() {
+                if let Some(id) = conn.proxy_pending {
+                    if let Some(resp) =
+                        crate::peripherals::esp32c3::virtual_wifi_host_net::take_http_answer(id)
+                    {
+                        conn.proxy_pending = None;
+                        proxy_done.push((*mac, *port, resp));
+                    }
+                }
+            }
+        }
+        for (mac, client_port, resp) in proxy_done {
+            if let Some(conn) = self
+                .stas
+                .get_mut(&mac)
+                .and_then(|s| s.conns.get_mut(&client_port))
+            {
+                if conn.fin_sent {
+                    continue;
+                }
+                let client_ip = conn.client_ip;
+                let server_port = conn.server_port;
+                let data = build_tcp_to_sta(
+                    ap_ip,
+                    mac,
+                    client_ip,
+                    server_port,
+                    client_port,
+                    conn.snd_nxt,
+                    conn.rcv_nxt,
+                    TCP_PSH | TCP_ACK,
+                    &resp,
+                );
+                conn.snd_nxt = conn.snd_nxt.wrapping_add(resp.len() as u32);
+                let fin = build_tcp_to_sta(
+                    ap_ip,
+                    mac,
+                    client_ip,
+                    server_port,
+                    client_port,
+                    conn.snd_nxt,
+                    conn.rcv_nxt,
+                    TCP_FIN | TCP_ACK,
+                    &[],
+                );
+                conn.snd_nxt = conn.snd_nxt.wrapping_add(1);
+                conn.fin_sent = true;
+                self.enqueue(mac, data);
+                self.enqueue(mac, fin);
+            }
         }
 
         if self.egress.conns.is_empty() {
