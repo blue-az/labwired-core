@@ -347,6 +347,16 @@ pub struct RunArgs {
     /// `--break-at` fires — for tracing ROM pointer chains. Repeatable.
     #[arg(long = "watch-mem", value_name = "HEX")]
     pub watch_mem: Vec<String>,
+
+    /// ARM-only: an additional flash piece placed at an explicit absolute
+    /// address, `<path>@<hex-offset>`. Repeatable — compose e.g. a Nordic
+    /// SoftDevice at `0x0` with an application ELF (`--firmware`) linked to
+    /// run above it. Each piece may be an ELF, an Intel HEX (`.hex`), or a
+    /// raw binary blob; overlapping pieces (with each other or with
+    /// `--firmware`) are a hard error. `--firmware` keeps working exactly as
+    /// before when no `--flash-image` is given.
+    #[arg(long = "flash-image", value_name = "PATH@HEX")]
+    pub flash_image: Vec<String>,
 }
 
 #[derive(Parser, Debug)]
