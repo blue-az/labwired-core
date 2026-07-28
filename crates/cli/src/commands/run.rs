@@ -1172,13 +1172,87 @@ pub(crate) fn run_firmware_arm(args: &RunArgs, chip_yaml: &str) -> ExitCode {
     let mut machine = Machine::new(cpu, bus);
 
     // Load ELF.
-    let image = match labwired_loader::load_elf(&args.firmware) {
+    let mut image = match labwired_loader::load_elf(&args.firmware) {
         Ok(img) => img,
         Err(e) => {
             eprintln!("error: cannot load firmware ELF {:?}: {e}", args.firmware);
             return ExitCode::from(EXIT_CONFIG_ERROR);
         }
     };
+
+    // Multi-image flash composition (`--flash-image <path>@<hex-offset>`,
+    // repeatable): additional pieces (SoftDevice, bootloader, ...) placed at
+    // explicit absolute addresses alongside `--firmware`. Only touched when
+    // at least one `--flash-image` is given, so the single-image path above
+    // is completely unaffected when it is not.
+    if !args.flash_image.is_empty() {
+        use labwired_loader::multi_image::{
+            check_no_overlaps, elf_alloc_sections, load_flash_piece, parse_flash_image_arg,
+        };
+
+        // Re-derive the primary --firmware's own segments from its ELF
+        // section headers (SHF_ALLOC sections with real bytes) rather than
+        // the PT_LOAD-based `image.segments` from `load_elf` above: some
+        // toolchains (e.g. Adafruit's nRF52 core, whose linker scripts
+        // request 64KB PT_LOAD alignment for DFU) emit a PT_LOAD segment
+        // whose p_paddr is rounded down below the real code, backed on disk
+        // by nothing but ELF-header bytes and zero padding — loading that
+        // via p_paddr would plant that padding over a legitimately-owned
+        // range (e.g. the SoftDevice below the app). See
+        // `elf_alloc_sections` for the full rationale. Only applies when
+        // `--flash-image` is in play; the single-image path above is
+        // unaffected.
+        let firmware_bytes = match std::fs::read(&args.firmware) {
+            Ok(b) => b,
+            Err(e) => {
+                eprintln!(
+                    "error: cannot re-read firmware ELF {:?}: {e}",
+                    args.firmware
+                );
+                return ExitCode::from(EXIT_CONFIG_ERROR);
+            }
+        };
+        image.segments = match elf_alloc_sections(&firmware_bytes) {
+            Ok(secs) => secs
+                .into_iter()
+                .map(|(addr, data)| labwired_core::memory::Segment {
+                    start_addr: addr,
+                    data,
+                })
+                .collect(),
+            Err(e) => {
+                eprintln!(
+                    "error: cannot extract ALLOC sections from firmware ELF {:?}: {e:#}",
+                    args.firmware
+                );
+                return ExitCode::from(EXIT_CONFIG_ERROR);
+            }
+        };
+
+        for arg in &args.flash_image {
+            let (path, offset) = match parse_flash_image_arg(arg) {
+                Ok(v) => v,
+                Err(e) => {
+                    eprintln!("error: invalid --flash-image {arg:?}: {e:#}");
+                    return ExitCode::from(EXIT_CONFIG_ERROR);
+                }
+            };
+            let piece = match load_flash_piece(&path, offset) {
+                Ok(p) => p,
+                Err(e) => {
+                    eprintln!("error: cannot load --flash-image {arg:?}: {e:#}");
+                    return ExitCode::from(EXIT_CONFIG_ERROR);
+                }
+            };
+            image.segments.extend(piece.segments);
+        }
+
+        if let Err(e) = check_no_overlaps(&image.segments) {
+            eprintln!("error: --flash-image composition failed: {e:#}");
+            return ExitCode::from(EXIT_CONFIG_ERROR);
+        }
+    }
+
     if let Err(e) = machine.load_firmware(&image) {
         eprintln!("error: cannot map firmware into bus: {e}");
         return ExitCode::from(EXIT_RUNTIME_ERROR);
@@ -1186,7 +1260,14 @@ pub(crate) fn run_firmware_arm(args: &RunArgs, chip_yaml: &str) -> ExitCode {
 
     // Run the step loop.
     let limit = args.max_steps.unwrap_or(u64::MAX);
-    for _ in 0..limit {
+    let dbg_trace: u64 = std::env::var("LABWIRED_ARM_TRACE")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0);
+    for i in 0..limit {
+        if dbg_trace != 0 && i % dbg_trace == 0 {
+            eprintln!("[arm-trace] step {i} pc={:#010x}", machine.cpu.get_pc());
+        }
         match machine.step() {
             Ok(()) => {}
             Err(e) => {
