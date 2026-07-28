@@ -22,5 +22,6 @@ pub mod sha;
 pub mod spi;
 pub mod uart;
 pub mod virtual_wifi;
+pub mod virtual_wifi_host_net;
 pub mod virtual_wifi_inet;
 pub mod wifi_mac;

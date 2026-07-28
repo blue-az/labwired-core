@@ -920,8 +920,21 @@ impl VirtualWifi {
         }
     }
 
-    /// Drain NAT sockets → station inboxes (call each WiFi bus tick).
+    /// Drain NAT sockets / browser host-net answers → station inboxes.
     fn poll_egress(&mut self) {
+        // DNS answers fulfilled by the browser host bridge.
+        for rep in crate::peripherals::esp32c3::virtual_wifi_host_net::take_dns_replies() {
+            let frame = build_udp_to_sta(
+                rep.ap_ip,
+                rep.sta_mac,
+                rep.client_ip,
+                53,
+                rep.client_port,
+                &rep.udp_payload,
+            );
+            self.enqueue(rep.sta_mac, frame);
+        }
+
         if self.egress.conns.is_empty() {
             return;
         }
@@ -1204,6 +1217,8 @@ fn build_arp_reply(da: [u8; 6], who_mac: [u8; 6], who_ip: [u8; 4], target_ip: [u
 
 /// If `frame` is a DNS query (UDP/53) to the AP, resolve via the host and
 /// return a from-DS reply frame. DHCP already advertises the AP as DNS.
+/// On browser (host-net bridge), queues async DNS and returns `None` until
+/// [`VirtualWifi::poll_egress`] injects the reply.
 fn build_dns_reply(ap_ip: [u8; 4], da: [u8; 6], frame: &[u8]) -> Option<Vec<u8>> {
     let ip = snap_off(frame);
     if frame.len() < ip + 20 || frame[ip] >> 4 != 4 || frame[ip + 9] != 17 {
@@ -1225,6 +1240,23 @@ fn build_dns_reply(ap_ip: [u8; 4], da: [u8; 6], frame: &[u8]) -> Option<Vec<u8>>
     let mut src_ip = [0u8; 4];
     src_ip.copy_from_slice(&frame[ip + 12..ip + 16]);
     let q = &frame[udp + 8..udp + ulen];
+    // Browser host-net: never use native resolver (none in wasm) — queue DoH.
+    if crate::peripherals::esp32c3::virtual_wifi_host_net::bridge_active() {
+        if let Some(name) =
+            crate::peripherals::esp32c3::virtual_wifi_host_net::dns_qname(q)
+        {
+            crate::peripherals::esp32c3::virtual_wifi_host_net::enqueue_dns(
+                name,
+                q.to_vec(),
+                da,
+                src_ip,
+                ap_ip,
+                sport,
+            );
+        }
+        return None;
+    }
+    // Native host resolver (instant).
     let resp = dns_respond(q)?;
     Some(build_udp_to_sta(ap_ip, da, src_ip, 53, sport, &resp))
 }

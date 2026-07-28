@@ -1,31 +1,50 @@
 //! Virtual AP internet egress — DNS + TCP NAT so a station on the modeled AP
-//! can reach the real host network (native only).
+//! can reach the real network.
 //!
-//! The station sees a normal SoftAP: DHCP gives gateway+DNS = AP IP. Off-LAN
-//! traffic is ARPed to the AP and NATed here:
-//!   * UDP/53 to the AP → minimal recursive DNS (host resolver)
-//!   * TCP to a non-local IP → non-blocking `TcpStream` shuttle
+//! * **Native:** UDP/53 DNS via host resolver; TCP via real `TcpStream`.
+//! * **Browser (wasm):** host-net bridge — JS does DoH + `fetch` for HTTP(S);
+//!   enable with [`crate::peripherals::esp32c3::virtual_wifi_host_net::set_bridge_active`].
 //!
-//! Browser wasm has no sockets: [`internet_enabled`] is false and external
-//! traffic is dropped (the playground still injects live public-stats for the
-//! stats lab). Set `LABWIRED_WIFI_NO_INTERNET=1` to force offline on native.
+//! Set `LABWIRED_WIFI_NO_INTERNET=1` to force offline on native.
 
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpStream, ToSocketAddrs};
 use std::time::Duration;
 
-/// When false, external destinations are dropped (wasm / offline CI).
+use crate::peripherals::esp32c3::virtual_wifi_host_net;
+#[cfg(target_arch = "wasm32")]
+use crate::peripherals::esp32c3::virtual_wifi_host_net::parse_http_request_line_host;
+
+/// When false, external destinations are dropped.
 pub fn internet_enabled() -> bool {
-    #[cfg(target_arch = "wasm32")]
+    if std::env::var_os("LABWIRED_WIFI_NO_INTERNET").is_some()
+        || std::env::var_os("LABWIRED_WIFI_STATS_OFFLINE").is_some()
     {
         return false;
     }
+    #[cfg(target_arch = "wasm32")]
+    {
+        return virtual_wifi_host_net::bridge_active();
+    }
     #[cfg(not(target_arch = "wasm32"))]
     {
-        std::env::var_os("LABWIRED_WIFI_NO_INTERNET").is_none()
-            && std::env::var_os("LABWIRED_WIFI_STATS_OFFLINE").is_none()
+        true
     }
+}
+
+enum EgressBackend {
+    #[cfg(not(target_arch = "wasm32"))]
+    Native(TcpStream),
+    /// Browser: accumulate HTTP request, host `fetch`es, deliver response.
+    #[cfg(target_arch = "wasm32")]
+    HostHttp {
+        req_buf: Vec<u8>,
+        pending_id: Option<u32>,
+        /// Remaining response bytes to send to the station.
+        resp_queue: Vec<u8>,
+        done: bool,
+    },
 }
 
 /// Per-station TCP connection through the NAT (key = station source port).
@@ -36,7 +55,7 @@ pub struct EgressTcp {
     pub client_ip: [u8; 4],
     pub remote_ip: [u8; 4],
     pub remote_port: u16,
-    stream: Option<TcpStream>,
+    backend: EgressBackend,
     /// Remote peer closed its write half.
     pub peer_fin: bool,
 }
@@ -48,15 +67,12 @@ impl std::fmt::Debug for EgressTcp {
             .field("remote_ip", &self.remote_ip)
             .field("remote_port", &self.remote_port)
             .field("fin_sent", &self.fin_sent)
-            .field("has_stream", &self.stream.is_some())
             .finish()
     }
 }
 
 impl EgressTcp {
-    /// Open a real TCP connection to `remote_ip:remote_port` (blocking connect
-    /// with a short timeout, then non-blocking I/O).
-    #[cfg(not(target_arch = "wasm32"))]
+    /// Open a connection: native TCP, or browser host-HTTP proxy.
     pub fn connect(
         client_ip: [u8; 4],
         remote_ip: [u8; 4],
@@ -64,76 +80,151 @@ impl EgressTcp {
         rcv_nxt: u32,
         snd_nxt: u32,
     ) -> Option<Self> {
-        let addr = SocketAddr::from((remote_ip, remote_port));
-        let stream = TcpStream::connect_timeout(&addr, Duration::from_secs(3)).ok()?;
-        let _ = stream.set_nonblocking(true);
-        let _ = stream.set_nodelay(true);
-        Some(Self {
-            rcv_nxt,
-            snd_nxt,
-            fin_sent: false,
-            client_ip,
-            remote_ip,
-            remote_port,
-            stream: Some(stream),
-            peer_fin: false,
-        })
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    pub fn connect(
-        _client_ip: [u8; 4],
-        _remote_ip: [u8; 4],
-        _remote_port: u16,
-        _rcv_nxt: u32,
-        _snd_nxt: u32,
-    ) -> Option<Self> {
-        None
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let addr = SocketAddr::from((remote_ip, remote_port));
+            let stream = TcpStream::connect_timeout(&addr, Duration::from_secs(3)).ok()?;
+            let _ = stream.set_nonblocking(true);
+            let _ = stream.set_nodelay(true);
+            return Some(Self {
+                rcv_nxt,
+                snd_nxt,
+                fin_sent: false,
+                client_ip,
+                remote_ip,
+                remote_port,
+                backend: EgressBackend::Native(stream),
+                peer_fin: false,
+            });
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            if !virtual_wifi_host_net::bridge_active() {
+                return None;
+            }
+            // Browser: accept any port; HTTP is proxied via fetch when the
+            // request is complete. Non-HTTP traffic will stall (no raw TCP).
+            Some(Self {
+                rcv_nxt,
+                snd_nxt,
+                fin_sent: false,
+                client_ip,
+                remote_ip,
+                remote_port,
+                backend: EgressBackend::HostHttp {
+                    req_buf: Vec::new(),
+                    pending_id: None,
+                    resp_queue: Vec::new(),
+                    done: false,
+                },
+                peer_fin: false,
+            })
+        }
     }
 
     pub fn write_all(&mut self, data: &[u8]) -> bool {
-        let Some(stream) = self.stream.as_mut() else {
-            return false;
-        };
-        // Prefer a complete write; fall back to best-effort for non-blocking.
-        match stream.write_all(data) {
-            Ok(()) => true,
-            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                let _ = stream.write(data);
+        match &mut self.backend {
+            #[cfg(not(target_arch = "wasm32"))]
+            EgressBackend::Native(stream) => match stream.write_all(data) {
+                Ok(()) => true,
+                Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                    let _ = stream.write(data);
+                    true
+                }
+                Err(_) => false,
+            },
+            #[cfg(target_arch = "wasm32")]
+            EgressBackend::HostHttp {
+                req_buf,
+                pending_id,
+                ..
+            } => {
+                req_buf.extend_from_slice(data);
+                if pending_id.is_none() && http_req_complete(req_buf) {
+                    if let Some((method, path, host)) = parse_http_request_line_host(req_buf) {
+                        let scheme = if self.remote_port == 443 { "https" } else { "http" };
+                        let host = host.split(':').next().unwrap_or(&host);
+                        let url = if path.starts_with("http://") || path.starts_with("https://") {
+                            path.clone()
+                        } else {
+                            format!("{scheme}://{host}{path}")
+                        };
+                        *pending_id =
+                            Some(virtual_wifi_host_net::enqueue_http(url, method, req_buf.clone()));
+                    }
+                }
                 true
             }
-            Err(_) => false,
         }
     }
 
     /// Read available bytes from the real peer (up to `cap`).
     pub fn read_available(&mut self, cap: usize) -> Vec<u8> {
-        let Some(stream) = self.stream.as_mut() else {
-            return Vec::new();
-        };
-        let mut buf = vec![0u8; cap.min(4096)];
-        match stream.read(&mut buf) {
-            Ok(0) => {
-                self.peer_fin = true;
-                Vec::new()
+        match &mut self.backend {
+            #[cfg(not(target_arch = "wasm32"))]
+            EgressBackend::Native(stream) => {
+                let mut buf = vec![0u8; cap.min(4096)];
+                match stream.read(&mut buf) {
+                    Ok(0) => {
+                        self.peer_fin = true;
+                        Vec::new()
+                    }
+                    Ok(n) => {
+                        buf.truncate(n);
+                        buf
+                    }
+                    Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => Vec::new(),
+                    Err(_) => {
+                        self.peer_fin = true;
+                        Vec::new()
+                    }
+                }
             }
-            Ok(n) => {
-                buf.truncate(n);
-                buf
-            }
-            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => Vec::new(),
-            Err(_) => {
-                self.peer_fin = true;
-                Vec::new()
+            #[cfg(target_arch = "wasm32")]
+            EgressBackend::HostHttp {
+                pending_id,
+                resp_queue,
+                done,
+                ..
+            } => {
+                if let Some(id) = *pending_id {
+                    if let Some(resp) = virtual_wifi_host_net::take_http_answer(id) {
+                        resp_queue.extend_from_slice(&resp);
+                        *pending_id = None;
+                        *done = true;
+                    }
+                }
+                if resp_queue.is_empty() {
+                    if *done {
+                        self.peer_fin = true;
+                    }
+                    return Vec::new();
+                }
+                let n = resp_queue.len().min(cap.min(4096));
+                let out: Vec<u8> = resp_queue.drain(..n).collect();
+                if resp_queue.is_empty() && *done {
+                    self.peer_fin = true;
+                }
+                out
             }
         }
     }
 
     pub fn shutdown_write(&mut self) {
-        if let Some(stream) = self.stream.as_mut() {
-            let _ = stream.shutdown(Shutdown::Write);
+        match &mut self.backend {
+            #[cfg(not(target_arch = "wasm32"))]
+            EgressBackend::Native(stream) => {
+                let _ = stream.shutdown(Shutdown::Write);
+            }
+            #[cfg(target_arch = "wasm32")]
+            EgressBackend::HostHttp { .. } => {}
         }
     }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn http_req_complete(req: &[u8]) -> bool {
+    req.windows(4).any(|w| w == b"\r\n\r\n")
 }
 
 /// Resolve a hostname (or dotted-quad) to IPv4 addresses via the host resolver.
