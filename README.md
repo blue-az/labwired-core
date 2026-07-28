@@ -27,7 +27,7 @@ Clone the repo, install the CLI, run a firmware. No cross-toolchain needed.
 
 ```sh
 git clone https://github.com/w1ne/labwired-core && cd labwired-core
-curl -fsSL https://raw.githubusercontent.com/w1ne/labwired-core/main/scripts/install.sh | LABWIRED_VERSION=v0.21.0 sh
+curl -fsSL https://labwired.com/install.sh | LABWIRED_VERSION=v0.21.0 sh
 labwired test --script examples/nrf54l15-dk/io-smoke.yaml
 ```
 
@@ -47,8 +47,7 @@ compiled on your machine.
 Linux, macOS, and Windows via WSL2. `LABWIRED_VERSION=` pins a release,
 `LABWIRED_INSTALL_DIR=` sets the install directory, `LABWIRED_FROM_SOURCE=1` builds from
 source. To read the installer first:
-`curl -fsSL https://raw.githubusercontent.com/w1ne/labwired-core/main/scripts/install.sh -o install.sh`, review it, then
-`sh install.sh`.
+`curl -fsSL https://labwired.com/install.sh -o install.sh`, review it, then `sh install.sh`.
 
 ## Three ways to drive it
 
@@ -76,7 +75,8 @@ claude mcp add labwired --transport http https://api.labwired.com/mcp
 codex   mcp add labwired --url https://api.labwired.com/mcp
 ```
 
-Other MCP clients take the standard block:
+On first use your client opens a browser to sign in. Other MCP clients take the standard
+block:
 
 ```json
 { "mcpServers": { "labwired": { "type": "http", "url": "https://api.labwired.com/mcp" } } }
@@ -143,7 +143,7 @@ ARM Cortex-M and RISC-V have the deepest coverage. Selected ESP32/Xtensa paths e
 specific examples. Per-board status is in [docs/boards](docs/boards/) and the
 [validation status matrix](docs/boards/VALIDATION_STATUS.md). Check it before assuming a
 peripheral is modeled. The browsable catalog of chips, boards, and peripherals is at
-[labwired.com/library](https://labwired.com/library.html).
+[app.labwired.com/validation](https://app.labwired.com/validation).
 
 | To see | Run |
 | --- | --- |
@@ -196,7 +196,7 @@ throughput ([`core-perf.yml`](.github/workflows/core-perf.yml)). For release mec
 [labwired.com](https://labwired.com/) ·
 [Playground](https://app.labwired.com/) ·
 [Docs](https://docs.labwired.com/) ·
-[Library](https://labwired.com/library.html) ·
+[Validation](https://app.labwired.com/validation) ·
 [For CI](https://labwired.com/ci.html) ·
 [Blog](https://labwired.com/blog/) ·
 [Pricing](https://labwired.com/pricing.html)

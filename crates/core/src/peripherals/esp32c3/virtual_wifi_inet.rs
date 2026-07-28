@@ -142,23 +142,19 @@ impl EgressTcp {
             } => {
                 req_buf.extend_from_slice(data);
                 if pending_id.is_none() && http_req_complete(req_buf) {
-                    if let Some((method, path, host)) = parse_http_request_line_host(req_buf) {
-                        let scheme = if self.remote_port == 443 {
-                            "https"
-                        } else {
-                            "http"
-                        };
-                        let host = host.split(':').next().unwrap_or(&host);
-                        let url = if path.starts_with("http://") || path.starts_with("https://") {
-                            path.clone()
-                        } else {
-                            format!("{scheme}://{host}{path}")
-                        };
+                    // Build a fetch URL for **whatever host** the station is
+                    // talking to — using Host header, then DNS reverse map,
+                    // then dotted IP. Client browser performs the fetch on the
+                    // user's own network (no LabWired-only allowlist).
+                    if let Some((method, path, url)) =
+                        browser_fetch_target(req_buf, self.remote_ip, self.remote_port)
+                    {
                         *pending_id = Some(virtual_wifi_host_net::enqueue_http(
                             url,
                             method,
                             req_buf.clone(),
                         ));
+                        let _ = path;
                     }
                 }
                 true
@@ -232,7 +228,78 @@ impl EgressTcp {
 
 #[cfg(target_arch = "wasm32")]
 fn http_req_complete(req: &[u8]) -> bool {
-    req.windows(4).any(|w| w == b"\r\n\r\n")
+    // Headers done; for POST/PUT also wait for Content-Length body if present.
+    let Some(sep) = req.windows(4).position(|w| w == b"\r\n\r\n") else {
+        return false;
+    };
+    let head = &req[..sep];
+    let body = &req[sep + 4..];
+    let head_txt = std::str::from_utf8(head).unwrap_or("");
+    let mut content_len: Option<usize> = None;
+    for line in head_txt.split("\r\n") {
+        if let Some(rest) = line
+            .strip_prefix("Content-Length:")
+            .or_else(|| line.strip_prefix("content-length:"))
+        {
+            content_len = rest.trim().parse().ok();
+            break;
+        }
+    }
+    match content_len {
+        Some(n) => body.len() >= n,
+        None => true, // GET/HEAD or unknown length
+    }
+}
+
+/// Resolve method + path + absolute URL for browser `fetch` from a raw request
+/// and the TCP peer the station connected to.
+#[cfg(target_arch = "wasm32")]
+fn browser_fetch_target(
+    req: &[u8],
+    remote_ip: [u8; 4],
+    remote_port: u16,
+) -> Option<(String, String, String)> {
+    let (method, path, host_hdr) = match parse_http_request_line_host(req) {
+        Some(t) => t,
+        None => {
+            // No Host header — still proxy using DNS reverse map / IP.
+            let text = std::str::from_utf8(req).ok()?;
+            let mut parts = text.lines().next()?.split_whitespace();
+            let method = parts.next()?.to_string();
+            let path = parts.next()?.to_string();
+            (method, path, String::new())
+        }
+    };
+    let scheme = if remote_port == 443 { "https" } else { "http" };
+    if path.starts_with("http://") || path.starts_with("https://") {
+        return Some((method, path.clone(), path));
+    }
+    let host_from_hdr = host_hdr.split(':').next().unwrap_or("").trim();
+    let host = if !host_from_hdr.is_empty()
+        && !host_from_hdr
+            .chars()
+            .all(|c| c.is_ascii_digit() || c == '.')
+    {
+        // Prefer hostname from Host: so the browser uses SNI/CORS origin of that host.
+        virtual_wifi_host_net::remember_ip_name(remote_ip, host_from_hdr);
+        host_from_hdr.to_string()
+    } else if let Some(name) = virtual_wifi_host_net::name_for_ip(remote_ip) {
+        name
+    } else if !host_from_hdr.is_empty() {
+        host_from_hdr.to_string()
+    } else {
+        format!(
+            "{}.{}.{}.{}",
+            remote_ip[0], remote_ip[1], remote_ip[2], remote_ip[3]
+        )
+    };
+    let authority = if remote_port == 80 || remote_port == 443 {
+        host
+    } else {
+        format!("{host}:{remote_port}")
+    };
+    let url = format!("{scheme}://{authority}{path}");
+    Some((method, path, url))
 }
 
 /// Resolve a hostname (or dotted-quad) to IPv4 addresses via the host resolver.
