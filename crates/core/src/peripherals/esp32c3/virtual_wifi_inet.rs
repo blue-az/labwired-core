@@ -12,6 +12,7 @@ use std::io::{Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpStream, ToSocketAddrs};
 use std::time::Duration;
 
+#[cfg(target_arch = "wasm32")]
 use crate::peripherals::esp32c3::virtual_wifi_host_net;
 #[cfg(target_arch = "wasm32")]
 use crate::peripherals::esp32c3::virtual_wifi_host_net::parse_http_request_line_host;
@@ -25,7 +26,7 @@ pub fn internet_enabled() -> bool {
     }
     #[cfg(target_arch = "wasm32")]
     {
-        return virtual_wifi_host_net::bridge_active();
+        virtual_wifi_host_net::bridge_active()
     }
     #[cfg(not(target_arch = "wasm32"))]
     {
@@ -86,7 +87,7 @@ impl EgressTcp {
             let stream = TcpStream::connect_timeout(&addr, Duration::from_secs(3)).ok()?;
             let _ = stream.set_nonblocking(true);
             let _ = stream.set_nodelay(true);
-            return Some(Self {
+            Some(Self {
                 rcv_nxt,
                 snd_nxt,
                 fin_sent: false,
@@ -95,7 +96,7 @@ impl EgressTcp {
                 remote_port,
                 backend: EgressBackend::Native(stream),
                 peer_fin: false,
-            });
+            })
         }
         #[cfg(target_arch = "wasm32")]
         {

@@ -1866,6 +1866,7 @@ mod tests {
     }
 
     /// Like `sta_tcp` but to an off-LAN peer (not the AP IP).
+    #[allow(clippy::too_many_arguments)]
     fn sta_tcp_to(
         sa: [u8; 6],
         client_ip: [u8; 4],
