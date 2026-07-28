@@ -128,16 +128,58 @@ static void check_i2c(void) {
   uint8_t rc = Wire.endTransmission();
 
   if (rc == 2 || rc == 3) {
-    // The expected outcome: no device at this address, cleanly reported.
+    // The expected outcome on most cores: no device at this address, cleanly
+    // reported as an address (2) or data (3) NACK.
     report("i2c", "PASS", NULL);
   } else if (rc == 0) {
     // Something ACKed. That still proves a working controller, and some
     // simulated systems do attach a device here.
     report("i2c", "PASS", NULL);
   } else if (rc == 4) {
+#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_RP2040)
+    // On arduino-esp32 AND arduino-pico an address NACK legitimately surfaces
+    // as 4. Both were traced through every hop of primary source rather than
+    // assumed.
+    //
+    // arduino-pico 6.0.0:
+    //   pico-sdk hardware_i2c/i2c.c — an abort whose reason is
+    //   ABRT_7B_ADDR_NOACK (or no reported reason, "seems to happen if there is
+    //   nothing connected to the bus") returns PICO_ERROR_GENERIC. Note a DATA
+    //   NACK instead returns the byte count, so the two are distinguished.
+    //   Wire.cpp endTransmission() then does `return (ret == len) ? 0 : 4`,
+    //   with PICO_ERROR_TIMEOUT separately mapped to 5.
+    //
+    // arduino-esp32 3.3.11:
+    //
+    //   ESP-IDF v5.5 esp_driver_i2c/i2c_master.c — on a NACK the ISR stores
+    //   I2C_STATUS_ACK_ERROR; s_i2c_send_commands issues a STOP and returns
+    //   WITHOUT ever storing I2C_STATUS_DONE, so the caller's
+    //   `if (status != I2C_STATUS_DONE) ret = ESP_ERR_INVALID_STATE`
+    //   fires. (Note i2c_master_probe DOES map ACK_ERROR to ESP_ERR_NOT_FOUND;
+    //   i2c_master_transmit does not.)
+    //
+    //   arduino-esp32 3.3.11 Wire.cpp endTransmission() switches only on
+    //   ESP_OK->0, ESP_FAIL->2, ESP_ERR_NOT_FOUND->2, ESP_ERR_TIMEOUT->5, and
+    //   returns 4 for everything else. ESP_ERR_INVALID_STATE hits that default.
+    //
+    // So 4 is what real ESP32 silicon+core produces here, and treating it as a
+    // failure was a bug in THIS sketch, not in the chip model.
+    //
+    // This stays narrow on purpose. 4 remains a failure on every other core,
+    // where it means a genuine bus error — accepting it globally would have
+    // hidden the real STM32F401 defect (a missing I2C ERROR interrupt vector),
+    // which presented as exactly this code. And a controller that never NACKs
+    // at all still fails here, because the IDF driver would then time out and
+    // Wire would return 5, which is handled below.
+    report("i2c", "PASS", NULL);
+#else
     report("i2c", "FAIL", "buserr");
-  } else {
+#endif
+  } else if (rc == 5) {
+    // Timeout: the controller never reached a definite conclusion.
     report("i2c", "FAIL", "timeout");
+  } else {
+    report("i2c", "FAIL", "unexpected-rc");
   }
 #else
   report("i2c", "SKIP", "no-wire-lib");
