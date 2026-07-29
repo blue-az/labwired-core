@@ -1211,6 +1211,21 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
     } else {
         bus.attach_uart_tx_sink(uart_tx.clone(), !args.no_uart_stdout);
     }
+    // ESP32-C3 / S3: Arduino USB-CDC `Serial` writes USB_SERIAL_JTAG, not UART0.
+    // Mirror those bytes into the same uart_tx buffer so uart_contains works for
+    // stock sketches (no dual Serial0 prints required).
+    {
+        use labwired_core::peripherals::esp32s3::usb_serial_jtag::UsbSerialJtag;
+        for p in bus.peripherals.iter_mut() {
+            if p.name == "usb_serial_jtag" {
+                if let Some(any) = p.dev.as_any_mut() {
+                    if let Some(jtag) = any.downcast_mut::<UsbSerialJtag>() {
+                        jtag.set_sink(Some(uart_tx.clone()), !args.no_uart_stdout);
+                    }
+                }
+            }
+        }
+    }
     // Let any attached IO-Link master record what it received over IO-Link into
     // the same captured buffer, so `uart_contains` can assert on the MASTER
     // side (MASTER PD= / MASTER VERDICT / MASTER EVENT), not just the device
