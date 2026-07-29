@@ -168,6 +168,17 @@ pub fn install_esp32c3_fast_boot(bus: &mut SystemBus, firmware_path: &Path) {
             MMU_FMT_C3,
         )),
     );
+    // USB-Serial-JTAG (0x6004_3000): Arduino `Serial` with USB_CDC_ON_BOOT
+    // prints here, not UART0. Without this, uart_contains stays empty for
+    // stock USB-CDC sketches. Sink is attached later by the test runner so
+    // capture shares the same buffer as UART0.
+    bus.replace_or_add_peripheral(
+        "usb_serial_jtag",
+        0x6004_3000,
+        0x100,
+        None,
+        Box::new(labwired_core::peripherals::esp32s3::usb_serial_jtag::UsbSerialJtag::new()),
+    );
     bus.config.optimized_bus_access = false;
     // FreeRTOS first yield needs FROM_CPU matrix → riscv_irq_lines.
     bus.esp32c3_irq_routing = true;
