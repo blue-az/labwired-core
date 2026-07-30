@@ -410,6 +410,10 @@ fn serial_from_sink(sink: &Arc<Mutex<Vec<u8>>>) -> String {
 }
 
 /// Run the probe against a concrete `DebugControl` machine.
+// Three arch paths call this with the same flat argument list (see the match in
+// `run`); bundling them into a struct would only move the arity to the struct
+// literal at each call site. Same rationale as `commands/test.rs`.
+#[allow(clippy::too_many_arguments)]
 fn run_on_machine(
     machine: &mut dyn DebugControl,
     verified_addrs: &[u32],
@@ -477,6 +481,9 @@ fn run_on_machine(
 }
 
 /// Build bus + UART sink shared by all arch paths (mirrors `labwired test` / DAP).
+// The tuple mirrors what `labwired test` / DAP already destructure at the call
+// site; naming it would add a type that exists only to satisfy the lint.
+#[allow(clippy::type_complexity)]
 fn build_bus_and_uart(
     system: &Path,
 ) -> Result<
@@ -707,7 +714,7 @@ mod tests {
     #[test]
     fn error_result_never_proven() {
         let r = DebugProbeResult::error("NO_FIRMWARE", "missing elf");
-        assert_eq!(r.proven, false);
+        assert!(!r.proven);
         assert_eq!(r.status, "error");
         assert_eq!(r.stop_reason, "config_error");
         let v = serde_json::to_value(&r).unwrap();
@@ -731,7 +738,7 @@ mod tests {
     #[test]
     fn stop_reason_mapping() {
         assert_eq!(
-            stop_reason_str(&labwired_core::StopReason::Breakpoint(0x8000_100)),
+            stop_reason_str(&labwired_core::StopReason::Breakpoint(0x0800_0100)),
             "breakpoint"
         );
         assert_eq!(
