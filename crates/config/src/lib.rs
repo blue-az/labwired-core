@@ -289,6 +289,12 @@ pub struct WifiApManifest {
     /// What the AP's HTTP origin serves: "labwired-stats" (default) or "none".
     #[serde(default = "default_wifi_ap_serves")]
     pub serves: String,
+    /// Optional network password (PSK). Empty / absent = open AP.
+    /// Stored so labs can record credentials that match firmware
+    /// `WiFi.begin(ssid, password)`; the frame-level virtual AP does not
+    /// model a WPA handshake yet — association still behaves as open.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub password: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
