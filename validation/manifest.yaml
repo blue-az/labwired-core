@@ -24,6 +24,16 @@
 #   ("yes, the model changed on this date, re-capture is tracked") that keeps CI
 #   green; any model change PAST the ack date re-fails the gate. No silent decay.
 #
+# DRIFT-WATCH COMPLETENESS (enforced)
+#   A drift gate is only as honest as its watch list, and an INCOMPLETE `models`
+#   list fails silently — the board just reads "fresh" forever. That is exactly
+#   what happened to esp32c3: its tier is a reset-state oracle asserted against
+#   the declarative descriptors in configs/peripherals/esp32c3/, and not one of
+#   those 29 files was listed, so the only files its silicon claim rests on were
+#   invisible to the gate. The generator now audits this: every `path:` a board's
+#   chip yaml wires must be covered by that board's `models`, and every listed
+#   path must exist. Add the path, don't drop the reference.
+#
 # TIERS
 #   silicon-verified   — live register/behaviour diff vs real silicon (dated)
 #   silicon-smoke      — boot + one path (usually UART) byte-parity vs silicon
@@ -127,7 +137,8 @@ boards:
     # read/write path, reset value or layout touched — drift is the shared nrf52
     # file commit date only. No live re-capture.
     # 2026-07-27: configs/chips/nrf52840.yaml corrected three NVIC numbers against tests/fixtures/real_world/nrf52840.svd — PDM 31->29 (31 is unassigned), PWM1 29->33 (29 was PDM's vector), PWM2 30->34 (30 is unassigned) — surfaced by the new SVD conformance gate. Numbers only; no peripheral model, register layout or base address changed, and the ACL / GPIO P1 base deviations were reviewed and left as recorded modelling limitations rather than silently 'fixed'. Evidence re-run on this commit: full cargo test -p labwired-core green, including this board's conformance, onboarding and firmware_survival cases. No live re-capture.
-    drift_ack: 2026-07-27
+    # 2026-07-30: configs/chips/nrf52840.yaml gained a 4KB zero-filled `nrf_errata_probe` memory region at 0xF0000000 (#708), so the Nordic nRF5 SDK / ArduinoCore-nRF5 errata probes that read 0xF0000FE0 stop recording unmapped_mmio. MEMORY MAP ONLY: no peripheral model, register layout, base address or reset value changed, and that window was previously UNMAPPED — it is not part of the 2026-06-17 asserted set (conformance 16/16, mmio 16/16, GPIO P0/P1, POWER/SPIS/TWIS/RTC0/TIMER0 sweeps all sit in the 0x4000_0000/0x5000_0000 peripheral space), so no captured value can move. The zero fill is a RECORDED MODELLING LIMITATION, not silicon parity: real die returns a package/rev fingerprint there, and zeros make the probe read 'not this rev' rather than have the sim invent a fingerprint it has never captured off the bench. Same pattern already carried by configs/chips/nrf52832.yaml. A live re-capture is still owed for the fingerprint window itself, but not for the drifted claim. No live re-capture.
+    drift_ack: 2026-07-30
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -185,7 +196,10 @@ boards:
     # `type: ir` SPI escape-hatch removed from nrf52/factory.rs); byte-identical,
     # same silicon. See the nrf52840 drift_ack note.
     # 2026-07-27: configs/chips/nrf52840.yaml corrected three NVIC numbers against tests/fixtures/real_world/nrf52840.svd — PDM 31->29 (31 is unassigned), PWM1 29->33 (29 was PDM's vector), PWM2 30->34 (30 is unassigned) — surfaced by the new SVD conformance gate. Numbers only; no peripheral model, register layout or base address changed, and the ACL / GPIO P1 base deviations were reviewed and left as recorded modelling limitations rather than silently 'fixed'. Evidence re-run on this commit: full cargo test -p labwired-core green, including this board's conformance, onboarding and firmware_survival cases. No live re-capture.
-    drift_ack: 2026-07-27
+    # 2026-07-30: rides the nrf52840 `nrf_errata_probe` 0xF0000000 window (#708);
+    # same silicon, memory map only, previously-unmapped address outside the
+    # asserted set. See the nrf52840 drift_ack note.
+    drift_ack: 2026-07-30
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -357,7 +371,24 @@ boards:
       # (RTCCALICFG), part of the C3 clock contract since the 2026-07-24
       # self-consistency fix.
       - crates/core/src/peripherals/esp32/timg.rs
+      # Shared Espressif UART twin. Since 2026-07-28 the C3's uart0/uart1 are
+      # `type: "esp32c3_uart"`, and esp32c3/uart.rs is a thin binder over
+      # peripherals/esp_uart.rs — the register map itself lives there. Without
+      # this entry a change to the C3's real UART layout could not trip drift.
+      - crates/core/src/peripherals/esp_uart.rs
+      # RISC-V core: the C3 counterpart of the CPU entry esp32s3 already has
+      # (cpu/xtensa_jit). The drift notes below already acknowledge cpu/riscv.rs
+      # changes (2026-07-05 snapshot serialization), so it belongs in the watch
+      # list those acks are meant to cover.
+      - crates/core/src/cpu/riscv.rs
       - configs/chips/esp32c3.yaml
+      # THE silicon anchor. The C3's tier is a reset-state oracle, not a
+      # behavioural diff: esp32c3_reset_values_match_silicon asserts descriptor
+      # `reset_value`s, and every one of the 29 declarative blocks the chip yaml
+      # wires comes from this directory. It was absent from this list until
+      # 2026-07-30, so the exact files the silicon claim rests on were the only
+      # ones the drift gate could not see.
+      - configs/peripherals/esp32c3
     # 2026-06-20: added behavioural I2C0 controller (esp32c3/i2c.rs) + external-device
     # slave-attach. Live I2C0 reset capture this date over USB-JTAG is byte-identical to
     # the model (CTR=0x20b, FIFO_CONF=0x408b, FIFO_ST=0, TO=0x10, INT_RAW=0x2). Full
@@ -1277,8 +1308,15 @@ boards:
     models:
       - crates/core/src/peripherals/esp32s3
       - crates/core/src/peripherals/esp_xtensa_common
+      # Shared Espressif UART twin — this file IS the relocated esp32s3/uart.rs
+      # (moved 2026-07-28 when the C3 started using the same IP), so the S3's
+      # UART register map lived outside its own watch list from that date.
+      - crates/core/src/peripherals/esp_uart.rs
       - crates/core/src/cpu/xtensa_jit
       - configs/chips/esp32s3.yaml
+      # Declarative descriptors the chip yaml wires; the 9-reg reset-state
+      # anchor is asserted against their reset_values.
+      - configs/peripherals/esp32s3
 
   - id: stm32f401
     doc: docs/boards/stm32f401.md
@@ -1317,6 +1355,7 @@ boards:
       - configs/chips/rp2040.yaml
       - crates/core/src/peripherals/rp2040
       - crates/core/src/peripherals/rp2040_clocks.rs
+      - configs/peripherals/rp2040
 
   - id: nrf5340
     doc: docs/boards/nrf5340.md
@@ -1437,6 +1476,7 @@ boards:
     models:
       - configs/chips/mkw41z4.yaml
       - crates/core/src/peripherals/i2c.rs
+      - configs/peripherals/mkw41z4
 
   - id: nrf54l15
     doc: docs/boards/nrf54l15.md

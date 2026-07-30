@@ -488,9 +488,7 @@ external_devices:
                     // all-white plane. Exiting on it stops before drawPage()
                     // ever renders, so the ink assertion below could never pass.
                     // Wait for a refresh that actually carries ink.
-                    if p.refresh_generation() >= 1
-                        && p.black_plane().iter().any(|&b| b != 0xFF)
-                    {
+                    if p.refresh_generation() >= 1 && p.black_plane().iter().any(|&b| b != 0xFF) {
                         break;
                     }
                 }
