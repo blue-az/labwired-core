@@ -12,9 +12,9 @@ Set what's yours at the top of `src/main.ino`:
 static const char *WIFI_SSID = "labwired-ap";      // your WiFi
 static const char *WIFI_PASS = "";                 // "" for an open network
 static const char *TITLE = "ANDRII'S WEATHER";     // the red line across the top
-static const char *CITY = "KYIV";                  // label + coordinates below
-static const float LAT = 50.45f;
-static const float LON = 30.52f;
+static const char *CITY = "BUDAPEST";              // label + coordinates below
+static const float LAT = 47.4979f;
+static const float LON = 19.0402f;
 static const unsigned long REFRESH_MINUTES = 30;
 ```
 
@@ -27,15 +27,36 @@ box — change it to your home network before flashing real hardware.
 ## What lands on the panel
 
 ```
-ANDRII'S WEATHER                      KYIV 21:00
+ANDRII'S WEATHER                        BUDAPEST
 ────────────────────────────────────────────────
-                     PARTLY CLOUDY
-  23°                 HUMIDITY  50%
-                     HI 25.7   LO 14.5
+   \ ; /                              THU 30 JUL
+  -- O --      32°C                      HUM 25%
+   / ; \                                 HI 35.8
+CLEAR                                    LO 23.8
 ```
 
-Title and temperature in red, everything else black. Conditions come from the
-WMO weather code, mapped to short labels in `code_text()`.
+Title, temperature and the sun/precipitation in **red**; cloud and text in
+black. The icon is drawn from primitives (`draw_sun`, `draw_cloud`, …) rather
+than a bitmap, so there is no glyph table to carry and it scales cleanly.
+Conditions come from the WMO weather code — `icon_for()` picks the icon,
+`code_text()` the label.
+
+**Date, not clock.** With a 30-minute refresh a printed time is stale the moment
+it reaches the glass, so the panel shows the weekday and date instead. The
+weekday is computed locally with Zeller's congruence — no RTC, no NTP.
+
+### Fitting the layout
+
+Adafruit_GFX wraps overflowing text to the next line by default, which strands
+the tail at x=0 — `PARTLY CLOUDY` printed at x=150 is 154px wide on a 296px
+panel, so it shed a lone `Y` onto the line below. Two things prevent that here:
+`setTextWrap(false)` as a backstop, and a layout sized so nothing needs to clip
+— the condition gets its own full-width line (longest label `FREEZING DRIZZLE`
+ends at x=181) and the stats column is right-aligned to x=290 (widest entry on
+that baseline starts at x=220).
+
+If you lengthen a label or add a field, check the widths rather than eyeballing
+them: sum the `xAdvance` values in the font header for your string.
 
 ## Refresh rate
 
