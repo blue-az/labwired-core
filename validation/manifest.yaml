@@ -137,7 +137,8 @@ boards:
     # read/write path, reset value or layout touched — drift is the shared nrf52
     # file commit date only. No live re-capture.
     # 2026-07-27: configs/chips/nrf52840.yaml corrected three NVIC numbers against tests/fixtures/real_world/nrf52840.svd — PDM 31->29 (31 is unassigned), PWM1 29->33 (29 was PDM's vector), PWM2 30->34 (30 is unassigned) — surfaced by the new SVD conformance gate. Numbers only; no peripheral model, register layout or base address changed, and the ACL / GPIO P1 base deviations were reviewed and left as recorded modelling limitations rather than silently 'fixed'. Evidence re-run on this commit: full cargo test -p labwired-core green, including this board's conformance, onboarding and firmware_survival cases. No live re-capture.
-    drift_ack: 2026-07-27
+    # 2026-07-30: configs/chips/nrf52840.yaml gained a 4KB zero-filled `nrf_errata_probe` memory region at 0xF0000000 (#708), so the Nordic nRF5 SDK / ArduinoCore-nRF5 errata probes that read 0xF0000FE0 stop recording unmapped_mmio. MEMORY MAP ONLY: no peripheral model, register layout, base address or reset value changed, and that window was previously UNMAPPED — it is not part of the 2026-06-17 asserted set (conformance 16/16, mmio 16/16, GPIO P0/P1, POWER/SPIS/TWIS/RTC0/TIMER0 sweeps all sit in the 0x4000_0000/0x5000_0000 peripheral space), so no captured value can move. The zero fill is a RECORDED MODELLING LIMITATION, not silicon parity: real die returns a package/rev fingerprint there, and zeros make the probe read 'not this rev' rather than have the sim invent a fingerprint it has never captured off the bench. Same pattern already carried by configs/chips/nrf52832.yaml. A live re-capture is still owed for the fingerprint window itself, but not for the drifted claim. No live re-capture.
+    drift_ack: 2026-07-30
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -195,7 +196,10 @@ boards:
     # `type: ir` SPI escape-hatch removed from nrf52/factory.rs); byte-identical,
     # same silicon. See the nrf52840 drift_ack note.
     # 2026-07-27: configs/chips/nrf52840.yaml corrected three NVIC numbers against tests/fixtures/real_world/nrf52840.svd — PDM 31->29 (31 is unassigned), PWM1 29->33 (29 was PDM's vector), PWM2 30->34 (30 is unassigned) — surfaced by the new SVD conformance gate. Numbers only; no peripheral model, register layout or base address changed, and the ACL / GPIO P1 base deviations were reviewed and left as recorded modelling limitations rather than silently 'fixed'. Evidence re-run on this commit: full cargo test -p labwired-core green, including this board's conformance, onboarding and firmware_survival cases. No live re-capture.
-    drift_ack: 2026-07-27
+    # 2026-07-30: rides the nrf52840 `nrf_errata_probe` 0xF0000000 window (#708);
+    # same silicon, memory map only, previously-unmapped address outside the
+    # asserted set. See the nrf52840 drift_ack note.
+    drift_ack: 2026-07-30
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
