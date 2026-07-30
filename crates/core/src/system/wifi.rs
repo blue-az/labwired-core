@@ -138,4 +138,21 @@ mod tests {
         );
         assert_eq!(wifi_ap_station_mac(&manifest(false)), None);
     }
+
+    #[test]
+    fn optional_password_parses_and_is_ignored_by_attach() {
+        // Password is stored for people to match firmware credentials; attach
+        // still succeeds (no WPA modelling). Empty/absent password remains open.
+        let with_pw = SystemManifest::from_yaml(
+            "name: t\nchip: esp32c3\nwifi_ap:\n  ssid: home\n  password: s3cret\n  ip: 192.168.4.1\n  serves: none\n",
+        )
+        .expect("valid manifest with password");
+        assert_eq!(with_pw.wifi_ap.as_ref().unwrap().password, "s3cret");
+        let mut bus = bus_with_c3_mac();
+        attach_configured_wifi_ap(&mut bus, &with_pw);
+        assert!(mac_needs_bus_tick(&mut bus), "password does not block attach");
+
+        let open = manifest(true);
+        assert_eq!(open.wifi_ap.as_ref().unwrap().password, "");
+    }
 }
