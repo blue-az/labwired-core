@@ -622,7 +622,7 @@ impl SystemBus {
     /// Attach a UART stream device (e.g. an inter-chip wire endpoint) to the
     /// UART peripheral registered under `uart_id`. This is the post-build
     /// counterpart to `AttachCtx::uart().attach_stream(..)`, used by
-    /// `World::from_manifest` to wire `UartCrossLink` endpoints between nodes.
+    /// `World::from_manifest` to wire cross-link endpoints between nodes.
     /// Errors if no such peripheral exists or it is not a UART.
     pub fn attach_uart_stream_by_id(
         &mut self,

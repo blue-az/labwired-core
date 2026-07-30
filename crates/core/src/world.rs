@@ -16,6 +16,22 @@ pub struct World {
     pub name: String,
     pub machines: HashMap<String, Box<dyn MachineTrait>>,
     pub interconnects: Vec<Box<dyn Interconnect>>,
+    /// The one UART cross-link medium for this world. Shared by cloning rather
+    /// than owned per link, and identical to what the browser attaches, so a
+    /// wire behaves the same on either host.
+    uart_wires: crate::network::VirtualWireBus,
+    /// Serial links on that medium, in manifest order.
+    uart_links: Vec<UartLink>,
+    next_uart_link_id: u32,
+}
+
+/// One point-to-point serial link between two nodes, as carried on the world's
+/// [`crate::network::VirtualWireBus`]. `node_a` sits on side 0, `node_b` side 1.
+#[derive(Debug, Clone)]
+pub struct UartLink {
+    pub id: u32,
+    pub node_a: String,
+    pub node_b: String,
 }
 
 /// Type-erased trait for machines to allow heterogeneous machines in the world.
@@ -26,7 +42,7 @@ pub trait MachineTrait: Send {
     fn total_cycles(&self) -> u64;
     fn read_u8(&self, addr: u64) -> SimResult<u8>;
     fn write_u8(&mut self, addr: u64, val: u8) -> SimResult<()>;
-    /// Attach a UART stream device (e.g. a `UartCrossLink` wire endpoint) to a
+    /// Attach a UART stream device (e.g. a cross-link wire endpoint) to a
     /// named UART peripheral inside this machine.
     fn attach_uart_stream(
         &mut self,
@@ -144,7 +160,21 @@ impl World {
             name,
             machines: HashMap::new(),
             interconnects: Vec::new(),
+            uart_wires: crate::network::VirtualWireBus::new(),
+            uart_links: Vec::new(),
+            next_uart_link_id: 0,
         }
+    }
+
+    /// This world's serial links, in manifest order.
+    pub fn uart_links(&self) -> &[UartLink] {
+        &self.uart_links
+    }
+
+    /// The medium carrying this world's serial links — used to inject wire
+    /// faults (see [`crate::network::VirtualWireBus::corrupt_next`]).
+    pub fn uart_wires(&self) -> &crate::network::VirtualWireBus {
+        &self.uart_wires
     }
 
     pub fn add_machine(&mut self, id: String, machine: Box<dyn MachineTrait>) {
@@ -202,7 +232,7 @@ impl World {
     /// follow from its own chip descriptor and firmware file — Cortex-M and
     /// RISC-V nodes (including ESP32-C3 flash images booted through the genuine
     /// mask ROM) can appear in the same world. Each `uart_cross_link` interconnect wires two nodes' named UARTs
-    /// via a [`crate::network::UartCrossLink`] (point-to-point, the IO-Link
+    /// via a [`crate::network::VirtualWireBus`] endpoint pair (point-to-point, the IO-Link
     /// C/Q wire). Paths in the manifest are resolved relative to `root_dir`
     /// (the directory containing the env manifest).
     pub fn from_manifest(
@@ -262,7 +292,14 @@ impl World {
                         .get("node_b_uart")
                         .and_then(|v| v.as_str())
                         .unwrap_or("uart2");
-                    let (link, ea, eb) = crate::network::UartCrossLink::new(a.clone(), b.clone());
+                    // Links are numbered in manifest order and carried on the
+                    // world's one shared medium — the same `VirtualWireBus` the
+                    // browser uses, so a link behaves identically on either host.
+                    // It needs no tick, so it is not an `Interconnect`.
+                    let link_id = world.next_uart_link_id;
+                    world.next_uart_link_id += 1;
+                    let ea = world.uart_wires.endpoint(link_id, 0);
+                    let eb = world.uart_wires.endpoint(link_id, 1);
                     world
                         .machines
                         .get_mut(a)
@@ -273,7 +310,9 @@ impl World {
                         .get_mut(b)
                         .with_context(|| format!("uart_cross_link: unknown node '{b}'"))?
                         .attach_uart_stream(b_uart, Box::new(eb))?;
-                    world.add_interconnect(Box::new(link));
+                    world
+                        .uart_links
+                        .push(UartLink { id: link_id, node_a: a.clone(), node_b: b.clone() });
                 }
                 "can_bus" => {
                     let peripheral = ic
