@@ -824,6 +824,16 @@
           "name": "cs_pin",
           "ty": "str",
           "doc": "Chip-select GPIO pin (e.g. \"PA4\"). Defaults to PA4."
+        },
+        {
+          "name": "dc_pin",
+          "ty": "str",
+          "doc": "Data/Command GPIO pin (e.g. \"GPIO17\"). Required for command framing."
+        },
+        {
+          "name": "busy_pin",
+          "ty": "str",
+          "doc": "BUSY status GPIO the host polls (e.g. \"GPIO4\"). Held LOW (idle) because this model refreshes instantly; without it a driver that waits on BUSY blocks until its timeout and the panel stays blank."
         }
       ],
       "labs": [
@@ -859,6 +869,11 @@
           "name": "dc_pin",
           "ty": "str",
           "doc": "Data/Command GPIO pin (e.g. \"GPIO2\"). Required for command framing."
+        },
+        {
+          "name": "busy_pin",
+          "ty": "str",
+          "doc": "BUSY status GPIO the host polls (e.g. \"GPIO5\"). Held HIGH (idle) — UC8151D is busy-LOW, the inverse of ssd1680_tricolor_290."
         }
       ],
       "labs": [],
