@@ -150,7 +150,10 @@ mod tests {
         assert_eq!(with_pw.wifi_ap.as_ref().unwrap().password, "s3cret");
         let mut bus = bus_with_c3_mac();
         attach_configured_wifi_ap(&mut bus, &with_pw);
-        assert!(mac_needs_bus_tick(&mut bus), "password does not block attach");
+        assert!(
+            mac_needs_bus_tick(&mut bus),
+            "password does not block attach"
+        );
 
         let open = manifest(true);
         assert_eq!(open.wifi_ap.as_ref().unwrap().password, "");
