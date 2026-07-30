@@ -433,7 +433,14 @@ const STM32_BOARDS: &[&str] = &[
 
 /// SPI display/sensor devices addressed by their own emitter
 /// (port of the TS `SPI_DEVICE_TYPES` set).
-const SPI_DEVICE_TYPES: &[&str] = &["ili9341", "max31855", "ssd1680_tricolor_290"];
+const SPI_DEVICE_TYPES: &[&str] = &[
+    "ili9341",
+    "max31855",
+    "ssd1680_tricolor_290",
+    // Was missing while `device_class` already classed it as a spi_device, so a
+    // diagram with this panel emitted no external_devices entry at all.
+    "uc8151d_tricolor_290",
+];
 
 /// Map an MCU part `type` to the chip-family key the pin map is keyed by.
 /// Ported from `BOARDS` (`mcuComponentType` → `chip`); falls back to the type
@@ -1262,8 +1269,19 @@ fn emit_spi_device(
     let (Some(connection), Some(cs_pin)) = (connection, cs_pin) else {
         return (None, None);
     };
+    // DC and BUSY are optional sidebands: emit them whenever the diagram wires
+    // them, for whichever MCU the part is wired to. A device that needs BUSY
+    // and never receives the key silently blocks its driver, so the wire being
+    // present in the diagram is what must decide this — not a per-board list.
+    let mut config = format!("      cs_pin: \"{cs_pin}\"");
+    if let Some(dc_pin) = mcu_pin_for_part_pin(wires, mcu_id, part_id, "DC") {
+        config.push_str(&format!("\n      dc_pin: \"{dc_pin}\""));
+    }
+    if let Some(busy_pin) = mcu_pin_for_part_pin(wires, mcu_id, part_id, "BUSY") {
+        config.push_str(&format!("\n      busy_pin: \"{busy_pin}\""));
+    }
     let ext = format!(
-        "  - id: \"{part_id}\"\n    type: \"{part_type}\"\n    connection: \"{connection}\"\n    config:\n      cs_pin: \"{cs_pin}\""
+        "  - id: \"{part_id}\"\n    type: \"{part_type}\"\n    connection: \"{connection}\"\n    config:\n{config}"
     );
     let bio = parse_mcu_pin(cs_pin).map(|(_, pin)| {
         format!(

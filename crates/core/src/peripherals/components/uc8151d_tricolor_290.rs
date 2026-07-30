@@ -406,6 +406,10 @@ use crate::peripherals::kit::{
 pub struct Uc8151dTricolor290Kit;
 pub static UC8151D_TRICOLOR_290_KIT: Uc8151dTricolor290Kit = Uc8151dTricolor290Kit;
 
+/// Level the BUSY line rests at when the panel is not refreshing. UC8151D
+/// pulls BUSY LOW while busy and releases it HIGH — inverted from SSD1680.
+const BUSY_IDLE_LEVEL: bool = true;
+
 static UC8151D_TRICOLOR_290_METADATA: KitMetadata = KitMetadata {
     inputs: &[],
     device_type: "uc8151d_tricolor_290",
@@ -427,6 +431,12 @@ static UC8151D_TRICOLOR_290_METADATA: KitMetadata = KitMetadata {
             name: "dc_pin",
             ty: ConfigType::Str,
             doc: "Data/Command GPIO pin (e.g. \"GPIO2\"). Required for command framing.",
+        },
+        ConfigKey {
+            name: "busy_pin",
+            ty: ConfigType::Str,
+            doc: "BUSY status GPIO the host polls (e.g. \"GPIO5\"). Held HIGH (idle) — \
+                  UC8151D is busy-LOW, the inverse of ssd1680_tricolor_290.",
         },
     ],
     // No core/examples/* lab with system.yaml yet (stats-display is playground-hosted).
@@ -450,6 +460,15 @@ impl PeripheralKit for Uc8151dTricolor290Kit {
             })?;
             panel = panel.with_dc_pin(dc_pin.to_string());
             crate::peripherals::spi::SpiDevice::set_dc_source(&mut panel, odr_addr, bit);
+        }
+        // BUSY: UC8151D holds it LOW while refreshing and releases it HIGH when
+        // idle — the OPPOSITE of ssd1680_tricolor_290, whose idle is LOW. The
+        // matching GxEPD2 class (`GxEPD2_290_Z13c`) passes `_busy_level = LOW`.
+        // Driving the wrong polarity here pins the driver in _waitWhileBusy
+        // forever and looks exactly like a hung CPU.
+        if let Some(busy_pin) = ctx.config_str("busy_pin") {
+            let busy_pin = busy_pin.to_string();
+            ctx.drive_pin_input(&busy_pin, BUSY_IDLE_LEVEL)?;
         }
         ctx.attach_spi_device(Box::new(panel))?;
         Ok(())

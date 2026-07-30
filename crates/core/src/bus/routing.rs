@@ -132,6 +132,28 @@ impl SystemBus {
         Self::resolve_pin_idr(bus, pin)
     }
 
+    /// Hold an MCU input pin at `level`, for device status lines the firmware
+    /// polls but nothing else drives (e-paper BUSY, sensor DRDY). Returns false
+    /// if the pin does not resolve or the owning GPIO block rejects it.
+    ///
+    /// Goes through `set_gpio_input` rather than an MMIO store because input
+    /// registers ignore writes — that is what makes them inputs. Shared by the
+    /// kit `AttachCtx` and the ESP32 external-device factory so both wire a
+    /// status line the same way on every chip.
+    pub fn drive_pin_input(bus: &mut SystemBus, pin: &str, level: bool) -> bool {
+        let Some((addr, bit)) = Self::resolve_pin_idr(bus, pin) else {
+            return false;
+        };
+        let Some(idx) = bus
+            .peripherals
+            .iter()
+            .position(|p| addr >= p.base && addr < p.base + p.size)
+        else {
+            return false;
+        };
+        bus.peripherals[idx].dev.set_gpio_input(bit, level)
+    }
+
     /// Resolve a pin label to its `(IDR address, bit)` so a sensor can
     /// drive an MCU input line (e.g. the HC-SR04 ECHO pin).
     ///
