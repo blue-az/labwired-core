@@ -99,5 +99,27 @@ labwired-ereader lab until 2026-07-30.
 
 ## Build
 
-Arduino-ESP32 + `zinggjm/GxEPD2` (inferred from `#include <GxEPD2_3C.h>` on hosted compile).
-Or paste `src/main.ino` into the LabWired weather-station project and flash.
+Arduino-ESP32 + `zinggjm/GxEPD2`. The library is **not** inferred from the
+`#include` — you have to declare it, or the build stops at
+`GxEPD2_3C.h: No such file or directory`.
+
+Hosted compile — pass it in `lib_deps`:
+
+```json
+{ "board": "esp32-c3-supermini", "language": "arduino",
+  "entryPath": "src/main.ino", "lib_deps": ["zinggjm/GxEPD2"] }
+```
+
+Locally with PlatformIO:
+
+```ini
+[env:esp32c3]
+platform = espressif32
+board = esp32-c3-devkitm-1
+framework = arduino
+lib_deps = zinggjm/GxEPD2
+```
+
+That pulls Adafruit GFX and BusIO as dependencies and builds clean (~780 KB
+flash, 60% of a 4 MB part). Or paste `src/main.ino` into the LabWired
+weather-station project and flash.
