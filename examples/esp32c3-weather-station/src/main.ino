@@ -8,11 +8,14 @@
 // Everything you need to change is in the EDIT ME block below.
 //
 // Uses the SAME proven display stack as labwired-ereader (works on glass + twin):
-//   GxEPD2_290_C90c  +  diagram part type uc8151d_tricolor_290
+//   GxEPD2_290_C90c  +  diagram part type ssd1680_tricolor_290
 //
-// Do NOT use raw SSD1680 0x24/0x26 here. GxEPD2_290_C90c speaks UC8151D-style
-// opcodes; locking the twin to ssd1680_tricolor_290 makes the same sketch
-// paint on silicon and stay blank/wrong in the emulator.
+// Despite the "C90c" name, this driver class speaks SSD1680: 0x12 SWRESET,
+// 0x01 driver output control, 0x11 data entry, 0x3C border, then 0x22+0x20 to
+// trigger, with RAM writes on 0x24/0x26. Lock the twin to
+// uc8151d_tricolor_290 (which is the GxEPD2_290_Z13c panel) and it decodes
+// that stream as PWR/LUT/DRF, never receives a plane, and stays blank. See
+// the "Correct lock" table in README.md for the captured command streams.
 //
 // Panel (buy): WeAct Studio 2.9" B/W/R
 //   https://www.aliexpress.com/item/1005004644515880.html
@@ -74,7 +77,7 @@ static const char *API_HOST = "api.open-meteo.com";
 // and the stats column is right-aligned so the widest line still fits.
 static const int16_t RIGHT_EDGE = 290;
 
-// C90c class = UC8151D command stream on the wire -> twin must be uc8151d_tricolor_290
+// C90c class = SSD1680 command stream on the wire -> twin must be ssd1680_tricolor_290
 GxEPD2_3C<GxEPD2_290_C90c, GxEPD2_290_C90c::HEIGHT> display(
     GxEPD2_290_C90c(/*CS=*/PIN_CS, /*DC=*/PIN_DC, /*RST=*/PIN_RST, /*BUSY=*/PIN_BUSY));
 
