@@ -63,8 +63,12 @@ pub struct DebugProbeArgs {
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 #[serde(untagged)]
 pub enum BreakpointSpec {
-    Address { address: String },
-    Symbol { symbol: String },
+    Address {
+        address: String,
+    },
+    Symbol {
+        symbol: String,
+    },
     Line {
         line: u32,
         #[serde(default)]
@@ -304,9 +308,7 @@ fn resolve_breakpoints(
                                  specify file for multi-CU firmware, or use symbol/address)"
                             )
                         } else {
-                            format!(
-                                "line {line} in '{file_hint}' not found in DWARF line table"
-                            )
+                            format!("line {line} in '{file_hint}' not found in DWARF line table")
                         };
                         outcomes.push(BreakpointOutcome {
                             requested,
@@ -338,8 +340,7 @@ fn parse_breakpoint_specs(args: &DebugProbeArgs) -> Result<Vec<BreakpointSpec>, 
         return Ok(Vec::new());
     }
 
-    serde_json::from_str(trimmed)
-        .map_err(|e| format!("invalid breakpoints JSON: {e}"))
+    serde_json::from_str(trimmed).map_err(|e| format!("invalid breakpoints JSON: {e}"))
 }
 
 fn emit_result(result: &DebugProbeResult, output_dir: Option<&Path>) -> ExitCode {
@@ -390,10 +391,7 @@ fn collect_registers(machine: &dyn DebugControl) -> BTreeMap<String, String> {
     regs
 }
 
-fn collect_location(
-    symbols: Option<&SymbolProvider>,
-    pc: u32,
-) -> Option<serde_json::Value> {
+fn collect_location(symbols: Option<&SymbolProvider>, pc: u32) -> Option<serde_json::Value> {
     let loc = symbols?.lookup(pc as u64)?;
     Some(json!({
         "file": loc.file,
@@ -455,11 +453,7 @@ fn run_on_machine(
     DebugProbeResult {
         status: "ok".into(),
         stop_reason,
-        pc: if read.pc {
-            Some(format_addr(pc))
-        } else {
-            None
-        },
+        pc: if read.pc { Some(format_addr(pc)) } else { None },
         cycles: Some(cycles),
         location: if read.location {
             collect_location(symbols, pc)
@@ -575,7 +569,10 @@ pub fn run(args: DebugProbeArgs) -> ExitCode {
     let symbols = match SymbolProvider::new(&firmware) {
         Ok(s) => Some(s),
         Err(e) => {
-            warn!("SymbolProvider unavailable for {}: {e:#}", firmware.display());
+            warn!(
+                "SymbolProvider unavailable for {}: {e:#}",
+                firmware.display()
+            );
             None
         }
     };
@@ -753,8 +750,7 @@ mod tests {
 
     #[test]
     fn breakpoint_spec_untagged_deser() {
-        let addr: BreakpointSpec =
-            serde_json::from_str(r#"{"address":"0x08000100"}"#).unwrap();
+        let addr: BreakpointSpec = serde_json::from_str(r#"{"address":"0x08000100"}"#).unwrap();
         assert_eq!(
             addr,
             BreakpointSpec::Address {
@@ -770,8 +766,7 @@ mod tests {
             }
         );
 
-        let line: BreakpointSpec =
-            serde_json::from_str(r#"{"line":42,"file":"main.c"}"#).unwrap();
+        let line: BreakpointSpec = serde_json::from_str(r#"{"line":42,"file":"main.c"}"#).unwrap();
         assert_eq!(
             line,
             BreakpointSpec::Line {
