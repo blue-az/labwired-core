@@ -52,14 +52,33 @@ timer with `esp_deep_sleep_start()` after the paint.
 | Layer | Value |
 |--------|--------|
 | **Driver** | `GxEPD2_290_C90c` |
-| **Twin / diagram type** | **`uc8151d_tricolor_290`** |
-| **Not** | `ssd1680_tricolor_290` + raw `0x24`/`0x26` |
+| **Twin / diagram type** | **`ssd1680_tricolor_290`** |
+| **Not** | `uc8151d_tricolor_290` (that is the `GxEPD2_290_Z13c` panel) |
 
-Several WeAct panels this size look identical but need different driver opcodes.
-GxEPD2's C90c class speaks **UC8151D-style** commands. The SSD1680 twin treats
-`0x12` as SWRESET, so the same sketch can paint on glass and stay blank in the
-emulator if the diagram is locked to SSD1680. This was fixed for labwired-ereader
-in core (2026-06-28); this lab must use the same lock.
+Several WeAct panels this size look identical but need different driver opcodes,
+so the twin has to match the *driver class* you instantiate — which is a property
+of the class, not of the MCU.
+
+Despite the name, `GxEPD2_290_C90c` speaks **SSD1680**. Read
+`GxEPD2_290_C90c::_InitDisplay()` in GxEPD2 1.6.0: `0x12` SWRESET, `0x01` driver
+output control, `0x11` data entry, `0x3C` border, `0x21`, then `0x22`+`0x20` to
+trigger the update, with RAM writes on `0x24`/`0x26`. Captured off the wire, a
+C90c build sends:
+
+```
+12 01 27 01 00 11 03 3c 05 18 80 21 00 80 44 ...   <- SSD1680
+```
+
+A `GxEPD2_290_Z13c` build — the UC8151D panel — sends something else entirely:
+
+```
+00 8f 61 80 01 28 50 77 04                          <- UC8151D (PSR, TRES, CDI, PON)
+```
+
+`ssd1680_tricolor_290` is written against exactly the 15 commands C90c emits.
+Pick `uc8151d_tricolor_290` here and the panel decodes that stream as PWR/LUT/DRF,
+never receives a plane, and stays blank — which is precisely what happened to the
+labwired-ereader lab until 2026-07-30.
 
 ## Pins (weather-station diagram)
 

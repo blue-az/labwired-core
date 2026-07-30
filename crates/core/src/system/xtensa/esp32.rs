@@ -107,16 +107,26 @@ pub fn attach_esp32_external_devices(
             .get("dc_pin")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
+        let busy_pin = ext
+            .config
+            .get("busy_pin")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
 
         // Build the panel for this block type. Both tri-color e-paper models
         // are SpiDevices driven over the real SPI3 peripheral; the only block-
         // specific bit is which controller's command set the model decodes.
+        // Level BUSY rests at when the panel is not refreshing. The two
+        // controllers are INVERTED: SSD1680 asserts BUSY high, UC8151D pulls it
+        // low. Both models refresh instantaneously, so they are always idle.
+        let mut busy_idle_level = false;
         let mut panel: Box<dyn SpiDevice> = match ext.r#type.as_str() {
             "uc8151d_tricolor_290" | "epd-2in9-uc8151d" => {
                 let mut p = crate::peripherals::components::Uc8151dTricolor290::new(cs_pin.clone());
                 if let Some(dc) = &dc_pin {
                     p = p.with_dc_pin(dc.clone());
                 }
+                busy_idle_level = true;
                 Box::new(p)
             }
             // GxEPD2_290_C90c (GDEY029Z90c / Waveshare 2.9" 3-color) is an
@@ -139,6 +149,23 @@ pub fn attach_esp32_external_devices(
                 continue;
             }
         };
+
+        // Hold BUSY at its idle level. GxEPD2 blocks in _waitWhileBusy until
+        // this line reads not-busy; its escape timeout is tens of seconds of
+        // *simulated* time (billions of cycles), so an undriven line is
+        // indistinguishable from a hang and leaves the panel blank. Real
+        // silicon spends ~18 s in a full refresh here — the twin refreshes
+        // instantly, so idle is the honest level to hold.
+        if let Some(busy) = &busy_pin {
+            if !crate::bus::SystemBus::drive_pin_input(bus, busy, busy_idle_level) {
+                tracing::warn!(
+                    "ESP32 external_devices: busy_pin '{}' on '{}' did not resolve to a \
+                     GPIO input; a driver that polls BUSY will block",
+                    busy,
+                    ext.id
+                );
+            }
+        }
 
         // Resolve the D/C GPIO to its (output-register address, bit) so the bus
         // can latch the real pin level before each transfer — silicon-accurate

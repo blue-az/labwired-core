@@ -8,11 +8,12 @@
 // Everything you need to change is in the EDIT ME block below.
 //
 // Uses the SAME proven display stack as labwired-ereader (works on glass + twin):
-//   GxEPD2_290_C90c  +  diagram part type uc8151d_tricolor_290
+//   GxEPD2_290_C90c  +  diagram part type ssd1680_tricolor_290
 //
-// Do NOT use raw SSD1680 0x24/0x26 here. GxEPD2_290_C90c speaks UC8151D-style
-// opcodes; locking the twin to ssd1680_tricolor_290 makes the same sketch
-// paint on silicon and stay blank/wrong in the emulator.
+// Despite the name, GxEPD2_290_C90c speaks SSD1680: 0x12 SWRESET, 0x11 data
+// entry, 0x24/0x26 RAM writes, 0x22+0x20 to refresh. Lock the twin to
+// uc8151d_tricolor_290 and it decodes those as PWR/LUT/DRF, never receives a
+// plane, and the panel stays blank while the same sketch paints fine on glass.
 //
 // Panel (buy): WeAct Studio 2.9" B/W/R
 //   https://www.aliexpress.com/item/1005004644515880.html
@@ -66,7 +67,7 @@ static const int PIN_BUSY = 5;
 
 static const char *API_HOST = "api.open-meteo.com";
 
-// C90c class = UC8151D command stream on the wire -> twin must be uc8151d_tricolor_290
+// C90c class = SSD1680 command stream on the wire -> twin must be ssd1680_tricolor_290
 GxEPD2_3C<GxEPD2_290_C90c, GxEPD2_290_C90c::HEIGHT> display(
     GxEPD2_290_C90c(/*CS=*/PIN_CS, /*DC=*/PIN_DC, /*RST=*/PIN_RST, /*BUSY=*/PIN_BUSY));
 
