@@ -281,24 +281,12 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
         ),
         (resolve("delay", 0x400e_5c28), rom_thunks::nop_return_zero),
     ];
-    // CHEAT(THUNK-LIB): the Arduino serial path is skipped wholesale. Both of
-    // the reasons this comment used to give are FALSE — getApbFrequency() is
-    // answered by rtc_cntl.rs (RTC_APB_FREQ_REG, since #110) and the sim DOES
-    // have a UART model the firmware can observe (peripherals/esp32/uart.rs:
-    // FIFO, baud-paced drain, sink, IRQ source 34). Do not delete these nops on
-    // the strength of that: measured 2026-07-31, removing them stalls
-    // demo-labwired-ereader.elf at ~123k cycles parked in esp_pm_impl_waiti.
-    // See the long note in crates/wasm/src/install.rs. These are keyed by the
-    // MANGLED symbol name because extract_arduino_esp32_thunks returns mangled
-    // names (goblin) — the old demangled placeholder key never resolved, a latent
-    // gap the fake-heap path masked by never reaching the baudrate calc. Same
-    // stubs the proven e2e path installs (crates/core/tests/e2e_labwired_ereader.rs).
-    for sym in &[
-    ] {
-        if let Some(&pc) = symbol_addrs.get(*sym) {
-            thunks.push((pc, rom_thunks::nop_return_zero));
-        }
-    }
+    // The Arduino serial nops that used to be installed here are gone, along
+    // with the empty loop that survived them. They dodged an Xtensa
+    // divide-by-zero in _get_effective_baudrate whose real cause was an
+    // apb_ctrl read-as-ones stub shadowing SYSCON at the same base — see
+    // system/xtensa/esp32.rs. Serial now works on this path, which is what
+    // makes the `<output>.uart.log` written below carry a sketch's own output.
     // Real-silicon noreturn functions — abort_halt prints diagnostics and
     // halts the CPU instead of returning. Without this, stubbing them as
     // nop_return_zero creates tight `assert → return → re-check → assert`
