@@ -141,7 +141,10 @@ fn an_out_of_range_press_is_rejected_and_leaves_the_pin_alone() {
     settle(&mut bus);
     assert!(bus.set_input(Some("btn_pc13"), "pressed", 5.0).is_err());
     settle(&mut bus);
-    assert!(pc13_high(&mut bus), "a rejected stimulus must not move the pin");
+    assert!(
+        pc13_high(&mut bus),
+        "a rejected stimulus must not move the pin"
+    );
 }
 
 #[test]
@@ -168,7 +171,9 @@ board_io:
     let manifest: SystemManifest = serde_yaml::from_str(&manifest_yaml).expect("parse manifest");
     let mut bus = SystemBus::from_config(&chip, &manifest).expect("build bus");
     assert!(
-        bus.list_inputs().iter().all(|(owner, _)| owner != "led_pa5"),
+        bus.list_inputs()
+            .iter()
+            .all(|(owner, _)| owner != "led_pa5"),
         "an LED output must not become a drivable input"
     );
 }
@@ -362,9 +367,15 @@ fn a_named_contact_channel_is_discoverable_and_drivable() {
         assert!(!pc13_high(&mut bus), "{channel}: idle reads LOW");
         bus.set_input(Some("sensor1"), channel, 1.0)
             .unwrap_or_else(|e| panic!("{channel} must be drivable: {e:?}"));
-        assert!(pc13_high(&mut bus), "{channel}: asserting drives the pin HIGH");
+        assert!(
+            pc13_high(&mut bus),
+            "{channel}: asserting drives the pin HIGH"
+        );
         bus.set_input(Some("sensor1"), channel, 0.0).expect("clear");
-        assert!(!pc13_high(&mut bus), "{channel}: clearing returns the pin LOW");
+        assert!(
+            !pc13_high(&mut bus),
+            "{channel}: clearing returns the pin LOW"
+        );
     }
 }
 
@@ -372,10 +383,7 @@ fn a_named_contact_channel_is_discoverable_and_drivable() {
 #[test]
 fn an_unnamed_contact_still_answers_to_pressed() {
     let mut bus = f103_with_button(false);
-    assert!(bus
-        .list_inputs()
-        .iter()
-        .any(|(_, ch)| ch.key == "pressed"));
+    assert!(bus.list_inputs().iter().any(|(_, ch)| ch.key == "pressed"));
 }
 
 /// An unknown channel name must NOT mint a channel nothing can drive: it falls

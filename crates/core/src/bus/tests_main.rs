@@ -4088,8 +4088,11 @@ fn gpio_devices_decide_whether_the_per_cycle_tick_is_trivial() {
     );
 
     // A button is level-driven on stimulus: the fast path survives.
-    bus.gpio_devices
-        .push(Box::new(Button::new("btn".into(), (0x4800_0000, 13), false)));
+    bus.gpio_devices.push(Box::new(Button::new(
+        "btn".into(),
+        (0x4800_0000, 13),
+        false,
+    )));
     assert!(
         bus.per_cycle_tick_is_trivial(),
         "a button must not cost the bus its walk-free fast path"
