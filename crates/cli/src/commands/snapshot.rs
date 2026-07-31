@@ -281,10 +281,14 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
         ),
         (resolve("delay", 0x400e_5c28), rom_thunks::nop_return_zero),
     ];
-    // HardwareSerial::begin / _get_effective_baudrate — the serial-init chain
-    // divides by getApbFrequency(), which returns 0 in the sim → divide-by-zero
-    // exception (Xtensa cause 6). The sim has no UART model the firmware can
-    // observe, so stub the whole begin plus the leaf. These are keyed by the
+    // CHEAT(THUNK-LIB): the Arduino serial path is skipped wholesale. Both of
+    // the reasons this comment used to give are FALSE — getApbFrequency() is
+    // answered by rtc_cntl.rs (RTC_APB_FREQ_REG, since #110) and the sim DOES
+    // have a UART model the firmware can observe (peripherals/esp32/uart.rs:
+    // FIFO, baud-paced drain, sink, IRQ source 34). Do not delete these nops on
+    // the strength of that: measured 2026-07-31, removing them stalls
+    // demo-labwired-ereader.elf at ~123k cycles parked in esp_pm_impl_waiti.
+    // See the long note in crates/wasm/src/install.rs. These are keyed by the
     // MANGLED symbol name because extract_arduino_esp32_thunks returns mangled
     // names (goblin) — the old demangled placeholder key never resolved, a latent
     // gap the fake-heap path masked by never reaching the baudrate calc. Same

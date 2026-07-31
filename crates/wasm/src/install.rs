@@ -218,11 +218,33 @@ impl WasmSimulator {
             "_ZN14HardwareSerial5flushEv",
             "_ZN14HardwareSerial9readBytesEPcj",
             "_ZN14HardwareSerial9readBytesEPhj",
-            // HardwareSerial::begin — Arduino-ESP32's serial init walks
-            // through _get_effective_baudrate which divides by
-            // getApbFrequency(). Our sim returns 0 → divide-by-zero
-            // exception. Skip the whole begin() rather than emulate the
-            // baud calculation; we don't model UART output anyway.
+            // CHEAT(THUNK-LIB): the Arduino serial path is skipped wholesale.
+            // This is real fidelity debt, and the reason recorded here for a
+            // year was wrong in BOTH of its claims. For the next person:
+            //
+            //   • "getApbFrequency() returns 0 → divide-by-zero" — not true
+            //     since #110 (2026-05-25). peripherals/esp32/rtc_cntl.rs
+            //     pre-seeds RTC_APB_FREQ_REG with the 40 MHz encoding
+            //     (0x0050_0050) precisely so this probe answers.
+            //   • "we don't model UART output anyway" — not true either.
+            //     peripherals/esp32/uart.rs is a full UART: TX FIFO, baud-paced
+            //     drain, capture sink, and INT_TX_DONE asserted into the
+            //     interrupt matrix as source 34 (its own unit test proves it).
+            //
+            // So the obvious fix — delete these nops and let the real driver
+            // run — looks right and is NOT. Measured 2026-07-31 against
+            // demo-labwired-ereader.elf: with them removed the firmware stalls
+            // at ~123k cycles with the CPU parked in esp_pm_impl_waiti (the
+            // FreeRTOS idle task's WAITI), never reaching a panel refresh;
+            // with them in place the same ELF paints. Something in Arduino's
+            // uart bring-up blocks on an event the sim never delivers, and
+            // finding it is the actual work here — the missing piece is
+            // downstream of both models above, not either of them.
+            //
+            // Consequence to keep in mind meanwhile: Serial.print on this path
+            // is DISCARDED, so a serial oracle or UART acceptance can never
+            // pass on a classic-ESP32 board. That is documented for users on
+            // both boards in packages/board-config/src/boards.ts.
             "_ZN14HardwareSerial5beginEmjaabmh",
             "_get_effective_baudrate",
             "uartAvailable",
