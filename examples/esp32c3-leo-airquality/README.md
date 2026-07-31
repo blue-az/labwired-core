@@ -110,12 +110,20 @@ it, and the firmware's verdict flips. The verdict thresholds are firmware policy
 blind to the scene config.
 
 Each ladder rung is an absolute cycle count (`after_cycles`), so the rungs must
-land inside the window in which the firmware is still sampling. Measured against
-the committed ELF: one measurement cycle costs ~343.8k core cycles, sample `t=4`
-is read at 1.25M cycles, sample `t=60` at 20.5M, and all 64 samples plus the
-final OLED frame are done by ~8.65M steps / ~22.6M cycles. A rung placed past
-that window is dead — it changes no reading, and the scenario it belongs to then
-passes or fails for reasons unrelated to the story it claims to tell.
+land inside the window in which the firmware is still sampling. Two real wires
+set that window, and both are clocked at their real rate: I²C0 shifts every
+transaction bit-by-bit, and UART0 shifts one 10-bit frame per baud period out of
+a 128-entry TX FIFO that **drops** a write when it is full — so `c3_uart.c` waits
+for a free FIFO entry before every byte (real flow control) and clocks the
+console at 2 Mbaud, because at the power-on 115200 the ~24 kB this demo prints
+would need ~2.1 s of wire time (~340M core cycles) on its own. Measured against
+the committed ELF (NORMAL): a measurement cycle costs ~250k core cycles while the
+room is quiet and ~1.0M once the longer condensation/mold lines push a cycle's
+telemetry past the FIFO (~585k on average); sample `t=4` is read at ~1.5M cycles, sample `t=60`
+at ~34.5M, and all 64 samples plus `LEO DONE` and the final OLED frame dump are
+done by ~21.5M steps / ~54.5M cycles. A rung placed past that window is dead — it
+changes no reading, and the scenario it belongs to then passes or fails for
+reasons unrelated to the story it claims to tell.
 
 > Note: the SGP41 VOC Index reads 0 for the first ~45 cycles. That is the **real**
 > Gas Index Algorithm's warm-up/blackout behaviour, not a stub — it gates output
