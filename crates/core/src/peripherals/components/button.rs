@@ -166,6 +166,14 @@ impl crate::bus::BusResidentDevice for Button {
         &self.id
     }
 
+    /// A contact holds its level until something moves it, and `set_input`
+    /// applies that level at the stimulus point, so a button needs no per-cycle
+    /// pass. Adding a push button to a canvas therefore must not cost the bus
+    /// its walk-free fast path.
+    fn is_level_driven_on_stimulus(&self) -> bool {
+        true
+    }
+
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
