@@ -97,9 +97,26 @@ pub fn kits() -> &'static [&'static dyn PeripheralKit] {
     KITS
 }
 
+/// Legacy `type:` spellings that predate the canonical `device_type` and are
+/// still accepted. These used to be understood only by the ESP32-classic attach
+/// arm, which meant the same manifest resolved on one chip and was skipped as
+/// "unsupported" on every other — resolving them here instead makes them mean
+/// the same thing on every MCU. Nothing in the repo emits them; the list exists
+/// so a hand-written manifest that already worked keeps working, and it should
+/// not grow.
+const TYPE_ALIASES: &[(&str, &str)] = &[
+    ("epd-2in9-tricolor", "ssd1680_tricolor_290"),
+    ("gxepd2_290_c90c", "ssd1680_tricolor_290"),
+    ("epd-2in9-uc8151d", "uc8151d_tricolor_290"),
+];
+
 /// Lookup a kit by the `device_type` string used in `system.yaml`.
 pub fn lookup(device_type: &str) -> Option<&'static dyn PeripheralKit> {
+    let canonical = TYPE_ALIASES
+        .iter()
+        .find(|(alias, _)| *alias == device_type)
+        .map_or(device_type, |(_, canonical)| *canonical);
     KITS.iter()
         .copied()
-        .find(|k| k.metadata().device_type == device_type)
+        .find(|k| k.metadata().device_type == canonical)
 }
