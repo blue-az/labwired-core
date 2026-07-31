@@ -61,6 +61,10 @@ pub struct Button {
     /// Level the pin reads while the button is PRESSED, derived from the wiring
     /// by the canvas compiler. `false` (active-low) is the common pull-up case.
     pub active_high: bool,
+    /// The stimulus channel this contact answers to. One of [`CHANNELS`] — a
+    /// closed vocabulary, so the key stays `&'static` and `input_channels` needs
+    /// no allocation or leak.
+    channel: &'static crate::sim_input::InputChannel,
 
     /// Whether the contact is currently closed.
     pressed: bool,
@@ -71,12 +75,65 @@ pub struct Button {
     last_high: Option<bool>,
 }
 
+/// Every channel a contact may expose.
+///
+/// A PIR, IR-obstacle, hall or vibration sensor is the same device as a push
+/// button — a digital output asserting a level on one pin — so they share this
+/// model. What differs is only the WORD: "pressed" is wrong for motion or a
+/// magnetic field, and a stimulus API whose vocabulary does not match the part
+/// on the canvas is one an agent cannot script blind.
+///
+/// Closed set by design: the key must be `&'static` for
+/// [`SimInput::input_channels`](crate::sim_input::SimInput::input_channels),
+/// and an unknown name falling back to `pressed` is better than leaking a
+/// `String` per attached part.
+pub const CHANNELS: &[crate::sim_input::InputChannel] = &[
+    ch("pressed", "Pressed"),
+    ch("obstacle", "Obstacle detected"),
+    ch("field", "Magnetic field"),
+    ch("vibration", "Vibration"),
+    ch("motion", "Motion detected"),
+    ch("touch", "Touched"),
+];
+
+/// One boolean contact channel: 0 released / absent, 1 asserted.
+const fn ch(key: &'static str, label: &'static str) -> crate::sim_input::InputChannel {
+    crate::sim_input::InputChannel {
+        key,
+        label,
+        unit: "bool",
+        min: 0.0,
+        max: 1.0,
+    }
+}
+
+/// Resolve a channel name to its entry, falling back to `pressed`.
+pub fn channel_or_pressed(name: Option<&str>) -> &'static crate::sim_input::InputChannel {
+    match name {
+        Some(n) => CHANNELS.iter().find(|c| c.key == n).unwrap_or(&CHANNELS[0]),
+        None => &CHANNELS[0],
+    }
+}
+
 impl Button {
     pub fn new(id: String, gpio: (u64, u8), active_high: bool) -> Self {
+        Self::with_channel(id, gpio, active_high, None)
+    }
+
+    /// A contact answering to a named channel (`obstacle`, `field`, ...).
+    /// Unknown names fall back to `pressed` rather than minting a channel the
+    /// discovery surface would report but nothing could drive.
+    pub fn with_channel(
+        id: String,
+        gpio: (u64, u8),
+        active_high: bool,
+        channel: Option<&str>,
+    ) -> Self {
         Self {
             id,
             gpio,
             active_high,
+            channel: channel_or_pressed(channel),
             pressed: false,
             last_high: None,
         }
@@ -118,15 +175,7 @@ impl Button {
 /// and reports each button under its `id` — same as the keypad and encoder.
 impl crate::sim_input::SimInput for Button {
     fn input_channels(&self) -> &'static [crate::sim_input::InputChannel] {
-        use crate::sim_input::InputChannel;
-        const CH: &[InputChannel] = &[InputChannel {
-            key: "pressed",
-            label: "Pressed",
-            unit: "bool",
-            min: 0.0,
-            max: 1.0,
-        }];
-        CH
+        std::slice::from_ref(self.channel)
     }
 
     fn set_input(&mut self, key: &str, value: f64) -> Result<(), crate::sim_input::SimInputError> {

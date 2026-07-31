@@ -1136,10 +1136,11 @@ impl SystemBus {
                 continue;
             };
             let anchor = self.peripherals[idx].base;
-            let mut button = crate::peripherals::components::button::Button::new(
+            let mut button = crate::peripherals::components::button::Button::with_channel(
                 binding.id.clone(),
                 (anchor, binding.pin),
                 binding.active_high,
+                binding.channel.as_deref(),
             );
 
             // Settle the released level NOW, before the firmware's first sample:

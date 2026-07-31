@@ -311,3 +311,80 @@ fn pressing_b1_flips_the_byte_the_l476_demo_prints() {
         "pressing B1 must make the firmware print BTN=1; got:\n{pressed}"
     );
 }
+
+// ---------------------------------------------------------------------------
+// Named channels: the same contact, the right word.
+//
+// A PIR, IR-obstacle, hall or vibration sensor is electrically a push button —
+// one pin asserting a digital level — so they share the Button model. Their
+// catalog entries name the channel (`motion`, `obstacle`, `field`,
+// `vibration`, `touch`), and the compiler stamps that name onto the board_io
+// binding. Without the stamp the catalog advertised `obstacle` while the engine
+// only answered to `pressed`, so a stimulus the TS layer accepted was rejected
+// by the engine — a vocabulary split across two layers.
+// ---------------------------------------------------------------------------
+
+/// An F103 with one active-high digital sensor on PC13 answering to `channel`.
+fn f103_with_named_contact(channel: &str) -> SystemBus {
+    let chip_path = workspace_root().join("configs/chips/stm32f103.yaml");
+    let chip = ChipDescriptor::from_file(&chip_path).expect("load stm32f103 chip");
+    let manifest_yaml = format!(
+        r#"
+name: "f103-sensor"
+chip: "{}"
+external_devices: []
+board_io:
+  - id: "sensor1"
+    kind: "button"
+    peripheral: "gpioc"
+    pin: 13
+    signal: "input"
+    active_high: true
+    channel: "{channel}"
+"#,
+        chip_path.display()
+    );
+    let manifest: SystemManifest = serde_yaml::from_str(&manifest_yaml).expect("parse manifest");
+    SystemBus::from_config(&chip, &manifest).expect("build bus")
+}
+
+#[test]
+fn a_named_contact_channel_is_discoverable_and_drivable() {
+    for channel in ["motion", "obstacle", "field", "vibration", "touch"] {
+        let mut bus = f103_with_named_contact(channel);
+        assert!(
+            bus.list_inputs()
+                .iter()
+                .any(|(owner, ch)| owner == "sensor1" && ch.key == channel),
+            "{channel} must be discoverable under its own name"
+        );
+        // Active-high: idle reads LOW, asserting drives the pin HIGH.
+        assert!(!pc13_high(&mut bus), "{channel}: idle reads LOW");
+        bus.set_input(Some("sensor1"), channel, 1.0)
+            .unwrap_or_else(|e| panic!("{channel} must be drivable: {e:?}"));
+        assert!(pc13_high(&mut bus), "{channel}: asserting drives the pin HIGH");
+        bus.set_input(Some("sensor1"), channel, 0.0).expect("clear");
+        assert!(!pc13_high(&mut bus), "{channel}: clearing returns the pin LOW");
+    }
+}
+
+/// A binding with no `channel` — every plain push button — still says `pressed`.
+#[test]
+fn an_unnamed_contact_still_answers_to_pressed() {
+    let mut bus = f103_with_button(false);
+    assert!(bus
+        .list_inputs()
+        .iter()
+        .any(|(_, ch)| ch.key == "pressed"));
+}
+
+/// An unknown channel name must NOT mint a channel nothing can drive: it falls
+/// back to `pressed` rather than being advertised and then failing on set.
+#[test]
+fn an_unknown_channel_name_falls_back_rather_than_advertising_a_dead_one() {
+    let mut bus = f103_with_named_contact("teleportation");
+    let keys: Vec<_> = bus.list_inputs().into_iter().map(|(_, c)| c.key).collect();
+    assert_eq!(keys, vec!["pressed"], "unknown name falls back to pressed");
+    bus.set_input(Some("sensor1"), "pressed", 1.0)
+        .expect("the fallback channel really works");
+}
