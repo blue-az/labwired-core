@@ -212,33 +212,16 @@ impl WasmSimulator {
             "esp_log_writev",
             "esp_random",
             "esp_fill_random",
-            // CHEAT(THUNK-LIB): the Arduino serial path is skipped wholesale.
-            // This is real fidelity debt, and the reason recorded here for a
-            // year was wrong in BOTH of its claims. For the next person:
-            //
-            //   • "getApbFrequency() returns 0 → divide-by-zero" — not true
-            //     since #110 (2026-05-25). peripherals/esp32/rtc_cntl.rs
-            //     pre-seeds RTC_APB_FREQ_REG with the 40 MHz encoding
-            //     (0x0050_0050) precisely so this probe answers.
-            //   • "we don't model UART output anyway" — not true either.
-            //     peripherals/esp32/uart.rs is a full UART: TX FIFO, baud-paced
-            //     drain, capture sink, and INT_TX_DONE asserted into the
-            //     interrupt matrix as source 34 (its own unit test proves it).
-            //
-            // So the obvious fix — delete these nops and let the real driver
-            // run — looks right and is NOT. Measured 2026-07-31 against
-            // demo-labwired-ereader.elf: with them removed the firmware stalls
-            // at ~123k cycles with the CPU parked in esp_pm_impl_waiti (the
-            // FreeRTOS idle task's WAITI), never reaching a panel refresh;
-            // with them in place the same ELF paints. Something in Arduino's
-            // uart bring-up blocks on an event the sim never delivers, and
-            // finding it is the actual work here — the missing piece is
-            // downstream of both models above, not either of them.
-            //
-            // Consequence to keep in mind meanwhile: Serial.print on this path
-            // is DISCARDED, so a serial oracle or UART acceptance can never
-            // pass on a classic-ESP32 board. That is documented for users on
-            // both boards in packages/board-config/src/boards.ts.
+            // The Arduino serial nops that used to sit here are GONE, and so
+            // is the fidelity debt they represented. They existed to dodge an
+            // Xtensa divide-by-zero in _get_effective_baudrate, whose real
+            // cause was an apb_ctrl read-as-ones stub shadowing the SYSCON
+            // model at the same base: SYSCLK_CONF read 0xFFFFFFFF, PRE_DIV_CNT
+            // came out 1023, and getApbFrequency() reported 78 kHz. Fixed in
+            // system/xtensa/esp32.rs by mapping apb_ctrl to its tail; the real
+            // HardwareSerial path now runs against the real UART model and
+            // demo-labwired-ereader.elf emits its own markers while still
+            // painting. See crates/core/tests/esp32_syscon_overlap.rs.
             "_Z14serialEventRunv",
             // vListInsert is NOT nop'd: with the fake FreeRTOS create functions
             // gone, real xQueueCreateMutex / scheduler code runs and depends on
