@@ -135,6 +135,23 @@ impl SystemBus {
     /// per-cycle tick genuinely has nothing left to do. Without the cache
     /// (hand-built buses) the per-tick register-read fallback is the only
     /// aggregation point, so it keeps the walk-era behaviour.
+    ///
+    /// `gpio_devices` counts as work. A bus-resident device (keypad, rotary
+    /// encoder, DHT22) DRIVES pins the firmware samples, and
+    /// `service_gpio_devices` — the pass that does the driving — lives inside
+    /// the phase-1 body this predicate skips. Omitting the check made those
+    /// devices silently inert on every walk-deleted bus: attach succeeded,
+    /// `list_inputs` advertised the channel, `set_input` returned Ok, and the
+    /// pin never moved. Walk deletion is a performance decision about
+    /// peripheral ORCHESTRATION; a device driving a pin is not orchestration,
+    /// and no fast path may decide it stops existing.
+    ///
+    /// The cost is bounded: only buses that actually host such a device give up
+    /// the fast path, and `service_gpio_devices` early-outs on an empty list,
+    /// so a bus without one is unaffected. Buttons deliberately do NOT rely on
+    /// this — a contact level changes only when something drives it, so it is
+    /// applied at the stimulus point (`sync_button_inputs`) and a button alone
+    /// never costs a bus its fast path.
     #[cfg(feature = "event-scheduler")]
     #[inline]
     pub(crate) fn per_cycle_tick_is_trivial(&self) -> bool {
@@ -146,7 +163,27 @@ impl SystemBus {
             && self.can_diagnostic_testers.is_empty()
             && self.can_uds_testers.is_empty()
             && self.can_log_players.is_empty()
+            && self.no_gpio_device_needs_service()
             && (self.hcsr04.is_empty() || self.hcsr04_event_scheduled())
+    }
+
+    /// Whether NO attached bus-resident device needs the per-cycle service pass
+    /// — i.e. skipping [`service_gpio_devices`](Self::service_gpio_devices)
+    /// changes nothing observable.
+    ///
+    /// A [`Button`](crate::peripherals::components::button::Button) is exempt:
+    /// its level is applied when the contact is driven, not per cycle, so a
+    /// canvas that adds a push button keeps the walk-free fast path. Every
+    /// other device is scanned or sampled per tick and does need it.
+    ///
+    /// Vacuously true on an empty list, which is what preserves the fast path
+    /// for the overwhelmingly common bus that hosts no such device at all.
+    #[cfg(feature = "event-scheduler")]
+    #[inline]
+    fn no_gpio_device_needs_service(&self) -> bool {
+        self.gpio_devices
+            .iter()
+            .all(|d| d.is_level_driven_on_stimulus())
     }
 
     /// True when an IO-Link master peer is attached to any UART. The master is
