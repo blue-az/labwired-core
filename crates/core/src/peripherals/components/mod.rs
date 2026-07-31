@@ -47,6 +47,12 @@ pub mod mlx90614;
 pub mod mlx90640;
 pub mod mpu6050;
 pub mod mq6;
+/// Shared fixture for the per-controller TCA9548A coverage tests. Each I²C
+/// controller family exercises the switch from its OWN test module (the
+/// register offsets and command opcodes are private there), so the switch
+/// topology under test lives here rather than being copied six times.
+#[cfg(test)]
+pub(crate) mod mux_fixture;
 pub mod neo6m;
 pub mod nrf24l01;
 pub mod ntc_thermistor;

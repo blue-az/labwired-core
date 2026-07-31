@@ -2370,6 +2370,298 @@ mod tests {
             .iter()
             .any(|e| matches!(&e.payload, BusPayload::I2c { byte, .. } if *byte == 0xAF)));
     }
+
+    // ── TCA9548A driven through the STM32L4 and Kinetis controllers ─────────
+    //
+    // `tests/i2c_mux_tca9548a.rs` proves the switch works through the STM32F1
+    // legacy peripheral. The L4 and Kinetis engines are separate state machines
+    // in this file with their own address-resolution sites, and both got the
+    // `claims_address` / `select_address` change without any switch ever being
+    // driven through them. These two modules close that.
+    mod mux_stm32l4 {
+        use super::super::{I2c, I2cRegisterLayout};
+        use crate::peripherals::components::mux_fixture::{
+            bytes_written_to, mux_with_tags, tag_for, MUX_ADDR, SENSOR_ADDR,
+        };
+        use crate::peripherals::components::tca9548a::Tca9548a;
+        use crate::Peripheral;
+
+        /// ICR.NACKCF (bit 4) + STOPCF (bit 5): clear the previous transfer's
+        /// verdict so this one's NACKF assertion is about this one.
+        fn clear_flags(i2c: &mut I2c) {
+            i2c.write(0x1C, (1 << 4) | (1 << 5)).unwrap();
+        }
+
+        /// Did the last address phase NACK? ISR.NACKF is bit 4.
+        fn nacked(i2c: &I2c) -> bool {
+            i2c.peek(0x18).unwrap() & (1 << 4) != 0
+        }
+
+        /// One-byte master write (NBYTES=1 + AUTOEND), settled.
+        fn write_one(i2c: &mut I2c, addr: u8, byte: u8) {
+            clear_flags(i2c);
+            super::l4_write_xfer(i2c, addr, byte);
+            super::l4_settle(i2c);
+        }
+
+        /// One-byte master read (RD_WRN + NBYTES=1 + AUTOEND), settled. The
+        /// byte lands in RXDR when the address phase ACKs.
+        fn read_one(i2c: &mut I2c, addr: u8) -> u8 {
+            clear_flags(i2c);
+            i2c.write(0x00, 1).unwrap(); // CR1.PE
+            let cr2: u32 = ((addr as u32) << 1)
+                | (1 << 10)  // RD_WRN
+                | (1 << 16)  // NBYTES = 1
+                | (1 << 25)  // AUTOEND
+                | (1 << 13); // START
+            i2c.write_u32(0x04, cr2).unwrap();
+            super::l4_settle(i2c);
+            i2c.read(0x24).unwrap() // RXDR
+        }
+
+        /// Address-only probe (NBYTES=0): ACK/NACK with no data phase.
+        fn probe_acked(i2c: &mut I2c, addr: u8) -> bool {
+            clear_flags(i2c);
+            super::l4_addr_probe(i2c, addr);
+            super::l4_settle(i2c);
+            !nacked(i2c)
+        }
+
+        fn bus() -> I2c {
+            let mut i2c = I2c::new_with_layout(I2cRegisterLayout::Stm32L4);
+            let trace = crate::bus::bus_trace::new_log();
+            i2c.attach_traced("i2c1", &trace, Box::new(mux_with_tags(4)));
+            i2c
+        }
+
+        /// Borrow the switch back out of the controller.
+        fn with_mux<R>(i2c: &I2c, f: impl FnOnce(&Tca9548a) -> R) -> R {
+            let cell = &i2c.attached_devices()[0];
+            let traced = cell.borrow();
+            let mux = traced
+                .as_any()
+                .and_then(|a| a.downcast_ref::<Tca9548a>())
+                .expect("slave 0 is the switch");
+            f(mux)
+        }
+
+        /// THE promise: four sensors that cannot be re-addressed, each reached
+        /// independently through the L4 engine's own address resolution.
+        #[test]
+        fn four_sensors_at_one_address_answer_independently() {
+            let mut i2c = bus();
+            for ch in 0..4u8 {
+                write_one(&mut i2c, MUX_ADDR, 1 << ch);
+                assert_eq!(
+                    read_one(&mut i2c, SENSOR_ADDR),
+                    tag_for(ch),
+                    "channel {ch} must be answered by the sensor wired to it"
+                );
+            }
+        }
+
+        /// Out-of-order selection: a controller that resolved the address once
+        /// and cached it would keep answering with the first channel's sensor.
+        #[test]
+        fn switching_channels_changes_which_sensor_answers() {
+            let mut i2c = bus();
+            for ch in [2u8, 0, 3, 1, 3, 0] {
+                write_one(&mut i2c, MUX_ADDR, 1 << ch);
+                assert_eq!(read_one(&mut i2c, SENSOR_ADDR), tag_for(ch), "channel {ch}");
+            }
+        }
+
+        #[test]
+        fn control_register_reads_back_over_the_bus() {
+            let mut i2c = bus();
+            write_one(&mut i2c, MUX_ADDR, 0b0000_1010);
+            assert!(
+                probe_acked(&mut i2c, MUX_ADDR),
+                "the switch must ACK its own address"
+            );
+            // No register pointer on the TCA9548A: a plain read returns the
+            // control register.
+            assert_eq!(read_one(&mut i2c, MUX_ADDR), 0b0000_1010);
+        }
+
+        #[test]
+        fn a_sensor_on_a_disabled_channel_does_not_answer() {
+            let mut i2c = bus();
+
+            // Reset state: every channel isolated.
+            assert!(
+                !probe_acked(&mut i2c, SENSOR_ADDR),
+                "with all channels disabled the sensor address must NACK, exactly \
+                 as an empty bus does"
+            );
+
+            // Enable channel 1 only — 0x13 answers, and with channel 1's tag.
+            write_one(&mut i2c, MUX_ADDR, 1 << 1);
+            assert!(probe_acked(&mut i2c, SENSOR_ADDR));
+            assert_eq!(read_one(&mut i2c, SENSOR_ADDR), tag_for(1));
+
+            // Isolate again: it stops answering.
+            write_one(&mut i2c, MUX_ADDR, 0x00);
+            assert!(
+                !probe_acked(&mut i2c, SENSOR_ADDR),
+                "re-isolating the switch must take the sensor off the bus again"
+            );
+        }
+
+        /// A data byte addressed to the sensor must reach the SELECTED
+        /// channel's device and no other.
+        #[test]
+        fn a_write_reaches_only_the_selected_channel() {
+            let mut i2c = bus();
+            write_one(&mut i2c, MUX_ADDR, 1 << 2);
+            write_one(&mut i2c, SENSOR_ADDR, 0x5A);
+
+            with_mux(&i2c, |mux| {
+                assert_eq!(bytes_written_to(mux, 2), vec![0x5A]);
+                for ch in [0u8, 1, 3] {
+                    assert!(
+                        bytes_written_to(mux, ch).is_empty(),
+                        "channel {ch} is isolated and must receive nothing"
+                    );
+                }
+            });
+        }
+    }
+
+    mod mux_kinetis {
+        use super::super::{I2c, I2cRegisterLayout, KI_C1_MST, KI_C1_TX, KI_S_RXAK};
+        use crate::peripherals::components::mux_fixture::{
+            bytes_written_to, mux_with_tags, tag_for, MUX_ADDR, SENSOR_ADDR,
+        };
+        use crate::peripherals::components::tca9548a::Tca9548a;
+        use crate::Peripheral;
+
+        const REG_C1: u64 = 0x02;
+        const REG_S: u64 = 0x03;
+        const REG_D: u64 = 0x04;
+
+        /// Did the slave ACK the most recent byte? S.RXAK is set on NAK.
+        fn acked(i2c: &I2c) -> bool {
+            i2c.peek(REG_S).unwrap() & KI_S_RXAK == 0
+        }
+
+        /// START + address(W) + one data byte + STOP, the fsl_i2c byte-at-a-time
+        /// master-transmit shape.
+        fn write_one(i2c: &mut I2c, addr: u8, byte: u8) {
+            i2c.write(REG_C1, KI_C1_MST | KI_C1_TX).unwrap(); // START
+            i2c.write(REG_D, addr << 1).unwrap(); // address + W
+            i2c.write(REG_D, byte).unwrap();
+            i2c.write(REG_C1, KI_C1_TX).unwrap(); // STOP (MST 1→0)
+        }
+
+        /// START + address(R), enter master-receive (the HAL's bus-release dummy
+        /// read), then clock one real byte out.
+        fn read_one(i2c: &mut I2c, addr: u8) -> u8 {
+            i2c.write(REG_C1, KI_C1_MST | KI_C1_TX).unwrap(); // START
+            i2c.write(REG_D, (addr << 1) | 1).unwrap(); // address + R
+            i2c.write(REG_C1, KI_C1_MST).unwrap(); // TX 1→0: enter RX
+            let _dummy = i2c.read(REG_D).unwrap(); // HAL bus-release read
+            let byte = i2c.read(REG_D).unwrap();
+            i2c.write(REG_C1, KI_C1_TX).unwrap(); // STOP
+            byte
+        }
+
+        /// START + address(W) only: did anything on the bus ACK?
+        fn probe_acked(i2c: &mut I2c, addr: u8) -> bool {
+            i2c.write(REG_C1, KI_C1_MST | KI_C1_TX).unwrap();
+            i2c.write(REG_D, addr << 1).unwrap();
+            let ack = acked(i2c);
+            i2c.write(REG_C1, KI_C1_TX).unwrap(); // STOP
+            ack
+        }
+
+        fn bus() -> I2c {
+            let mut i2c = I2c::new_with_layout(I2cRegisterLayout::Kinetis);
+            let trace = crate::bus::bus_trace::new_log();
+            i2c.attach_traced("i2c0", &trace, Box::new(mux_with_tags(4)));
+            i2c
+        }
+
+        fn with_mux<R>(i2c: &I2c, f: impl FnOnce(&Tca9548a) -> R) -> R {
+            let cell = &i2c.attached_devices()[0];
+            let traced = cell.borrow();
+            let mux = traced
+                .as_any()
+                .and_then(|a| a.downcast_ref::<Tca9548a>())
+                .expect("slave 0 is the switch");
+            f(mux)
+        }
+
+        #[test]
+        fn four_sensors_at_one_address_answer_independently() {
+            let mut i2c = bus();
+            for ch in 0..4u8 {
+                write_one(&mut i2c, MUX_ADDR, 1 << ch);
+                assert_eq!(
+                    read_one(&mut i2c, SENSOR_ADDR),
+                    tag_for(ch),
+                    "channel {ch} must be answered by the sensor wired to it"
+                );
+            }
+        }
+
+        #[test]
+        fn switching_channels_changes_which_sensor_answers() {
+            let mut i2c = bus();
+            for ch in [2u8, 0, 3, 1, 3, 0] {
+                write_one(&mut i2c, MUX_ADDR, 1 << ch);
+                assert_eq!(read_one(&mut i2c, SENSOR_ADDR), tag_for(ch), "channel {ch}");
+            }
+        }
+
+        #[test]
+        fn control_register_reads_back_over_the_bus() {
+            let mut i2c = bus();
+            write_one(&mut i2c, MUX_ADDR, 0b0000_1010);
+            assert!(
+                probe_acked(&mut i2c, MUX_ADDR),
+                "the switch must ACK its own address"
+            );
+            assert_eq!(read_one(&mut i2c, MUX_ADDR), 0b0000_1010);
+        }
+
+        #[test]
+        fn a_sensor_on_a_disabled_channel_does_not_answer() {
+            let mut i2c = bus();
+            assert!(
+                !probe_acked(&mut i2c, SENSOR_ADDR),
+                "with all channels disabled the sensor address must NAK (S.RXAK), \
+                 exactly as an empty bus does"
+            );
+
+            write_one(&mut i2c, MUX_ADDR, 1 << 1);
+            assert!(probe_acked(&mut i2c, SENSOR_ADDR));
+            assert_eq!(read_one(&mut i2c, SENSOR_ADDR), tag_for(1));
+
+            write_one(&mut i2c, MUX_ADDR, 0x00);
+            assert!(
+                !probe_acked(&mut i2c, SENSOR_ADDR),
+                "re-isolating the switch must take the sensor off the bus again"
+            );
+        }
+
+        #[test]
+        fn a_write_reaches_only_the_selected_channel() {
+            let mut i2c = bus();
+            write_one(&mut i2c, MUX_ADDR, 1 << 2);
+            write_one(&mut i2c, SENSOR_ADDR, 0x5A);
+
+            with_mux(&i2c, |mux| {
+                assert_eq!(bytes_written_to(mux, 2), vec![0x5A]);
+                for ch in [0u8, 1, 3] {
+                    assert!(
+                        bytes_written_to(mux, ch).is_empty(),
+                        "channel {ch} is isolated and must receive nothing"
+                    );
+                }
+            });
+        }
+    }
 }
 
 // ── Walk-free (batch B4) differential: Kinetis level-IRQ walk vs scheduler ────
