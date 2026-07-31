@@ -1,17 +1,16 @@
-// PING PONG — Player B (the screen)
-// ---------------------------------
-// Returns every ball the other board serves, and draws the match on a 128x64
-// SSD1306: a ball bouncing between two paddles, the live rally count, and the
-// best rally so far.
+// Ping Pong - Player B
+//
+// Returns every ball the other board sends, and draws the match on a 128x64
+// SSD1306: a ball between two paddles, the current rally, and the best so far.
 //
 // Wiring:
-//   B GPIO7 (RX) <--- A GPIO6 (TX)      the link
+//   B GPIO7 (RX) <--- A GPIO6 (TX)
 //   B GPIO6 (TX) ---> A GPIO7 (RX)
 //   B GND        ---- A GND
 //   OLED SDA -> GPIO4, SCL -> GPIO5, VCC -> 3V3, GND -> GND
 //
-// The OLED is driven with plain Wire writes and a local framebuffer, so this
-// sketch has no library dependencies to install.
+// The OLED is driven with plain Wire writes into a local framebuffer, so there
+// are no libraries to install.
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -76,8 +75,7 @@ static void fillRect(int x, int y, int w, int h) {
     for (int dx = 0; dx < w; dx++) pset(x + dx, y + dy);
 }
 
-// 5x7 digits, one column per byte. Only digits are needed, so the table stays
-// small enough to read.
+// 5x7 digits, one column per byte. Only digits are needed here.
 static const uint8_t DIGITS[10][5] = {
   {0x3E,0x51,0x49,0x45,0x3E}, {0x00,0x42,0x7F,0x40,0x00},
   {0x42,0x61,0x51,0x49,0x46}, {0x21,0x41,0x45,0x4B,0x31},
@@ -108,12 +106,12 @@ static void drawNumber(int x, int y, uint32_t n, int scale) {
 static void render() {
   memset(fb, 0, sizeof(fb));
 
-  // Two paddles and the ball between them - the match itself.
+  // Two paddles with the ball between them.
   fillRect(2, 20, 3, 20);
   fillRect(SCREEN_W - 5, 20, 3, 20);
   fillRect(ballX, 28, 4, 4);
 
-  // Live rally, large. Best rally, small, bottom-right.
+  // Current rally, big. Best rally, small, bottom right.
   drawNumber(44, 4, rally, 2);
   drawNumber(96, 52, longest, 1);
 
@@ -140,11 +138,11 @@ void loop() {
     if (c == '\n') {
       inbox[filled] = '\0';
       if (strcmp(inbox, "PING") == 0) {
-        Serial1.print("PONG\n");   // return the ball
+        Serial1.print("PONG\n");   // send it back
         rally++;
         if (rally > longest) longest = rally;
-        // Step the ball so the screen animates in time with the real rally
-        // rather than on a timer of its own.
+        // Move the ball on each one received, so the picture follows the
+        // real rally instead of its own timer.
         ballX += ballDir * 6;
         if (ballX > SCREEN_W - 12) ballDir = -1;
         if (ballX < 8) ballDir = 1;

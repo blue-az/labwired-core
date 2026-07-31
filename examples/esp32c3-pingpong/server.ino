@@ -1,16 +1,17 @@
-// PING PONG — Player A (the server)
-// ---------------------------------
-// Two ESP32-C3s rally a "ball" back and forth over a plain serial wire, with
-// no host, no WiFi, and no coordinator. This board serves; the other board
-// returns and draws the match on its OLED.
+// Ping Pong - Player A
 //
-// Wiring (cross-connected, TX to RX both ways):
+// Serves a ball to the other board over a serial wire and counts the rally.
+// The other board returns it and draws it on an OLED.
+//
+// Wiring (TX to RX both ways, plus a shared ground):
 //   A GPIO6 (TX) ---> B GPIO7 (RX)
 //   A GPIO7 (RX) <--- B GPIO6 (TX)
-//   A GND        ---- B GND        <- shared ground, or neither side sees a byte
+//   A GND        ---- B GND
 //
-// The rally is self-sustaining: every PONG that comes back is immediately
-// answered with the next PING, so the two boards keep each other running.
+// Without the ground wire neither board sees a byte.
+//
+// Every PONG that comes back is answered with the next PING, so the two boards
+// keep each other going.
 
 #include <Arduino.h>
 
@@ -18,8 +19,8 @@ static constexpr int PIN_LINK_TX = 6;
 static constexpr int PIN_LINK_RX = 7;
 static constexpr uint32_t LINK_BAUD = 115200;
 
-// If a return never arrives the rally is dead; serve a fresh ball rather than
-// waiting forever, so unplugging one board and plugging it back in recovers.
+// If a return never comes back the rally is over. Serve a new ball instead of
+// waiting forever, so pulling a wire and putting it back recovers on its own.
 static constexpr uint32_t RETURN_TIMEOUT_MS = 1000;
 
 static uint32_t rally = 0;      // consecutive successful returns
@@ -35,8 +36,8 @@ static void serve() {
 
 void setup() {
   Serial.begin(115200);
-  // Serial1 is the inter-board link. Serial (UART0) stays the USB console, so
-  // the rally traffic and the commentary never share a wire.
+  // Serial1 is the link to the other board. Serial stays on USB for messages
+  // you read on a laptop, so the two never mix.
   Serial1.begin(LINK_BAUD, SERIAL_8N1, PIN_LINK_RX, PIN_LINK_TX);
   Serial.println("Player A ready - serving");
   serve();
@@ -55,7 +56,7 @@ void loop() {
         if (rally > longest) longest = rally;
         Serial.print("rally ");
         Serial.println(rally);
-        serve();  // returned - keep the ball moving
+        serve();  // came back, send it again
       }
       filled = 0;
     } else if (filled < sizeof(inbox) - 1) {

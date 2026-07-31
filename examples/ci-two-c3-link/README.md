@@ -1,23 +1,22 @@
-# Engine fixture: two ESP32-C3s on one UART wire
+# Test fixture: two ESP32-C3s on one UART wire
 
-The smallest thing that proves cross-chip serial works on a GPIO-matrix chip.
-Two independent C3 nodes, cross-linked on UART1, exchanging `PING` / `PONG`.
+Two C3 nodes cross-linked on UART1, sending `PING` and `PONG`. This is what CI
+runs to check that cross-chip serial works on a chip with a GPIO matrix.
 
-This is a **test fixture, not a lab**. The user-facing version — Arduino, with
-the rally drawn on an OLED — is `examples/esp32c3-pingpong`.
+It is a fixture, not a lab. The version people are meant to read and build is
+`examples/esp32c3-pingpong`, which is Arduino and draws the rally on an OLED.
 
-It exists separately because CI must be able to run it with nothing installed:
-the firmware is bare-metal Rust for `riscv32imc-unknown-none-elf`, a target that
-ships with stock rustup. No Espressif toolchain, no ESP-IDF, no PlatformIO
-builder, no network. The Arduino sketches cannot meet that bar, because
-compiling them needs the hosted builder.
+It is separate because CI has to build it with nothing installed. The firmware is
+bare-metal Rust for `riscv32imc-unknown-none-elf`, a target that comes with
+rustup. No Espressif toolchain, no ESP-IDF, no PlatformIO, no network. The
+Arduino sketches cannot meet that, since compiling them needs the hosted builder.
 
-Bare-metal is also the point: the firmware writes the C3's UART registers
-directly, so a regression in the `esp_uart` model surfaces here instead of being
-absorbed by a HAL.
+Bare-metal is also deliberate. The firmware writes the C3's UART registers
+directly, so if the `esp_uart` model breaks, this test catches it instead of a
+HAL hiding the problem.
 
 ```
 cargo build --release          # writes firmware/{server,client}.elf
 ```
 
-The assertions live in `crates/core/tests/world_esp32c3_pingpong.rs`.
+The assertions are in `crates/core/tests/world_esp32c3_pingpong.rs`.

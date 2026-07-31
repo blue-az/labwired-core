@@ -1,17 +1,16 @@
-# Ping Pong — two ESP32-C3s, one screen
+# Ping Pong
 
-Two boards rally a ball back and forth over a plain serial wire. No host, no
-WiFi, no coordinator: each board keeps the other running. The second board draws
-the match on a 128x64 OLED — ball, paddles, live rally count, best rally.
+Two ESP32-C3 boards throw a ball back and forth over a serial wire. The second
+board has an OLED and draws the match.
 
-Both sketches are ordinary Arduino. The only library is `Wire`, which ships with
-the ESP32 core, so there is nothing to install.
+There is no host and no master. Each board only reacts to the other one, so if
+you pull a wire the ball stops moving.
 
 ## Wiring
 
-Cross the serial link (each board's TX to the other's RX) and **share ground** —
-without a common ground neither board sees a byte, which is the single most
-common way this fails on a desk.
+Cross the link (each board's TX goes to the other's RX) and connect the grounds.
+If you skip the ground wire, neither board sees a single byte. That is the most
+common way this fails.
 
 ```
   Player A                    Player B (+ OLED)
@@ -25,50 +24,50 @@ common way this fails on a desk.
                                OLED GND -> GND
 ```
 
-`Serial1` is the link; `Serial` (UART0) stays the USB console on both boards, so
-rally traffic never collides with the messages you read over USB.
+`Serial1` is the link between the boards. `Serial` (over USB) stays free for
+messages you read on your laptop, so the two never collide.
 
 ## Flashing
 
-| Board | Sketch |
-|---|---|
-| Player A (server) | `server.ino` |
-| Player B (screen) | `screen.ino` |
+Player A gets `server.ino`. Player B gets `screen.ino`.
 
-Order does not matter. Player A serves immediately and re-serves after a
-one-second timeout, so whichever board boots second simply joins the rally.
+Order does not matter. Player A serves right away and serves again after a
+second of silence, so whichever board boots later just joins in.
 
-## What to expect
+## What you should see
 
-Player A's console counts rallies; Player B's counts returns and the OLED
-animates one step per received ball — the picture is driven by the actual rally,
-not by a timer, so if the link breaks the ball stops moving.
+Player A counts rallies over USB. Player B counts returns. The ball on the OLED
+moves one step per ball received, so the picture tracks the real rally instead of
+running on its own timer.
 
-Pull the link wire and Player A reports `missed - rally ended at N`, then serves
-again. Reconnect and the rally resumes.
+Pull the link wire out. Player A prints `missed - rally ended at N` and serves
+again. Plug it back in and the rally picks up.
 
-## Ideas to fork
+## Libraries
 
-- Make it a real game: drop the ball if a return takes too long, and keep score.
-- Add a button so a human can serve.
-- Three boards in a ring, passing the ball on.
-- Print the rally over USB and plot it on a host.
+None. The OLED is driven with plain `Wire` writes into a local framebuffer, so
+there is nothing to install.
 
-## Verified
+## Ideas
 
-Both sketches compile on the hosted ESP32 toolchain (Arduino profile, no library
-deps). `screen.ino` was run in the twin against a wired SSD1306: it boots through
-the real C3 mask ROM and 2nd-stage bootloader, initialises the panel, renders,
-and prints `Player B ready - returning`. The panel is genuinely painted —
-framebuffer readback reports 128x64, 231 lit pixels — rather than the draw code
-merely executing.
+- Keep score: drop the ball if a return takes too long.
+- Add a button so a person serves.
+- Three boards in a ring passing the ball on.
+- Send the rally count over USB and plot it.
 
-Note the C3's ROM boot consumes most of a default step budget on its own, so a
-hosted run needs `max_steps` well above the default or it stops mid-boot and is
-misreported as an infinite loop.
+## What has been tested
 
-**Not yet verified:** the two boards rallying *together* in the hosted twin. The
-hosted run path is still single-MCU, so it can only boot one of these sketches at
-a time. The link itself is proven at engine level by
-`crates/core/tests/world_esp32c3_pingpong.rs`, and on real hardware the pair is
-just two boards and three wires.
+Both sketches compile on the hosted ESP32 toolchain.
+
+`screen.ino` was run in the simulator with an OLED wired up. It boots through the
+real C3 ROM, sets up the panel, draws, and prints its banner. Reading the panel
+back shows 231 lit pixels on a 128x64 screen, so it really did draw rather than
+just running the drawing code.
+
+The two boards have not been run together in the hosted simulator, because that
+path only boots one chip at a time. The wire itself is covered by
+`crates/core/tests/world_esp32c3_pingpong.rs`.
+
+One thing worth knowing if you run this yourself: the C3's ROM boot uses up most
+of a default step budget before your sketch starts. Give it a bigger budget or
+the run stops during boot and reports an infinite loop that is not there.
