@@ -1072,6 +1072,28 @@ pub struct I2cSpec {
     /// target register completes. Applies to the `registers:` (wide) mode.
     #[serde(default)]
     pub updates: Vec<UpdateRule>,
+    /// **Register-pointer auto-increment**: the pointer walks one BYTE per byte
+    /// read, so a master can read a contiguous block in one transaction.
+    /// Applies to the `registers:` (wide) mode. Default false, which keeps every
+    /// device written before this existed byte-identical — without it a read
+    /// past the pointed register's width returns `0xFF` forever.
+    ///
+    /// Byte-wise rather than register-wise deliberately. ST's VL53L0X API reads
+    /// a 12-byte block starting at `RESULT_RANGE_STATUS` (0x14) to reach the
+    /// range bytes at 0x1E, crossing both declared registers and addresses this
+    /// model does not declare. Advancing by whole registers would land on the
+    /// wrong byte the moment a gap or a 2-byte register appears in the span.
+    #[serde(default)]
+    pub auto_increment: bool,
+    /// Byte returned for an address inside an auto-increment block that no
+    /// declared register covers. Absent ⇒ `0xFF`, matching what a non-
+    /// auto-incrementing device already returns past the end of a register.
+    ///
+    /// Real parts differ and the difference is observable: a driver may block-read
+    /// across reserved addresses and compare. Set it to what the part actually
+    /// drives rather than accepting the default by omission.
+    #[serde(default)]
+    pub unmapped_byte: Option<u8>,
     /// Engineering-unit values derived from the register file, readable by Rust
     /// consumers/tests through the engine's `observable()` API (e.g. the PCA9685
     /// `servo_angle` per channel). Applies to the `register_file:` mode.
@@ -1136,6 +1158,22 @@ pub struct DataReady {
     /// once the conversion completes.
     #[serde(default)]
     pub clear_on_read: Vec<String>,
+    /// Registers whose WRITE clears the status bit — the write-1-to-clear
+    /// interrupt idiom.
+    ///
+    /// Distinct from `clear_on_read` because the parts differ on which event
+    /// clears: the VCNL4010 clears when the result register is read, while the
+    /// VL53L0X keeps its interrupt asserted until firmware writes
+    /// `SYSTEM_INTERRUPT_CLEAR` — reading the range does NOT clear it. Modelling
+    /// the second as the first would let a driver that never writes the clear
+    /// register appear to work, which is precisely the bug class a faithful
+    /// twin exists to catch.
+    ///
+    /// Any write to a named register clears, regardless of value: the datasheet
+    /// idiom is "write anything to acknowledge", and a value-matched variant
+    /// would be a guess about which encoding a given part uses.
+    #[serde(default)]
+    pub clear_on_write: Vec<String>,
 }
 
 /// **Byte-addressable register file** for the `register_file` I²C mode: `size`
@@ -1747,6 +1785,7 @@ pub fn embedded_device_yaml(device_type: &str) -> Option<&'static str> {
         "tmp102" => Some(include_str!("../../../configs/devices/tmp102.yaml")),
         "pca9685" => Some(include_str!("../../../configs/devices/pca9685.yaml")),
         "vcnl4010" => Some(include_str!("../../../configs/devices/vcnl4010.yaml")),
+        "vl53l0x" => Some(include_str!("../../../configs/devices/vl53l0x.yaml")),
         _ => None,
     }
 }

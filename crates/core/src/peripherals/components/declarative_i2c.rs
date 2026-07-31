@@ -140,6 +140,12 @@ pub struct GenericI2cDevice {
     reg_pointer_mask: u8,
     /// Register-pointer-mode self-driving update rules (e.g. TMP102 drift).
     updates: Vec<UpdateRule>,
+    /// Register-pointer-mode byte-wise pointer auto-increment. False ⇒ the
+    /// pointer latches one register and reads past its width return 0xFF, which
+    /// is what every device written before this behaved like.
+    reg_auto_increment: bool,
+    /// Byte driven for an auto-increment address no register covers.
+    reg_unmapped_byte: u8,
 
     /// **Byte-addressable register-file** mode state. `Some` ⇒ this device is a
     /// register-file device (PCA9685-style); the register/command fields above
@@ -237,6 +243,8 @@ impl GenericI2cDevice {
             data_ready: spec.data_ready.clone(),
             reg_pointer_mask: spec.pointer_mask.unwrap_or(0xFF),
             updates: spec.updates.clone(),
+            reg_auto_increment: spec.auto_increment,
+            reg_unmapped_byte: spec.unmapped_byte.unwrap_or(0xFF),
             file,
             file_pointer: 0,
             file_writes_since_frame: 0,
@@ -407,6 +415,54 @@ impl GenericI2cDevice {
         self.registers.iter().find(|r| r.addr == addr)
     }
 
+    /// The register whose byte span COVERS `addr`, not just the one that starts
+    /// there. Only auto-increment needs this: without it, walking into the
+    /// second byte of a 2-byte register would look unmapped.
+    fn register_covering(&self, addr: u8) -> Option<&I2cRegister> {
+        self.registers
+            .iter()
+            .find(|r| addr >= r.addr && u16::from(addr) < u16::from(r.addr) + u16::from(r.width))
+    }
+
+    /// One byte of the address space, as auto-increment reads it: the byte the
+    /// covering register drives (status overlay included), or `unmapped_byte`.
+    ///
+    /// When `addr` is the register's LAST byte, also returns its name and START
+    /// address — the two things a post-word side effect needs. A mid-word byte
+    /// reports `None` so clears and updates fire once per word, not per byte.
+    fn byte_at(&self, addr: u8) -> (u8, Option<(String, u8)>) {
+        let Some(reg) = self.register_covering(addr) else {
+            return (self.reg_unmapped_byte, None);
+        };
+        let raw = register_read_bytes(reg, &self.slots, &self.reg_values);
+        let overlay = self.ready_overlay(&reg.name);
+        let bytes = if overlay == 0 {
+            raw
+        } else {
+            pack(unpack(&raw, reg.endian) | overlay, reg.width, reg.endian)
+        };
+        let idx = usize::from(addr - reg.addr);
+        let byte = bytes.get(idx).copied().unwrap_or(self.reg_unmapped_byte);
+        let done = idx + 1 == usize::from(reg.width);
+        (byte, done.then(|| (reg.name.clone(), reg.addr)))
+    }
+
+    /// Write-1-to-clear: any write to a named register drops the ready bit.
+    fn clear_on_write(&mut self, register: &str) {
+        for i in 0..self.data_ready.len() {
+            if !self.data_ready[i]
+                .clear_on_write
+                .iter()
+                .any(|n| n == register)
+            {
+                continue;
+            }
+            if matches!(self.dr_state[i], DataReadyState::Ready) {
+                self.dr_state[i] = DataReadyState::Idle;
+            }
+        }
+    }
+
     fn find_command(&self, code: u16) -> Option<&I2cCommand> {
         self.commands.iter().find(|c| c.code == code)
     }
@@ -547,6 +603,11 @@ impl I2cDevice for GenericI2cDevice {
         };
         self.reg_values.insert(name.clone(), stored);
         if !self.data_ready.is_empty() {
+            // Acknowledge first, then start: a part whose start and clear
+            // registers are the same would otherwise clear the conversion it
+            // just started. Ordering it this way makes "write 1 to clear, then
+            // write 1 to start" behave like the two operations it is.
+            self.clear_on_write(&name);
             self.start_conversions(&name, stored);
         }
     }
@@ -571,6 +632,31 @@ impl I2cDevice for GenericI2cDevice {
             }
             let byte = self.read_buf.get(self.read_idx).copied().unwrap_or(0xFF);
             self.read_idx += 1;
+            return byte;
+        }
+        // Register mode with byte-wise auto-increment: every read drives the
+        // byte at the pointer and walks it, so a master can pull a contiguous
+        // block in one transaction. No latch — the pointer IS the cursor.
+        if self.reg_auto_increment {
+            if !self.data_ready.is_empty() {
+                self.tick_data_ready();
+            }
+            let addr = self.pointer.unwrap_or(0);
+            let (byte, hit) = self.byte_at(addr);
+            self.pointer = Some(addr.wrapping_add(1));
+            // Clear only once the whole word has been delivered: clearing on the
+            // first byte of a 2-byte result would drop the flag while the master
+            // is still mid-read. Same reason the self-driving updates fire here
+            // and are keyed on the register's START address, which is what
+            // `apply_read_complete_updates` matches a trigger against.
+            if let Some((name, start)) = hit {
+                if !self.data_ready.is_empty() {
+                    self.clear_on_read(&name);
+                }
+                if !self.updates.is_empty() {
+                    self.apply_read_complete_updates(start);
+                }
+            }
             return byte;
         }
         // Register mode: latch the pointed register's bytes on the first read.
@@ -711,6 +797,24 @@ fn validate_spec(spec: &I2cSpec) -> Result<()> {
             if !spec.registers.iter().any(|r| &r.name == name) {
                 bail!(
                     "data_ready '{}' clear_on_read '{name}' is not a declared register",
+                    dr.name
+                );
+            }
+        }
+        for name in &dr.clear_on_write {
+            let Some(reg) = spec.registers.iter().find(|r| &r.name == name) else {
+                bail!(
+                    "data_ready '{}' clear_on_write '{name}' is not a declared register",
+                    dr.name
+                );
+            };
+            // A read-only register can never be written, so the clear could
+            // never fire and firmware would hang on a flag that stays set —
+            // the same silent-stall class `data_ready` was built to expose.
+            if reg.access != I2cAccess::Rw {
+                bail!(
+                    "data_ready '{}' clear_on_write '{name}' is read-only — firmware could \
+                     never clear the flag",
                     dr.name
                 );
             }
@@ -1102,6 +1206,22 @@ pub static VCNL4010_KIT: LazyLock<DeclarativeI2cKit> = LazyLock::new(|| {
         labwired_config::embedded_device_yaml("vcnl4010").expect("vcnl4010 descriptor is embedded"),
     )
     .expect("vcnl4010.yaml is a valid declarative i2c descriptor")
+});
+
+/// ST VL53L0X laser time-of-flight sensor (declarative `vl53l0x.yaml`).
+///
+/// Migrated from a hand-written model that is DELETED rather than kept as a
+/// parity oracle, because one behaviour deliberately changed: that model's
+/// ready flag latched on the first start with no conversion time, where this
+/// one follows ST's 33 ms timing budget and clears on acknowledge. An oracle
+/// asserting the old behaviour would be asserting the bug.
+/// `tests/vl53l0x_migration_parity.rs` holds the transcripts that must stay
+/// identical and states the one that must not.
+pub static VL53L0X_KIT: LazyLock<DeclarativeI2cKit> = LazyLock::new(|| {
+    DeclarativeI2cKit::from_yaml(
+        labwired_config::embedded_device_yaml("vl53l0x").expect("vl53l0x descriptor is embedded"),
+    )
+    .expect("vl53l0x.yaml is a valid declarative i2c descriptor")
 });
 
 #[cfg(test)]
@@ -1739,11 +1859,13 @@ behavior:
     /// it is cleared by reading a third, `RESULT_RANGE_VAL` (0x1E). Adopting
     /// the primitive for it is YAML only — no Rust, no schema change.
     ///
-    /// (The shipping [`super::vl53l0x`] model is NOT migrated onto this: it
-    /// still needs register-mode pointer auto-increment for the 12-byte block
-    /// read at 0x14, and a write-1-to-clear idiom for `SYSTEM_INTERRUPT_CLEAR`.
-    /// Both are engine work, tracked separately — see the migration note in
-    /// that module.)
+    /// (The real VL53L0X has SINCE been migrated: `configs/devices/vl53l0x.yaml`
+    /// is the shipping model and the hand-written `components/vl53l0x.rs` is
+    /// deleted. It needed two more engine capabilities this fixture does not
+    /// exercise — `auto_increment` for the 12-byte block read at 0x14, and
+    /// `clear_on_write` for `SYSTEM_INTERRUPT_CLEAR`, since reading the range
+    /// does NOT acknowledge on that part. See `tests/vl53l0x_migration_parity.rs`.
+    /// This fixture stays as the minimal split-register shape.)
     const TOF_FIXTURE: &str = r#"
 type: test_tof_data_ready_fixture
 behavior:

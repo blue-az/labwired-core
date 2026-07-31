@@ -28,7 +28,6 @@ pub static KITS: &[&'static dyn PeripheralKit] = &[
     &components::ds3231::DS3231_KIT,
     &components::hx711::HX711_KIT,
     &components::as5600::AS5600_KIT,
-    &components::vl53l0x::VL53L0X_KIT,
     &components::bno055::BNO055_KIT,
     &components::hc05::HC05_KIT,
     &components::nrf24l01::NRF24L01_KIT,
@@ -86,6 +85,10 @@ pub static KITS: &[&'static dyn PeripheralKit] = &[
     &components::declarative_i2c::PCA9685_KIT,
     // VCNL4010: declarative from the start, no hand-written predecessor.
     &components::declarative_i2c::VCNL4010_KIT,
+    // VL53L0X: migrated from a hand-written model that is DELETED, not kept as
+    // an oracle — its ready flag latched forever with no conversion time, so an
+    // oracle would be asserting the bug. See vl53l0x_migration_parity.rs.
+    &components::declarative_i2c::VL53L0X_KIT,
     // Declarative SPI devices — model lives entirely in configs/devices/*.yaml,
     // interpreted by the generic GenericSpiDevice (zero per-part Rust).
     &components::declarative_spi::ADXL345_KIT,
