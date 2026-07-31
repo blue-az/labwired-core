@@ -184,8 +184,19 @@ impl Nrf54lTwim {
         self.last_us.push(u64::MAX);
     }
 
-    fn slave_index(&self, addr: u8) -> Option<usize> {
-        self.slaves.iter().position(|s| s.address() == addr)
+    /// Resolve the slave that answers to `addr` and tell it which address was
+    /// selected.
+    ///
+    /// Resolution goes through `claims_address`, not `address()`: a bus switch
+    /// (TCA9548A) answers for every device behind its enabled channels, and a
+    /// flat `address()` comparison is first-match — four identical sensors on
+    /// four channels would collapse onto one. `select_address` then hands the
+    /// matched device the wire address, which is how a switch tells "write my
+    /// control register" from "forward to the downstream device".
+    fn slave_index(&mut self, addr: u8) -> Option<usize> {
+        let idx = self.slaves.iter().position(|s| s.claims_address(addr))?;
+        self.slaves[idx].select_address(addr);
+        Some(idx)
     }
 
     /// The firmware's own clock: the GRTC SYSCOUNTER (µs), read via the bus.

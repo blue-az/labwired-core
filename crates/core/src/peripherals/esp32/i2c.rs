@@ -208,15 +208,28 @@ impl Esp32I2c {
     /// Resolve a slave from SLAVE_ADDR (7-bit or 8-bit shifted form). Used when
     /// Arduino/ESP-IDF parks the target in SLAVE_ADDR and does not push the
     /// address byte into the TX FIFO.
-    fn find_slave_from_slave_addr_register(&self) -> Option<usize> {
+    fn find_slave_from_slave_addr_register(&mut self) -> Option<usize> {
         let raw = self.slave_addr & 0x7FFF;
         if raw <= 0x7F {
-            if let Some(idx) = self.slaves.iter().position(|s| s.address() == raw as u8) {
+            if let Some(idx) = self.find_slave_by_address(raw as u8) {
                 return Some(idx);
             }
         }
         let shifted = ((raw >> 1) & 0x7F) as u8;
-        self.slaves.iter().position(|s| s.address() == shifted)
+        self.find_slave_by_address(shifted)
+    }
+
+    /// Resolve the slave that answers to `address` and tell it which address
+    /// the master selected.
+    ///
+    /// Resolution goes through `claims_address`, not `address()`: a bus switch
+    /// (TCA9548A) answers for every device behind its enabled channels, and a
+    /// flat `address()` comparison is first-match — four identical sensors on
+    /// four channels would collapse onto one.
+    fn find_slave_by_address(&mut self, address: u8) -> Option<usize> {
+        let idx = self.slaves.iter().position(|s| s.claims_address(address))?;
+        self.slaves[idx].select_address(address);
+        Some(idx)
     }
 }
 
@@ -381,10 +394,11 @@ impl Peripheral for Esp32I2c {
         f: &mut dyn FnMut(&mut dyn crate::sim_input::SimInput) -> bool,
     ) -> bool {
         for slave in self.slaves.iter_mut() {
-            if let Some(si) = slave.as_sim_input_mut() {
-                if f(si) {
-                    return true;
-                }
+            // `for_each_sim_input`, not `as_sim_input_mut`: a container slave
+            // (TCA9548A mux) exposes the inputs of the devices behind it, which
+            // a single-surface accessor cannot represent.
+            if slave.for_each_sim_input(f) {
+                return true;
             }
         }
         false
@@ -457,7 +471,7 @@ impl Esp32I2c {
                         if expects_addr && i == 0 {
                             // First byte of a WRITE following RSTART is addr+R/W.
                             let addr = b >> 1;
-                            active = self.slaves.iter().position(|s| s.address() == addr);
+                            active = self.find_slave_by_address(addr);
                             if active.is_none() {
                                 // Fallback: address only in SLAVE_ADDR, payload in FIFO.
                                 active = self.find_slave_from_slave_addr_register();

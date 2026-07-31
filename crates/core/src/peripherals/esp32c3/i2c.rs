@@ -705,10 +705,21 @@ impl Esp32c3I2c {
             .unwrap_or(false)
     }
 
-    fn find_slave_by_address(&self, address: u8) -> Option<usize> {
-        self.slaves.iter().enumerate().find_map(|(idx, slave)| {
-            (self.slave_route_active(idx) && slave.address() == address).then_some(idx)
-        })
+    /// Resolve the slave that answers to `address` on an active pad route, and
+    /// tell it which address the master selected.
+    ///
+    /// Resolution goes through `claims_address`, not `address()`: a bus switch
+    /// (TCA9548A) answers for every device behind its enabled channels, and a
+    /// flat `address()` comparison is first-match — four identical sensors on
+    /// four channels would collapse onto one. The GPIO-matrix route gate is
+    /// unchanged and still applies to the switch itself, which is the only
+    /// thing physically wired to the pads.
+    fn find_slave_by_address(&mut self, address: u8) -> Option<usize> {
+        let idx = self.slaves.iter().enumerate().find_map(|(idx, slave)| {
+            (self.slave_route_active(idx) && slave.claims_address(address)).then_some(idx)
+        })?;
+        self.slaves[idx].select_address(address);
+        Some(idx)
     }
 
     fn fifo_status(&self) -> u32 {
@@ -738,7 +749,7 @@ impl Esp32c3I2c {
         (self.sr & SR_RESP_REC) | busy | SR_STRETCH_CAUSE_RESET | (rx << 8) | (tx << 18)
     }
 
-    fn find_slave_from_slave_addr_register(&self) -> Option<usize> {
+    fn find_slave_from_slave_addr_register(&mut self) -> Option<usize> {
         let raw = self.slave_addr & 0x7FFF;
         if raw <= 0x7F {
             if let Some(idx) = self.find_slave_by_address(raw as u8) {
@@ -1083,10 +1094,11 @@ impl Peripheral for Esp32c3I2c {
         f: &mut dyn FnMut(&mut dyn crate::sim_input::SimInput) -> bool,
     ) -> bool {
         for slave in self.slaves.iter_mut() {
-            if let Some(si) = slave.as_sim_input_mut() {
-                if f(si) {
-                    return true;
-                }
+            // `for_each_sim_input`, not `as_sim_input_mut`: a container slave
+            // (TCA9548A mux) exposes the inputs of the devices behind it, which
+            // a single-surface accessor cannot represent.
+            if slave.for_each_sim_input(f) {
+                return true;
             }
         }
         false

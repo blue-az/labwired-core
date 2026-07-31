@@ -85,10 +85,14 @@ impl Rp2040I2c {
         self.attached_devices.push(RefCell::new(device));
     }
 
+    /// Resolve the attached device that answers to `addr7`. Uses
+    /// `claims_address` (not `address()`) so a bus switch can answer for the
+    /// devices behind its enabled channels — see
+    /// [`crate::peripherals::i2c::I2cDevice::claims_address`].
     fn device_for(&self, addr7: u8) -> Option<usize> {
         self.attached_devices
             .iter()
-            .position(|d| d.borrow().address() == addr7)
+            .position(|d| d.borrow().claims_address(addr7))
     }
 
     fn set_raw(&self, bits: u32) {
@@ -194,6 +198,9 @@ impl Peripheral for Rp2040I2c {
                     Some(idx) => {
                         self.clr_raw(INTR_TX_ABRT);
                         self.tx_abrt_source.set(0);
+                        self.attached_devices[idx]
+                            .borrow_mut()
+                            .select_address(addr7);
                         if value & DATA_CMD_READ != 0 {
                             let b = self.attached_devices[idx].borrow_mut().read();
                             self.rx_byte.set(Some(b));
@@ -288,6 +295,71 @@ mod tests {
         assert_ne!(i2c.read_u32(IC_RAW_INTR_STAT).unwrap() & INTR_STOP_DET, 0);
         assert_ne!(i2c.read_u32(IC_RAW_INTR_STAT).unwrap() & INTR_TX_EMPTY, 0);
         assert!(i2c.tick().irq);
+    }
+
+    /// Four sensors at ONE fixed address behind a TCA9548A, on the RP2040's
+    /// DesignWare controller. Guards the same resolution seam as the nRF52 and
+    /// STM32 tests: `device_for` must ask `claims_address`, not compare
+    /// `address()` and take the first hit.
+    #[test]
+    fn four_same_address_sensors_behind_a_bus_switch_are_each_reachable() {
+        use crate::peripherals::components::tca9548a::Tca9548a;
+
+        struct Tag(u8);
+        impl I2cDevice for Tag {
+            fn address(&self) -> u8 {
+                0x13
+            }
+            fn read(&mut self) -> u8 {
+                self.0
+            }
+            fn write(&mut self, _data: u8) {}
+        }
+
+        let mut mux = Tca9548a::new(0x70);
+        for ch in 0..4u8 {
+            mux.attach(ch, Box::new(Tag(0xA0 + ch))).unwrap();
+        }
+
+        let mut i2c = enabled_i2c();
+        i2c.push_slave(Box::new(mux));
+
+        // Reset state: no channel enabled, so 0x13 is on no reachable segment.
+        i2c.write_u32(IC_TAR, 0x13).unwrap();
+        i2c.write_u32(IC_DATA_CMD, DATA_CMD_READ | DATA_CMD_STOP)
+            .unwrap();
+        assert_ne!(
+            i2c.read_u32(IC_TX_ABRT_SOURCE).unwrap() & ABRT_7B_ADDR_NOACK,
+            0,
+            "an unselected sensor must NACK like an empty bus"
+        );
+
+        for ch in 0..4u8 {
+            // Select the channel on the switch.
+            i2c.write_u32(IC_TAR, 0x70).unwrap();
+            i2c.write_u32(IC_DATA_CMD, (1u32 << ch) | DATA_CMD_STOP)
+                .unwrap();
+            assert_eq!(
+                i2c.read_u32(IC_RAW_INTR_STAT).unwrap() & INTR_TX_ABRT,
+                0,
+                "the switch must ACK its own address"
+            );
+
+            // Read the sensor behind it.
+            i2c.write_u32(IC_TAR, 0x13).unwrap();
+            i2c.write_u32(IC_DATA_CMD, DATA_CMD_READ | DATA_CMD_STOP)
+                .unwrap();
+            assert_eq!(
+                i2c.read_u32(IC_RAW_INTR_STAT).unwrap() & INTR_TX_ABRT,
+                0,
+                "channel {ch} is enabled, so 0x13 must ACK"
+            );
+            assert_eq!(
+                i2c.read_u32(IC_DATA_CMD).unwrap() & 0xFF,
+                (0xA0 + ch) as u32,
+                "channel {ch} must be answered by its own sensor"
+            );
+        }
     }
 
     #[test]

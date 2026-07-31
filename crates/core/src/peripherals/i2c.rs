@@ -26,6 +26,57 @@ pub trait I2cDevice: Send {
     fn write(&mut self, data: u8);
     fn start(&mut self) {}
     fn stop(&mut self) {}
+
+    /// Does this device answer to `addr` on the wire *right now*?
+    ///
+    /// A plain slave owns exactly one address, so the default is the obvious
+    /// `self.address() == addr` — every existing model keeps its behaviour with
+    /// no edit. The hook exists for devices whose answered-address set is not a
+    /// singleton and is not static: an I²C **bus switch** (TCA9548A) answers to
+    /// its own control address *and*, while a channel is enabled, to every
+    /// address reachable behind that channel. That set changes whenever
+    /// firmware rewrites the switch's control register, so it cannot be
+    /// flattened into one `address()` at attach time.
+    ///
+    /// Controllers MUST resolve a slave with this, never by comparing
+    /// `address()` — a flat `position(|d| d.address() == addr)` is first-match
+    /// and makes four identical sensors behind a mux collapse into one.
+    fn claims_address(&self, addr: u8) -> bool {
+        self.address() == addr
+    }
+
+    /// Tell the device which address the master just selected, immediately
+    /// after [`claims_address`](Self::claims_address) returned `true` for it and
+    /// before any `start`/`write`/`read`/`stop` of that transaction.
+    ///
+    /// Default no-op: a single-address slave already knows who it is. A bus
+    /// switch uses it to decide whether this transaction targets its own
+    /// control register or is to be forwarded to the downstream device(s) that
+    /// claim `addr` on the currently enabled channel(s).
+    fn select_address(&mut self, addr: u8) {
+        let _ = addr;
+    }
+
+    /// Walk every [`SimInput`](crate::sim_input::SimInput) surface this device
+    /// exposes, including devices nested *behind* it. Returns `true` if `f`
+    /// asked to stop early.
+    ///
+    /// The default is exactly the old behaviour — a device offers at most its
+    /// own [`as_sim_input_mut`](Self::as_sim_input_mut). It is overridden by
+    /// containers (the TCA9548A mux) so their children stay reachable from the
+    /// ONE stimulus walk in [`crate::bus::SystemBus::for_each_sim_input`].
+    /// Without it, putting a sensor behind a mux would silently subtract it
+    /// from `list_inputs` / `set_input` — the same class of invisible-device
+    /// bug the controller-level seam was introduced to kill.
+    fn for_each_sim_input(
+        &mut self,
+        f: &mut dyn FnMut(&mut dyn crate::sim_input::SimInput) -> bool,
+    ) -> bool {
+        match self.as_sim_input_mut() {
+            Some(si) => f(si),
+            None => false,
+        }
+    }
     fn as_any(&self) -> Option<&dyn std::any::Any> {
         None
     }
@@ -359,9 +410,11 @@ impl F1I2c {
                         self.current_target = self
                             .attached_devices
                             .iter()
-                            .position(|d| d.borrow().address() == addr);
+                            .position(|d| d.borrow().claims_address(addr));
                         if let Some(idx) = self.current_target {
-                            self.attached_devices[idx].borrow_mut().start();
+                            let mut dev = self.attached_devices[idx].borrow_mut();
+                            dev.select_address(addr);
+                            dev.start();
                         }
                         let _ = self.tick();
                     } else if (self.effective_sr1() & 0x80) != 0 || (self.sr2 & 0x0001) != 0 {
@@ -760,9 +813,11 @@ impl L4I2c {
                         self.current_target = self
                             .attached_devices
                             .iter()
-                            .position(|d| d.borrow().address() == addr);
+                            .position(|d| d.borrow().claims_address(addr));
                         if let Some(idx) = self.current_target {
-                            self.attached_devices[idx].borrow_mut().start();
+                            let mut dev = self.attached_devices[idx].borrow_mut();
+                            dev.select_address(addr);
+                            dev.start();
                         }
                         // Real silicon begins the addressed transfer the instant
                         // START is set — for reads AND writes — but the Start
@@ -1210,9 +1265,13 @@ impl KinetisI2c {
                     self.current_target = self
                         .attached_devices
                         .iter()
-                        .position(|dev| dev.borrow().address() == addr);
+                        .position(|dev| dev.borrow().claims_address(addr));
                     if let Some(idx) = self.current_target {
-                        self.attached_devices[idx].borrow_mut().start();
+                        {
+                            let mut dev = self.attached_devices[idx].borrow_mut();
+                            dev.select_address(addr);
+                            dev.start();
+                        }
                         self.byte_complete(true);
                     } else {
                         self.byte_complete(false); // address NAK
@@ -1619,11 +1678,11 @@ impl crate::Peripheral for I2c {
         f: &mut dyn FnMut(&mut dyn crate::sim_input::SimInput) -> bool,
     ) -> bool {
         for cell in self.attached_devices() {
-            let mut dev = cell.borrow_mut();
-            if let Some(si) = dev.as_sim_input_mut() {
-                if f(si) {
-                    return true;
-                }
+            // `for_each_sim_input`, not `as_sim_input_mut`: a container slave
+            // (TCA9548A mux) exposes the inputs of the devices behind it, which
+            // a single-surface accessor cannot represent.
+            if cell.borrow_mut().for_each_sim_input(f) {
+                return true;
             }
         }
         false

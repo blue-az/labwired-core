@@ -73,6 +73,7 @@ pub mod sps30;
 pub mod ssd1306;
 pub mod ssd1680_tricolor_290;
 pub mod step_dir_motor;
+pub mod tca9548a;
 pub mod tm1637_7seg;
 pub mod tmp117;
 pub mod uc8151d_tricolor_290;
@@ -103,7 +104,10 @@ pub use drv2605::{Drv2605, DRV2605_ADDR};
 pub use fxos8700::Fxos8700;
 pub use hc595::Hc595;
 pub use hc595_7seg::Hc5957Seg;
-pub use i2c_factory::{build_external_i2c_device, build_i2c_device};
+pub use i2c_factory::{
+    build_external_i2c_device, build_i2c_device, build_i2c_tree, i2c_mux_child_ids,
+    is_i2c_mux_type, validate_i2c_mux_topology,
+};
 pub use ili9341::Ili9341;
 pub use iolink_master::{
     IolinkComSpeed, IolinkFrameKind, IolinkLinkState, IolinkMaster, IolinkXfer,
@@ -128,6 +132,7 @@ pub use sn74hc165::Sn74hc165;
 pub use sps30::{Sps30, SPS30_ADDR};
 pub use ssd1306::Ssd1306;
 pub use ssd1680_tricolor_290::Ssd1680Tricolor290;
+pub use tca9548a::Tca9548a;
 pub use tm1637_7seg::Tm1637;
 pub use tmp117::Tmp117;
 pub use uc8151d_tricolor_290::Uc8151dTricolor290;
