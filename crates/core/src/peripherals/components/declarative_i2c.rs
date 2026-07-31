@@ -848,6 +848,19 @@ pub static PCA9685_KIT: LazyLock<DeclarativeI2cKit> = LazyLock::new(|| {
     .expect("pca9685.yaml is a valid declarative i2c descriptor")
 });
 
+/// Vishay VCNL4010 proximity + ambient sensor (declarative `vcnl4010.yaml`).
+/// Written declaratively from the start — there is no hand-written model to
+/// migrate from and none is needed: the part is a register map plus two input
+/// channels. Its address 0x13 is fixed in silicon, so more than one on a bus
+/// requires a [`super::tca9548a::Tca9548a`] switch; see
+/// `tests/vcnl4010_bay_occupancy.rs` for that topology driven end to end.
+pub static VCNL4010_KIT: LazyLock<DeclarativeI2cKit> = LazyLock::new(|| {
+    DeclarativeI2cKit::from_yaml(
+        labwired_config::embedded_device_yaml("vcnl4010").expect("vcnl4010 descriptor is embedded"),
+    )
+    .expect("vcnl4010.yaml is a valid declarative i2c descriptor")
+});
+
 #[cfg(test)]
 mod tests {
     use super::*;

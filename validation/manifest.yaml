@@ -139,7 +139,19 @@ boards:
     # 2026-07-27: configs/chips/nrf52840.yaml corrected three NVIC numbers against tests/fixtures/real_world/nrf52840.svd — PDM 31->29 (31 is unassigned), PWM1 29->33 (29 was PDM's vector), PWM2 30->34 (30 is unassigned) — surfaced by the new SVD conformance gate. Numbers only; no peripheral model, register layout or base address changed, and the ACL / GPIO P1 base deviations were reviewed and left as recorded modelling limitations rather than silently 'fixed'. Evidence re-run on this commit: full cargo test -p labwired-core green, including this board's conformance, onboarding and firmware_survival cases. No live re-capture.
     # 2026-07-30: crates/core/src/peripherals/nrf52/rtc.rs gained a `tick_elapsed_forced` override. Under `event-scheduler` the RTC's `tick` no-ops and the counter advances only from the bus-published cycle clock, which the bare-CPU forced walk freezes — so RTC0 could never reach its compare and nrf52840_onboarding_rtc0_fires_compare_and_pends_irq failed under `cargo test --workspace`. The override restores the legacy one-tick-per-bus-tick advance on that oracle-only path and carries `anchor` with it so no cycle is replayed. No register layout, base address or reset value changed, and the production event chain (take_scheduled_events / on_event) is untouched — this path is never reached from Machine execution, so nothing the 2026-06-17 capture asserts can move. Evidence: full `cargo test --workspace --lib` green, this board's conformance/onboarding/firmware_survival cases green, and the feature-off path unchanged at 2423 passed. No live re-capture.
     # 2026-07-30: configs/chips/nrf52840.yaml gained a 4KB zero-filled `nrf_errata_probe` memory region at 0xF0000000 (#708), so the Nordic nRF5 SDK / ArduinoCore-nRF5 errata probes that read 0xF0000FE0 stop recording unmapped_mmio. MEMORY MAP ONLY: no peripheral model, register layout, base address or reset value changed, and that window was previously UNMAPPED — it is not part of the 2026-06-17 asserted set (conformance 16/16, mmio 16/16, GPIO P0/P1, POWER/SPIS/TWIS/RTC0/TIMER0 sweeps all sit in the 0x4000_0000/0x5000_0000 peripheral space), so no captured value can move. The zero fill is a RECORDED MODELLING LIMITATION, not silicon parity: real die returns a package/rev fingerprint there, and zeros make the probe read 'not this rev' rather than have the sim invent a fingerprint it has never captured off the bench. Same pattern already carried by configs/chips/nrf52832.yaml. A live re-capture is still owed for the fingerprint window itself, but not for the drifted claim. No live re-capture.
-    drift_ack: 2026-07-30
+    # 2026-07-31: I²C slave resolution changed from a flat `d.address() == addr`
+    # first-match to `d.claims_address(addr)` plus a `select_address` hook at the TWIM
+    # dispatch sites in crates/core/src/peripherals/nrf52/{twim,factory}.rs (#720), so
+    # a TCA9548A bus switch can route for itself. DISPATCH ONLY: both hooks are
+    # defaulted on the `I2cDevice` trait — `claims_address` defaults to
+    # `self.address() == addr` and `select_address` to a no-op — so with no mux on the
+    # bus the resolution is byte-identical to the code it replaces. No TWIM register
+    # layout, base address, reset value or EasyDMA read/write path moved, and slave
+    # selection is not part of the 2026-06-17 asserted set (conformance 16/16, mmio
+    # 16/16, GPIO P0/P1, POWER/SPIS/TWIS/RTC0/TIMER0 sweeps), so no captured value can
+    # move. Evidence: the new per-family mux coverage drives a real EasyDMA
+    # transaction through this controller and passes unchanged. No live re-capture.
+    drift_ack: 2026-07-31
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -203,7 +215,10 @@ boards:
     # 2026-07-30: rides the nrf52840 `nrf_errata_probe` 0xF0000000 window (#708);
     # same silicon, memory map only, previously-unmapped address outside the
     # asserted set. See the nrf52840 drift_ack note.
-    drift_ack: 2026-07-30
+    # 2026-07-31: rides the nrf52840 TWIM `claims_address`/`select_address` dispatch
+    # change (#720); same silicon, defaulted trait hooks, byte-identical with no mux
+    # attached. See the nrf52840 drift_ack note.
+    drift_ack: 2026-07-31
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -336,7 +351,20 @@ boards:
     # or full-duplex RX events: labwired-hw-oracle (27/27) and chip_conformance
     # pass unchanged. No live re-capture this session; re-capturing IDR readback
     # and SPI RX behaviour is tracked.
-    drift_ack: 2026-07-28
+    # 2026-07-31: crates/core/src/peripherals/i2c.rs — slave resolution moved from a
+    # flat `d.address() == addr` first-match to `d.claims_address(addr)` plus a
+    # `select_address` hook at the dispatch sites (#720), so a TCA9548A bus switch
+    # can route for itself instead of every controller growing a tree resolver.
+    # DISPATCH ONLY: both hooks are defaulted on the `I2cDevice` trait —
+    # `claims_address` defaults to `self.address() == addr` and `select_address` to a
+    # no-op — so with no mux on the bus the resolution is byte-identical to the code
+    # it replaces. No I2C register layout, base address, reset value or MMIO
+    # read/write path moved. Which slave answers an address is on the far side of the
+    # wire, outside a reset-value/register-sweep capture, so no captured value can
+    # move. Evidence: the new per-family mux coverage drives a real transaction
+    # through this controller; all six families pass unchanged, no dispatch bug
+    # found. No live re-capture.
+    drift_ack: 2026-07-31
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
@@ -673,7 +701,20 @@ boards:
     # Serial RX injection keeps parity — the twin now exposes rx_buffer() and
     # attach_uart_rx_source[_named] resolve it, so `uart_injections:` still
     # works. No live USB-JTAG re-capture this session.
-    drift_ack: 2026-07-28
+    # 2026-07-31: crates/core/src/peripherals/esp32c3/i2c.rs — slave resolution moved
+    # from a flat `d.address() == addr` first-match to `d.claims_address(addr)` plus a
+    # `select_address` hook at BOTH resolution sites, the command-list dispatch and
+    # the `SLAVE_ADDR` fallback (#720), so a TCA9548A bus switch can route for itself.
+    # DISPATCH ONLY: both hooks are defaulted on the `I2cDevice` trait —
+    # `claims_address` defaults to `self.address() == addr` and `select_address` to a
+    # no-op — so with no mux on the bus the resolution is byte-identical to the code
+    # it replaces. The GPIO-matrix route gate is untouched. No I2C register layout,
+    # base address or reset value moved, so the 2026-06-17 reset-state oracle
+    # (1123/1123 static registers) cannot move. Evidence: the new per-family mux
+    # coverage bit-clocks a real transaction through this controller and covers the
+    # `SLAVE_ADDR` fallback specifically; passes unchanged. No live USB-JTAG
+    # re-capture this session.
+    drift_ack: 2026-07-31
 
   - id: nucleo-l476rg
     doc: docs/boards/nucleo-l476rg.md
@@ -782,7 +823,20 @@ boards:
     # or full-duplex RX events: labwired-hw-oracle (27/27) and chip_conformance
     # pass unchanged. No live re-capture this session; re-capturing IDR readback
     # and SPI RX behaviour is tracked.
-    drift_ack: 2026-07-28
+    # 2026-07-31: crates/core/src/peripherals/i2c.rs — slave resolution moved from a
+    # flat `d.address() == addr` first-match to `d.claims_address(addr)` plus a
+    # `select_address` hook at the dispatch sites (#720), so a TCA9548A bus switch
+    # can route for itself instead of every controller growing a tree resolver.
+    # DISPATCH ONLY: both hooks are defaulted on the `I2cDevice` trait —
+    # `claims_address` defaults to `self.address() == addr` and `select_address` to a
+    # no-op — so with no mux on the bus the resolution is byte-identical to the code
+    # it replaces. No I2C register layout, base address, reset value or MMIO
+    # read/write path moved. Which slave answers an address is on the far side of the
+    # wire, outside a reset-value/register-sweep capture, so no captured value can
+    # move. Evidence: the new per-family mux coverage drives a real transaction
+    # through this controller; all six families pass unchanged, no dispatch bug
+    # found. No live re-capture.
+    drift_ack: 2026-07-31
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
@@ -1016,7 +1070,20 @@ boards:
     # or full-duplex RX events: labwired-hw-oracle (27/27) and chip_conformance
     # pass unchanged. No live re-capture this session; re-capturing IDR readback
     # and SPI RX behaviour is tracked.
-    drift_ack: 2026-07-28
+    # 2026-07-31: crates/core/src/peripherals/i2c.rs — slave resolution moved from a
+    # flat `d.address() == addr` first-match to `d.claims_address(addr)` plus a
+    # `select_address` hook at the dispatch sites (#720), so a TCA9548A bus switch
+    # can route for itself instead of every controller growing a tree resolver.
+    # DISPATCH ONLY: both hooks are defaulted on the `I2cDevice` trait —
+    # `claims_address` defaults to `self.address() == addr` and `select_address` to a
+    # no-op — so with no mux on the bus the resolution is byte-identical to the code
+    # it replaces. No I2C register layout, base address, reset value or MMIO
+    # read/write path moved. Which slave answers an address is on the far side of the
+    # wire, outside a reset-value/register-sweep capture, so no captured value can
+    # move. Evidence: the new per-family mux coverage drives a real transaction
+    # through this controller; all six families pass unchanged, no dispatch bug
+    # found. No live re-capture.
+    drift_ack: 2026-07-31
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/afio.rs
@@ -1129,7 +1196,20 @@ boards:
     # The chip YAML also renames tim1 -> tim1_pwm (an id-only change declaring the
     # tier1 pwm class) and adds an nvic entry. No live re-capture this session; a
     # DMA width diff against silicon is tracked.
-    drift_ack: 2026-07-28
+    # 2026-07-31: crates/core/src/peripherals/i2c.rs — slave resolution moved from a
+    # flat `d.address() == addr` first-match to `d.claims_address(addr)` plus a
+    # `select_address` hook at the dispatch sites (#720), so a TCA9548A bus switch
+    # can route for itself instead of every controller growing a tree resolver.
+    # DISPATCH ONLY: both hooks are defaulted on the `I2cDevice` trait —
+    # `claims_address` defaults to `self.address() == addr` and `select_address` to a
+    # no-op — so with no mux on the bus the resolution is byte-identical to the code
+    # it replaces. No I2C register layout, base address, reset value or MMIO
+    # read/write path moved. Which slave answers an address is on the far side of the
+    # wire, outside a reset-value/register-sweep capture, so no captured value can
+    # move. Evidence: the new per-family mux coverage drives a real transaction
+    # through this controller; all six families pass unchanged, no dispatch bug
+    # found. No live re-capture.
+    drift_ack: 2026-07-31
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
@@ -1308,7 +1388,16 @@ boards:
     # Register map, reset values and the 9-reg reset-state anchor are untouched;
     # esp32s3 reset conformance + the GDMA UART-TX descriptor tests pass. No S3
     # board attached; no live re-capture.
-    drift_ack: 2026-07-28
+    # 2026-07-31: crates/core/src/peripherals/esp32s3/i2c.rs — slave resolution moved
+    # from a flat `d.address() == addr` first-match to `d.claims_address(addr)` plus a
+    # `select_address` hook at both the command-list dispatch and the `SLAVE_ADDR`
+    # fallback (#720), so a TCA9548A bus switch can route for itself. DISPATCH ONLY:
+    # both hooks are defaulted on the `I2cDevice` trait — `claims_address` defaults to
+    # `self.address() == addr` and `select_address` to a no-op — so with no mux on the
+    # bus the resolution is byte-identical to the code it replaces. Register map,
+    # reset values and the 9-reg reset-state anchor are untouched; esp32s3 reset
+    # conformance passes. No S3 board attached; no live re-capture.
+    drift_ack: 2026-07-31
     models:
       - crates/core/src/peripherals/esp32s3
       - crates/core/src/peripherals/esp_xtensa_common

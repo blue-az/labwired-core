@@ -184,8 +184,19 @@ impl Nrf54lTwim {
         self.last_us.push(u64::MAX);
     }
 
-    fn slave_index(&self, addr: u8) -> Option<usize> {
-        self.slaves.iter().position(|s| s.address() == addr)
+    /// Resolve the slave that answers to `addr` and tell it which address was
+    /// selected.
+    ///
+    /// Resolution goes through `claims_address`, not `address()`: a bus switch
+    /// (TCA9548A) answers for every device behind its enabled channels, and a
+    /// flat `address()` comparison is first-match — four identical sensors on
+    /// four channels would collapse onto one. `select_address` then hands the
+    /// matched device the wire address, which is how a switch tells "write my
+    /// control register" from "forward to the downstream device".
+    fn slave_index(&mut self, addr: u8) -> Option<usize> {
+        let idx = self.slaves.iter().position(|s| s.claims_address(addr))?;
+        self.slaves[idx].select_address(addr);
+        Some(idx)
     }
 
     /// The firmware's own clock: the GRTC SYSCOUNTER (µs), read via the bus.
@@ -838,5 +849,181 @@ mod tests {
         assert_eq!(twim.read_u32(OFF_DMA_TX_MAXCNT).unwrap(), MAXCNT_MASK);
 
         assert_eq!(twim.read_u32(0xFFC).unwrap(), 0);
+    }
+    // ── TCA9548A driven through the nRF54L TWIM ─────────────────────────────
+    //
+    // The TWIM resolves its slave once per DMA leg (`slave_index`), so the write
+    // leg and the read leg each go through `claims_address` independently. That
+    // site got the switch change with no switch ever driven through it.
+    mod mux {
+        use super::*;
+        use crate::peripherals::components::mux_fixture::{
+            bytes_written_to, mux_with_tags, tag_for, MUX_ADDR, SENSOR_ADDR,
+        };
+        use crate::peripherals::components::tca9548a::Tca9548a;
+
+        const TX_BUF: u32 = 0x2000_0000;
+        const RX_BUF: u32 = 0x2000_0010;
+
+        fn rig_with_switch() -> (Nrf54lTwim, SystemBus) {
+            let mut twim = Nrf54lTwim::new();
+            twim.push_slave(Box::new(mux_with_tags(4)));
+            let mut bus = SystemBus::empty();
+            bus.ram = LinearMemory::new(256, 0x2000_0000);
+            twim.write_u32(OFF_ENABLE, ENABLE_TWIM).unwrap();
+            (twim, bus)
+        }
+
+        fn with_mux<R>(twim: &Nrf54lTwim, f: impl FnOnce(&Tca9548a) -> R) -> R {
+            let mux = twim.slaves[0]
+                .as_any()
+                .and_then(|a| a.downcast_ref::<Tca9548a>())
+                .expect("slave 0 is the switch");
+            f(mux)
+        }
+
+        /// Clear the previous transfer's verdict so this one's ANACK assertion
+        /// is about this one. ERRORSRC is write-1-clear; EVENTS are write-0.
+        fn clear_verdict(twim: &mut Nrf54lTwim) {
+            twim.write_u32(OFF_ERRORSRC, 0xFFFF_FFFF).unwrap();
+            twim.write_u32(OFF_EVENTS_ERROR, 0).unwrap();
+            twim.write_u32(OFF_EVENTS_STOPPED, 0).unwrap();
+        }
+
+        fn anacked(twim: &Nrf54lTwim) -> bool {
+            twim.read_u32(OFF_ERRORSRC).unwrap() & (1 << 1) != 0
+        }
+
+        /// One-byte master write terminated by LASTTX_STOP.
+        fn write_one(twim: &mut Nrf54lTwim, bus: &mut SystemBus, addr: u8, byte: u8) {
+            clear_verdict(twim);
+            bus.write_u8(TX_BUF as u64, byte).unwrap();
+            twim.write_u32(OFF_ADDRESS, addr as u32).unwrap();
+            twim.write_u32(OFF_SHORTS, SHORT_LASTTX_STOP).unwrap();
+            twim.write_u32(OFF_DMA_TX_PTR, TX_BUF).unwrap();
+            twim.write_u32(OFF_DMA_TX_MAXCNT, 1).unwrap();
+            twim.write_u32(OFF_TASKS_DMA_TX_START, 1).unwrap();
+            twim.tick_with_bus(bus);
+        }
+
+        /// One-byte master read terminated by LASTRX_STOP.
+        fn read_one(twim: &mut Nrf54lTwim, bus: &mut SystemBus, addr: u8) -> u8 {
+            clear_verdict(twim);
+            bus.write_u8(RX_BUF as u64, 0x00).unwrap();
+            twim.write_u32(OFF_ADDRESS, addr as u32).unwrap();
+            twim.write_u32(OFF_SHORTS, SHORT_LASTRX_STOP).unwrap();
+            twim.write_u32(OFF_DMA_RX_PTR, RX_BUF).unwrap();
+            twim.write_u32(OFF_DMA_RX_MAXCNT, 1).unwrap();
+            twim.write_u32(OFF_TASKS_DMA_RX_START, 1).unwrap();
+            twim.tick_with_bus(bus);
+            bus.read_u8(RX_BUF as u64).unwrap()
+        }
+
+        /// Zero-length TX: the address phase runs and nothing else, which is a
+        /// bus scan's probe.
+        fn probe_acked(twim: &mut Nrf54lTwim, bus: &mut SystemBus, addr: u8) -> bool {
+            clear_verdict(twim);
+            twim.write_u32(OFF_ADDRESS, addr as u32).unwrap();
+            twim.write_u32(OFF_SHORTS, SHORT_LASTTX_STOP).unwrap();
+            twim.write_u32(OFF_DMA_TX_PTR, TX_BUF).unwrap();
+            twim.write_u32(OFF_DMA_TX_MAXCNT, 0).unwrap();
+            twim.write_u32(OFF_TASKS_DMA_TX_START, 1).unwrap();
+            twim.tick_with_bus(bus);
+            !anacked(twim)
+        }
+
+        #[test]
+        fn four_sensors_at_one_address_answer_independently() {
+            let (mut twim, mut bus) = rig_with_switch();
+            for ch in 0..4u8 {
+                write_one(&mut twim, &mut bus, MUX_ADDR, 1 << ch);
+                assert_eq!(
+                    read_one(&mut twim, &mut bus, SENSOR_ADDR),
+                    tag_for(ch),
+                    "channel {ch} must be answered by the sensor wired to it"
+                );
+            }
+        }
+
+        #[test]
+        fn switching_channels_changes_which_sensor_answers() {
+            let (mut twim, mut bus) = rig_with_switch();
+            for ch in [2u8, 0, 3, 1, 3, 0] {
+                write_one(&mut twim, &mut bus, MUX_ADDR, 1 << ch);
+                assert_eq!(
+                    read_one(&mut twim, &mut bus, SENSOR_ADDR),
+                    tag_for(ch),
+                    "channel {ch}"
+                );
+            }
+        }
+
+        #[test]
+        fn control_register_reads_back_over_the_bus() {
+            let (mut twim, mut bus) = rig_with_switch();
+            write_one(&mut twim, &mut bus, MUX_ADDR, 0b0000_1010);
+            assert!(
+                probe_acked(&mut twim, &mut bus, MUX_ADDR),
+                "the switch must ACK its own address"
+            );
+            assert_eq!(read_one(&mut twim, &mut bus, MUX_ADDR), 0b0000_1010);
+        }
+
+        #[test]
+        fn a_sensor_on_a_disabled_channel_does_not_answer() {
+            let (mut twim, mut bus) = rig_with_switch();
+            assert!(
+                !probe_acked(&mut twim, &mut bus, SENSOR_ADDR),
+                "with all channels disabled the sensor address must set ERRORSRC.ANACK, \
+                 exactly as an unpopulated bus does"
+            );
+
+            write_one(&mut twim, &mut bus, MUX_ADDR, 1 << 1);
+            assert!(probe_acked(&mut twim, &mut bus, SENSOR_ADDR));
+            assert_eq!(read_one(&mut twim, &mut bus, SENSOR_ADDR), tag_for(1));
+
+            write_one(&mut twim, &mut bus, MUX_ADDR, 0x00);
+            assert!(
+                !probe_acked(&mut twim, &mut bus, SENSOR_ADDR),
+                "re-isolating the switch takes the sensor off the bus again"
+            );
+        }
+
+        /// The READ leg resolves the address on its own, so it must consult the
+        /// switch too — a read against an isolated channel has to fail rather
+        /// than fall through to whoever the write leg had selected.
+        #[test]
+        fn the_read_leg_re_resolves_through_the_switch() {
+            let (mut twim, mut bus) = rig_with_switch();
+            write_one(&mut twim, &mut bus, MUX_ADDR, 1 << 1);
+            assert_eq!(read_one(&mut twim, &mut bus, SENSOR_ADDR), tag_for(1));
+
+            // Isolate every channel, then read 0x13 again: the RX leg must NACK
+            // and leave the destination buffer untouched.
+            write_one(&mut twim, &mut bus, MUX_ADDR, 0x00);
+            assert_eq!(
+                read_one(&mut twim, &mut bus, SENSOR_ADDR),
+                0x00,
+                "an isolated sensor must not deliver a byte into the RX buffer"
+            );
+            assert!(anacked(&twim), "the RX leg must report ANACK");
+        }
+
+        #[test]
+        fn a_write_reaches_only_the_selected_channel() {
+            let (mut twim, mut bus) = rig_with_switch();
+            write_one(&mut twim, &mut bus, MUX_ADDR, 1 << 2);
+            write_one(&mut twim, &mut bus, SENSOR_ADDR, 0x5A);
+
+            with_mux(&twim, |mux| {
+                assert_eq!(bytes_written_to(mux, 2), vec![0x5A]);
+                for ch in [0u8, 1, 3] {
+                    assert!(
+                        bytes_written_to(mux, ch).is_empty(),
+                        "channel {ch} is isolated and must receive nothing"
+                    );
+                }
+            });
+        }
     }
 }

@@ -179,7 +179,20 @@ pub struct ChipDescriptor {
 pub struct ExternalDevice {
     pub id: String,
     pub r#type: String,
-    pub connection: String, // e.g. "uart1", "i2c1"
+    /// What this device hangs off. Normally a controller peripheral id
+    /// (`"uart1"`, `"i2c1"`), but it may also name ANOTHER external device's
+    /// `id` — that is how a slave is placed behind an I²C bus switch
+    /// (TCA9548A). The loader resolves the peripheral name first; only if no
+    /// peripheral answers to it does it look for a matching external device.
+    pub connection: String,
+    /// Downstream channel on the device named by `connection`, when that device
+    /// is a bus switch (TCA9548A: 0..=7). Meaningless — and ignored — when
+    /// `connection` names a controller.
+    ///
+    /// Optional so every pre-existing manifest deserializes and behaves
+    /// exactly as before. `None` behind a switch means channel 0.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub channel: Option<u8>,
     /// Physical signal-to-pad route for a bus-attached device. Signal names
     /// are transport-generic (`sda`/`scl`, `mosi`/`miso`/`sck`, `tx`/`rx`)
     /// while pad labels stay target-native (`GPIO4`, `PB7`, ...).
@@ -1666,6 +1679,7 @@ pub fn embedded_device_yaml(device_type: &str) -> Option<&'static str> {
         "veml7700" => Some(include_str!("../../../configs/devices/veml7700.yaml")),
         "tmp102" => Some(include_str!("../../../configs/devices/tmp102.yaml")),
         "pca9685" => Some(include_str!("../../../configs/devices/pca9685.yaml")),
+        "vcnl4010" => Some(include_str!("../../../configs/devices/vcnl4010.yaml")),
         _ => None,
     }
 }
