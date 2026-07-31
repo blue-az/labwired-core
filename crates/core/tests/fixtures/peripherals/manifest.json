@@ -1725,7 +1725,7 @@
       "device_type": "vcnl4010",
       "label": "Vishay VCNL4010 Proximity",
       "summary": "Proximity + ambient-light sensor over I2C (fixed address 0x13).",
-      "detail": "Vishay VCNL4010 at its fixed address 0x13, a register-pointer device with 16-bit big-endian result words. Reports raw proximity and ambient counts driven by the `proximity` and `ambient` input channels; counts-to-distance depends on the reflector and is deliberately not modelled. Both data-ready flags read set, so a driver's ready-poll always terminates. Because the address is fixed, several VCNL4010s on one bus need a TCA9548A switch — one sensor per channel.",
+      "detail": "Vishay VCNL4010 at its fixed address 0x13, a register-pointer device with 16-bit big-endian result words. Reports raw proximity and ambient counts driven by the `proximity` and `ambient` input channels; counts-to-distance depends on the reflector and is deliberately not modelled. Conversion timing is real: writing a COMMAND start bit takes 570 us (proximity) or 100 ms (ambient) before the matching data-ready flag reads set, and reading the result clears it — so firmware whose ready-poll is missing or too short fails here as it would on silicon. On chips with no absolute-microsecond counter (STM32, ESP32-classic, nRF52) the flags degrade to always-ready. Because the address is fixed, several VCNL4010s on one bus need a TCA9548A switch — one sensor per channel.",
       "transport": "i2c",
       "category": "i2c",
       "config_keys": [

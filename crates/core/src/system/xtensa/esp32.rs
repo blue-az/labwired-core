@@ -149,13 +149,24 @@ pub fn attach_esp32_external_devices(
                 }
                 Box::new(p)
             }
+            // ILI9341 TFT — the panel on Adafruit's 2.4" TFT FeatherWing, which
+            // is a Feather-shaped carrier and therefore lands on classic ESP32
+            // more often than on anything else. The model decodes framing from
+            // the protocol stream itself and takes no D/C/BUSY line, so the
+            // hooks below are simply no-ops for it.
+            "ili9341" => Box::new(crate::peripherals::components::Ili9341::new(cs_pin.clone())),
             other => {
-                tracing::warn!(
-                    "ESP32 external_devices: unsupported type '{}' on '{}'; skipping",
+                // Loud, not silent: a skipped panel means the firmware paints
+                // into nothing and the run still "succeeds", which is the
+                // hardest kind of wrong to notice. Attach failures elsewhere in
+                // this function are errors, so this one is too.
+                anyhow::bail!(
+                    "ESP32 external_devices: unsupported SPI device type '{}' on '{}'. \
+                     A device the manifest declares but the twin cannot build would \
+                     silently paint nowhere; declare a supported type or remove it.",
                     other,
                     ext.id
                 );
-                continue;
             }
         };
 
