@@ -731,11 +731,18 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
         ("rtcio", 0x3FF4_8400), // sub-range of RTC_CNTL window, leave 4 KiB span
         ("sar_adc", 0x3FF4_C000),
         ("i2s0", 0x3FF4_F000),
-        ("uart1", 0x3FF5_0000),
+        // uart1 (0x3FF5_0000) and uart2 (0x3FF6_E000) are the real Esp32Uart
+        // models from ESP32_PERIPHERALS — same removal as i2c0/pwm0 below.
+        // They used to ALSO appear here, and because a 0x1000 stub at the
+        // SAME base registered later beats the real 0x100 model
+        // (equal starts → last registered), UART1/UART2 on classic ESP32 were
+        // round-trip stubs and the real models had never executed. Serial1 and
+        // Serial2 therefore produced nothing — the same defect that killed
+        // Serial0 via the apb_ctrl/SYSCON shadow. Guarded by
+        // tests::peripheral_reachability.
         // i2c0 (0x3FF5_3000) is the real Esp32I2c model registered above.
         ("uhci0", 0x3FF5_4000),
         ("i2s1", 0x3FF6_D000),
-        ("uart2", 0x3FF6_E000),
         // pwm0 (0x3FF5_E000) is now the real MCPWM0 model registered above.
         ("ledc2", 0x3FF6_8000),
         ("rmt", 0x3FF5_6000),

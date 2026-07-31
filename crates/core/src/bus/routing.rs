@@ -547,7 +547,7 @@ impl SystemBus {
                         return Some(index);
                     }
                     // Possible nesting: only scan (ord, pos] for a stealer.
-                    if !self.narrower_after(ord, start, addr) {
+                    if !self.narrower_after(ord, addr) {
                         self.peripheral_hint.set(Some(index));
                         return Some(index);
                     }
@@ -625,12 +625,26 @@ impl SystemBus {
 
     /// True if some range after `outer_ord` with `start > outer_start` covers
     /// `addr` (would beat the cached window under greatest-start-wins).
-    fn narrower_after(&self, outer_ord: usize, outer_start: u64, addr: u64) -> bool {
+    fn narrower_after(&self, outer_ord: usize, addr: u64) -> bool {
         for range in self.peripheral_ranges.iter().skip(outer_ord + 1) {
             if range.start > addr {
                 break;
             }
-            if range.start > outer_start && addr < range.end {
+            // Containment is the whole test. Every range after `outer_ord` has
+            // `start >= outer_start` (the sort is stable), and the loop above
+            // already established `range.start <= addr` — so any such range
+            // covering `addr` beats the cached one, by a greater start OR by
+            // being the later-registered entry at an EQUAL start.
+            //
+            // This used to require `range.start > outer_start`, which silently
+            // excluded the equal-start case and made the cached path disagree
+            // with the cold path's backwards walk: `find_peripheral_index`
+            // returned the later-registered narrow twin on a cold bus and the
+            // broad window once anything else had been routed first. Same
+            // address, same bus, answer depending on query history — while this
+            // function's own contract is that routing is a pure function of the
+            // address. Equal starts are exactly the SYSCON/apb_ctrl case.
+            if addr < range.end {
                 return true;
             }
         }
