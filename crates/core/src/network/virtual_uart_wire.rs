@@ -118,6 +118,12 @@ impl UartStreamDevice for VirtualWireEndpoint {
             link.inbox[self.side ^ 1].push_back(byte);
         }
     }
+
+    /// A wire between two chips carries whatever protocol the firmware speaks,
+    /// not console text.
+    fn carries_protocol_octets(&self) -> bool {
+        true
+    }
 }
 
 #[cfg(test)]

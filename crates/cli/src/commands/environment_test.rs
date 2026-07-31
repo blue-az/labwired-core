@@ -789,6 +789,13 @@ fn write_config_error(
     config: EnvironmentConfig,
     message: String,
 ) -> EnvironmentRunOutcome {
+    // Say it out loud. This used to land ONLY in result.json, so an
+    // environment run without `--output-dir` exited non-zero having printed
+    // nothing at all — a genuine misconfiguration ("peripheral 'uart1' is not
+    // a UART") was indistinguishable from a crash. Artifacts are still written
+    // below for machine consumers; this is for the human at the terminal.
+    eprintln!("error: {message}");
+
     let world_firmware_hash = config.world_firmware_hash.clone();
     let stop_reason = StopReason::ConfigError;
     let details = build_stop_reason_details(&stop_reason, limits, 0, 0, 0, 0, Duration::ZERO, 0);
