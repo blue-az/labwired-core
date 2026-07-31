@@ -950,7 +950,17 @@ boards:
     # or full-duplex RX events: labwired-hw-oracle (27/27) and chip_conformance
     # pass unchanged. No live re-capture this session; re-capturing IDR readback
     # and SPI RX behaviour is tracked.
-    drift_ack: 2026-07-28
+    # 2026-07-31: a `board_io` button is now a real bus-resident device that drives
+    # its pin, so this board's B1 (PC13, active-low) settles to its RELEASED level
+    # at boot instead of sitting at the IDR reset value 0 — which read as a press
+    # that is never released. This is a genuine behavioural change on PC13, not a
+    # file-hash drift, and it moves the model TOWARDS silicon: the real NUCLEO
+    # holds PC13 at VDD through R34. The frozen capture covers RCC/GPIOA/SPI1/
+    # TIM2/TIM21 and never reads GPIOC (no 0x48000800 anywhere in validation/), so
+    # no captured value can move; stm32l073_walk_differential and the L073 survival
+    # smoke case pass unchanged. A future re-capture would agree with the NEW model,
+    # not the old one. Re-capture of GPIOC IDR readback is owed and tracked.
+    drift_ack: 2026-07-31
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
