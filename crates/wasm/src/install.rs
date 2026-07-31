@@ -212,12 +212,6 @@ impl WasmSimulator {
             "esp_log_writev",
             "esp_random",
             "esp_fill_random",
-            "_ZN14HardwareSerial5writeEh",
-            "_ZN14HardwareSerial5writeEPKhj",
-            "_ZN14HardwareSerial9availableEv",
-            "_ZN14HardwareSerial5flushEv",
-            "_ZN14HardwareSerial9readBytesEPcj",
-            "_ZN14HardwareSerial9readBytesEPhj",
             // CHEAT(THUNK-LIB): the Arduino serial path is skipped wholesale.
             // This is real fidelity debt, and the reason recorded here for a
             // year was wrong in BOTH of its claims. For the next person:
@@ -245,12 +239,6 @@ impl WasmSimulator {
             // is DISCARDED, so a serial oracle or UART acceptance can never
             // pass on a classic-ESP32 board. That is documented for users on
             // both boards in packages/board-config/src/boards.ts.
-            "_ZN14HardwareSerial5beginEmjaabmh",
-            "_get_effective_baudrate",
-            "uartAvailable",
-            "uartAvailableForWrite",
-            "uartWrite",
-            "uartWriteBuf",
             "_Z14serialEventRunv",
             // vListInsert is NOT nop'd: with the fake FreeRTOS create functions
             // gone, real xQueueCreateMutex / scheduler code runs and depends on
