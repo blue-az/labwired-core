@@ -12,14 +12,16 @@ Set what's yours at the top of `src/main.ino`:
 static const char *WIFI_SSID = "labwired-ap";      // your WiFi
 static const char *WIFI_PASS = "";                 // "" for an open network
 static const char *TITLE = "ANDRII'S WEATHER";     // the red line across the top
-static const char *CITY = "BUDAPEST";              // label + coordinates below
-static const float LAT = 47.4979f;
-static const float LON = 19.0402f;
+static const char *CITY = "BUDAPEST";              // just the name
 static const unsigned long REFRESH_MINUTES = 30;
 ```
 
-Find your coordinates with the city search at
-[open-meteo.com/en/docs](https://open-meteo.com/en/docs).
+**No coordinates to look up.** The city name is the whole setting — Open-Meteo's
+geocoder turns it into a latitude and longitude on the first fetch, and the
+result is kept for the rest of the boot, since a city does not move between
+refreshes. `"New York"` and other names with spaces are fine; they're
+percent-encoded. A name that matches nothing paints `CITY NOT FOUND` rather
+than quietly falling back to 0°,0° in the Gulf of Guinea.
 
 `WIFI_SSID` ships as `labwired-ap` so the lab runs in the simulator out of the
 box — change it to your home network before flashing real hardware.

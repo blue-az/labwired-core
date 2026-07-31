@@ -8,11 +8,14 @@
 // Everything you need to change is in the EDIT ME block below.
 //
 // Uses the SAME proven display stack as labwired-ereader (works on glass + twin):
-//   GxEPD2_290_C90c  +  diagram part type uc8151d_tricolor_290
+//   GxEPD2_290_C90c  +  diagram part type ssd1680_tricolor_290
 //
-// Do NOT use raw SSD1680 0x24/0x26 here. GxEPD2_290_C90c speaks UC8151D-style
-// opcodes; locking the twin to ssd1680_tricolor_290 makes the same sketch
-// paint on silicon and stay blank/wrong in the emulator.
+// Despite the "C90c" name, this driver class speaks SSD1680: 0x12 SWRESET,
+// 0x01 driver output control, 0x11 data entry, 0x3C border, then 0x22+0x20 to
+// trigger, with RAM writes on 0x24/0x26. Lock the twin to
+// uc8151d_tricolor_290 (which is the GxEPD2_290_Z13c panel) and it decodes
+// that stream as PWR/LUT/DRF, never receives a plane, and stays blank. See
+// the "Correct lock" table in README.md for the captured command streams.
 //
 // Panel (buy): WeAct Studio 2.9" B/W/R
 //   https://www.aliexpress.com/item/1005004644515880.html
@@ -43,11 +46,10 @@ static const char *WIFI_PASS = "";
 // Shown in red across the top. Make it yours.
 static const char *TITLE = "ANDRII'S WEATHER";
 
-// Your city: the label to print, and its coordinates.
-// Look coordinates up at https://open-meteo.com/en/docs (search your city).
+// Your city. That is the whole setting — the coordinates are looked up for you
+// on the first fetch, so there is no latitude/longitude to go and find.
+// "Budapest", "New York", "Kyiv" all work; spaces are fine.
 static const char *CITY = "BUDAPEST";
-static const float LAT = 47.4979f;
-static const float LON = 19.0402f;
 
 // How often to re-fetch and repaint.
 // Tri-color panels take ~15 s per full refresh and their datasheets ask for at
@@ -65,6 +67,13 @@ static const int PIN_RST = 3;
 static const int PIN_BUSY = 5;
 
 static const char *API_HOST = "api.open-meteo.com";
+static const char *GEO_HOST = "geocoding-api.open-meteo.com";
+
+// Coordinates for CITY, resolved once on the first successful fetch and kept
+// for the life of the boot. Geocoding a name that has not changed on every
+// refresh would be a request per half hour for an answer that never moves.
+static float g_lat = NAN;
+static float g_lon = NAN;
 
 // Panel is 296x128 in landscape (setRotation(1)). Keep every drawn run inside
 // RIGHT_EDGE: Adafruit_GFX wraps overflowing text to the next line by default,
@@ -74,7 +83,7 @@ static const char *API_HOST = "api.open-meteo.com";
 // and the stats column is right-aligned so the widest line still fits.
 static const int16_t RIGHT_EDGE = 290;
 
-// C90c class = UC8151D command stream on the wire -> twin must be uc8151d_tricolor_290
+// C90c class = SSD1680 command stream on the wire -> twin must be ssd1680_tricolor_290
 GxEPD2_3C<GxEPD2_290_C90c, GxEPD2_290_C90c::HEIGHT> display(
     GxEPD2_290_C90c(/*CS=*/PIN_CS, /*DC=*/PIN_DC, /*RST=*/PIN_RST, /*BUSY=*/PIN_BUSY));
 
@@ -410,18 +419,34 @@ static bool json_date(const String &b, int from, int *y, int *m, int *d) {
   return *y > 0 && *m >= 1 && *m <= 12 && *d >= 1 && *d <= 31;
 }
 
-static bool http_get_forecast(String &out) {
+// Percent-encode anything outside the unreserved set, so a city with a space
+// ("New York") or an accent does not produce a malformed request line.
+static String url_encode(const char *s) {
+  String out;
+  for (const char *p = s; *p; ++p) {
+    unsigned char c = (unsigned char)*p;
+    if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
+      out += (char)c;
+    } else {
+      char buf[4];
+      snprintf(buf, sizeof buf, "%%%02X", c);
+      out += buf;
+    }
+  }
+  return out;
+}
+
+// One plain-HTTP GET. Shared by the geocode and forecast calls so there is a
+// single place that speaks HTTP — and so the twin's cleartext egress path is
+// exercised identically by both.
+static bool http_get(const char *host, const String &path, String &out) {
   WiFiClient c;
-  if (!c.connect(API_HOST, 80)) {
-    Serial.println("HTTP connect() failed");
+  if (!c.connect(host, 80)) {
+    Serial.print("HTTP connect() failed: ");
+    Serial.println(host);
     return false;
   }
-  String path = String("/v1/forecast?latitude=") + String(LAT, 4) +
-                "&longitude=" + String(LON, 4) +
-                "&current=temperature_2m,relative_humidity_2m,weather_code"
-                "&daily=temperature_2m_max,temperature_2m_min"
-                "&timezone=auto&forecast_days=1";
-  c.print(String("GET ") + path + " HTTP/1.1\r\nHost: " + API_HOST +
+  c.print(String("GET ") + path + " HTTP/1.1\r\nHost: " + host +
           "\r\nConnection: close\r\n\r\n");
 
   String resp;
@@ -435,6 +460,46 @@ static bool http_get_forecast(String &out) {
   out = (s >= 0) ? resp.substring(s + 4) : resp;
   Serial.print("HTTP BODY: ");
   Serial.println(out);
+  return out.length() > 0;
+}
+
+// CITY -> coordinates, via Open-Meteo's geocoder (also free, also no key).
+// Resolved once per boot; a city's location does not move between refreshes.
+static bool resolve_city() {
+  if (!isnan(g_lat) && !isnan(g_lon)) return true;
+
+  String body;
+  String path = String("/v1/search?name=") + url_encode(CITY) +
+                "&count=1&language=en&format=json";
+  if (!http_get(GEO_HOST, path, body)) return false;
+
+  // Anchor inside results[0]; a miss returns {"generationtime_ms":...} with no
+  // results at all, which must read as "not found" rather than as 0,0.
+  int r = body.indexOf("\"results\":[");
+  if (r < 0) {
+    Serial.println("city not found");
+    return false;
+  }
+  float lat = json_float(body, "latitude", r);
+  float lon = json_float(body, "longitude", r);
+  if (isnan(lat) || isnan(lon)) {
+    Serial.println("geocode parse failed");
+    return false;
+  }
+  g_lat = lat;
+  g_lon = lon;
+  Serial.printf("GEOCODED %s -> %.4f, %.4f\n", CITY, g_lat, g_lon);
+  return true;
+}
+
+static bool http_get_forecast(String &out) {
+  if (!resolve_city()) return false;
+  String path = String("/v1/forecast?latitude=") + String(g_lat, 4) +
+                "&longitude=" + String(g_lon, 4) +
+                "&current=temperature_2m,relative_humidity_2m,weather_code"
+                "&daily=temperature_2m_max,temperature_2m_min"
+                "&timezone=auto&forecast_days=1";
+  if (!http_get(API_HOST, path, out)) return false;
   return out.indexOf("\"current\":") >= 0;
 }
 
@@ -462,6 +527,12 @@ static bool connect_wifi() {
 static void refresh() {
   if (!connect_wifi()) {
     draw_offline("NO WIFI - CHECK SSID");
+    return;
+  }
+
+  // Resolve first so a typo'd CITY says so, instead of blaming the forecast.
+  if (!resolve_city()) {
+    draw_offline("CITY NOT FOUND");
     return;
   }
 

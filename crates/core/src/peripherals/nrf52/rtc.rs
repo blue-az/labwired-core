@@ -477,6 +477,37 @@ impl Peripheral for Nrf52Rtc {
         }
     }
 
+    /// Compatibility hook for the bare-CPU forced walk
+    /// (`tick_peripherals_fully_forced`). In scheduler mode `tick` above
+    /// deliberately no-ops and the counter advances only via `sync_to` /
+    /// `advance_to`, which reads the bus-published cycle clock. That clock is
+    /// frozen while the forced walk runs, so `now <= anchor` on every call and
+    /// the RTC can never reach its compare — `nrf52840_onboarding_rtc0_fires_
+    /// compare_and_pends_irq` saw EVENTS_COMPARE[0] stay 0 through all 10000
+    /// forced ticks. Invisible under `-p labwired-core` (feature off, so
+    /// `scheduler_mode()` is false and the legacy walk runs), and only failing
+    /// under `cargo test --workspace`, where Cargo unifies `event-scheduler`
+    /// on from `crates/wasm`. Same contract, and the same discovery path, as
+    /// the EXTI and DMA models that already override this.
+    ///
+    /// Advances one cycle to match the legacy walk's one-tick-per-bus-tick
+    /// contract, and carries `anchor` with it so a later clock-driven
+    /// `advance_to` cannot replay the cycles settled here. Never reached from
+    /// production `Machine` execution: there the event chain
+    /// (`take_scheduled_events` / `on_event`) stays the sole owner.
+    fn tick_elapsed_forced(&mut self, _cycles: u64) -> PeripheralTickResult {
+        if self.scheduler_mode() {
+            self.anchor.set(self.anchor.get().wrapping_add(1));
+        }
+        let (irq, fired_mask) = self.advance_and_eval(1);
+        PeripheralTickResult {
+            irq,
+            cycles: 1,
+            fired_events: self.fired_mask_to_events(fired_mask),
+            ..Default::default()
+        }
+    }
+
     fn uses_scheduler(&self) -> bool {
         self.scheduler_mode()
     }

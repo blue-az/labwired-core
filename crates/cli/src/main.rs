@@ -167,6 +167,14 @@ enum Commands {
     /// findings, not emulation false positives. Exits non-zero if a crash is
     /// found (CI-friendly).
     Fuzz(FuzzArgs),
+
+    /// One-shot agent debug probe (JSON on stdout or --output-dir/result.json).
+    ///
+    /// Loads machine + firmware, resolves optional breakpoints (address /
+    /// symbol / line), runs until stop or max-steps, and returns stop reason,
+    /// PC, location, registers, and serial. Observational only: never claims
+    /// oracle proof (`proven` is always false).
+    DebugProbe(commands::debug_probe::DebugProbeArgs),
 }
 
 #[derive(Parser, Debug)]
@@ -757,6 +765,7 @@ fn main() -> ExitCode {
         Some(Commands::Tier1Matrix(args)) => commands::tier1::run_tier1_matrix(args),
         Some(Commands::CosimStep(args)) => commands::cosim::run_cosim_step(args),
         Some(Commands::Fuzz(args)) => commands::fuzz::run_fuzz(args),
+        Some(Commands::DebugProbe(args)) => commands::debug_probe::run(args),
         None => commands::run::run_interactive(cli),
     }
 }
