@@ -55,10 +55,16 @@ pub fn try_build(
                 if ext.connection != p_cfg.id {
                     continue;
                 }
-                match crate::peripherals::components::build_external_i2c_device(
-                    &ext.r#type,
-                    &ext.id,
-                    &ext.config,
+                // `build_i2c_tree` assembles a TCA9548A bus switch together
+                // with everything wired behind it, so what is pushed onto the
+                // TWIM is one unit. The topology was validated in
+                // `SystemBus::from_config` before this factory ran, so an Err
+                // here is a build failure, not a wiring mistake.
+                match crate::peripherals::components::build_i2c_tree(manifest, ext).unwrap_or_else(
+                    |e| {
+                        tracing::error!("nrf54l twim i2c tree for '{}': {e}", ext.id);
+                        None
+                    },
                 ) {
                     Some(device) => {
                         tracing::info!(

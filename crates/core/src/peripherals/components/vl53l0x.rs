@@ -10,6 +10,32 @@
 //! identification registers (0xC0–0xC2), SYSRANGE start (0x00),
 //! RESULT_INTERRUPT_STATUS (0x13), and RESULT_RANGE_STATUS range bytes
 //! (0x1E/0x1F). Distance is host-settable; the ranging algorithm is not simulated.
+//!
+//! ## NOT YET MIGRATED onto the declarative `data_ready` primitive
+//!
+//! The `ranging` flag below — set by a write to one register, read from
+//! another — is the same behaviour the declarative engine now expresses as
+//! data ([`labwired_config::DataReady`]), and
+//! `declarative_i2c::tests::a_second_device_shape_adopts_data_ready_in_yaml_only`
+//! shows this part's exact register shape working with YAML alone. Migrating
+//! the shipping model is deliberately NOT part of that change, because it needs
+//! more than a descriptor:
+//!
+//!  * **Register-mode pointer auto-increment.** This model walks
+//!    `current_register` on every byte, so ST's API reading a 12-byte block
+//!    from `RESULT_RANGE_STATUS` (0x14) reaches the range bytes at 0x1E. The
+//!    declarative register-pointer engine latches ONE register and returns
+//!    `0xFF` past its width — a real byte difference for that driver.
+//!  * **Write-1-to-clear.** The VL53L0X clears its interrupt by a WRITE to
+//!    `SYSTEM_INTERRUPT_CLEAR` (0x0B), not by a result read, so `data_ready`
+//!    would need a `clear_on_write` idiom alongside `clear_on_read`.
+//!  * **Frame semantics.** This model treats the first byte after `stop()` as
+//!    the pointer; the declarative engine re-frames on `start()`. Drivers using
+//!    a repeated START are affected.
+//!  * `ranging` currently latches forever once set and the model has no
+//!    datasheet conversion time (the VL53L0X timing budget is programmable,
+//!    ~33 ms by default), so the migration is also a fidelity change that needs
+//!    its own parity harness against this model.
 
 use crate::peripherals::i2c::I2cDevice;
 

@@ -18,14 +18,15 @@ use crate::Bus;
 /// board-level fact, not a builder default — so a manifest declaring an SH1107
 /// on `i2c0` at 0x3D gets exactly that, on every path that wires the manifest.
 fn build_i2c_external_device(
+    manifest: &labwired_config::SystemManifest,
     ext: &labwired_config::ExternalDevice,
-) -> Option<Box<dyn crate::peripherals::i2c::I2cDevice>> {
+) -> anyhow::Result<Option<Box<dyn crate::peripherals::i2c::I2cDevice>>> {
     // Prefer the shared factory (includes kit types like ina219) so ESP classic
     // and S3 stay in lockstep with the generic from_config attach path.
-    if let Some(dev) =
-        crate::peripherals::components::build_external_i2c_device(&ext.r#type, &ext.id, &ext.config)
-    {
-        return Some(dev);
+    // `build_i2c_tree` also assembles a TCA9548A bus switch together with every
+    // device wired behind it, so a mux reaches the bus as one unit.
+    if let Some(dev) = crate::peripherals::components::build_i2c_tree(manifest, ext)? {
+        return Ok(Some(dev));
     }
     let addr = |default: u8| {
         ext.config
@@ -34,17 +35,18 @@ fn build_i2c_external_device(
             .map(|a| a as u8)
             .unwrap_or(default)
     };
-    match ext.r#type.as_str() {
-        "oled-sh1107" => Some(Box::new(crate::peripherals::components::Sh1107::new(addr(
-            0x3D,
-        )))),
+    Ok(match ext.r#type.as_str() {
+        "oled-sh1107" => Some(
+            Box::new(crate::peripherals::components::Sh1107::new(addr(0x3D)))
+                as Box<dyn crate::peripherals::i2c::I2cDevice>,
+        ),
         "oled-ssd1306" => Some(Box::new(crate::peripherals::components::Ssd1306::new(
             addr(0x3C),
         ))),
         // tmp102 / pca9685 are declarative devices handled by the shared factory
         // (`build_external_i2c_device`) above — no local arm needed.
         _ => None,
-    }
+    })
 }
 
 /// Attach external devices declared in `manifest.external_devices` to an
@@ -63,13 +65,20 @@ pub fn attach_esp32_external_devices(
 ) -> anyhow::Result<()> {
     use crate::peripherals::spi::SpiDevice;
 
+    // Devices wired behind an I²C bus switch are attached as part of that
+    // switch by `build_i2c_tree`, never straight onto a controller.
+    let mux_children = crate::peripherals::components::i2c_mux_child_ids(manifest);
+
     for ext in &manifest.external_devices {
+        if mux_children.contains(&ext.id.as_str()) {
+            continue;
+        }
         // I2C-attached devices are wired to an I2C controller by `connection`
         // and addressed by `config.i2c_address` — the SPI cs_pin/dc_pin framing
         // below is meaningless for them, so handle and `continue` first. This is
         // how a manifest that declares an SH1107 on i2c0 gets the panel wired,
         // instead of the builder hardcoding "every board always has one".
-        if let Some(dev) = build_i2c_external_device(ext) {
+        if let Some(dev) = build_i2c_external_device(manifest, ext)? {
             bus.attach_i2c_slave(&ext.connection, dev).map_err(|_| {
                 anyhow::anyhow!(
                     "External I2C device '{}' connection '{}' is not an ESP32 I2C peripheral",
@@ -140,13 +149,24 @@ pub fn attach_esp32_external_devices(
                 }
                 Box::new(p)
             }
+            // ILI9341 TFT — the panel on Adafruit's 2.4" TFT FeatherWing, which
+            // is a Feather-shaped carrier and therefore lands on classic ESP32
+            // more often than on anything else. The model decodes framing from
+            // the protocol stream itself and takes no D/C/BUSY line, so the
+            // hooks below are simply no-ops for it.
+            "ili9341" => Box::new(crate::peripherals::components::Ili9341::new(cs_pin.clone())),
             other => {
-                tracing::warn!(
-                    "ESP32 external_devices: unsupported type '{}' on '{}'; skipping",
+                // Loud, not silent: a skipped panel means the firmware paints
+                // into nothing and the run still "succeeds", which is the
+                // hardest kind of wrong to notice. Attach failures elsewhere in
+                // this function are errors, so this one is too.
+                anyhow::bail!(
+                    "ESP32 external_devices: unsupported SPI device type '{}' on '{}'. \
+                     A device the manifest declares but the twin cannot build would \
+                     silently paint nowhere; declare a supported type or remove it.",
                     other,
                     ext.id
                 );
-                continue;
             }
         };
 

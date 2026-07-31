@@ -2743,6 +2743,7 @@ pub mod integration_tests {
                 id: "oled".to_string(),
                 r#type: "oled-ssd1306-128x32".to_string(),
                 connection: "i2c0".to_string(),
+                channel: None,
                 route: BTreeMap::from([
                     ("sda".to_string(), "GPIO4".to_string()),
                     ("scl".to_string(), "GPIO5".to_string()),
@@ -2882,6 +2883,7 @@ pub mod integration_tests {
                     id: "oled".to_string(),
                     r#type: "oled-ssd1306-128x32".to_string(),
                     connection: "i2c0".to_string(),
+                    channel: None,
                     route: BTreeMap::from([
                         ("sda".to_string(), "GPIO4".to_string()),
                         ("scl".to_string(), "GPIO5".to_string()),

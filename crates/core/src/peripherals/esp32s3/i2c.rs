@@ -269,15 +269,28 @@ impl Esp32s3I2c {
         (self.sr & SR_RESP_REC) | SR_STRETCH_CAUSE_RESET | (rx << 8) | (tx << 18)
     }
 
-    fn find_slave_from_slave_addr_register(&self) -> Option<usize> {
+    fn find_slave_from_slave_addr_register(&mut self) -> Option<usize> {
         let raw = self.slave_addr & 0x7FFF;
         if raw <= 0x7F {
-            if let Some(idx) = self.slaves.iter().position(|s| s.address() == raw as u8) {
+            if let Some(idx) = self.find_slave_by_address(raw as u8) {
                 return Some(idx);
             }
         }
         let shifted = ((raw >> 1) & 0x7F) as u8;
-        self.slaves.iter().position(|s| s.address() == shifted)
+        self.find_slave_by_address(shifted)
+    }
+
+    /// Resolve the slave that answers to `address` and tell it which address
+    /// the master selected.
+    ///
+    /// Resolution goes through `claims_address`, not `address()`: a bus switch
+    /// (TCA9548A) answers for every device behind its enabled channels, and a
+    /// flat `address()` comparison is first-match — four identical sensors on
+    /// four channels would collapse onto one.
+    fn find_slave_by_address(&mut self, address: u8) -> Option<usize> {
+        let idx = self.slaves.iter().position(|s| s.claims_address(address))?;
+        self.slaves[idx].select_address(address);
+        Some(idx)
     }
 }
 
@@ -513,10 +526,11 @@ impl Peripheral for Esp32s3I2c {
         f: &mut dyn FnMut(&mut dyn crate::sim_input::SimInput) -> bool,
     ) -> bool {
         for slave in self.slaves.iter_mut() {
-            if let Some(si) = slave.as_sim_input_mut() {
-                if f(si) {
-                    return true;
-                }
+            // `for_each_sim_input`, not `as_sim_input_mut`: a container slave
+            // (TCA9548A mux) exposes the inputs of the devices behind it, which
+            // a single-surface accessor cannot represent.
+            if slave.for_each_sim_input(f) {
+                return true;
             }
         }
         false
@@ -579,7 +593,7 @@ impl Esp32s3I2c {
                         if expects_addr && i == 0 {
                             // First byte of a WRITE following RSTART is addr+R/W.
                             let addr = b >> 1;
-                            active = self.slaves.iter().position(|s| s.address() == addr);
+                            active = self.find_slave_by_address(addr);
                             if let Some(slave_idx) = active {
                                 // Slave acknowledged its address. Signal START
                                 // to the selected device — on the wire the
@@ -1191,5 +1205,193 @@ mod tests {
         let mut p = Esp32s3I2c::new();
         p.write_u32(0xC0, 0xDEAD_BEEF).unwrap();
         assert_eq!(p.read_u32(0xC0).unwrap(), 0, "unmapped 0xC0 must read 0");
+    }
+
+    // ── TCA9548A driven through the ESP32-S3 command-list engine ────────────
+    //
+    // Same shape as the classic-ESP32 coverage, against the S3's own opcode
+    // numbering and its own copy of the resolution code — including the
+    // `SLAVE_ADDR` fallback, which is a second, independent path into
+    // `claims_address` that no existing test drove with a switch attached.
+    mod mux {
+        use super::*;
+        use crate::peripherals::components::mux_fixture::{
+            bytes_written_to, mux_with_tags, tag_for, MUX_ADDR, SENSOR_ADDR,
+        };
+        use crate::peripherals::components::tca9548a::Tca9548a;
+
+        fn controller() -> Esp32s3I2c {
+            let mut p = Esp32s3I2c::new();
+            p.push_slave(Box::new(mux_with_tags(4)));
+            p
+        }
+
+        fn with_mux<R>(p: &Esp32s3I2c, f: impl FnOnce(&Tca9548a) -> R) -> R {
+            let mux = p.attached_slaves()[0]
+                .as_any()
+                .and_then(|a| a.downcast_ref::<Tca9548a>())
+                .expect("slave 0 is the switch");
+            f(mux)
+        }
+
+        fn program(p: &mut Esp32s3I2c, list: &[(u8, u8)], tx: &[u8]) {
+            p.write_u32(REG_INT_CLR, 0xFFFF_FFFF).unwrap();
+            // Flush both FIFOs without disturbing the watermark fields.
+            let conf = p.read_u32(REG_FIFO_CONF).unwrap();
+            p.write_u32(REG_FIFO_CONF, conf | (1 << 12) | (1 << 13))
+                .unwrap();
+            for (i, (op, n)) in list.iter().enumerate() {
+                p.write_u32(REG_CMD0 + 4 * i as u64, cmd(*op, *n)).unwrap();
+            }
+            for b in tx {
+                p.write_u32(REG_DATA, *b as u32).unwrap();
+            }
+            p.write_u32(REG_CTR, CTR_TRANS_START_BIT).unwrap();
+        }
+
+        fn write_bytes(p: &mut Esp32s3I2c, addr: u8, payload: &[u8]) {
+            let mut tx = vec![addr << 1];
+            tx.extend_from_slice(payload);
+            p.write_u32(REG_SLAVE_ADDR, addr as u32).unwrap();
+            program(
+                p,
+                &[(CMD_RSTART, 0), (CMD_WRITE, tx.len() as u8), (CMD_STOP, 0)],
+                &tx,
+            );
+        }
+
+        fn read_byte(p: &mut Esp32s3I2c, addr: u8) -> u8 {
+            p.write_u32(REG_SLAVE_ADDR, addr as u32).unwrap();
+            program(
+                p,
+                &[
+                    (CMD_RSTART, 0),
+                    (CMD_WRITE, 1),
+                    (CMD_READ, 1),
+                    (CMD_STOP, 0),
+                ],
+                &[(addr << 1) | 1],
+            );
+            p.read_u32(REG_DATA).unwrap() as u8
+        }
+
+        fn nacked(p: &Esp32s3I2c) -> bool {
+            p.read_u32(REG_INT_RAW).unwrap() & INT_NACK != 0
+        }
+
+        fn probe_acked(p: &mut Esp32s3I2c, addr: u8) -> bool {
+            p.write_u32(REG_SLAVE_ADDR, addr as u32).unwrap();
+            program(
+                p,
+                &[(CMD_RSTART, 0), (CMD_WRITE, 1), (CMD_STOP, 0)],
+                &[addr << 1],
+            );
+            !nacked(p)
+        }
+
+        #[test]
+        fn four_sensors_at_one_address_answer_independently() {
+            let mut p = controller();
+            for ch in 0..4u8 {
+                write_bytes(&mut p, MUX_ADDR, &[1 << ch]);
+                assert_eq!(
+                    read_byte(&mut p, SENSOR_ADDR),
+                    tag_for(ch),
+                    "channel {ch} must be answered by the sensor wired to it"
+                );
+            }
+        }
+
+        #[test]
+        fn switching_channels_changes_which_sensor_answers() {
+            let mut p = controller();
+            for ch in [2u8, 0, 3, 1, 3, 0] {
+                write_bytes(&mut p, MUX_ADDR, &[1 << ch]);
+                assert_eq!(read_byte(&mut p, SENSOR_ADDR), tag_for(ch), "channel {ch}");
+            }
+        }
+
+        #[test]
+        fn control_register_reads_back_over_the_bus() {
+            let mut p = controller();
+            write_bytes(&mut p, MUX_ADDR, &[0b0000_1010]);
+            assert!(
+                probe_acked(&mut p, MUX_ADDR),
+                "the switch ACKs its own address"
+            );
+            assert_eq!(read_byte(&mut p, MUX_ADDR), 0b0000_1010);
+        }
+
+        #[test]
+        fn a_sensor_on_a_disabled_channel_does_not_answer() {
+            let mut p = controller();
+            assert!(
+                !probe_acked(&mut p, SENSOR_ADDR),
+                "with all channels disabled the sensor address must raise INT_NACK, \
+                 exactly as an unpopulated bus does"
+            );
+
+            write_bytes(&mut p, MUX_ADDR, &[1 << 1]);
+            assert!(probe_acked(&mut p, SENSOR_ADDR));
+            assert_eq!(read_byte(&mut p, SENSOR_ADDR), tag_for(1));
+
+            write_bytes(&mut p, MUX_ADDR, &[0x00]);
+            assert!(
+                !probe_acked(&mut p, SENSOR_ADDR),
+                "re-isolating the switch takes the sensor off the bus again"
+            );
+        }
+
+        #[test]
+        fn the_slave_addr_register_path_also_routes_through_the_switch() {
+            let mut p = controller();
+
+            p.write_u32(REG_SLAVE_ADDR, SENSOR_ADDR as u32).unwrap();
+            program(
+                &mut p,
+                &[(CMD_RSTART, 0), (CMD_WRITE, 0), (CMD_STOP, 0)],
+                &[],
+            );
+            assert!(
+                nacked(&p),
+                "a SLAVE_ADDR-parked probe must NACK while every channel is isolated"
+            );
+
+            write_bytes(&mut p, MUX_ADDR, &[1 << 3]);
+            p.write_u32(REG_SLAVE_ADDR, SENSOR_ADDR as u32).unwrap();
+            program(
+                &mut p,
+                &[
+                    (CMD_RSTART, 0),
+                    (CMD_WRITE, 0),
+                    (CMD_READ, 1),
+                    (CMD_STOP, 0),
+                ],
+                &[],
+            );
+            assert!(!nacked(&p), "channel 3 is enabled; 0x13 must ACK");
+            assert_eq!(
+                p.read_u32(REG_DATA).unwrap() as u8,
+                tag_for(3),
+                "the SLAVE_ADDR path must reach the sensor on the SELECTED channel"
+            );
+        }
+
+        #[test]
+        fn a_write_reaches_only_the_selected_channel() {
+            let mut p = controller();
+            write_bytes(&mut p, MUX_ADDR, &[1 << 2]);
+            write_bytes(&mut p, SENSOR_ADDR, &[0x5A]);
+
+            with_mux(&p, |mux| {
+                assert_eq!(bytes_written_to(mux, 2), vec![0x5A]);
+                for ch in [0u8, 1, 3] {
+                    assert!(
+                        bytes_written_to(mux, ch).is_empty(),
+                        "channel {ch} is isolated and must receive nothing"
+                    );
+                }
+            });
+        }
     }
 }

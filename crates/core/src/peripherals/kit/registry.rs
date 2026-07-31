@@ -84,6 +84,8 @@ pub static KITS: &[&'static dyn PeripheralKit] = &[
     // the byte-parity oracles (pca9685_tmp102_parity.rs).
     &components::declarative_i2c::TMP102_KIT,
     &components::declarative_i2c::PCA9685_KIT,
+    // VCNL4010: declarative from the start, no hand-written predecessor.
+    &components::declarative_i2c::VCNL4010_KIT,
     // Declarative SPI devices — model lives entirely in configs/devices/*.yaml,
     // interpreted by the generic GenericSpiDevice (zero per-part Rust).
     &components::declarative_spi::ADXL345_KIT,

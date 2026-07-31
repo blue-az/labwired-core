@@ -63,8 +63,12 @@ pub struct DebugProbeArgs {
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 #[serde(untagged)]
 pub enum BreakpointSpec {
-    Address { address: String },
-    Symbol { symbol: String },
+    Address {
+        address: String,
+    },
+    Symbol {
+        symbol: String,
+    },
     Line {
         line: u32,
         #[serde(default)]
@@ -304,9 +308,7 @@ fn resolve_breakpoints(
                                  specify file for multi-CU firmware, or use symbol/address)"
                             )
                         } else {
-                            format!(
-                                "line {line} in '{file_hint}' not found in DWARF line table"
-                            )
+                            format!("line {line} in '{file_hint}' not found in DWARF line table")
                         };
                         outcomes.push(BreakpointOutcome {
                             requested,
@@ -338,8 +340,7 @@ fn parse_breakpoint_specs(args: &DebugProbeArgs) -> Result<Vec<BreakpointSpec>, 
         return Ok(Vec::new());
     }
 
-    serde_json::from_str(trimmed)
-        .map_err(|e| format!("invalid breakpoints JSON: {e}"))
+    serde_json::from_str(trimmed).map_err(|e| format!("invalid breakpoints JSON: {e}"))
 }
 
 fn emit_result(result: &DebugProbeResult, output_dir: Option<&Path>) -> ExitCode {
@@ -390,10 +391,7 @@ fn collect_registers(machine: &dyn DebugControl) -> BTreeMap<String, String> {
     regs
 }
 
-fn collect_location(
-    symbols: Option<&SymbolProvider>,
-    pc: u32,
-) -> Option<serde_json::Value> {
+fn collect_location(symbols: Option<&SymbolProvider>, pc: u32) -> Option<serde_json::Value> {
     let loc = symbols?.lookup(pc as u64)?;
     Some(json!({
         "file": loc.file,
@@ -412,6 +410,10 @@ fn serial_from_sink(sink: &Arc<Mutex<Vec<u8>>>) -> String {
 }
 
 /// Run the probe against a concrete `DebugControl` machine.
+// Three arch paths call this with the same flat argument list (see the match in
+// `run`); bundling them into a struct would only move the arity to the struct
+// literal at each call site. Same rationale as `commands/test.rs`.
+#[allow(clippy::too_many_arguments)]
 fn run_on_machine(
     machine: &mut dyn DebugControl,
     verified_addrs: &[u32],
@@ -455,11 +457,7 @@ fn run_on_machine(
     DebugProbeResult {
         status: "ok".into(),
         stop_reason,
-        pc: if read.pc {
-            Some(format_addr(pc))
-        } else {
-            None
-        },
+        pc: if read.pc { Some(format_addr(pc)) } else { None },
         cycles: Some(cycles),
         location: if read.location {
             collect_location(symbols, pc)
@@ -483,6 +481,9 @@ fn run_on_machine(
 }
 
 /// Build bus + UART sink shared by all arch paths (mirrors `labwired test` / DAP).
+// The tuple mirrors what `labwired test` / DAP already destructure at the call
+// site; naming it would add a type that exists only to satisfy the lint.
+#[allow(clippy::type_complexity)]
 fn build_bus_and_uart(
     system: &Path,
 ) -> Result<
@@ -575,7 +576,10 @@ pub fn run(args: DebugProbeArgs) -> ExitCode {
     let symbols = match SymbolProvider::new(&firmware) {
         Ok(s) => Some(s),
         Err(e) => {
-            warn!("SymbolProvider unavailable for {}: {e:#}", firmware.display());
+            warn!(
+                "SymbolProvider unavailable for {}: {e:#}",
+                firmware.display()
+            );
             None
         }
     };
@@ -710,7 +714,7 @@ mod tests {
     #[test]
     fn error_result_never_proven() {
         let r = DebugProbeResult::error("NO_FIRMWARE", "missing elf");
-        assert_eq!(r.proven, false);
+        assert!(!r.proven);
         assert_eq!(r.status, "error");
         assert_eq!(r.stop_reason, "config_error");
         let v = serde_json::to_value(&r).unwrap();
@@ -734,7 +738,7 @@ mod tests {
     #[test]
     fn stop_reason_mapping() {
         assert_eq!(
-            stop_reason_str(&labwired_core::StopReason::Breakpoint(0x8000_100)),
+            stop_reason_str(&labwired_core::StopReason::Breakpoint(0x0800_0100)),
             "breakpoint"
         );
         assert_eq!(
@@ -753,8 +757,7 @@ mod tests {
 
     #[test]
     fn breakpoint_spec_untagged_deser() {
-        let addr: BreakpointSpec =
-            serde_json::from_str(r#"{"address":"0x08000100"}"#).unwrap();
+        let addr: BreakpointSpec = serde_json::from_str(r#"{"address":"0x08000100"}"#).unwrap();
         assert_eq!(
             addr,
             BreakpointSpec::Address {
@@ -770,8 +773,7 @@ mod tests {
             }
         );
 
-        let line: BreakpointSpec =
-            serde_json::from_str(r#"{"line":42,"file":"main.c"}"#).unwrap();
+        let line: BreakpointSpec = serde_json::from_str(r#"{"line":42,"file":"main.c"}"#).unwrap();
         assert_eq!(
             line,
             BreakpointSpec::Line {

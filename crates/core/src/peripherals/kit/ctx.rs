@@ -206,10 +206,8 @@ impl<'a> AttachCtx<'a> {
     /// simulated speed is effectively forever. That is not a hang to debug; it
     /// is a peripheral nobody modelled.
     pub fn drive_pin_input(&mut self, pin: &str, level: bool) -> Result<()> {
-        let (device_type, device_id) = (
-            self.device_type().to_string(),
-            self.device_id().to_string(),
-        );
+        let (device_type, device_id) =
+            (self.device_type().to_string(), self.device_id().to_string());
         if !SystemBus::drive_pin_input(self.bus, pin, level) {
             anyhow::bail!(
                 "{device_type} '{device_id}': pin '{pin}' could not be driven as a \

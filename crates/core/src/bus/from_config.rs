@@ -270,6 +270,21 @@ impl SystemBus {
         let mut attached_i2c_ext_ids: std::collections::HashSet<&str> =
             std::collections::HashSet::new();
 
+        // I²C bus-switch topology. `external_devices[].connection` may name
+        // another external device's id instead of a controller — that is how a
+        // slave is placed behind a TCA9548A, the only way several devices with
+        // the same fixed address can share one bus. Validate the whole shape up
+        // front (this runs for EVERY family, since every peripheral factory is
+        // invoked from this loop) so a mis-wired switch is a loud error rather
+        // than a device that quietly answers nothing.
+        //
+        // Every device behind a switch is marked attached here: it is wired as
+        // part of its parent by `build_i2c_tree`, and letting it also reach the
+        // generic attach loop below would put a second copy straight on the
+        // controller — on the wrong bus segment, ahead of the switch.
+        let mux_children = crate::peripherals::components::validate_i2c_mux_topology(manifest)?;
+        attached_i2c_ext_ids.extend(mux_children.iter().copied());
+
         for p_cfg in &merged_peripherals {
             let canonical_type = Self::canonical_peripheral_type(&p_cfg.r#type);
             if canonical_type != p_cfg.r#type.to_ascii_lowercase() {
@@ -400,11 +415,12 @@ impl SystemBus {
                     if ext.connection != p_cfg.id {
                         continue;
                     }
-                    match crate::peripherals::components::build_external_i2c_device(
-                        &ext.r#type,
-                        &ext.id,
-                        &ext.config,
-                    ) {
+                    // `build_i2c_tree`, not the bare factory: when `ext` is a
+                    // bus switch this also builds every device wired behind it
+                    // and buckets them onto its channels, so what reaches the
+                    // attach choke point below is ONE assembled unit — the
+                    // switch — exactly as on the board.
+                    match crate::peripherals::components::build_i2c_tree(manifest, ext)? {
                         Some(device) => {
                             tracing::info!(
                                 "i2c attach: '{}' (type={}) -> '{}'",
