@@ -163,6 +163,91 @@ fn esp32_class_delay_ready_end_to_end_through_advance() {
     );
 }
 
+// ─── data_ready: the same drive, gating a register bit ─────────────────────
+
+/// Build the same machine hosting the SHIPPING VCNL4010 descriptor, whose
+/// `data_ready` rules gate `prox_data_rdy` on the identical clock.
+fn build_vcnl_machine() -> Machine<CountingCpu> {
+    let yaml = labwired_config::embedded_device_yaml("vcnl4010").expect("embedded");
+    let mut controller = Esp32c3I2c::new();
+    controller.push_slave(Box::new(GenericI2cDevice::from_yaml(yaml, 0).unwrap()));
+
+    let mut bus = crate::bus::SystemBus::new();
+    bus.add_peripheral(
+        "systimer",
+        0x6002_3000,
+        0x100,
+        None,
+        Box::new(Systimer::new_with_source(C3_CPU_HZ, 37)),
+    );
+    bus.add_peripheral("i2c0", 0x6001_3000, 0x100, None, Box::new(controller));
+    Machine::new(CountingCpu::default(), bus)
+}
+
+fn vcnl(machine: &mut Machine<CountingCpu>) -> &mut GenericI2cDevice {
+    delay_device(machine)
+}
+
+/// `Adafruit_VCNL4010::readProximity()` writes COMMAND = 0x08 then spins on
+/// `read8(COMMAND) & 0x20`. On an ESP32-class chip that poll must be REAL: the
+/// bit stays clear until the datasheet's 570 µs of simulated time has passed,
+/// so firmware that skips the poll (or waits too little) reads a result that is
+/// not ready — the same failure it would hit on silicon.
+#[test]
+fn esp32_class_vcnl4010_ready_bit_is_gated_by_the_central_drive() {
+    use crate::AdvanceRequest;
+
+    const COMMAND: u8 = 0x80;
+    const PROX_RDY: u8 = 0x20;
+
+    fn read_command(dev: &mut GenericI2cDevice) -> u8 {
+        dev.start();
+        dev.write(COMMAND);
+        dev.start();
+        let b = dev.read();
+        dev.stop();
+        b
+    }
+
+    let mut machine = build_vcnl_machine();
+    // Boot far enough that the drive is anchored and the µs source is live.
+    machine
+        .advance(AdvanceRequest::run(Some(100_000)))
+        .expect("advance");
+
+    // Start an on-demand proximity measurement (prox_od).
+    let dev = vcnl(&mut machine);
+    dev.start();
+    dev.write(COMMAND);
+    dev.write(0x08);
+    dev.stop();
+    assert_eq!(
+        read_command(vcnl(&mut machine)) & PROX_RDY,
+        0,
+        "the result cannot be ready in the same instant the measurement started"
+    );
+
+    // ~250 µs of simulated time (160 cycles/µs) — still inside the conversion.
+    machine
+        .advance(AdvanceRequest::run(Some(250 * CYCLES_PER_US)))
+        .expect("advance");
+    assert_eq!(
+        read_command(vcnl(&mut machine)) & PROX_RDY,
+        0,
+        "a too-short data-ready poll must still see the flag clear"
+    );
+
+    // Past the 570 µs conversion time.
+    machine
+        .advance(AdvanceRequest::run(Some(600 * CYCLES_PER_US)))
+        .expect("advance");
+    assert_eq!(
+        read_command(vcnl(&mut machine)) & PROX_RDY,
+        PROX_RDY,
+        "once the datasheet conversion time has elapsed the result is available"
+    );
+}
+
 #[test]
 fn nrf54l_twim_does_not_opt_into_central_drive() {
     // The nRF54L TWIM drives its slaves' advance_time_us itself off the GRTC,

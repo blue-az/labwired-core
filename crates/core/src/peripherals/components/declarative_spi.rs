@@ -182,7 +182,16 @@ impl SpiDevice for GenericSpiDevice {
             self.write_acc.push(mosi);
             if let Some(reg) = self.find_register(addr) {
                 if reg.access == RegisterAccess::Rw && self.write_acc.len() == reg.width as usize {
-                    let val = unpack(&self.write_acc, reg.endian);
+                    let written = unpack(&self.write_acc, reg.endian);
+                    // `write_mask` (shared with the I²C engine) keeps the bits
+                    // silicon owns; absent ⇒ the whole word is replaced.
+                    let val = match reg.write_mask {
+                        Some(mask) => {
+                            let prev = self.reg_values.get(&reg.name).copied().unwrap_or(0);
+                            (prev & !mask) | (written & mask)
+                        }
+                        None => written,
+                    };
                     self.reg_values.insert(reg.name.clone(), val);
                     self.write_acc.clear();
                     if self.framing.auto_increment {

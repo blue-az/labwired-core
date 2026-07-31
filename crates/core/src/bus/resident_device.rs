@@ -34,6 +34,26 @@ pub trait BusResidentDevice: std::fmt::Debug + Send {
     /// Stable system.yaml id, for sim-input targeting + diagnostics.
     fn id(&self) -> &str;
 
+    /// Whether this device's pin level changes ONLY when a stimulus drives it,
+    /// so it needs no per-cycle [`service`](Self::service) pass to stay correct.
+    ///
+    /// A push button is the one such device: a contact holds its level until
+    /// something moves it, and that level is applied at the stimulus apply
+    /// point. Everything else here is scanned or sampled per tick — a keypad
+    /// re-reads the driven row every cycle, an encoder walks a Gray sequence, a
+    /// DHT22 clocks out a timed frame — and must say `false`.
+    ///
+    /// This exists so a bus hosting only a button keeps the walk-free fast path
+    /// (see [`SystemBus::per_cycle_tick_is_trivial`]) without that optimisation
+    /// ever being able to silently un-wire a device that does need servicing.
+    /// It defaults to `false` — the safe answer — so a device added later gets
+    /// serviced unless its author deliberately opts out.
+    ///
+    /// [`SystemBus::per_cycle_tick_is_trivial`]: crate::bus::SystemBus
+    fn is_level_driven_on_stimulus(&self) -> bool {
+        false
+    }
+
     /// Concrete-type escape hatch for typed readback / diagnostics (see
     /// [`SystemBus::gpio_devices_of`]). The service/stimulus paths never
     /// downcast — this is only for callers that want a specific model back out.
