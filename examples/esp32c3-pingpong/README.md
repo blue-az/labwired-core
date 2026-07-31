@@ -53,3 +53,22 @@ again. Reconnect and the rally resumes.
 - Add a button so a human can serve.
 - Three boards in a ring, passing the ball on.
 - Print the rally over USB and plot it on a host.
+
+## Verified
+
+Both sketches compile on the hosted ESP32 toolchain (Arduino profile, no library
+deps). `screen.ino` was run in the twin against a wired SSD1306: it boots through
+the real C3 mask ROM and 2nd-stage bootloader, initialises the panel, renders,
+and prints `Player B ready - returning`. The panel is genuinely painted —
+framebuffer readback reports 128x64, 231 lit pixels — rather than the draw code
+merely executing.
+
+Note the C3's ROM boot consumes most of a default step budget on its own, so a
+hosted run needs `max_steps` well above the default or it stops mid-boot and is
+misreported as an infinite loop.
+
+**Not yet verified:** the two boards rallying *together* in the hosted twin. The
+hosted run path is still single-MCU, so it can only boot one of these sketches at
+a time. The link itself is proven at engine level by
+`crates/core/tests/world_esp32c3_pingpong.rs`, and on real hardware the pair is
+just two boards and three wires.
