@@ -482,3 +482,148 @@ fn configuration_registers_hold_what_the_driver_wrote() {
         "begin() enables the proximity-ready interrupt source"
     );
 }
+
+// ── the weld: the manifest the TS compiler actually emits ───────────────────
+//
+// Everything above builds the lab in Rust. This case starts from the exact
+// `external_devices:` block `packages/board-config` emits for the four-bay
+// diagram (see `test/i2c-mux-emit.test.ts`, which asserts the same bytes from
+// the other side) and proves core reconstructs the intended topology from it.
+//
+// Without this, the two halves could each be self-consistently wrong: the
+// emitter could name a channel core ignores, or core could expect a shape the
+// emitter never produces, and both test suites would stay green.
+//
+// Core is a submodule and cannot read the parent repo, so these bytes are a
+// vendored copy rather than a shared file. The weld is on the OTHER side:
+// `emits exactly the manifest core is tested against` in that TS file asserts
+// the compiler's output equals this string exactly, so changing the emit
+// format fails there and names this fixture to update.
+const EMITTED_MANIFEST: &str = r#"
+name: "playground-board"
+chip: "esp32s3"
+external_devices:
+  - id: "mux"
+    type: "tca9548a"
+    connection: "i2c0"
+    route:
+      sda: "GPIO8"
+      scl: "GPIO9"
+    config:
+      i2c_address: 0x70
+  - id: "bay0"
+    type: "vcnl4010"
+    connection: "mux"
+    channel: 0
+    config:
+      i2c_address: 0x13
+  - id: "bay1"
+    type: "vcnl4010"
+    connection: "mux"
+    channel: 1
+    config:
+      i2c_address: 0x13
+  - id: "bay2"
+    type: "vcnl4010"
+    connection: "mux"
+    channel: 2
+    config:
+      i2c_address: 0x13
+  - id: "bay3"
+    type: "vcnl4010"
+    connection: "mux"
+    channel: 3
+    config:
+      i2c_address: 0x13
+"#;
+
+#[test]
+fn the_compilers_manifest_builds_the_intended_topology() {
+    use labwired_core::peripherals::components::{build_i2c_tree, i2c_mux_child_ids};
+
+    let manifest: labwired_config::SystemManifest =
+        serde_yaml::from_str(EMITTED_MANIFEST).expect("the emitted manifest must parse");
+
+    // The four sensors are recognised as switch children, so no attach path
+    // puts them straight on the controller (which would be the silent
+    // mis-wiring the whole topology exists to prevent).
+    assert_eq!(
+        i2c_mux_child_ids(&manifest),
+        vec!["bay0", "bay1", "bay2", "bay3"]
+    );
+
+    let device = build_i2c_tree(&manifest, &manifest.external_devices[0])
+        .unwrap()
+        .expect("the switch must build");
+    let mux = device
+        .as_any()
+        .and_then(|a| a.downcast_ref::<Tca9548a>())
+        .expect("the assembled unit is the switch itself");
+    assert_eq!(mux.address(), MUX_ADDR);
+
+    for ch in 0..4u8 {
+        let behind = mux.channel_devices(ch);
+        assert_eq!(behind.len(), 1, "one sensor on channel {ch}");
+        assert_eq!(
+            behind[0].address(),
+            SENSOR_ADDR,
+            "channel {ch} carries a VCNL4010 at its fixed address"
+        );
+    }
+    assert!(
+        mux.channel_devices(4).is_empty(),
+        "channels 4..7 are unpopulated in this diagram"
+    );
+}
+
+#[test]
+fn the_compilers_manifest_drives_every_bay_through_a_controller() {
+    let manifest: labwired_config::SystemManifest =
+        serde_yaml::from_str(EMITTED_MANIFEST).expect("the emitted manifest must parse");
+    let device = labwired_core::peripherals::components::build_i2c_tree(
+        &manifest,
+        &manifest.external_devices[0],
+    )
+    .unwrap()
+    .expect("the switch must build");
+
+    let mut i2c = I2c::new_with_layout(I2cRegisterLayout::Stm32F1);
+    let trace = labwired_core::bus::bus_trace::new_log();
+    i2c.attach_traced("i2c1", &trace, device);
+
+    // The ids come from the diagram, so an agent (or a YAML scenario) drives a
+    // bay by the name the user gave it on the canvas.
+    let counts = [1_200u16, 24_000, 900, 33_333];
+    for (bay, &c) in counts.iter().enumerate() {
+        let cell = &i2c.attached_devices()[0];
+        let mut traced = cell.borrow_mut();
+        let mux = traced
+            .as_any_mut()
+            .and_then(|a| a.downcast_mut::<Tca9548a>())
+            .expect("slave 0 is the switch");
+        let want = format!("bay{bay}");
+        let mut done = false;
+        mux.for_each_sim_input(&mut |si| {
+            if si.component_id() == Some(want.as_str()) {
+                si.set_input("proximity", c as f64).unwrap();
+                done = true;
+                return true;
+            }
+            false
+        });
+        assert!(done, "the manifest must stamp the diagram id '{want}'");
+    }
+
+    for bay in [3u8, 1, 0, 2] {
+        select_channel(&mut i2c, bay);
+        assert!(
+            adafruit_begin(&mut i2c),
+            "begin() must succeed on bay {bay} of the compiled board"
+        );
+        assert_eq!(
+            adafruit_read_proximity(&mut i2c),
+            counts[bay as usize],
+            "bay {bay} of the compiled board"
+        );
+    }
+}
