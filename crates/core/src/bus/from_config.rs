@@ -1053,6 +1053,14 @@ impl SystemBus {
         }
 
         bus.rebuild_peripheral_ranges();
+        // Buttons/switches declared in `board_io` become bus-resident stimulus
+        // devices. They are the one input family the canvas emits WITHOUT an
+        // external_devices entry (a passive contact needs no device block), so
+        // without this pass a button on the canvas is inert in a headless run:
+        // it drives no pin and exposes no `pressed` channel, and every stimulus
+        // naming it is rejected as an unknown channel. Ranges must already be
+        // rebuilt — the IDR address is resolved through the registered GPIO.
+        bus.attach_board_io_buttons(manifest);
         // ESP32-C3: share IO_MUX pad controls with GPIO so an Arduino
         // `INPUT_PULLUP` changes the floating input level. No-op for every
         // other chip.
@@ -1089,6 +1097,78 @@ impl SystemBus {
             None => bus.derive_walk_deletable(),
         };
         Ok(bus)
+    }
+
+    /// Materialise every `board_io` button/switch binding as a bus-resident
+    /// [`Button`](crate::peripherals::components::button::Button).
+    ///
+    /// `board_io` is the canvas compiler's existing output for passive contacts
+    /// — it already carries the owning GPIO peripheral, the pin index, and the
+    /// `active_high` polarity derived from which rail the other terminal is
+    /// wired to. Reading it here rather than inventing a second declaration
+    /// keeps ONE source of truth for "there is a button on this pin".
+    ///
+    /// Only `signal: input` bindings attach: a `kind: button` emitted as an
+    /// output is not a contact the firmware samples. A binding naming a
+    /// peripheral that is not registered is skipped with a warning rather than
+    /// failing the build — the rest of the system still runs, the button simply
+    /// stays undrivable.
+    ///
+    /// The button is anchored to its GPIO by that peripheral's BASE address, not
+    /// by an input-register address: the level is applied through the owning
+    /// peripheral's `set_gpio_input`, which every GPIO model implements, so this
+    /// works for a per-port register model (STM32, Nordic, Kinetis) and a single
+    /// GPIO-matrix model (ESP32/C3/S3) alike.
+    fn attach_board_io_buttons(&mut self, manifest: &SystemManifest) {
+        use labwired_config::{BoardIoKind, BoardIoSignal};
+
+        for binding in &manifest.board_io {
+            if binding.kind != BoardIoKind::Button || binding.signal != BoardIoSignal::Input {
+                continue;
+            }
+            let Some(idx) = self.find_peripheral_index_by_name(&binding.peripheral) else {
+                tracing::warn!(
+                    "board_io button '{}' names unregistered peripheral '{}'; \
+                     the button will not be drivable",
+                    binding.id,
+                    binding.peripheral
+                );
+                continue;
+            };
+            let anchor = self.peripherals[idx].base;
+            let mut button = crate::peripherals::components::button::Button::new(
+                binding.id.clone(),
+                (anchor, binding.pin),
+                binding.active_high,
+            );
+
+            // Settle the released level NOW, before the firmware's first sample:
+            // an active-low button whose pin is left at the input register's
+            // reset value of 0 reads as a press that is never released, so a
+            // sketch waiting on the button fires immediately at boot.
+            //
+            // Then PROVE the level landed. A GPIO model that does not honour an
+            // externally driven level would leave a button that discovery
+            // advertises, `set_input` accepts, and the firmware never sees move
+            // — a stimulus that reports success and proves nothing. Where we
+            // cannot demonstrate the drive, we do not claim the capability: the
+            // button is dropped and the pin is left exactly as that chip had it.
+            let (level, _) = button.service();
+            let landed = self.drive_input_bit(anchor, binding.pin, level)
+                && self.peripherals[idx].dev.read_gpio_input(binding.pin) == Some(level);
+            if !landed {
+                tracing::warn!(
+                    "board_io button '{}' on '{}' pin {}: this GPIO model does not reflect an \
+                     externally driven input level, so the button is not attached and cannot be \
+                     driven by a stimulus",
+                    binding.id,
+                    binding.peripheral,
+                    binding.pin
+                );
+                continue;
+            }
+            self.gpio_devices.push(Box::new(button));
+        }
     }
 
     /// Install a GPIO edge observer on ESP32 / ESP32-S3 GPIO models when present.

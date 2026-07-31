@@ -144,14 +144,23 @@ impl SystemBus {
         let Some((addr, bit)) = Self::resolve_pin_idr(bus, pin) else {
             return false;
         };
-        let Some(idx) = bus
+        bus.drive_input_bit(addr, bit, level)
+    }
+
+    /// Address-keyed twin of [`drive_pin_input`](Self::drive_pin_input), for
+    /// callers that already hold a resolved `(IDR address, bit)` — a
+    /// bus-resident device servicing the pin it was attached to, rather than a
+    /// caller starting from a pad label. Same external-world seam
+    /// (`set_gpio_input`), so both routes agree on every chip.
+    pub fn drive_input_bit(&mut self, addr: u64, bit: u8, level: bool) -> bool {
+        let Some(idx) = self
             .peripherals
             .iter()
             .position(|p| addr >= p.base && addr < p.base + p.size)
         else {
             return false;
         };
-        bus.peripherals[idx].dev.set_gpio_input(bit, level)
+        self.peripherals[idx].dev.set_gpio_input(bit, level)
     }
 
     /// Resolve a pin label to its `(IDR address, bit)` so a sensor can
