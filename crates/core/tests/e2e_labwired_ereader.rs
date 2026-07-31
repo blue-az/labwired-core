@@ -281,13 +281,12 @@ external_devices:
         "esp_log_writev",
         "esp_random",
         "esp_fill_random",
-        // HardwareSerial::begin chain hits `_get_effective_baudrate` →
-        // `quou a10, a8, a10` with divisor=0 because getApbFrequency()
-        // returns 0 in the sim → divide-by-zero exception. Stub the
-        // whole begin so the UART init never runs (the sim has no UART
-        // model the firmware can observe anyway).
-        // Belt-and-braces: stub the leaf too, in case anything outside
-        // begin reaches it.
+        // serialEventRun stays nop'd: it is the Arduino loop() hook for
+        // user-defined serialEvent() callbacks, unrelated to UART output.
+        // The HardwareSerial nops this comment used to justify are gone —
+        // that rationale (divide-by-zero in _get_effective_baudrate) named a
+        // real mechanism but the wrong cause, and reading as settled fact is
+        // what kept anyone from looking at apb_ctrl for a year.
         "_Z14serialEventRunv",
     ] {
         push_named(&mut thunks, sym, rom_thunks::nop_return_zero);

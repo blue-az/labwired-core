@@ -903,6 +903,39 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
         }
     }
 
+    // The universal final-state inspect block — the SAME `machine.inspect()`
+    // payload the `test` path puts in result.json, written beside the snapshot
+    // as `<output>.inspect.json`.
+    //
+    // Without this the profile path's only evidence was an e-paper refresh
+    // scraped out of the stderr text above, so a classic-ESP32 sketch that
+    // reported through GPIO — or through any peripheral that is not a panel on
+    // spi3 — produced a clean run with nothing to verify against, and an oracle
+    // asserting pin state could never pass however correct the firmware was.
+    // Two run paths, two different answers to "what did the hardware do";
+    // this makes it one.
+    {
+        let inspect_block = machine.inspect(
+            None,
+            &labwired_core::inspect::InspectOpts {
+                include_bytes: false,
+                peripheral: None,
+            },
+        );
+        let inspect_path = args.output.with_extension("inspect.json");
+        match serde_json::to_vec(&inspect_block) {
+            Ok(json) => match std::fs::write(&inspect_path, &json) {
+                Ok(()) => eprintln!(
+                    "labwired-cli snapshot: inspect {} peripheral(s) -> {:?}",
+                    inspect_block.peripherals.len(),
+                    inspect_path
+                ),
+                Err(e) => eprintln!("labwired-cli snapshot: warn: write {inspect_path:?}: {e}"),
+            },
+            Err(e) => eprintln!("labwired-cli snapshot: warn: encode inspect block: {e}"),
+        }
+    }
+
     eprintln!(
         "labwired-cli snapshot: wrote {} bytes to {:?} (pc=0x{:08x} after {} cycles)",
         bytes.len(),
