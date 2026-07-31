@@ -218,7 +218,12 @@ fn adafruit_begin(i2c: &mut I2c) -> bool {
 fn adafruit_read_proximity(i2c: &mut I2c) -> u16 {
     let i = read8(i2c, SENSOR_ADDR, VCNL4010_INTSTAT);
     write8(i2c, SENSOR_ADDR, VCNL4010_INTSTAT, i & !0x80);
-    write8(i2c, SENSOR_ADDR, VCNL4010_COMMAND, VCNL4010_MEASUREPROXIMITY);
+    write8(
+        i2c,
+        SENSOR_ADDR,
+        VCNL4010_COMMAND,
+        VCNL4010_MEASUREPROXIMITY,
+    );
     for _ in 0..1000 {
         if read8(i2c, SENSOR_ADDR, VCNL4010_COMMAND) & VCNL4010_PROXIMITYREADY != 0 {
             return read16(i2c, SENSOR_ADDR, VCNL4010_PROXIMITYDATA);
@@ -323,7 +328,11 @@ fn every_combination_of_four_bays_reads_back_exactly() {
         }
         for bay in 0..4u8 {
             select_channel(&mut i2c, bay);
-            let expect = if mask & (1 << bay) != 0 { PRESENT } else { EMPTY };
+            let expect = if mask & (1 << bay) != 0 {
+                PRESENT
+            } else {
+                EMPTY
+            };
             assert_eq!(
                 adafruit_read_proximity(&mut i2c),
                 expect,
