@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **ESP32-C3 drift gate was watching the wrong files.** The C3's tier is a
+  reset-state oracle asserted against the declarative descriptors in
+  `configs/peripherals/esp32c3/`, and none of the 29 the chip yaml wires were in
+  its `models` drift-watch list — nor was `peripherals/esp_uart.rs`, where the
+  real UART0/UART1 register map moved on 2026-07-28. Those files could change
+  without the board's "silicon-verified" row ever going stale. Same hole on
+  `esp32s3` (3 descriptors + `esp_uart.rs`), `rp2040` and `mkw41z4`; all filled.
+  `generate_validation_status.py` now audits the watch list under `--check` /
+  `--drift`: every `path:` a chip yaml wires must be covered by that board's
+  `models`, and every listed path must exist. No board's status changed — every
+  newly watched path predates the covering `drift_ack`.
+- `docs/boards/VALIDATION_STATUS.md` regenerated: `nrf52840` and
+  `seeed-xiao-nrf52840-sense` now correctly read `✖ DRIFT` (model 2026-07-30 >
+  capture 2026-06-17, past the 2026-07-27 ack) instead of claiming an ack that
+  no longer covers them.
+
 ## [0.21.0] - 2026-07-27
 
 ### Added
