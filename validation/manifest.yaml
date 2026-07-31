@@ -137,6 +137,15 @@ boards:
     # read/write path, reset value or layout touched — drift is the shared nrf52
     # file commit date only. No live re-capture.
     # 2026-07-27: configs/chips/nrf52840.yaml corrected three NVIC numbers against tests/fixtures/real_world/nrf52840.svd — PDM 31->29 (31 is unassigned), PWM1 29->33 (29 was PDM's vector), PWM2 30->34 (30 is unassigned) — surfaced by the new SVD conformance gate. Numbers only; no peripheral model, register layout or base address changed, and the ACL / GPIO P1 base deviations were reviewed and left as recorded modelling limitations rather than silently 'fixed'. Evidence re-run on this commit: full cargo test -p labwired-core green, including this board's conformance, onboarding and firmware_survival cases. No live re-capture.
+    # 2026-07-31: I2C transaction dispatch in nrf52/twim.rs gained `claims_address` /
+    # `select_address` hooks so a bus switch (TCA9548A) can answer for addresses
+    # reachable behind an enabled channel. The DEFAULT `claims_address` is
+    # `self.address() == addr` — the exact predicate the previous
+    # `position(|d| d.borrow().address() == addr)` lookup used — so every existing
+    # device dispatches byte-identically; only the switch overrides it. No register
+    # read/write path, reset value, layout or base address changed. Evidence re-run
+    # on this commit: full `cargo test -p labwired-core` green, 82 test binaries, 0
+    # failures. No live re-capture.
     # 2026-07-30: crates/core/src/peripherals/nrf52/rtc.rs gained a `tick_elapsed_forced` override. Under `event-scheduler` the RTC's `tick` no-ops and the counter advances only from the bus-published cycle clock, which the bare-CPU forced walk freezes — so RTC0 could never reach its compare and nrf52840_onboarding_rtc0_fires_compare_and_pends_irq failed under `cargo test --workspace`. The override restores the legacy one-tick-per-bus-tick advance on that oracle-only path and carries `anchor` with it so no cycle is replayed. No register layout, base address or reset value changed, and the production event chain (take_scheduled_events / on_event) is untouched — this path is never reached from Machine execution, so nothing the 2026-06-17 capture asserts can move. Evidence: full `cargo test --workspace --lib` green, this board's conformance/onboarding/firmware_survival cases green, and the feature-off path unchanged at 2423 passed. No live re-capture.
     # 2026-07-30: configs/chips/nrf52840.yaml gained a 4KB zero-filled `nrf_errata_probe` memory region at 0xF0000000 (#708), so the Nordic nRF5 SDK / ArduinoCore-nRF5 errata probes that read 0xF0000FE0 stop recording unmapped_mmio. MEMORY MAP ONLY: no peripheral model, register layout, base address or reset value changed, and that window was previously UNMAPPED — it is not part of the 2026-06-17 asserted set (conformance 16/16, mmio 16/16, GPIO P0/P1, POWER/SPIS/TWIS/RTC0/TIMER0 sweeps all sit in the 0x4000_0000/0x5000_0000 peripheral space), so no captured value can move. The zero fill is a RECORDED MODELLING LIMITATION, not silicon parity: real die returns a package/rev fingerprint there, and zeros make the probe read 'not this rev' rather than have the sim invent a fingerprint it has never captured off the bench. Same pattern already carried by configs/chips/nrf52832.yaml. A live re-capture is still owed for the fingerprint window itself, but not for the drifted claim. No live re-capture.
     # 2026-07-31: I²C slave resolution changed from a flat `d.address() == addr`
@@ -209,6 +218,15 @@ boards:
     # `type: ir` SPI escape-hatch removed from nrf52/factory.rs); byte-identical,
     # same silicon. See the nrf52840 drift_ack note.
     # 2026-07-27: configs/chips/nrf52840.yaml corrected three NVIC numbers against tests/fixtures/real_world/nrf52840.svd — PDM 31->29 (31 is unassigned), PWM1 29->33 (29 was PDM's vector), PWM2 30->34 (30 is unassigned) — surfaced by the new SVD conformance gate. Numbers only; no peripheral model, register layout or base address changed, and the ACL / GPIO P1 base deviations were reviewed and left as recorded modelling limitations rather than silently 'fixed'. Evidence re-run on this commit: full cargo test -p labwired-core green, including this board's conformance, onboarding and firmware_survival cases. No live re-capture.
+    # 2026-07-31: I2C transaction dispatch in nrf52/twim.rs gained `claims_address` /
+    # `select_address` hooks so a bus switch (TCA9548A) can answer for addresses
+    # reachable behind an enabled channel. The DEFAULT `claims_address` is
+    # `self.address() == addr` — the exact predicate the previous
+    # `position(|d| d.borrow().address() == addr)` lookup used — so every existing
+    # device dispatches byte-identically; only the switch overrides it. No register
+    # read/write path, reset value, layout or base address changed. Evidence re-run
+    # on this commit: full `cargo test -p labwired-core` green, 82 test binaries, 0
+    # failures. No live re-capture.
     # 2026-07-30: rides the nrf52840 RTC `tick_elapsed_forced` override (same
     # silicon); oracle-only forced-walk path, no register layout or reset value
     # touched. See the nrf52840 drift_ack note.
@@ -351,6 +369,15 @@ boards:
     # or full-duplex RX events: labwired-hw-oracle (27/27) and chip_conformance
     # pass unchanged. No live re-capture this session; re-capturing IDR readback
     # and SPI RX behaviour is tracked.
+    # 2026-07-31: I2C transaction dispatch in peripherals/i2c.rs gained `claims_address` /
+    # `select_address` hooks so a bus switch (TCA9548A) can answer for addresses
+    # reachable behind an enabled channel. The DEFAULT `claims_address` is
+    # `self.address() == addr` — the exact predicate the previous
+    # `position(|d| d.borrow().address() == addr)` lookup used — so every existing
+    # device dispatches byte-identically; only the switch overrides it. No register
+    # read/write path, reset value, layout or base address changed. Evidence re-run
+    # on this commit: full `cargo test -p labwired-core` green, 82 test binaries, 0
+    # failures. No live re-capture.
     # 2026-07-31: crates/core/src/peripherals/i2c.rs — slave resolution moved from a
     # flat `d.address() == addr` first-match to `d.claims_address(addr)` plus a
     # `select_address` hook at the dispatch sites (#720), so a TCA9548A bus switch
@@ -701,6 +728,15 @@ boards:
     # Serial RX injection keeps parity — the twin now exposes rx_buffer() and
     # attach_uart_rx_source[_named] resolve it, so `uart_injections:` still
     # works. No live USB-JTAG re-capture this session.
+    # 2026-07-31: I2C transaction dispatch in esp32c3/i2c.rs gained `claims_address` /
+    # `select_address` hooks so a bus switch (TCA9548A) can answer for addresses
+    # reachable behind an enabled channel. The DEFAULT `claims_address` is
+    # `self.address() == addr` — the exact predicate the previous
+    # `position(|d| d.borrow().address() == addr)` lookup used — so every existing
+    # device dispatches byte-identically; only the switch overrides it. No register
+    # read/write path, reset value, layout or base address changed. Evidence re-run
+    # on this commit: full `cargo test -p labwired-core` green, 82 test binaries, 0
+    # failures. No live re-capture.
     # 2026-07-31: crates/core/src/peripherals/esp32c3/i2c.rs — slave resolution moved
     # from a flat `d.address() == addr` first-match to `d.claims_address(addr)` plus a
     # `select_address` hook at BOTH resolution sites, the command-list dispatch and
@@ -823,6 +859,15 @@ boards:
     # or full-duplex RX events: labwired-hw-oracle (27/27) and chip_conformance
     # pass unchanged. No live re-capture this session; re-capturing IDR readback
     # and SPI RX behaviour is tracked.
+    # 2026-07-31: I2C transaction dispatch in peripherals/i2c.rs gained `claims_address` /
+    # `select_address` hooks so a bus switch (TCA9548A) can answer for addresses
+    # reachable behind an enabled channel. The DEFAULT `claims_address` is
+    # `self.address() == addr` — the exact predicate the previous
+    # `position(|d| d.borrow().address() == addr)` lookup used — so every existing
+    # device dispatches byte-identically; only the switch overrides it. No register
+    # read/write path, reset value, layout or base address changed. Evidence re-run
+    # on this commit: full `cargo test -p labwired-core` green, 82 test binaries, 0
+    # failures. No live re-capture.
     # 2026-07-31: crates/core/src/peripherals/i2c.rs — slave resolution moved from a
     # flat `d.address() == addr` first-match to `d.claims_address(addr)` plus a
     # `select_address` hook at the dispatch sites (#720), so a TCA9548A bus switch
@@ -1080,6 +1125,15 @@ boards:
     # or full-duplex RX events: labwired-hw-oracle (27/27) and chip_conformance
     # pass unchanged. No live re-capture this session; re-capturing IDR readback
     # and SPI RX behaviour is tracked.
+    # 2026-07-31: I2C transaction dispatch in peripherals/i2c.rs gained `claims_address` /
+    # `select_address` hooks so a bus switch (TCA9548A) can answer for addresses
+    # reachable behind an enabled channel. The DEFAULT `claims_address` is
+    # `self.address() == addr` — the exact predicate the previous
+    # `position(|d| d.borrow().address() == addr)` lookup used — so every existing
+    # device dispatches byte-identically; only the switch overrides it. No register
+    # read/write path, reset value, layout or base address changed. Evidence re-run
+    # on this commit: full `cargo test -p labwired-core` green, 82 test binaries, 0
+    # failures. No live re-capture.
     # 2026-07-31: crates/core/src/peripherals/i2c.rs — slave resolution moved from a
     # flat `d.address() == addr` first-match to `d.claims_address(addr)` plus a
     # `select_address` hook at the dispatch sites (#720), so a TCA9548A bus switch
@@ -1206,6 +1260,15 @@ boards:
     # The chip YAML also renames tim1 -> tim1_pwm (an id-only change declaring the
     # tier1 pwm class) and adds an nvic entry. No live re-capture this session; a
     # DMA width diff against silicon is tracked.
+    # 2026-07-31: I2C transaction dispatch in peripherals/i2c.rs gained `claims_address` /
+    # `select_address` hooks so a bus switch (TCA9548A) can answer for addresses
+    # reachable behind an enabled channel. The DEFAULT `claims_address` is
+    # `self.address() == addr` — the exact predicate the previous
+    # `position(|d| d.borrow().address() == addr)` lookup used — so every existing
+    # device dispatches byte-identically; only the switch overrides it. No register
+    # read/write path, reset value, layout or base address changed. Evidence re-run
+    # on this commit: full `cargo test -p labwired-core` green, 82 test binaries, 0
+    # failures. No live re-capture.
     # 2026-07-31: crates/core/src/peripherals/i2c.rs — slave resolution moved from a
     # flat `d.address() == addr` first-match to `d.claims_address(addr)` plus a
     # `select_address` hook at the dispatch sites (#720), so a TCA9548A bus switch
@@ -1398,6 +1461,15 @@ boards:
     # Register map, reset values and the 9-reg reset-state anchor are untouched;
     # esp32s3 reset conformance + the GDMA UART-TX descriptor tests pass. No S3
     # board attached; no live re-capture.
+    # 2026-07-31: I2C transaction dispatch in esp32s3/i2c.rs gained `claims_address` /
+    # `select_address` hooks so a bus switch (TCA9548A) can answer for addresses
+    # reachable behind an enabled channel. The DEFAULT `claims_address` is
+    # `self.address() == addr` — the exact predicate the previous
+    # `position(|d| d.borrow().address() == addr)` lookup used — so every existing
+    # device dispatches byte-identically; only the switch overrides it. No register
+    # read/write path, reset value, layout or base address changed. Evidence re-run
+    # on this commit: full `cargo test -p labwired-core` green, 82 test binaries, 0
+    # failures. No live re-capture.
     # 2026-07-31: crates/core/src/peripherals/esp32s3/i2c.rs — slave resolution moved
     # from a flat `d.address() == addr` first-match to `d.claims_address(addr)` plus a
     # `select_address` hook at both the command-list dispatch and the `SLAVE_ADDR`

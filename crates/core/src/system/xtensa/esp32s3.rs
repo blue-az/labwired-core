@@ -416,16 +416,19 @@ pub fn configure_xtensa_esp32s3(bus: &mut SystemBus, opts: &Esp32s3Opts) -> Esp3
         Box::new(crate::peripherals::esp32s3::crosscore_ipi::Esp32s3CrossCoreIpi::new()),
     );
     // ── SYSTEM_CORE_1_CONTROL (0x600C_0000) ──────────────────────────────
-    // APP_CPU reset/clock-gate control. Registered BEFORE the 0x600C_0000
-    // "system" catch-all so the RESETING 1→0 edge (APP_CPU out of reset) is
-    // observed and the run loop can boot core 1 from the real ROM.
-    bus.add_peripheral(
-        "core1_control",
-        0x600C_0000,
-        0x8,
-        None,
-        Box::new(crate::peripherals::esp32s3::core1_control::Esp32s3Core1Control::new()),
-    );
+    // NOT registered here, deliberately. `system_regs` window A (registered
+    // below at this same base) serves 0x600C_0000..0x030 and already models
+    // CORE_1_CONTROL_0/1 including the RESETING 1→0 edge that releases the
+    // APP_CPU — see the note there.
+    //
+    // A `core1_control` entry used to sit here with the comment "Registered
+    // BEFORE the 'system' catch-all so the RESETING edge is observed". That is
+    // backwards: equal starts resolve to the LAST registered, so registering
+    // first meant losing. The entry owned no address at all and its model never
+    // executed — dead code that read as the authoritative APP_CPU boot path.
+    // (The type itself is still live via the declarative factory's
+    // `esp32s3_core1_control`; only this shadowed registration is gone.)
+    // Guarded by tests::peripheral_reachability.
     // ── EXTMEM cache controller (0x600C_4000) ────────────────────────────
     // The boot ROM drives cache invalidate/writeback/sync through this block
     // using a launch-bit/done-bit handshake (CACHE_SYNC_CTRL @+0x28: write an
