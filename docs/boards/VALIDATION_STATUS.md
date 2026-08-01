@@ -12,7 +12,7 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 | `stm32h563` | 🟢 silicon-verified | 2026-06-22 | 2026-07-31 | ⚠ drift acked 2026-07-31 (re-capture pending) |
 | `esp32c3` | 🟢 silicon-verified | 2026-06-17 | 2026-07-31 | ⚠ drift acked 2026-07-31 (re-capture pending) |
 | `nucleo-l476rg` | 🟢 silicon-verified | 2026-06-20 | 2026-07-31 | ⚠ drift acked 2026-07-31 (re-capture pending) |
-| `nucleo-l073rz` | 🟢 silicon-verified | 2026-06-20 | 2026-07-28 | ⚠ drift acked 2026-07-31 (re-capture pending) |
+| `nucleo-l073rz` | 🟢 silicon-verified | 2026-06-20 | 2026-07-31 | ⚠ drift acked 2026-07-31 (re-capture pending) |
 | `stm32f103` | 🟢 silicon-verified | 2026-06-20 | 2026-07-31 | ⚠ drift acked 2026-07-31 (re-capture pending) |
 | `stm32f407` | 🟢 silicon-smoke | 2026-06-20 | 2026-07-31 | ⚠ drift acked 2026-07-31 (re-capture pending) |
 | `esp32s3` | 🟢 silicon-verified | 2026-07-15 | 2026-07-31 | ⚠ drift acked 2026-07-31 (re-capture pending) |
