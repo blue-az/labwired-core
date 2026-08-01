@@ -91,8 +91,12 @@ fn labwired_ereader_runs_to_panel_paint() {
     // panel is indistinguishable from a panel that was never driven, and the
     // final PC only ever shows the FreeRTOS idle task.
     let uart_sink = Arc::new(Mutex::new(Vec::new()));
-    bus.attach_uart_tx_sink(uart_sink.clone(), false);
     let cpu = configure_xtensa_esp32(&mut bus);
+    // AFTER configure_xtensa_esp32, not before: attach_uart_tx_sink walks the
+    // peripherals already on the bus, so calling it first attached the sink to
+    // an empty list and captured nothing. The "firmware never reached
+    // Serial.println" line below was reporting that, not the firmware.
+    bus.attach_uart_tx_sink(uart_sink.clone(), false);
 
     let manifest: labwired_config::SystemManifest = serde_yaml::from_str(
         r#"
@@ -277,25 +281,12 @@ external_devices:
         "esp_log_writev",
         "esp_random",
         "esp_fill_random",
-        // HardwareSerial::begin chain hits `_get_effective_baudrate` →
-        // `quou a10, a8, a10` with divisor=0 because getApbFrequency()
-        // returns 0 in the sim → divide-by-zero exception. Stub the
-        // whole begin so the UART init never runs (the sim has no UART
-        // model the firmware can observe anyway).
-        "_ZN14HardwareSerial5beginEmjaabmh",
-        // Belt-and-braces: stub the leaf too, in case anything outside
-        // begin reaches it.
-        "_get_effective_baudrate",
-        "_ZN14HardwareSerial5writeEh",
-        "_ZN14HardwareSerial5writeEPKhj",
-        "_ZN14HardwareSerial9availableEv",
-        "_ZN14HardwareSerial5flushEv",
-        "_ZN14HardwareSerial9readBytesEPcj",
-        "_ZN14HardwareSerial9readBytesEPhj",
-        "uartAvailable",
-        "uartAvailableForWrite",
-        "uartWrite",
-        "uartWriteBuf",
+        // serialEventRun stays nop'd: it is the Arduino loop() hook for
+        // user-defined serialEvent() callbacks, unrelated to UART output.
+        // The HardwareSerial nops this comment used to justify are gone —
+        // that rationale (divide-by-zero in _get_effective_baudrate) named a
+        // real mechanism but the wrong cause, and reading as settled fact is
+        // what kept anyone from looking at apb_ctrl for a year.
         "_Z14serialEventRunv",
     ] {
         push_named(&mut thunks, sym, rom_thunks::nop_return_zero);
@@ -559,12 +550,24 @@ external_devices:
     let uart_text = String::from_utf8_lossy(&uart_sink.lock().unwrap().clone()).to_string();
     eprintln!("[ereader-sim] ── firmware serial ─────────────────────────────");
     if uart_text.trim().is_empty() {
-        eprintln!("[ereader-sim] (no UART output — firmware never reached Serial.println)");
+        eprintln!("[ereader-sim] (UART sink empty)");
     } else {
         for line in uart_text.lines() {
             eprintln!("[ereader-sim] | {line}");
         }
     }
+    // Serial is now REAL on this path: the Arduino HardwareSerial nops are gone
+    // and the sketch's own markers come back through the modelled UART. Assert
+    // it, because "no UART output" was mistaken for firmware behaviour for a
+    // year while the actual causes were a shadowed SYSCON model (SYSCLK_CONF
+    // read 0xFFFFFFFF → getApbFrequency() → divide-by-zero) and, in this test,
+    // a sink attached before the peripherals existed.
+    assert!(
+        uart_text.contains("[reader] setup() entered"),
+        "expected the sketch's own Serial marker in the UART sink, got {} byte(s): {uart_text:?}",
+        uart_text.len(),
+    );
+
     assert!(
         refresh_gen >= 1,
         "labwired-ereader did not reach a panel refresh in {step_count} cycles \

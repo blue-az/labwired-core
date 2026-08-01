@@ -410,6 +410,38 @@ impl GpioFamily {
         }
     }
 
+    /// Set the level the OUTSIDE WORLD holds on `pin` — a button contact, a
+    /// sensor status line, a device driving a shared bus.
+    ///
+    /// This writes the input latch directly instead of going through
+    /// [`write_reg`](Self::write_reg), because on silicon an input register is
+    /// read-only: firmware storing to IDR must be ignored, and the F1 model
+    /// correctly ignores it. Routing external input through the same MMIO store
+    /// therefore silently did nothing on every STM32F1 pin — a button, keypad
+    /// or BUSY line attached to an F1 could be "driven" with a successful
+    /// return value and never move the pin. The latch is only what the world
+    /// holds; [`read_reg`] still blends it with whatever an output pin drives.
+    fn set_external_input(&mut self, pin: u8, level: bool) -> bool {
+        if pin >= 32 {
+            return false;
+        }
+        let apply = |idr: &mut u32| {
+            if level {
+                *idr |= 1u32 << pin;
+            } else {
+                *idr &= !(1u32 << pin);
+            }
+        };
+        match self {
+            Self::Stm32F1(g) => apply(&mut g.idr),
+            Self::Stm32V2(g) => apply(&mut g.idr),
+            Self::Nrf52(g) => apply(&mut g.idr),
+            // Kinetis names its input latch PDIR.
+            Self::Kinetis(g) => apply(&mut g.pdir),
+        }
+        true
+    }
+
     /// Direction-aware pad level (the logic-probe truth). See
     /// [`crate::Peripheral::read_gpio_pad`]; kept on the family so the
     /// push-capture tap can read pre/post-write levels while the tap state is
@@ -926,20 +958,10 @@ impl crate::Peripheral for GpioPort {
     }
 
     fn set_gpio_input(&mut self, pin: u8, level: bool) -> bool {
-        if pin >= 32 {
-            return false;
-        }
-        let offset = self.idr_offset();
-        let mut reg = self.read_reg(offset);
-        if level {
-            reg |= 1u32 << pin;
-        } else {
-            reg &= !(1u32 << pin);
-        }
         self.tap_snapshot();
-        self.write_reg(offset, reg);
+        let ok = self.family.set_external_input(pin, level);
         self.tap_report();
-        true
+        ok
     }
 
     fn install_logic_tap(
