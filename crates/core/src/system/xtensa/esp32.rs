@@ -443,12 +443,18 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
     // 40 (matches the RTC_APB_FREQ_REG 0x0050_0050 encoding the RtcCntl
     // peripheral seeds at construction).
     rom_bank.register(0x4000_8588, rom_thunks::rom_xtal_freq_40mhz);
-    // ets_printf — formats and writes to UART. Reuse the S3 thunk.
-    rom_bank.register(0x4000_7d54, rom_thunks::ets_printf);
+    // ets_printf is NOT thunked on classic ESP32: the real ROM implementation
+    // is loaded by `install_rom_console` below, and formats through the ROM's
+    // own `ets_write_char` -> putc1 -> `uart_tx_one_char` chain into UART0.
+    // The Rust `rom_thunks::ets_printf` it used to share with the S3 wrote to
+    // `tracing::info!` instead, so output reached the host's stderr but never
+    // the UART — invisible to any capture, assertion, or timing.
     // esp_rom_spiflash_config_clk — configures flash SPI clock divider.
     // No-op in sim; returns 0 (success).
     rom_bank.register(0x4006_2bc8, rom_thunks::nop_return_zero);
-    rom_bank.register(0x4000_9200, rom_thunks::nop_return_zero); // (unnamed esp32_init helper)
+    // 0x4000_9200 is `uart_tx_one_char`, not the "unnamed esp32_init helper" it
+    // was once registered as here — and it is NOT thunked any more. The real
+    // ROM code is loaded over this address by `install_rom_console` below.
     rom_bank.register(0x4000_4348, rom_thunks::nop_return_zero); // rom_i2c_writeReg vicinity
     rom_bank.register(0x4000_41a4, rom_thunks::nop_return_zero); // rom_i2c_writeReg
                                                                  // Cache control — esp-hal pokes these during boot. We don't model
@@ -508,14 +514,21 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
     rom_bank.register(0x4000_1778, rom_thunks::rom_close); // newlib close
     rom_bank.register(0x4000_17dc, rom_thunks::rom_read); // newlib read
     rom_bank.register(0x4000_181c, rom_thunks::rom_write); // newlib write
-    rom_bank.register(0x4000_7d18, rom_thunks::nop_return_zero); // ets_install_putc1
-    rom_bank.register(0x4000_7d28, rom_thunks::nop_return_zero); // ets_install_uart_printf
-    rom_bank.register(0x4000_7d38, rom_thunks::nop_return_zero); // ets_install_putc2
+    // ets_install_putc1 / ets_install_uart_printf / ets_install_putc2 are real
+    // ROM code too (loaded below). They are three-instruction routines that
+    // store a function pointer into the ROM's putc globals; nop'ing them meant
+    // firmware redirecting the console got its pointer silently dropped.
+    // Four console entries here used to carry INVENTED addresses under real ROM
+    // symbol names: uart_tx_one_char at 0x4000_8fa8, uart_tx_one_char2 at
+    // 0x4000_9018, uart_tx_flush at 0x4000_8fcc, and a "uart_tx_wait_idle" at
+    // 0x4000_9024 (the real ones are 0x9200 / 0x922c / 0x9258 / 0x9278, per
+    // Espressif's esp32.rom.ld). Nothing ever called them, and the mistake was
+    // invisible: the bank pre-fills its whole range with BREAK 1,14 and
+    // `get_rom_thunk` falls back to `nop_return_zero`, so a name at a dead
+    // address and a correctly-addressed nop behave identically — both discard
+    // every byte the firmware prints. They are gone; the real ROM code for the
+    // console runs instead (see `install_rom_console`).
     rom_bank.register(0x4000_9028, rom_thunks::nop_return_zero); // uart_tx_switch
-    rom_bank.register(0x4000_9024, rom_thunks::nop_return_zero); // uart_tx_wait_idle
-    rom_bank.register(0x4000_8fcc, rom_thunks::nop_return_zero); // uart_tx_flush
-    rom_bank.register(0x4000_8fa8, rom_thunks::nop_return_zero); // uart_tx_one_char
-    rom_bank.register(0x4000_9018, rom_thunks::nop_return_zero); // uart_tx_one_char2
     rom_bank.register(0x4000_05a4, rom_thunks::nop_return_zero); // cache_flush_rom
     rom_bank.register(0x4005_a980, rom_thunks::nop_return_zero); // Cache_Read_Disable
     rom_bank.register(0x4005_a917, rom_thunks::nop_return_zero); // Cache_Flush
@@ -538,6 +551,10 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
     rom_bank.register(0x4005_da7c, rom_thunks::rom_md5_init); // esp_rom_md5_init
     rom_bank.register(0x4005_da9c, rom_thunks::rom_md5_update); // esp_rom_md5_update
     rom_bank.register(0x4005_db1c, rom_thunks::rom_md5_final); // esp_rom_md5_final
+    // Load the boot ROM's REAL console routines over the BREAK bytes, taking
+    // the UART output path off the thunk mechanism entirely. Last, so it wins
+    // over any registration above.
+    super::install_rom_console(&mut rom_bank);
     bus.add_peripheral("rom", 0x4000_0000, 0x70000, None, Box::new(rom_bank));
     // UART0 — STM32F1 layout for now (see caveat above).
     // UART0 (Serial) echoes to the host console; UART1/2 are capture-only.
@@ -842,6 +859,13 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
         None,
         Box::new(RamPeripheral::new(0x10000)),
     );
+
+    // Seed the ROM's own console state — the rodata digit tables into the
+    // brom_data window just registered, and putc1 into DRAM. Must come after
+    // both windows exist, since it writes through the bus. Without it
+    // `ets_printf` executes correctly and prints nothing, because real silicon
+    // installs putc1 during a boot path we skip. See `seed_rom_console_state`.
+    super::seed_rom_console_state(bus);
 
     // Phase 2B.3c (issue #192): every peripheral registered above is either
     // migrated to the event scheduler (uart0, gpio, rtc_cntl, timg0/1) or
