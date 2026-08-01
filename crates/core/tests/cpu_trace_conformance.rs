@@ -232,8 +232,7 @@ fn every_core_emits_the_full_per_instruction_trace() {
             let width = core.step_len as usize;
             let mut expected_opcode = 0u32;
             for b in (0..width).rev() {
-                expected_opcode =
-                    (expected_opcode << 8) | core.program[i * width + b] as u32;
+                expected_opcode = (expected_opcode << 8) | core.program[i * width + b] as u32;
             }
             assert_eq!(
                 step.start_opcode, expected_opcode,
