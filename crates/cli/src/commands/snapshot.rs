@@ -837,6 +837,54 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
                                 non_ff,
                                 bp.len(),
                             );
+                        } else if let Some(panel) = panel_any
+                            .downcast_ref::<labwired_core::peripherals::components::Ili9341>(
+                        ) {
+                            // An RGB565 TFT has no e-paper "refresh" — the
+                            // frame memory IS the screen — so the evidence is
+                            // DISPON plus how much of the framebuffer the
+                            // firmware actually wrote. Without this line the
+                            // panel produced no run evidence at all: a `display`
+                            // oracle clause could not resolve, and a lab could
+                            // only assert that `tft.begin()` returned, which is
+                            // a host-side value the driver tracks itself and
+                            // would read the same with no panel on the bus.
+                            //
+                            // `refresh_generation` is reported as 1 once the
+                            // display is on and pixels exist, so one oracle
+                            // shape covers both panel families.
+                            let fb = panel.framebuffer();
+                            let painted = fb.iter().filter(|&&b| b != 0x00).count();
+                            let generation = u32::from(panel.display_on() && painted > 0);
+                            let (w, h) = panel.dimensions();
+                            // The most common non-black pixel, so the line says
+                            // WHAT was drawn and not merely that something was.
+                            // "10176 bytes changed" cannot be checked against a
+                            // photo of the real panel; "top colour 0x07E0"
+                            // (RGB565 green) can.
+                            let mut counts: std::collections::HashMap<u16, usize> =
+                                std::collections::HashMap::new();
+                            for px in fb.chunks_exact(2) {
+                                let v = u16::from_be_bytes([px[0], px[1]]);
+                                if v != 0 {
+                                    *counts.entry(v).or_default() += 1;
+                                }
+                            }
+                            let top = counts
+                                .iter()
+                                .max_by_key(|&(_, n)| *n)
+                                .map(|(v, n)| format!("0x{v:04X} x{n}"))
+                                .unwrap_or_else(|| "none".to_string());
+                            eprintln!(
+                                "labwired-cli snapshot: panel (ili9341) state — refresh_generation={}, display_on={}, painted bytes={}/{}, {}x{}, top colour {}",
+                                generation,
+                                panel.display_on(),
+                                painted,
+                                fb.len(),
+                                w,
+                                h,
+                                top,
+                            );
                         } else if let Some(panel) = panel_any.downcast_ref::<Uc8151dTricolor290>() {
                             let bp = panel.black_plane();
                             let non_ff = bp.iter().filter(|&&b| b != 0xFF).count();

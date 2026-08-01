@@ -90,8 +90,18 @@ impl SystemBus {
                 })
                 .unwrap_or(false);
             if is_esp32 {
+                // Low bank in GPIO_OUT (base + 0x04), high bank in GPIO_OUT1
+                // (base + 0x10) with bit = pad - 32. The C3 has only one bank,
+                // and `parse_esp32_gpio_pin` never yields >= 32 for it because
+                // its pads stop at 21.
                 const GPIO_OUT_REG_OFFSET: u64 = 0x04;
-                return Some((bus.peripherals[idx].base + GPIO_OUT_REG_OFFSET, bit));
+                const GPIO_OUT1_REG_OFFSET: u64 = 0x10;
+                let (offset, bit) = if bit >= 32 {
+                    (GPIO_OUT1_REG_OFFSET, bit - 32)
+                } else {
+                    (GPIO_OUT_REG_OFFSET, bit)
+                };
+                return Some((bus.peripherals[idx].base + offset, bit));
             }
         }
         None
@@ -106,10 +116,13 @@ impl SystemBus {
             .trim_start_matches(|c: char| c.is_ascii_alphabetic())
             .trim();
         let num: u8 = digits.parse().ok()?;
-        if num > 31 {
-            return None;
-        }
-        Some(num)
+        // Classic ESP32 pads run 0..=39. The high bank (32..39) lives in
+        // OUT1/ENABLE1 and is modelled, so it must resolve too — capping at 31
+        // here made every high-bank pad unresolvable, and a device wired to one
+        // (an Adafruit TFT FeatherWing puts D/C on GPIO33) silently lost its
+        // control line: `set_dc_source` was never called, so the bus never
+        // latched D/C and the panel framed every byte as a command.
+        (num <= 39).then_some(num)
     }
 
     /// Parse an ESP32-S3 GPIO label ("GPIO48", "gpio8", "IO17", or a bare "48")
