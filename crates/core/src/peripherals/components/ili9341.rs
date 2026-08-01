@@ -804,7 +804,6 @@ mod tests {
         assert_eq!(fb[3], 0xE0);
     }
 
-    #[test]
     // Datasheet §8.2.2: "the Frame Memory contents are unaffected by this
     // command". This test previously asserted the opposite, pinning a model
     // behaviour that let firmware relying on SWRESET to blank the screen pass
