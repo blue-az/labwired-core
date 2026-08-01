@@ -1742,15 +1742,33 @@ impl XtensaLx7 {
                 let wb_cur = self.regs.windowbase();
                 let wb_dest = wb_cur.wrapping_sub(n) & 0x0F;
 
-                // Shadow hybrid: if we still have a preserve entry for this RETW,
-                // force the dest frame live and skip UF — restore_call_preserve
-                // below reloads a0..a7 (including ipc_task a5/a6). Stack UF is
-                // unreliable after FreeRTOS task switch (save areas get reused).
-                if !self.faithful_windows
-                    && !self.call_preserve_stack.is_empty()
-                    && !self.regs.windowstart_bit(wb_dest)
-                    && n > 0
-                {
+                // Shadow mode owns window save/restore END TO END, so it must
+                // never hand a RETW to the firmware's underflow vector.
+                //
+                // The two halves have to agree. In shadow mode the per-access
+                // WINDOW OVERFLOW vector is disabled (see the F5 block in
+                // `execute`) because the sim-level spill on CALL{n} preserves
+                // the caller's registers itself — which means the firmware's
+                // `_WindowOverflow{4,8,12}` handlers never run and the on-stack
+                // save areas at a1-16.. are never written. Vectoring to
+                // `_WindowUnderflow8` then restores a0 from a save area nobody
+                // populated: a0 comes back 0 and the RETW lands at pc=0x0,
+                // surfacing as an illegal-instruction fault inside
+                // _KernelExceptionVector with no hint of where it came from.
+                //
+                // This guard used to additionally require a non-empty
+                // `call_preserve_stack`, so it only masked the asymmetry while
+                // that stack happened to be primed. A deep enough call chain
+                // drained it and the next wrapped RETW fell through to the
+                // firmware handler. Adafruit's stock `graphicstest` reproduces
+                // it during its first benchmark, where real silicon (verified
+                // on an ESP32-D0WDQ6) completes all twelve.
+                //
+                // With the stack empty there is nothing to reload, but forcing
+                // the frame live is still strictly better: the physical
+                // registers hold the most recent values, whereas the firmware
+                // path is guaranteed to read zeros.
+                if !self.faithful_windows && !self.regs.windowstart_bit(wb_dest) && n > 0 {
                     self.regs.set_windowstart_bit(wb_dest, true);
                     for k in 1..n {
                         let s = wb_dest.wrapping_add(k) & 0x0F;
