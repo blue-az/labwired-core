@@ -1008,6 +1008,25 @@ fn build_sim_bus() -> SystemBus {
     bus
 }
 
+/// One settle tick for this bare-bus oracle harness.
+///
+/// There is no `Machine` here — only a `SystemBus` — so nothing ever drains
+/// the event scheduler. Under the `event-scheduler` feature the production
+/// walk deliberately skips every `uses_scheduler()` peripheral (GPDMA, FDCAN,
+/// …) because a `Machine` is expected to advance them through `on_event`;
+/// with no drain those models would sit frozen and every autonomous-completion
+/// case here would read back zeros. `tick_peripherals_fully_forced` is the
+/// documented compatibility boundary for exactly this shape of harness (see
+/// its doc comment, and `labwired_hw_oracle::arm_thumb`, which already settles
+/// its frozen-CPU bus this way): it reconstructs the pre-scheduler walk and
+/// routes each model through `tick_elapsed_forced`, the override GPDMA/DMA/
+/// EXTI/nRF52-RTC carry precisely so the oracle sees their one-tick legacy
+/// transition. In featureless builds the forced walk is the same walk, so this
+/// is a no-op there.
+fn settle_one_tick(sim: &mut SystemBus) {
+    let _ = sim.tick_peripherals_fully_forced();
+}
+
 /// Apply a case's prep + write to the sim bus and return the masked readback.
 fn sim_masked_read(sim: &mut SystemBus, case: &MmioCase) -> u32 {
     for &(addr, val) in case.prep {
@@ -1028,7 +1047,7 @@ fn sim_masked_read(sim: &mut SystemBus, case: &MmioCase) -> u32 {
         // lazily from the published clock instead of the walk.
         let now = sim.current_cycle + 1;
         sim.set_current_cycle(now);
-        sim.tick_peripherals_fully();
+        settle_one_tick(sim);
     }
     let v = sim
         .read_u32(case.read_addr as u64)
@@ -1166,7 +1185,7 @@ mod hw {
         for _ in 0..case.settle_ticks {
             let now = sim.current_cycle + 1;
             sim.set_current_cycle(now);
-            sim.tick_peripherals_fully();
+            settle_one_tick(sim);
         }
 
         let sim_val = match sim.read_u32(case.read_addr as u64) {
