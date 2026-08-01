@@ -161,7 +161,8 @@ fn esp32_rom_uart_tx_one_char_executes_and_reaches_the_sink() {
     let offset = ((ROM_UART_TX_ONE_CHAR as i64 - ((STUB & !3) as i64 + 4)) >> 2) as i32;
     let word = 0x5u32 | (2 << 4) | ((offset as u32 & 0x3_FFFF) << 6);
     for i in 0..3 {
-        bus.write_u8(STUB as u64 + i, (word >> (8 * i)) as u8).unwrap();
+        bus.write_u8(STUB as u64 + i, (word >> (8 * i)) as u8)
+            .unwrap();
     }
 
     // CALL8 rotates the register window by 8, so the callee's a2 (its argument)

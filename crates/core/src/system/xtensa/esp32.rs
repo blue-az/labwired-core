@@ -395,20 +395,20 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
     rom_bank.register(0x4000_1778, rom_thunks::rom_close); // newlib close
     rom_bank.register(0x4000_17dc, rom_thunks::rom_read); // newlib read
     rom_bank.register(0x4000_181c, rom_thunks::rom_write); // newlib write
-    // ets_install_putc1 / ets_install_uart_printf / ets_install_putc2 are real
-    // ROM code too (loaded below). They are three-instruction routines that
-    // store a function pointer into the ROM's putc globals; nop'ing them meant
-    // firmware redirecting the console got its pointer silently dropped.
-    // Four console entries here used to carry INVENTED addresses under real ROM
-    // symbol names: uart_tx_one_char at 0x4000_8fa8, uart_tx_one_char2 at
-    // 0x4000_9018, uart_tx_flush at 0x4000_8fcc, and a "uart_tx_wait_idle" at
-    // 0x4000_9024 (the real ones are 0x9200 / 0x922c / 0x9258 / 0x9278, per
-    // Espressif's esp32.rom.ld). Nothing ever called them, and the mistake was
-    // invisible: the bank pre-fills its whole range with BREAK 1,14 and
-    // `get_rom_thunk` falls back to `nop_return_zero`, so a name at a dead
-    // address and a correctly-addressed nop behave identically — both discard
-    // every byte the firmware prints. They are gone; the real ROM code for the
-    // console runs instead (see `install_rom_console`).
+                                                           // ets_install_putc1 / ets_install_uart_printf / ets_install_putc2 are real
+                                                           // ROM code too (loaded below). They are three-instruction routines that
+                                                           // store a function pointer into the ROM's putc globals; nop'ing them meant
+                                                           // firmware redirecting the console got its pointer silently dropped.
+                                                           // Four console entries here used to carry INVENTED addresses under real ROM
+                                                           // symbol names: uart_tx_one_char at 0x4000_8fa8, uart_tx_one_char2 at
+                                                           // 0x4000_9018, uart_tx_flush at 0x4000_8fcc, and a "uart_tx_wait_idle" at
+                                                           // 0x4000_9024 (the real ones are 0x9200 / 0x922c / 0x9258 / 0x9278, per
+                                                           // Espressif's esp32.rom.ld). Nothing ever called them, and the mistake was
+                                                           // invisible: the bank pre-fills its whole range with BREAK 1,14 and
+                                                           // `get_rom_thunk` falls back to `nop_return_zero`, so a name at a dead
+                                                           // address and a correctly-addressed nop behave identically — both discard
+                                                           // every byte the firmware prints. They are gone; the real ROM code for the
+                                                           // console runs instead (see `install_rom_console`).
     rom_bank.register(0x4000_9028, rom_thunks::nop_return_zero); // uart_tx_switch
     rom_bank.register(0x4000_05a4, rom_thunks::nop_return_zero); // cache_flush_rom
     rom_bank.register(0x4005_a980, rom_thunks::nop_return_zero); // Cache_Read_Disable
@@ -432,9 +432,9 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
     rom_bank.register(0x4005_da7c, rom_thunks::rom_md5_init); // esp_rom_md5_init
     rom_bank.register(0x4005_da9c, rom_thunks::rom_md5_update); // esp_rom_md5_update
     rom_bank.register(0x4005_db1c, rom_thunks::rom_md5_final); // esp_rom_md5_final
-    // Load the boot ROM's REAL console routines over the BREAK bytes, taking
-    // the UART output path off the thunk mechanism entirely. Last, so it wins
-    // over any registration above.
+                                                               // Load the boot ROM's REAL console routines over the BREAK bytes, taking
+                                                               // the UART output path off the thunk mechanism entirely. Last, so it wins
+                                                               // over any registration above.
     super::install_rom_console(&mut rom_bank);
     bus.add_peripheral("rom", 0x4000_0000, 0x70000, None, Box::new(rom_bank));
     // UART0 — STM32F1 layout for now (see caveat above).
