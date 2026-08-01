@@ -33,13 +33,23 @@
 //! Sensirion models (scd41) chose always-ready responses for exactly this
 //! reason. Reads before the delay elapses return not-ready bytes (`0xFF`),
 //! matching how a Sensirion read past an empty response buffer reads.
+//!
+//! **Data-ready bits.** Register devices express the same conversion timing as
+//! a status bit rather than a withheld response: a
+//! [`labwired_config::DataReady`] rule names the start bit firmware writes, the
+//! status bit the model drives, the datasheet conversion time, and the result
+//! register whose read clears the flag. It is one primitive over data — the
+//! VCNL4010 adopts it in YAML, and so can any part with the same
+//! start/poll/read datasheet shape. Where a bus has no honest µs source
+//! (STM32-class, ESP32-classic, nRF52) the bit degrades to always-set, i.e. the
+//! always-ready constant these models used before the primitive existed.
 
 use std::collections::HashMap;
 
 use anyhow::{bail, Context, Result};
 use labwired_config::{
-    AddWrap, AutoIncrement, Crc8Spec, DeviceDescriptor, Endian, I2cAccess, I2cCommand, I2cRegister,
-    I2cSpec, ObservableSpec, ReadComplete, ResponseWord, UpdateRule,
+    AddWrap, AutoIncrement, Crc8Spec, DataReady, DeviceDescriptor, Endian, I2cAccess, I2cCommand,
+    I2cRegister, I2cSpec, ObservableSpec, ReadComplete, ResponseWord, UpdateRule,
 };
 
 use super::declarative_regs::{encode_raw, observe, pack, register_read_bytes, unpack};
@@ -62,6 +72,19 @@ fn crc8(data: &[u8], poly: u8, init: u8) -> u8 {
         }
     }
     crc
+}
+
+/// Where one [`DataReady`] rule's conversion currently stands. See the
+/// lifecycle on [`DataReady`]; `Converting` carries the simulated-µs deadline.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DataReadyState {
+    /// No conversion has been started (power-on), or the flag was cleared by a
+    /// result read and the start bits were no longer set.
+    Idle,
+    /// A conversion is in flight; the flag sets once `elapsed_us` reaches this.
+    Converting(u64),
+    /// The conversion finished: the status bit reads set.
+    Ready,
 }
 
 /// The generic device. Constructed from a [`DeviceDescriptor`] whose
@@ -100,6 +123,17 @@ pub struct GenericI2cDevice {
     /// A delayed response withheld until `elapsed_us >= ready_at_us`.
     pending: Option<Vec<u8>>,
     ready_at_us: u64,
+    /// True once a bus master has actually advanced this device's wall-clock —
+    /// i.e. the chip has an honest absolute-µs source. Families without one
+    /// (STM32, ESP32-classic, nRF52) never set it, and every [`DataReady`] bit
+    /// degrades to always-set there (see [`DataReady`] for why).
+    time_source_seen: bool,
+
+    /// `data_ready` rules and their per-rule conversion state (parallel Vecs,
+    /// one state per rule). Empty ⇒ every data-ready code path short-circuits,
+    /// so devices that declare none are untouched.
+    data_ready: Vec<DataReady>,
+    dr_state: Vec<DataReadyState>,
 
     /// Register-pointer-mode pointer mask (applied to the pointer byte). 0xFF ⇒
     /// no masking (the default; TMP102 uses 0x03).
@@ -198,6 +232,9 @@ impl GenericI2cDevice {
             elapsed_us: 0,
             pending: None,
             ready_at_us: 0,
+            time_source_seen: false,
+            dr_state: vec![DataReadyState::Idle; spec.data_ready.len()],
+            data_ready: spec.data_ready.clone(),
             reg_pointer_mask: spec.pointer_mask.unwrap_or(0xFF),
             updates: spec.updates.clone(),
             file,
@@ -268,6 +305,82 @@ impl GenericI2cDevice {
                 v = a.reset;
             }
             self.reg_values.insert(name.clone(), (v as u16) as u32);
+        }
+    }
+
+    // ─── data_ready primitive ──────────────────────────────────────────────
+    //
+    // One write-triggered, time-gated status bit, driven entirely by the
+    // declared [`DataReady`] rules. Every method here returns immediately when
+    // no rule is declared, so devices without the primitive are byte-identical.
+
+    /// Promote every conversion whose deadline the simulated clock has reached.
+    /// Called before a register read latches, which is the only moment the
+    /// state is observable.
+    fn tick_data_ready(&mut self) {
+        for state in &mut self.dr_state {
+            if let DataReadyState::Converting(deadline) = *state {
+                if self.elapsed_us >= deadline {
+                    *state = DataReadyState::Ready;
+                }
+            }
+        }
+    }
+
+    /// Whether rule `i`'s status bit currently reads set. Without an honest µs
+    /// source the bit is always set — the documented holdout degradation.
+    fn data_ready_set(&self, i: usize) -> bool {
+        !self.time_source_seen || self.dr_state[i] == DataReadyState::Ready
+    }
+
+    /// The bits every declared rule contributes to a read of `register`.
+    fn ready_overlay(&self, register: &str) -> u32 {
+        let mut overlay = 0;
+        for (i, rule) in self.data_ready.iter().enumerate() {
+            if rule.ready_register == register && self.data_ready_set(i) {
+                overlay |= rule.ready_mask;
+            }
+        }
+        overlay
+    }
+
+    /// Start every conversion whose start bits the master just left set in
+    /// `register` (level-triggered — a driver re-issues the same on-demand bit
+    /// for each reading). `stored` is the register's value AFTER the write.
+    fn start_conversions(&mut self, register: &str, stored: u32) {
+        for (i, rule) in self.data_ready.iter().enumerate() {
+            if rule.start_register == register && stored & rule.start_mask != 0 {
+                self.dr_state[i] =
+                    DataReadyState::Converting(self.elapsed_us.saturating_add(rule.conversion_us));
+            }
+        }
+    }
+
+    /// Clear every status bit whose result register was just read, and restart
+    /// the conversion when the start bits are still set (so a periodic /
+    /// self-timed sketch keeps getting fresh data instead of stalling).
+    fn clear_on_read(&mut self, register: &str) {
+        for i in 0..self.data_ready.len() {
+            if !self.data_ready[i]
+                .clear_on_read
+                .iter()
+                .any(|r| r == register)
+            {
+                continue;
+            }
+            let rule = &self.data_ready[i];
+            let still_started = self
+                .reg_values
+                .get(&rule.start_register)
+                .copied()
+                .unwrap_or(0)
+                & rule.start_mask
+                != 0;
+            self.dr_state[i] = if still_started {
+                DataReadyState::Converting(self.elapsed_us.saturating_add(rule.conversion_us))
+            } else {
+                DataReadyState::Idle
+            };
         }
     }
 
@@ -414,11 +527,27 @@ impl I2cDevice for GenericI2cDevice {
             return;
         }
         let Some(ptr) = self.pointer else { return };
-        if let Some(reg) = self.find_register(ptr) {
-            if reg.access == I2cAccess::Rw && self.write_buf.len() == 1 + reg.width as usize {
-                let val = unpack(&self.write_buf[1..], reg.endian);
-                self.reg_values.insert(reg.name.clone(), val);
+        let Some(reg) = self.find_register(ptr) else {
+            return;
+        };
+        if reg.access != I2cAccess::Rw || self.write_buf.len() != 1 + reg.width as usize {
+            return;
+        }
+        let (name, endian, write_mask) = (reg.name.clone(), reg.endian, reg.write_mask);
+        let written = unpack(&self.write_buf[1..], endian);
+        // `write_mask` protects the bits silicon owns (a model-driven status
+        // flag, a hardwired bit): those keep their current value. Absent ⇒ the
+        // whole word is replaced, exactly as before the mask existed.
+        let stored = match write_mask {
+            Some(mask) => {
+                let prev = self.reg_values.get(&name).copied().unwrap_or(0);
+                (prev & !mask) | (written & mask)
             }
+            None => written,
+        };
+        self.reg_values.insert(name.clone(), stored);
+        if !self.data_ready.is_empty() {
+            self.start_conversions(&name, stored);
         }
     }
 
@@ -446,11 +575,37 @@ impl I2cDevice for GenericI2cDevice {
         }
         // Register mode: latch the pointed register's bytes on the first read.
         if !self.latched {
-            self.read_buf = match self.pointer.and_then(|p| self.find_register(p)) {
-                Some(reg) => register_read_bytes(reg, &self.slots, &self.reg_values),
+            // Any conversion whose deadline has passed becomes readable here —
+            // the only point at which the status bit is observable.
+            if !self.data_ready.is_empty() {
+                self.tick_data_ready();
+            }
+            let (bytes, name) = match self.pointer.and_then(|p| self.find_register(p)) {
+                Some(reg) => {
+                    let raw = register_read_bytes(reg, &self.slots, &self.reg_values);
+                    // Status bits are OR'd over whatever the register stores, so
+                    // one register carries the firmware-written enable bits and
+                    // the model-driven ready flags at once.
+                    let overlay = self.ready_overlay(&reg.name);
+                    let bytes = if overlay == 0 {
+                        raw
+                    } else {
+                        pack(unpack(&raw, reg.endian) | overlay, reg.width, reg.endian)
+                    };
+                    (bytes, Some(reg.name.clone()))
+                }
                 // Unknown pointer reads a zero word, matching veml7700.
-                None => vec![0, 0],
+                None => (vec![0, 0], None),
             };
+            self.read_buf = bytes;
+            // The datasheets clear the flag on a read of the result register
+            // ("reset when one of the corresponding result registers is read"),
+            // so it happens as the read latches, not after the last byte.
+            if let Some(name) = name {
+                if !self.data_ready.is_empty() {
+                    self.clear_on_read(&name);
+                }
+            }
             self.latched = true;
         }
         let byte = self.read_buf.get(self.read_idx).copied().unwrap_or(0xFF);
@@ -471,6 +626,12 @@ impl I2cDevice for GenericI2cDevice {
 
     fn advance_time_us(&mut self, us: u64) {
         self.elapsed_us = self.elapsed_us.saturating_add(us);
+        // A non-zero advance is the proof that this bus has an honest µs source
+        // and that `data_ready` gating is meaningful here. Zero-length slices
+        // (the central drive runs every slice) prove nothing either way.
+        if us > 0 {
+            self.time_source_seen = true;
+        }
     }
 
     fn as_any(&self) -> Option<&dyn std::any::Any> {
@@ -525,6 +686,88 @@ fn validate_spec(spec: &I2cSpec) -> Result<()> {
     }
     if !spec.updates.is_empty() && !has_regs {
         bail!("behavior.i2c declares updates but no registers (updates drive a wide register)");
+    }
+    // A data_ready rule that names a register the device does not have would
+    // silently never fire — the exact failure mode (a ready bit that never
+    // appears) that hangs firmware inside a vendor poll loop. Reject it here.
+    if !spec.data_ready.is_empty() && !has_regs {
+        bail!(
+            "behavior.i2c declares data_ready but no registers (data_ready gates a register bit)"
+        );
+    }
+    for dr in &spec.data_ready {
+        for (role, name) in [
+            ("start_register", &dr.start_register),
+            ("ready_register", &dr.ready_register),
+        ] {
+            if !spec.registers.iter().any(|r| &r.name == name) {
+                bail!(
+                    "data_ready '{}' {role} '{name}' is not a declared register",
+                    dr.name
+                );
+            }
+        }
+        for name in &dr.clear_on_read {
+            if !spec.registers.iter().any(|r| &r.name == name) {
+                bail!(
+                    "data_ready '{}' clear_on_read '{name}' is not a declared register",
+                    dr.name
+                );
+            }
+        }
+        if dr.start_mask == 0 || dr.ready_mask == 0 {
+            bail!(
+                "data_ready '{}' has an empty start_mask or ready_mask (it could never fire)",
+                dr.name
+            );
+        }
+        // The start bits must survive a firmware write, or the conversion could
+        // never be started; the ready bits must NOT, or firmware could forge
+        // readiness. Both are `write_mask` questions on the named registers.
+        let start_reg = spec
+            .registers
+            .iter()
+            .find(|r| r.name == dr.start_register)
+            .expect("checked above");
+        if start_reg.access != labwired_config::RegisterAccess::Rw {
+            bail!(
+                "data_ready '{}' start_register '{}' is read-only — firmware could never \
+                 start a conversion",
+                dr.name,
+                dr.start_register
+            );
+        }
+        if let Some(mask) = start_reg.write_mask {
+            if dr.start_mask & !mask != 0 {
+                bail!(
+                    "data_ready '{}' start_mask {:#x} includes bits '{}' write_mask {:#x} \
+                     protects — firmware could never start a conversion",
+                    dr.name,
+                    dr.start_mask,
+                    dr.start_register,
+                    mask
+                );
+            }
+        }
+        let ready_reg = spec
+            .registers
+            .iter()
+            .find(|r| r.name == dr.ready_register)
+            .expect("checked above");
+        let writable = match (ready_reg.access, ready_reg.write_mask) {
+            (labwired_config::RegisterAccess::R, _) => 0,
+            (labwired_config::RegisterAccess::Rw, Some(mask)) => mask,
+            (labwired_config::RegisterAccess::Rw, None) => u32::MAX,
+        };
+        if dr.ready_mask & writable != 0 {
+            bail!(
+                "data_ready '{}' ready_mask {:#x} overlaps bits firmware may write in '{}' — \
+                 the status bit must be model-owned (narrow its write_mask)",
+                dr.name,
+                dr.ready_mask,
+                dr.ready_register
+            );
+        }
     }
     if let Some(rf) = &spec.register_file {
         if rf.size == 0 || rf.size > 65536 {
@@ -846,6 +1089,19 @@ pub static PCA9685_KIT: LazyLock<DeclarativeI2cKit> = LazyLock::new(|| {
         labwired_config::embedded_device_yaml("pca9685").expect("pca9685 descriptor is embedded"),
     )
     .expect("pca9685.yaml is a valid declarative i2c descriptor")
+});
+
+/// Vishay VCNL4010 proximity + ambient sensor (declarative `vcnl4010.yaml`).
+/// Written declaratively from the start — there is no hand-written model to
+/// migrate from and none is needed: the part is a register map plus two input
+/// channels. Its address 0x13 is fixed in silicon, so more than one on a bus
+/// requires a [`super::tca9548a::Tca9548a`] switch; see
+/// `tests/vcnl4010_bay_occupancy.rs` for that topology driven end to end.
+pub static VCNL4010_KIT: LazyLock<DeclarativeI2cKit> = LazyLock::new(|| {
+    DeclarativeI2cKit::from_yaml(
+        labwired_config::embedded_device_yaml("vcnl4010").expect("vcnl4010 descriptor is embedded"),
+    )
+    .expect("vcnl4010.yaml is a valid declarative i2c descriptor")
 });
 
 #[cfg(test)]
@@ -1244,6 +1500,320 @@ behavior:
       - { name: c, code: 0x0001 }
 "#;
         assert!(GenericI2cDevice::from_yaml(yaml, 0).is_err());
+    }
+
+    // ── data_ready: write-triggered, time-gated status bits ────────────────
+    //
+    // Driven against the SHIPPING VCNL4010 descriptor rather than a fixture, so
+    // these assert the real part's datasheet numbers (COMMAND 0x80, prox_od
+    // 0x08 → prox_data_rdy 0x20 after 570 µs, als_od 0x10 → als_data_rdy 0x40
+    // after 100 ms, cleared by a read of the matching result register).
+
+    const COMMAND: u8 = 0x80;
+    const PROX_DATA: u8 = 0x87;
+    const AMBI_DATA: u8 = 0x85;
+    const PROX_RDY: u8 = 0x20;
+    const ALS_RDY: u8 = 0x40;
+
+    fn vcnl() -> GenericI2cDevice {
+        GenericI2cDevice::from_yaml(
+            labwired_config::embedded_device_yaml("vcnl4010").expect("embedded"),
+            0,
+        )
+        .expect("vcnl4010.yaml is a valid descriptor")
+    }
+
+    /// A VCNL4010 on a bus WITH an honest µs source: one non-zero advance is
+    /// what proves the source exists, so nudge the clock before the script.
+    fn vcnl_timed() -> GenericI2cDevice {
+        let mut d = vcnl();
+        d.advance_time_us(1);
+        d
+    }
+
+    fn write8(d: &mut GenericI2cDevice, reg: u8, value: u8) {
+        d.start();
+        d.write(reg);
+        d.write(value);
+        d.stop();
+    }
+
+    fn read8(d: &mut GenericI2cDevice, reg: u8) -> u8 {
+        read_reg(d, reg, 1)[0]
+    }
+
+    #[test]
+    fn ready_bit_is_clear_until_the_conversion_time_elapses() {
+        let mut d = vcnl_timed();
+        assert_eq!(
+            read8(&mut d, COMMAND) & PROX_RDY,
+            0,
+            "nothing has been measured yet, so no result is available"
+        );
+        write8(&mut d, COMMAND, 0x08); // prox_od
+        assert_eq!(read8(&mut d, COMMAND) & PROX_RDY, 0, "conversion in flight");
+        d.advance_time_us(569);
+        assert_eq!(
+            read8(&mut d, COMMAND) & PROX_RDY,
+            0,
+            "one µs short of the 570 µs conversion time"
+        );
+        d.advance_time_us(1);
+        assert_eq!(
+            read8(&mut d, COMMAND) & PROX_RDY,
+            PROX_RDY,
+            "the conversion time has elapsed: the result is available"
+        );
+    }
+
+    #[test]
+    fn reading_the_result_clears_the_ready_bit() {
+        let mut d = vcnl_timed();
+        write8(&mut d, COMMAND, 0x08);
+        d.advance_time_us(570);
+        assert_eq!(read8(&mut d, COMMAND) & PROX_RDY, PROX_RDY);
+        // Datasheet: "this bit will be reset when one of the corresponding
+        // result registers (reg #7, reg #8) is read".
+        let counts = read_reg(&mut d, PROX_DATA, 2);
+        assert_eq!(counts, vec![0x07, 0xD0], "default 2000 counts, big-endian");
+        assert_eq!(
+            read8(&mut d, COMMAND) & PROX_RDY,
+            0,
+            "the result was consumed, so a fresh conversion is under way"
+        );
+        // prox_od is still set, so the next conversion re-arms rather than the
+        // part going idle — a polling sketch keeps getting fresh readings.
+        d.advance_time_us(570);
+        assert_eq!(read8(&mut d, COMMAND) & PROX_RDY, PROX_RDY);
+    }
+
+    #[test]
+    fn firmware_cannot_forge_or_clear_a_ready_bit() {
+        let mut d = vcnl_timed();
+        // Write every bit: only the low five (write_mask 0x1F) may land, so the
+        // data-ready flags stay clear and config_lock stays set.
+        write8(&mut d, COMMAND, 0xFF);
+        assert_eq!(
+            read8(&mut d, COMMAND) & (PROX_RDY | ALS_RDY),
+            0,
+            "a firmware write must never forge readiness"
+        );
+        assert_eq!(read8(&mut d, COMMAND) & 0x80, 0x80, "config_lock reads 1");
+        assert_eq!(read8(&mut d, COMMAND) & 0x1F, 0x1F, "the enables did land");
+        // Once a conversion completes, a write cannot clear the flag either.
+        d.advance_time_us(570);
+        assert_eq!(read8(&mut d, COMMAND) & PROX_RDY, PROX_RDY);
+        write8(&mut d, COMMAND, 0x00);
+        assert_eq!(
+            read8(&mut d, COMMAND) & PROX_RDY,
+            PROX_RDY,
+            "only a result read clears it"
+        );
+    }
+
+    #[test]
+    fn ambient_and_proximity_convert_independently() {
+        let mut d = vcnl_timed();
+        write8(&mut d, COMMAND, 0x18); // als_od | prox_od together
+        d.advance_time_us(570);
+        let cmd = read8(&mut d, COMMAND);
+        assert_eq!(cmd & PROX_RDY, PROX_RDY, "proximity takes 570 µs");
+        assert_eq!(cmd & ALS_RDY, 0, "ambient needs the full 100 ms frame");
+        d.advance_time_us(100_000 - 570);
+        assert_eq!(read8(&mut d, COMMAND) & ALS_RDY, ALS_RDY);
+        // Clearing one leaves the other alone.
+        read_reg(&mut d, AMBI_DATA, 2);
+        let cmd = read8(&mut d, COMMAND);
+        assert_eq!(cmd & ALS_RDY, 0, "the ambient result was consumed");
+        assert_eq!(cmd & PROX_RDY, PROX_RDY, "the proximity result was not");
+    }
+
+    /// The bug this primitive exists to catch: firmware that starts a
+    /// conversion and reads the result without waiting for the ready flag.
+    /// The twin must report the flag clear, exactly as silicon would.
+    #[test]
+    fn a_missing_data_ready_poll_is_visible() {
+        let mut d = vcnl_timed();
+        d.set_input("proximity", 31_000.0).unwrap();
+        write8(&mut d, COMMAND, 0x08);
+        assert_eq!(
+            read8(&mut d, COMMAND) & PROX_RDY,
+            0,
+            "firmware skipping the poll reads a result that is not ready"
+        );
+    }
+
+    /// Holdout families (STM32, ESP32-classic, nRF52) never advance the clock,
+    /// and the flags must degrade to always-set there — the same always-ready
+    /// constant this part modelled before the primitive existed. Anything else
+    /// would hang correct firmware inside a vendor poll loop.
+    #[test]
+    fn without_a_time_source_the_flags_read_always_ready() {
+        let mut d = vcnl(); // no advance_time_us — no honest µs source
+        assert_eq!(
+            read8(&mut d, COMMAND),
+            0xE0,
+            "config_lock + both ready bits"
+        );
+        write8(&mut d, COMMAND, 0x08);
+        assert_eq!(read8(&mut d, COMMAND), 0xE8, "…plus the enable that landed");
+        read_reg(&mut d, PROX_DATA, 2);
+        assert_eq!(
+            read8(&mut d, COMMAND) & PROX_RDY,
+            PROX_RDY,
+            "a result read cannot un-ready a device with no clock to wait on"
+        );
+    }
+
+    #[test]
+    fn a_zero_length_advance_does_not_claim_a_time_source() {
+        // The central drive runs every scheduler slice and often hands over 0 µs;
+        // that proves nothing about whether the chip has an absolute counter.
+        let mut d = vcnl();
+        d.advance_time_us(0);
+        assert_eq!(read8(&mut d, COMMAND), 0xE0);
+    }
+
+    // ── data_ready: spec validation ────────────────────────────────────────
+
+    /// A `data_ready` rule with a mistake would silently never fire, which is
+    /// the one failure mode that hangs firmware inside a vendor poll loop, so
+    /// each is rejected at construction instead.
+    #[test]
+    fn malformed_data_ready_rules_are_rejected() {
+        let build = |rule: &str, regs: &str| {
+            let yaml = format!(
+                "type: dr_bad\nbehavior:\n  primitive: i2c_device\n  i2c:\n    \
+                 default_address: 0x10\n    registers:\n{regs}    data_ready:\n{rule}"
+            );
+            GenericI2cDevice::from_yaml(&yaml, 0)
+        };
+        const GOOD_REGS: &str = "      - { name: CMD, addr: 0x00, width: 1, endian: be, access: rw, write_mask: 0x0F }\n      - { name: OUT, addr: 0x01, width: 2, endian: be, access: r }\n";
+        const GOOD_RULE: &str = "      - { name: m, start_register: CMD, start_mask: 0x01, ready_register: CMD, ready_mask: 0x10, conversion_us: 100, clear_on_read: [OUT] }\n";
+        assert!(build(GOOD_RULE, GOOD_REGS).is_ok(), "the baseline is valid");
+
+        // A register name that does not exist — in any of the three roles.
+        for rule in [
+            "      - { name: m, start_register: NOPE, start_mask: 0x01, ready_register: CMD, ready_mask: 0x10, conversion_us: 100 }\n",
+            "      - { name: m, start_register: CMD, start_mask: 0x01, ready_register: NOPE, ready_mask: 0x10, conversion_us: 100 }\n",
+            "      - { name: m, start_register: CMD, start_mask: 0x01, ready_register: CMD, ready_mask: 0x10, conversion_us: 100, clear_on_read: [NOPE] }\n",
+        ] {
+            assert!(build(rule, GOOD_REGS).is_err(), "unknown register: {rule}");
+        }
+        // An empty mask could never fire.
+        assert!(build(
+            "      - { name: m, start_register: CMD, start_mask: 0x00, ready_register: CMD, ready_mask: 0x10, conversion_us: 100 }\n",
+            GOOD_REGS
+        )
+        .is_err());
+        // A start bit firmware cannot reach (outside write_mask), and a
+        // read-only start register: both mean no conversion can ever start.
+        assert!(build(
+            "      - { name: m, start_register: CMD, start_mask: 0x10, ready_register: CMD, ready_mask: 0x20, conversion_us: 100 }\n",
+            GOOD_REGS
+        )
+        .is_err());
+        assert!(build(
+            "      - { name: m, start_register: OUT, start_mask: 0x01, ready_register: CMD, ready_mask: 0x10, conversion_us: 100 }\n",
+            GOOD_REGS
+        )
+        .is_err());
+        // A ready bit firmware COULD write would let a sketch forge readiness.
+        assert!(build(
+            "      - { name: m, start_register: CMD, start_mask: 0x01, ready_register: CMD, ready_mask: 0x02, conversion_us: 100 }\n",
+            GOOD_REGS
+        )
+        .is_err());
+        // data_ready needs a register-pointer device to gate a bit in.
+        let cmd_mode = "type: dr_cmd\nbehavior:\n  primitive: i2c_device\n  i2c:\n    default_address: 0x10\n    commands:\n      - { name: c, code: 0x01 }\n    data_ready:\n      - { name: m, start_register: CMD, start_mask: 0x01, ready_register: CMD, ready_mask: 0x10, conversion_us: 100 }\n";
+        assert!(GenericI2cDevice::from_yaml(cmd_mode, 0).is_err());
+    }
+
+    // ── data_ready is not VCNL4010-shaped ──────────────────────────────────
+
+    /// The VCNL4010 puts the start bit and the ready bit in the SAME register.
+    /// If the primitive only worked for that it would be a device feature with
+    /// a schema, not a primitive. This fixture is the OTHER common shape, taken
+    /// from the ST VL53L0X: the start bit lives in `SYSRANGE_START` (0x00), the
+    /// ready bit in a different register `RESULT_INTERRUPT_STATUS` (0x13), and
+    /// it is cleared by reading a third, `RESULT_RANGE_VAL` (0x1E). Adopting
+    /// the primitive for it is YAML only — no Rust, no schema change.
+    ///
+    /// (The shipping [`super::vl53l0x`] model is NOT migrated onto this: it
+    /// still needs register-mode pointer auto-increment for the 12-byte block
+    /// read at 0x14, and a write-1-to-clear idiom for `SYSTEM_INTERRUPT_CLEAR`.
+    /// Both are engine work, tracked separately — see the migration note in
+    /// that module.)
+    const TOF_FIXTURE: &str = r#"
+type: test_tof_data_ready_fixture
+behavior:
+  primitive: i2c_device
+  i2c:
+    default_address: 0x29
+    registers:
+      - { name: SYSRANGE_START, addr: 0x00, width: 1, endian: be, access: rw, reset: 0x00 }
+      - { name: RESULT_INTERRUPT_STATUS, addr: 0x13, width: 1, endian: be, access: r, reset: 0x00 }
+      - { name: RESULT_RANGE_VAL, addr: 0x1E, width: 2, endian: be, access: r, source: distance }
+      - { name: MODEL_ID, addr: 0xC0, width: 1, endian: be, access: r, reset: 0xEE }
+    data_ready:
+      - name: range
+        start_register: SYSRANGE_START
+        start_mask: 0x01
+        ready_register: RESULT_INTERRUPT_STATUS
+        ready_mask: 0x07
+        conversion_us: 33000
+        clear_on_read: [RESULT_RANGE_VAL]
+metadata:
+  inputs:
+    - { key: distance, label: "Distance", unit: mm, min: 0, max: 2000, default: 200 }
+"#;
+
+    #[test]
+    fn a_second_device_shape_adopts_data_ready_in_yaml_only() {
+        let mut d = GenericI2cDevice::from_yaml(TOF_FIXTURE, 0).unwrap();
+        d.advance_time_us(1); // honest µs source present
+        assert_eq!(read8(&mut d, 0xC0), 0xEE, "identification is untouched");
+        assert_eq!(
+            read8(&mut d, 0x13),
+            0x00,
+            "no ranging started ⇒ the interrupt status is clear"
+        );
+        write8(&mut d, 0x00, 0x01); // SYSRANGE_START
+        assert_eq!(read8(&mut d, 0x13), 0x00, "measuring");
+        d.advance_time_us(32_999);
+        assert_eq!(read8(&mut d, 0x13), 0x00, "one µs short of the budget");
+        d.advance_time_us(1);
+        assert_eq!(read8(&mut d, 0x13), 0x07, "the range is ready");
+        // The flag lives in a different register from the start bit, and is
+        // cleared by reading a third.
+        assert_eq!(read_reg(&mut d, 0x1E, 2), vec![0x00, 0xC8], "200 mm");
+        assert_eq!(
+            read8(&mut d, 0x13),
+            0x00,
+            "reading the range consumed the result"
+        );
+        // Still in continuous mode (the start bit is set), so it re-arms.
+        d.advance_time_us(33_000);
+        assert_eq!(read8(&mut d, 0x13), 0x07);
+    }
+
+    #[test]
+    fn write_mask_protects_bits_outside_it() {
+        // Independent of data_ready: an rw register with a write_mask keeps the
+        // bits silicon owns, and an absent mask still replaces the whole word.
+        let yaml = "type: wm\nbehavior:\n  primitive: i2c_device\n  i2c:\n    \
+             default_address: 0x10\n    registers:\n      \
+             - { name: A, addr: 0x00, width: 1, endian: be, access: rw, write_mask: 0x0F, reset: 0xA0 }\n      \
+             - { name: B, addr: 0x01, width: 1, endian: be, access: rw, reset: 0xA0 }\n";
+        let mut d = GenericI2cDevice::from_yaml(yaml, 0).unwrap();
+        write8(&mut d, 0x00, 0xFF);
+        assert_eq!(
+            read8(&mut d, 0x00),
+            0xAF,
+            "high nibble kept, low nibble set"
+        );
+        write8(&mut d, 0x01, 0xFF);
+        assert_eq!(read8(&mut d, 0x01), 0xFF, "no mask ⇒ full replacement");
     }
 
     #[test]

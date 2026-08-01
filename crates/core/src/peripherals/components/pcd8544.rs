@@ -457,6 +457,7 @@ mod tests {
             id: "lcd".to_string(),
             r#type: "pcd8544".to_string(),
             connection: "spi0".to_string(),
+            channel: None,
             route: Default::default(),
             config: cfg,
         };

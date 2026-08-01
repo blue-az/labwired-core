@@ -190,6 +190,33 @@ impl<'a> AttachCtx<'a> {
         SystemBus::resolve_pin_odr_pub(self.bus, pin)
     }
 
+    /// Hold an MCU input pin at `level` — for device status lines the host
+    /// polls but nothing else drives (an e-paper BUSY, a sensor DRDY).
+    ///
+    /// Resolution goes through `resolve_pin_idr`, which understands the chip
+    /// pin-map, STM32/Nordic pad labels and ESP `GPIO`n alike, so a kit gets
+    /// this on every supported MCU without knowing which one it is wired to.
+    ///
+    /// This must go through the GPIO peripheral rather than an MMIO write:
+    /// input registers ignore stores (that is what makes them inputs), so a
+    /// bus write would be silently dropped.
+    ///
+    /// A line left undriven reads whatever the input register happens to hold,
+    /// and a driver that waits on it then blocks until its timeout — which at
+    /// simulated speed is effectively forever. That is not a hang to debug; it
+    /// is a peripheral nobody modelled.
+    pub fn drive_pin_input(&mut self, pin: &str, level: bool) -> Result<()> {
+        let (device_type, device_id) =
+            (self.device_type().to_string(), self.device_id().to_string());
+        if !SystemBus::drive_pin_input(self.bus, pin, level) {
+            anyhow::bail!(
+                "{device_type} '{device_id}': pin '{pin}' could not be driven as a \
+                 GPIO input (unresolvable pin, or the GPIO block refused it)"
+            );
+        }
+        Ok(())
+    }
+
     /// Read the optional `i2c_address` config key, returning `default` when
     /// absent. Rejects non-integer values and any address outside the 7-bit
     /// range — same validation every legacy hand-written I2C bus arm did,

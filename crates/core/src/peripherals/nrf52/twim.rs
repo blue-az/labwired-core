@@ -253,11 +253,26 @@ impl Nrf52Twim {
         &self.attached_devices
     }
 
-    /// Find the first attached device whose `address()` matches `addr7`.
+    /// Find the attached device that answers to `addr7` and tell it which
+    /// address was selected.
+    ///
+    /// Resolution goes through `claims_address`, not `address()`: a bus switch
+    /// (TCA9548A) answers for every device behind its enabled channels, and a
+    /// flat `address()` comparison is first-match — four identical sensors on
+    /// four channels would collapse onto one. `select_address` then hands the
+    /// matched device the wire address so a switch knows whether the
+    /// transaction is for its own control register or for a downstream device.
+    /// Slaves sit behind `RefCell`, so the selection is possible from `&self`
+    /// and every call site gets it without a separate step to forget.
     fn device_for(&self, addr7: u8) -> Option<usize> {
-        self.attached_devices
+        let idx = self
+            .attached_devices
             .iter()
-            .position(|d| d.borrow().address() == addr7)
+            .position(|d| d.borrow().claims_address(addr7))?;
+        self.attached_devices[idx]
+            .borrow_mut()
+            .select_address(addr7);
+        Some(idx)
     }
 
     /// Core-cycle latency of a `bytes`-byte wire transfer at the configured SCL
@@ -688,11 +703,11 @@ impl Peripheral for Nrf52Twim {
         f: &mut dyn FnMut(&mut dyn crate::sim_input::SimInput) -> bool,
     ) -> bool {
         for cell in self.attached_devices.iter_mut() {
-            let mut dev = cell.borrow_mut();
-            if let Some(si) = dev.as_sim_input_mut() {
-                if f(si) {
-                    return true;
-                }
+            // `for_each_sim_input`, not `as_sim_input_mut`: a container slave
+            // (TCA9548A mux) exposes the inputs of the devices behind it, which
+            // a single-surface accessor cannot represent.
+            if cell.borrow_mut().for_each_sim_input(f) {
+                return true;
             }
         }
         false
@@ -1117,6 +1132,93 @@ mod tests {
         let rx = bus.read_slice(rx_base, 4);
         assert_eq!(rx, read_seq, "RXD RAM contains device bytes");
         assert_eq!(read32(&t, OFF_ERRORSRC), 0, "no error");
+    }
+
+    /// Four sensors that share ONE fixed address, behind a TCA9548A: the TWIM
+    /// must reach each of them independently.
+    ///
+    /// Guards the resolution seam, not the switch. `device_for` used to compare
+    /// `address()` and take the first match, which made this shape impossible —
+    /// the switch answers for its channels through `claims_address`, and the
+    /// TWIM must ask that question instead.
+    #[test]
+    fn twim_reaches_four_same_address_sensors_behind_a_bus_switch() {
+        use crate::peripherals::components::tca9548a::Tca9548a;
+
+        const MUX: u8 = 0x70;
+        const SENSOR: u8 = 0x13;
+
+        let mut mux = Tca9548a::new(MUX);
+        for ch in 0..4u8 {
+            mux.attach(ch, Box::new(RecordingDevice::new(SENSOR, vec![0xA0 + ch])))
+                .unwrap();
+        }
+
+        let mut t = Nrf52Twim::new();
+        t.push_slave(Box::new(mux));
+        let mut bus = FlatRam::new();
+
+        let tx_base: u64 = 0x2000_0400;
+        let rx_base: u64 = 0x2000_0500;
+        write32(&mut t, OFF_ENABLE, 6);
+
+        for ch in 0..4u8 {
+            // Select the channel: one byte written to the switch's own address.
+            bus.write_slice(tx_base, &[1 << ch]);
+            write32(&mut t, OFF_ADDRESS, MUX as u32);
+            write32(&mut t, OFF_TXD_PTR, tx_base as u32);
+            write32(&mut t, OFF_TXD_MAXCNT, 1);
+            write32(&mut t, OFF_TASKS_STARTTX, 1);
+            run_leg(&mut t, &mut bus);
+            assert_eq!(read32(&t, OFF_ERRORSRC), 0, "switch must ACK its address");
+
+            // Read the sensor at the fixed address behind that channel.
+            write32(&mut t, OFF_ADDRESS, SENSOR as u32);
+            write32(&mut t, OFF_RXD_PTR, rx_base as u32);
+            write32(&mut t, OFF_RXD_MAXCNT, 1);
+            write32(&mut t, OFF_TASKS_STARTRX, 1);
+            run_leg(&mut t, &mut bus);
+
+            assert_eq!(
+                read32(&t, OFF_ERRORSRC),
+                0,
+                "channel {ch} is enabled, so 0x13 must ACK"
+            );
+            assert_eq!(
+                bus.read_slice(rx_base, 1),
+                vec![0xA0 + ch],
+                "channel {ch} must be answered by its own sensor"
+            );
+        }
+    }
+
+    /// With every channel isolated the sensor address is off the bus, and the
+    /// TWIM must report ANACK exactly as it does for an empty bus. A switch
+    /// that ACKed unconditionally would hide a missing channel select.
+    #[test]
+    fn twim_anacks_a_sensor_behind_a_disabled_switch_channel() {
+        use crate::peripherals::components::tca9548a::Tca9548a;
+
+        let mut mux = Tca9548a::new(0x70);
+        mux.attach(0, Box::new(RecordingDevice::new(0x13, vec![0xAA])))
+            .unwrap();
+
+        let mut t = Nrf52Twim::new();
+        t.push_slave(Box::new(mux));
+        let mut bus = FlatRam::new();
+
+        write32(&mut t, OFF_ENABLE, 6);
+        write32(&mut t, OFF_ADDRESS, 0x13);
+        write32(&mut t, OFF_RXD_PTR, 0x2000_0600);
+        write32(&mut t, OFF_RXD_MAXCNT, 1);
+        write32(&mut t, OFF_TASKS_STARTRX, 1);
+        run_leg(&mut t, &mut bus);
+
+        assert_ne!(
+            read32(&t, OFF_ERRORSRC) & ERRORSRC_ANACK,
+            0,
+            "reset state disables every channel, so 0x13 is on no reachable segment"
+        );
     }
 
     /// RX with no device: RAM filled with 0xFF, ANACK fired.

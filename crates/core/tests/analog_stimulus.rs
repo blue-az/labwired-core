@@ -148,6 +148,7 @@ fn pot(id: &str, channel: u64) -> labwired_config::ExternalDevice {
         id: id.to_string(),
         r#type: "potentiometer".to_string(),
         connection: "adc1".to_string(),
+        channel: None,
         route: Default::default(),
         config,
     }

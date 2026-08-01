@@ -179,7 +179,20 @@ pub struct ChipDescriptor {
 pub struct ExternalDevice {
     pub id: String,
     pub r#type: String,
-    pub connection: String, // e.g. "uart1", "i2c1"
+    /// What this device hangs off. Normally a controller peripheral id
+    /// (`"uart1"`, `"i2c1"`), but it may also name ANOTHER external device's
+    /// `id` — that is how a slave is placed behind an I²C bus switch
+    /// (TCA9548A). The loader resolves the peripheral name first; only if no
+    /// peripheral answers to it does it look for a matching external device.
+    pub connection: String,
+    /// Downstream channel on the device named by `connection`, when that device
+    /// is a bus switch (TCA9548A: 0..=7). Meaningless — and ignored — when
+    /// `connection` names a controller.
+    ///
+    /// Optional so every pre-existing manifest deserializes and behaves
+    /// exactly as before. `None` behind a switch means channel 0.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub channel: Option<u8>,
     /// Physical signal-to-pad route for a bus-attached device. Signal names
     /// are transport-generic (`sda`/`scl`, `mosi`/`miso`/`sck`, `tx`/`rx`)
     /// while pad labels stay target-native (`GPIO4`, `PB7`, ...).
@@ -1064,6 +1077,65 @@ pub struct I2cSpec {
     /// `servo_angle` per channel). Applies to the `register_file:` mode.
     #[serde(default)]
     pub observables: Vec<ObservableSpec>,
+    /// Conversion-timing status bits: firmware writes a start bit, the part
+    /// takes `conversion_us`, then a status bit reads set until the result is
+    /// read. Applies to the `registers:` (wide) mode. See [`DataReady`].
+    #[serde(default)]
+    pub data_ready: Vec<DataReady>,
+}
+
+/// One **data-ready** rule: a write-triggered, time-gated status bit.
+///
+/// This is the datasheet shape shared by every "start a conversion, poll a
+/// flag, read the result" part — the VCNL4010's `prox_od` → `prox_data_rdy` →
+/// `PROX_DATA`, the VL53L0X's `SYSRANGE_START` → `RESULT_INTERRUPT_STATUS` →
+/// range bytes, and the ready-flag halves of the Sensirion command devices. It
+/// is deliberately expressed as data over one Rust behaviour, not as a
+/// per-device trigger/action pair: a second part adopts it by naming its own
+/// registers, masks and conversion time in YAML.
+///
+/// Lifecycle (`name` is for diagnostics only):
+///  1. **idle** at power-on — the status bit reads clear.
+///  2. A master write to `start_register` that leaves any `start_mask` bit set
+///     starts a conversion; the status bit reads clear for `conversion_us` of
+///     simulated wall-clock.
+///  3. **ready** — the status bit reads set (OR'd over whatever the register
+///     stores), and the result registers hold the current measurement.
+///  4. A read of any `clear_on_read` register clears the status bit, exactly as
+///     the datasheets specify ("this bit will be reset when one of the
+///     corresponding result registers is read"). If the start bits are still
+///     set in the register at that moment the next conversion starts
+///     immediately, so both the on-demand and the periodic/self-timed firmware
+///     idiom keep producing fresh results.
+///
+/// **Holdout degradation.** `conversion_us` is measured on the honest µs source
+/// the bus master feeds in through `I2cDevice::advance_time_us` (ESP32
+/// SYSTIMER, nRF54L GRTC). On families with no absolute-µs counter — STM32,
+/// ESP32-classic, nRF52 — nothing ever advances that clock, and the status bit
+/// degrades to *always set*, i.e. exactly the always-ready constant these
+/// devices modelled before this primitive existed. The degradation is
+/// deliberate: fabricating a µs clock from a pinned core frequency would be a
+/// cheat, and a permanently-clear flag would hang firmware that is correct.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct DataReady {
+    /// Diagnostic name for this conversion (e.g. `proximity`). Not addressable.
+    pub name: String,
+    /// Register whose bits the master writes to start a conversion.
+    pub start_register: String,
+    /// Bits in `start_register` that start one. A write leaving ANY of them set
+    /// starts a conversion (level, not edge — drivers re-issue the same
+    /// on-demand bit for every reading).
+    pub start_mask: u32,
+    /// Register carrying the sim-driven status bit (often the same register).
+    pub ready_register: String,
+    /// The status bit(s) within `ready_register`, OR'd into every read of it.
+    pub ready_mask: u32,
+    /// Datasheet conversion time in microseconds.
+    pub conversion_us: u64,
+    /// Registers whose read clears the status bit. Empty ⇒ the bit stays set
+    /// once the conversion completes.
+    #[serde(default)]
+    pub clear_on_read: Vec<String>,
 }
 
 /// **Byte-addressable register file** for the `register_file` I²C mode: `size`
@@ -1369,6 +1441,14 @@ pub struct RegisterSpec {
     pub width: u8,
     pub endian: Endian,
     pub access: RegisterAccess,
+    /// Bits of an `rw` register the master may actually change. Bits outside
+    /// the mask keep their current value, so one register can mix firmware-owned
+    /// configuration bits with silicon-owned read-only bits — a status flag the
+    /// model drives (see [`DataReady`]), or a hardwired bit like the VCNL4010's
+    /// `config_lock`. Absent ⇒ every bit is writable, which is what `rw` meant
+    /// before this field existed (so old descriptors are unchanged).
+    #[serde(default)]
+    pub write_mask: Option<u32>,
     /// Power-on value (also the value read back before any write / measurement).
     #[serde(default)]
     pub reset: u32,
@@ -1666,6 +1746,7 @@ pub fn embedded_device_yaml(device_type: &str) -> Option<&'static str> {
         "veml7700" => Some(include_str!("../../../configs/devices/veml7700.yaml")),
         "tmp102" => Some(include_str!("../../../configs/devices/tmp102.yaml")),
         "pca9685" => Some(include_str!("../../../configs/devices/pca9685.yaml")),
+        "vcnl4010" => Some(include_str!("../../../configs/devices/vcnl4010.yaml")),
         _ => None,
     }
 }
@@ -4724,6 +4805,7 @@ metadata:
             width: 1,
             endian: Endian::Le,
             access: I2cAccess::R,
+            write_mask: None,
             reset: 0,
             source: None,
             encode: None,

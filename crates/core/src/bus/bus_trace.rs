@@ -142,6 +142,14 @@ pub struct TracingI2cDevice {
     trace: BusTrace,
     inner: Box<dyn I2cDevice>,
     expect_address: bool, // next write is the address byte (set on start())
+    /// The address the master most recently selected on this device
+    /// (`I2cDevice::select_address`). For a plain slave this is simply its own
+    /// address; for a bus switch it is the *downstream* address currently being
+    /// addressed, which is what actually appears in the address frame on the
+    /// wire between MCU and switch. `None` until a controller selects, so the
+    /// fallback stays `inner.address()` and low-level fixtures that never
+    /// select trace exactly as before.
+    selected: Option<u8>,
 }
 
 impl TracingI2cDevice {
@@ -151,13 +159,32 @@ impl TracingI2cDevice {
             trace,
             inner,
             expect_address: false,
+            selected: None,
         }
+    }
+
+    /// Address to put in a reconstructed address frame.
+    fn wire_address(&self) -> u8 {
+        self.selected.unwrap_or_else(|| self.inner.address())
     }
 }
 
 impl I2cDevice for TracingI2cDevice {
     fn address(&self) -> u8 {
         self.inner.address()
+    }
+    fn claims_address(&self, addr: u8) -> bool {
+        self.inner.claims_address(addr)
+    }
+    fn select_address(&mut self, addr: u8) {
+        self.selected = Some(addr);
+        self.inner.select_address(addr);
+    }
+    fn for_each_sim_input(
+        &mut self,
+        f: &mut dyn FnMut(&mut dyn crate::sim_input::SimInput) -> bool,
+    ) -> bool {
+        self.inner.for_each_sim_input(f)
     }
     fn start(&mut self) {
         self.expect_address = true;
@@ -181,7 +208,7 @@ impl I2cDevice for TracingI2cDevice {
         // start() is the address (direction inferred: write => AddrWrite), using the
         // device's own address(); subsequent transfers are Data. No master cooperation
         // needed, so this works identically for every chip family.
-        let addr_byte = self.inner.address() << 1; // write (R/W bit = 0)
+        let addr_byte = self.wire_address() << 1; // write (R/W bit = 0)
         let kind = if self.expect_address {
             I2cSym::AddrWrite
         } else {
@@ -219,7 +246,7 @@ impl I2cDevice for TracingI2cDevice {
         if self.expect_address {
             // A read transaction: synthesize the address frame (R) before the first byte.
             self.expect_address = false;
-            let addr_byte = (self.inner.address() << 1) | 1; // read
+            let addr_byte = (self.wire_address() << 1) | 1; // read
             self.trace.push(
                 &self.bus,
                 BusPayload::I2c {
