@@ -32,6 +32,29 @@ fn require(path: PathBuf) -> PathBuf {
     path
 }
 
+/// Step budget that reaches `OLED painted: LabWired` on the console.
+///
+/// This run is CONSOLE-BOUND, not compute-bound, and that is real silicon
+/// behaviour. The curated image is a stock ESP-IDF v5.3.1 app: the mask ROM,
+/// the 2nd-stage bootloader and `cpu_start`/`app_init`/`heap_init` all log at
+/// INFO, so 3519 bytes have to shift out of UART0 before `app_main` even gets
+/// to print the paint line. UART0 comes out of reset at CLKDIV=694 (~115200
+/// baud off the 80 MHz APB source), i.e. 10 * 694 * 160 MHz / 80 MHz = 13_880
+/// CPU cycles per byte — so the transcript alone costs ~48.8M of the run's
+/// cycles. The ROM/IDF console does the flow control silicon requires (it polls
+/// `STATUS.TXFIFO_CNT` before every byte), so nothing is dropped; the bytes
+/// take wire time. `EspUart` (`crates/core/src/peripherals/esp_uart.rs`) models
+/// that shift-out rate, which the STM32-shaped `Uart` the C3 used before
+/// 15b96281 did not — it accepted every byte instantly, which is why the
+/// original 8M budget looked sufficient.
+///
+/// MEASURED against the committed flash fixture on this tree: the marker leaves
+/// the TX shift register at 24_439_616 steps / 61_675_548 cycles (~385 ms of
+/// device time). 32M steps is that number plus ~31 % headroom, and the firmware
+/// then spins in its 500 ms refresh loop, so the run still stops on `max_steps`
+/// (verified: 32_000_000 steps / 82_487_648 cycles, `stop_reason: max_steps`).
+const OLED_PAINT_MAX_STEPS: u64 = 32_000_000;
+
 /// Write a `labwired test` script that names a system + limits + assertions but
 /// deliberately sets an EMPTY firmware input (the schema requires the key; the
 /// CLI filters empty and takes the ELF-less rom-boot path). Returns its path.
@@ -42,7 +65,7 @@ fn write_no_firmware_script(dir: &Path, system: &Path) -> PathBuf {
            firmware: \"\"\n  \
            system: \"{}\"\n\
          limits:\n  \
-           max_steps: 8000000\n\
+           max_steps: {OLED_PAINT_MAX_STEPS}\n\
          assertions:\n  \
            - expected_stop_reason: max_steps\n  \
            - uart_contains: \"OLED painted: LabWired\"\n",

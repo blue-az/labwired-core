@@ -603,6 +603,31 @@ pub trait Peripheral: std::fmt::Debug + Send {
     fn needs_bus_tick(&self) -> bool {
         false
     }
+
+    /// Bare-CPU-oracle twin of [`Self::needs_bus_tick`] — the `tick_with_bus`
+    /// counterpart of [`Self::tick_elapsed_forced`].
+    ///
+    /// A model whose real work lives in `tick_with_bus` (it moves bytes over
+    /// the bus) and which self-guards that hook on `scheduler_mode()` is
+    /// invisible to the forced walk: `tick_elapsed_forced` never reaches the
+    /// transfer engine, and the bus-tick pass never even selects the model
+    /// because `needs_bus_tick()` already reported `false`. Overriding this
+    /// pair re-exposes the historical one-tick transfer to the oracle only.
+    ///
+    /// The default forwards to `needs_bus_tick`, so the ordinary walk and every
+    /// model that does not opt in are unchanged.
+    #[doc(hidden)]
+    fn needs_bus_tick_forced(&self) -> bool {
+        self.needs_bus_tick()
+    }
+
+    /// Bare-CPU-oracle twin of [`Self::tick_with_bus`]; see
+    /// [`Self::needs_bus_tick_forced`]. Default forwards to `tick_with_bus`.
+    #[doc(hidden)]
+    fn tick_with_bus_forced(&mut self, bus: &mut dyn Bus) {
+        self.tick_with_bus(bus)
+    }
+
     /// True if this peripheral's `tick_with_bus` must keep running at a bounded
     /// cadence even while the CPU is idle-fast-forwarding — because it services
     /// an *external* medium (a WiFi station polling a shared-AP inbox and

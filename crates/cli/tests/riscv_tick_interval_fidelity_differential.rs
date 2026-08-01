@@ -205,12 +205,17 @@ fn tick_interval_1_vs_64_observable_output_identical_c3_oled() {
     }
 
     // Run to a step budget large enough to paint the OLED and report it on serial
-    // (matches riscv_jit_c3_oled_test_differential's max_steps scenario).
+    // (matches riscv_jit_c3_oled_test_differential's max_steps scenario). The
+    // budget is set by CONSOLE wire time, not compute: the stock ESP-IDF boot
+    // transcript is 3519 bytes and UART0 shifts one byte per 13_880 CPU cycles
+    // at its reset CLKDIV, so the paint marker lands at a MEASURED 24_439_616
+    // steps / 61_675_548 cycles; 32M is that plus ~31 % headroom. See
+    // `no_elf_c3_rom_boot::OLED_PAINT_MAX_STEPS` for the derivation.
     let script = write_script(
         &tmp,
         "oled_max_steps.yaml",
         &fx,
-        "  max_steps: 8000000\n",
+        "  max_steps: 32000000\n",
         "  - expected_stop_reason: max_steps\n  - uart_contains: \"OLED painted: LabWired\"",
     );
 
