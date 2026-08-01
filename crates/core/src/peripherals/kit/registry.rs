@@ -28,7 +28,6 @@ pub static KITS: &[&'static dyn PeripheralKit] = &[
     &components::ds3231::DS3231_KIT,
     &components::hx711::HX711_KIT,
     &components::as5600::AS5600_KIT,
-    &components::vl53l0x::VL53L0X_KIT,
     &components::bno055::BNO055_KIT,
     &components::hc05::HC05_KIT,
     &components::nrf24l01::NRF24L01_KIT,
@@ -86,6 +85,10 @@ pub static KITS: &[&'static dyn PeripheralKit] = &[
     &components::declarative_i2c::PCA9685_KIT,
     // VCNL4010: declarative from the start, no hand-written predecessor.
     &components::declarative_i2c::VCNL4010_KIT,
+    // VL53L0X: migrated from a hand-written model that is DELETED, not kept as
+    // an oracle — its ready flag latched forever with no conversion time, so an
+    // oracle would be asserting the bug. See vl53l0x_migration_parity.rs.
+    &components::declarative_i2c::VL53L0X_KIT,
     // Declarative SPI devices — model lives entirely in configs/devices/*.yaml,
     // interpreted by the generic GenericSpiDevice (zero per-part Rust).
     &components::declarative_spi::ADXL345_KIT,
@@ -97,9 +100,26 @@ pub fn kits() -> &'static [&'static dyn PeripheralKit] {
     KITS
 }
 
+/// Legacy `type:` spellings that predate the canonical `device_type` and are
+/// still accepted. These used to be understood only by the ESP32-classic attach
+/// arm, which meant the same manifest resolved on one chip and was skipped as
+/// "unsupported" on every other — resolving them here instead makes them mean
+/// the same thing on every MCU. Nothing in the repo emits them; the list exists
+/// so a hand-written manifest that already worked keeps working, and it should
+/// not grow.
+const TYPE_ALIASES: &[(&str, &str)] = &[
+    ("epd-2in9-tricolor", "ssd1680_tricolor_290"),
+    ("gxepd2_290_c90c", "ssd1680_tricolor_290"),
+    ("epd-2in9-uc8151d", "uc8151d_tricolor_290"),
+];
+
 /// Lookup a kit by the `device_type` string used in `system.yaml`.
 pub fn lookup(device_type: &str) -> Option<&'static dyn PeripheralKit> {
+    let canonical = TYPE_ALIASES
+        .iter()
+        .find(|(alias, _)| *alias == device_type)
+        .map_or(device_type, |(_, canonical)| *canonical);
     KITS.iter()
         .copied()
-        .find(|k| k.metadata().device_type == device_type)
+        .find(|k| k.metadata().device_type == canonical)
 }
