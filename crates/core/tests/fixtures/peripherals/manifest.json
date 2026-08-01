@@ -315,31 +315,6 @@
       ]
     },
     {
-      "device_type": "vl53l0x",
-      "label": "VL53L0X ToF",
-      "summary": "Laser time-of-flight distance sensor over I²C (ST VL53L0X).",
-      "detail": "STMicroelectronics VL53L0X at 0x29. Identification + range result registers for common Arduino drivers; host sets distance in mm via SimInput.",
-      "transport": "i2c",
-      "category": "i2c",
-      "config_keys": [
-        {
-          "name": "i2c_address",
-          "ty": "int",
-          "doc": "7-bit slave address. Defaults to 0x29."
-        }
-      ],
-      "labs": [],
-      "inputs": [
-        {
-          "key": "distance",
-          "label": "Distance",
-          "unit": "mm",
-          "min": 0.0,
-          "max": 2000.0
-        }
-      ]
-    },
-    {
       "device_type": "bno055",
       "label": "BNO055 IMU",
       "summary": "9-DoF absolute orientation sensor (Bosch BNO055) over I²C.",
@@ -1760,6 +1735,36 @@
           "unit": "counts",
           "min": 0.0,
           "max": 65535.0
+        }
+      ]
+    },
+    {
+      "device_type": "vl53l0x",
+      "label": "VL53L0X ToF",
+      "summary": "Laser time-of-flight distance sensor over I²C (ST VL53L0X).",
+      "detail": "STMicroelectronics VL53L0X at 0x29. Identification and range-result registers for common Arduino drivers, with byte-wise pointer auto-increment so ST's own 12-byte block read from RESULT_RANGE_STATUS reaches the range bytes. A one-shot range takes ST's default 33 ms timing budget, after which RESULT_INTERRUPT_STATUS reads set until firmware writes SYSTEM_INTERRUPT_CLEAR. Host sets distance in mm via SimInput; the ranging algorithm itself is not simulated.",
+      "transport": "i2c",
+      "category": "i2c",
+      "config_keys": [
+        {
+          "name": "i2c_address",
+          "ty": "int",
+          "doc": "7-bit slave address. Defaults to the VL53L0X power-on address 0x29."
+        },
+        {
+          "name": "distance",
+          "ty": "float",
+          "doc": "Initial distance in mm. Default 200. Drive it at runtime with the `distance` input channel."
+        }
+      ],
+      "labs": [],
+      "inputs": [
+        {
+          "key": "distance",
+          "label": "Distance",
+          "unit": "mm",
+          "min": 0.0,
+          "max": 2000.0
         }
       ]
     },
