@@ -162,8 +162,7 @@ fn cores() -> Vec<CoreUnderTest> {
             name: "RiscV",
             entry: 0x100,
             // `addi x1, x1, 1` ×4 (4 bytes each).
-            program: std::iter::repeat(0x00108093u32)
-                .take(4)
+            program: std::iter::repeat_n(0x00108093u32, 4)
                 .flat_map(u32::to_le_bytes)
                 .collect(),
             step_len: 4,
