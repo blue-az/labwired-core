@@ -235,6 +235,46 @@ impl SystemBus {
         }
     }
 
+    /// Forced-walk twin of [`Self::run_bus_tick_pass`] for the bare-CPU
+    /// hardware-oracle boundary ([`Self::tick_peripherals_fully_forced`]).
+    ///
+    /// `bus_tick_indices` is derived from `needs_bus_tick()`, which a
+    /// scheduler-driven bus-mover (the RP2040 DMA) reports `false` for so the
+    /// walk cannot double-drive the transfer its `on_event` chain owns. That
+    /// also means the model is entirely absent from the cached set, so
+    /// `tick_elapsed_forced` alone cannot reach it — the forced pass must
+    /// re-derive membership from `needs_bus_tick_forced()` in peripheral-index
+    /// order, exactly as the legacy tick walk re-derives `forced_tick_indices`
+    /// from `legacy_tick_active()`. Defaults forward to the ordinary hooks, so
+    /// on any bus without a forced-only bus-mover this reproduces
+    /// `run_bus_tick_pass` entry-for-entry.
+    fn run_bus_tick_pass_forced(&mut self) {
+        let mut forced: Vec<usize> = (0..self.peripherals.len())
+            .filter(|&i| self.peripherals[i].dev.needs_bus_tick_forced())
+            .collect();
+        let mut pos = 0;
+        while pos < forced.len() {
+            let i = forced[pos];
+            let placeholder: Box<dyn Peripheral> =
+                Box::new(crate::peripherals::stub::StubPeripheral::new(0));
+            let mut dev = std::mem::replace(&mut self.peripherals[i].dev, placeholder);
+            dev.tick_with_bus_forced(self);
+            self.peripherals[i].dev = dev;
+            // Keep the cached sets honest for the models that DO live on the
+            // ordinary pass (a WiFi MAC that just went quiet), mirroring
+            // `run_bus_tick_pass`.
+            let _ = self.refresh_bus_tick_index(i);
+            if self.peripherals[i].dev.legacy_tick_dynamic() {
+                self.refresh_legacy_tick_index(i);
+            }
+            if self.peripherals[i].dev.needs_bus_tick_forced() {
+                pos += 1;
+            } else {
+                forced.remove(pos);
+            }
+        }
+    }
+
     /// True when a bus peripheral services an external medium that must keep
     /// being polled at a bounded cadence through a CPU idle skip (see
     /// [`Peripheral::idle_poll_bus_tick`]) — currently a medium-mode WiFi MAC.
@@ -290,7 +330,16 @@ impl SystemBus {
         // `&mut self` into `tick_with_bus`; a no-op stub stands in for the
         // duration. `needs_bus_tick` returning false skips this for
         // everyone else at near-zero cost.
-        self.run_bus_tick_pass();
+        //
+        // The bare-CPU oracle boundary takes the forced twin, which re-derives
+        // membership from `needs_bus_tick_forced()` so a scheduler-driven
+        // bus-mover (the RP2040 DMA) still performs its legacy one-tick
+        // transfer with no `Machine` around to drain its event chain.
+        if force_scheduler_walk {
+            self.run_bus_tick_pass_forced();
+        } else {
+            self.run_bus_tick_pass();
+        }
 
         // Plan 3: collect ESP32-S3 explicit_irq source IDs during pass 1 so
         // they can be routed through the intmatrix in a follow-up pass that
