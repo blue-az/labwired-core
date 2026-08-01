@@ -44,7 +44,7 @@ static const char *WIFI_SSID = "labwired-ap";
 static const char *WIFI_PASS = "";
 
 // Shown in red across the top. Make it yours.
-static const char *TITLE = "PETER'S WEATHER";
+static const char *TITLE = "ANDRII'S WEATHER";
 
 // Your city. That is the whole setting — the coordinates are looked up for you
 // on the first fetch, so there is no latitude/longitude to go and find.
