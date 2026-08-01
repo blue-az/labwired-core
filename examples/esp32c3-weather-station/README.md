@@ -11,7 +11,7 @@ Set what's yours at the top of `src/main.ino`:
 ```c
 static const char *WIFI_SSID = "labwired-ap";      // your WiFi
 static const char *WIFI_PASS = "";                 // "" for an open network
-static const char *TITLE = "PETER'S WEATHER";      // the red line across the top
+static const char *TITLE = "ANDRII'S WEATHER";     // the red line across the top
 static const char *CITY = "BUDAPEST";              // just the name
 static const unsigned long REFRESH_MINUTES = 30;
 ```
@@ -29,7 +29,7 @@ box — change it to your home network before flashing real hardware.
 ## What lands on the panel
 
 ```
-PETER'S WEATHER                         BUDAPEST
+ANDRII'S WEATHER                        BUDAPEST
 ────────────────────────────────────────────────
    \ ; /                              THU 30 JUL
   -- O --      32°C                      HUM 25%
