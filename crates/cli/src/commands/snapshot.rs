@@ -281,22 +281,12 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
         ),
         (resolve("delay", 0x400e_5c28), rom_thunks::nop_return_zero),
     ];
-    // HardwareSerial::begin / _get_effective_baudrate — the serial-init chain
-    // divides by getApbFrequency(), which returns 0 in the sim → divide-by-zero
-    // exception (Xtensa cause 6). The sim has no UART model the firmware can
-    // observe, so stub the whole begin plus the leaf. These are keyed by the
-    // MANGLED symbol name because extract_arduino_esp32_thunks returns mangled
-    // names (goblin) — the old demangled placeholder key never resolved, a latent
-    // gap the fake-heap path masked by never reaching the baudrate calc. Same
-    // stubs the proven e2e path installs (crates/core/tests/e2e_labwired_ereader.rs).
-    for sym in &[
-        "_ZN14HardwareSerial5beginEmjaabmh",
-        "_get_effective_baudrate",
-    ] {
-        if let Some(&pc) = symbol_addrs.get(*sym) {
-            thunks.push((pc, rom_thunks::nop_return_zero));
-        }
-    }
+    // The Arduino serial nops that used to be installed here are gone, along
+    // with the empty loop that survived them. They dodged an Xtensa
+    // divide-by-zero in _get_effective_baudrate whose real cause was an
+    // apb_ctrl read-as-ones stub shadowing SYSCON at the same base — see
+    // system/xtensa/esp32.rs. Serial now works on this path, which is what
+    // makes the `<output>.uart.log` written below carry a sketch's own output.
     // Real-silicon noreturn functions — abort_halt prints diagnostics and
     // halts the CPU instead of returning. Without this, stubbing them as
     // nop_return_zero creates tight `assert → return → re-check → assert`
@@ -408,28 +398,15 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
         // single-CPU render path.
         "esp_ipc_init",
         "esp_ipc_isr_init",
-        // HardwareSerial / UART layer only — leave Print/Stream alone so
-        // virtual dispatch through Print::print → Adafruit_GFX::write →
-        // drawPixel (the display.print render path) keeps working. The
-        // original spin was in HardwareSerial::write's buffer-available
-        // wait, not in Print or Stream.
-        //
-        // Removing these (and the ::begin stub below) is PROVEN not to regress
-        // the panel paint — the ereader e2e stays green — but it is NOT enough
-        // to get serial out of this path either: with both unstubbed a printing
-        // sketch still emitted 0 UART bytes in 8M steps, so something further
-        // down swallows the write. Left in place until that is found; the
-        // uart.log this command now writes is the instrument for finding it.
-        "_ZN14HardwareSerial5writeEh",
-        "_ZN14HardwareSerial5writeEPKhj",
-        "_ZN14HardwareSerial9availableEv",
-        "_ZN14HardwareSerial5flushEv",
-        "_ZN14HardwareSerial9readBytesEPcj",
-        "_ZN14HardwareSerial9readBytesEPhj",
-        "uartAvailable",
-        "uartAvailableForWrite",
-        "uartWrite",
-        "uartWriteBuf",
+        // The HardwareSerial / uartWrite nops are GONE. A previous attempt
+        // recorded here that unstubbing them "still emitted 0 UART bytes in 8M
+        // steps, so something further down swallows the write" — that run was
+        // made while apb_ctrl shadowed the SYSCON model, so SYSCLK_CONF read
+        // 0xFFFFFFFF, getApbFrequency() returned 78125 Hz and
+        // _get_effective_baudrate divided by zero. The clock tree was broken,
+        // not the write path. With the syscon window fixed (see
+        // system/xtensa/esp32.rs) the real Arduino serial path runs and
+        // demo-labwired-ereader.elf emits its own markers.
         "_Z14serialEventRunv",
         // FreeRTOS recursive mutexes used by newlib stdio locks — same
         // null-queue assertion problem. Stub since sim is effectively
@@ -923,6 +900,39 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
                 uart_path
             ),
             Err(e) => eprintln!("labwired-cli snapshot: warn: write {uart_path:?}: {e}"),
+        }
+    }
+
+    // The universal final-state inspect block — the SAME `machine.inspect()`
+    // payload the `test` path puts in result.json, written beside the snapshot
+    // as `<output>.inspect.json`.
+    //
+    // Without this the profile path's only evidence was an e-paper refresh
+    // scraped out of the stderr text above, so a classic-ESP32 sketch that
+    // reported through GPIO — or through any peripheral that is not a panel on
+    // spi3 — produced a clean run with nothing to verify against, and an oracle
+    // asserting pin state could never pass however correct the firmware was.
+    // Two run paths, two different answers to "what did the hardware do";
+    // this makes it one.
+    {
+        let inspect_block = machine.inspect(
+            None,
+            &labwired_core::inspect::InspectOpts {
+                include_bytes: false,
+                peripheral: None,
+            },
+        );
+        let inspect_path = args.output.with_extension("inspect.json");
+        match serde_json::to_vec(&inspect_block) {
+            Ok(json) => match std::fs::write(&inspect_path, &json) {
+                Ok(()) => eprintln!(
+                    "labwired-cli snapshot: inspect {} peripheral(s) -> {:?}",
+                    inspect_block.peripherals.len(),
+                    inspect_path
+                ),
+                Err(e) => eprintln!("labwired-cli snapshot: warn: write {inspect_path:?}: {e}"),
+            },
+            Err(e) => eprintln!("labwired-cli snapshot: warn: encode inspect block: {e}"),
         }
     }
 

@@ -677,13 +677,26 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
         Box::new(crate::peripherals::esp32::syscon::Syscon::new()),
     );
 
-    // APB_CTRL — clock source select etc. Read/write stub. Covers the
-    // 0x3FF6_6100..0x3FF6_6FFF tail of the APB-CTRL window; the 0x100
-    // header is handled by the SYSCON peripheral above.
+    // APB_CTRL — clock source select etc. Read/write stub for the
+    // 0x3FF6_6100..0x3FF6_6FFF TAIL of the APB-CTRL window. The 0x100 header
+    // belongs to SYSCON above.
+    //
+    // This used to be registered at 0x3FF6_6000 with size 0x1000, overlapping
+    // SYSCON completely, on the belief that "registration order wins on
+    // overlap". It does not: routing.rs resolves the window with the GREATEST
+    // start, and ties by the LAST registered — so this stub answered every
+    // SYSCON register and the whole model was dead code reading 0xFFFFFFFF.
+    //
+    // The cost was not abstract. SYSCLK_CONF's PRE_DIV_CNT read 1023 instead
+    // of 0, so ESP-IDF computed a CPU divider of 1024, Arduino's
+    // getApbFrequency() returned 78125 Hz, and _get_effective_baudrate divided
+    // by zero — which is the exception the Arduino serial thunks existed to
+    // avoid. Mapping the tail where the comment always said it went removes
+    // the overlap entirely rather than depending on registration order.
     bus.add_peripheral(
         "apb_ctrl",
-        0x3FF6_6000,
-        0x1000,
+        0x3FF6_6100,
+        0x0F00,
         None,
         Box::new(
             crate::peripherals::esp_xtensa_common::system_stub::SystemStub::with_unwritten_ones(),
@@ -718,11 +731,18 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
         ("rtcio", 0x3FF4_8400), // sub-range of RTC_CNTL window, leave 4 KiB span
         ("sar_adc", 0x3FF4_C000),
         ("i2s0", 0x3FF4_F000),
-        ("uart1", 0x3FF5_0000),
+        // uart1 (0x3FF5_0000) and uart2 (0x3FF6_E000) are the real Esp32Uart
+        // models from ESP32_PERIPHERALS — same removal as i2c0/pwm0 below.
+        // They used to ALSO appear here, and because a 0x1000 stub at the
+        // SAME base registered later beats the real 0x100 model
+        // (equal starts → last registered), UART1/UART2 on classic ESP32 were
+        // round-trip stubs and the real models had never executed. Serial1 and
+        // Serial2 therefore produced nothing — the same defect that killed
+        // Serial0 via the apb_ctrl/SYSCON shadow. Guarded by
+        // tests::peripheral_reachability.
         // i2c0 (0x3FF5_3000) is the real Esp32I2c model registered above.
         ("uhci0", 0x3FF5_4000),
         ("i2s1", 0x3FF6_D000),
-        ("uart2", 0x3FF6_E000),
         // pwm0 (0x3FF5_E000) is now the real MCPWM0 model registered above.
         ("ledc2", 0x3FF6_8000),
         ("rmt", 0x3FF5_6000),
@@ -891,8 +911,12 @@ pub(crate) const ESP32_PERIPHERALS: &[(&str, &str, u64, u64, Option<u32>)] = &[
     ("i2c0",     "esp32_i2c",      0x3FF5_3000, 0x1000, Some(49)),
     // SENS SAR-ADC one-shot engine (RTC controller ADC1/ADC2 path the IDF
     // adc1_get_raw/adc2_get_raw drivers drive). 0x100 window over the SAR
-    // control + measurement registers; registered before the rtcio catch-all
-    // stub (0x3FF4_8400/0x1000) so it wins the overlapping SENS sub-range.
+    // control + measurement registers. It wins the overlapping SENS sub-range
+    // against the rtcio catch-all stub (0x3FF4_8400/0x1000) because routing.rs
+    // picks the window with the GREATEST start, and 0x8800 > 0x8400 — NOT
+    // because it is registered first. Registration order only breaks ties
+    // between EQUAL starts, and there the LAST registered wins. Getting that
+    // backwards is what left SYSCON dead behind apb_ctrl for a year.
     ("sens_sar_adc", "esp32_sar_adc", 0x3FF4_8800, 0x0100, None),
     ("gpio",     "esp32_gpio",     0x3FF4_4000, 0x1000, None),
     ("dport",    "esp32_dport",    0x3FF0_0000, 0x1000, None),

@@ -273,6 +273,17 @@ pub struct BoardIoBinding {
     pub i2c_address: Option<u8>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub device_type: Option<String>,
+    /// Stimulus channel this contact exposes, when it is something other than a
+    /// plain `pressed` button.
+    ///
+    /// A PIR, IR-obstacle, hall or vibration sensor is electrically the same
+    /// thing — a digital output asserting a level on one pin — but "pressed" is
+    /// the wrong word for motion or a magnetic field. The canvas catalog already
+    /// names each one (`obstacle`, `field`, `vibration`), so the compiler stamps
+    /// that name here rather than the engine keeping a second copy of the
+    /// vocabulary. Absent means `pressed`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub channel: Option<String>,
 }
 
 fn default_wifi_ap_ssid() -> String {

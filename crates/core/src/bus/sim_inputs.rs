@@ -255,8 +255,33 @@ impl SystemBus {
         // caller can drive one and observe a stale conversion.
         if result.is_ok() {
             self.sync_analog_inputs();
+            self.sync_button_inputs();
         }
         result
+    }
+
+    /// Push every button's contact state onto its pin.
+    ///
+    /// Buttons are not time-varying: a contact only changes when something
+    /// drives it, so applying the level here — at the single stimulus apply
+    /// point — is what makes a press take effect. The per-tick
+    /// [`service_gpio_devices`](Self::service_gpio_devices) pass re-drives the
+    /// same level and is a no-op once it matches; this keeps a press working on
+    /// a bus whose per-cycle tick is trivial (walk deleted), where that pass
+    /// never runs. Attaching a button must not silently switch a bus off its
+    /// walk-free fast path just to deliver a level that never changes.
+    pub(crate) fn sync_button_inputs(&mut self) {
+        use crate::peripherals::components::button::Button;
+        let pending: Vec<(u64, u8, bool)> = self
+            .gpio_devices_of_mut::<Button>()
+            .filter_map(|b| {
+                let (level, changed) = b.service();
+                changed.then_some((b.gpio.0, b.gpio.1, level))
+            })
+            .collect();
+        for (addr, bit, level) in pending {
+            self.drive_input_bit(addr, bit, level);
+        }
     }
 
     /// Apply several input sets as ONE transaction: every set is resolved and
