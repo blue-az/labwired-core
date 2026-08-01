@@ -310,6 +310,17 @@ pub struct SnapshotCaptureArgs {
     /// Print a progress line every N steps. 0 = silent.
     #[arg(long, default_value = "5000000")]
     pub progress_every: u64,
+
+    /// Write a JSON instruction trace here. Records the LAST `--trace-last`
+    /// retired instructions, which is the window that matters when a run
+    /// faults. Attaching a trace forces the interpreter (compiled blocks can't
+    /// emit per-step events), so the capture runs slower.
+    #[arg(long = "trace-out", value_name = "PATH")]
+    pub trace_out: Option<PathBuf>,
+
+    /// How many retired instructions to keep in the trace ring.
+    #[arg(long = "trace-last", value_name = "N", default_value = "4096")]
+    pub trace_last: usize,
 }
 
 #[derive(Parser, Debug)]

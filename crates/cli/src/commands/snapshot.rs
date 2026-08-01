@@ -599,7 +599,55 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
         "labwired-cli snapshot: stepping firmware to cycle {}",
         args.steps
     );
-    let observers: Vec<std::sync::Arc<dyn labwired_core::SimulationObserver>> = Vec::new();
+    // Instruction trace. Off unless asked for: attaching an observer forces
+    // the interpreter path (a compiled block cannot emit per-step events), so
+    // an always-on trace would silently tax every capture.
+    let ring = args
+        .trace_out
+        .as_ref()
+        .map(|_| std::sync::Arc::new(labwired_core::trace::RetiredRing::new(args.trace_last)));
+    let observers: Vec<std::sync::Arc<dyn labwired_core::SimulationObserver>> = match &ring {
+        Some(r) => vec![r.clone()],
+        None => Vec::new(),
+    };
+    if let Some(path) = &args.trace_out {
+        eprintln!(
+            "labwired-cli snapshot: tracing the last {} retired instructions to {}",
+            args.trace_last,
+            path.display()
+        );
+    }
+    // Written on EVERY exit path, faults included — a trace that only survives
+    // a clean run is useless for the case it exists to explain.
+    let dump_trace = |ring: &Option<std::sync::Arc<labwired_core::trace::RetiredRing>>| {
+        let (Some(ring), Some(path)) = (ring, args.trace_out.as_ref()) else {
+            return;
+        };
+        let entries = ring.entries();
+        let total = ring.total_retired();
+        let payload = serde_json::json!({
+            "total_retired": total,
+            "kept": entries.len(),
+            "dropped": total.saturating_sub(entries.len() as u64),
+            "instructions": entries,
+        });
+        match std::fs::File::create(path) {
+            Ok(f) => {
+                if let Err(e) = serde_json::to_writer_pretty(f, &payload) {
+                    eprintln!("error: failed to write {}: {e}", path.display());
+                } else {
+                    eprintln!(
+                        "labwired-cli snapshot: wrote {} of {} retired instructions to {}",
+                        entries.len(),
+                        total,
+                        path.display()
+                    );
+                }
+            }
+            Err(e) => eprintln!("error: failed to create {}: {e}", path.display()),
+        }
+    };
+
     let config = labwired_core::SimulationConfig::default();
     let mut i: u64 = 0;
     let progress = args.progress_every;
@@ -665,6 +713,7 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
                     "error: sim step at cycle {i} pc=0x{:08x}: {e}",
                     machine.cpu.get_pc()
                 );
+                dump_trace(&ring);
                 return ExitCode::from(EXIT_RUNTIME_ERROR);
             }
         }
@@ -699,6 +748,7 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
                         "error: sim step cpu1 at cycle {i} pc=0x{:08x}: {e}",
                         cpu1.get_pc()
                     );
+                    dump_trace(&ring);
                     return ExitCode::from(EXIT_RUNTIME_ERROR);
                 }
             }
@@ -935,6 +985,8 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
             }
         }
     }
+
+    dump_trace(&ring);
 
     let snap = machine.take_runtime_snapshot();
     let bytes = snap.to_bytes();

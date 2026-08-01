@@ -157,6 +157,35 @@ impl PeripheralTickResult {
 }
 
 /// Trait for observing simulation events in a modular way.
+///
+/// # The per-instruction trace contract
+///
+/// Every CPU core MUST emit, for each retired instruction, in this order:
+///
+///   1. `on_step_start(pc, opcode)` — before execution, `pc` is the address
+///      being executed and `opcode` its raw little-endian encoding.
+///   2. `TraceEvent::InstructionRetired { pc, opcode }` via [`emit_trace_event`].
+///   3. `on_step_end(cycles, registers)` — after execution.
+///
+/// A core may skip all three when `observers.is_empty()` (building the
+/// register view is not free), but it may NOT skip them for any other reason:
+/// in particular a JIT/compiled-block fast path must fall back to the
+/// interpreter while anyone is observing, or the trace silently loses the
+/// instructions that matter most.
+///
+/// `registers` is arch-specific in its leading entries, but the **last two
+/// slots are standardized** so that arch-agnostic consumers work everywhere:
+///
+/// ```text
+///   [ .. architectural registers, ISA numbering .. , SP , PC ]
+/// ```
+///
+/// SP and PC are repeated in those trailing slots even when they already
+/// appear in the arch block (ARM's r13/r15, RISC-V's x2). The duplication is
+/// deliberate: it means a consumer never has to know which core produced a
+/// trace to find the two values it almost always wants. See
+/// [`SP_FROM_END`]/[`PC_FROM_END`], and `tests/cpu_trace_conformance.rs`,
+/// which runs every core and fails if one drifts from any of the above.
 pub trait SimulationObserver: std::fmt::Debug + Send + Sync {
     fn on_simulation_start(&self) {}
     fn on_simulation_stop(&self) {}
@@ -165,6 +194,23 @@ pub trait SimulationObserver: std::fmt::Debug + Send + Sync {
     fn on_step_end(&self, _cycles: u32, _registers: &[u32]) {}
     fn on_memory_write(&self, _addr: u64, _old: u8, _new: u8) {}
     fn on_peripheral_tick(&self, _name: &str, _cycles: u32) {}
+}
+
+/// Offset of the standardized PC slot from the end of an `on_step_end`
+/// register slice. See [`SimulationObserver`].
+pub const PC_FROM_END: usize = 1;
+/// Offset of the standardized SP slot from the end of an `on_step_end`
+/// register slice. See [`SimulationObserver`].
+pub const SP_FROM_END: usize = 2;
+
+/// SP and PC out of an `on_step_end` register slice, whatever core produced
+/// it. Returns `None` for a slice too short to carry the standard trailer.
+pub fn trace_sp_pc(registers: &[u32]) -> Option<(u32, u32)> {
+    let n = registers.len();
+    if n < SP_FROM_END {
+        return None;
+    }
+    Some((registers[n - SP_FROM_END], registers[n - PC_FROM_END]))
 }
 
 pub fn emit_trace_event(
