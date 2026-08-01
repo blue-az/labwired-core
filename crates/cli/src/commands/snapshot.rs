@@ -146,10 +146,21 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
     // Handles both legacy and IDF-5.x app_main layouts. See
     // rom_thunks::repin_loop_task.
     if let Some(&app_main_addr) = symbol_addrs.get("app_main") {
-        if let Some((addr, shape)) = rom_thunks::repin_loop_task(&mut machine.bus, app_main_addr) {
-            eprintln!(
+        match rom_thunks::repin_loop_task(&mut machine.bus, app_main_addr) {
+            Some((addr, shape)) => eprintln!(
                 "labwired-cli snapshot: repinned loopTask xCoreID at 0x{addr:08x} (1→0, {shape}; runs on PRO_CPU)"
-            );
+            ),
+            // Not benign. An unrecognised layout leaves loopTask pinned to
+            // APP_CPU, where the sketch deadlocks the first time it contends a
+            // FreeRTOS portMUX with PRO_CPU — parking in `spinlock_acquire`
+            // partway through setup(). That reads as a firmware hang, so say
+            // plainly that it was us. A silently-skipped repin cost a real
+            // customer rig a mid-setup() stall that looked like their bug.
+            None => eprintln!(
+                "labwired-cli snapshot: warn: app_main at 0x{app_main_addr:08x} matched no known \
+                 xCoreID layout — loopTask stays on APP_CPU and setup() may deadlock in \
+                 spinlock_acquire. This is a simulator gap, not a firmware fault."
+            ),
         }
     }
 

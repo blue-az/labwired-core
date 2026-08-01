@@ -88,6 +88,31 @@ impl Esp32Gpio {
         }
     }
 
+    /// Level at the pads of bank 0 (GPIO0..31) — what `GPIO_IN` reports.
+    ///
+    /// `IN` is the pad, not the external stimulus. A pin whose output driver is
+    /// enabled reads back the level it is DRIVING; only a pin left as an input
+    /// reports what the outside world put there. Reading `in_data` alone made
+    /// `digitalRead()` on a pin the firmware had just driven return 0 forever,
+    /// so the common "set it, then confirm it" idiom could never pass — the
+    /// firmware was correct and the model said no.
+    ///
+    /// If a pin is both driven and externally forced, the output driver wins
+    /// here. Real silicon has a contention whose winner depends on drive
+    /// strength; we do not model that, and taking the driver is the case that
+    /// matches a correctly wired board.
+    fn pad_level_bank0(&self) -> u32 {
+        (self.out & self.enable) | (self.in_data & !self.enable)
+    }
+
+    /// Bank 1 twin of [`pad_level_bank0`] for the GPIO32..39 pads, where bit 0
+    /// is GPIO32. There is no external-input storage for this bank yet, so an
+    /// undriven pad reads 0 — the same value the register returned before,
+    /// which keeps this strictly a gain.
+    fn pad_level_bank1(&self) -> u32 {
+        self.out1 & self.enable1
+    }
+
     fn apply_out(&mut self, new_out: u32) {
         let old = self.out;
         self.out = new_out;
@@ -150,10 +175,10 @@ impl Esp32Gpio {
             // Concretely we just need GPIO0=1 so the BROM doesn't fall
             // into DOWNLOAD_BOOT and wait on UART/SDIO forever.
             0x38 => 0x33,
-            // IN (GPIO0..31).
-            0x3C => self.in_data,
-            // IN1 — not modeled.
-            0x40 => 0,
+            // IN (GPIO0..31) — the pad level, so a driven output reads back.
+            0x3C => self.pad_level_bank0(),
+            // IN1 (GPIO32..39), same rule for the high bank.
+            0x40 => self.pad_level_bank1(),
             // STATUS / STATUS1 — int status not driven; return 0.
             0x44 | 0x48 | 0x4C | 0x50 | 0x54 | 0x58 => 0,
             // GPIO_PINn_REG at 0x88 + pin*4 (TRM Table 4-12).
@@ -355,14 +380,9 @@ impl Peripheral for Esp32Gpio {
         if pin >= 32 {
             return None;
         }
-        let mask = 1u32 << pin;
-        // ENABLE is the output driver: enabled pins show the OUT latch,
-        // everything else shows the (externally driven) input level.
-        Some(if (self.enable & mask) != 0 {
-            (self.out & mask) != 0
-        } else {
-            (self.in_data & mask) != 0
-        })
+        // Same rule the IN register reports — one definition of "pad level",
+        // so a caller here and firmware reading GPIO_IN cannot disagree.
+        Some((self.pad_level_bank0() & (1u32 << pin)) != 0)
     }
 
     fn gpio_routing(&self, pin: u8) -> Option<crate::peripherals::gpio::GpioRouting> {
