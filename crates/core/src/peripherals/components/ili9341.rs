@@ -99,6 +99,13 @@ pub struct Ili9341 {
     dc_pin: Option<String>,
     /// Latched D/C level at transfer time: false = command, true = data.
     dc_level: bool,
+    /// GPIO output register + bit the bus samples the D/C level from. Resolved
+    /// once at install time from `dc_pin`. Without this the bus's
+    /// `maybe_latch_dc` skips the device entirely — `dc_source()` defaults to
+    /// `None` and the filter drops it — so `dc_level` would stay false and
+    /// every byte would be read as a command. Declaring `dc_pin` alone is not
+    /// enough; this is the half that makes the wire actually drive the model.
+    dc_source: Option<(u64, u8)>,
     /// MADCTL (0x36) value — orientation and mirroring.
     madctl: u8,
     /// Command byte currently collecting parameters (D/C-framed path).
@@ -135,6 +142,7 @@ impl Ili9341 {
             state: ProtoState::Idle,
             dc_pin: None,
             dc_level: false,
+            dc_source: None,
             madctl: 0,
             cur_cmd: 0,
             param_buf: [0; 4],
@@ -494,6 +502,14 @@ impl SpiDevice for Ili9341 {
         self.dc_level = level;
     }
 
+    fn dc_source(&self) -> Option<(u64, u8)> {
+        self.dc_source
+    }
+
+    fn set_dc_source(&mut self, odr_addr: u64, bit: u8) {
+        self.dc_source = Some((odr_addr, bit));
+    }
+
     fn transfer(&mut self, mosi: u8) -> u8 {
         // With a D/C line wired, framing is the wire's, not a guess.
         if self.dc_pin.is_some() {
@@ -601,7 +617,23 @@ impl PeripheralKit for Ili9341Kit {
         let dc_pin = ctx.config_str("dc_pin").map(|s| s.to_string());
         let mut dev = Ili9341::new(cs_pin);
         if let Some(dc) = dc_pin {
+            // Resolving the pin to its GPIO output register is the half that
+            // makes D/C real: the bus samples that register before each
+            // transfer. Declaring `dc_pin` without this leaves the level stuck
+            // low, so every byte frames as a command and not one pixel lands —
+            // a blank panel with no error anywhere.
+            let dc_src = ctx.resolve_pin_odr(&dc).ok_or_else(|| {
+                anyhow::anyhow!(
+                    "ili9341 '{}': D/C pin '{}' does not resolve to a driveable GPIO output. \
+                     The bus latches command-vs-data from this pin's output register, so an \
+                     unmapped pin leaves D/C stuck low and the display renders blank.",
+                    ctx.device_id(),
+                    dc,
+                )
+            })?;
             dev = dev.with_dc_pin(dc);
+            let (odr_addr, bit) = dc_src;
+            crate::peripherals::spi::SpiDevice::set_dc_source(&mut dev, odr_addr, bit);
         }
         ctx.attach_spi_device(Box::new(dev))?;
         Ok(())
