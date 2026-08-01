@@ -196,6 +196,41 @@ fn a_second_range_can_be_started_after_acknowledging() {
 }
 
 #[test]
+fn the_shipped_c3_marketplace_example_still_reads_the_same_bytes() {
+    // `examples/marketplace-arduino-c3/src/main.ino` is the one shipped sketch
+    // that drives this part, and it does two things worth pinning.
+    //
+    // First it reads the range as TWO separately-pointed single-byte reads, at
+    // 0x1E and then 0x1F. 0x1F is the second byte of the 2-byte
+    // RESULT_RANGE_VAL — not a register start — so it only resolves because the
+    // auto-increment path looks for the register COVERING an address. Without
+    // that, a pointed read of 0x1F matches nothing and returns a zero word,
+    // which would quietly halve the reported distance.
+    //
+    // Second, it writes SYSRANGE_START once in setup() and then never reads
+    // RESULT_INTERRUPT_STATUS and never acknowledges. That is why the honest
+    // 33 ms timing this migration introduces does NOT break it: the range
+    // register is readable whenever it is asked for, and only the STATUS bit is
+    // gated. A sketch that polls is now timed truthfully; a sketch that does
+    // not poll is unaffected.
+    let mut dev = declarative();
+    with_clock(&mut dev);
+    write_reg(&mut dev, 0x00, 0x01); // setup(): start ranging, once
+
+    for _ in 0..3 {
+        // loop(): id, then the two range bytes, each its own pointed read.
+        assert_eq!(read_block(&mut dev, 0xC0, 1), vec![0xEE]);
+        let hi = read_block(&mut dev, 0x1E, 1)[0];
+        let lo = read_block(&mut dev, 0x1F, 1)[0];
+        assert_eq!(
+            (u16::from(hi) << 8) | u16::from(lo),
+            DISTANCE_MM,
+            "the sketch's two-pointed-reads pattern must still yield the range"
+        );
+    }
+}
+
+#[test]
 fn the_distance_channel_drives_the_range() {
     // SimInput parity: the old model clamped to 0..2000 and rounded.
     use labwired_core::sim_input::SimInput;
