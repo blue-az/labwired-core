@@ -254,7 +254,7 @@ pub fn build_i2c_device(
         // hand-written structs survive only as the byte-parity oracles.
         // The VCNL4010 joins them: its whole model is a register map plus two
         // input channels, so there is nothing for a hand-written struct to add.
-        "tmp102" | "pca9685" | "vcnl4010" => {
+        "tmp102" | "pca9685" | "vcnl4010" | "vl53l0x" => {
             build_declarative_i2c_device(&type_str.to_ascii_lowercase(), config)
         }
         "tmp117" => {

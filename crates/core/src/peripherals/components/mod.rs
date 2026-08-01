@@ -94,7 +94,6 @@ pub mod veml7700;
 /// Byte-parity harness: the declarative VEML7700 vs the hand-written oracle.
 #[cfg(test)]
 mod veml7700_parity;
-pub mod vl53l0x;
 pub mod vl53l1x;
 pub mod ws2812;
 
