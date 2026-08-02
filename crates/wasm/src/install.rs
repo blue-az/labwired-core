@@ -23,10 +23,17 @@ impl WasmSimulator {
     /// the resolved PCs; calling this without the matching ELF is a no-op
     /// (symbols don't resolve → no thunks installed).
     ///
-    /// Also attaches a `Uc8151dTricolor290` panel to spi3 (the SSD1680
-    /// panel attached by default doesn't decode UC8151D opcodes
-    /// `0x00 PSR` / `0x04 PON` / `0x10 DTM1` / `0x12 DRF` / `0x13 DTM2`
-    /// that GxEPD2_290_C90c / Z13c emits).
+    /// Attaches no peripheral of its own: the panel (model, CS, DC) comes
+    /// from the board manifest via `attach_esp32_external_devices` at system
+    /// load — see the body below. This method used to hardcode a panel here;
+    /// that behaviour is gone, and the manifest is the single source of truth.
+    ///
+    /// For the record, because the deleted comment had it backwards:
+    /// `GxEPD2_290_C90c` is an **SSD1680** controller (0x12 SWRESET, 0x11 data
+    /// entry, 0x24/0x26 RAM, 0x22+0x20 update), not UC8151D. UC8151D
+    /// (`0x00 PSR` / `0x04 PON` / `0x10 DTM1` / `0x12 DRF` / `0x13 DTM2`) is
+    /// what `GxEPD2_290_Z13c` emits. `peripherals::kit::registry::TYPE_ALIASES`
+    /// owns that mapping.
     #[wasm_bindgen]
     pub fn install_arduino_esp32_quirks(&mut self, elf_bytes: &[u8]) -> Result<(), JsValue> {
         use labwired_core::peripherals::esp_xtensa_common::rom_thunks;
@@ -105,6 +112,23 @@ impl WasmSimulator {
             }
         }
 
+        // `g_ticks_per_us_pro` / `_app` — CPU MHz, normally written by
+        // `ets_update_cpu_frequency()` in the ROM bootloader, which this path
+        // skips. `esp_clk_apb_freq()` on ESP32-classic is
+        // `MIN(g_ticks_per_us_pro, 80) * MHZ`, so leaving them zero reports a
+        // 0 Hz APB bus and `esp_timer_impl_update_apb_freq` aborts boot.
+        //
+        // Without this the browser had the SAME defect the CLI had until
+        // core#742: millis() came back with bit 31 set, so every
+        // `(int32_t)(millis() - deadline) >= 0` in a sketch compared negative
+        // and loop() ran forever doing NOTHING. A bay-occupancy lab showed a
+        // blank panel and no serial for as long as you cared to wait.
+        for sym in ["g_ticks_per_us_pro", "g_ticks_per_us_app"] {
+            if let Some(&addr) = symbol_addrs.get(sym) {
+                let _ = machine.bus.write_u32(addr as u64, 240);
+            }
+        }
+
         // pxCurrentTCB pointer seed for xTaskGetCurrentTaskHandle thunk.
         if let Some(&addr) = symbol_addrs.get("pxCurrentTCB") {
             rom_thunks::PX_CURRENT_TCB_ADDR.with(|s| s.set(Some(addr)));
@@ -132,8 +156,9 @@ impl WasmSimulator {
         // with the real heap: refresh_gen=1, 1429 ink bytes).
 
         // No-op stubs for ESP-IDF / Arduino-ESP32 init paths we don't model.
+        // NB: esp_timer_init is deliberately absent — it is what programs
+        // LACT_CONFIG (enable + divider), and TIMG0 models LACT.
         for sym in &[
-            "esp_timer_init",
             "spi_flash_disable_interrupts_caches_and_other_cpu",
             "spi_flash_enable_interrupts_caches_and_other_cpu",
             "__retarget_lock_init_recursive",
@@ -266,11 +291,11 @@ impl WasmSimulator {
             "__getreent",
             rom_thunks::getreent_dram_fake_ptr,
         );
-        push_named(
-            &mut thunks,
-            "esp_timer_impl_get_counter_reg",
-            rom_thunks::monotonic_counter_32,
-        );
+        // esp_timer_impl_get_counter_reg is NOT thunked: TIMG0 models the LACT
+        // timer it reads. The thunk it replaces returned 32 bits through a2 and
+        // left a3 — the HIGH word — undefined, and `esp_timer_get_time` computes
+        // `(hi << 31) | (lo >> 1)`, putting garbage on bit 31 of every
+        // microsecond timestamp. See core#742.
         push_named(
             &mut thunks,
             "esp_clk_cpu_freq",

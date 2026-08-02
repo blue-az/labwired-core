@@ -71,7 +71,6 @@
 //! probes from firmware still see their own writes.
 
 use crate::{Peripheral, PeripheralTickResult, SimResult};
-use std::collections::HashMap;
 
 // Per-timer register offsets (T0 block starts at 0x00, T1 block at 0x24).
 // Some entries (`*_ALARM*`, `WDT_CONFIG0`, `INT_ENA`, `INT_ST`) aren't
@@ -192,7 +191,7 @@ pub struct Timg {
     base: u32,
     /// Word-aligned register backing store. Any offset not explicitly
     /// computed in `read()` falls through to this map (or zero).
-    regs: HashMap<u64, u32>,
+    regs: crate::FastMap<u64, u32>,
     /// Live 64-bit value for timer 0. Advances on every `tick()` while
     /// `T0CONFIG.EN` is set. Latched into `T0_LO`/`T0_HI` on a write to
     /// `T0_UPDATE` (and on read of LO/HI as a safety net so firmware that
@@ -237,7 +236,7 @@ impl Timg {
     pub fn new(base: u32) -> Self {
         Self {
             base,
-            regs: HashMap::new(),
+            regs: crate::FastMap::default(),
             counter_t0: 0,
             counter_t1: 0,
             counter_lact: 0,
