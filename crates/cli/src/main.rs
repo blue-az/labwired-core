@@ -810,8 +810,20 @@ fn rom_boot_flash_self_key() -> Option<(&'static str, [u8; 32])> {
 /// Build an ESP32-C3 ROM-boot machine; `efuse_mac` programs a distinct factory
 /// MAC so multiple instances are distinguishable on the shared VirtualWifi air.
 pub(crate) fn build_c3_rom_boot_machine(
+    bus: labwired_core::bus::SystemBus,
+    efuse_mac: Option<[u8; 6]>,
+) -> Result<labwired_core::Machine<labwired_core::cpu::RiscV>, ExitCode> {
+    build_c3_rom_boot_machine_from(bus, efuse_mac, "LABWIRED_ESP32C3_FLASH")
+}
+
+/// As [`build_c3_rom_boot_machine`], but the flash image comes from the named
+/// environment variable. Multi-node runs boot two different firmwares in one
+/// process (e.g. a BLE advertiser and a BLE scanner), which one fixed variable
+/// cannot express.
+pub(crate) fn build_c3_rom_boot_machine_from(
     mut bus: labwired_core::bus::SystemBus,
     efuse_mac: Option<[u8; 6]>,
+    flash_env: &str,
 ) -> Result<labwired_core::Machine<labwired_core::cpu::RiscV>, ExitCode> {
     // ── Faithful RISC-V ROM boot (ESP32-C3) ──────────────────────────
     // Reset to the BROM vector 0x4000_0000 (RISC-V `_start`, which jumps to
@@ -850,11 +862,11 @@ pub(crate) fn build_c3_rom_boot_machine(
             tracing::info!("provisioned {n} bytes of C3 boot ROM @ {base:#010x}");
         }
     }
-    let flash_path = match std::env::var("LABWIRED_ESP32C3_FLASH") {
+    let flash_path = match std::env::var(flash_env) {
         Ok(p) => p,
         Err(_) => {
             eprintln!(
-                "error: --rom-boot needs LABWIRED_ESP32C3_FLASH set (the flash image: \
+                "error: --rom-boot needs {flash_env} set (the flash image: \
                      bootloader@0x0 + partition-table@0x8000 + app@0x10000)"
             );
             return Err(ExitCode::from(EXIT_CONFIG_ERROR));
@@ -884,6 +896,84 @@ pub(crate) fn build_c3_rom_boot_machine(
         // Native keeps the concrete RiscV CPU (the wasm path boxes it).
         |c| c,
     ))
+}
+
+/// Two-node BLE run: boot two ESP32-C3 instances with distinct factory MACs and
+/// **different firmware** onto the shared BLE air, so one can advertise while
+/// the other scans. `LABWIRED_ESP32C3_FLASH` is node A, `LABWIRED_ESP32C3_FLASH_B`
+/// is node B; both models take the process-global
+/// [`ble_air`](labwired_core::peripherals::ble_air) bus, so the medium between
+/// them is the same one the single-node run already transmits into.
+fn run_two_c3_ble(
+    args: &RunArgs,
+    chip: &labwired_config::ChipDescriptor,
+    manifest: &labwired_config::SystemManifest,
+) -> ExitCode {
+    use labwired_core::bus::SystemBus;
+
+    eprintln!(
+        "[ble] two-C3 BLE over the shared air: A=02:00:00:00:00:02 (LABWIRED_ESP32C3_FLASH), \
+         B=02:00:00:00:00:03 (LABWIRED_ESP32C3_FLASH_B)"
+    );
+
+    let build = |mac: [u8; 6],
+                 env: &str|
+     -> Result<labwired_core::Machine<labwired_core::cpu::RiscV>, ExitCode> {
+        let bus = match SystemBus::from_config(chip, manifest) {
+            Ok(b) => b,
+            Err(e) => {
+                eprintln!("error: failed to build system bus: {e:#}");
+                return Err(ExitCode::from(EXIT_CONFIG_ERROR));
+            }
+        };
+        build_c3_rom_boot_machine_from(bus, Some(mac), env)
+    };
+    let mut a = match build([0x02, 0, 0, 0, 0, 0x02], "LABWIRED_ESP32C3_FLASH") {
+        Ok(m) => m,
+        Err(c) => return c,
+    };
+    let mut b = match build([0x02, 0, 0, 0, 0, 0x03], "LABWIRED_ESP32C3_FLASH_B") {
+        Ok(m) => m,
+        Err(c) => return c,
+    };
+    // Give each node its own serial capture and silence the shared console
+    // echo: two machines writing stdout byte-by-byte interleave into an
+    // unreadable mess, and the whole point of this run is reading both.
+    let sinks: Vec<std::sync::Arc<std::sync::Mutex<Vec<u8>>>> = (0..2)
+        .map(|_| std::sync::Arc::new(std::sync::Mutex::new(Vec::new())))
+        .collect();
+    for (m, sink) in [(&mut a, &sinks[0]), (&mut b, &sinks[1])] {
+        for p in m.bus.peripherals.iter_mut() {
+            let Some(any) = p.dev.as_any_mut() else {
+                continue;
+            };
+            if let Some(uart) = any.downcast_mut::<labwired_core::peripherals::esp_uart::EspUart>()
+            {
+                uart.set_sink(Some(sink.clone()));
+                uart.silence_stdout_echo_if(false);
+            }
+        }
+    }
+
+    let limit = args.max_steps.unwrap_or(u64::MAX);
+    for i in 0..limit {
+        if let Err(e) = a.step() {
+            eprintln!("[ble] node A halted at step {i}: {e}");
+            break;
+        }
+        if let Err(e) = b.step() {
+            eprintln!("[ble] node B halted at step {i}: {e}");
+            break;
+        }
+    }
+    for (label, sink) in [("[A]", &sinks[0]), ("[B]", &sinks[1])] {
+        let bytes = sink.lock().map(|g| g.clone()).unwrap_or_default();
+        for line in String::from_utf8_lossy(&bytes).lines() {
+            println!("{label} {line}");
+        }
+    }
+    eprintln!("[ble] run complete");
+    ExitCode::SUCCESS
 }
 
 /// Two-station WiFi run: boot two ESP32-C3 instances with distinct factory MACs

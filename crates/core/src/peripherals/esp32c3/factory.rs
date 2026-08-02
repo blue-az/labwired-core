@@ -9,6 +9,10 @@ use labwired_config::PeripheralConfig;
 
 pub fn try_build(canonical_type: &str, p_cfg: &PeripheralConfig) -> Option<Box<dyn Peripheral>> {
     let dev: Box<dyn Peripheral> = match canonical_type {
+        // Bluetooth LE link-layer / baseband (0x6003_1000). Register-backed
+        // window + the Bluetooth native clock the BT ROM's event scheduler
+        // reads; reverse-engineered from live silicon, see `super::bt`.
+        "esp32c3_bt" => Box::new(super::bt::Esp32c3Bt::new()),
         "esp32c3_gpio" => Box::new(super::gpio::Esp32c3Gpio::new()),
         "esp32c3_io_mux" => Box::new(super::io_mux::Esp32c3IoMux::new()),
         // RMT TX model (Arduino RGB_BUILTIN / rgbLedWrite). Instant TX_END +
@@ -35,6 +39,7 @@ pub fn try_build(canonical_type: &str, p_cfg: &PeripheralConfig) -> Option<Box<d
 }
 
 pub const SUPPORTED_TYPES: &[&str] = &[
+    "esp32c3_bt",
     "esp32c3_gpio",
     "esp32c3_io_mux",
     "esp32c3_rmt",

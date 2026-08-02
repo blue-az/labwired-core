@@ -6,6 +6,7 @@
 
 pub mod adc;
 pub mod afio;
+pub mod ble_air;
 pub mod bxcan;
 pub mod can;
 pub mod comp;
