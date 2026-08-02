@@ -102,6 +102,40 @@ const T1_LOADLO: u64 = 0x3C;
 const T1_LOADHI: u64 = 0x40;
 const T1_LOAD: u64 = 0x44;
 
+// LACT — the "legacy"/local accurate clock timer (TRM §16.3). This is the
+// time source `esp_timer` runs on for ESP32-classic
+// (esp_timer_impl_lac.c), so it is what `esp_timer_get_time()`, and
+// therefore Arduino's `micros()` and `millis()`, ultimately read.
+//
+// `esp_timer_impl_get_counter_reg` strobes LACT_UPDATE, waits for LACT_LO
+// to change, then reads the LO/HI pair; `esp_timer_get_time` returns that
+// 64-bit value >> 1, so LACT ticks at 2 MHz for a 1 µs result — which is
+// APB (80 MHz) / 40, the divider IDF programs.
+const LACT_CONFIG: u64 = 0x70;
+#[allow(dead_code)]
+const LACT_RTC: u64 = 0x74;
+const LACT_LO: u64 = 0x78;
+const LACT_HI: u64 = 0x7C;
+const LACT_UPDATE: u64 = 0x80;
+#[allow(dead_code)]
+const LACT_ALARMLO: u64 = 0x84;
+#[allow(dead_code)]
+const LACT_ALARMHI: u64 = 0x88;
+const LACT_LOADLO: u64 = 0x8C;
+const LACT_LOADHI: u64 = 0x90;
+const LACT_LOAD: u64 = 0x94;
+
+/// LACT_CONFIG.LACT_EN.
+const LACT_EN_BIT: u32 = 1 << 31;
+/// LACT_CONFIG.LACT_DIVIDER occupies bits [28:13] — the field
+/// `esp_timer_impl_get_counter_reg` itself recovers with
+/// `extui a8, a8, 13, 16`.
+const LACT_DIVIDER_SHIFT: u32 = 13;
+const LACT_DIVIDER_BITS: u32 = 16;
+/// APB clock in MHz. `tick()` runs once per simulated microsecond, so this
+/// is exactly how many APB cycles elapse per tick.
+const APB_MHZ: u32 = 80;
+
 // Watchdog
 #[allow(dead_code)]
 const WDT_CONFIG0: u64 = 0x48;
@@ -166,6 +200,13 @@ pub struct Timg {
     counter_t0: u64,
     /// Live 64-bit value for timer 1. Same semantics as `counter_t0`.
     counter_t1: u64,
+    /// Live 64-bit LACT counter — the `esp_timer` time base. Advances by
+    /// `APB_MHZ / divider` per tick while `LACT_CONFIG.EN` is set, with the
+    /// remainder carried in `lact_rem` so a divider that does not divide 80
+    /// still averages out to the right rate instead of truncating to zero.
+    counter_lact: u64,
+    /// Undivided APB cycles not yet converted into LACT ticks.
+    lact_rem: u32,
     /// Phase 2B.2 (issue #192): peripheral-tick index of the last `sync_to`.
     /// In scheduler mode the counters no longer advance one-per-`tick()`;
     /// instead `sync_to(now)` lazily adds `(now - anchor_tick)` to each
@@ -189,6 +230,8 @@ impl Timg {
             regs: HashMap::new(),
             counter_t0: 0,
             counter_t1: 0,
+            counter_lact: 0,
+            lact_rem: 0,
             anchor_tick: 0,
             rtc_cal: None,
         }
@@ -228,6 +271,59 @@ impl Timg {
 
     fn is_t1_enabled(&self) -> bool {
         self.word(T1_CONFIG) & T_CONFIG_EN_BIT != 0
+    }
+
+    /// Live LACT counter (debug helper / test introspection).
+    pub fn counter_lact(&self) -> u64 {
+        self.counter_lact
+    }
+
+    /// Programmed LACT prescaler, or `None` when LACT is disabled or the
+    /// divider is still zero. Silicon divides by 65536 when the field reads
+    /// zero; we treat it as "not yet programmed" and hold the counter still,
+    /// because a firmware that has not configured LACT has no business
+    /// seeing it advance and a stopped clock is easier to diagnose than one
+    /// running 65536× slow.
+    fn lact_divider(&self) -> Option<u32> {
+        let cfg = self.word(LACT_CONFIG);
+        if cfg & LACT_EN_BIT == 0 {
+            return None;
+        }
+        let mask = (1u32 << LACT_DIVIDER_BITS) - 1;
+        match (cfg >> LACT_DIVIDER_SHIFT) & mask {
+            0 => None,
+            d => Some(d),
+        }
+    }
+
+    /// Advance LACT by one simulated microsecond's worth of APB cycles.
+    fn advance_lact(&mut self, ticks: u64) {
+        let Some(div) = self.lact_divider() else {
+            return;
+        };
+        // Accumulate undivided APB cycles, then convert whole quotients.
+        // Saturating rather than wrapping: a run long enough to overflow
+        // this has bigger problems than a timer glitch.
+        let cycles = (ticks.saturating_mul(APB_MHZ as u64)).saturating_add(self.lact_rem as u64);
+        self.counter_lact = self.counter_lact.wrapping_add(cycles / div as u64);
+        self.lact_rem = (cycles % div as u64) as u32;
+    }
+
+    /// Latch the live LACT counter into LACT_LO/LACT_HI. Real silicon
+    /// requires the LACT_UPDATE strobe before the pair is coherent, and
+    /// `esp_timer_impl_get_counter_reg` spins until LO *changes* after that
+    /// strobe — so the latch must genuinely move once the counter has.
+    fn latch_lact(&mut self) {
+        self.regs.insert(LACT_LO, self.counter_lact as u32);
+        self.regs.insert(LACT_HI, (self.counter_lact >> 32) as u32);
+    }
+
+    fn preload_lact(&mut self) {
+        let lo = self.word(LACT_LOADLO) as u64;
+        let hi = self.word(LACT_LOADHI) as u64;
+        self.counter_lact = (hi << 32) | lo;
+        self.lact_rem = 0;
+        self.latch_lact();
     }
 
     /// Latch the live `counter_t0` into the T0_LO/T0_HI register pair so
@@ -270,6 +366,8 @@ impl Timg {
             T1_UPDATE => self.latch_t1(),
             T0_LOAD => self.preload_t0(),
             T1_LOAD => self.preload_t1(),
+            LACT_UPDATE => self.latch_lact(),
+            LACT_LOAD => self.preload_lact(),
             WDT_FEED | WDT_WPROTECT => {
                 // Watchdog feed / write-protect: round-trip the value.
                 // WDT timing/reset behavior isn't modeled.
@@ -356,6 +454,16 @@ impl Peripheral for Timg {
                 .get(&T1_HI)
                 .copied()
                 .unwrap_or((self.counter_t1 >> 32) as u32),
+            LACT_LO => self
+                .regs
+                .get(&LACT_LO)
+                .copied()
+                .unwrap_or(self.counter_lact as u32),
+            LACT_HI => self
+                .regs
+                .get(&LACT_HI)
+                .copied()
+                .unwrap_or((self.counter_lact >> 32) as u32),
             _ => self.word(word_off),
         };
         Ok(((word >> byte_off) & 0xFF) as u8)
@@ -400,6 +508,16 @@ impl Peripheral for Timg {
                 .get(&T1_HI)
                 .copied()
                 .unwrap_or((self.counter_t1 >> 32) as u32),
+            LACT_LO => self
+                .regs
+                .get(&LACT_LO)
+                .copied()
+                .unwrap_or(self.counter_lact as u32),
+            LACT_HI => self
+                .regs
+                .get(&LACT_HI)
+                .copied()
+                .unwrap_or((self.counter_lact >> 32) as u32),
             _ => self.word(word_off),
         };
         Ok(word)
@@ -423,6 +541,7 @@ impl Peripheral for Timg {
         if self.is_t1_enabled() {
             self.counter_t1 = self.counter_t1.wrapping_add(1);
         }
+        self.advance_lact(1);
         // No interrupt firing this round — see module docs. Routing is
         // a separate task.
         PeripheralTickResult::default()
@@ -457,6 +576,7 @@ impl Peripheral for Timg {
         if self.is_t1_enabled() {
             self.counter_t1 = self.counter_t1.wrapping_add(delta);
         }
+        self.advance_lact(delta);
         self.anchor_tick = tick_now;
     }
 
