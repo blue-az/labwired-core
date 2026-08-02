@@ -27,7 +27,6 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
     use labwired_core::bus::SystemBus;
     use labwired_core::peripherals::components::{Ssd1680Tricolor290, Uc8151dTricolor290};
     use labwired_core::peripherals::esp32::spi::Esp32Spi;
-    use labwired_core::peripherals::esp_xtensa_common::rom_thunks;
     use labwired_core::system::xtensa::configure_xtensa_esp32;
     use labwired_core::{Machine, SimulationError};
     use labwired_loader::{extract_arduino_esp32_thunks, load_elf_bytes};
@@ -147,19 +146,11 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
         }
     };
     let symbol_addrs = profile.symbols.clone();
-    let appcpu_initial_sp = profile.appcpu_initial_sp;
     eprintln!(
         "labwired-cli snapshot: installing {} thunks ({} resolved from ELF symbols)",
         profile.thunks_installed,
         symbol_addrs.len(),
     );
-
-    // IPI bridge state — DPORT FROM_CPU intmatrix mapping observed each
-    // cycle, raised on the CPU as an internal interrupt edge.
-    let mut from_cpu_bit0: Option<u8> = None;
-    let mut from_cpu_bit1: Option<u8> = None;
-    let mut last_from_cpu0_val: u32 = 0;
-    let mut last_from_cpu1_val: u32 = 0;
 
     eprintln!(
         "labwired-cli snapshot: stepping firmware to cycle {}",
@@ -172,10 +163,11 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
         .trace_out
         .as_ref()
         .map(|_| std::sync::Arc::new(labwired_core::trace::RetiredRing::new(args.trace_last)));
-    let observers: Vec<std::sync::Arc<dyn labwired_core::SimulationObserver>> = match &ring {
-        Some(r) => vec![r.clone()],
-        None => Vec::new(),
-    };
+    // The authoritative path owns its observers, so hand the trace ring to the
+    // Machine instead of passing a list into every cpu.step call.
+    if let Some(r) = &ring {
+        machine.observers.push(r.clone());
+    }
     if let Some(path) = &args.trace_out {
         eprintln!(
             "labwired-cli snapshot: tracing the last {} retired instructions to {}",
@@ -214,15 +206,10 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
         }
     };
 
-    let config = labwired_core::SimulationConfig::default();
     let mut i: u64 = 0;
     let progress = args.progress_every;
     while i < args.steps {
-        // The per-step half of the profile — IPI bridge + handshake
-        // re-stamp — now lives with the rest of it, so `labwired test`
-        // gets identical behaviour instead of only identical setup.
-        profile.step(&mut machine, i);
-        match machine.cpu.step(&mut machine.bus, &observers, &config) {
+        match machine.step() {
             Ok(()) => {}
             Err(SimulationError::BreakpointHit(_)) => {}
             Err(e) => {
@@ -234,43 +221,9 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
                 return ExitCode::from(EXIT_RUNTIME_ERROR);
             }
         }
-        // Dual-core: snapshot capture bypasses Machine::step, so the
-        // appcpu-release + cpu1.step loop has to live here too. Plain
-        // round-robin per-instruction interleaving — matches the chip's
-        // true parallelism within the granularity of one instruction.
-        // S32C1I is atomic within step() so spinlocks work correctly.
-        if let Some(cpu1) = machine.cpu_secondary.as_mut() {
-            if let Some(boot_addr) =
-                labwired_core::peripherals::esp_xtensa_common::rom_thunks::APPCPU_BOOT_ADDR
-                    .with(|s| s.take())
-            {
-                cpu1.set_pc(boot_addr);
-                cpu1.set_sp(appcpu_initial_sp);
-                // Run APP_CPU for real by default: it executes the firmware's
-                // own `call_start_cpu1`, sets s_cpu_up/etc itself, and runs the
-                // FreeRTOS SMP scheduler on core 1 — so we DON'T pre-seed the
-                // handshake flags (that was a workaround for keeping cpu1
-                // halted). Proven byte-identical to silicon with the real second
-                // core (spi3=19033, ink=1429). LABWIRED_NO_DUALCORE=1 halts it
-                // (falls back to the pre-seed path) for debugging SMP races.
-                if std::env::var("LABWIRED_NO_DUALCORE").is_err() {
-                    cpu1.unhalt();
-                }
-            }
-            match cpu1.step(&mut machine.bus, &observers, &config) {
-                Ok(()) => {}
-                Err(SimulationError::BreakpointHit(_)) => {}
-                Err(e) => {
-                    eprintln!(
-                        "error: sim step cpu1 at cycle {i} pc=0x{:08x}: {e}",
-                        cpu1.get_pc()
-                    );
-                    dump_trace(&ring);
-                    return ExitCode::from(EXIT_RUNTIME_ERROR);
-                }
-            }
-        }
-        machine.bus.tick_peripherals_with_costs();
+        // Secondary-CPU release, secondary stepping and peripheral ticking
+        // all happen inside Machine::step. Doing them here as well is how
+        // this loop drifted from every other runner in the first place.
         i += 1;
         if progress > 0 && i.is_multiple_of(progress) {
             let cpu1_state = match machine.cpu_secondary.as_ref() {
