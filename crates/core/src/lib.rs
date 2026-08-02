@@ -2672,3 +2672,53 @@ impl<C: Cpu> DebugControl for Machine<C> {
         self.apply_snapshot(snapshot.clone())
     }
 }
+
+/// A fast, dependency-free hasher for small integer keys (register offsets).
+///
+/// Peripheral register banks are `HashMap<u64, u32>` keyed by offset and are
+/// read on nearly every tick — `UartCore::int_raw` alone walks several. With
+/// std's default SipHash, `sip::Hasher::write` profiled as the SECOND heaviest
+/// frame in a whole classic-ESP32 run, behind only the peripheral-walk loop.
+/// SipHash is a DoS-resistant hash for adversarial keys; a register offset the
+/// firmware chose is not that.
+///
+/// This is the same finding, and the same fix, that took the ESP32-C3 labs
+/// 2.343s -> 1.955s (see the scheduler-hash work). Multiply-xor, i.e. the FxHash
+/// construction, without taking a new dependency.
+#[derive(Default, Clone, Copy)]
+pub struct FastHasher(u64);
+
+impl std::hash::Hasher for FastHasher {
+    #[inline]
+    fn finish(&self) -> u64 {
+        self.0
+    }
+    #[inline]
+    fn write(&mut self, bytes: &[u8]) {
+        for &b in bytes {
+            self.write_u8(b);
+        }
+    }
+    #[inline]
+    fn write_u8(&mut self, n: u8) {
+        self.write_u64(u64::from(n));
+    }
+    #[inline]
+    fn write_u32(&mut self, n: u32) {
+        self.write_u64(u64::from(n));
+    }
+    #[inline]
+    fn write_u64(&mut self, n: u64) {
+        // FxHash: rotate, xor, multiply by a large odd constant.
+        const SEED: u64 = 0x51_7c_c1_b7_27_22_0a_95;
+        self.0 = (self.0.rotate_left(5) ^ n).wrapping_mul(SEED);
+    }
+    #[inline]
+    fn write_usize(&mut self, n: usize) {
+        self.write_u64(n as u64);
+    }
+}
+
+/// Drop-in replacement for `HashMap` on integer keys. Same semantics, same
+/// iteration-order guarantees (i.e. none), just a cheaper hash.
+pub type FastMap<K, V> = std::collections::HashMap<K, V, std::hash::BuildHasherDefault<FastHasher>>;
