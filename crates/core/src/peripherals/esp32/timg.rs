@@ -192,7 +192,7 @@ pub struct Timg {
     base: u32,
     /// Word-aligned register backing store. Any offset not explicitly
     /// computed in `read()` falls through to this map (or zero).
-    regs: HashMap<u64, u32>,
+    regs: crate::FastMap<u64, u32>,
     /// Live 64-bit value for timer 0. Advances on every `tick()` while
     /// `T0CONFIG.EN` is set. Latched into `T0_LO`/`T0_HI` on a write to
     /// `T0_UPDATE` (and on read of LO/HI as a safety net so firmware that
@@ -237,7 +237,7 @@ impl Timg {
     pub fn new(base: u32) -> Self {
         Self {
             base,
-            regs: HashMap::new(),
+            regs: crate::FastMap::default(),
             counter_t0: 0,
             counter_t1: 0,
             counter_lact: 0,
