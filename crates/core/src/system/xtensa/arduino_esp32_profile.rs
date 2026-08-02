@@ -23,8 +23,279 @@
 //! If you are tempted to copy a piece of this into a runner, don't — add a
 //! parameter here instead.
 
+use crate::peripherals::esp_xtensa_common::rom_thunks;
 use crate::{Bus, Cpu, Machine};
 use std::collections::HashMap;
+
+// ---------------------------------------------------------------------------
+// The thunk debt, declared in one place so it can be counted and ratcheted.
+//
+// A thunk is not the same thing as skipping the bootloader. Seeding the state
+// the bootloader would have left is a one-time fact about where boot ended, and
+// it is verifiable — you can read the register back. A thunk redirects a call
+// the firmware makes for the WHOLE RUN, so it is a standing lie with nothing to
+// compare against, and it drifts silently.
+//
+// That is not theoretical here. `esp_timer_impl_get_counter_reg` was thunked to
+// return a 32-bit count through a2, leaving a3 — the high word —
+// undefined. `esp_timer_get_time` computes `(hi << 31) | (lo >> 1)`, so garbage
+// landed on bit 31 of every timestamp and every sketch using the standard
+// `(int32_t)(millis() - deadline) >= 0` idiom silently did nothing, forever,
+// while loop() kept being called. Nothing caught it because a thunk has no
+// register to be wrong about. Modelling the LACT timer and seeding
+// `g_ticks_per_us` — strictly less code than the fake — fixed it.
+//
+// So: these lists may only ever get SHORTER. `thunk_debt_only_falls` enforces
+// that. Before adding one, ask whether the thing you are faking is bootloader
+// work (seed it), a value that lives in a register or eFuse (model it), or
+// firmware you do not want to run (that is the debt — say why, in a comment).
+// ---------------------------------------------------------------------------
+
+/// Stubs installed unconditionally, with a hand-curated fallback address for
+/// the reference firmware's fully stripped ELF.
+const FIXED_STUBS: &[(&str, u32, rom_thunks::RomThunkFn)] = &[
+    // NB: esp_timer_init is deliberately NOT stubbed — it is what programs
+    // LACT_CONFIG (enable + divider), and TIMG0 now models LACT, so it has
+    // real registers to write and the timer only advances once it has.
+    (
+        "spi_flash_disable_interrupts_caches_and_other_cpu",
+        0x4008_17dc,
+        rom_thunks::nop_return_zero,
+    ),
+    (
+        "spi_flash_enable_interrupts_caches_and_other_cpu",
+        0x4008_188c,
+        rom_thunks::nop_return_zero,
+    ),
+    (
+        "__retarget_lock_init_recursive",
+        0x4008_3384,
+        rom_thunks::nop_return_zero,
+    ),
+    (
+        "__retarget_lock_close_recursive",
+        0x4008_339c,
+        rom_thunks::nop_return_zero,
+    ),
+    (
+        "__retarget_lock_acquire_recursive",
+        0x4008_33b0,
+        rom_thunks::nop_return_zero,
+    ),
+    (
+        "__retarget_lock_release_recursive",
+        0x4008_33cc,
+        rom_thunks::nop_return_zero,
+    ),
+    (
+        "_esp_error_check_failed",
+        0x4008_bbd0,
+        rom_thunks::nop_return_zero,
+    ),
+    ("setCpuFrequencyMhz", 0x400e_99dc, rom_thunks::nop_return_zero),
+    (
+        "esp_ota_get_running_partition",
+        0x400e_ae18,
+        rom_thunks::nop_return_fake_ptr,
+    ),
+    ("delay", 0x400e_5c28, rom_thunks::nop_return_zero),
+];
+
+/// Real-silicon noreturn functions — `abort_halt` prints diagnostics and halts
+/// the CPU instead of returning. Without this, stubbing them as
+/// `nop_return_zero` creates tight `assert → return → re-check → assert` loops
+/// in xQueueGenericSend's parameter-validation path.
+const ABORT_STUBS: &[&str] = &[
+    "panic_abort",
+    "__assert_func",
+    "abort",
+    "__assert",
+    "__cxa_pure_virtual",
+    "__cxa_throw",
+];
+
+/// ESP-IDF clock/efuse/cache/dport bring-up and the newlib/stdio surface —
+/// the sim has no silicon behind these, so they return 0. Installed only when
+/// the symbol is present in the ELF.
+const NOP_STUBS: &[&str] = &[
+    // newlib stdio init — sketch doesn't use stdio on render path
+    "__sinit",
+    "__sfp",
+    "__sfp_lock_acquire",
+    "__sfp_lock_release",
+    "__sflags",
+    "__swsetup_r",
+    "__srefill_r",
+    "__sread",
+    "__swrite",
+    "__seek",
+    "__sclose",
+    "esp_reent_init",
+    "_fflush_r",
+    "_fclose_r",
+    "_fwrite_r",
+    "esp_panic_handler",
+    "esp_panic_handler_reconfigure_wdts",
+    // xTaskGetCurrentTaskHandle gets a proper thunk below — returning
+    // 0 breaks vTaskDelete(NULL) by passing NULL into prvDeleteTLS.
+    "pthread_key_create",
+    "pthread_setspecific",
+    "pthread_getspecific",
+    "pthread_mutex_init",
+    "pthread_mutex_lock",
+    "pthread_mutex_unlock",
+    // Dual-core sim: with cpu_secondary actually running, FreeRTOS
+    // primitives can use their real implementations — stubbing them
+    // would defeat the purpose. Only esp_pthread_init stays stubbed
+    // (it depends on per-task TLS we don't model).
+    "esp_pthread_init",
+    "esp_task_wdt_reset",
+    "esp_task_wdt_init",
+    "esp_task_wdt_add",
+    "esp_task_wdt_delete",
+    "esp_clk_init",
+    "esp_perip_clk_init",
+    "core_intr_matrix_clear",
+    "esp_efuse_check_errors",
+    "esp_dport_access_stall_other_cpu_start",
+    "esp_dport_access_stall_other_cpu_end",
+    "esp_cpu_unstall",
+    "bootloader_flash_update_id",
+    "bootloader_init_mem",
+    "esp_mspi_pin_init",
+    "spi_flash_init_chip_state",
+    "esp_log_timestamp",
+    // SPI-flash HAL — see loader::extract_arduino_esp32_thunks for why.
+    "spi_flash_hal_configure_host_io_mode",
+    "spi_flash_chip_generic_config_host_io_mode",
+    "spi_flash_chip_generic_get_io_mode",
+    "spi_flash_chip_generic_set_io_mode",
+    "spi_flash_chip_generic_probe",
+    "spi_flash_chip_generic_detect_size",
+    "spi_flash_chip_generic_read",
+    "spi_flash_chip_generic_yield",
+    "spi_flash_chip_gd_probe",
+    "spi_flash_chip_gd_detect_size",
+    "spi_flash_chip_gd_get_io_mode",
+    "spi_flash_chip_gd_set_io_mode",
+    "spi_flash_init",
+    "spi_flash_hal_init",
+    "spi_flash_hal_supports_direct_write",
+    "spi_flash_hal_supports_direct_read",
+    "esp_flash_app_enable_os_functions",
+    "esp_flash_app_disable_os_functions",
+    "esp_flash_app_init",
+    "esp_flash_init_main",
+    "esp_flash_init_default_chip",
+    "esp_flash_init",
+    "esp_random",
+    "esp_fill_random",
+    "esp_log_early_timestamp",
+    "esp_log_writev",
+    "esp_log_write",
+    "esp_log_buffer_hex_internal",
+    "esp_log_buffer_char_internal",
+    "esp_log_buffer_hexdump_internal",
+    // log mutex (esp_log_impl_lock/unlock) — sim doesn't model the log
+    // mutex queue, and the real impl calls xQueueGenericSend on an
+    // uninitialized queue, tripping a NULL-pcHead assertion.
+    "esp_log_impl_lock",
+    "esp_log_impl_lock_timeout",
+    "esp_log_impl_unlock",
+    // esp_ipc_init/isr_init create the IPC task per core. Its
+    // semaphore-wait turns into a tight loop in the sim (xQueueSemaphoreTake
+    // is stubbed to pdTRUE), starving loopTask. Stub the init so the
+    // task is never created — cross-core IPC isn't used on the
+    // single-CPU render path.
+    "esp_ipc_init",
+    "esp_ipc_isr_init",
+    // The HardwareSerial / uartWrite nops are GONE. A previous attempt
+    // recorded here that unstubbing them "still emitted 0 UART bytes in 8M
+    // steps, so something further down swallows the write" — that run was
+    // made while apb_ctrl shadowed the SYSCON model, so SYSCLK_CONF read
+    // 0xFFFFFFFF, getApbFrequency() returned 78125 Hz and
+    // _get_effective_baudrate divided by zero. The clock tree was broken,
+    // not the write path. With the syscon window fixed (see
+    // system/xtensa/esp32.rs) the real Arduino serial path runs and
+    // demo-labwired-ereader.elf emits its own markers.
+    "_Z14serialEventRunv",
+    // FreeRTOS recursive mutexes used by newlib stdio locks — same
+    // null-queue assertion problem. Stub since sim is effectively
+    // single-threaded on the panel-render path. xQueueCreateMutexStatic
+    // gets a separate echo_arg0 thunk below (callers assert the returned
+    // handle equals the static buffer they passed in). xQueueCreateMutex is
+    // NOT stubbed — the SPI bus mutex is a real FreeRTOS object (see the
+    // spiStartBus note below); faking its create returned an uninitialised
+    // handle that forced faking every lock op on top of it and dropped the
+    // SPI payload to the panel.
+    "xQueueGiveMutexRecursive",
+    "xQueueTakeMutexRecursive",
+    "__sfvwrite_r",
+    "__sflush_r",
+    "_printf_r",
+    "_fprintf_r",
+    "_vfprintf_r",
+    "_vprintf_r",
+    "printf",
+    "fprintf",
+    "vfprintf",
+    "vprintf",
+    "puts",
+    "fputs",
+    "fputc",
+    "putchar",
+    "_puts_r",
+    "_fputs_r",
+    "_putchar_r",
+    "_write_r",
+    "write",
+];
+
+/// Stubs that need more than return-0, installed only when the symbol is
+/// present. Each one is a specific claim about what the firmware should see.
+const SPECIAL_STUBS: &[(&str, rom_thunks::RomThunkFn)] = &[
+    // esp_chip_info has to fill the output struct with a plausible revision so
+    // the firmware's `chip_revision >= min` assert passes.
+    ("esp_chip_info", rom_thunks::esp_chip_info_stub),
+    // __getreent must return a non-NULL pointer to a zeroed reent struct. Real
+    // silicon's per-task reent is set up by FreeRTOS task-local storage, which
+    // we don't model — return a fixed pointer into DRAM (always zeroed by
+    // RamPeripheral::new). ESP32-classic-specific address; an `esp32s3` profile
+    // (if/when added) needs its own version pointing at S3's DRAM range.
+    ("__getreent", rom_thunks::getreent_dram_fake_ptr),
+    // FreeRTOS divides CPU freq by tick rate to set _xt_tick_divisor; without a
+    // meaningful value the divisor is 0 and the timer ISR re-fires every CCOUNT
+    // cycle, pinning CPU 0 in the tick hook. 240 matches the g_ticks_per_us
+    // seed above, so the two cannot drift.
+    ("esp_clk_cpu_freq", rom_thunks::esp_clk_cpu_freq_240mhz),
+    // Xtensa HAL register-window-file spill. The HAL impl walks WS bits and
+    // spills each live slot's a0..a3 to its stack save area — but the sim's
+    // transparent shadow-spill on CALL{n} leaves WS=1 on displaced slots while
+    // the AR file has the callee's data, so the HAL walk reads garbage
+    // (callee's a1 is often 0 → store to 0xfffffff0 traps). This emulates the
+    // spill using shadow-stack snapshots when available.
+    //
+    // Only the `_nw` leaf (the spill loop that would trap) is thunked; the
+    // `xthal_window_spill` wrapper is a thin CALL{n}-entered PS-save shell that
+    // must run natively (its real ENTRY/RETW manage the window). Thunking the
+    // wrapper returns via a0 = the caller's return address, corrupting the
+    // first-task dispatch.
+    ("xthal_window_spill_nw", rom_thunks::xthal_window_spill_thunk),
+    // Returns the caller's static buffer as the handle. Callers
+    // (esp_newlib_locks_init in particular) assert the returned handle equals
+    // the buffer they passed in — a nop_return_zero stub fails that check.
+    (
+        "xQueueCreateMutexStatic",
+        rom_thunks::x_queue_create_mutex_static_echo,
+    ),
+    // Arduino-ESP32's main_task self-deletes after app_main returns via
+    // vTaskDelete(NULL), which depends on this getter. Reads pxCurrentTCB,
+    // whose address is handed to the rom_thunks side below.
+    (
+        "xTaskGetCurrentTaskHandle",
+        rom_thunks::x_task_get_current_task_handle,
+    ),
+];
 
 /// Everything a caller needs back after the profile is installed.
 pub struct ArduinoEsp32Profile {
@@ -203,72 +474,17 @@ pub fn install_arduino_esp32_profile<C: Cpu>(
     // bump-allocator thunks were debt; the "real heap walls" symptom was an
     // APP_CPU dual-core bring-up bug (fixed by the real second core), not an
     // allocator bug.
-    let mut thunks: Vec<(u32, rom_thunks::RomThunkFn)> = vec![
-        // NB: esp_timer_init is deliberately NOT stubbed — it is what programs
-        // LACT_CONFIG (enable + divider), and TIMG0 now models LACT, so it has
-        // real registers to write and the timer only advances once it has.
-        (
-            resolve(
-                "spi_flash_disable_interrupts_caches_and_other_cpu",
-                0x4008_17dc,
-            ),
-            rom_thunks::nop_return_zero,
-        ),
-        (
-            resolve(
-                "spi_flash_enable_interrupts_caches_and_other_cpu",
-                0x4008_188c,
-            ),
-            rom_thunks::nop_return_zero,
-        ),
-        (
-            resolve("__retarget_lock_init_recursive", 0x4008_3384),
-            rom_thunks::nop_return_zero,
-        ),
-        (
-            resolve("__retarget_lock_close_recursive", 0x4008_339c),
-            rom_thunks::nop_return_zero,
-        ),
-        (
-            resolve("__retarget_lock_acquire_recursive", 0x4008_33b0),
-            rom_thunks::nop_return_zero,
-        ),
-        (
-            resolve("__retarget_lock_release_recursive", 0x4008_33cc),
-            rom_thunks::nop_return_zero,
-        ),
-        (
-            resolve("_esp_error_check_failed", 0x4008_bbd0),
-            rom_thunks::nop_return_zero,
-        ),
-        (
-            resolve("setCpuFrequencyMhz", 0x400e_99dc),
-            rom_thunks::nop_return_zero,
-        ),
-        (
-            resolve("esp_ota_get_running_partition", 0x400e_ae18),
-            rom_thunks::nop_return_fake_ptr,
-        ),
-        (resolve("delay", 0x400e_5c28), rom_thunks::nop_return_zero),
-    ];
+    let mut thunks: Vec<(u32, rom_thunks::RomThunkFn)> = FIXED_STUBS
+        .iter()
+        .map(|&(sym, fallback, f)| (resolve(sym, fallback), f))
+        .collect();
     // The Arduino serial nops that used to be installed here are gone, along
     // with the empty loop that survived them. They dodged an Xtensa
     // divide-by-zero in _get_effective_baudrate whose real cause was an
     // apb_ctrl read-as-ones stub shadowing SYSCON at the same base — see
     // system/xtensa/esp32.rs. Serial now works on this path, which is what
     // makes the `<output>.uart.log` written below carry a sketch's own output.
-    // Real-silicon noreturn functions — abort_halt prints diagnostics and
-    // halts the CPU instead of returning. Without this, stubbing them as
-    // nop_return_zero creates tight `assert → return → re-check → assert`
-    // loops in xQueueGenericSend's parameter-validation path.
-    for sym in &[
-        "panic_abort",
-        "__assert_func",
-        "abort",
-        "__assert",
-        "__cxa_pure_virtual",
-        "__cxa_throw",
-    ] {
+    for sym in ABORT_STUBS {
         if let Some(&pc) = symbol_addrs.get(*sym) {
             thunks.push((pc, rom_thunks::abort_halt));
         }
@@ -276,209 +492,24 @@ pub fn install_arduino_esp32_profile<C: Cpu>(
     // ESP-IDF clock/efuse/cache/dport bring-up — the sim has no silicon
     // behind these so we stub them to return-0. Only installed when the
     // symbol is present in the ELF (Arduino-ESP32 profile).
-    for sym in &[
-        // newlib stdio init — sketch doesn't use stdio on render path
-        "__sinit",
-        "__sfp",
-        "__sfp_lock_acquire",
-        "__sfp_lock_release",
-        "__sflags",
-        "__swsetup_r",
-        "__srefill_r",
-        "__sread",
-        "__swrite",
-        "__seek",
-        "__sclose",
-        "esp_reent_init",
-        "_fflush_r",
-        "_fclose_r",
-        "_fwrite_r",
-        "esp_panic_handler",
-        "esp_panic_handler_reconfigure_wdts",
-        // xTaskGetCurrentTaskHandle gets a proper thunk below — returning
-        // 0 breaks vTaskDelete(NULL) by passing NULL into prvDeleteTLS.
-        "pthread_key_create",
-        "pthread_setspecific",
-        "pthread_getspecific",
-        "pthread_mutex_init",
-        "pthread_mutex_lock",
-        "pthread_mutex_unlock",
-        // Dual-core sim: with cpu_secondary actually running, FreeRTOS
-        // primitives can use their real implementations — stubbing them
-        // would defeat the purpose. Only esp_pthread_init stays stubbed
-        // (it depends on per-task TLS we don't model).
-        "esp_pthread_init",
-        "esp_task_wdt_reset",
-        "esp_task_wdt_init",
-        "esp_task_wdt_add",
-        "esp_task_wdt_delete",
-        "esp_clk_init",
-        "esp_perip_clk_init",
-        "core_intr_matrix_clear",
-        "esp_efuse_check_errors",
-        "esp_dport_access_stall_other_cpu_start",
-        "esp_dport_access_stall_other_cpu_end",
-        "esp_cpu_unstall",
-        "bootloader_flash_update_id",
-        "bootloader_init_mem",
-        "esp_mspi_pin_init",
-        "spi_flash_init_chip_state",
-        "esp_log_timestamp",
-        // SPI-flash HAL — see loader::extract_arduino_esp32_thunks for why.
-        "spi_flash_hal_configure_host_io_mode",
-        "spi_flash_chip_generic_config_host_io_mode",
-        "spi_flash_chip_generic_get_io_mode",
-        "spi_flash_chip_generic_set_io_mode",
-        "spi_flash_chip_generic_probe",
-        "spi_flash_chip_generic_detect_size",
-        "spi_flash_chip_generic_read",
-        "spi_flash_chip_generic_yield",
-        "spi_flash_chip_gd_probe",
-        "spi_flash_chip_gd_detect_size",
-        "spi_flash_chip_gd_get_io_mode",
-        "spi_flash_chip_gd_set_io_mode",
-        "spi_flash_init",
-        "spi_flash_hal_init",
-        "spi_flash_hal_supports_direct_write",
-        "spi_flash_hal_supports_direct_read",
-        "esp_flash_app_enable_os_functions",
-        "esp_flash_app_disable_os_functions",
-        "esp_flash_app_init",
-        "esp_flash_init_main",
-        "esp_flash_init_default_chip",
-        "esp_flash_init",
-        "esp_random",
-        "esp_fill_random",
-        "esp_log_early_timestamp",
-        "esp_log_writev",
-        "esp_log_write",
-        "esp_log_buffer_hex_internal",
-        "esp_log_buffer_char_internal",
-        "esp_log_buffer_hexdump_internal",
-        // log mutex (esp_log_impl_lock/unlock) — sim doesn't model the log
-        // mutex queue, and the real impl calls xQueueGenericSend on an
-        // uninitialized queue, tripping a NULL-pcHead assertion.
-        "esp_log_impl_lock",
-        "esp_log_impl_lock_timeout",
-        "esp_log_impl_unlock",
-        // esp_ipc_init/isr_init create the IPC task per core. Its
-        // semaphore-wait turns into a tight loop in the sim (xQueueSemaphoreTake
-        // is stubbed to pdTRUE), starving loopTask. Stub the init so the
-        // task is never created — cross-core IPC isn't used on the
-        // single-CPU render path.
-        "esp_ipc_init",
-        "esp_ipc_isr_init",
-        // The HardwareSerial / uartWrite nops are GONE. A previous attempt
-        // recorded here that unstubbing them "still emitted 0 UART bytes in 8M
-        // steps, so something further down swallows the write" — that run was
-        // made while apb_ctrl shadowed the SYSCON model, so SYSCLK_CONF read
-        // 0xFFFFFFFF, getApbFrequency() returned 78125 Hz and
-        // _get_effective_baudrate divided by zero. The clock tree was broken,
-        // not the write path. With the syscon window fixed (see
-        // system/xtensa/esp32.rs) the real Arduino serial path runs and
-        // demo-labwired-ereader.elf emits its own markers.
-        "_Z14serialEventRunv",
-        // FreeRTOS recursive mutexes used by newlib stdio locks — same
-        // null-queue assertion problem. Stub since sim is effectively
-        // single-threaded on the panel-render path. xQueueCreateMutexStatic
-        // gets a separate echo_arg0 thunk below (callers assert the returned
-        // handle equals the static buffer they passed in). xQueueCreateMutex is
-        // NOT stubbed — the SPI bus mutex is a real FreeRTOS object (see the
-        // spiStartBus note below); faking its create returned an uninitialised
-        // handle that forced faking every lock op on top of it and dropped the
-        // SPI payload to the panel.
-        "xQueueGiveMutexRecursive",
-        "xQueueTakeMutexRecursive",
-        "__sfvwrite_r",
-        "__swsetup_r",
-        "__sflush_r",
-        "_printf_r",
-        "_fprintf_r",
-        "_vfprintf_r",
-        "_vprintf_r",
-        "printf",
-        "fprintf",
-        "vfprintf",
-        "vprintf",
-        "puts",
-        "fputs",
-        "fputc",
-        "putchar",
-        "_puts_r",
-        "_fputs_r",
-        "_putchar_r",
-        "_write_r",
-        "write",
-    ] {
+    for sym in NOP_STUBS {
         if let Some(&pc) = symbol_addrs.get(*sym) {
             thunks.push((pc, rom_thunks::nop_return_zero));
         }
     }
-    // esp_chip_info needs more than nop — has to fill the output struct
-    // with a plausible revision so the firmware's chip_revision >= min
-    // assert passes.
-    if let Some(&pc) = symbol_addrs.get("esp_chip_info") {
-        thunks.push((pc, rom_thunks::esp_chip_info_stub));
-    }
-    // __getreent must return a non-NULL pointer to a zeroed reent struct.
-    // Real silicon's per-task reent is set up by FreeRTOS task local
-    // storage which we don't model — return a fixed pointer into DRAM
-    // (always zeroed by RamPeripheral::new). ESP32-classic-specific
-    // address; an `esp32s3` profile (if/when added) would need its own
-    // version of this thunk pointing at S3's DRAM range.
-    if let Some(&pc) = symbol_addrs.get("__getreent") {
-        thunks.push((pc, rom_thunks::getreent_dram_fake_ptr));
-    }
     // esp_timer_impl_get_counter_reg is NOT thunked: TIMG0 models the LACT
     // timer it reads, so the firmware's own implementation runs and returns a
-    // real 64-bit count.
-    //
-    // The thunk it replaces returned a 32-bit counter through a2 and left a3
-    // — the HIGH word — undefined. `esp_timer_get_time` computes
-    // `(hi << 31) | (lo >> 1)`, so that garbage landed directly on bit 31 of
-    // every microsecond timestamp. Sketches that schedule work with the
-    // standard `(int32_t)(millis() - deadline) >= 0` idiom then saw a
-    // permanently negative difference and silently did NOTHING, forever, with
-    // loop() still being called. Adafruit's graphicstest printed
-    // `2147484148` (= 2^31 + 500) where silicon prints `28084`.
-    // esp_clk_cpu_freq() — FreeRTOS divides CPU freq by tick rate to set
-    // _xt_tick_divisor; without a meaningful value, divisor is 0 and the
-    // timer ISR re-fires every CCOUNT cycle, pinning CPU 0 in the tick hook.
-    if let Some(&pc) = symbol_addrs.get("esp_clk_cpu_freq") {
-        thunks.push((pc, rom_thunks::esp_clk_cpu_freq_240mhz));
+    // real 64-bit count. See the debt note on the const lists above for what
+    // the thunk it replaced silently broke.
+    for &(sym, f) in SPECIAL_STUBS {
+        if let Some(&pc) = symbol_addrs.get(sym) {
+            thunks.push((pc, f));
+        }
     }
-    // Xtensa HAL register-window-file spill. The HAL impl walks WS bits
-    // and spills each live slot's a0..a3 to its stack save area — but
-    // our sim's transparent shadow-spill on CALL{n} leaves WS=1 on
-    // displaced slots while the AR file has the callee's data, so the
-    // HAL walk reads garbage (callee's a1 is often 0 → store to
-    // 0xfffffff0 traps). The custom thunk emulates the spill using
-    // shadow-stack snapshots when available.
-    //
-    // Only the `_nw` leaf (the spill loop that would trap) is thunked;
-    // the `xthal_window_spill` wrapper is a thin CALL{n}-entered
-    // PS-save shell that must run natively (its real ENTRY/RETW manage
-    // the window). Thunking the wrapper returns via a0 = the caller's
-    // return address, corrupting the first-task dispatch.
-    if let Some(&pc) = symbol_addrs.get("xthal_window_spill_nw") {
-        thunks.push((pc, rom_thunks::xthal_window_spill_thunk));
-    }
-    // xQueueCreateMutexStatic returns the caller's static buffer as the
-    // handle. Callers (esp_newlib_locks_init in particular) assert that the
-    // returned handle equals the buffer they passed in — a nop_return_zero
-    // stub fails that check.
-    if let Some(&pc) = symbol_addrs.get("xQueueCreateMutexStatic") {
-        thunks.push((pc, rom_thunks::x_queue_create_mutex_static_echo));
-    }
-    // pxCurrentTCB symbol → feed into the rom_thunks side so the
-    // xTaskGetCurrentTaskHandle thunk can read it. Arduino-ESP32's
-    // main_task self-deletes after app_main returns via vTaskDelete(NULL),
-    // which depends on this getter.
+    // pxCurrentTCB's address is handed to the rom_thunks side so the
+    // xTaskGetCurrentTaskHandle stub above can read it.
     if let Some(&addr) = symbol_addrs.get("pxCurrentTCB") {
         rom_thunks::PX_CURRENT_TCB_ADDR.with(|s| s.set(Some(addr)));
-    }
-    if let Some(&pc) = symbol_addrs.get("xTaskGetCurrentTaskHandle") {
-        thunks.push((pc, rom_thunks::x_task_get_current_task_handle));
     }
     // NO SPI-bus lock shims and NO SPI init fakes. GxEPD2_EPD::init() calls
     // SPI.begin() → the real compiled spiStartBus runs: it creates a real
@@ -566,4 +597,64 @@ pub fn install_arduino_esp32_profile<C: Cpu>(
         s_other_cpu_startup_done,
         preseed_handshake,
     })
+}
+
+/// Every firmware symbol this profile redirects to a sim-side stub.
+///
+/// This is the twin's thunk debt for Arduino-ESP32, in one list. It exists so
+/// the number is a fact rather than an impression — see the note on the const
+/// lists above for why a thunk is worse than a boot-state seed.
+pub fn declared_thunk_symbols() -> Vec<&'static str> {
+    FIXED_STUBS
+        .iter()
+        .map(|&(sym, _, _)| sym)
+        .chain(ABORT_STUBS.iter().copied())
+        .chain(NOP_STUBS.iter().copied())
+        .chain(SPECIAL_STUBS.iter().map(|&(sym, _)| sym))
+        .collect()
+}
+
+#[cfg(test)]
+mod thunk_debt {
+    use super::*;
+    use std::collections::BTreeSet;
+
+    /// The number of firmware symbols the Arduino-ESP32 profile fakes.
+    ///
+    /// This may only ever go DOWN. If you are here because the test failed
+    /// after you added a stub: the fix is almost never to raise the ceiling.
+    /// Ask which of the three cases you are in —
+    ///
+    ///  * bootloader work (`esp_timer_init`, heap/flash bring-up): seed the
+    ///    state it would have left and let the firmware run. A seed is a fact
+    ///    you can read back out of a register; a thunk is not.
+    ///  * a value that lives in silicon (`esp_chip_info`, `esp_clk_cpu_freq`):
+    ///    model the register or eFuse it comes from.
+    ///  * firmware you genuinely cannot run yet: that is real debt. Raising the
+    ///    ceiling is then a deliberate act, and the comment next to the stub has
+    ///    to say what is missing.
+    const CEILING: usize = 119;
+
+    #[test]
+    fn thunk_debt_only_falls() {
+        let n = declared_thunk_symbols().len();
+        assert!(
+            n <= CEILING,
+            "arduino-esp32 thunk count rose to {n} (ceiling {CEILING}). Each thunk is a \
+             standing lie the twin cannot detect — prefer a boot-state seed or a modelled \
+             register. See the doc comment on CEILING before changing it."
+        );
+    }
+
+    #[test]
+    fn no_symbol_is_thunked_twice() {
+        let all = declared_thunk_symbols();
+        let unique: BTreeSet<_> = all.iter().collect();
+        assert_eq!(
+            all.len(),
+            unique.len(),
+            "a symbol appears in more than one stub list — two entries claim the same PC, so \
+             which stub wins depends on install order"
+        );
+    }
 }
