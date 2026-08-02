@@ -3057,9 +3057,17 @@ impl EnvTestScript {
             anyhow::bail!("Environment test scripts do not support 'uart_injections'");
         }
 
-        if self.assertions.is_empty() {
-            anyhow::bail!("Environment test scripts require at least one assertion");
-        }
+        // An environment script MAY assert nothing. Such a run is
+        // observational: it reports what each node printed and whether anything
+        // faulted, and its `status` is decided by the safety stop alone (an
+        // empty assertion list is vacuously satisfied). That is the same
+        // contract a single-machine script has always had, and it is what a
+        // hosted verify needs — "compile every chip and run the world without
+        // faulting" is a claim about faults, not about an author's oracle.
+        //
+        // A script that DOES carry assertions is still held to all of the rules
+        // below, so a gate cannot quietly weaken itself: it either states what
+        // it checks, or it visibly checks nothing.
 
         for (index, assertion) in self.assertions.iter().enumerate() {
             let TestAssertion::MemoryValue(memory) = assertion else {
@@ -4453,8 +4461,11 @@ assertions:
 schema_version: "1.0"
 inputs: { env: "twonode-env.yaml" }
 limits: { max_steps: 10 }
+assertions:
+  - memory_value: { node: tester, address: 0x20010000, expected_value: 1 }
+  - uart_contains: "PASS"
 "#,
-                "at least one assertion",
+                "memory_value",
             ),
             (
                 "missing-node",
@@ -4494,6 +4505,30 @@ assertions:
             let err = load_test_script(&script_path).unwrap_err().to_string();
             assert!(err.contains(diagnostic), "unexpected error: {err}");
         }
+    }
+
+    #[test]
+    fn env_script_may_assert_nothing_and_still_load() {
+        // An observational world run: it reports what each node printed and
+        // whether anything faulted, with no author oracle. `status` then rests
+        // on the safety stop alone, which is exactly the claim a hosted verify
+        // makes ("every chip compiled and the world ran without faulting").
+        // A script that DOES carry assertions is still held to every rule
+        // above, so a gate cannot quietly weaken itself into a green.
+        let script_path = write_temp_file(
+            "observational-env",
+            r#"
+schema_version: "1.0"
+inputs: { env: "twonode-env.yaml" }
+limits: { max_steps: 10 }
+assertions: []
+"#,
+        );
+        let script = load_test_script(&script_path).expect("observational env script must load");
+        let LoadedTestScript::Env(env) = script else {
+            panic!("expected an environment script");
+        };
+        assert!(env.assertions.is_empty());
     }
 
     #[test]
