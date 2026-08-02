@@ -850,6 +850,10 @@ impl XtensaLx7 {
         // Leftover WS panes: CALL4 a0..a3 only for 16B-aligned known frame SPs.
         let ws = self.regs.windowstart();
         let wb = self.regs.windowbase();
+
+        // Gather the panes first: the OF base for a pane is its *callee's* SP,
+        // which we can only pick once every frame SP in this window is known.
+        let mut panes: Vec<(u32, u32, u32, u32)> = Vec::new();
         for slot in 0..16u8 {
             if (ws >> slot) & 1 == 0 {
                 continue;
@@ -872,13 +876,37 @@ impl XtensaLx7 {
             if !valid_sp(a1) {
                 continue;
             }
+            panes.push((a0, a1, a2, a3));
+        }
+
+        // Every SP we know about in this call chain, ascending. The stack grows
+        // down, so a frame's callee is the next SP *below* it.
+        let mut all_sps = frame_sps.clone();
+        all_sps.extend(panes.iter().map(|&(_, a1, _, _)| a1));
+        all_sps.sort_unstable();
+        all_sps.dedup();
+
+        for &(a0, a1, a2, a3) in &panes {
             let a1_ok = frame_sps.contains(&a1)
                 || frame_sps
                     .iter()
                     .any(|&f| a1 < f && f.wrapping_sub(a1) < 0x80);
-            if a1_ok && stackish(a1, current_a1) {
-                write4(bus, a1, 16, a0, a1, a2, a3);
+            if !a1_ok || !stackish(a1, current_a1) {
+                continue;
             }
+            // WindowOverflow4 (window_vectors.S) saves a0..a3 at `call[j+1]`'s
+            // stack frame — the CALLEE's sp − 16, never the frame's own sp.
+            // Using the frame's own sp lands the record in the callee's save
+            // area and destroys what the callee legitimately stored there:
+            // graphicstest_featherwing overwrote a correct a1=0x3ffb2240 at
+            // 0x3ffb2214 with 0x3ffb2220, so the firmware's WindowUnderflow
+            // restored a bogus frame and RETW'd to pc=0. There is no safe
+            // fallback: with no known callee we cannot place the record, and
+            // guessing is what corrupted the stack, so skip the pane instead.
+            let Some(&callee_sp) = all_sps.iter().rev().find(|&&s| s < a1) else {
+                continue;
+            };
+            write4(bus, callee_sp, 16, a0, a1, a2, a3);
         }
 
         self.regs.set_windowstart(1u16 << (wb & 0x0F));
