@@ -146,10 +146,21 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
     // Handles both legacy and IDF-5.x app_main layouts. See
     // rom_thunks::repin_loop_task.
     if let Some(&app_main_addr) = symbol_addrs.get("app_main") {
-        if let Some((addr, shape)) = rom_thunks::repin_loop_task(&mut machine.bus, app_main_addr) {
-            eprintln!(
+        match rom_thunks::repin_loop_task(&mut machine.bus, app_main_addr) {
+            Some((addr, shape)) => eprintln!(
                 "labwired-cli snapshot: repinned loopTask xCoreID at 0x{addr:08x} (1→0, {shape}; runs on PRO_CPU)"
-            );
+            ),
+            // Not benign. An unrecognised layout leaves loopTask pinned to
+            // APP_CPU, where the sketch deadlocks the first time it contends a
+            // FreeRTOS portMUX with PRO_CPU — parking in `spinlock_acquire`
+            // partway through setup(). That reads as a firmware hang, so say
+            // plainly that it was us. A silently-skipped repin cost a real
+            // customer rig a mid-setup() stall that looked like their bug.
+            None => eprintln!(
+                "labwired-cli snapshot: warn: app_main at 0x{app_main_addr:08x} matched no known \
+                 xCoreID layout — loopTask stays on APP_CPU and setup() may deadlock in \
+                 spinlock_acquire. This is a simulator gap, not a firmware fault."
+            ),
         }
     }
 
@@ -170,6 +181,28 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
     // `LABWIRED_PRESEED_HANDSHAKE=1`.
     let preseed_handshake = std::env::var("LABWIRED_NO_DUALCORE").is_ok()
         || std::env::var("LABWIRED_PRESEED_HANDSHAKE").is_ok();
+    // `g_ticks_per_us_pro` / `_app` — CPU MHz, written by
+    // `ets_update_cpu_frequency()`. On silicon the ROM bootloader calls that
+    // before it hands control to the app image; we start at the app entry
+    // (see the CHEAT(SKIP) above that seeds PC), so nothing ever writes them
+    // and they stay 0.
+    //
+    // That is not cosmetic. `esp_clk_apb_freq()` on ESP32-classic is
+    // `MIN(g_ticks_per_us_pro, 80) * MHZ`, so a zero here reports a 0 Hz APB
+    // bus, and `esp_timer_impl_update_apb_freq` aborts the whole boot on
+    // `apb_ticks_per_us >= 3 && "divider value too low"`. Seeding them is
+    // restoring skipped boot state, not stubbing behaviour: the firmware's own
+    // esp_timer code then runs and programs the real LACT divider (80 MHz APB
+    // / 2 MHz = 40) into the TIMG0 registers the model implements.
+    //
+    // 240 matches the `esp_clk_cpu_freq` thunk below, so the two cannot drift.
+    for sym in ["g_ticks_per_us_pro", "g_ticks_per_us_app"] {
+        let addr = resolve_data(sym, 0);
+        if addr != 0 {
+            let _ = machine.bus.write_u32(addr as u64, 240);
+        }
+    }
+
     let s_resume_cores = resolve_data("s_resume_cores", 0);
     let s_cpu_up = resolve_data("s_cpu_up", 0);
     let s_cpu_inited = resolve_data("s_cpu_inited", 0);
@@ -233,10 +266,9 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
     // APP_CPU dual-core bring-up bug (fixed by the real second core), not an
     // allocator bug.
     let mut thunks: Vec<(u32, rom_thunks::RomThunkFn)> = vec![
-        (
-            resolve("esp_timer_init", 0x4012_9034),
-            rom_thunks::nop_return_zero,
-        ),
+        // NB: esp_timer_init is deliberately NOT stubbed — it is what programs
+        // LACT_CONFIG (enable + divider), and TIMG0 now models LACT, so it has
+        // real registers to write and the timer only advances once it has.
         (
             resolve(
                 "spi_flash_disable_interrupts_caches_and_other_cpu",
@@ -459,12 +491,18 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
     if let Some(&pc) = symbol_addrs.get("__getreent") {
         thunks.push((pc, rom_thunks::getreent_dram_fake_ptr));
     }
-    // esp_timer_impl_get_counter_reg must return a monotonically increasing
-    // value, otherwise polling-loop callers (esp-idf flash HAL, FreeRTOS
-    // timeout helpers) spin forever.
-    if let Some(&pc) = symbol_addrs.get("esp_timer_impl_get_counter_reg") {
-        thunks.push((pc, rom_thunks::monotonic_counter_32));
-    }
+    // esp_timer_impl_get_counter_reg is NOT thunked: TIMG0 models the LACT
+    // timer it reads, so the firmware's own implementation runs and returns a
+    // real 64-bit count.
+    //
+    // The thunk it replaces returned a 32-bit counter through a2 and left a3
+    // — the HIGH word — undefined. `esp_timer_get_time` computes
+    // `(hi << 31) | (lo >> 1)`, so that garbage landed directly on bit 31 of
+    // every microsecond timestamp. Sketches that schedule work with the
+    // standard `(int32_t)(millis() - deadline) >= 0` idiom then saw a
+    // permanently negative difference and silently did NOTHING, forever, with
+    // loop() still being called. Adafruit's graphicstest printed
+    // `2147484148` (= 2^31 + 500) where silicon prints `28084`.
     // esp_clk_cpu_freq() — FreeRTOS divides CPU freq by tick rate to set
     // _xt_tick_divisor; without a meaningful value, divisor is 0 and the
     // timer ISR re-fires every CCOUNT cycle, pinning CPU 0 in the tick hook.
@@ -588,7 +626,55 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
         "labwired-cli snapshot: stepping firmware to cycle {}",
         args.steps
     );
-    let observers: Vec<std::sync::Arc<dyn labwired_core::SimulationObserver>> = Vec::new();
+    // Instruction trace. Off unless asked for: attaching an observer forces
+    // the interpreter path (a compiled block cannot emit per-step events), so
+    // an always-on trace would silently tax every capture.
+    let ring = args
+        .trace_out
+        .as_ref()
+        .map(|_| std::sync::Arc::new(labwired_core::trace::RetiredRing::new(args.trace_last)));
+    let observers: Vec<std::sync::Arc<dyn labwired_core::SimulationObserver>> = match &ring {
+        Some(r) => vec![r.clone()],
+        None => Vec::new(),
+    };
+    if let Some(path) = &args.trace_out {
+        eprintln!(
+            "labwired-cli snapshot: tracing the last {} retired instructions to {}",
+            args.trace_last,
+            path.display()
+        );
+    }
+    // Written on EVERY exit path, faults included — a trace that only survives
+    // a clean run is useless for the case it exists to explain.
+    let dump_trace = |ring: &Option<std::sync::Arc<labwired_core::trace::RetiredRing>>| {
+        let (Some(ring), Some(path)) = (ring, args.trace_out.as_ref()) else {
+            return;
+        };
+        let entries = ring.entries();
+        let total = ring.total_retired();
+        let payload = serde_json::json!({
+            "total_retired": total,
+            "kept": entries.len(),
+            "dropped": total.saturating_sub(entries.len() as u64),
+            "instructions": entries,
+        });
+        match std::fs::File::create(path) {
+            Ok(f) => {
+                if let Err(e) = serde_json::to_writer_pretty(f, &payload) {
+                    eprintln!("error: failed to write {}: {e}", path.display());
+                } else {
+                    eprintln!(
+                        "labwired-cli snapshot: wrote {} of {} retired instructions to {}",
+                        entries.len(),
+                        total,
+                        path.display()
+                    );
+                }
+            }
+            Err(e) => eprintln!("error: failed to create {}: {e}", path.display()),
+        }
+    };
+
     let config = labwired_core::SimulationConfig::default();
     let mut i: u64 = 0;
     let progress = args.progress_every;
@@ -654,6 +740,7 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
                     "error: sim step at cycle {i} pc=0x{:08x}: {e}",
                     machine.cpu.get_pc()
                 );
+                dump_trace(&ring);
                 return ExitCode::from(EXIT_RUNTIME_ERROR);
             }
         }
@@ -688,6 +775,7 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
                         "error: sim step cpu1 at cycle {i} pc=0x{:08x}: {e}",
                         cpu1.get_pc()
                     );
+                    dump_trace(&ring);
                     return ExitCode::from(EXIT_RUNTIME_ERROR);
                 }
             }
@@ -826,6 +914,54 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
                                 non_ff,
                                 bp.len(),
                             );
+                        } else if let Some(panel) = panel_any
+                            .downcast_ref::<labwired_core::peripherals::components::Ili9341>(
+                        ) {
+                            // An RGB565 TFT has no e-paper "refresh" — the
+                            // frame memory IS the screen — so the evidence is
+                            // DISPON plus how much of the framebuffer the
+                            // firmware actually wrote. Without this line the
+                            // panel produced no run evidence at all: a `display`
+                            // oracle clause could not resolve, and a lab could
+                            // only assert that `tft.begin()` returned, which is
+                            // a host-side value the driver tracks itself and
+                            // would read the same with no panel on the bus.
+                            //
+                            // `refresh_generation` is reported as 1 once the
+                            // display is on and pixels exist, so one oracle
+                            // shape covers both panel families.
+                            let fb = panel.framebuffer();
+                            let painted = fb.iter().filter(|&&b| b != 0x00).count();
+                            let generation = u32::from(panel.display_on() && painted > 0);
+                            let (w, h) = panel.dimensions();
+                            // The most common non-black pixel, so the line says
+                            // WHAT was drawn and not merely that something was.
+                            // "10176 bytes changed" cannot be checked against a
+                            // photo of the real panel; "top colour 0x07E0"
+                            // (RGB565 green) can.
+                            let mut counts: std::collections::HashMap<u16, usize> =
+                                std::collections::HashMap::new();
+                            for px in fb.chunks_exact(2) {
+                                let v = u16::from_be_bytes([px[0], px[1]]);
+                                if v != 0 {
+                                    *counts.entry(v).or_default() += 1;
+                                }
+                            }
+                            let top = counts
+                                .iter()
+                                .max_by_key(|&(_, n)| *n)
+                                .map(|(v, n)| format!("0x{v:04X} x{n}"))
+                                .unwrap_or_else(|| "none".to_string());
+                            eprintln!(
+                                "labwired-cli snapshot: panel (ili9341) state — refresh_generation={}, display_on={}, painted bytes={}/{}, {}x{}, top colour {}",
+                                generation,
+                                panel.display_on(),
+                                painted,
+                                fb.len(),
+                                w,
+                                h,
+                                top,
+                            );
                         } else if let Some(panel) = panel_any.downcast_ref::<Uc8151dTricolor290>() {
                             let bp = panel.black_plane();
                             let non_ff = bp.iter().filter(|&&b| b != 0xFF).count();
@@ -876,6 +1012,8 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
             }
         }
     }
+
+    dump_trace(&ring);
 
     let snap = machine.take_runtime_snapshot();
     let bytes = snap.to_bytes();

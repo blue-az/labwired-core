@@ -485,6 +485,29 @@ impl Peripheral for Rp2040Dma {
         self.level_irqs()
     }
 
+    /// Oracle settle path: re-assert the held DMA lines even under scheduler
+    /// mode. The bare-CPU oracle has no `Machine` draining `on_event`, so
+    /// without this the completion IRQ is never delivered and the ISR never
+    /// runs — the `tick_elapsed_forced` hole the `core-ci` "Feature gate —
+    /// hardware oracle under event-scheduler" step exists to catch.
+    fn tick_elapsed_forced(&mut self, _cycles: u64) -> PeripheralTickResult {
+        self.level_irqs()
+    }
+
+    /// Oracle settle path, transfer half: this model moves its bytes in
+    /// `tick_with_bus`, and scheduler mode deliberately hides it from the
+    /// ordinary bus-tick pass so the walk cannot double-drive the event chain.
+    /// The forced pass re-derives membership from here, so the frozen-CPU
+    /// oracle still gets exactly one beat per settle tick — the same
+    /// `BEATS_PER_TICK` cadence the legacy walk and `on_event` both use.
+    fn needs_bus_tick_forced(&self) -> bool {
+        self.any_busy()
+    }
+
+    fn tick_with_bus_forced(&mut self, bus: &mut dyn Bus) {
+        self.run(bus);
+    }
+
     fn uses_scheduler(&self) -> bool {
         self.scheduler_mode()
     }

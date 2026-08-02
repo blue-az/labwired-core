@@ -198,12 +198,18 @@ fn jit_on_vs_off_result_json_byte_identical_c3_oled() {
     std::fs::create_dir_all(&tmp).expect("create tmp dir");
 
     // Scenario 1: run to a step budget — the OLED paints and serial reports it.
-    // 8M steps is comfortably past the "OLED painted: LabWired" milestone.
+    // The run is CONSOLE-bound: the stock ESP-IDF boot transcript is 3519 bytes
+    // and UART0 shifts one byte per 13_880 CPU cycles at its reset CLKDIV, so
+    // "OLED painted: LabWired" only leaves the shift register at a MEASURED
+    // 24_439_616 steps / 61_675_548 cycles. 32M is that plus ~31 % headroom —
+    // see `no_elf_c3_rom_boot::OLED_PAINT_MAX_STEPS` for the full derivation.
+    // (The 8M this used to carry predates 15b96281, when C3 uart0 sat on the
+    // STM32-shaped `Uart` and console bytes cost no wire time at all.)
     let s_steps = write_script(
         &tmp,
         "oled_max_steps.yaml",
         &fx,
-        "  max_steps: 8000000\n",
+        "  max_steps: 32000000\n",
         "  - expected_stop_reason: max_steps\n  - uart_contains: \"OLED painted: LabWired\"",
     );
     assert_arms_byte_identical("max_steps", &fx, &s_steps, &tmp);
