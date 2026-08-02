@@ -760,7 +760,20 @@ boards:
     # the 2026-06-17 reset-state oracle (1123/1123 static registers) cannot
     # move. Evidence: full `cargo test -p labwired-core --lib` green, 2509
     # tests. No live USB-JTAG re-capture this session.
-    drift_ack: 2026-08-01
+    # 2026-08-02: the shared `esp32/timg.rs` gained LACT (the ESP32-classic
+    # esp_timer time base). It is OPT-IN and the C3 does not opt in — the C3's
+    # TIMGs are built in generic_factory.rs WITHOUT `with_lact()`, so every
+    # LACT offset still falls through to the generic round-trip map exactly as
+    # before. This matters: the C3 puts INT_ENA/INT_ST/INT_CLR_TIMERS and
+    # RTCCALICFG2 at 0x70/0x78/0x7C/0x80, which is precisely where LACT lives
+    # on classic ESP32, so an ungated version WOULD have latched a counter over
+    # the C3's interrupt status. Two tests pin the split:
+    # `lact_offsets_are_plain_storage_without_with_lact` writes C3-shaped values
+    # and asserts they survive a latch attempt, and
+    # `lact_counts_and_latches_when_declared` keeps that guard from passing
+    # vacuously. No C3 register layout, base address or reset value moved, so
+    # the 2026-06-17 reset-state oracle cannot move. No live re-capture.
+    drift_ack: 2026-08-02
 
   - id: nucleo-l476rg
     doc: docs/boards/nucleo-l476rg.md
@@ -1500,7 +1513,19 @@ boards:
     # chip peripheral. Register map, reset values and the 9-reg reset-state
     # anchor are untouched; esp32s3 reset conformance passes. No S3 board
     # attached; no live re-capture.
-    drift_ack: 2026-08-01
+    # 2026-08-02: two Xtensa-side changes, neither an S3 peripheral.
+    # (a) The register-window spill now writes a leftover WINDOWSTART pane's
+    # a0..a3 at its CALLEE's sp-16 rather than its own — the WindowOverflow4
+    # layout — which is a CPU-core correction shared by every Xtensa target and
+    # fixes a stack clobber, not a register map. (b) TIMG0 gained an opt-in LACT
+    # timer for ESP32-classic; the S3 builds its timers from its own
+    # descriptors and never opts in. A seed writing RTC_CNTL +0xB4 was
+    # considered and REMOVED before landing precisely because that offset is
+    # SWD_CONF on the S3 (STORE5 is at 0xC4 here, not 0xB4) — this gate is what
+    # prompted checking. Register map, reset values and the 9-reg reset-state
+    # anchor untouched; esp32s3 reset conformance passes. No S3 board attached;
+    # no live re-capture.
+    drift_ack: 2026-08-02
     models:
       - crates/core/src/peripherals/esp32s3
       - crates/core/src/peripherals/esp_xtensa_common

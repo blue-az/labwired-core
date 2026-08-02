@@ -181,6 +181,28 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
     // `LABWIRED_PRESEED_HANDSHAKE=1`.
     let preseed_handshake = std::env::var("LABWIRED_NO_DUALCORE").is_ok()
         || std::env::var("LABWIRED_PRESEED_HANDSHAKE").is_ok();
+    // `g_ticks_per_us_pro` / `_app` — CPU MHz, written by
+    // `ets_update_cpu_frequency()`. On silicon the ROM bootloader calls that
+    // before it hands control to the app image; we start at the app entry
+    // (see the CHEAT(SKIP) above that seeds PC), so nothing ever writes them
+    // and they stay 0.
+    //
+    // That is not cosmetic. `esp_clk_apb_freq()` on ESP32-classic is
+    // `MIN(g_ticks_per_us_pro, 80) * MHZ`, so a zero here reports a 0 Hz APB
+    // bus, and `esp_timer_impl_update_apb_freq` aborts the whole boot on
+    // `apb_ticks_per_us >= 3 && "divider value too low"`. Seeding them is
+    // restoring skipped boot state, not stubbing behaviour: the firmware's own
+    // esp_timer code then runs and programs the real LACT divider (80 MHz APB
+    // / 2 MHz = 40) into the TIMG0 registers the model implements.
+    //
+    // 240 matches the `esp_clk_cpu_freq` thunk below, so the two cannot drift.
+    for sym in ["g_ticks_per_us_pro", "g_ticks_per_us_app"] {
+        let addr = resolve_data(sym, 0);
+        if addr != 0 {
+            let _ = machine.bus.write_u32(addr as u64, 240);
+        }
+    }
+
     let s_resume_cores = resolve_data("s_resume_cores", 0);
     let s_cpu_up = resolve_data("s_cpu_up", 0);
     let s_cpu_inited = resolve_data("s_cpu_inited", 0);
@@ -244,10 +266,9 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
     // APP_CPU dual-core bring-up bug (fixed by the real second core), not an
     // allocator bug.
     let mut thunks: Vec<(u32, rom_thunks::RomThunkFn)> = vec![
-        (
-            resolve("esp_timer_init", 0x4012_9034),
-            rom_thunks::nop_return_zero,
-        ),
+        // NB: esp_timer_init is deliberately NOT stubbed — it is what programs
+        // LACT_CONFIG (enable + divider), and TIMG0 now models LACT, so it has
+        // real registers to write and the timer only advances once it has.
         (
             resolve(
                 "spi_flash_disable_interrupts_caches_and_other_cpu",
@@ -470,12 +491,18 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
     if let Some(&pc) = symbol_addrs.get("__getreent") {
         thunks.push((pc, rom_thunks::getreent_dram_fake_ptr));
     }
-    // esp_timer_impl_get_counter_reg must return a monotonically increasing
-    // value, otherwise polling-loop callers (esp-idf flash HAL, FreeRTOS
-    // timeout helpers) spin forever.
-    if let Some(&pc) = symbol_addrs.get("esp_timer_impl_get_counter_reg") {
-        thunks.push((pc, rom_thunks::monotonic_counter_32));
-    }
+    // esp_timer_impl_get_counter_reg is NOT thunked: TIMG0 models the LACT
+    // timer it reads, so the firmware's own implementation runs and returns a
+    // real 64-bit count.
+    //
+    // The thunk it replaces returned a 32-bit counter through a2 and left a3
+    // — the HIGH word — undefined. `esp_timer_get_time` computes
+    // `(hi << 31) | (lo >> 1)`, so that garbage landed directly on bit 31 of
+    // every microsecond timestamp. Sketches that schedule work with the
+    // standard `(int32_t)(millis() - deadline) >= 0` idiom then saw a
+    // permanently negative difference and silently did NOTHING, forever, with
+    // loop() still being called. Adafruit's graphicstest printed
+    // `2147484148` (= 2^31 + 500) where silicon prints `28084`.
     // esp_clk_cpu_freq() — FreeRTOS divides CPU freq by tick rate to set
     // _xt_tick_divisor; without a meaningful value, divisor is 0 and the
     // timer ISR re-fires every CCOUNT cycle, pinning CPU 0 in the tick hook.
