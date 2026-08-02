@@ -441,6 +441,14 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
     // gets a proportionally higher ceiling (wall-clock caps still apply).
     const MAX_ALLOWED_STEPS: u64 = 50_000_000;
     const MAX_ALLOWED_STEPS_ROM_BOOT: u64 = 500_000_000;
+    // An Arduino fast boot running a POLLING sketch is the most step-hungry
+    // shape we support: bring-up alone is tens of millions, and every poll
+    // costs four I2C sensor reads with a ready-spin. Ryan's rig reaches only
+    // ~126M cycles inside the 500M rom-boot ceiling — one status line, far too
+    // early to assert on anything a stimulus caused. The ceiling exists to
+    // catch CI misconfiguration, not to cap a legitimately long run, and the
+    // wall-clock caps still bound a runaway sim.
+    const MAX_ALLOWED_STEPS_ARDUINO_FAST_BOOT: u64 = 4_000_000_000;
     // A run boots the real ROM (and needs the higher ceiling) not only when
     // --rom-boot is set, but whenever it captures/resumes an app-entry snapshot
     // OR a flash-image env is present: the compiled-source ESP32-C3/S3 path
@@ -467,7 +475,9 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
     // same headroom rom-boot already gets — acceptance markers still halt
     // early, and the wall-clock caps still bound a runaway sim.
     let arduino_fast_boot = script_profile.as_deref() == Some("arduino-esp32");
-    let max_allowed_steps = if rom_boot_effective || arduino_fast_boot {
+    let max_allowed_steps = if arduino_fast_boot {
+        MAX_ALLOWED_STEPS_ARDUINO_FAST_BOOT
+    } else if rom_boot_effective {
         MAX_ALLOWED_STEPS_ROM_BOOT
     } else {
         MAX_ALLOWED_STEPS

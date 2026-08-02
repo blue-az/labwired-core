@@ -135,7 +135,7 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
     // declarative runner — the one that owns stimuli and assertions — could not
     // run a classic-ESP32 Arduino sketch at all.
     let symbol_addrs = extract_arduino_esp32_thunks(&elf_bytes);
-    let profile = match labwired_core::system::xtensa::install_arduino_esp32_profile(
+    let mut profile = match labwired_core::system::xtensa::install_arduino_esp32_profile(
         &mut machine,
         symbol_addrs,
         program_image.entry_point as u32,
@@ -146,14 +146,8 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
             return ExitCode::from(EXIT_RUNTIME_ERROR);
         }
     };
-    let symbol_addrs = profile.symbols;
+    let symbol_addrs = profile.symbols.clone();
     let appcpu_initial_sp = profile.appcpu_initial_sp;
-    let preseed_handshake = profile.preseed_handshake;
-    let s_resume_cores = profile.s_resume_cores;
-    let s_cpu_up = profile.s_cpu_up;
-    let s_cpu_inited = profile.s_cpu_inited;
-    let s_system_inited = profile.s_system_inited;
-    let s_other_cpu_startup_done = profile.s_other_cpu_startup_done;
     eprintln!(
         "labwired-cli snapshot: installing {} thunks ({} resolved from ELF symbols)",
         profile.thunks_installed,
@@ -224,59 +218,10 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
     let mut i: u64 = 0;
     let progress = args.progress_every;
     while i < args.steps {
-        if let Ok(v) = machine.bus.read_u32(0x3FF0_0164) {
-            let bit = (v & 0x1F) as u8;
-            if v != 0 && bit < 32 {
-                from_cpu_bit0 = Some(bit);
-            }
-        }
-        if let Ok(v) = machine.bus.read_u32(0x3FF0_0168) {
-            let bit = (v & 0x1F) as u8;
-            if v != 0 && bit < 32 {
-                from_cpu_bit1 = Some(bit);
-            }
-        }
-        if let Ok(v0) = machine.bus.read_u32(0x3FF0_00DC) {
-            if v0 != 0 && v0 != last_from_cpu0_val {
-                if let Some(bit) = from_cpu_bit0 {
-                    machine.cpu.raise_interrupt_bits(1u32 << bit);
-                }
-                let _ = machine.bus.write_u32(0x3FF0_00DC, 0);
-            }
-            last_from_cpu0_val = 0;
-        }
-        if let Ok(v1) = machine.bus.read_u32(0x3FF0_00E0) {
-            if v1 != 0 && v1 != last_from_cpu1_val {
-                if let Some(bit) = from_cpu_bit1 {
-                    machine.cpu.raise_interrupt_bits(1u32 << bit);
-                }
-                let _ = machine.bus.write_u32(0x3FF0_00E0, 0);
-            }
-            last_from_cpu1_val = 0;
-        }
-        // Re-stamp the dual-core handshake bytes every 10k cycles so
-        // start_other_core / do_other_cpu_settings keep seeing them as
-        // "up." Write to each resolved symbol's [0]+[1] slots.
-        if preseed_handshake && i.is_multiple_of(10_000) {
-            if s_resume_cores != 0 {
-                let _ = machine.bus.write_u8(s_resume_cores as u64, 0x01);
-            }
-            if s_cpu_up != 0 {
-                let _ = machine.bus.write_u8(s_cpu_up as u64, 0x01);
-                let _ = machine.bus.write_u8(s_cpu_up as u64 + 1, 0x01);
-            }
-            if s_cpu_inited != 0 {
-                let _ = machine.bus.write_u8(s_cpu_inited as u64, 0x01);
-                let _ = machine.bus.write_u8(s_cpu_inited as u64 + 1, 0x01);
-            }
-            if s_system_inited != 0 {
-                let _ = machine.bus.write_u8(s_system_inited as u64, 0x01);
-                let _ = machine.bus.write_u8(s_system_inited as u64 + 1, 0x01);
-            }
-            if s_other_cpu_startup_done != 0 {
-                let _ = machine.bus.write_u8(s_other_cpu_startup_done as u64, 0x01);
-            }
-        }
+        // The per-step half of the profile — IPI bridge + handshake
+        // re-stamp — now lives with the rest of it, so `labwired test`
+        // gets identical behaviour instead of only identical setup.
+        profile.step(&mut machine, i);
         match machine.cpu.step(&mut machine.bus, &observers, &config) {
             Ok(()) => {}
             Err(SimulationError::BreakpointHit(_)) => {}

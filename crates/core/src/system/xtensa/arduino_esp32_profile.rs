@@ -46,6 +46,92 @@ pub struct ArduinoEsp32Profile {
     /// Whether the handshake pre-seed path is active (LABWIRED_NO_DUALCORE /
     /// LABWIRED_PRESEED_HANDSHAKE). The loop only re-seeds when it is.
     pub preseed_handshake: bool,
+    /// Which DPORT FROM_CPU bit each core's IPI is routed to, learned by
+    /// watching the interrupt matrix. `None` until the firmware programs it.
+    from_cpu_bit0: Option<u8>,
+    from_cpu_bit1: Option<u8>,
+    last_from_cpu0_val: u32,
+    last_from_cpu1_val: u32,
+}
+
+// DPORT interrupt-matrix slots for the two FROM_CPU (software IPI) sources,
+// and the registers a core writes to raise one. ESP32 TRM, DPORT section.
+const DPORT_PRO_FROM_CPU_INTR0_MAP: u64 = 0x3FF0_0164;
+const DPORT_PRO_FROM_CPU_INTR1_MAP: u64 = 0x3FF0_0168;
+const DPORT_CPU_INTR_FROM_CPU_0: u64 = 0x3FF0_00DC;
+const DPORT_CPU_INTR_FROM_CPU_1: u64 = 0x3FF0_00E0;
+
+impl ArduinoEsp32Profile {
+    /// The per-step half of the profile. Runners MUST call this once per
+    /// simulated step, before `cpu.step`.
+    ///
+    /// FreeRTOS on ESP32 signals across cores through the DPORT FROM_CPU
+    /// software interrupts: one core writes the trigger register, and the
+    /// interrupt matrix delivers it to the other core on whichever CPU
+    /// interrupt line the firmware routed it to. Nothing in the peripheral
+    /// model turns that write into an interrupt edge, so the runner has to
+    /// bridge it.
+    ///
+    /// This used to live inline in `snapshot capture`'s loop, which is why a
+    /// firmware could boot identically under both runners and then diverge:
+    /// `labwired test` completed setup() and produced NO loop() output at all,
+    /// because a cross-core notification never arrived and the poll blocked.
+    /// At an equal 105,000,000 cycles snapshot produced 152 status lines and
+    /// test produced 0. Setup parity is not parity — the per-step behaviour is
+    /// part of the profile, so it lives here with the rest of it.
+    pub fn step<C: Cpu>(&mut self, machine: &mut Machine<C>, step_index: u64) {
+        // Learn the routing: the firmware writes the target CPU interrupt
+        // number into the matrix slot for each FROM_CPU source.
+        if let Ok(v) = machine.bus.read_u32(DPORT_PRO_FROM_CPU_INTR0_MAP) {
+            let bit = (v & 0x1F) as u8;
+            if v != 0 && bit < 32 {
+                self.from_cpu_bit0 = Some(bit);
+            }
+        }
+        if let Ok(v) = machine.bus.read_u32(DPORT_PRO_FROM_CPU_INTR1_MAP) {
+            let bit = (v & 0x1F) as u8;
+            if v != 0 && bit < 32 {
+                self.from_cpu_bit1 = Some(bit);
+            }
+        }
+        // Deliver, then clear the trigger the way the ISR would.
+        if let Ok(v0) = machine.bus.read_u32(DPORT_CPU_INTR_FROM_CPU_0) {
+            if v0 != 0 && v0 != self.last_from_cpu0_val {
+                if let Some(bit) = self.from_cpu_bit0 {
+                    machine.cpu.raise_interrupt_bits(1u32 << bit);
+                }
+                let _ = machine.bus.write_u32(DPORT_CPU_INTR_FROM_CPU_0, 0);
+            }
+            self.last_from_cpu0_val = 0;
+        }
+        if let Ok(v1) = machine.bus.read_u32(DPORT_CPU_INTR_FROM_CPU_1) {
+            if v1 != 0 && v1 != self.last_from_cpu1_val {
+                if let Some(bit) = self.from_cpu_bit1 {
+                    machine.cpu.raise_interrupt_bits(1u32 << bit);
+                }
+                let _ = machine.bus.write_u32(DPORT_CPU_INTR_FROM_CPU_1, 0);
+            }
+            self.last_from_cpu1_val = 0;
+        }
+        // Re-stamp the dual-core handshake bytes every 10k steps so
+        // start_other_core / do_other_cpu_settings keep seeing them as "up".
+        if self.preseed_handshake && step_index.is_multiple_of(10_000) {
+            for (addr, pair) in [
+                (self.s_resume_cores, false),
+                (self.s_cpu_up, true),
+                (self.s_cpu_inited, true),
+                (self.s_system_inited, true),
+                (self.s_other_cpu_startup_done, false),
+            ] {
+                if addr != 0 {
+                    let _ = machine.bus.write_u8(addr as u64, 0x01);
+                    if pair {
+                        let _ = machine.bus.write_u8(addr as u64 + 1, 0x01);
+                    }
+                }
+            }
+        }
+    }
 }
 
 /// Install the Arduino-ESP32 profile onto an already-loaded `Machine`.
@@ -560,5 +646,9 @@ pub fn install_arduino_esp32_profile<C: Cpu>(
         s_system_inited,
         s_other_cpu_startup_done,
         preseed_handshake,
+        from_cpu_bit0: None,
+        from_cpu_bit1: None,
+        last_from_cpu0_val: 0,
+        last_from_cpu1_val: 0,
     })
 }
