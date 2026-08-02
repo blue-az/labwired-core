@@ -6,6 +6,7 @@
 
 pub mod ana_i2c;
 pub mod apb_saradc;
+pub mod bt;
 pub mod cache;
 pub mod factory;
 pub mod forced_status;
