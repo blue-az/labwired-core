@@ -737,6 +737,16 @@ pub trait Peripheral: std::fmt::Debug + Send {
         None
     }
 
+    /// This peripheral as an inter-chip UART cross-link endpoint, if it is one.
+    ///
+    /// Named capability rather than a downcast: `attach_uart_stream_by_id` used
+    /// to require the concrete [`crate::peripherals::uart::Uart`], which made
+    /// every family with its own UART model (the whole ESP32 line) unwireable.
+    /// Default `None` = not a UART.
+    fn as_uart_stream_host(&mut self) -> Option<&mut dyn crate::peripherals::uart::UartStreamHost> {
+        None
+    }
+
     /// Stimulus reachability: call `f` once for every device attached to this
     /// controller that accepts simulated input, in attach order.
     ///
