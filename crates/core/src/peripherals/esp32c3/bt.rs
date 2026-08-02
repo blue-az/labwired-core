@@ -100,8 +100,11 @@
 //!   a rotating slot index, but that is a guess and the read trace shows
 //!   `BLEDevice::init()` never reads it. It stays plain storage; if a firmware
 //!   ever polls it the run will stall visibly rather than be lied to.
-//! * **The radio itself.** As with the WiFi MAC, there is no RF here. This is
-//!   an air-gapped behavioral endpoint, not a faithful BLE PHY.
+//! * **The RF PHY.** There is still no modulation, no preamble, no bit sync,
+//!   no whitening and no CRC arithmetic here. Programmed radio events now run
+//!   and their PDUs cross a shared air (see below and
+//!   [`crate::peripherals::ble_air`]), but that air is an idealised,
+//!   lossless, collision-free medium — not a faithful BLE PHY.
 //!
 //! ## The interrupt path (silicon capture 2026-08-02, board `38:44:be:42:f5:58`)
 //!
@@ -263,17 +266,179 @@
 //!   programs a radio event (`+0x32C <= 0x4000_000D`, `+0x100 <=
 //!   0x8000_0000`).
 //!
-//! It stops there, and the reason is structural rather than fixable by more
-//! register archaeology: having programmed a radio event, the controller waits
-//! for `r_sch_prog_end_isr` / `_tx_isr` / `_rx_isr` (bits 5, 1, 2). Those come
-//! from an RF block this model does not have and cannot honestly fake — see
-//! the WiFi MAC, which is air-gapped for the same reason. Silicon shows that
-//! is exactly the missing edge: sampling the advertising part 14 times caught
-//! one mid-event, `INTSTAT = 0x20` / `INTRAWSTAT = 0x31` / `+0x2D8 =
-//! 0x0000_803E` — a queued **bit 5**, `sch_prog_end`, the end of a radio
-//! event. So the twin now gets two full link-layer scheduler cycles and parks
-//! at the radio boundary, instead of parking immediately after arming its
-//! first timer.
+//! That used to stop there, waiting on `r_sch_prog_end_isr` / `_tx_isr` /
+//! `_rx_isr` (bits 5, 1, 2). Silicon showed exactly that missing edge:
+//! sampling the advertising part 14 times caught one mid-event, `INTSTAT =
+//! 0x20` / `INTRAWSTAT = 0x31` / `+0x2D8 = 0x0000_803E` — a queued **bit 5**,
+//! `sch_prog_end`. That edge is now real; see the next section.
+//!
+//! ## Programmed radio events, and the exchange memory behind them
+//!
+//! That is where the previous pass stopped. It no longer does: the controller's
+//! programmed events now execute, transmit the PDU the controller staged, and
+//! complete with `sch_prog_end`, so advertising runs as a sustained cadence.
+//!
+//! **The layout was read out of the ROM and then confirmed on silicon**, field
+//! by field — nothing here is a guess about a descriptor.
+//!
+//! ### Exchange memory is ordinary data RAM behind a base-register window
+//!
+//! `r_emi_get_mem_addr_by_offset` (`0x4000_6976`) translates an
+//! exchange-memory byte offset to a CPU address:
+//!
+//! ```text
+//! reg = *(0x6003_1204 + reg_idx*4)          // bank A, reg_idx <= 47
+//!     | *(0x6003_1220 + reg_idx*4)          // bank B, reg_idx 48..=55
+//! covered  = (reg >> 18) << 2               // the EM offset this reg serves
+//! cpu_addr = ((reg << 2) & 0x000F_FFFC) | 0x3FC0_0000  +  (em_off - covered)
+//! ```
+//!
+//! So the RW-BLE core's "exchange memory" is a set of **1 KiB windows the
+//! controller allocates out of the C3's own SRAM at runtime**
+//! (`r_emi_alloc_em_mapping_by_offset`) and publishes through those registers.
+//! The ROM consults a `em_base_reg_lut` table to pick the register, but that
+//! table is redundant — it asserts `lut[off >> 10].base == (reg >> 18) << 2`,
+//! i.e. every register already names the offset it covers — so this model picks
+//! the covering register straight off the register file and hardcodes no
+//! address at all. Silicon capture 2026-08-02, board `38:44:be:42:f5:58`, with
+//! BLE up: `0x6003_1204 = 0x0002_9725` → EM `0x0000` at `0x3FCA_5C94`;
+//! `0x6003_1208 = 0x0402_977B` → EM `0x0400` at `0x3FCA_5DEC`;
+//! `0x6003_1214 = 0x1402_9961` → EM `0x1400`; `0x6003_1220 = 0x2402_B833` →
+//! EM `0x2400`. The twin's own firmware writes the same registers with its own
+//! addresses (`+0x220 <= 0x2402_B9F2`), which is exactly why reading them
+//! beats hardcoding them.
+//!
+//! ### `+0x100` — the programmed-event push
+//!
+//! `r_sch_prog_ble_push` (`0x4003_0BDA`) fills an exchange-table entry and then
+//! does `sw (0x8000_0000 | idx), 256(0x6003_1000)`, having asserted
+//! `idx & ~0xF == 0`. The live window reads `+0x100` back as 0, so it is a
+//! self-clearing command register.
+//!
+//! ### The exchange table (ET) — EM offset `0x000`, 16 entries × 16 bytes
+//!
+//! Every `sch_prog` routine reaches it via `r_plf_funcs_p[47](0)`, i.e.
+//! `emi_get_mem_addr_by_offset(0)`, and indexes it `idx << 4`;
+//! `r_sch_prog_init` walks `0..256` step 16.
+//!
+//! | off | field | evidence |
+//! |---|---|---|
+//! | `+0x0` | control; **bits[5:3] = status**, hardware-owned | all four `sch_prog` ISRs read `(lhu >> 3) & 7`; `r_sch_prog_ble_push` writes this halfword with that field ZERO |
+//! | `+0x2` | start time, low 16 bits of the 28-bit CLKN half-slot count | `r_sch_prog_push` writes `time & 0xFFFF`; live entry 0 read `0x83A9` while `sch_prog_env[0]` held `0x00F8_83A9` |
+//! | `+0x4` | start time, high 12 bits | same routine writes `(time >> 16) & 0xFFF`; live `0x00F8` |
+//! | `+0x6` | fine start offset, encoded `624 - hus` | `r_sch_prog_push` asserts `hus <= 624` then writes `624 - hus`; live `0x0270` = 624, matching `+0x0F0` |
+//! | `+0x8` | **control-structure pointer, EM offset / 2** | `r_sch_prog_ble_push` writes `(cs_idx*90 + 1024) >> 1`; live `0x0200` → EM `0x400`, which is where the control structure demonstrably is (below). 90 is the CS stride and 1024 = `EM_BLE_CS_OFFSET` |
+//! | `+0xA` | duration; bit15 selects half-slots, else two half-µs per unit | `r_sch_prog_push` writes `(dur+1)>>1` below `0x8000` and `((dur+625)/625) | 0x8000` above; live `0x0AF7` = 2807 µs, a plausible 3-channel legacy advertising event |
+//! | `+0xC` | two 5-bit priorities | `(min(p2,31) << 8) | min(p1,31)`; live `0x0C00` |
+//! | `+0xE` | `(5-bit field << 8) | 2-bit field` | written by `r_sch_prog_ble_push`; live `0x0F00`. **Meaning not determined** — plausibly a link label, but nothing measured says so, so nothing here reads it |
+//!
+//! The status codes are pinned by what the ROM does with them:
+//! `r_sch_prog_push` refuses to reuse an entry whose status is **1 or 2**
+//! ("still in use", `sch_prog.c` 560); `r_sch_prog_tx_isr`/`_rx_isr` assert
+//! `status & 6 != 0`; `r_sch_prog_end_isr` dispatches the frame callback for
+//! **3, 4 or 5** and passes `irq_type = (status == 4)`; `r_sch_prog_skip_isr`
+//! consumes **6**; and `r_sch_prog_init` seeds every entry with 3. Silicon
+//! agrees: all sixteen live entries read `+0x0 = 0x281A`, whose status field is
+//! 3, on a part that had just finished an advertising event. This model writes
+//! **2 while the event executes** (the only value consistent with both the
+//! "in use" rejection and the tx/rx asserts — inference from ROM constraints,
+//! flagged as such) and **3 when it ends**. Status 1, 4, 5 and 6 are never
+//! written: nothing measured says what produces them.
+//!
+//! ### The control structure (CS) — EM offset `0x400`, stride 90 bytes
+//!
+//! `r_sch_prog_ble_push`'s `cs_idx*90 + 1024` gives both constants. Silicon
+//! confirms the stride independently: the live control structures carry a
+//! per-structure marker at `+0x2` (`0x0001`, `0x0002`, `0x0003`, `0x0004`) and
+//! they sit exactly 90 bytes apart. CS 0, live, decoded — and the BLE spec
+//! constants in it are the proof this is what it is:
+//!
+//! ```text
+//! +0x00 0x0404   format word; the model acts only on low byte 0x04
+//! +0x06 5a f5 42 be 44 38   device address, LSB first = 38:44:be:42:f5:5a
+//!                           (the board's BLE address, its base MAC + 2)
+//! +0x0C d6 be 89 8e         access address = 0x8E89BED6 — the BLE
+//!                           advertising access address, spec-defined
+//! +0x10 55 55 55            CRC init = 0x555555 — the BLE advertising CRC
+//!                           init, spec-defined
+//! +0x16 0x8027              hop control; bits[6:0] = 39 = the last of the
+//!                           three primary advertising channels
+//! +0x1C 0x1400              EM offset of the first TX descriptor
+//! ```
+//!
+//! ### The TX descriptor — 14 bytes, singly linked
+//!
+//! Two live descriptors at EM `0x1400` and `0x140E`, each pointing at the next
+//! through `+0x0`:
+//!
+//! ```text
+//! +0x0  next descriptor, EM offset  (0x140E / 0x1400 — a ring of two)
+//! +0x2  (payload_len << 8) | pdu_header_byte
+//!         0x0F20 -> header 0x20 (ADV_IND, ChSel=1), 15 bytes
+//!         0x1904 -> header 0x04 (SCAN_RSP),         25 bytes
+//! +0x4  EM offset of the payload bytes after the device address
+//!         0x2400 -> 02 01 06 05 12 20 00 40 00        (9 bytes)
+//!         0x2C00 -> 09 09 "lw-probe" 02 0a 09 05 12 20 00 40 00 (19 bytes)
+//! ```
+//!
+//! 15 = 6 + 9 and 25 = 6 + 19, so the core inserts the 6-byte device address
+//! from `CS+0x06` ahead of the descriptor's buffer. That is measured twice, on
+//! two PDU types, and it is the only reading under which the declared lengths
+//! and the buffer contents agree — but it is still an inference from two
+//! samples rather than something the ROM states, and it is only claimed for
+//! the legacy advertising format.
+//!
+//! ### What the model does with a pushed event
+//!
+//! At the programmed instant it writes status 2, walks
+//! ET → CS → TX descriptor → payload buffer, emits the PDU onto the shared air
+//! (see [`crate::peripherals::ble_air`]), and after the programmed duration
+//! writes status 3 and raises `sch_prog_end` (bit 5) through the IRQ FIFO. It
+//! raises **no** `sch_prog_tx` (bit 1), and the ROM is why:
+//! `r_lld_adv_frm_cbk` (`0x4001_7550`) handles irq_type 0/1 (end), silently
+//! ignores 2 (RX) and forwards 4 (skip), and **asserts on anything else** —
+//! `r_sch_prog_tx_isr` passes 3. Raising bit 1 stopped the twin dead with
+//! exactly that assert (`assert lld_adv.c 2328, param 00000000 00000003`), so
+//! a legacy advertising event provably does not produce one on silicon.
+//!
+//! ### Measured result (twin, 500 M steps, `LABWIRED_BT_TRACE=1`)
+//!
+//! `PRE_BLE / BLE_INIT_OK / ADV_ON / ALIVE`, no asserts, 810 BT register
+//! writes, and **19 complete radio events**, cycling exchange-table entries
+//! `0..15` and wrapping to `0, 1, 2` — the real 16-deep ring. Each ends with
+//! the exact ROM ack sequence (`+0x2D8 <= 0x0000_803F` pop, `+0x018 <= 0x20`
+//! W1C) and is followed by the controller re-arming the half-µs comparator for
+//! the next advertising instant. End-to-end intervals were 130–158 CLKN ticks
+//! (40.6–49.4 ms), against 119–150 ticks (37–47 ms) measured on the live part —
+//! the same advertising interval with the same random delay on top. Every one
+//! of the 19 frames carried
+//! `20 0f <AdvA> 02 01 06 05 12 20 00 40 00`: header `0x20` = ADV_IND with
+//! ChSel, 15 bytes, and an advertising payload byte-identical to the
+//! `ADVDATATXBUF` read off the live board.
+//!
+//! ### Radio-event gaps still open (say so rather than invent)
+//!
+//! * **Channel sweeping.** A real legacy advertising event transmits on every
+//!   enabled primary advertising channel (37/38/39) within the single
+//!   programmed event; this model emits **one** frame per event, on the channel
+//!   the control structure's hop word names. That word read 39 in every event
+//!   on both the twin and the live part, and no field that would name the
+//!   enabled channel set was identified, so sweeping is idealised away rather
+//!   than faked.
+//! * **`+0x32C`.** The controller writes `0x4000_000D` here immediately before
+//!   every push. No ROM routine touches this offset (it comes from ESP-IDF's
+//!   IRAM `libble_app`), so its meaning is unknown. Plain storage.
+//! * **The RX side.** The RX descriptor chain was located (EM `0x1000`, 20-byte
+//!   stride, `+0x0` next pointer with an undetermined bit15 flag, `+0x8`/`+0xA`
+//!   a 32-bit CLKN receive timestamp that matches live scan-request arrival
+//!   times) but **where the core writes the received bytes was not
+//!   determined**, so no frame is ever delivered into exchange memory and
+//!   `sch_prog_rx` (bit 2) is never raised. A scanning controller therefore
+//!   still hears nothing.
+//! * **Status codes 1, 4, 5, 6** and the `ET+0xE` field are named nowhere that
+//!   was measured, so they are neither written nor interpreted.
+//! * **Event skipping and cancellation.** `sch_prog_skip` (bit 6) is never
+//!   raised: every pushed event runs.
 //!
 //! ## Interrupt-path gaps still open (say so rather than invent)
 //!
@@ -285,17 +450,18 @@
 //!   hardware condition sets the latch" was not measured, so it is not
 //!   modelled. Bit 4 has no handler in either ISR at all and no story
 //!   whatsoever. Recorded, not faked.
-//! * **The radio-event bits (1, 2, 5, 6 — `sch_prog` tx/rx/end/skip, and
-//!   18/19)** are *named*, and bit 5 was caught live on silicon, but none of
-//!   them is *raised* here: they come from a radio this model does not have.
-//!   Only the three timer comparators fire.
+//! * **Radio-event bits 1, 2, 6 (`sch_prog` tx / rx / skip) and 18/19** are
+//!   *named* but still never raised — only bit 5, `sch_prog_end`, is. Bit 1 is
+//!   a deliberate, ROM-attested omission for advertising (see below); bits 2,
+//!   6, 18 and 19 have no modelled cause.
 //! * **The comparator edge rule** was not measured. This model fires on
 //!   "reached or passed" (28-bit wrapping compare) rather than strict
 //!   equality, because a strict-equality comparator that misses its instant
 //!   would deadlock the controller for a full 28-bit wrap (~23 h of device
 //!   time). The two are indistinguishable whenever the deadline is not missed.
 
-use crate::{CycleClock, Peripheral, PeripheralTickResult, SimResult};
+use crate::peripherals::ble_air::{default_ble_air_bus, BleAirBus, BleAirFrame};
+use crate::{Bus, CycleClock, Peripheral, PeripheralTickResult, SimResult};
 use std::cell::{Cell, RefCell};
 use std::collections::VecDeque;
 
@@ -362,6 +528,123 @@ const INTACK_FIFO: u64 = 0x38C;
 const INT_TIMER_10MS: u32 = 1 << 9;
 const INT_TIMER_HS: u32 = 1 << 10;
 const INT_TIMER_HUS: u32 = 1 << 11;
+
+/// `r_sch_prog_end_isr` — a programmed radio event ended.
+const INT_SCH_PROG_END: u32 = 1 << 5;
+
+// ── The programmed-event interface (see the module docs) ─────────────────────
+
+/// `+0x100` — the programmed-event push register. `r_sch_prog_ble_push`
+/// (`0x4003_0BDA`) ends with `s2 |= 0x8000_0000; sw s2, 256(0x6003_1000)`
+/// after asserting the index is 4 bits wide, and the live part reads it back
+/// as 0 (silicon capture 2026-08-02, board `38:44:be:42:f5:58`), i.e. it is a
+/// self-clearing command register, not storage.
+const PROG_PUSH: u64 = 0x100;
+/// Bit31 of a `PROG_PUSH` write — "execute the entry named in bits[3:0]".
+const PROG_PUSH_GO: u32 = 0x8000_0000;
+/// Index field of a `PROG_PUSH` write. `r_sch_prog_ble_push` asserts
+/// `idx & ~0xF == 0` (`sch_prog.c` line 6648) — the exchange table is 16 deep.
+const PROG_PUSH_IDX: u32 = 0xF;
+
+/// Exchange-memory base registers, bank A (`reg_idx` 0..=47).
+/// `r_emi_get_mem_addr_by_offset` (`0x4000_6976`) computes the register
+/// address as `(0x1800_C481 + reg_idx) << 2` = `0x6003_1204 + reg_idx*4`.
+const EM_BASE_REG_BANK_A: u64 = 0x204;
+/// Exchange-memory base registers, bank B (`reg_idx` 48..=55): the same ROM
+/// routine switches to `(0x1800_C488 + reg_idx) << 2` = `0x6003_1220 + idx*4`.
+/// Every bank-B register read 0 on the live part; the bank exists in the ROM's
+/// arithmetic, so it is honoured here, but nothing was ever measured in it.
+const EM_BASE_REG_BANK_B: u64 = 0x220;
+/// Highest `reg_idx` in bank A.
+const EM_BASE_REG_BANK_A_MAX: u64 = 47;
+/// Highest `reg_idx` the ROM will accept at all (`assert reg_idx <= 55`).
+const EM_BASE_REG_MAX: u64 = 55;
+/// The data-RAM window every exchange-memory base register resolves into:
+/// `r_emi_get_mem_addr_by_offset` finishes with
+/// `((reg << 2) & 0x000F_FFFC) | 0x3FC0_0000`.
+const EM_RAM_WINDOW: u64 = 0x3FC0_0000;
+/// Address mask the same routine applies (`0x0010_0000 - 4`).
+const EM_RAM_ADDR_MASK: u32 = 0x000F_FFFC;
+
+/// Exchange-memory offset of the **exchange table (ET)**. `r_sch_prog_init`,
+/// `r_sch_prog_push`, `r_sch_prog_ble_push` and all four `sch_prog` ISRs reach
+/// it through `r_plf_funcs_p[47](0)`, i.e. `emi_get_mem_addr_by_offset(0)`.
+const EM_ET_OFFSET: u32 = 0x000;
+/// Stride of one ET entry. Every ROM site indexes it as `idx << 4`
+/// (`r_sch_prog_init` walks `0..256` step 16 = 16 entries).
+const ET_ENTRY_BYTES: u32 = 16;
+/// Number of ET entries — `r_sch_prog_ble_push` asserts the index is 4 bits.
+const ET_ENTRIES: u32 = 16;
+
+/// ET entry `+0x0`: the control/status halfword. Bits[5:3] are the status the
+/// hardware owns; the rest is written by `r_sch_prog_ble_push`.
+const ET_CTRL: u32 = 0x0;
+/// ET entry `+0x2`/`+0x4`: the 28-bit half-slot (CLKN) start time, low then
+/// high. `r_sch_prog_push` writes `time & 0xFFFF` and `(time >> 16) & 0xFFF`.
+const ET_START_LO: u32 = 0x2;
+const ET_START_HI: u32 = 0x4;
+/// ET entry `+0x6`: the fine start offset, written as `624 - hus` — the same
+/// down-counting encoding as the `+0x0F0` half-µs comparator.
+const ET_START_FINE: u32 = 0x6;
+/// ET entry `+0x8`: the control-structure pointer, as an exchange-memory byte
+/// offset divided by two. `r_sch_prog_ble_push` writes
+/// `(cs_idx * 90 + 1024) >> 1`, i.e. `(EM_BLE_CS_OFFSET + cs_idx * CS_SIZE)/2`.
+const ET_CS_PTR: u32 = 0x8;
+/// ET entry `+0xA`: the event duration. `r_sch_prog_push` writes
+/// `(dur + 1) >> 1` for `dur < 0x8000` (units of two half-µs) and
+/// `((dur + 625) / 625) | 0x8000` above that (units of half-slots).
+const ET_DURATION: u32 = 0xA;
+/// Bit15 of [`ET_DURATION`]: the unit selector.
+const ET_DURATION_HALF_SLOTS: u16 = 0x8000;
+
+/// Shift of the 3-bit hardware status field in [`ET_CTRL`]. Every `sch_prog`
+/// ISR reads it as `(lhu(et) >> 3) & 7`.
+const ET_STATUS_SHIFT: u32 = 3;
+const ET_STATUS_FIELD: u16 = 0x7 << ET_STATUS_SHIFT;
+/// Status the model writes while an event is executing. Inferred, and flagged
+/// as such: `r_sch_prog_push` rejects an entry whose status is 1 or 2 as still
+/// in use, while `r_sch_prog_tx_isr`/`_rx_isr` assert `status & 6 != 0` — so
+/// the state an event is in while it transmits and receives has to be 2.
+const ET_STATUS_ONGOING: u16 = 2;
+/// Status the model writes when the event ends. `r_sch_prog_end_isr` dispatches
+/// the frame callback for status 3, 4 or 5 and passes `irq_type = (status == 4)`
+/// — 3 is therefore the plain end, and it is also what `r_sch_prog_init` seeds
+/// every entry with. Silicon confirms: all 16 live entries read `+0x0 = 0x281A`,
+/// whose status field is 3.
+const ET_STATUS_END: u16 = 3;
+
+/// Control-structure `+0x06`: the 6-byte device address, LSB first.
+const CS_BDADDR: u32 = 0x06;
+/// Control-structure `+0x0C`: the 32-bit access address (sync word).
+const CS_ACCESS_ADDR: u32 = 0x0C;
+/// Control-structure `+0x10`: the 24-bit CRC init.
+const CS_CRC_INIT: u32 = 0x10;
+/// Control-structure `+0x16`: the hop-control word; bits[6:0] are the RF
+/// channel index.
+const CS_HOP_CTRL: u32 = 0x16;
+/// Channel-index field of [`CS_HOP_CTRL`].
+const CS_CHANNEL_MASK: u16 = 0x7F;
+/// Control-structure `+0x1C`: exchange-memory offset of the first TX
+/// descriptor, or 0 for an event that does not transmit.
+const CS_TX_DESC_PTR: u32 = 0x1C;
+/// Control-structure `+0x00`: the format word. Only the value measured on the
+/// live advertising part is acted on — see [`CS_FORMAT_LEGACY_ADV`].
+const CS_FORMAT: u32 = 0x00;
+/// Low byte of [`CS_FORMAT`] on the live, legacy-advertising part
+/// (`+0x00 = 0x0404`). The model transmits only for this format; any other
+/// value is traced and left alone rather than guessed at.
+const CS_FORMAT_LEGACY_ADV: u16 = 0x04;
+
+/// TX descriptor `+0x2`: `(payload_len << 8) | pdu_header_byte`.
+const TXD_HEADER: u32 = 0x2;
+/// TX descriptor `+0x4`: exchange-memory offset of the payload bytes that
+/// follow the device address.
+const TXD_DATA_PTR: u32 = 0x4;
+/// Bytes of the advertiser's device address the core inserts ahead of the
+/// descriptor's own buffer, taken from [`CS_BDADDR`]. Measured on both live
+/// descriptors: `ADV_IND` declared 15 bytes over a 9-byte buffer, `SCAN_RSP`
+/// declared 25 over a 19-byte buffer.
+const TXD_ADDR_PREFIX_LEN: u16 = 6;
 
 /// C3 interrupt-matrix source for the RW-BLE core. Silicon capture
 /// 2026-08-02: `0x600C_2020` (the source-8 map register) reads 5, i.e. the
@@ -502,6 +785,38 @@ pub struct Esp32c3Bt {
     /// [`SystemBus::add_peripheral`](crate::bus::SystemBus). Drives CLKN and
     /// the fine counter. Not serialized — re-attached by the bus.
     clock: Option<CycleClock>,
+    /// Exchange-table indices the controller has pushed through `+0x100` and
+    /// the core has not started yet, oldest first. `r_sch_prog_push` hands the
+    /// hardware entries in ring order and `r_sch_prog_end_isr` consumes them
+    /// from its own head index in the same order, so a FIFO is the shape the
+    /// software half already assumes.
+    prog_queue: VecDeque<u32>,
+    /// The programmed event currently being executed, if any.
+    radio: Option<RadioEvent>,
+    /// Duration of [`Self::radio`], in CPU cycles, decoded from `ET + 0xA`.
+    radio_duration: u64,
+    /// The shared air this controller transmits into and listens on.
+    air: BleAirBus,
+}
+
+/// Where a programmed radio event is in its life.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RadioPhase {
+    /// Pushed and decoded; waiting for its programmed start instant.
+    Pending,
+    /// Started (status [`ET_STATUS_ONGOING`]); waiting out its duration.
+    Running,
+}
+
+/// One programmed radio event in flight.
+#[derive(Debug, Clone, Copy)]
+struct RadioEvent {
+    /// Index of its exchange-table entry.
+    et_idx: u32,
+    phase: RadioPhase,
+    /// Next instant this event does something, in the same elapsed-cycle
+    /// domain as [`Esp32c3Bt::elapsed_cycles`].
+    deadline: u64,
 }
 
 impl Esp32c3Bt {
@@ -518,7 +833,26 @@ impl Esp32c3Bt {
             arm_seq: 0,
             clock_base: None,
             clock: None,
+            prog_queue: VecDeque::new(),
+            radio: None,
+            radio_duration: 0,
+            air: default_ble_air_bus().clone(),
         }
+    }
+
+    /// Build a controller on an explicitly-owned air, so two nodes in one
+    /// world share a medium and two worlds do not. Mirrors
+    /// [`Nrf52Radio::with_air`](crate::peripherals::nrf52::radio::Nrf52Radio::with_air).
+    pub fn with_air(air: BleAirBus) -> Self {
+        Self {
+            air,
+            ..Self::new()
+        }
+    }
+
+    /// The air this controller is on (tests, inspection, the air view).
+    pub fn air(&self) -> &BleAirBus {
+        &self.air
     }
 
     /// Cycles elapsed since the controller un-gated the block, or 0 while it is
@@ -718,8 +1052,9 @@ impl Esp32c3Bt {
         }
     }
 
-    /// Cycles from `elapsed` to the nearest armed, unspent comparator, or
-    /// `None` when nothing is scheduled. Zero when one is already due.
+    /// Cycles from `elapsed` to the nearest armed, unspent comparator or
+    /// pending radio-event phase, or `None` when nothing is scheduled. Zero
+    /// when one is already due.
     fn cycles_to_next_deadline(&self, elapsed: u64) -> Option<u64> {
         let spent = self.comparators_fired.get() | self.int_raw.get();
         [INT_TIMER_10MS, INT_TIMER_HS, INT_TIMER_HUS]
@@ -727,6 +1062,7 @@ impl Esp32c3Bt {
             .filter(|bit| spent & bit == 0)
             .filter_map(|bit| self.deadline_cycles(bit))
             .map(|deadline| deadline.saturating_sub(elapsed))
+            .chain(self.cycles_to_radio_deadline(elapsed))
             .min()
     }
 
@@ -747,12 +1083,310 @@ impl Esp32c3Bt {
     /// True while a comparator is armed or the line is asserted — the only
     /// states in which the per-cycle walk has anything to do.
     fn irq_work_pending(&self) -> bool {
+        // The radio engine only runs from `on_event` (it needs the bus), so it
+        // is deliberately NOT a reason to join the legacy walk — a walk that
+        // could never make progress on it would spin forever.
         self.int_status() != 0
             || (self.clock_base.is_some()
                 && self.int_enable()
                     & self.comparators_programmed
                     & !(self.comparators_fired.get() | self.int_raw.get())
                     != 0)
+    }
+
+    // ── The programmed-event engine ─────────────────────────────────────────
+
+    /// Latch `bits` into `INTRAWSTAT` and queue one IRQ FIFO entry for them,
+    /// the same way [`Self::latch_at`] does for a comparator. One entry per
+    /// hardware interrupt: `r_rwble_isr` pops the head, dispatches its bitmap
+    /// and returns without acking anything when the FIFO is empty.
+    fn raise_irq_bits(&self, bits: u32) {
+        if bits == 0 {
+            return;
+        }
+        self.int_raw.set(self.int_raw.get() | bits);
+        let queued = bits & self.int_enable();
+        if queued == 0 {
+            return;
+        }
+        let mut fifo = self.irq_fifo.borrow_mut();
+        if (fifo.len() as u32) < IRQ_FIFO_DEPTH {
+            fifo.push_back(queued);
+        }
+    }
+
+    /// Translate an exchange-memory byte offset to the CPU data-RAM address the
+    /// controller mapped it at, or `None` while the region is unmapped.
+    ///
+    /// This is `r_emi_get_mem_addr_by_offset` (`0x4000_6976`) with its ROM
+    /// lookup table dropped, because the base registers make it redundant: each
+    /// register carries the exchange-memory offset it covers in bits[31:18]
+    /// (the ROM asserts `lut[off >> 10].base == (reg >> 18) << 2`), so the
+    /// covering register is simply the one with the largest covered offset not
+    /// past `em_off`. Nothing is hardcoded — the addresses come out of
+    /// registers the controller itself wrote, which is why the model works
+    /// unchanged against a firmware that lays its exchange memory out
+    /// differently.
+    fn em_cpu_addr(&self, em_off: u32) -> Option<u64> {
+        let mut best: Option<(u32, u32)> = None;
+        for idx in 0..=EM_BASE_REG_MAX {
+            let reg_off = if idx <= EM_BASE_REG_BANK_A_MAX {
+                EM_BASE_REG_BANK_A + idx * 4
+            } else {
+                EM_BASE_REG_BANK_B + idx * 4
+            };
+            let reg = self.reg(reg_off);
+            let addr_lo = (reg << 2) & EM_RAM_ADDR_MASK;
+            if addr_lo == 0 {
+                // Region never allocated: `r_emi_alloc_em_mapping_by_offset`
+                // has not run for it and the live part reads the whole
+                // register as `<covered offset> | 0`.
+                continue;
+            }
+            let covered = (reg >> 18) << 2;
+            if covered > em_off {
+                continue;
+            }
+            if best.is_none_or(|(c, _)| covered >= c) {
+                best = Some((covered, reg));
+            }
+        }
+        let (covered, reg) = best?;
+        let addr_lo = u64::from((reg << 2) & EM_RAM_ADDR_MASK);
+        Some((EM_RAM_WINDOW | addr_lo) + u64::from(em_off - covered))
+    }
+
+    fn em_read_u8(&self, bus: &dyn Bus, em_off: u32) -> Option<u8> {
+        bus.read_u8(self.em_cpu_addr(em_off)?).ok()
+    }
+
+    fn em_read_u16(&self, bus: &dyn Bus, em_off: u32) -> Option<u16> {
+        let lo = u16::from(self.em_read_u8(bus, em_off)?);
+        let hi = u16::from(self.em_read_u8(bus, em_off + 1)?);
+        Some(lo | (hi << 8))
+    }
+
+    fn em_read_u32(&self, bus: &dyn Bus, em_off: u32) -> Option<u32> {
+        let lo = u32::from(self.em_read_u16(bus, em_off)?);
+        let hi = u32::from(self.em_read_u16(bus, em_off + 2)?);
+        Some(lo | (hi << 16))
+    }
+
+    fn em_write_u16(&self, bus: &mut dyn Bus, em_off: u32, value: u16) -> Option<()> {
+        let addr = self.em_cpu_addr(em_off)?;
+        bus.write_u8(addr, value as u8).ok()?;
+        bus.write_u8(addr + 1, (value >> 8) as u8).ok()
+    }
+
+    /// Byte offset of exchange-table entry `idx`.
+    fn et_entry(idx: u32) -> u32 {
+        EM_ET_OFFSET + (idx & (ET_ENTRIES - 1)) * ET_ENTRY_BYTES
+    }
+
+    /// Absolute elapsed cycle at which the exchange-table entry says its event
+    /// starts, and how long it runs, or `None` while exchange memory is not
+    /// mapped yet.
+    fn read_et_schedule(&self, bus: &dyn Bus, idx: u32) -> Option<(u64, u64)> {
+        let et = Self::et_entry(idx);
+        let lo = u32::from(self.em_read_u16(bus, et + ET_START_LO)?);
+        let hi = u32::from(self.em_read_u16(bus, et + ET_START_HI)?) & 0x0FFF;
+        let clkn = (lo | (hi << 16)) & CLKN_MASK;
+        // `+0x6` holds `624 - hus`, compared against the DOWN-counting
+        // FINETIMECNT, so the offset into the target tick is `624 - field`
+        // fine ticks — the same arithmetic the `+0x0F0` comparator uses.
+        let fine_field =
+            u64::from(self.em_read_u16(bus, et + ET_START_FINE)?).min(FINE_TICKS_PER_CLKN - 1);
+        let start = u64::from(clkn) * CYCLES_PER_CLKN_TICK
+            + (FINE_TICKS_PER_CLKN - 1 - fine_field) * CYCLES_PER_FINE_TICK;
+
+        let dur = self.em_read_u16(bus, et + ET_DURATION)?;
+        let duration = if dur & ET_DURATION_HALF_SLOTS != 0 {
+            u64::from(dur & !ET_DURATION_HALF_SLOTS) * CYCLES_PER_CLKN_TICK
+        } else {
+            // `(hus + 1) >> 1` going in, so two half-µs per stored unit.
+            u64::from(dur) * 2 * CYCLES_PER_FINE_TICK
+        };
+        Some((start, duration))
+    }
+
+    /// Write the 3-bit hardware status field of an exchange-table entry,
+    /// leaving every firmware-owned bit alone.
+    fn set_et_status(&self, bus: &mut dyn Bus, idx: u32, status: u16) {
+        let et = Self::et_entry(idx);
+        let Some(ctrl) = self.em_read_u16(bus, et + ET_CTRL) else {
+            return;
+        };
+        let next = (ctrl & !ET_STATUS_FIELD) | ((status << ET_STATUS_SHIFT) & ET_STATUS_FIELD);
+        let _ = self.em_write_u16(bus, et + ET_CTRL, next);
+    }
+
+    /// Build the PDU this event's control structure staged and push it onto the
+    /// air. Returns `true` if a frame was actually transmitted.
+    ///
+    /// The whole chain is read out of exchange memory — nothing is synthesised:
+    /// `ET[idx] + 8` × 2 is the control-structure offset, the control structure
+    /// carries the device address, access address, CRC init and channel, and
+    /// its `+0x1C` points at a TX descriptor whose `+0x2` is
+    /// `(length << 8) | header` and whose `+0x4` points at the payload bytes.
+    fn transmit_event(&self, bus: &mut dyn Bus, idx: u32) -> bool {
+        let et = Self::et_entry(idx);
+        let Some(cs_ptr) = self.em_read_u16(bus, et + ET_CS_PTR) else {
+            return false;
+        };
+        let cs = u32::from(cs_ptr) * 2;
+
+        let Some(format) = self.em_read_u16(bus, cs + CS_FORMAT) else {
+            return false;
+        };
+        if format & 0xFF != CS_FORMAT_LEGACY_ADV {
+            // Only the legacy-advertising format was measured. Anything else
+            // is left alone rather than guessed at; the event still ends
+            // normally so the controller is never wedged by our ignorance.
+            if bt_trace_enabled() {
+                eprintln!("[bt] radio: CS format {format:#06x} not modelled — no TX");
+            }
+            return false;
+        }
+
+        let Some(tx_desc_ptr) = self.em_read_u16(bus, cs + CS_TX_DESC_PTR) else {
+            return false;
+        };
+        // Bit15 of a descriptor pointer is a flag the RX descriptor chain also
+        // carries (a live descriptor read `0x903C` where its neighbours read
+        // `0x103C`); its meaning was not determined, so it is masked off the
+        // address and nothing is inferred from it.
+        let tx_desc = u32::from(tx_desc_ptr & 0x7FFF);
+        if tx_desc == 0 {
+            return false; // an event that only listens
+        }
+
+        let Some(hdr_word) = self.em_read_u16(bus, tx_desc + TXD_HEADER) else {
+            return false;
+        };
+        let header = (hdr_word & 0xFF) as u8;
+        let len = hdr_word >> 8;
+        let Some(data_ptr) = self.em_read_u16(bus, tx_desc + TXD_DATA_PTR) else {
+            return false;
+        };
+        if len < TXD_ADDR_PREFIX_LEN {
+            return false;
+        }
+
+        let mut payload = Vec::with_capacity(usize::from(len));
+        for b in 0..u32::from(TXD_ADDR_PREFIX_LEN) {
+            payload.push(self.em_read_u8(bus, cs + CS_BDADDR + b).unwrap_or(0));
+        }
+        let data_off = u32::from(data_ptr & 0x7FFF);
+        for b in 0..u32::from(len - TXD_ADDR_PREFIX_LEN) {
+            payload.push(self.em_read_u8(bus, data_off + b).unwrap_or(0));
+        }
+
+        let access_address = self.em_read_u32(bus, cs + CS_ACCESS_ADDR).unwrap_or(0);
+        let crc_init = self.em_read_u32(bus, cs + CS_CRC_INIT).unwrap_or(0) & 0x00FF_FFFF;
+        let channel = (self
+            .em_read_u16(bus, cs + CS_HOP_CTRL)
+            .unwrap_or_default()
+            & CS_CHANNEL_MASK) as u8;
+
+        let mut pdu = Vec::with_capacity(payload.len() + 2);
+        pdu.push(header);
+        pdu.push(len as u8);
+        pdu.extend_from_slice(&payload);
+
+        if bt_trace_enabled() {
+            let hex: String = pdu.iter().map(|b| format!("{b:02x} ")).collect();
+            eprintln!(
+                "[bt] radio TX ch{channel} aa={access_address:#010x} crcinit={crc_init:#08x} \
+                 et={idx} pdu={hex}"
+            );
+        }
+        self.air.transmit(BleAirFrame {
+            seq: 0,
+            channel,
+            access_address,
+            crc_init,
+            pdu,
+        });
+        true
+    }
+
+    /// Advance every programmed event that has come due as of `elapsed`.
+    fn service_radio(&mut self, elapsed: u64, bus: &mut dyn Bus) {
+        loop {
+            if self.radio.is_none() {
+                let Some(idx) = self.prog_queue.pop_front() else {
+                    return;
+                };
+                let Some((start, duration)) = self.read_et_schedule(bus, idx) else {
+                    // Exchange memory is not mapped: the event cannot be
+                    // decoded, so it is dropped rather than completed with
+                    // invented state. Firmware will stall visibly.
+                    if bt_trace_enabled() {
+                        eprintln!("[bt] radio: ET {idx} unreadable (EM unmapped) — dropped");
+                    }
+                    continue;
+                };
+                self.radio = Some(RadioEvent {
+                    et_idx: idx,
+                    phase: RadioPhase::Pending,
+                    // A deadline already in the past starts now. The
+                    // alternative — refusing a late event — would deadlock the
+                    // controller, and the two are indistinguishable whenever
+                    // the event is programmed ahead of its instant, which is
+                    // what `sch_arb` does.
+                    deadline: start.max(elapsed),
+                });
+                self.radio_duration = duration;
+            }
+            let Some(ev) = self.radio else { return };
+            if elapsed < ev.deadline {
+                return;
+            }
+            match ev.phase {
+                RadioPhase::Pending => {
+                    self.set_et_status(bus, ev.et_idx, ET_STATUS_ONGOING);
+                    // Deliberately NO `sch_prog_tx` (bit 1) here, and the ROM
+                    // is the reason rather than trial and error:
+                    // `r_lld_adv_frm_cbk` (`0x4001_7550`) dispatches irq_type
+                    // 0 and 1 to `lld_adv_frm_isr`, ignores 2 (RX) with a bare
+                    // `ret`, forwards 4 (SKIP), and **asserts on anything
+                    // else** — `assert lld_adv.c 2328`. `r_sch_prog_tx_isr`
+                    // passes irq_type 3. So a legacy advertising event
+                    // provably does not raise bit 1 on silicon; raising it
+                    // here stopped the controller dead with that exact assert.
+                    // Which event types DO raise it was not determined.
+                    self.transmit_event(bus, ev.et_idx);
+                    self.radio = Some(RadioEvent {
+                        phase: RadioPhase::Running,
+                        deadline: ev.deadline + self.radio_duration,
+                        ..ev
+                    });
+                }
+                RadioPhase::Running => {
+                    self.set_et_status(bus, ev.et_idx, ET_STATUS_END);
+                    self.raise_irq_bits(INT_SCH_PROG_END);
+                    if bt_trace_enabled() {
+                        eprintln!(
+                            "[bt] radio: ET {} end (clkn={})",
+                            ev.et_idx,
+                            Self::clkn_at(elapsed)
+                        );
+                    }
+                    self.radio = None;
+                }
+            }
+        }
+    }
+
+    /// Cycles from `elapsed` to the next thing the radio engine must do, or
+    /// `None` when it is idle. Zero when an entry is queued but not decoded —
+    /// decoding needs the bus, which only [`Peripheral::on_event`] has.
+    fn cycles_to_radio_deadline(&self, elapsed: u64) -> Option<u64> {
+        match self.radio {
+            Some(ev) => Some(ev.deadline.saturating_sub(elapsed)),
+            None if !self.prog_queue.is_empty() => Some(0),
+            None => None,
+        }
     }
 }
 
@@ -835,7 +1469,7 @@ impl Peripheral for Esp32c3Bt {
         &mut self,
         event_token: u32,
         sched: &mut crate::sched::EventScheduler,
-        _bus: &mut dyn crate::Bus,
+        bus: &mut dyn crate::Bus,
     ) -> crate::sched::EventResult {
         if !self.scheduler_mode() || event_token != self.arm_seq {
             // Stale chain (re-armed since this event was scheduled): die.
@@ -843,6 +1477,10 @@ impl Peripheral for Esp32c3Bt {
         }
         let elapsed = self.elapsed_at(sched.now());
         self.latch_at(elapsed);
+        // The radio engine runs here and only here: decoding a programmed
+        // event means reading the controller's exchange memory, and `on_event`
+        // is the one hook that is handed the bus.
+        self.service_radio(elapsed, bus);
         crate::sched::EventResult {
             reschedule_delay: self.cycles_to_next_deadline(elapsed),
             ..Default::default()
@@ -894,8 +1532,10 @@ impl Peripheral for Esp32c3Bt {
             // Derived, not stored: silicon reads INTSTAT == INTRAWSTAT & INTCNTL.
             INTSTAT => self.int_status(),
             INTRAWSTAT => self.int_raw.get(),
-            // W1C registers read back 0 on a live advertising part.
-            INTACK | INTACK_FIFO => 0,
+            // W1C / command registers read back 0 on a live advertising part.
+            // `+0x100` is the programmed-event push: the ROM writes
+            // `0x8000_000D` and the live window still reads 0.
+            INTACK | INTACK_FIFO | PROG_PUSH => 0,
             IRQ_FIFO => self.irq_fifo_word(),
             _ => self.reg(offset),
         })
@@ -955,6 +1595,18 @@ impl Peripheral for Esp32c3Bt {
             // neither is a storage slot, so a write to them is dropped rather
             // than allowed to shadow the derivation.
             INTSTAT | INTRAWSTAT => {}
+            // Self-clearing command: execute the exchange-table entry named in
+            // bits[3:0]. Silicon reads `+0x100` back as 0, so nothing is
+            // stored. The entry itself cannot be decoded here — that needs the
+            // bus — so it is queued and `on_event` picks it up at once.
+            PROG_PUSH => {
+                if value & PROG_PUSH_GO != 0 {
+                    let idx = value & PROG_PUSH_IDX;
+                    if (self.prog_queue.len() as u32) < ET_ENTRIES {
+                        self.prog_queue.push_back(idx);
+                    }
+                }
+            }
             // Bit 0 pops the head entry. Bit 31 is the ISR's fatal-path flag;
             // it is stored nowhere because nothing here reads it back.
             IRQ_FIFO => {
@@ -1385,6 +2037,313 @@ mod tests {
         assert_eq!(bt.read_u32(INTSTAT).unwrap(), 0, "stale token is inert");
         bt.on_event(fresh, &mut sched, &mut bus);
         assert_eq!(bt.read_u32(INTSTAT).unwrap(), INT_TIMER_HUS);
+    }
+
+    // ── Programmed radio events ─────────────────────────────────────────────
+
+    /// A flat byte-addressed memory standing in for the C3's data RAM, so the
+    /// radio engine can be driven without a whole `Machine`.
+    #[derive(Default)]
+    struct RamBus {
+        ram: std::collections::HashMap<u64, u8>,
+        cfg: crate::SimulationConfig,
+    }
+
+    impl RamBus {
+        fn put(&mut self, addr: u64, bytes: &[u8]) {
+            for (i, b) in bytes.iter().enumerate() {
+                self.ram.insert(addr + i as u64, *b);
+            }
+        }
+        fn u16_at(&self, addr: u64) -> u16 {
+            u16::from(*self.ram.get(&addr).unwrap_or(&0))
+                | (u16::from(*self.ram.get(&(addr + 1)).unwrap_or(&0)) << 8)
+        }
+    }
+
+    impl crate::Bus for RamBus {
+        fn read_u8(&self, addr: u64) -> SimResult<u8> {
+            Ok(*self.ram.get(&addr).unwrap_or(&0))
+        }
+        fn write_u8(&mut self, addr: u64, value: u8) -> SimResult<()> {
+            self.ram.insert(addr, value);
+            Ok(())
+        }
+        fn tick_peripherals(&mut self) -> Vec<u32> {
+            Vec::new()
+        }
+        fn execute_dma(&mut self, _requests: &[crate::DmaRequest]) -> SimResult<()> {
+            Ok(())
+        }
+        fn config(&self) -> &crate::SimulationConfig {
+            &self.cfg
+        }
+    }
+
+    /// Base CPU address the fixture maps exchange memory at — the same
+    /// `0x3FC0_0000` data-RAM window `r_emi_get_mem_addr_by_offset` resolves
+    /// into. Offset chosen to match the live part's `0x3FCA_5C94`.
+    const FIXTURE_EM_BASE: u64 = 0x3FCA_5C94;
+
+    /// Program a base register that maps the 1 KiB exchange-memory bucket
+    /// starting at `em_off` to `cpu_addr`, in the exact encoding
+    /// `r_emi_get_mem_addr_by_offset` decodes:
+    /// bits[31:18] = `em_off >> 2`, bits[17:0] = `cpu_addr >> 2`.
+    fn em_base_reg(em_off: u32, cpu_addr: u64) -> u32 {
+        ((em_off >> 2) << 18) | (((cpu_addr as u32) & EM_RAM_ADDR_MASK) >> 2)
+    }
+
+    /// Stage exactly what the live board had staged: the exchange table at EM
+    /// `0x000`, the control structure at `0x400`, the TX descriptor at
+    /// `0x1400` and the advertising payload at `0x2400`, then push entry 0.
+    ///
+    /// Every byte here is a value read off board `38:44:be:42:f5:58` on
+    /// 2026-08-02 (silicon capture), except the start time, which is set to
+    /// the caller's `start_clkn` so the test can drive the schedule.
+    fn stage_advertising_event(bt: &mut Esp32c3Bt, bus: &mut RamBus, start_clkn: u32) {
+        // Exchange-memory windows. Laid out non-contiguously on purpose: the
+        // live part's allocator packs them (EM 0x400 lands only 0x158 bytes
+        // after EM 0x000), so a model that assumed a flat map would break.
+        let map = [
+            (0x0000u32, FIXTURE_EM_BASE),
+            (0x0400, FIXTURE_EM_BASE + 0x158),
+            (0x1400, FIXTURE_EM_BASE + 0x800),
+            (0x2400, FIXTURE_EM_BASE + 0xC00),
+        ];
+        for (i, (em_off, cpu)) in map.iter().enumerate() {
+            bt.write_u32(EM_BASE_REG_BANK_A + (i as u64) * 4, em_base_reg(*em_off, *cpu))
+                .unwrap();
+        }
+
+        // ET entry 0: status 0, start at `start_clkn` with fine offset 624
+        // (= hus 0), CS pointer 0x200 (EM 0x400), duration 0x0AF7.
+        let et = FIXTURE_EM_BASE;
+        bus.put(et, &0x2802u16.to_le_bytes()); // +0x0 control, status field 0
+        bus.put(et + 2, &(start_clkn as u16).to_le_bytes());
+        bus.put(et + 4, &(((start_clkn >> 16) & 0x0FFF) as u16).to_le_bytes());
+        bus.put(et + 6, &624u16.to_le_bytes());
+        bus.put(et + 8, &0x0200u16.to_le_bytes());
+        bus.put(et + 10, &0x0AF7u16.to_le_bytes());
+        bus.put(et + 12, &0x0C00u16.to_le_bytes());
+        bus.put(et + 14, &0x0F00u16.to_le_bytes());
+
+        // Control structure, verbatim from the live part.
+        let cs = FIXTURE_EM_BASE + 0x158;
+        bus.put(cs, &0x0404u16.to_le_bytes());
+        bus.put(cs + 0x06, &[0x5a, 0xf5, 0x42, 0xbe, 0x44, 0x38]);
+        bus.put(cs + 0x0C, &0x8E89_BED6u32.to_le_bytes());
+        bus.put(cs + 0x10, &[0x55, 0x55, 0x55]);
+        bus.put(cs + 0x16, &0x8027u16.to_le_bytes()); // channel 39
+        bus.put(cs + 0x1C, &0x1400u16.to_le_bytes());
+
+        // TX descriptor: ADV_IND (header 0x20), 15 bytes, payload at 0x2400.
+        let txd = FIXTURE_EM_BASE + 0x800;
+        bus.put(txd, &0x140Eu16.to_le_bytes());
+        bus.put(txd + 2, &0x0F20u16.to_le_bytes());
+        bus.put(txd + 4, &0x2400u16.to_le_bytes());
+
+        // The advertising payload the live board had staged.
+        bus.put(
+            FIXTURE_EM_BASE + 0xC00,
+            &[0x02, 0x01, 0x06, 0x05, 0x12, 0x20, 0x00, 0x40, 0x00],
+        );
+    }
+
+    /// The base-register window is decoded exactly as
+    /// `r_emi_get_mem_addr_by_offset` does, including the packed non-contiguous
+    /// layout the live allocator produces. Values are the live registers.
+    #[test]
+    fn exchange_memory_offsets_resolve_through_the_base_registers() {
+        let mut bt = Esp32c3Bt::new();
+        // Silicon capture 2026-08-02, board `38:44:be:42:f5:58`.
+        for (i, reg) in [
+            0x0002_9725u32,
+            0x0402_977B,
+            0x0C02_988D,
+            0x1002_992B,
+            0x1402_9961,
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            bt.write_u32(EM_BASE_REG_BANK_A + (i as u64) * 4, reg)
+                .unwrap();
+        }
+        assert_eq!(bt.em_cpu_addr(0x0000), Some(0x3FCA_5C94));
+        assert_eq!(bt.em_cpu_addr(0x0400), Some(0x3FCA_5DEC));
+        assert_eq!(bt.em_cpu_addr(0x1400), Some(0x3FCA_6584));
+        // Bucket 2 (EM 0x800..0xBFF) is served by the register that covers
+        // 0x400 — exactly what `em_base_reg_lut` encodes.
+        assert_eq!(bt.em_cpu_addr(0x0800), Some(0x3FCA_5DEC + 0x400));
+        // Offsets inside a region are byte-addressable.
+        assert_eq!(bt.em_cpu_addr(0x0406), Some(0x3FCA_5DEC + 6));
+        // Nothing mapped yet -> no address, rather than a fabricated one.
+        assert_eq!(Esp32c3Bt::new().em_cpu_addr(0), None);
+    }
+
+    /// `+0x100` is a self-clearing command register: `r_sch_prog_ble_push`
+    /// writes `0x8000_0000 | idx` and the live window reads back 0.
+    #[test]
+    fn prog_push_is_a_command_register() {
+        let mut bt = Esp32c3Bt::new();
+        bt.write_u32(PROG_PUSH, 0x8000_000D).unwrap();
+        assert_eq!(bt.read_u32(PROG_PUSH).unwrap(), 0, "reads 0 on silicon");
+        assert_eq!(bt.prog_queue.front().copied(), Some(13));
+        // Without the go bit nothing is queued.
+        bt.prog_queue.clear();
+        bt.write_u32(PROG_PUSH, 0x0000_0003).unwrap();
+        assert!(bt.prog_queue.is_empty());
+    }
+
+    /// The whole milestone in one test: a pushed event runs at its programmed
+    /// instant, drives its exchange-table status through the ROM's own state
+    /// values, emits the PDU the controller staged, and raises `sch_prog_end`
+    /// through the IRQ FIFO after its programmed duration.
+    #[cfg(feature = "event-scheduler")]
+    #[test]
+    fn a_programmed_event_transmits_the_staged_pdu_and_ends() {
+        use crate::sched::EventScheduler;
+
+        let clock = CycleClock::default();
+        let mut bt = advertising_part(&clock);
+        let air = crate::peripherals::ble_air::BleAirBus::new();
+        bt.air = air.clone();
+        let mut bus = RamBus::default();
+        let mut sched = EventScheduler::new();
+
+        let start: u32 = 200;
+        stage_advertising_event(&mut bt, &mut bus, start);
+        bt.write_u32(PROG_PUSH, 0x8000_0000).unwrap();
+
+        // The push schedules immediately: the entry cannot be decoded without
+        // the bus, so the engine asks for a zero-delay event to do it.
+        let events = bt.take_scheduled_events();
+        let token = events[0].1;
+        assert_eq!(events[0].0, 0, "decode the entry at once");
+
+        // Before the programmed instant: decoded, but nothing has happened.
+        let before = (start as u64 - 1) * CYCLES_PER_CLKN_TICK;
+        sched.advance_to(before);
+        clock.publish(before);
+        let res = bt.on_event(token, &mut sched, &mut bus);
+        assert!(air.trace_snapshot().is_empty(), "not transmitted early");
+        assert_eq!(bt.read_u32(INTSTAT).unwrap() & INT_SCH_PROG_END, 0);
+        assert_eq!(
+            res.reschedule_delay,
+            Some(CYCLES_PER_CLKN_TICK),
+            "chained to the programmed instant"
+        );
+
+        // At the programmed instant: status 2 and the PDU is on the air.
+        let at = start as u64 * CYCLES_PER_CLKN_TICK;
+        sched.advance_to(at);
+        clock.publish(at);
+        let res = bt.on_event(token, &mut sched, &mut bus);
+        assert_eq!(
+            (bus.u16_at(FIXTURE_EM_BASE) & ET_STATUS_FIELD) >> ET_STATUS_SHIFT,
+            ET_STATUS_ONGOING,
+            "the core owns the status field while the event runs"
+        );
+        let frames = air.trace_snapshot();
+        assert_eq!(frames.len(), 1, "exactly one frame per event");
+        let f = &frames[0];
+        assert_eq!(f.channel, 39, "the channel the hop word named");
+        assert_eq!(f.access_address, 0x8E89_BED6);
+        assert_eq!(f.crc_init, 0x0055_5555);
+        assert_eq!(
+            f.pdu,
+            vec![
+                0x20, 0x0f, // ADV_IND with ChSel, 15 bytes
+                0x5a, 0xf5, 0x42, 0xbe, 0x44, 0x38, // AdvA from CS+0x06
+                0x02, 0x01, 0x06, 0x05, 0x12, 0x20, 0x00, 0x40, 0x00, // AdvData
+            ],
+            "the real bytes the controller staged, not a synthesised packet"
+        );
+        // No `sch_prog_tx`: `r_lld_adv_frm_cbk` asserts on irq_type 3.
+        assert_eq!(bt.read_u32(INTRAWSTAT).unwrap() & 0x2, 0);
+        assert_eq!(bt.read_u32(INTSTAT).unwrap() & INT_SCH_PROG_END, 0, "not over");
+
+        // The duration is the one the entry programmed: 0x0AF7 units of two
+        // half-µs = 2807 µs.
+        let duration = 0x0AF7 * 2 * CYCLES_PER_FINE_TICK;
+        assert_eq!(res.reschedule_delay, Some(duration));
+
+        // At the end: status 3 and `sch_prog_end`, queued in the FIFO exactly
+        // as `r_rwble_isr` expects to find it.
+        let end = at + duration;
+        sched.advance_to(end);
+        clock.publish(end);
+        bt.on_event(token, &mut sched, &mut bus);
+        assert_eq!(
+            (bus.u16_at(FIXTURE_EM_BASE) & ET_STATUS_FIELD) >> ET_STATUS_SHIFT,
+            ET_STATUS_END,
+        );
+        assert_eq!(bt.read_u32(INTSTAT).unwrap() & INT_SCH_PROG_END, INT_SCH_PROG_END);
+        assert_eq!(bt.matrix_irq_sources(), vec![RWBLE_IRQ_SOURCE]);
+        assert_eq!(
+            bt.read_u32(IRQ_FIFO).unwrap(),
+            0x0000_803E,
+            "cnt 1, rem 15, bitmap 0x20 — the exact word silicon read mid-event"
+        );
+        assert_eq!(air.trace_snapshot().len(), 1, "one event, one frame");
+    }
+
+    /// The model must not invent an event it cannot read. With exchange memory
+    /// unmapped the push is dropped and nothing is completed — firmware stalls
+    /// visibly instead of being lied to.
+    #[cfg(feature = "event-scheduler")]
+    #[test]
+    fn an_undecodable_event_is_dropped_not_faked() {
+        use crate::sched::EventScheduler;
+
+        let clock = CycleClock::default();
+        let mut bt = advertising_part(&clock);
+        let mut bus = RamBus::default();
+        let mut sched = EventScheduler::new();
+        bt.write_u32(PROG_PUSH, 0x8000_0000).unwrap();
+        let token = bt.take_scheduled_events()[0].1;
+        clock.publish(CYCLES_PER_CLKN_TICK);
+        sched.advance_to(CYCLES_PER_CLKN_TICK);
+        bt.on_event(token, &mut sched, &mut bus);
+        assert_eq!(
+            bt.read_u32(INTRAWSTAT).unwrap() & INT_SCH_PROG_END,
+            0,
+            "no end interrupt out of an entry that was never read"
+        );
+        assert!(bt.radio.is_none());
+    }
+
+    /// A control structure whose format is not the measured legacy-advertising
+    /// one transmits nothing — but the event still completes, so an unmodelled
+    /// activity cannot wedge the controller.
+    #[cfg(feature = "event-scheduler")]
+    #[test]
+    fn an_unmeasured_cs_format_transmits_nothing_but_still_ends() {
+        use crate::sched::EventScheduler;
+
+        let clock = CycleClock::default();
+        let mut bt = advertising_part(&clock);
+        let air = crate::peripherals::ble_air::BleAirBus::new();
+        bt.air = air.clone();
+        let mut bus = RamBus::default();
+        let mut sched = EventScheduler::new();
+        stage_advertising_event(&mut bt, &mut bus, 0);
+        // Anything but the measured 0x04.
+        bus.put(FIXTURE_EM_BASE + 0x158, &0x0405u16.to_le_bytes());
+        bt.write_u32(PROG_PUSH, 0x8000_0000).unwrap();
+        let token = bt.take_scheduled_events()[0].1;
+        let end = 0x0AF7 * 2 * CYCLES_PER_FINE_TICK;
+        for at in [0, end] {
+            sched.advance_to(at);
+            clock.publish(at);
+            bt.on_event(token, &mut sched, &mut bus);
+        }
+        assert!(air.trace_snapshot().is_empty(), "no invented frame");
+        assert_eq!(
+            bt.read_u32(INTRAWSTAT).unwrap() & INT_SCH_PROG_END,
+            INT_SCH_PROG_END,
+            "the event still ends"
+        );
     }
 
     /// CLKN must be monotonic — the event scheduler re-reads it to decide
