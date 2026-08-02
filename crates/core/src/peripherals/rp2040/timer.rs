@@ -298,6 +298,34 @@ impl Peripheral for Rp2040Timer {
         self.advance_cycles(1)
     }
 
+    /// Oracle settle path: latch alarm matches and re-assert the held level
+    /// even under scheduler mode.
+    ///
+    /// The bare-CPU oracle has no `Machine` to drain `on_event` and, while it
+    /// spins through filler instructions, issues no MMIO write to trigger
+    /// [`Peripheral::sync_to`] — so the only `&mut` entry point left is this
+    /// forced tick. Reads alone cannot do it: `advance_counter_to` is `&self`
+    /// and moves the free-running counter WITHOUT latching `INTR`. Pull the
+    /// elapsed base ticks straight off the bus-published clock (the oracle
+    /// advances it once per executed instruction) and run the same
+    /// `advance_cycles` the `on_event` path runs. Anchor-based, so it cannot
+    /// double-count against the read-side lazy sync.
+    fn tick_elapsed_forced(&mut self, cycles: u64) -> PeripheralTickResult {
+        if !self.scheduler_mode() {
+            return self.tick_elapsed(cycles);
+        }
+        let Some(now) = self.clock.as_ref().map(|c| c.now()) else {
+            return self.level_irqs();
+        };
+        let anchor = self.anchor.get();
+        if now > anchor {
+            self.anchor.set(now);
+            return self.advance_cycles(now - anchor);
+        }
+        // Level re-pend without counter motion — mirrors `on_event`.
+        self.level_irqs()
+    }
+
     fn uses_scheduler(&self) -> bool {
         self.scheduler_mode()
     }
