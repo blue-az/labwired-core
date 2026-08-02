@@ -680,7 +680,7 @@ impl SystemBus {
     /// Attach a UART stream device (e.g. an inter-chip wire endpoint) to the
     /// UART peripheral registered under `uart_id`. This is the post-build
     /// counterpart to `AttachCtx::uart().attach_stream(..)`, used by
-    /// `World::from_manifest` to wire `UartCrossLink` endpoints between nodes.
+    /// `World::from_manifest` to wire cross-link endpoints between nodes.
     /// Errors if no such peripheral exists or it is not a UART.
     pub fn attach_uart_stream_by_id(
         &mut self,
@@ -690,15 +690,16 @@ impl SystemBus {
         let idx = self
             .find_peripheral_index_by_name(uart_id)
             .ok_or_else(|| anyhow::anyhow!("no peripheral '{uart_id}'"))?;
-        let any = self.peripherals[idx]
+        // Bind to the CAPABILITY, not a concrete struct. Downcasting to `Uart`
+        // used to reject every family with its own UART model — an ESP32-C3's
+        // `uart1` reported "is not a UART", so two C3s could not be linked at
+        // all. Any model that implements `UartStreamHost` is wireable here.
+        let uart = self.peripherals[idx]
             .dev
-            .as_any_mut()
-            .ok_or_else(|| anyhow::anyhow!("peripheral '{uart_id}' is not introspectable"))?;
-        let uart = any
-            .downcast_mut::<crate::peripherals::uart::Uart>()
+            .as_uart_stream_host()
             .ok_or_else(|| anyhow::anyhow!("peripheral '{uart_id}' is not a UART"))?;
-        uart.set_sink(None, false);
-        uart.attach_stream(dev);
+        uart.detach_console_sink();
+        uart.attach_stream_device(dev);
         // This is the one post-build path that appends to a UART's
         // `attached_streams`, so the `iolink_master_attached` cache that
         // `requires_cycle_accurate` reads would otherwise go stale here — a
