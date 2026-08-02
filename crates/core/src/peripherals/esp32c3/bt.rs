@@ -2274,11 +2274,15 @@ mod tests {
     /// A flat byte-addressed memory standing in for the C3's data RAM, so the
     /// radio engine can be driven without a whole `Machine`.
     #[derive(Default)]
+    // Fixture for the event-scheduler tests only; dead without the feature.
+    #[cfg(feature = "event-scheduler")]
     struct RamBus {
         ram: std::collections::HashMap<u64, u8>,
         cfg: crate::SimulationConfig,
     }
 
+    // Fixture for the event-scheduler tests only; dead without the feature.
+    #[cfg(feature = "event-scheduler")]
     impl RamBus {
         fn put(&mut self, addr: u64, bytes: &[u8]) {
             for (i, b) in bytes.iter().enumerate() {
@@ -2291,6 +2295,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "event-scheduler")]
     impl crate::Bus for RamBus {
         fn read_u8(&self, addr: u64) -> SimResult<u8> {
             Ok(*self.ram.get(&addr).unwrap_or(&0))
@@ -2313,12 +2318,17 @@ mod tests {
     /// Base CPU address the fixture maps exchange memory at — the same
     /// `0x3FC0_0000` data-RAM window `r_emi_get_mem_addr_by_offset` resolves
     /// into. Offset chosen to match the live part's `0x3FCA_5C94`.
+    // Fixture for the event-scheduler tests only; dead without the feature.
+    #[cfg(feature = "event-scheduler")]
     const FIXTURE_EM_BASE: u64 = 0x3FCA_5C94;
 
     /// Program a base register that maps the 1 KiB exchange-memory bucket
     /// starting at `em_off` to `cpu_addr`, in the exact encoding
     /// `r_emi_get_mem_addr_by_offset` decodes:
     /// bits[31:18] = `em_off >> 2`, bits[17:0] = `cpu_addr >> 2`.
+    // Only the event-scheduler tests stage a programmed event; without the
+    // feature this helper has no caller and clippy is right to say so.
+    #[cfg(feature = "event-scheduler")]
     fn em_base_reg(em_off: u32, cpu_addr: u64) -> u32 {
         ((em_off >> 2) << 18) | (((cpu_addr as u32) & EM_RAM_ADDR_MASK) >> 2)
     }
@@ -2330,6 +2340,9 @@ mod tests {
     /// Every byte here is a value read off board `38:44:be:42:f5:58` on
     /// 2026-08-02 (silicon capture), except the start time, which is set to
     /// the caller's `start_clkn` so the test can drive the schedule.
+    // Only the event-scheduler tests stage a programmed event; without the
+    // feature this helper has no caller and clippy is right to say so.
+    #[cfg(feature = "event-scheduler")]
     fn stage_advertising_event(bt: &mut Esp32c3Bt, bus: &mut RamBus, start_clkn: u32) {
         // Exchange-memory windows. Laid out non-contiguously on purpose: the
         // live part's allocator packs them (EM 0x400 lands only 0x158 bytes
