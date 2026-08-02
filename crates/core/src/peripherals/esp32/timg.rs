@@ -832,7 +832,7 @@ mod tests {
     #[test]
     fn lact_offsets_are_plain_storage_without_with_lact() {
         let mut t = Timg::new(0x6001_F000); // C3 TIMG0 base — no with_lact()
-        // Enable-looking bits in what the C3 calls INT_ENA_TIMERS.
+                                            // Enable-looking bits in what the C3 calls INT_ENA_TIMERS.
         write_u32(&mut t, 0x70, 0xFFFF_FFFF);
         // What the C3 calls INT_ST_TIMERS / INT_CLR_TIMERS.
         write_u32(&mut t, 0x78, 0x1111_1111);
@@ -842,9 +842,21 @@ mod tests {
         }
         // A write to RTCCALICFG2 must NOT latch a counter over 0x78/0x7C.
         write_u32(&mut t, 0x80, 1);
-        assert_eq!(read_u32(&t, 0x78), 0x1111_1111, "INT_ST_TIMERS was clobbered by a LACT latch");
-        assert_eq!(read_u32(&t, 0x7C), 0x2222_2222, "INT_CLR_TIMERS was clobbered by a LACT latch");
-        assert_eq!(t.counter_lact(), 0, "LACT advanced on a chip that has no LACT");
+        assert_eq!(
+            read_u32(&t, 0x78),
+            0x1111_1111,
+            "INT_ST_TIMERS was clobbered by a LACT latch"
+        );
+        assert_eq!(
+            read_u32(&t, 0x7C),
+            0x2222_2222,
+            "INT_CLR_TIMERS was clobbered by a LACT latch"
+        );
+        assert_eq!(
+            t.counter_lact(),
+            0,
+            "LACT advanced on a chip that has no LACT"
+        );
     }
 
     /// ...and LIVE when it is declared, so the guard above is not vacuous.
