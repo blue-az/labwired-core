@@ -388,12 +388,45 @@
 //! samples rather than something the ROM states, and it is only claimed for
 //! the legacy advertising format.
 //!
+//! ### The RX descriptor — EM `0x1000`, 20 bytes, singly linked
+//!
+//! Both `r_lld_scan_process_pkt_rx` and
+//! `r_lld_scan_process_pkt_rx_legacy_adv` reach it with
+//! `emi_get_mem_addr_by_offset(0x1000)` and `idx * 20`, so the base and stride
+//! are ROM constants rather than inferences:
+//!
+//! ```text
+//! +0x00 next descriptor EM offset in bits[14:0]; bit15 is an availability
+//!       flag firmware sets (r_lld_update_rxbuf asserts lhu >> 15 != 0)
+//! +0x02 reception status. r_lld_scan_process_pkt_rx rejects the packet on
+//!       (status & 0x402D) != 0. Every populated live descriptor read 0x8040,
+//!       which passes that test — the measured word for a good reception
+//! +0x04 (payload_len << 8) | pdu_header_byte, the mirror of the TX
+//!       descriptor's +0x2. Live 0x0C03 = a 12-byte SCAN_REQ (type 3)
+//! +0x08 32-bit CLKN receive timestamp (live 0x00F888AE, just behind the
+//!       0x00F88A5D the part's own clock read at the same halt)
+//! +0x12 EM offset of the received PAYLOAD — no header bytes; the ROM
+//!       memcpy's six bytes straight off it to get the peer address
+//! ```
+//!
+//! Which descriptor is next is the register that used to be a mystery:
+//! **`+0x024`** — `r_lld_update_rxbuf` reads it, masks `& 0x7FFF` and recovers
+//! the index as `(ptr - 0x1000) / 20`. Every value ever sampled on the live
+//! part is exactly `0x1000 + 20*n`, and the twin's own firmware seeds it with
+//! `+0x024 <= 0x1000` during bring-up. The earlier note calling it "live but
+//! not monotonic, so not a counter" was right that it is not a counter, and
+//! the ROM now says what it is.
+//!
 //! ### What the model does with a pushed event
 //!
 //! At the programmed instant it writes status 2, walks
 //! ET → CS → TX descriptor → payload buffer, emits the PDU onto the shared air
-//! (see [`crate::peripherals::ble_air`]), and after the programmed duration
-//! writes status 3 and raises `sch_prog_end` (bit 5) through the IRQ FIFO. It
+//! (see [`crate::peripherals::ble_air`]), then — if the air is carrying a frame
+//! on the channel and access address this event's control structure programmed
+//! and this controller did not itself transmit it — writes that frame into the
+//! descriptor at `+0x024`, advances `+0x024` along the ring, and raises
+//! `sch_prog_rx` (bit 2). After the programmed duration it writes status 3 and
+//! raises `sch_prog_end` (bit 5) through the IRQ FIFO. It
 //! raises **no** `sch_prog_tx` (bit 1), and the ROM is why:
 //! `r_lld_adv_frm_cbk` (`0x4001_7550`) handles irq_type 0/1 (end), silently
 //! ignores 2 (RX) and forwards 4 (skip), and **asserts on anything else** —
@@ -421,20 +454,26 @@
 //! * **Channel sweeping.** A real legacy advertising event transmits on every
 //!   enabled primary advertising channel (37/38/39) within the single
 //!   programmed event; this model emits **one** frame per event, on the channel
-//!   the control structure's hop word names. That word read 39 in every event
-//!   on both the twin and the live part, and no field that would name the
-//!   enabled channel set was identified, so sweeping is idealised away rather
-//!   than faked.
+//!   the control structure's hop word names. Sampling `CS+0x16` six times
+//!   across three seconds of continuous advertising on board
+//!   `38:44:be:42:f5:58` returned `0x8027` — channel 39 — every single time, so
+//!   the firmware demonstrably does not rewrite the hop word between events and
+//!   whatever field the core sweeps from was not identified. Sweeping is
+//!   therefore idealised away rather than faked, and the practical consequence
+//!   is that an advertiser and a scanner in one world only meet on the
+//!   scanner's channel-39 dwell.
 //! * **`+0x32C`.** The controller writes `0x4000_000D` here immediately before
 //!   every push. No ROM routine touches this offset (it comes from ESP-IDF's
 //!   IRAM `libble_app`), so its meaning is unknown. Plain storage.
-//! * **The RX side.** The RX descriptor chain was located (EM `0x1000`, 20-byte
-//!   stride, `+0x0` next pointer with an undetermined bit15 flag, `+0x8`/`+0xA`
-//!   a 32-bit CLKN receive timestamp that matches live scan-request arrival
-//!   times) but **where the core writes the received bytes was not
-//!   determined**, so no frame is ever delivered into exchange memory and
-//!   `sch_prog_rx` (bit 2) is never raised. A scanning controller therefore
-//!   still hears nothing.
+//! * **RX descriptor fields `+0x2` (beyond the ROM's error mask), `+0x6` and
+//!   `+0xC`.** The live values (`0x8040`, `0x26B6`/`0x27BD`, `0xED`/`0x1D`)
+//!   were captured but only `+0x2` is interpreted, and only through the mask
+//!   the ROM itself applies. `+0x6` looks like it could carry RSSI; nothing
+//!   measured says so, so it is left at zero.
+//! * **`+0x2D0`/`+0x2D4`, the RX-buffer hand-back path.**
+//!   `r_lld_update_rxbuf` writes a free descriptor into `+0x2D0` and the model
+//!   ignores it: `sch_prog` interrupt bit 18 (`lld_update_rxbuf_isr`), which is
+//!   what drives that routine, is never raised.
 //! * **Status codes 1, 4, 5, 6** and the `ET+0xE` field are named nowhere that
 //!   was measured, so they are neither written nor interpreted.
 //! * **Event skipping and cancellation.** `sch_prog_skip` (bit 6) is never
@@ -529,6 +568,8 @@ const INT_TIMER_10MS: u32 = 1 << 9;
 const INT_TIMER_HS: u32 = 1 << 10;
 const INT_TIMER_HUS: u32 = 1 << 11;
 
+/// `r_sch_prog_rx_isr` — a programmed event received a frame.
+const INT_SCH_PROG_RX: u32 = 1 << 2;
 /// `r_sch_prog_end_isr` — a programmed radio event ended.
 const INT_SCH_PROG_END: u32 = 1 << 5;
 
@@ -646,6 +687,61 @@ const TXD_DATA_PTR: u32 = 0x4;
 /// declared 25 over a 19-byte buffer.
 const TXD_ADDR_PREFIX_LEN: u16 = 6;
 
+/// `+0x024` — `CURRENTRXDESCPTR`, the exchange-memory offset of the RX
+/// descriptor the core will fill next. `r_lld_update_rxbuf` (`0x4002_13C0`)
+/// reads it, masks `& 0x7FFF`, and recovers the descriptor index as
+/// `(ptr - 0x1000) / 20`. Every value ever sampled on the live part
+/// (`0x1000, 0x1050, 0x1064, 0x108C, 0x10A0, 0x10B4`) is exactly
+/// `0x1000 + 20*n` — which is why this register looked like a non-monotonic
+/// mystery counter before the ROM named it.
+const RX_DESC_PTR: u64 = 0x024;
+/// Address field of [`RX_DESC_PTR`] (`r_lld_update_rxbuf` masks with this).
+const RX_DESC_PTR_MASK: u32 = 0x7FFF;
+
+/// Exchange-memory offset of the RX descriptor array. ROM constant:
+/// `r_lld_scan_process_pkt_rx` and `r_lld_scan_process_pkt_rx_legacy_adv` both
+/// call `emi_get_mem_addr_by_offset(0x1000)` and index it `idx * 20`.
+const EM_RX_DESC_OFFSET: u32 = 0x1000;
+/// Stride of one RX descriptor (`mul idx, 20` at both sites).
+const RX_DESC_BYTES: u32 = 20;
+
+/// RX descriptor `+0x0`: next descriptor, exchange-memory offset in
+/// bits[14:0]. Bit15 is an availability flag firmware sets when it hands the
+/// buffer back (`r_lld_update_rxbuf` asserts `lhu(rxd) >> 15 != 0` and sets
+/// bit15 in the `+0x2D0` write); this model only follows the pointer.
+const RXD_NEXT: u32 = 0x0;
+/// RX descriptor `+0x2`: the reception status word. `r_lld_scan_process_pkt_rx`
+/// rejects the packet when `status & 0x402D != 0`.
+const RXD_STATUS: u32 = 0x2;
+/// The bad-packet mask the ROM applies to [`RXD_STATUS`] (`s7 = 0x402D`).
+const RXD_STATUS_ERROR_MASK: u16 = 0x402D;
+/// The status word the hardware left after a **good** reception, read off the
+/// live part: every populated RX descriptor held `0x8040`, and
+/// `0x8040 & 0x402D == 0`, so the ROM's own error test passes on it. This is
+/// the measured word, not a value picked to make the test pass — what its
+/// individual bits mean was not determined.
+const RXD_STATUS_GOOD: u16 = 0x8040;
+/// The measured good-reception word must clear the ROM's own bad-packet test,
+/// or every frame this model delivers would be dropped by
+/// `r_lld_scan_process_pkt_rx` before firmware ever saw it.
+const _: () = assert!(RXD_STATUS_GOOD & RXD_STATUS_ERROR_MASK == 0);
+/// RX descriptor `+0x4`: `(payload_len << 8) | pdu_header_byte`, the exact
+/// mirror of [`TXD_HEADER`]. `r_lld_scan_process_pkt_rx` takes the PDU type
+/// from `lhu & 0xF`; `r_lld_scan_process_pkt_rx_legacy_adv` takes the
+/// advertising-data length from `(lhu >> 8) - 6` and the address type from
+/// bit 6. Live: `0x0C03` — a 12-byte `SCAN_REQ` (type 3), i.e. ScanA + AdvA.
+const RXD_HEADER: u32 = 0x4;
+/// RX descriptor `+0x8`/`+0xA`: the 32-bit CLKN timestamp of the reception.
+/// Live values (`0x00F8_88AE`, `0x00F8_8939`, `0x00F8_89C0`) sit just behind
+/// the CLKN the part read at the same halt (`0x00F8_8A5D`).
+const RXD_TIMESTAMP: u32 = 0x8;
+/// RX descriptor `+0x12`: exchange-memory offset of the received **payload**
+/// (the PDU body, with no header bytes — those live in [`RXD_HEADER`]).
+/// `r_lld_scan_process_pkt_rx_legacy_adv` reads this halfword and `memcpy`s
+/// six bytes from `emi_get_mem_addr_by_offset(that + 0)` to get the
+/// advertiser address.
+const RXD_DATA_PTR: u32 = 0x12;
+
 /// C3 interrupt-matrix source for the RW-BLE core. Silicon capture
 /// 2026-08-02: `0x600C_2020` (the source-8 map register) reads 5, i.e. the
 /// firmware routes source 8 to CPU line 5.
@@ -722,6 +818,12 @@ const CYCLES_PER_FINE_TICK: u64 = CYCLES_PER_CLKN_TICK / FINE_TICKS_PER_CLKN;
 /// Process-cached `LABWIRED_BT_TRACE` gate. Read ONCE per process — the write
 /// path is hot and `std::env::var` is a syscall-backed lookup (same reasoning
 /// as the WiFi MAC's `rxbuf_trace_enabled`).
+/// Hand every controller instance a distinct identity on the shared air.
+fn next_node_id() -> u64 {
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+    NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+}
+
 fn bt_trace_enabled() -> bool {
     static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     *ENABLED.get_or_init(|| std::env::var("LABWIRED_BT_TRACE").is_ok())
@@ -795,6 +897,13 @@ pub struct Esp32c3Bt {
     radio: Option<RadioEvent>,
     /// Duration of [`Self::radio`], in CPU cycles, decoded from `ET + 0xA`.
     radio_duration: u64,
+    /// Sequence number of the oldest air frame this controller has not looked
+    /// at yet. The air broadcasts, so advancing this consumes nothing for any
+    /// other listener.
+    rx_cursor: u64,
+    /// This controller's identity on the air, so it never decodes its own
+    /// transmission.
+    node_id: u64,
     /// The shared air this controller transmits into and listens on.
     air: BleAirBus,
 }
@@ -836,6 +945,8 @@ impl Esp32c3Bt {
             prog_queue: VecDeque::new(),
             radio: None,
             radio_duration: 0,
+            rx_cursor: 0,
+            node_id: next_node_id(),
             air: default_ble_air_bus().clone(),
         }
     }
@@ -1302,11 +1413,96 @@ impl Esp32c3Bt {
         }
         self.air.transmit(BleAirFrame {
             seq: 0,
+            source: self.node_id,
             channel,
             access_address,
             crc_init,
             pdu,
         });
+        true
+    }
+
+    /// Deliver one air frame this event's control structure is listening for,
+    /// if the air has one this controller has not seen. Returns `true` if a
+    /// frame was written into exchange memory.
+    ///
+    /// The write-back is the mirror of the transmit path and every field is
+    /// ROM-attested (see the constants): the descriptor at `+0x024` gets the
+    /// status word a good reception leaves, `(len << 8) | header`, the CLKN
+    /// timestamp, and the payload bytes at the exchange-memory offset its
+    /// `+0x12` names — then `+0x024` advances along the descriptor ring.
+    fn receive_event(&mut self, bus: &mut dyn Bus, idx: u32, elapsed: u64) -> bool {
+        let et = Self::et_entry(idx);
+        let Some(cs_ptr) = self.em_read_u16(bus, et + ET_CS_PTR) else {
+            return false;
+        };
+        let cs = u32::from(cs_ptr) * 2;
+        let Some(access_address) = self.em_read_u32(bus, cs + CS_ACCESS_ADDR) else {
+            return false;
+        };
+        let channel = (self
+            .em_read_u16(bus, cs + CS_HOP_CTRL)
+            .unwrap_or_default()
+            & CS_CHANNEL_MASK) as u8;
+
+        // The descriptor the core would fill next. Below the array base it has
+        // not been programmed, so there is nowhere honest to put a frame.
+        let rxd = self.reg(RX_DESC_PTR) & RX_DESC_PTR_MASK;
+        if rxd < EM_RX_DESC_OFFSET || (rxd - EM_RX_DESC_OFFSET) % RX_DESC_BYTES != 0 {
+            return false;
+        }
+        let Some(data_ptr) = self.em_read_u16(bus, rxd + RXD_DATA_PTR) else {
+            return false;
+        };
+        if data_ptr == 0 {
+            return false;
+        }
+
+        let Some(frame) = self
+            .air
+            .receive_from(channel, access_address, self.rx_cursor, self.node_id)
+        else {
+            return false;
+        };
+        self.rx_cursor = frame.seq + 1;
+        if frame.pdu.len() < 2 {
+            return false;
+        }
+        let header = frame.pdu[0];
+        let payload = &frame.pdu[2..];
+        let len = payload.len() as u16;
+
+        let data_off = u32::from(data_ptr & 0x7FFF);
+        for (i, b) in payload.iter().enumerate() {
+            let Some(addr) = self.em_cpu_addr(data_off + i as u32) else {
+                return false;
+            };
+            if bus.write_u8(addr, *b).is_err() {
+                return false;
+            }
+        }
+        let clkn = Self::clkn_at(elapsed);
+        let _ = self.em_write_u16(bus, rxd + RXD_HEADER, (len << 8) | u16::from(header));
+        let _ = self.em_write_u16(bus, rxd + RXD_STATUS, RXD_STATUS_GOOD);
+        let _ = self.em_write_u16(bus, rxd + RXD_TIMESTAMP, clkn as u16);
+        let _ = self.em_write_u16(bus, rxd + RXD_TIMESTAMP + 2, (clkn >> 16) as u16);
+
+        // Advance the core's descriptor pointer along the ring the firmware
+        // linked, preserving whatever the register's high bits hold.
+        if let Some(next) = self.em_read_u16(bus, rxd + RXD_NEXT) {
+            let keep = self.reg(RX_DESC_PTR) & !RX_DESC_PTR_MASK;
+            if let Some(slot) = self.regs.get_mut((RX_DESC_PTR / 4) as usize) {
+                *slot = keep | (u32::from(next) & RX_DESC_PTR_MASK);
+            }
+        }
+
+        if bt_trace_enabled() {
+            let hex: String = frame.pdu.iter().map(|b| format!("{b:02x} ")).collect();
+            eprintln!(
+                "[bt] radio RX ch{channel} aa={access_address:#010x} rxd={rxd:#06x} \
+                 et={idx} pdu={hex}"
+            );
+        }
         true
     }
 
@@ -1356,6 +1552,15 @@ impl Esp32c3Bt {
                     // here stopped the controller dead with that exact assert.
                     // Which event types DO raise it was not determined.
                     self.transmit_event(bus, ev.et_idx);
+                    // A listening event picks up whatever the air is carrying
+                    // on the channel and access address its control structure
+                    // programmed. `sch_prog_rx` (bit 2) is raised only when a
+                    // frame was actually written into exchange memory —
+                    // `r_lld_adv_frm_cbk` ignores irq_type 2 with a bare
+                    // `ret`, so it is safe for an advertiser too.
+                    if self.receive_event(bus, ev.et_idx, elapsed) {
+                        self.raise_irq_bits(INT_SCH_PROG_RX);
+                    }
                     self.radio = Some(RadioEvent {
                         phase: RadioPhase::Running,
                         deadline: ev.deadline + self.radio_duration,
@@ -2343,6 +2548,112 @@ mod tests {
             bt.read_u32(INTRAWSTAT).unwrap() & INT_SCH_PROG_END,
             INT_SCH_PROG_END,
             "the event still ends"
+        );
+    }
+
+    /// A listening event writes the air frame into the RX descriptor at
+    /// `+0x024` in the exact layout the ROM reads back, advances the pointer
+    /// along the ring, and raises `sch_prog_rx`.
+    #[cfg(feature = "event-scheduler")]
+    #[test]
+    fn a_listening_event_writes_the_frame_into_the_rx_descriptor() {
+        use crate::peripherals::ble_air::{BleAirBus, BleAirFrame};
+        use crate::sched::EventScheduler;
+
+        let clock = CycleClock::default();
+        let mut bt = advertising_part(&clock);
+        let air = BleAirBus::new();
+        bt.air = air.clone();
+        let mut bus = RamBus::default();
+        let mut sched = EventScheduler::new();
+        stage_advertising_event(&mut bt, &mut bus, 0);
+
+        // Map the RX descriptor array (EM 0x1000) and a receive buffer, then
+        // seed `+0x024` the way the twin's own bring-up does.
+        let rxd_cpu = FIXTURE_EM_BASE + 0x1000;
+        let rxbuf_cpu = FIXTURE_EM_BASE + 0x1400;
+        bt.write_u32(EM_BASE_REG_BANK_A + 16, em_base_reg(0x1000, rxd_cpu))
+            .unwrap();
+        bt.write_u32(EM_BASE_REG_BANK_A + 20, em_base_reg(0x1C00, rxbuf_cpu))
+            .unwrap();
+        bus.put(rxd_cpu, &0x9014u16.to_le_bytes()); // next = 0x1014
+        bus.put(rxd_cpu + 0x12, &0x1C00u16.to_le_bytes()); // payload buffer
+        bt.write_u32(RX_DESC_PTR, 0x0000_1000).unwrap();
+
+        // Somebody else advertises on the channel this control structure names.
+        air.transmit(BleAirFrame {
+            seq: 0,
+            source: bt.node_id + 1,
+            channel: 39,
+            access_address: 0x8E89_BED6,
+            crc_init: 0x0055_5555,
+            pdu: vec![0x20, 0x07, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x42],
+        });
+
+        bt.write_u32(PROG_PUSH, 0x8000_0000).unwrap();
+        let token = bt.take_scheduled_events()[0].1;
+        sched.advance_to(0);
+        clock.publish(0);
+        bt.on_event(token, &mut sched, &mut bus);
+
+        assert_eq!(
+            bus.u16_at(rxd_cpu + u64::from(RXD_HEADER)),
+            (7 << 8) | 0x20,
+            "(len << 8) | header, the mirror of the TX descriptor"
+        );
+        let status = bus.u16_at(rxd_cpu + u64::from(RXD_STATUS));
+        assert_eq!(status, RXD_STATUS_GOOD);
+        assert_eq!(
+            status & RXD_STATUS_ERROR_MASK,
+            0,
+            "the ROM's own bad-packet mask must clear on it"
+        );
+        for (i, b) in [0xAAu8, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x42].iter().enumerate() {
+            assert_eq!(
+                bus.read_u8(rxbuf_cpu + i as u64).unwrap(),
+                *b,
+                "payload byte {i} at the offset +0x12 named"
+            );
+        }
+        assert_eq!(
+            bt.read_u32(RX_DESC_PTR).unwrap() & RX_DESC_PTR_MASK,
+            0x1014,
+            "the pointer walks the ring the firmware linked"
+        );
+        assert_eq!(
+            bt.read_u32(INTSTAT).unwrap() & INT_SCH_PROG_RX,
+            INT_SCH_PROG_RX
+        );
+        // And the same controller never decodes its own transmission: its
+        // outgoing ADV_IND is on the very same channel and access address.
+        assert_eq!(air.trace_snapshot().len(), 2, "one in, one out");
+        assert_eq!(bt.rx_cursor, 1, "cursor past the peer's frame only");
+    }
+
+    /// No frame on the air means no interrupt and no exchange-memory write —
+    /// a reception is never invented to keep a scanner busy.
+    #[cfg(feature = "event-scheduler")]
+    #[test]
+    fn a_silent_air_delivers_nothing() {
+        use crate::sched::EventScheduler;
+
+        let clock = CycleClock::default();
+        let mut bt = advertising_part(&clock);
+        bt.air = crate::peripherals::ble_air::BleAirBus::new();
+        let mut bus = RamBus::default();
+        let mut sched = EventScheduler::new();
+        stage_advertising_event(&mut bt, &mut bus, 0);
+        bt.write_u32(RX_DESC_PTR, 0x0000_1000).unwrap();
+        bt.write_u32(PROG_PUSH, 0x8000_0000).unwrap();
+        let token = bt.take_scheduled_events()[0].1;
+        sched.advance_to(0);
+        clock.publish(0);
+        bt.on_event(token, &mut sched, &mut bus);
+        assert_eq!(bt.read_u32(INTRAWSTAT).unwrap() & INT_SCH_PROG_RX, 0);
+        assert_eq!(
+            bt.read_u32(RX_DESC_PTR).unwrap(),
+            0x0000_1000,
+            "the descriptor pointer does not move without a reception"
         );
     }
 

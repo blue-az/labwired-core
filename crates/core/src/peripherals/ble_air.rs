@@ -75,6 +75,10 @@ pub struct BleAirFrame {
     /// this so a frame is broadcast to every listener rather than consumed by
     /// the first one.
     pub seq: u64,
+    /// Opaque identity of the transmitting controller. A receiver never
+    /// decodes its own transmission: a radio is not a full-duplex device and
+    /// the RW-BLE core does not hand firmware back what it just sent.
+    pub source: u64,
     /// RF channel index, 0..=39 in BLE numbering (37/38/39 are the primary
     /// advertising channels). Taken from the transmitter's programmed hop
     /// control word, not chosen here.
@@ -136,14 +140,23 @@ impl BleAirBus {
     }
 
     /// The oldest frame on `channel` with `seq >= cursor` whose access address
-    /// matches, or `None`. Broadcast: the frame stays on the air for other
-    /// receivers. The caller advances its cursor past `frame.seq`.
-    pub fn receive_from(&self, channel: u8, access_address: u32, cursor: u64) -> Option<BleAirFrame> {
+    /// matches and which `listener` did not itself transmit, or `None`.
+    /// Broadcast: the frame stays on the air for other receivers. The caller
+    /// advances its cursor past `frame.seq`.
+    pub fn receive_from(
+        &self,
+        channel: u8,
+        access_address: u32,
+        cursor: u64,
+        listener: u64,
+    ) -> Option<BleAirFrame> {
         let air = self.inner.lock().ok()?;
         air.channels
             .get(&channel)?
             .iter()
-            .find(|f| f.seq >= cursor && f.access_address == access_address)
+            .find(|f| {
+                f.seq >= cursor && f.access_address == access_address && f.source != listener
+            })
             .cloned()
     }
 
@@ -180,6 +193,7 @@ mod tests {
     fn frame(ch: u8, aa: u32, payload: &[u8]) -> BleAirFrame {
         BleAirFrame {
             seq: 0,
+            source: 1,
             channel: ch,
             access_address: aa,
             crc_init: 0x0055_5555,
@@ -193,12 +207,12 @@ mod tests {
         let bus = BleAirBus::new();
         let seq = bus.transmit(frame(37, 0x8E89_BED6, &[0x20, 0x0f, 1, 2, 3]));
         for cursor in [0u64, 0u64] {
-            let got = bus.receive_from(37, 0x8E89_BED6, cursor).expect("delivered");
+            let got = bus.receive_from(37, 0x8E89_BED6, cursor, 2).expect("delivered");
             assert_eq!(got.seq, seq);
             assert_eq!(got.pdu, vec![0x20, 0x0f, 1, 2, 3]);
         }
         // Advancing past it stops delivery.
-        assert!(bus.receive_from(37, 0x8E89_BED6, seq + 1).is_none());
+        assert!(bus.receive_from(37, 0x8E89_BED6, seq + 1, 2).is_none());
     }
 
     /// Channel and access address both select.
@@ -206,9 +220,18 @@ mod tests {
     fn channel_and_access_address_select() {
         let bus = BleAirBus::new();
         bus.transmit(frame(37, 0x8E89_BED6, &[0x20, 0x00]));
-        assert!(bus.receive_from(38, 0x8E89_BED6, 0).is_none(), "wrong channel");
-        assert!(bus.receive_from(37, 0x1234_5678, 0).is_none(), "wrong AA");
-        assert!(bus.receive_from(37, 0x8E89_BED6, 0).is_some());
+        assert!(bus.receive_from(38, 0x8E89_BED6, 0, 2).is_none(), "wrong channel");
+        assert!(bus.receive_from(37, 0x1234_5678, 0, 2).is_none(), "wrong AA");
+        assert!(bus.receive_from(37, 0x8E89_BED6, 0, 2).is_some());
+    }
+
+    /// A controller never decodes its own transmission.
+    #[test]
+    fn a_node_does_not_hear_itself() {
+        let bus = BleAirBus::new();
+        bus.transmit(frame(37, 0x8E89_BED6, &[0x20, 0x00]));
+        assert!(bus.receive_from(37, 0x8E89_BED6, 0, 1).is_none(), "own frame");
+        assert!(bus.receive_from(37, 0x8E89_BED6, 0, 2).is_some(), "someone else's");
     }
 
     /// Buses are isolated: two labs in one process do not hear each other.
@@ -217,7 +240,7 @@ mod tests {
         let a = BleAirBus::new();
         let b = BleAirBus::new();
         a.transmit(frame(37, 0x8E89_BED6, &[0x20, 0x00]));
-        assert!(b.receive_from(37, 0x8E89_BED6, 0).is_none());
+        assert!(b.receive_from(37, 0x8E89_BED6, 0, 2).is_none());
     }
 
     /// The retention window is bounded and drops the oldest.
@@ -227,7 +250,7 @@ mod tests {
         for _ in 0..(AIR_DEPTH + 8) {
             bus.transmit(frame(37, 0x8E89_BED6, &[0x20, 0x00]));
         }
-        let oldest = bus.receive_from(37, 0x8E89_BED6, 0).expect("something survives");
+        let oldest = bus.receive_from(37, 0x8E89_BED6, 0, 2).expect("something survives");
         assert_eq!(oldest.seq, 8, "the first 8 frames aged out");
     }
 }
