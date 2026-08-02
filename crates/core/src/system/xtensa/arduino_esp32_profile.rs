@@ -119,21 +119,6 @@ const ABORT_STUBS: &[&str] = &[
 /// the symbol is present in the ELF.
 const NOP_STUBS: &[&str] = &[
     // newlib stdio init — sketch doesn't use stdio on render path
-    "__sinit",
-    "__sfp",
-    "__sfp_lock_acquire",
-    "__sfp_lock_release",
-    "__sflags",
-    "__swsetup_r",
-    "__srefill_r",
-    "__sread",
-    "__swrite",
-    "__seek",
-    "__sclose",
-    "esp_reent_init",
-    "_fflush_r",
-    "_fclose_r",
-    "_fwrite_r",
     "esp_panic_handler",
     "esp_panic_handler_reconfigure_wdts",
     // xTaskGetCurrentTaskHandle gets a proper thunk below — returning
@@ -164,7 +149,6 @@ const NOP_STUBS: &[&str] = &[
     "bootloader_init_mem",
     "esp_mspi_pin_init",
     "spi_flash_init_chip_state",
-    "esp_log_timestamp",
     // SPI-flash HAL — see loader::extract_arduino_esp32_thunks for why.
     "spi_flash_hal_configure_host_io_mode",
     "spi_flash_chip_generic_config_host_io_mode",
@@ -190,18 +174,9 @@ const NOP_STUBS: &[&str] = &[
     "esp_flash_init",
     "esp_random",
     "esp_fill_random",
-    "esp_log_early_timestamp",
-    "esp_log_writev",
-    "esp_log_write",
-    "esp_log_buffer_hex_internal",
-    "esp_log_buffer_char_internal",
-    "esp_log_buffer_hexdump_internal",
     // log mutex (esp_log_impl_lock/unlock) — sim doesn't model the log
     // mutex queue, and the real impl calls xQueueGenericSend on an
     // uninitialized queue, tripping a NULL-pcHead assertion.
-    "esp_log_impl_lock",
-    "esp_log_impl_lock_timeout",
-    "esp_log_impl_unlock",
     // esp_ipc_init/isr_init create the IPC task per core. Its
     // semaphore-wait turns into a tight loop in the sim (xQueueSemaphoreTake
     // is stubbed to pdTRUE), starving loopTask. Stub the init so the
@@ -230,25 +205,6 @@ const NOP_STUBS: &[&str] = &[
     // SPI payload to the panel.
     "xQueueGiveMutexRecursive",
     "xQueueTakeMutexRecursive",
-    "__sfvwrite_r",
-    "__sflush_r",
-    "_printf_r",
-    "_fprintf_r",
-    "_vfprintf_r",
-    "_vprintf_r",
-    "printf",
-    "fprintf",
-    "vfprintf",
-    "vprintf",
-    "puts",
-    "fputs",
-    "fputc",
-    "putchar",
-    "_puts_r",
-    "_fputs_r",
-    "_putchar_r",
-    "_write_r",
-    "write",
 ];
 
 /// Stubs that need more than return-0, installed only when the symbol is
@@ -633,7 +589,7 @@ mod thunk_debt {
     ///  * firmware you genuinely cannot run yet: that is real debt. Raising the
     ///    ceiling is then a deliberate act, and the comment next to the stub has
     ///    to say what is missing.
-    const CEILING: usize = 119;
+    const CEILING: usize = 75;
 
     #[test]
     fn thunk_debt_only_falls() {
