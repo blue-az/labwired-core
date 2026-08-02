@@ -1,0 +1,733 @@
+peripheral: CC_PKA_S
+version: 0.1.0
+registers:
+- id: MEMORY_MAP0
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP1
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP2
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP3
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP4
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP5
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP6
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP7
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP8
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP9
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP10
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP11
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP12
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP13
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP14
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP15
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP16
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP17
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP18
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP19
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP20
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP21
+  address_offset: 84
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP22
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP23
+  address_offset: 92
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP24
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP25
+  address_offset: 100
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP26
+  address_offset: 104
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP27
+  address_offset: 108
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP28
+  address_offset: 112
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP29
+  address_offset: 116
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP30
+  address_offset: 120
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: MEMORY_MAP31
+  address_offset: 124
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 10
+    - 1
+    description: The physical word address used for the virtual register.
+  side_effects: null
+- id: OPCODE
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 5
+    - 0
+    description: Holds the operation tag or the operand C virtual register index.
+  - name: REG_R
+    bit_range:
+    - 10
+    - 6
+    description: Result register virtual register index.
+  - name: DISCARD_R
+    bit_range:
+    - 11
+    - 11
+    description: This field controls the interpretation of REG_R.
+  - name: REG_B
+    bit_range:
+    - 16
+    - 12
+    description: Operand B virtual register index.
+  - name: CONST_B
+    bit_range:
+    - 17
+    - 17
+    description: This field controls the interpretation of REG_B.
+  - name: REG_A
+    bit_range:
+    - 22
+    - 18
+    description: Operand A virtual register index.
+  - name: CONST_A
+    bit_range:
+    - 23
+    - 23
+    description: This field controls the interpretation of REG_A.
+  - name: LEN
+    bit_range:
+    - 26
+    - 24
+    description: 'The length of the operands. This value serves as an PKA length register index. E.g.: if LEN field value is set to 0, PKA_L[0] holds the size of the operands.'
+  - name: OPCODE
+    bit_range:
+    - 31
+    - 27
+    description: Operation code to be executed by the PKA engine
+  side_effects: null
+- id: N_NP_T0_T1_ADDR
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 1046560
+  fields:
+  - name: N_VIRTUAL_ADDR
+    bit_range:
+    - 4
+    - 0
+    description: Register N virtual register index. Default is R0.
+  - name: NP_VIRTUAL_ADDR
+    bit_range:
+    - 9
+    - 5
+    description: Register Np virtual register index. Default is R1.
+  - name: T0_VIRTUAL_ADDR
+    bit_range:
+    - 14
+    - 10
+    description: Temporary register 0 virtual register index. Default is R30.
+  - name: T1_VIRTUAL_ADDR
+    bit_range:
+    - 19
+    - 15
+    description: Temporary register 1 virtual register index. Default is R31.
+  side_effects: null
+- id: PKA_STATUS
+  address_offset: 136
+  size: 32
+  access: READ_ONLY
+  reset_value: 4096
+  fields:
+  - name: ALU_MSB_4BITS
+    bit_range:
+    - 3
+    - 0
+    description: The most significant 4-bits of the operand updated in shift operation.
+  - name: ALU_LSB_4BITS
+    bit_range:
+    - 7
+    - 4
+    description: The least significant 4-bits of the operand updated in shift operation.
+  - name: ALU_SIGN_OUT
+    bit_range:
+    - 8
+    - 8
+    description: Indicates the MSB sign of the last operation.
+  - name: ALU_CARRY
+    bit_range:
+    - 9
+    - 9
+    description: Holds the carry of the last ALU operation.
+  - name: ALU_CARRY_MOD
+    bit_range:
+    - 10
+    - 10
+    description: Holds the carry of the last modular operation.
+  - name: ALU_SUB_IS_ZERO
+    bit_range:
+    - 11
+    - 11
+    description: Indicates the last subtraction operation sign.
+  - name: ALU_OUT_ZERO
+    bit_range:
+    - 12
+    - 12
+    description: Indicates if the result of ALU OUT is zero.
+  - name: ALU_MODOVRFLW
+    bit_range:
+    - 13
+    - 13
+    description: Modular overflow flag.
+  - name: DIV_BY_ZERO
+    bit_range:
+    - 14
+    - 14
+    description: Indication if the division is done by zero.
+  - name: MODINV_OF_ZERO
+    bit_range:
+    - 15
+    - 15
+    description: Indicates the modular inverse of zero.
+  - name: OPCODE
+    bit_range:
+    - 20
+    - 16
+    description: Opcode of the last operation
+  side_effects: null
+- id: PKA_SW_RESET
+  address_offset: 140
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: RESET
+    bit_range:
+    - 0
+    - 0
+    description: Writing any value to this address resets the PKA engine. The reset takes 4 CPU clock cycles to complete.
+  side_effects: null
+- id: PKA_L0
+  address_offset: 144
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OpSize
+    bit_range:
+    - 12
+    - 0
+    description: Operand bit size.
+  side_effects: null
+- id: PKA_L1
+  address_offset: 148
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OpSize
+    bit_range:
+    - 12
+    - 0
+    description: Operand bit size.
+  side_effects: null
+- id: PKA_L2
+  address_offset: 152
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OpSize
+    bit_range:
+    - 12
+    - 0
+    description: Operand bit size.
+  side_effects: null
+- id: PKA_L3
+  address_offset: 156
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OpSize
+    bit_range:
+    - 12
+    - 0
+    description: Operand bit size.
+  side_effects: null
+- id: PKA_L4
+  address_offset: 160
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OpSize
+    bit_range:
+    - 12
+    - 0
+    description: Operand bit size.
+  side_effects: null
+- id: PKA_L5
+  address_offset: 164
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OpSize
+    bit_range:
+    - 12
+    - 0
+    description: Operand bit size.
+  side_effects: null
+- id: PKA_L6
+  address_offset: 168
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OpSize
+    bit_range:
+    - 12
+    - 0
+    description: Operand bit size.
+  side_effects: null
+- id: PKA_L7
+  address_offset: 172
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OpSize
+    bit_range:
+    - 12
+    - 0
+    description: Operand bit size.
+  side_effects: null
+- id: PKA_PIPE
+  address_offset: 176
+  size: 32
+  access: READ_ONLY
+  reset_value: 1
+  fields:
+  - name: STATUS
+    bit_range:
+    - 0
+    - 0
+    description: PKA pipeline status.
+  side_effects: null
+- id: PKA_DONE
+  address_offset: 180
+  size: 32
+  access: READ_ONLY
+  reset_value: 1
+  fields:
+  - name: STATUS
+    bit_range:
+    - 0
+    - 0
+    description: PKA operation status.
+  side_effects: null
+- id: PKA_VERSION
+  address_offset: 196
+  size: 32
+  access: READ_ONLY
+  reset_value: 370213397
+  fields:
+  - name: PKA_VERSION
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: PKA_SRAM_WADDR
+  address_offset: 212
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 31
+    - 0
+    description: PKA SRAM start address for write transaction
+  side_effects: null
+- id: PKA_SRAM_WDATA
+  address_offset: 216
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Data to write to PKA SRAM.
+  side_effects: null
+- id: PKA_SRAM_RDATA
+  address_offset: 220
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Data to read from PKA SRAM
+  side_effects: null
+- id: PKA_SRAM_WCLEAR
+  address_offset: 224
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: CLEAR
+    bit_range:
+    - 31
+    - 0
+    description: Clear the PKA SRAM write buffer.
+  side_effects: null
+- id: PKA_SRAM_RADDR
+  address_offset: 228
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 31
+    - 0
+    description: PKA SRAM start address for read transaction
+  side_effects: null
+interrupts: null
+timing: null

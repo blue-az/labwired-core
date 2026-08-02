@@ -1,0 +1,867 @@
+peripheral: LPTIM1
+version: 0.1.0
+registers:
+- id: LPTIM_ISR_output
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CC1IF
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Compare 1 interrupt flag
+      The CC1IF flag is set by hardware to inform application that LPTIM_CNT register value matches the compare register's value. The CC1IF flag can be cleared by writing 1 to the CC1CF bit in the LPTIM_ICR register.
+  - name: ARRM
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Autoreload match
+      ARRM is set by hardware to inform application that LPTIM_CNT register's value reached the LPTIM_ARR register's value. ARRM flag can be cleared by writing 1 to the ARRMCF bit in the LPTIM_ICR register.
+  - name: EXTTRIG
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      External trigger edge event
+      EXTTRIG is set by hardware to inform application that a valid edge on the selected external trigger input has occurred. If the trigger is ignored because the timer has already started, then this flag is not set. EXTTRIG flag can be cleared by writing 1 to the EXTTRIGCF bit in the LPTIM_ICR register.
+  - name: CMP1OK
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Compare register 1 update OK
+      CMP1OK is set by hardware to inform application that the APB bus write operation to the LPTIM_CCR1 register has been successfully completed. CMP1OK flag can be cleared by writing 1 to the CMP1OKCF bit in the LPTIM_ICR register.
+  - name: ARROK
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Autoreload register update OK
+      ARROK is set by hardware to inform application that the APB bus write operation to the LPTIM_ARR register has been successfully completed. ARROK flag can be cleared by writing 1 to the ARROKCF bit in the LPTIM_ICR register.
+  - name: UP
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Counter direction change down to up
+      In Encoder mode, UP bit is set by hardware to inform application that the counter direction has changed from down to up. UP flag can be cleared by writing 1 to the UPCF bit in the LPTIM_ICR register.
+      Note: If the LPTIM does not support encoder mode feature, this bit is reserved. Please refer to .
+  - name: DOWN
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Counter direction change up to down
+      In Encoder mode, DOWN bit is set by hardware to inform application that the counter direction has changed from up to down. DOWN flag can be cleared by writing 1 to the DOWNCF bit in the LPTIM_ICR register.
+      Note: If the LPTIM does not support encoder mode feature, this bit is reserved. Please refer to .
+  - name: UE
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      LPTIM update event occurred
+      UE is set by hardware to inform application that an update event was generated. UE flag can be cleared by writing 1 to the UECF bit in the LPTIM_ICR register.
+  - name: REPOK
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Repetition register update OK
+      REPOK is set by hardware to inform application that the APB bus write operation to the LPTIM_RCR register has been successfully completed. REPOK flag can be cleared by writing 1 to the REPOKCF bit in the LPTIM_ICR register.
+  - name: DIEROK
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      Interrupt enable register update OK
+      DIEROK is set by hardware to inform application that the APB bus write operation to the LPTIM_DIER register has been successfully completed. DIEROK flag can be cleared by writing 1 to the DIEROKCF bit in the LPTIM_ICR register.
+  side_effects: null
+- id: LPTIM_ISR_intput
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CC1IF
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      capture 1 interrupt flag
+      If channel CC1 is configured as input:
+      CC1IF is set by hardware to inform application that the current value of the counter is captured in LPTIM_CCR1 register. The corresponding interrupt or DMA request is generated if enabled. The CC1OF flag is set if the CC1IF flag was already high.
+  - name: ARRM
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Autoreload match
+      ARRM is set by hardware to inform application that LPTIM_CNT register's value reached the LPTIM_ARR register's value. ARRM flag can be cleared by writing 1 to the ARRMCF bit in the LPTIM_ICR register.
+  - name: EXTTRIG
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      External trigger edge event
+      EXTTRIG is set by hardware to inform application that a valid edge on the selected external trigger input has occurred. If the trigger is ignored because the timer has already started, then this flag is not set. EXTTRIG flag can be cleared by writing 1 to the EXTTRIGCF bit in the LPTIM_ICR register.
+  - name: ARROK
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Autoreload register update OK
+      ARROK is set by hardware to inform application that the APB bus write operation to the LPTIM_ARR register has been successfully completed. ARROK flag can be cleared by writing 1 to the ARROKCF bit in the LPTIM_ICR register.
+  - name: UP
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Counter direction change down to up
+      In Encoder mode, UP bit is set by hardware to inform application that the counter direction has changed from down to up. UP flag can be cleared by writing 1 to the UPCF bit in the LPTIM_ICR register.
+      Note: If the LPTIM does not support encoder mode feature, this bit is reserved. Please refer to .
+  - name: DOWN
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Counter direction change up to down
+      In Encoder mode, DOWN bit is set by hardware to inform application that the counter direction has changed from up to down. DOWN flag can be cleared by writing 1 to the DOWNCF bit in the LPTIM_ICR register.
+      Note: If the LPTIM does not support encoder mode feature, this bit is reserved. Please refer to .
+  - name: UE
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      LPTIM update event occurred
+      UE is set by hardware to inform application that an update event was generated. UE flag can be cleared by writing 1 to the UECF bit in the LPTIM_ICR register.
+  - name: REPOK
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Repetition register update OK
+      REPOK is set by hardware to inform application that the APB bus write operation to the LPTIM_RCR register has been successfully completed. REPOK flag can be cleared by writing 1 to the REPOKCF bit in the LPTIM_ICR register.
+  - name: CC2IF
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Capture 2 interrupt flag
+      If channel CC2 is configured as input:
+      CC2IF is set by hardware to inform application that the current value of the counter is captured in LPTIM_CCR2 register. The corresponding interrupt or DMA request is generated if enabled. The CC2OF flag is set if the CC2IF flag was already high.
+      Note: If LPTIM does not implement at least 2 channels this bit is reserved. Please refer to .
+  - name: CC1OF
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Capture 1 over-capture flag
+      This flag is set by hardware only when the corresponding channel is configured in input capture mode. It is cleared by software by writing 1 to the CC1OCF bit in the LPTIM_ICR register.
+      Note: If LPTIM does not implement at least 1 channel this bit is reserved. Please refer to .
+  - name: CC2OF
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Capture 2 over-capture flag
+      This flag is set by hardware only when the corresponding channel is configured in input capture mode. It is cleared by software by writing 1 to the CC2OCF bit in the LPTIM_ICR register.
+      Note: If LPTIM does not implement at least 2 channels this bit is reserved. Please refer to .
+  - name: DIEROK
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      Interrupt enable register update OK
+      DIEROK is set by hardware to inform application that the APB bus write operation to the LPTIM_DIER register has been successfully completed. DIEROK flag can be cleared by writing 1 to the DIEROKCF bit in the LPTIM_ICR register.
+  side_effects: null
+- id: LPTIM_ICR_intput
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CC1CF
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Capture/compare 1 clear flag
+      Writing 1 to this bit clears the CC1IF flag in the LPTIM_ISR register.
+  - name: ARRMCF
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Autoreload match clear flag
+      Writing 1 to this bit clears the ARRM flag in the LPTIM_ISR register
+  - name: EXTTRIGCF
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      External trigger valid edge clear flag
+      Writing 1 to this bit clears the EXTTRIG flag in the LPTIM_ISR register
+  - name: ARROKCF
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Autoreload register update OK clear flag
+      Writing 1 to this bit clears the ARROK flag in the LPTIM_ISR register
+  - name: UPCF
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Direction change to UP clear flag
+      Writing 1 to this bit clear the UP flag in the LPTIM_ISR register.
+      Note: If the LPTIM does not support encoder mode feature, this bit is reserved. Please refer to .
+  - name: DOWNCF
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Direction change to down clear flag
+      Writing 1 to this bit clear the DOWN flag in the LPTIM_ISR register.
+      Note: If the LPTIM does not support encoder mode feature, this bit is reserved. Please refer to .
+  - name: UECF
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Update event clear flag
+      Writing 1 to this bit clear the UE flag in the LPTIM_ISR register.
+  - name: REPOKCF
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Repetition register update OK clear flag
+      Writing 1 to this bit clears the REPOK flag in the LPTIM_ISR register.
+  - name: CC2CF
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Capture/compare 2 clear flag
+      Writing 1 to this bit clears the CC2IF flag in the LPTIM_ISR register.
+      Note: If LPTIM does not implement at least 2 channels this bit is reserved. Please refer to .
+  - name: CC1OCF
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Capture/compare 1 over-capture clear flag
+      Writing 1 to this bit clears the CC1OF flag in the LPTIM_ISR register.
+      Note: If LPTIM does not implement at least 1 channel this bit is reserved. Please refer to .
+  - name: CC2OCF
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Capture/compare 2 over-capture clear flag
+      Writing 1 to this bit clears the CC2OF flag in the LPTIM_ISR register.
+      Note: If LPTIM does not implement at least 2 channels this bit is reserved. Please refer to .
+  - name: DIEROKCF
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      Interrupt enable register update OK clear flag
+      Writing 1 to this bit clears the DIEROK flag in the LPTIM_ISR register.
+  side_effects: null
+- id: LPTIM_ICR_output
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CC1CF
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Capture/compare 1 clear flag
+      Writing 1 to this bit clears the CC1IF flag in the LPTIM_ISR register.
+  - name: ARRMCF
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Autoreload match clear flag
+      Writing 1 to this bit clears the ARRM flag in the LPTIM_ISR register
+  - name: EXTTRIGCF
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      External trigger valid edge clear flag
+      Writing 1 to this bit clears the EXTTRIG flag in the LPTIM_ISR register
+  - name: CMP1OKCF
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Compare register 1 update OK clear flag
+      Writing 1 to this bit clears the CMP1OK flag in the LPTIM_ISR register.
+  - name: ARROKCF
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Autoreload register update OK clear flag
+      Writing 1 to this bit clears the ARROK flag in the LPTIM_ISR register
+  - name: UPCF
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Direction change to UP clear flag
+      Writing 1 to this bit clear the UP flag in the LPTIM_ISR register.
+      Note: If the LPTIM does not support encoder mode feature, this bit is reserved. Please refer to .
+  - name: DOWNCF
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Direction change to down clear flag
+      Writing 1 to this bit clear the DOWN flag in the LPTIM_ISR register.
+      Note: If the LPTIM does not support encoder mode feature, this bit is reserved. Please refer to .
+  - name: UECF
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Update event clear flag
+      Writing 1 to this bit clear the UE flag in the LPTIM_ISR register.
+  - name: REPOKCF
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Repetition register update OK clear flag
+      Writing 1 to this bit clears the REPOK flag in the LPTIM_ISR register.
+  - name: DIEROKCF
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      Interrupt enable register update OK clear flag
+      Writing 1 to this bit clears the DIEROK flag in the LPTIM_ISR register.
+  side_effects: null
+- id: LPTIM_DIER_intput
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CC1IE
+    bit_range:
+    - 0
+    - 0
+    description: Capture/compare 1 interrupt enable
+  - name: ARRMIE
+    bit_range:
+    - 1
+    - 1
+    description: Autoreload match Interrupt Enable
+  - name: EXTTRIGIE
+    bit_range:
+    - 2
+    - 2
+    description: External trigger valid edge Interrupt Enable
+  - name: ARROKIE
+    bit_range:
+    - 4
+    - 4
+    description: Autoreload register update OK Interrupt Enable
+  - name: UPIE
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Direction change to UP Interrupt Enable
+      Note: If the LPTIM does not support encoder mode feature, this bit is reserved. Please refer to .
+  - name: DOWNIE
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Direction change to down Interrupt Enable
+      Note: If the LPTIM does not support encoder mode feature, this bit is reserved. Please refer to .
+  - name: UEIE
+    bit_range:
+    - 7
+    - 7
+    description: Update event interrupt enable
+  - name: REPOKIE
+    bit_range:
+    - 8
+    - 8
+    description: Repetition register update OK interrupt Enable
+  - name: CC2IE
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Capture/compare 2 interrupt enable
+      Note: If LPTIM does not implement at least 2 channels this bit is reserved. Please refer to .
+  - name: CC1OIE
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Capture/compare 1 over-capture interrupt enable
+      Note: If LPTIM does not implement at least 1 channel this bit is reserved. Please refer to .
+  - name: CC2OIE
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Capture/compare 2 over-capture interrupt enable
+      Note: If LPTIM does not implement at least 2 channels this bit is reserved. Please refer to .
+  - name: CC1DE
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      Capture/compare 1 DMA request enable
+      Note: If LPTIM does not implement at least 1 channel this bit is reserved. Please refer to .
+  - name: UEDE
+    bit_range:
+    - 23
+    - 23
+    description: |-
+      Update event DMA request enable
+      Note: If LPTIM does not implement at least 1 channel this bit is reserved. Please refer to .
+  - name: CC2DE
+    bit_range:
+    - 25
+    - 25
+    description: |-
+      Capture/compare 2 DMA request enable
+      Note: If LPTIM does not implement at least 2 channels this bit is reserved. Please refer to .
+  side_effects: null
+- id: LPTIM_DIER_output
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CC1IE
+    bit_range:
+    - 0
+    - 0
+    description: Capture/compare 1 interrupt enable
+  - name: ARRMIE
+    bit_range:
+    - 1
+    - 1
+    description: Autoreload match Interrupt Enable
+  - name: EXTTRIGIE
+    bit_range:
+    - 2
+    - 2
+    description: External trigger valid edge Interrupt Enable
+  - name: CMP1OKIE
+    bit_range:
+    - 3
+    - 3
+    description: Compare register 1 update OK interrupt enable
+  - name: ARROKIE
+    bit_range:
+    - 4
+    - 4
+    description: Autoreload register update OK Interrupt Enable
+  - name: UPIE
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Direction change to UP Interrupt Enable
+      Note: If the LPTIM does not support encoder mode feature, this bit is reserved. Please refer to .
+  - name: DOWNIE
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Direction change to down Interrupt Enable
+      Note: If the LPTIM does not support encoder mode feature, this bit is reserved. Please refer to .
+  - name: UEIE
+    bit_range:
+    - 7
+    - 7
+    description: Update event interrupt enable
+  - name: REPOKIE
+    bit_range:
+    - 8
+    - 8
+    description: Repetition register update OK interrupt Enable
+  side_effects: null
+- id: LPTIM_CFGR
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CKSEL
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Clock selector
+      The CKSEL bit selects which clock source the LPTIM uses:
+  - name: CKPOL
+    bit_range:
+    - 2
+    - 1
+    description: |-
+      Clock Polarity
+      When the LPTIM is clocked by an external clock source, CKPOL bits is used to configure the active edge or edges used by the counter:
+      If the LPTIM is configured in Encoder mode (ENC bit is set), the encoder sub-mode 1 is active.
+      If the LPTIM is configured in Encoder mode (ENC bit is set), the encoder sub-mode 2 is active.
+      Refer to  for more details about Encoder mode sub-modes.
+  - name: CKFLT
+    bit_range:
+    - 4
+    - 3
+    description: |-
+      Configurable digital filter for external clock
+      The CKFLT value sets the number of consecutive equal samples that should be detected when a level change occurs on an external clock signal before it is considered as a valid level transition. An internal clock source must be present to use this feature
+  - name: TRGFLT
+    bit_range:
+    - 7
+    - 6
+    description: |-
+      Configurable digital filter for trigger
+      The TRGFLT value sets the number of consecutive equal samples that should be detected when a level change occurs on an internal trigger before it is considered as a valid level transition. An internal clock source must be present to use this feature
+  - name: PRESC
+    bit_range:
+    - 11
+    - 9
+    description: |-
+      Clock prescaler
+      The PRESC bits configure the prescaler division factor. It can be one among the following division factors:
+  - name: TRIGSEL
+    bit_range:
+    - 15
+    - 13
+    description: |-
+      Trigger selector
+      The TRIGSEL bits select the trigger source that serves as a trigger event for the LPTIM among the below 8 available sources:
+      See  for details.
+  - name: TRIGEN
+    bit_range:
+    - 18
+    - 17
+    description: |-
+      Trigger enable and polarity
+      The TRIGEN bits controls whether the LPTIM counter is started by an external trigger or not. If the external trigger option is selected, three configurations are possible for the trigger active edge:
+  - name: TIMOUT
+    bit_range:
+    - 19
+    - 19
+    description: |-
+      Timeout enable
+      The TIMOUT bit controls the Timeout feature
+  - name: WAVE
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      Waveform shape
+      The WAVE bit controls the output shape
+  - name: WAVPOL
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      Waveform shape polarity
+      The WAVEPOL bit controls the output polarity
+      Note: If the LPTIM implements at least one capture/compare channel, this bit is reserved. Please refer to .
+  - name: PRELOAD
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      Registers update mode
+      The PRELOAD bit controls the LPTIM_ARR, LPTIM_RCR and the LPTIM_CCRx registers update modality
+  - name: COUNTMODE
+    bit_range:
+    - 23
+    - 23
+    description: |-
+      counter mode enabled
+      The COUNTMODE bit selects which clock source is used by the LPTIM to clock the counter:
+  - name: ENC
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      Encoder mode enable
+      The ENC bit controls the Encoder mode
+      Note: If the LPTIM does not support encoder mode feature, this bit is reserved. Please refer to .
+  side_effects: null
+- id: LPTIM_CR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENABLE
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      LPTIM enable
+      The ENABLE bit is set and cleared by software.
+  - name: SNGSTRT
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      LPTIM start in Single mode
+      This bit is set by software and cleared by hardware.
+      In case of software start (TRIGEN[1:0] = '00'), setting this bit starts the LPTIM in single pulse mode.
+      If the software start is disabled (TRIGEN[1:0] different than '00'), setting this bit starts the LPTIM in single pulse mode as soon as an external trigger is detected.
+      If this bit is set when the LPTIM is in continuous counting mode, then the LPTIM stops at the following match between LPTIM_ARR and LPTIM_CNT registers.
+      This bit can only be set when the LPTIM is enabled. It is automatically reset by hardware.
+  - name: CNTSTRT
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Timer start in Continuous mode
+      This bit is set by software and cleared by hardware.
+      In case of software start (TRIGEN[1:0] = '00'), setting this bit starts the LPTIM in Continuous mode.
+      If the software start is disabled (TRIGEN[1:0] different than '00'), setting this bit starts the timer in Continuous mode as soon as an external trigger is detected.
+      If this bit is set when a single pulse mode counting is ongoing, then the timer does not stop at the next match between the LPTIM_ARR and LPTIM_CNT registers and the LPTIM counter keeps counting in Continuous mode.
+      This bit can be set only when the LPTIM is enabled. It is automatically reset by hardware.
+  - name: COUNTRST
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Counter reset
+      This bit is set by software and cleared by hardware. When set to '1' this bit triggers a synchronous reset of the LPTIM_CNT counter register. Due to the synchronous nature of this reset, it only takes place after a synchronization delay of 3 LPTimer core clock cycles (LPTimer core clock may be different from APB clock).
+      This bit can be set only when the LPTIM is enabled. It is automatically reset by hardware.
+      COUNTRST must never be set to '1' by software before it is already cleared to '0' by hardware. Software should consequently check that COUNTRST bit is already cleared to '0' before attempting to set it to '1'.
+  - name: RSTARE
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Reset after read enable
+      This bit is set and cleared by software. When RSTARE is set to '1', any read access to LPTIM_CNT register asynchronously resets LPTIM_CNT register content.
+      This bit can be set only when the LPTIM is enabled.
+  side_effects: null
+- id: LPTIM_CCR1
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCR1
+    bit_range:
+    - 15
+    - 0
+    description: |-
+      Capture/compare 1 value
+      If channel CC1 is configured as output:
+      CCR1 is the value to be loaded in the capture/compare 1 register.
+      Depending on the PRELOAD option, the CCR1 register is immediately updated if the PRELOAD bit is reset and updated at next LPTIM update event if PREOAD bit is reset.
+      The capture/compare register 1 contains the value to be compared to the counter LPTIM_CNT and signaled on OC1 output.
+      If channel CC1 is configured as input:
+      CCR1 contains the counter value transferred by the last input capture 1 event. The LPTIM_CCR1 register is read-only and cannot be programmed.
+      If LPTIM does not implement any channel:
+      The compare register 1 contains the value to be compared to the counter LPTIM_CNT and signaled on LPTIM output.
+  side_effects: null
+- id: LPTIM_ARR
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: ARR
+    bit_range:
+    - 15
+    - 0
+    description: |-
+      Auto reload value
+      ARR is the autoreload value for the LPTIM.
+      This value must be strictly greater than the CCRx[15:0] value.
+  side_effects: null
+- id: LPTIM_CNT
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CNT
+    bit_range:
+    - 15
+    - 0
+    description: |-
+      Counter value
+      When the LPTIM is running with an asynchronous clock, reading the LPTIM_CNT register may return unreliable values. So in this case it is necessary to perform two consecutive read accesses and verify that the two returned values are identical.
+  side_effects: null
+- id: LPTIM_CFGR2
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IN1SEL
+    bit_range:
+    - 1
+    - 0
+    description: |-
+      LPTIM input 1 selection
+      The IN1SEL bits control the LPTIM input 1 multiplexer, which connects LPTIM input 1 to one of the available inputs.
+      For connection details refer to .
+  - name: IN2SEL
+    bit_range:
+    - 5
+    - 4
+    description: |-
+      LPTIM input 2 selection
+      The IN2SEL bits control the LPTIM input 2 multiplexer, which connects LPTIM input 2 to one of the available inputs.
+      For connection details refer to .
+  - name: IC1SEL
+    bit_range:
+    - 17
+    - 16
+    description: |-
+      LPTIM input capture 1 selection
+      The IC1SEL bits control the LPTIM Input capture 1 multiplexer, which connects LPTIM Input capture
+      1 to one of the available inputs.
+      For connection details refer to .
+  - name: IC2SEL
+    bit_range:
+    - 21
+    - 20
+    description: |-
+      LPTIM input capture 2 selection
+      The IC2SEL bits control the LPTIM Input capture 2 multiplexer, which connects LPTIM Input capture
+      2 to one of the available inputs.
+      For connection details refer to .
+  side_effects: null
+- id: LPTIM_RCR
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: REP
+    bit_range:
+    - 7
+    - 0
+    description: |-
+      Repetition register value
+      REP is the repetition value for the LPTIM.
+  side_effects: null
+- id: LPTIM_CCMR1
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CC1SEL
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Capture/compare 1 selection
+      This bitfield defines the direction of the channel input (capture) or output mode.
+  - name: CC1E
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Capture/compare 1 output enable.
+      This bit determines if a capture of the counter value can actually be done into the input capture/compare register 1 (LPTIM_CCR1) or not.
+  - name: CC1P
+    bit_range:
+    - 3
+    - 2
+    description: |-
+      Capture/compare 1 output polarity.
+      Only bit2 is used to set polarity when output mode is enabled, bit3 is don't care.
+      This field is used to select the IC1 polarity for capture operations.
+  - name: IC1PSC
+    bit_range:
+    - 9
+    - 8
+    description: |-
+      Input capture 1 prescaler
+      This bitfield defines the ratio of the prescaler acting on the CC1 input (IC1).
+  - name: IC1F
+    bit_range:
+    - 13
+    - 12
+    description: |-
+      Input capture 1 filter
+      This bitfield defines the number of consecutive equal samples that should be detected when a level change occurs on an external input capture signal before it is considered as a valid level transition. An internal clock source must be present to use this feature.
+  - name: CC2SEL
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      Capture/compare 2 selection
+      This bitfield defines the direction of the channel, input (capture) or output mode.
+  - name: CC2E
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      Capture/compare 2 output enable.
+      This bit determines if a capture of the counter value can actually be done into the input capture/compare register 2 (LPTIM_CCR2) or not.
+  - name: CC2P
+    bit_range:
+    - 19
+    - 18
+    description: |-
+      Capture/compare 2 output polarity.
+      Only bit2 is used to set polarity when output mode is enabled, bit3 is don't care.
+      This field is used to select the IC2 polarity for capture operations.
+  - name: IC2PSC
+    bit_range:
+    - 25
+    - 24
+    description: |-
+      Input capture 2 prescaler
+      This bitfield defines the ratio of the prescaler acting on the CC2 input (IC2).
+  - name: IC2F
+    bit_range:
+    - 29
+    - 28
+    description: |-
+      Input capture 2 filter
+      This bitfield defines the number of consecutive equal samples that should be detected when a level change occurs on an external input capture signal before it is considered as a valid level transition. An internal clock source must be present to use this feature.
+  side_effects: null
+- id: LPTIM_CCR2
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCR2
+    bit_range:
+    - 15
+    - 0
+    description: |-
+      Capture/compare 2 value
+      If channel CC2 is configured as output:
+      CCR2 is the value to be loaded in the capture/compare 2 register.
+      Depending on the PRELOAD option, the CCR2 register is immediately updated if the PRELOAD bit is reset and updated at next LPTIM update event if PREOAD bit is reset.
+      The capture/compare register 2 contains the value to be compared to the counter LPTIM_CNT and signaled on OC2 output.
+      If channel CC2 is configured as input:
+      CCR2 contains the counter value transferred by the last input capture 2 event. The LPTIM_CCR2 register is read-only and cannot be programmed.
+  side_effects: null
+interrupts:
+  LPTIM1: 64
+timing: null

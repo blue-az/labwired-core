@@ -1,0 +1,228 @@
+peripheral: UART5
+version: 0.1.0
+registers:
+- id: SR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PE
+    bit_range:
+    - 0
+    - 0
+    description: PE
+  - name: FE
+    bit_range:
+    - 1
+    - 1
+    description: FE
+  - name: NE
+    bit_range:
+    - 2
+    - 2
+    description: NE
+  - name: ORE
+    bit_range:
+    - 3
+    - 3
+    description: ORE
+  - name: IDLE
+    bit_range:
+    - 4
+    - 4
+    description: IDLE
+  - name: RXNE
+    bit_range:
+    - 5
+    - 5
+    description: RXNE
+  - name: TC
+    bit_range:
+    - 6
+    - 6
+    description: TC
+  - name: TXE
+    bit_range:
+    - 7
+    - 7
+    description: TXE
+  - name: LBD
+    bit_range:
+    - 8
+    - 8
+    description: LBD
+  side_effects: null
+- id: DR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DR
+    bit_range:
+    - 8
+    - 0
+    description: DR
+  side_effects: null
+- id: BRR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DIV_Fraction
+    bit_range:
+    - 3
+    - 0
+    description: DIV_Fraction
+  - name: DIV_Mantissa
+    bit_range:
+    - 15
+    - 4
+    description: DIV_Mantissa
+  side_effects: null
+- id: CR1
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SBK
+    bit_range:
+    - 0
+    - 0
+    description: SBK
+  - name: RWU
+    bit_range:
+    - 1
+    - 1
+    description: RWU
+  - name: RE
+    bit_range:
+    - 2
+    - 2
+    description: RE
+  - name: TE
+    bit_range:
+    - 3
+    - 3
+    description: TE
+  - name: IDLEIE
+    bit_range:
+    - 4
+    - 4
+    description: IDLEIE
+  - name: RXNEIE
+    bit_range:
+    - 5
+    - 5
+    description: RXNEIE
+  - name: TCIE
+    bit_range:
+    - 6
+    - 6
+    description: TCIE
+  - name: TXEIE
+    bit_range:
+    - 7
+    - 7
+    description: TXEIE
+  - name: PEIE
+    bit_range:
+    - 8
+    - 8
+    description: PEIE
+  - name: PS
+    bit_range:
+    - 9
+    - 9
+    description: PS
+  - name: PCE
+    bit_range:
+    - 10
+    - 10
+    description: PCE
+  - name: WAKE
+    bit_range:
+    - 11
+    - 11
+    description: WAKE
+  - name: M
+    bit_range:
+    - 12
+    - 12
+    description: M
+  - name: UE
+    bit_range:
+    - 13
+    - 13
+    description: UE
+  side_effects: null
+- id: CR2
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADD
+    bit_range:
+    - 3
+    - 0
+    description: ADD
+  - name: LBDL
+    bit_range:
+    - 5
+    - 5
+    description: LBDL
+  - name: LBDIE
+    bit_range:
+    - 6
+    - 6
+    description: LBDIE
+  - name: STOP
+    bit_range:
+    - 13
+    - 12
+    description: STOP
+  - name: LINEN
+    bit_range:
+    - 14
+    - 14
+    description: LINEN
+  side_effects: null
+- id: CR3
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EIE
+    bit_range:
+    - 0
+    - 0
+    description: Error interrupt enable
+  - name: IREN
+    bit_range:
+    - 1
+    - 1
+    description: IrDA mode enable
+  - name: IRLP
+    bit_range:
+    - 2
+    - 2
+    description: IrDA low-power
+  - name: HDSEL
+    bit_range:
+    - 3
+    - 3
+    description: Half-duplex selection
+  - name: DMAT
+    bit_range:
+    - 7
+    - 7
+    description: DMA enable transmitter
+  side_effects: null
+interrupts:
+  UART5: 53
+timing: null

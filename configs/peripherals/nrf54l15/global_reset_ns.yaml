@@ -1,0 +1,82 @@
+peripheral: GLOBAL_RESET_NS
+version: 0.1.0
+registers:
+- id: RESETREAS
+  address_offset: 1536
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RESETPIN
+    bit_range:
+    - 0
+    - 0
+    description: Reset from pin reset detected
+  - name: DOG0
+    bit_range:
+    - 1
+    - 1
+    description: Reset from watchdog timer 0 detected
+  - name: DOG1
+    bit_range:
+    - 2
+    - 2
+    description: Reset from watchdog timer 1 detected
+  - name: CTRLAPSOFT
+    bit_range:
+    - 3
+    - 3
+    description: Soft reset from CTRL-AP detected
+  - name: CTRLAPHARD
+    bit_range:
+    - 4
+    - 4
+    description: Reset due to CTRL-AP hard reset
+  - name: CTRLAPPIN
+    bit_range:
+    - 5
+    - 5
+    description: Reset due to CTRL-AP pin reset
+  - name: SREQ
+    bit_range:
+    - 6
+    - 6
+    description: Reset from soft reset detected
+  - name: LOCKUP
+    bit_range:
+    - 7
+    - 7
+    description: Reset from CPU lockup detected
+  - name: OFF
+    bit_range:
+    - 8
+    - 8
+    description: Reset due to wakeup from System OFF mode when wakeup is triggered by DETECT signal from GPIO
+  - name: LPCOMP
+    bit_range:
+    - 9
+    - 9
+    description: Reset due to wakeup from System OFF mode when wakeup is triggered by ANADETECT signal from LPCOMP
+  - name: DIF
+    bit_range:
+    - 10
+    - 10
+    description: Reset triggered by Debug Interface
+  - name: GRTC
+    bit_range:
+    - 11
+    - 11
+    description: Reset due to wakeup from GRTC
+  - name: NFC
+    bit_range:
+    - 12
+    - 12
+    description: Reset after wakeup from System OFF mode due to NFC field being detected
+  - name: SECTAMPER
+    bit_range:
+    - 13
+    - 13
+    description: Reset due to illegal tampering of the device
+  side_effects: null
+interrupts: null
+timing: null

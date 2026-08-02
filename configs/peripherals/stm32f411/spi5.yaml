@@ -1,0 +1,294 @@
+peripheral: SPI5
+version: 0.1.0
+registers:
+- id: CR1
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BIDIMODE
+    bit_range:
+    - 15
+    - 15
+    description: Bidirectional data mode enable
+  - name: BIDIOE
+    bit_range:
+    - 14
+    - 14
+    description: Output enable in bidirectional mode
+  - name: CRCEN
+    bit_range:
+    - 13
+    - 13
+    description: Hardware CRC calculation enable
+  - name: CRCNEXT
+    bit_range:
+    - 12
+    - 12
+    description: CRC transfer next
+  - name: DFF
+    bit_range:
+    - 11
+    - 11
+    description: Data frame format
+  - name: RXONLY
+    bit_range:
+    - 10
+    - 10
+    description: Receive only
+  - name: SSM
+    bit_range:
+    - 9
+    - 9
+    description: Software slave management
+  - name: SSI
+    bit_range:
+    - 8
+    - 8
+    description: Internal slave select
+  - name: LSBFIRST
+    bit_range:
+    - 7
+    - 7
+    description: Frame format
+  - name: SPE
+    bit_range:
+    - 6
+    - 6
+    description: SPI enable
+  - name: BR
+    bit_range:
+    - 5
+    - 3
+    description: Baud rate control
+  - name: MSTR
+    bit_range:
+    - 2
+    - 2
+    description: Master selection
+  - name: CPOL
+    bit_range:
+    - 1
+    - 1
+    description: Clock polarity
+  - name: CPHA
+    bit_range:
+    - 0
+    - 0
+    description: Clock phase
+  side_effects: null
+- id: CR2
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TXEIE
+    bit_range:
+    - 7
+    - 7
+    description: Tx buffer empty interrupt enable
+  - name: RXNEIE
+    bit_range:
+    - 6
+    - 6
+    description: RX buffer not empty interrupt enable
+  - name: ERRIE
+    bit_range:
+    - 5
+    - 5
+    description: Error interrupt enable
+  - name: FRF
+    bit_range:
+    - 4
+    - 4
+    description: Frame format
+  - name: SSOE
+    bit_range:
+    - 2
+    - 2
+    description: SS output enable
+  - name: TXDMAEN
+    bit_range:
+    - 1
+    - 1
+    description: Tx buffer DMA enable
+  - name: RXDMAEN
+    bit_range:
+    - 0
+    - 0
+    description: Rx buffer DMA enable
+  side_effects: null
+- id: SR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: TIFRFE
+    bit_range:
+    - 8
+    - 8
+    description: TI frame format error
+  - name: BSY
+    bit_range:
+    - 7
+    - 7
+    description: Busy flag
+  - name: OVR
+    bit_range:
+    - 6
+    - 6
+    description: Overrun flag
+  - name: MODF
+    bit_range:
+    - 5
+    - 5
+    description: Mode fault
+  - name: CRCERR
+    bit_range:
+    - 4
+    - 4
+    description: CRC error flag
+  - name: UDR
+    bit_range:
+    - 3
+    - 3
+    description: Underrun flag
+  - name: CHSIDE
+    bit_range:
+    - 2
+    - 2
+    description: Channel side
+  - name: TXE
+    bit_range:
+    - 1
+    - 1
+    description: Transmit buffer empty
+  - name: RXNE
+    bit_range:
+    - 0
+    - 0
+    description: Receive buffer not empty
+  side_effects: null
+- id: DR
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DR
+    bit_range:
+    - 15
+    - 0
+    description: Data register
+  side_effects: null
+- id: CRCPR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 7
+  fields:
+  - name: CRCPOLY
+    bit_range:
+    - 15
+    - 0
+    description: CRC polynomial register
+  side_effects: null
+- id: RXCRCR
+  address_offset: 20
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: RxCRC
+    bit_range:
+    - 15
+    - 0
+    description: Rx CRC register
+  side_effects: null
+- id: TXCRCR
+  address_offset: 24
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: TxCRC
+    bit_range:
+    - 15
+    - 0
+    description: Tx CRC register
+  side_effects: null
+- id: I2SCFGR
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: I2SMOD
+    bit_range:
+    - 11
+    - 11
+    description: I2S mode selection
+  - name: I2SE
+    bit_range:
+    - 10
+    - 10
+    description: I2S Enable
+  - name: I2SCFG
+    bit_range:
+    - 9
+    - 8
+    description: I2S configuration mode
+  - name: PCMSYNC
+    bit_range:
+    - 7
+    - 7
+    description: PCM frame synchronization
+  - name: I2SSTD
+    bit_range:
+    - 5
+    - 4
+    description: I2S standard selection
+  - name: CKPOL
+    bit_range:
+    - 3
+    - 3
+    description: Steady state clock polarity
+  - name: DATLEN
+    bit_range:
+    - 2
+    - 1
+    description: Data length to be transferred
+  - name: CHLEN
+    bit_range:
+    - 0
+    - 0
+    description: Channel length (number of bits per audio channel)
+  side_effects: null
+- id: I2SPR
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MCKOE
+    bit_range:
+    - 9
+    - 9
+    description: Master clock output enable
+  - name: ODD
+    bit_range:
+    - 8
+    - 8
+    description: Odd factor for the prescaler
+  - name: I2SDIV
+    bit_range:
+    - 7
+    - 0
+    description: I2S Linear prescaler
+  side_effects: null
+interrupts:
+  SPI5: 85
+timing: null

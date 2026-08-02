@@ -1,0 +1,154 @@
+peripheral: SYSCFG
+version: 0.1.0
+registers:
+- id: MEMRM
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MEM_MODE
+    bit_range:
+    - 1
+    - 0
+    description: MEM_MODE
+  side_effects: null
+- id: PMC
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADC1DC2
+    bit_range:
+    - 16
+    - 16
+    description: ADC1DC2
+  side_effects: null
+- id: EXTICR1
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EXTI3
+    bit_range:
+    - 15
+    - 12
+    description: EXTI x configuration (x = 0 to 3)
+  - name: EXTI2
+    bit_range:
+    - 11
+    - 8
+    description: EXTI x configuration (x = 0 to 3)
+  - name: EXTI1
+    bit_range:
+    - 7
+    - 4
+    description: EXTI x configuration (x = 0 to 3)
+  - name: EXTI0
+    bit_range:
+    - 3
+    - 0
+    description: EXTI x configuration (x = 0 to 3)
+  side_effects: null
+- id: EXTICR2
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EXTI7
+    bit_range:
+    - 15
+    - 12
+    description: EXTI x configuration (x = 4 to 7)
+  - name: EXTI6
+    bit_range:
+    - 11
+    - 8
+    description: EXTI x configuration (x = 4 to 7)
+  - name: EXTI5
+    bit_range:
+    - 7
+    - 4
+    description: EXTI x configuration (x = 4 to 7)
+  - name: EXTI4
+    bit_range:
+    - 3
+    - 0
+    description: EXTI x configuration (x = 4 to 7)
+  side_effects: null
+- id: EXTICR3
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EXTI11
+    bit_range:
+    - 15
+    - 12
+    description: EXTI x configuration (x = 8 to 11)
+  - name: EXTI10
+    bit_range:
+    - 11
+    - 8
+    description: EXTI10
+  - name: EXTI9
+    bit_range:
+    - 7
+    - 4
+    description: EXTI x configuration (x = 8 to 11)
+  - name: EXTI8
+    bit_range:
+    - 3
+    - 0
+    description: EXTI x configuration (x = 8 to 11)
+  side_effects: null
+- id: EXTICR4
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EXTI15
+    bit_range:
+    - 15
+    - 12
+    description: EXTI x configuration (x = 12 to 15)
+  - name: EXTI14
+    bit_range:
+    - 11
+    - 8
+    description: EXTI x configuration (x = 12 to 15)
+  - name: EXTI13
+    bit_range:
+    - 7
+    - 4
+    description: EXTI x configuration (x = 12 to 15)
+  - name: EXTI12
+    bit_range:
+    - 3
+    - 0
+    description: EXTI x configuration (x = 12 to 15)
+  side_effects: null
+- id: CMPCR
+  address_offset: 32
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: READY
+    bit_range:
+    - 8
+    - 8
+    description: READY
+  - name: CMP_PD
+    bit_range:
+    - 0
+    - 0
+    description: Compensation cell power-down
+  side_effects: null
+interrupts: null
+timing: null

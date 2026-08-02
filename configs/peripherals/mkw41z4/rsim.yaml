@@ -1,0 +1,609 @@
+peripheral: RSIM
+version: 0.1.0
+registers:
+- id: CONTROL
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 12582914
+  fields:
+  - name: BLE_RF_OSC_REQ_EN
+    bit_range:
+    - 0
+    - 0
+    description: BLE Ref Osc (Sysclk) Request Enable
+  - name: BLE_RF_OSC_REQ_STAT
+    bit_range:
+    - 1
+    - 1
+    description: BLE Ref Osc (Sysclk) Request Status
+  - name: BLE_RF_OSC_REQ_INT_EN
+    bit_range:
+    - 4
+    - 4
+    description: BLE Ref Osc (Sysclk) Request Interrupt Enable
+  - name: BLE_RF_OSC_REQ_INT
+    bit_range:
+    - 5
+    - 5
+    description: BLE Ref Osc (Sysclk) Request Interrupt Flag
+  - name: RF_OSC_EN
+    bit_range:
+    - 11
+    - 8
+    description: RF Ref Osc Enable Select
+  - name: RADIO_GASKET_BYPASS_OVRD_EN
+    bit_range:
+    - 12
+    - 12
+    description: Radio Gasket Bypass Override Enable
+  - name: RADIO_GASKET_BYPASS_OVRD
+    bit_range:
+    - 13
+    - 13
+    description: Radio Gasket Bypass Override
+  - name: IPP_OBE_3V_BLE_ACTIVE_1
+    bit_range:
+    - 16
+    - 16
+    description: IPP_OBE_3V_BLE_ACTIVE_1
+  - name: IPP_OBE_3V_BLE_ACTIVE_2
+    bit_range:
+    - 17
+    - 17
+    description: IPP_OBE_3V_BLE_ACTIVE_2
+  - name: RADIO_RAM_ACCESS_OVRD_EN
+    bit_range:
+    - 18
+    - 18
+    description: Radio RAM Access Override Enable
+  - name: RADIO_RAM_ACCESS_OVRD
+    bit_range:
+    - 19
+    - 19
+    description: Radio RAM Access Override
+  - name: RSIM_DSM_EXIT
+    bit_range:
+    - 20
+    - 20
+    description: BLE Force Deep Sleep Mode Exit
+  - name: RSIM_STOP_ACK_OVRD_EN
+    bit_range:
+    - 22
+    - 22
+    description: Stop Acknowledge Override Enable
+  - name: RSIM_STOP_ACK_OVRD
+    bit_range:
+    - 23
+    - 23
+    description: Stop Acknowledge Override
+  - name: RF_OSC_READY
+    bit_range:
+    - 24
+    - 24
+    description: RF Ref Osc Ready
+  - name: RF_OSC_READY_OVRD_EN
+    bit_range:
+    - 25
+    - 25
+    description: RF Ref Osc Ready Override Enable
+  - name: RF_OSC_READY_OVRD
+    bit_range:
+    - 26
+    - 26
+    description: RF Ref Osc Ready Override
+  - name: BLOCK_SOC_RESETS
+    bit_range:
+    - 28
+    - 28
+    description: Block SoC Resets of the Radio
+  - name: BLOCK_RADIO_OUTPUTS
+    bit_range:
+    - 29
+    - 29
+    description: Block Radio Outputs
+  - name: ALLOW_DFT_RESETS
+    bit_range:
+    - 30
+    - 30
+    description: Allow the DFT Reset Pin to Reset the Radio
+  - name: RADIO_RESET_BIT
+    bit_range:
+    - 31
+    - 31
+    description: Software Reset for the Radio
+  side_effects: null
+- id: ACTIVE_DELAY
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BLE_FINE_DELAY
+    bit_range:
+    - 5
+    - 0
+    description: BLE Active Fine Delay
+  - name: BLE_COARSE_DELAY
+    bit_range:
+    - 19
+    - 16
+    description: BLE Active Coarse Delay
+  side_effects: null
+- id: MAC_MSB
+  address_offset: 8
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: MAC_ADDR_MSB
+    bit_range:
+    - 7
+    - 0
+    description: Radio MAC Address MSB
+  side_effects: null
+- id: MAC_LSB
+  address_offset: 12
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: MAC_ADDR_LSB
+    bit_range:
+    - 31
+    - 0
+    description: Radio MAC Address LSB
+  side_effects: null
+- id: MISC
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 50331648
+  fields:
+  - name: ANALOG_TEST_EN
+    bit_range:
+    - 4
+    - 0
+    description: RSIM Analog Test Mux Enables
+  - name: RADIO_VERSION
+    bit_range:
+    - 31
+    - 24
+    description: Radio Version ID number
+  side_effects: null
+- id: DSM_TIMER
+  address_offset: 256
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DSM_TIMER
+    bit_range:
+    - 23
+    - 0
+    description: Deep Sleep Mode Timer
+  side_effects: null
+- id: DSM_CONTROL
+  address_offset: 260
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DSM_ANT_READY
+    bit_range:
+    - 0
+    - 0
+    description: ANT Ready for Deep Sleep Mode
+  - name: ANT_DEEP_SLEEP_STATUS
+    bit_range:
+    - 1
+    - 1
+    description: ANT Link Layer Deep Sleep Mode Status
+  - name: DSM_ANT_FINISHED
+    bit_range:
+    - 2
+    - 2
+    description: ANT Deep Sleep Time Finished
+  - name: ANT_SYSCLK_REQUEST_EN
+    bit_range:
+    - 3
+    - 3
+    description: Enable ANT Link Layer to Request RF OSC
+  - name: ANT_SLEEP_REQUEST
+    bit_range:
+    - 4
+    - 4
+    description: ANT Link Layer Deep Sleep Requested
+  - name: ANT_SYSCLK_REQ
+    bit_range:
+    - 5
+    - 5
+    description: ANT Link Layer RF OSC Request Status
+  - name: ANT_SYSCLK_INTERRUPT_EN
+    bit_range:
+    - 6
+    - 6
+    description: ANT Link Layer RF OSC Request Interrupt Enable
+  - name: ANT_SYSCLK_REQ_INT
+    bit_range:
+    - 7
+    - 7
+    description: Interrupt Flag from an ANT Link Layer RF OSC Request
+  - name: DSM_GEN_READY
+    bit_range:
+    - 8
+    - 8
+    description: Generic FSK Ready for Deep Sleep Mode
+  - name: GEN_DEEP_SLEEP_STATUS
+    bit_range:
+    - 9
+    - 9
+    description: Generic FSK Link Layer Deep Sleep Mode Status
+  - name: DSM_GEN_FINISHED
+    bit_range:
+    - 10
+    - 10
+    description: Generic FSK Deep Sleep Time Finished
+  - name: GEN_SYSCLK_REQUEST_EN
+    bit_range:
+    - 11
+    - 11
+    description: Enable Generic FSK Link Layer to Request RF OSC
+  - name: GEN_SLEEP_REQUEST
+    bit_range:
+    - 12
+    - 12
+    description: Generic FSK Link Layer Deep Sleep Requested
+  - name: GEN_SYSCLK_REQ
+    bit_range:
+    - 13
+    - 13
+    description: Generic FSK Link Layer RF OSC Request Status
+  - name: GEN_SYSCLK_INTERRUPT_EN
+    bit_range:
+    - 14
+    - 14
+    description: Generic FSK Link Layer RF OSC Request Interrupt Enable
+  - name: GEN_SYSCLK_REQ_INT
+    bit_range:
+    - 15
+    - 15
+    description: Interrupt Flag from an Generic FSK Link Layer RF OSC Request
+  - name: DSM_ZIG_READY
+    bit_range:
+    - 16
+    - 16
+    description: 802.15.4 Ready for Deep Sleep Mode
+  - name: ZIG_DEEP_SLEEP_STATUS
+    bit_range:
+    - 17
+    - 17
+    description: 802.15.4 Link Layer Deep Sleep Mode Status
+  - name: DSM_ZIG_FINISHED
+    bit_range:
+    - 18
+    - 18
+    description: 802.15.4 Deep Sleep Time Finished
+  - name: ZIG_SYSCLK_REQUEST_EN
+    bit_range:
+    - 19
+    - 19
+    description: Enable 802.15.4 Link Layer to Request RF OSC
+  - name: ZIG_SLEEP_REQUEST
+    bit_range:
+    - 20
+    - 20
+    description: 802.15.4 Link Layer Deep Sleep Requested
+  - name: ZIG_SYSCLK_REQ
+    bit_range:
+    - 21
+    - 21
+    description: 802.15.4 Link Layer RF OSC Request Status
+  - name: ZIG_SYSCLK_INTERRUPT_EN
+    bit_range:
+    - 22
+    - 22
+    description: 802.15.4 Link Layer RF OSC Request Interrupt Enable
+  - name: ZIG_SYSCLK_REQ_INT
+    bit_range:
+    - 23
+    - 23
+    description: Interrupt Flag from an 802.15.4 Link Layer RF OSC Request
+  - name: DSM_TIMER_CLR
+    bit_range:
+    - 27
+    - 27
+    description: Deep Sleep Mode Timer Clear
+  - name: DSM_TIMER_EN
+    bit_range:
+    - 31
+    - 31
+    description: Deep Sleep Mode Timer Enable
+  side_effects: null
+- id: DSM_OSC_OFFSET
+  address_offset: 264
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DSM_OSC_STABILIZE_TIME
+    bit_range:
+    - 9
+    - 0
+    description: Deep Sleep Wakeup RF OSC Stabilize Time
+  side_effects: null
+- id: ANT_SLEEP
+  address_offset: 268
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ANT_SLEEP_TIME
+    bit_range:
+    - 23
+    - 0
+    description: ANT Link Layer Sleep Time
+  side_effects: null
+- id: ANT_WAKE
+  address_offset: 272
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ANT_WAKE_TIME
+    bit_range:
+    - 23
+    - 0
+    description: ANT Link Layer Wake Time
+  side_effects: null
+- id: ZIG_SLEEP
+  address_offset: 276
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ZIG_SLEEP_TIME
+    bit_range:
+    - 23
+    - 0
+    description: 802.15.4 Link Layer Sleep Time
+  side_effects: null
+- id: ZIG_WAKE
+  address_offset: 280
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ZIG_WAKE_TIME
+    bit_range:
+    - 23
+    - 0
+    description: 802.15.4 Link Layer Wake Time
+  side_effects: null
+- id: GEN_SLEEP
+  address_offset: 284
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: GEN_SLEEP_TIME
+    bit_range:
+    - 23
+    - 0
+    description: Generic FSK Link Layer Sleep Time
+  side_effects: null
+- id: GEN_WAKE
+  address_offset: 288
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: GEN_WAKE_TIME
+    bit_range:
+    - 23
+    - 0
+    description: Generic FSK Link Layer Wake Time
+  side_effects: null
+- id: RF_OSC_CTRL
+  address_offset: 292
+  size: 32
+  access: READ_WRITE
+  reset_value: 2111494
+  fields:
+  - name: BB_XTAL_ALC_COUNT_SEL
+    bit_range:
+    - 1
+    - 0
+    description: rmap_bb_xtal_alc_count_sel_hv[1:0]
+  - name: BB_XTAL_ALC_ON
+    bit_range:
+    - 2
+    - 2
+    description: rmap_bb_xtal_alc_on_hv
+  - name: RF_OSC_BYPASS_EN
+    bit_range:
+    - 3
+    - 3
+    description: RF Ref Osc Bypass Enable
+  - name: BB_XTAL_COMP_BIAS
+    bit_range:
+    - 8
+    - 4
+    description: rmap_bb_xtal_comp_bias_hv[4:0]
+  - name: BB_XTAL_DC_COUP_MODE_EN
+    bit_range:
+    - 9
+    - 9
+    description: rmap_bb_xtal_dc_coup_mode_en_hv
+  - name: BB_XTAL_DIAGSEL
+    bit_range:
+    - 10
+    - 10
+    description: rmap_bb_xtal_diagsel_hv
+  - name: BB_XTAL_DIG_CLK_ON
+    bit_range:
+    - 11
+    - 11
+    description: rmap_bb_xtal_dig_clk_on_hv
+  - name: BB_XTAL_GM
+    bit_range:
+    - 16
+    - 12
+    description: rmap_bb_xtal_gm_hv[4:0]
+  - name: BB_XTAL_ON_OVRD
+    bit_range:
+    - 17
+    - 17
+    description: rmap_bb_xtal_on_ovrd_hv
+  - name: BB_XTAL_ON_OVRD_ON
+    bit_range:
+    - 18
+    - 18
+    description: rmap_bb_xtal_on_ovrd_on_hv
+  - name: BB_XTAL_READY_COUNT_SEL
+    bit_range:
+    - 21
+    - 20
+    description: rmap_bb_xtal_ready_count_sel_hv[1:0]
+  - name: RADIO_EXT_OSC_RF_EN_SEL
+    bit_range:
+    - 27
+    - 27
+    description: Radio External Request for RF OSC Select
+  - name: RADIO_EXT_OSC_OVRD
+    bit_range:
+    - 28
+    - 28
+    description: Radio External Request for RF OSC Override
+  - name: RADIO_EXT_OSC_OVRD_EN
+    bit_range:
+    - 29
+    - 29
+    description: Radio External Request for RF OSC Override Enable
+  - name: RADIO_RF_ABORT_OVRD
+    bit_range:
+    - 30
+    - 30
+    description: Radio RF Abort Override
+  - name: RADIO_RF_ABORT_OVRD_EN
+    bit_range:
+    - 31
+    - 31
+    description: Radio RF Abort Override Enable
+  side_effects: null
+- id: ANA_TEST
+  address_offset: 296
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BB_LDO_LS_BYP
+    bit_range:
+    - 0
+    - 0
+    description: rmap_bb_ldo_ls_byp_hv
+  - name: BB_LDO_LS_DIAGSEL
+    bit_range:
+    - 1
+    - 1
+    description: rmap_bb_ldo_ls_diagsel_hv
+  - name: BB_LDO_XO_BYP_ON
+    bit_range:
+    - 2
+    - 2
+    description: rmap_bb_ldo_xo_byp_on_hv
+  - name: BB_LDO_XO_DIAGSEL
+    bit_range:
+    - 3
+    - 3
+    description: rmap_bb_ldo_xo_diagsel_hv
+  - name: BB_XTAL_TEST
+    bit_range:
+    - 4
+    - 4
+    description: rmap_bb_xtal_test_en_hv
+  - name: BG_DIAGBUF
+    bit_range:
+    - 5
+    - 5
+    description: rmap_bg_diagbuf_hv
+  - name: BG_DIAGSEL
+    bit_range:
+    - 6
+    - 6
+    description: rmap_bg_diagsel_hv
+  - name: BG_STARTUPFORCE
+    bit_range:
+    - 7
+    - 7
+    description: rmap_bg_startupforce_hv
+  - name: DIAG_1234_ON
+    bit_range:
+    - 8
+    - 8
+    description: rmap_diag_1234_on_hv
+  - name: DIAG2SOCADC_DEC
+    bit_range:
+    - 10
+    - 9
+    description: rmap_diag2socadc_dec_hv[1:0]
+  - name: DIAG2SOCADC_DEC_ON
+    bit_range:
+    - 11
+    - 11
+    description: rmap_diag2socadc_dec_on_hv
+  - name: DIAGCODE
+    bit_range:
+    - 14
+    - 12
+    description: rmap_diagcode_hv[2:0]
+  side_effects: null
+- id: ANA_TRIM
+  address_offset: 300
+  size: 32
+  access: READ_WRITE
+  reset_value: 2018181120
+  fields:
+  - name: BB_LDO_LS_SPARE
+    bit_range:
+    - 1
+    - 0
+    description: rmap_bb_ldo_ls_spare_hv[1:0]
+  - name: BB_LDO_LS_TRIM
+    bit_range:
+    - 5
+    - 3
+    description: rmap_bb_ldo_ls_trim_hv[2:0]
+  - name: BB_LDO_XO_SPARE
+    bit_range:
+    - 7
+    - 6
+    description: rmap_bb_ldo_xo_spare_hv[1:0]
+  - name: BB_LDO_XO_TRIM
+    bit_range:
+    - 10
+    - 8
+    description: rmap_bb_ldo_xo_trim_hv[2:0]
+  - name: BB_XTAL_SPARE
+    bit_range:
+    - 15
+    - 11
+    description: rmap_bb_xtal_spare_hv[4:0]
+  - name: BB_XTAL_TRIM
+    bit_range:
+    - 23
+    - 16
+    description: rmap_bb_xtal_trim_hv[7:0]
+  - name: BG_1V_TRIM
+    bit_range:
+    - 27
+    - 24
+    description: rmap_bg_1v_trim_hv[3:0]
+  - name: BG_IBIAS_5U_TRIM
+    bit_range:
+    - 31
+    - 28
+    description: rmap_bg_ibias_5u_trim_hv[3:0]
+  side_effects: null
+interrupts: null
+timing: null

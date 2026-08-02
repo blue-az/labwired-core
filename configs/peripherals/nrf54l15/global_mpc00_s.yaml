@@ -1,0 +1,763 @@
+peripheral: GLOBAL_MPC00_S
+version: 0.1.0
+registers:
+- id: EVENTS_MEMACCERR
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_MEMACCERR
+    bit_range:
+    - 0
+    - 0
+    description: Memory Access Error event
+  side_effects: null
+- id: INTEN
+  address_offset: 768
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MEMACCERR
+    bit_range:
+    - 0
+    - 0
+    description: Enable or disable interrupt for event MEMACCERR
+  side_effects: null
+- id: INTENSET
+  address_offset: 772
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MEMACCERR
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to enable interrupt for event MEMACCERR
+  side_effects: null
+- id: INTENCLR
+  address_offset: 776
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MEMACCERR
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to disable interrupt for event MEMACCERR
+  side_effects: null
+- id: MEMACCERR_ADDRESS
+  address_offset: 1024
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: ADDRESS
+    bit_range:
+    - 31
+    - 0
+    description: Target address for erroneous access
+  side_effects: null
+- id: MEMACCERR_INFO
+  address_offset: 1028
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: READ
+    bit_range:
+    - 12
+    - 12
+    description: Read bit of bus access
+  - name: WRITE
+    bit_range:
+    - 13
+    - 13
+    description: Write bit of bus access
+  - name: EXECUTE
+    bit_range:
+    - 14
+    - 14
+    description: Execute bit of bus access
+  - name: SECURE
+    bit_range:
+    - 15
+    - 15
+    description: Secure bit of bus access
+  - name: ERRORSOURCE
+    bit_range:
+    - 16
+    - 16
+    description: Source of memory access error
+  side_effects: null
+- id: OVERRIDE0_CONFIG
+  address_offset: 2048
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Lock Override region n
+  - name: ENABLE
+    bit_range:
+    - 9
+    - 9
+    description: Enable Override region n
+  side_effects: null
+- id: OVERRIDE0_STARTADDR
+  address_offset: 2052
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STARTADDR
+    bit_range:
+    - 31
+    - 0
+    description: Start address for override region n
+  side_effects: null
+- id: OVERRIDE0_ENDADDR
+  address_offset: 2056
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENDADDR
+    bit_range:
+    - 31
+    - 0
+    description: End address for override region n
+  side_effects: null
+- id: OVERRIDE0_PERM
+  address_offset: 2064
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: READ
+    bit_range:
+    - 0
+    - 0
+    description: Read access
+  - name: WRITE
+    bit_range:
+    - 1
+    - 1
+    description: Write access
+  - name: EXECUTE
+    bit_range:
+    - 2
+    - 2
+    description: Software execute
+  - name: SECATTR
+    bit_range:
+    - 3
+    - 3
+    description: Security mapping
+  side_effects: null
+- id: OVERRIDE0_PERMMASK
+  address_offset: 2068
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: READ
+    bit_range:
+    - 0
+    - 0
+    description: Read mask
+  - name: WRITE
+    bit_range:
+    - 1
+    - 1
+    description: Write mask
+  - name: EXECUTE
+    bit_range:
+    - 2
+    - 2
+    description: Execute mask
+  - name: SECATTR
+    bit_range:
+    - 3
+    - 3
+    description: Security mapping mask
+  side_effects: null
+- id: OVERRIDE1_CONFIG
+  address_offset: 2080
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Lock Override region n
+  - name: ENABLE
+    bit_range:
+    - 9
+    - 9
+    description: Enable Override region n
+  side_effects: null
+- id: OVERRIDE1_STARTADDR
+  address_offset: 2084
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STARTADDR
+    bit_range:
+    - 31
+    - 0
+    description: Start address for override region n
+  side_effects: null
+- id: OVERRIDE1_ENDADDR
+  address_offset: 2088
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENDADDR
+    bit_range:
+    - 31
+    - 0
+    description: End address for override region n
+  side_effects: null
+- id: OVERRIDE1_PERM
+  address_offset: 2096
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: READ
+    bit_range:
+    - 0
+    - 0
+    description: Read access
+  - name: WRITE
+    bit_range:
+    - 1
+    - 1
+    description: Write access
+  - name: EXECUTE
+    bit_range:
+    - 2
+    - 2
+    description: Software execute
+  - name: SECATTR
+    bit_range:
+    - 3
+    - 3
+    description: Security mapping
+  side_effects: null
+- id: OVERRIDE1_PERMMASK
+  address_offset: 2100
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: READ
+    bit_range:
+    - 0
+    - 0
+    description: Read mask
+  - name: WRITE
+    bit_range:
+    - 1
+    - 1
+    description: Write mask
+  - name: EXECUTE
+    bit_range:
+    - 2
+    - 2
+    description: Execute mask
+  - name: SECATTR
+    bit_range:
+    - 3
+    - 3
+    description: Security mapping mask
+  side_effects: null
+- id: OVERRIDE2_CONFIG
+  address_offset: 2112
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Lock Override region n
+  - name: ENABLE
+    bit_range:
+    - 9
+    - 9
+    description: Enable Override region n
+  side_effects: null
+- id: OVERRIDE2_STARTADDR
+  address_offset: 2116
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STARTADDR
+    bit_range:
+    - 31
+    - 0
+    description: Start address for override region n
+  side_effects: null
+- id: OVERRIDE2_ENDADDR
+  address_offset: 2120
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENDADDR
+    bit_range:
+    - 31
+    - 0
+    description: End address for override region n
+  side_effects: null
+- id: OVERRIDE2_PERM
+  address_offset: 2128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: READ
+    bit_range:
+    - 0
+    - 0
+    description: Read access
+  - name: WRITE
+    bit_range:
+    - 1
+    - 1
+    description: Write access
+  - name: EXECUTE
+    bit_range:
+    - 2
+    - 2
+    description: Software execute
+  - name: SECATTR
+    bit_range:
+    - 3
+    - 3
+    description: Security mapping
+  side_effects: null
+- id: OVERRIDE2_PERMMASK
+  address_offset: 2132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: READ
+    bit_range:
+    - 0
+    - 0
+    description: Read mask
+  - name: WRITE
+    bit_range:
+    - 1
+    - 1
+    description: Write mask
+  - name: EXECUTE
+    bit_range:
+    - 2
+    - 2
+    description: Execute mask
+  - name: SECATTR
+    bit_range:
+    - 3
+    - 3
+    description: Security mapping mask
+  side_effects: null
+- id: OVERRIDE3_CONFIG
+  address_offset: 2144
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Lock Override region n
+  - name: ENABLE
+    bit_range:
+    - 9
+    - 9
+    description: Enable Override region n
+  side_effects: null
+- id: OVERRIDE3_STARTADDR
+  address_offset: 2148
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STARTADDR
+    bit_range:
+    - 31
+    - 0
+    description: Start address for override region n
+  side_effects: null
+- id: OVERRIDE3_ENDADDR
+  address_offset: 2152
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENDADDR
+    bit_range:
+    - 31
+    - 0
+    description: End address for override region n
+  side_effects: null
+- id: OVERRIDE3_PERM
+  address_offset: 2160
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: READ
+    bit_range:
+    - 0
+    - 0
+    description: Read access
+  - name: WRITE
+    bit_range:
+    - 1
+    - 1
+    description: Write access
+  - name: EXECUTE
+    bit_range:
+    - 2
+    - 2
+    description: Software execute
+  - name: SECATTR
+    bit_range:
+    - 3
+    - 3
+    description: Security mapping
+  side_effects: null
+- id: OVERRIDE3_PERMMASK
+  address_offset: 2164
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: READ
+    bit_range:
+    - 0
+    - 0
+    description: Read mask
+  - name: WRITE
+    bit_range:
+    - 1
+    - 1
+    description: Write mask
+  - name: EXECUTE
+    bit_range:
+    - 2
+    - 2
+    description: Execute mask
+  - name: SECATTR
+    bit_range:
+    - 3
+    - 3
+    description: Security mapping mask
+  side_effects: null
+- id: OVERRIDE4_CONFIG
+  address_offset: 2176
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Lock Override region n
+  - name: ENABLE
+    bit_range:
+    - 9
+    - 9
+    description: Enable Override region n
+  side_effects: null
+- id: OVERRIDE4_STARTADDR
+  address_offset: 2180
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STARTADDR
+    bit_range:
+    - 31
+    - 0
+    description: Start address for override region n
+  side_effects: null
+- id: OVERRIDE4_ENDADDR
+  address_offset: 2184
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENDADDR
+    bit_range:
+    - 31
+    - 0
+    description: End address for override region n
+  side_effects: null
+- id: OVERRIDE4_PERM
+  address_offset: 2192
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: READ
+    bit_range:
+    - 0
+    - 0
+    description: Read access
+  - name: WRITE
+    bit_range:
+    - 1
+    - 1
+    description: Write access
+  - name: EXECUTE
+    bit_range:
+    - 2
+    - 2
+    description: Software execute
+  - name: SECATTR
+    bit_range:
+    - 3
+    - 3
+    description: Security mapping
+  side_effects: null
+- id: OVERRIDE4_PERMMASK
+  address_offset: 2196
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: READ
+    bit_range:
+    - 0
+    - 0
+    description: Read mask
+  - name: WRITE
+    bit_range:
+    - 1
+    - 1
+    description: Write mask
+  - name: EXECUTE
+    bit_range:
+    - 2
+    - 2
+    description: Execute mask
+  - name: SECATTR
+    bit_range:
+    - 3
+    - 3
+    description: Security mapping mask
+  side_effects: null
+- id: OVERRIDE5_CONFIG
+  address_offset: 2208
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Lock Override region n
+  - name: ENABLE
+    bit_range:
+    - 9
+    - 9
+    description: Enable Override region n
+  side_effects: null
+- id: OVERRIDE5_STARTADDR
+  address_offset: 2212
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STARTADDR
+    bit_range:
+    - 31
+    - 0
+    description: Start address for override region n
+  side_effects: null
+- id: OVERRIDE5_ENDADDR
+  address_offset: 2216
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENDADDR
+    bit_range:
+    - 31
+    - 0
+    description: End address for override region n
+  side_effects: null
+- id: OVERRIDE5_PERM
+  address_offset: 2224
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: READ
+    bit_range:
+    - 0
+    - 0
+    description: Read access
+  - name: WRITE
+    bit_range:
+    - 1
+    - 1
+    description: Write access
+  - name: EXECUTE
+    bit_range:
+    - 2
+    - 2
+    description: Software execute
+  - name: SECATTR
+    bit_range:
+    - 3
+    - 3
+    description: Security mapping
+  side_effects: null
+- id: OVERRIDE5_PERMMASK
+  address_offset: 2228
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: READ
+    bit_range:
+    - 0
+    - 0
+    description: Read mask
+  - name: WRITE
+    bit_range:
+    - 1
+    - 1
+    description: Write mask
+  - name: EXECUTE
+    bit_range:
+    - 2
+    - 2
+    description: Execute mask
+  - name: SECATTR
+    bit_range:
+    - 3
+    - 3
+    description: Security mapping mask
+  side_effects: null
+- id: OVERRIDE6_CONFIG
+  address_offset: 2240
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Lock Override region n
+  - name: ENABLE
+    bit_range:
+    - 9
+    - 9
+    description: Enable Override region n
+  side_effects: null
+- id: OVERRIDE6_STARTADDR
+  address_offset: 2244
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STARTADDR
+    bit_range:
+    - 31
+    - 0
+    description: Start address for override region n
+  side_effects: null
+- id: OVERRIDE6_ENDADDR
+  address_offset: 2248
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENDADDR
+    bit_range:
+    - 31
+    - 0
+    description: End address for override region n
+  side_effects: null
+- id: OVERRIDE6_PERM
+  address_offset: 2256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: READ
+    bit_range:
+    - 0
+    - 0
+    description: Read access
+  - name: WRITE
+    bit_range:
+    - 1
+    - 1
+    description: Write access
+  - name: EXECUTE
+    bit_range:
+    - 2
+    - 2
+    description: Software execute
+  - name: SECATTR
+    bit_range:
+    - 3
+    - 3
+    description: Security mapping
+  side_effects: null
+- id: OVERRIDE6_PERMMASK
+  address_offset: 2260
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: READ
+    bit_range:
+    - 0
+    - 0
+    description: Read mask
+  - name: WRITE
+    bit_range:
+    - 1
+    - 1
+    description: Write mask
+  - name: EXECUTE
+    bit_range:
+    - 2
+    - 2
+    description: Execute mask
+  - name: SECATTR
+    bit_range:
+    - 3
+    - 3
+    description: Security mapping mask
+  side_effects: null
+interrupts:
+  MPC00: 65
+timing: null

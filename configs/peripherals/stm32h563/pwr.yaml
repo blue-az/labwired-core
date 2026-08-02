@@ -1,0 +1,758 @@
+peripheral: PWR
+version: 0.1.0
+registers:
+- id: PWR_PMCR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 12
+  fields:
+  - name: LPMS
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      low-power mode selection
+      This bit defines the Deepsleep mode.
+  - name: SVOS
+    bit_range:
+    - 3
+    - 2
+    description: |-
+      system Stop mode voltage scaling selection
+      These bits control the Vsub CORE/sub  voltage level in system Stop mode, to obtain the best trade-off between power consumption and performance.
+  - name: CSSF
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      clear Standby and Stop flags (always read as 0)
+      This bit is cleared to 0 by hardware.
+  - name: FLPS
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Flash memory low-power mode in Stop mode
+      This bit is used to obtain the best trade-off between low-power consumption and restart time when exiting from Stop mode.
+      When it is set, the Flash memory enters low-power mode when the CPU domain is in Stop mode.
+      Note: When system enters stop mode with SVOS5 enabled, Flash memory is automatically forced in low-power mode.
+  - name: BOOSTE
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      analog switch Vsub BOOST/sub  control
+      This bit enables the booster to guarantee the analog switch AC performance when the Vsub DD/sub  supply voltage is below 2.7 V (reduction of the total harmonic distortion to have the same switch performance over the full supply voltage range) The Vsub DD/sub  supply voltage can be monitored through the PVD and the PLS bits.
+  - name: AVD_READY
+    bit_range:
+    - 13
+    - 13
+    description: "analog voltage ready\nThis bit is only used when the analog switch boost needs to be enabled (see BOOSTE bit).\nIt must be set by software when the expected Vsub DDA/sub  analog supply level is available.\nThe correct analog supply level is indicated by the AVDO bit (PWR_VMSR register) after setting the AVDEN bit (PWR_VMCR register) and selecting the supply level to be monitored \t(ALS bits)."
+  - name: ETHERNETSO
+    bit_range:
+    - 16
+    - 16
+    description: ETHERNET RAM shut-off in Stop mode.
+  - name: SRAM3SO
+    bit_range:
+    - 23
+    - 23
+    description: AHB SRAM3 shut-off in Stop mode.
+  - name: SRAM2_16SO
+    bit_range:
+    - 24
+    - 24
+    description: AHB SRAM2 16-Kbyte shut-off in Stop mode.
+  - name: SRAM2_48SO
+    bit_range:
+    - 25
+    - 25
+    description: AHB SRAM2 48-Kbyte shut-off in Stop mode.
+  - name: SRAM1SO
+    bit_range:
+    - 26
+    - 26
+    description: AHB SRAM1 shut-off in Stop mode
+  side_effects: null
+- id: PWR_PMSR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STOPF
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Stop flag
+      This bit is set by hardware and cleared only by any reset or by setting the CSSF bit.
+  - name: SBF
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      System standby flag
+      This bit is set by hardware and cleared only by a POR or by setting the CSSF bit.
+  side_effects: null
+- id: PWR_VOSCR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VOS
+    bit_range:
+    - 5
+    - 4
+    description: |-
+      voltage scaling selection according to performance
+      These bits control the Vsub CORE/sub  voltage level and allow to obtain the best trade-off between power consumption and performance:
+      - In bypass mode, these bits must also be set according to the external provided core voltage level and related performance.
+      - When increasing the performance, the voltage scaling must be changed before increasing the system frequency.
+      - When decreasing performance, the system frequency must first be decreased before changing the voltage scaling.
+  side_effects: null
+- id: PWR_VOSSR
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 8
+  fields:
+  - name: VOSRDY
+    bit_range:
+    - 3
+    - 3
+    description: Ready bit for Vsub CORE/sub  voltage scaling output selection.
+  - name: ACTVOSRDY
+    bit_range:
+    - 13
+    - 13
+    description: Voltage level ready for currently used VOS
+  - name: ACTVOS
+    bit_range:
+    - 15
+    - 14
+    description: "voltage output scaling currently applied to Vsub CORE/sub \nThis field provides the last VOS value."
+  side_effects: null
+- id: PWR_BDCR
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BREN
+    bit_range:
+    - 0
+    - 0
+    description: "Backup RAM retention in Standby and Vsub BAT/sub  modes\nWhen this bit set, the backup regulator (used to maintain the backup RAM content in Standby and Vsub BAT/sub  modes) is enabled.\nIf BREN is cleared, the backup regulator is switched off. The backup RAM can still be used in \tRun and Stop modes. However its content is lost in Standby and Vsub BAT/sub  modes.\nIf BREN is set, the application must wait till the backup regulator ready flag (BRRDY) is set to indicate that the data written into the SRAM is maintained in Standby and Vsub BAT/sub  modes."
+  - name: MONEN
+    bit_range:
+    - 1
+    - 1
+    description: Backup domain voltage and temperature monitoring enable
+  - name: VBE
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Vsub BAT/sub  charging enable
+      Note: Reset only by POR,.
+  - name: VBRS
+    bit_range:
+    - 9
+    - 9
+    description: Vsub BAT/sub  charging resistor selection
+  side_effects: null
+- id: PWR_DBPCR
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DBP
+    bit_range:
+    - 0
+    - 0
+    description: "Disable Backup domain write protection\nIn reset state, all registers and SRAM in Backup domain are protected against parasitic write \taccess. This bit must be set to enable write access to these registers."
+  side_effects: null
+- id: PWR_BDSR
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BRRDY
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      backup regulator ready
+      This bit is set by hardware to indicate that the backup regulator is ready.
+  - name: VBATL
+    bit_range:
+    - 20
+    - 20
+    description: Vsub BAT/sub  level monitoring versus low threshold
+  - name: VBATH
+    bit_range:
+    - 21
+    - 21
+    description: Vsub BAT/sub  level monitoring versus high threshold
+  - name: TEMPL
+    bit_range:
+    - 22
+    - 22
+    description: temperature level monitoring versus low threshold
+  - name: TEMPH
+    bit_range:
+    - 23
+    - 23
+    description: temperature level monitoring versus high threshold
+  side_effects: null
+- id: PWR_UCPDR
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: UCPD_DBDIS
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      USB Type-C and power delivery dead battery disable
+      After exiting reset, the USB Type-C 'dead battery' behavior is enabled, which may have a pull-down effect on CC1 and CC2 pins. It is recommended to disable it in all case, either to stop this pull-down or to hand over control to the UCPD (which should therefore be initialized before doing the disable).
+  - name: UCPD_STBY
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      USB Type-c and Power delivery Standby mode
+      When set, this bit is used to memorize the UCPD configuration in Standby mode. This bit must be written to 1 just before entering Standby mode when using UCPD, and it must be written to 0 after exiting the standby mode and before writing any UCPD register.
+  side_effects: null
+- id: PWR_SCCR
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BYPASS
+    bit_range:
+    - 0
+    - 0
+    description: power management unit bypass
+  - name: LDOEN
+    bit_range:
+    - 8
+    - 8
+    description: "LDO enable \nThe value is set by hardware when the package uses the LDO regulator."
+  - name: SMPSEN
+    bit_range:
+    - 9
+    - 9
+    description: "SMPS enable \nThe value is set by hardware when the package uses the SMPS regulator."
+  side_effects: null
+- id: PWR_VMCR
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PVDE
+    bit_range:
+    - 0
+    - 0
+    description: PVD enable
+  - name: PLS
+    bit_range:
+    - 3
+    - 1
+    description: |-
+      programmable voltage detector (PVD) level selection
+      These bits select the voltage threshold detected by the PVD.
+  - name: AVDEN
+    bit_range:
+    - 8
+    - 8
+    description: peripheral voltage monitor on Vsub DDA/sub  enable
+  - name: ALS
+    bit_range:
+    - 10
+    - 9
+    description: |-
+      analog voltage detector (AVD) level selection
+      These bits select the voltage threshold detected by the AVD.
+  side_effects: null
+- id: PWR_USBSCR
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: USB33DEN
+    bit_range:
+    - 24
+    - 24
+    description: Vsub DDUSB/sub  voltage level detector enable
+  - name: USB33SV
+    bit_range:
+    - 25
+    - 25
+    description: |-
+      independent USB supply valid
+      This bit is used to validate the Vsub DDUSB/sub  supply for electrical and logical isolation purpose. Setting this bit is mandatory to use the USBFS peripheral. If Vsub DDUSB/sub  is not always present in the application, the Vsub DDUSB/sub  voltage monitor can be used to determine whether this supply is ready or not.
+  side_effects: null
+- id: PWR_VMSR
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: AVDO
+    bit_range:
+    - 19
+    - 19
+    description: "analog voltage detector output on Vsub DDA/sub \nThis bit is set and cleared by hardware. It is valid only if AVD on VDDA is enabled by the AVDEN bit.\nNote: Since the AVD is disabled in Standby mode, this bit is equal to 0 after standby or reset until the AVDEN bit is set."
+  - name: VDDIO2RDY
+    bit_range:
+    - 20
+    - 20
+    description: "voltage detector output on Vsub DDIO2/sub \nThis bit is set and cleared by hardware."
+  - name: PVDO
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      programmable voltage detect output
+      This bit is set and cleared by hardware. It is valid only if the PVD has been enabled by the PVDE bit.
+      Note: Since the PVD is disabled in Standby mode, this bit is equal to 0 after Standby or reset until the PVDE bit is set.
+  - name: USB33RDY
+    bit_range:
+    - 24
+    - 24
+    description: Vsub DDUSB/sub  ready
+  side_effects: null
+- id: PWR_WUSCR
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CWUF1
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      clear wakeup pin flag for WUFx
+      These bits are always read as 0.
+  - name: CWUF2
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      clear wakeup pin flag for WUFx
+      These bits are always read as 0.
+  - name: CWUF3
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      clear wakeup pin flag for WUFx
+      These bits are always read as 0.
+  - name: CWUF4
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      clear wakeup pin flag for WUFx
+      These bits are always read as 0.
+  - name: CWUF5
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      clear wakeup pin flag for WUFx
+      These bits are always read as 0.
+  - name: CWUF6
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      clear wakeup pin flag for WUFx
+      These bits are always read as 0.
+  - name: CWUF7
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      clear wakeup pin flag for WUFx
+      These bits are always read as 0.
+  - name: CWUF8
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      clear wakeup pin flag for WUFx
+      These bits are always read as 0.
+  side_effects: null
+- id: PWR_WUSR
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WUF1
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      wakeup pin WUFx flag
+      This bit is set by hardware and cleared only by a RESET pin or by setting the CWUFx bit in PWR_WUSCR register.
+  - name: WUF2
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      wakeup pin WUFx flag
+      This bit is set by hardware and cleared only by a RESET pin or by setting the CWUFx bit in PWR_WUSCR register.
+  - name: WUF3
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      wakeup pin WUFx flag
+      This bit is set by hardware and cleared only by a RESET pin or by setting the CWUFx bit in PWR_WUSCR register.
+  - name: WUF4
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      wakeup pin WUFx flag
+      This bit is set by hardware and cleared only by a RESET pin or by setting the CWUFx bit in PWR_WUSCR register.
+  - name: WUF5
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      wakeup pin WUFx flag
+      This bit is set by hardware and cleared only by a RESET pin or by setting the CWUFx bit in PWR_WUSCR register.
+  - name: WUF6
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      wakeup pin WUFx flag
+      This bit is set by hardware and cleared only by a RESET pin or by setting the CWUFx bit in PWR_WUSCR register.
+  - name: WUF7
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      wakeup pin WUFx flag
+      This bit is set by hardware and cleared only by a RESET pin or by setting the CWUFx bit in PWR_WUSCR register.
+  - name: WUF8
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      wakeup pin WUFx flag
+      This bit is set by hardware and cleared only by a RESET pin or by setting the CWUFx bit in PWR_WUSCR register.
+  side_effects: null
+- id: PWR_WUCR
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WUPEN1
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      enable wakeup pin WUPx
+      These bits are set and cleared by software.
+      Note: an additional wakeup event is detected if WUPx pin is enabled (by setting the WUPENx bit) when WUPx pin level is already high when WUPPx selects rising edge, or low when WUPPx selects falling edge.
+  - name: WUPEN2
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      enable wakeup pin WUPx
+      These bits are set and cleared by software.
+      Note: an additional wakeup event is detected if WUPx pin is enabled (by setting the WUPENx bit) when WUPx pin level is already high when WUPPx selects rising edge, or low when WUPPx selects falling edge.
+  - name: WUPEN3
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      enable wakeup pin WUPx
+      These bits are set and cleared by software.
+      Note: an additional wakeup event is detected if WUPx pin is enabled (by setting the WUPENx bit) when WUPx pin level is already high when WUPPx selects rising edge, or low when WUPPx selects falling edge.
+  - name: WUPEN4
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      enable wakeup pin WUPx
+      These bits are set and cleared by software.
+      Note: an additional wakeup event is detected if WUPx pin is enabled (by setting the WUPENx bit) when WUPx pin level is already high when WUPPx selects rising edge, or low when WUPPx selects falling edge.
+  - name: WUPEN5
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      enable wakeup pin WUPx
+      These bits are set and cleared by software.
+      Note: an additional wakeup event is detected if WUPx pin is enabled (by setting the WUPENx bit) when WUPx pin level is already high when WUPPx selects rising edge, or low when WUPPx selects falling edge.
+  - name: WUPEN6
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      enable wakeup pin WUPx
+      These bits are set and cleared by software.
+      Note: an additional wakeup event is detected if WUPx pin is enabled (by setting the WUPENx bit) when WUPx pin level is already high when WUPPx selects rising edge, or low when WUPPx selects falling edge.
+  - name: WUPEN7
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      enable wakeup pin WUPx
+      These bits are set and cleared by software.
+      Note: an additional wakeup event is detected if WUPx pin is enabled (by setting the WUPENx bit) when WUPx pin level is already high when WUPPx selects rising edge, or low when WUPPx selects falling edge.
+  - name: WUPEN8
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      enable wakeup pin WUPx
+      These bits are set and cleared by software.
+      Note: an additional wakeup event is detected if WUPx pin is enabled (by setting the WUPENx bit) when WUPx pin level is already high when WUPPx selects rising edge, or low when WUPPx selects falling edge.
+  - name: WUPP1
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      wakeup pin polarity bit for WUPx
+      These bits define the polarity used for event detection on WUPx external wakeup pin.
+  - name: WUPP2
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      wakeup pin polarity bit for WUPx
+      These bits define the polarity used for event detection on WUPx external wakeup pin.
+  - name: WUPP3
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      wakeup pin polarity bit for WUPx
+      These bits define the polarity used for event detection on WUPx external wakeup pin.
+  - name: WUPP4
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      wakeup pin polarity bit for WUPx
+      These bits define the polarity used for event detection on WUPx external wakeup pin.
+  - name: WUPP5
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      wakeup pin polarity bit for WUPx
+      These bits define the polarity used for event detection on WUPx external wakeup pin.
+  - name: WUPP6
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      wakeup pin polarity bit for WUPx
+      These bits define the polarity used for event detection on WUPx external wakeup pin.
+  - name: WUPP7
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      wakeup pin polarity bit for WUPx
+      These bits define the polarity used for event detection on WUPx external wakeup pin.
+  - name: WUPP8
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      wakeup pin polarity bit for WUPx
+      These bits define the polarity used for event detection on WUPx external wakeup pin.
+  - name: WUPPUPD1
+    bit_range:
+    - 17
+    - 16
+    description: |-
+      wakeup pin pull configuration for WKUPx
+      These bits define the I/O pad pull configuration used when WUPENx = 1. The associated GPIO port pull configuration must be set to the same value or to 00. The wakeup pin pull configuration is kept in Standby mode.
+  - name: WUPPUPD2
+    bit_range:
+    - 19
+    - 18
+    description: |-
+      wakeup pin pull configuration for WKUPx
+      These bits define the I/O pad pull configuration used when WUPENx = 1. The associated GPIO port pull configuration must be set to the same value or to 00. The wakeup pin pull configuration is kept in Standby mode.
+  - name: WUPPUPD3
+    bit_range:
+    - 21
+    - 20
+    description: |-
+      wakeup pin pull configuration for WKUPx
+      These bits define the I/O pad pull configuration used when WUPENx = 1. The associated GPIO port pull configuration must be set to the same value or to 00. The wakeup pin pull configuration is kept in Standby mode.
+  - name: WUPPUPD4
+    bit_range:
+    - 23
+    - 22
+    description: |-
+      wakeup pin pull configuration for WKUPx
+      These bits define the I/O pad pull configuration used when WUPENx = 1. The associated GPIO port pull configuration must be set to the same value or to 00. The wakeup pin pull configuration is kept in Standby mode.
+  - name: WUPPUPD5
+    bit_range:
+    - 25
+    - 24
+    description: |-
+      wakeup pin pull configuration for WKUPx
+      These bits define the I/O pad pull configuration used when WUPENx = 1. The associated GPIO port pull configuration must be set to the same value or to 00. The wakeup pin pull configuration is kept in Standby mode.
+  - name: WUPPUPD6
+    bit_range:
+    - 27
+    - 26
+    description: |-
+      wakeup pin pull configuration for WKUPx
+      These bits define the I/O pad pull configuration used when WUPENx = 1. The associated GPIO port pull configuration must be set to the same value or to 00. The wakeup pin pull configuration is kept in Standby mode.
+  - name: WUPPUPD7
+    bit_range:
+    - 29
+    - 28
+    description: |-
+      wakeup pin pull configuration for WKUPx
+      These bits define the I/O pad pull configuration used when WUPENx = 1. The associated GPIO port pull configuration must be set to the same value or to 00. The wakeup pin pull configuration is kept in Standby mode.
+  - name: WUPPUPD8
+    bit_range:
+    - 31
+    - 30
+    description: |-
+      wakeup pin pull configuration for WKUPx
+      These bits define the I/O pad pull configuration used when WUPENx = 1. The associated GPIO port pull configuration must be set to the same value or to 00. The wakeup pin pull configuration is kept in Standby mode.
+  side_effects: null
+- id: PWR_IORETR
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IORETEN
+    bit_range:
+    - 0
+    - 0
+    description: "IO retention enable:\nWhen entering into standby mode, the output is sampled, and apply to the output IO during the standby power mode. \nNote: the IO state is not retained if the DBG_STANDBY bit is set in DBGMCU_CR register."
+  - name: JTAGIORETEN
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      IO retention enable for JTAG IOs
+      when entering into standby mode, the output is sampled, and apply to the output IO during the standby power mode
+  side_effects: null
+- id: PWR_SECCFGR
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WUP1SEC
+    bit_range:
+    - 0
+    - 0
+    description: WUPx secure protection
+  - name: WUP2SEC
+    bit_range:
+    - 1
+    - 1
+    description: WUPx secure protection
+  - name: WUP3SEC
+    bit_range:
+    - 2
+    - 2
+    description: WUPx secure protection
+  - name: WUP4SEC
+    bit_range:
+    - 3
+    - 3
+    description: WUPx secure protection
+  - name: WUP5SEC
+    bit_range:
+    - 4
+    - 4
+    description: WUPx secure protection
+  - name: WUP6SEC
+    bit_range:
+    - 5
+    - 5
+    description: WUPx secure protection
+  - name: WUP7SEC
+    bit_range:
+    - 6
+    - 6
+    description: WUPx secure protection
+  - name: WUP8SEC
+    bit_range:
+    - 7
+    - 7
+    description: WUPx secure protection
+  - name: RETSEC
+    bit_range:
+    - 11
+    - 11
+    description: retention secure protection
+  - name: LPMSEC
+    bit_range:
+    - 12
+    - 12
+    description: low-power modes secure protection
+  - name: SCMSEC
+    bit_range:
+    - 13
+    - 13
+    description: supply configuration and monitoring secure protection.
+  - name: VBSEC
+    bit_range:
+    - 14
+    - 14
+    description: backup domain secure protection
+  - name: VUSBSEC
+    bit_range:
+    - 15
+    - 15
+    description: voltage USB secure protection
+  side_effects: null
+- id: PWR_PRIVCFGR
+  address_offset: 260
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SPRIV
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      PWR secure functions privilege configuration
+      Set and reset by software. This bit can be written only by a secure privileged access.
+  - name: NSPRIV
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      PWR non-secure functions privilege configuration
+      Set and reset by software. This bit can be written only by privileged access, secure or non-secure.
+  side_effects: null
+interrupts: null
+timing: null

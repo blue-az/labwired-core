@@ -1,0 +1,1069 @@
+peripheral: UART1
+version: 0.1.0
+registers:
+- id: FIFO
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RXFIFO_RD_BYTE
+    bit_range:
+    - 7
+    - 0
+    description: This register stores one byte data  read by rx fifo.
+  side_effects: null
+- id: INT_RAW
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RXFIFO_FULL_INT_RAW
+    bit_range:
+    - 0
+    - 0
+    description: This interrupt raw bit turns to high level when receiver receives more data than (rx_flow_thrhd_h3 rx_flow_thrhd).
+  - name: TXFIFO_EMPTY_INT_RAW
+    bit_range:
+    - 1
+    - 1
+    description: This interrupt raw bit turns to high level when the amount of data in transmitter's fifo is less than ((tx_mem_cnttxfifo_cnt) .
+  - name: PARITY_ERR_INT_RAW
+    bit_range:
+    - 2
+    - 2
+    description: This interrupt raw bit turns to high level when receiver detects the parity error of data.
+  - name: FRM_ERR_INT_RAW
+    bit_range:
+    - 3
+    - 3
+    description: This interrupt raw bit turns to high level when receiver detects data's frame error .
+  - name: RXFIFO_OVF_INT_RAW
+    bit_range:
+    - 4
+    - 4
+    description: This interrupt raw bit turns to high level when receiver receives more data than the fifo can store.
+  - name: DSR_CHG_INT_RAW
+    bit_range:
+    - 5
+    - 5
+    description: This interrupt raw bit turns to high level when receiver detects the edge change of dsrn signal.
+  - name: CTS_CHG_INT_RAW
+    bit_range:
+    - 6
+    - 6
+    description: This interrupt raw bit turns to high level when receiver detects the edge change of ctsn signal.
+  - name: BRK_DET_INT_RAW
+    bit_range:
+    - 7
+    - 7
+    description: This interrupt raw bit turns to high level when receiver detects the 0 after the stop bit.
+  - name: RXFIFO_TOUT_INT_RAW
+    bit_range:
+    - 8
+    - 8
+    description: This interrupt raw bit turns to high level when receiver takes more time than rx_tout_thrhd to receive a byte.
+  - name: SW_XON_INT_RAW
+    bit_range:
+    - 9
+    - 9
+    description: This interrupt raw bit turns to high level when receiver receives xoff char with uart_sw_flow_con_en is set to 1.
+  - name: SW_XOFF_INT_RAW
+    bit_range:
+    - 10
+    - 10
+    description: This interrupt raw bit turns to high level when receiver receives xon char with uart_sw_flow_con_en is set to 1.
+  - name: GLITCH_DET_INT_RAW
+    bit_range:
+    - 11
+    - 11
+    description: This interrupt raw bit turns to high level when receiver detects the start bit.
+  - name: TX_BRK_DONE_INT_RAW
+    bit_range:
+    - 12
+    - 12
+    description: This interrupt raw bit turns to high level when transmitter completes  sendding  0 after all the datas in transmitter's fifo are send.
+  - name: TX_BRK_IDLE_DONE_INT_RAW
+    bit_range:
+    - 13
+    - 13
+    description: This interrupt raw bit turns to high level when transmitter has kept the shortest duration after the  last data has been send.
+  - name: TX_DONE_INT_RAW
+    bit_range:
+    - 14
+    - 14
+    description: This interrupt raw bit turns to high level when transmitter has send all the data in fifo.
+  - name: RS485_PARITY_ERR_INT_RAW
+    bit_range:
+    - 15
+    - 15
+    description: This interrupt raw bit turns to high level when rs485 detects the parity error.
+  - name: RS485_FRM_ERR_INT_RAW
+    bit_range:
+    - 16
+    - 16
+    description: This interrupt raw bit turns to high level when rs485 detects the data frame error.
+  - name: RS485_CLASH_INT_RAW
+    bit_range:
+    - 17
+    - 17
+    description: This interrupt raw bit turns to high level when rs485 detects the clash between transmitter and receiver.
+  - name: AT_CMD_CHAR_DET_INT_RAW
+    bit_range:
+    - 18
+    - 18
+    description: This interrupt raw bit turns to high level when receiver detects the configured at_cmd chars.
+  side_effects: null
+- id: INT_ST
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RXFIFO_FULL_INT_ST
+    bit_range:
+    - 0
+    - 0
+    description: This is the status bit for rxfifo_full_int_raw when rxfifo_full_int_ena is set to 1.
+  - name: TXFIFO_EMPTY_INT_ST
+    bit_range:
+    - 1
+    - 1
+    description: This is the status bit for  txfifo_empty_int_raw  when txfifo_empty_int_ena is set to 1.
+  - name: PARITY_ERR_INT_ST
+    bit_range:
+    - 2
+    - 2
+    description: This is the status bit for parity_err_int_raw when parity_err_int_ena is set to 1.
+  - name: FRM_ERR_INT_ST
+    bit_range:
+    - 3
+    - 3
+    description: This is the status bit for frm_err_int_raw when fm_err_int_ena is set to 1.
+  - name: RXFIFO_OVF_INT_ST
+    bit_range:
+    - 4
+    - 4
+    description: This is the status bit for rxfifo_ovf_int_raw when rxfifo_ovf_int_ena is set to 1.
+  - name: DSR_CHG_INT_ST
+    bit_range:
+    - 5
+    - 5
+    description: This is the status bit for dsr_chg_int_raw when dsr_chg_int_ena is set to 1.
+  - name: CTS_CHG_INT_ST
+    bit_range:
+    - 6
+    - 6
+    description: This is the status bit for cts_chg_int_raw when cts_chg_int_ena is set to 1.
+  - name: BRK_DET_INT_ST
+    bit_range:
+    - 7
+    - 7
+    description: This is the status bit for brk_det_int_raw when brk_det_int_ena is set to 1.
+  - name: RXFIFO_TOUT_INT_ST
+    bit_range:
+    - 8
+    - 8
+    description: This is the status bit for rxfifo_tout_int_raw when rxfifo_tout_int_ena is set to 1.
+  - name: SW_XON_INT_ST
+    bit_range:
+    - 9
+    - 9
+    description: This is the status bit for sw_xon_int_raw when sw_xon_int_ena is set to 1.
+  - name: SW_XOFF_INT_ST
+    bit_range:
+    - 10
+    - 10
+    description: This is the status bit for sw_xoff_int_raw when sw_xoff_int_ena is set to 1.
+  - name: GLITCH_DET_INT_ST
+    bit_range:
+    - 11
+    - 11
+    description: This is the status bit for glitch_det_int_raw when glitch_det_int_ena is set to 1.
+  - name: TX_BRK_DONE_INT_ST
+    bit_range:
+    - 12
+    - 12
+    description: This is the status bit for tx_brk_done_int_raw when tx_brk_done_int_ena is set to 1.
+  - name: TX_BRK_IDLE_DONE_INT_ST
+    bit_range:
+    - 13
+    - 13
+    description: This is the stauts bit for tx_brk_idle_done_int_raw when tx_brk_idle_done_int_ena is set to 1.
+  - name: TX_DONE_INT_ST
+    bit_range:
+    - 14
+    - 14
+    description: This is the status bit for tx_done_int_raw when tx_done_int_ena is set to 1.
+  - name: RS485_PARITY_ERR_INT_ST
+    bit_range:
+    - 15
+    - 15
+    description: This is the status bit for rs485_parity_err_int_raw when rs485_parity_int_ena is set to 1.
+  - name: RS485_FRM_ERR_INT_ST
+    bit_range:
+    - 16
+    - 16
+    description: This is the status bit for rs485_fm_err_int_raw when rs485_fm_err_int_ena is set to 1.
+  - name: RS485_CLASH_INT_ST
+    bit_range:
+    - 17
+    - 17
+    description: This is the status bit for rs485_clash_int_raw when rs485_clash_int_ena is set to 1.
+  - name: AT_CMD_CHAR_DET_INT_ST
+    bit_range:
+    - 18
+    - 18
+    description: This is the status bit for at_cmd_det_int_raw when at_cmd_char_det_int_ena is set to 1.
+  side_effects: null
+- id: INT_ENA
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RXFIFO_FULL_INT_ENA
+    bit_range:
+    - 0
+    - 0
+    description: This is the enable bit for rxfifo_full_int_st register.
+  - name: TXFIFO_EMPTY_INT_ENA
+    bit_range:
+    - 1
+    - 1
+    description: This is the enable bit for rxfifo_full_int_st register.
+  - name: PARITY_ERR_INT_ENA
+    bit_range:
+    - 2
+    - 2
+    description: This is the enable bit for parity_err_int_st register.
+  - name: FRM_ERR_INT_ENA
+    bit_range:
+    - 3
+    - 3
+    description: This is the enable bit for frm_err_int_st register.
+  - name: RXFIFO_OVF_INT_ENA
+    bit_range:
+    - 4
+    - 4
+    description: This is the enable bit for rxfifo_ovf_int_st register.
+  - name: DSR_CHG_INT_ENA
+    bit_range:
+    - 5
+    - 5
+    description: This is the enable bit for dsr_chg_int_st register.
+  - name: CTS_CHG_INT_ENA
+    bit_range:
+    - 6
+    - 6
+    description: This is the enable bit for cts_chg_int_st register.
+  - name: BRK_DET_INT_ENA
+    bit_range:
+    - 7
+    - 7
+    description: This is the enable bit for brk_det_int_st register.
+  - name: RXFIFO_TOUT_INT_ENA
+    bit_range:
+    - 8
+    - 8
+    description: This is the enable bit for rxfifo_tout_int_st register.
+  - name: SW_XON_INT_ENA
+    bit_range:
+    - 9
+    - 9
+    description: This is the enable bit for sw_xon_int_st register.
+  - name: SW_XOFF_INT_ENA
+    bit_range:
+    - 10
+    - 10
+    description: This is the enable bit for sw_xoff_int_st register.
+  - name: GLITCH_DET_INT_ENA
+    bit_range:
+    - 11
+    - 11
+    description: This is the enable bit for glitch_det_int_st register.
+  - name: TX_BRK_DONE_INT_ENA
+    bit_range:
+    - 12
+    - 12
+    description: This is the enable bit for tx_brk_done_int_st register.
+  - name: TX_BRK_IDLE_DONE_INT_ENA
+    bit_range:
+    - 13
+    - 13
+    description: This is the enable bit for tx_brk_idle_done_int_st register.
+  - name: TX_DONE_INT_ENA
+    bit_range:
+    - 14
+    - 14
+    description: This is the enable bit for tx_done_int_st register.
+  - name: RS485_PARITY_ERR_INT_ENA
+    bit_range:
+    - 15
+    - 15
+    description: This is the enable bit for rs485_parity_err_int_st register.
+  - name: RS485_FRM_ERR_INT_ENA
+    bit_range:
+    - 16
+    - 16
+    description: This is the enable bit for rs485_parity_err_int_st register.
+  - name: RS485_CLASH_INT_ENA
+    bit_range:
+    - 17
+    - 17
+    description: This is the enable bit for rs485_clash_int_st register.
+  - name: AT_CMD_CHAR_DET_INT_ENA
+    bit_range:
+    - 18
+    - 18
+    description: This is the enable bit for at_cmd_char_det_int_st register.
+  side_effects: null
+- id: INT_CLR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RXFIFO_FULL_INT_CLR
+    bit_range:
+    - 0
+    - 0
+    description: Set this bit to clear the rxfifo_full_int_raw interrupt.
+  - name: TXFIFO_EMPTY_INT_CLR
+    bit_range:
+    - 1
+    - 1
+    description: Set this bit to clear txfifo_empty_int_raw interrupt.
+  - name: PARITY_ERR_INT_CLR
+    bit_range:
+    - 2
+    - 2
+    description: Set this bit to clear parity_err_int_raw interrupt.
+  - name: FRM_ERR_INT_CLR
+    bit_range:
+    - 3
+    - 3
+    description: Set this bit to clear frm_err_int_raw interrupt.
+  - name: RXFIFO_OVF_INT_CLR
+    bit_range:
+    - 4
+    - 4
+    description: Set this bit to clear rxfifo_ovf_int_raw interrupt.
+  - name: DSR_CHG_INT_CLR
+    bit_range:
+    - 5
+    - 5
+    description: Set this bit to clear the dsr_chg_int_raw interrupt.
+  - name: CTS_CHG_INT_CLR
+    bit_range:
+    - 6
+    - 6
+    description: Set this bit to clear the cts_chg_int_raw interrupt.
+  - name: BRK_DET_INT_CLR
+    bit_range:
+    - 7
+    - 7
+    description: Set this bit to clear the brk_det_int_raw interrupt.
+  - name: RXFIFO_TOUT_INT_CLR
+    bit_range:
+    - 8
+    - 8
+    description: Set this bit to clear the rxfifo_tout_int_raw interrupt.
+  - name: SW_XON_INT_CLR
+    bit_range:
+    - 9
+    - 9
+    description: Set this bit to clear the sw_xon_int_raw interrupt.
+  - name: SW_XOFF_INT_CLR
+    bit_range:
+    - 10
+    - 10
+    description: Set this bit to clear the sw_xon_int_raw interrupt.
+  - name: GLITCH_DET_INT_CLR
+    bit_range:
+    - 11
+    - 11
+    description: Set this bit to clear the glitch_det_int_raw interrupt.
+  - name: TX_BRK_DONE_INT_CLR
+    bit_range:
+    - 12
+    - 12
+    description: Set this bit to clear the tx_brk_done_int_raw interrupt..
+  - name: TX_BRK_IDLE_DONE_INT_CLR
+    bit_range:
+    - 13
+    - 13
+    description: Set this bit to clear the tx_brk_idle_done_int_raw interrupt.
+  - name: TX_DONE_INT_CLR
+    bit_range:
+    - 14
+    - 14
+    description: Set this bit to clear the tx_done_int_raw interrupt.
+  - name: RS485_PARITY_ERR_INT_CLR
+    bit_range:
+    - 15
+    - 15
+    description: Set this bit to clear the rs485_parity_err_int_raw interrupt.
+  - name: RS485_FRM_ERR_INT_CLR
+    bit_range:
+    - 16
+    - 16
+    description: Set this bit to clear the rs485_frm_err_int_raw interrupt.
+  - name: RS485_CLASH_INT_CLR
+    bit_range:
+    - 17
+    - 17
+    description: Set this bit to clear the rs485_clash_int_raw interrupt.
+  - name: AT_CMD_CHAR_DET_INT_CLR
+    bit_range:
+    - 18
+    - 18
+    description: Set this bit to clear the at_cmd_char_det_int_raw interrupt.
+  side_effects: null
+- id: CLKDIV
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 694
+  fields:
+  - name: CLKDIV
+    bit_range:
+    - 19
+    - 0
+    description: The register value is  the  integer part of the frequency divider's factor.
+  - name: FRAG
+    bit_range:
+    - 23
+    - 20
+    description: The register  value is the decimal part of the frequency divider's factor.
+  side_effects: null
+- id: AUTOBAUD
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 4096
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: This is the enable bit for detecting baudrate.
+  - name: GLITCH_FILT
+    bit_range:
+    - 15
+    - 8
+    description: when input pulse width is lower then this value igore this pulse.this register is used in autobaud detect process.
+  side_effects: null
+- id: STATUS
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RXFIFO_CNT
+    bit_range:
+    - 7
+    - 0
+    description: (rx_mem_cnt rxfifo_cnt) stores the byte num of valid datas in receiver's fifo. rx_mem_cnt register stores the 3 most significant bits  rxfifo_cnt stores the 8 least significant bits.
+  - name: ST_URX_OUT
+    bit_range:
+    - 11
+    - 8
+    description: This register stores the value of receiver's finite state machine. 0:RX_IDLE  1:RX_STRT  2:RX_DAT0  3:RX_DAT1  4:RX_DAT2  5:RX_DAT3  6:RX_DAT4  7:RX_DAT5  8:RX_DAT6  9:RX_DAT7   10:RX_PRTY   11:RX_STP1  12:RX_STP2 13:RX_DL1
+  - name: DSRN
+    bit_range:
+    - 13
+    - 13
+    description: This register stores the level value of the internal uart dsr signal.
+  - name: CTSN
+    bit_range:
+    - 14
+    - 14
+    description: This register stores the level value of the internal uart cts signal.
+  - name: RXD
+    bit_range:
+    - 15
+    - 15
+    description: This register stores the level value of the internal uart rxd signal.
+  - name: TXFIFO_CNT
+    bit_range:
+    - 23
+    - 16
+    description: (tx_mem_cnt txfifo_cnt) stores the byte num of valid datas in transmitter's fifo.tx_mem_cnt stores the 3 most significant bits  txfifo_cnt stores the 8 least significant bits.
+  - name: ST_UTX_OUT
+    bit_range:
+    - 27
+    - 24
+    description: This register stores the value of transmitter's finite state machine. 0:TX_IDLE  1:TX_STRT  2:TX_DAT0  3:TX_DAT1  4:TX_DAT2   5:TX_DAT3 6:TX_DAT4  7:TX_DAT5  8:TX_DAT6 9:TX_DAT7  10:TX_PRTY   11:TX_STP1  12:TX_STP2  13:TX_DL0   14:TX_DL1
+  - name: DTRN
+    bit_range:
+    - 29
+    - 29
+    description: The register represent the level value of the internal uart dsr signal.
+  - name: RTSN
+    bit_range:
+    - 30
+    - 30
+    description: This register represent the level value of the internal uart cts signal.
+  - name: TXD
+    bit_range:
+    - 31
+    - 31
+    description: This register represent the  level value of the internal uart rxd signal.
+  side_effects: null
+- id: CONF0
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 134217756
+  fields:
+  - name: PARITY
+    bit_range:
+    - 0
+    - 0
+    description: This register is used to configure the parity check mode.  0:even 1:odd
+  - name: PARITY_EN
+    bit_range:
+    - 1
+    - 1
+    description: Set this bit to enable uart parity check.
+  - name: BIT_NUM
+    bit_range:
+    - 3
+    - 2
+    description: 'This registe is used to set the length of data:  0:5bits 1:6bits 2:7bits 3:8bits'
+  - name: STOP_BIT_NUM
+    bit_range:
+    - 5
+    - 4
+    description: This register is used to set the length of  stop bit. 1:1bit  2:1.5bits  3:2bits
+  - name: SW_RTS
+    bit_range:
+    - 6
+    - 6
+    description: This register is used to configure the software rts signal which is used in software flow control.
+  - name: SW_DTR
+    bit_range:
+    - 7
+    - 7
+    description: This register is used to configure the software dtr signal which is used in software flow control..
+  - name: TXD_BRK
+    bit_range:
+    - 8
+    - 8
+    description: Set this bit to enbale transmitter to  send 0 when the process of sending data is done.
+  - name: IRDA_DPLX
+    bit_range:
+    - 9
+    - 9
+    description: Set this bit to enable irda loopback mode.
+  - name: IRDA_TX_EN
+    bit_range:
+    - 10
+    - 10
+    description: This is the start enable bit for irda transmitter.
+  - name: IRDA_WCTL
+    bit_range:
+    - 11
+    - 11
+    description: 1.the irda transmitter's 11th bit is the same to the 10th bit. 0.set irda transmitter's 11th bit to 0.
+  - name: IRDA_TX_INV
+    bit_range:
+    - 12
+    - 12
+    description: Set this bit to inverse the level value of  irda transmitter's level.
+  - name: IRDA_RX_INV
+    bit_range:
+    - 13
+    - 13
+    description: Set this bit to inverse the level value of irda receiver's level.
+  - name: LOOPBACK
+    bit_range:
+    - 14
+    - 14
+    description: Set this bit to enable uart loopback test mode.
+  - name: TX_FLOW_EN
+    bit_range:
+    - 15
+    - 15
+    description: Set this bit to enable transmitter's flow control function.
+  - name: IRDA_EN
+    bit_range:
+    - 16
+    - 16
+    description: Set this bit to enable irda protocol.
+  - name: RXFIFO_RST
+    bit_range:
+    - 17
+    - 17
+    description: Set this bit to reset uart receiver's fifo.
+  - name: TXFIFO_RST
+    bit_range:
+    - 18
+    - 18
+    description: Set this bit to reset uart transmitter's fifo.
+  - name: RXD_INV
+    bit_range:
+    - 19
+    - 19
+    description: Set this bit to inverse the level value of uart rxd signal.
+  - name: CTS_INV
+    bit_range:
+    - 20
+    - 20
+    description: Set this bit to inverse the level value of uart cts signal.
+  - name: DSR_INV
+    bit_range:
+    - 21
+    - 21
+    description: Set this bit to inverse the level value of uart dsr signal.
+  - name: TXD_INV
+    bit_range:
+    - 22
+    - 22
+    description: Set this bit to inverse the level value of uart txd signal.
+  - name: RTS_INV
+    bit_range:
+    - 23
+    - 23
+    description: Set this bit to inverse the level value of uart rts signal.
+  - name: DTR_INV
+    bit_range:
+    - 24
+    - 24
+    description: Set this bit to inverse the level value of uart dtr signal.
+  - name: CLK_EN
+    bit_range:
+    - 25
+    - 25
+    description: 1.force clock on for registers.support clock only when write registers
+  - name: ERR_WR_MASK
+    bit_range:
+    - 26
+    - 26
+    description: 1.receiver stops storing data int fifo when data is wrong. 0.receiver stores the data even if the  received data is wrong.
+  - name: TICK_REF_ALWAYS_ON
+    bit_range:
+    - 27
+    - 27
+    description: This register is used to select the clock.1.apb clock 0:ref_tick
+  side_effects: null
+- id: CONF1
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 24672
+  fields:
+  - name: RXFIFO_FULL_THRHD
+    bit_range:
+    - 6
+    - 0
+    description: When receiver receives more data than its threshold value.receiver will produce rxfifo_full_int_raw interrupt.the threshold value is (rx_flow_thrhd_h3 rxfifo_full_thrhd).
+  - name: TXFIFO_EMPTY_THRHD
+    bit_range:
+    - 14
+    - 8
+    description: when the data amount in transmitter fifo is less than its threshold value. it will produce txfifo_empty_int_raw interrupt. the threshold value is (tx_mem_empty_thrhd txfifo_empty_thrhd)
+  - name: RX_FLOW_THRHD
+    bit_range:
+    - 22
+    - 16
+    description: when receiver receives more data than its threshold value. receiver produce signal to tell the transmitter stop transferring data. the threshold value is (rx_flow_thrhd_h3 rx_flow_thrhd).
+  - name: RX_FLOW_EN
+    bit_range:
+    - 23
+    - 23
+    description: This is the flow enable bit for uart receiver. 1:choose software flow control with configuring sw_rts signal
+  - name: RX_TOUT_THRHD
+    bit_range:
+    - 30
+    - 24
+    description: This register is used to configure the timeout value for uart receiver receiving a byte.
+  - name: RX_TOUT_EN
+    bit_range:
+    - 31
+    - 31
+    description: This is the enble bit for uart receiver's timeout function.
+  side_effects: null
+- id: LOWPULSE
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048575
+  fields:
+  - name: MIN_CNT
+    bit_range:
+    - 19
+    - 0
+    description: This register stores the value of the minimum duration time for the low level pulse. it is used in baudrate-detect process.
+  side_effects: null
+- id: HIGHPULSE
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048575
+  fields:
+  - name: MIN_CNT
+    bit_range:
+    - 19
+    - 0
+    description: This register stores  the value of the maxinum duration time for the high level pulse. it is used in baudrate-detect process.
+  side_effects: null
+- id: RXD_CNT
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RXD_EDGE_CNT
+    bit_range:
+    - 9
+    - 0
+    description: This register stores the count of rxd edge change. it is used in baudrate-detect process.
+  side_effects: null
+- id: FLOW_CONF
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SW_FLOW_CON_EN
+    bit_range:
+    - 0
+    - 0
+    description: Set this bit to enable software  flow control. it is used with register sw_xon or sw_xoff .
+  - name: XONOFF_DEL
+    bit_range:
+    - 1
+    - 1
+    description: Set this bit to remove flow control char from the received data.
+  - name: FORCE_XON
+    bit_range:
+    - 2
+    - 2
+    description: Set this bit to clear ctsn to stop the  transmitter from sending data.
+  - name: FORCE_XOFF
+    bit_range:
+    - 3
+    - 3
+    description: Set this bit to set ctsn to enable the transmitter to go on sending data.
+  - name: SEND_XON
+    bit_range:
+    - 4
+    - 4
+    description: Set this bit to send xon char. it is cleared by hardware automatically.
+  - name: SEND_XOFF
+    bit_range:
+    - 5
+    - 5
+    description: Set this bit to send xoff char. it is cleared by hardware automatically.
+  side_effects: null
+- id: SLEEP_CONF
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 240
+  fields:
+  - name: ACTIVE_THRESHOLD
+    bit_range:
+    - 9
+    - 0
+    description: When the input rxd edge changes more than this register value. the uart is active from light sleeping mode.
+  side_effects: null
+- id: SWFC_CONF
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 319938560
+  fields:
+  - name: XON_THRESHOLD
+    bit_range:
+    - 7
+    - 0
+    description: when the data amount in receiver's fifo is more than this register value. it will send a xoff char with uart_sw_flow_con_en set to 1.
+  - name: XOFF_THRESHOLD
+    bit_range:
+    - 15
+    - 8
+    description: When the data amount in receiver's fifo is less than this register value. it will send a xon char with uart_sw_flow_con_en set to 1.
+  - name: XON_CHAR
+    bit_range:
+    - 23
+    - 16
+    description: This register stores the xon flow control char.
+  - name: XOFF_CHAR
+    bit_range:
+    - 31
+    - 24
+    description: This register stores the xoff flow control char.
+  side_effects: null
+- id: IDLE_CONF
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 10748160
+  fields:
+  - name: RX_IDLE_THRHD
+    bit_range:
+    - 9
+    - 0
+    description: when receiver takes more time than this register value to receive a byte data. it will produce frame end signal for uhci to stop receiving data.
+  - name: TX_IDLE_NUM
+    bit_range:
+    - 19
+    - 10
+    description: This register is used to configure the duration time between transfers.
+  - name: TX_BRK_NUM
+    bit_range:
+    - 27
+    - 20
+    description: This register is used to configure the num of 0 send after the process of sending data is done. it is active when txd_brk is set to 1.
+  side_effects: null
+- id: RS485_CONF
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RS485_EN
+    bit_range:
+    - 0
+    - 0
+    description: Set this bit to choose rs485 mode.
+  - name: DL0_EN
+    bit_range:
+    - 1
+    - 1
+    description: Set this bit to delay the stop bit by 1 bit.
+  - name: DL1_EN
+    bit_range:
+    - 2
+    - 2
+    description: Set this bit to delay the stop bit by 1 bit.
+  - name: RS485TX_RX_EN
+    bit_range:
+    - 3
+    - 3
+    description: Set this bit to enable loopback transmitter's output data signal to receiver's input data signal.
+  - name: RS485RXBY_TX_EN
+    bit_range:
+    - 4
+    - 4
+    description: '1: enable rs485''s transmitter to send data when rs485''s receiver is busy. 0:rs485''s transmitter should not send data when its receiver is busy.'
+  - name: RS485_RX_DLY_NUM
+    bit_range:
+    - 5
+    - 5
+    description: This register is used to delay the receiver's internal data signal.
+  - name: RS485_TX_DLY_NUM
+    bit_range:
+    - 9
+    - 6
+    description: This register is used to delay the transmitter's internal data signal.
+  side_effects: null
+- id: AT_CMD_PRECNT
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 1600000
+  fields:
+  - name: PRE_IDLE_NUM
+    bit_range:
+    - 23
+    - 0
+    description: This register is used to configure the idle duration time before the first at_cmd is received by receiver. when the the duration is less than this register value it will not take the next data received as at_cmd char.
+  side_effects: null
+- id: AT_CMD_POSTCNT
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 1600000
+  fields:
+  - name: POST_IDLE_NUM
+    bit_range:
+    - 23
+    - 0
+    description: This register is used to configure the duration time between the last at_cmd and the next data. when the duration is less than this register value  it will not take the previous data as at_cmd char.
+  side_effects: null
+- id: AT_CMD_GAPTOUT
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 7680
+  fields:
+  - name: RX_GAP_TOUT
+    bit_range:
+    - 23
+    - 0
+    description: This register is used to configure the duration time between the at_cmd chars. when the duration time is less than this register value it will not take the datas as continous at_cmd chars.
+  side_effects: null
+- id: AT_CMD_CHAR
+  address_offset: 84
+  size: 32
+  access: READ_WRITE
+  reset_value: 811
+  fields:
+  - name: AT_CMD_CHAR
+    bit_range:
+    - 7
+    - 0
+    description: This register is used to configure the content of at_cmd char.
+  - name: CHAR_NUM
+    bit_range:
+    - 15
+    - 8
+    description: This register is used to configure the num of continous at_cmd chars received by receiver.
+  side_effects: null
+- id: MEM_CONF
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 136
+  fields:
+  - name: MEM_PD
+    bit_range:
+    - 0
+    - 0
+    description: Set this bit to power down mem.when reg_mem_pd registers in the 3 uarts are all set to 1  mem will enter low power mode.
+  - name: RX_SIZE
+    bit_range:
+    - 6
+    - 3
+    description: This register is used to configure the amount of mem allocated to receiver's fifo. the default byte num is 128.
+  - name: TX_SIZE
+    bit_range:
+    - 10
+    - 7
+    description: This register is used to configure the amount of mem allocated to transmitter's fifo.the default byte num is 128.
+  - name: RX_FLOW_THRHD_H3
+    bit_range:
+    - 17
+    - 15
+    description: refer to the rx_flow_thrhd's describtion.
+  - name: RX_TOUT_THRHD_H3
+    bit_range:
+    - 20
+    - 18
+    description: refer to the rx_tout_thrhd's describtion.
+  - name: XON_THRESHOLD_H2
+    bit_range:
+    - 22
+    - 21
+    description: refer to the uart_xon_threshold's describtion.
+  - name: XOFF_THRESHOLD_H2
+    bit_range:
+    - 24
+    - 23
+    description: refer to the uart_xoff_threshold's describtion.
+  - name: RX_MEM_FULL_THRHD
+    bit_range:
+    - 27
+    - 25
+    description: refer to the rxfifo_full_thrhd's describtion.
+  - name: TX_MEM_EMPTY_THRHD
+    bit_range:
+    - 30
+    - 28
+    description: refer to txfifo_empty_thrhd 's describtion.
+  side_effects: null
+- id: MEM_TX_STATUS
+  address_offset: 92
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MEM_TX_STATUS
+    bit_range:
+    - 23
+    - 0
+  side_effects: null
+- id: MEM_RX_STATUS
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MEM_RX_STATUS
+    bit_range:
+    - 23
+    - 0
+    description: This register stores the current uart rx mem read address  and rx mem write address
+  - name: MEM_RX_RD_ADDR
+    bit_range:
+    - 12
+    - 2
+    description: This register stores the rx mem read address
+  - name: MEM_RX_WR_ADDR
+    bit_range:
+    - 23
+    - 13
+    description: This register stores the rx mem write address
+  side_effects: null
+- id: MEM_CNT_STATUS
+  address_offset: 100
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RX_MEM_CNT
+    bit_range:
+    - 2
+    - 0
+    description: refer to the rxfifo_cnt's describtion.
+  - name: TX_MEM_CNT
+    bit_range:
+    - 5
+    - 3
+    description: refer to the txfifo_cnt's describtion.
+  side_effects: null
+- id: POSPULSE
+  address_offset: 104
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048575
+  fields:
+  - name: POSEDGE_MIN_CNT
+    bit_range:
+    - 19
+    - 0
+    description: This register stores the count of rxd posedge edge. it is used in boudrate-detect process.
+  side_effects: null
+- id: NEGPULSE
+  address_offset: 108
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048575
+  fields:
+  - name: NEGEDGE_MIN_CNT
+    bit_range:
+    - 19
+    - 0
+    description: This register stores the count of rxd negedge edge. it is used in boudrate-detect process.
+  side_effects: null
+- id: DATE
+  address_offset: 120
+  size: 32
+  access: READ_WRITE
+  reset_value: 353510656
+  fields:
+  - name: DATE
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: ID
+  address_offset: 124
+  size: 32
+  access: READ_WRITE
+  reset_value: 1280
+  fields:
+  - name: ID
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+interrupts:
+  UART1: 35
+  UART0: 34
+timing: null

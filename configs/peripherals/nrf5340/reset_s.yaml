@@ -1,0 +1,79 @@
+peripheral: RESET_S
+version: 0.1.0
+registers:
+- id: RESETREAS
+  address_offset: 1024
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RESETPIN
+    bit_range:
+    - 0
+    - 0
+    description: Reset from pin reset detected
+  - name: DOG0
+    bit_range:
+    - 1
+    - 1
+    description: Reset from application watchdog timer 0 detected
+  - name: CTRLAP
+    bit_range:
+    - 2
+    - 2
+    description: Reset from application CTRL-AP detected
+  - name: SREQ
+    bit_range:
+    - 3
+    - 3
+    description: Reset from application soft reset detected
+  - name: LOCKUP
+    bit_range:
+    - 4
+    - 4
+    description: Reset from application CPU lockup detected
+  - name: OFF
+    bit_range:
+    - 5
+    - 5
+    description: Reset due to wakeup from System OFF mode when wakeup is triggered by DETECT signal from GPIO
+  - name: LPCOMP
+    bit_range:
+    - 6
+    - 6
+    description: Reset due to wakeup from System OFF mode when wakeup is triggered by ANADETECT signal from LPCOMP
+  - name: DIF
+    bit_range:
+    - 7
+    - 7
+    description: Reset due to wakeup from System OFF mode when wakeup is triggered by entering the Debug Interface mode
+  - name: NFC
+    bit_range:
+    - 24
+    - 24
+    description: Reset after wakeup from System OFF mode due to NFC field being detected
+  - name: DOG1
+    bit_range:
+    - 25
+    - 25
+    description: Reset from application watchdog timer 1 detected
+  - name: VBUS
+    bit_range:
+    - 26
+    - 26
+    description: Reset after wakeup from System OFF mode due to VBUS rising into valid range
+  side_effects: null
+- id: NETWORK_FORCEOFF
+  address_offset: 1556
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: FORCEOFF
+    bit_range:
+    - 0
+    - 0
+    description: Force network core off
+  side_effects: null
+interrupts: null
+timing: null

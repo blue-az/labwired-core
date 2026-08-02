@@ -1,0 +1,335 @@
+peripheral: I2C1
+version: 0.1.0
+registers:
+- id: CR1
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SWRST
+    bit_range:
+    - 15
+    - 15
+    description: Software reset
+  - name: ALERT
+    bit_range:
+    - 13
+    - 13
+    description: SMBus alert
+  - name: PEC
+    bit_range:
+    - 12
+    - 12
+    description: Packet error checking
+  - name: POS
+    bit_range:
+    - 11
+    - 11
+    description: Acknowledge/PEC Position (for data reception)
+  - name: ACK
+    bit_range:
+    - 10
+    - 10
+    description: Acknowledge enable
+  - name: STOP
+    bit_range:
+    - 9
+    - 9
+    description: Stop generation
+  - name: START
+    bit_range:
+    - 8
+    - 8
+    description: Start generation
+  - name: NOSTRETCH
+    bit_range:
+    - 7
+    - 7
+    description: Clock stretching disable (Slave mode)
+  - name: ENGC
+    bit_range:
+    - 6
+    - 6
+    description: General call enable
+  - name: ENPEC
+    bit_range:
+    - 5
+    - 5
+    description: PEC enable
+  - name: ENARP
+    bit_range:
+    - 4
+    - 4
+    description: ARP enable
+  - name: SMBTYPE
+    bit_range:
+    - 3
+    - 3
+    description: SMBus type
+  - name: SMBUS
+    bit_range:
+    - 1
+    - 1
+    description: SMBus mode
+  - name: PE
+    bit_range:
+    - 0
+    - 0
+    description: Peripheral enable
+  side_effects: null
+- id: CR2
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LAST
+    bit_range:
+    - 12
+    - 12
+    description: DMA last transfer
+  - name: DMAEN
+    bit_range:
+    - 11
+    - 11
+    description: DMA requests enable
+  - name: ITBUFEN
+    bit_range:
+    - 10
+    - 10
+    description: Buffer interrupt enable
+  - name: ITEVTEN
+    bit_range:
+    - 9
+    - 9
+    description: Event interrupt enable
+  - name: ITERREN
+    bit_range:
+    - 8
+    - 8
+    description: Error interrupt enable
+  - name: FREQ
+    bit_range:
+    - 5
+    - 0
+    description: Peripheral clock frequency
+  side_effects: null
+- id: OAR1
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDMODE
+    bit_range:
+    - 15
+    - 15
+    description: Addressing mode (slave mode)
+  - name: ADD10
+    bit_range:
+    - 9
+    - 8
+    description: Interface address
+  - name: ADD7
+    bit_range:
+    - 7
+    - 1
+    description: Interface address
+  - name: ADD0
+    bit_range:
+    - 0
+    - 0
+    description: Interface address
+  side_effects: null
+- id: OAR2
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADD2
+    bit_range:
+    - 7
+    - 1
+    description: Interface address
+  - name: ENDUAL
+    bit_range:
+    - 0
+    - 0
+    description: Dual addressing mode enable
+  side_effects: null
+- id: DR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DR
+    bit_range:
+    - 7
+    - 0
+    description: 8-bit data register
+  side_effects: null
+- id: SR1
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SMBALERT
+    bit_range:
+    - 15
+    - 15
+    description: SMBus alert
+  - name: TIMEOUT
+    bit_range:
+    - 14
+    - 14
+    description: Timeout or Tlow error
+  - name: PECERR
+    bit_range:
+    - 12
+    - 12
+    description: PEC Error in reception
+  - name: OVR
+    bit_range:
+    - 11
+    - 11
+    description: Overrun/Underrun
+  - name: AF
+    bit_range:
+    - 10
+    - 10
+    description: Acknowledge failure
+  - name: ARLO
+    bit_range:
+    - 9
+    - 9
+    description: Arbitration lost (master mode)
+  - name: BERR
+    bit_range:
+    - 8
+    - 8
+    description: Bus error
+  - name: TxE
+    bit_range:
+    - 7
+    - 7
+    description: Data register empty (transmitters)
+  - name: RxNE
+    bit_range:
+    - 6
+    - 6
+    description: Data register not empty (receivers)
+  - name: STOPF
+    bit_range:
+    - 4
+    - 4
+    description: Stop detection (slave mode)
+  - name: ADD10
+    bit_range:
+    - 3
+    - 3
+    description: 10-bit header sent (Master mode)
+  - name: BTF
+    bit_range:
+    - 2
+    - 2
+    description: Byte transfer finished
+  - name: ADDR
+    bit_range:
+    - 1
+    - 1
+    description: Address sent (master mode)/matched (slave mode)
+  - name: SB
+    bit_range:
+    - 0
+    - 0
+    description: Start bit (Master mode)
+  side_effects: null
+- id: SR2
+  address_offset: 24
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PEC
+    bit_range:
+    - 15
+    - 8
+    description: acket error checking register
+  - name: DUALF
+    bit_range:
+    - 7
+    - 7
+    description: Dual flag (Slave mode)
+  - name: SMBHOST
+    bit_range:
+    - 6
+    - 6
+    description: SMBus host header (Slave mode)
+  - name: SMBDEFAULT
+    bit_range:
+    - 5
+    - 5
+    description: SMBus device default address (Slave mode)
+  - name: GENCALL
+    bit_range:
+    - 4
+    - 4
+    description: General call address (Slave mode)
+  - name: TRA
+    bit_range:
+    - 2
+    - 2
+    description: Transmitter/receiver
+  - name: BUSY
+    bit_range:
+    - 1
+    - 1
+    description: Bus busy
+  - name: MSL
+    bit_range:
+    - 0
+    - 0
+    description: Master/slave
+  side_effects: null
+- id: CCR
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: F_S
+    bit_range:
+    - 15
+    - 15
+    description: I2C master mode selection
+  - name: DUTY
+    bit_range:
+    - 14
+    - 14
+    description: Fast mode duty cycle
+  - name: CCR
+    bit_range:
+    - 11
+    - 0
+    description: Clock control register in Fast/Standard mode (Master mode)
+  side_effects: null
+- id: TRISE
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: TRISE
+    bit_range:
+    - 5
+    - 0
+    description: Maximum rise time in Fast/Standard mode (Master mode)
+  side_effects: null
+interrupts:
+  I2C1_EV: 31
+  I2C1_ER: 32
+timing: null

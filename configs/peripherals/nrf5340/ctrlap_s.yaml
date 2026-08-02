@@ -1,0 +1,147 @@
+peripheral: CTRLAP_S
+version: 0.1.0
+registers:
+- id: MAILBOX_RXDATA
+  address_offset: 1024
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: RXDATA
+    bit_range:
+    - 31
+    - 0
+    description: Data received from debugger
+  side_effects: null
+- id: MAILBOX_RXSTATUS
+  address_offset: 1028
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: RXSTATUS
+    bit_range:
+    - 0
+    - 0
+    description: Status of data in register RXDATA
+  side_effects: null
+- id: MAILBOX_TXDATA
+  address_offset: 1152
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TXDATA
+    bit_range:
+    - 31
+    - 0
+    description: Data sent to debugger
+  side_effects: null
+- id: MAILBOX_TXSTATUS
+  address_offset: 1156
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: TXSTATUS
+    bit_range:
+    - 0
+    - 0
+    description: Status of data in register TXDATA
+  side_effects: null
+- id: ERASEPROTECT_LOCK
+  address_offset: 1280
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LOCK
+    bit_range:
+    - 0
+    - 0
+    description: Lock ERASEPROTECT.DISABLE register from being written until next reset
+  side_effects: null
+- id: ERASEPROTECT_DISABLE
+  address_offset: 1284
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: KEY
+    bit_range:
+    - 31
+    - 0
+    description: The ERASEALL sequence is initiated if the value of the KEY fields are non-zero and the KEY fields match on both the CPU and debugger sides.
+  side_effects: null
+- id: APPROTECT_LOCK
+  address_offset: 1344
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LOCK
+    bit_range:
+    - 0
+    - 0
+    description: Lock the APPROTECT.DISABLE register from being written to until next reset
+  side_effects: null
+- id: APPROTECT_DISABLE
+  address_offset: 1348
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: KEY
+    bit_range:
+    - 31
+    - 0
+    description: If the value of the KEY field is non-zero, and the KEY fields match on both the CPU and debugger sides, disable APPROTECT and enable debug access to non-secure mode until the next pin reset, brown-out reset, power-on reset, or watchog timer reset. After reset the debugger side register has a fixed KEY value. To enable debug access, both CTRL-AP and UICR.APPROTECT protection needs to be disabled.
+  side_effects: null
+- id: SECUREAPPROTECT_LOCK
+  address_offset: 1352
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LOCK
+    bit_range:
+    - 0
+    - 0
+    description: Lock register SECUREAPPROTECT.DISABLE from being written until next reset
+  side_effects: null
+- id: SECUREAPPROTECT_DISABLE
+  address_offset: 1356
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: KEY
+    bit_range:
+    - 31
+    - 0
+    description: If the value of the KEY field is non-zero, and the KEY fields match on both the CPU and debugger sides, disable SECUREAPPROTECT and enable debug access to secure mode until the next pin reset, brown-out reset, power-on reset, or watchog timer reset. After reset the debugger side register has a fixed KEY value. To enable debug access, both CTRL-AP and UICR.SECUREAPPROTECT protection needs to be disabled.
+  side_effects: null
+- id: STATUS
+  address_offset: 1536
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: UICRAPPROTECT
+    bit_range:
+    - 0
+    - 0
+    description: Status bit for UICR part of access port protection at last reset.
+  - name: UICRSECUREAPPROTECT
+    bit_range:
+    - 1
+    - 1
+    description: Status bit for UICR part of secure access port protection at last reset.
+  - name: DBGIFACEMODE
+    bit_range:
+    - 2
+    - 2
+    description: Status bit for device debug interface mode
+  side_effects: null
+interrupts: null
+timing: null

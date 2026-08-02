@@ -1,0 +1,1423 @@
+peripheral: RMT
+version: 0.1.0
+registers:
+- id: CH0DATA
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Read and write data for channel %s via APB FIFO.
+  side_effects: null
+- id: CH1DATA
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Read and write data for channel %s via APB FIFO.
+  side_effects: null
+- id: CH2DATA
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Read and write data for channel %s via APB FIFO.
+  side_effects: null
+- id: CH3DATA
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Read and write data for channel %s via APB FIFO.
+  side_effects: null
+- id: CH4DATA
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Read and write data for channel %s via APB FIFO.
+  side_effects: null
+- id: CH5DATA
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Read and write data for channel %s via APB FIFO.
+  side_effects: null
+- id: CH6DATA
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Read and write data for channel %s via APB FIFO.
+  side_effects: null
+- id: CH7DATA
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Read and write data for channel %s via APB FIFO.
+  side_effects: null
+- id: CH0_TX_CONF0
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 7406080
+  fields:
+  - name: TX_START
+    bit_range:
+    - 0
+    - 0
+    description: Set this bit to start sending data on CHANNEL%s.
+  - name: MEM_RD_RST
+    bit_range:
+    - 1
+    - 1
+    description: Set this bit to reset read ram address for CHANNEL%s by accessing transmitter.
+  - name: APB_MEM_RST
+    bit_range:
+    - 2
+    - 2
+    description: Set this bit to reset W/R ram address for CHANNEL%s by accessing apb fifo.
+  - name: TX_CONTI_MODE
+    bit_range:
+    - 3
+    - 3
+    description: Set this bit to restart transmission  from the first data to the last data in CHANNEL%s.
+  - name: MEM_TX_WRAP_EN
+    bit_range:
+    - 4
+    - 4
+    description: 'This is the channel %s enable bit for wraparound mode: it will resume sending at the start when the data to be sent is more than its memory size.'
+  - name: IDLE_OUT_LV
+    bit_range:
+    - 5
+    - 5
+    description: This bit configures the level of output signal in CHANNEL%s when the latter is in IDLE state.
+  - name: IDLE_OUT_EN
+    bit_range:
+    - 6
+    - 6
+    description: This is the output enable-control bit for CHANNEL%s in IDLE state.
+  - name: TX_STOP
+    bit_range:
+    - 7
+    - 7
+    description: Set this bit to stop the transmitter of CHANNEL%s sending data out.
+  - name: DIV_CNT
+    bit_range:
+    - 15
+    - 8
+    description: This register is used to configure the divider for clock of CHANNEL%s.
+  - name: MEM_SIZE
+    bit_range:
+    - 19
+    - 16
+    description: This register is used to configure the maximum size of memory allocated to CHANNEL%s.
+  - name: CARRIER_EFF_EN
+    bit_range:
+    - 20
+    - 20
+    description: '1: Add carrier modulation on the output signal only at the send data state for CHANNEL%s. 0: Add carrier modulation on the output signal at all state for CHANNEL%s. Only valid when RMT_CARRIER_EN_CH%s is 1.'
+  - name: CARRIER_EN
+    bit_range:
+    - 21
+    - 21
+    description: 'This is the carrier modulation enable-control bit for CHANNEL%s. 1: Add carrier modulation in the output signal. 0: No carrier modulation in sig_out.'
+  - name: CARRIER_OUT_LV
+    bit_range:
+    - 22
+    - 22
+    description: 'This bit is used to configure the position of carrier wave for CHANNEL%s. 1''h0: add carrier wave on low level. 1''h1: add carrier wave on high level.'
+  - name: AFIFO_RST
+    bit_range:
+    - 23
+    - 23
+    description: Reserved
+  - name: CONF_UPDATE
+    bit_range:
+    - 24
+    - 24
+    description: synchronization bit for CHANNEL%s
+  side_effects: null
+- id: CH1_TX_CONF0
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 7406080
+  fields:
+  - name: TX_START
+    bit_range:
+    - 0
+    - 0
+    description: Set this bit to start sending data on CHANNEL%s.
+  - name: MEM_RD_RST
+    bit_range:
+    - 1
+    - 1
+    description: Set this bit to reset read ram address for CHANNEL%s by accessing transmitter.
+  - name: APB_MEM_RST
+    bit_range:
+    - 2
+    - 2
+    description: Set this bit to reset W/R ram address for CHANNEL%s by accessing apb fifo.
+  - name: TX_CONTI_MODE
+    bit_range:
+    - 3
+    - 3
+    description: Set this bit to restart transmission  from the first data to the last data in CHANNEL%s.
+  - name: MEM_TX_WRAP_EN
+    bit_range:
+    - 4
+    - 4
+    description: 'This is the channel %s enable bit for wraparound mode: it will resume sending at the start when the data to be sent is more than its memory size.'
+  - name: IDLE_OUT_LV
+    bit_range:
+    - 5
+    - 5
+    description: This bit configures the level of output signal in CHANNEL%s when the latter is in IDLE state.
+  - name: IDLE_OUT_EN
+    bit_range:
+    - 6
+    - 6
+    description: This is the output enable-control bit for CHANNEL%s in IDLE state.
+  - name: TX_STOP
+    bit_range:
+    - 7
+    - 7
+    description: Set this bit to stop the transmitter of CHANNEL%s sending data out.
+  - name: DIV_CNT
+    bit_range:
+    - 15
+    - 8
+    description: This register is used to configure the divider for clock of CHANNEL%s.
+  - name: MEM_SIZE
+    bit_range:
+    - 19
+    - 16
+    description: This register is used to configure the maximum size of memory allocated to CHANNEL%s.
+  - name: CARRIER_EFF_EN
+    bit_range:
+    - 20
+    - 20
+    description: '1: Add carrier modulation on the output signal only at the send data state for CHANNEL%s. 0: Add carrier modulation on the output signal at all state for CHANNEL%s. Only valid when RMT_CARRIER_EN_CH%s is 1.'
+  - name: CARRIER_EN
+    bit_range:
+    - 21
+    - 21
+    description: 'This is the carrier modulation enable-control bit for CHANNEL%s. 1: Add carrier modulation in the output signal. 0: No carrier modulation in sig_out.'
+  - name: CARRIER_OUT_LV
+    bit_range:
+    - 22
+    - 22
+    description: 'This bit is used to configure the position of carrier wave for CHANNEL%s. 1''h0: add carrier wave on low level. 1''h1: add carrier wave on high level.'
+  - name: AFIFO_RST
+    bit_range:
+    - 23
+    - 23
+    description: Reserved
+  - name: CONF_UPDATE
+    bit_range:
+    - 24
+    - 24
+    description: synchronization bit for CHANNEL%s
+  side_effects: null
+- id: CH2_TX_CONF0
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 7406080
+  fields:
+  - name: TX_START
+    bit_range:
+    - 0
+    - 0
+    description: Set this bit to start sending data on CHANNEL%s.
+  - name: MEM_RD_RST
+    bit_range:
+    - 1
+    - 1
+    description: Set this bit to reset read ram address for CHANNEL%s by accessing transmitter.
+  - name: APB_MEM_RST
+    bit_range:
+    - 2
+    - 2
+    description: Set this bit to reset W/R ram address for CHANNEL%s by accessing apb fifo.
+  - name: TX_CONTI_MODE
+    bit_range:
+    - 3
+    - 3
+    description: Set this bit to restart transmission  from the first data to the last data in CHANNEL%s.
+  - name: MEM_TX_WRAP_EN
+    bit_range:
+    - 4
+    - 4
+    description: 'This is the channel %s enable bit for wraparound mode: it will resume sending at the start when the data to be sent is more than its memory size.'
+  - name: IDLE_OUT_LV
+    bit_range:
+    - 5
+    - 5
+    description: This bit configures the level of output signal in CHANNEL%s when the latter is in IDLE state.
+  - name: IDLE_OUT_EN
+    bit_range:
+    - 6
+    - 6
+    description: This is the output enable-control bit for CHANNEL%s in IDLE state.
+  - name: TX_STOP
+    bit_range:
+    - 7
+    - 7
+    description: Set this bit to stop the transmitter of CHANNEL%s sending data out.
+  - name: DIV_CNT
+    bit_range:
+    - 15
+    - 8
+    description: This register is used to configure the divider for clock of CHANNEL%s.
+  - name: MEM_SIZE
+    bit_range:
+    - 19
+    - 16
+    description: This register is used to configure the maximum size of memory allocated to CHANNEL%s.
+  - name: CARRIER_EFF_EN
+    bit_range:
+    - 20
+    - 20
+    description: '1: Add carrier modulation on the output signal only at the send data state for CHANNEL%s. 0: Add carrier modulation on the output signal at all state for CHANNEL%s. Only valid when RMT_CARRIER_EN_CH%s is 1.'
+  - name: CARRIER_EN
+    bit_range:
+    - 21
+    - 21
+    description: 'This is the carrier modulation enable-control bit for CHANNEL%s. 1: Add carrier modulation in the output signal. 0: No carrier modulation in sig_out.'
+  - name: CARRIER_OUT_LV
+    bit_range:
+    - 22
+    - 22
+    description: 'This bit is used to configure the position of carrier wave for CHANNEL%s. 1''h0: add carrier wave on low level. 1''h1: add carrier wave on high level.'
+  - name: AFIFO_RST
+    bit_range:
+    - 23
+    - 23
+    description: Reserved
+  - name: CONF_UPDATE
+    bit_range:
+    - 24
+    - 24
+    description: synchronization bit for CHANNEL%s
+  side_effects: null
+- id: CH3_TX_CONF0
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 7406080
+  fields:
+  - name: TX_START
+    bit_range:
+    - 0
+    - 0
+    description: Set this bit to start sending data on CHANNEL%s.
+  - name: MEM_RD_RST
+    bit_range:
+    - 1
+    - 1
+    description: Set this bit to reset read ram address for CHANNEL%s by accessing transmitter.
+  - name: APB_MEM_RST
+    bit_range:
+    - 2
+    - 2
+    description: Set this bit to reset W/R ram address for CHANNEL%s by accessing apb fifo.
+  - name: TX_CONTI_MODE
+    bit_range:
+    - 3
+    - 3
+    description: Set this bit to restart transmission  from the first data to the last data in CHANNEL%s.
+  - name: MEM_TX_WRAP_EN
+    bit_range:
+    - 4
+    - 4
+    description: 'This is the channel %s enable bit for wraparound mode: it will resume sending at the start when the data to be sent is more than its memory size.'
+  - name: IDLE_OUT_LV
+    bit_range:
+    - 5
+    - 5
+    description: This bit configures the level of output signal in CHANNEL%s when the latter is in IDLE state.
+  - name: IDLE_OUT_EN
+    bit_range:
+    - 6
+    - 6
+    description: This is the output enable-control bit for CHANNEL%s in IDLE state.
+  - name: TX_STOP
+    bit_range:
+    - 7
+    - 7
+    description: Set this bit to stop the transmitter of CHANNEL%s sending data out.
+  - name: DIV_CNT
+    bit_range:
+    - 15
+    - 8
+    description: This register is used to configure the divider for clock of CHANNEL%s.
+  - name: MEM_SIZE
+    bit_range:
+    - 19
+    - 16
+    description: This register is used to configure the maximum size of memory allocated to CHANNEL%s.
+  - name: CARRIER_EFF_EN
+    bit_range:
+    - 20
+    - 20
+    description: '1: Add carrier modulation on the output signal only at the send data state for CHANNEL%s. 0: Add carrier modulation on the output signal at all state for CHANNEL%s. Only valid when RMT_CARRIER_EN_CH%s is 1.'
+  - name: CARRIER_EN
+    bit_range:
+    - 21
+    - 21
+    description: 'This is the carrier modulation enable-control bit for CHANNEL%s. 1: Add carrier modulation in the output signal. 0: No carrier modulation in sig_out.'
+  - name: CARRIER_OUT_LV
+    bit_range:
+    - 22
+    - 22
+    description: 'This bit is used to configure the position of carrier wave for CHANNEL%s. 1''h0: add carrier wave on low level. 1''h1: add carrier wave on high level.'
+  - name: AFIFO_RST
+    bit_range:
+    - 23
+    - 23
+    description: Reserved
+  - name: CONF_UPDATE
+    bit_range:
+    - 24
+    - 24
+    description: synchronization bit for CHANNEL%s
+  side_effects: null
+- id: CH4-7_RX_CONF0
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 830471938
+  fields:
+  - name: DIV_CNT
+    bit_range:
+    - 7
+    - 0
+    description: This register is used to configure the divider for clock of CHANNEL%s.
+  - name: IDLE_THRES
+    bit_range:
+    - 22
+    - 8
+    description: When no edge is detected on the input signal and continuous clock cycles is longer than this register value, received process is finished.
+  - name: MEM_SIZE
+    bit_range:
+    - 27
+    - 24
+    description: This register is used to configure the maximum size of memory allocated to CHANNEL%s.
+  - name: CARRIER_EN
+    bit_range:
+    - 28
+    - 28
+    description: 'This is the carrier modulation enable-control bit for CHANNEL%s. 1: Add carrier modulation in the output signal. 0: No carrier modulation in sig_out.'
+  - name: CARRIER_OUT_LV
+    bit_range:
+    - 29
+    - 29
+    description: 'This bit is used to configure the position of carrier wave for CHANNEL%s. 1''h0: add carrier wave on low level. 1''h1: add carrier wave on high level.'
+  side_effects: null
+- id: CH4-7_RX_CONF1
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 488
+  fields:
+  - name: RX_EN
+    bit_range:
+    - 0
+    - 0
+    description: Set this bit to enable receiver to receive data on CHANNEL%s.
+  - name: MEM_WR_RST
+    bit_range:
+    - 1
+    - 1
+    description: Set this bit to reset write ram address for CHANNEL%s by accessing receiver.
+  - name: APB_MEM_RST
+    bit_range:
+    - 2
+    - 2
+    description: Set this bit to reset W/R ram address for CHANNEL%s by accessing apb fifo.
+  - name: MEM_OWNER
+    bit_range:
+    - 3
+    - 3
+    description: 'This register marks the ownership of CHANNEL%s''s ram block. 1''h1: Receiver is using the ram. 1''h0: APB bus is using the ram.'
+  - name: RX_FILTER_EN
+    bit_range:
+    - 4
+    - 4
+    description: This is the receive filter's enable bit for CHANNEL%s.
+  - name: RX_FILTER_THRES
+    bit_range:
+    - 12
+    - 5
+    description: Ignores the input pulse when its width is smaller than this register value in APB clock periods (in receive mode).
+  - name: MEM_RX_WRAP_EN
+    bit_range:
+    - 13
+    - 13
+    description: 'This is the channel %s enable bit for wraparound mode: it will resume receiving at the start when the data to be received is more than its memory size.'
+  - name: AFIFO_RST
+    bit_range:
+    - 14
+    - 14
+    description: Reserved
+  - name: CONF_UPDATE
+    bit_range:
+    - 15
+    - 15
+    description: synchronization bit for CHANNEL%s
+  side_effects: null
+- id: CH0_TX_STATUS
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MEM_RADDR_EX
+    bit_range:
+    - 9
+    - 0
+    description: This register records the memory address offset when transmitter of CHANNEL%s is using the RAM.
+  - name: APB_MEM_WADDR
+    bit_range:
+    - 20
+    - 11
+    description: This register records the memory address offset when writes RAM over APB bus.
+  - name: STATE
+    bit_range:
+    - 24
+    - 22
+    description: This register records the FSM status of CHANNEL%s.
+  - name: MEM_EMPTY
+    bit_range:
+    - 25
+    - 25
+    description: This status bit will be set when the data to be set is more than memory size and the wraparound mode is disabled.
+  - name: APB_MEM_WR_ERR
+    bit_range:
+    - 26
+    - 26
+    description: This status bit will be set if the offset address out of memory size when writes via APB bus.
+  side_effects: null
+- id: CH1_TX_STATUS
+  address_offset: 84
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MEM_RADDR_EX
+    bit_range:
+    - 9
+    - 0
+    description: This register records the memory address offset when transmitter of CHANNEL%s is using the RAM.
+  - name: APB_MEM_WADDR
+    bit_range:
+    - 20
+    - 11
+    description: This register records the memory address offset when writes RAM over APB bus.
+  - name: STATE
+    bit_range:
+    - 24
+    - 22
+    description: This register records the FSM status of CHANNEL%s.
+  - name: MEM_EMPTY
+    bit_range:
+    - 25
+    - 25
+    description: This status bit will be set when the data to be set is more than memory size and the wraparound mode is disabled.
+  - name: APB_MEM_WR_ERR
+    bit_range:
+    - 26
+    - 26
+    description: This status bit will be set if the offset address out of memory size when writes via APB bus.
+  side_effects: null
+- id: CH2_TX_STATUS
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MEM_RADDR_EX
+    bit_range:
+    - 9
+    - 0
+    description: This register records the memory address offset when transmitter of CHANNEL%s is using the RAM.
+  - name: APB_MEM_WADDR
+    bit_range:
+    - 20
+    - 11
+    description: This register records the memory address offset when writes RAM over APB bus.
+  - name: STATE
+    bit_range:
+    - 24
+    - 22
+    description: This register records the FSM status of CHANNEL%s.
+  - name: MEM_EMPTY
+    bit_range:
+    - 25
+    - 25
+    description: This status bit will be set when the data to be set is more than memory size and the wraparound mode is disabled.
+  - name: APB_MEM_WR_ERR
+    bit_range:
+    - 26
+    - 26
+    description: This status bit will be set if the offset address out of memory size when writes via APB bus.
+  side_effects: null
+- id: CH3_TX_STATUS
+  address_offset: 92
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MEM_RADDR_EX
+    bit_range:
+    - 9
+    - 0
+    description: This register records the memory address offset when transmitter of CHANNEL%s is using the RAM.
+  - name: APB_MEM_WADDR
+    bit_range:
+    - 20
+    - 11
+    description: This register records the memory address offset when writes RAM over APB bus.
+  - name: STATE
+    bit_range:
+    - 24
+    - 22
+    description: This register records the FSM status of CHANNEL%s.
+  - name: MEM_EMPTY
+    bit_range:
+    - 25
+    - 25
+    description: This status bit will be set when the data to be set is more than memory size and the wraparound mode is disabled.
+  - name: APB_MEM_WR_ERR
+    bit_range:
+    - 26
+    - 26
+    description: This status bit will be set if the offset address out of memory size when writes via APB bus.
+  side_effects: null
+- id: CH0_RX_STATUS
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 393408
+  fields:
+  - name: MEM_WADDR_EX
+    bit_range:
+    - 9
+    - 0
+    description: This register records the memory address offset when receiver of CHANNEL%s is using the RAM.
+  - name: APB_MEM_RADDR
+    bit_range:
+    - 20
+    - 11
+    description: This register records the memory address offset when reads RAM over APB bus.
+  - name: STATE
+    bit_range:
+    - 24
+    - 22
+    description: This register records the FSM status of CHANNEL%s.
+  - name: MEM_OWNER_ERR
+    bit_range:
+    - 25
+    - 25
+    description: This status bit will be set when the ownership of memory block is wrong.
+  - name: MEM_FULL
+    bit_range:
+    - 26
+    - 26
+    description: This status bit will be set if the receiver receives more data than the memory size.
+  - name: APB_MEM_RD_ERR
+    bit_range:
+    - 27
+    - 27
+    description: This status bit will be set if the offset address out of memory size when reads via APB bus.
+  side_effects: null
+- id: CH1_RX_STATUS
+  address_offset: 100
+  size: 32
+  access: READ_WRITE
+  reset_value: 393408
+  fields:
+  - name: MEM_WADDR_EX
+    bit_range:
+    - 9
+    - 0
+    description: This register records the memory address offset when receiver of CHANNEL%s is using the RAM.
+  - name: APB_MEM_RADDR
+    bit_range:
+    - 20
+    - 11
+    description: This register records the memory address offset when reads RAM over APB bus.
+  - name: STATE
+    bit_range:
+    - 24
+    - 22
+    description: This register records the FSM status of CHANNEL%s.
+  - name: MEM_OWNER_ERR
+    bit_range:
+    - 25
+    - 25
+    description: This status bit will be set when the ownership of memory block is wrong.
+  - name: MEM_FULL
+    bit_range:
+    - 26
+    - 26
+    description: This status bit will be set if the receiver receives more data than the memory size.
+  - name: APB_MEM_RD_ERR
+    bit_range:
+    - 27
+    - 27
+    description: This status bit will be set if the offset address out of memory size when reads via APB bus.
+  side_effects: null
+- id: CH2_RX_STATUS
+  address_offset: 104
+  size: 32
+  access: READ_WRITE
+  reset_value: 393408
+  fields:
+  - name: MEM_WADDR_EX
+    bit_range:
+    - 9
+    - 0
+    description: This register records the memory address offset when receiver of CHANNEL%s is using the RAM.
+  - name: APB_MEM_RADDR
+    bit_range:
+    - 20
+    - 11
+    description: This register records the memory address offset when reads RAM over APB bus.
+  - name: STATE
+    bit_range:
+    - 24
+    - 22
+    description: This register records the FSM status of CHANNEL%s.
+  - name: MEM_OWNER_ERR
+    bit_range:
+    - 25
+    - 25
+    description: This status bit will be set when the ownership of memory block is wrong.
+  - name: MEM_FULL
+    bit_range:
+    - 26
+    - 26
+    description: This status bit will be set if the receiver receives more data than the memory size.
+  - name: APB_MEM_RD_ERR
+    bit_range:
+    - 27
+    - 27
+    description: This status bit will be set if the offset address out of memory size when reads via APB bus.
+  side_effects: null
+- id: CH3_RX_STATUS
+  address_offset: 108
+  size: 32
+  access: READ_WRITE
+  reset_value: 393408
+  fields:
+  - name: MEM_WADDR_EX
+    bit_range:
+    - 9
+    - 0
+    description: This register records the memory address offset when receiver of CHANNEL%s is using the RAM.
+  - name: APB_MEM_RADDR
+    bit_range:
+    - 20
+    - 11
+    description: This register records the memory address offset when reads RAM over APB bus.
+  - name: STATE
+    bit_range:
+    - 24
+    - 22
+    description: This register records the FSM status of CHANNEL%s.
+  - name: MEM_OWNER_ERR
+    bit_range:
+    - 25
+    - 25
+    description: This status bit will be set when the ownership of memory block is wrong.
+  - name: MEM_FULL
+    bit_range:
+    - 26
+    - 26
+    description: This status bit will be set if the receiver receives more data than the memory size.
+  - name: APB_MEM_RD_ERR
+    bit_range:
+    - 27
+    - 27
+    description: This status bit will be set if the offset address out of memory size when reads via APB bus.
+  side_effects: null
+- id: INT_RAW
+  address_offset: 112
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CH%s_TX_END
+    bit_range:
+    - 0
+    - 0
+    description: The interrupt raw bit for CHANNEL%s. Triggered when transmission done.
+  - name: CH%s_TX_ERR
+    bit_range:
+    - 4
+    - 4
+    description: The interrupt raw bit for CHANNEL%s. Triggered when error occurs.
+  - name: CH%s_TX_THR_EVENT
+    bit_range:
+    - 8
+    - 8
+    description: The interrupt raw bit for CHANNEL%s. Triggered when transmitter sent more data than configured value.
+  - name: CH%s_TX_LOOP
+    bit_range:
+    - 12
+    - 12
+    description: The interrupt raw bit for CHANNEL%s. Triggered when the loop count reaches the configured threshold value.
+  - name: CH%s_RX_END
+    bit_range:
+    - 16
+    - 16
+    description: The interrupt raw bit for CHANNEL4. Triggered when reception done.
+  - name: CH%s_RX_ERR
+    bit_range:
+    - 20
+    - 20
+    description: The interrupt raw bit for CHANNEL4. Triggered when error occurs.
+  - name: CH%s_RX_THR_EVENT
+    bit_range:
+    - 24
+    - 24
+    description: The interrupt raw bit for CHANNEL4. Triggered when receiver receive more data than configured value.
+  - name: TX_CH3_DMA_ACCESS_FAIL
+    bit_range:
+    - 28
+    - 28
+    description: The interrupt raw bit for CHANNEL3. Triggered when dma accessing CHANNEL3 fails.
+  - name: RX_CH7_DMA_ACCESS_FAIL
+    bit_range:
+    - 29
+    - 29
+    description: The interrupt raw bit for CHANNEL7. Triggered when dma accessing CHANNEL7 fails.
+  side_effects: null
+- id: INT_ST
+  address_offset: 116
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CH%s_TX_END
+    bit_range:
+    - 0
+    - 0
+    description: The masked interrupt status bit for CH%s_TX_END_INT.
+  - name: CH%s_TX_ERR
+    bit_range:
+    - 4
+    - 4
+    description: The masked interrupt status bit for CH%s_ERR_INT.
+  - name: CH%s_TX_THR_EVENT
+    bit_range:
+    - 8
+    - 8
+    description: The masked interrupt status bit for CH%s_TX_THR_EVENT_INT.
+  - name: CH%s_TX_LOOP
+    bit_range:
+    - 12
+    - 12
+    description: The masked interrupt status bit for CH%s_TX_LOOP_INT.
+  - name: CH%s_RX_END
+    bit_range:
+    - 16
+    - 16
+    description: The masked interrupt status bit for CH4_RX_END_INT.
+  - name: CH%s_RX_ERR
+    bit_range:
+    - 20
+    - 20
+    description: The masked interrupt status bit for CH4_ERR_INT.
+  - name: CH%s_RX_THR_EVENT
+    bit_range:
+    - 24
+    - 24
+    description: The masked interrupt status bit for CH4_RX_THR_EVENT_INT.
+  - name: TX_CH3_DMA_ACCESS_FAIL
+    bit_range:
+    - 28
+    - 28
+    description: The masked interrupt status bit for  CH3_DMA_ACCESS_FAIL_INT.
+  - name: RX_CH7_DMA_ACCESS_FAIL
+    bit_range:
+    - 29
+    - 29
+    description: The masked interrupt status bit for  CH7_DMA_ACCESS_FAIL_INT.
+  side_effects: null
+- id: INT_ENA
+  address_offset: 120
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CH%s_TX_END
+    bit_range:
+    - 0
+    - 0
+    description: The interrupt enable bit for CH%s_TX_END_INT.
+  - name: CH%s_TX_ERR
+    bit_range:
+    - 4
+    - 4
+    description: The interrupt enable bit for CH%s_ERR_INT.
+  - name: CH%s_TX_THR_EVENT
+    bit_range:
+    - 8
+    - 8
+    description: The interrupt enable bit for CH%s_TX_THR_EVENT_INT.
+  - name: CH%s_TX_LOOP
+    bit_range:
+    - 12
+    - 12
+    description: The interrupt enable bit for CH%s_TX_LOOP_INT.
+  - name: CH%s_RX_END
+    bit_range:
+    - 16
+    - 16
+    description: The interrupt enable bit for CH4_RX_END_INT.
+  - name: CH%s_RX_ERR
+    bit_range:
+    - 20
+    - 20
+    description: The interrupt enable bit for CH4_ERR_INT.
+  - name: CH%s_RX_THR_EVENT
+    bit_range:
+    - 24
+    - 24
+    description: The interrupt enable bit for CH4_RX_THR_EVENT_INT.
+  - name: TX_CH3_DMA_ACCESS_FAIL
+    bit_range:
+    - 28
+    - 28
+    description: The interrupt enable bit for CH3_DMA_ACCESS_FAIL_INT.
+  - name: RX_CH7_DMA_ACCESS_FAIL
+    bit_range:
+    - 29
+    - 29
+    description: The interrupt enable bit for CH7_DMA_ACCESS_FAIL_INT.
+  side_effects: null
+- id: INT_CLR
+  address_offset: 124
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CH%s_TX_END
+    bit_range:
+    - 0
+    - 0
+    description: Set this bit to clear theCH%s_TX_END_INT interrupt.
+  - name: CH%s_TX_ERR
+    bit_range:
+    - 4
+    - 4
+    description: Set this bit to clear theCH%s_ERR_INT interrupt.
+  - name: CH%s_TX_THR_EVENT
+    bit_range:
+    - 8
+    - 8
+    description: Set this bit to clear theCH%s_TX_THR_EVENT_INT interrupt.
+  - name: CH%s_TX_LOOP
+    bit_range:
+    - 12
+    - 12
+    description: Set this bit to clear theCH%s_TX_LOOP_INT interrupt.
+  - name: CH%s_RX_END
+    bit_range:
+    - 16
+    - 16
+    description: Set this bit to clear theCH4_RX_END_INT interrupt.
+  - name: CH%s_RX_ERR
+    bit_range:
+    - 20
+    - 20
+    description: Set this bit to clear theCH4_ERR_INT interrupt.
+  - name: CH%s_RX_THR_EVENT
+    bit_range:
+    - 24
+    - 24
+    description: Set this bit to clear theCH4_RX_THR_EVENT_INT interrupt.
+  - name: TX_CH3_DMA_ACCESS_FAIL
+    bit_range:
+    - 28
+    - 28
+    description: Set this bit to clear the CH3_DMA_ACCESS_FAIL_INT interrupt.
+  - name: RX_CH7_DMA_ACCESS_FAIL
+    bit_range:
+    - 29
+    - 29
+    description: Set this bit to clear the CH7_DMA_ACCESS_FAIL_INT interrupt.
+  side_effects: null
+- id: CH0CARRIER_DUTY
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 4194368
+  fields:
+  - name: CARRIER_LOW
+    bit_range:
+    - 15
+    - 0
+    description: This register is used to configure carrier wave 's low level clock period for CHANNEL%s.
+  - name: CARRIER_HIGH
+    bit_range:
+    - 31
+    - 16
+    description: This register is used to configure carrier wave 's high level clock period for CHANNEL%s.
+  side_effects: null
+- id: CH1CARRIER_DUTY
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 4194368
+  fields:
+  - name: CARRIER_LOW
+    bit_range:
+    - 15
+    - 0
+    description: This register is used to configure carrier wave 's low level clock period for CHANNEL%s.
+  - name: CARRIER_HIGH
+    bit_range:
+    - 31
+    - 16
+    description: This register is used to configure carrier wave 's high level clock period for CHANNEL%s.
+  side_effects: null
+- id: CH2CARRIER_DUTY
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 4194368
+  fields:
+  - name: CARRIER_LOW
+    bit_range:
+    - 15
+    - 0
+    description: This register is used to configure carrier wave 's low level clock period for CHANNEL%s.
+  - name: CARRIER_HIGH
+    bit_range:
+    - 31
+    - 16
+    description: This register is used to configure carrier wave 's high level clock period for CHANNEL%s.
+  side_effects: null
+- id: CH3CARRIER_DUTY
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 4194368
+  fields:
+  - name: CARRIER_LOW
+    bit_range:
+    - 15
+    - 0
+    description: This register is used to configure carrier wave 's low level clock period for CHANNEL%s.
+  - name: CARRIER_HIGH
+    bit_range:
+    - 31
+    - 16
+    description: This register is used to configure carrier wave 's high level clock period for CHANNEL%s.
+  side_effects: null
+- id: CH0_RX_CARRIER_RM
+  address_offset: 144
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CARRIER_LOW_THRES
+    bit_range:
+    - 15
+    - 0
+    description: The low level period in a carrier modulation mode is (REG_RMT_REG_CARRIER_LOW_THRES_CH%s + 1) for channel %s.
+  - name: CARRIER_HIGH_THRES
+    bit_range:
+    - 31
+    - 16
+    description: The high level period in a carrier modulation mode is (REG_RMT_REG_CARRIER_HIGH_THRES_CH%s + 1) for channel %s.
+  side_effects: null
+- id: CH1_RX_CARRIER_RM
+  address_offset: 148
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CARRIER_LOW_THRES
+    bit_range:
+    - 15
+    - 0
+    description: The low level period in a carrier modulation mode is (REG_RMT_REG_CARRIER_LOW_THRES_CH%s + 1) for channel %s.
+  - name: CARRIER_HIGH_THRES
+    bit_range:
+    - 31
+    - 16
+    description: The high level period in a carrier modulation mode is (REG_RMT_REG_CARRIER_HIGH_THRES_CH%s + 1) for channel %s.
+  side_effects: null
+- id: CH2_RX_CARRIER_RM
+  address_offset: 152
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CARRIER_LOW_THRES
+    bit_range:
+    - 15
+    - 0
+    description: The low level period in a carrier modulation mode is (REG_RMT_REG_CARRIER_LOW_THRES_CH%s + 1) for channel %s.
+  - name: CARRIER_HIGH_THRES
+    bit_range:
+    - 31
+    - 16
+    description: The high level period in a carrier modulation mode is (REG_RMT_REG_CARRIER_HIGH_THRES_CH%s + 1) for channel %s.
+  side_effects: null
+- id: CH3_RX_CARRIER_RM
+  address_offset: 156
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CARRIER_LOW_THRES
+    bit_range:
+    - 15
+    - 0
+    description: The low level period in a carrier modulation mode is (REG_RMT_REG_CARRIER_LOW_THRES_CH%s + 1) for channel %s.
+  - name: CARRIER_HIGH_THRES
+    bit_range:
+    - 31
+    - 16
+    description: The high level period in a carrier modulation mode is (REG_RMT_REG_CARRIER_HIGH_THRES_CH%s + 1) for channel %s.
+  side_effects: null
+- id: CH0_TX_LIM
+  address_offset: 160
+  size: 32
+  access: READ_WRITE
+  reset_value: 128
+  fields:
+  - name: TX_LIM
+    bit_range:
+    - 8
+    - 0
+    description: This register is used to configure the maximum entries that CHANNEL%s can send out.
+  - name: TX_LOOP_NUM
+    bit_range:
+    - 18
+    - 9
+    description: This register is used to configure the maximum loop count when tx_conti_mode is valid.
+  - name: TX_LOOP_CNT_EN
+    bit_range:
+    - 19
+    - 19
+    description: This register is the enabled bit for loop count.
+  - name: LOOP_COUNT_RESET
+    bit_range:
+    - 20
+    - 20
+    description: This register is used to reset the loop count when tx_conti_mode is valid.
+  - name: LOOP_STOP_EN
+    bit_range:
+    - 21
+    - 21
+    description: This bit is used to enable the loop send stop function after the loop counter counts to  loop number for CHANNEL%s.
+  side_effects: null
+- id: CH1_TX_LIM
+  address_offset: 164
+  size: 32
+  access: READ_WRITE
+  reset_value: 128
+  fields:
+  - name: TX_LIM
+    bit_range:
+    - 8
+    - 0
+    description: This register is used to configure the maximum entries that CHANNEL%s can send out.
+  - name: TX_LOOP_NUM
+    bit_range:
+    - 18
+    - 9
+    description: This register is used to configure the maximum loop count when tx_conti_mode is valid.
+  - name: TX_LOOP_CNT_EN
+    bit_range:
+    - 19
+    - 19
+    description: This register is the enabled bit for loop count.
+  - name: LOOP_COUNT_RESET
+    bit_range:
+    - 20
+    - 20
+    description: This register is used to reset the loop count when tx_conti_mode is valid.
+  - name: LOOP_STOP_EN
+    bit_range:
+    - 21
+    - 21
+    description: This bit is used to enable the loop send stop function after the loop counter counts to  loop number for CHANNEL%s.
+  side_effects: null
+- id: CH2_TX_LIM
+  address_offset: 168
+  size: 32
+  access: READ_WRITE
+  reset_value: 128
+  fields:
+  - name: TX_LIM
+    bit_range:
+    - 8
+    - 0
+    description: This register is used to configure the maximum entries that CHANNEL%s can send out.
+  - name: TX_LOOP_NUM
+    bit_range:
+    - 18
+    - 9
+    description: This register is used to configure the maximum loop count when tx_conti_mode is valid.
+  - name: TX_LOOP_CNT_EN
+    bit_range:
+    - 19
+    - 19
+    description: This register is the enabled bit for loop count.
+  - name: LOOP_COUNT_RESET
+    bit_range:
+    - 20
+    - 20
+    description: This register is used to reset the loop count when tx_conti_mode is valid.
+  - name: LOOP_STOP_EN
+    bit_range:
+    - 21
+    - 21
+    description: This bit is used to enable the loop send stop function after the loop counter counts to  loop number for CHANNEL%s.
+  side_effects: null
+- id: CH3_TX_LIM
+  address_offset: 172
+  size: 32
+  access: READ_WRITE
+  reset_value: 128
+  fields:
+  - name: TX_LIM
+    bit_range:
+    - 8
+    - 0
+    description: This register is used to configure the maximum entries that CHANNEL%s can send out.
+  - name: TX_LOOP_NUM
+    bit_range:
+    - 18
+    - 9
+    description: This register is used to configure the maximum loop count when tx_conti_mode is valid.
+  - name: TX_LOOP_CNT_EN
+    bit_range:
+    - 19
+    - 19
+    description: This register is the enabled bit for loop count.
+  - name: LOOP_COUNT_RESET
+    bit_range:
+    - 20
+    - 20
+    description: This register is used to reset the loop count when tx_conti_mode is valid.
+  - name: LOOP_STOP_EN
+    bit_range:
+    - 21
+    - 21
+    description: This bit is used to enable the loop send stop function after the loop counter counts to  loop number for CHANNEL%s.
+  side_effects: null
+- id: CH0_RX_LIM
+  address_offset: 176
+  size: 32
+  access: READ_WRITE
+  reset_value: 128
+  fields:
+  - name: RX_LIM
+    bit_range:
+    - 8
+    - 0
+    description: This register is used to configure the maximum entries that CHANNEL%s can receive.
+  side_effects: null
+- id: CH1_RX_LIM
+  address_offset: 180
+  size: 32
+  access: READ_WRITE
+  reset_value: 128
+  fields:
+  - name: RX_LIM
+    bit_range:
+    - 8
+    - 0
+    description: This register is used to configure the maximum entries that CHANNEL%s can receive.
+  side_effects: null
+- id: CH2_RX_LIM
+  address_offset: 184
+  size: 32
+  access: READ_WRITE
+  reset_value: 128
+  fields:
+  - name: RX_LIM
+    bit_range:
+    - 8
+    - 0
+    description: This register is used to configure the maximum entries that CHANNEL%s can receive.
+  side_effects: null
+- id: CH3_RX_LIM
+  address_offset: 188
+  size: 32
+  access: READ_WRITE
+  reset_value: 128
+  fields:
+  - name: RX_LIM
+    bit_range:
+    - 8
+    - 0
+    description: This register is used to configure the maximum entries that CHANNEL%s can receive.
+  side_effects: null
+- id: SYS_CONF
+  address_offset: 192
+  size: 32
+  access: READ_WRITE
+  reset_value: 83886096
+  fields:
+  - name: APB_FIFO_MASK
+    bit_range:
+    - 0
+    - 0
+    description: '1''h1: access memory directly.   1''h0: access memory by FIFO.'
+  - name: MEM_CLK_FORCE_ON
+    bit_range:
+    - 1
+    - 1
+    description: Set this bit to enable the clock for RMT memory.
+  - name: MEM_FORCE_PD
+    bit_range:
+    - 2
+    - 2
+    description: Set this bit to power down RMT memory.
+  - name: MEM_FORCE_PU
+    bit_range:
+    - 3
+    - 3
+    description: '1: Disable RMT memory light sleep power down function. 0: Power down RMT memory when RMT is in light sleep mode.'
+  - name: SCLK_DIV_NUM
+    bit_range:
+    - 11
+    - 4
+    description: the integral part of the fractional divisor
+  - name: SCLK_DIV_A
+    bit_range:
+    - 17
+    - 12
+    description: the numerator of the fractional part of the fractional divisor
+  - name: SCLK_DIV_B
+    bit_range:
+    - 23
+    - 18
+    description: the denominator of the fractional part of the fractional divisor
+  - name: SCLK_SEL
+    bit_range:
+    - 25
+    - 24
+    description: choose the clock source of rmt_sclk. 1:CLK_80Mhz;2:CLK_8MHz; 2:XTAL
+  - name: SCLK_ACTIVE
+    bit_range:
+    - 26
+    - 26
+    description: rmt_sclk switch
+  - name: CLK_EN
+    bit_range:
+    - 31
+    - 31
+    description: 'RMT register clock gate enable signal. 1: Power up the drive clock of registers. 0: Power down the drive clock of registers'
+  side_effects: null
+- id: TX_SIM
+  address_offset: 196
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CH0
+    bit_range:
+    - 0
+    - 0
+    description: Set this bit to enable CHANNEL0 to start sending data synchronously with other enabled channels.
+  - name: CH1
+    bit_range:
+    - 1
+    - 1
+    description: Set this bit to enable CHANNEL1 to start sending data synchronously with other enabled channels.
+  - name: CH2
+    bit_range:
+    - 2
+    - 2
+    description: Set this bit to enable CHANNEL2 to start sending data synchronously with other enabled channels.
+  - name: CH3
+    bit_range:
+    - 3
+    - 3
+    description: Set this bit to enable CHANNEL3 to start sending data synchronously with other enabled channels.
+  - name: EN
+    bit_range:
+    - 4
+    - 4
+    description: This register is used to enable multiple of channels to start sending data synchronously.
+  side_effects: null
+- id: REF_CNT_RST
+  address_offset: 200
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CH%s
+    bit_range:
+    - 0
+    - 0
+    description: This register is used to reset the clock divider of CHANNEL%s.
+  side_effects: null
+- id: DATE
+  address_offset: 204
+  size: 32
+  access: READ_WRITE
+  reset_value: 34607489
+  fields:
+  - name: DATE
+    bit_range:
+    - 27
+    - 0
+    description: This is the version register.
+  side_effects: null
+interrupts:
+  RMT: 40
+timing: null

@@ -1,0 +1,790 @@
+peripheral: CLOCK_S
+version: 0.1.0
+registers:
+- id: TASKS_HFCLKSTART
+  address_offset: 0
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_HFCLKSTART
+    bit_range:
+    - 0
+    - 0
+    description: Start HFCLK128M/HFCLK64M source as selected in HFCLKSRC
+  side_effects: null
+- id: TASKS_HFCLKSTOP
+  address_offset: 4
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_HFCLKSTOP
+    bit_range:
+    - 0
+    - 0
+    description: Stop HFCLK128M/HFCLK64M source
+  side_effects: null
+- id: TASKS_LFCLKSTART
+  address_offset: 8
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_LFCLKSTART
+    bit_range:
+    - 0
+    - 0
+    description: Start LFCLK source as selected in LFCLKSRC
+  side_effects: null
+- id: TASKS_LFCLKSTOP
+  address_offset: 12
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_LFCLKSTOP
+    bit_range:
+    - 0
+    - 0
+    description: Stop LFCLK source
+  side_effects: null
+- id: TASKS_CAL
+  address_offset: 16
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_CAL
+    bit_range:
+    - 0
+    - 0
+    description: Start calibration of LFRC oscillator
+  side_effects: null
+- id: TASKS_HFCLKAUDIOSTART
+  address_offset: 24
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_HFCLKAUDIOSTART
+    bit_range:
+    - 0
+    - 0
+    description: Start HFCLKAUDIO source
+  side_effects: null
+- id: TASKS_HFCLKAUDIOSTOP
+  address_offset: 28
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_HFCLKAUDIOSTOP
+    bit_range:
+    - 0
+    - 0
+    description: Stop HFCLKAUDIO source
+  side_effects: null
+- id: TASKS_HFCLK192MSTART
+  address_offset: 32
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_HFCLK192MSTART
+    bit_range:
+    - 0
+    - 0
+    description: Start HFCLK192M source as selected in HFCLK192MSRC
+  side_effects: null
+- id: TASKS_HFCLK192MSTOP
+  address_offset: 36
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_HFCLK192MSTOP
+    bit_range:
+    - 0
+    - 0
+    description: Stop HFCLK192M source
+  side_effects: null
+- id: SUBSCRIBE_HFCLKSTART
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task HFCLKSTART will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_HFCLKSTOP
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task HFCLKSTOP will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_LFCLKSTART
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task LFCLKSTART will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_LFCLKSTOP
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task LFCLKSTOP will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CAL
+  address_offset: 144
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CAL will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_HFCLKAUDIOSTART
+  address_offset: 152
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task HFCLKAUDIOSTART will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_HFCLKAUDIOSTOP
+  address_offset: 156
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task HFCLKAUDIOSTOP will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_HFCLK192MSTART
+  address_offset: 160
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task HFCLK192MSTART will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_HFCLK192MSTOP
+  address_offset: 164
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task HFCLK192MSTOP will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: EVENTS_HFCLKSTARTED
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_HFCLKSTARTED
+    bit_range:
+    - 0
+    - 0
+    description: HFCLK128M/HFCLK64M source started
+  side_effects: null
+- id: EVENTS_LFCLKSTARTED
+  address_offset: 260
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_LFCLKSTARTED
+    bit_range:
+    - 0
+    - 0
+    description: LFCLK source started
+  side_effects: null
+- id: EVENTS_DONE
+  address_offset: 284
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_DONE
+    bit_range:
+    - 0
+    - 0
+    description: Calibration of LFRC oscillator complete event
+  side_effects: null
+- id: EVENTS_HFCLKAUDIOSTARTED
+  address_offset: 288
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_HFCLKAUDIOSTARTED
+    bit_range:
+    - 0
+    - 0
+    description: HFCLKAUDIO source started
+  side_effects: null
+- id: EVENTS_HFCLK192MSTARTED
+  address_offset: 292
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_HFCLK192MSTARTED
+    bit_range:
+    - 0
+    - 0
+    description: HFCLK192M source started
+  side_effects: null
+- id: PUBLISH_HFCLKSTARTED
+  address_offset: 384
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event HFCLKSTARTED will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_LFCLKSTARTED
+  address_offset: 388
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event LFCLKSTARTED will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_DONE
+  address_offset: 412
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event DONE will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_HFCLKAUDIOSTARTED
+  address_offset: 416
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event HFCLKAUDIOSTARTED will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_HFCLK192MSTARTED
+  address_offset: 420
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event HFCLK192MSTARTED will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: INTEN
+  address_offset: 768
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HFCLKSTARTED
+    bit_range:
+    - 0
+    - 0
+    description: Enable or disable interrupt for event HFCLKSTARTED
+  - name: LFCLKSTARTED
+    bit_range:
+    - 1
+    - 1
+    description: Enable or disable interrupt for event LFCLKSTARTED
+  - name: DONE
+    bit_range:
+    - 7
+    - 7
+    description: Enable or disable interrupt for event DONE
+  - name: HFCLKAUDIOSTARTED
+    bit_range:
+    - 8
+    - 8
+    description: Enable or disable interrupt for event HFCLKAUDIOSTARTED
+  - name: HFCLK192MSTARTED
+    bit_range:
+    - 9
+    - 9
+    description: Enable or disable interrupt for event HFCLK192MSTARTED
+  side_effects: null
+- id: INTENSET
+  address_offset: 772
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HFCLKSTARTED
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to enable interrupt for event HFCLKSTARTED
+  - name: LFCLKSTARTED
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to enable interrupt for event LFCLKSTARTED
+  - name: DONE
+    bit_range:
+    - 7
+    - 7
+    description: Write '1' to enable interrupt for event DONE
+  - name: HFCLKAUDIOSTARTED
+    bit_range:
+    - 8
+    - 8
+    description: Write '1' to enable interrupt for event HFCLKAUDIOSTARTED
+  - name: HFCLK192MSTARTED
+    bit_range:
+    - 9
+    - 9
+    description: Write '1' to enable interrupt for event HFCLK192MSTARTED
+  side_effects: null
+- id: INTENCLR
+  address_offset: 776
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HFCLKSTARTED
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to disable interrupt for event HFCLKSTARTED
+  - name: LFCLKSTARTED
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to disable interrupt for event LFCLKSTARTED
+  - name: DONE
+    bit_range:
+    - 7
+    - 7
+    description: Write '1' to disable interrupt for event DONE
+  - name: HFCLKAUDIOSTARTED
+    bit_range:
+    - 8
+    - 8
+    description: Write '1' to disable interrupt for event HFCLKAUDIOSTARTED
+  - name: HFCLK192MSTARTED
+    bit_range:
+    - 9
+    - 9
+    description: Write '1' to disable interrupt for event HFCLK192MSTARTED
+  side_effects: null
+- id: INTPEND
+  address_offset: 780
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: HFCLKSTARTED
+    bit_range:
+    - 0
+    - 0
+    description: Read pending status of interrupt for event HFCLKSTARTED
+  - name: LFCLKSTARTED
+    bit_range:
+    - 1
+    - 1
+    description: Read pending status of interrupt for event LFCLKSTARTED
+  - name: DONE
+    bit_range:
+    - 7
+    - 7
+    description: Read pending status of interrupt for event DONE
+  - name: HFCLKAUDIOSTARTED
+    bit_range:
+    - 8
+    - 8
+    description: Read pending status of interrupt for event HFCLKAUDIOSTARTED
+  - name: HFCLK192MSTARTED
+    bit_range:
+    - 9
+    - 9
+    description: Read pending status of interrupt for event HFCLK192MSTARTED
+  side_effects: null
+- id: HFCLKRUN
+  address_offset: 1032
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: STATUS
+    bit_range:
+    - 0
+    - 0
+    description: HFCLKSTART task triggered or not
+  side_effects: null
+- id: HFCLKSTAT
+  address_offset: 1036
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: SRC
+    bit_range:
+    - 0
+    - 0
+    description: Active clock source
+  - name: ALWAYSRUNNING
+    bit_range:
+    - 4
+    - 4
+    description: ALWAYSRUN activated
+  - name: STATE
+    bit_range:
+    - 16
+    - 16
+    description: HFCLK state
+  side_effects: null
+- id: LFCLKRUN
+  address_offset: 1044
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: STATUS
+    bit_range:
+    - 0
+    - 0
+    description: LFCLKSTART task triggered or not
+  side_effects: null
+- id: LFCLKSTAT
+  address_offset: 1048
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: SRC
+    bit_range:
+    - 1
+    - 0
+    description: Active clock source
+  - name: ALWAYSRUNNING
+    bit_range:
+    - 4
+    - 4
+    description: ALWAYSRUN activated
+  - name: STATE
+    bit_range:
+    - 16
+    - 16
+    description: LFCLK state
+  side_effects: null
+- id: LFCLKSRCCOPY
+  address_offset: 1052
+  size: 32
+  access: READ_ONLY
+  reset_value: 1
+  fields:
+  - name: SRC
+    bit_range:
+    - 1
+    - 0
+    description: Clock source
+  side_effects: null
+- id: HFCLKAUDIORUN
+  address_offset: 1104
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: STATUS
+    bit_range:
+    - 0
+    - 0
+    description: HFCLKAUDIOSTART task triggered or not
+  side_effects: null
+- id: HFCLKAUDIOSTAT
+  address_offset: 1108
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: ALWAYSRUNNING
+    bit_range:
+    - 4
+    - 4
+    description: ALWAYSRUN activated
+  - name: STATE
+    bit_range:
+    - 16
+    - 16
+    description: HFCLKAUDIO state
+  side_effects: null
+- id: HFCLK192MRUN
+  address_offset: 1112
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: STATUS
+    bit_range:
+    - 0
+    - 0
+    description: HFCLK192MSTART task triggered or not
+  side_effects: null
+- id: HFCLK192MSTAT
+  address_offset: 1116
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: SRC
+    bit_range:
+    - 0
+    - 0
+    description: Active clock source
+  - name: ALWAYSRUNNING
+    bit_range:
+    - 4
+    - 4
+    description: ALWAYSRUN activated
+  - name: STATE
+    bit_range:
+    - 16
+    - 16
+    description: HFCLK192M state
+  side_effects: null
+- id: HFCLKSRC
+  address_offset: 1300
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: SRC
+    bit_range:
+    - 0
+    - 0
+    description: Select which HFCLK source is started by the HFCLKSTART task
+  side_effects: null
+- id: LFCLKSRC
+  address_offset: 1304
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: SRC
+    bit_range:
+    - 1
+    - 0
+    description: Select which LFCLK source is started by the LFCLKSTART task
+  side_effects: null
+- id: HFCLKCTRL
+  address_offset: 1368
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: HCLK
+    bit_range:
+    - 1
+    - 0
+    description: High frequency clock HCLK
+  side_effects: null
+- id: HFCLKAUDIO_FREQUENCY
+  address_offset: 1372
+  size: 32
+  access: READ_WRITE
+  reset_value: 39854
+  fields:
+  - name: FREQUENCY
+    bit_range:
+    - 15
+    - 0
+    description: 'Frequency 0: 10.666 MHz 65535: 13.333 MHz'
+  side_effects: null
+- id: HFCLKALWAYSRUN
+  address_offset: 1392
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ALWAYSRUN
+    bit_range:
+    - 0
+    - 0
+    description: Ensure clock is always running
+  side_effects: null
+- id: LFCLKALWAYSRUN
+  address_offset: 1396
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ALWAYSRUN
+    bit_range:
+    - 0
+    - 0
+    description: Ensure clock is always running
+  side_effects: null
+- id: HFCLKAUDIOALWAYSRUN
+  address_offset: 1404
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ALWAYSRUN
+    bit_range:
+    - 0
+    - 0
+    description: Ensure clock is always running
+  side_effects: null
+- id: HFCLK192MSRC
+  address_offset: 1408
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: SRC
+    bit_range:
+    - 0
+    - 0
+    description: Select which HFCLK192M source is started by the HFCLK192MSTART task
+  side_effects: null
+- id: HFCLK192MALWAYSRUN
+  address_offset: 1412
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ALWAYSRUN
+    bit_range:
+    - 0
+    - 0
+    description: Ensure clock is always running
+  side_effects: null
+- id: HFCLK192MCTRL
+  address_offset: 1464
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: HCLK192M
+    bit_range:
+    - 1
+    - 0
+    description: High frequency clock HCLK192M
+  side_effects: null
+interrupts:
+  CLOCK_POWER: 5
+  CLOCK_POWER: 5
+timing: null

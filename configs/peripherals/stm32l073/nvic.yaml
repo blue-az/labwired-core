@@ -1,0 +1,269 @@
+peripheral: NVIC
+version: 0.1.0
+registers:
+- id: ISER
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SETENA
+    bit_range:
+    - 31
+    - 0
+    description: SETENA
+  side_effects: null
+- id: ICER
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CLRENA
+    bit_range:
+    - 31
+    - 0
+    description: CLRENA
+  side_effects: null
+- id: ISPR
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SETPEND
+    bit_range:
+    - 31
+    - 0
+    description: SETPEND
+  side_effects: null
+- id: ICPR
+  address_offset: 384
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CLRPEND
+    bit_range:
+    - 31
+    - 0
+    description: CLRPEND
+  side_effects: null
+- id: IPR0
+  address_offset: 768
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRI_0
+    bit_range:
+    - 7
+    - 0
+    description: priority for interrupt 0
+  - name: PRI_1
+    bit_range:
+    - 15
+    - 8
+    description: priority for interrupt 1
+  - name: PRI_2
+    bit_range:
+    - 23
+    - 16
+    description: priority for interrupt 2
+  - name: PRI_3
+    bit_range:
+    - 31
+    - 24
+    description: priority for interrupt 3
+  side_effects: null
+- id: IPR1
+  address_offset: 772
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRI_4
+    bit_range:
+    - 7
+    - 0
+    description: priority for interrupt n
+  - name: PRI_5
+    bit_range:
+    - 15
+    - 8
+    description: priority for interrupt n
+  - name: PRI_6
+    bit_range:
+    - 23
+    - 16
+    description: priority for interrupt n
+  - name: PRI_7
+    bit_range:
+    - 31
+    - 24
+    description: priority for interrupt n
+  side_effects: null
+- id: IPR2
+  address_offset: 776
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRI_8
+    bit_range:
+    - 7
+    - 0
+    description: priority for interrupt n
+  - name: PRI_9
+    bit_range:
+    - 15
+    - 8
+    description: priority for interrupt n
+  - name: PRI_10
+    bit_range:
+    - 23
+    - 16
+    description: priority for interrupt n
+  - name: PRI_11
+    bit_range:
+    - 31
+    - 24
+    description: priority for interrupt n
+  side_effects: null
+- id: IPR3
+  address_offset: 780
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRI_12
+    bit_range:
+    - 7
+    - 0
+    description: priority for interrupt n
+  - name: PRI_13
+    bit_range:
+    - 15
+    - 8
+    description: priority for interrupt n
+  - name: PRI_14
+    bit_range:
+    - 23
+    - 16
+    description: priority for interrupt n
+  - name: PRI_15
+    bit_range:
+    - 31
+    - 24
+    description: priority for interrupt n
+  side_effects: null
+- id: IPR4
+  address_offset: 784
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRI_16
+    bit_range:
+    - 7
+    - 0
+    description: priority for interrupt n
+  - name: PRI_17
+    bit_range:
+    - 15
+    - 8
+    description: priority for interrupt n
+  - name: PRI_18
+    bit_range:
+    - 23
+    - 16
+    description: priority for interrupt n
+  - name: PRI_19
+    bit_range:
+    - 31
+    - 24
+    description: priority for interrupt n
+  side_effects: null
+- id: IPR5
+  address_offset: 788
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRI_20
+    bit_range:
+    - 7
+    - 0
+    description: priority for interrupt n
+  - name: PRI_21
+    bit_range:
+    - 15
+    - 8
+    description: priority for interrupt n
+  - name: PRI_22
+    bit_range:
+    - 23
+    - 16
+    description: priority for interrupt n
+  - name: PRI_23
+    bit_range:
+    - 31
+    - 24
+    description: priority for interrupt n
+  side_effects: null
+- id: IPR6
+  address_offset: 792
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRI_24
+    bit_range:
+    - 7
+    - 0
+    description: priority for interrupt n
+  - name: PRI_25
+    bit_range:
+    - 15
+    - 8
+    description: priority for interrupt n
+  - name: PRI_26
+    bit_range:
+    - 23
+    - 16
+    description: priority for interrupt n
+  - name: PRI_27
+    bit_range:
+    - 31
+    - 24
+    description: priority for interrupt n
+  side_effects: null
+- id: IPR7
+  address_offset: 796
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRI_28
+    bit_range:
+    - 7
+    - 0
+    description: priority for interrupt n
+  - name: PRI_29
+    bit_range:
+    - 15
+    - 8
+    description: priority for interrupt n
+  - name: PRI_30
+    bit_range:
+    - 23
+    - 16
+    description: priority for interrupt n
+  - name: PRI_31
+    bit_range:
+    - 31
+    - 24
+    description: priority for interrupt n
+  side_effects: null
+interrupts: null
+timing: null

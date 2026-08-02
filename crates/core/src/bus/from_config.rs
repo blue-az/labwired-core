@@ -100,6 +100,25 @@ impl SystemBus {
         out
     }
 
+    /// Attach a chip's debugger-only register schemas to a bus that was built
+    /// programmatically instead of through [`Self::from_config`].
+    ///
+    /// The ESP32-classic and ESP32-S3 wiring (`configure_xtensa_esp32`,
+    /// `configure_xtensa_esp32s3`) starts from [`SystemBus::new`] and registers
+    /// its peripheral bank in Rust, deliberately bypassing the chip YAML's
+    /// peripheral list. That also bypassed `load_debug_schemas`, so every
+    /// `debug_schema:` an Xtensa chip declared was silently inert and its
+    /// peripherals inspected as `registers: []` no matter what the YAML said.
+    /// Runners on that path call this after wiring the bus.
+    ///
+    /// Schemas are keyed by the chip YAML's peripheral `id` and matched against
+    /// the bus peripheral's `name`, so an id that no bus peripheral answers to
+    /// is simply never consulted. Like `from_config`, this only names registers
+    /// the model already holds — it never changes what the bus does.
+    pub fn attach_debug_schemas(&mut self, chip: &ChipDescriptor, manifest: &SystemManifest) {
+        self.debug_schemas = Self::load_debug_schemas(chip, manifest);
+    }
+
     pub fn from_config(chip: &ChipDescriptor, manifest: &SystemManifest) -> anyhow::Result<Self> {
         let flash_size = parse_size(&chip.flash.size)?;
         let ram_size = parse_size(&chip.ram.size)?;

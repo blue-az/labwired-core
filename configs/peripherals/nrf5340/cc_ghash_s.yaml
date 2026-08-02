@@ -1,0 +1,125 @@
+peripheral: CC_GHASH_S
+version: 0.1.0
+registers:
+- id: GHASH_SUBKEY0
+  address_offset: 2400
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: GHASH subkey value.
+  side_effects: null
+- id: GHASH_SUBKEY1
+  address_offset: 2404
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: GHASH subkey value.
+  side_effects: null
+- id: GHASH_SUBKEY2
+  address_offset: 2408
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: GHASH subkey value.
+  side_effects: null
+- id: GHASH_SUBKEY3
+  address_offset: 2412
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: GHASH subkey value.
+  side_effects: null
+- id: GHASH_IV0
+  address_offset: 2416
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: GHASH IV value.
+  side_effects: null
+- id: GHASH_IV1
+  address_offset: 2420
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: GHASH IV value.
+  side_effects: null
+- id: GHASH_IV2
+  address_offset: 2424
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: GHASH IV value.
+  side_effects: null
+- id: GHASH_IV3
+  address_offset: 2428
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: GHASH IV value.
+  side_effects: null
+- id: GHASH_BUSY
+  address_offset: 2432
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: STATUS
+    bit_range:
+    - 0
+    - 0
+    description: GHASH engine status.
+  side_effects: null
+- id: GHASH_INIT
+  address_offset: 2436
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: ENABLE
+    bit_range:
+    - 0
+    - 0
+    description: Initialize a new GHASH operation.
+  side_effects: null
+interrupts: null
+timing: null

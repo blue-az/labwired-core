@@ -1,0 +1,388 @@
+peripheral: CC_CHACHA_S
+version: 0.1.0
+registers:
+- id: CHACHA_CONTROL
+  address_offset: 896
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHACHA_OR_SALSA
+    bit_range:
+    - 0
+    - 0
+    description: Run engine in ChaCha or Salsa mode
+  - name: INIT
+    bit_range:
+    - 1
+    - 1
+    description: Perform initialization for a new message
+  - name: GEN_KEY_POLY1305
+    bit_range:
+    - 2
+    - 2
+    description: Generate the key to use in Poly1305 message authentication code calculation.
+  - name: KEY_LEN
+    bit_range:
+    - 3
+    - 3
+    description: Key length selection.
+  - name: NUM_OF_ROUNDS
+    bit_range:
+    - 5
+    - 4
+    description: Set number of permutation rounds, default value is 20.
+  - name: RESET_BLOCK_CNT
+    bit_range:
+    - 9
+    - 9
+    description: Reset block counter for new messages
+  - name: USE_IV_96BIT
+    bit_range:
+    - 10
+    - 10
+    description: Use 96 bits Initialization Vector (IV)
+  side_effects: null
+- id: CHACHA_VERSION
+  address_offset: 900
+  size: 32
+  access: READ_ONLY
+  reset_value: 1
+  fields:
+  - name: CHACHA_VERSION
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: CHACHA_KEY0
+  address_offset: 904
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: CHACHA key value.
+  side_effects: null
+- id: CHACHA_KEY1
+  address_offset: 908
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: CHACHA key value.
+  side_effects: null
+- id: CHACHA_KEY2
+  address_offset: 912
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: CHACHA key value.
+  side_effects: null
+- id: CHACHA_KEY3
+  address_offset: 916
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: CHACHA key value.
+  side_effects: null
+- id: CHACHA_KEY4
+  address_offset: 920
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: CHACHA key value.
+  side_effects: null
+- id: CHACHA_KEY5
+  address_offset: 924
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: CHACHA key value.
+  side_effects: null
+- id: CHACHA_KEY6
+  address_offset: 928
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: CHACHA key value.
+  side_effects: null
+- id: CHACHA_KEY7
+  address_offset: 932
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: CHACHA key value.
+  side_effects: null
+- id: CHACHA_IV0
+  address_offset: 936
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: CHACHA IV value.
+  side_effects: null
+- id: CHACHA_IV1
+  address_offset: 940
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: CHACHA IV value.
+  side_effects: null
+- id: CHACHA_BUSY
+  address_offset: 944
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: STATUS
+    bit_range:
+    - 0
+    - 0
+    description: CHACHA engine status.
+  side_effects: null
+- id: CHACHA_HW_FLAGS
+  address_offset: 948
+  size: 32
+  access: READ_ONLY
+  reset_value: 1
+  fields:
+  - name: CHACHA_EXISTS
+    bit_range:
+    - 0
+    - 0
+    description: If this flag is set, the engine include ChaCha support
+  - name: SALSA_EXISTS
+    bit_range:
+    - 1
+    - 1
+    description: If this flag is set, the engine include Salsa support
+  - name: FAST_CHACHA
+    bit_range:
+    - 2
+    - 2
+    description: If this flag is set, the next matrix calculated when the current one is written to data output path.
+  side_effects: null
+- id: CHACHA_BLOCK_CNT_LSB
+  address_offset: 952
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: This register holds the ChaCha block counter bits [31:0] and must be read and written during respectively suspend and resume operations.
+  side_effects: null
+- id: CHACHA_BLOCK_CNT_MSB
+  address_offset: 956
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: This register holds the ChaCha block counter bits [63:32] and must be read and written during respectively suspend and resume operations.
+  side_effects: null
+- id: CHACHA_SW_RESET
+  address_offset: 960
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: RESET
+    bit_range:
+    - 0
+    - 0
+    description: Writing any value to this address resets the CHACHA engine. The reset takes 4 CPU clock cycles to complete.
+  side_effects: null
+- id: CHACHA_POLY1305_KEY0
+  address_offset: 964
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Poly1305 key value.
+  side_effects: null
+- id: CHACHA_POLY1305_KEY1
+  address_offset: 968
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Poly1305 key value.
+  side_effects: null
+- id: CHACHA_POLY1305_KEY2
+  address_offset: 972
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Poly1305 key value.
+  side_effects: null
+- id: CHACHA_POLY1305_KEY3
+  address_offset: 976
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Poly1305 key value.
+  side_effects: null
+- id: CHACHA_POLY1305_KEY4
+  address_offset: 980
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Poly1305 key value.
+  side_effects: null
+- id: CHACHA_POLY1305_KEY5
+  address_offset: 984
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Poly1305 key value.
+  side_effects: null
+- id: CHACHA_POLY1305_KEY6
+  address_offset: 988
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Poly1305 key value.
+  side_effects: null
+- id: CHACHA_POLY1305_KEY7
+  address_offset: 992
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Poly1305 key value.
+  side_effects: null
+- id: CHACHA_ENDIANNESS
+  address_offset: 996
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHACHA_DIN_WORD_ORDER
+    bit_range:
+    - 0
+    - 0
+    description: Change the word order of the input data.
+  - name: CHACHA_DIN_BYTE_ORDER
+    bit_range:
+    - 1
+    - 1
+    description: Change the byte order of the input data.
+  - name: CHACHA_CORE_MATRIX_LBE_ORDER
+    bit_range:
+    - 2
+    - 2
+    description: Change the quarter of a matrix order in the engine.
+  - name: CHACHA_DOUT_WORD_ORDER
+    bit_range:
+    - 3
+    - 3
+    description: Change the word order of the output data.
+  - name: CHACHA_DOUT_BYTE_ORDER
+    bit_range:
+    - 4
+    - 4
+    description: Change the byte order of the output data.
+  side_effects: null
+- id: CHACHA_DEBUG
+  address_offset: 1000
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: FSM_STATE
+    bit_range:
+    - 1
+    - 0
+    description: Reflects the debug state of the CHACHA FSM.
+  side_effects: null
+interrupts: null
+timing: null

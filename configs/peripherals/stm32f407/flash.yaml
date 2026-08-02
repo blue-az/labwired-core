@@ -1,0 +1,207 @@
+peripheral: FLASH
+version: 0.1.0
+registers:
+- id: ACR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LATENCY
+    bit_range:
+    - 2
+    - 0
+    description: Latency
+  - name: PRFTEN
+    bit_range:
+    - 8
+    - 8
+    description: Prefetch enable
+  - name: ICEN
+    bit_range:
+    - 9
+    - 9
+    description: Instruction cache enable
+  - name: DCEN
+    bit_range:
+    - 10
+    - 10
+    description: Data cache enable
+  - name: ICRST
+    bit_range:
+    - 11
+    - 11
+    description: Instruction cache reset
+  - name: DCRST
+    bit_range:
+    - 12
+    - 12
+    description: Data cache reset
+  side_effects: null
+- id: KEYR
+  address_offset: 4
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: KEY
+    bit_range:
+    - 31
+    - 0
+    description: FPEC key
+  side_effects: null
+- id: OPTKEYR
+  address_offset: 8
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: OPTKEY
+    bit_range:
+    - 31
+    - 0
+    description: Option byte key
+  side_effects: null
+- id: SR
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EOP
+    bit_range:
+    - 0
+    - 0
+    description: End of operation
+  - name: OPERR
+    bit_range:
+    - 1
+    - 1
+    description: Operation error
+  - name: WRPERR
+    bit_range:
+    - 4
+    - 4
+    description: Write protection error
+  - name: PGAERR
+    bit_range:
+    - 5
+    - 5
+    description: Programming alignment error
+  - name: PGPERR
+    bit_range:
+    - 6
+    - 6
+    description: Programming parallelism error
+  - name: PGSERR
+    bit_range:
+    - 7
+    - 7
+    description: Programming sequence error
+  - name: BSY
+    bit_range:
+    - 16
+    - 16
+    description: Busy
+  side_effects: null
+- id: CR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483648
+  fields:
+  - name: PG
+    bit_range:
+    - 0
+    - 0
+    description: Programming
+  - name: SER
+    bit_range:
+    - 1
+    - 1
+    description: Sector Erase
+  - name: MER
+    bit_range:
+    - 2
+    - 2
+    description: Mass Erase
+  - name: SNB
+    bit_range:
+    - 6
+    - 3
+    description: Sector number
+  - name: PSIZE
+    bit_range:
+    - 9
+    - 8
+    description: Program size
+  - name: STRT
+    bit_range:
+    - 16
+    - 16
+    description: Start
+  - name: EOPIE
+    bit_range:
+    - 24
+    - 24
+    description: End of operation interrupt enable
+  - name: ERRIE
+    bit_range:
+    - 25
+    - 25
+    description: Error interrupt enable
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: Lock
+  side_effects: null
+- id: OPTCR
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 20
+  fields:
+  - name: OPTLOCK
+    bit_range:
+    - 0
+    - 0
+    description: Option lock
+  - name: OPTSTRT
+    bit_range:
+    - 1
+    - 1
+    description: Option start
+  - name: BOR_LEV
+    bit_range:
+    - 3
+    - 2
+    description: BOR reset Level
+  - name: WDG_SW
+    bit_range:
+    - 5
+    - 5
+    description: WDG_SW User option bytes
+  - name: nRST_STOP
+    bit_range:
+    - 6
+    - 6
+    description: nRST_STOP User option bytes
+  - name: nRST_STDBY
+    bit_range:
+    - 7
+    - 7
+    description: nRST_STDBY User option bytes
+  - name: RDP
+    bit_range:
+    - 15
+    - 8
+    description: Read protect
+  - name: nWRP
+    bit_range:
+    - 27
+    - 16
+    description: Not write protect
+  side_effects: null
+interrupts: null
+timing: null

@@ -65,6 +65,25 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
                     eprintln!("error: attaching external devices from {sys_path:?}: {e}");
                     return ExitCode::from(EXIT_CONFIG_ERROR);
                 }
+                // Debugger register NAMES come from the chip YAML even though
+                // the peripheral bank above is programmatic. Without this the
+                // whole ESP32 bank inspects as `registers: []` no matter what
+                // `debug_schema:` the chip declares. Never fatal — a missing
+                // debugger convenience must not stop a capture.
+                let chip_dir = sys_path
+                    .parent()
+                    .unwrap_or_else(|| std::path::Path::new("."));
+                match labwired_config::ChipDescriptor::resolve(&manifest.chip, chip_dir) {
+                    Ok(chip) => bus.attach_debug_schemas(
+                        &chip,
+                        &labwired_core::system::builder::anchor_chip_path(&manifest, chip_dir),
+                    ),
+                    Err(e) => eprintln!(
+                        "warning: cannot load chip descriptor {:?}: {e}; \
+                         inspected registers will be unnamed",
+                        manifest.chip
+                    ),
+                }
             }
             Err(e) => {
                 eprintln!("error: cannot load system manifest {sys_path:?}: {e}");

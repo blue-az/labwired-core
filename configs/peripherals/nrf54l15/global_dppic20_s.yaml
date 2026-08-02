@@ -1,0 +1,1488 @@
+peripheral: GLOBAL_DPPIC20_S
+version: 0.1.0
+registers:
+- id: TASKS_CHG0_EN
+  address_offset: 0
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Enable channel group n
+  side_effects: null
+- id: TASKS_CHG0_DIS
+  address_offset: 4
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: DIS
+    bit_range:
+    - 0
+    - 0
+    description: Disable channel group n
+  side_effects: null
+- id: TASKS_CHG1_EN
+  address_offset: 8
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Enable channel group n
+  side_effects: null
+- id: TASKS_CHG1_DIS
+  address_offset: 12
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: DIS
+    bit_range:
+    - 0
+    - 0
+    description: Disable channel group n
+  side_effects: null
+- id: TASKS_CHG2_EN
+  address_offset: 16
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Enable channel group n
+  side_effects: null
+- id: TASKS_CHG2_DIS
+  address_offset: 20
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: DIS
+    bit_range:
+    - 0
+    - 0
+    description: Disable channel group n
+  side_effects: null
+- id: TASKS_CHG3_EN
+  address_offset: 24
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Enable channel group n
+  side_effects: null
+- id: TASKS_CHG3_DIS
+  address_offset: 28
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: DIS
+    bit_range:
+    - 0
+    - 0
+    description: Disable channel group n
+  side_effects: null
+- id: TASKS_CHG4_EN
+  address_offset: 32
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Enable channel group n
+  side_effects: null
+- id: TASKS_CHG4_DIS
+  address_offset: 36
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: DIS
+    bit_range:
+    - 0
+    - 0
+    description: Disable channel group n
+  side_effects: null
+- id: TASKS_CHG5_EN
+  address_offset: 40
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Enable channel group n
+  side_effects: null
+- id: TASKS_CHG5_DIS
+  address_offset: 44
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: DIS
+    bit_range:
+    - 0
+    - 0
+    description: Disable channel group n
+  side_effects: null
+- id: SUBSCRIBE_CHG0_EN
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CHG[n].EN will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CHG0_DIS
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CHG[n].DIS will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CHG1_EN
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CHG[n].EN will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CHG1_DIS
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CHG[n].DIS will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CHG2_EN
+  address_offset: 144
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CHG[n].EN will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CHG2_DIS
+  address_offset: 148
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CHG[n].DIS will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CHG3_EN
+  address_offset: 152
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CHG[n].EN will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CHG3_DIS
+  address_offset: 156
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CHG[n].DIS will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CHG4_EN
+  address_offset: 160
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CHG[n].EN will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CHG4_DIS
+  address_offset: 164
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CHG[n].DIS will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CHG5_EN
+  address_offset: 168
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CHG[n].EN will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CHG5_DIS
+  address_offset: 172
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CHG[n].DIS will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: CHEN
+  address_offset: 1280
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CH0
+    bit_range:
+    - 0
+    - 0
+    description: Enable or disable channel 0
+  - name: CH1
+    bit_range:
+    - 1
+    - 1
+    description: Enable or disable channel 1
+  - name: CH2
+    bit_range:
+    - 2
+    - 2
+    description: Enable or disable channel 2
+  - name: CH3
+    bit_range:
+    - 3
+    - 3
+    description: Enable or disable channel 3
+  - name: CH4
+    bit_range:
+    - 4
+    - 4
+    description: Enable or disable channel 4
+  - name: CH5
+    bit_range:
+    - 5
+    - 5
+    description: Enable or disable channel 5
+  - name: CH6
+    bit_range:
+    - 6
+    - 6
+    description: Enable or disable channel 6
+  - name: CH7
+    bit_range:
+    - 7
+    - 7
+    description: Enable or disable channel 7
+  - name: CH8
+    bit_range:
+    - 8
+    - 8
+    description: Enable or disable channel 8
+  - name: CH9
+    bit_range:
+    - 9
+    - 9
+    description: Enable or disable channel 9
+  - name: CH10
+    bit_range:
+    - 10
+    - 10
+    description: Enable or disable channel 10
+  - name: CH11
+    bit_range:
+    - 11
+    - 11
+    description: Enable or disable channel 11
+  - name: CH12
+    bit_range:
+    - 12
+    - 12
+    description: Enable or disable channel 12
+  - name: CH13
+    bit_range:
+    - 13
+    - 13
+    description: Enable or disable channel 13
+  - name: CH14
+    bit_range:
+    - 14
+    - 14
+    description: Enable or disable channel 14
+  - name: CH15
+    bit_range:
+    - 15
+    - 15
+    description: Enable or disable channel 15
+  - name: CH16
+    bit_range:
+    - 16
+    - 16
+    description: Enable or disable channel 16
+  - name: CH17
+    bit_range:
+    - 17
+    - 17
+    description: Enable or disable channel 17
+  - name: CH18
+    bit_range:
+    - 18
+    - 18
+    description: Enable or disable channel 18
+  - name: CH19
+    bit_range:
+    - 19
+    - 19
+    description: Enable or disable channel 19
+  - name: CH20
+    bit_range:
+    - 20
+    - 20
+    description: Enable or disable channel 20
+  - name: CH21
+    bit_range:
+    - 21
+    - 21
+    description: Enable or disable channel 21
+  - name: CH22
+    bit_range:
+    - 22
+    - 22
+    description: Enable or disable channel 22
+  - name: CH23
+    bit_range:
+    - 23
+    - 23
+    description: Enable or disable channel 23
+  side_effects: null
+- id: CHENSET
+  address_offset: 1284
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CH0
+    bit_range:
+    - 0
+    - 0
+    description: Channel 0 enable set register. Writing 0 has no effect.
+  - name: CH1
+    bit_range:
+    - 1
+    - 1
+    description: Channel 1 enable set register. Writing 0 has no effect.
+  - name: CH2
+    bit_range:
+    - 2
+    - 2
+    description: Channel 2 enable set register. Writing 0 has no effect.
+  - name: CH3
+    bit_range:
+    - 3
+    - 3
+    description: Channel 3 enable set register. Writing 0 has no effect.
+  - name: CH4
+    bit_range:
+    - 4
+    - 4
+    description: Channel 4 enable set register. Writing 0 has no effect.
+  - name: CH5
+    bit_range:
+    - 5
+    - 5
+    description: Channel 5 enable set register. Writing 0 has no effect.
+  - name: CH6
+    bit_range:
+    - 6
+    - 6
+    description: Channel 6 enable set register. Writing 0 has no effect.
+  - name: CH7
+    bit_range:
+    - 7
+    - 7
+    description: Channel 7 enable set register. Writing 0 has no effect.
+  - name: CH8
+    bit_range:
+    - 8
+    - 8
+    description: Channel 8 enable set register. Writing 0 has no effect.
+  - name: CH9
+    bit_range:
+    - 9
+    - 9
+    description: Channel 9 enable set register. Writing 0 has no effect.
+  - name: CH10
+    bit_range:
+    - 10
+    - 10
+    description: Channel 10 enable set register. Writing 0 has no effect.
+  - name: CH11
+    bit_range:
+    - 11
+    - 11
+    description: Channel 11 enable set register. Writing 0 has no effect.
+  - name: CH12
+    bit_range:
+    - 12
+    - 12
+    description: Channel 12 enable set register. Writing 0 has no effect.
+  - name: CH13
+    bit_range:
+    - 13
+    - 13
+    description: Channel 13 enable set register. Writing 0 has no effect.
+  - name: CH14
+    bit_range:
+    - 14
+    - 14
+    description: Channel 14 enable set register. Writing 0 has no effect.
+  - name: CH15
+    bit_range:
+    - 15
+    - 15
+    description: Channel 15 enable set register. Writing 0 has no effect.
+  - name: CH16
+    bit_range:
+    - 16
+    - 16
+    description: Channel 16 enable set register. Writing 0 has no effect.
+  - name: CH17
+    bit_range:
+    - 17
+    - 17
+    description: Channel 17 enable set register. Writing 0 has no effect.
+  - name: CH18
+    bit_range:
+    - 18
+    - 18
+    description: Channel 18 enable set register. Writing 0 has no effect.
+  - name: CH19
+    bit_range:
+    - 19
+    - 19
+    description: Channel 19 enable set register. Writing 0 has no effect.
+  - name: CH20
+    bit_range:
+    - 20
+    - 20
+    description: Channel 20 enable set register. Writing 0 has no effect.
+  - name: CH21
+    bit_range:
+    - 21
+    - 21
+    description: Channel 21 enable set register. Writing 0 has no effect.
+  - name: CH22
+    bit_range:
+    - 22
+    - 22
+    description: Channel 22 enable set register. Writing 0 has no effect.
+  - name: CH23
+    bit_range:
+    - 23
+    - 23
+    description: Channel 23 enable set register. Writing 0 has no effect.
+  side_effects: null
+- id: CHENCLR
+  address_offset: 1288
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CH0
+    bit_range:
+    - 0
+    - 0
+    description: Channel 0 enable clear register.  Writing 0 has no effect.
+  - name: CH1
+    bit_range:
+    - 1
+    - 1
+    description: Channel 1 enable clear register.  Writing 0 has no effect.
+  - name: CH2
+    bit_range:
+    - 2
+    - 2
+    description: Channel 2 enable clear register.  Writing 0 has no effect.
+  - name: CH3
+    bit_range:
+    - 3
+    - 3
+    description: Channel 3 enable clear register.  Writing 0 has no effect.
+  - name: CH4
+    bit_range:
+    - 4
+    - 4
+    description: Channel 4 enable clear register.  Writing 0 has no effect.
+  - name: CH5
+    bit_range:
+    - 5
+    - 5
+    description: Channel 5 enable clear register.  Writing 0 has no effect.
+  - name: CH6
+    bit_range:
+    - 6
+    - 6
+    description: Channel 6 enable clear register.  Writing 0 has no effect.
+  - name: CH7
+    bit_range:
+    - 7
+    - 7
+    description: Channel 7 enable clear register.  Writing 0 has no effect.
+  - name: CH8
+    bit_range:
+    - 8
+    - 8
+    description: Channel 8 enable clear register.  Writing 0 has no effect.
+  - name: CH9
+    bit_range:
+    - 9
+    - 9
+    description: Channel 9 enable clear register.  Writing 0 has no effect.
+  - name: CH10
+    bit_range:
+    - 10
+    - 10
+    description: Channel 10 enable clear register.  Writing 0 has no effect.
+  - name: CH11
+    bit_range:
+    - 11
+    - 11
+    description: Channel 11 enable clear register.  Writing 0 has no effect.
+  - name: CH12
+    bit_range:
+    - 12
+    - 12
+    description: Channel 12 enable clear register.  Writing 0 has no effect.
+  - name: CH13
+    bit_range:
+    - 13
+    - 13
+    description: Channel 13 enable clear register.  Writing 0 has no effect.
+  - name: CH14
+    bit_range:
+    - 14
+    - 14
+    description: Channel 14 enable clear register.  Writing 0 has no effect.
+  - name: CH15
+    bit_range:
+    - 15
+    - 15
+    description: Channel 15 enable clear register.  Writing 0 has no effect.
+  - name: CH16
+    bit_range:
+    - 16
+    - 16
+    description: Channel 16 enable clear register.  Writing 0 has no effect.
+  - name: CH17
+    bit_range:
+    - 17
+    - 17
+    description: Channel 17 enable clear register.  Writing 0 has no effect.
+  - name: CH18
+    bit_range:
+    - 18
+    - 18
+    description: Channel 18 enable clear register.  Writing 0 has no effect.
+  - name: CH19
+    bit_range:
+    - 19
+    - 19
+    description: Channel 19 enable clear register.  Writing 0 has no effect.
+  - name: CH20
+    bit_range:
+    - 20
+    - 20
+    description: Channel 20 enable clear register.  Writing 0 has no effect.
+  - name: CH21
+    bit_range:
+    - 21
+    - 21
+    description: Channel 21 enable clear register.  Writing 0 has no effect.
+  - name: CH22
+    bit_range:
+    - 22
+    - 22
+    description: Channel 22 enable clear register.  Writing 0 has no effect.
+  - name: CH23
+    bit_range:
+    - 23
+    - 23
+    description: Channel 23 enable clear register.  Writing 0 has no effect.
+  side_effects:
+    read_action: null
+    write_action: write_one_to_clear
+    on_read: null
+    on_write: null
+- id: CHG0
+  address_offset: 2048
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CH0
+    bit_range:
+    - 0
+    - 0
+    description: Include or exclude channel 0
+  - name: CH1
+    bit_range:
+    - 1
+    - 1
+    description: Include or exclude channel 1
+  - name: CH2
+    bit_range:
+    - 2
+    - 2
+    description: Include or exclude channel 2
+  - name: CH3
+    bit_range:
+    - 3
+    - 3
+    description: Include or exclude channel 3
+  - name: CH4
+    bit_range:
+    - 4
+    - 4
+    description: Include or exclude channel 4
+  - name: CH5
+    bit_range:
+    - 5
+    - 5
+    description: Include or exclude channel 5
+  - name: CH6
+    bit_range:
+    - 6
+    - 6
+    description: Include or exclude channel 6
+  - name: CH7
+    bit_range:
+    - 7
+    - 7
+    description: Include or exclude channel 7
+  - name: CH8
+    bit_range:
+    - 8
+    - 8
+    description: Include or exclude channel 8
+  - name: CH9
+    bit_range:
+    - 9
+    - 9
+    description: Include or exclude channel 9
+  - name: CH10
+    bit_range:
+    - 10
+    - 10
+    description: Include or exclude channel 10
+  - name: CH11
+    bit_range:
+    - 11
+    - 11
+    description: Include or exclude channel 11
+  - name: CH12
+    bit_range:
+    - 12
+    - 12
+    description: Include or exclude channel 12
+  - name: CH13
+    bit_range:
+    - 13
+    - 13
+    description: Include or exclude channel 13
+  - name: CH14
+    bit_range:
+    - 14
+    - 14
+    description: Include or exclude channel 14
+  - name: CH15
+    bit_range:
+    - 15
+    - 15
+    description: Include or exclude channel 15
+  - name: CH16
+    bit_range:
+    - 16
+    - 16
+    description: Include or exclude channel 16
+  - name: CH17
+    bit_range:
+    - 17
+    - 17
+    description: Include or exclude channel 17
+  - name: CH18
+    bit_range:
+    - 18
+    - 18
+    description: Include or exclude channel 18
+  - name: CH19
+    bit_range:
+    - 19
+    - 19
+    description: Include or exclude channel 19
+  - name: CH20
+    bit_range:
+    - 20
+    - 20
+    description: Include or exclude channel 20
+  - name: CH21
+    bit_range:
+    - 21
+    - 21
+    description: Include or exclude channel 21
+  - name: CH22
+    bit_range:
+    - 22
+    - 22
+    description: Include or exclude channel 22
+  - name: CH23
+    bit_range:
+    - 23
+    - 23
+    description: Include or exclude channel 23
+  side_effects: null
+- id: CHG1
+  address_offset: 2052
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CH0
+    bit_range:
+    - 0
+    - 0
+    description: Include or exclude channel 0
+  - name: CH1
+    bit_range:
+    - 1
+    - 1
+    description: Include or exclude channel 1
+  - name: CH2
+    bit_range:
+    - 2
+    - 2
+    description: Include or exclude channel 2
+  - name: CH3
+    bit_range:
+    - 3
+    - 3
+    description: Include or exclude channel 3
+  - name: CH4
+    bit_range:
+    - 4
+    - 4
+    description: Include or exclude channel 4
+  - name: CH5
+    bit_range:
+    - 5
+    - 5
+    description: Include or exclude channel 5
+  - name: CH6
+    bit_range:
+    - 6
+    - 6
+    description: Include or exclude channel 6
+  - name: CH7
+    bit_range:
+    - 7
+    - 7
+    description: Include or exclude channel 7
+  - name: CH8
+    bit_range:
+    - 8
+    - 8
+    description: Include or exclude channel 8
+  - name: CH9
+    bit_range:
+    - 9
+    - 9
+    description: Include or exclude channel 9
+  - name: CH10
+    bit_range:
+    - 10
+    - 10
+    description: Include or exclude channel 10
+  - name: CH11
+    bit_range:
+    - 11
+    - 11
+    description: Include or exclude channel 11
+  - name: CH12
+    bit_range:
+    - 12
+    - 12
+    description: Include or exclude channel 12
+  - name: CH13
+    bit_range:
+    - 13
+    - 13
+    description: Include or exclude channel 13
+  - name: CH14
+    bit_range:
+    - 14
+    - 14
+    description: Include or exclude channel 14
+  - name: CH15
+    bit_range:
+    - 15
+    - 15
+    description: Include or exclude channel 15
+  - name: CH16
+    bit_range:
+    - 16
+    - 16
+    description: Include or exclude channel 16
+  - name: CH17
+    bit_range:
+    - 17
+    - 17
+    description: Include or exclude channel 17
+  - name: CH18
+    bit_range:
+    - 18
+    - 18
+    description: Include or exclude channel 18
+  - name: CH19
+    bit_range:
+    - 19
+    - 19
+    description: Include or exclude channel 19
+  - name: CH20
+    bit_range:
+    - 20
+    - 20
+    description: Include or exclude channel 20
+  - name: CH21
+    bit_range:
+    - 21
+    - 21
+    description: Include or exclude channel 21
+  - name: CH22
+    bit_range:
+    - 22
+    - 22
+    description: Include or exclude channel 22
+  - name: CH23
+    bit_range:
+    - 23
+    - 23
+    description: Include or exclude channel 23
+  side_effects: null
+- id: CHG2
+  address_offset: 2056
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CH0
+    bit_range:
+    - 0
+    - 0
+    description: Include or exclude channel 0
+  - name: CH1
+    bit_range:
+    - 1
+    - 1
+    description: Include or exclude channel 1
+  - name: CH2
+    bit_range:
+    - 2
+    - 2
+    description: Include or exclude channel 2
+  - name: CH3
+    bit_range:
+    - 3
+    - 3
+    description: Include or exclude channel 3
+  - name: CH4
+    bit_range:
+    - 4
+    - 4
+    description: Include or exclude channel 4
+  - name: CH5
+    bit_range:
+    - 5
+    - 5
+    description: Include or exclude channel 5
+  - name: CH6
+    bit_range:
+    - 6
+    - 6
+    description: Include or exclude channel 6
+  - name: CH7
+    bit_range:
+    - 7
+    - 7
+    description: Include or exclude channel 7
+  - name: CH8
+    bit_range:
+    - 8
+    - 8
+    description: Include or exclude channel 8
+  - name: CH9
+    bit_range:
+    - 9
+    - 9
+    description: Include or exclude channel 9
+  - name: CH10
+    bit_range:
+    - 10
+    - 10
+    description: Include or exclude channel 10
+  - name: CH11
+    bit_range:
+    - 11
+    - 11
+    description: Include or exclude channel 11
+  - name: CH12
+    bit_range:
+    - 12
+    - 12
+    description: Include or exclude channel 12
+  - name: CH13
+    bit_range:
+    - 13
+    - 13
+    description: Include or exclude channel 13
+  - name: CH14
+    bit_range:
+    - 14
+    - 14
+    description: Include or exclude channel 14
+  - name: CH15
+    bit_range:
+    - 15
+    - 15
+    description: Include or exclude channel 15
+  - name: CH16
+    bit_range:
+    - 16
+    - 16
+    description: Include or exclude channel 16
+  - name: CH17
+    bit_range:
+    - 17
+    - 17
+    description: Include or exclude channel 17
+  - name: CH18
+    bit_range:
+    - 18
+    - 18
+    description: Include or exclude channel 18
+  - name: CH19
+    bit_range:
+    - 19
+    - 19
+    description: Include or exclude channel 19
+  - name: CH20
+    bit_range:
+    - 20
+    - 20
+    description: Include or exclude channel 20
+  - name: CH21
+    bit_range:
+    - 21
+    - 21
+    description: Include or exclude channel 21
+  - name: CH22
+    bit_range:
+    - 22
+    - 22
+    description: Include or exclude channel 22
+  - name: CH23
+    bit_range:
+    - 23
+    - 23
+    description: Include or exclude channel 23
+  side_effects: null
+- id: CHG3
+  address_offset: 2060
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CH0
+    bit_range:
+    - 0
+    - 0
+    description: Include or exclude channel 0
+  - name: CH1
+    bit_range:
+    - 1
+    - 1
+    description: Include or exclude channel 1
+  - name: CH2
+    bit_range:
+    - 2
+    - 2
+    description: Include or exclude channel 2
+  - name: CH3
+    bit_range:
+    - 3
+    - 3
+    description: Include or exclude channel 3
+  - name: CH4
+    bit_range:
+    - 4
+    - 4
+    description: Include or exclude channel 4
+  - name: CH5
+    bit_range:
+    - 5
+    - 5
+    description: Include or exclude channel 5
+  - name: CH6
+    bit_range:
+    - 6
+    - 6
+    description: Include or exclude channel 6
+  - name: CH7
+    bit_range:
+    - 7
+    - 7
+    description: Include or exclude channel 7
+  - name: CH8
+    bit_range:
+    - 8
+    - 8
+    description: Include or exclude channel 8
+  - name: CH9
+    bit_range:
+    - 9
+    - 9
+    description: Include or exclude channel 9
+  - name: CH10
+    bit_range:
+    - 10
+    - 10
+    description: Include or exclude channel 10
+  - name: CH11
+    bit_range:
+    - 11
+    - 11
+    description: Include or exclude channel 11
+  - name: CH12
+    bit_range:
+    - 12
+    - 12
+    description: Include or exclude channel 12
+  - name: CH13
+    bit_range:
+    - 13
+    - 13
+    description: Include or exclude channel 13
+  - name: CH14
+    bit_range:
+    - 14
+    - 14
+    description: Include or exclude channel 14
+  - name: CH15
+    bit_range:
+    - 15
+    - 15
+    description: Include or exclude channel 15
+  - name: CH16
+    bit_range:
+    - 16
+    - 16
+    description: Include or exclude channel 16
+  - name: CH17
+    bit_range:
+    - 17
+    - 17
+    description: Include or exclude channel 17
+  - name: CH18
+    bit_range:
+    - 18
+    - 18
+    description: Include or exclude channel 18
+  - name: CH19
+    bit_range:
+    - 19
+    - 19
+    description: Include or exclude channel 19
+  - name: CH20
+    bit_range:
+    - 20
+    - 20
+    description: Include or exclude channel 20
+  - name: CH21
+    bit_range:
+    - 21
+    - 21
+    description: Include or exclude channel 21
+  - name: CH22
+    bit_range:
+    - 22
+    - 22
+    description: Include or exclude channel 22
+  - name: CH23
+    bit_range:
+    - 23
+    - 23
+    description: Include or exclude channel 23
+  side_effects: null
+- id: CHG4
+  address_offset: 2064
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CH0
+    bit_range:
+    - 0
+    - 0
+    description: Include or exclude channel 0
+  - name: CH1
+    bit_range:
+    - 1
+    - 1
+    description: Include or exclude channel 1
+  - name: CH2
+    bit_range:
+    - 2
+    - 2
+    description: Include or exclude channel 2
+  - name: CH3
+    bit_range:
+    - 3
+    - 3
+    description: Include or exclude channel 3
+  - name: CH4
+    bit_range:
+    - 4
+    - 4
+    description: Include or exclude channel 4
+  - name: CH5
+    bit_range:
+    - 5
+    - 5
+    description: Include or exclude channel 5
+  - name: CH6
+    bit_range:
+    - 6
+    - 6
+    description: Include or exclude channel 6
+  - name: CH7
+    bit_range:
+    - 7
+    - 7
+    description: Include or exclude channel 7
+  - name: CH8
+    bit_range:
+    - 8
+    - 8
+    description: Include or exclude channel 8
+  - name: CH9
+    bit_range:
+    - 9
+    - 9
+    description: Include or exclude channel 9
+  - name: CH10
+    bit_range:
+    - 10
+    - 10
+    description: Include or exclude channel 10
+  - name: CH11
+    bit_range:
+    - 11
+    - 11
+    description: Include or exclude channel 11
+  - name: CH12
+    bit_range:
+    - 12
+    - 12
+    description: Include or exclude channel 12
+  - name: CH13
+    bit_range:
+    - 13
+    - 13
+    description: Include or exclude channel 13
+  - name: CH14
+    bit_range:
+    - 14
+    - 14
+    description: Include or exclude channel 14
+  - name: CH15
+    bit_range:
+    - 15
+    - 15
+    description: Include or exclude channel 15
+  - name: CH16
+    bit_range:
+    - 16
+    - 16
+    description: Include or exclude channel 16
+  - name: CH17
+    bit_range:
+    - 17
+    - 17
+    description: Include or exclude channel 17
+  - name: CH18
+    bit_range:
+    - 18
+    - 18
+    description: Include or exclude channel 18
+  - name: CH19
+    bit_range:
+    - 19
+    - 19
+    description: Include or exclude channel 19
+  - name: CH20
+    bit_range:
+    - 20
+    - 20
+    description: Include or exclude channel 20
+  - name: CH21
+    bit_range:
+    - 21
+    - 21
+    description: Include or exclude channel 21
+  - name: CH22
+    bit_range:
+    - 22
+    - 22
+    description: Include or exclude channel 22
+  - name: CH23
+    bit_range:
+    - 23
+    - 23
+    description: Include or exclude channel 23
+  side_effects: null
+- id: CHG5
+  address_offset: 2068
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CH0
+    bit_range:
+    - 0
+    - 0
+    description: Include or exclude channel 0
+  - name: CH1
+    bit_range:
+    - 1
+    - 1
+    description: Include or exclude channel 1
+  - name: CH2
+    bit_range:
+    - 2
+    - 2
+    description: Include or exclude channel 2
+  - name: CH3
+    bit_range:
+    - 3
+    - 3
+    description: Include or exclude channel 3
+  - name: CH4
+    bit_range:
+    - 4
+    - 4
+    description: Include or exclude channel 4
+  - name: CH5
+    bit_range:
+    - 5
+    - 5
+    description: Include or exclude channel 5
+  - name: CH6
+    bit_range:
+    - 6
+    - 6
+    description: Include or exclude channel 6
+  - name: CH7
+    bit_range:
+    - 7
+    - 7
+    description: Include or exclude channel 7
+  - name: CH8
+    bit_range:
+    - 8
+    - 8
+    description: Include or exclude channel 8
+  - name: CH9
+    bit_range:
+    - 9
+    - 9
+    description: Include or exclude channel 9
+  - name: CH10
+    bit_range:
+    - 10
+    - 10
+    description: Include or exclude channel 10
+  - name: CH11
+    bit_range:
+    - 11
+    - 11
+    description: Include or exclude channel 11
+  - name: CH12
+    bit_range:
+    - 12
+    - 12
+    description: Include or exclude channel 12
+  - name: CH13
+    bit_range:
+    - 13
+    - 13
+    description: Include or exclude channel 13
+  - name: CH14
+    bit_range:
+    - 14
+    - 14
+    description: Include or exclude channel 14
+  - name: CH15
+    bit_range:
+    - 15
+    - 15
+    description: Include or exclude channel 15
+  - name: CH16
+    bit_range:
+    - 16
+    - 16
+    description: Include or exclude channel 16
+  - name: CH17
+    bit_range:
+    - 17
+    - 17
+    description: Include or exclude channel 17
+  - name: CH18
+    bit_range:
+    - 18
+    - 18
+    description: Include or exclude channel 18
+  - name: CH19
+    bit_range:
+    - 19
+    - 19
+    description: Include or exclude channel 19
+  - name: CH20
+    bit_range:
+    - 20
+    - 20
+    description: Include or exclude channel 20
+  - name: CH21
+    bit_range:
+    - 21
+    - 21
+    description: Include or exclude channel 21
+  - name: CH22
+    bit_range:
+    - 22
+    - 22
+    description: Include or exclude channel 22
+  - name: CH23
+    bit_range:
+    - 23
+    - 23
+    description: Include or exclude channel 23
+  side_effects: null
+interrupts: null
+timing: null

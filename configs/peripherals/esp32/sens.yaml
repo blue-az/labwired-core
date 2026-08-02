@@ -1,0 +1,1012 @@
+peripheral: SENS
+version: 0.1.0
+registers:
+- id: SAR_READ_CTRL
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 461058
+  fields:
+  - name: SAR1_CLK_DIV
+    bit_range:
+    - 7
+    - 0
+    description: clock divider
+  - name: SAR1_SAMPLE_CYCLE
+    bit_range:
+    - 15
+    - 8
+    description: sample cycles for SAR ADC1
+  - name: SAR1_SAMPLE_BIT
+    bit_range:
+    - 17
+    - 16
+    description: '00: for 9-bit width  01: for 10-bit width  10: for 11-bit width  11: for 12-bit width'
+  - name: SAR1_CLK_GATED
+    bit_range:
+    - 18
+    - 18
+  - name: SAR1_SAMPLE_NUM
+    bit_range:
+    - 26
+    - 19
+  - name: SAR1_DIG_FORCE
+    bit_range:
+    - 27
+    - 27
+    description: '1: SAR ADC1 controlled by DIG ADC1 CTRL  0: SAR ADC1 controlled by RTC ADC1 CTRL'
+  - name: SAR1_DATA_INV
+    bit_range:
+    - 28
+    - 28
+    description: Invert SAR ADC1 data
+  side_effects: null
+- id: SAR_READ_STATUS1
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SAR1_READER_STATUS
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: SAR_MEAS_WAIT1
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 655370
+  fields:
+  - name: SAR_AMP_WAIT1
+    bit_range:
+    - 15
+    - 0
+  - name: SAR_AMP_WAIT2
+    bit_range:
+    - 31
+    - 16
+  side_effects: null
+- id: SAR_MEAS_WAIT2
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 2097162
+  fields:
+  - name: FORCE_XPD_SAR_SW
+    bit_range:
+    - 0
+    - 0
+  - name: SAR_AMP_WAIT3
+    bit_range:
+    - 15
+    - 0
+  - name: FORCE_XPD_AMP
+    bit_range:
+    - 17
+    - 16
+  - name: FORCE_XPD_SAR
+    bit_range:
+    - 19
+    - 18
+  - name: SAR2_RSTB_WAIT
+    bit_range:
+    - 27
+    - 20
+  side_effects: null
+- id: SAR_MEAS_CTRL
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 117912463
+  fields:
+  - name: XPD_SAR_AMP_FSM
+    bit_range:
+    - 3
+    - 0
+  - name: AMP_RST_FB_FSM
+    bit_range:
+    - 7
+    - 4
+  - name: AMP_SHORT_REF_FSM
+    bit_range:
+    - 11
+    - 8
+  - name: AMP_SHORT_REF_GND_FSM
+    bit_range:
+    - 15
+    - 12
+  - name: XPD_SAR_FSM
+    bit_range:
+    - 19
+    - 16
+  - name: SAR_RSTB_FSM
+    bit_range:
+    - 23
+    - 20
+  - name: SAR2_XPD_WAIT
+    bit_range:
+    - 31
+    - 24
+  side_effects: null
+- id: SAR_READ_STATUS2
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SAR2_READER_STATUS
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: ULP_CP_SLEEP_CYC0
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 200
+  fields:
+  - name: SLEEP_CYCLES_S0
+    bit_range:
+    - 31
+    - 0
+    description: sleep cycles for ULP-coprocessor timer
+  side_effects: null
+- id: ULP_CP_SLEEP_CYC1
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 100
+  fields:
+  - name: SLEEP_CYCLES_S1
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: ULP_CP_SLEEP_CYC2
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 50
+  fields:
+  - name: SLEEP_CYCLES_S2
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: ULP_CP_SLEEP_CYC3
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 40
+  fields:
+  - name: SLEEP_CYCLES_S3
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: ULP_CP_SLEEP_CYC4
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 20
+  fields:
+  - name: SLEEP_CYCLES_S4
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: SAR_START_FORCE
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 15
+  fields:
+  - name: SAR1_BIT_WIDTH
+    bit_range:
+    - 1
+    - 0
+    description: '00: 9 bit  01: 10 bits  10: 11bits  11: 12bits'
+  - name: SAR2_BIT_WIDTH
+    bit_range:
+    - 3
+    - 2
+    description: '00: 9 bit  01: 10 bits  10: 11bits  11: 12bits'
+  - name: SAR2_EN_TEST
+    bit_range:
+    - 4
+    - 4
+    description: SAR2_EN_TEST  only active when reg_sar2_dig_force = 0
+  - name: SAR2_PWDET_CCT
+    bit_range:
+    - 7
+    - 5
+    description: SAR2_PWDET_CCT  PA power detector capacitance tuning.
+  - name: ULP_CP_FORCE_START_TOP
+    bit_range:
+    - 8
+    - 8
+    description: '1: ULP-coprocessor is started by SW  0: ULP-coprocessor is started by timer'
+  - name: ULP_CP_START_TOP
+    bit_range:
+    - 9
+    - 9
+    description: Write 1 to start ULP-coprocessor  only active when reg_ulp_cp_force_start_top = 1
+  - name: SARCLK_EN
+    bit_range:
+    - 10
+    - 10
+  - name: PC_INIT
+    bit_range:
+    - 21
+    - 11
+    description: initialized PC for ULP-coprocessor
+  - name: SAR2_STOP
+    bit_range:
+    - 22
+    - 22
+    description: stop SAR ADC2 conversion
+  - name: SAR1_STOP
+    bit_range:
+    - 23
+    - 23
+    description: stop SAR ADC1 conversion
+  - name: SAR2_PWDET_EN
+    bit_range:
+    - 24
+    - 24
+    description: N/A
+  side_effects: null
+- id: SAR_MEM_WR_CTRL
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 1049088
+  fields:
+  - name: MEM_WR_ADDR_INIT
+    bit_range:
+    - 10
+    - 0
+  - name: MEM_WR_ADDR_SIZE
+    bit_range:
+    - 21
+    - 11
+  - name: RTC_MEM_WR_OFFST_CLR
+    bit_range:
+    - 22
+    - 22
+  side_effects: null
+- id: SAR_ATTEN1
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: SAR1_ATTEN
+    bit_range:
+    - 31
+    - 0
+    description: 2-bit attenuation for each pad  11:1dB  10:6dB  01:3dB  00:0dB
+  side_effects: null
+- id: SAR_ATTEN2
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: SAR2_ATTEN
+    bit_range:
+    - 31
+    - 0
+    description: 2-bit attenuation for each pad  11:1dB  10:6dB  01:3dB  00:0dB
+  side_effects: null
+- id: SAR_SLAVE_ADDR1
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: I2C_SLAVE_ADDR1
+    bit_range:
+    - 10
+    - 0
+  - name: I2C_SLAVE_ADDR0
+    bit_range:
+    - 21
+    - 11
+  - name: MEAS_STATUS
+    bit_range:
+    - 29
+    - 22
+  side_effects: null
+- id: SAR_SLAVE_ADDR2
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: I2C_SLAVE_ADDR3
+    bit_range:
+    - 10
+    - 0
+  - name: I2C_SLAVE_ADDR2
+    bit_range:
+    - 21
+    - 11
+  side_effects: null
+- id: SAR_SLAVE_ADDR3
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: I2C_SLAVE_ADDR5
+    bit_range:
+    - 10
+    - 0
+  - name: I2C_SLAVE_ADDR4
+    bit_range:
+    - 21
+    - 11
+  - name: TSENS_OUT
+    bit_range:
+    - 29
+    - 22
+    description: temperature sensor data out
+  - name: TSENS_RDY_OUT
+    bit_range:
+    - 30
+    - 30
+    description: indicate temperature sensor out ready
+  side_effects: null
+- id: SAR_SLAVE_ADDR4
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: I2C_SLAVE_ADDR7
+    bit_range:
+    - 10
+    - 0
+  - name: I2C_SLAVE_ADDR6
+    bit_range:
+    - 21
+    - 11
+  - name: I2C_RDATA
+    bit_range:
+    - 29
+    - 22
+    description: I2C read data
+  - name: I2C_DONE
+    bit_range:
+    - 30
+    - 30
+    description: indicate I2C done
+  side_effects: null
+- id: SAR_TSENS_CTRL
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 417794
+  fields:
+  - name: TSENS_XPD_WAIT
+    bit_range:
+    - 11
+    - 0
+  - name: TSENS_XPD_FORCE
+    bit_range:
+    - 12
+    - 12
+  - name: TSENS_CLK_INV
+    bit_range:
+    - 13
+    - 13
+  - name: TSENS_CLK_GATED
+    bit_range:
+    - 14
+    - 14
+  - name: TSENS_IN_INV
+    bit_range:
+    - 15
+    - 15
+    description: invert temperature sensor data
+  - name: TSENS_CLK_DIV
+    bit_range:
+    - 23
+    - 16
+    description: temperature sensor clock divider
+  - name: TSENS_POWER_UP
+    bit_range:
+    - 24
+    - 24
+    description: temperature sensor power up
+  - name: TSENS_POWER_UP_FORCE
+    bit_range:
+    - 25
+    - 25
+    description: '1: dump out & power up controlled by SW  0: by FSM'
+  - name: TSENS_DUMP_OUT
+    bit_range:
+    - 26
+    - 26
+    description: temperature sensor dump out  only active when reg_tsens_power_up_force = 1
+  side_effects: null
+- id: SAR_I2C_CTRL
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SAR_I2C_CTRL
+    bit_range:
+    - 27
+    - 0
+    description: I2C control data  only active when reg_sar_i2c_start_force = 1
+  - name: SAR_I2C_START
+    bit_range:
+    - 28
+    - 28
+    description: start I2C  only active when reg_sar_i2c_start_force = 1
+  - name: SAR_I2C_START_FORCE
+    bit_range:
+    - 29
+    - 29
+    description: '1: I2C started by SW  0: I2C started by FSM'
+  side_effects: null
+- id: SAR_MEAS_START1
+  address_offset: 84
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MEAS1_DATA_SAR
+    bit_range:
+    - 15
+    - 0
+    description: SAR ADC1 data
+  - name: MEAS1_DONE_SAR
+    bit_range:
+    - 16
+    - 16
+    description: SAR ADC1 conversion done indication
+  - name: MEAS1_START_SAR
+    bit_range:
+    - 17
+    - 17
+    description: SAR ADC1 controller (in RTC) starts conversion  only active when reg_meas1_start_force = 1
+  - name: MEAS1_START_FORCE
+    bit_range:
+    - 18
+    - 18
+    description: '1: SAR ADC1 controller (in RTC) is started by SW  0: SAR ADC1 controller is started by ULP-coprocessor'
+  - name: SAR1_EN_PAD
+    bit_range:
+    - 30
+    - 19
+    description: SAR ADC1 pad enable bitmap  only active when reg_sar1_en_pad_force = 1
+  - name: SAR1_EN_PAD_FORCE
+    bit_range:
+    - 31
+    - 31
+    description: '1: SAR ADC1 pad enable bitmap is controlled by SW  0: SAR ADC1 pad enable bitmap is controlled by ULP-coprocessor'
+  side_effects: null
+- id: SAR_TOUCH_CTRL1
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 33820672
+  fields:
+  - name: TOUCH_MEAS_DELAY
+    bit_range:
+    - 15
+    - 0
+    description: the meas length (in 8MHz)
+  - name: TOUCH_XPD_WAIT
+    bit_range:
+    - 23
+    - 16
+    description: the waiting cycles (in 8MHz) between TOUCH_START and TOUCH_XPD
+  - name: TOUCH_OUT_SEL
+    bit_range:
+    - 24
+    - 24
+    description: '1: when the counter is greater then the threshold  the touch pad is considered as "touched"  0: when the counter is less than the threshold  the touch pad is considered as "touched"'
+  - name: TOUCH_OUT_1EN
+    bit_range:
+    - 25
+    - 25
+    description: '1: wakeup interrupt is generated if SET1 is "touched"  0: wakeup interrupt is generated only if SET1 & SET2 is both "touched"'
+  - name: XPD_HALL_FORCE
+    bit_range:
+    - 26
+    - 26
+    description: '1: XPD HALL is controlled by SW. 0: XPD HALL is controlled by FSM in ULP-coprocessor'
+  - name: HALL_PHASE_FORCE
+    bit_range:
+    - 27
+    - 27
+    description: '1: HALL PHASE is controlled by SW  0: HALL PHASE is controlled by FSM in ULP-coprocessor'
+  side_effects: null
+- id: SAR_TOUCH_THRES1
+  address_offset: 92
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TOUCH_OUT_TH1
+    bit_range:
+    - 15
+    - 0
+    description: the threshold for touch pad 1
+  - name: TOUCH_OUT_TH0
+    bit_range:
+    - 31
+    - 16
+    description: the threshold for touch pad 0
+  side_effects: null
+- id: SAR_TOUCH_THRES2
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TOUCH_OUT_TH3
+    bit_range:
+    - 15
+    - 0
+    description: the threshold for touch pad 3
+  - name: TOUCH_OUT_TH2
+    bit_range:
+    - 31
+    - 16
+    description: the threshold for touch pad 2
+  side_effects: null
+- id: SAR_TOUCH_THRES3
+  address_offset: 100
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TOUCH_OUT_TH5
+    bit_range:
+    - 15
+    - 0
+    description: the threshold for touch pad 5
+  - name: TOUCH_OUT_TH4
+    bit_range:
+    - 31
+    - 16
+    description: the threshold for touch pad 4
+  side_effects: null
+- id: SAR_TOUCH_THRES4
+  address_offset: 104
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TOUCH_OUT_TH7
+    bit_range:
+    - 15
+    - 0
+    description: the threshold for touch pad 7
+  - name: TOUCH_OUT_TH6
+    bit_range:
+    - 31
+    - 16
+    description: the threshold for touch pad 6
+  side_effects: null
+- id: SAR_TOUCH_THRES5
+  address_offset: 108
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TOUCH_OUT_TH9
+    bit_range:
+    - 15
+    - 0
+    description: the threshold for touch pad 9
+  - name: TOUCH_OUT_TH8
+    bit_range:
+    - 31
+    - 16
+    description: the threshold for touch pad 8
+  side_effects: null
+- id: SAR_TOUCH_OUT1
+  address_offset: 112
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TOUCH_MEAS_OUT1
+    bit_range:
+    - 15
+    - 0
+    description: the counter for touch pad 1
+  - name: TOUCH_MEAS_OUT0
+    bit_range:
+    - 31
+    - 16
+    description: the counter for touch pad 0
+  side_effects: null
+- id: SAR_TOUCH_OUT2
+  address_offset: 116
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TOUCH_MEAS_OUT3
+    bit_range:
+    - 15
+    - 0
+    description: the counter for touch pad 3
+  - name: TOUCH_MEAS_OUT2
+    bit_range:
+    - 31
+    - 16
+    description: the counter for touch pad 2
+  side_effects: null
+- id: SAR_TOUCH_OUT3
+  address_offset: 120
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TOUCH_MEAS_OUT5
+    bit_range:
+    - 15
+    - 0
+    description: the counter for touch pad 5
+  - name: TOUCH_MEAS_OUT4
+    bit_range:
+    - 31
+    - 16
+    description: the counter for touch pad 4
+  side_effects: null
+- id: SAR_TOUCH_OUT4
+  address_offset: 124
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TOUCH_MEAS_OUT7
+    bit_range:
+    - 15
+    - 0
+    description: the counter for touch pad 7
+  - name: TOUCH_MEAS_OUT6
+    bit_range:
+    - 31
+    - 16
+    description: the counter for touch pad 6
+  side_effects: null
+- id: SAR_TOUCH_OUT5
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TOUCH_MEAS_OUT9
+    bit_range:
+    - 15
+    - 0
+    description: the counter for touch pad 9
+  - name: TOUCH_MEAS_OUT8
+    bit_range:
+    - 31
+    - 16
+    description: the counter for touch pad 8
+  side_effects: null
+- id: SAR_TOUCH_CTRL2
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 4196352
+  fields:
+  - name: TOUCH_MEAS_EN
+    bit_range:
+    - 9
+    - 0
+    description: 10-bit register to indicate which pads are "touched"
+  - name: TOUCH_MEAS_DONE
+    bit_range:
+    - 10
+    - 10
+    description: fsm set 1 to indicate touch touch meas is done
+  - name: TOUCH_START_FSM_EN
+    bit_range:
+    - 11
+    - 11
+    description: '1: TOUCH_START & TOUCH_XPD is controlled by touch fsm  0: TOUCH_START & TOUCH_XPD is controlled by registers'
+  - name: TOUCH_START_EN
+    bit_range:
+    - 12
+    - 12
+    description: '1: start touch fsm  valid when reg_touch_start_force is set'
+  - name: TOUCH_START_FORCE
+    bit_range:
+    - 13
+    - 13
+    description: '1: to start touch fsm by SW  0: to start touch fsm by timer'
+  - name: TOUCH_SLEEP_CYCLES
+    bit_range:
+    - 29
+    - 14
+    description: sleep cycles for timer
+  - name: TOUCH_MEAS_EN_CLR
+    bit_range:
+    - 30
+    - 30
+    description: to clear reg_touch_meas_en
+  side_effects: null
+- id: SAR_TOUCH_ENABLE
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 1073741823
+  fields:
+  - name: TOUCH_PAD_WORKEN
+    bit_range:
+    - 9
+    - 0
+    description: Bitmap defining the working set during the measurement.
+  - name: TOUCH_PAD_OUTEN2
+    bit_range:
+    - 19
+    - 10
+    description: Bitmap defining SET2 for generating wakeup interrupt. SET2 is "touched" only if at least one of touch pad in SET2 is "touched".
+  - name: TOUCH_PAD_OUTEN1
+    bit_range:
+    - 29
+    - 20
+    description: Bitmap defining SET1 for generating wakeup interrupt. SET1 is "touched" only if at least one of touch pad in SET1 is "touched".
+  side_effects: null
+- id: SAR_READ_CTRL2
+  address_offset: 144
+  size: 32
+  access: READ_WRITE
+  reset_value: 461058
+  fields:
+  - name: SAR2_CLK_DIV
+    bit_range:
+    - 7
+    - 0
+    description: clock divider
+  - name: SAR2_SAMPLE_CYCLE
+    bit_range:
+    - 15
+    - 8
+    description: sample cycles for SAR ADC2
+  - name: SAR2_SAMPLE_BIT
+    bit_range:
+    - 17
+    - 16
+    description: '00: for 9-bit width  01: for 10-bit width  10: for 11-bit width  11: for 12-bit width'
+  - name: SAR2_CLK_GATED
+    bit_range:
+    - 18
+    - 18
+  - name: SAR2_SAMPLE_NUM
+    bit_range:
+    - 26
+    - 19
+  - name: SAR2_PWDET_FORCE
+    bit_range:
+    - 27
+    - 27
+  - name: SAR2_DIG_FORCE
+    bit_range:
+    - 28
+    - 28
+    description: '1: SAR ADC2 controlled by DIG ADC2 CTRL or PWDET CTRL  0: SAR ADC2 controlled by RTC ADC2 CTRL'
+  - name: SAR2_DATA_INV
+    bit_range:
+    - 29
+    - 29
+    description: Invert SAR ADC2 data
+  side_effects: null
+- id: SAR_MEAS_START2
+  address_offset: 148
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MEAS2_DATA_SAR
+    bit_range:
+    - 15
+    - 0
+    description: SAR ADC2 data
+  - name: MEAS2_DONE_SAR
+    bit_range:
+    - 16
+    - 16
+    description: SAR ADC2 conversion done indication
+  - name: MEAS2_START_SAR
+    bit_range:
+    - 17
+    - 17
+    description: SAR ADC2 controller (in RTC) starts conversion  only active when reg_meas2_start_force = 1
+  - name: MEAS2_START_FORCE
+    bit_range:
+    - 18
+    - 18
+    description: '1: SAR ADC2 controller (in RTC) is started by SW  0: SAR ADC2 controller is started by ULP-coprocessor'
+  - name: SAR2_EN_PAD
+    bit_range:
+    - 30
+    - 19
+    description: SAR ADC2 pad enable bitmap  only active when reg_sar2_en_pad_force = 1
+  - name: SAR2_EN_PAD_FORCE
+    bit_range:
+    - 31
+    - 31
+    description: '1: SAR ADC2 pad enable bitmap is controlled by SW  0: SAR ADC2 pad enable bitmap is controlled by ULP-coprocessor'
+  side_effects: null
+- id: SAR_DAC_CTRL1
+  address_offset: 152
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SW_FSTEP
+    bit_range:
+    - 15
+    - 0
+    description: frequency step for CW generator  can be used to adjust the frequency
+  - name: SW_TONE_EN
+    bit_range:
+    - 16
+    - 16
+    description: '1: enable CW generator  0: disable CW generator'
+  - name: DEBUG_BIT_SEL
+    bit_range:
+    - 21
+    - 17
+  - name: DAC_DIG_FORCE
+    bit_range:
+    - 22
+    - 22
+    description: '1: DAC1 & DAC2 use DMA  0: DAC1 & DAC2 do not use DMA'
+  - name: DAC_CLK_FORCE_LOW
+    bit_range:
+    - 23
+    - 23
+    description: '1: force PDAC_CLK to low'
+  - name: DAC_CLK_FORCE_HIGH
+    bit_range:
+    - 24
+    - 24
+    description: '1: force PDAC_CLK to high'
+  - name: DAC_CLK_INV
+    bit_range:
+    - 25
+    - 25
+    description: '1: invert PDAC_CLK'
+  side_effects: null
+- id: SAR_DAC_CTRL2
+  address_offset: 156
+  size: 32
+  access: READ_WRITE
+  reset_value: 50331648
+  fields:
+  - name: DAC_DC1
+    bit_range:
+    - 7
+    - 0
+    description: DC offset for DAC1 CW generator
+  - name: DAC_DC2
+    bit_range:
+    - 15
+    - 8
+    description: DC offset for DAC2 CW generator
+  - name: DAC_SCALE1
+    bit_range:
+    - 17
+    - 16
+    description: '00: no scale  01: scale to 1/2  10: scale to 1/4  scale to 1/8'
+  - name: DAC_SCALE2
+    bit_range:
+    - 19
+    - 18
+    description: '00: no scale  01: scale to 1/2  10: scale to 1/4  scale to 1/8'
+  - name: DAC_INV1
+    bit_range:
+    - 21
+    - 20
+    description: '00: do not invert any bits  01: invert all bits  10: invert MSB  11: invert all bits except MSB'
+  - name: DAC_INV2
+    bit_range:
+    - 23
+    - 22
+    description: '00: do not invert any bits  01: invert all bits  10: invert MSB  11: invert all bits except MSB'
+  - name: DAC_CW_EN1
+    bit_range:
+    - 24
+    - 24
+    description: '1: to select CW generator as source to PDAC1_DAC[7:0]  0: to select register reg_pdac1_dac[7:0] as source to PDAC1_DAC[7:0]'
+  - name: DAC_CW_EN2
+    bit_range:
+    - 25
+    - 25
+    description: '1: to select CW generator as source to PDAC2_DAC[7:0]  0: to select register reg_pdac2_dac[7:0] as source to PDAC2_DAC[7:0]'
+  side_effects: null
+- id: SAR_MEAS_CTRL2
+  address_offset: 160
+  size: 32
+  access: READ_WRITE
+  reset_value: 3
+  fields:
+  - name: SAR1_DAC_XPD_FSM
+    bit_range:
+    - 3
+    - 0
+  - name: SAR1_DAC_XPD_FSM_IDLE
+    bit_range:
+    - 4
+    - 4
+  - name: XPD_SAR_AMP_FSM_IDLE
+    bit_range:
+    - 5
+    - 5
+  - name: AMP_RST_FB_FSM_IDLE
+    bit_range:
+    - 6
+    - 6
+  - name: AMP_SHORT_REF_FSM_IDLE
+    bit_range:
+    - 7
+    - 7
+  - name: AMP_SHORT_REF_GND_FSM_IDLE
+    bit_range:
+    - 8
+    - 8
+  - name: XPD_SAR_FSM_IDLE
+    bit_range:
+    - 9
+    - 9
+  - name: SAR_RSTB_FSM_IDLE
+    bit_range:
+    - 10
+    - 10
+  - name: SAR2_RSTB_FORCE
+    bit_range:
+    - 12
+    - 11
+  - name: AMP_RST_FB_FORCE
+    bit_range:
+    - 14
+    - 13
+  - name: AMP_SHORT_REF_FORCE
+    bit_range:
+    - 16
+    - 15
+  - name: AMP_SHORT_REF_GND_FORCE
+    bit_range:
+    - 18
+    - 17
+  side_effects: null
+- id: SAR_NOUSE
+  address_offset: 248
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SAR_NOUSE
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: SARDATE
+  address_offset: 252
+  size: 32
+  access: READ_WRITE
+  reset_value: 23089536
+  fields:
+  - name: SAR_DATE
+    bit_range:
+    - 27
+    - 0
+  side_effects: null
+interrupts: null
+timing: null

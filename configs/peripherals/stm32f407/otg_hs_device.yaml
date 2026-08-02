@@ -1,0 +1,2475 @@
+peripheral: OTG_HS_DEVICE
+version: 0.1.0
+registers:
+- id: OTG_HS_DCFG
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 35651584
+  fields:
+  - name: DSPD
+    bit_range:
+    - 1
+    - 0
+    description: Device speed
+  - name: NZLSOHSK
+    bit_range:
+    - 2
+    - 2
+    description: Nonzero-length status OUT handshake
+  - name: DAD
+    bit_range:
+    - 10
+    - 4
+    description: Device address
+  - name: PFIVL
+    bit_range:
+    - 12
+    - 11
+    description: Periodic (micro)frame interval
+  - name: PERSCHIVL
+    bit_range:
+    - 25
+    - 24
+    description: Periodic scheduling interval
+  side_effects: null
+- id: OTG_HS_DCTL
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RWUSIG
+    bit_range:
+    - 0
+    - 0
+    description: Remote wakeup signaling
+  - name: SDIS
+    bit_range:
+    - 1
+    - 1
+    description: Soft disconnect
+  - name: GINSTS
+    bit_range:
+    - 2
+    - 2
+    description: Global IN NAK status
+  - name: GONSTS
+    bit_range:
+    - 3
+    - 3
+    description: Global OUT NAK status
+  - name: TCTL
+    bit_range:
+    - 6
+    - 4
+    description: Test control
+  - name: SGINAK
+    bit_range:
+    - 7
+    - 7
+    description: Set global IN NAK
+  - name: CGINAK
+    bit_range:
+    - 8
+    - 8
+    description: Clear global IN NAK
+  - name: SGONAK
+    bit_range:
+    - 9
+    - 9
+    description: Set global OUT NAK
+  - name: CGONAK
+    bit_range:
+    - 10
+    - 10
+    description: Clear global OUT NAK
+  - name: POPRGDNE
+    bit_range:
+    - 11
+    - 11
+    description: Power-on programming done
+  side_effects: null
+- id: OTG_HS_DSTS
+  address_offset: 8
+  size: 32
+  access: READ_ONLY
+  reset_value: 16
+  fields:
+  - name: SUSPSTS
+    bit_range:
+    - 0
+    - 0
+    description: Suspend status
+  - name: ENUMSPD
+    bit_range:
+    - 2
+    - 1
+    description: Enumerated speed
+  - name: EERR
+    bit_range:
+    - 3
+    - 3
+    description: Erratic error
+  - name: FNSOF
+    bit_range:
+    - 21
+    - 8
+    description: Frame number of the received SOF
+  side_effects: null
+- id: OTG_HS_DIEPMSK
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRCM
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed interrupt mask
+  - name: EPDM
+    bit_range:
+    - 1
+    - 1
+    description: Endpoint disabled interrupt mask
+  - name: TOM
+    bit_range:
+    - 3
+    - 3
+    description: Timeout condition mask (nonisochronous endpoints)
+  - name: ITTXFEMSK
+    bit_range:
+    - 4
+    - 4
+    description: IN token received when TxFIFO empty mask
+  - name: INEPNMM
+    bit_range:
+    - 5
+    - 5
+    description: IN token received with EP mismatch mask
+  - name: INEPNEM
+    bit_range:
+    - 6
+    - 6
+    description: IN endpoint NAK effective mask
+  - name: TXFURM
+    bit_range:
+    - 8
+    - 8
+    description: FIFO underrun mask
+  - name: BIM
+    bit_range:
+    - 9
+    - 9
+    description: BNA interrupt mask
+  side_effects: null
+- id: OTG_HS_DOEPMSK
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRCM
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed interrupt mask
+  - name: EPDM
+    bit_range:
+    - 1
+    - 1
+    description: Endpoint disabled interrupt mask
+  - name: STUPM
+    bit_range:
+    - 3
+    - 3
+    description: SETUP phase done mask
+  - name: OTEPDM
+    bit_range:
+    - 4
+    - 4
+    description: OUT token received when endpoint disabled mask
+  - name: B2BSTUP
+    bit_range:
+    - 6
+    - 6
+    description: Back-to-back SETUP packets received mask
+  - name: OPEM
+    bit_range:
+    - 8
+    - 8
+    description: OUT packet error mask
+  - name: BOIM
+    bit_range:
+    - 9
+    - 9
+    description: BNA interrupt mask
+  side_effects: null
+- id: OTG_HS_DAINT
+  address_offset: 24
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: IEPINT
+    bit_range:
+    - 15
+    - 0
+    description: IN endpoint interrupt bits
+  - name: OEPINT
+    bit_range:
+    - 31
+    - 16
+    description: OUT endpoint interrupt bits
+  side_effects: null
+- id: OTG_HS_DAINTMSK
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IEPM
+    bit_range:
+    - 15
+    - 0
+    description: IN EP interrupt mask bits
+  - name: OEPM
+    bit_range:
+    - 31
+    - 16
+    description: OUT EP interrupt mask bits
+  side_effects: null
+- id: OTG_HS_DVBUSDIS
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 6103
+  fields:
+  - name: VBUSDT
+    bit_range:
+    - 15
+    - 0
+    description: Device VBUS discharge time
+  side_effects: null
+- id: OTG_HS_DVBUSPULSE
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 1464
+  fields:
+  - name: DVBUSP
+    bit_range:
+    - 11
+    - 0
+    description: Device VBUS pulsing time
+  side_effects: null
+- id: OTG_HS_DTHRCTL
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NONISOTHREN
+    bit_range:
+    - 0
+    - 0
+    description: Nonisochronous IN endpoints threshold enable
+  - name: ISOTHREN
+    bit_range:
+    - 1
+    - 1
+    description: ISO IN endpoint threshold enable
+  - name: TXTHRLEN
+    bit_range:
+    - 10
+    - 2
+    description: Transmit threshold length
+  - name: RXTHREN
+    bit_range:
+    - 16
+    - 16
+    description: Receive threshold enable
+  - name: RXTHRLEN
+    bit_range:
+    - 25
+    - 17
+    description: Receive threshold length
+  - name: ARPEN
+    bit_range:
+    - 27
+    - 27
+    description: Arbiter parking enable
+  side_effects: null
+- id: OTG_HS_DIEPEMPMSK
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: INEPTXFEM
+    bit_range:
+    - 15
+    - 0
+    description: IN EP Tx FIFO empty interrupt mask bits
+  side_effects: null
+- id: OTG_HS_DEACHINT
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IEP1INT
+    bit_range:
+    - 1
+    - 1
+    description: IN endpoint 1interrupt bit
+  - name: OEP1INT
+    bit_range:
+    - 17
+    - 17
+    description: OUT endpoint 1 interrupt bit
+  side_effects: null
+- id: OTG_HS_DEACHINTMSK
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IEP1INTM
+    bit_range:
+    - 1
+    - 1
+    description: IN Endpoint 1 interrupt mask bit
+  - name: OEP1INTM
+    bit_range:
+    - 17
+    - 17
+    description: OUT Endpoint 1 interrupt mask bit
+  side_effects: null
+- id: OTG_HS_DIEPEACHMSK1
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRCM
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed interrupt mask
+  - name: EPDM
+    bit_range:
+    - 1
+    - 1
+    description: Endpoint disabled interrupt mask
+  - name: TOM
+    bit_range:
+    - 3
+    - 3
+    description: Timeout condition mask (nonisochronous endpoints)
+  - name: ITTXFEMSK
+    bit_range:
+    - 4
+    - 4
+    description: IN token received when TxFIFO empty mask
+  - name: INEPNMM
+    bit_range:
+    - 5
+    - 5
+    description: IN token received with EP mismatch mask
+  - name: INEPNEM
+    bit_range:
+    - 6
+    - 6
+    description: IN endpoint NAK effective mask
+  - name: TXFURM
+    bit_range:
+    - 8
+    - 8
+    description: FIFO underrun mask
+  - name: BIM
+    bit_range:
+    - 9
+    - 9
+    description: BNA interrupt mask
+  - name: NAKM
+    bit_range:
+    - 13
+    - 13
+    description: NAK interrupt mask
+  side_effects: null
+- id: OTG_HS_DOEPEACHMSK1
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRCM
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed interrupt mask
+  - name: EPDM
+    bit_range:
+    - 1
+    - 1
+    description: Endpoint disabled interrupt mask
+  - name: TOM
+    bit_range:
+    - 3
+    - 3
+    description: Timeout condition mask
+  - name: ITTXFEMSK
+    bit_range:
+    - 4
+    - 4
+    description: IN token received when TxFIFO empty mask
+  - name: INEPNMM
+    bit_range:
+    - 5
+    - 5
+    description: IN token received with EP mismatch mask
+  - name: INEPNEM
+    bit_range:
+    - 6
+    - 6
+    description: IN endpoint NAK effective mask
+  - name: TXFURM
+    bit_range:
+    - 8
+    - 8
+    description: OUT packet error mask
+  - name: BIM
+    bit_range:
+    - 9
+    - 9
+    description: BNA interrupt mask
+  - name: BERRM
+    bit_range:
+    - 12
+    - 12
+    description: Bubble error interrupt mask
+  - name: NAKM
+    bit_range:
+    - 13
+    - 13
+    description: NAK interrupt mask
+  - name: NYETM
+    bit_range:
+    - 14
+    - 14
+    description: NYET interrupt mask
+  side_effects: null
+- id: OTG_HS_DIEPCTL0
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MPSIZ
+    bit_range:
+    - 10
+    - 0
+    description: Maximum packet size
+  - name: USBAEP
+    bit_range:
+    - 15
+    - 15
+    description: USB active endpoint
+  - name: EONUM_DPID
+    bit_range:
+    - 16
+    - 16
+    description: Even/odd frame
+  - name: NAKSTS
+    bit_range:
+    - 17
+    - 17
+    description: NAK status
+  - name: EPTYP
+    bit_range:
+    - 19
+    - 18
+    description: Endpoint type
+  - name: Stall
+    bit_range:
+    - 21
+    - 21
+    description: STALL handshake
+  - name: TXFNUM
+    bit_range:
+    - 25
+    - 22
+    description: TxFIFO number
+  - name: CNAK
+    bit_range:
+    - 26
+    - 26
+    description: Clear NAK
+  - name: SNAK
+    bit_range:
+    - 27
+    - 27
+    description: Set NAK
+  - name: SD0PID_SEVNFRM
+    bit_range:
+    - 28
+    - 28
+    description: Set DATA0 PID
+  - name: SODDFRM
+    bit_range:
+    - 29
+    - 29
+    description: Set odd frame
+  - name: EPDIS
+    bit_range:
+    - 30
+    - 30
+    description: Endpoint disable
+  - name: EPENA
+    bit_range:
+    - 31
+    - 31
+    description: Endpoint enable
+  side_effects: null
+- id: OTG_HS_DIEPCTL1
+  address_offset: 288
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MPSIZ
+    bit_range:
+    - 10
+    - 0
+    description: Maximum packet size
+  - name: USBAEP
+    bit_range:
+    - 15
+    - 15
+    description: USB active endpoint
+  - name: EONUM_DPID
+    bit_range:
+    - 16
+    - 16
+    description: Even/odd frame
+  - name: NAKSTS
+    bit_range:
+    - 17
+    - 17
+    description: NAK status
+  - name: EPTYP
+    bit_range:
+    - 19
+    - 18
+    description: Endpoint type
+  - name: Stall
+    bit_range:
+    - 21
+    - 21
+    description: STALL handshake
+  - name: TXFNUM
+    bit_range:
+    - 25
+    - 22
+    description: TxFIFO number
+  - name: CNAK
+    bit_range:
+    - 26
+    - 26
+    description: Clear NAK
+  - name: SNAK
+    bit_range:
+    - 27
+    - 27
+    description: Set NAK
+  - name: SD0PID_SEVNFRM
+    bit_range:
+    - 28
+    - 28
+    description: Set DATA0 PID
+  - name: SODDFRM
+    bit_range:
+    - 29
+    - 29
+    description: Set odd frame
+  - name: EPDIS
+    bit_range:
+    - 30
+    - 30
+    description: Endpoint disable
+  - name: EPENA
+    bit_range:
+    - 31
+    - 31
+    description: Endpoint enable
+  side_effects: null
+- id: OTG_HS_DIEPCTL2
+  address_offset: 320
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MPSIZ
+    bit_range:
+    - 10
+    - 0
+    description: Maximum packet size
+  - name: USBAEP
+    bit_range:
+    - 15
+    - 15
+    description: USB active endpoint
+  - name: EONUM_DPID
+    bit_range:
+    - 16
+    - 16
+    description: Even/odd frame
+  - name: NAKSTS
+    bit_range:
+    - 17
+    - 17
+    description: NAK status
+  - name: EPTYP
+    bit_range:
+    - 19
+    - 18
+    description: Endpoint type
+  - name: Stall
+    bit_range:
+    - 21
+    - 21
+    description: STALL handshake
+  - name: TXFNUM
+    bit_range:
+    - 25
+    - 22
+    description: TxFIFO number
+  - name: CNAK
+    bit_range:
+    - 26
+    - 26
+    description: Clear NAK
+  - name: SNAK
+    bit_range:
+    - 27
+    - 27
+    description: Set NAK
+  - name: SD0PID_SEVNFRM
+    bit_range:
+    - 28
+    - 28
+    description: Set DATA0 PID
+  - name: SODDFRM
+    bit_range:
+    - 29
+    - 29
+    description: Set odd frame
+  - name: EPDIS
+    bit_range:
+    - 30
+    - 30
+    description: Endpoint disable
+  - name: EPENA
+    bit_range:
+    - 31
+    - 31
+    description: Endpoint enable
+  side_effects: null
+- id: OTG_HS_DIEPCTL3
+  address_offset: 352
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MPSIZ
+    bit_range:
+    - 10
+    - 0
+    description: Maximum packet size
+  - name: USBAEP
+    bit_range:
+    - 15
+    - 15
+    description: USB active endpoint
+  - name: EONUM_DPID
+    bit_range:
+    - 16
+    - 16
+    description: Even/odd frame
+  - name: NAKSTS
+    bit_range:
+    - 17
+    - 17
+    description: NAK status
+  - name: EPTYP
+    bit_range:
+    - 19
+    - 18
+    description: Endpoint type
+  - name: Stall
+    bit_range:
+    - 21
+    - 21
+    description: STALL handshake
+  - name: TXFNUM
+    bit_range:
+    - 25
+    - 22
+    description: TxFIFO number
+  - name: CNAK
+    bit_range:
+    - 26
+    - 26
+    description: Clear NAK
+  - name: SNAK
+    bit_range:
+    - 27
+    - 27
+    description: Set NAK
+  - name: SD0PID_SEVNFRM
+    bit_range:
+    - 28
+    - 28
+    description: Set DATA0 PID
+  - name: SODDFRM
+    bit_range:
+    - 29
+    - 29
+    description: Set odd frame
+  - name: EPDIS
+    bit_range:
+    - 30
+    - 30
+    description: Endpoint disable
+  - name: EPENA
+    bit_range:
+    - 31
+    - 31
+    description: Endpoint enable
+  side_effects: null
+- id: OTG_HS_DIEPCTL4
+  address_offset: 384
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MPSIZ
+    bit_range:
+    - 10
+    - 0
+    description: Maximum packet size
+  - name: USBAEP
+    bit_range:
+    - 15
+    - 15
+    description: USB active endpoint
+  - name: EONUM_DPID
+    bit_range:
+    - 16
+    - 16
+    description: Even/odd frame
+  - name: NAKSTS
+    bit_range:
+    - 17
+    - 17
+    description: NAK status
+  - name: EPTYP
+    bit_range:
+    - 19
+    - 18
+    description: Endpoint type
+  - name: Stall
+    bit_range:
+    - 21
+    - 21
+    description: STALL handshake
+  - name: TXFNUM
+    bit_range:
+    - 25
+    - 22
+    description: TxFIFO number
+  - name: CNAK
+    bit_range:
+    - 26
+    - 26
+    description: Clear NAK
+  - name: SNAK
+    bit_range:
+    - 27
+    - 27
+    description: Set NAK
+  - name: SD0PID_SEVNFRM
+    bit_range:
+    - 28
+    - 28
+    description: Set DATA0 PID
+  - name: SODDFRM
+    bit_range:
+    - 29
+    - 29
+    description: Set odd frame
+  - name: EPDIS
+    bit_range:
+    - 30
+    - 30
+    description: Endpoint disable
+  - name: EPENA
+    bit_range:
+    - 31
+    - 31
+    description: Endpoint enable
+  side_effects: null
+- id: OTG_HS_DIEPCTL5
+  address_offset: 416
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MPSIZ
+    bit_range:
+    - 10
+    - 0
+    description: Maximum packet size
+  - name: USBAEP
+    bit_range:
+    - 15
+    - 15
+    description: USB active endpoint
+  - name: EONUM_DPID
+    bit_range:
+    - 16
+    - 16
+    description: Even/odd frame
+  - name: NAKSTS
+    bit_range:
+    - 17
+    - 17
+    description: NAK status
+  - name: EPTYP
+    bit_range:
+    - 19
+    - 18
+    description: Endpoint type
+  - name: Stall
+    bit_range:
+    - 21
+    - 21
+    description: STALL handshake
+  - name: TXFNUM
+    bit_range:
+    - 25
+    - 22
+    description: TxFIFO number
+  - name: CNAK
+    bit_range:
+    - 26
+    - 26
+    description: Clear NAK
+  - name: SNAK
+    bit_range:
+    - 27
+    - 27
+    description: Set NAK
+  - name: SD0PID_SEVNFRM
+    bit_range:
+    - 28
+    - 28
+    description: Set DATA0 PID
+  - name: SODDFRM
+    bit_range:
+    - 29
+    - 29
+    description: Set odd frame
+  - name: EPDIS
+    bit_range:
+    - 30
+    - 30
+    description: Endpoint disable
+  - name: EPENA
+    bit_range:
+    - 31
+    - 31
+    description: Endpoint enable
+  side_effects: null
+- id: OTG_HS_DIEPCTL6
+  address_offset: 448
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MPSIZ
+    bit_range:
+    - 10
+    - 0
+    description: Maximum packet size
+  - name: USBAEP
+    bit_range:
+    - 15
+    - 15
+    description: USB active endpoint
+  - name: EONUM_DPID
+    bit_range:
+    - 16
+    - 16
+    description: Even/odd frame
+  - name: NAKSTS
+    bit_range:
+    - 17
+    - 17
+    description: NAK status
+  - name: EPTYP
+    bit_range:
+    - 19
+    - 18
+    description: Endpoint type
+  - name: Stall
+    bit_range:
+    - 21
+    - 21
+    description: STALL handshake
+  - name: TXFNUM
+    bit_range:
+    - 25
+    - 22
+    description: TxFIFO number
+  - name: CNAK
+    bit_range:
+    - 26
+    - 26
+    description: Clear NAK
+  - name: SNAK
+    bit_range:
+    - 27
+    - 27
+    description: Set NAK
+  - name: SD0PID_SEVNFRM
+    bit_range:
+    - 28
+    - 28
+    description: Set DATA0 PID
+  - name: SODDFRM
+    bit_range:
+    - 29
+    - 29
+    description: Set odd frame
+  - name: EPDIS
+    bit_range:
+    - 30
+    - 30
+    description: Endpoint disable
+  - name: EPENA
+    bit_range:
+    - 31
+    - 31
+    description: Endpoint enable
+  side_effects: null
+- id: OTG_HS_DIEPCTL7
+  address_offset: 480
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MPSIZ
+    bit_range:
+    - 10
+    - 0
+    description: Maximum packet size
+  - name: USBAEP
+    bit_range:
+    - 15
+    - 15
+    description: USB active endpoint
+  - name: EONUM_DPID
+    bit_range:
+    - 16
+    - 16
+    description: Even/odd frame
+  - name: NAKSTS
+    bit_range:
+    - 17
+    - 17
+    description: NAK status
+  - name: EPTYP
+    bit_range:
+    - 19
+    - 18
+    description: Endpoint type
+  - name: Stall
+    bit_range:
+    - 21
+    - 21
+    description: STALL handshake
+  - name: TXFNUM
+    bit_range:
+    - 25
+    - 22
+    description: TxFIFO number
+  - name: CNAK
+    bit_range:
+    - 26
+    - 26
+    description: Clear NAK
+  - name: SNAK
+    bit_range:
+    - 27
+    - 27
+    description: Set NAK
+  - name: SD0PID_SEVNFRM
+    bit_range:
+    - 28
+    - 28
+    description: Set DATA0 PID
+  - name: SODDFRM
+    bit_range:
+    - 29
+    - 29
+    description: Set odd frame
+  - name: EPDIS
+    bit_range:
+    - 30
+    - 30
+    description: Endpoint disable
+  - name: EPENA
+    bit_range:
+    - 31
+    - 31
+    description: Endpoint enable
+  side_effects: null
+- id: OTG_HS_DIEPINT0
+  address_offset: 264
+  size: 32
+  access: READ_WRITE
+  reset_value: 128
+  fields:
+  - name: XFRC
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed interrupt
+  - name: EPDISD
+    bit_range:
+    - 1
+    - 1
+    description: Endpoint disabled interrupt
+  - name: TOC
+    bit_range:
+    - 3
+    - 3
+    description: Timeout condition
+  - name: ITTXFE
+    bit_range:
+    - 4
+    - 4
+    description: IN token received when TxFIFO is empty
+  - name: INEPNE
+    bit_range:
+    - 6
+    - 6
+    description: IN endpoint NAK effective
+  - name: TXFE
+    bit_range:
+    - 7
+    - 7
+    description: Transmit FIFO empty
+  - name: TXFIFOUDRN
+    bit_range:
+    - 8
+    - 8
+    description: Transmit Fifo Underrun
+  - name: BNA
+    bit_range:
+    - 9
+    - 9
+    description: Buffer not available interrupt
+  - name: PKTDRPSTS
+    bit_range:
+    - 11
+    - 11
+    description: Packet dropped status
+  - name: BERR
+    bit_range:
+    - 12
+    - 12
+    description: Babble error interrupt
+  - name: NAK
+    bit_range:
+    - 13
+    - 13
+    description: NAK interrupt
+  side_effects: null
+- id: OTG_HS_DIEPINT1
+  address_offset: 296
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRC
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed interrupt
+  - name: EPDISD
+    bit_range:
+    - 1
+    - 1
+    description: Endpoint disabled interrupt
+  - name: TOC
+    bit_range:
+    - 3
+    - 3
+    description: Timeout condition
+  - name: ITTXFE
+    bit_range:
+    - 4
+    - 4
+    description: IN token received when TxFIFO is empty
+  - name: INEPNE
+    bit_range:
+    - 6
+    - 6
+    description: IN endpoint NAK effective
+  - name: TXFE
+    bit_range:
+    - 7
+    - 7
+    description: Transmit FIFO empty
+  - name: TXFIFOUDRN
+    bit_range:
+    - 8
+    - 8
+    description: Transmit Fifo Underrun
+  - name: BNA
+    bit_range:
+    - 9
+    - 9
+    description: Buffer not available interrupt
+  - name: PKTDRPSTS
+    bit_range:
+    - 11
+    - 11
+    description: Packet dropped status
+  - name: BERR
+    bit_range:
+    - 12
+    - 12
+    description: Babble error interrupt
+  - name: NAK
+    bit_range:
+    - 13
+    - 13
+    description: NAK interrupt
+  side_effects: null
+- id: OTG_HS_DIEPINT2
+  address_offset: 328
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRC
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed interrupt
+  - name: EPDISD
+    bit_range:
+    - 1
+    - 1
+    description: Endpoint disabled interrupt
+  - name: TOC
+    bit_range:
+    - 3
+    - 3
+    description: Timeout condition
+  - name: ITTXFE
+    bit_range:
+    - 4
+    - 4
+    description: IN token received when TxFIFO is empty
+  - name: INEPNE
+    bit_range:
+    - 6
+    - 6
+    description: IN endpoint NAK effective
+  - name: TXFE
+    bit_range:
+    - 7
+    - 7
+    description: Transmit FIFO empty
+  - name: TXFIFOUDRN
+    bit_range:
+    - 8
+    - 8
+    description: Transmit Fifo Underrun
+  - name: BNA
+    bit_range:
+    - 9
+    - 9
+    description: Buffer not available interrupt
+  - name: PKTDRPSTS
+    bit_range:
+    - 11
+    - 11
+    description: Packet dropped status
+  - name: BERR
+    bit_range:
+    - 12
+    - 12
+    description: Babble error interrupt
+  - name: NAK
+    bit_range:
+    - 13
+    - 13
+    description: NAK interrupt
+  side_effects: null
+- id: OTG_HS_DIEPINT3
+  address_offset: 360
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRC
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed interrupt
+  - name: EPDISD
+    bit_range:
+    - 1
+    - 1
+    description: Endpoint disabled interrupt
+  - name: TOC
+    bit_range:
+    - 3
+    - 3
+    description: Timeout condition
+  - name: ITTXFE
+    bit_range:
+    - 4
+    - 4
+    description: IN token received when TxFIFO is empty
+  - name: INEPNE
+    bit_range:
+    - 6
+    - 6
+    description: IN endpoint NAK effective
+  - name: TXFE
+    bit_range:
+    - 7
+    - 7
+    description: Transmit FIFO empty
+  - name: TXFIFOUDRN
+    bit_range:
+    - 8
+    - 8
+    description: Transmit Fifo Underrun
+  - name: BNA
+    bit_range:
+    - 9
+    - 9
+    description: Buffer not available interrupt
+  - name: PKTDRPSTS
+    bit_range:
+    - 11
+    - 11
+    description: Packet dropped status
+  - name: BERR
+    bit_range:
+    - 12
+    - 12
+    description: Babble error interrupt
+  - name: NAK
+    bit_range:
+    - 13
+    - 13
+    description: NAK interrupt
+  side_effects: null
+- id: OTG_HS_DIEPINT4
+  address_offset: 392
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRC
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed interrupt
+  - name: EPDISD
+    bit_range:
+    - 1
+    - 1
+    description: Endpoint disabled interrupt
+  - name: TOC
+    bit_range:
+    - 3
+    - 3
+    description: Timeout condition
+  - name: ITTXFE
+    bit_range:
+    - 4
+    - 4
+    description: IN token received when TxFIFO is empty
+  - name: INEPNE
+    bit_range:
+    - 6
+    - 6
+    description: IN endpoint NAK effective
+  - name: TXFE
+    bit_range:
+    - 7
+    - 7
+    description: Transmit FIFO empty
+  - name: TXFIFOUDRN
+    bit_range:
+    - 8
+    - 8
+    description: Transmit Fifo Underrun
+  - name: BNA
+    bit_range:
+    - 9
+    - 9
+    description: Buffer not available interrupt
+  - name: PKTDRPSTS
+    bit_range:
+    - 11
+    - 11
+    description: Packet dropped status
+  - name: BERR
+    bit_range:
+    - 12
+    - 12
+    description: Babble error interrupt
+  - name: NAK
+    bit_range:
+    - 13
+    - 13
+    description: NAK interrupt
+  side_effects: null
+- id: OTG_HS_DIEPINT5
+  address_offset: 424
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRC
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed interrupt
+  - name: EPDISD
+    bit_range:
+    - 1
+    - 1
+    description: Endpoint disabled interrupt
+  - name: TOC
+    bit_range:
+    - 3
+    - 3
+    description: Timeout condition
+  - name: ITTXFE
+    bit_range:
+    - 4
+    - 4
+    description: IN token received when TxFIFO is empty
+  - name: INEPNE
+    bit_range:
+    - 6
+    - 6
+    description: IN endpoint NAK effective
+  - name: TXFE
+    bit_range:
+    - 7
+    - 7
+    description: Transmit FIFO empty
+  - name: TXFIFOUDRN
+    bit_range:
+    - 8
+    - 8
+    description: Transmit Fifo Underrun
+  - name: BNA
+    bit_range:
+    - 9
+    - 9
+    description: Buffer not available interrupt
+  - name: PKTDRPSTS
+    bit_range:
+    - 11
+    - 11
+    description: Packet dropped status
+  - name: BERR
+    bit_range:
+    - 12
+    - 12
+    description: Babble error interrupt
+  - name: NAK
+    bit_range:
+    - 13
+    - 13
+    description: NAK interrupt
+  side_effects: null
+- id: OTG_HS_DIEPINT6
+  address_offset: 456
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRC
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed interrupt
+  - name: EPDISD
+    bit_range:
+    - 1
+    - 1
+    description: Endpoint disabled interrupt
+  - name: TOC
+    bit_range:
+    - 3
+    - 3
+    description: Timeout condition
+  - name: ITTXFE
+    bit_range:
+    - 4
+    - 4
+    description: IN token received when TxFIFO is empty
+  - name: INEPNE
+    bit_range:
+    - 6
+    - 6
+    description: IN endpoint NAK effective
+  - name: TXFE
+    bit_range:
+    - 7
+    - 7
+    description: Transmit FIFO empty
+  - name: TXFIFOUDRN
+    bit_range:
+    - 8
+    - 8
+    description: Transmit Fifo Underrun
+  - name: BNA
+    bit_range:
+    - 9
+    - 9
+    description: Buffer not available interrupt
+  - name: PKTDRPSTS
+    bit_range:
+    - 11
+    - 11
+    description: Packet dropped status
+  - name: BERR
+    bit_range:
+    - 12
+    - 12
+    description: Babble error interrupt
+  - name: NAK
+    bit_range:
+    - 13
+    - 13
+    description: NAK interrupt
+  side_effects: null
+- id: OTG_HS_DIEPINT7
+  address_offset: 488
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRC
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed interrupt
+  - name: EPDISD
+    bit_range:
+    - 1
+    - 1
+    description: Endpoint disabled interrupt
+  - name: TOC
+    bit_range:
+    - 3
+    - 3
+    description: Timeout condition
+  - name: ITTXFE
+    bit_range:
+    - 4
+    - 4
+    description: IN token received when TxFIFO is empty
+  - name: INEPNE
+    bit_range:
+    - 6
+    - 6
+    description: IN endpoint NAK effective
+  - name: TXFE
+    bit_range:
+    - 7
+    - 7
+    description: Transmit FIFO empty
+  - name: TXFIFOUDRN
+    bit_range:
+    - 8
+    - 8
+    description: Transmit Fifo Underrun
+  - name: BNA
+    bit_range:
+    - 9
+    - 9
+    description: Buffer not available interrupt
+  - name: PKTDRPSTS
+    bit_range:
+    - 11
+    - 11
+    description: Packet dropped status
+  - name: BERR
+    bit_range:
+    - 12
+    - 12
+    description: Babble error interrupt
+  - name: NAK
+    bit_range:
+    - 13
+    - 13
+    description: NAK interrupt
+  side_effects: null
+- id: OTG_HS_DIEPTSIZ0
+  address_offset: 272
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRSIZ
+    bit_range:
+    - 6
+    - 0
+    description: Transfer size
+  - name: PKTCNT
+    bit_range:
+    - 20
+    - 19
+    description: Packet count
+  side_effects: null
+- id: OTG_HS_DIEPDMA1
+  address_offset: 276
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DMAADDR
+    bit_range:
+    - 31
+    - 0
+    description: DMA address
+  side_effects: null
+- id: OTG_HS_DIEPDMA2
+  address_offset: 308
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DMAADDR
+    bit_range:
+    - 31
+    - 0
+    description: DMA address
+  side_effects: null
+- id: OTG_HS_DIEPDMA3
+  address_offset: 340
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DMAADDR
+    bit_range:
+    - 31
+    - 0
+    description: DMA address
+  side_effects: null
+- id: OTG_HS_DIEPDMA4
+  address_offset: 372
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DMAADDR
+    bit_range:
+    - 31
+    - 0
+    description: DMA address
+  side_effects: null
+- id: OTG_HS_DIEPDMA5
+  address_offset: 404
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DMAADDR
+    bit_range:
+    - 31
+    - 0
+    description: DMA address
+  side_effects: null
+- id: OTG_HS_DTXFSTS0
+  address_offset: 280
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: INEPTFSAV
+    bit_range:
+    - 15
+    - 0
+    description: IN endpoint TxFIFO space avail
+  side_effects: null
+- id: OTG_HS_DTXFSTS1
+  address_offset: 312
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: INEPTFSAV
+    bit_range:
+    - 15
+    - 0
+    description: IN endpoint TxFIFO space avail
+  side_effects: null
+- id: OTG_HS_DTXFSTS2
+  address_offset: 344
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: INEPTFSAV
+    bit_range:
+    - 15
+    - 0
+    description: IN endpoint TxFIFO space avail
+  side_effects: null
+- id: OTG_HS_DTXFSTS3
+  address_offset: 376
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: INEPTFSAV
+    bit_range:
+    - 15
+    - 0
+    description: IN endpoint TxFIFO space avail
+  side_effects: null
+- id: OTG_HS_DTXFSTS4
+  address_offset: 408
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: INEPTFSAV
+    bit_range:
+    - 15
+    - 0
+    description: IN endpoint TxFIFO space avail
+  side_effects: null
+- id: OTG_HS_DTXFSTS5
+  address_offset: 440
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: INEPTFSAV
+    bit_range:
+    - 15
+    - 0
+    description: IN endpoint TxFIFO space avail
+  side_effects: null
+- id: OTG_HS_DIEPTSIZ1
+  address_offset: 304
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRSIZ
+    bit_range:
+    - 18
+    - 0
+    description: Transfer size
+  - name: PKTCNT
+    bit_range:
+    - 28
+    - 19
+    description: Packet count
+  - name: MCNT
+    bit_range:
+    - 30
+    - 29
+    description: Multi count
+  side_effects: null
+- id: OTG_HS_DIEPTSIZ2
+  address_offset: 336
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRSIZ
+    bit_range:
+    - 18
+    - 0
+    description: Transfer size
+  - name: PKTCNT
+    bit_range:
+    - 28
+    - 19
+    description: Packet count
+  - name: MCNT
+    bit_range:
+    - 30
+    - 29
+    description: Multi count
+  side_effects: null
+- id: OTG_HS_DIEPTSIZ3
+  address_offset: 368
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRSIZ
+    bit_range:
+    - 18
+    - 0
+    description: Transfer size
+  - name: PKTCNT
+    bit_range:
+    - 28
+    - 19
+    description: Packet count
+  - name: MCNT
+    bit_range:
+    - 30
+    - 29
+    description: Multi count
+  side_effects: null
+- id: OTG_HS_DIEPTSIZ4
+  address_offset: 400
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRSIZ
+    bit_range:
+    - 18
+    - 0
+    description: Transfer size
+  - name: PKTCNT
+    bit_range:
+    - 28
+    - 19
+    description: Packet count
+  - name: MCNT
+    bit_range:
+    - 30
+    - 29
+    description: Multi count
+  side_effects: null
+- id: OTG_HS_DIEPTSIZ5
+  address_offset: 432
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRSIZ
+    bit_range:
+    - 18
+    - 0
+    description: Transfer size
+  - name: PKTCNT
+    bit_range:
+    - 28
+    - 19
+    description: Packet count
+  - name: MCNT
+    bit_range:
+    - 30
+    - 29
+    description: Multi count
+  side_effects: null
+- id: OTG_HS_DOEPCTL0
+  address_offset: 768
+  size: 32
+  access: READ_WRITE
+  reset_value: 32768
+  fields:
+  - name: MPSIZ
+    bit_range:
+    - 1
+    - 0
+    description: Maximum packet size
+  - name: USBAEP
+    bit_range:
+    - 15
+    - 15
+    description: USB active endpoint
+  - name: NAKSTS
+    bit_range:
+    - 17
+    - 17
+    description: NAK status
+  - name: EPTYP
+    bit_range:
+    - 19
+    - 18
+    description: Endpoint type
+  - name: SNPM
+    bit_range:
+    - 20
+    - 20
+    description: Snoop mode
+  - name: Stall
+    bit_range:
+    - 21
+    - 21
+    description: STALL handshake
+  - name: CNAK
+    bit_range:
+    - 26
+    - 26
+    description: Clear NAK
+  - name: SNAK
+    bit_range:
+    - 27
+    - 27
+    description: Set NAK
+  - name: EPDIS
+    bit_range:
+    - 30
+    - 30
+    description: Endpoint disable
+  - name: EPENA
+    bit_range:
+    - 31
+    - 31
+    description: Endpoint enable
+  side_effects: null
+- id: OTG_HS_DOEPCTL1
+  address_offset: 800
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MPSIZ
+    bit_range:
+    - 10
+    - 0
+    description: Maximum packet size
+  - name: USBAEP
+    bit_range:
+    - 15
+    - 15
+    description: USB active endpoint
+  - name: EONUM_DPID
+    bit_range:
+    - 16
+    - 16
+    description: Even odd frame/Endpoint data PID
+  - name: NAKSTS
+    bit_range:
+    - 17
+    - 17
+    description: NAK status
+  - name: EPTYP
+    bit_range:
+    - 19
+    - 18
+    description: Endpoint type
+  - name: SNPM
+    bit_range:
+    - 20
+    - 20
+    description: Snoop mode
+  - name: Stall
+    bit_range:
+    - 21
+    - 21
+    description: STALL handshake
+  - name: CNAK
+    bit_range:
+    - 26
+    - 26
+    description: Clear NAK
+  - name: SNAK
+    bit_range:
+    - 27
+    - 27
+    description: Set NAK
+  - name: SD0PID_SEVNFRM
+    bit_range:
+    - 28
+    - 28
+    description: Set DATA0 PID/Set even frame
+  - name: SODDFRM
+    bit_range:
+    - 29
+    - 29
+    description: Set odd frame
+  - name: EPDIS
+    bit_range:
+    - 30
+    - 30
+    description: Endpoint disable
+  - name: EPENA
+    bit_range:
+    - 31
+    - 31
+    description: Endpoint enable
+  side_effects: null
+- id: OTG_HS_DOEPCTL2
+  address_offset: 832
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MPSIZ
+    bit_range:
+    - 10
+    - 0
+    description: Maximum packet size
+  - name: USBAEP
+    bit_range:
+    - 15
+    - 15
+    description: USB active endpoint
+  - name: EONUM_DPID
+    bit_range:
+    - 16
+    - 16
+    description: Even odd frame/Endpoint data PID
+  - name: NAKSTS
+    bit_range:
+    - 17
+    - 17
+    description: NAK status
+  - name: EPTYP
+    bit_range:
+    - 19
+    - 18
+    description: Endpoint type
+  - name: SNPM
+    bit_range:
+    - 20
+    - 20
+    description: Snoop mode
+  - name: Stall
+    bit_range:
+    - 21
+    - 21
+    description: STALL handshake
+  - name: CNAK
+    bit_range:
+    - 26
+    - 26
+    description: Clear NAK
+  - name: SNAK
+    bit_range:
+    - 27
+    - 27
+    description: Set NAK
+  - name: SD0PID_SEVNFRM
+    bit_range:
+    - 28
+    - 28
+    description: Set DATA0 PID/Set even frame
+  - name: SODDFRM
+    bit_range:
+    - 29
+    - 29
+    description: Set odd frame
+  - name: EPDIS
+    bit_range:
+    - 30
+    - 30
+    description: Endpoint disable
+  - name: EPENA
+    bit_range:
+    - 31
+    - 31
+    description: Endpoint enable
+  side_effects: null
+- id: OTG_HS_DOEPCTL3
+  address_offset: 864
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MPSIZ
+    bit_range:
+    - 10
+    - 0
+    description: Maximum packet size
+  - name: USBAEP
+    bit_range:
+    - 15
+    - 15
+    description: USB active endpoint
+  - name: EONUM_DPID
+    bit_range:
+    - 16
+    - 16
+    description: Even odd frame/Endpoint data PID
+  - name: NAKSTS
+    bit_range:
+    - 17
+    - 17
+    description: NAK status
+  - name: EPTYP
+    bit_range:
+    - 19
+    - 18
+    description: Endpoint type
+  - name: SNPM
+    bit_range:
+    - 20
+    - 20
+    description: Snoop mode
+  - name: Stall
+    bit_range:
+    - 21
+    - 21
+    description: STALL handshake
+  - name: CNAK
+    bit_range:
+    - 26
+    - 26
+    description: Clear NAK
+  - name: SNAK
+    bit_range:
+    - 27
+    - 27
+    description: Set NAK
+  - name: SD0PID_SEVNFRM
+    bit_range:
+    - 28
+    - 28
+    description: Set DATA0 PID/Set even frame
+  - name: SODDFRM
+    bit_range:
+    - 29
+    - 29
+    description: Set odd frame
+  - name: EPDIS
+    bit_range:
+    - 30
+    - 30
+    description: Endpoint disable
+  - name: EPENA
+    bit_range:
+    - 31
+    - 31
+    description: Endpoint enable
+  side_effects: null
+- id: OTG_HS_DOEPINT0
+  address_offset: 776
+  size: 32
+  access: READ_WRITE
+  reset_value: 128
+  fields:
+  - name: XFRC
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed interrupt
+  - name: EPDISD
+    bit_range:
+    - 1
+    - 1
+    description: Endpoint disabled interrupt
+  - name: STUP
+    bit_range:
+    - 3
+    - 3
+    description: SETUP phase done
+  - name: OTEPDIS
+    bit_range:
+    - 4
+    - 4
+    description: OUT token received when endpoint disabled
+  - name: B2BSTUP
+    bit_range:
+    - 6
+    - 6
+    description: Back-to-back SETUP packets received
+  - name: NYET
+    bit_range:
+    - 14
+    - 14
+    description: NYET interrupt
+  side_effects: null
+- id: OTG_HS_DOEPINT1
+  address_offset: 808
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRC
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed interrupt
+  - name: EPDISD
+    bit_range:
+    - 1
+    - 1
+    description: Endpoint disabled interrupt
+  - name: STUP
+    bit_range:
+    - 3
+    - 3
+    description: SETUP phase done
+  - name: OTEPDIS
+    bit_range:
+    - 4
+    - 4
+    description: OUT token received when endpoint disabled
+  - name: B2BSTUP
+    bit_range:
+    - 6
+    - 6
+    description: Back-to-back SETUP packets received
+  - name: NYET
+    bit_range:
+    - 14
+    - 14
+    description: NYET interrupt
+  side_effects: null
+- id: OTG_HS_DOEPINT2
+  address_offset: 840
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRC
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed interrupt
+  - name: EPDISD
+    bit_range:
+    - 1
+    - 1
+    description: Endpoint disabled interrupt
+  - name: STUP
+    bit_range:
+    - 3
+    - 3
+    description: SETUP phase done
+  - name: OTEPDIS
+    bit_range:
+    - 4
+    - 4
+    description: OUT token received when endpoint disabled
+  - name: B2BSTUP
+    bit_range:
+    - 6
+    - 6
+    description: Back-to-back SETUP packets received
+  - name: NYET
+    bit_range:
+    - 14
+    - 14
+    description: NYET interrupt
+  side_effects: null
+- id: OTG_HS_DOEPINT3
+  address_offset: 872
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRC
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed interrupt
+  - name: EPDISD
+    bit_range:
+    - 1
+    - 1
+    description: Endpoint disabled interrupt
+  - name: STUP
+    bit_range:
+    - 3
+    - 3
+    description: SETUP phase done
+  - name: OTEPDIS
+    bit_range:
+    - 4
+    - 4
+    description: OUT token received when endpoint disabled
+  - name: B2BSTUP
+    bit_range:
+    - 6
+    - 6
+    description: Back-to-back SETUP packets received
+  - name: NYET
+    bit_range:
+    - 14
+    - 14
+    description: NYET interrupt
+  side_effects: null
+- id: OTG_HS_DOEPINT4
+  address_offset: 904
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRC
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed interrupt
+  - name: EPDISD
+    bit_range:
+    - 1
+    - 1
+    description: Endpoint disabled interrupt
+  - name: STUP
+    bit_range:
+    - 3
+    - 3
+    description: SETUP phase done
+  - name: OTEPDIS
+    bit_range:
+    - 4
+    - 4
+    description: OUT token received when endpoint disabled
+  - name: B2BSTUP
+    bit_range:
+    - 6
+    - 6
+    description: Back-to-back SETUP packets received
+  - name: NYET
+    bit_range:
+    - 14
+    - 14
+    description: NYET interrupt
+  side_effects: null
+- id: OTG_HS_DOEPINT5
+  address_offset: 936
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRC
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed interrupt
+  - name: EPDISD
+    bit_range:
+    - 1
+    - 1
+    description: Endpoint disabled interrupt
+  - name: STUP
+    bit_range:
+    - 3
+    - 3
+    description: SETUP phase done
+  - name: OTEPDIS
+    bit_range:
+    - 4
+    - 4
+    description: OUT token received when endpoint disabled
+  - name: B2BSTUP
+    bit_range:
+    - 6
+    - 6
+    description: Back-to-back SETUP packets received
+  - name: NYET
+    bit_range:
+    - 14
+    - 14
+    description: NYET interrupt
+  side_effects: null
+- id: OTG_HS_DOEPINT6
+  address_offset: 968
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRC
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed interrupt
+  - name: EPDISD
+    bit_range:
+    - 1
+    - 1
+    description: Endpoint disabled interrupt
+  - name: STUP
+    bit_range:
+    - 3
+    - 3
+    description: SETUP phase done
+  - name: OTEPDIS
+    bit_range:
+    - 4
+    - 4
+    description: OUT token received when endpoint disabled
+  - name: B2BSTUP
+    bit_range:
+    - 6
+    - 6
+    description: Back-to-back SETUP packets received
+  - name: NYET
+    bit_range:
+    - 14
+    - 14
+    description: NYET interrupt
+  side_effects: null
+- id: OTG_HS_DOEPINT7
+  address_offset: 1000
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRC
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed interrupt
+  - name: EPDISD
+    bit_range:
+    - 1
+    - 1
+    description: Endpoint disabled interrupt
+  - name: STUP
+    bit_range:
+    - 3
+    - 3
+    description: SETUP phase done
+  - name: OTEPDIS
+    bit_range:
+    - 4
+    - 4
+    description: OUT token received when endpoint disabled
+  - name: B2BSTUP
+    bit_range:
+    - 6
+    - 6
+    description: Back-to-back SETUP packets received
+  - name: NYET
+    bit_range:
+    - 14
+    - 14
+    description: NYET interrupt
+  side_effects: null
+- id: OTG_HS_DOEPTSIZ0
+  address_offset: 784
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRSIZ
+    bit_range:
+    - 6
+    - 0
+    description: Transfer size
+  - name: PKTCNT
+    bit_range:
+    - 19
+    - 19
+    description: Packet count
+  - name: STUPCNT
+    bit_range:
+    - 30
+    - 29
+    description: SETUP packet count
+  side_effects: null
+- id: OTG_HS_DOEPTSIZ1
+  address_offset: 816
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRSIZ
+    bit_range:
+    - 18
+    - 0
+    description: Transfer size
+  - name: PKTCNT
+    bit_range:
+    - 28
+    - 19
+    description: Packet count
+  - name: RXDPID_STUPCNT
+    bit_range:
+    - 30
+    - 29
+    description: Received data PID/SETUP packet count
+  side_effects: null
+- id: OTG_HS_DOEPTSIZ2
+  address_offset: 848
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRSIZ
+    bit_range:
+    - 18
+    - 0
+    description: Transfer size
+  - name: PKTCNT
+    bit_range:
+    - 28
+    - 19
+    description: Packet count
+  - name: RXDPID_STUPCNT
+    bit_range:
+    - 30
+    - 29
+    description: Received data PID/SETUP packet count
+  side_effects: null
+- id: OTG_HS_DOEPTSIZ3
+  address_offset: 880
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRSIZ
+    bit_range:
+    - 18
+    - 0
+    description: Transfer size
+  - name: PKTCNT
+    bit_range:
+    - 28
+    - 19
+    description: Packet count
+  - name: RXDPID_STUPCNT
+    bit_range:
+    - 30
+    - 29
+    description: Received data PID/SETUP packet count
+  side_effects: null
+- id: OTG_HS_DOEPTSIZ4
+  address_offset: 912
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRSIZ
+    bit_range:
+    - 18
+    - 0
+    description: Transfer size
+  - name: PKTCNT
+    bit_range:
+    - 28
+    - 19
+    description: Packet count
+  - name: RXDPID_STUPCNT
+    bit_range:
+    - 30
+    - 29
+    description: Received data PID/SETUP packet count
+  side_effects: null
+interrupts: null
+timing: null

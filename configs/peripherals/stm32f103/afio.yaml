@@ -1,0 +1,264 @@
+peripheral: AFIO
+version: 0.1.0
+registers:
+- id: EVCR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PIN
+    bit_range:
+    - 3
+    - 0
+    description: Pin selection
+  - name: PORT
+    bit_range:
+    - 6
+    - 4
+    description: Port selection
+  - name: EVOE
+    bit_range:
+    - 7
+    - 7
+    description: Event Output Enable
+  side_effects: null
+- id: MAPR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SPI1_REMAP
+    bit_range:
+    - 0
+    - 0
+    description: SPI1 remapping
+  - name: I2C1_REMAP
+    bit_range:
+    - 1
+    - 1
+    description: I2C1 remapping
+  - name: USART1_REMAP
+    bit_range:
+    - 2
+    - 2
+    description: USART1 remapping
+  - name: USART2_REMAP
+    bit_range:
+    - 3
+    - 3
+    description: USART2 remapping
+  - name: USART3_REMAP
+    bit_range:
+    - 5
+    - 4
+    description: USART3 remapping
+  - name: TIM1_REMAP
+    bit_range:
+    - 7
+    - 6
+    description: TIM1 remapping
+  - name: TIM2_REMAP
+    bit_range:
+    - 9
+    - 8
+    description: TIM2 remapping
+  - name: TIM3_REMAP
+    bit_range:
+    - 11
+    - 10
+    description: TIM3 remapping
+  - name: TIM4_REMAP
+    bit_range:
+    - 12
+    - 12
+    description: TIM4 remapping
+  - name: CAN_REMAP
+    bit_range:
+    - 14
+    - 13
+    description: CAN1 remapping
+  - name: PD01_REMAP
+    bit_range:
+    - 15
+    - 15
+    description: Port D0/Port D1 mapping on OSCIN/OSCOUT
+  - name: TIM5CH4_IREMAP
+    bit_range:
+    - 16
+    - 16
+    description: Set and cleared by software
+  - name: ADC1_ETRGINJ_REMAP
+    bit_range:
+    - 17
+    - 17
+    description: ADC 1 External trigger injected conversion remapping
+  - name: ADC1_ETRGREG_REMAP
+    bit_range:
+    - 18
+    - 18
+    description: ADC 1 external trigger regular conversion remapping
+  - name: ADC2_ETRGINJ_REMAP
+    bit_range:
+    - 19
+    - 19
+    description: ADC 2 external trigger injected conversion remapping
+  - name: ADC2_ETRGREG_REMAP
+    bit_range:
+    - 20
+    - 20
+    description: ADC 2 external trigger regular conversion remapping
+  - name: SWJ_CFG
+    bit_range:
+    - 26
+    - 24
+    description: Serial wire JTAG configuration
+  side_effects: null
+- id: EXTICR1
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EXTI0
+    bit_range:
+    - 3
+    - 0
+    description: EXTI0 configuration
+  - name: EXTI1
+    bit_range:
+    - 7
+    - 4
+    description: EXTI1 configuration
+  - name: EXTI2
+    bit_range:
+    - 11
+    - 8
+    description: EXTI2 configuration
+  - name: EXTI3
+    bit_range:
+    - 15
+    - 12
+    description: EXTI3 configuration
+  side_effects: null
+- id: EXTICR2
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EXTI4
+    bit_range:
+    - 3
+    - 0
+    description: EXTI4 configuration
+  - name: EXTI5
+    bit_range:
+    - 7
+    - 4
+    description: EXTI5 configuration
+  - name: EXTI6
+    bit_range:
+    - 11
+    - 8
+    description: EXTI6 configuration
+  - name: EXTI7
+    bit_range:
+    - 15
+    - 12
+    description: EXTI7 configuration
+  side_effects: null
+- id: EXTICR3
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EXTI8
+    bit_range:
+    - 3
+    - 0
+    description: EXTI8 configuration
+  - name: EXTI9
+    bit_range:
+    - 7
+    - 4
+    description: EXTI9 configuration
+  - name: EXTI10
+    bit_range:
+    - 11
+    - 8
+    description: EXTI10 configuration
+  - name: EXTI11
+    bit_range:
+    - 15
+    - 12
+    description: EXTI11 configuration
+  side_effects: null
+- id: EXTICR4
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EXTI12
+    bit_range:
+    - 3
+    - 0
+    description: EXTI12 configuration
+  - name: EXTI13
+    bit_range:
+    - 7
+    - 4
+    description: EXTI13 configuration
+  - name: EXTI14
+    bit_range:
+    - 11
+    - 8
+    description: EXTI14 configuration
+  - name: EXTI15
+    bit_range:
+    - 15
+    - 12
+    description: EXTI15 configuration
+  side_effects: null
+- id: MAPR2
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIM9_REMAP
+    bit_range:
+    - 5
+    - 5
+    description: TIM9 remapping
+  - name: TIM10_REMAP
+    bit_range:
+    - 6
+    - 6
+    description: TIM10 remapping
+  - name: TIM11_REMAP
+    bit_range:
+    - 7
+    - 7
+    description: TIM11 remapping
+  - name: TIM13_REMAP
+    bit_range:
+    - 8
+    - 8
+    description: TIM13 remapping
+  - name: TIM14_REMAP
+    bit_range:
+    - 9
+    - 9
+    description: TIM14 remapping
+  - name: FSMC_NADV
+    bit_range:
+    - 10
+    - 10
+    description: NADV connect/disconnect
+  side_effects: null
+interrupts: null
+timing: null

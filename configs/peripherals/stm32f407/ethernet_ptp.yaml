@@ -1,0 +1,232 @@
+peripheral: Ethernet_PTP
+version: 0.1.0
+registers:
+- id: PTPTSCR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 8192
+  fields:
+  - name: TSE
+    bit_range:
+    - 0
+    - 0
+    description: TSE
+  - name: TSFCU
+    bit_range:
+    - 1
+    - 1
+    description: TSFCU
+  - name: TSPTPPSV2E
+    bit_range:
+    - 10
+    - 10
+    description: TSPTPPSV2E
+  - name: TSSPTPOEFE
+    bit_range:
+    - 11
+    - 11
+    description: TSSPTPOEFE
+  - name: TSSIPV6FE
+    bit_range:
+    - 12
+    - 12
+    description: TSSIPV6FE
+  - name: TSSIPV4FE
+    bit_range:
+    - 13
+    - 13
+    description: TSSIPV4FE
+  - name: TSSEME
+    bit_range:
+    - 14
+    - 14
+    description: TSSEME
+  - name: TSSMRME
+    bit_range:
+    - 15
+    - 15
+    description: TSSMRME
+  - name: TSCNT
+    bit_range:
+    - 17
+    - 16
+    description: TSCNT
+  - name: TSPFFMAE
+    bit_range:
+    - 18
+    - 18
+    description: TSPFFMAE
+  - name: TSSTI
+    bit_range:
+    - 2
+    - 2
+    description: TSSTI
+  - name: TSSTU
+    bit_range:
+    - 3
+    - 3
+    description: TSSTU
+  - name: TSITE
+    bit_range:
+    - 4
+    - 4
+    description: TSITE
+  - name: TTSARU
+    bit_range:
+    - 5
+    - 5
+    description: TTSARU
+  - name: TSSARFE
+    bit_range:
+    - 8
+    - 8
+    description: TSSARFE
+  - name: TSSSR
+    bit_range:
+    - 9
+    - 9
+    description: TSSSR
+  side_effects: null
+- id: PTPSSIR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STSSI
+    bit_range:
+    - 7
+    - 0
+    description: STSSI
+  side_effects: null
+- id: PTPTSHR
+  address_offset: 8
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: STS
+    bit_range:
+    - 31
+    - 0
+    description: STS
+  side_effects: null
+- id: PTPTSLR
+  address_offset: 12
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: STSS
+    bit_range:
+    - 30
+    - 0
+    description: STSS
+  - name: STPNS
+    bit_range:
+    - 31
+    - 31
+    description: STPNS
+  side_effects: null
+- id: PTPTSHUR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TSUS
+    bit_range:
+    - 31
+    - 0
+    description: TSUS
+  side_effects: null
+- id: PTPTSLUR
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TSUSS
+    bit_range:
+    - 30
+    - 0
+    description: TSUSS
+  - name: TSUPNS
+    bit_range:
+    - 31
+    - 31
+    description: TSUPNS
+  side_effects: null
+- id: PTPTSAR
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TSA
+    bit_range:
+    - 31
+    - 0
+    description: TSA
+  side_effects: null
+- id: PTPTTHR
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TTSH
+    bit_range:
+    - 31
+    - 0
+    description: 0
+  side_effects: null
+- id: PTPTTLR
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TTSL
+    bit_range:
+    - 31
+    - 0
+    description: TTSL
+  side_effects: null
+- id: PTPTSSR
+  address_offset: 40
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: TSSO
+    bit_range:
+    - 0
+    - 0
+    description: TSSO
+  - name: TSTTR
+    bit_range:
+    - 1
+    - 1
+    description: TSTTR
+  side_effects: null
+- id: PTPPPSCR
+  address_offset: 44
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: TSSO
+    bit_range:
+    - 0
+    - 0
+    description: TSSO
+  - name: TSTTR
+    bit_range:
+    - 1
+    - 1
+    description: TSTTR
+  side_effects: null
+interrupts: null
+timing: null

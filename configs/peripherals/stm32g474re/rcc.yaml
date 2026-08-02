@@ -1,0 +1,2167 @@
+peripheral: RCC
+version: 0.1.0
+registers:
+- id: RCC_CR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 99
+  fields:
+  - name: HSION
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      HSI16 clock enable
+      Set and cleared by software.
+      Cleared by hardware to stop the HSI16 oscillator when entering Stop, Standby or Shutdown mode.
+      Set by hardware to force the HSI16 oscillator ON when STOPWUCK=1 or HSIASFS = 1 when leaving Stop modes, or in case of failure of the HSE crystal oscillator.
+      This bit is set by hardware if the HSI16 is used directly or indirectly as system clock.
+  - name: HSIKERON
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      HSI16 always enable for peripheral kernels.
+      Set and cleared by software to force HSI16 ON even in Stop modes. The HSI16 can only feed USARTs and I<sup>2</sup>Cs peripherals configured with HSI16 as kernel clock. Keeping the HSI16 ON in Stop mode allows to avoid slowing down the communication speed because of the HSI16 startup time. This bit has no effect on HSION value.
+  - name: HSIRDY
+    bit_range:
+    - 10
+    - 10
+    description: "HSI16 clock ready flag\nSet by hardware to indicate that HSI16 oscillator is stable. This bit is set only when HSI16 is enabled by software by setting HSION. \nNote: Once the HSION bit is cleared, HSIRDY goes low after 6 HSI16 clock cycles."
+  - name: HSEON
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      HSE clock enable
+      Set and cleared by software.
+      Cleared by hardware to stop the HSE oscillator when entering Stop, Standby or Shutdown mode. This bit cannot be reset if the HSE oscillator is used directly or indirectly as the system clock.
+  - name: HSERDY
+    bit_range:
+    - 17
+    - 17
+    description: "HSE clock ready flag\nSet by hardware to indicate that the HSE oscillator is stable. \nNote: Once the HSEON bit is cleared, HSERDY goes low after 6 HSE clock cycles."
+  - name: HSEBYP
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      HSE crystal oscillator bypass
+      Set and cleared by software to bypass the oscillator with an external clock. The external clock must be enabled with the HSEON bit set, to be used by the device. The HSEBYP bit can be written only if the HSE oscillator is disabled.
+  - name: CSSON
+    bit_range:
+    - 19
+    - 19
+    description: |-
+      Clock security system enable
+      Set by software to enable the clock security system. When CSSON is set, the clock detector is enabled by hardware when the HSE oscillator is ready, and disabled by hardware if a HSE clock failure is detected. This bit is set only and is cleared by reset.
+  - name: PLLON
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      Main PLL enable
+      Set and cleared by software to enable the main PLL.
+      Cleared by hardware when entering Stop, Standby or Shutdown mode. This bit cannot be reset if the PLL clock is used as the system clock.
+  - name: PLLRDY
+    bit_range:
+    - 25
+    - 25
+    description: |-
+      Main PLL clock ready flag
+      Set by hardware to indicate that the main PLL is locked.
+  side_effects: null
+- id: RCC_ICSCR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 1073741824
+  fields:
+  - name: HSICAL
+    bit_range:
+    - 23
+    - 16
+    description: |-
+      HSI16 clock calibration
+      These bits are initialized at startup with the factory-programmed HSI16 calibration trim value. When HSITRIM is written, HSICAL is updated with the sum of HSITRIM and the factory trim value.
+  - name: HSITRIM
+    bit_range:
+    - 30
+    - 24
+    description: |-
+      HSI16 clock trimming
+      These bits provide an additional user-programmable trimming value that is added to the HSICAL[7:0] bits. It can be programmed to adjust to variations in voltage and temperature that influence the frequency of the HSI16.
+      The default value is 16, which, when added to the HSICAL value, should trim the HSI16 to 16 MHz � 1 %.
+  side_effects: null
+- id: RCC_CFGR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 5
+  fields:
+  - name: SW
+    bit_range:
+    - 1
+    - 0
+    description: |-
+      System clock switch
+      Set and cleared by software to select system clock source (SYSCLK).
+      Configured by hardware to force HSI16 oscillator selection when exiting stop and standby modes or in case of failure of the HSE oscillator.
+  - name: SWS
+    bit_range:
+    - 3
+    - 2
+    description: |-
+      System clock switch status
+      Set and cleared by hardware to indicate which clock source is used as system clock.
+  - name: HPRE
+    bit_range:
+    - 7
+    - 4
+    description: |-
+      AHB prescaler
+      Set and cleared by software to control the division factor of the AHB clock.
+      Note: Depending on the device voltage range, the software has to set correctly these bits to ensure that the system frequency does not exceed the maximum allowed frequency (for more details please refer to Section 6.1.5: Dynamic voltage scaling management). After a write operation to these bits and before decreasing the voltage range, this register must be read to be sure that the new value has been taken into account.
+      0xxx: SYSCLK not divided
+  - name: PPRE1
+    bit_range:
+    - 10
+    - 8
+    description: |-
+      APB1 prescaler
+      Set and cleared by software to control the division factor of the APB1 clock (PCLK1).
+      0xx: HCLK not divided
+  - name: PPRE2
+    bit_range:
+    - 13
+    - 11
+    description: |-
+      APB2 prescaler
+      Set and cleared by software to control the division factor of the APB2 clock (PCLK2).
+      0xx: HCLK not divided
+  - name: MCOSEL
+    bit_range:
+    - 27
+    - 24
+    description: "Microcontroller clock output \nSet and cleared by software.\nOthers: Reserved\nNote: This clock output may have some truncated cycles at startup or during MCO clock source switching."
+  - name: MCOPRE
+    bit_range:
+    - 30
+    - 28
+    description: |-
+      Microcontroller clock output prescaler
+      These bits are set and cleared by software.
+      It is highly recommended to change this prescaler before MCO output is enabled.
+      Others: not allowed
+  side_effects: null
+- id: RCC_PLLCFGR
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 4096
+  fields:
+  - name: PLLSRC
+    bit_range:
+    - 1
+    - 0
+    description: |-
+      Main PLL entry clock source
+      Set and cleared by software to select PLL clock source. These bits can be written only when PLL is disabled.
+      In order to save power, when no PLL is used, the value of PLLSRC should be 00.
+  - name: PLLM
+    bit_range:
+    - 7
+    - 4
+    description: |-
+      Division factor for the main PLL input clock
+      Set and cleared by software to divide the PLL input clock before the VCO. These bits can be written only when all PLLs are disabled.
+      VCO input frequency = PLL input clock frequency / PLLM with 1 <= PLLM <= 16
+      ...
+      Note: The software has to set these bits correctly to ensure that the VCO input frequency is within the range defined in the device datasheet.
+  - name: PLLN
+    bit_range:
+    - 14
+    - 8
+    description: "Main PLL multiplication factor for VCO\nSet and cleared by software to control the multiplication factor of the VCO. These bits can be written only when the PLL is disabled. \nVCO output frequency = VCO input frequency x PLLN with 8 =< PLLN =< 127\n...\n...\nNote: The software has to set correctly these bits to assure that the VCO output frequency is within the range defined in the device datasheet."
+  - name: PLLPEN
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      Main PLL PLL “P” clock output enable
+      Set and reset by software to enable the PLL “P” clock output of the PLL.
+      In order to save power, when the PLL “P” clock output of the PLL is not used, the value of PLLPEN should be 0.
+  - name: PLLP
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      Main PLL division factor for PLL “P” clock.
+      Set and cleared by software to control the frequency of the main PLL output clock PLL “P” clock. These bits can be written only if PLL is disabled.
+      When the PLLPDIV[4:0] is set to “00000”PLL “P” output clock frequency = VCO frequency / PLLP with PLLP =7, or 17
+      Note: The software has to set these bits correctly not to exceed 170 MHz on this domain.
+  - name: PLLQEN
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      Main PLL “Q” clock output enable
+      Set and reset by software to enable the PLL “Q” clock output of the PLL.
+      In order to save power, when the PLL “Q” clock output of the PLL is not used, the value of PLLQEN should be 0.
+  - name: PLLQ
+    bit_range:
+    - 22
+    - 21
+    description: |-
+      Main PLL division factor for PLL “Q” clock.
+      Set and cleared by software to control the frequency of the main PLL output clock PLL “Q” clock. This output can be selected for USB, RNG, SAI (48 MHz clock). These bits can be written only if PLL is disabled.
+      PLL “Q” output clock frequency = VCO frequency / PLLQ with PLLQ = 2, 4, 6, or 8
+      Note: The software has to set these bits correctly not to exceed 170 MHz on this domain.
+  - name: PLLREN
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      PLL “R” clock output enable
+      Set and reset by software to enable the PLL “R” clock output of the PLL (used as system clock).
+      This bit cannot be written when PLL “R” clock output of the PLL is used as System Clock.
+      In order to save power, when the PLL “R” clock output of the PLL is not used, the value of PLLREN should be 0.
+  - name: PLLR
+    bit_range:
+    - 26
+    - 25
+    description: |-
+      Main PLL division factor for PLL “R” clock (system clock)
+      Set and cleared by software to control the frequency of the main PLL output clock PLLCLK. This output can be selected as system clock. These bits can be written only if PLL is disabled.
+      PLL “R” output clock frequency = VCO frequency / PLLR with PLLR = 2, 4, 6, or 8
+      Note: The software has to set these bits correctly not to exceed 170 MHz on this domain.
+  - name: PLLPDIV
+    bit_range:
+    - 31
+    - 27
+    description: |-
+      Main PLLP division factor
+      Set and cleared by software to control the PLL “P” frequency. PLL “P” output clock frequency = VCO frequency / PLLPDIV.
+      ....
+  side_effects: null
+- id: RCC_CIER
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LSIRDYIE
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      LSI ready interrupt enable
+      Set and cleared by software to enable/disable interrupt caused by the LSI oscillator stabilization.
+  - name: LSERDYIE
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      LSE ready interrupt enable
+      Set and cleared by software to enable/disable interrupt caused by the LSE oscillator stabilization.
+  - name: HSIRDYIE
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      HSI16 ready interrupt enable
+      Set and cleared by software to enable/disable interrupt caused by the HSI16 oscillator stabilization.
+  - name: HSERDYIE
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      HSE ready interrupt enable
+      Set and cleared by software to enable/disable interrupt caused by the HSE oscillator stabilization.
+  - name: PLLRDYIE
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      PLL ready interrupt enable
+      Set and cleared by software to enable/disable interrupt caused by PLL lock.
+  - name: LSECSSIE
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      LSE clock security system interrupt enable
+      Set and cleared by software to enable/disable interrupt caused by the clock security system on LSE.
+  - name: HSI48RDYIE
+    bit_range:
+    - 10
+    - 10
+    description: "HSI48 ready interrupt enable \nSet and cleared by software to enable/disable interrupt caused by the internal HSI48 oscillator."
+  side_effects: null
+- id: RCC_CIFR
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LSIRDYF
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      LSI ready interrupt flag
+      Set by hardware when the LSI clock becomes stable and LSIRDYDIE is set.
+      Cleared by software setting the LSIRDYC bit.
+  - name: LSERDYF
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      LSE ready interrupt flag
+      Set by hardware when the LSE clock becomes stable and LSERDYDIE is set.
+      Cleared by software setting the LSERDYC bit.
+  - name: HSIRDYF
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      HSI16 ready interrupt flag
+      Set by hardware when the HSI16 clock becomes stable and HSIRDYDIE is set in a response to setting the HSION (refer to Clock control register (RCC_CR)). When HSION is not set but the HSI16 oscillator is enabled by the peripheral through a clock request, this bit is not set and no interrupt is generated.
+      Cleared by software setting the HSIRDYC bit.
+  - name: HSERDYF
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      HSE ready interrupt flag
+      Set by hardware when the HSE clock becomes stable and HSERDYDIE is set.
+      Cleared by software setting the HSERDYC bit.
+  - name: PLLRDYF
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      PLL ready interrupt flag
+      Set by hardware when the PLL locks and PLLRDYDIE is set.
+      Cleared by software setting the PLLRDYC bit.
+  - name: CSSF
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Clock security system interrupt flag
+      Set by hardware when a failure is detected in the HSE oscillator.
+      Cleared by software setting the CSSC bit.
+  - name: LSECSSF
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      LSE Clock security system interrupt flag
+      Set by hardware when a failure is detected in the LSE oscillator.
+      Cleared by software setting the LSECSSC bit.
+  - name: HSI48RDYF
+    bit_range:
+    - 10
+    - 10
+    description: "HSI48 ready interrupt flag \nSet by hardware when the HSI48 clock becomes stable and HSI48RDYIE is set in a response to setting the HSI48ON (refer to Clock recovery RC register (RCC_CRRCR)). \nCleared by software setting the HSI48RDYC bit."
+  side_effects: null
+- id: RCC_CICR
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LSIRDYC
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      LSI ready interrupt clear
+      This bit is set by software to clear the LSIRDYF flag.
+  - name: LSERDYC
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      LSE ready interrupt clear
+      This bit is set by software to clear the LSERDYF flag.
+  - name: HSIRDYC
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      HSI16 ready interrupt clear
+      This bit is set software to clear the HSIRDYF flag.
+  - name: HSERDYC
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      HSE ready interrupt clear
+      This bit is set by software to clear the HSERDYF flag.
+  - name: PLLRDYC
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      PLL ready interrupt clear
+      This bit is set by software to clear the PLLRDYF flag.
+  - name: CSSC
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Clock security system interrupt clear
+      This bit is set by software to clear the CSSF flag.
+  - name: LSECSSC
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      LSE Clock security system interrupt clear
+      This bit is set by software to clear the LSECSSF flag.
+  - name: HSI48RDYC
+    bit_range:
+    - 10
+    - 10
+    description: "HSI48 oscillator ready interrupt clear \nThis bit is set by software to clear the HSI48RDYF flag."
+  side_effects: null
+- id: RCC_AHB1RSTR
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DMA1RST
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      DMA1 reset
+      Set and cleared by software.
+  - name: DMA2RST
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      DMA2 reset
+      Set and cleared by software.
+  - name: DMAMUX1RST
+    bit_range:
+    - 2
+    - 2
+    description: Set and cleared by software.
+  - name: CORDICRST
+    bit_range:
+    - 3
+    - 3
+    description: Set and cleared by software
+  - name: FMACRST
+    bit_range:
+    - 4
+    - 4
+    description: Set and cleared by software
+  - name: FLASHRST
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Flash memory interface reset
+      Set and cleared by software. This bit can be activated only when the Flash memory is in power down mode.
+  - name: CRCRST
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      CRC reset
+      Set and cleared by software.
+  side_effects: null
+- id: RCC_AHB2RSTR
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: GPIOARST
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      IO port A reset
+      Set and cleared by software.
+  - name: GPIOBRST
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      IO port B reset
+      Set and cleared by software.
+  - name: GPIOCRST
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      IO port C reset
+      Set and cleared by software.
+  - name: GPIODRST
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      IO port D reset
+      Set and cleared by software.
+  - name: GPIOERST
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      IO port E reset
+      Set and cleared by software.
+  - name: GPIOFRST
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      IO port F reset
+      Set and cleared by software.
+  - name: GPIOGRST
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      IO port G reset
+      Set and cleared by software.
+  - name: ADC12RST
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      ADC12 reset
+      Set and cleared by software.
+  - name: ADC345RST
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      ADC345 reset
+      Set and cleared by software.
+  - name: DAC1RST
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      DAC1 reset
+      Set and cleared by software.
+  - name: DAC2RST
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      DAC2 reset
+      Set and cleared by software.
+  - name: DAC3RST
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      DAC3 reset
+      Set and cleared by software.
+  - name: DAC4RST
+    bit_range:
+    - 19
+    - 19
+    description: |-
+      DAC4 reset
+      Set and cleared by software.
+  - name: AESRST
+    bit_range:
+    - 24
+    - 24
+    description: "AESRST reset \nSet and cleared by software."
+  - name: RNGRST
+    bit_range:
+    - 26
+    - 26
+    description: |-
+      RNG reset
+      Set and cleared by software.
+  side_effects: null
+- id: RCC_AHB3RSTR
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FMCRST
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Flexible static memory controller reset
+      Set and cleared by software.
+  - name: QSPIRST
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      QUADSPI reset
+      Set and cleared by software.
+  side_effects: null
+- id: RCC_APB1RSTR1
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIM2RST
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      TIM2 timer reset
+      Set and cleared by software.
+  - name: TIM3RST
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      TIM3 timer reset
+      Set and cleared by software.
+  - name: TIM4RST
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      TIM3 timer reset
+      Set and cleared by software.
+  - name: TIM5RST
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      TIM5 timer reset
+      Set and cleared by software.
+  - name: TIM6RST
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      TIM6 timer reset
+      Set and cleared by software.
+  - name: TIM7RST
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      TIM7 timer reset
+      Set and cleared by software.
+  - name: CRSRST
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      CRS reset
+      Set and cleared by software.
+  - name: SPI2RST
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      SPI2 reset
+      Set and cleared by software.
+  - name: SPI3RST
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      SPI3 reset
+      Set and cleared by software.
+  - name: USART2RST
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      USART2 reset
+      Set and cleared by software.
+  - name: USART3RST
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      USART3 reset
+      Set and cleared by software.
+  - name: UART4RST
+    bit_range:
+    - 19
+    - 19
+    description: |-
+      UART4 reset
+      Set and cleared by software.
+  - name: UART5RST
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      UART5 reset
+      Set and cleared by software.
+  - name: I2C1RST
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      I2C1 reset
+      Set and cleared by software.
+  - name: I2C2RST
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      I2C2 reset
+      Set and cleared by software.
+  - name: USBRST
+    bit_range:
+    - 23
+    - 23
+    description: |-
+      USB device reset
+      Set and reset by software.
+  - name: FDCANRST
+    bit_range:
+    - 25
+    - 25
+    description: |-
+      FDCAN reset
+      Set and reset by software.
+  - name: PWRRST
+    bit_range:
+    - 28
+    - 28
+    description: |-
+      Power interface reset
+      Set and cleared by software.
+  - name: I2C3RST
+    bit_range:
+    - 30
+    - 30
+    description: |-
+      I2C3 reset
+      Set and cleared by software.
+  - name: LPTIM1RST
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      Low Power Timer 1 reset
+      Set and cleared by software.
+  side_effects: null
+- id: RCC_APB1RSTR2
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LPUART1RST
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Low-power UART 1 reset
+      Set and cleared by software.
+  - name: I2C4RST
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      I2C4 reset
+         Set and cleared by software
+  - name: UCPD1RST
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      UCPD1 reset
+      Set and cleared by software.
+  side_effects: null
+- id: RCC_APB2RSTR
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SYSCFGRST
+    bit_range:
+    - 0
+    - 0
+    description: SYSCFG + COMP + OPAMP + VREFBUF reset
+  - name: TIM1RST
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      TIM1 timer reset
+      Set and cleared by software.
+  - name: SPI1RST
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      SPI1 reset
+      Set and cleared by software.
+  - name: TIM8RST
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      TIM8 timer reset
+      Set and cleared by software.
+  - name: USART1RST
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      USART1 reset
+      Set and cleared by software.
+  - name: SPI4RST
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      SPI4 reset
+      Set and cleared by software.
+  - name: TIM15RST
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      TIM15 timer reset
+      Set and cleared by software.
+  - name: TIM16RST
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      TIM16 timer reset
+      Set and cleared by software.
+  - name: TIM17RST
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      TIM17 timer reset
+      Set and cleared by software.
+  - name: TIM20RST
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      TIM20 reset
+      Set and cleared by software.
+  - name: SAI1RST
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      Serial audio interface 1 (SAI1) reset
+      Set and cleared by software.
+  - name: HRTIM1RST
+    bit_range:
+    - 26
+    - 26
+    description: |-
+      HRTIM1 reset
+      Set and cleared by software.
+  side_effects: null
+- id: RCC_AHB1ENR
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 256
+  fields:
+  - name: DMA1EN
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      DMA1 clock enable
+      Set and cleared by software.
+  - name: DMA2EN
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      DMA2 clock enable
+      Set and cleared by software.
+  - name: DMAMUX1EN
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      DMAMUX1 clock enable
+      Set and reset by software.
+  - name: CORDICEN
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      CORDIC clock enable
+      Set and reset by software.
+  - name: FMACEN
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      FMAC enable
+      Set and reset by software.
+  - name: FLASHEN
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Flash memory interface clock enable
+      Set and cleared by software. This bit can be disabled only when the Flash is in power down mode.
+  - name: CRCEN
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      CRC clock enable
+      Set and cleared by software.
+  side_effects: null
+- id: RCC_AHB2ENR
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: GPIOAEN
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      IO port A clock enable
+      Set and cleared by software.
+  - name: GPIOBEN
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      IO port B clock enable
+      Set and cleared by software.
+  - name: GPIOCEN
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      IO port C clock enable
+      Set and cleared by software.
+  - name: GPIODEN
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      IO port D clock enable
+      Set and cleared by software.
+  - name: GPIOEEN
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      IO port E clock enable
+      Set and cleared by software.
+  - name: GPIOFEN
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      IO port F clock enable
+      Set and cleared by software.
+  - name: GPIOGEN
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      IO port G clock enable
+      Set and cleared by software.
+  - name: ADC12EN
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      ADC12 clock enable
+      Set and cleared by software.
+  - name: ADC345EN
+    bit_range:
+    - 14
+    - 14
+    description: "ADC345 clock enable \n   Set and cleared by software"
+  - name: DAC1EN
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      DAC1 clock enable
+      Set and cleared by software.
+  - name: DAC2EN
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      DAC2 clock enable
+      Set and cleared by software.
+  - name: DAC3EN
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      DAC3 clock enable
+      Set and cleared by software.
+  - name: DAC4EN
+    bit_range:
+    - 19
+    - 19
+    description: |-
+      DAC4 clock enable
+      Set and cleared by software.
+  - name: AESEN
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      AES clock enable
+      Set and cleared by software.
+  - name: RNGEN
+    bit_range:
+    - 26
+    - 26
+    description: |-
+      RNG enable
+      Set and cleared by software.
+  side_effects: null
+- id: RCC_AHB3ENR
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FMCEN
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Flexible static memory controller clock enable
+      Set and cleared by software.
+  - name: QSPIEN
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      QUADSPI memory interface clock enable
+      Set and cleared by software.
+  side_effects: null
+- id: RCC_APB1ENR1
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 1024
+  fields:
+  - name: TIM2EN
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      TIM2 timer clock enable
+      Set and cleared by software.
+  - name: TIM3EN
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      TIM3 timer clock enable
+      Set and cleared by software.
+  - name: TIM4EN
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      TIM4 timer clock enable
+      Set and cleared by software.
+  - name: TIM5EN
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      TIM5 timer clock enable
+      Set and cleared by software.
+  - name: TIM6EN
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      TIM6 timer clock enable
+      Set and cleared by software.
+  - name: TIM7EN
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      TIM7 timer clock enable
+      Set and cleared by software.
+  - name: CRSEN
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      CRS Recovery System clock enable
+      Set and cleared by software.
+  - name: RTCAPBEN
+    bit_range:
+    - 10
+    - 10
+    description: "RTC APB clock enable \nSet and cleared by software"
+  - name: WWDGEN
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Window watchdog clock enable
+      Set by software to enable the window watchdog clock. Reset by hardware system reset. This bit can also be set by hardware if the WWDG_SW option bit is reset.
+  - name: SPI2EN
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      SPI2 clock enable
+      Set and cleared by software.
+  - name: SPI3EN
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      SPI3 clock enable
+      Set and cleared by software.
+  - name: USART2EN
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      USART2 clock enable
+      Set and cleared by software.
+  - name: USART3EN
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      USART3 clock enable
+      Set and cleared by software.
+  - name: UART4EN
+    bit_range:
+    - 19
+    - 19
+    description: |-
+      UART4 clock enable
+      Set and cleared by software.
+  - name: UART5EN
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      UART5 clock enable
+      Set and cleared by software.
+  - name: I2C1EN
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      I2C1 clock enable
+      Set and cleared by software.
+  - name: I2C2EN
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      I2C2 clock enable
+      Set and cleared by software.
+  - name: USBEN
+    bit_range:
+    - 23
+    - 23
+    description: |-
+      USB device clock enable
+      Set and cleared by software.
+  - name: FDCANEN
+    bit_range:
+    - 25
+    - 25
+    description: |-
+      FDCAN clock enable
+      Set and cleared by software.
+  - name: PWREN
+    bit_range:
+    - 28
+    - 28
+    description: |-
+      Power interface clock enable
+      Set and cleared by software.
+  - name: I2C3EN
+    bit_range:
+    - 30
+    - 30
+    description: |-
+      I2C3 clock enable
+      Set and cleared by software.
+  - name: LPTIM1EN
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      Low power timer 1 clock enable
+      Set and cleared by software.
+  side_effects: null
+- id: RCC_APB1ENR2
+  address_offset: 92
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LPUART1EN
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Low power UART 1 clock enable
+      Set and cleared by software.
+  - name: I2C4EN
+    bit_range:
+    - 1
+    - 1
+    description: "I2C4 clock enable \nSet and cleared by software"
+  - name: UCPD1EN
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      UCPD1 clock enable
+      Set and cleared by software.
+  side_effects: null
+- id: RCC_APB2ENR
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SYSCFGEN
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      SYSCFG + COMP + VREFBUF + OPAMP clock enable
+      Set and cleared by software.
+  - name: TIM1EN
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      TIM1 timer clock enable
+      Set and cleared by software.
+  - name: SPI1EN
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      SPI1 clock enable
+      Set and cleared by software.
+  - name: TIM8EN
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      TIM8 timer clock enable
+      Set and cleared by software.
+  - name: USART1EN
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      USART1clock enable
+      Set and cleared by software.
+  - name: SPI4EN
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      SPI4 clock enable
+      Set and cleared by software.
+  - name: TIM15EN
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      TIM15 timer clock enable
+      Set and cleared by software.
+  - name: TIM16EN
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      TIM16 timer clock enable
+      Set and cleared by software.
+  - name: TIM17EN
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      TIM17 timer clock enable
+      Set and cleared by software.
+  - name: TIM20EN
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      TIM20 timer clock enable
+      Set and cleared by software.
+  - name: SAI1EN
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      SAI1 clock enable
+      Set and cleared by software.
+  - name: HRTIM1EN
+    bit_range:
+    - 26
+    - 26
+    description: |-
+      HRTIM1 clock enable
+      Set and cleared by software.
+  side_effects: null
+- id: RCC_AHB1SMENR
+  address_offset: 104
+  size: 32
+  access: READ_WRITE
+  reset_value: 4879
+  fields:
+  - name: DMA1SMEN
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      DMA1 clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: DMA2SMEN
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      DMA2 clocks enable during Sleep and Stop modes
+      Set and cleared by software during Sleep mode.
+  - name: DMAMUX1SMEN
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      DMAMUX1 clock enable during Sleep and Stop modes.
+      Set and cleared by software.
+  - name: CORDICSMEN
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      CORDICSM clock enable.
+      Set and cleared by software.
+  - name: FMACSMEN
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      FMACSM clock enable.
+      Set and cleared by software.
+  - name: FLASHSMEN
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Flash memory interface clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: SRAM1SMEN
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      SRAM1 interface clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: CRCSMEN
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      CRC clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  side_effects: null
+- id: RCC_AHB2SMENR
+  address_offset: 108
+  size: 32
+  access: READ_WRITE
+  reset_value: 84895359
+  fields:
+  - name: GPIOASMEN
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      IO port A clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: GPIOBSMEN
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      IO port B clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: GPIOCSMEN
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      IO port C clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: GPIODSMEN
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      IO port D clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: GPIOESMEN
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      IO port E clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: GPIOFSMEN
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      IO port F clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: GPIOGSMEN
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      IO port G clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: CCMSRAMSMEN
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      CCM SRAM interface clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: SRAM2SMEN
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      SRAM2 interface clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: ADC12SMEN
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      ADC12 clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: ADC345SMEN
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      ADC345 clock enable
+      Set and cleared by software.
+  - name: DAC1SMEN
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      DAC1 clock enable
+      Set and cleared by software.
+  - name: DAC2SMEN
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      DAC2 clock enable
+      Set and cleared by software.
+  - name: DAC3SMEN
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      DAC3 clock enable
+      Set and cleared by software.
+  - name: DAC4SMEN
+    bit_range:
+    - 19
+    - 19
+    description: |-
+      DAC4 clock enable
+      Set and cleared by software.
+  - name: AESSMEN
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      AESM clocks enable
+      Set and cleared by software.
+  - name: RNGEN
+    bit_range:
+    - 26
+    - 26
+    description: |-
+      RNG enable
+      Set and cleared by software.
+  side_effects: null
+- id: RCC_AHB3SMENR
+  address_offset: 112
+  size: 32
+  access: READ_WRITE
+  reset_value: 257
+  fields:
+  - name: FMCSMEN
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Flexible static memory controller clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: QSPISMEN
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      QUADSPI memory interface clock enable during Sleep and Stop modes
+      Set and cleared by software.
+  side_effects: null
+- id: RCC_APB1SMENR1
+  address_offset: 120
+  size: 32
+  access: READ_WRITE
+  reset_value: 3539914047
+  fields:
+  - name: TIM2SMEN
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      TIM2 timer clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: TIM3SMEN
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      TIM3 timer clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: TIM4SMEN
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      TIM4 timer clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: TIM5SMEN
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      TIM5 timer clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: TIM6SMEN
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      TIM6 timer clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: TIM7SMEN
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      TIM7 timer clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: CRSSMEN
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      CRS timer clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: RTCAPBSMEN
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      RTC APB clock enable during Sleep and Stop modes
+      Set and cleared by software
+  - name: WWDGSMEN
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Window watchdog clocks enable during Sleep and Stop modes
+      Set and cleared by software. This bit is forced to ‘1’ by hardware when the hardware WWDG option is activated.
+  - name: SPI2SMEN
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      SPI2 clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: SPI3SMEN
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      SPI3 clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: USART2SMEN
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      USART2 clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: USART3SMEN
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      USART3 clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: UART4SMEN
+    bit_range:
+    - 19
+    - 19
+    description: |-
+      UART4 clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: UART5SMEN
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      UART5 clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: I2C1SMEN
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      I2C1 clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: I2C2SMEN
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      I2C2 clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: USBSMEN
+    bit_range:
+    - 23
+    - 23
+    description: |-
+      USB device clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: FDCANSMEN
+    bit_range:
+    - 25
+    - 25
+    description: |-
+      FDCAN clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: PWRSMEN
+    bit_range:
+    - 28
+    - 28
+    description: |-
+      Power interface clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: I2C3SMEN
+    bit_range:
+    - 30
+    - 30
+    description: |-
+      I2C3 clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: LPTIM1SMEN
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      Low power timer 1 clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  side_effects: null
+- id: RCC_APB1SMENR2
+  address_offset: 124
+  size: 32
+  access: READ_WRITE
+  reset_value: 259
+  fields:
+  - name: LPUART1SMEN
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Low power UART 1 clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: I2C4SMEN
+    bit_range:
+    - 1
+    - 1
+    description: "I2C4 clocks enable during Sleep and Stop modes \n   Set and cleared by software"
+  - name: UCPD1SMEN
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      UCPD1 clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  side_effects: null
+- id: RCC_APB2SMENR
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 70776833
+  fields:
+  - name: SYSCFGSMEN
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      SYSCFG + COMP + VREFBUF + OPAMP clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: TIM1SMEN
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      TIM1 timer clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: SPI1SMEN
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      SPI1 clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: TIM8SMEN
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      TIM8 timer clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: USART1SMEN
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      USART1clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: SPI4SMEN
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      SPI4 timer clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: TIM15SMEN
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      TIM15 timer clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: TIM16SMEN
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      TIM16 timer clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: TIM17SMEN
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      TIM17 timer clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: TIM20SMEN
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      TIM20 timer clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: SAI1SMEN
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      SAI1 clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  - name: HRTIM1SMEN
+    bit_range:
+    - 26
+    - 26
+    description: |-
+      HRTIM1 timer clocks enable during Sleep and Stop modes
+      Set and cleared by software.
+  side_effects: null
+- id: RCC_CCIPR
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: USART1SEL
+    bit_range:
+    - 1
+    - 0
+    description: |-
+      USART1 clock source selection
+      This bit is set and cleared by software to select the USART1 clock source.
+  - name: USART2SEL
+    bit_range:
+    - 3
+    - 2
+    description: |-
+      USART2 clock source selection
+      This bit is set and cleared by software to select the USART2 clock source.
+  - name: USART3SEL
+    bit_range:
+    - 5
+    - 4
+    description: |-
+      USART3 clock source selection
+      This bit is set and cleared by software to select the USART3 clock source.
+  - name: UART4SEL
+    bit_range:
+    - 7
+    - 6
+    description: |-
+      UART4 clock source selection
+      This bit is set and cleared by software to select the UART4 clock source.
+  - name: UART5SEL
+    bit_range:
+    - 9
+    - 8
+    description: |-
+      UART5 clock source selection
+      These bits are set and cleared by software to select the UART5 clock source.
+  - name: LPUART1SEL
+    bit_range:
+    - 11
+    - 10
+    description: |-
+      LPUART1 clock source selection
+      These bits are set and cleared by software to select the LPUART1 clock source.
+  - name: I2C1SEL
+    bit_range:
+    - 13
+    - 12
+    description: |-
+      I2C1 clock source selection
+      These bits are set and cleared by software to select the I2C1 clock source.
+  - name: I2C2SEL
+    bit_range:
+    - 15
+    - 14
+    description: |-
+      I2C2 clock source selection
+      These bits are set and cleared by software to select the I2C2 clock source.
+  - name: I2C3SEL
+    bit_range:
+    - 17
+    - 16
+    description: |-
+      I2C3 clock source selection
+      These bits are set and cleared by software to select the I2C3 clock source.
+  - name: LPTIM1SEL
+    bit_range:
+    - 19
+    - 18
+    description: |-
+      Low power timer 1 clock source selection
+      These bits are set and cleared by software to select the LPTIM1 clock source.
+  - name: SAI1SEL
+    bit_range:
+    - 21
+    - 20
+    description: |-
+      clock source selection
+      These bits are set and cleared by software to select the SAI clock source.
+  - name: I2S23SEL
+    bit_range:
+    - 23
+    - 22
+    description: |-
+      clock source selection
+      These bits are set and cleared by software to select the I2S23 clock source.
+  - name: FDCANSEL
+    bit_range:
+    - 25
+    - 24
+    description: None
+  - name: CLK48SEL
+    bit_range:
+    - 27
+    - 26
+    description: |-
+      48 MHz clock source selection
+      These bits are set and cleared by software to select the 48 MHz clock source used by USB device FS and RNG.
+  - name: ADC12SEL
+    bit_range:
+    - 29
+    - 28
+    description: |-
+      ADC1/2 clock source selection
+      These bits are set and cleared by software to select the clock source used by the ADC interface.
+  - name: ADC345SEL
+    bit_range:
+    - 31
+    - 30
+    description: |-
+      ADC3/4/5 clock source selection
+      These bits are set and cleared by software to select the clock source used by the ADC345 interface.
+  side_effects: null
+- id: RCC_BDCR
+  address_offset: 144
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LSEON
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      LSE oscillator enable
+      Set and cleared by software.
+  - name: LSERDY
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      LSE oscillator ready
+      Set and cleared by hardware to indicate when the external 32 kHz oscillator is stable. After the LSEON bit is cleared, LSERDY goes low after 6 external low-speed oscillator clock cycles.
+  - name: LSEBYP
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      LSE oscillator bypass
+      Set and cleared by software to bypass oscillator in debug mode. This bit can be written only when the external 32 kHz oscillator is disabled (LSEON=0 and LSERDY=0).
+  - name: LSEDRV
+    bit_range:
+    - 4
+    - 3
+    description: "LSE oscillator drive capability\nSet by software to modulate the LSE oscillator’s drive capability. \nThe oscillator is in Xtal mode when it is not in bypass mode."
+  - name: LSECSSON
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      CSS on LSE enable
+      Set by software to enable the Clock Security System on LSE (32 kHz oscillator).
+      LSECSSON must be enabled after the LSE oscillator is enabled (LSEON bit enabled) and ready (LSERDY flag set by hardware), and after the RTCSEL bit is selected.
+      Once enabled this bit cannot be disabled, except after a LSE failure detection (LSECSSD
+      =1). In that case the software MUST disable the LSECSSON bit.
+  - name: LSECSSD
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      CSS on LSE failure Detection
+      Set by hardware to indicate when a failure has been detected by the Clock Security System
+      on the external 32 kHz oscillator (LSE).
+  - name: RTCSEL
+    bit_range:
+    - 9
+    - 8
+    description: |-
+      RTC clock source selection
+      Set by software to select the clock source for the RTC. Once the RTC clock source has been selected, it cannot be changed anymore unless the RTC domain is reset, or unless a failure is detected on LSE (LSECSSD is set). The BDRST bit can be used to reset them.
+  - name: RTCEN
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      RTC clock enable
+      Set and cleared by software.
+  - name: BDRST
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      RTC domain software reset
+      Set and cleared by software.
+  - name: LSCOEN
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      Low speed clock output enable
+      Set and cleared by software.
+  - name: LSCOSEL
+    bit_range:
+    - 25
+    - 25
+    description: |-
+      Low speed clock output selection
+      Set and cleared by software.
+  side_effects: null
+- id: RCC_CSR
+  address_offset: 148
+  size: 32
+  access: READ_WRITE
+  reset_value: 201326592
+  fields:
+  - name: LSION
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      LSI oscillator enable
+      Set and cleared by software.
+  - name: LSIRDY
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      LSI oscillator ready
+      Set and cleared by hardware to indicate when the LSI oscillator is stable. After the LSION bit is cleared, LSIRDY goes low after 3 LSI oscillator clock cycles. This bit can be set even if LSION = 0 if the LSI is requested by the Clock Security System on LSE, by the Independent Watchdog or by the RTC.
+  - name: RMVF
+    bit_range:
+    - 23
+    - 23
+    description: |-
+      Remove reset flag
+      Set by software to clear the reset flags.
+  - name: OBLRSTF
+    bit_range:
+    - 25
+    - 25
+    description: |-
+      Option byte loader reset flag
+      Set by hardware when a reset from the Option Byte loading occurs.
+      Cleared by writing to the RMVF bit.
+  - name: PINRSTF
+    bit_range:
+    - 26
+    - 26
+    description: |-
+      Pin reset flag
+      Set by hardware when a reset from the NRST pin occurs.
+      Cleared by writing to the RMVF bit.
+  - name: BORRSTF
+    bit_range:
+    - 27
+    - 27
+    description: |-
+      BOR flag
+      Set by hardware when a BOR occurs.
+      Cleared by writing to the RMVF bit.
+  - name: SFTRSTF
+    bit_range:
+    - 28
+    - 28
+    description: |-
+      Software reset flag
+      Set by hardware when a software reset occurs.
+      Cleared by writing to the RMVF bit.
+  - name: IWDGRSTF
+    bit_range:
+    - 29
+    - 29
+    description: |-
+      Independent window watchdog reset flag
+      Set by hardware when an independent watchdog reset domain occurs.
+      Cleared by writing to the RMVF bit.
+  - name: WWDGRSTF
+    bit_range:
+    - 30
+    - 30
+    description: |-
+      Window watchdog reset flag
+      Set by hardware when a window watchdog reset occurs.
+      Cleared by writing to the RMVF bit.
+  - name: LPWRRSTF
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      Low-power reset flag
+      Set by hardware when a reset occurs due to illegal Stop, Standby or Shutdown mode entry.
+      Cleared by writing to the RMVF bit.
+  side_effects: null
+- id: RCC_CRRCR
+  address_offset: 152
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HSI48ON
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      HSI48 clock enable
+      Set and cleared by software.
+      Cleared by hardware to stop the HSI48 when entering in Stop, Standby or Shutdown modes.
+  - name: HSI48RDY
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      HSI48 clock ready flag
+      Set by hardware to indicate that HSI48 oscillator is stable. This bit is set only when HSI48 is enabled by software by setting HSI48ON.
+  - name: HSI48CAL
+    bit_range:
+    - 15
+    - 7
+    description: |-
+      HSI48 clock calibration
+      These bits are initialized at startup with the factory-programmed HSI48 calibration trim value.
+      They are ready only.
+  side_effects: null
+- id: RCC_CCIPR2
+  address_offset: 156
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: I2C4SEL
+    bit_range:
+    - 1
+    - 0
+    description: |-
+      I2C4 clock source selection
+      These bits are set and cleared by software to select the I2C4 clock source.
+  - name: QSPISEL
+    bit_range:
+    - 21
+    - 20
+    description: |-
+      QUADSPI clock source selection
+      Set and reset by software.
+  side_effects: null
+interrupts:
+  RCC: 5
+timing: null

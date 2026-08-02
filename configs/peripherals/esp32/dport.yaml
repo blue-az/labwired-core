@@ -1,0 +1,5146 @@
+peripheral: DPORT
+version: 0.1.0
+registers:
+- id: PRO_BOOT_REMAP_CTRL
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRO_BOOT_REMAP
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+- id: APP_BOOT_REMAP_CTRL
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APP_BOOT_REMAP
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+- id: ACCESS_CHECK
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRO
+    bit_range:
+    - 0
+    - 0
+  - name: APP
+    bit_range:
+    - 8
+    - 8
+  side_effects: null
+- id: PRO_DPORT_APB_MASK0
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRODPORT_APB_MASK0
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: PRO_DPORT_APB_MASK1
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRODPORT_APB_MASK1
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: APP_DPORT_APB_MASK0
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APPDPORT_APB_MASK0
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: APP_DPORT_APB_MASK1
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APPDPORT_APB_MASK1
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: PERI_CLK_EN
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PERI_CLK_EN
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: PERI_RST_EN
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PERI_RST_EN
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: WIFI_BB_CFG
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WIFI_BB_CFG
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: WIFI_BB_CFG_2
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WIFI_BB_CFG_2
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: APPCPU_CTRL_A
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: APPCPU_RESETTING
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+- id: APPCPU_CTRL_B
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APPCPU_CLKGATE_EN
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+- id: APPCPU_CTRL_C
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APPCPU_RUNSTALL
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+- id: APPCPU_CTRL_D
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APPCPU_BOOT_ADDR
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: CPU_PER_CONF
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CPUPERIOD_SEL
+    bit_range:
+    - 1
+    - 0
+  - name: LOWSPEED_CLK_SEL
+    bit_range:
+    - 2
+    - 2
+  - name: FAST_CLK_RTC_SEL
+    bit_range:
+    - 3
+    - 3
+  side_effects: null
+- id: PRO_CACHE_CTRL
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_CACHE_MODE
+    bit_range:
+    - 2
+    - 2
+  - name: PRO_CACHE_ENABLE
+    bit_range:
+    - 3
+    - 3
+  - name: PRO_CACHE_FLUSH_ENA
+    bit_range:
+    - 4
+    - 4
+  - name: PRO_CACHE_FLUSH_DONE
+    bit_range:
+    - 5
+    - 5
+  - name: PRO_CACHE_LOCK_0_EN
+    bit_range:
+    - 6
+    - 6
+  - name: PRO_CACHE_LOCK_1_EN
+    bit_range:
+    - 7
+    - 7
+  - name: PRO_CACHE_LOCK_2_EN
+    bit_range:
+    - 8
+    - 8
+  - name: PRO_CACHE_LOCK_3_EN
+    bit_range:
+    - 9
+    - 9
+  - name: PRO_SINGLE_IRAM_ENA
+    bit_range:
+    - 10
+    - 10
+  - name: PRO_DRAM_SPLIT
+    bit_range:
+    - 11
+    - 11
+  - name: PRO_AHB_SPI_REQ
+    bit_range:
+    - 12
+    - 12
+  - name: PRO_SLAVE_REQ
+    bit_range:
+    - 13
+    - 13
+  - name: AHB_SPI_REQ
+    bit_range:
+    - 14
+    - 14
+  - name: SLAVE_REQ
+    bit_range:
+    - 15
+    - 15
+  - name: PRO_DRAM_HL
+    bit_range:
+    - 16
+    - 16
+  side_effects: null
+- id: PRO_CACHE_CTRL1
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 2303
+  fields:
+  - name: PRO_CACHE_MASK_IRAM0
+    bit_range:
+    - 0
+    - 0
+  - name: PRO_CACHE_MASK_IRAM1
+    bit_range:
+    - 1
+    - 1
+  - name: PRO_CACHE_MASK_IROM0
+    bit_range:
+    - 2
+    - 2
+  - name: PRO_CACHE_MASK_DRAM1
+    bit_range:
+    - 3
+    - 3
+  - name: PRO_CACHE_MASK_DROM0
+    bit_range:
+    - 4
+    - 4
+  - name: PRO_CACHE_MASK_OPSDRAM
+    bit_range:
+    - 5
+    - 5
+  - name: PRO_CMMU_SRAM_PAGE_MODE
+    bit_range:
+    - 8
+    - 6
+  - name: PRO_CMMU_FLASH_PAGE_MODE
+    bit_range:
+    - 10
+    - 9
+  - name: PRO_CMMU_FORCE_ON
+    bit_range:
+    - 11
+    - 11
+  - name: PRO_CMMU_PD
+    bit_range:
+    - 12
+    - 12
+  - name: PRO_CACHE_MMU_IA_CLR
+    bit_range:
+    - 13
+    - 13
+  side_effects: null
+- id: PRO_CACHE_LOCK_0_ADDR
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRE
+    bit_range:
+    - 13
+    - 0
+  - name: MIN
+    bit_range:
+    - 17
+    - 14
+  - name: MAX
+    bit_range:
+    - 21
+    - 18
+  side_effects: null
+- id: PRO_CACHE_LOCK_1_ADDR
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRE
+    bit_range:
+    - 13
+    - 0
+  - name: MIN
+    bit_range:
+    - 17
+    - 14
+  - name: MAX
+    bit_range:
+    - 21
+    - 18
+  side_effects: null
+- id: PRO_CACHE_LOCK_2_ADDR
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRE
+    bit_range:
+    - 13
+    - 0
+  - name: MIN
+    bit_range:
+    - 17
+    - 14
+  - name: MAX
+    bit_range:
+    - 21
+    - 18
+  side_effects: null
+- id: PRO_CACHE_LOCK_3_ADDR
+  address_offset: 84
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRE
+    bit_range:
+    - 13
+    - 0
+  - name: MIN
+    bit_range:
+    - 17
+    - 14
+  - name: MAX
+    bit_range:
+    - 21
+    - 18
+  side_effects: null
+- id: APP_CACHE_CTRL
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_CACHE_MODE
+    bit_range:
+    - 2
+    - 2
+  - name: APP_CACHE_ENABLE
+    bit_range:
+    - 3
+    - 3
+  - name: APP_CACHE_FLUSH_ENA
+    bit_range:
+    - 4
+    - 4
+  - name: APP_CACHE_FLUSH_DONE
+    bit_range:
+    - 5
+    - 5
+  - name: APP_CACHE_LOCK_0_EN
+    bit_range:
+    - 6
+    - 6
+  - name: APP_CACHE_LOCK_1_EN
+    bit_range:
+    - 7
+    - 7
+  - name: APP_CACHE_LOCK_2_EN
+    bit_range:
+    - 8
+    - 8
+  - name: APP_CACHE_LOCK_3_EN
+    bit_range:
+    - 9
+    - 9
+  - name: APP_SINGLE_IRAM_ENA
+    bit_range:
+    - 10
+    - 10
+  - name: APP_DRAM_SPLIT
+    bit_range:
+    - 11
+    - 11
+  - name: APP_AHB_SPI_REQ
+    bit_range:
+    - 12
+    - 12
+  - name: APP_SLAVE_REQ
+    bit_range:
+    - 13
+    - 13
+  - name: APP_DRAM_HL
+    bit_range:
+    - 14
+    - 14
+  side_effects: null
+- id: APP_CACHE_CTRL1
+  address_offset: 92
+  size: 32
+  access: READ_WRITE
+  reset_value: 2303
+  fields:
+  - name: APP_CACHE_MASK_IRAM0
+    bit_range:
+    - 0
+    - 0
+  - name: APP_CACHE_MASK_IRAM1
+    bit_range:
+    - 1
+    - 1
+  - name: APP_CACHE_MASK_IROM0
+    bit_range:
+    - 2
+    - 2
+  - name: APP_CACHE_MASK_DRAM1
+    bit_range:
+    - 3
+    - 3
+  - name: APP_CACHE_MASK_DROM0
+    bit_range:
+    - 4
+    - 4
+  - name: APP_CACHE_MASK_OPSDRAM
+    bit_range:
+    - 5
+    - 5
+  - name: APP_CMMU_SRAM_PAGE_MODE
+    bit_range:
+    - 8
+    - 6
+  - name: APP_CMMU_FLASH_PAGE_MODE
+    bit_range:
+    - 10
+    - 9
+  - name: APP_CMMU_FORCE_ON
+    bit_range:
+    - 11
+    - 11
+  - name: APP_CMMU_PD
+    bit_range:
+    - 12
+    - 12
+  - name: APP_CACHE_MMU_IA_CLR
+    bit_range:
+    - 13
+    - 13
+  side_effects: null
+- id: APP_CACHE_LOCK_0_ADDR
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRE
+    bit_range:
+    - 13
+    - 0
+  - name: MIN
+    bit_range:
+    - 17
+    - 14
+  - name: MAX
+    bit_range:
+    - 21
+    - 18
+  side_effects: null
+- id: APP_CACHE_LOCK_1_ADDR
+  address_offset: 100
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRE
+    bit_range:
+    - 13
+    - 0
+  - name: MIN
+    bit_range:
+    - 17
+    - 14
+  - name: MAX
+    bit_range:
+    - 21
+    - 18
+  side_effects: null
+- id: APP_CACHE_LOCK_2_ADDR
+  address_offset: 104
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRE
+    bit_range:
+    - 13
+    - 0
+  - name: MIN
+    bit_range:
+    - 17
+    - 14
+  - name: MAX
+    bit_range:
+    - 21
+    - 18
+  side_effects: null
+- id: APP_CACHE_LOCK_3_ADDR
+  address_offset: 108
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRE
+    bit_range:
+    - 13
+    - 0
+  - name: MIN
+    bit_range:
+    - 17
+    - 14
+  - name: MAX
+    bit_range:
+    - 21
+    - 18
+  side_effects: null
+- id: TRACEMEM_MUX_MODE
+  address_offset: 112
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TRACEMEM_MUX_MODE
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: PRO_TRACEMEM_ENA
+  address_offset: 116
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRO_TRACEMEM_ENA
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+- id: APP_TRACEMEM_ENA
+  address_offset: 120
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APP_TRACEMEM_ENA
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+- id: CACHE_MUX_MODE
+  address_offset: 124
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CACHE_MUX_MODE
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: IMMU_PAGE_MODE
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: INTERNAL_SRAM_IMMU_ENA
+    bit_range:
+    - 0
+    - 0
+  - name: IMMU_PAGE_MODE
+    bit_range:
+    - 2
+    - 1
+  side_effects: null
+- id: DMMU_PAGE_MODE
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: INTERNAL_SRAM_DMMU_ENA
+    bit_range:
+    - 0
+    - 0
+  - name: DMMU_PAGE_MODE
+    bit_range:
+    - 2
+    - 1
+  side_effects: null
+- id: ROM_MPU_ENA
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SHARE_ROM_MPU_ENA
+    bit_range:
+    - 0
+    - 0
+  - name: PRO_ROM_MPU_ENA
+    bit_range:
+    - 1
+    - 1
+  - name: APP_ROM_MPU_ENA
+    bit_range:
+    - 2
+    - 2
+  side_effects: null
+- id: MEM_PD_MASK
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: LSLP_MEM_PD_MASK
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+- id: ROM_PD_CTRL
+  address_offset: 144
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRO_ROM_PD
+    bit_range:
+    - 0
+    - 0
+  - name: APP_ROM_PD
+    bit_range:
+    - 1
+    - 1
+  - name: SHARE_ROM_PD
+    bit_range:
+    - 7
+    - 2
+  side_effects: null
+- id: ROM_FO_CTRL
+  address_offset: 148
+  size: 32
+  access: READ_WRITE
+  reset_value: 3
+  fields:
+  - name: PRO_ROM_FO
+    bit_range:
+    - 0
+    - 0
+  - name: APP_ROM_FO
+    bit_range:
+    - 1
+    - 1
+  - name: SHARE_ROM_FO
+    bit_range:
+    - 7
+    - 2
+  side_effects: null
+- id: SRAM_PD_CTRL_0
+  address_offset: 152
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SRAM_PD_0
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: SRAM_PD_CTRL_1
+  address_offset: 156
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SRAM_PD_1
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+- id: SRAM_FO_CTRL_0
+  address_offset: 160
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: SRAM_FO_0
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: SRAM_FO_CTRL_1
+  address_offset: 164
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: SRAM_FO_1
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+- id: IRAM_DRAM_AHB_SEL
+  address_offset: 168
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MASK_PRO_IRAM
+    bit_range:
+    - 0
+    - 0
+  - name: MASK_APP_IRAM
+    bit_range:
+    - 1
+    - 1
+  - name: MASK_PRO_DRAM
+    bit_range:
+    - 2
+    - 2
+  - name: MASK_APP_DRAM
+    bit_range:
+    - 3
+    - 3
+  - name: MASK_AHB
+    bit_range:
+    - 4
+    - 4
+  - name: MAC_DUMP_MODE
+    bit_range:
+    - 6
+    - 5
+  side_effects: null
+- id: TAG_FO_CTRL
+  address_offset: 172
+  size: 32
+  access: READ_WRITE
+  reset_value: 257
+  fields:
+  - name: PRO_CACHE_TAG_FORCE_ON
+    bit_range:
+    - 0
+    - 0
+  - name: PRO_CACHE_TAG_PD
+    bit_range:
+    - 1
+    - 1
+  - name: APP_CACHE_TAG_FORCE_ON
+    bit_range:
+    - 8
+    - 8
+  - name: APP_CACHE_TAG_PD
+    bit_range:
+    - 9
+    - 9
+  side_effects: null
+- id: AHB_LITE_MASK
+  address_offset: 176
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRO
+    bit_range:
+    - 0
+    - 0
+  - name: APP
+    bit_range:
+    - 4
+    - 4
+  - name: SDIO
+    bit_range:
+    - 8
+    - 8
+  - name: PRODPORT
+    bit_range:
+    - 9
+    - 9
+  - name: APPDPORT
+    bit_range:
+    - 10
+    - 10
+  - name: AHB_LITE_SDHOST_PID
+    bit_range:
+    - 13
+    - 11
+  side_effects: null
+- id: AHB_MPU_TABLE_0
+  address_offset: 180
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: AHB_ACCESS_GRANT_0
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: AHB_MPU_TABLE_1
+  address_offset: 184
+  size: 32
+  access: READ_WRITE
+  reset_value: 511
+  fields:
+  - name: AHB_ACCESS_GRANT_1
+    bit_range:
+    - 8
+    - 0
+  side_effects: null
+- id: HOST_INF_SEL
+  address_offset: 188
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PERI_IO_SWAP
+    bit_range:
+    - 7
+    - 0
+  - name: LINK_DEVICE_SEL
+    bit_range:
+    - 15
+    - 8
+  side_effects: null
+- id: PERIP_CLK_EN
+  address_offset: 192
+  size: 32
+  access: READ_WRITE
+  reset_value: 4190232687
+  fields:
+  - name: TIMERS_CLK_EN
+    bit_range:
+    - 0
+    - 0
+  - name: SPI01_CLK_EN
+    bit_range:
+    - 1
+    - 1
+  - name: UART_CLK_EN
+    bit_range:
+    - 2
+    - 2
+  - name: WDG_CLK_EN
+    bit_range:
+    - 3
+    - 3
+  - name: I2S0_CLK_EN
+    bit_range:
+    - 4
+    - 4
+  - name: UART1_CLK_EN
+    bit_range:
+    - 5
+    - 5
+  - name: SPI2_CLK_EN
+    bit_range:
+    - 6
+    - 6
+  - name: I2C0_EXT0_CLK_EN
+    bit_range:
+    - 7
+    - 7
+  - name: UHCI0_CLK_EN
+    bit_range:
+    - 8
+    - 8
+  - name: RMT_CLK_EN
+    bit_range:
+    - 9
+    - 9
+  - name: PCNT_CLK_EN
+    bit_range:
+    - 10
+    - 10
+  - name: LEDC_CLK_EN
+    bit_range:
+    - 11
+    - 11
+  - name: UHCI1_CLK_EN
+    bit_range:
+    - 12
+    - 12
+  - name: TIMERGROUP_CLK_EN
+    bit_range:
+    - 13
+    - 13
+  - name: EFUSE_CLK_EN
+    bit_range:
+    - 14
+    - 14
+  - name: TIMERGROUP1_CLK_EN
+    bit_range:
+    - 15
+    - 15
+  - name: SPI3_CLK_EN
+    bit_range:
+    - 16
+    - 16
+  - name: PWM0_CLK_EN
+    bit_range:
+    - 17
+    - 17
+  - name: I2C_EXT1_CLK_EN
+    bit_range:
+    - 18
+    - 18
+  - name: TWAI_CLK_EN
+    bit_range:
+    - 19
+    - 19
+  - name: PWM1_CLK_EN
+    bit_range:
+    - 20
+    - 20
+  - name: I2S1_CLK_EN
+    bit_range:
+    - 21
+    - 21
+  - name: SPI_DMA_CLK_EN
+    bit_range:
+    - 22
+    - 22
+  - name: UART2_CLK_EN
+    bit_range:
+    - 23
+    - 23
+  - name: UART_MEM_CLK_EN
+    bit_range:
+    - 24
+    - 24
+  - name: PWM2_CLK_EN
+    bit_range:
+    - 25
+    - 25
+  - name: PWM3_CLK_EN
+    bit_range:
+    - 26
+    - 26
+  side_effects: null
+- id: PERIP_RST_EN
+  address_offset: 196
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIMERS_RST
+    bit_range:
+    - 0
+    - 0
+  - name: SPI01_RST
+    bit_range:
+    - 1
+    - 1
+  - name: UART_RST
+    bit_range:
+    - 2
+    - 2
+  - name: WDG_RST
+    bit_range:
+    - 3
+    - 3
+  - name: I2S0_RST
+    bit_range:
+    - 4
+    - 4
+  - name: UART1_RST
+    bit_range:
+    - 5
+    - 5
+  - name: SPI2_RST
+    bit_range:
+    - 6
+    - 6
+  - name: I2C0_EXT0_RST
+    bit_range:
+    - 7
+    - 7
+  - name: UHCI0_RST
+    bit_range:
+    - 8
+    - 8
+  - name: RMT_RST
+    bit_range:
+    - 9
+    - 9
+  - name: PCNT_RST
+    bit_range:
+    - 10
+    - 10
+  - name: LEDC_RST
+    bit_range:
+    - 11
+    - 11
+  - name: UHCI1_RST
+    bit_range:
+    - 12
+    - 12
+  - name: TIMERGROUP_RST
+    bit_range:
+    - 13
+    - 13
+  - name: EFUSE_RST
+    bit_range:
+    - 14
+    - 14
+  - name: TIMERGROUP1_RST
+    bit_range:
+    - 15
+    - 15
+  - name: SPI3_RST
+    bit_range:
+    - 16
+    - 16
+  - name: PWM0_RST
+    bit_range:
+    - 17
+    - 17
+  - name: I2C_EXT1_RST
+    bit_range:
+    - 18
+    - 18
+  - name: TWAI_RST
+    bit_range:
+    - 19
+    - 19
+  - name: PWM1_RST
+    bit_range:
+    - 20
+    - 20
+  - name: I2S1_RST
+    bit_range:
+    - 21
+    - 21
+  - name: SPI_DMA_RST
+    bit_range:
+    - 22
+    - 22
+  - name: UART2_RST
+    bit_range:
+    - 23
+    - 23
+  - name: UART_MEM_RST
+    bit_range:
+    - 24
+    - 24
+  - name: PWM2_RST
+    bit_range:
+    - 25
+    - 25
+  - name: PWM3_RST
+    bit_range:
+    - 26
+    - 26
+  side_effects: null
+- id: SLAVE_SPI_CONFIG
+  address_offset: 200
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SLAVE_SPI_MASK_PRO
+    bit_range:
+    - 0
+    - 0
+  - name: SLAVE_SPI_MASK_APP
+    bit_range:
+    - 4
+    - 4
+  - name: SPI_ENCRYPT_ENABLE
+    bit_range:
+    - 8
+    - 8
+  - name: SPI_DECRYPT_ENABLE
+    bit_range:
+    - 12
+    - 12
+  side_effects: null
+- id: WIFI_CLK_EN
+  address_offset: 204
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294762544
+  fields:
+  - name: WIFI_CLK_EN
+    bit_range:
+    - 31
+    - 0
+  - name: WIFI_CLK_WIFI_EN
+    bit_range:
+    - 2
+    - 0
+  - name: WIFI_CLK_WIFI_BT_COMMON
+    bit_range:
+    - 5
+    - 0
+  - name: WIFI_CLK_BT_EN
+    bit_range:
+    - 13
+    - 11
+  side_effects: null
+- id: CORE_RST_EN
+  address_offset: 208
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CORE_RST
+    bit_range:
+    - 7
+    - 0
+  side_effects: null
+- id: BT_LPCK_DIV_INT
+  address_offset: 212
+  size: 32
+  access: READ_WRITE
+  reset_value: 255
+  fields:
+  - name: BT_LPCK_DIV_NUM
+    bit_range:
+    - 11
+    - 0
+  - name: BTEXTWAKEUP_REQ
+    bit_range:
+    - 12
+    - 12
+  side_effects: null
+- id: BT_LPCK_DIV_FRAC
+  address_offset: 216
+  size: 32
+  access: READ_WRITE
+  reset_value: 33558529
+  fields:
+  - name: BT_LPCK_DIV_B
+    bit_range:
+    - 11
+    - 0
+  - name: BT_LPCK_DIV_A
+    bit_range:
+    - 23
+    - 12
+  - name: LPCLK_SEL_RTC_SLOW
+    bit_range:
+    - 24
+    - 24
+  - name: LPCLK_SEL_8M
+    bit_range:
+    - 25
+    - 25
+  - name: LPCLK_SEL_XTAL
+    bit_range:
+    - 26
+    - 26
+  - name: LPCLK_SEL_XTAL32K
+    bit_range:
+    - 27
+    - 27
+  side_effects: null
+- id: CPU_INTR_FROM_CPU_0
+  address_offset: 220
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CPU_INTR_FROM_CPU_0
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+- id: CPU_INTR_FROM_CPU_1
+  address_offset: 224
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CPU_INTR_FROM_CPU_1
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+- id: CPU_INTR_FROM_CPU_2
+  address_offset: 228
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CPU_INTR_FROM_CPU_2
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+- id: CPU_INTR_FROM_CPU_3
+  address_offset: 232
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CPU_INTR_FROM_CPU_3
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+- id: PRO_INTR_STATUS_0
+  address_offset: 236
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRO_INTR_STATUS_0
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: PRO_INTR_STATUS_1
+  address_offset: 240
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRO_INTR_STATUS_1
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: PRO_INTR_STATUS_2
+  address_offset: 244
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRO_INTR_STATUS_2
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: APP_INTR_STATUS_0
+  address_offset: 248
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APP_INTR_STATUS_0
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: APP_INTR_STATUS_1
+  address_offset: 252
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APP_INTR_STATUS_1
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: APP_INTR_STATUS_2
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APP_INTR_STATUS_2
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: PRO_MAC_INTR_MAP
+  address_offset: 260
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_MAC_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_MAC_NMI_MAP
+  address_offset: 264
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_MAC_NMI_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_BB_INT_MAP
+  address_offset: 268
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_BB_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_BT_MAC_INT_MAP
+  address_offset: 272
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_BT_MAC_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_BT_BB_INT_MAP
+  address_offset: 276
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_BT_BB_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_BT_BB_NMI_MAP
+  address_offset: 280
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_BT_BB_NMI_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_RWBT_IRQ_MAP
+  address_offset: 284
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_RWBT_IRQ_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_RWBLE_IRQ_MAP
+  address_offset: 288
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_RWBLE_IRQ_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_RWBT_NMI_MAP
+  address_offset: 292
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_RWBT_NMI_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_RWBLE_NMI_MAP
+  address_offset: 296
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_RWBLE_NMI_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_SLC0_INTR_MAP
+  address_offset: 300
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_SLC0_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_SLC1_INTR_MAP
+  address_offset: 304
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_SLC1_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_UHCI0_INTR_MAP
+  address_offset: 308
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_UHCI0_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_UHCI1_INTR_MAP
+  address_offset: 312
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_UHCI1_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_TG_T0_LEVEL_INT_MAP
+  address_offset: 316
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_TG_T0_LEVEL_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_TG_T1_LEVEL_INT_MAP
+  address_offset: 320
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_TG_T1_LEVEL_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_TG_WDT_LEVEL_INT_MAP
+  address_offset: 324
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_TG_WDT_LEVEL_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_TG_LACT_LEVEL_INT_MAP
+  address_offset: 328
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_TG_LACT_LEVEL_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_TG1_T0_LEVEL_INT_MAP
+  address_offset: 332
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_TG1_T0_LEVEL_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_TG1_T1_LEVEL_INT_MAP
+  address_offset: 336
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_TG1_T1_LEVEL_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_TG1_WDT_LEVEL_INT_MAP
+  address_offset: 340
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_TG1_WDT_LEVEL_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_TG1_LACT_LEVEL_INT_MAP
+  address_offset: 344
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_TG1_LACT_LEVEL_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_GPIO_INTERRUPT_MAP
+  address_offset: 348
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_GPIO_INTERRUPT_PRO_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_GPIO_INTERRUPT_NMI_MAP
+  address_offset: 352
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_GPIO_INTERRUPT_PRO_NMI_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_CPU_INTR_FROM_CPU_0_MAP
+  address_offset: 356
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_CPU_INTR_FROM_CPU_0_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_CPU_INTR_FROM_CPU_1_MAP
+  address_offset: 360
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_CPU_INTR_FROM_CPU_1_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_CPU_INTR_FROM_CPU_2_MAP
+  address_offset: 364
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_CPU_INTR_FROM_CPU_2_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_CPU_INTR_FROM_CPU_3_MAP
+  address_offset: 368
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_CPU_INTR_FROM_CPU_3_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_SPI_INTR_0_MAP
+  address_offset: 372
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_SPI_INTR_0_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_SPI_INTR_1_MAP
+  address_offset: 376
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_SPI_INTR_1_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_SPI_INTR_2_MAP
+  address_offset: 380
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_SPI_INTR_2_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_SPI_INTR_3_MAP
+  address_offset: 384
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_SPI_INTR_3_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_I2S0_INT_MAP
+  address_offset: 388
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_I2S0_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_I2S1_INT_MAP
+  address_offset: 392
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_I2S1_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_UART_INTR_MAP
+  address_offset: 396
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_UART_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_UART1_INTR_MAP
+  address_offset: 400
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_UART1_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_UART2_INTR_MAP
+  address_offset: 404
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_UART2_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_SDIO_HOST_INTERRUPT_MAP
+  address_offset: 408
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_SDIO_HOST_INTERRUPT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_EMAC_INT_MAP
+  address_offset: 412
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_EMAC_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_PWM0_INTR_MAP
+  address_offset: 416
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_PWM0_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_PWM1_INTR_MAP
+  address_offset: 420
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_PWM1_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_PWM2_INTR_MAP
+  address_offset: 424
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_PWM2_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_PWM3_INTR_MAP
+  address_offset: 428
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_PWM3_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_LEDC_INT_MAP
+  address_offset: 432
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_LEDC_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_EFUSE_INT_MAP
+  address_offset: 436
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_EFUSE_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_CAN_INT_MAP
+  address_offset: 440
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_CAN_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_RTC_CORE_INTR_MAP
+  address_offset: 444
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_RTC_CORE_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_RMT_INTR_MAP
+  address_offset: 448
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_RMT_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_PCNT_INTR_MAP
+  address_offset: 452
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_PCNT_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_I2C_EXT0_INTR_MAP
+  address_offset: 456
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_I2C_EXT0_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_I2C_EXT1_INTR_MAP
+  address_offset: 460
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_I2C_EXT1_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_RSA_INTR_MAP
+  address_offset: 464
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_RSA_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_SPI1_DMA_INT_MAP
+  address_offset: 468
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_SPI1_DMA_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_SPI2_DMA_INT_MAP
+  address_offset: 472
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_SPI2_DMA_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_SPI3_DMA_INT_MAP
+  address_offset: 476
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_SPI3_DMA_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_WDG_INT_MAP
+  address_offset: 480
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_WDG_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_TIMER_INT1_MAP
+  address_offset: 484
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_TIMER_INT1_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_TIMER_INT2_MAP
+  address_offset: 488
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_TIMER_INT2_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_TG_T0_EDGE_INT_MAP
+  address_offset: 492
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_TG_T0_EDGE_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_TG_T1_EDGE_INT_MAP
+  address_offset: 496
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_TG_T1_EDGE_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_TG_WDT_EDGE_INT_MAP
+  address_offset: 500
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_TG_WDT_EDGE_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_TG_LACT_EDGE_INT_MAP
+  address_offset: 504
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_TG_LACT_EDGE_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_TG1_T0_EDGE_INT_MAP
+  address_offset: 508
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_TG1_T0_EDGE_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_TG1_T1_EDGE_INT_MAP
+  address_offset: 512
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_TG1_T1_EDGE_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_TG1_WDT_EDGE_INT_MAP
+  address_offset: 516
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_TG1_WDT_EDGE_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_TG1_LACT_EDGE_INT_MAP
+  address_offset: 520
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_TG1_LACT_EDGE_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_MMU_IA_INT_MAP
+  address_offset: 524
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_MMU_IA_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_MPU_IA_INT_MAP
+  address_offset: 528
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_MPU_IA_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: PRO_CACHE_IA_INT_MAP
+  address_offset: 532
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: PRO_CACHE_IA_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_MAC_INTR_MAP
+  address_offset: 536
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_MAC_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_MAC_NMI_MAP
+  address_offset: 540
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_MAC_NMI_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_BB_INT_MAP
+  address_offset: 544
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_BB_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_BT_MAC_INT_MAP
+  address_offset: 548
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_BT_MAC_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_BT_BB_INT_MAP
+  address_offset: 552
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_BT_BB_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_BT_BB_NMI_MAP
+  address_offset: 556
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_BT_BB_NMI_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_RWBT_IRQ_MAP
+  address_offset: 560
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_RWBT_IRQ_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_RWBLE_IRQ_MAP
+  address_offset: 564
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_RWBLE_IRQ_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_RWBT_NMI_MAP
+  address_offset: 568
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_RWBT_NMI_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_RWBLE_NMI_MAP
+  address_offset: 572
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_RWBLE_NMI_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_SLC0_INTR_MAP
+  address_offset: 576
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_SLC0_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_SLC1_INTR_MAP
+  address_offset: 580
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_SLC1_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_UHCI0_INTR_MAP
+  address_offset: 584
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_UHCI0_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_UHCI1_INTR_MAP
+  address_offset: 588
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_UHCI1_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_TG_T0_LEVEL_INT_MAP
+  address_offset: 592
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_TG_T0_LEVEL_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_TG_T1_LEVEL_INT_MAP
+  address_offset: 596
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_TG_T1_LEVEL_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_TG_WDT_LEVEL_INT_MAP
+  address_offset: 600
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_TG_WDT_LEVEL_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_TG_LACT_LEVEL_INT_MAP
+  address_offset: 604
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_TG_LACT_LEVEL_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_TG1_T0_LEVEL_INT_MAP
+  address_offset: 608
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_TG1_T0_LEVEL_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_TG1_T1_LEVEL_INT_MAP
+  address_offset: 612
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_TG1_T1_LEVEL_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_TG1_WDT_LEVEL_INT_MAP
+  address_offset: 616
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_TG1_WDT_LEVEL_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_TG1_LACT_LEVEL_INT_MAP
+  address_offset: 620
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_TG1_LACT_LEVEL_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_GPIO_INTERRUPT_MAP
+  address_offset: 624
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_GPIO_INTERRUPT_APP_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_GPIO_INTERRUPT_NMI_MAP
+  address_offset: 628
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_GPIO_INTERRUPT_APP_NMI_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_CPU_INTR_FROM_CPU_0_MAP
+  address_offset: 632
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_CPU_INTR_FROM_CPU_0_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_CPU_INTR_FROM_CPU_1_MAP
+  address_offset: 636
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_CPU_INTR_FROM_CPU_1_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_CPU_INTR_FROM_CPU_2_MAP
+  address_offset: 640
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_CPU_INTR_FROM_CPU_2_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_CPU_INTR_FROM_CPU_3_MAP
+  address_offset: 644
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_CPU_INTR_FROM_CPU_3_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_SPI_INTR_0_MAP
+  address_offset: 648
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_SPI_INTR_0_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_SPI_INTR_1_MAP
+  address_offset: 652
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_SPI_INTR_1_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_SPI_INTR_2_MAP
+  address_offset: 656
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_SPI_INTR_2_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_SPI_INTR_3_MAP
+  address_offset: 660
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_SPI_INTR_3_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_I2S0_INT_MAP
+  address_offset: 664
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_I2S0_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_I2S1_INT_MAP
+  address_offset: 668
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_I2S1_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_UART_INTR_MAP
+  address_offset: 672
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_UART_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_UART1_INTR_MAP
+  address_offset: 676
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_UART1_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_UART2_INTR_MAP
+  address_offset: 680
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_UART2_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_SDIO_HOST_INTERRUPT_MAP
+  address_offset: 684
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_SDIO_HOST_INTERRUPT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_EMAC_INT_MAP
+  address_offset: 688
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_EMAC_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_PWM0_INTR_MAP
+  address_offset: 692
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_PWM0_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_PWM1_INTR_MAP
+  address_offset: 696
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_PWM1_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_PWM2_INTR_MAP
+  address_offset: 700
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_PWM2_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_PWM3_INTR_MAP
+  address_offset: 704
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_PWM3_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_LEDC_INT_MAP
+  address_offset: 708
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_LEDC_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_EFUSE_INT_MAP
+  address_offset: 712
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_EFUSE_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_CAN_INT_MAP
+  address_offset: 716
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_CAN_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_RTC_CORE_INTR_MAP
+  address_offset: 720
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_RTC_CORE_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_RMT_INTR_MAP
+  address_offset: 724
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_RMT_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_PCNT_INTR_MAP
+  address_offset: 728
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_PCNT_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_I2C_EXT0_INTR_MAP
+  address_offset: 732
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_I2C_EXT0_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_I2C_EXT1_INTR_MAP
+  address_offset: 736
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_I2C_EXT1_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_RSA_INTR_MAP
+  address_offset: 740
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_RSA_INTR_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_SPI1_DMA_INT_MAP
+  address_offset: 744
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_SPI1_DMA_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_SPI2_DMA_INT_MAP
+  address_offset: 748
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_SPI2_DMA_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_SPI3_DMA_INT_MAP
+  address_offset: 752
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_SPI3_DMA_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_WDG_INT_MAP
+  address_offset: 756
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_WDG_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_TIMER_INT1_MAP
+  address_offset: 760
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_TIMER_INT1_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_TIMER_INT2_MAP
+  address_offset: 764
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_TIMER_INT2_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_TG_T0_EDGE_INT_MAP
+  address_offset: 768
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_TG_T0_EDGE_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_TG_T1_EDGE_INT_MAP
+  address_offset: 772
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_TG_T1_EDGE_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_TG_WDT_EDGE_INT_MAP
+  address_offset: 776
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_TG_WDT_EDGE_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_TG_LACT_EDGE_INT_MAP
+  address_offset: 780
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_TG_LACT_EDGE_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_TG1_T0_EDGE_INT_MAP
+  address_offset: 784
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_TG1_T0_EDGE_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_TG1_T1_EDGE_INT_MAP
+  address_offset: 788
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_TG1_T1_EDGE_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_TG1_WDT_EDGE_INT_MAP
+  address_offset: 792
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_TG1_WDT_EDGE_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_TG1_LACT_EDGE_INT_MAP
+  address_offset: 796
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_TG1_LACT_EDGE_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_MMU_IA_INT_MAP
+  address_offset: 800
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_MMU_IA_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_MPU_IA_INT_MAP
+  address_offset: 804
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_MPU_IA_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: APP_CACHE_IA_INT_MAP
+  address_offset: 808
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: APP_CACHE_IA_INT_MAP
+    bit_range:
+    - 4
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_UART
+  address_offset: 812
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: UART_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_SPI1
+  address_offset: 816
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SPI1_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_SPI0
+  address_offset: 820
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SPI0_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_GPIO
+  address_offset: 824
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: GPIO_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_FE2
+  address_offset: 828
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FE2_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_FE
+  address_offset: 832
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FE_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_TIMER
+  address_offset: 836
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIMER_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_RTC
+  address_offset: 840
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RTC_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_IO_MUX
+  address_offset: 844
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IOMUX_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_WDG
+  address_offset: 848
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WDG_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_HINF
+  address_offset: 852
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HINF_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_UHCI1
+  address_offset: 856
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: UHCI1_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_MISC
+  address_offset: 860
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MISC_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_I2C
+  address_offset: 864
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: I2C_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_I2S0
+  address_offset: 868
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: I2S0_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_UART1
+  address_offset: 872
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: UART1_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_BT
+  address_offset: 876
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BT_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_BT_BUFFER
+  address_offset: 880
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BTBUFFER_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_I2C_EXT0
+  address_offset: 884
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: I2CEXT0_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_UHCI0
+  address_offset: 888
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: UHCI0_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_SLCHOST
+  address_offset: 892
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SLCHOST_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_RMT
+  address_offset: 896
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RMT_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_PCNT
+  address_offset: 900
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PCNT_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_SLC
+  address_offset: 904
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SLC_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_LEDC
+  address_offset: 908
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LEDC_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_EFUSE
+  address_offset: 912
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EFUSE_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_SPI_ENCRYPT
+  address_offset: 916
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SPI_ENCRYPY_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_BB
+  address_offset: 920
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BB_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_PWM0
+  address_offset: 924
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PWM0_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_TIMERGROUP
+  address_offset: 928
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIMERGROUP_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_TIMERGROUP1
+  address_offset: 932
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIMERGROUP1_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_SPI2
+  address_offset: 936
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SPI2_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_SPI3
+  address_offset: 940
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SPI3_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_APB_CTRL
+  address_offset: 944
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APBCTRL_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_I2C_EXT1
+  address_offset: 948
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: I2CEXT1_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_SDIO_HOST
+  address_offset: 952
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SDIOHOST_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_EMAC
+  address_offset: 956
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EMAC_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_CAN
+  address_offset: 960
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CAN_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_PWM1
+  address_offset: 964
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PWM1_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_I2S1
+  address_offset: 968
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: I2S1_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_UART2
+  address_offset: 972
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: UART2_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_PWM2
+  address_offset: 976
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PWM2_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_PWM3
+  address_offset: 980
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PWM3_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_RWBT
+  address_offset: 984
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RWBT_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_BTMAC
+  address_offset: 988
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BTMAC_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_WIFIMAC
+  address_offset: 992
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WIFIMAC_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: AHBLITE_MPU_TABLE_PWR
+  address_offset: 996
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PWR_ACCESS_GRANT_CONFIG
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: MEM_ACCESS_DBUG0
+  address_offset: 1000
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRO_ROM_MPU_AD
+    bit_range:
+    - 0
+    - 0
+  - name: PRO_ROM_IA
+    bit_range:
+    - 1
+    - 1
+  - name: APP_ROM_MPU_AD
+    bit_range:
+    - 2
+    - 2
+  - name: APP_ROM_IA
+    bit_range:
+    - 3
+    - 3
+  - name: SHARE_ROM_MPU_AD
+    bit_range:
+    - 5
+    - 4
+  - name: SHARE_ROM_IA
+    bit_range:
+    - 9
+    - 6
+  - name: INTERNAL_SRAM_MMU_AD
+    bit_range:
+    - 13
+    - 10
+  - name: INTERNAL_SRAM_IA
+    bit_range:
+    - 25
+    - 14
+  - name: INTERNAL_SRAM_MMU_MULTI_HIT
+    bit_range:
+    - 29
+    - 26
+  side_effects: null
+- id: MEM_ACCESS_DBUG1
+  address_offset: 1004
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: INTERNAL_SRAM_MMU_MISS
+    bit_range:
+    - 3
+    - 0
+  - name: ARB_IA
+    bit_range:
+    - 5
+    - 4
+  - name: PIDGEN_IA
+    bit_range:
+    - 7
+    - 6
+  - name: AHB_ACCESS_DENY
+    bit_range:
+    - 8
+    - 8
+  - name: AHBLITE_ACCESS_DENY
+    bit_range:
+    - 9
+    - 9
+  - name: AHBLITE_IA
+    bit_range:
+    - 10
+    - 10
+  side_effects: null
+- id: PRO_DCACHE_DBUG0
+  address_offset: 1008
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRO_SLAVE_WDATA
+    bit_range:
+    - 0
+    - 0
+  - name: PRO_CACHE_MMU_IA
+    bit_range:
+    - 0
+    - 0
+  - name: PRO_CACHE_IA
+    bit_range:
+    - 6
+    - 1
+  - name: PRO_CACHE_STATE
+    bit_range:
+    - 18
+    - 7
+  - name: PRO_WR_BAK_TO_READ
+    bit_range:
+    - 19
+    - 19
+  - name: PRO_TX_END
+    bit_range:
+    - 20
+    - 20
+  - name: PRO_SLAVE_WR
+    bit_range:
+    - 21
+    - 21
+  - name: PRO_SLAVE_WDATA_V
+    bit_range:
+    - 22
+    - 22
+  - name: PRO_RX_END
+    bit_range:
+    - 23
+    - 23
+  side_effects: null
+- id: PRO_DCACHE_DBUG1
+  address_offset: 1012
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRO_CTAG_RAM_RDATA
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: PRO_DCACHE_DBUG2
+  address_offset: 1016
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRO_CACHE_VADDR
+    bit_range:
+    - 26
+    - 0
+  side_effects: null
+- id: PRO_DCACHE_DBUG3
+  address_offset: 1020
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRO_MMU_RDATA
+    bit_range:
+    - 8
+    - 0
+  - name: PRO_CPU_DISABLED_CACHE_IA
+    bit_range:
+    - 14
+    - 9
+  - name: PRO_CPU_DISABLED_CACHE_IA_OPPOSITE
+    bit_range:
+    - 9
+    - 9
+  - name: PRO_CPU_DISABLED_CACHE_IA_DRAM1
+    bit_range:
+    - 10
+    - 10
+  - name: PRO_CPU_DISABLED_CACHE_IA_IROM0
+    bit_range:
+    - 11
+    - 11
+  - name: PRO_CPU_DISABLED_CACHE_IA_IRAM1
+    bit_range:
+    - 12
+    - 12
+  - name: PRO_CPU_DISABLED_CACHE_IA_IRAM0
+    bit_range:
+    - 13
+    - 13
+  - name: PRO_CPU_DISABLED_CACHE_IA_DROM0
+    bit_range:
+    - 14
+    - 14
+  - name: PRO_CACHE_IRAM0_PID_ERROR
+    bit_range:
+    - 15
+    - 15
+  side_effects: null
+- id: PRO_DCACHE_DBUG4
+  address_offset: 1024
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRO_DRAM1ADDR0_IA
+    bit_range:
+    - 19
+    - 0
+  side_effects: null
+- id: PRO_DCACHE_DBUG5
+  address_offset: 1028
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRO_DROM0ADDR0_IA
+    bit_range:
+    - 19
+    - 0
+  side_effects: null
+- id: PRO_DCACHE_DBUG6
+  address_offset: 1032
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRO_IRAM0ADDR_IA
+    bit_range:
+    - 19
+    - 0
+  side_effects: null
+- id: PRO_DCACHE_DBUG7
+  address_offset: 1036
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRO_IRAM1ADDR_IA
+    bit_range:
+    - 19
+    - 0
+  side_effects: null
+- id: PRO_DCACHE_DBUG8
+  address_offset: 1040
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRO_IROM0ADDR_IA
+    bit_range:
+    - 19
+    - 0
+  side_effects: null
+- id: PRO_DCACHE_DBUG9
+  address_offset: 1044
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRO_OPSDRAMADDR_IA
+    bit_range:
+    - 19
+    - 0
+  side_effects: null
+- id: APP_DCACHE_DBUG0
+  address_offset: 1048
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APP_SLAVE_WDATA
+    bit_range:
+    - 0
+    - 0
+  - name: APP_CACHE_MMU_IA
+    bit_range:
+    - 0
+    - 0
+  - name: APP_CACHE_IA
+    bit_range:
+    - 6
+    - 1
+  - name: APP_CACHE_STATE
+    bit_range:
+    - 18
+    - 7
+  - name: APP_WR_BAK_TO_READ
+    bit_range:
+    - 19
+    - 19
+  - name: APP_TX_END
+    bit_range:
+    - 20
+    - 20
+  - name: APP_SLAVE_WR
+    bit_range:
+    - 21
+    - 21
+  - name: APP_SLAVE_WDATA_V
+    bit_range:
+    - 22
+    - 22
+  - name: APP_RX_END
+    bit_range:
+    - 23
+    - 23
+  side_effects: null
+- id: APP_DCACHE_DBUG1
+  address_offset: 1052
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APP_CTAG_RAM_RDATA
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: APP_DCACHE_DBUG2
+  address_offset: 1056
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APP_CACHE_VADDR
+    bit_range:
+    - 26
+    - 0
+  side_effects: null
+- id: APP_DCACHE_DBUG3
+  address_offset: 1060
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APP_MMU_RDATA
+    bit_range:
+    - 8
+    - 0
+  - name: APP_CPU_DISABLED_CACHE_IA
+    bit_range:
+    - 14
+    - 9
+  - name: APP_CPU_DISABLED_CACHE_IA_OPPOSITE
+    bit_range:
+    - 9
+    - 9
+  - name: APP_CPU_DISABLED_CACHE_IA_DRAM1
+    bit_range:
+    - 10
+    - 10
+  - name: APP_CPU_DISABLED_CACHE_IA_IROM0
+    bit_range:
+    - 11
+    - 11
+  - name: APP_CPU_DISABLED_CACHE_IA_IRAM1
+    bit_range:
+    - 12
+    - 12
+  - name: APP_CPU_DISABLED_CACHE_IA_IRAM0
+    bit_range:
+    - 13
+    - 13
+  - name: APP_CPU_DISABLED_CACHE_IA_DROM0
+    bit_range:
+    - 14
+    - 14
+  - name: APP_CACHE_IRAM0_PID_ERROR
+    bit_range:
+    - 15
+    - 15
+  side_effects: null
+- id: APP_DCACHE_DBUG4
+  address_offset: 1064
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APP_DRAM1ADDR0_IA
+    bit_range:
+    - 19
+    - 0
+  side_effects: null
+- id: APP_DCACHE_DBUG5
+  address_offset: 1068
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APP_DROM0ADDR0_IA
+    bit_range:
+    - 19
+    - 0
+  side_effects: null
+- id: APP_DCACHE_DBUG6
+  address_offset: 1072
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APP_IRAM0ADDR_IA
+    bit_range:
+    - 19
+    - 0
+  side_effects: null
+- id: APP_DCACHE_DBUG7
+  address_offset: 1076
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APP_IRAM1ADDR_IA
+    bit_range:
+    - 19
+    - 0
+  side_effects: null
+- id: APP_DCACHE_DBUG8
+  address_offset: 1080
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APP_IROM0ADDR_IA
+    bit_range:
+    - 19
+    - 0
+  side_effects: null
+- id: APP_DCACHE_DBUG9
+  address_offset: 1084
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APP_OPSDRAMADDR_IA
+    bit_range:
+    - 19
+    - 0
+  side_effects: null
+- id: PRO_CPU_RECORD_CTRL
+  address_offset: 1088
+  size: 32
+  access: READ_WRITE
+  reset_value: 256
+  fields:
+  - name: PRO_CPU_RECORD_ENABLE
+    bit_range:
+    - 0
+    - 0
+  - name: PRO_CPU_RECORD_DISABLE
+    bit_range:
+    - 4
+    - 4
+  - name: PRO_CPU_PDEBUG_ENABLE
+    bit_range:
+    - 8
+    - 8
+  side_effects: null
+- id: PRO_CPU_RECORD_STATUS
+  address_offset: 1092
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRO_CPU_RECORDING
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+- id: PRO_CPU_RECORD_PID
+  address_offset: 1096
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RECORD_PRO_PID
+    bit_range:
+    - 2
+    - 0
+  side_effects: null
+- id: PRO_CPU_RECORD_PDEBUGINST
+  address_offset: 1100
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RECORD_PRO_PDEBUGINST
+    bit_range:
+    - 31
+    - 0
+  - name: RECORD_PDEBUGINST_SZ
+    bit_range:
+    - 7
+    - 0
+  - name: RECORD_PDEBUGINST_ISRC
+    bit_range:
+    - 14
+    - 12
+  - name: RECORD_PDEBUGINST_LOOP_REP
+    bit_range:
+    - 20
+    - 20
+  - name: RECORD_PDEBUGINST_LOOP
+    bit_range:
+    - 21
+    - 21
+  - name: RECORD_PDEBUGINST_CINTL
+    bit_range:
+    - 27
+    - 24
+  side_effects: null
+- id: PRO_CPU_RECORD_PDEBUGSTATUS
+  address_offset: 1104
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RECORD_PRO_PDEBUGSTATUS
+    bit_range:
+    - 7
+    - 0
+  - name: RECORD_PDEBUGSTATUS_BBCAUSE
+    bit_range:
+    - 5
+    - 0
+  - name: RECORD_PDEBUGSTATUS_INSNTYPE
+    bit_range:
+    - 5
+    - 0
+  side_effects: null
+- id: PRO_CPU_RECORD_PDEBUGDATA
+  address_offset: 1108
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RECORD_PRO_PDEBUGDATA
+    bit_range:
+    - 31
+    - 0
+  - name: RECORD_PDEBUGDATA_DEP_OTHER
+    bit_range:
+    - 0
+    - 0
+  - name: RECORD_PDEBUGDATA_EXCVEC
+    bit_range:
+    - 4
+    - 0
+  - name: RECORD_PDEBUGDATA_INSNTYPE_SR
+    bit_range:
+    - 7
+    - 0
+  - name: RECORD_PDEBUGDATA_INSNTYPE_RER
+    bit_range:
+    - 0
+    - 0
+  - name: RECORD_PDEBUGDATA_STALL_BUFF
+    bit_range:
+    - 1
+    - 1
+  - name: RECORD_PDEBUGDATA_INSNTYPE_WER
+    bit_range:
+    - 1
+    - 1
+  - name: RECORD_PDEBUGDATA_STALL_BUFFCONFL
+    bit_range:
+    - 2
+    - 2
+  - name: RECORD_PDEBUGDATA_INSNTYPE_ER
+    bit_range:
+    - 13
+    - 2
+  - name: RECORD_PDEBUGDATA_STALL_DCM
+    bit_range:
+    - 3
+    - 3
+  - name: RECORD_PDEBUGDATA_STALL_LSU
+    bit_range:
+    - 4
+    - 4
+  - name: RECORD_PDEBUGDATA_STALL_ICM
+    bit_range:
+    - 6
+    - 6
+  - name: RECORD_PDEBUGDATA_STALL_IRAMBUSY
+    bit_range:
+    - 7
+    - 7
+  - name: RECORD_PDEBUGDATA_DEP_LSU
+    bit_range:
+    - 8
+    - 8
+  - name: RECORD_PDEBUGDATA_STALL_IPIF
+    bit_range:
+    - 8
+    - 8
+  - name: RECORD_PDEBUGDATA_INSNTYPE_RSR
+    bit_range:
+    - 8
+    - 8
+  - name: RECORD_PDEBUGDATA_STALL_TIE
+    bit_range:
+    - 9
+    - 9
+  - name: RECORD_PDEBUGDATA_INSNTYPE_WSR
+    bit_range:
+    - 9
+    - 9
+  - name: RECORD_PDEBUGDATA_STALL_RUN
+    bit_range:
+    - 10
+    - 10
+  - name: RECORD_PDEBUGDATA_INSNTYPE_XSR
+    bit_range:
+    - 10
+    - 10
+  - name: RECORD_PDEBUGDATA_DEP_STR
+    bit_range:
+    - 11
+    - 11
+  - name: RECORD_PDEBUGDATA_DEP
+    bit_range:
+    - 12
+    - 12
+  - name: RECORD_PDEBUGDATA_STALL_BPIFETCH
+    bit_range:
+    - 12
+    - 12
+  - name: RECORD_PDEBUGDATA_STALL_L32R
+    bit_range:
+    - 13
+    - 13
+  - name: RECORD_PDEBUGDATA_STALL_LSPROC
+    bit_range:
+    - 14
+    - 14
+  - name: RECORD_PDEBUGDATA_STALL_BPLOAD
+    bit_range:
+    - 15
+    - 15
+  - name: RECORD_PDEBUGDATA_DEP_MEMW
+    bit_range:
+    - 16
+    - 16
+  - name: RECORD_PDEBUGDATA_EXCCAUSE
+    bit_range:
+    - 21
+    - 16
+  - name: RECORD_PDEBUGDATA_STALL_BANKCONFL
+    bit_range:
+    - 16
+    - 16
+  - name: RECORD_PDEBUGDATA_DEP_HALT
+    bit_range:
+    - 17
+    - 17
+  - name: RECORD_PDEBUGDATA_STALL_ITERMUL
+    bit_range:
+    - 18
+    - 18
+  - name: RECORD_PDEBUGDATA_STALL_ITERDIV
+    bit_range:
+    - 19
+    - 19
+  side_effects: null
+- id: PRO_CPU_RECORD_PDEBUGPC
+  address_offset: 1112
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RECORD_PRO_PDEBUGPC
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: PRO_CPU_RECORD_PDEBUGLS0STAT
+  address_offset: 1116
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RECORD_PRO_PDEBUGLS0STAT
+    bit_range:
+    - 31
+    - 0
+  - name: RECORD_PDEBUGLS0STAT_TYPE
+    bit_range:
+    - 3
+    - 0
+  - name: RECORD_PDEBUGLS0STAT_SZ
+    bit_range:
+    - 7
+    - 4
+  - name: RECORD_PDEBUGLS0STAT_DTLBM
+    bit_range:
+    - 8
+    - 8
+  - name: RECORD_PDEBUGLS0STAT_DCM
+    bit_range:
+    - 9
+    - 9
+  - name: RECORD_PDEBUGLS0STAT_DCH
+    bit_range:
+    - 10
+    - 10
+  - name: RECORD_PDEBUGLS0STAT_UC
+    bit_range:
+    - 12
+    - 12
+  - name: RECORD_PDEBUGLS0STAT_WB
+    bit_range:
+    - 13
+    - 13
+  - name: RECORD_PDEBUGLS0STAT_COH
+    bit_range:
+    - 16
+    - 16
+  - name: RECORD_PDEBUGLS0STAT_STCOH
+    bit_range:
+    - 18
+    - 17
+  - name: RECORD_PDEBUGLS0STAT_TGT
+    bit_range:
+    - 23
+    - 20
+  side_effects: null
+- id: PRO_CPU_RECORD_PDEBUGLS0ADDR
+  address_offset: 1120
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RECORD_PRO_PDEBUGLS0ADDR
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: PRO_CPU_RECORD_PDEBUGLS0DATA
+  address_offset: 1124
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RECORD_PRO_PDEBUGLS0DATA
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: APP_CPU_RECORD_CTRL
+  address_offset: 1128
+  size: 32
+  access: READ_WRITE
+  reset_value: 256
+  fields:
+  - name: APP_CPU_RECORD_ENABLE
+    bit_range:
+    - 0
+    - 0
+  - name: APP_CPU_RECORD_DISABLE
+    bit_range:
+    - 4
+    - 4
+  - name: APP_CPU_PDEBUG_ENABLE
+    bit_range:
+    - 8
+    - 8
+  side_effects: null
+- id: APP_CPU_RECORD_STATUS
+  address_offset: 1132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APP_CPU_RECORDING
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+- id: APP_CPU_RECORD_PID
+  address_offset: 1136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RECORD_APP_PID
+    bit_range:
+    - 2
+    - 0
+  side_effects: null
+- id: APP_CPU_RECORD_PDEBUGINST
+  address_offset: 1140
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RECORD_APP_PDEBUGINST
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: APP_CPU_RECORD_PDEBUGSTATUS
+  address_offset: 1144
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RECORD_APP_PDEBUGSTATUS
+    bit_range:
+    - 7
+    - 0
+  side_effects: null
+- id: APP_CPU_RECORD_PDEBUGDATA
+  address_offset: 1148
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RECORD_APP_PDEBUGDATA
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: APP_CPU_RECORD_PDEBUGPC
+  address_offset: 1152
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RECORD_APP_PDEBUGPC
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: APP_CPU_RECORD_PDEBUGLS0STAT
+  address_offset: 1156
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RECORD_APP_PDEBUGLS0STAT
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: APP_CPU_RECORD_PDEBUGLS0ADDR
+  address_offset: 1160
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RECORD_APP_PDEBUGLS0ADDR
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: APP_CPU_RECORD_PDEBUGLS0DATA
+  address_offset: 1164
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RECORD_APP_PDEBUGLS0DATA
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: RSA_PD_CTRL
+  address_offset: 1168
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RSA_PD
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+- id: ROM_MPU_TABLE0
+  address_offset: 1172
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: ROM_MPU_TABLE0
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: ROM_MPU_TABLE1
+  address_offset: 1176
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: ROM_MPU_TABLE1
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: ROM_MPU_TABLE2
+  address_offset: 1180
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: ROM_MPU_TABLE2
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: ROM_MPU_TABLE3
+  address_offset: 1184
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: ROM_MPU_TABLE3
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: SHROM_MPU_TABLE0
+  address_offset: 1188
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: SHROM_MPU_TABLE0
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: SHROM_MPU_TABLE1
+  address_offset: 1192
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: SHROM_MPU_TABLE1
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: SHROM_MPU_TABLE2
+  address_offset: 1196
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: SHROM_MPU_TABLE2
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: SHROM_MPU_TABLE3
+  address_offset: 1200
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: SHROM_MPU_TABLE3
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: SHROM_MPU_TABLE4
+  address_offset: 1204
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: SHROM_MPU_TABLE4
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: SHROM_MPU_TABLE5
+  address_offset: 1208
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: SHROM_MPU_TABLE5
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: SHROM_MPU_TABLE6
+  address_offset: 1212
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: SHROM_MPU_TABLE6
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: SHROM_MPU_TABLE7
+  address_offset: 1216
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: SHROM_MPU_TABLE7
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: SHROM_MPU_TABLE8
+  address_offset: 1220
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: SHROM_MPU_TABLE8
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: SHROM_MPU_TABLE9
+  address_offset: 1224
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: SHROM_MPU_TABLE9
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: SHROM_MPU_TABLE10
+  address_offset: 1228
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: SHROM_MPU_TABLE10
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: SHROM_MPU_TABLE11
+  address_offset: 1232
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: SHROM_MPU_TABLE11
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: SHROM_MPU_TABLE12
+  address_offset: 1236
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: SHROM_MPU_TABLE12
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: SHROM_MPU_TABLE13
+  address_offset: 1240
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: SHROM_MPU_TABLE13
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: SHROM_MPU_TABLE14
+  address_offset: 1244
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: SHROM_MPU_TABLE14
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: SHROM_MPU_TABLE15
+  address_offset: 1248
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: SHROM_MPU_TABLE15
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: SHROM_MPU_TABLE16
+  address_offset: 1252
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: SHROM_MPU_TABLE16
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: SHROM_MPU_TABLE17
+  address_offset: 1256
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: SHROM_MPU_TABLE17
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: SHROM_MPU_TABLE18
+  address_offset: 1260
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: SHROM_MPU_TABLE18
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: SHROM_MPU_TABLE19
+  address_offset: 1264
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: SHROM_MPU_TABLE19
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: SHROM_MPU_TABLE20
+  address_offset: 1268
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: SHROM_MPU_TABLE20
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: SHROM_MPU_TABLE21
+  address_offset: 1272
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: SHROM_MPU_TABLE21
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: SHROM_MPU_TABLE22
+  address_offset: 1276
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: SHROM_MPU_TABLE22
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: SHROM_MPU_TABLE23
+  address_offset: 1280
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: SHROM_MPU_TABLE23
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: IMMU_TABLE0
+  address_offset: 1284
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IMMU_TABLE0
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: IMMU_TABLE1
+  address_offset: 1288
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: IMMU_TABLE1
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: IMMU_TABLE2
+  address_offset: 1292
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: IMMU_TABLE2
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: IMMU_TABLE3
+  address_offset: 1296
+  size: 32
+  access: READ_WRITE
+  reset_value: 3
+  fields:
+  - name: IMMU_TABLE3
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: IMMU_TABLE4
+  address_offset: 1300
+  size: 32
+  access: READ_WRITE
+  reset_value: 4
+  fields:
+  - name: IMMU_TABLE4
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: IMMU_TABLE5
+  address_offset: 1304
+  size: 32
+  access: READ_WRITE
+  reset_value: 5
+  fields:
+  - name: IMMU_TABLE5
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: IMMU_TABLE6
+  address_offset: 1308
+  size: 32
+  access: READ_WRITE
+  reset_value: 6
+  fields:
+  - name: IMMU_TABLE6
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: IMMU_TABLE7
+  address_offset: 1312
+  size: 32
+  access: READ_WRITE
+  reset_value: 7
+  fields:
+  - name: IMMU_TABLE7
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: IMMU_TABLE8
+  address_offset: 1316
+  size: 32
+  access: READ_WRITE
+  reset_value: 8
+  fields:
+  - name: IMMU_TABLE8
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: IMMU_TABLE9
+  address_offset: 1320
+  size: 32
+  access: READ_WRITE
+  reset_value: 9
+  fields:
+  - name: IMMU_TABLE9
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: IMMU_TABLE10
+  address_offset: 1324
+  size: 32
+  access: READ_WRITE
+  reset_value: 10
+  fields:
+  - name: IMMU_TABLE10
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: IMMU_TABLE11
+  address_offset: 1328
+  size: 32
+  access: READ_WRITE
+  reset_value: 11
+  fields:
+  - name: IMMU_TABLE11
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: IMMU_TABLE12
+  address_offset: 1332
+  size: 32
+  access: READ_WRITE
+  reset_value: 12
+  fields:
+  - name: IMMU_TABLE12
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: IMMU_TABLE13
+  address_offset: 1336
+  size: 32
+  access: READ_WRITE
+  reset_value: 13
+  fields:
+  - name: IMMU_TABLE13
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: IMMU_TABLE14
+  address_offset: 1340
+  size: 32
+  access: READ_WRITE
+  reset_value: 14
+  fields:
+  - name: IMMU_TABLE14
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: IMMU_TABLE15
+  address_offset: 1344
+  size: 32
+  access: READ_WRITE
+  reset_value: 15
+  fields:
+  - name: IMMU_TABLE15
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: DMMU_TABLE0
+  address_offset: 1348
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DMMU_TABLE0
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: DMMU_TABLE1
+  address_offset: 1352
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: DMMU_TABLE1
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: DMMU_TABLE2
+  address_offset: 1356
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DMMU_TABLE2
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: DMMU_TABLE3
+  address_offset: 1360
+  size: 32
+  access: READ_WRITE
+  reset_value: 3
+  fields:
+  - name: DMMU_TABLE3
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: DMMU_TABLE4
+  address_offset: 1364
+  size: 32
+  access: READ_WRITE
+  reset_value: 4
+  fields:
+  - name: DMMU_TABLE4
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: DMMU_TABLE5
+  address_offset: 1368
+  size: 32
+  access: READ_WRITE
+  reset_value: 5
+  fields:
+  - name: DMMU_TABLE5
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: DMMU_TABLE6
+  address_offset: 1372
+  size: 32
+  access: READ_WRITE
+  reset_value: 6
+  fields:
+  - name: DMMU_TABLE6
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: DMMU_TABLE7
+  address_offset: 1376
+  size: 32
+  access: READ_WRITE
+  reset_value: 7
+  fields:
+  - name: DMMU_TABLE7
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: DMMU_TABLE8
+  address_offset: 1380
+  size: 32
+  access: READ_WRITE
+  reset_value: 8
+  fields:
+  - name: DMMU_TABLE8
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: DMMU_TABLE9
+  address_offset: 1384
+  size: 32
+  access: READ_WRITE
+  reset_value: 9
+  fields:
+  - name: DMMU_TABLE9
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: DMMU_TABLE10
+  address_offset: 1388
+  size: 32
+  access: READ_WRITE
+  reset_value: 10
+  fields:
+  - name: DMMU_TABLE10
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: DMMU_TABLE11
+  address_offset: 1392
+  size: 32
+  access: READ_WRITE
+  reset_value: 11
+  fields:
+  - name: DMMU_TABLE11
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: DMMU_TABLE12
+  address_offset: 1396
+  size: 32
+  access: READ_WRITE
+  reset_value: 12
+  fields:
+  - name: DMMU_TABLE12
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: DMMU_TABLE13
+  address_offset: 1400
+  size: 32
+  access: READ_WRITE
+  reset_value: 13
+  fields:
+  - name: DMMU_TABLE13
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: DMMU_TABLE14
+  address_offset: 1404
+  size: 32
+  access: READ_WRITE
+  reset_value: 14
+  fields:
+  - name: DMMU_TABLE14
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: DMMU_TABLE15
+  address_offset: 1408
+  size: 32
+  access: READ_WRITE
+  reset_value: 15
+  fields:
+  - name: DMMU_TABLE15
+    bit_range:
+    - 6
+    - 0
+  side_effects: null
+- id: PRO_INTRUSION_CTRL
+  address_offset: 1412
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: PRO_INTRUSION_RECORD_RESET_N
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+- id: PRO_INTRUSION_STATUS
+  address_offset: 1416
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRO_INTRUSION_RECORD
+    bit_range:
+    - 3
+    - 0
+  side_effects: null
+- id: APP_INTRUSION_CTRL
+  address_offset: 1420
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: APP_INTRUSION_RECORD_RESET_N
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+- id: APP_INTRUSION_STATUS
+  address_offset: 1424
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APP_INTRUSION_RECORD
+    bit_range:
+    - 3
+    - 0
+  side_effects: null
+- id: FRONT_END_MEM_PD
+  address_offset: 1428
+  size: 32
+  access: READ_WRITE
+  reset_value: 5
+  fields:
+  - name: AGC_MEM_FORCE_PU
+    bit_range:
+    - 0
+    - 0
+  - name: AGC_MEM_FORCE_PD
+    bit_range:
+    - 1
+    - 1
+  - name: PBUS_MEM_FORCE_PU
+    bit_range:
+    - 2
+    - 2
+  - name: PBUS_MEM_FORCE_PD
+    bit_range:
+    - 3
+    - 3
+  side_effects: null
+- id: MMU_IA_INT_EN
+  address_offset: 1432
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MMU_IA_INT_EN
+    bit_range:
+    - 23
+    - 0
+  side_effects: null
+- id: MPU_IA_INT_EN
+  address_offset: 1436
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MPU_IA_INT_EN
+    bit_range:
+    - 16
+    - 0
+  side_effects: null
+- id: CACHE_IA_INT_EN
+  address_offset: 1440
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CACHE_IA_INT_EN
+    bit_range:
+    - 27
+    - 0
+    description: Interrupt enable bits for various invalid cache access reasons
+  - name: CACHE_IA_INT_APP_DROM0
+    bit_range:
+    - 0
+    - 0
+    description: APP CPU invalid access to DROM0 when cache is disabled
+  - name: CACHE_IA_INT_APP_IRAM0
+    bit_range:
+    - 1
+    - 1
+    description: APP CPU invalid access to IRAM0 when cache is disabled
+  - name: CACHE_IA_INT_APP_IRAM1
+    bit_range:
+    - 2
+    - 2
+    description: APP CPU invalid access to IRAM1 when cache is disabled
+  - name: CACHE_IA_INT_APP_IROM0
+    bit_range:
+    - 3
+    - 3
+    description: APP CPU invalid access to IROM0 when cache is disabled
+  - name: CACHE_IA_INT_APP_DRAM1
+    bit_range:
+    - 4
+    - 4
+    description: APP CPU invalid access to DRAM1 when cache is disabled
+  - name: CACHE_IA_INT_APP_OPPOSITE
+    bit_range:
+    - 5
+    - 5
+    description: APP CPU invalid access to APP CPU cache when cache disabled
+  - name: CACHE_IA_INT_PRO_DROM0
+    bit_range:
+    - 14
+    - 14
+    description: PRO CPU invalid access to DROM0 when cache is disabled
+  - name: CACHE_IA_INT_PRO_IRAM0
+    bit_range:
+    - 15
+    - 15
+    description: PRO CPU invalid access to IRAM0 when cache is disabled
+  - name: CACHE_IA_INT_PRO_IRAM1
+    bit_range:
+    - 16
+    - 16
+    description: PRO CPU invalid access to IRAM1 when cache is disabled
+  - name: CACHE_IA_INT_PRO_IROM0
+    bit_range:
+    - 17
+    - 17
+    description: PRO CPU invalid access to IROM0 when cache is disabled
+  - name: CACHE_IA_INT_PRO_DRAM1
+    bit_range:
+    - 18
+    - 18
+    description: PRO CPU invalid access to DRAM1 when cache is disabled
+  - name: CACHE_IA_INT_PRO_OPPOSITE
+    bit_range:
+    - 19
+    - 19
+    description: PRO CPU invalid access to APP CPU cache when cache disabled
+  side_effects: null
+- id: SECURE_BOOT_CTRL
+  address_offset: 1444
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SW_BOOTLOADER_SEL
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+- id: SPI_DMA_CHAN_SEL
+  address_offset: 1448
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SPI1_DMA_CHAN_SEL
+    bit_range:
+    - 1
+    - 0
+  - name: SPI2_DMA_CHAN_SEL
+    bit_range:
+    - 3
+    - 2
+  - name: SPI3_DMA_CHAN_SEL
+    bit_range:
+    - 5
+    - 4
+  side_effects: null
+- id: PRO_VECBASE_CTRL
+  address_offset: 1452
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRO_OUT_VECBASE_SEL
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: PRO_VECBASE_SET
+  address_offset: 1456
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRO_OUT_VECBASE
+    bit_range:
+    - 21
+    - 0
+  side_effects: null
+- id: APP_VECBASE_CTRL
+  address_offset: 1460
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APP_OUT_VECBASE_SEL
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: APP_VECBASE_SET
+  address_offset: 1464
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APP_OUT_VECBASE
+    bit_range:
+    - 21
+    - 0
+  side_effects: null
+- id: DATE
+  address_offset: 4092
+  size: 32
+  access: READ_WRITE
+  reset_value: 23089552
+  fields:
+  - name: DATE
+    bit_range:
+    - 27
+    - 0
+  side_effects: null
+interrupts:
+  WIFI_MAC: 0
+  WIFI_NMI: 1
+  WIFI_BB: 2
+  BT_MAC: 3
+  BT_BB: 4
+  BT_BB_NMI: 5
+  RWBT: 6
+  RWBLE: 7
+  RWBT_NMI: 8
+  RWBLE_NMI: 9
+  FROM_CPU_INTR0: 24
+  FROM_CPU_INTR1: 25
+  FROM_CPU_INTR2: 26
+  FROM_CPU_INTR3: 27
+  SDIO_HOST: 37
+  ETH_MAC: 38
+  WDT: 55
+  MMU_IA: 66
+  MPU_IA: 67
+  CACHE_IA: 68
+timing: null

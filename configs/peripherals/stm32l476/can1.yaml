@@ -1,0 +1,10995 @@
+peripheral: CAN1
+version: 0.1.0
+registers:
+- id: MCR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 65538
+  fields:
+  - name: INRQ
+    bit_range:
+    - 0
+    - 0
+    description: INRQ
+  - name: SLEEP
+    bit_range:
+    - 1
+    - 1
+    description: SLEEP
+  - name: TXFP
+    bit_range:
+    - 2
+    - 2
+    description: TXFP
+  - name: RFLM
+    bit_range:
+    - 3
+    - 3
+    description: RFLM
+  - name: NART
+    bit_range:
+    - 4
+    - 4
+    description: NART
+  - name: AWUM
+    bit_range:
+    - 5
+    - 5
+    description: AWUM
+  - name: ABOM
+    bit_range:
+    - 6
+    - 6
+    description: ABOM
+  - name: TTCM
+    bit_range:
+    - 7
+    - 7
+    description: TTCM
+  - name: RESET
+    bit_range:
+    - 15
+    - 15
+    description: RESET
+  - name: DBF
+    bit_range:
+    - 16
+    - 16
+    description: DBF
+  side_effects: null
+- id: MSR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 3074
+  fields:
+  - name: INAK
+    bit_range:
+    - 0
+    - 0
+    description: INAK
+  - name: SLAK
+    bit_range:
+    - 1
+    - 1
+    description: SLAK
+  - name: ERRI
+    bit_range:
+    - 2
+    - 2
+    description: ERRI
+  - name: WKUI
+    bit_range:
+    - 3
+    - 3
+    description: WKUI
+  - name: SLAKI
+    bit_range:
+    - 4
+    - 4
+    description: SLAKI
+  - name: TXM
+    bit_range:
+    - 8
+    - 8
+    description: TXM
+  - name: RXM
+    bit_range:
+    - 9
+    - 9
+    description: RXM
+  - name: SAMP
+    bit_range:
+    - 10
+    - 10
+    description: SAMP
+  - name: RX
+    bit_range:
+    - 11
+    - 11
+    description: RX
+  side_effects: null
+- id: TSR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 469762048
+  fields:
+  - name: RQCP0
+    bit_range:
+    - 0
+    - 0
+    description: RQCP0
+  - name: TXOK0
+    bit_range:
+    - 1
+    - 1
+    description: TXOK0
+  - name: ALST0
+    bit_range:
+    - 2
+    - 2
+    description: ALST0
+  - name: TERR0
+    bit_range:
+    - 3
+    - 3
+    description: TERR0
+  - name: ABRQ0
+    bit_range:
+    - 7
+    - 7
+    description: ABRQ0
+  - name: RQCP1
+    bit_range:
+    - 8
+    - 8
+    description: RQCP1
+  - name: TXOK1
+    bit_range:
+    - 9
+    - 9
+    description: TXOK1
+  - name: ALST1
+    bit_range:
+    - 10
+    - 10
+    description: ALST1
+  - name: TERR1
+    bit_range:
+    - 11
+    - 11
+    description: TERR1
+  - name: ABRQ1
+    bit_range:
+    - 15
+    - 15
+    description: ABRQ1
+  - name: RQCP2
+    bit_range:
+    - 16
+    - 16
+    description: RQCP2
+  - name: TXOK2
+    bit_range:
+    - 17
+    - 17
+    description: TXOK2
+  - name: ALST2
+    bit_range:
+    - 18
+    - 18
+    description: ALST2
+  - name: TERR2
+    bit_range:
+    - 19
+    - 19
+    description: TERR2
+  - name: ABRQ2
+    bit_range:
+    - 23
+    - 23
+    description: ABRQ2
+  - name: CODE
+    bit_range:
+    - 25
+    - 24
+    description: CODE
+  - name: TME0
+    bit_range:
+    - 26
+    - 26
+    description: |-
+      Lowest priority flag for mailbox
+                    0
+  - name: TME1
+    bit_range:
+    - 27
+    - 27
+    description: |-
+      Lowest priority flag for mailbox
+                    1
+  - name: TME2
+    bit_range:
+    - 28
+    - 28
+    description: |-
+      Lowest priority flag for mailbox
+                    2
+  - name: LOW0
+    bit_range:
+    - 29
+    - 29
+    description: |-
+      Lowest priority flag for mailbox
+                    0
+  - name: LOW1
+    bit_range:
+    - 30
+    - 30
+    description: |-
+      Lowest priority flag for mailbox
+                    1
+  - name: LOW2
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      Lowest priority flag for mailbox
+                    2
+  side_effects: null
+- id: RF0R
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FMP0
+    bit_range:
+    - 1
+    - 0
+    description: FMP0
+  - name: FULL0
+    bit_range:
+    - 3
+    - 3
+    description: FULL0
+  - name: FOVR0
+    bit_range:
+    - 4
+    - 4
+    description: FOVR0
+  - name: RFOM0
+    bit_range:
+    - 5
+    - 5
+    description: RFOM0
+  side_effects: null
+- id: RF1R
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FMP1
+    bit_range:
+    - 1
+    - 0
+    description: FMP1
+  - name: FULL1
+    bit_range:
+    - 3
+    - 3
+    description: FULL1
+  - name: FOVR1
+    bit_range:
+    - 4
+    - 4
+    description: FOVR1
+  - name: RFOM1
+    bit_range:
+    - 5
+    - 5
+    description: RFOM1
+  side_effects: null
+- id: IER
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TMEIE
+    bit_range:
+    - 0
+    - 0
+    description: TMEIE
+  - name: FMPIE0
+    bit_range:
+    - 1
+    - 1
+    description: FMPIE0
+  - name: FFIE0
+    bit_range:
+    - 2
+    - 2
+    description: FFIE0
+  - name: FOVIE0
+    bit_range:
+    - 3
+    - 3
+    description: FOVIE0
+  - name: FMPIE1
+    bit_range:
+    - 4
+    - 4
+    description: FMPIE1
+  - name: FFIE1
+    bit_range:
+    - 5
+    - 5
+    description: FFIE1
+  - name: FOVIE1
+    bit_range:
+    - 6
+    - 6
+    description: FOVIE1
+  - name: EWGIE
+    bit_range:
+    - 8
+    - 8
+    description: EWGIE
+  - name: EPVIE
+    bit_range:
+    - 9
+    - 9
+    description: EPVIE
+  - name: BOFIE
+    bit_range:
+    - 10
+    - 10
+    description: BOFIE
+  - name: LECIE
+    bit_range:
+    - 11
+    - 11
+    description: LECIE
+  - name: ERRIE
+    bit_range:
+    - 15
+    - 15
+    description: ERRIE
+  - name: WKUIE
+    bit_range:
+    - 16
+    - 16
+    description: WKUIE
+  - name: SLKIE
+    bit_range:
+    - 17
+    - 17
+    description: SLKIE
+  side_effects: null
+- id: ESR
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EWGF
+    bit_range:
+    - 0
+    - 0
+    description: EWGF
+  - name: EPVF
+    bit_range:
+    - 1
+    - 1
+    description: EPVF
+  - name: BOFF
+    bit_range:
+    - 2
+    - 2
+    description: BOFF
+  - name: LEC
+    bit_range:
+    - 6
+    - 4
+    description: LEC
+  - name: TEC
+    bit_range:
+    - 23
+    - 16
+    description: TEC
+  - name: REC
+    bit_range:
+    - 31
+    - 24
+    description: REC
+  side_effects: null
+- id: BTR
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BRP
+    bit_range:
+    - 9
+    - 0
+    description: BRP
+  - name: TS1
+    bit_range:
+    - 19
+    - 16
+    description: TS1
+  - name: TS2
+    bit_range:
+    - 22
+    - 20
+    description: TS2
+  - name: SJW
+    bit_range:
+    - 25
+    - 24
+    description: SJW
+  - name: LBKM
+    bit_range:
+    - 30
+    - 30
+    description: LBKM
+  - name: SILM
+    bit_range:
+    - 31
+    - 31
+    description: SILM
+  side_effects: null
+- id: TI0R
+  address_offset: 384
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TXRQ
+    bit_range:
+    - 0
+    - 0
+    description: TXRQ
+  - name: RTR
+    bit_range:
+    - 1
+    - 1
+    description: RTR
+  - name: IDE
+    bit_range:
+    - 2
+    - 2
+    description: IDE
+  - name: EXID
+    bit_range:
+    - 20
+    - 3
+    description: EXID
+  - name: STID
+    bit_range:
+    - 31
+    - 21
+    description: STID
+  side_effects: null
+- id: TDT0R
+  address_offset: 388
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DLC
+    bit_range:
+    - 3
+    - 0
+    description: DLC
+  - name: TGT
+    bit_range:
+    - 8
+    - 8
+    description: TGT
+  - name: TIME
+    bit_range:
+    - 31
+    - 16
+    description: TIME
+  side_effects: null
+- id: TDL0R
+  address_offset: 392
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA0
+    bit_range:
+    - 7
+    - 0
+    description: DATA0
+  - name: DATA1
+    bit_range:
+    - 15
+    - 8
+    description: DATA1
+  - name: DATA2
+    bit_range:
+    - 23
+    - 16
+    description: DATA2
+  - name: DATA3
+    bit_range:
+    - 31
+    - 24
+    description: DATA3
+  side_effects: null
+- id: TDH0R
+  address_offset: 396
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA4
+    bit_range:
+    - 7
+    - 0
+    description: DATA4
+  - name: DATA5
+    bit_range:
+    - 15
+    - 8
+    description: DATA5
+  - name: DATA6
+    bit_range:
+    - 23
+    - 16
+    description: DATA6
+  - name: DATA7
+    bit_range:
+    - 31
+    - 24
+    description: DATA7
+  side_effects: null
+- id: TI1R
+  address_offset: 400
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TXRQ
+    bit_range:
+    - 0
+    - 0
+    description: TXRQ
+  - name: RTR
+    bit_range:
+    - 1
+    - 1
+    description: RTR
+  - name: IDE
+    bit_range:
+    - 2
+    - 2
+    description: IDE
+  - name: EXID
+    bit_range:
+    - 20
+    - 3
+    description: EXID
+  - name: STID
+    bit_range:
+    - 31
+    - 21
+    description: STID
+  side_effects: null
+- id: TDT1R
+  address_offset: 404
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DLC
+    bit_range:
+    - 3
+    - 0
+    description: DLC
+  - name: TGT
+    bit_range:
+    - 8
+    - 8
+    description: TGT
+  - name: TIME
+    bit_range:
+    - 31
+    - 16
+    description: TIME
+  side_effects: null
+- id: TDL1R
+  address_offset: 408
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA0
+    bit_range:
+    - 7
+    - 0
+    description: DATA0
+  - name: DATA1
+    bit_range:
+    - 15
+    - 8
+    description: DATA1
+  - name: DATA2
+    bit_range:
+    - 23
+    - 16
+    description: DATA2
+  - name: DATA3
+    bit_range:
+    - 31
+    - 24
+    description: DATA3
+  side_effects: null
+- id: TDH1R
+  address_offset: 412
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA4
+    bit_range:
+    - 7
+    - 0
+    description: DATA4
+  - name: DATA5
+    bit_range:
+    - 15
+    - 8
+    description: DATA5
+  - name: DATA6
+    bit_range:
+    - 23
+    - 16
+    description: DATA6
+  - name: DATA7
+    bit_range:
+    - 31
+    - 24
+    description: DATA7
+  side_effects: null
+- id: TI2R
+  address_offset: 416
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TXRQ
+    bit_range:
+    - 0
+    - 0
+    description: TXRQ
+  - name: RTR
+    bit_range:
+    - 1
+    - 1
+    description: RTR
+  - name: IDE
+    bit_range:
+    - 2
+    - 2
+    description: IDE
+  - name: EXID
+    bit_range:
+    - 20
+    - 3
+    description: EXID
+  - name: STID
+    bit_range:
+    - 31
+    - 21
+    description: STID
+  side_effects: null
+- id: TDT2R
+  address_offset: 420
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DLC
+    bit_range:
+    - 3
+    - 0
+    description: DLC
+  - name: TGT
+    bit_range:
+    - 8
+    - 8
+    description: TGT
+  - name: TIME
+    bit_range:
+    - 31
+    - 16
+    description: TIME
+  side_effects: null
+- id: TDL2R
+  address_offset: 424
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA0
+    bit_range:
+    - 7
+    - 0
+    description: DATA0
+  - name: DATA1
+    bit_range:
+    - 15
+    - 8
+    description: DATA1
+  - name: DATA2
+    bit_range:
+    - 23
+    - 16
+    description: DATA2
+  - name: DATA3
+    bit_range:
+    - 31
+    - 24
+    description: DATA3
+  side_effects: null
+- id: TDH2R
+  address_offset: 428
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA4
+    bit_range:
+    - 7
+    - 0
+    description: DATA4
+  - name: DATA5
+    bit_range:
+    - 15
+    - 8
+    description: DATA5
+  - name: DATA6
+    bit_range:
+    - 23
+    - 16
+    description: DATA6
+  - name: DATA7
+    bit_range:
+    - 31
+    - 24
+    description: DATA7
+  side_effects: null
+- id: RI0R
+  address_offset: 432
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: RTR
+    bit_range:
+    - 1
+    - 1
+    description: RTR
+  - name: IDE
+    bit_range:
+    - 2
+    - 2
+    description: IDE
+  - name: EXID
+    bit_range:
+    - 20
+    - 3
+    description: EXID
+  - name: STID
+    bit_range:
+    - 31
+    - 21
+    description: STID
+  side_effects: null
+- id: RDT0R
+  address_offset: 436
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DLC
+    bit_range:
+    - 3
+    - 0
+    description: DLC
+  - name: FMI
+    bit_range:
+    - 15
+    - 8
+    description: FMI
+  - name: TIME
+    bit_range:
+    - 31
+    - 16
+    description: TIME
+  side_effects: null
+- id: RDL0R
+  address_offset: 440
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DATA0
+    bit_range:
+    - 7
+    - 0
+    description: DATA0
+  - name: DATA1
+    bit_range:
+    - 15
+    - 8
+    description: DATA1
+  - name: DATA2
+    bit_range:
+    - 23
+    - 16
+    description: DATA2
+  - name: DATA3
+    bit_range:
+    - 31
+    - 24
+    description: DATA3
+  side_effects: null
+- id: RDH0R
+  address_offset: 444
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DATA4
+    bit_range:
+    - 7
+    - 0
+    description: DATA4
+  - name: DATA5
+    bit_range:
+    - 15
+    - 8
+    description: DATA5
+  - name: DATA6
+    bit_range:
+    - 23
+    - 16
+    description: DATA6
+  - name: DATA7
+    bit_range:
+    - 31
+    - 24
+    description: DATA7
+  side_effects: null
+- id: RI1R
+  address_offset: 448
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: RTR
+    bit_range:
+    - 1
+    - 1
+    description: RTR
+  - name: IDE
+    bit_range:
+    - 2
+    - 2
+    description: IDE
+  - name: EXID
+    bit_range:
+    - 20
+    - 3
+    description: EXID
+  - name: STID
+    bit_range:
+    - 31
+    - 21
+    description: STID
+  side_effects: null
+- id: RDT1R
+  address_offset: 452
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DLC
+    bit_range:
+    - 3
+    - 0
+    description: DLC
+  - name: FMI
+    bit_range:
+    - 15
+    - 8
+    description: FMI
+  - name: TIME
+    bit_range:
+    - 31
+    - 16
+    description: TIME
+  side_effects: null
+- id: RDL1R
+  address_offset: 456
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DATA0
+    bit_range:
+    - 7
+    - 0
+    description: DATA0
+  - name: DATA1
+    bit_range:
+    - 15
+    - 8
+    description: DATA1
+  - name: DATA2
+    bit_range:
+    - 23
+    - 16
+    description: DATA2
+  - name: DATA3
+    bit_range:
+    - 31
+    - 24
+    description: DATA3
+  side_effects: null
+- id: RDH1R
+  address_offset: 460
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DATA4
+    bit_range:
+    - 7
+    - 0
+    description: DATA4
+  - name: DATA5
+    bit_range:
+    - 15
+    - 8
+    description: DATA5
+  - name: DATA6
+    bit_range:
+    - 23
+    - 16
+    description: DATA6
+  - name: DATA7
+    bit_range:
+    - 31
+    - 24
+    description: DATA7
+  side_effects: null
+- id: FMR
+  address_offset: 512
+  size: 32
+  access: READ_WRITE
+  reset_value: 706481665
+  fields:
+  - name: FINIT
+    bit_range:
+    - 0
+    - 0
+    description: Filter initialization mode
+  - name: CANSB
+    bit_range:
+    - 13
+    - 8
+    description: CAN start bank
+  side_effects: null
+- id: FM1R
+  address_offset: 516
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FBM0
+    bit_range:
+    - 0
+    - 0
+    description: Filter mode
+  - name: FBM1
+    bit_range:
+    - 1
+    - 1
+    description: Filter mode
+  - name: FBM2
+    bit_range:
+    - 2
+    - 2
+    description: Filter mode
+  - name: FBM3
+    bit_range:
+    - 3
+    - 3
+    description: Filter mode
+  - name: FBM4
+    bit_range:
+    - 4
+    - 4
+    description: Filter mode
+  - name: FBM5
+    bit_range:
+    - 5
+    - 5
+    description: Filter mode
+  - name: FBM6
+    bit_range:
+    - 6
+    - 6
+    description: Filter mode
+  - name: FBM7
+    bit_range:
+    - 7
+    - 7
+    description: Filter mode
+  - name: FBM8
+    bit_range:
+    - 8
+    - 8
+    description: Filter mode
+  - name: FBM9
+    bit_range:
+    - 9
+    - 9
+    description: Filter mode
+  - name: FBM10
+    bit_range:
+    - 10
+    - 10
+    description: Filter mode
+  - name: FBM11
+    bit_range:
+    - 11
+    - 11
+    description: Filter mode
+  - name: FBM12
+    bit_range:
+    - 12
+    - 12
+    description: Filter mode
+  - name: FBM13
+    bit_range:
+    - 13
+    - 13
+    description: Filter mode
+  - name: FBM14
+    bit_range:
+    - 14
+    - 14
+    description: Filter mode
+  - name: FBM15
+    bit_range:
+    - 15
+    - 15
+    description: Filter mode
+  - name: FBM16
+    bit_range:
+    - 16
+    - 16
+    description: Filter mode
+  - name: FBM17
+    bit_range:
+    - 17
+    - 17
+    description: Filter mode
+  - name: FBM18
+    bit_range:
+    - 18
+    - 18
+    description: Filter mode
+  - name: FBM19
+    bit_range:
+    - 19
+    - 19
+    description: Filter mode
+  - name: FBM20
+    bit_range:
+    - 20
+    - 20
+    description: Filter mode
+  - name: FBM21
+    bit_range:
+    - 21
+    - 21
+    description: Filter mode
+  - name: FBM22
+    bit_range:
+    - 22
+    - 22
+    description: Filter mode
+  - name: FBM23
+    bit_range:
+    - 23
+    - 23
+    description: Filter mode
+  - name: FBM24
+    bit_range:
+    - 24
+    - 24
+    description: Filter mode
+  - name: FBM25
+    bit_range:
+    - 25
+    - 25
+    description: Filter mode
+  - name: FBM26
+    bit_range:
+    - 26
+    - 26
+    description: Filter mode
+  - name: FBM27
+    bit_range:
+    - 27
+    - 27
+    description: Filter mode
+  side_effects: null
+- id: FS1R
+  address_offset: 524
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FSC0
+    bit_range:
+    - 0
+    - 0
+    description: Filter scale configuration
+  - name: FSC1
+    bit_range:
+    - 1
+    - 1
+    description: Filter scale configuration
+  - name: FSC2
+    bit_range:
+    - 2
+    - 2
+    description: Filter scale configuration
+  - name: FSC3
+    bit_range:
+    - 3
+    - 3
+    description: Filter scale configuration
+  - name: FSC4
+    bit_range:
+    - 4
+    - 4
+    description: Filter scale configuration
+  - name: FSC5
+    bit_range:
+    - 5
+    - 5
+    description: Filter scale configuration
+  - name: FSC6
+    bit_range:
+    - 6
+    - 6
+    description: Filter scale configuration
+  - name: FSC7
+    bit_range:
+    - 7
+    - 7
+    description: Filter scale configuration
+  - name: FSC8
+    bit_range:
+    - 8
+    - 8
+    description: Filter scale configuration
+  - name: FSC9
+    bit_range:
+    - 9
+    - 9
+    description: Filter scale configuration
+  - name: FSC10
+    bit_range:
+    - 10
+    - 10
+    description: Filter scale configuration
+  - name: FSC11
+    bit_range:
+    - 11
+    - 11
+    description: Filter scale configuration
+  - name: FSC12
+    bit_range:
+    - 12
+    - 12
+    description: Filter scale configuration
+  - name: FSC13
+    bit_range:
+    - 13
+    - 13
+    description: Filter scale configuration
+  - name: FSC14
+    bit_range:
+    - 14
+    - 14
+    description: Filter scale configuration
+  - name: FSC15
+    bit_range:
+    - 15
+    - 15
+    description: Filter scale configuration
+  - name: FSC16
+    bit_range:
+    - 16
+    - 16
+    description: Filter scale configuration
+  - name: FSC17
+    bit_range:
+    - 17
+    - 17
+    description: Filter scale configuration
+  - name: FSC18
+    bit_range:
+    - 18
+    - 18
+    description: Filter scale configuration
+  - name: FSC19
+    bit_range:
+    - 19
+    - 19
+    description: Filter scale configuration
+  - name: FSC20
+    bit_range:
+    - 20
+    - 20
+    description: Filter scale configuration
+  - name: FSC21
+    bit_range:
+    - 21
+    - 21
+    description: Filter scale configuration
+  - name: FSC22
+    bit_range:
+    - 22
+    - 22
+    description: Filter scale configuration
+  - name: FSC23
+    bit_range:
+    - 23
+    - 23
+    description: Filter scale configuration
+  - name: FSC24
+    bit_range:
+    - 24
+    - 24
+    description: Filter scale configuration
+  - name: FSC25
+    bit_range:
+    - 25
+    - 25
+    description: Filter scale configuration
+  - name: FSC26
+    bit_range:
+    - 26
+    - 26
+    description: Filter scale configuration
+  - name: FSC27
+    bit_range:
+    - 27
+    - 27
+    description: Filter scale configuration
+  side_effects: null
+- id: FFA1R
+  address_offset: 532
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FFA0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Filter FIFO assignment for filter
+                    0
+  - name: FFA1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Filter FIFO assignment for filter
+                    1
+  - name: FFA2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Filter FIFO assignment for filter
+                    2
+  - name: FFA3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Filter FIFO assignment for filter
+                    3
+  - name: FFA4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Filter FIFO assignment for filter
+                    4
+  - name: FFA5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Filter FIFO assignment for filter
+                    5
+  - name: FFA6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Filter FIFO assignment for filter
+                    6
+  - name: FFA7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Filter FIFO assignment for filter
+                    7
+  - name: FFA8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Filter FIFO assignment for filter
+                    8
+  - name: FFA9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Filter FIFO assignment for filter
+                    9
+  - name: FFA10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Filter FIFO assignment for filter
+                    10
+  - name: FFA11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Filter FIFO assignment for filter
+                    11
+  - name: FFA12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Filter FIFO assignment for filter
+                    12
+  - name: FFA13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Filter FIFO assignment for filter
+                    13
+  - name: FFA14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Filter FIFO assignment for
+                    filter
+  - name: FFA15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Filter FIFO assignment for
+                    filter
+  - name: FFA16
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      Filter FIFO assignment for
+                    filter
+  - name: FFA17
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      Filter FIFO assignment for
+                    filter
+  - name: FFA18
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      Filter FIFO assignment for
+                    filter
+  - name: FFA19
+    bit_range:
+    - 19
+    - 19
+    description: |-
+      Filter FIFO assignment for
+                    filter
+  - name: FFA20
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      Filter FIFO assignment for
+                    filter
+  - name: FFA21
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      Filter FIFO assignment for
+                    filter
+  - name: FFA22
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      Filter FIFO assignment for
+                    filter
+  - name: FFA23
+    bit_range:
+    - 23
+    - 23
+    description: |-
+      Filter FIFO assignment for
+                    filter
+  - name: FFA24
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      Filter FIFO assignment for
+                    filter
+  - name: FFA25
+    bit_range:
+    - 25
+    - 25
+    description: |-
+      Filter FIFO assignment for
+                    filter
+  - name: FFA26
+    bit_range:
+    - 26
+    - 26
+    description: |-
+      Filter FIFO assignment for
+                    filter
+  - name: FFA27
+    bit_range:
+    - 27
+    - 27
+    description: |-
+      Filter FIFO assignment for
+                    filter
+  side_effects: null
+- id: FA1R
+  address_offset: 540
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FACT0
+    bit_range:
+    - 0
+    - 0
+    description: Filter active
+  - name: FACT1
+    bit_range:
+    - 1
+    - 1
+    description: Filter active
+  - name: FACT2
+    bit_range:
+    - 2
+    - 2
+    description: Filter active
+  - name: FACT3
+    bit_range:
+    - 3
+    - 3
+    description: Filter active
+  - name: FACT4
+    bit_range:
+    - 4
+    - 4
+    description: Filter active
+  - name: FACT5
+    bit_range:
+    - 5
+    - 5
+    description: Filter active
+  - name: FACT6
+    bit_range:
+    - 6
+    - 6
+    description: Filter active
+  - name: FACT7
+    bit_range:
+    - 7
+    - 7
+    description: Filter active
+  - name: FACT8
+    bit_range:
+    - 8
+    - 8
+    description: Filter active
+  - name: FACT9
+    bit_range:
+    - 9
+    - 9
+    description: Filter active
+  - name: FACT10
+    bit_range:
+    - 10
+    - 10
+    description: Filter active
+  - name: FACT11
+    bit_range:
+    - 11
+    - 11
+    description: Filter active
+  - name: FACT12
+    bit_range:
+    - 12
+    - 12
+    description: Filter active
+  - name: FACT13
+    bit_range:
+    - 13
+    - 13
+    description: Filter active
+  - name: FACT14
+    bit_range:
+    - 14
+    - 14
+    description: Filter active
+  - name: FACT15
+    bit_range:
+    - 15
+    - 15
+    description: Filter active
+  - name: FACT16
+    bit_range:
+    - 16
+    - 16
+    description: Filter active
+  - name: FACT17
+    bit_range:
+    - 17
+    - 17
+    description: Filter active
+  - name: FACT18
+    bit_range:
+    - 18
+    - 18
+    description: Filter active
+  - name: FACT19
+    bit_range:
+    - 19
+    - 19
+    description: Filter active
+  - name: FACT20
+    bit_range:
+    - 20
+    - 20
+    description: Filter active
+  - name: FACT21
+    bit_range:
+    - 21
+    - 21
+    description: Filter active
+  - name: FACT22
+    bit_range:
+    - 22
+    - 22
+    description: Filter active
+  - name: FACT23
+    bit_range:
+    - 23
+    - 23
+    description: Filter active
+  - name: FACT24
+    bit_range:
+    - 24
+    - 24
+    description: Filter active
+  - name: FACT25
+    bit_range:
+    - 25
+    - 25
+    description: Filter active
+  - name: FACT26
+    bit_range:
+    - 26
+    - 26
+    description: Filter active
+  - name: FACT27
+    bit_range:
+    - 27
+    - 27
+    description: Filter active
+  side_effects: null
+- id: F0R1
+  address_offset: 576
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F0R2
+  address_offset: 580
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F1R1
+  address_offset: 584
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F1R2
+  address_offset: 588
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F2R1
+  address_offset: 592
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F2R2
+  address_offset: 596
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F3R1
+  address_offset: 600
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F3R2
+  address_offset: 604
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F4R1
+  address_offset: 608
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F4R2
+  address_offset: 612
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F5R1
+  address_offset: 616
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F5R2
+  address_offset: 620
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F6R1
+  address_offset: 624
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F6R2
+  address_offset: 628
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F7R1
+  address_offset: 632
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F7R2
+  address_offset: 636
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F8R1
+  address_offset: 640
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F8R2
+  address_offset: 644
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F9R1
+  address_offset: 648
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F9R2
+  address_offset: 652
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F10R1
+  address_offset: 656
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F10R2
+  address_offset: 660
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F11R1
+  address_offset: 664
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F11R2
+  address_offset: 668
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F12R1
+  address_offset: 672
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F12R2
+  address_offset: 676
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F13R1
+  address_offset: 680
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F13R2
+  address_offset: 684
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F14R1
+  address_offset: 688
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F14R2
+  address_offset: 692
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F15R1
+  address_offset: 696
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F15R2
+  address_offset: 700
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F16R1
+  address_offset: 704
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F16R2
+  address_offset: 708
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F17R1
+  address_offset: 712
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F17R2
+  address_offset: 716
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F18R1
+  address_offset: 720
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F18R2
+  address_offset: 724
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F19R1
+  address_offset: 728
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F19R2
+  address_offset: 732
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F20R1
+  address_offset: 736
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F20R2
+  address_offset: 740
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F21R1
+  address_offset: 744
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F21R2
+  address_offset: 748
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F22R1
+  address_offset: 752
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F22R2
+  address_offset: 756
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F23R1
+  address_offset: 760
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F23R2
+  address_offset: 764
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F24R1
+  address_offset: 768
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F24R2
+  address_offset: 772
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F25R1
+  address_offset: 776
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F25R2
+  address_offset: 780
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F26R1
+  address_offset: 784
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F26R2
+  address_offset: 788
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F27R1
+  address_offset: 792
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+- id: F27R2
+  address_offset: 796
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FB0
+    bit_range:
+    - 0
+    - 0
+    description: Filter bits
+  - name: FB1
+    bit_range:
+    - 1
+    - 1
+    description: Filter bits
+  - name: FB2
+    bit_range:
+    - 2
+    - 2
+    description: Filter bits
+  - name: FB3
+    bit_range:
+    - 3
+    - 3
+    description: Filter bits
+  - name: FB4
+    bit_range:
+    - 4
+    - 4
+    description: Filter bits
+  - name: FB5
+    bit_range:
+    - 5
+    - 5
+    description: Filter bits
+  - name: FB6
+    bit_range:
+    - 6
+    - 6
+    description: Filter bits
+  - name: FB7
+    bit_range:
+    - 7
+    - 7
+    description: Filter bits
+  - name: FB8
+    bit_range:
+    - 8
+    - 8
+    description: Filter bits
+  - name: FB9
+    bit_range:
+    - 9
+    - 9
+    description: Filter bits
+  - name: FB10
+    bit_range:
+    - 10
+    - 10
+    description: Filter bits
+  - name: FB11
+    bit_range:
+    - 11
+    - 11
+    description: Filter bits
+  - name: FB12
+    bit_range:
+    - 12
+    - 12
+    description: Filter bits
+  - name: FB13
+    bit_range:
+    - 13
+    - 13
+    description: Filter bits
+  - name: FB14
+    bit_range:
+    - 14
+    - 14
+    description: Filter bits
+  - name: FB15
+    bit_range:
+    - 15
+    - 15
+    description: Filter bits
+  - name: FB16
+    bit_range:
+    - 16
+    - 16
+    description: Filter bits
+  - name: FB17
+    bit_range:
+    - 17
+    - 17
+    description: Filter bits
+  - name: FB18
+    bit_range:
+    - 18
+    - 18
+    description: Filter bits
+  - name: FB19
+    bit_range:
+    - 19
+    - 19
+    description: Filter bits
+  - name: FB20
+    bit_range:
+    - 20
+    - 20
+    description: Filter bits
+  - name: FB21
+    bit_range:
+    - 21
+    - 21
+    description: Filter bits
+  - name: FB22
+    bit_range:
+    - 22
+    - 22
+    description: Filter bits
+  - name: FB23
+    bit_range:
+    - 23
+    - 23
+    description: Filter bits
+  - name: FB24
+    bit_range:
+    - 24
+    - 24
+    description: Filter bits
+  - name: FB25
+    bit_range:
+    - 25
+    - 25
+    description: Filter bits
+  - name: FB26
+    bit_range:
+    - 26
+    - 26
+    description: Filter bits
+  - name: FB27
+    bit_range:
+    - 27
+    - 27
+    description: Filter bits
+  - name: FB28
+    bit_range:
+    - 28
+    - 28
+    description: Filter bits
+  - name: FB29
+    bit_range:
+    - 29
+    - 29
+    description: Filter bits
+  - name: FB30
+    bit_range:
+    - 30
+    - 30
+    description: Filter bits
+  - name: FB31
+    bit_range:
+    - 31
+    - 31
+    description: Filter bits
+  side_effects: null
+interrupts:
+  CAN1_RX0: 20
+  CAN1_TX: 19
+  CAN1_RX1: 21
+  CAN1_SCE: 22
+timing: null

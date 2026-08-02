@@ -1,0 +1,746 @@
+peripheral: USB_FS
+version: 0.1.0
+registers:
+- id: EP0R
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EA
+    bit_range:
+    - 3
+    - 0
+    description: EA
+  - name: STAT_TX
+    bit_range:
+    - 5
+    - 4
+    description: STAT_TX
+  - name: DTOG_TX
+    bit_range:
+    - 6
+    - 6
+    description: DTOG_TX
+  - name: CTR_TX
+    bit_range:
+    - 7
+    - 7
+    description: CTR_TX
+  - name: EP_KIND
+    bit_range:
+    - 8
+    - 8
+    description: EP_KIND
+  - name: EPTYPE
+    bit_range:
+    - 10
+    - 9
+    description: EPTYPE
+  - name: SETUP
+    bit_range:
+    - 11
+    - 11
+    description: SETUP
+  - name: STAT_RX
+    bit_range:
+    - 13
+    - 12
+    description: STAT_RX
+  - name: DTOG_RX
+    bit_range:
+    - 14
+    - 14
+    description: DTOG_RX
+  - name: CTR_RX
+    bit_range:
+    - 15
+    - 15
+    description: CTR_RX
+  side_effects: null
+- id: EP1R
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EA
+    bit_range:
+    - 3
+    - 0
+    description: EA
+  - name: STAT_TX
+    bit_range:
+    - 5
+    - 4
+    description: STAT_TX
+  - name: DTOG_TX
+    bit_range:
+    - 6
+    - 6
+    description: DTOG_TX
+  - name: CTR_TX
+    bit_range:
+    - 7
+    - 7
+    description: CTR_TX
+  - name: EP_KIND
+    bit_range:
+    - 8
+    - 8
+    description: EP_KIND
+  - name: EPTYPE
+    bit_range:
+    - 10
+    - 9
+    description: EPTYPE
+  - name: SETUP
+    bit_range:
+    - 11
+    - 11
+    description: SETUP
+  - name: STAT_RX
+    bit_range:
+    - 13
+    - 12
+    description: STAT_RX
+  - name: DTOG_RX
+    bit_range:
+    - 14
+    - 14
+    description: DTOG_RX
+  - name: CTR_RX
+    bit_range:
+    - 15
+    - 15
+    description: CTR_RX
+  side_effects: null
+- id: EP2R
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EA
+    bit_range:
+    - 3
+    - 0
+    description: EA
+  - name: STAT_TX
+    bit_range:
+    - 5
+    - 4
+    description: STAT_TX
+  - name: DTOG_TX
+    bit_range:
+    - 6
+    - 6
+    description: DTOG_TX
+  - name: CTR_TX
+    bit_range:
+    - 7
+    - 7
+    description: CTR_TX
+  - name: EP_KIND
+    bit_range:
+    - 8
+    - 8
+    description: EP_KIND
+  - name: EPTYPE
+    bit_range:
+    - 10
+    - 9
+    description: EPTYPE
+  - name: SETUP
+    bit_range:
+    - 11
+    - 11
+    description: SETUP
+  - name: STAT_RX
+    bit_range:
+    - 13
+    - 12
+    description: STAT_RX
+  - name: DTOG_RX
+    bit_range:
+    - 14
+    - 14
+    description: DTOG_RX
+  - name: CTR_RX
+    bit_range:
+    - 15
+    - 15
+    description: CTR_RX
+  side_effects: null
+- id: EP3R
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EA
+    bit_range:
+    - 3
+    - 0
+    description: EA
+  - name: STAT_TX
+    bit_range:
+    - 5
+    - 4
+    description: STAT_TX
+  - name: DTOG_TX
+    bit_range:
+    - 6
+    - 6
+    description: DTOG_TX
+  - name: CTR_TX
+    bit_range:
+    - 7
+    - 7
+    description: CTR_TX
+  - name: EP_KIND
+    bit_range:
+    - 8
+    - 8
+    description: EP_KIND
+  - name: EPTYPE
+    bit_range:
+    - 10
+    - 9
+    description: EPTYPE
+  - name: SETUP
+    bit_range:
+    - 11
+    - 11
+    description: SETUP
+  - name: STAT_RX
+    bit_range:
+    - 13
+    - 12
+    description: STAT_RX
+  - name: DTOG_RX
+    bit_range:
+    - 14
+    - 14
+    description: DTOG_RX
+  - name: CTR_RX
+    bit_range:
+    - 15
+    - 15
+    description: CTR_RX
+  side_effects: null
+- id: EP4R
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EA
+    bit_range:
+    - 3
+    - 0
+    description: EA
+  - name: STAT_TX
+    bit_range:
+    - 5
+    - 4
+    description: STAT_TX
+  - name: DTOG_TX
+    bit_range:
+    - 6
+    - 6
+    description: DTOG_TX
+  - name: CTR_TX
+    bit_range:
+    - 7
+    - 7
+    description: CTR_TX
+  - name: EP_KIND
+    bit_range:
+    - 8
+    - 8
+    description: EP_KIND
+  - name: EPTYPE
+    bit_range:
+    - 10
+    - 9
+    description: EPTYPE
+  - name: SETUP
+    bit_range:
+    - 11
+    - 11
+    description: SETUP
+  - name: STAT_RX
+    bit_range:
+    - 13
+    - 12
+    description: STAT_RX
+  - name: DTOG_RX
+    bit_range:
+    - 14
+    - 14
+    description: DTOG_RX
+  - name: CTR_RX
+    bit_range:
+    - 15
+    - 15
+    description: CTR_RX
+  side_effects: null
+- id: EP5R
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EA
+    bit_range:
+    - 3
+    - 0
+    description: EA
+  - name: STAT_TX
+    bit_range:
+    - 5
+    - 4
+    description: STAT_TX
+  - name: DTOG_TX
+    bit_range:
+    - 6
+    - 6
+    description: DTOG_TX
+  - name: CTR_TX
+    bit_range:
+    - 7
+    - 7
+    description: CTR_TX
+  - name: EP_KIND
+    bit_range:
+    - 8
+    - 8
+    description: EP_KIND
+  - name: EPTYPE
+    bit_range:
+    - 10
+    - 9
+    description: EPTYPE
+  - name: SETUP
+    bit_range:
+    - 11
+    - 11
+    description: SETUP
+  - name: STAT_RX
+    bit_range:
+    - 13
+    - 12
+    description: STAT_RX
+  - name: DTOG_RX
+    bit_range:
+    - 14
+    - 14
+    description: DTOG_RX
+  - name: CTR_RX
+    bit_range:
+    - 15
+    - 15
+    description: CTR_RX
+  side_effects: null
+- id: EP6R
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EA
+    bit_range:
+    - 3
+    - 0
+    description: EA
+  - name: STAT_TX
+    bit_range:
+    - 5
+    - 4
+    description: STAT_TX
+  - name: DTOG_TX
+    bit_range:
+    - 6
+    - 6
+    description: DTOG_TX
+  - name: CTR_TX
+    bit_range:
+    - 7
+    - 7
+    description: CTR_TX
+  - name: EP_KIND
+    bit_range:
+    - 8
+    - 8
+    description: EP_KIND
+  - name: EPTYPE
+    bit_range:
+    - 10
+    - 9
+    description: EPTYPE
+  - name: SETUP
+    bit_range:
+    - 11
+    - 11
+    description: SETUP
+  - name: STAT_RX
+    bit_range:
+    - 13
+    - 12
+    description: STAT_RX
+  - name: DTOG_RX
+    bit_range:
+    - 14
+    - 14
+    description: DTOG_RX
+  - name: CTR_RX
+    bit_range:
+    - 15
+    - 15
+    description: CTR_RX
+  side_effects: null
+- id: EP7R
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EA
+    bit_range:
+    - 3
+    - 0
+    description: EA
+  - name: STAT_TX
+    bit_range:
+    - 5
+    - 4
+    description: STAT_TX
+  - name: DTOG_TX
+    bit_range:
+    - 6
+    - 6
+    description: DTOG_TX
+  - name: CTR_TX
+    bit_range:
+    - 7
+    - 7
+    description: CTR_TX
+  - name: EP_KIND
+    bit_range:
+    - 8
+    - 8
+    description: EP_KIND
+  - name: EPTYPE
+    bit_range:
+    - 10
+    - 9
+    description: EPTYPE
+  - name: SETUP
+    bit_range:
+    - 11
+    - 11
+    description: SETUP
+  - name: STAT_RX
+    bit_range:
+    - 13
+    - 12
+    description: STAT_RX
+  - name: DTOG_RX
+    bit_range:
+    - 14
+    - 14
+    description: DTOG_RX
+  - name: CTR_RX
+    bit_range:
+    - 15
+    - 15
+    description: CTR_RX
+  side_effects: null
+- id: CNTR
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FRES
+    bit_range:
+    - 0
+    - 0
+    description: FRES
+  - name: PDWN
+    bit_range:
+    - 1
+    - 1
+    description: PDWN
+  - name: LPMODE
+    bit_range:
+    - 2
+    - 2
+    description: LPMODE
+  - name: FSUSP
+    bit_range:
+    - 3
+    - 3
+    description: FSUSP
+  - name: RESUME
+    bit_range:
+    - 4
+    - 4
+    description: RESUME
+  - name: L1RESUME
+    bit_range:
+    - 5
+    - 5
+    description: L1RESUME
+  - name: L1REQM
+    bit_range:
+    - 7
+    - 7
+    description: L1REQM
+  - name: ESOFM
+    bit_range:
+    - 8
+    - 8
+    description: ESOFM
+  - name: SOFM
+    bit_range:
+    - 9
+    - 9
+    description: SOFM
+  - name: RESETM
+    bit_range:
+    - 10
+    - 10
+    description: RESETM
+  - name: SUSPM
+    bit_range:
+    - 11
+    - 11
+    description: SUSPM
+  - name: WKUPM
+    bit_range:
+    - 12
+    - 12
+    description: WKUPM
+  - name: ERRM
+    bit_range:
+    - 13
+    - 13
+    description: ERRM
+  - name: PMAOVRM
+    bit_range:
+    - 14
+    - 14
+    description: PMAOVRM
+  - name: CTRM
+    bit_range:
+    - 15
+    - 15
+    description: CTRM
+  side_effects: null
+- id: ISTR
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EP_ID
+    bit_range:
+    - 3
+    - 0
+    description: EP_ID
+  - name: DIR
+    bit_range:
+    - 4
+    - 4
+    description: DIR
+  - name: L1REQ
+    bit_range:
+    - 7
+    - 7
+    description: L1REQ
+  - name: ESOF
+    bit_range:
+    - 8
+    - 8
+    description: ESOF
+  - name: SOF
+    bit_range:
+    - 9
+    - 9
+    description: SOF
+  - name: RESET
+    bit_range:
+    - 10
+    - 10
+    description: RESET
+  - name: SUSP
+    bit_range:
+    - 11
+    - 11
+    description: SUSP
+  - name: WKUP
+    bit_range:
+    - 12
+    - 12
+    description: WKUP
+  - name: ERR
+    bit_range:
+    - 13
+    - 13
+    description: ERR
+  - name: PMAOVR
+    bit_range:
+    - 14
+    - 14
+    description: PMAOVR
+  - name: CTR
+    bit_range:
+    - 15
+    - 15
+    description: CTR
+  side_effects: null
+- id: FNR
+  address_offset: 72
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: FN
+    bit_range:
+    - 10
+    - 0
+    description: FN
+  - name: LSOF
+    bit_range:
+    - 12
+    - 11
+    description: LSOF
+  - name: LCK
+    bit_range:
+    - 13
+    - 13
+    description: LCK
+  - name: RXDM
+    bit_range:
+    - 14
+    - 14
+    description: RXDM
+  - name: RXDP
+    bit_range:
+    - 15
+    - 15
+    description: RXDP
+  side_effects: null
+- id: DADDR
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADD
+    bit_range:
+    - 6
+    - 0
+    description: ADD
+  - name: EF
+    bit_range:
+    - 7
+    - 7
+    description: EF
+  side_effects: null
+- id: BTABLE
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BTABLE
+    bit_range:
+    - 15
+    - 3
+    description: BTABLE
+  side_effects: null
+- id: LPMCSR
+  address_offset: 84
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LPMEN
+    bit_range:
+    - 0
+    - 0
+    description: LPMEN
+  - name: LPMACK
+    bit_range:
+    - 1
+    - 1
+    description: LPMACK
+  - name: REMWAKE
+    bit_range:
+    - 3
+    - 3
+    description: REMWAKE
+  - name: BESL
+    bit_range:
+    - 7
+    - 4
+    description: BESL
+  side_effects: null
+- id: BCDR
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BCDEN
+    bit_range:
+    - 0
+    - 0
+    description: BCDEN
+  - name: DCDEN
+    bit_range:
+    - 1
+    - 1
+    description: DCDEN
+  - name: PDEN
+    bit_range:
+    - 2
+    - 2
+    description: PDEN
+  - name: SDEN
+    bit_range:
+    - 3
+    - 3
+    description: SDEN
+  - name: DCDET
+    bit_range:
+    - 4
+    - 4
+    description: DCDET
+  - name: PDET
+    bit_range:
+    - 5
+    - 5
+    description: PDET
+  - name: SDET
+    bit_range:
+    - 6
+    - 6
+    description: SDET
+  - name: PS2DET
+    bit_range:
+    - 7
+    - 7
+    description: PS2DET
+  - name: DPPU
+    bit_range:
+    - 15
+    - 15
+    description: DPPU
+  side_effects: null
+interrupts:
+  USB: 31
+timing: null

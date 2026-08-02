@@ -1,0 +1,583 @@
+peripheral: GLOBAL_CLOCK_S
+version: 0.1.0
+registers:
+- id: TASKS_XOSTART
+  address_offset: 0
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_XOSTART
+    bit_range:
+    - 0
+    - 0
+    description: Start crystal oscillator (HFXO)
+  side_effects: null
+- id: TASKS_XOSTOP
+  address_offset: 4
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_XOSTOP
+    bit_range:
+    - 0
+    - 0
+    description: Stop crystal oscillator (HFXO)
+  side_effects: null
+- id: TASKS_PLLSTART
+  address_offset: 8
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_PLLSTART
+    bit_range:
+    - 0
+    - 0
+    description: Start PLL and keep it running, regardless of the automatic clock requests
+  side_effects: null
+- id: TASKS_PLLSTOP
+  address_offset: 12
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_PLLSTOP
+    bit_range:
+    - 0
+    - 0
+    description: Stop PLL
+  side_effects: null
+- id: TASKS_LFCLKSTART
+  address_offset: 16
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_LFCLKSTART
+    bit_range:
+    - 0
+    - 0
+    description: Start LFCLK source as selected in LFCLK.SRC
+  side_effects: null
+- id: TASKS_LFCLKSTOP
+  address_offset: 20
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_LFCLKSTOP
+    bit_range:
+    - 0
+    - 0
+    description: Stop LFCLK source
+  side_effects: null
+- id: TASKS_CAL
+  address_offset: 24
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_CAL
+    bit_range:
+    - 0
+    - 0
+    description: Start calibration of LFRC oscillator
+  side_effects: null
+- id: TASKS_XOTUNE
+  address_offset: 28
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_XOTUNE
+    bit_range:
+    - 0
+    - 0
+    description: Request tuning for HFXO
+  side_effects: null
+- id: TASKS_XOTUNEABORT
+  address_offset: 32
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_XOTUNEABORT
+    bit_range:
+    - 0
+    - 0
+    description: Abort tuning for HFXO
+  side_effects: null
+- id: SUBSCRIBE_XOSTART
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task XOSTART will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_XOSTOP
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task XOSTOP will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_PLLSTART
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task PLLSTART will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_PLLSTOP
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task PLLSTOP will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_LFCLKSTART
+  address_offset: 144
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task LFCLKSTART will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_LFCLKSTOP
+  address_offset: 148
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task LFCLKSTOP will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CAL
+  address_offset: 152
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CAL will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: EVENTS_XOSTARTED
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_XOSTARTED
+    bit_range:
+    - 0
+    - 0
+    description: Crystal oscillator has started
+  side_effects: null
+- id: EVENTS_PLLSTARTED
+  address_offset: 260
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_PLLSTARTED
+    bit_range:
+    - 0
+    - 0
+    description: PLL started
+  side_effects: null
+- id: EVENTS_LFCLKSTARTED
+  address_offset: 264
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_LFCLKSTARTED
+    bit_range:
+    - 0
+    - 0
+    description: LFCLK source started
+  side_effects: null
+- id: EVENTS_DONE
+  address_offset: 268
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_DONE
+    bit_range:
+    - 0
+    - 0
+    description: Calibration of LFRC oscillator complete event
+  side_effects: null
+- id: EVENTS_XOTUNED
+  address_offset: 272
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_XOTUNED
+    bit_range:
+    - 0
+    - 0
+    description: HFXO tuning is done. XOTUNED is generated after TASKS_XOSTART or after TASKS_XOTUNE has completed
+  side_effects: null
+- id: EVENTS_XOTUNEERROR
+  address_offset: 276
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_XOTUNEERROR
+    bit_range:
+    - 0
+    - 0
+    description: HFXO quality issue detected, XOTUNE is needed
+  side_effects: null
+- id: EVENTS_XOTUNEFAILED
+  address_offset: 280
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_XOTUNEFAILED
+    bit_range:
+    - 0
+    - 0
+    description: HFXO tuning could not be completed
+  side_effects: null
+- id: INTEN
+  address_offset: 768
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XOSTARTED
+    bit_range:
+    - 0
+    - 0
+    description: Enable or disable interrupt for event XOSTARTED
+  - name: PLLSTARTED
+    bit_range:
+    - 1
+    - 1
+    description: Enable or disable interrupt for event PLLSTARTED
+  - name: LFCLKSTARTED
+    bit_range:
+    - 2
+    - 2
+    description: Enable or disable interrupt for event LFCLKSTARTED
+  - name: DONE
+    bit_range:
+    - 3
+    - 3
+    description: Enable or disable interrupt for event DONE
+  - name: XOTUNED
+    bit_range:
+    - 4
+    - 4
+    description: Enable or disable interrupt for event XOTUNED
+  - name: XOTUNEERROR
+    bit_range:
+    - 5
+    - 5
+    description: Enable or disable interrupt for event XOTUNEERROR
+  - name: XOTUNEFAILED
+    bit_range:
+    - 6
+    - 6
+    description: Enable or disable interrupt for event XOTUNEFAILED
+  side_effects: null
+- id: INTENSET
+  address_offset: 772
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XOSTARTED
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to enable interrupt for event XOSTARTED
+  - name: PLLSTARTED
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to enable interrupt for event PLLSTARTED
+  - name: LFCLKSTARTED
+    bit_range:
+    - 2
+    - 2
+    description: Write '1' to enable interrupt for event LFCLKSTARTED
+  - name: DONE
+    bit_range:
+    - 3
+    - 3
+    description: Write '1' to enable interrupt for event DONE
+  - name: XOTUNED
+    bit_range:
+    - 4
+    - 4
+    description: Write '1' to enable interrupt for event XOTUNED
+  - name: XOTUNEERROR
+    bit_range:
+    - 5
+    - 5
+    description: Write '1' to enable interrupt for event XOTUNEERROR
+  - name: XOTUNEFAILED
+    bit_range:
+    - 6
+    - 6
+    description: Write '1' to enable interrupt for event XOTUNEFAILED
+  side_effects: null
+- id: INTENCLR
+  address_offset: 776
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XOSTARTED
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to disable interrupt for event XOSTARTED
+  - name: PLLSTARTED
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to disable interrupt for event PLLSTARTED
+  - name: LFCLKSTARTED
+    bit_range:
+    - 2
+    - 2
+    description: Write '1' to disable interrupt for event LFCLKSTARTED
+  - name: DONE
+    bit_range:
+    - 3
+    - 3
+    description: Write '1' to disable interrupt for event DONE
+  - name: XOTUNED
+    bit_range:
+    - 4
+    - 4
+    description: Write '1' to disable interrupt for event XOTUNED
+  - name: XOTUNEERROR
+    bit_range:
+    - 5
+    - 5
+    description: Write '1' to disable interrupt for event XOTUNEERROR
+  - name: XOTUNEFAILED
+    bit_range:
+    - 6
+    - 6
+    description: Write '1' to disable interrupt for event XOTUNEFAILED
+  side_effects: null
+- id: INTPEND
+  address_offset: 780
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: XOSTARTED
+    bit_range:
+    - 0
+    - 0
+    description: Read pending status of interrupt for event XOSTARTED
+  - name: PLLSTARTED
+    bit_range:
+    - 1
+    - 1
+    description: Read pending status of interrupt for event PLLSTARTED
+  - name: LFCLKSTARTED
+    bit_range:
+    - 2
+    - 2
+    description: Read pending status of interrupt for event LFCLKSTARTED
+  - name: DONE
+    bit_range:
+    - 3
+    - 3
+    description: Read pending status of interrupt for event DONE
+  - name: XOTUNED
+    bit_range:
+    - 4
+    - 4
+    description: Read pending status of interrupt for event XOTUNED
+  - name: XOTUNEERROR
+    bit_range:
+    - 5
+    - 5
+    description: Read pending status of interrupt for event XOTUNEERROR
+  - name: XOTUNEFAILED
+    bit_range:
+    - 6
+    - 6
+    description: Read pending status of interrupt for event XOTUNEFAILED
+  side_effects: null
+- id: XO_RUN
+  address_offset: 1032
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: STATUS
+    bit_range:
+    - 0
+    - 0
+    description: XOSTART task triggered or not
+  side_effects: null
+- id: XO_STAT
+  address_offset: 1036
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: STATE
+    bit_range:
+    - 16
+    - 16
+    description: XO state (Running between START task and STOPPED event)
+  side_effects: null
+- id: PLL_RUN
+  address_offset: 1064
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: STATUS
+    bit_range:
+    - 0
+    - 0
+    description: PLLSTART task triggered or not
+  side_effects: null
+- id: PLL_STAT
+  address_offset: 1068
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: STATE
+    bit_range:
+    - 16
+    - 16
+    description: PLL state (Running between START task and STOPPED event)
+  side_effects: null
+- id: LFCLK_SRC
+  address_offset: 1088
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SRC
+    bit_range:
+    - 1
+    - 0
+    description: Select which LFCLK source is started by the LFCLKSTART task
+  side_effects: null
+- id: LFCLK_RUN
+  address_offset: 1096
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: STATUS
+    bit_range:
+    - 0
+    - 0
+    description: LFCLKSTART task triggered or not
+  side_effects: null
+- id: LFCLK_STAT
+  address_offset: 1100
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: SRC
+    bit_range:
+    - 1
+    - 0
+    description: Value of LFCLK.SRCCOPY register when LFCLKSTARTED event was triggered
+  - name: ALWAYSRUNNING
+    bit_range:
+    - 4
+    - 4
+    description: ALWAYSRUN activated
+  - name: STATE
+    bit_range:
+    - 16
+    - 16
+    description: LFCLK state (Running between START task and STOPPED event)
+  side_effects: null
+- id: LFCLK_SRCCOPY
+  address_offset: 1104
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SRC
+    bit_range:
+    - 1
+    - 0
+    description: Value of LFCLK.SRC register when LFCLKSTART task was triggered
+  side_effects: null
+interrupts: null
+timing: null

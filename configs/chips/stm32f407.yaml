@@ -29,6 +29,7 @@ peripherals:
     base_address: 0x40023800
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32f407/rcc.yaml"
       profile: "stm32f4"
       # ENR writable masks = the F407's implemented-peripheral set, silicon-
       # confirmed on the bench F407 (stm32f4_mmio_diff). Per-part: the smaller
@@ -40,21 +41,31 @@ peripherals:
     type: "stm32f4_gpio"
     base_address: 0x40020000
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f407/gpioa.yaml"
   - id: "gpiob"
     type: "stm32f4_gpio"
     base_address: 0x40020400
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f407/gpiob.yaml"
   - id: "gpioc"
     type: "stm32f4_gpio"
     base_address: 0x40020800
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f407/gpioc.yaml"
   - id: "gpiod"
     type: "stm32f4_gpio"
     base_address: 0x40020C00
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f407/gpiod.yaml"
   - id: "systick"
     type: "systick"
     base_address: 0xE000E010
+    config:
+      debug_schema: "../peripherals/stm32f407/stk.yaml"
   - id: "uart2"
     type: "uart"
     base_address: 0x40004400
@@ -63,6 +74,7 @@ peripherals:
     # F4 USART CR3 adds bit 11 (ONEBIT) over the shared F1 map → 0xFFF.
     # Silicon-confirmed on the bench F407 (stm32f4_mmio_diff).
     config:
+      debug_schema: "../peripherals/stm32f407/usart2.yaml"
       cr3_mask: 0xFFF
   - id: "i2c1"
     type: "i2c"
@@ -76,11 +88,14 @@ peripherals:
     # ER under CR2.ITERREN, and an interrupt-mode HAL (STM32duino 3.x uses
     # HAL_I2C_Master_Transmit_IT) only learns an address was NACKed there.
     config:
+      debug_schema: "../peripherals/stm32f407/i2c1.yaml"
       irq_error: 32
   - id: "gpioe"
     type: "stm32f4_gpio"
     base_address: 0x40021000
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f407/gpioe.yaml"
   # TIM1 — advanced-control PWM timer (APB2). The `_pwm` id suffix declares
   # the pwm class alongside timer. RCC_APB2ENR.TIM1EN (bit 0).
   - id: "tim1_pwm"
@@ -90,6 +105,7 @@ peripherals:
     irq: 27
     clock: { reg: "apb2enr", bit: 0 }
     config:
+      debug_schema: "../peripherals/stm32f407/tim1.yaml"
       advanced: true
   - id: "tim2"
     type: "timer"
@@ -97,6 +113,7 @@ peripherals:
     size: "1KB"
     irq: 28
     config:
+      debug_schema: "../peripherals/stm32f407/tim2.yaml"
       width: 32
     # TIM2 is clocked from RCC_APB1ENR.TIM2EN (bit 0). Unclocked out of reset
     # (RM0090 §6.3.11) — ARR reads its 0xFFFFFFFF reset only once the clock is on.
@@ -106,17 +123,22 @@ peripherals:
     base_address: 0x40000400
     size: "1KB"
     irq: 29
+    config:
+      debug_schema: "../peripherals/stm32f407/tim3.yaml"
   - id: "tim4"
     type: "timer"
     base_address: 0x40000800
     size: "1KB"
     irq: 30
+    config:
+      debug_schema: "../peripherals/stm32f407/tim4.yaml"
   - id: "tim5"
     type: "timer"
     base_address: 0x40000C00
     size: "1KB"
     irq: 50
     config:
+      debug_schema: "../peripherals/stm32f407/tim5.yaml"
       width: 32
   - id: "usart1"
     type: "uart"
@@ -124,6 +146,7 @@ peripherals:
     size: "1KB"
     irq: 37
     config:
+      debug_schema: "../peripherals/stm32f407/usart1.yaml"
       cr3_mask: 0xFFF
   - id: "usart3"
     type: "uart"
@@ -131,6 +154,7 @@ peripherals:
     size: "1KB"
     irq: 39
     config:
+      debug_schema: "../peripherals/stm32f407/usart3.yaml"
       cr3_mask: 0xFFF
   - id: "usart6"
     type: "uart"
@@ -138,6 +162,7 @@ peripherals:
     size: "1KB"
     irq: 71
     config:
+      debug_schema: "../peripherals/stm32f407/usart6.yaml"
       cr3_mask: 0xFFF
   - id: "spi1"
     type: "spi"
@@ -149,6 +174,7 @@ peripherals:
     clock: { reg: "apb2enr", bit: 12 }
     # F4 classic SPI CR2 adds bit 4 (FRF/TI-mode) over the F1 map → 0xF7.
     config:
+      debug_schema: "../peripherals/stm32f407/spi1.yaml"
       cr2_mask: 0xF7
       # F407 silicon does not latch CR1 bit 12 (CRCNEXT): writing 0xFFFF reads
       # back 0xEFFF (silicon-confirmed over SWD). F1/L0/L4 leave it writable.
@@ -159,6 +185,7 @@ peripherals:
     size: "1KB"
     irq: 36
     config:
+      debug_schema: "../peripherals/stm32f407/spi2.yaml"
       cr2_mask: 0xF7
       # F407 silicon does not latch CR1 bit 12 (CRCNEXT): writing 0xFFFF reads
       # back 0xEFFF (silicon-confirmed over SWD). F1/L0/L4 leave it writable.
@@ -169,6 +196,7 @@ peripherals:
     size: "1KB"
     irq: 51
     config:
+      debug_schema: "../peripherals/stm32f407/spi3.yaml"
       cr2_mask: 0xF7
       # F407 silicon does not latch CR1 bit 12 (CRCNEXT): writing 0xFFFF reads
       # back 0xEFFF (silicon-confirmed over SWD). F1/L0/L4 leave it writable.
@@ -178,11 +206,15 @@ peripherals:
     base_address: 0x40005800
     size: "1KB"
     irq: 33
+    config:
+      debug_schema: "../peripherals/stm32f407/i2c2.yaml"
   - id: "i2c3"
     type: "i2c"
     base_address: 0x40005C00
     size: "1KB"
     irq: 72
+    config:
+      debug_schema: "../peripherals/stm32f407/i2c3.yaml"
   - id: "adc1"
     type: "adc"
     base_address: 0x40012000
@@ -191,11 +223,14 @@ peripherals:
     # ADC1 is clocked from RCC_APB2ENR.ADC1EN (bit 8 on F4 — NOT bit 9 as on F1).
     # Unclocked out of reset (RM0090 §6.3.16) — the converter is dead until on.
     clock: { reg: "apb2enr", bit: 8 }
+    config:
+      debug_schema: "../peripherals/stm32f407/adc1.yaml"
   - id: "exti"
     type: "exti"
     base_address: 0x40013C00
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32f407/exti.yaml"
       lines: 23
   # NVIC is wired unconditionally for Cortex-M machines; this entry declares
   # the tier1 irq class and pins the canonical base.
@@ -203,6 +238,8 @@ peripherals:
     type: "nvic"
     base_address: 0xE000E100
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f407/nvic.yaml"
   # IWDG — independent watchdog (RM0090 §21). Clocked from the dedicated LSI
   # oscillator, NOT an APB/AHB peripheral-enable bit, so it carries no `clock:`
   # gate. The KR key (0x5555) protects PR/RLR writes instead.
@@ -210,6 +247,8 @@ peripherals:
     type: "iwdg"
     base_address: 0x40003000
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f407/iwdg.yaml"
   # RTC — calendar real-time clock (RM0090 §26; same IP as the L4 `rtc` model).
   # Lives in the backup domain, clock-enabled via RCC_BDCR.RTCEN — outside the
   # APB/AHB peripheral-enable gate this model expresses, so it is left ungated.
@@ -217,11 +256,14 @@ peripherals:
     type: "rtc"
     base_address: 0x40002800
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f407/rtc.yaml"
   - id: "dbgmcu"
     type: "dbgmcu"
     base_address: 0xE0042000
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32f407/dbg.yaml"
       # DBGMCU_IDCODE for STM32F407: DEV_ID=0x413, REV_ID=0x1001.
       # Read from the user's silicon via `openocd -f interface/stlink.cfg
       # -f target/stm32f4x.cfg -c "program ... verify reset exit"` — the
@@ -240,6 +282,7 @@ peripherals:
     size: "1KB"
     clock: { reg: "ahb1enr", bit: 21 }
     config:
+      debug_schema: "../peripherals/stm32f407/dma1.yaml"
       # DMA1_Stream0..7 NVIC positions (stm32f407xx.h): 11..17, then 47.
       stream_irqs: [11, 12, 13, 14, 15, 16, 17, 47]
   - id: "dma2"
@@ -248,6 +291,7 @@ peripherals:
     size: "1KB"
     clock: { reg: "ahb1enr", bit: 22 }
     config:
+      debug_schema: "../peripherals/stm32f407/dma2.yaml"
       dma2: true
       # DMA2_Stream0..7 NVIC positions (stm32f407xx.h): 56..60, then 68..70.
       stream_irqs: [56, 57, 58, 59, 60, 68, 69, 70]
@@ -260,8 +304,11 @@ peripherals:
     base_address: 0x40023C00
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32f407/flash.yaml"
       profile: "f1"
   - id: "pwr"
     type: "pwr"
     base_address: 0x40007000
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f407/pwr.yaml"

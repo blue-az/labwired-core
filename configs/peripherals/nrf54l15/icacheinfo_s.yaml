@@ -1,0 +1,10757 @@
+peripheral: ICACHEINFO_S
+version: 0.1.0
+registers:
+- id: SET0_WAY0_INFO
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET0_WAY1_INFO
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET1_WAY0_INFO
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET1_WAY1_INFO
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET2_WAY0_INFO
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET2_WAY1_INFO
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET3_WAY0_INFO
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET3_WAY1_INFO
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET4_WAY0_INFO
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET4_WAY1_INFO
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET5_WAY0_INFO
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET5_WAY1_INFO
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET6_WAY0_INFO
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET6_WAY1_INFO
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET7_WAY0_INFO
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET7_WAY1_INFO
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET8_WAY0_INFO
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET8_WAY1_INFO
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET9_WAY0_INFO
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET9_WAY1_INFO
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET10_WAY0_INFO
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET10_WAY1_INFO
+  address_offset: 84
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET11_WAY0_INFO
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET11_WAY1_INFO
+  address_offset: 92
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET12_WAY0_INFO
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET12_WAY1_INFO
+  address_offset: 100
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET13_WAY0_INFO
+  address_offset: 104
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET13_WAY1_INFO
+  address_offset: 108
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET14_WAY0_INFO
+  address_offset: 112
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET14_WAY1_INFO
+  address_offset: 116
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET15_WAY0_INFO
+  address_offset: 120
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET15_WAY1_INFO
+  address_offset: 124
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET16_WAY0_INFO
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET16_WAY1_INFO
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET17_WAY0_INFO
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET17_WAY1_INFO
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET18_WAY0_INFO
+  address_offset: 144
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET18_WAY1_INFO
+  address_offset: 148
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET19_WAY0_INFO
+  address_offset: 152
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET19_WAY1_INFO
+  address_offset: 156
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET20_WAY0_INFO
+  address_offset: 160
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET20_WAY1_INFO
+  address_offset: 164
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET21_WAY0_INFO
+  address_offset: 168
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET21_WAY1_INFO
+  address_offset: 172
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET22_WAY0_INFO
+  address_offset: 176
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET22_WAY1_INFO
+  address_offset: 180
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET23_WAY0_INFO
+  address_offset: 184
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET23_WAY1_INFO
+  address_offset: 188
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET24_WAY0_INFO
+  address_offset: 192
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET24_WAY1_INFO
+  address_offset: 196
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET25_WAY0_INFO
+  address_offset: 200
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET25_WAY1_INFO
+  address_offset: 204
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET26_WAY0_INFO
+  address_offset: 208
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET26_WAY1_INFO
+  address_offset: 212
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET27_WAY0_INFO
+  address_offset: 216
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET27_WAY1_INFO
+  address_offset: 220
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET28_WAY0_INFO
+  address_offset: 224
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET28_WAY1_INFO
+  address_offset: 228
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET29_WAY0_INFO
+  address_offset: 232
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET29_WAY1_INFO
+  address_offset: 236
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET30_WAY0_INFO
+  address_offset: 240
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET30_WAY1_INFO
+  address_offset: 244
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET31_WAY0_INFO
+  address_offset: 248
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET31_WAY1_INFO
+  address_offset: 252
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET32_WAY0_INFO
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET32_WAY1_INFO
+  address_offset: 260
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET33_WAY0_INFO
+  address_offset: 264
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET33_WAY1_INFO
+  address_offset: 268
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET34_WAY0_INFO
+  address_offset: 272
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET34_WAY1_INFO
+  address_offset: 276
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET35_WAY0_INFO
+  address_offset: 280
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET35_WAY1_INFO
+  address_offset: 284
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET36_WAY0_INFO
+  address_offset: 288
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET36_WAY1_INFO
+  address_offset: 292
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET37_WAY0_INFO
+  address_offset: 296
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET37_WAY1_INFO
+  address_offset: 300
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET38_WAY0_INFO
+  address_offset: 304
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET38_WAY1_INFO
+  address_offset: 308
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET39_WAY0_INFO
+  address_offset: 312
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET39_WAY1_INFO
+  address_offset: 316
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET40_WAY0_INFO
+  address_offset: 320
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET40_WAY1_INFO
+  address_offset: 324
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET41_WAY0_INFO
+  address_offset: 328
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET41_WAY1_INFO
+  address_offset: 332
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET42_WAY0_INFO
+  address_offset: 336
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET42_WAY1_INFO
+  address_offset: 340
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET43_WAY0_INFO
+  address_offset: 344
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET43_WAY1_INFO
+  address_offset: 348
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET44_WAY0_INFO
+  address_offset: 352
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET44_WAY1_INFO
+  address_offset: 356
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET45_WAY0_INFO
+  address_offset: 360
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET45_WAY1_INFO
+  address_offset: 364
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET46_WAY0_INFO
+  address_offset: 368
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET46_WAY1_INFO
+  address_offset: 372
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET47_WAY0_INFO
+  address_offset: 376
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET47_WAY1_INFO
+  address_offset: 380
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET48_WAY0_INFO
+  address_offset: 384
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET48_WAY1_INFO
+  address_offset: 388
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET49_WAY0_INFO
+  address_offset: 392
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET49_WAY1_INFO
+  address_offset: 396
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET50_WAY0_INFO
+  address_offset: 400
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET50_WAY1_INFO
+  address_offset: 404
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET51_WAY0_INFO
+  address_offset: 408
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET51_WAY1_INFO
+  address_offset: 412
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET52_WAY0_INFO
+  address_offset: 416
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET52_WAY1_INFO
+  address_offset: 420
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET53_WAY0_INFO
+  address_offset: 424
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET53_WAY1_INFO
+  address_offset: 428
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET54_WAY0_INFO
+  address_offset: 432
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET54_WAY1_INFO
+  address_offset: 436
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET55_WAY0_INFO
+  address_offset: 440
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET55_WAY1_INFO
+  address_offset: 444
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET56_WAY0_INFO
+  address_offset: 448
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET56_WAY1_INFO
+  address_offset: 452
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET57_WAY0_INFO
+  address_offset: 456
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET57_WAY1_INFO
+  address_offset: 460
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET58_WAY0_INFO
+  address_offset: 464
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET58_WAY1_INFO
+  address_offset: 468
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET59_WAY0_INFO
+  address_offset: 472
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET59_WAY1_INFO
+  address_offset: 476
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET60_WAY0_INFO
+  address_offset: 480
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET60_WAY1_INFO
+  address_offset: 484
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET61_WAY0_INFO
+  address_offset: 488
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET61_WAY1_INFO
+  address_offset: 492
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET62_WAY0_INFO
+  address_offset: 496
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET62_WAY1_INFO
+  address_offset: 500
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET63_WAY0_INFO
+  address_offset: 504
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET63_WAY1_INFO
+  address_offset: 508
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET64_WAY0_INFO
+  address_offset: 512
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET64_WAY1_INFO
+  address_offset: 516
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET65_WAY0_INFO
+  address_offset: 520
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET65_WAY1_INFO
+  address_offset: 524
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET66_WAY0_INFO
+  address_offset: 528
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET66_WAY1_INFO
+  address_offset: 532
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET67_WAY0_INFO
+  address_offset: 536
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET67_WAY1_INFO
+  address_offset: 540
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET68_WAY0_INFO
+  address_offset: 544
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET68_WAY1_INFO
+  address_offset: 548
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET69_WAY0_INFO
+  address_offset: 552
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET69_WAY1_INFO
+  address_offset: 556
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET70_WAY0_INFO
+  address_offset: 560
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET70_WAY1_INFO
+  address_offset: 564
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET71_WAY0_INFO
+  address_offset: 568
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET71_WAY1_INFO
+  address_offset: 572
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET72_WAY0_INFO
+  address_offset: 576
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET72_WAY1_INFO
+  address_offset: 580
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET73_WAY0_INFO
+  address_offset: 584
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET73_WAY1_INFO
+  address_offset: 588
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET74_WAY0_INFO
+  address_offset: 592
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET74_WAY1_INFO
+  address_offset: 596
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET75_WAY0_INFO
+  address_offset: 600
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET75_WAY1_INFO
+  address_offset: 604
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET76_WAY0_INFO
+  address_offset: 608
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET76_WAY1_INFO
+  address_offset: 612
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET77_WAY0_INFO
+  address_offset: 616
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET77_WAY1_INFO
+  address_offset: 620
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET78_WAY0_INFO
+  address_offset: 624
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET78_WAY1_INFO
+  address_offset: 628
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET79_WAY0_INFO
+  address_offset: 632
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET79_WAY1_INFO
+  address_offset: 636
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET80_WAY0_INFO
+  address_offset: 640
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET80_WAY1_INFO
+  address_offset: 644
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET81_WAY0_INFO
+  address_offset: 648
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET81_WAY1_INFO
+  address_offset: 652
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET82_WAY0_INFO
+  address_offset: 656
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET82_WAY1_INFO
+  address_offset: 660
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET83_WAY0_INFO
+  address_offset: 664
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET83_WAY1_INFO
+  address_offset: 668
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET84_WAY0_INFO
+  address_offset: 672
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET84_WAY1_INFO
+  address_offset: 676
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET85_WAY0_INFO
+  address_offset: 680
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET85_WAY1_INFO
+  address_offset: 684
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET86_WAY0_INFO
+  address_offset: 688
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET86_WAY1_INFO
+  address_offset: 692
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET87_WAY0_INFO
+  address_offset: 696
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET87_WAY1_INFO
+  address_offset: 700
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET88_WAY0_INFO
+  address_offset: 704
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET88_WAY1_INFO
+  address_offset: 708
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET89_WAY0_INFO
+  address_offset: 712
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET89_WAY1_INFO
+  address_offset: 716
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET90_WAY0_INFO
+  address_offset: 720
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET90_WAY1_INFO
+  address_offset: 724
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET91_WAY0_INFO
+  address_offset: 728
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET91_WAY1_INFO
+  address_offset: 732
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET92_WAY0_INFO
+  address_offset: 736
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET92_WAY1_INFO
+  address_offset: 740
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET93_WAY0_INFO
+  address_offset: 744
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET93_WAY1_INFO
+  address_offset: 748
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET94_WAY0_INFO
+  address_offset: 752
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET94_WAY1_INFO
+  address_offset: 756
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET95_WAY0_INFO
+  address_offset: 760
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET95_WAY1_INFO
+  address_offset: 764
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET96_WAY0_INFO
+  address_offset: 768
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET96_WAY1_INFO
+  address_offset: 772
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET97_WAY0_INFO
+  address_offset: 776
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET97_WAY1_INFO
+  address_offset: 780
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET98_WAY0_INFO
+  address_offset: 784
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET98_WAY1_INFO
+  address_offset: 788
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET99_WAY0_INFO
+  address_offset: 792
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET99_WAY1_INFO
+  address_offset: 796
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET100_WAY0_INFO
+  address_offset: 800
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET100_WAY1_INFO
+  address_offset: 804
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET101_WAY0_INFO
+  address_offset: 808
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET101_WAY1_INFO
+  address_offset: 812
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET102_WAY0_INFO
+  address_offset: 816
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET102_WAY1_INFO
+  address_offset: 820
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET103_WAY0_INFO
+  address_offset: 824
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET103_WAY1_INFO
+  address_offset: 828
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET104_WAY0_INFO
+  address_offset: 832
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET104_WAY1_INFO
+  address_offset: 836
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET105_WAY0_INFO
+  address_offset: 840
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET105_WAY1_INFO
+  address_offset: 844
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET106_WAY0_INFO
+  address_offset: 848
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET106_WAY1_INFO
+  address_offset: 852
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET107_WAY0_INFO
+  address_offset: 856
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET107_WAY1_INFO
+  address_offset: 860
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET108_WAY0_INFO
+  address_offset: 864
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET108_WAY1_INFO
+  address_offset: 868
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET109_WAY0_INFO
+  address_offset: 872
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET109_WAY1_INFO
+  address_offset: 876
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET110_WAY0_INFO
+  address_offset: 880
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET110_WAY1_INFO
+  address_offset: 884
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET111_WAY0_INFO
+  address_offset: 888
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET111_WAY1_INFO
+  address_offset: 892
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET112_WAY0_INFO
+  address_offset: 896
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET112_WAY1_INFO
+  address_offset: 900
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET113_WAY0_INFO
+  address_offset: 904
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET113_WAY1_INFO
+  address_offset: 908
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET114_WAY0_INFO
+  address_offset: 912
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET114_WAY1_INFO
+  address_offset: 916
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET115_WAY0_INFO
+  address_offset: 920
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET115_WAY1_INFO
+  address_offset: 924
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET116_WAY0_INFO
+  address_offset: 928
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET116_WAY1_INFO
+  address_offset: 932
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET117_WAY0_INFO
+  address_offset: 936
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET117_WAY1_INFO
+  address_offset: 940
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET118_WAY0_INFO
+  address_offset: 944
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET118_WAY1_INFO
+  address_offset: 948
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET119_WAY0_INFO
+  address_offset: 952
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET119_WAY1_INFO
+  address_offset: 956
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET120_WAY0_INFO
+  address_offset: 960
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET120_WAY1_INFO
+  address_offset: 964
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET121_WAY0_INFO
+  address_offset: 968
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET121_WAY1_INFO
+  address_offset: 972
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET122_WAY0_INFO
+  address_offset: 976
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET122_WAY1_INFO
+  address_offset: 980
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET123_WAY0_INFO
+  address_offset: 984
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET123_WAY1_INFO
+  address_offset: 988
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET124_WAY0_INFO
+  address_offset: 992
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET124_WAY1_INFO
+  address_offset: 996
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET125_WAY0_INFO
+  address_offset: 1000
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET125_WAY1_INFO
+  address_offset: 1004
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET126_WAY0_INFO
+  address_offset: 1008
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET126_WAY1_INFO
+  address_offset: 1012
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET127_WAY0_INFO
+  address_offset: 1016
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+- id: SET127_WAY1_INFO
+  address_offset: 1020
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAG
+    bit_range:
+    - 19
+    - 0
+    description: Cache tag.
+  - name: DUV_0
+    bit_range:
+    - 24
+    - 24
+    description: Data unit valid info.
+  - name: DUV_1
+    bit_range:
+    - 25
+    - 25
+    description: Data unit valid info.
+  - name: DUV_2
+    bit_range:
+    - 26
+    - 26
+    description: Data unit valid info.
+  - name: DUV_3
+    bit_range:
+    - 27
+    - 27
+    description: Data unit valid info.
+  - name: V
+    bit_range:
+    - 30
+    - 30
+    description: Line valid bit.
+  - name: MRU
+    bit_range:
+    - 31
+    - 31
+    description: Most recently used way.
+  side_effects: null
+interrupts: null
+timing: null

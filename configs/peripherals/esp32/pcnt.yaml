@@ -1,0 +1,459 @@
+peripheral: PCNT
+version: 0.1.0
+registers:
+- id: U0-7_CONF0
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 15376
+  fields:
+  - name: FILTER_THRES
+    bit_range:
+    - 9
+    - 0
+    description: This register is used to filter pluse whose width is smaller than this value for unit0.
+  - name: FILTER_EN
+    bit_range:
+    - 10
+    - 10
+    description: This is the enable bit for filtering input signals for unit0.
+  - name: THR_ZERO_EN
+    bit_range:
+    - 11
+    - 11
+    description: This is the enable bit for comparing unit0's count with 0 value.
+  - name: THR_H_LIM_EN
+    bit_range:
+    - 12
+    - 12
+    description: This is the enable bit for  comparing unit0's count with thr_h_lim value.
+  - name: THR_L_LIM_EN
+    bit_range:
+    - 13
+    - 13
+    description: This is the enable bit for comparing unit0's count with thr_l_lim  value.
+  - name: THR_THRES0_EN
+    bit_range:
+    - 14
+    - 14
+    description: This is the enable bit for comparing unit0's count with  thres0 value.
+  - name: THR_THRES1_EN
+    bit_range:
+    - 15
+    - 15
+    description: This is the enable bit for  comparing  unit0's count with thres1 value .
+  - name: CH0_NEG_MODE
+    bit_range:
+    - 17
+    - 16
+    description: 'This register is used to control the mode of channel0''s input negedge signal for unit0. 2''d1: increase at the negedge of input signal    2''d2:decrease at the negedge of input signal    others:forbidden'
+  - name: CH0_POS_MODE
+    bit_range:
+    - 19
+    - 18
+    description: 'This register is used to control the mode of channel0''s input posedge signal for unit0. 2''d1: increase at the posedge of input signal    2''d2:decrease at the posedge of input signal    others:forbidden'
+  - name: CH0_HCTRL_MODE
+    bit_range:
+    - 21
+    - 20
+    description: 'This register is used to control the mode of channel0''s high control signal for unit0. 2''d0:increase when control signal is low   2''d1: decrease when control signal is high   others:forbidden'
+  - name: CH0_LCTRL_MODE
+    bit_range:
+    - 23
+    - 22
+    description: 'This register is used to control the mode of channel0''s low control signal for unit0. 2''d0:increase when control signal is low   2''d1: decrease when control signal is high   others:forbidden'
+  - name: CH1_NEG_MODE
+    bit_range:
+    - 25
+    - 24
+    description: 'This register is used to control the mode of channel1''s input negedge signal for unit0. 2''d1: increase at the negedge of input signal    2''d2:decrease at the negedge of input signal    others:forbidden'
+  - name: CH1_POS_MODE
+    bit_range:
+    - 27
+    - 26
+    description: 'This register is used to control the mode of channel1''s input posedge signal for unit0. 2''d1: increase at the posedge of input signal    2''d2:decrease at the posedge of input signal    others:forbidden'
+  - name: CH1_HCTRL_MODE
+    bit_range:
+    - 29
+    - 28
+    description: 'This register is used to control the mode of channel1''s high control signal for unit0. 2''d0:increase when control signal is low   2''d1: decrease when control signal is high   others:forbidden'
+  - name: CH1_LCTRL_MODE
+    bit_range:
+    - 31
+    - 30
+    description: 'This register is used to control the mode of channel1''s low control signal for unit0. 2''d0:increase when control signal is low   2''d1: decrease when control signal is high   others:forbidden'
+  side_effects: null
+- id: U0-7_CONF1
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CNT_THRES0
+    bit_range:
+    - 15
+    - 0
+    description: This register is used to configure thres0 value for unit0.
+  - name: CNT_THRES1
+    bit_range:
+    - 31
+    - 16
+    description: This register is used to configure  thres1 value for unit0.
+  side_effects: null
+- id: U0-7_CONF2
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CNT_H_LIM
+    bit_range:
+    - 15
+    - 0
+    description: This register is used to configure thr_h_lim value for unit0.
+  - name: CNT_L_LIM
+    bit_range:
+    - 31
+    - 16
+    description: This register is used to confiugre thr_l_lim value for unit0.
+  side_effects: null
+- id: U0-7_CNT
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CNT
+    bit_range:
+    - 15
+    - 0
+    description: This register stores the current pulse count value for unit0.
+  side_effects: null
+- id: INT_RAW
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CNT_THR_EVENT_U0
+    bit_range:
+    - 0
+    - 0
+    description: This is the interrupt raw bit for channel0 event.
+  - name: CNT_THR_EVENT_U1
+    bit_range:
+    - 1
+    - 1
+    description: This is the interrupt raw bit for channel1 event.
+  - name: CNT_THR_EVENT_U2
+    bit_range:
+    - 2
+    - 2
+    description: This is the interrupt raw bit for channel2 event.
+  - name: CNT_THR_EVENT_U3
+    bit_range:
+    - 3
+    - 3
+    description: This is the interrupt raw bit for channel3 event.
+  - name: CNT_THR_EVENT_U4
+    bit_range:
+    - 4
+    - 4
+    description: This is the interrupt raw bit for channel4 event.
+  - name: CNT_THR_EVENT_U5
+    bit_range:
+    - 5
+    - 5
+    description: This is the interrupt raw bit for channel5 event.
+  - name: CNT_THR_EVENT_U6
+    bit_range:
+    - 6
+    - 6
+    description: This is the interrupt raw bit for channel6 event.
+  - name: CNT_THR_EVENT_U7
+    bit_range:
+    - 7
+    - 7
+    description: This is the interrupt raw bit for channel7 event.
+  side_effects: null
+- id: INT_ST
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CNT_THR_EVENT_U0
+    bit_range:
+    - 0
+    - 0
+    description: This is the  interrupt status bit for channel0 event.
+  - name: CNT_THR_EVENT_U1
+    bit_range:
+    - 1
+    - 1
+    description: This is the  interrupt status bit for channel1 event.
+  - name: CNT_THR_EVENT_U2
+    bit_range:
+    - 2
+    - 2
+    description: This is the  interrupt status bit for channel2 event.
+  - name: CNT_THR_EVENT_U3
+    bit_range:
+    - 3
+    - 3
+    description: This is the  interrupt status bit for channel3 event.
+  - name: CNT_THR_EVENT_U4
+    bit_range:
+    - 4
+    - 4
+    description: This is the  interrupt status bit for channel4 event.
+  - name: CNT_THR_EVENT_U5
+    bit_range:
+    - 5
+    - 5
+    description: This is the  interrupt status bit for channel5 event.
+  - name: CNT_THR_EVENT_U6
+    bit_range:
+    - 6
+    - 6
+    description: This is the  interrupt status bit for channel6 event.
+  - name: CNT_THR_EVENT_U7
+    bit_range:
+    - 7
+    - 7
+    description: This is the  interrupt status bit for channel7 event.
+  side_effects: null
+- id: INT_ENA
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CNT_THR_EVENT_U0
+    bit_range:
+    - 0
+    - 0
+    description: This is the  interrupt enable bit for channel0 event.
+  - name: CNT_THR_EVENT_U1
+    bit_range:
+    - 1
+    - 1
+    description: This is the  interrupt enable bit for channel1 event.
+  - name: CNT_THR_EVENT_U2
+    bit_range:
+    - 2
+    - 2
+    description: This is the  interrupt enable bit for channel2 event.
+  - name: CNT_THR_EVENT_U3
+    bit_range:
+    - 3
+    - 3
+    description: This is the  interrupt enable bit for channel3 event.
+  - name: CNT_THR_EVENT_U4
+    bit_range:
+    - 4
+    - 4
+    description: This is the  interrupt enable bit for channel4 event.
+  - name: CNT_THR_EVENT_U5
+    bit_range:
+    - 5
+    - 5
+    description: This is the  interrupt enable bit for channel5 event.
+  - name: CNT_THR_EVENT_U6
+    bit_range:
+    - 6
+    - 6
+    description: This is the  interrupt enable bit for channel6 event.
+  - name: CNT_THR_EVENT_U7
+    bit_range:
+    - 7
+    - 7
+    description: This is the  interrupt enable bit for channel7 event.
+  side_effects: null
+- id: INT_CLR
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CNT_THR_EVENT_U0
+    bit_range:
+    - 0
+    - 0
+    description: Set this bit to clear channel0 event interrupt.
+  - name: CNT_THR_EVENT_U1
+    bit_range:
+    - 1
+    - 1
+    description: Set this bit to clear channel1 event interrupt.
+  - name: CNT_THR_EVENT_U2
+    bit_range:
+    - 2
+    - 2
+    description: Set this bit to clear channel2 event interrupt.
+  - name: CNT_THR_EVENT_U3
+    bit_range:
+    - 3
+    - 3
+    description: Set this bit to clear channel3 event interrupt.
+  - name: CNT_THR_EVENT_U4
+    bit_range:
+    - 4
+    - 4
+    description: Set this bit to clear channel4 event interrupt.
+  - name: CNT_THR_EVENT_U5
+    bit_range:
+    - 5
+    - 5
+    description: Set this bit to clear channel5 event interrupt.
+  - name: CNT_THR_EVENT_U6
+    bit_range:
+    - 6
+    - 6
+    description: Set this bit to clear channel6 event interrupt.
+  - name: CNT_THR_EVENT_U7
+    bit_range:
+    - 7
+    - 7
+    description: Set this bit to clear channel7 event interrupt.
+  side_effects: null
+- id: U0-7_STATUS
+  address_offset: 144
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CORE_STATUS_U0
+    bit_range:
+    - 31
+    - 0
+  - name: ZERO_MODE
+    bit_range:
+    - 1
+    - 0
+  - name: THRES1
+    bit_range:
+    - 2
+    - 2
+  - name: THRES0
+    bit_range:
+    - 3
+    - 3
+  - name: L_LIM
+    bit_range:
+    - 4
+    - 4
+  - name: H_LIM
+    bit_range:
+    - 5
+    - 5
+  - name: ZERO
+    bit_range:
+    - 6
+    - 6
+  side_effects: null
+- id: CTRL
+  address_offset: 176
+  size: 32
+  access: READ_WRITE
+  reset_value: 21845
+  fields:
+  - name: CNT_RST_U0
+    bit_range:
+    - 0
+    - 0
+    description: Set this bit to clear unit0's counter.
+  - name: CNT_PAUSE_U0
+    bit_range:
+    - 1
+    - 1
+    description: Set this bit to pause unit0's counter.
+  - name: CNT_RST_U1
+    bit_range:
+    - 2
+    - 2
+    description: Set this bit to clear unit1's counter.
+  - name: CNT_PAUSE_U1
+    bit_range:
+    - 3
+    - 3
+    description: Set this bit to pause unit1's counter.
+  - name: CNT_RST_U2
+    bit_range:
+    - 4
+    - 4
+    description: Set this bit to clear unit2's counter.
+  - name: CNT_PAUSE_U2
+    bit_range:
+    - 5
+    - 5
+    description: Set this bit to pause unit2's counter.
+  - name: CNT_RST_U3
+    bit_range:
+    - 6
+    - 6
+    description: Set this bit to clear unit3's counter.
+  - name: CNT_PAUSE_U3
+    bit_range:
+    - 7
+    - 7
+    description: Set this bit to pause unit3's counter.
+  - name: CNT_RST_U4
+    bit_range:
+    - 8
+    - 8
+    description: Set this bit to clear unit4's counter.
+  - name: CNT_PAUSE_U4
+    bit_range:
+    - 9
+    - 9
+    description: Set this bit to pause unit4's counter.
+  - name: CNT_RST_U5
+    bit_range:
+    - 10
+    - 10
+    description: Set this bit to clear unit5's counter.
+  - name: CNT_PAUSE_U5
+    bit_range:
+    - 11
+    - 11
+    description: Set this bit to pause unit5's counter.
+  - name: CNT_RST_U6
+    bit_range:
+    - 12
+    - 12
+    description: Set this bit to clear unit6's counter.
+  - name: CNT_PAUSE_U6
+    bit_range:
+    - 13
+    - 13
+    description: Set this bit to pause unit6's counter.
+  - name: CNT_RST_U7
+    bit_range:
+    - 14
+    - 14
+    description: Set this bit to clear unit7's counter.
+  - name: CNT_PAUSE_U7
+    bit_range:
+    - 15
+    - 15
+    description: Set this bit to pause unit7's counter.
+  - name: CLK_EN
+    bit_range:
+    - 16
+    - 16
+  side_effects: null
+- id: DATE
+  address_offset: 252
+  size: 32
+  access: READ_WRITE
+  reset_value: 336733696
+  fields:
+  - name: DATE
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+interrupts:
+  PCNT: 48
+timing: null

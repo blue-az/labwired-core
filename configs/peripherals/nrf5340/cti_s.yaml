@@ -1,0 +1,935 @@
+peripheral: CTI_S
+version: 0.1.0
+registers:
+- id: CTICONTROL
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: GLBEN
+    bit_range:
+    - 0
+    - 0
+    description: Enables or disables the CTI.
+  side_effects: null
+- id: CTIINTACK
+  address_offset: 16
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: INTACK_0
+    bit_range:
+    - 0
+    - 0
+    description: Acknowledges the ctitrigout 0 output.
+  - name: INTACK_1
+    bit_range:
+    - 1
+    - 1
+    description: Acknowledges the ctitrigout 1 output.
+  - name: INTACK_2
+    bit_range:
+    - 2
+    - 2
+    description: Acknowledges the ctitrigout 2 output.
+  - name: INTACK_3
+    bit_range:
+    - 3
+    - 3
+    description: Acknowledges the ctitrigout 3 output.
+  - name: INTACK_4
+    bit_range:
+    - 4
+    - 4
+    description: Acknowledges the ctitrigout 4 output.
+  - name: INTACK_5
+    bit_range:
+    - 5
+    - 5
+    description: Acknowledges the ctitrigout 5 output.
+  - name: INTACK_6
+    bit_range:
+    - 6
+    - 6
+    description: Acknowledges the ctitrigout 6 output.
+  - name: INTACK_7
+    bit_range:
+    - 7
+    - 7
+    description: Acknowledges the ctitrigout 7 output.
+  side_effects: null
+- id: CTIAPPSET
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APPSET_0
+    bit_range:
+    - 0
+    - 0
+    description: Application trigger event for channel 0.
+  - name: APPSET_1
+    bit_range:
+    - 1
+    - 1
+    description: Application trigger event for channel 1.
+  - name: APPSET_2
+    bit_range:
+    - 2
+    - 2
+    description: Application trigger event for channel 2.
+  - name: APPSET_3
+    bit_range:
+    - 3
+    - 3
+    description: Application trigger event for channel 3.
+  side_effects: null
+- id: CTIAPPCLEAR
+  address_offset: 24
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: APPCLEAR_0
+    bit_range:
+    - 0
+    - 0
+    description: Sets the corresponding bits in the CTIAPPSET to 0. There is one bit of the register for each channel.
+  - name: APPCLEAR_1
+    bit_range:
+    - 1
+    - 1
+    description: Sets the corresponding bits in the CTIAPPSET to 0. There is one bit of the register for each channel.
+  - name: APPCLEAR_2
+    bit_range:
+    - 2
+    - 2
+    description: Sets the corresponding bits in the CTIAPPSET to 0. There is one bit of the register for each channel.
+  - name: APPCLEAR_3
+    bit_range:
+    - 3
+    - 3
+    description: Sets the corresponding bits in the CTIAPPSET to 0. There is one bit of the register for each channel.
+  side_effects: null
+- id: CTIAPPPULSE
+  address_offset: 28
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: APPULSE_0
+    bit_range:
+    - 0
+    - 0
+    description: Setting a bit HIGH generates a channel event pulse for the selected channel. There is one bit of the register for each channel.
+  - name: APPULSE_1
+    bit_range:
+    - 1
+    - 1
+    description: Setting a bit HIGH generates a channel event pulse for the selected channel. There is one bit of the register for each channel.
+  - name: APPULSE_2
+    bit_range:
+    - 2
+    - 2
+    description: Setting a bit HIGH generates a channel event pulse for the selected channel. There is one bit of the register for each channel.
+  - name: APPULSE_3
+    bit_range:
+    - 3
+    - 3
+    description: Setting a bit HIGH generates a channel event pulse for the selected channel. There is one bit of the register for each channel.
+  side_effects: null
+- id: CTIINEN0
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TRIGINEN_0
+    bit_range:
+    - 0
+    - 0
+    description: Enables a cross trigger event to channel 0 when a ctitrigin input is activated.
+  - name: TRIGINEN_1
+    bit_range:
+    - 1
+    - 1
+    description: Enables a cross trigger event to channel 1 when a ctitrigin input is activated.
+  - name: TRIGINEN_2
+    bit_range:
+    - 2
+    - 2
+    description: Enables a cross trigger event to channel 2 when a ctitrigin input is activated.
+  - name: TRIGINEN_3
+    bit_range:
+    - 3
+    - 3
+    description: Enables a cross trigger event to channel 3 when a ctitrigin input is activated.
+  side_effects: null
+- id: CTIINEN1
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TRIGINEN_0
+    bit_range:
+    - 0
+    - 0
+    description: Enables a cross trigger event to channel 0 when a ctitrigin input is activated.
+  - name: TRIGINEN_1
+    bit_range:
+    - 1
+    - 1
+    description: Enables a cross trigger event to channel 1 when a ctitrigin input is activated.
+  - name: TRIGINEN_2
+    bit_range:
+    - 2
+    - 2
+    description: Enables a cross trigger event to channel 2 when a ctitrigin input is activated.
+  - name: TRIGINEN_3
+    bit_range:
+    - 3
+    - 3
+    description: Enables a cross trigger event to channel 3 when a ctitrigin input is activated.
+  side_effects: null
+- id: CTIINEN2
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TRIGINEN_0
+    bit_range:
+    - 0
+    - 0
+    description: Enables a cross trigger event to channel 0 when a ctitrigin input is activated.
+  - name: TRIGINEN_1
+    bit_range:
+    - 1
+    - 1
+    description: Enables a cross trigger event to channel 1 when a ctitrigin input is activated.
+  - name: TRIGINEN_2
+    bit_range:
+    - 2
+    - 2
+    description: Enables a cross trigger event to channel 2 when a ctitrigin input is activated.
+  - name: TRIGINEN_3
+    bit_range:
+    - 3
+    - 3
+    description: Enables a cross trigger event to channel 3 when a ctitrigin input is activated.
+  side_effects: null
+- id: CTIINEN3
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TRIGINEN_0
+    bit_range:
+    - 0
+    - 0
+    description: Enables a cross trigger event to channel 0 when a ctitrigin input is activated.
+  - name: TRIGINEN_1
+    bit_range:
+    - 1
+    - 1
+    description: Enables a cross trigger event to channel 1 when a ctitrigin input is activated.
+  - name: TRIGINEN_2
+    bit_range:
+    - 2
+    - 2
+    description: Enables a cross trigger event to channel 2 when a ctitrigin input is activated.
+  - name: TRIGINEN_3
+    bit_range:
+    - 3
+    - 3
+    description: Enables a cross trigger event to channel 3 when a ctitrigin input is activated.
+  side_effects: null
+- id: CTIINEN4
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TRIGINEN_0
+    bit_range:
+    - 0
+    - 0
+    description: Enables a cross trigger event to channel 0 when a ctitrigin input is activated.
+  - name: TRIGINEN_1
+    bit_range:
+    - 1
+    - 1
+    description: Enables a cross trigger event to channel 1 when a ctitrigin input is activated.
+  - name: TRIGINEN_2
+    bit_range:
+    - 2
+    - 2
+    description: Enables a cross trigger event to channel 2 when a ctitrigin input is activated.
+  - name: TRIGINEN_3
+    bit_range:
+    - 3
+    - 3
+    description: Enables a cross trigger event to channel 3 when a ctitrigin input is activated.
+  side_effects: null
+- id: CTIINEN5
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TRIGINEN_0
+    bit_range:
+    - 0
+    - 0
+    description: Enables a cross trigger event to channel 0 when a ctitrigin input is activated.
+  - name: TRIGINEN_1
+    bit_range:
+    - 1
+    - 1
+    description: Enables a cross trigger event to channel 1 when a ctitrigin input is activated.
+  - name: TRIGINEN_2
+    bit_range:
+    - 2
+    - 2
+    description: Enables a cross trigger event to channel 2 when a ctitrigin input is activated.
+  - name: TRIGINEN_3
+    bit_range:
+    - 3
+    - 3
+    description: Enables a cross trigger event to channel 3 when a ctitrigin input is activated.
+  side_effects: null
+- id: CTIINEN6
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TRIGINEN_0
+    bit_range:
+    - 0
+    - 0
+    description: Enables a cross trigger event to channel 0 when a ctitrigin input is activated.
+  - name: TRIGINEN_1
+    bit_range:
+    - 1
+    - 1
+    description: Enables a cross trigger event to channel 1 when a ctitrigin input is activated.
+  - name: TRIGINEN_2
+    bit_range:
+    - 2
+    - 2
+    description: Enables a cross trigger event to channel 2 when a ctitrigin input is activated.
+  - name: TRIGINEN_3
+    bit_range:
+    - 3
+    - 3
+    description: Enables a cross trigger event to channel 3 when a ctitrigin input is activated.
+  side_effects: null
+- id: CTIINEN7
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TRIGINEN_0
+    bit_range:
+    - 0
+    - 0
+    description: Enables a cross trigger event to channel 0 when a ctitrigin input is activated.
+  - name: TRIGINEN_1
+    bit_range:
+    - 1
+    - 1
+    description: Enables a cross trigger event to channel 1 when a ctitrigin input is activated.
+  - name: TRIGINEN_2
+    bit_range:
+    - 2
+    - 2
+    description: Enables a cross trigger event to channel 2 when a ctitrigin input is activated.
+  - name: TRIGINEN_3
+    bit_range:
+    - 3
+    - 3
+    description: Enables a cross trigger event to channel 3 when a ctitrigin input is activated.
+  side_effects: null
+- id: CTIOUTEN0
+  address_offset: 160
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TRIGOUTEN_0
+    bit_range:
+    - 0
+    - 0
+    description: Enables a cross trigger event to ctitrigout when channel 0 is activated.
+  - name: TRIGOUTEN_1
+    bit_range:
+    - 1
+    - 1
+    description: Enables a cross trigger event to ctitrigout when channel 1 is activated.
+  - name: TRIGOUTEN_2
+    bit_range:
+    - 2
+    - 2
+    description: Enables a cross trigger event to ctitrigout when channel 2 is activated.
+  - name: TRIGOUTEN_3
+    bit_range:
+    - 3
+    - 3
+    description: Enables a cross trigger event to ctitrigout when channel 3 is activated.
+  side_effects: null
+- id: CTIOUTEN1
+  address_offset: 164
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TRIGOUTEN_0
+    bit_range:
+    - 0
+    - 0
+    description: Enables a cross trigger event to ctitrigout when channel 0 is activated.
+  - name: TRIGOUTEN_1
+    bit_range:
+    - 1
+    - 1
+    description: Enables a cross trigger event to ctitrigout when channel 1 is activated.
+  - name: TRIGOUTEN_2
+    bit_range:
+    - 2
+    - 2
+    description: Enables a cross trigger event to ctitrigout when channel 2 is activated.
+  - name: TRIGOUTEN_3
+    bit_range:
+    - 3
+    - 3
+    description: Enables a cross trigger event to ctitrigout when channel 3 is activated.
+  side_effects: null
+- id: CTIOUTEN2
+  address_offset: 168
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TRIGOUTEN_0
+    bit_range:
+    - 0
+    - 0
+    description: Enables a cross trigger event to ctitrigout when channel 0 is activated.
+  - name: TRIGOUTEN_1
+    bit_range:
+    - 1
+    - 1
+    description: Enables a cross trigger event to ctitrigout when channel 1 is activated.
+  - name: TRIGOUTEN_2
+    bit_range:
+    - 2
+    - 2
+    description: Enables a cross trigger event to ctitrigout when channel 2 is activated.
+  - name: TRIGOUTEN_3
+    bit_range:
+    - 3
+    - 3
+    description: Enables a cross trigger event to ctitrigout when channel 3 is activated.
+  side_effects: null
+- id: CTIOUTEN3
+  address_offset: 172
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TRIGOUTEN_0
+    bit_range:
+    - 0
+    - 0
+    description: Enables a cross trigger event to ctitrigout when channel 0 is activated.
+  - name: TRIGOUTEN_1
+    bit_range:
+    - 1
+    - 1
+    description: Enables a cross trigger event to ctitrigout when channel 1 is activated.
+  - name: TRIGOUTEN_2
+    bit_range:
+    - 2
+    - 2
+    description: Enables a cross trigger event to ctitrigout when channel 2 is activated.
+  - name: TRIGOUTEN_3
+    bit_range:
+    - 3
+    - 3
+    description: Enables a cross trigger event to ctitrigout when channel 3 is activated.
+  side_effects: null
+- id: CTIOUTEN4
+  address_offset: 176
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TRIGOUTEN_0
+    bit_range:
+    - 0
+    - 0
+    description: Enables a cross trigger event to ctitrigout when channel 0 is activated.
+  - name: TRIGOUTEN_1
+    bit_range:
+    - 1
+    - 1
+    description: Enables a cross trigger event to ctitrigout when channel 1 is activated.
+  - name: TRIGOUTEN_2
+    bit_range:
+    - 2
+    - 2
+    description: Enables a cross trigger event to ctitrigout when channel 2 is activated.
+  - name: TRIGOUTEN_3
+    bit_range:
+    - 3
+    - 3
+    description: Enables a cross trigger event to ctitrigout when channel 3 is activated.
+  side_effects: null
+- id: CTIOUTEN5
+  address_offset: 180
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TRIGOUTEN_0
+    bit_range:
+    - 0
+    - 0
+    description: Enables a cross trigger event to ctitrigout when channel 0 is activated.
+  - name: TRIGOUTEN_1
+    bit_range:
+    - 1
+    - 1
+    description: Enables a cross trigger event to ctitrigout when channel 1 is activated.
+  - name: TRIGOUTEN_2
+    bit_range:
+    - 2
+    - 2
+    description: Enables a cross trigger event to ctitrigout when channel 2 is activated.
+  - name: TRIGOUTEN_3
+    bit_range:
+    - 3
+    - 3
+    description: Enables a cross trigger event to ctitrigout when channel 3 is activated.
+  side_effects: null
+- id: CTIOUTEN6
+  address_offset: 184
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TRIGOUTEN_0
+    bit_range:
+    - 0
+    - 0
+    description: Enables a cross trigger event to ctitrigout when channel 0 is activated.
+  - name: TRIGOUTEN_1
+    bit_range:
+    - 1
+    - 1
+    description: Enables a cross trigger event to ctitrigout when channel 1 is activated.
+  - name: TRIGOUTEN_2
+    bit_range:
+    - 2
+    - 2
+    description: Enables a cross trigger event to ctitrigout when channel 2 is activated.
+  - name: TRIGOUTEN_3
+    bit_range:
+    - 3
+    - 3
+    description: Enables a cross trigger event to ctitrigout when channel 3 is activated.
+  side_effects: null
+- id: CTIOUTEN7
+  address_offset: 188
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TRIGOUTEN_0
+    bit_range:
+    - 0
+    - 0
+    description: Enables a cross trigger event to ctitrigout when channel 0 is activated.
+  - name: TRIGOUTEN_1
+    bit_range:
+    - 1
+    - 1
+    description: Enables a cross trigger event to ctitrigout when channel 1 is activated.
+  - name: TRIGOUTEN_2
+    bit_range:
+    - 2
+    - 2
+    description: Enables a cross trigger event to ctitrigout when channel 2 is activated.
+  - name: TRIGOUTEN_3
+    bit_range:
+    - 3
+    - 3
+    description: Enables a cross trigger event to ctitrigout when channel 3 is activated.
+  side_effects: null
+- id: CTITRIGINSTATUS
+  address_offset: 304
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: TRIGINSTATUS_0
+    bit_range:
+    - 0
+    - 0
+    description: Shows the status of ctitrigin0 input.
+  - name: TRIGINSTATUS_1
+    bit_range:
+    - 1
+    - 1
+    description: Shows the status of ctitrigin1 input.
+  - name: TRIGINSTATUS_2
+    bit_range:
+    - 2
+    - 2
+    description: Shows the status of ctitrigin2 input.
+  - name: TRIGINSTATUS_3
+    bit_range:
+    - 3
+    - 3
+    description: Shows the status of ctitrigin3 input.
+  - name: TRIGINSTATUS_4
+    bit_range:
+    - 4
+    - 4
+    description: Shows the status of ctitrigin4 input.
+  - name: TRIGINSTATUS_5
+    bit_range:
+    - 5
+    - 5
+    description: Shows the status of ctitrigin5 input.
+  - name: TRIGINSTATUS_6
+    bit_range:
+    - 6
+    - 6
+    description: Shows the status of ctitrigin6 input.
+  - name: TRIGINSTATUS_7
+    bit_range:
+    - 7
+    - 7
+    description: Shows the status of ctitrigin7 input.
+  side_effects: null
+- id: CTITRIGOUTSTATUS
+  address_offset: 308
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: TRIGOUTSTATUS_0
+    bit_range:
+    - 0
+    - 0
+    description: Shows the status of ctitrigout0 output.
+  - name: TRIGOUTSTATUS_1
+    bit_range:
+    - 1
+    - 1
+    description: Shows the status of ctitrigout1 output.
+  - name: TRIGOUTSTATUS_2
+    bit_range:
+    - 2
+    - 2
+    description: Shows the status of ctitrigout2 output.
+  - name: TRIGOUTSTATUS_3
+    bit_range:
+    - 3
+    - 3
+    description: Shows the status of ctitrigout3 output.
+  - name: TRIGOUTSTATUS_4
+    bit_range:
+    - 4
+    - 4
+    description: Shows the status of ctitrigout4 output.
+  - name: TRIGOUTSTATUS_5
+    bit_range:
+    - 5
+    - 5
+    description: Shows the status of ctitrigout5 output.
+  - name: TRIGOUTSTATUS_6
+    bit_range:
+    - 6
+    - 6
+    description: Shows the status of ctitrigout6 output.
+  - name: TRIGOUTSTATUS_7
+    bit_range:
+    - 7
+    - 7
+    description: Shows the status of ctitrigout7 output.
+  side_effects: null
+- id: CTICHINSTATUS
+  address_offset: 312
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: CTICHINSTATUS_0
+    bit_range:
+    - 0
+    - 0
+    description: Shows the status of the ctitrigin 0 input.
+  - name: CTICHINSTATUS_1
+    bit_range:
+    - 1
+    - 1
+    description: Shows the status of the ctitrigin 1 input.
+  - name: CTICHINSTATUS_2
+    bit_range:
+    - 2
+    - 2
+    description: Shows the status of the ctitrigin 2 input.
+  - name: CTICHINSTATUS_3
+    bit_range:
+    - 3
+    - 3
+    description: Shows the status of the ctitrigin 3 input.
+  side_effects: null
+- id: CTIGATE
+  address_offset: 320
+  size: 32
+  access: READ_WRITE
+  reset_value: 15
+  fields:
+  - name: CTIGATEEN_0
+    bit_range:
+    - 0
+    - 0
+    description: Enable ctichout0.
+  - name: CTIGATEEN_1
+    bit_range:
+    - 1
+    - 1
+    description: Enable ctichout1.
+  - name: CTIGATEEN_2
+    bit_range:
+    - 2
+    - 2
+    description: Enable ctichout2.
+  - name: CTIGATEEN_3
+    bit_range:
+    - 3
+    - 3
+    description: Enable ctichout3.
+  side_effects: null
+- id: DEVARCH
+  address_offset: 4028
+  size: 32
+  access: READ_ONLY
+  reset_value: 1198529044
+  fields:
+  - name: Architecture
+    bit_range:
+    - 0
+    - 0
+    description: Contains the CTI device architecture.
+  side_effects: null
+- id: DEVID
+  address_offset: 4040
+  size: 32
+  access: READ_ONLY
+  reset_value: 264192
+  fields:
+  - name: EXTMUXNUM
+    bit_range:
+    - 4
+    - 0
+    description: Indicates the number of multiplexers available on Trigger Inputs and Trigger Outputs that are using asicctl. The default value of 0b00000 indicates that no multiplexing is present.
+  - name: NUMTRIG
+    bit_range:
+    - 15
+    - 8
+    description: Number of ECT triggers available.
+  - name: NUMCH
+    bit_range:
+    - 19
+    - 16
+    description: Number of ECT channels available.
+  side_effects: null
+- id: DEVTYPE
+  address_offset: 4044
+  size: 32
+  access: READ_ONLY
+  reset_value: 20
+  fields:
+  - name: MAJOR
+    bit_range:
+    - 3
+    - 0
+    description: Major classification of the type of the debug component as specified in the Arm Architecture Specification for this debug and trace component.
+  - name: SUB
+    bit_range:
+    - 7
+    - 4
+    description: Sub-classification of the type of the debug component as specified in the Arm Architecture Specification within the major classification as specified in the MAJOR field.
+  side_effects: null
+- id: PIDR4
+  address_offset: 4048
+  size: 32
+  access: READ_ONLY
+  reset_value: 4
+  fields:
+  - name: DES_2
+    bit_range:
+    - 3
+    - 0
+    description: Together, PIDR1.DES_0, PIDR2.DES_1, and PIDR4.DES_2 identify the designer of the component.
+  - name: SIZE
+    bit_range:
+    - 7
+    - 4
+    description: Always 0b0000. Indicates that the device only occupies 4KB of memory.
+  side_effects: null
+- id: PIDR5
+  address_offset: 4052
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields: []
+  side_effects: null
+- id: PIDR6
+  address_offset: 4056
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields: []
+  side_effects: null
+- id: PIDR7
+  address_offset: 4060
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields: []
+  side_effects: null
+- id: PIDR0
+  address_offset: 4064
+  size: 32
+  access: READ_ONLY
+  reset_value: 33
+  fields:
+  - name: PART_0
+    bit_range:
+    - 7
+    - 0
+    description: Bits[7:0] of the 12-bit part number of the component. The designer of the component assigns this part number.
+  side_effects: null
+- id: PIDR1
+  address_offset: 4068
+  size: 32
+  access: READ_ONLY
+  reset_value: 189
+  fields:
+  - name: PART_1
+    bit_range:
+    - 3
+    - 0
+    description: Bits[11:8] of the 12-bit part number of the component. The designer of the component assigns this part number.
+  - name: DES_0
+    bit_range:
+    - 7
+    - 4
+    description: Together, PIDR1.DES_0, PIDR2.DES_1, and PIDR4.DES_2 identify the designer of the component.
+  side_effects: null
+- id: PIDR2
+  address_offset: 4072
+  size: 32
+  access: READ_ONLY
+  reset_value: 11
+  fields:
+  - name: DES_1
+    bit_range:
+    - 2
+    - 0
+    description: Together, PIDR1.DES_0, PIDR2.DES_1, and PIDR4.DES_2 identify the designer of the component.
+  - name: JEDEC
+    bit_range:
+    - 3
+    - 3
+    description: Always 1. Indicates that the JEDEC-assigned designer ID is used.
+  - name: REVISION
+    bit_range:
+    - 7
+    - 4
+    description: Peripheral revision
+  side_effects: null
+- id: PIDR3
+  address_offset: 4076
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: CMOD
+    bit_range:
+    - 3
+    - 0
+    description: Customer Modified. Indicates whether the customer has modified the behavior of the component. In most cases, this field is 0b0000. Customers change this value when they make authorized modifications to this component.
+  - name: REVAND
+    bit_range:
+    - 7
+    - 4
+    description: Indicates minor errata fixes specific to the revision of the component being used, for example metal fixes after implementation. In most cases, this field is 0b0000. Arm recommends that the component designers ensure that a metal fix can change this field if required, for example, by driving it from registers that reset to 0b0000.
+  side_effects: null
+- id: CIDR0
+  address_offset: 4080
+  size: 32
+  access: READ_ONLY
+  reset_value: 13
+  fields:
+  - name: PRMBL_0
+    bit_range:
+    - 7
+    - 0
+    description: Preamble[0]. Contains bits[7:0] of the component identification code.
+  side_effects: null
+- id: CIDR1
+  address_offset: 4084
+  size: 32
+  access: READ_ONLY
+  reset_value: 144
+  fields:
+  - name: PRMBL_1
+    bit_range:
+    - 3
+    - 0
+    description: Preamble[1]. Contains bits[11:8] of the component identification code.
+  - name: CLASS
+    bit_range:
+    - 7
+    - 4
+    description: Class of the component, for example, whether the component is a ROM table or a generic CoreSight component. Contains bits[15:12] of the component identification code
+  side_effects: null
+- id: CIDR2
+  address_offset: 4088
+  size: 32
+  access: READ_ONLY
+  reset_value: 5
+  fields:
+  - name: PRMBL_2
+    bit_range:
+    - 7
+    - 0
+    description: Preamble[2]. Contains bits[23:16] of the component identification code.
+  side_effects: null
+- id: CIDR3
+  address_offset: 4092
+  size: 32
+  access: READ_ONLY
+  reset_value: 177
+  fields:
+  - name: PRMBL_3
+    bit_range:
+    - 7
+    - 0
+    description: Preamble[3]. Contains bits[31:24] of the component identification code.
+  side_effects: null
+interrupts: null
+timing: null

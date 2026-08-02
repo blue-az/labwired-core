@@ -329,6 +329,25 @@ impl Peripheral for Ledc {
         false
     }
 
+    /// Side-effect-free probe, so `inspect` can show real values instead of
+    /// zeros.
+    ///
+    /// Delegating to `read` is safe here for one specific reason, and it is
+    /// worth stating because it is NOT safe in general: `Peripheral::read`
+    /// takes `&self`, so the only way a read could disturb the model is
+    /// through interior mutability, and this model has none -- no `Cell`,
+    /// `RefCell`, `Atomic*` or `Mutex` anywhere. Every read is a pure function
+    /// of state the debugger is allowed to look at.
+    ///
+    /// Do NOT copy this into a peripheral that does have interior mutability
+    /// without checking its read path first. A read-to-clear status register
+    /// would be cleared by the act of displaying it, and the firmware under
+    /// test would then miss the event -- the exact failure `inspect`'s
+    /// peek-only contract exists to prevent.
+    fn peek(&self, offset: u64) -> Option<u8> {
+        self.read(offset).ok()
+    }
+
     fn read(&self, offset: u64) -> SimResult<u8> {
         let word_off = offset & !3;
         let byte_off = (offset & 3) * 8;

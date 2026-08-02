@@ -46,6 +46,8 @@ peripherals:
     base_address: 0x50005000
     size: "4KB"
     irq: 5
+    config:
+      debug_schema: "../peripherals/nrf5340/clock_s.yaml"
 
   # UARTE0 — the console. EasyDMA TX walks TXD.PTR/MAXCNT out of RAM and emits the
   # bytes to the capture sink (this is the path the hello_world banner travels).
@@ -54,6 +56,8 @@ peripherals:
     base_address: 0x50008000
     size: "4KB"
     irq: 8
+    config:
+      debug_schema: "../peripherals/nrf5340/uarte0_s.yaml"
 
   # RTC0/RTC1 — nrf_rtc_timer drives the kernel tick off RTC1 (LFCLK-clocked).
   - id: "rtc0"
@@ -61,12 +65,15 @@ peripherals:
     base_address: 0x50014000
     size: "4KB"
     irq: 20
+    config:
+      debug_schema: "../peripherals/nrf5340/rtc0_s.yaml"
   - id: "rtc1"
     type: "nrf52840_rtc"
     base_address: 0x50015000
     size: "4KB"
     irq: 21
     config:
+      debug_schema: "../peripherals/nrf5340/rtc1_s.yaml"
       num_cc: 4
 
   - id: "timer0"
@@ -74,16 +81,22 @@ peripherals:
     base_address: 0x5000f000
     size: "4KB"
     irq: 15
+    config:
+      debug_schema: "../peripherals/nrf5340/timer0_s.yaml"
   - id: "timer1"
     type: "nrf52840_timer"
     base_address: 0x50010000
     size: "4KB"
     irq: 16
+    config:
+      debug_schema: "../peripherals/nrf5340/timer1_s.yaml"
   - id: "timer2"
     type: "nrf52840_timer"
     base_address: 0x50011000
     size: "4KB"
     irq: 17
+    config:
+      debug_schema: "../peripherals/nrf5340/timer2_s.yaml"
 
   # GPIO P0/P1 — the nRF5340 GPIO block sits at 0x5084_2000, far from the rest
   # of the peripheral window.
@@ -96,6 +109,13 @@ peripherals:
   # high. That is a silent failure: UART still works and the boot still
   # completes, only the pins never move. Found while onboarding the nRF54L15,
   # which has the identical layout quirk.
+  #
+  # For the SAME reason these two carry NO `debug_schema`: the SVD's P0_S/P1_S
+  # descriptors are written against the MDK base (0x50842500 / 0x50842800), so
+  # attaching one here would name every register 0x500 off — a debugger
+  # confidently labelling the wrong address is worse than no names at all.
+  # A shifted-offset descriptor would have to be authored by hand; do not
+  # "fix" this by pointing at p0_s.yaml.
   - id: "gpio0"
     type: "gpio"
     base_address: 0x50842000
@@ -119,11 +139,15 @@ peripherals:
     type: "nrf5340_dcnf_stub"
     base_address: 0x50000000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/nrf5340/dcnf_s.yaml"
   # FPU's event registers live INSIDE the DCNF page on silicon (both are based
   # at 0x50000000), and the bus maps one peripheral per address range, so this
   # inert stub gets a private window. 0x50002000 is reserved on silicon, which
   # makes it the honest place to park an artifact — see ALLOWED in
   # crates/core/tests/svd_conformance.rs.
+  # No `debug_schema`: by construction there is no SVD peripheral at 0x50002000
+  # (the SVD puts FPU_S at 0x50000000, overlaid on DCNF_S).
   - id: "fpu"
     type: "nrf5340_fpu_stub"
     base_address: 0x50002000
@@ -134,28 +158,40 @@ peripherals:
     type: "nrf5340_cache_stub"
     base_address: 0x50001000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/nrf5340/cache_s.yaml"
   - id: "spu"
     type: "nrf5340_spu_stub"
     base_address: 0x50003000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/nrf5340/spu_s.yaml"
   - id: "oscillators_regulators"
     type: "nrf5340_osc_reg_stub"
     base_address: 0x50004000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/nrf5340/oscillators_s.yaml"
   - id: "ctrlap"
     type: "nrf5340_ctrlap_stub"
     base_address: 0x50006000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/nrf5340/ctrlap_s.yaml"
   - id: "gpiote0"
     type: "nrf5340_gpiote_stub"
     base_address: 0x5000d000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/nrf5340/gpiote0_s.yaml"
   # DPPIC — the RTC/timer SUBSCRIBE/PUBLISH channel wiring is poked here at boot
   # but is not read back; benign for a UART smoke boot.
   - id: "dppic"
     type: "nrf5340_dppic_stub"
     base_address: 0x50017000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/nrf5340/dppic_s.yaml"
   # FICR — factory info / analog trims at 0x00FF0000 (NOT in the 0x5000_0000
   # block). Zephyr's soc-init copies a trim block out of here; the values are
   # oscillator/radio calibration that the UART console path does not depend on,
@@ -166,15 +202,23 @@ peripherals:
     type: "nrf5340_ficr_stub"
     base_address: 0x00FF0000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/nrf5340/ficr_s.yaml"
   # UICR — user info config at 0x00FF8000. Read during soc-init (e.g. approtect /
   # reg-out config); unprovisioned reads as 0 here, which the boot path accepts.
   - id: "uicr"
     type: "nrf5340_uicr_stub"
     base_address: 0x00FF8000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/nrf5340/uicr_s.yaml"
   # Analog trim target block (0x5002A000): soc-init writes FICR-sourced
   # oscillator/analog trim values here. Write-only on the boot path (never read
   # back) and irrelevant to the digital UART console, so a stub is faithful.
+  # No `debug_schema`: 0x5002A000 is IPC_S in the SVD, not a trim block. The
+  # base matches but the identity does not, and naming these IPC TASKS/EVENTS
+  # would describe a peripheral this stub does not model. Resolve what actually
+  # lives here before wiring a descriptor.
   - id: "trim_analog"
     type: "nrf5340_trim_stub"
     base_address: 0x5002A000

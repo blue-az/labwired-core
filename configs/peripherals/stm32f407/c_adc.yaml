@@ -1,0 +1,161 @@
+peripheral: C_ADC
+version: 0.1.0
+registers:
+- id: CSR
+  address_offset: 0
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: OVR3
+    bit_range:
+    - 21
+    - 21
+    description: Overrun flag of ADC3
+  - name: STRT3
+    bit_range:
+    - 20
+    - 20
+    description: Regular channel Start flag of ADC 3
+  - name: JSTRT3
+    bit_range:
+    - 19
+    - 19
+    description: Injected channel Start flag of ADC 3
+  - name: JEOC3
+    bit_range:
+    - 18
+    - 18
+    description: Injected channel end of conversion of ADC 3
+  - name: EOC3
+    bit_range:
+    - 17
+    - 17
+    description: End of conversion of ADC 3
+  - name: AWD3
+    bit_range:
+    - 16
+    - 16
+    description: Analog watchdog flag of ADC 3
+  - name: OVR2
+    bit_range:
+    - 13
+    - 13
+    description: Overrun flag of ADC 2
+  - name: STRT2
+    bit_range:
+    - 12
+    - 12
+    description: Regular channel Start flag of ADC 2
+  - name: JSTRT2
+    bit_range:
+    - 11
+    - 11
+    description: Injected channel Start flag of ADC 2
+  - name: JEOC2
+    bit_range:
+    - 10
+    - 10
+    description: Injected channel end of conversion of ADC 2
+  - name: EOC2
+    bit_range:
+    - 9
+    - 9
+    description: End of conversion of ADC 2
+  - name: AWD2
+    bit_range:
+    - 8
+    - 8
+    description: Analog watchdog flag of ADC 2
+  - name: OVR1
+    bit_range:
+    - 5
+    - 5
+    description: Overrun flag of ADC 1
+  - name: STRT1
+    bit_range:
+    - 4
+    - 4
+    description: Regular channel Start flag of ADC 1
+  - name: JSTRT1
+    bit_range:
+    - 3
+    - 3
+    description: Injected channel Start flag of ADC 1
+  - name: JEOC1
+    bit_range:
+    - 2
+    - 2
+    description: Injected channel end of conversion of ADC 1
+  - name: EOC1
+    bit_range:
+    - 1
+    - 1
+    description: End of conversion of ADC 1
+  - name: AWD1
+    bit_range:
+    - 0
+    - 0
+    description: Analog watchdog flag of ADC 1
+  side_effects: null
+- id: CCR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TSVREFE
+    bit_range:
+    - 23
+    - 23
+    description: Temperature sensor and VREFINT enable
+  - name: VBATE
+    bit_range:
+    - 22
+    - 22
+    description: VBAT enable
+  - name: ADCPRE
+    bit_range:
+    - 17
+    - 16
+    description: ADC prescaler
+  - name: DMA
+    bit_range:
+    - 15
+    - 14
+    description: Direct memory access mode for multi ADC mode
+  - name: DDS
+    bit_range:
+    - 13
+    - 13
+    description: DMA disable selection for multi-ADC mode
+  - name: DELAY
+    bit_range:
+    - 11
+    - 8
+    description: Delay between 2 sampling phases
+  - name: MULT
+    bit_range:
+    - 4
+    - 0
+    description: Multi ADC mode selection
+  side_effects: null
+- id: CDR
+  address_offset: 8
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DATA2
+    bit_range:
+    - 31
+    - 16
+    description: 2nd data item of a pair of regular conversions
+  - name: DATA1
+    bit_range:
+    - 15
+    - 0
+    description: 1st data item of a pair of regular conversions
+  side_effects: null
+interrupts: null
+timing: null

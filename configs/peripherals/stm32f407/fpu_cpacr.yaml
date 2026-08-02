@@ -1,0 +1,17 @@
+peripheral: FPU_CPACR
+version: 0.1.0
+registers:
+- id: CPACR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CP
+    bit_range:
+    - 23
+    - 20
+    description: CP
+  side_effects: null
+interrupts: null
+timing: null

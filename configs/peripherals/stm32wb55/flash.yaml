@@ -1,0 +1,664 @@
+peripheral: Flash
+version: 0.1.0
+registers:
+- id: ACR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 1536
+  fields:
+  - name: LATENCY
+    bit_range:
+    - 2
+    - 0
+    description: Latency
+  - name: PRFTEN
+    bit_range:
+    - 8
+    - 8
+    description: Prefetch enable
+  - name: ICEN
+    bit_range:
+    - 9
+    - 9
+    description: Instruction cache enable
+  - name: DCEN
+    bit_range:
+    - 10
+    - 10
+    description: Data cache enable
+  - name: ICRST
+    bit_range:
+    - 11
+    - 11
+    description: Instruction cache reset
+  - name: DCRST
+    bit_range:
+    - 12
+    - 12
+    description: Data cache reset
+  - name: PES
+    bit_range:
+    - 15
+    - 15
+    description: CPU1 CortexM4 program erase suspend               request
+  - name: EMPTY
+    bit_range:
+    - 16
+    - 16
+    description: Flash User area empty
+  side_effects: null
+- id: KEYR
+  address_offset: 8
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: KEYR
+    bit_range:
+    - 31
+    - 0
+    description: KEYR
+  side_effects: null
+- id: OPTKEYR
+  address_offset: 12
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: OPTKEYR
+    bit_range:
+    - 31
+    - 0
+    description: Option byte key
+  side_effects: null
+- id: SR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EOP
+    bit_range:
+    - 0
+    - 0
+    description: End of operation
+  - name: OPERR
+    bit_range:
+    - 1
+    - 1
+    description: Operation error
+  - name: PROGERR
+    bit_range:
+    - 3
+    - 3
+    description: Programming error
+  - name: WRPERR
+    bit_range:
+    - 4
+    - 4
+    description: Write protected error
+  - name: PGAERR
+    bit_range:
+    - 5
+    - 5
+    description: Programming alignment               error
+  - name: SIZERR
+    bit_range:
+    - 6
+    - 6
+    description: Size error
+  - name: PGSERR
+    bit_range:
+    - 7
+    - 7
+    description: Programming sequence error
+  - name: MISERR
+    bit_range:
+    - 8
+    - 8
+    description: Fast programming data miss               error
+  - name: FASTERR
+    bit_range:
+    - 9
+    - 9
+    description: Fast programming error
+  - name: OPTNV
+    bit_range:
+    - 13
+    - 13
+    description: User Option OPTVAL               indication
+  - name: RDERR
+    bit_range:
+    - 14
+    - 14
+    description: PCROP read error
+  - name: OPTVERR
+    bit_range:
+    - 15
+    - 15
+    description: Option validity error
+  - name: BSY
+    bit_range:
+    - 16
+    - 16
+    description: Busy
+  - name: CFGBSY
+    bit_range:
+    - 18
+    - 18
+    description: Programming or erase configuration               busy
+  - name: PESD
+    bit_range:
+    - 19
+    - 19
+    description: Programming or erase operation               suspended
+  side_effects: null
+- id: CR
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 3221225472
+  fields:
+  - name: PG
+    bit_range:
+    - 0
+    - 0
+    description: Programming
+  - name: PER
+    bit_range:
+    - 1
+    - 1
+    description: Page erase
+  - name: MER
+    bit_range:
+    - 2
+    - 2
+    description: This bit triggers the mass erase (all               user pages) when set
+  - name: PNB
+    bit_range:
+    - 10
+    - 3
+    description: Page number selection
+  - name: STRT
+    bit_range:
+    - 16
+    - 16
+    description: Start
+  - name: OPTSTRT
+    bit_range:
+    - 17
+    - 17
+    description: Options modification start
+  - name: FSTPG
+    bit_range:
+    - 18
+    - 18
+    description: Fast programming
+  - name: EOPIE
+    bit_range:
+    - 24
+    - 24
+    description: End of operation interrupt               enable
+  - name: ERRIE
+    bit_range:
+    - 25
+    - 25
+    description: Error interrupt enable
+  - name: RDERRIE
+    bit_range:
+    - 26
+    - 26
+    description: PCROP read error interrupt               enable
+  - name: OBL_LAUNCH
+    bit_range:
+    - 27
+    - 27
+    description: Force the option byte               loading
+  - name: OPTLOCK
+    bit_range:
+    - 30
+    - 30
+    description: Options Lock
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: FLASH_CR Lock
+  side_effects: null
+- id: ECCR
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR_ECC
+    bit_range:
+    - 16
+    - 0
+    description: ECC fail address
+  - name: SYSF_ECC
+    bit_range:
+    - 20
+    - 20
+    description: System Flash ECC fail
+  - name: ECCCIE
+    bit_range:
+    - 24
+    - 24
+    description: ECC correction interrupt               enable
+  - name: CPUID
+    bit_range:
+    - 28
+    - 26
+    description: CPU identification
+  - name: ECCC
+    bit_range:
+    - 30
+    - 30
+    description: ECC correction
+  - name: ECCD
+    bit_range:
+    - 31
+    - 31
+    description: ECC detection
+  side_effects: null
+- id: OPTR
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 275808256
+  fields:
+  - name: RDP
+    bit_range:
+    - 7
+    - 0
+    description: Read protection level
+  - name: ESE
+    bit_range:
+    - 8
+    - 8
+    description: Security enabled
+  - name: BOR_LEV
+    bit_range:
+    - 11
+    - 9
+    description: BOR reset Level
+  - name: nRST_STOP
+    bit_range:
+    - 12
+    - 12
+    description: nRST_STOP
+  - name: nRST_STDBY
+    bit_range:
+    - 13
+    - 13
+    description: nRST_STDBY
+  - name: nRST_SHDW
+    bit_range:
+    - 14
+    - 14
+    description: nRST_SHDW
+  - name: IDWG_SW
+    bit_range:
+    - 16
+    - 16
+    description: Independent watchdog               selection
+  - name: IWDG_STOP
+    bit_range:
+    - 17
+    - 17
+    description: Independent watchdog counter freeze in               Stop mode
+  - name: IWDG_STDBY
+    bit_range:
+    - 18
+    - 18
+    description: Independent watchdog counter freeze in               Standby mode
+  - name: WWDG_SW
+    bit_range:
+    - 19
+    - 19
+    description: Window watchdog selection
+  - name: nBOOT1
+    bit_range:
+    - 23
+    - 23
+    description: Boot configuration
+  - name: SRAM2_PE
+    bit_range:
+    - 24
+    - 24
+    description: SRAM2 parity check enable
+  - name: SRAM2_RST
+    bit_range:
+    - 25
+    - 25
+    description: SRAM2 Erase when system               reset
+  - name: nSWBOOT0
+    bit_range:
+    - 26
+    - 26
+    description: Software Boot0
+  - name: nBOOT0
+    bit_range:
+    - 27
+    - 27
+    description: nBoot0 option bit
+  - name: AGC_TRIM
+    bit_range:
+    - 31
+    - 29
+    description: Radio Automatic Gain Control               Trimming
+  side_effects: null
+- id: PCROP1ASR
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294966784
+  fields:
+  - name: PCROP1A_STRT
+    bit_range:
+    - 8
+    - 0
+    description: Bank 1 PCROPQ area start               offset
+  side_effects: null
+- id: PCROP1AER
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483136
+  fields:
+  - name: PCROP1A_END
+    bit_range:
+    - 8
+    - 0
+    description: Bank 1 PCROP area end               offset
+  - name: PCROP_RDP
+    bit_range:
+    - 31
+    - 31
+    description: PCROP area preserved when RDP level               decreased
+  side_effects: null
+- id: WRP1AR
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 4278255360
+  fields:
+  - name: WRP1A_STRT
+    bit_range:
+    - 7
+    - 0
+    description: Bank 1 WRP first area A start               offset
+  - name: WRP1A_END
+    bit_range:
+    - 23
+    - 16
+    description: Bank 1 WRP first area A end               offset
+  side_effects: null
+- id: WRP1BR
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 4278255360
+  fields:
+  - name: WRP1B_END
+    bit_range:
+    - 7
+    - 0
+    description: Bank 1 WRP second area B start               offset
+  - name: WRP1B_STRT
+    bit_range:
+    - 23
+    - 16
+    description: Bank 1 WRP second area B end               offset
+  side_effects: null
+- id: PCROP1BSR
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294966784
+  fields:
+  - name: PCROP1B_STRT
+    bit_range:
+    - 8
+    - 0
+    description: Bank 1 PCROP area B start               offset
+  side_effects: null
+- id: PCROP1BER
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294966784
+  fields:
+  - name: PCROP1B_END
+    bit_range:
+    - 8
+    - 0
+    description: Bank 1 PCROP area end area B               offset
+  side_effects: null
+- id: IPCCBR
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294950912
+  fields:
+  - name: IPCCDBA
+    bit_range:
+    - 13
+    - 0
+    description: PCC mailbox data buffer base               address
+  side_effects: null
+- id: C2ACR
+  address_offset: 92
+  size: 32
+  access: READ_WRITE
+  reset_value: 1536
+  fields:
+  - name: PRFTEN
+    bit_range:
+    - 8
+    - 8
+    description: CPU2 cortex M0 prefetch               enable
+  - name: ICEN
+    bit_range:
+    - 9
+    - 9
+    description: CPU2 cortex M0 instruction cache               enable
+  - name: ICRST
+    bit_range:
+    - 11
+    - 11
+    description: CPU2 cortex M0 instruction cache               reset
+  - name: PES
+    bit_range:
+    - 15
+    - 15
+    description: CPU2 cortex M0 program erase suspend               request
+  side_effects: null
+- id: C2SR
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EOP
+    bit_range:
+    - 0
+    - 0
+    description: End of operation
+  - name: OPERR
+    bit_range:
+    - 1
+    - 1
+    description: Operation error
+  - name: PROGERR
+    bit_range:
+    - 3
+    - 3
+    description: Programming error
+  - name: WRPERR
+    bit_range:
+    - 4
+    - 4
+    description: write protection error
+  - name: PGAERR
+    bit_range:
+    - 5
+    - 5
+    description: Programming alignment               error
+  - name: SIZERR
+    bit_range:
+    - 6
+    - 6
+    description: Size error
+  - name: PGSERR
+    bit_range:
+    - 7
+    - 7
+    description: Programming sequence error
+  - name: MISSERR
+    bit_range:
+    - 8
+    - 8
+    description: Fast programming data miss               error
+  - name: FASTERR
+    bit_range:
+    - 9
+    - 9
+    description: Fast programming error
+  - name: RDERR
+    bit_range:
+    - 14
+    - 14
+    description: PCROP read error
+  - name: BSY
+    bit_range:
+    - 16
+    - 16
+    description: Busy
+  - name: CFGBSY
+    bit_range:
+    - 18
+    - 18
+    description: Programming or erase configuration               busy
+  - name: PESD
+    bit_range:
+    - 19
+    - 19
+    description: Programming or erase operation               suspended
+  side_effects: null
+- id: C2CR
+  address_offset: 100
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PG
+    bit_range:
+    - 0
+    - 0
+    description: Programming
+  - name: PER
+    bit_range:
+    - 1
+    - 1
+    description: Page erase
+  - name: MER
+    bit_range:
+    - 2
+    - 2
+    description: Masse erase
+  - name: PNB
+    bit_range:
+    - 10
+    - 3
+    description: Page Number selection
+  - name: STRT
+    bit_range:
+    - 16
+    - 16
+    description: Start
+  - name: FSTPG
+    bit_range:
+    - 18
+    - 18
+    description: Fast programming
+  - name: EOPIE
+    bit_range:
+    - 24
+    - 24
+    description: End of operation interrupt               enable
+  - name: ERRIE
+    bit_range:
+    - 25
+    - 25
+    description: Error interrupt enable
+  - name: RDERRIE
+    bit_range:
+    - 26
+    - 26
+    description: PCROP read error interrupt               enable
+  side_effects: null
+- id: SFR
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294962688
+  fields:
+  - name: SFSA
+    bit_range:
+    - 7
+    - 0
+    description: Secure flash start address
+  - name: FSD
+    bit_range:
+    - 8
+    - 8
+    description: Flash security disable
+  - name: DDS
+    bit_range:
+    - 12
+    - 12
+    description: Disable Cortex M0 debug               access
+  side_effects: null
+- id: SRRVR
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 16777216
+  fields:
+  - name: SBRV
+    bit_range:
+    - 17
+    - 0
+    description: cortex M0 access control               register
+  - name: SBRSA
+    bit_range:
+    - 22
+    - 18
+    description: Secure backup SRAM2a start               address
+  - name: BRSD
+    bit_range:
+    - 23
+    - 23
+    description: backup SRAM2a security               disable
+  - name: SNBRSA
+    bit_range:
+    - 29
+    - 25
+    description: Secure non backup SRAM2a start               address
+  - name: NBRSD
+    bit_range:
+    - 30
+    - 30
+    description: non-backup SRAM2b security               disable
+  - name: C2OPT
+    bit_range:
+    - 31
+    - 31
+    description: CPU2 cortex M0 boot reset vector memory               selection
+  side_effects: null
+interrupts:
+  FLASH: 4
+timing: null

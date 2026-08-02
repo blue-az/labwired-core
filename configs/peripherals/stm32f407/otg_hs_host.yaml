@@ -1,0 +1,3133 @@
+peripheral: OTG_HS_HOST
+version: 0.1.0
+registers:
+- id: OTG_HS_HCFG
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FSLSPCS
+    bit_range:
+    - 1
+    - 0
+    description: FS/LS PHY clock select
+  - name: FSLSS
+    bit_range:
+    - 2
+    - 2
+    description: FS- and LS-only support
+  side_effects: null
+- id: OTG_HS_HFIR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 60000
+  fields:
+  - name: FRIVL
+    bit_range:
+    - 15
+    - 0
+    description: Frame interval
+  side_effects: null
+- id: OTG_HS_HFNUM
+  address_offset: 8
+  size: 32
+  access: READ_ONLY
+  reset_value: 16383
+  fields:
+  - name: FRNUM
+    bit_range:
+    - 15
+    - 0
+    description: Frame number
+  - name: FTREM
+    bit_range:
+    - 31
+    - 16
+    description: Frame time remaining
+  side_effects: null
+- id: OTG_HS_HPTXSTS
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 524544
+  fields:
+  - name: PTXFSAVL
+    bit_range:
+    - 15
+    - 0
+    description: Periodic transmit data FIFO space available
+  - name: PTXQSAV
+    bit_range:
+    - 23
+    - 16
+    description: Periodic transmit request queue space available
+  - name: PTXQTOP
+    bit_range:
+    - 31
+    - 24
+    description: Top of the periodic transmit request queue
+  side_effects: null
+- id: OTG_HS_HAINT
+  address_offset: 20
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: HAINT
+    bit_range:
+    - 15
+    - 0
+    description: Channel interrupts
+  side_effects: null
+- id: OTG_HS_HAINTMSK
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HAINTM
+    bit_range:
+    - 15
+    - 0
+    description: Channel interrupt mask
+  side_effects: null
+- id: OTG_HS_HPRT
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PCSTS
+    bit_range:
+    - 0
+    - 0
+    description: Port connect status
+  - name: PCDET
+    bit_range:
+    - 1
+    - 1
+    description: Port connect detected
+  - name: PENA
+    bit_range:
+    - 2
+    - 2
+    description: Port enable
+  - name: PENCHNG
+    bit_range:
+    - 3
+    - 3
+    description: Port enable/disable change
+  - name: POCA
+    bit_range:
+    - 4
+    - 4
+    description: Port overcurrent active
+  - name: POCCHNG
+    bit_range:
+    - 5
+    - 5
+    description: Port overcurrent change
+  - name: PRES
+    bit_range:
+    - 6
+    - 6
+    description: Port resume
+  - name: PSUSP
+    bit_range:
+    - 7
+    - 7
+    description: Port suspend
+  - name: PRST
+    bit_range:
+    - 8
+    - 8
+    description: Port reset
+  - name: PLSTS
+    bit_range:
+    - 11
+    - 10
+    description: Port line status
+  - name: PPWR
+    bit_range:
+    - 12
+    - 12
+    description: Port power
+  - name: PTCTL
+    bit_range:
+    - 16
+    - 13
+    description: Port test control
+  - name: PSPD
+    bit_range:
+    - 18
+    - 17
+    description: Port speed
+  side_effects: null
+- id: OTG_HS_HCCHAR0
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MPSIZ
+    bit_range:
+    - 10
+    - 0
+    description: Maximum packet size
+  - name: EPNUM
+    bit_range:
+    - 14
+    - 11
+    description: Endpoint number
+  - name: EPDIR
+    bit_range:
+    - 15
+    - 15
+    description: Endpoint direction
+  - name: LSDEV
+    bit_range:
+    - 17
+    - 17
+    description: Low-speed device
+  - name: EPTYP
+    bit_range:
+    - 19
+    - 18
+    description: Endpoint type
+  - name: MC
+    bit_range:
+    - 21
+    - 20
+    description: Multi Count (MC) / Error Count (EC)
+  - name: DAD
+    bit_range:
+    - 28
+    - 22
+    description: Device address
+  - name: ODDFRM
+    bit_range:
+    - 29
+    - 29
+    description: Odd frame
+  - name: CHDIS
+    bit_range:
+    - 30
+    - 30
+    description: Channel disable
+  - name: CHENA
+    bit_range:
+    - 31
+    - 31
+    description: Channel enable
+  side_effects: null
+- id: OTG_HS_HCCHAR1
+  address_offset: 288
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MPSIZ
+    bit_range:
+    - 10
+    - 0
+    description: Maximum packet size
+  - name: EPNUM
+    bit_range:
+    - 14
+    - 11
+    description: Endpoint number
+  - name: EPDIR
+    bit_range:
+    - 15
+    - 15
+    description: Endpoint direction
+  - name: LSDEV
+    bit_range:
+    - 17
+    - 17
+    description: Low-speed device
+  - name: EPTYP
+    bit_range:
+    - 19
+    - 18
+    description: Endpoint type
+  - name: MC
+    bit_range:
+    - 21
+    - 20
+    description: Multi Count (MC) / Error Count (EC)
+  - name: DAD
+    bit_range:
+    - 28
+    - 22
+    description: Device address
+  - name: ODDFRM
+    bit_range:
+    - 29
+    - 29
+    description: Odd frame
+  - name: CHDIS
+    bit_range:
+    - 30
+    - 30
+    description: Channel disable
+  - name: CHENA
+    bit_range:
+    - 31
+    - 31
+    description: Channel enable
+  side_effects: null
+- id: OTG_HS_HCCHAR2
+  address_offset: 320
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MPSIZ
+    bit_range:
+    - 10
+    - 0
+    description: Maximum packet size
+  - name: EPNUM
+    bit_range:
+    - 14
+    - 11
+    description: Endpoint number
+  - name: EPDIR
+    bit_range:
+    - 15
+    - 15
+    description: Endpoint direction
+  - name: LSDEV
+    bit_range:
+    - 17
+    - 17
+    description: Low-speed device
+  - name: EPTYP
+    bit_range:
+    - 19
+    - 18
+    description: Endpoint type
+  - name: MC
+    bit_range:
+    - 21
+    - 20
+    description: Multi Count (MC) / Error Count (EC)
+  - name: DAD
+    bit_range:
+    - 28
+    - 22
+    description: Device address
+  - name: ODDFRM
+    bit_range:
+    - 29
+    - 29
+    description: Odd frame
+  - name: CHDIS
+    bit_range:
+    - 30
+    - 30
+    description: Channel disable
+  - name: CHENA
+    bit_range:
+    - 31
+    - 31
+    description: Channel enable
+  side_effects: null
+- id: OTG_HS_HCCHAR3
+  address_offset: 352
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MPSIZ
+    bit_range:
+    - 10
+    - 0
+    description: Maximum packet size
+  - name: EPNUM
+    bit_range:
+    - 14
+    - 11
+    description: Endpoint number
+  - name: EPDIR
+    bit_range:
+    - 15
+    - 15
+    description: Endpoint direction
+  - name: LSDEV
+    bit_range:
+    - 17
+    - 17
+    description: Low-speed device
+  - name: EPTYP
+    bit_range:
+    - 19
+    - 18
+    description: Endpoint type
+  - name: MC
+    bit_range:
+    - 21
+    - 20
+    description: Multi Count (MC) / Error Count (EC)
+  - name: DAD
+    bit_range:
+    - 28
+    - 22
+    description: Device address
+  - name: ODDFRM
+    bit_range:
+    - 29
+    - 29
+    description: Odd frame
+  - name: CHDIS
+    bit_range:
+    - 30
+    - 30
+    description: Channel disable
+  - name: CHENA
+    bit_range:
+    - 31
+    - 31
+    description: Channel enable
+  side_effects: null
+- id: OTG_HS_HCCHAR4
+  address_offset: 384
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MPSIZ
+    bit_range:
+    - 10
+    - 0
+    description: Maximum packet size
+  - name: EPNUM
+    bit_range:
+    - 14
+    - 11
+    description: Endpoint number
+  - name: EPDIR
+    bit_range:
+    - 15
+    - 15
+    description: Endpoint direction
+  - name: LSDEV
+    bit_range:
+    - 17
+    - 17
+    description: Low-speed device
+  - name: EPTYP
+    bit_range:
+    - 19
+    - 18
+    description: Endpoint type
+  - name: MC
+    bit_range:
+    - 21
+    - 20
+    description: Multi Count (MC) / Error Count (EC)
+  - name: DAD
+    bit_range:
+    - 28
+    - 22
+    description: Device address
+  - name: ODDFRM
+    bit_range:
+    - 29
+    - 29
+    description: Odd frame
+  - name: CHDIS
+    bit_range:
+    - 30
+    - 30
+    description: Channel disable
+  - name: CHENA
+    bit_range:
+    - 31
+    - 31
+    description: Channel enable
+  side_effects: null
+- id: OTG_HS_HCCHAR5
+  address_offset: 416
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MPSIZ
+    bit_range:
+    - 10
+    - 0
+    description: Maximum packet size
+  - name: EPNUM
+    bit_range:
+    - 14
+    - 11
+    description: Endpoint number
+  - name: EPDIR
+    bit_range:
+    - 15
+    - 15
+    description: Endpoint direction
+  - name: LSDEV
+    bit_range:
+    - 17
+    - 17
+    description: Low-speed device
+  - name: EPTYP
+    bit_range:
+    - 19
+    - 18
+    description: Endpoint type
+  - name: MC
+    bit_range:
+    - 21
+    - 20
+    description: Multi Count (MC) / Error Count (EC)
+  - name: DAD
+    bit_range:
+    - 28
+    - 22
+    description: Device address
+  - name: ODDFRM
+    bit_range:
+    - 29
+    - 29
+    description: Odd frame
+  - name: CHDIS
+    bit_range:
+    - 30
+    - 30
+    description: Channel disable
+  - name: CHENA
+    bit_range:
+    - 31
+    - 31
+    description: Channel enable
+  side_effects: null
+- id: OTG_HS_HCCHAR6
+  address_offset: 448
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MPSIZ
+    bit_range:
+    - 10
+    - 0
+    description: Maximum packet size
+  - name: EPNUM
+    bit_range:
+    - 14
+    - 11
+    description: Endpoint number
+  - name: EPDIR
+    bit_range:
+    - 15
+    - 15
+    description: Endpoint direction
+  - name: LSDEV
+    bit_range:
+    - 17
+    - 17
+    description: Low-speed device
+  - name: EPTYP
+    bit_range:
+    - 19
+    - 18
+    description: Endpoint type
+  - name: MC
+    bit_range:
+    - 21
+    - 20
+    description: Multi Count (MC) / Error Count (EC)
+  - name: DAD
+    bit_range:
+    - 28
+    - 22
+    description: Device address
+  - name: ODDFRM
+    bit_range:
+    - 29
+    - 29
+    description: Odd frame
+  - name: CHDIS
+    bit_range:
+    - 30
+    - 30
+    description: Channel disable
+  - name: CHENA
+    bit_range:
+    - 31
+    - 31
+    description: Channel enable
+  side_effects: null
+- id: OTG_HS_HCCHAR7
+  address_offset: 480
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MPSIZ
+    bit_range:
+    - 10
+    - 0
+    description: Maximum packet size
+  - name: EPNUM
+    bit_range:
+    - 14
+    - 11
+    description: Endpoint number
+  - name: EPDIR
+    bit_range:
+    - 15
+    - 15
+    description: Endpoint direction
+  - name: LSDEV
+    bit_range:
+    - 17
+    - 17
+    description: Low-speed device
+  - name: EPTYP
+    bit_range:
+    - 19
+    - 18
+    description: Endpoint type
+  - name: MC
+    bit_range:
+    - 21
+    - 20
+    description: Multi Count (MC) / Error Count (EC)
+  - name: DAD
+    bit_range:
+    - 28
+    - 22
+    description: Device address
+  - name: ODDFRM
+    bit_range:
+    - 29
+    - 29
+    description: Odd frame
+  - name: CHDIS
+    bit_range:
+    - 30
+    - 30
+    description: Channel disable
+  - name: CHENA
+    bit_range:
+    - 31
+    - 31
+    description: Channel enable
+  side_effects: null
+- id: OTG_HS_HCCHAR8
+  address_offset: 512
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MPSIZ
+    bit_range:
+    - 10
+    - 0
+    description: Maximum packet size
+  - name: EPNUM
+    bit_range:
+    - 14
+    - 11
+    description: Endpoint number
+  - name: EPDIR
+    bit_range:
+    - 15
+    - 15
+    description: Endpoint direction
+  - name: LSDEV
+    bit_range:
+    - 17
+    - 17
+    description: Low-speed device
+  - name: EPTYP
+    bit_range:
+    - 19
+    - 18
+    description: Endpoint type
+  - name: MC
+    bit_range:
+    - 21
+    - 20
+    description: Multi Count (MC) / Error Count (EC)
+  - name: DAD
+    bit_range:
+    - 28
+    - 22
+    description: Device address
+  - name: ODDFRM
+    bit_range:
+    - 29
+    - 29
+    description: Odd frame
+  - name: CHDIS
+    bit_range:
+    - 30
+    - 30
+    description: Channel disable
+  - name: CHENA
+    bit_range:
+    - 31
+    - 31
+    description: Channel enable
+  side_effects: null
+- id: OTG_HS_HCCHAR9
+  address_offset: 544
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MPSIZ
+    bit_range:
+    - 10
+    - 0
+    description: Maximum packet size
+  - name: EPNUM
+    bit_range:
+    - 14
+    - 11
+    description: Endpoint number
+  - name: EPDIR
+    bit_range:
+    - 15
+    - 15
+    description: Endpoint direction
+  - name: LSDEV
+    bit_range:
+    - 17
+    - 17
+    description: Low-speed device
+  - name: EPTYP
+    bit_range:
+    - 19
+    - 18
+    description: Endpoint type
+  - name: MC
+    bit_range:
+    - 21
+    - 20
+    description: Multi Count (MC) / Error Count (EC)
+  - name: DAD
+    bit_range:
+    - 28
+    - 22
+    description: Device address
+  - name: ODDFRM
+    bit_range:
+    - 29
+    - 29
+    description: Odd frame
+  - name: CHDIS
+    bit_range:
+    - 30
+    - 30
+    description: Channel disable
+  - name: CHENA
+    bit_range:
+    - 31
+    - 31
+    description: Channel enable
+  side_effects: null
+- id: OTG_HS_HCCHAR10
+  address_offset: 576
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MPSIZ
+    bit_range:
+    - 10
+    - 0
+    description: Maximum packet size
+  - name: EPNUM
+    bit_range:
+    - 14
+    - 11
+    description: Endpoint number
+  - name: EPDIR
+    bit_range:
+    - 15
+    - 15
+    description: Endpoint direction
+  - name: LSDEV
+    bit_range:
+    - 17
+    - 17
+    description: Low-speed device
+  - name: EPTYP
+    bit_range:
+    - 19
+    - 18
+    description: Endpoint type
+  - name: MC
+    bit_range:
+    - 21
+    - 20
+    description: Multi Count (MC) / Error Count (EC)
+  - name: DAD
+    bit_range:
+    - 28
+    - 22
+    description: Device address
+  - name: ODDFRM
+    bit_range:
+    - 29
+    - 29
+    description: Odd frame
+  - name: CHDIS
+    bit_range:
+    - 30
+    - 30
+    description: Channel disable
+  - name: CHENA
+    bit_range:
+    - 31
+    - 31
+    description: Channel enable
+  side_effects: null
+- id: OTG_HS_HCCHAR11
+  address_offset: 608
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MPSIZ
+    bit_range:
+    - 10
+    - 0
+    description: Maximum packet size
+  - name: EPNUM
+    bit_range:
+    - 14
+    - 11
+    description: Endpoint number
+  - name: EPDIR
+    bit_range:
+    - 15
+    - 15
+    description: Endpoint direction
+  - name: LSDEV
+    bit_range:
+    - 17
+    - 17
+    description: Low-speed device
+  - name: EPTYP
+    bit_range:
+    - 19
+    - 18
+    description: Endpoint type
+  - name: MC
+    bit_range:
+    - 21
+    - 20
+    description: Multi Count (MC) / Error Count (EC)
+  - name: DAD
+    bit_range:
+    - 28
+    - 22
+    description: Device address
+  - name: ODDFRM
+    bit_range:
+    - 29
+    - 29
+    description: Odd frame
+  - name: CHDIS
+    bit_range:
+    - 30
+    - 30
+    description: Channel disable
+  - name: CHENA
+    bit_range:
+    - 31
+    - 31
+    description: Channel enable
+  side_effects: null
+- id: OTG_HS_HCSPLT0
+  address_offset: 260
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRTADDR
+    bit_range:
+    - 6
+    - 0
+    description: Port address
+  - name: HUBADDR
+    bit_range:
+    - 13
+    - 7
+    description: Hub address
+  - name: XACTPOS
+    bit_range:
+    - 15
+    - 14
+    description: XACTPOS
+  - name: COMPLSPLT
+    bit_range:
+    - 16
+    - 16
+    description: Do complete split
+  - name: SPLITEN
+    bit_range:
+    - 31
+    - 31
+    description: Split enable
+  side_effects: null
+- id: OTG_HS_HCSPLT1
+  address_offset: 292
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRTADDR
+    bit_range:
+    - 6
+    - 0
+    description: Port address
+  - name: HUBADDR
+    bit_range:
+    - 13
+    - 7
+    description: Hub address
+  - name: XACTPOS
+    bit_range:
+    - 15
+    - 14
+    description: XACTPOS
+  - name: COMPLSPLT
+    bit_range:
+    - 16
+    - 16
+    description: Do complete split
+  - name: SPLITEN
+    bit_range:
+    - 31
+    - 31
+    description: Split enable
+  side_effects: null
+- id: OTG_HS_HCSPLT2
+  address_offset: 324
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRTADDR
+    bit_range:
+    - 6
+    - 0
+    description: Port address
+  - name: HUBADDR
+    bit_range:
+    - 13
+    - 7
+    description: Hub address
+  - name: XACTPOS
+    bit_range:
+    - 15
+    - 14
+    description: XACTPOS
+  - name: COMPLSPLT
+    bit_range:
+    - 16
+    - 16
+    description: Do complete split
+  - name: SPLITEN
+    bit_range:
+    - 31
+    - 31
+    description: Split enable
+  side_effects: null
+- id: OTG_HS_HCSPLT3
+  address_offset: 356
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRTADDR
+    bit_range:
+    - 6
+    - 0
+    description: Port address
+  - name: HUBADDR
+    bit_range:
+    - 13
+    - 7
+    description: Hub address
+  - name: XACTPOS
+    bit_range:
+    - 15
+    - 14
+    description: XACTPOS
+  - name: COMPLSPLT
+    bit_range:
+    - 16
+    - 16
+    description: Do complete split
+  - name: SPLITEN
+    bit_range:
+    - 31
+    - 31
+    description: Split enable
+  side_effects: null
+- id: OTG_HS_HCSPLT4
+  address_offset: 388
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRTADDR
+    bit_range:
+    - 6
+    - 0
+    description: Port address
+  - name: HUBADDR
+    bit_range:
+    - 13
+    - 7
+    description: Hub address
+  - name: XACTPOS
+    bit_range:
+    - 15
+    - 14
+    description: XACTPOS
+  - name: COMPLSPLT
+    bit_range:
+    - 16
+    - 16
+    description: Do complete split
+  - name: SPLITEN
+    bit_range:
+    - 31
+    - 31
+    description: Split enable
+  side_effects: null
+- id: OTG_HS_HCSPLT5
+  address_offset: 420
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRTADDR
+    bit_range:
+    - 6
+    - 0
+    description: Port address
+  - name: HUBADDR
+    bit_range:
+    - 13
+    - 7
+    description: Hub address
+  - name: XACTPOS
+    bit_range:
+    - 15
+    - 14
+    description: XACTPOS
+  - name: COMPLSPLT
+    bit_range:
+    - 16
+    - 16
+    description: Do complete split
+  - name: SPLITEN
+    bit_range:
+    - 31
+    - 31
+    description: Split enable
+  side_effects: null
+- id: OTG_HS_HCSPLT6
+  address_offset: 452
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRTADDR
+    bit_range:
+    - 6
+    - 0
+    description: Port address
+  - name: HUBADDR
+    bit_range:
+    - 13
+    - 7
+    description: Hub address
+  - name: XACTPOS
+    bit_range:
+    - 15
+    - 14
+    description: XACTPOS
+  - name: COMPLSPLT
+    bit_range:
+    - 16
+    - 16
+    description: Do complete split
+  - name: SPLITEN
+    bit_range:
+    - 31
+    - 31
+    description: Split enable
+  side_effects: null
+- id: OTG_HS_HCSPLT7
+  address_offset: 484
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRTADDR
+    bit_range:
+    - 6
+    - 0
+    description: Port address
+  - name: HUBADDR
+    bit_range:
+    - 13
+    - 7
+    description: Hub address
+  - name: XACTPOS
+    bit_range:
+    - 15
+    - 14
+    description: XACTPOS
+  - name: COMPLSPLT
+    bit_range:
+    - 16
+    - 16
+    description: Do complete split
+  - name: SPLITEN
+    bit_range:
+    - 31
+    - 31
+    description: Split enable
+  side_effects: null
+- id: OTG_HS_HCSPLT8
+  address_offset: 516
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRTADDR
+    bit_range:
+    - 6
+    - 0
+    description: Port address
+  - name: HUBADDR
+    bit_range:
+    - 13
+    - 7
+    description: Hub address
+  - name: XACTPOS
+    bit_range:
+    - 15
+    - 14
+    description: XACTPOS
+  - name: COMPLSPLT
+    bit_range:
+    - 16
+    - 16
+    description: Do complete split
+  - name: SPLITEN
+    bit_range:
+    - 31
+    - 31
+    description: Split enable
+  side_effects: null
+- id: OTG_HS_HCSPLT9
+  address_offset: 548
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRTADDR
+    bit_range:
+    - 6
+    - 0
+    description: Port address
+  - name: HUBADDR
+    bit_range:
+    - 13
+    - 7
+    description: Hub address
+  - name: XACTPOS
+    bit_range:
+    - 15
+    - 14
+    description: XACTPOS
+  - name: COMPLSPLT
+    bit_range:
+    - 16
+    - 16
+    description: Do complete split
+  - name: SPLITEN
+    bit_range:
+    - 31
+    - 31
+    description: Split enable
+  side_effects: null
+- id: OTG_HS_HCSPLT10
+  address_offset: 580
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRTADDR
+    bit_range:
+    - 6
+    - 0
+    description: Port address
+  - name: HUBADDR
+    bit_range:
+    - 13
+    - 7
+    description: Hub address
+  - name: XACTPOS
+    bit_range:
+    - 15
+    - 14
+    description: XACTPOS
+  - name: COMPLSPLT
+    bit_range:
+    - 16
+    - 16
+    description: Do complete split
+  - name: SPLITEN
+    bit_range:
+    - 31
+    - 31
+    description: Split enable
+  side_effects: null
+- id: OTG_HS_HCSPLT11
+  address_offset: 612
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRTADDR
+    bit_range:
+    - 6
+    - 0
+    description: Port address
+  - name: HUBADDR
+    bit_range:
+    - 13
+    - 7
+    description: Hub address
+  - name: XACTPOS
+    bit_range:
+    - 15
+    - 14
+    description: XACTPOS
+  - name: COMPLSPLT
+    bit_range:
+    - 16
+    - 16
+    description: Do complete split
+  - name: SPLITEN
+    bit_range:
+    - 31
+    - 31
+    description: Split enable
+  side_effects: null
+- id: OTG_HS_HCINT0
+  address_offset: 264
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRC
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed
+  - name: CHH
+    bit_range:
+    - 1
+    - 1
+    description: Channel halted
+  - name: AHBERR
+    bit_range:
+    - 2
+    - 2
+    description: AHB error
+  - name: STALL
+    bit_range:
+    - 3
+    - 3
+    description: STALL response received interrupt
+  - name: NAK
+    bit_range:
+    - 4
+    - 4
+    description: NAK response received interrupt
+  - name: ACK
+    bit_range:
+    - 5
+    - 5
+    description: ACK response received/transmitted interrupt
+  - name: NYET
+    bit_range:
+    - 6
+    - 6
+    description: Response received interrupt
+  - name: TXERR
+    bit_range:
+    - 7
+    - 7
+    description: Transaction error
+  - name: BBERR
+    bit_range:
+    - 8
+    - 8
+    description: Babble error
+  - name: FRMOR
+    bit_range:
+    - 9
+    - 9
+    description: Frame overrun
+  - name: DTERR
+    bit_range:
+    - 10
+    - 10
+    description: Data toggle error
+  side_effects: null
+- id: OTG_HS_HCINT1
+  address_offset: 296
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRC
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed
+  - name: CHH
+    bit_range:
+    - 1
+    - 1
+    description: Channel halted
+  - name: AHBERR
+    bit_range:
+    - 2
+    - 2
+    description: AHB error
+  - name: STALL
+    bit_range:
+    - 3
+    - 3
+    description: STALL response received interrupt
+  - name: NAK
+    bit_range:
+    - 4
+    - 4
+    description: NAK response received interrupt
+  - name: ACK
+    bit_range:
+    - 5
+    - 5
+    description: ACK response received/transmitted interrupt
+  - name: NYET
+    bit_range:
+    - 6
+    - 6
+    description: Response received interrupt
+  - name: TXERR
+    bit_range:
+    - 7
+    - 7
+    description: Transaction error
+  - name: BBERR
+    bit_range:
+    - 8
+    - 8
+    description: Babble error
+  - name: FRMOR
+    bit_range:
+    - 9
+    - 9
+    description: Frame overrun
+  - name: DTERR
+    bit_range:
+    - 10
+    - 10
+    description: Data toggle error
+  side_effects: null
+- id: OTG_HS_HCINT2
+  address_offset: 328
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRC
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed
+  - name: CHH
+    bit_range:
+    - 1
+    - 1
+    description: Channel halted
+  - name: AHBERR
+    bit_range:
+    - 2
+    - 2
+    description: AHB error
+  - name: STALL
+    bit_range:
+    - 3
+    - 3
+    description: STALL response received interrupt
+  - name: NAK
+    bit_range:
+    - 4
+    - 4
+    description: NAK response received interrupt
+  - name: ACK
+    bit_range:
+    - 5
+    - 5
+    description: ACK response received/transmitted interrupt
+  - name: NYET
+    bit_range:
+    - 6
+    - 6
+    description: Response received interrupt
+  - name: TXERR
+    bit_range:
+    - 7
+    - 7
+    description: Transaction error
+  - name: BBERR
+    bit_range:
+    - 8
+    - 8
+    description: Babble error
+  - name: FRMOR
+    bit_range:
+    - 9
+    - 9
+    description: Frame overrun
+  - name: DTERR
+    bit_range:
+    - 10
+    - 10
+    description: Data toggle error
+  side_effects: null
+- id: OTG_HS_HCINT3
+  address_offset: 360
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRC
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed
+  - name: CHH
+    bit_range:
+    - 1
+    - 1
+    description: Channel halted
+  - name: AHBERR
+    bit_range:
+    - 2
+    - 2
+    description: AHB error
+  - name: STALL
+    bit_range:
+    - 3
+    - 3
+    description: STALL response received interrupt
+  - name: NAK
+    bit_range:
+    - 4
+    - 4
+    description: NAK response received interrupt
+  - name: ACK
+    bit_range:
+    - 5
+    - 5
+    description: ACK response received/transmitted interrupt
+  - name: NYET
+    bit_range:
+    - 6
+    - 6
+    description: Response received interrupt
+  - name: TXERR
+    bit_range:
+    - 7
+    - 7
+    description: Transaction error
+  - name: BBERR
+    bit_range:
+    - 8
+    - 8
+    description: Babble error
+  - name: FRMOR
+    bit_range:
+    - 9
+    - 9
+    description: Frame overrun
+  - name: DTERR
+    bit_range:
+    - 10
+    - 10
+    description: Data toggle error
+  side_effects: null
+- id: OTG_HS_HCINT4
+  address_offset: 392
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRC
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed
+  - name: CHH
+    bit_range:
+    - 1
+    - 1
+    description: Channel halted
+  - name: AHBERR
+    bit_range:
+    - 2
+    - 2
+    description: AHB error
+  - name: STALL
+    bit_range:
+    - 3
+    - 3
+    description: STALL response received interrupt
+  - name: NAK
+    bit_range:
+    - 4
+    - 4
+    description: NAK response received interrupt
+  - name: ACK
+    bit_range:
+    - 5
+    - 5
+    description: ACK response received/transmitted interrupt
+  - name: NYET
+    bit_range:
+    - 6
+    - 6
+    description: Response received interrupt
+  - name: TXERR
+    bit_range:
+    - 7
+    - 7
+    description: Transaction error
+  - name: BBERR
+    bit_range:
+    - 8
+    - 8
+    description: Babble error
+  - name: FRMOR
+    bit_range:
+    - 9
+    - 9
+    description: Frame overrun
+  - name: DTERR
+    bit_range:
+    - 10
+    - 10
+    description: Data toggle error
+  side_effects: null
+- id: OTG_HS_HCINT5
+  address_offset: 424
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRC
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed
+  - name: CHH
+    bit_range:
+    - 1
+    - 1
+    description: Channel halted
+  - name: AHBERR
+    bit_range:
+    - 2
+    - 2
+    description: AHB error
+  - name: STALL
+    bit_range:
+    - 3
+    - 3
+    description: STALL response received interrupt
+  - name: NAK
+    bit_range:
+    - 4
+    - 4
+    description: NAK response received interrupt
+  - name: ACK
+    bit_range:
+    - 5
+    - 5
+    description: ACK response received/transmitted interrupt
+  - name: NYET
+    bit_range:
+    - 6
+    - 6
+    description: Response received interrupt
+  - name: TXERR
+    bit_range:
+    - 7
+    - 7
+    description: Transaction error
+  - name: BBERR
+    bit_range:
+    - 8
+    - 8
+    description: Babble error
+  - name: FRMOR
+    bit_range:
+    - 9
+    - 9
+    description: Frame overrun
+  - name: DTERR
+    bit_range:
+    - 10
+    - 10
+    description: Data toggle error
+  side_effects: null
+- id: OTG_HS_HCINT6
+  address_offset: 456
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRC
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed
+  - name: CHH
+    bit_range:
+    - 1
+    - 1
+    description: Channel halted
+  - name: AHBERR
+    bit_range:
+    - 2
+    - 2
+    description: AHB error
+  - name: STALL
+    bit_range:
+    - 3
+    - 3
+    description: STALL response received interrupt
+  - name: NAK
+    bit_range:
+    - 4
+    - 4
+    description: NAK response received interrupt
+  - name: ACK
+    bit_range:
+    - 5
+    - 5
+    description: ACK response received/transmitted interrupt
+  - name: NYET
+    bit_range:
+    - 6
+    - 6
+    description: Response received interrupt
+  - name: TXERR
+    bit_range:
+    - 7
+    - 7
+    description: Transaction error
+  - name: BBERR
+    bit_range:
+    - 8
+    - 8
+    description: Babble error
+  - name: FRMOR
+    bit_range:
+    - 9
+    - 9
+    description: Frame overrun
+  - name: DTERR
+    bit_range:
+    - 10
+    - 10
+    description: Data toggle error
+  side_effects: null
+- id: OTG_HS_HCINT7
+  address_offset: 488
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRC
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed
+  - name: CHH
+    bit_range:
+    - 1
+    - 1
+    description: Channel halted
+  - name: AHBERR
+    bit_range:
+    - 2
+    - 2
+    description: AHB error
+  - name: STALL
+    bit_range:
+    - 3
+    - 3
+    description: STALL response received interrupt
+  - name: NAK
+    bit_range:
+    - 4
+    - 4
+    description: NAK response received interrupt
+  - name: ACK
+    bit_range:
+    - 5
+    - 5
+    description: ACK response received/transmitted interrupt
+  - name: NYET
+    bit_range:
+    - 6
+    - 6
+    description: Response received interrupt
+  - name: TXERR
+    bit_range:
+    - 7
+    - 7
+    description: Transaction error
+  - name: BBERR
+    bit_range:
+    - 8
+    - 8
+    description: Babble error
+  - name: FRMOR
+    bit_range:
+    - 9
+    - 9
+    description: Frame overrun
+  - name: DTERR
+    bit_range:
+    - 10
+    - 10
+    description: Data toggle error
+  side_effects: null
+- id: OTG_HS_HCINT8
+  address_offset: 520
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRC
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed
+  - name: CHH
+    bit_range:
+    - 1
+    - 1
+    description: Channel halted
+  - name: AHBERR
+    bit_range:
+    - 2
+    - 2
+    description: AHB error
+  - name: STALL
+    bit_range:
+    - 3
+    - 3
+    description: STALL response received interrupt
+  - name: NAK
+    bit_range:
+    - 4
+    - 4
+    description: NAK response received interrupt
+  - name: ACK
+    bit_range:
+    - 5
+    - 5
+    description: ACK response received/transmitted interrupt
+  - name: NYET
+    bit_range:
+    - 6
+    - 6
+    description: Response received interrupt
+  - name: TXERR
+    bit_range:
+    - 7
+    - 7
+    description: Transaction error
+  - name: BBERR
+    bit_range:
+    - 8
+    - 8
+    description: Babble error
+  - name: FRMOR
+    bit_range:
+    - 9
+    - 9
+    description: Frame overrun
+  - name: DTERR
+    bit_range:
+    - 10
+    - 10
+    description: Data toggle error
+  side_effects: null
+- id: OTG_HS_HCINT9
+  address_offset: 552
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRC
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed
+  - name: CHH
+    bit_range:
+    - 1
+    - 1
+    description: Channel halted
+  - name: AHBERR
+    bit_range:
+    - 2
+    - 2
+    description: AHB error
+  - name: STALL
+    bit_range:
+    - 3
+    - 3
+    description: STALL response received interrupt
+  - name: NAK
+    bit_range:
+    - 4
+    - 4
+    description: NAK response received interrupt
+  - name: ACK
+    bit_range:
+    - 5
+    - 5
+    description: ACK response received/transmitted interrupt
+  - name: NYET
+    bit_range:
+    - 6
+    - 6
+    description: Response received interrupt
+  - name: TXERR
+    bit_range:
+    - 7
+    - 7
+    description: Transaction error
+  - name: BBERR
+    bit_range:
+    - 8
+    - 8
+    description: Babble error
+  - name: FRMOR
+    bit_range:
+    - 9
+    - 9
+    description: Frame overrun
+  - name: DTERR
+    bit_range:
+    - 10
+    - 10
+    description: Data toggle error
+  side_effects: null
+- id: OTG_HS_HCINT10
+  address_offset: 584
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRC
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed
+  - name: CHH
+    bit_range:
+    - 1
+    - 1
+    description: Channel halted
+  - name: AHBERR
+    bit_range:
+    - 2
+    - 2
+    description: AHB error
+  - name: STALL
+    bit_range:
+    - 3
+    - 3
+    description: STALL response received interrupt
+  - name: NAK
+    bit_range:
+    - 4
+    - 4
+    description: NAK response received interrupt
+  - name: ACK
+    bit_range:
+    - 5
+    - 5
+    description: ACK response received/transmitted interrupt
+  - name: NYET
+    bit_range:
+    - 6
+    - 6
+    description: Response received interrupt
+  - name: TXERR
+    bit_range:
+    - 7
+    - 7
+    description: Transaction error
+  - name: BBERR
+    bit_range:
+    - 8
+    - 8
+    description: Babble error
+  - name: FRMOR
+    bit_range:
+    - 9
+    - 9
+    description: Frame overrun
+  - name: DTERR
+    bit_range:
+    - 10
+    - 10
+    description: Data toggle error
+  side_effects: null
+- id: OTG_HS_HCINT11
+  address_offset: 616
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRC
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed
+  - name: CHH
+    bit_range:
+    - 1
+    - 1
+    description: Channel halted
+  - name: AHBERR
+    bit_range:
+    - 2
+    - 2
+    description: AHB error
+  - name: STALL
+    bit_range:
+    - 3
+    - 3
+    description: STALL response received interrupt
+  - name: NAK
+    bit_range:
+    - 4
+    - 4
+    description: NAK response received interrupt
+  - name: ACK
+    bit_range:
+    - 5
+    - 5
+    description: ACK response received/transmitted interrupt
+  - name: NYET
+    bit_range:
+    - 6
+    - 6
+    description: Response received interrupt
+  - name: TXERR
+    bit_range:
+    - 7
+    - 7
+    description: Transaction error
+  - name: BBERR
+    bit_range:
+    - 8
+    - 8
+    description: Babble error
+  - name: FRMOR
+    bit_range:
+    - 9
+    - 9
+    description: Frame overrun
+  - name: DTERR
+    bit_range:
+    - 10
+    - 10
+    description: Data toggle error
+  side_effects: null
+- id: OTG_HS_HCINTMSK0
+  address_offset: 268
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRCM
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed mask
+  - name: CHHM
+    bit_range:
+    - 1
+    - 1
+    description: Channel halted mask
+  - name: AHBERR
+    bit_range:
+    - 2
+    - 2
+    description: AHB error
+  - name: STALLM
+    bit_range:
+    - 3
+    - 3
+    description: STALL response received interrupt mask
+  - name: NAKM
+    bit_range:
+    - 4
+    - 4
+    description: NAK response received interrupt mask
+  - name: ACKM
+    bit_range:
+    - 5
+    - 5
+    description: ACK response received/transmitted interrupt mask
+  - name: NYET
+    bit_range:
+    - 6
+    - 6
+    description: response received interrupt mask
+  - name: TXERRM
+    bit_range:
+    - 7
+    - 7
+    description: Transaction error mask
+  - name: BBERRM
+    bit_range:
+    - 8
+    - 8
+    description: Babble error mask
+  - name: FRMORM
+    bit_range:
+    - 9
+    - 9
+    description: Frame overrun mask
+  - name: DTERRM
+    bit_range:
+    - 10
+    - 10
+    description: Data toggle error mask
+  side_effects: null
+- id: OTG_HS_HCINTMSK1
+  address_offset: 300
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRCM
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed mask
+  - name: CHHM
+    bit_range:
+    - 1
+    - 1
+    description: Channel halted mask
+  - name: AHBERR
+    bit_range:
+    - 2
+    - 2
+    description: AHB error
+  - name: STALLM
+    bit_range:
+    - 3
+    - 3
+    description: STALL response received interrupt mask
+  - name: NAKM
+    bit_range:
+    - 4
+    - 4
+    description: NAK response received interrupt mask
+  - name: ACKM
+    bit_range:
+    - 5
+    - 5
+    description: ACK response received/transmitted interrupt mask
+  - name: NYET
+    bit_range:
+    - 6
+    - 6
+    description: response received interrupt mask
+  - name: TXERRM
+    bit_range:
+    - 7
+    - 7
+    description: Transaction error mask
+  - name: BBERRM
+    bit_range:
+    - 8
+    - 8
+    description: Babble error mask
+  - name: FRMORM
+    bit_range:
+    - 9
+    - 9
+    description: Frame overrun mask
+  - name: DTERRM
+    bit_range:
+    - 10
+    - 10
+    description: Data toggle error mask
+  side_effects: null
+- id: OTG_HS_HCINTMSK2
+  address_offset: 332
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRCM
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed mask
+  - name: CHHM
+    bit_range:
+    - 1
+    - 1
+    description: Channel halted mask
+  - name: AHBERR
+    bit_range:
+    - 2
+    - 2
+    description: AHB error
+  - name: STALLM
+    bit_range:
+    - 3
+    - 3
+    description: STALL response received interrupt mask
+  - name: NAKM
+    bit_range:
+    - 4
+    - 4
+    description: NAK response received interrupt mask
+  - name: ACKM
+    bit_range:
+    - 5
+    - 5
+    description: ACK response received/transmitted interrupt mask
+  - name: NYET
+    bit_range:
+    - 6
+    - 6
+    description: response received interrupt mask
+  - name: TXERRM
+    bit_range:
+    - 7
+    - 7
+    description: Transaction error mask
+  - name: BBERRM
+    bit_range:
+    - 8
+    - 8
+    description: Babble error mask
+  - name: FRMORM
+    bit_range:
+    - 9
+    - 9
+    description: Frame overrun mask
+  - name: DTERRM
+    bit_range:
+    - 10
+    - 10
+    description: Data toggle error mask
+  side_effects: null
+- id: OTG_HS_HCINTMSK3
+  address_offset: 364
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRCM
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed mask
+  - name: CHHM
+    bit_range:
+    - 1
+    - 1
+    description: Channel halted mask
+  - name: AHBERR
+    bit_range:
+    - 2
+    - 2
+    description: AHB error
+  - name: STALLM
+    bit_range:
+    - 3
+    - 3
+    description: STALL response received interrupt mask
+  - name: NAKM
+    bit_range:
+    - 4
+    - 4
+    description: NAK response received interrupt mask
+  - name: ACKM
+    bit_range:
+    - 5
+    - 5
+    description: ACK response received/transmitted interrupt mask
+  - name: NYET
+    bit_range:
+    - 6
+    - 6
+    description: response received interrupt mask
+  - name: TXERRM
+    bit_range:
+    - 7
+    - 7
+    description: Transaction error mask
+  - name: BBERRM
+    bit_range:
+    - 8
+    - 8
+    description: Babble error mask
+  - name: FRMORM
+    bit_range:
+    - 9
+    - 9
+    description: Frame overrun mask
+  - name: DTERRM
+    bit_range:
+    - 10
+    - 10
+    description: Data toggle error mask
+  side_effects: null
+- id: OTG_HS_HCINTMSK4
+  address_offset: 396
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRCM
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed mask
+  - name: CHHM
+    bit_range:
+    - 1
+    - 1
+    description: Channel halted mask
+  - name: AHBERR
+    bit_range:
+    - 2
+    - 2
+    description: AHB error
+  - name: STALLM
+    bit_range:
+    - 3
+    - 3
+    description: STALL response received interrupt mask
+  - name: NAKM
+    bit_range:
+    - 4
+    - 4
+    description: NAK response received interrupt mask
+  - name: ACKM
+    bit_range:
+    - 5
+    - 5
+    description: ACK response received/transmitted interrupt mask
+  - name: NYET
+    bit_range:
+    - 6
+    - 6
+    description: response received interrupt mask
+  - name: TXERRM
+    bit_range:
+    - 7
+    - 7
+    description: Transaction error mask
+  - name: BBERRM
+    bit_range:
+    - 8
+    - 8
+    description: Babble error mask
+  - name: FRMORM
+    bit_range:
+    - 9
+    - 9
+    description: Frame overrun mask
+  - name: DTERRM
+    bit_range:
+    - 10
+    - 10
+    description: Data toggle error mask
+  side_effects: null
+- id: OTG_HS_HCINTMSK5
+  address_offset: 428
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRCM
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed mask
+  - name: CHHM
+    bit_range:
+    - 1
+    - 1
+    description: Channel halted mask
+  - name: AHBERR
+    bit_range:
+    - 2
+    - 2
+    description: AHB error
+  - name: STALLM
+    bit_range:
+    - 3
+    - 3
+    description: STALL response received interrupt mask
+  - name: NAKM
+    bit_range:
+    - 4
+    - 4
+    description: NAK response received interrupt mask
+  - name: ACKM
+    bit_range:
+    - 5
+    - 5
+    description: ACK response received/transmitted interrupt mask
+  - name: NYET
+    bit_range:
+    - 6
+    - 6
+    description: response received interrupt mask
+  - name: TXERRM
+    bit_range:
+    - 7
+    - 7
+    description: Transaction error mask
+  - name: BBERRM
+    bit_range:
+    - 8
+    - 8
+    description: Babble error mask
+  - name: FRMORM
+    bit_range:
+    - 9
+    - 9
+    description: Frame overrun mask
+  - name: DTERRM
+    bit_range:
+    - 10
+    - 10
+    description: Data toggle error mask
+  side_effects: null
+- id: OTG_HS_HCINTMSK6
+  address_offset: 460
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRCM
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed mask
+  - name: CHHM
+    bit_range:
+    - 1
+    - 1
+    description: Channel halted mask
+  - name: AHBERR
+    bit_range:
+    - 2
+    - 2
+    description: AHB error
+  - name: STALLM
+    bit_range:
+    - 3
+    - 3
+    description: STALL response received interrupt mask
+  - name: NAKM
+    bit_range:
+    - 4
+    - 4
+    description: NAK response received interrupt mask
+  - name: ACKM
+    bit_range:
+    - 5
+    - 5
+    description: ACK response received/transmitted interrupt mask
+  - name: NYET
+    bit_range:
+    - 6
+    - 6
+    description: response received interrupt mask
+  - name: TXERRM
+    bit_range:
+    - 7
+    - 7
+    description: Transaction error mask
+  - name: BBERRM
+    bit_range:
+    - 8
+    - 8
+    description: Babble error mask
+  - name: FRMORM
+    bit_range:
+    - 9
+    - 9
+    description: Frame overrun mask
+  - name: DTERRM
+    bit_range:
+    - 10
+    - 10
+    description: Data toggle error mask
+  side_effects: null
+- id: OTG_HS_HCINTMSK7
+  address_offset: 492
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRCM
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed mask
+  - name: CHHM
+    bit_range:
+    - 1
+    - 1
+    description: Channel halted mask
+  - name: AHBERR
+    bit_range:
+    - 2
+    - 2
+    description: AHB error
+  - name: STALLM
+    bit_range:
+    - 3
+    - 3
+    description: STALL response received interrupt mask
+  - name: NAKM
+    bit_range:
+    - 4
+    - 4
+    description: NAK response received interrupt mask
+  - name: ACKM
+    bit_range:
+    - 5
+    - 5
+    description: ACK response received/transmitted interrupt mask
+  - name: NYET
+    bit_range:
+    - 6
+    - 6
+    description: response received interrupt mask
+  - name: TXERRM
+    bit_range:
+    - 7
+    - 7
+    description: Transaction error mask
+  - name: BBERRM
+    bit_range:
+    - 8
+    - 8
+    description: Babble error mask
+  - name: FRMORM
+    bit_range:
+    - 9
+    - 9
+    description: Frame overrun mask
+  - name: DTERRM
+    bit_range:
+    - 10
+    - 10
+    description: Data toggle error mask
+  side_effects: null
+- id: OTG_HS_HCINTMSK8
+  address_offset: 524
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRCM
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed mask
+  - name: CHHM
+    bit_range:
+    - 1
+    - 1
+    description: Channel halted mask
+  - name: AHBERR
+    bit_range:
+    - 2
+    - 2
+    description: AHB error
+  - name: STALLM
+    bit_range:
+    - 3
+    - 3
+    description: STALL response received interrupt mask
+  - name: NAKM
+    bit_range:
+    - 4
+    - 4
+    description: NAK response received interrupt mask
+  - name: ACKM
+    bit_range:
+    - 5
+    - 5
+    description: ACK response received/transmitted interrupt mask
+  - name: NYET
+    bit_range:
+    - 6
+    - 6
+    description: response received interrupt mask
+  - name: TXERRM
+    bit_range:
+    - 7
+    - 7
+    description: Transaction error mask
+  - name: BBERRM
+    bit_range:
+    - 8
+    - 8
+    description: Babble error mask
+  - name: FRMORM
+    bit_range:
+    - 9
+    - 9
+    description: Frame overrun mask
+  - name: DTERRM
+    bit_range:
+    - 10
+    - 10
+    description: Data toggle error mask
+  side_effects: null
+- id: OTG_HS_HCINTMSK9
+  address_offset: 556
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRCM
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed mask
+  - name: CHHM
+    bit_range:
+    - 1
+    - 1
+    description: Channel halted mask
+  - name: AHBERR
+    bit_range:
+    - 2
+    - 2
+    description: AHB error
+  - name: STALLM
+    bit_range:
+    - 3
+    - 3
+    description: STALL response received interrupt mask
+  - name: NAKM
+    bit_range:
+    - 4
+    - 4
+    description: NAK response received interrupt mask
+  - name: ACKM
+    bit_range:
+    - 5
+    - 5
+    description: ACK response received/transmitted interrupt mask
+  - name: NYET
+    bit_range:
+    - 6
+    - 6
+    description: response received interrupt mask
+  - name: TXERRM
+    bit_range:
+    - 7
+    - 7
+    description: Transaction error mask
+  - name: BBERRM
+    bit_range:
+    - 8
+    - 8
+    description: Babble error mask
+  - name: FRMORM
+    bit_range:
+    - 9
+    - 9
+    description: Frame overrun mask
+  - name: DTERRM
+    bit_range:
+    - 10
+    - 10
+    description: Data toggle error mask
+  side_effects: null
+- id: OTG_HS_HCINTMSK10
+  address_offset: 588
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRCM
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed mask
+  - name: CHHM
+    bit_range:
+    - 1
+    - 1
+    description: Channel halted mask
+  - name: AHBERR
+    bit_range:
+    - 2
+    - 2
+    description: AHB error
+  - name: STALLM
+    bit_range:
+    - 3
+    - 3
+    description: STALL response received interrupt mask
+  - name: NAKM
+    bit_range:
+    - 4
+    - 4
+    description: NAK response received interrupt mask
+  - name: ACKM
+    bit_range:
+    - 5
+    - 5
+    description: ACK response received/transmitted interrupt mask
+  - name: NYET
+    bit_range:
+    - 6
+    - 6
+    description: response received interrupt mask
+  - name: TXERRM
+    bit_range:
+    - 7
+    - 7
+    description: Transaction error mask
+  - name: BBERRM
+    bit_range:
+    - 8
+    - 8
+    description: Babble error mask
+  - name: FRMORM
+    bit_range:
+    - 9
+    - 9
+    description: Frame overrun mask
+  - name: DTERRM
+    bit_range:
+    - 10
+    - 10
+    description: Data toggle error mask
+  side_effects: null
+- id: OTG_HS_HCINTMSK11
+  address_offset: 620
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRCM
+    bit_range:
+    - 0
+    - 0
+    description: Transfer completed mask
+  - name: CHHM
+    bit_range:
+    - 1
+    - 1
+    description: Channel halted mask
+  - name: AHBERR
+    bit_range:
+    - 2
+    - 2
+    description: AHB error
+  - name: STALLM
+    bit_range:
+    - 3
+    - 3
+    description: STALL response received interrupt mask
+  - name: NAKM
+    bit_range:
+    - 4
+    - 4
+    description: NAK response received interrupt mask
+  - name: ACKM
+    bit_range:
+    - 5
+    - 5
+    description: ACK response received/transmitted interrupt mask
+  - name: NYET
+    bit_range:
+    - 6
+    - 6
+    description: response received interrupt mask
+  - name: TXERRM
+    bit_range:
+    - 7
+    - 7
+    description: Transaction error mask
+  - name: BBERRM
+    bit_range:
+    - 8
+    - 8
+    description: Babble error mask
+  - name: FRMORM
+    bit_range:
+    - 9
+    - 9
+    description: Frame overrun mask
+  - name: DTERRM
+    bit_range:
+    - 10
+    - 10
+    description: Data toggle error mask
+  side_effects: null
+- id: OTG_HS_HCTSIZ0
+  address_offset: 272
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRSIZ
+    bit_range:
+    - 18
+    - 0
+    description: Transfer size
+  - name: PKTCNT
+    bit_range:
+    - 28
+    - 19
+    description: Packet count
+  - name: DPID
+    bit_range:
+    - 30
+    - 29
+    description: Data PID
+  side_effects: null
+- id: OTG_HS_HCTSIZ1
+  address_offset: 304
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRSIZ
+    bit_range:
+    - 18
+    - 0
+    description: Transfer size
+  - name: PKTCNT
+    bit_range:
+    - 28
+    - 19
+    description: Packet count
+  - name: DPID
+    bit_range:
+    - 30
+    - 29
+    description: Data PID
+  side_effects: null
+- id: OTG_HS_HCTSIZ2
+  address_offset: 336
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRSIZ
+    bit_range:
+    - 18
+    - 0
+    description: Transfer size
+  - name: PKTCNT
+    bit_range:
+    - 28
+    - 19
+    description: Packet count
+  - name: DPID
+    bit_range:
+    - 30
+    - 29
+    description: Data PID
+  side_effects: null
+- id: OTG_HS_HCTSIZ3
+  address_offset: 368
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRSIZ
+    bit_range:
+    - 18
+    - 0
+    description: Transfer size
+  - name: PKTCNT
+    bit_range:
+    - 28
+    - 19
+    description: Packet count
+  - name: DPID
+    bit_range:
+    - 30
+    - 29
+    description: Data PID
+  side_effects: null
+- id: OTG_HS_HCTSIZ4
+  address_offset: 400
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRSIZ
+    bit_range:
+    - 18
+    - 0
+    description: Transfer size
+  - name: PKTCNT
+    bit_range:
+    - 28
+    - 19
+    description: Packet count
+  - name: DPID
+    bit_range:
+    - 30
+    - 29
+    description: Data PID
+  side_effects: null
+- id: OTG_HS_HCTSIZ5
+  address_offset: 432
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRSIZ
+    bit_range:
+    - 18
+    - 0
+    description: Transfer size
+  - name: PKTCNT
+    bit_range:
+    - 28
+    - 19
+    description: Packet count
+  - name: DPID
+    bit_range:
+    - 30
+    - 29
+    description: Data PID
+  side_effects: null
+- id: OTG_HS_HCTSIZ6
+  address_offset: 464
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRSIZ
+    bit_range:
+    - 18
+    - 0
+    description: Transfer size
+  - name: PKTCNT
+    bit_range:
+    - 28
+    - 19
+    description: Packet count
+  - name: DPID
+    bit_range:
+    - 30
+    - 29
+    description: Data PID
+  side_effects: null
+- id: OTG_HS_HCTSIZ7
+  address_offset: 496
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRSIZ
+    bit_range:
+    - 18
+    - 0
+    description: Transfer size
+  - name: PKTCNT
+    bit_range:
+    - 28
+    - 19
+    description: Packet count
+  - name: DPID
+    bit_range:
+    - 30
+    - 29
+    description: Data PID
+  side_effects: null
+- id: OTG_HS_HCTSIZ8
+  address_offset: 528
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRSIZ
+    bit_range:
+    - 18
+    - 0
+    description: Transfer size
+  - name: PKTCNT
+    bit_range:
+    - 28
+    - 19
+    description: Packet count
+  - name: DPID
+    bit_range:
+    - 30
+    - 29
+    description: Data PID
+  side_effects: null
+- id: OTG_HS_HCTSIZ9
+  address_offset: 560
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRSIZ
+    bit_range:
+    - 18
+    - 0
+    description: Transfer size
+  - name: PKTCNT
+    bit_range:
+    - 28
+    - 19
+    description: Packet count
+  - name: DPID
+    bit_range:
+    - 30
+    - 29
+    description: Data PID
+  side_effects: null
+- id: OTG_HS_HCTSIZ10
+  address_offset: 592
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRSIZ
+    bit_range:
+    - 18
+    - 0
+    description: Transfer size
+  - name: PKTCNT
+    bit_range:
+    - 28
+    - 19
+    description: Packet count
+  - name: DPID
+    bit_range:
+    - 30
+    - 29
+    description: Data PID
+  side_effects: null
+- id: OTG_HS_HCTSIZ11
+  address_offset: 624
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XFRSIZ
+    bit_range:
+    - 18
+    - 0
+    description: Transfer size
+  - name: PKTCNT
+    bit_range:
+    - 28
+    - 19
+    description: Packet count
+  - name: DPID
+    bit_range:
+    - 30
+    - 29
+    description: Data PID
+  side_effects: null
+- id: OTG_HS_HCDMA0
+  address_offset: 276
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DMAADDR
+    bit_range:
+    - 31
+    - 0
+    description: DMA address
+  side_effects: null
+- id: OTG_HS_HCDMA1
+  address_offset: 308
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DMAADDR
+    bit_range:
+    - 31
+    - 0
+    description: DMA address
+  side_effects: null
+- id: OTG_HS_HCDMA2
+  address_offset: 340
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DMAADDR
+    bit_range:
+    - 31
+    - 0
+    description: DMA address
+  side_effects: null
+- id: OTG_HS_HCDMA3
+  address_offset: 372
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DMAADDR
+    bit_range:
+    - 31
+    - 0
+    description: DMA address
+  side_effects: null
+- id: OTG_HS_HCDMA4
+  address_offset: 404
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DMAADDR
+    bit_range:
+    - 31
+    - 0
+    description: DMA address
+  side_effects: null
+- id: OTG_HS_HCDMA5
+  address_offset: 436
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DMAADDR
+    bit_range:
+    - 31
+    - 0
+    description: DMA address
+  side_effects: null
+- id: OTG_HS_HCDMA6
+  address_offset: 468
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DMAADDR
+    bit_range:
+    - 31
+    - 0
+    description: DMA address
+  side_effects: null
+- id: OTG_HS_HCDMA7
+  address_offset: 500
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DMAADDR
+    bit_range:
+    - 31
+    - 0
+    description: DMA address
+  side_effects: null
+- id: OTG_HS_HCDMA8
+  address_offset: 532
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DMAADDR
+    bit_range:
+    - 31
+    - 0
+    description: DMA address
+  side_effects: null
+- id: OTG_HS_HCDMA9
+  address_offset: 564
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DMAADDR
+    bit_range:
+    - 31
+    - 0
+    description: DMA address
+  side_effects: null
+- id: OTG_HS_HCDMA10
+  address_offset: 596
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DMAADDR
+    bit_range:
+    - 31
+    - 0
+    description: DMA address
+  side_effects: null
+- id: OTG_HS_HCDMA11
+  address_offset: 628
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DMAADDR
+    bit_range:
+    - 31
+    - 0
+    description: DMA address
+  side_effects: null
+interrupts: null
+timing: null

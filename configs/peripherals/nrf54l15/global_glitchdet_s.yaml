@@ -1,0 +1,22 @@
+peripheral: GLOBAL_GLITCHDET_S
+version: 0.1.0
+registers:
+- id: CONFIG
+  address_offset: 1440
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: ENABLE
+    bit_range:
+    - 0
+    - 0
+    description: Enable glitch detector
+  - name: MODE
+    bit_range:
+    - 4
+    - 4
+    description: Glitch detector mode
+  side_effects: null
+interrupts: null
+timing: null
