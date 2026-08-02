@@ -181,6 +181,28 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
     // `LABWIRED_PRESEED_HANDSHAKE=1`.
     let preseed_handshake = std::env::var("LABWIRED_NO_DUALCORE").is_ok()
         || std::env::var("LABWIRED_PRESEED_HANDSHAKE").is_ok();
+    // `g_ticks_per_us_pro` / `_app` — CPU MHz, written by
+    // `ets_update_cpu_frequency()`. On silicon the ROM bootloader calls that
+    // before it hands control to the app image; we start at the app entry
+    // (see the CHEAT(SKIP) above that seeds PC), so nothing ever writes them
+    // and they stay 0.
+    //
+    // That is not cosmetic. `esp_clk_apb_freq()` on ESP32-classic is
+    // `MIN(g_ticks_per_us_pro, 80) * MHZ`, so a zero here reports a 0 Hz APB
+    // bus, and `esp_timer_impl_update_apb_freq` aborts the whole boot on
+    // `apb_ticks_per_us >= 3 && "divider value too low"`. Seeding them is
+    // restoring skipped boot state, not stubbing behaviour: the firmware's own
+    // esp_timer code then runs and programs the real LACT divider (80 MHz APB
+    // / 2 MHz = 40) into the TIMG0 registers the model implements.
+    //
+    // 240 matches the `esp_clk_cpu_freq` thunk below, so the two cannot drift.
+    for sym in ["g_ticks_per_us_pro", "g_ticks_per_us_app"] {
+        let addr = resolve_data(sym, 0);
+        if addr != 0 {
+            let _ = machine.bus.write_u32(addr as u64, 240);
+        }
+    }
+
     let s_resume_cores = resolve_data("s_resume_cores", 0);
     let s_cpu_up = resolve_data("s_cpu_up", 0);
     let s_cpu_inited = resolve_data("s_cpu_inited", 0);
