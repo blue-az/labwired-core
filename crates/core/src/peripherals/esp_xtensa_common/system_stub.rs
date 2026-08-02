@@ -202,32 +202,9 @@ impl RtcCntlStub {
         // so the firmware's clear of it is a detectable un-stall edge — the
         // faithful APP_CPU release trigger (no firmware-symbol hooks).
         words.insert(0xBC, APPCPU_STALL_C1 << APPCPU_STALL_C1_SHIFT);
-        // RTC_APB_FREQ_REG (= RTC_CNTL_STORE5_REG, offset 0xB4 per the vendor
-        // SVD) holds the APB frequency across deep sleep. It is a plain
-        // retention register, so it reads back whatever was last written —
-        // and what writes it is `rtc_clk_apb_freq_update()` in the SECOND-STAGE
-        // BOOTLOADER, which we skip when booting an app image directly.
-        //
-        // Left at zero, `rtc_clk_apb_freq_get()` reports 0 Hz and
-        // `esp_timer_impl_update_apb_freq` aborts on
-        // `apb_ticks_per_us >= 3 && "divider value too low"`. Seeding it is
-        // therefore not a shortcut around the firmware — it is the boot state
-        // real silicon would have handed the app, the same reason PLL_LOCK and
-        // the APP_CPU stall magic are seeded above.
-        //
-        // Encoding is IDF's: `clk_val_to_reg_val(hz >> 12)` duplicates the low
-        // 16 bits into both halves, and `rtc_clk_apb_freq_get` recovers
-        // `(reg & 0xFFFF) << 12`. 80 MHz >> 12 = 0x4C4B, so the register reads
-        // back 79,998,976 Hz — the same rounded value silicon reports.
-        const APB_FREQ_HZ: u32 = 80_000_000;
-        let apb_val = (APB_FREQ_HZ >> 12) & 0xFFFF;
-        words.insert(RTC_APB_FREQ_OFF, apb_val | (apb_val << 16));
         Self { words }
     }
 }
-
-/// RTC_APB_FREQ_REG = RTC_CNTL_STORE5_REG, offset 0xB4 (ESP32 TRM / vendor SVD).
-const RTC_APB_FREQ_OFF: u64 = 0xB4;
 
 /// RTC_CNTL_SW_CPU_STALL_REG offset within the RTC_CNTL window.
 const SW_CPU_STALL_OFF: u64 = 0xBC;
