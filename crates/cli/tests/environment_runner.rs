@@ -1505,7 +1505,10 @@ assertions: []
 "#,
         &[],
     );
-    assert!(!output.status.success(), "60M steps must exceed the fast-boot ceiling");
+    assert!(
+        !output.status.success(),
+        "60M steps must exceed the fast-boot ceiling"
+    );
     let message = budget_error_message(&dir);
     assert!(
         message.contains("between 1 and 50000000"),

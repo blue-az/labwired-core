@@ -193,7 +193,10 @@ fn world_rejects_nodes_whose_chip_declares_no_known_architecture() {
     // Assert on the architecture message specifically: a missing fixture file
     // would also produce an error, and would make this test pass for the wrong
     // reason.
-    assert!(error.contains("does not declare a known architecture"), "{error}");
+    assert!(
+        error.contains("does not declare a known architecture"),
+        "{error}"
+    );
 }
 
 #[test]

@@ -259,8 +259,7 @@ impl World {
             let fw_path = root_dir.join(&node.firmware);
             let firmware = crate::system::node::NodeFirmware::from_file(&fw_path)
                 .with_context(|| format!("node '{}': firmware {:?}", node.id, fw_path))?;
-            let mut machine =
-                crate::system::node::build_node(&node.id, &chip, &sysman, firmware)?;
+            let mut machine = crate::system::node::build_node(&node.id, &chip, &sysman, firmware)?;
             // Label each node's UART console with its id so the shared stdout
             // stays readable (line-buffered per node instead of byte-interleaved
             // across all nodes).
@@ -310,9 +309,11 @@ impl World {
                         .get_mut(b)
                         .with_context(|| format!("uart_cross_link: unknown node '{b}'"))?
                         .attach_uart_stream(b_uart, Box::new(eb))?;
-                    world
-                        .uart_links
-                        .push(UartLink { id: link_id, node_a: a.clone(), node_b: b.clone() });
+                    world.uart_links.push(UartLink {
+                        id: link_id,
+                        node_a: a.clone(),
+                        node_b: b.clone(),
+                    });
                 }
                 "can_bus" => {
                     let peripheral = ic

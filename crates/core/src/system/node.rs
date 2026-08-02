@@ -108,8 +108,8 @@ fn build_cortex_m_node(
         );
     };
 
-    let image = parse_elf_image(&bytes)
-        .with_context(|| format!("node '{id}': parse firmware ELF"))?;
+    let image =
+        parse_elf_image(&bytes).with_context(|| format!("node '{id}': parse firmware ELF"))?;
     validate_cortex_m_firmware(id, chip, &image)?;
 
     let mut bus = crate::bus::SystemBus::from_config(chip, system)
@@ -210,8 +210,8 @@ fn build_xtensa_node(
             chip.name
         );
     };
-    let image = parse_elf_image(&bytes)
-        .with_context(|| format!("node '{id}': parse firmware ELF"))?;
+    let image =
+        parse_elf_image(&bytes).with_context(|| format!("node '{id}': parse firmware ELF"))?;
 
     // Classic ESP32 (LX6): the Rust peripheral bank is authoritative, and the
     // second core starts halted until PRO releases it — the same construction
@@ -287,9 +287,7 @@ fn build_esp32s3_node(
             cpu.faithful_windows = true;
             let mut app_cpu = XtensaLx7::new_app_cpu();
             app_cpu.faithful_windows = true;
-            Ok(Box::new(
-                Machine::new(cpu, bus).with_secondary_cpu(app_cpu),
-            ))
+            Ok(Box::new(Machine::new(cpu, bus).with_secondary_cpu(app_cpu)))
         }
         NodeFirmware::Elf(bytes) => {
             use crate::boot::esp32s3::{fast_boot, BootOpts};
@@ -358,10 +356,18 @@ fn validate_cortex_m_firmware(
         );
     }
 
-    let flash_size = labwired_config::parse_size(&chip.flash.size)
-        .with_context(|| format!("node '{node_id}': invalid flash size for chip '{}'", chip.name))?;
-    let ram_size = labwired_config::parse_size(&chip.ram.size)
-        .with_context(|| format!("node '{node_id}': invalid RAM size for chip '{}'", chip.name))?;
+    let flash_size = labwired_config::parse_size(&chip.flash.size).with_context(|| {
+        format!(
+            "node '{node_id}': invalid flash size for chip '{}'",
+            chip.name
+        )
+    })?;
+    let ram_size = labwired_config::parse_size(&chip.ram.size).with_context(|| {
+        format!(
+            "node '{node_id}': invalid RAM size for chip '{}'",
+            chip.name
+        )
+    })?;
     let vector_base = chip
         .flash
         .base

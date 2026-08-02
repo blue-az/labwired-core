@@ -163,7 +163,11 @@ mod tests {
         a.on_tx_byte(0x55);
         a.on_tx_byte(0x66);
         assert_eq!(b.poll(0), Some(0xAA), "first byte flipped (0x55 ^ 0xFF)");
-        assert_eq!(b.poll(0), Some(0x66), "clean again after the budget runs out");
+        assert_eq!(
+            b.poll(0),
+            Some(0x66),
+            "clean again after the budget runs out"
+        );
     }
 
     /// A fault on one direction must not disturb the other.

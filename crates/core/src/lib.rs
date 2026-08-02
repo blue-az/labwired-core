@@ -743,9 +743,7 @@ pub trait Peripheral: std::fmt::Debug + Send {
     /// to require the concrete [`crate::peripherals::uart::Uart`], which made
     /// every family with its own UART model (the whole ESP32 line) unwireable.
     /// Default `None` = not a UART.
-    fn as_uart_stream_host(
-        &mut self,
-    ) -> Option<&mut dyn crate::peripherals::uart::UartStreamHost> {
+    fn as_uart_stream_host(&mut self) -> Option<&mut dyn crate::peripherals::uart::UartStreamHost> {
         None
     }
 

@@ -387,8 +387,7 @@ impl SystemBus {
             // Asked as a capability, not per model. The previous code tested
             // this only inside the generic-`Uart` arm, so ESP UARTs -- the ones
             // that made two C3s linkable at all -- were never covered.
-            if p
-                .dev
+            if p.dev
                 .as_uart_stream_host()
                 .is_some_and(|u| u.hosts_protocol_peer())
             {

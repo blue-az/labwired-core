@@ -603,10 +603,7 @@ impl EspUart {
 }
 
 impl crate::peripherals::uart::UartStreamHost for EspUart {
-    fn attach_stream_device(
-        &mut self,
-        dev: Box<dyn crate::peripherals::uart::UartStreamDevice>,
-    ) {
+    fn attach_stream_device(&mut self, dev: Box<dyn crate::peripherals::uart::UartStreamDevice>) {
         self.attached_streams.push(dev);
     }
 
@@ -789,9 +786,7 @@ impl Peripheral for EspUart {
         Some(self)
     }
 
-    fn as_uart_stream_host(
-        &mut self,
-    ) -> Option<&mut dyn crate::peripherals::uart::UartStreamHost> {
+    fn as_uart_stream_host(&mut self) -> Option<&mut dyn crate::peripherals::uart::UartStreamHost> {
         Some(self)
     }
 
