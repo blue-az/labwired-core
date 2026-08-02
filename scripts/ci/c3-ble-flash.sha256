@@ -1,0 +1,43 @@
+# SHA-256 pins for the ESP32-C3 Arduino-BLE probe flash image that
+# `crates/cli/tests/e2e_esp32c3_ble_arduino.rs` boots.
+#
+# WHAT THIS FIRMWARE IS
+# ---------------------
+# A stock Arduino-ESP32 sketch (framework-arduinoespressif32 on esp-idf
+# v4.4.7 38eeba213a, built 2024-03-05 by arduino-lib-builder) that does the
+# smallest honest thing a BLE peripheral can do and narrates it on Serial:
+#
+#     Serial.println("PRE_BLE");
+#     BLEDevice::init("lw-probe");                 -> "BLE_INIT_OK"
+#     ... advertise service 12345678-1234-1234-1234-1234567890ab ...
+#     pAdvertising->start();                       -> "ADV_ON"
+#     loop() { Serial.println("ALIVE"); ... }
+#
+# So the four markers below are the firmware's own words, printed by the real
+# compiled Bluedroid/NimBLE-free BLE stack through the real HardwareSerial —
+# not by the harness. The gate asserts BLE_INIT_OK and ADV_ON, i.e. that
+# `BLEDevice::init()` and `startAdvertising()` BOTH returned inside the twin.
+#
+# WHY DIGESTS AND NOT THE FILE
+# ----------------------------
+# The composed image is 4 MiB. Committing it would put a binary that goes stale
+# silently into git for the sake of one gate. So the four content-addressed
+# flash parts are fetched from the blob store and recomposed on demand by
+# `scripts/ci/fetch-c3-ble-flash.sh`, and pinned here.
+#
+# Pinning is what keeps the gate honest. Without it the gate would boot whatever
+# the blob store happened to serve, and "BLE_INIT_OK appeared" would stop being
+# evidence about THIS engine. If the probe firmware is intentionally rebuilt,
+# update every line below in the same change and say why.
+#
+# Columns: <sha256>  <flash-offset>  <part>
+# Parts land at their offsets in a 4 MiB image padded with 0xFF (erased flash).
+30d47ab1f344cfa69f6b2f718ffa72fc7baea6db047eaabefea162db29e6821c  0x0      bootloader
+148b959cbff1c38aa8e1d5c0ba9d612c54997b945e56a63f41223eef650653a1  0x8000   partition-table
+f94c5d786a7a8fab06ac5d10e33bf37711a6697636dc037559ea19cc410a17f0  0xe000   otadata
+7b233c1758071cdd4075e92e1fc9f192775795808b93d00b0ae2666af966d528  0x10000  app
+#
+# The composed image. `image` is not an offset — this row is the whole 4 MiB
+# artifact, and it is what the test itself re-verifies before booting, so a
+# hand-placed or half-written file cannot masquerade as the pinned firmware.
+1d05e3e709fae2304a52814a5b7a69a99f6e9d03bd58845a1b96b15d49201f08  image    esp32c3-ble-arduino-flash.bin
