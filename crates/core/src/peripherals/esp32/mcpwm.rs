@@ -31,7 +31,6 @@
 //! frequency/duty a controller actually commands.
 
 use crate::{Peripheral, PeripheralTickResult, SimResult};
-use std::collections::HashMap;
 use std::sync::Arc;
 
 /// Notified when an operator commits a new compare-A (duty) value, i.e. on

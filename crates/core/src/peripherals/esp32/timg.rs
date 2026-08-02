@@ -71,7 +71,6 @@
 //! probes from firmware still see their own writes.
 
 use crate::{Peripheral, PeripheralTickResult, SimResult};
-use std::collections::HashMap;
 
 // Per-timer register offsets (T0 block starts at 0x00, T1 block at 0x24).
 // Some entries (`*_ALARM*`, `WDT_CONFIG0`, `INT_ENA`, `INT_ST`) aren't

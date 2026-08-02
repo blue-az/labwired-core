@@ -69,7 +69,6 @@
 //! waveform UI actually consume.
 
 use crate::{Peripheral, PeripheralTickResult, SimResult};
-use std::collections::HashMap;
 use std::sync::Arc;
 
 /// Notified when a channel commits a new duty via the `CONF1.DUTY_START`

@@ -35,7 +35,7 @@
 //! routes it through the per-core interrupt matrix.
 
 use crate::{Peripheral, PeripheralTickResult, SimResult};
-use std::collections::{HashMap, VecDeque};
+use std::collections::VecDeque;
 use std::io::{self, Write};
 use std::sync::{Arc, Mutex};
 

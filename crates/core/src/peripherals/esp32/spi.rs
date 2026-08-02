@@ -41,7 +41,6 @@
 
 use crate::peripherals::spi::SpiDevice;
 use crate::{Peripheral, PeripheralTickResult, SimResult};
-use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 /// Read once per process — this sits on the SPI transfer path.
