@@ -134,7 +134,7 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
     // declarative runner — the one that owns stimuli and assertions — could not
     // run a classic-ESP32 Arduino sketch at all.
     let symbol_addrs = extract_arduino_esp32_thunks(&elf_bytes);
-    let mut profile = match labwired_core::system::xtensa::install_arduino_esp32_profile(
+    let profile = match labwired_core::system::xtensa::install_arduino_esp32_profile(
         &mut machine,
         symbol_addrs,
         program_image.entry_point as u32,
