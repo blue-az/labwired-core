@@ -987,10 +987,7 @@ impl Esp32c3Bt {
     /// world share a medium and two worlds do not. Mirrors
     /// [`Nrf52Radio::with_air`](crate::peripherals::nrf52::radio::Nrf52Radio::with_air).
     pub fn with_air(air: BleAirBus) -> Self {
-        Self {
-            air,
-            ..Self::new()
-        }
+        Self { air, ..Self::new() }
     }
 
     /// The air this controller is on (tests, inspection, the air view).
@@ -1426,10 +1423,8 @@ impl Esp32c3Bt {
 
         let access_address = self.em_read_u32(bus, cs + CS_ACCESS_ADDR).unwrap_or(0);
         let crc_init = self.em_read_u32(bus, cs + CS_CRC_INIT).unwrap_or(0) & 0x00FF_FFFF;
-        let channel = (self
-            .em_read_u16(bus, cs + CS_HOP_CTRL)
-            .unwrap_or_default()
-            & CS_CHANNEL_MASK) as u8;
+        let channel =
+            (self.em_read_u16(bus, cs + CS_HOP_CTRL).unwrap_or_default() & CS_CHANNEL_MASK) as u8;
 
         let mut pdu = Vec::with_capacity(payload.len() + 2);
         pdu.push(header);
@@ -1472,10 +1467,8 @@ impl Esp32c3Bt {
         let Some(access_address) = self.em_read_u32(bus, cs + CS_ACCESS_ADDR) else {
             return false;
         };
-        let channel = (self
-            .em_read_u16(bus, cs + CS_HOP_CTRL)
-            .unwrap_or_default()
-            & CS_CHANNEL_MASK) as u8;
+        let channel =
+            (self.em_read_u16(bus, cs + CS_HOP_CTRL).unwrap_or_default() & CS_CHANNEL_MASK) as u8;
 
         // The descriptor the core would fill next. Below the array base it has
         // not been programmed, so there is nowhere honest to put a frame.
@@ -1490,9 +1483,9 @@ impl Esp32c3Bt {
             return false;
         }
 
-        let Some(frame) = self
-            .air
-            .receive_from(channel, access_address, self.rx_cursor, self.node_id)
+        let Some(frame) =
+            self.air
+                .receive_from(channel, access_address, self.rx_cursor, self.node_id)
         else {
             return false;
         };
@@ -2348,8 +2341,11 @@ mod tests {
             (0x2400, FIXTURE_EM_BASE + 0xC00),
         ];
         for (i, (em_off, cpu)) in map.iter().enumerate() {
-            bt.write_u32(EM_BASE_REG_BANK_A + (i as u64) * 4, em_base_reg(*em_off, *cpu))
-                .unwrap();
+            bt.write_u32(
+                EM_BASE_REG_BANK_A + (i as u64) * 4,
+                em_base_reg(*em_off, *cpu),
+            )
+            .unwrap();
         }
 
         // ET entry 0: status 0, start at `start_clkn` with fine offset 624
@@ -2357,7 +2353,10 @@ mod tests {
         let et = FIXTURE_EM_BASE;
         bus.put(et, &0x2802u16.to_le_bytes()); // +0x0 control, status field 0
         bus.put(et + 2, &(start_clkn as u16).to_le_bytes());
-        bus.put(et + 4, &(((start_clkn >> 16) & 0x0FFF) as u16).to_le_bytes());
+        bus.put(
+            et + 4,
+            &(((start_clkn >> 16) & 0x0FFF) as u16).to_le_bytes(),
+        );
         bus.put(et + 6, &624u16.to_le_bytes());
         bus.put(et + 8, &0x0200u16.to_le_bytes());
         bus.put(et + 10, &0x0AF7u16.to_le_bytes());
@@ -2498,7 +2497,11 @@ mod tests {
         );
         // No `sch_prog_tx`: `r_lld_adv_frm_cbk` asserts on irq_type 3.
         assert_eq!(bt.read_u32(INTRAWSTAT).unwrap() & 0x2, 0);
-        assert_eq!(bt.read_u32(INTSTAT).unwrap() & INT_SCH_PROG_END, 0, "not over");
+        assert_eq!(
+            bt.read_u32(INTSTAT).unwrap() & INT_SCH_PROG_END,
+            0,
+            "not over"
+        );
 
         // The duration is the one the entry programmed: 0x0AF7 units of two
         // half-µs = 2807 µs.
@@ -2515,7 +2518,10 @@ mod tests {
             (bus.u16_at(FIXTURE_EM_BASE) & ET_STATUS_FIELD) >> ET_STATUS_SHIFT,
             ET_STATUS_END,
         );
-        assert_eq!(bt.read_u32(INTSTAT).unwrap() & INT_SCH_PROG_END, INT_SCH_PROG_END);
+        assert_eq!(
+            bt.read_u32(INTSTAT).unwrap() & INT_SCH_PROG_END,
+            INT_SCH_PROG_END
+        );
         assert_eq!(bt.matrix_irq_sources(), vec![RWBLE_IRQ_SOURCE]);
         assert_eq!(
             bt.read_u32(IRQ_FIFO).unwrap(),
@@ -2640,7 +2646,10 @@ mod tests {
             0,
             "the ROM's own bad-packet mask must clear on it"
         );
-        for (i, b) in [0xAAu8, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x42].iter().enumerate() {
+        for (i, b) in [0xAAu8, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x42]
+            .iter()
+            .enumerate()
+        {
             assert_eq!(
                 bus.read_u8(rxbuf_cpu + i as u64).unwrap(),
                 *b,

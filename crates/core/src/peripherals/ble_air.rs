@@ -154,9 +154,7 @@ impl BleAirBus {
         air.channels
             .get(&channel)?
             .iter()
-            .find(|f| {
-                f.seq >= cursor && f.access_address == access_address && f.source != listener
-            })
+            .find(|f| f.seq >= cursor && f.access_address == access_address && f.source != listener)
             .cloned()
     }
 
@@ -207,7 +205,9 @@ mod tests {
         let bus = BleAirBus::new();
         let seq = bus.transmit(frame(37, 0x8E89_BED6, &[0x20, 0x0f, 1, 2, 3]));
         for cursor in [0u64, 0u64] {
-            let got = bus.receive_from(37, 0x8E89_BED6, cursor, 2).expect("delivered");
+            let got = bus
+                .receive_from(37, 0x8E89_BED6, cursor, 2)
+                .expect("delivered");
             assert_eq!(got.seq, seq);
             assert_eq!(got.pdu, vec![0x20, 0x0f, 1, 2, 3]);
         }
@@ -220,8 +220,14 @@ mod tests {
     fn channel_and_access_address_select() {
         let bus = BleAirBus::new();
         bus.transmit(frame(37, 0x8E89_BED6, &[0x20, 0x00]));
-        assert!(bus.receive_from(38, 0x8E89_BED6, 0, 2).is_none(), "wrong channel");
-        assert!(bus.receive_from(37, 0x1234_5678, 0, 2).is_none(), "wrong AA");
+        assert!(
+            bus.receive_from(38, 0x8E89_BED6, 0, 2).is_none(),
+            "wrong channel"
+        );
+        assert!(
+            bus.receive_from(37, 0x1234_5678, 0, 2).is_none(),
+            "wrong AA"
+        );
         assert!(bus.receive_from(37, 0x8E89_BED6, 0, 2).is_some());
     }
 
@@ -230,8 +236,14 @@ mod tests {
     fn a_node_does_not_hear_itself() {
         let bus = BleAirBus::new();
         bus.transmit(frame(37, 0x8E89_BED6, &[0x20, 0x00]));
-        assert!(bus.receive_from(37, 0x8E89_BED6, 0, 1).is_none(), "own frame");
-        assert!(bus.receive_from(37, 0x8E89_BED6, 0, 2).is_some(), "someone else's");
+        assert!(
+            bus.receive_from(37, 0x8E89_BED6, 0, 1).is_none(),
+            "own frame"
+        );
+        assert!(
+            bus.receive_from(37, 0x8E89_BED6, 0, 2).is_some(),
+            "someone else's"
+        );
     }
 
     /// Buses are isolated: two labs in one process do not hear each other.
@@ -250,7 +262,9 @@ mod tests {
         for _ in 0..(AIR_DEPTH + 8) {
             bus.transmit(frame(37, 0x8E89_BED6, &[0x20, 0x00]));
         }
-        let oldest = bus.receive_from(37, 0x8E89_BED6, 0, 2).expect("something survives");
+        let oldest = bus
+            .receive_from(37, 0x8E89_BED6, 0, 2)
+            .expect("something survives");
         assert_eq!(oldest.seq, 8, "the first 8 frames aged out");
     }
 }

@@ -947,8 +947,7 @@ fn run_two_c3_ble(
             let Some(any) = p.dev.as_any_mut() else {
                 continue;
             };
-            if let Some(uart) =
-                any.downcast_mut::<labwired_core::peripherals::esp_uart::EspUart>()
+            if let Some(uart) = any.downcast_mut::<labwired_core::peripherals::esp_uart::EspUart>()
             {
                 uart.set_sink(Some(sink.clone()));
                 uart.silence_stdout_echo_if(false);
