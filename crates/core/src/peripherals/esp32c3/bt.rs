@@ -434,7 +434,29 @@
 //! exactly that assert (`assert lld_adv.c 2328, param 00000000 00000003`), so
 //! a legacy advertising event provably does not produce one on silicon.
 //!
-//! ### Measured result (twin, 500 M steps, `LABWIRED_BT_TRACE=1`)
+//! ### Measured result, two nodes in one world
+//!
+//! `labwired run --rom-boot` with `LABWIRED_BLE_DUAL=1` boots an advertiser
+//! and a BLE scanner onto the shared air. Both stacks come up —
+//! `[A] PRE_BLE / BLE_INIT_OK / ADV_ON / ALIVE` and
+//! `[B] PRE_BLE / BLE_INIT_OK / SCAN_ON / ALIVE` — and node B's controller
+//! receives node A's advertising PDU four times over 400 M steps:
+//!
+//! ```text
+//! [bt] radio RX ch39 aa=0x8e89bed6 rxd=0x1000 et=4
+//!      pdu=20 0f 04 00 00 00 00 02 02 01 06 05 12 20 00 40 00
+//! [bt] +0x2d8 <= 0x0000103f      ← FIFO popped, head bitmap 0x4
+//! [bt] +0x018 <= 0x00000004      ← bit 2 W1C-acked
+//! [bt] radio: ET 4 end (clkn=7097)
+//! ```
+//!
+//! `04 00 00 00 00 02` is node A's own BLE address and the nine bytes after it
+//! are the advertising payload A staged in *its* exchange memory. The
+//! descriptor pointer walked the ring the firmware linked — `0x1000`, `0x1014`,
+//! `0x1028`, `0x103C`. What does *not* happen yet is the host-level scan
+//! report; see the RX-buffer lifecycle note in the gaps below for exactly why.
+//!
+//! ### Measured result (single node, 500 M steps, `LABWIRED_BT_TRACE=1`)
 //!
 //! `PRE_BLE / BLE_INIT_OK / ADV_ON / ALIVE`, no asserts, 810 BT register
 //! writes, and **19 complete radio events**, cycling exchange-table entries
@@ -470,10 +492,20 @@
 //!   were captured but only `+0x2` is interpreted, and only through the mask
 //!   the ROM itself applies. `+0x6` looks like it could carry RSSI; nothing
 //!   measured says so, so it is left at zero.
-//! * **`+0x2D0`/`+0x2D4`, the RX-buffer hand-back path.**
-//!   `r_lld_update_rxbuf` writes a free descriptor into `+0x2D0` and the model
-//!   ignores it: `sch_prog` interrupt bit 18 (`lld_update_rxbuf_isr`), which is
-//!   what drives that routine, is never raised.
+//! * **The RX-buffer lifecycle — the next blocker, precisely.** A scanning
+//!   node's controller now receives: the two-node run below shows four real
+//!   receptions, each acked by the ROM's own ISR path, with no assert (so
+//!   `r_lld_scan_process_pkt_rx` accepted both the status word and the PDU
+//!   type). But no advertising report ever reached the host. The reason is
+//!   `p_lld_env[216]`, the *software's* RX descriptor cursor, which
+//!   `r_lld_scan_process_pkt_rx` indexes with: it is advanced only by
+//!   `r_lld_update_rxbuf`, which runs off `sch_prog` interrupt **bit 18**
+//!   (`lld_update_rxbuf_isr`) and hands a fresh descriptor back through
+//!   `+0x2D0`. This model never raises bit 18, so the link layer keeps reading
+//!   descriptor 0 while the hardware pointer at `+0x024` walks on. **What
+//!   condition makes silicon raise bit 18 was not measured**, and it is not
+//!   invented here — a fabricated buffer-return interrupt would desynchronise
+//!   the two halves silently instead of visibly.
 //! * **Status codes 1, 4, 5, 6** and the `ET+0xE` field are named nowhere that
 //!   was measured, so they are neither written nor interpreted.
 //! * **Event skipping and cancellation.** `sch_prog_skip` (bit 6) is never
