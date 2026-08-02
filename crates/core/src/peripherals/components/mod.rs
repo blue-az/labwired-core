@@ -14,6 +14,7 @@ pub mod bme280;
 pub mod bmi270;
 pub mod bmp280;
 pub mod bno055;
+pub mod button;
 pub mod cap1188;
 pub mod declarative_i2c;
 pub mod declarative_regs;
@@ -93,7 +94,6 @@ pub mod veml7700;
 /// Byte-parity harness: the declarative VEML7700 vs the hand-written oracle.
 #[cfg(test)]
 mod veml7700_parity;
-pub mod vl53l0x;
 pub mod vl53l1x;
 pub mod ws2812;
 

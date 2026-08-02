@@ -21,6 +21,8 @@ pub mod machine_advance;
 #[cfg(test)]
 pub mod nrf52;
 #[cfg(test)]
+pub mod peripheral_reachability;
+#[cfg(test)]
 pub mod rp2040;
 #[cfg(test)]
 pub mod scb_reset;

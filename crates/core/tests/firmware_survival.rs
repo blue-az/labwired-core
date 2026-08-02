@@ -599,6 +599,19 @@ DONE\r\n",
         // RCC, GPIO, USART, SPI, I2C, ADC, DMA — in one cohesive
         // bring-up sequence. The output stream below is captured
         // byte-for-byte from real NUCLEO-L476RG silicon.
+        //
+        // `BTN=` is the one line that was NOT a silicon capture. The demo
+        // prints `(GPIOC_IDR >> 13) & 1 == 0` — active-low, so `BTN=1` means
+        // *pressed*. This board's B1 is untouched, and real silicon holds PC13
+        // at VDD through R34, so silicon prints `BTN=0`. It read `BTN=1` here
+        // only because the `board_io` button binding materialised as nothing:
+        // PC13 sat at its reset-value 0 and the sim reported a phantom press.
+        // `firmware-l476-demo` documented that gap in its own source. Now that
+        // a button is a real bus-resident device driving its pin, this line
+        // agrees with silicon like every other line above.
+        // `board_io_button_stimulus.rs` runs this same ELF with B1 pressed and
+        // asserts it prints `BTN=1`, so both states are pinned, not just this
+        // one.
         name: "nucleo_l476rg_demo",
         core: "cortex-m4",
         family: CpuFamily::CortexM,
@@ -615,7 +628,7 @@ ADC1 OK\r\n\
 DMA1 OK\r\n\
 LED ON\r\n\
 LED OFF\r\n\
-BTN=1\r\n\
+BTN=0\r\n\
 DONE\r\n",
     },
     SurvivalCase {

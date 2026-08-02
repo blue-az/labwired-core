@@ -212,23 +212,16 @@ impl WasmSimulator {
             "esp_log_writev",
             "esp_random",
             "esp_fill_random",
-            "_ZN14HardwareSerial5writeEh",
-            "_ZN14HardwareSerial5writeEPKhj",
-            "_ZN14HardwareSerial9availableEv",
-            "_ZN14HardwareSerial5flushEv",
-            "_ZN14HardwareSerial9readBytesEPcj",
-            "_ZN14HardwareSerial9readBytesEPhj",
-            // HardwareSerial::begin — Arduino-ESP32's serial init walks
-            // through _get_effective_baudrate which divides by
-            // getApbFrequency(). Our sim returns 0 → divide-by-zero
-            // exception. Skip the whole begin() rather than emulate the
-            // baud calculation; we don't model UART output anyway.
-            "_ZN14HardwareSerial5beginEmjaabmh",
-            "_get_effective_baudrate",
-            "uartAvailable",
-            "uartAvailableForWrite",
-            "uartWrite",
-            "uartWriteBuf",
+            // The Arduino serial nops that used to sit here are GONE, and so
+            // is the fidelity debt they represented. They existed to dodge an
+            // Xtensa divide-by-zero in _get_effective_baudrate, whose real
+            // cause was an apb_ctrl read-as-ones stub shadowing the SYSCON
+            // model at the same base: SYSCLK_CONF read 0xFFFFFFFF, PRE_DIV_CNT
+            // came out 1023, and getApbFrequency() reported 78 kHz. Fixed in
+            // system/xtensa/esp32.rs by mapping apb_ctrl to its tail; the real
+            // HardwareSerial path now runs against the real UART model and
+            // demo-labwired-ereader.elf emits its own markers while still
+            // painting. See crates/core/tests/esp32_syscon_overlap.rs.
             "_Z14serialEventRunv",
             // vListInsert is NOT nop'd: with the fake FreeRTOS create functions
             // gone, real xQueueCreateMutex / scheduler code runs and depends on

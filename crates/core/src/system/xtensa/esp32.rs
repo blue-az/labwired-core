@@ -14,48 +14,34 @@ use crate::Bus;
 
 /// Build an I2C-attached external device from its manifest declaration, or
 /// `None` if `ext.type` is not a known I2C device (so the caller falls through
-/// to the SPI path). The panel is addressed by `config.i2c_address` — a real
-/// board-level fact, not a builder default — so a manifest declaring an SH1107
-/// on `i2c0` at 0x3D gets exactly that, on every path that wires the manifest.
+/// to the SPI path). `build_i2c_tree` also assembles a TCA9548A bus switch
+/// together with every device wired behind it, so a mux reaches the bus as one
+/// unit.
+///
+/// This is the shared factory and nothing else. It used to carry local
+/// `oled-sh1107` / `oled-ssd1306` arms on top, which shadowed the kits of the
+/// same name and quietly disagreed with them — the local SH1107 arm defaulted
+/// to 0x3D where `SH1107_KIT` defaults to 0x3C, so the same manifest addressed
+/// a different device depending on which chip ran it. The caller now consults
+/// the kit registry first, which is the one place those defaults live.
 fn build_i2c_external_device(
     manifest: &labwired_config::SystemManifest,
     ext: &labwired_config::ExternalDevice,
 ) -> anyhow::Result<Option<Box<dyn crate::peripherals::i2c::I2cDevice>>> {
-    // Prefer the shared factory (includes kit types like ina219) so ESP classic
-    // and S3 stay in lockstep with the generic from_config attach path.
-    // `build_i2c_tree` also assembles a TCA9548A bus switch together with every
-    // device wired behind it, so a mux reaches the bus as one unit.
-    if let Some(dev) = crate::peripherals::components::build_i2c_tree(manifest, ext)? {
-        return Ok(Some(dev));
-    }
-    let addr = |default: u8| {
-        ext.config
-            .get("i2c_address")
-            .and_then(|v| v.as_u64())
-            .map(|a| a as u8)
-            .unwrap_or(default)
-    };
-    Ok(match ext.r#type.as_str() {
-        "oled-sh1107" => Some(
-            Box::new(crate::peripherals::components::Sh1107::new(addr(0x3D)))
-                as Box<dyn crate::peripherals::i2c::I2cDevice>,
-        ),
-        "oled-ssd1306" => Some(Box::new(crate::peripherals::components::Ssd1306::new(
-            addr(0x3C),
-        ))),
-        // tmp102 / pca9685 are declarative devices handled by the shared factory
-        // (`build_external_i2c_device`) above — no local arm needed.
-        _ => None,
-    })
+    crate::peripherals::components::build_i2c_tree(manifest, ext)
 }
 
 /// Attach external devices declared in `manifest.external_devices` to an
 /// ESP32-classic bus that was already set up by `configure_xtensa_esp32`.
 ///
-/// Currently supports `ssd1680_tricolor_290` / `epd-2in9-tricolor` (the
-/// Waveshare 2.9" tri-color e-paper panel on SPI3/VSPI).  Other device
-/// types emit a `tracing::warn` and are skipped so that future labs with
-/// additional devices don't break existing runs.
+/// What a device type MEANS — its pins, defaults, addresses, and how it hangs
+/// off a bus — lives in that device's `PeripheralKit`, never here. This
+/// function only resolves the ESP32-specific parts: which controller a
+/// `connection:` names, and the legacy I²C factory for types not yet migrated
+/// to a kit. Dispatch order enforces that: registry first, factory second.
+/// Anything else and a type with both a kit and a factory arm would resolve
+/// differently depending on which chip ran the manifest, which is exactly the
+/// bug the two shadowed OLED arms used to cause.
 ///
 /// This is the canonical implementation; `crates/wasm/src/lib.rs` delegates
 /// to it (the wasm crate no longer carries its own copy).
@@ -63,8 +49,6 @@ pub fn attach_esp32_external_devices(
     bus: &mut SystemBus,
     manifest: &labwired_config::SystemManifest,
 ) -> anyhow::Result<()> {
-    use crate::peripherals::spi::SpiDevice;
-
     // Devices wired behind an I²C bus switch are attached as part of that
     // switch by `build_i2c_tree`, never straight onto a controller.
     let mux_children = crate::peripherals::components::i2c_mux_child_ids(manifest);
@@ -73,11 +57,28 @@ pub fn attach_esp32_external_devices(
         if mux_children.contains(&ext.id.as_str()) {
             continue;
         }
-        // I2C-attached devices are wired to an I2C controller by `connection`
-        // and addressed by `config.i2c_address` — the SPI cs_pin/dc_pin framing
-        // below is meaningless for them, so handle and `continue` first. This is
-        // how a manifest that declares an SH1107 on i2c0 gets the panel wired,
-        // instead of the builder hardcoding "every board always has one".
+        // 1. The kit registry, the same lookup `bus::from_config` performs for
+        //    every other MCU. A kit owns its own transport, so an I²C kit and
+        //    an SPI kit both land here and neither needs an arm below.
+        //
+        //    This used to sit BELOW the I²C factory and carry only a
+        //    `potentiometer` special case, with a hand-written e-paper arm
+        //    after it that re-parsed cs/dc/busy and matched panel types itself.
+        //    That arm was a second implementation of wiring the kits already
+        //    own, so a pin or panel added to a kit worked on every chip EXCEPT
+        //    classic ESP32 — the chip the shipped e-reader demo runs on — and
+        //    it failed silently, as an "unsupported type" skip.
+        if let Some(kit) = crate::peripherals::kit::registry::lookup(&ext.r#type) {
+            let mut ctx = crate::peripherals::kit::AttachCtx::new(bus, ext);
+            kit.attach(&mut ctx)?;
+            continue;
+        }
+
+        // 2. The legacy I²C factory, for device types that still predate the
+        //    kit contract (the TCA9548A bus switch among them). Addressed by
+        //    `config.i2c_address` — a board-level fact, not a builder default
+        //    — so a manifest that declares a sensor on i2c0 gets exactly that,
+        //    instead of the builder hardcoding "every board always has one".
         if let Some(dev) = build_i2c_external_device(manifest, ext)? {
             bus.attach_i2c_slave(&ext.connection, dev).map_err(|_| {
                 anyhow::anyhow!(
@@ -89,131 +90,11 @@ pub fn attach_esp32_external_devices(
             continue;
         }
 
-        // Potentiometer: an analog wiper on a SAR-ADC channel. It is not a bus
-        // slave — it drives the ADC channel's injected level, so `analogRead()`
-        // on that channel returns the wiper voltage.
-        //
-        // Delegated to the potentiometer kit rather than re-parsing config
-        // here: the kit is what retains the model on the bus, and that
-        // retention is what makes `set_input("position", …)` reach it. A second
-        // copy of this wiring would silently produce a pot that reads correctly
-        // at boot but cannot be driven.
-        if ext.r#type == "potentiometer" {
-            use crate::peripherals::kit::PeripheralKit;
-            let mut ctx = crate::peripherals::kit::AttachCtx::new(bus, ext);
-            crate::peripherals::components::potentiometer::POTENTIOMETER_KIT.attach(&mut ctx)?;
-            continue;
-        }
-
-        let cs_pin = ext
-            .config
-            .get("cs_pin")
-            .and_then(|v| v.as_str())
-            .unwrap_or("GPIO5")
-            .to_string();
-        let dc_pin = ext
-            .config
-            .get("dc_pin")
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string());
-        let busy_pin = ext
-            .config
-            .get("busy_pin")
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string());
-
-        // Build the panel for this block type. Both tri-color e-paper models
-        // are SpiDevices driven over the real SPI3 peripheral; the only block-
-        // specific bit is which controller's command set the model decodes.
-        // Level BUSY rests at when the panel is not refreshing. The two
-        // controllers are INVERTED: SSD1680 asserts BUSY high, UC8151D pulls it
-        // low. Both models refresh instantaneously, so they are always idle.
-        let mut busy_idle_level = false;
-        let mut panel: Box<dyn SpiDevice> = match ext.r#type.as_str() {
-            "uc8151d_tricolor_290" | "epd-2in9-uc8151d" => {
-                let mut p = crate::peripherals::components::Uc8151dTricolor290::new(cs_pin.clone());
-                if let Some(dc) = &dc_pin {
-                    p = p.with_dc_pin(dc.clone());
-                }
-                busy_idle_level = true;
-                Box::new(p)
-            }
-            // GxEPD2_290_C90c (GDEY029Z90c / Waveshare 2.9" 3-color) is an
-            // SSD1680-controller panel — see the GxEPD2 driver header
-            // "Controller: SSD1680". It drives SSD1680 opcodes, so it maps to the
-            // SSD1680 model, NOT UC8151D.
-            "ssd1680_tricolor_290" | "epd-2in9-tricolor" | "gxepd2_290_c90c" => {
-                let mut p = crate::peripherals::components::Ssd1680Tricolor290::new(cs_pin.clone());
-                if let Some(dc) = &dc_pin {
-                    p = p.with_dc_pin(dc.clone());
-                }
-                Box::new(p)
-            }
-            // ILI9341 TFT — the panel on Adafruit's 2.4" TFT FeatherWing, which
-            // is a Feather-shaped carrier and therefore lands on classic ESP32
-            // more often than on anything else. The model decodes framing from
-            // the protocol stream itself and takes no D/C/BUSY line, so the
-            // hooks below are simply no-ops for it.
-            "ili9341" => Box::new(crate::peripherals::components::Ili9341::new(cs_pin.clone())),
-            other => {
-                // Loud, not silent: a skipped panel means the firmware paints
-                // into nothing and the run still "succeeds", which is the
-                // hardest kind of wrong to notice. Attach failures elsewhere in
-                // this function are errors, so this one is too.
-                anyhow::bail!(
-                    "ESP32 external_devices: unsupported SPI device type '{}' on '{}'. \
-                     A device the manifest declares but the twin cannot build would \
-                     silently paint nowhere; declare a supported type or remove it.",
-                    other,
-                    ext.id
-                );
-            }
-        };
-
-        // Hold BUSY at its idle level. GxEPD2 blocks in _waitWhileBusy until
-        // this line reads not-busy; its escape timeout is tens of seconds of
-        // *simulated* time (billions of cycles), so an undriven line is
-        // indistinguishable from a hang and leaves the panel blank. Real
-        // silicon spends ~18 s in a full refresh here — the twin refreshes
-        // instantly, so idle is the honest level to hold.
-        if let Some(busy) = &busy_pin {
-            if !crate::bus::SystemBus::drive_pin_input(bus, busy, busy_idle_level) {
-                tracing::warn!(
-                    "ESP32 external_devices: busy_pin '{}' on '{}' did not resolve to a \
-                     GPIO input; a driver that polls BUSY will block",
-                    busy,
-                    ext.id
-                );
-            }
-        }
-
-        // Resolve the D/C GPIO to its (output-register address, bit) so the bus
-        // can latch the real pin level before each transfer — silicon-accurate
-        // command/data framing, no GxEPD2 thunk. Immutable bus borrow first.
-        if let Some(dc) = &dc_pin {
-            if let Some((odr_addr, bit)) = crate::bus::SystemBus::resolve_pin_odr_pub(bus, dc) {
-                panel.set_dc_source(odr_addr, bit);
-            } else {
-                tracing::warn!(
-                    "ESP32 external_devices: dc_pin '{}' on '{}' did not resolve to a GPIO; \
-                     framing falls back to protocol-state inference",
-                    dc,
-                    ext.id
-                );
-            }
-        }
-
-        // Funnel through the single bus choke point, which wraps `panel` in the
-        // shared bus trace and dispatches to whichever SPI controller the
-        // `connection:` resolves to (classic `Esp32Spi` spi2/spi3 or the GP-SPI
-        // `Esp32s3Spi` spi2_s3/spi3_s3). No untraced attach path.
-        bus.attach_spi_device(&ext.connection, panel).map_err(|_| {
-            anyhow::anyhow!(
-                "External device '{}' connection '{}' is not an ESP32 SPI peripheral",
-                ext.id,
-                ext.connection
-            )
-        })?;
+        tracing::warn!(
+            "ESP32 external_devices: unsupported type '{}' on '{}'; skipping",
+            ext.r#type,
+            ext.id
+        );
     }
     Ok(())
 }
@@ -677,13 +558,26 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
         Box::new(crate::peripherals::esp32::syscon::Syscon::new()),
     );
 
-    // APB_CTRL — clock source select etc. Read/write stub. Covers the
-    // 0x3FF6_6100..0x3FF6_6FFF tail of the APB-CTRL window; the 0x100
-    // header is handled by the SYSCON peripheral above.
+    // APB_CTRL — clock source select etc. Read/write stub for the
+    // 0x3FF6_6100..0x3FF6_6FFF TAIL of the APB-CTRL window. The 0x100 header
+    // belongs to SYSCON above.
+    //
+    // This used to be registered at 0x3FF6_6000 with size 0x1000, overlapping
+    // SYSCON completely, on the belief that "registration order wins on
+    // overlap". It does not: routing.rs resolves the window with the GREATEST
+    // start, and ties by the LAST registered — so this stub answered every
+    // SYSCON register and the whole model was dead code reading 0xFFFFFFFF.
+    //
+    // The cost was not abstract. SYSCLK_CONF's PRE_DIV_CNT read 1023 instead
+    // of 0, so ESP-IDF computed a CPU divider of 1024, Arduino's
+    // getApbFrequency() returned 78125 Hz, and _get_effective_baudrate divided
+    // by zero — which is the exception the Arduino serial thunks existed to
+    // avoid. Mapping the tail where the comment always said it went removes
+    // the overlap entirely rather than depending on registration order.
     bus.add_peripheral(
         "apb_ctrl",
-        0x3FF6_6000,
-        0x1000,
+        0x3FF6_6100,
+        0x0F00,
         None,
         Box::new(
             crate::peripherals::esp_xtensa_common::system_stub::SystemStub::with_unwritten_ones(),
@@ -718,11 +612,18 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
         ("rtcio", 0x3FF4_8400), // sub-range of RTC_CNTL window, leave 4 KiB span
         ("sar_adc", 0x3FF4_C000),
         ("i2s0", 0x3FF4_F000),
-        ("uart1", 0x3FF5_0000),
+        // uart1 (0x3FF5_0000) and uart2 (0x3FF6_E000) are the real Esp32Uart
+        // models from ESP32_PERIPHERALS — same removal as i2c0/pwm0 below.
+        // They used to ALSO appear here, and because a 0x1000 stub at the
+        // SAME base registered later beats the real 0x100 model
+        // (equal starts → last registered), UART1/UART2 on classic ESP32 were
+        // round-trip stubs and the real models had never executed. Serial1 and
+        // Serial2 therefore produced nothing — the same defect that killed
+        // Serial0 via the apb_ctrl/SYSCON shadow. Guarded by
+        // tests::peripheral_reachability.
         // i2c0 (0x3FF5_3000) is the real Esp32I2c model registered above.
         ("uhci0", 0x3FF5_4000),
         ("i2s1", 0x3FF6_D000),
-        ("uart2", 0x3FF6_E000),
         // pwm0 (0x3FF5_E000) is now the real MCPWM0 model registered above.
         ("ledc2", 0x3FF6_8000),
         ("rmt", 0x3FF5_6000),
@@ -891,8 +792,12 @@ pub(crate) const ESP32_PERIPHERALS: &[(&str, &str, u64, u64, Option<u32>)] = &[
     ("i2c0",     "esp32_i2c",      0x3FF5_3000, 0x1000, Some(49)),
     // SENS SAR-ADC one-shot engine (RTC controller ADC1/ADC2 path the IDF
     // adc1_get_raw/adc2_get_raw drivers drive). 0x100 window over the SAR
-    // control + measurement registers; registered before the rtcio catch-all
-    // stub (0x3FF4_8400/0x1000) so it wins the overlapping SENS sub-range.
+    // control + measurement registers. It wins the overlapping SENS sub-range
+    // against the rtcio catch-all stub (0x3FF4_8400/0x1000) because routing.rs
+    // picks the window with the GREATEST start, and 0x8800 > 0x8400 — NOT
+    // because it is registered first. Registration order only breaks ties
+    // between EQUAL starts, and there the LAST registered wins. Getting that
+    // backwards is what left SYSCON dead behind apb_ctrl for a year.
     ("sens_sar_adc", "esp32_sar_adc", 0x3FF4_8800, 0x0100, None),
     ("gpio",     "esp32_gpio",     0x3FF4_4000, 0x1000, None),
     ("dport",    "esp32_dport",    0x3FF0_0000, 0x1000, None),
