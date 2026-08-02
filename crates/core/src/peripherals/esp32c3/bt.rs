@@ -136,6 +136,28 @@ const CLKN_FINE: u64 = 0x020;
 /// it set.
 const CLKN_TARGET_ARM: u32 = 0x8000_0000;
 
+/// `RWBLECNTL` — the core control word.
+const RWBLECNTL: u64 = 0x000;
+/// `RWBLECNTL` bit31: a **self-clearing** command bit (the RW-BLE core's
+/// master soft-reset / kick). Silicon capture 2026-08-02 attests this directly
+/// and twice over:
+///
+/// * the write trace shows the controller writing `+0x000` in pairs — first
+///   the plain control word, then the same word with bit31 set
+///   (`0x0010_060f` → `0x8010_060f`, later `0x0010_070f` → `0x8010_070f`);
+/// * yet **every** idle dump of a live, advertising part reads `+0x000` back
+///   as `0x0010_070f`, i.e. with bit31 CLEAR, even though the last write set
+///   it.
+///
+/// So the hardware consumes and drops the bit. Storing the write verbatim
+/// (which is what a plain register-backed window does) wedges the controller:
+/// it writes the kick and then spins waiting to read the bit go away. That is
+/// exactly where the twin parked before this — the last BT write it ever made
+/// was `+0x000 <= 0x8010_070f`, and the CPU sat on the instruction immediately
+/// after that store while the real part carried straight on into the next
+/// bring-up step.
+const RWBLECNTL_SELF_CLEARING: u32 = 0x8000_0000;
+
 /// Read-only hardware identity/configuration words, seeded from the silicon
 /// capture of 2026-08-02. These are the ONLY snapshot-seeded values in the
 /// model; everything else is either derived (the timebase) or plain storage.
@@ -323,6 +345,13 @@ impl Peripheral for Esp32c3Bt {
                 self.event_armed = value & CLKN_TARGET_ARM != 0;
                 self.event_target = value & !CLKN_TARGET_ARM;
             }
+            // Consume the self-clearing command bit — the hardware executes it
+            // and drops it, so it must never read back set.
+            RWBLECNTL => {
+                if let Some(slot) = self.regs.get_mut((offset / 4) as usize) {
+                    *slot = value & !RWBLECNTL_SELF_CLEARING;
+                }
+            }
             _ => {
                 if let Some(slot) = self.regs.get_mut((offset / 4) as usize) {
                     *slot = value;
@@ -361,6 +390,26 @@ mod tests {
         }
     }
 
+    /// `RWBLECNTL` bit31 is a self-clearing command bit: the controller writes
+    /// the control word, then writes it again with bit31 set as a kick, and
+    /// spins until the bit reads back clear. Silicon reads `+0x000` as
+    /// `0x0010_070f` (bit31 clear) on a live part whose last write was
+    /// `0x8010_070f`. Regression for the stall that pinned the twin on the
+    /// instruction after that store.
+    #[test]
+    fn rwblecntl_command_bit_self_clears() {
+        let mut bt = Esp32c3Bt::new();
+        bt.write_u32(RWBLECNTL, 0x0010_070f).unwrap();
+        assert_eq!(bt.read_u32(RWBLECNTL).unwrap(), 0x0010_070f);
+        bt.write_u32(RWBLECNTL, 0x8010_070f).unwrap();
+        assert_eq!(
+            bt.read_u32(RWBLECNTL).unwrap(),
+            0x0010_070f,
+            "bit31 must be consumed, not stored — otherwise the controller \
+             spins forever waiting for its own kick to clear"
+        );
+    }
+
     /// The controller validates `VERSION` during `lld` bring-up and asserts on
     /// a mismatch, quoting the value it wants:
     /// `assert lld.c 318, param 00000000 09001b00`. Regression for that stop.
@@ -383,8 +432,7 @@ mod tests {
     fn window_is_register_backed() {
         let mut bt = Esp32c3Bt::new();
         for (off, val) in [
-            (0x000u64, 0x0010_070fu32), // control word, final post-init value
-            (0x204, 0x0002_9725),       // ROM patch/veneer table entry 0
+            (0x204u64, 0x0002_9725u32), // ROM patch/veneer table entry 0
             (0x2c4, 0x07fe_01ff),       // patch-enable mask, fully populated
             (0x0e0, 0x0190_012c),       // advertising interval pair
             (0x530, 0x0000_0001),
