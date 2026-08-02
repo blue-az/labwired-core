@@ -207,6 +207,16 @@ pub struct Timg {
     counter_lact: u64,
     /// Undivided APB cycles not yet converted into LACT ticks.
     lact_rem: u32,
+    /// Is this a TIMG that HAS a LACT timer? Only ESP32-classic does.
+    ///
+    /// The ESP32-C3 reuses this model (see generic_factory.rs) but dropped
+    /// LACT in favour of SYSTIMER, and put entirely different registers in
+    /// the same offsets: 0x78/0x7C are INT_ST_TIMERS/INT_CLR_TIMERS and 0x80
+    /// is RTCCALICFG2. Answering those offsets as LACT there would have a
+    /// write to RTCCALICFG2 latch the counter over the C3's interrupt status
+    /// and clear registers. So LACT is opt-in, and only the ESP32-classic
+    /// factory opts in.
+    lact_enabled: bool,
     /// Phase 2B.2 (issue #192): peripheral-tick index of the last `sync_to`.
     /// In scheduler mode the counters no longer advance one-per-`tick()`;
     /// instead `sync_to(now)` lazily adds `(now - anchor_tick)` to each
@@ -232,6 +242,7 @@ impl Timg {
             counter_t1: 0,
             counter_lact: 0,
             lact_rem: 0,
+            lact_enabled: false,
             anchor_tick: 0,
             rtc_cal: None,
         }
@@ -243,6 +254,16 @@ impl Timg {
     /// frequencies, so `rtc_clk_cal` recovers exactly `profile.slow_hz`.
     pub fn with_rtc_cal(mut self, profile: RtcCalProfile) -> Self {
         self.rtc_cal = Some(profile);
+        self
+    }
+
+    /// Declare that this TIMG has a LACT timer (ESP32-classic only).
+    ///
+    /// Without this, every LACT offset falls through to the generic
+    /// round-trip map, which is exactly the behaviour a chip that has no LACT
+    /// needs — see the note on `lact_enabled`.
+    pub fn with_lact(mut self) -> Self {
+        self.lact_enabled = true;
         self
     }
 
@@ -285,6 +306,9 @@ impl Timg {
     /// seeing it advance and a stopped clock is easier to diagnose than one
     /// running 65536× slow.
     fn lact_divider(&self) -> Option<u32> {
+        if !self.lact_enabled {
+            return None;
+        }
         let cfg = self.word(LACT_CONFIG);
         if cfg & LACT_EN_BIT == 0 {
             return None;
@@ -366,8 +390,8 @@ impl Timg {
             T1_UPDATE => self.latch_t1(),
             T0_LOAD => self.preload_t0(),
             T1_LOAD => self.preload_t1(),
-            LACT_UPDATE => self.latch_lact(),
-            LACT_LOAD => self.preload_lact(),
+            LACT_UPDATE if self.lact_enabled => self.latch_lact(),
+            LACT_LOAD if self.lact_enabled => self.preload_lact(),
             WDT_FEED | WDT_WPROTECT => {
                 // Watchdog feed / write-protect: round-trip the value.
                 // WDT timing/reset behavior isn't modeled.
@@ -454,12 +478,12 @@ impl Peripheral for Timg {
                 .get(&T1_HI)
                 .copied()
                 .unwrap_or((self.counter_t1 >> 32) as u32),
-            LACT_LO => self
+            LACT_LO if self.lact_enabled => self
                 .regs
                 .get(&LACT_LO)
                 .copied()
                 .unwrap_or(self.counter_lact as u32),
-            LACT_HI => self
+            LACT_HI if self.lact_enabled => self
                 .regs
                 .get(&LACT_HI)
                 .copied()
@@ -508,12 +532,12 @@ impl Peripheral for Timg {
                 .get(&T1_HI)
                 .copied()
                 .unwrap_or((self.counter_t1 >> 32) as u32),
-            LACT_LO => self
+            LACT_LO if self.lact_enabled => self
                 .regs
                 .get(&LACT_LO)
                 .copied()
                 .unwrap_or(self.counter_lact as u32),
-            LACT_HI => self
+            LACT_HI if self.lact_enabled => self
                 .regs
                 .get(&LACT_HI)
                 .copied()
@@ -795,5 +819,48 @@ mod tests {
         let mut t = Timg::new(0x3FF5_F000);
         write_u32(&mut t, 0x70, 0xCAFE_BABE);
         assert_eq!(read_u32(&t, 0x70), 0xCAFE_BABE);
+    }
+
+    /// LACT must be INERT on a TIMG that was not told it has one.
+    ///
+    /// The ESP32-C3 reuses this model with entirely different registers in
+    /// the LACT window: 0x78/0x7C are INT_ST_TIMERS/INT_CLR_TIMERS and 0x80
+    /// is RTCCALICFG2. Before `with_lact()` existed, a C3 firmware writing
+    /// RTCCALICFG2 would latch the counter straight over its own interrupt
+    /// status and clear registers, and a read of INT_ST_TIMERS would return
+    /// a timer count. Both are silent corruption, so this pins the default.
+    #[test]
+    fn lact_offsets_are_plain_storage_without_with_lact() {
+        let mut t = Timg::new(0x6001_F000); // C3 TIMG0 base — no with_lact()
+        // Enable-looking bits in what the C3 calls INT_ENA_TIMERS.
+        write_u32(&mut t, 0x70, 0xFFFF_FFFF);
+        // What the C3 calls INT_ST_TIMERS / INT_CLR_TIMERS.
+        write_u32(&mut t, 0x78, 0x1111_1111);
+        write_u32(&mut t, 0x7C, 0x2222_2222);
+        for _ in 0..1000 {
+            t.tick();
+        }
+        // A write to RTCCALICFG2 must NOT latch a counter over 0x78/0x7C.
+        write_u32(&mut t, 0x80, 1);
+        assert_eq!(read_u32(&t, 0x78), 0x1111_1111, "INT_ST_TIMERS was clobbered by a LACT latch");
+        assert_eq!(read_u32(&t, 0x7C), 0x2222_2222, "INT_CLR_TIMERS was clobbered by a LACT latch");
+        assert_eq!(t.counter_lact(), 0, "LACT advanced on a chip that has no LACT");
+    }
+
+    /// ...and LIVE when it is declared, so the guard above is not vacuous.
+    #[test]
+    fn lact_counts_and_latches_when_declared() {
+        let mut t = Timg::new(0x3FF5_F000).with_lact();
+        // LACT_EN | divider 40 at bits [28:13] — what esp_timer programs for
+        // the 2 MHz tick esp_timer_get_time() halves into microseconds.
+        write_u32(&mut t, 0x70, (1 << 31) | (40 << 13));
+        for _ in 0..1000 {
+            t.tick();
+        }
+        // 1000 us at APB 80 MHz / 40 = 2 ticks per us.
+        assert_eq!(t.counter_lact(), 2000);
+        write_u32(&mut t, 0x80, 1); // LACT_UPDATE latches LO/HI
+        assert_eq!(read_u32(&t, 0x78), 2000);
+        assert_eq!(read_u32(&t, 0x7C), 0);
     }
 }
