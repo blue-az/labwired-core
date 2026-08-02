@@ -2094,6 +2094,22 @@ pub struct TestInputs {
     /// manifest whose entire content would be a chip pointer and two empty
     /// lists. Anything with a device attached needs `system`.
     pub chip: Option<String>,
+    /// Optional boot profile. Omitted (the default) means the faithful path:
+    /// the skipped-BROM DRAM seed and a real dual-core release, with no
+    /// firmware flash-thunks.
+    ///
+    /// `arduino-esp32` selects the FAST BOOT instead — the same profile
+    /// `labwired snapshot capture` uses, which redirects a set of ROM/IDF
+    /// entry points so an Arduino-ESP32 sketch reaches `setup()` quickly.
+    /// Classic-ESP32 Arduino firmware does not boot on the faithful path yet,
+    /// so without this a sketch like Ryan's bay-occupancy rig produced ~47
+    /// bytes of UART and stopped — which meant the runner that owns `stimuli:`
+    /// could not exercise the firmware at all.
+    ///
+    /// It is opt-in and named in the script on purpose: a run that took the
+    /// fast boot should say so, rather than leaving a reader to infer which
+    /// of two boot paths produced the result.
+    pub profile: Option<String>,
 }
 
 /// A system, resolved once: the manifest plus the directory that relative

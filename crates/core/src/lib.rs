@@ -1302,6 +1302,12 @@ pub struct Machine<C: Cpu> {
     pub cpu_secondary: Option<C>,
     pub bus: bus::SystemBus,
     pub observers: Vec<Arc<dyn SimulationObserver>>,
+    /// Stack pointer to give the secondary CPU when it is released, if the
+    /// platform has one to give (ESP32 resolves `port_IntStackTop`). Set by
+    /// whoever configures the platform; consumed in
+    /// `release_secondary_cpu_if_requested` so a core is never released
+    /// without a stack.
+    pub secondary_boot_sp: Option<u32>,
 
     // Debug state
     pub breakpoints: std::collections::HashSet<u32>,
@@ -1654,6 +1660,7 @@ impl<C: Cpu> Machine<C> {
             cpu_secondary: None,
             bus,
             observers: Vec::new(),
+            secondary_boot_sp: None,
             breakpoints: HashSet::new(),
             last_breakpoint: None,
             total_cycles: 0,
