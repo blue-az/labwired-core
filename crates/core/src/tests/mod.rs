@@ -32,3 +32,5 @@ pub mod scb_reset;
 pub mod stm32_spi_waveform;
 #[cfg(test)]
 pub mod test_cycles;
+#[cfg(test)]
+pub mod walk_starvation_contract;
