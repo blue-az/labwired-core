@@ -81,11 +81,12 @@ const DEFAULT_FLASH: &str = "fixtures/esp32c3-ble/esp32c3-ble-node-flash.bin";
 /// The run stops the moment BOTH nodes have printed a `PEER` line
 /// (`LABWIRED_BLE_DUAL_STOP_ON`), so a healthy engine never reaches this. It
 /// only bounds how long a broken one is allowed to flail. MEASURED on this
-/// tree: both directions land well inside it; the number is the measured cost
-/// plus headroom for the advertising interval's random delay, which decides
-/// when the two nodes' channel-39 dwells happen to overlap and is therefore the
-/// dominant variance in this run.
-const TWO_NODE_MAX_STEPS: u64 = 1_400_000_000;
+/// tree: both nodes had reported by **44 M steps**. The ceiling is more than an
+/// order of magnitude above that, which is deliberate — the variance here is
+/// the advertising interval's random delay deciding when the two nodes'
+/// channel-39 dwells overlap, and a gate that fails because two pseudo-random
+/// schedules took a few extra intervals to line up is a flake, not a finding.
+const TWO_NODE_MAX_STEPS: u64 = 600_000_000;
 
 /// Substring both nodes must print before the run may stop early.
 const STOP_ON: &str = "PEER tag=";

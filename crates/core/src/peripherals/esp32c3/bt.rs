@@ -518,16 +518,27 @@
 //! identities). Real captured serial:
 //!
 //! ```text
+//! [ble] both nodes printed "PEER tag=" by step 44000000 — stopping
 //! [A] BLE_INIT_OK / MYTAG 4 / ADV_ON / SCAN_ON / TICK 1
 //! [A] PEER tag=5 val=0 from=02:00:00:00:00:05
-//! [A] PEER tag=5 val=1 from=02:00:00:00:00:05
 //! [B] BLE_INIT_OK / MYTAG 5 / ADV_ON / SCAN_ON / TICK 1
+//! [B] PEER tag=4 val=0 from=02:00:00:00:00:04
 //! ```
 //!
-//! i.e. node A's *application* read bytes node B's application chose, and read
-//! them **changing** (`val=0` then `val=1`) — connectionless advertising data
-//! carrying live state between two twins. `crates/cli/tests/
-//! e2e_esp32c3_ble_two_node.rs` is the gate over it.
+//! i.e. each twin's *application* read bytes the other's application chose —
+//! connectionless advertising data carrying live state in both directions.
+//! `crates/cli/tests/e2e_esp32c3_ble_two_node.rs` is the gate over it.
+//!
+//! Getting the second direction working needed one more thing, and it is worth
+//! recording because the symptom was so misleading: a node that advertises AND
+//! scans has two activities, and this model used to deliver an air frame into
+//! **whichever event happened to be running**. An advertising event that
+//! swallowed an `ADV_IND` stamped it with the advertising activity's link
+//! label, `r_lld_scan_process_pkt_rx` rejected it as somebody else's, never
+//! freed the descriptor, and the ring wedged on `RXDONE` — the node went
+//! permanently deaf after one misdelivery, having reported an advertisement or
+//! two first. Reception is now gated on the control structure's measured
+//! scanning format; see [`CS_FORMAT_SCAN`] for what that costs.
 //!
 //! ### Measured result (single node, 500 M steps, `LABWIRED_BT_TRACE=1`)
 //!
@@ -806,6 +817,31 @@ const CS_FORMAT: u32 = 0x00;
 /// (`+0x00 = 0x0404`). The model transmits only for this format; any other
 /// value is traced and left alone rather than guessed at.
 const CS_FORMAT_LEGACY_ADV: u16 = 0x04;
+/// Low byte of [`CS_FORMAT`] for a **scanning** activity: `0x0208`, which is
+/// what the real Arduino `BLEScan` firmware programs in the twin (756 events in
+/// one two-node run, every one of them a control structure with no TX
+/// descriptor). Measured from firmware rather than from silicon — no scanning
+/// capture off the board exists — and used only to *narrow* what the model
+/// does, never to widen it.
+///
+/// **Why receive is gated on it.** An air frame is delivered only to an event
+/// whose control structure is programmed in this format. Delivering to any
+/// event that happened to be running (which is what this model did before) is
+/// not merely imprecise, it desynchronises the link layer: the descriptor is
+/// stamped with the *running* activity's link label, so when an advertising
+/// event picks up an `ADV_IND` meant for the scanner, `r_lld_rxdesc_check`
+/// rejects it on the label, never frees it, and the descriptor stays `RXDONE`
+/// forever — the ring wedges after exactly one such misdelivery. That is
+/// precisely what happened to a node doing both at once: it reported a couple
+/// of advertisements and then went permanently deaf.
+///
+/// The cost of the narrowing, stated plainly: an advertising event's own
+/// receive window (`SCAN_REQ` / `CONNECT_IND` addressed to the advertiser) is
+/// NOT modelled. Nothing on this air ever transmits one — the model only
+/// transmits for [`CS_FORMAT_LEGACY_ADV`], and a passive scanner sends
+/// nothing — so today the narrowing loses no traffic that exists. It would have
+/// to be revisited to model active scanning or connection setup.
+const CS_FORMAT_SCAN: u16 = 0x08;
 
 /// TX descriptor `+0x2`: `(payload_len << 8) | pdu_header_byte`.
 const TXD_HEADER: u32 = 0x2;
@@ -1654,6 +1690,16 @@ impl Esp32c3Bt {
             return false;
         };
         let cs = u32::from(cs_ptr) * 2;
+        // Only a SCANNING activity receives. See [`CS_FORMAT_SCAN`] for why this
+        // gate is load-bearing rather than cosmetic: delivering into whichever
+        // event happened to be running stamps the wrong link label and wedges
+        // the descriptor ring on the first misdelivery.
+        let Some(format) = self.em_read_u16(bus, cs + CS_FORMAT) else {
+            return false;
+        };
+        if format & 0xFF != CS_FORMAT_SCAN {
+            return false;
+        }
         let Some(access_address) = self.em_read_u32(bus, cs + CS_ACCESS_ADDR) else {
             return false;
         };
@@ -2652,6 +2698,61 @@ mod tests {
         );
     }
 
+    /// Stage a **scanning** activity the way the real firmware does: its own
+    /// exchange-table entry, its own control structure at `cs_idx` in the
+    /// measured scanning format ([`CS_FORMAT_SCAN`], `0x0208` — no TX
+    /// descriptor), plus the RX descriptor array and one receive buffer.
+    ///
+    /// A separate activity from the advertising one on purpose: a node that
+    /// advertises AND scans has two, with different control-structure indices,
+    /// and getting the receive path to deliver into the right one is exactly
+    /// what these tests are about.
+    #[cfg(feature = "event-scheduler")]
+    fn stage_scan_event(
+        bt: &mut Esp32c3Bt,
+        bus: &mut RamBus,
+        et_idx: u32,
+        cs_idx: u32,
+        start_clkn: u32,
+    ) -> (u64, u64) {
+        let et = FIXTURE_EM_BASE + u64::from(Esp32c3Bt::et_entry(et_idx));
+        let cs_em = EM_CS_OFFSET + cs_idx * CS_STRIDE;
+        bus.put(et, &0x2802u16.to_le_bytes());
+        bus.put(et + 2, &(start_clkn as u16).to_le_bytes());
+        bus.put(
+            et + 4,
+            &(((start_clkn >> 16) & 0x0FFF) as u16).to_le_bytes(),
+        );
+        bus.put(et + 6, &624u16.to_le_bytes());
+        bus.put(et + 8, &((cs_em / 2) as u16).to_le_bytes());
+        bus.put(et + 10, &0x0AF7u16.to_le_bytes());
+        bus.put(et + 12, &0x0C00u16.to_le_bytes());
+        bus.put(et + 14, &0x0F00u16.to_le_bytes());
+
+        // EM 0x400..0x7FF is one 1 KiB bucket, so the advertising fixture's
+        // base register already covers every control structure in it.
+        let cs = FIXTURE_EM_BASE + 0x158 + u64::from(cs_em - 0x400);
+        bus.put(cs, &0x0208u16.to_le_bytes()); // the measured scan format
+        bus.put(cs + 0x06, &[0x5a, 0xf5, 0x42, 0xbe, 0x44, 0x38]);
+        bus.put(cs + 0x0C, &0x8E89_BED6u32.to_le_bytes());
+        bus.put(cs + 0x10, &[0x55, 0x55, 0x55]);
+        bus.put(cs + 0x16, &0x8027u16.to_le_bytes()); // channel 39
+        bus.put(cs + 0x1C, &0u16.to_le_bytes()); // listens only
+
+        let rxd_cpu = FIXTURE_EM_BASE + 0x1000;
+        let rxbuf_cpu = FIXTURE_EM_BASE + 0x1400;
+        bt.write_u32(EM_BASE_REG_BANK_A + 16, em_base_reg(0x1000, rxd_cpu))
+            .unwrap();
+        bt.write_u32(EM_BASE_REG_BANK_A + 20, em_base_reg(0x1C00, rxbuf_cpu))
+            .unwrap();
+        // `next = 0x1014` with RXDONE CLEAR: the state firmware's own refill
+        // leaves a descriptor in when it hands it to the core.
+        bus.put(rxd_cpu, &0x1014u16.to_le_bytes());
+        bus.put(rxd_cpu + 0x12, &0x1C00u16.to_le_bytes());
+        bt.write_u32(RX_DESC_PTR, 0x0000_1000).unwrap();
+        (rxd_cpu, rxbuf_cpu)
+    }
+
     /// The base-register window is decoded exactly as
     /// `r_emi_get_mem_addr_by_offset` does, including the packed non-contiguous
     /// layout the live allocator produces. Values are the live registers.
@@ -2859,6 +2960,11 @@ mod tests {
     /// A listening event writes the air frame into the RX descriptor at
     /// `+0x024` in the exact layout the ROM reads back, advances the pointer
     /// along the ring, and raises `sch_prog_rx`.
+    ///
+    /// The activity is a real SCANNING one (its own exchange-table entry and a
+    /// control structure in the measured `0x0208` format), programmed alongside
+    /// the advertising activity — which is what a node doing both actually
+    /// looks like, and what caught the misdelivery bug this fixture now guards.
     #[cfg(feature = "event-scheduler")]
     #[test]
     fn a_listening_event_writes_the_frame_into_the_rx_descriptor() {
@@ -2872,20 +2978,7 @@ mod tests {
         let mut bus = RamBus::default();
         let mut sched = EventScheduler::new();
         stage_advertising_event(&mut bt, &mut bus, 0);
-
-        // Map the RX descriptor array (EM 0x1000) and a receive buffer, then
-        // seed `+0x024` the way the twin's own bring-up does.
-        let rxd_cpu = FIXTURE_EM_BASE + 0x1000;
-        let rxbuf_cpu = FIXTURE_EM_BASE + 0x1400;
-        bt.write_u32(EM_BASE_REG_BANK_A + 16, em_base_reg(0x1000, rxd_cpu))
-            .unwrap();
-        bt.write_u32(EM_BASE_REG_BANK_A + 20, em_base_reg(0x1C00, rxbuf_cpu))
-            .unwrap();
-        // `next = 0x1014` with RXDONE CLEAR: the state firmware's own refill
-        // leaves a descriptor in when it hands it to the core.
-        bus.put(rxd_cpu, &0x1014u16.to_le_bytes());
-        bus.put(rxd_cpu + 0x12, &0x1C00u16.to_le_bytes()); // payload buffer
-        bt.write_u32(RX_DESC_PTR, 0x0000_1000).unwrap();
+        let (rxd_cpu, rxbuf_cpu) = stage_scan_event(&mut bt, &mut bus, 1, 1, 0);
 
         // Somebody else advertises on the channel this control structure names.
         air.transmit(BleAirFrame {
@@ -2897,11 +2990,17 @@ mod tests {
             pdu: vec![0x20, 0x07, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x42],
         });
 
+        // Run the advertising event first (it transmits and, correctly, does
+        // NOT consume the peer's frame), then the scan event.
         bt.write_u32(PROG_PUSH, 0x8000_0000).unwrap();
+        bt.write_u32(PROG_PUSH, 0x8000_0001).unwrap();
         let token = bt.take_scheduled_events()[0].1;
-        sched.advance_to(0);
-        clock.publish(0);
-        bt.on_event(token, &mut sched, &mut bus);
+        let adv_end = 0x0AF7 * 2 * CYCLES_PER_FINE_TICK;
+        for at in [0, adv_end, adv_end] {
+            sched.advance_to(at);
+            clock.publish(at);
+            bt.on_event(token, &mut sched, &mut bus);
+        }
 
         assert_eq!(
             bus.u16_at(rxd_cpu + u64::from(RXD_HEADER)),
@@ -2958,15 +3057,88 @@ mod tests {
         );
         assert_eq!(
             bus.u16_at(rxd_cpu + u64::from(RXD_LINK_LABEL)) >> RXD_LINK_LABEL_SHIFT,
+            1,
+            "link label = the control-structure index: this scan activity's CS \
+             is at EM 0x45A = 1024 + 1*90, i.e. index 1, while the advertising \
+             activity next to it is index 0"
+        );
+    }
+
+    /// An ADVERTISING event does not swallow a frame the scanning activity is
+    /// waiting for. This is not tidiness: the core stamps the RUNNING
+    /// activity's link label into the descriptor, so a frame delivered to the
+    /// advertising activity is stamped with its label,
+    /// `r_lld_scan_process_pkt_rx` rejects it as somebody else's, never frees
+    /// it, and the descriptor stays `RXDONE` forever. One misdelivery and the
+    /// node is permanently deaf — which is exactly what a node advertising and
+    /// scanning at once did before this gate existed.
+    #[cfg(feature = "event-scheduler")]
+    #[test]
+    fn an_advertising_event_does_not_swallow_the_scanners_frame() {
+        use crate::peripherals::ble_air::{BleAirBus, BleAirFrame};
+        use crate::sched::EventScheduler;
+
+        let clock = CycleClock::default();
+        let mut bt = advertising_part(&clock);
+        let air = BleAirBus::new();
+        bt.air = air.clone();
+        let mut bus = RamBus::default();
+        let mut sched = EventScheduler::new();
+        stage_advertising_event(&mut bt, &mut bus, 0);
+        // The scan activity lives at a DIFFERENT control-structure index, as it
+        // does in real firmware — so a misdelivery would be visible as a wrong
+        // label even if the ring survived it.
+        let (rxd_cpu, _) = stage_scan_event(&mut bt, &mut bus, 1, 2, 0);
+
+        air.transmit(BleAirFrame {
+            seq: 0,
+            source: bt.node_id + 1,
+            channel: 39,
+            access_address: 0x8E89_BED6,
+            crc_init: 0x0055_5555,
+            pdu: vec![0x20, 0x06, 1, 2, 3, 4, 5, 6],
+        });
+
+        // ONLY the advertising event runs.
+        bt.write_u32(PROG_PUSH, 0x8000_0000).unwrap();
+        let token = bt.take_scheduled_events()[0].1;
+        let adv_end = 0x0AF7 * 2 * CYCLES_PER_FINE_TICK;
+        for at in [0, adv_end] {
+            sched.advance_to(at);
+            clock.publish(at);
+            bt.on_event(token, &mut sched, &mut bus);
+        }
+        assert_eq!(air.trace_snapshot().len(), 2, "it transmitted");
+        assert_eq!(
+            bus.u16_at(rxd_cpu + u64::from(RXD_HEADER)),
             0,
-            "link label = the control-structure index; this fixture's CS is at \
-             EM 0x400 = 1024 + 0*90, i.e. index 0 — the same value the live \
-             advertiser's descriptors carried"
+            "and wrote NOTHING into the RX descriptor"
+        );
+        assert_eq!(bt.read_u32(INTRAWSTAT).unwrap() & INT_SCH_PROG_RX, 0);
+        assert_eq!(bt.rx_cursor, 0, "the frame is still unread");
+
+        // Now the scan event runs and picks it up, stamped with ITS index.
+        bt.write_u32(PROG_PUSH, 0x8000_0001).unwrap();
+        let token = bt.take_scheduled_events()[0].1;
+        for at in [adv_end, adv_end] {
+            sched.advance_to(at);
+            clock.publish(at);
+            bt.on_event(token, &mut sched, &mut bus);
+        }
+        assert_eq!(
+            bus.u16_at(rxd_cpu + u64::from(RXD_HEADER)),
+            (6 << 8) | 0x20,
+            "the scanning activity received it"
+        );
+        assert_eq!(
+            bus.u16_at(rxd_cpu + u64::from(RXD_LINK_LABEL)) >> RXD_LINK_LABEL_SHIFT,
+            2,
+            "stamped with the SCAN activity's control-structure index"
         );
     }
 
     /// The link label the core stamps into `+0x0C` is the *control-structure
-    /// index* of the activity that received, not a constant: a second activity
+    /// index* of the activity that received, not a constant: a scan activity
     /// whose control structure sits at CS index 2 gets label 2. Without this
     /// `r_lld_rxdesc_check` would reject every packet a non-zero-index activity
     /// received, and the host would see nothing while the trace showed a
@@ -2984,32 +3156,7 @@ mod tests {
         let mut bus = RamBus::default();
         let mut sched = EventScheduler::new();
         stage_advertising_event(&mut bt, &mut bus, 0);
-
-        // Re-point the exchange-table entry at control structure index 2, in the
-        // encoding `r_sch_prog_ble_push` writes: `(cs_idx*90 + 1024) >> 1`.
-        let cs_idx = 2u32;
-        let cs_em = EM_CS_OFFSET + cs_idx * CS_STRIDE;
-        bus.put(
-            FIXTURE_EM_BASE + u64::from(ET_CS_PTR),
-            &((cs_em / 2) as u16).to_le_bytes(),
-        );
-        // EM 0x400..0x7FF is one 1 KiB bucket, so the fixture's existing base
-        // register already covers this offset — copy the live control structure
-        // there and only the index changes.
-        let cs_cpu = FIXTURE_EM_BASE + 0x158 + u64::from(cs_em - 0x400);
-        bus.put(cs_cpu, &0x0404u16.to_le_bytes());
-        bus.put(cs_cpu + 0x0C, &0x8E89_BED6u32.to_le_bytes());
-        bus.put(cs_cpu + 0x16, &0x8027u16.to_le_bytes()); // channel 39
-
-        let rxd_cpu = FIXTURE_EM_BASE + 0x1000;
-        let rxbuf_cpu = FIXTURE_EM_BASE + 0x1400;
-        bt.write_u32(EM_BASE_REG_BANK_A + 16, em_base_reg(0x1000, rxd_cpu))
-            .unwrap();
-        bt.write_u32(EM_BASE_REG_BANK_A + 20, em_base_reg(0x1C00, rxbuf_cpu))
-            .unwrap();
-        bus.put(rxd_cpu, &0x1014u16.to_le_bytes());
-        bus.put(rxd_cpu + 0x12, &0x1C00u16.to_le_bytes());
-        bt.write_u32(RX_DESC_PTR, 0x0000_1000).unwrap();
+        let (rxd_cpu, _) = stage_scan_event(&mut bt, &mut bus, 3, 2, 0);
 
         air.transmit(BleAirFrame {
             seq: 0,
@@ -3020,7 +3167,7 @@ mod tests {
             pdu: vec![0x20, 0x06, 1, 2, 3, 4, 5, 6],
         });
 
-        bt.write_u32(PROG_PUSH, 0x8000_0000).unwrap();
+        bt.write_u32(PROG_PUSH, 0x8000_0003).unwrap();
         let token = bt.take_scheduled_events()[0].1;
         sched.advance_to(0);
         clock.publish(0);
@@ -3028,7 +3175,7 @@ mod tests {
 
         assert_eq!(
             bus.u16_at(rxd_cpu + u64::from(RXD_LINK_LABEL)) >> RXD_LINK_LABEL_SHIFT,
-            cs_idx as u16,
+            2,
             "the label follows the control-structure index the ET named"
         );
     }
@@ -3050,17 +3197,9 @@ mod tests {
         let mut bus = RamBus::default();
         let mut sched = EventScheduler::new();
         stage_advertising_event(&mut bt, &mut bus, 0);
-
-        let rxd_cpu = FIXTURE_EM_BASE + 0x1000;
-        let rxbuf_cpu = FIXTURE_EM_BASE + 0x1400;
-        bt.write_u32(EM_BASE_REG_BANK_A + 16, em_base_reg(0x1000, rxd_cpu))
-            .unwrap();
-        bt.write_u32(EM_BASE_REG_BANK_A + 20, em_base_reg(0x1C00, rxbuf_cpu))
-            .unwrap();
+        let (rxd_cpu, rxbuf_cpu) = stage_scan_event(&mut bt, &mut bus, 1, 1, 0);
         // RXDONE still SET: the previous reception has not been released.
         bus.put(rxd_cpu, &(0x1014u16 | RXD_DONE).to_le_bytes());
-        bus.put(rxd_cpu + 0x12, &0x1C00u16.to_le_bytes());
-        bt.write_u32(RX_DESC_PTR, 0x0000_1000).unwrap();
 
         air.transmit(BleAirFrame {
             seq: 0,
@@ -3071,7 +3210,7 @@ mod tests {
             pdu: vec![0x20, 0x02, 0x11, 0x22],
         });
 
-        bt.write_u32(PROG_PUSH, 0x8000_0000).unwrap();
+        bt.write_u32(PROG_PUSH, 0x8000_0001).unwrap();
         let token = bt.take_scheduled_events()[0].1;
         sched.advance_to(0);
         clock.publish(0);
@@ -3166,8 +3305,8 @@ mod tests {
         let mut bus = RamBus::default();
         let mut sched = EventScheduler::new();
         stage_advertising_event(&mut bt, &mut bus, 0);
-        bt.write_u32(RX_DESC_PTR, 0x0000_1000).unwrap();
-        bt.write_u32(PROG_PUSH, 0x8000_0000).unwrap();
+        stage_scan_event(&mut bt, &mut bus, 1, 1, 0);
+        bt.write_u32(PROG_PUSH, 0x8000_0001).unwrap();
         let token = bt.take_scheduled_events()[0].1;
         sched.advance_to(0);
         clock.publish(0);
