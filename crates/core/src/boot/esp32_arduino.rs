@@ -150,7 +150,8 @@ pub fn build_arduino_elf_machine(
         opts.appcpu_up_flag_addrs.clone(),
     );
 
-    let profile = install_arduino_esp32_profile(&mut machine, symbol_addrs, image.entry_point as u32)?;
+    let profile =
+        install_arduino_esp32_profile(&mut machine, symbol_addrs, image.entry_point as u32)?;
 
     Ok(ArduinoElfMachine {
         machine,

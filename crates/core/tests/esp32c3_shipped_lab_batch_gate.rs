@@ -291,7 +291,11 @@ fn run_classic_arduino_lab(
 
     let serial_bytes = booted.uart_sink.lock().unwrap().len();
     let total_cycles = booted.machine.total_cycles;
-    (booted.machine.step_profile().clone(), serial_bytes, total_cycles)
+    (
+        booted.machine.step_profile().clone(),
+        serial_bytes,
+        total_cycles,
+    )
 }
 
 /// One row of the committed per-lab budget (`docs/coverage/lab-perf-budget.json`).
@@ -435,8 +439,7 @@ fn shipped_labs_keep_batching() {
             let (profile, serial_bytes, total_cycles) =
                 run_classic_arduino_lab(&b.system_yaml, &elf);
             let mean_batch = profile.cpu_instructions as f64 / profile.cpu_batches.max(1) as f64;
-            let walk_per_cycle =
-                profile.legacy_tick_entries as f64 / total_cycles.max(1) as f64;
+            let walk_per_cycle = profile.legacy_tick_entries as f64 / total_cycles.max(1) as f64;
 
             eprintln!(
                 "SHIPPED_LAB_GATE {} mean_batch={mean_batch:.3} (min {}) serial_bytes={serial_bytes} \
@@ -472,9 +475,7 @@ fn shipped_labs_keep_batching() {
                     b.lab, b.min_mean_batch
                 ));
             }
-            if b.max_legacy_ticks_per_cycle > 0.0
-                && walk_per_cycle > b.max_legacy_ticks_per_cycle
-            {
+            if b.max_legacy_ticks_per_cycle > 0.0 && walk_per_cycle > b.max_legacy_ticks_per_cycle {
                 failures.push(format!(
                     "{}: legacy walk work rose to {walk_per_cycle:.3} entries per simulated \
                      cycle (max {}). This is the metric that actually tracks classic-ESP32 \
@@ -492,10 +493,7 @@ fn shipped_labs_keep_batching() {
             // nothing behind it.
             match &b.unenforced_reason {
                 Some(reason) => {
-                    eprintln!(
-                        "UNENFORCED {}: boot kind '{}' — {reason}",
-                        b.lab, b.boot
-                    );
+                    eprintln!("UNENFORCED {}: boot kind '{}' — {reason}", b.lab, b.boot);
                     unenforced.push(b.lab.clone());
                 }
                 None => failures.push(format!(
