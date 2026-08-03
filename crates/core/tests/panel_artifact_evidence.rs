@@ -66,6 +66,7 @@ fn rig(device_type: &str, connection: &str, config: &[(&str, serde_yaml::Value)]
         debug_uart: None,
         wifi_ap: None,
         peripherals: vec![],
+        parts: Default::default(),
         memory_overrides: Default::default(),
     };
     SystemBus::from_config(&chip, &manifest).expect("build bus")
