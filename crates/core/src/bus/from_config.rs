@@ -171,6 +171,8 @@ impl SystemBus {
             extra_mem,
             peripherals: Vec::new(),
             debug_schemas: Self::load_debug_schemas(chip, manifest),
+            // Filled by `record_external_devices` below — the one home for it.
+            external_device_decls: Vec::new(),
             nvic: None,
             observers: Vec::new(),
             config: crate::SimulationConfig::default(),
@@ -231,6 +233,7 @@ impl SystemBus {
             logic_tap: crate::logic_capture::LogicTap::new(),
             pin_map: std::collections::HashMap::new(),
         };
+        bus.record_external_devices(manifest);
 
         // Authoritative pin map (silicon truth) — resolution prefers this over the
         // label-letter parse; see routing::resolve_pin_odr.

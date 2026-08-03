@@ -256,6 +256,13 @@ impl Peripheral for Nrf52SerialInstance {
         self.twim.for_each_attached_sim_input(f) || self.spim.for_each_attached_sim_input(f)
     }
 
+    /// Same reasoning as the sim-input walk above: both halves of the shared
+    /// SPIM/TWIM window are held live, so both are walked regardless of ENABLE.
+    fn for_each_attached_device(&self, f: &mut dyn FnMut(crate::inspect::AttachedDeviceRef<'_>)) {
+        self.twim.for_each_attached_device(f);
+        self.spim.for_each_attached_device(f);
+    }
+
     fn snapshot(&self) -> serde_json::Value {
         serde_json::json!({
             "enable": self.enable,

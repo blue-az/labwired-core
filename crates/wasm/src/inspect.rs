@@ -1369,6 +1369,10 @@ impl WasmSimulator {
     /// omitted; each artifact still carries `meta.generation` so the UI can skip
     /// re-pulling unchanged buffers. Snapshot semantics — reads the current
     /// paused machine state, side-effect-free.
+    ///
+    /// The payload gained a `devices` list: the external I²C/SPI devices the
+    /// manifest placed, which are owned by their controller and so never
+    /// appeared under `peripherals`.
     #[wasm_bindgen]
     pub fn inspect(&self, name: Option<String>, include_bytes: bool) -> JsValue {
         let machine = self.machine.as_ref().unwrap();

@@ -1688,13 +1688,25 @@ impl crate::Peripheral for I2c {
         false
     }
 
+    /// Slaves live behind `RefCell` here for the same reason
+    /// [`Self::for_each_attached_sim_input`] borrows each cell in turn.
+    fn for_each_attached_device(&self, f: &mut dyn FnMut(crate::inspect::AttachedDeviceRef<'_>)) {
+        for cell in self.attached_devices() {
+            crate::inspect::visit_i2c_device(&**cell.borrow(), f);
+        }
+    }
+
     /// Custom inspection: the generic register decode plus a `framebuffer`
-    /// artifact for any attached SSD1306 OLED. This is the pattern the ~10
-    /// bespoke `get_*_framebuffer` wasm accessors generalize into — the
-    /// controller walks its own attached devices and emits panel artifacts, one
-    /// code path instead of a bespoke accessor per panel. Summary mode omits the
-    /// bytes and carries a cheap `generation` hash so callers skip unchanged
-    /// buffers.
+    /// artifact for any attached panel. This is the pattern the ~10 bespoke
+    /// `get_*_framebuffer` wasm accessors generalize into — the controller walks
+    /// its own attached devices and emits panel artifacts, one code path instead
+    /// of a bespoke accessor per panel. Summary mode omits the bytes and carries
+    /// a cheap `generation` hash so callers skip unchanged buffers.
+    ///
+    /// What each panel's artifact CONTAINS is not decided here: it comes from
+    /// [`crate::inspect::device_artifacts`], the single emitter shared with the
+    /// machine-level device walk, so a panel cannot report one thing on this
+    /// controller and something else on another.
     fn inspect(
         &self,
         base: u64,
@@ -1706,28 +1718,12 @@ impl crate::Peripheral for I2c {
         for dev_cell in self.attached_devices() {
             let dev = dev_cell.borrow();
             let addr = dev.address();
-            if let Some(oled) = dev
-                .as_any()
-                .and_then(|a| a.downcast_ref::<crate::peripherals::components::Ssd1306>())
-            {
-                let fb = oled.framebuffer();
-                pi.artifacts.push(crate::inspect::Artifact {
-                    kind: "framebuffer".to_string(),
-                    id: format!("i2c@0x{:02x}", addr),
-                    meta: serde_json::json!({
-                        "w": oled.width(),
-                        "h": oled.height(),
-                        "format": "ssd1306_page",
-                        "generation": crate::inspect::artifact_generation(fb),
-                        "ink_bytes": oled.ink_bytes(),
-                        "lit_pixels": oled.lit_pixels(),
-                    }),
-                    bytes: if opts.include_bytes {
-                        Some(fb.to_vec())
-                    } else {
-                        None
-                    },
-                });
+            if let Some(model) = dev.as_any() {
+                pi.artifacts.extend(crate::inspect::device_artifacts(
+                    model,
+                    &format!("i2c@0x{:02x}", addr),
+                    opts,
+                ));
             }
         }
         pi
