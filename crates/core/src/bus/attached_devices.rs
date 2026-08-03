@@ -147,7 +147,7 @@ impl SystemBus {
         }
         for dev in &self.ws2812 {
             let id = dev.component_id().unwrap_or("ws2812");
-            self.emit_resident(f, Resident::gpio(id, None));
+            self.emit_resident(f, Resident::gpio(id, Some(&**dev)));
         }
         for dev in &self.servos {
             self.emit_resident(f, Resident::gpio(dev.id(), None));
