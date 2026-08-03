@@ -1,0 +1,61 @@
+{
+  "type": "standard",
+  "cpu": {
+    "type": "xtensa_lx7",
+    "registers": [
+      2148399153,
+      1073444896,
+      0,
+      1074296148,
+      32,
+      2147483648,
+      8123720,
+      4194303,
+      2148069628,
+      1073444864,
+      1073443712,
+      1073476932,
+      1073476932,
+      0,
+      262176,
+      0
+    ],
+    "pc": 1074762435,
+    "ps": 262176,
+    "window_base": 8,
+    "window_start": 376,
+    "vecbase": 1074266112
+  },
+  "steps_executed": 4000000000,
+  "cycles": 715577420,
+  "instructions": 715577420,
+  "stop_reason": "max_steps",
+  "stop_reason_details": {
+    "triggered_stop_condition": "max_steps",
+    "triggered_limit": {
+      "name": "max_steps",
+      "value": 4000000000
+    },
+    "observed": {
+      "name": "steps_executed",
+      "value": 4000000000
+    }
+  },
+  "limits": {
+    "max_steps": 4000000000,
+    "max_cycles": null,
+    "max_uart_bytes": null,
+    "no_progress_steps": null,
+    "wall_time_ms": null,
+    "max_vcd_bytes": null,
+    "stop_when_assertions_pass": false,
+    "stop_when_assertions_pass_settle_steps": 100000,
+    "stop_when_assertions_pass_min_steps": 0
+  },
+  "firmware_hash": "baaa2ead3fef2bd07f9d075f08992dd55ca09ff37a81c9eb8dc01b8ae34745e4",
+  "config": {
+    "firmware": "../firmware/.pio/build/adafruit_feather_esp32_v2/firmware.elf",
+    "system": "../system.yaml",
+    "script": "test-thresholds-hysteresis.yaml"
+  }
+}

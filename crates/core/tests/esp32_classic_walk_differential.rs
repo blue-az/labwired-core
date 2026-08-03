@@ -182,7 +182,9 @@ fn esp32_classic_serial_reaches_sink_under_browser_policy() {
     eprintln!(
         "browser policy: tick_interval={tick_interval} legacy_walk_disabled={} \
          steps={steps} cycles={} idle_ff_skipped={}",
-        machine.bus.legacy_walk_disabled, machine.total_cycles, machine.idle_fast_forward_cycles_skipped
+        machine.bus.legacy_walk_disabled,
+        machine.total_cycles,
+        machine.idle_fast_forward_cycles_skipped
     );
     eprintln!(
         "uart0: CLKDIV={clkdiv} ({clkdiv:#x}) TXFIFO_CNT={txfifo_cnt} sink_bytes={}",

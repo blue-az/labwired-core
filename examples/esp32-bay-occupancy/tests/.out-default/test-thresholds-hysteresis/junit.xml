@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="labwired" tests="6" failures="0" errors="0" time="334.011657">
+  <properties>
+    <property name="result_schema_version" value="1.0"/>
+    <property name="stop_reason" value="MaxSteps"/>
+    <property name="firmware_hash" value="baaa2ead3fef2bd07f9d075f08992dd55ca09ff37a81c9eb8dc01b8ae34745e4"/>
+  </properties>
+  <testcase classname="labwired" name="run" time="334.011657">
+  </testcase>
+  <testcase classname="labwired" name="assertion 1: uart_contains: bay-occupancy ready" time="0.000000">
+  </testcase>
+  <testcase classname="labwired" name="assertion 2: uart_contains: BAY 0 ready" time="0.000000">
+  </testcase>
+  <testcase classname="labwired" name="assertion 3: uart_contains: BAY 3 ready" time="0.000000">
+  </testcase>
+  <testcase classname="labwired" name="assertion 4: uart_contains: STATE P3000 E500" time="0.000000">
+  </testcase>
+  <testcase classname="labwired" name="assertion 5: uart_contains: STATE P2000 E2000" time="0.000000">
+  </testcase>
+</testsuite>
