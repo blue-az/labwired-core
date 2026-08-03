@@ -842,45 +842,44 @@ boards:
     #      address resolution is NOT modelled, so 0 is the honest value. `+0x10` is
     #      still unidentified and is zeroed for the same staleness reason, flagged as a
     #      choice.
-    # RWBLECNTL bit 25 IS now modelled — it was previously called out here as a
-    # known gap, and that gap turned out to be a real defect rather than a
-    # tolerable simplification. r_lld_adv_stop (0x4001898A) sets it alongside
-    # CS+0x20 = 1 ONLY down the branch it takes when the activity's state byte
-    # lld_adv_env[act]->[137] is 1, i.e. an advertising event is in flight;
-    # firmware then sets state 2 and WAITS for lld_adv_frm_isr -> r_lld_adv_end.
-    # With state 0 a different synchronous path runs (0x400189E6) and the bit is
-    # never touched. So ignoring it is harmless when re-advertising slowly (the
-    # stop lands between events) and fatal at the 20 ms BLE minimum advertising
-    # interval (the stop lands ON an event): the activity stays STOPPING, adv_start
-    # never re-arms it, and the node goes quiet after one publish while still
-    # looking healthy. The model now ends the in-flight event early through the
-    # same ET_STATUS_END + sch_prog_end path a natural expiry takes.
+    # NOT modelled and called out rather than invented: RWBLECNTL bit 25, which
+    # r_lld_adv_stop (0x4001898A) sets alongside CS+0x20 = 1 when it aborts an
+    # in-flight advertising event. What that does to an already-programmed event was
+    # not determined; the measured cost of ignoring it is that the event runs its
+    # programmed duration (<= 2.8 ms) before lld_adv_frm_isr completes the stop.
+    # Evidence re-run on this commit: lib 2535/0 default and 2649/0 with --features
+    # event-scheduler, C3 heavy differentials 13/13 the real way, clippy clean both
+    # feature configs with --all-targets, cargo fmt clean, both existing BLE gates
+    # green, and a new gate (e2e_esp32c3_ble_adv_republish) requiring five completed
+    # loop() iterations per node and five different successive counter values read by
+    # the peer's application, both ways, with NO firmware assertion in the serial.
+    # No live re-capture.
     #
-    # Scope was established by measurement, not argument: aborting a Pending event
-    # silenced both nodes (the PDU goes out at event START, so the packet is
-    # already on air by the time firmware can ask), and aborting any Running event
-    # was also silent because this model runs ONE event queue for every activity
-    # and at 20 ms the event in flight is very often the SCANNER — truncating that
-    # closes the receive window. The abort is scoped to legacy-advertising control
-    # structures via the same CS_FORMAT check the TX path gates on.
+    # 2026-08-04: an attempt to model RWBLECNTL bit 25 (the advertising-event
+    # abort) was merged and then REVERTED the same day, because the two-node run
+    # that would have justified it came back negative. Recorded so the next
+    # attempt does not repeat it:
     #
-    # SILICON, 2026-08-04: two real ESP32-C3s (MAC 38:44:be:42:f5:58 and
-    # 9c:cc:01:d0:5e:70) were flashed with the identical image and sniffed off the
-    # air from the host — tag 0x5a took the host role and 0x72 stayed guest
-    # (myTag < peerTag), ball bytes advance across frames, ~200 frames per node
-    # per 20 s. That is a live AIR capture confirming the firmware is correct and
-    # the twin was the thing at fault; it is NOT a register re-capture, so the
-    # reset-state oracle's last_capture is unchanged.
+    #   baseline (no bit25 model): node A takes the host role, ball sweeps
+    #     x=4..122, score reaches 3:2 — one reception gets through and the
+    #     host-side game runs.
+    #   with the abort modelled:   no node ever takes the host role, the ball
+    #     never moves, and only ~50 loop iterations happen where the baseline
+    #     manages ~157. Strictly worse, same firmware image.
     #
-    # ⚠ NOT determined: whether silicon reports the abort as irq_type 0 or 1
-    # (r_lld_adv_frm_cbk dispatches both to lld_adv_frm_isr, so it is not
-    # observable through this interface), and whether hardware clears bit 25 once
-    # serviced — it is plain storage and only the 0->1 edge acts.
+    # Three scopings were tried and ALL regressed: abort any in-flight event;
+    # abort only Running events; abort only Running legacy-ADVERTISING events
+    # (CS_FORMAT gated). So the defect is not simply "the abort is missing" —
+    # ending the event early through the ordinary ET_STATUS_END + sch_prog_end
+    # path is not what the core does, or not all of it. The ROM evidence for the
+    # bit stands (r_lld_adv_stop 0x4001898A sets it only when state byte [137]
+    # == 1, then waits in state 2); what the CORE does in response is unknown.
     #
-    # ⚠ At the time of this ack the two-node TWIN run confirming the guest tracks
-    # the ball had not yet completed, and no gate exercises a fast re-publication
-    # cadence — both existing BLE gates run at 700 ms and provably cannot catch
-    # this. That gate is still owed.
+    # The bug it was chasing is real and still OPEN: at a 20 ms re-publication
+    # cadence a node goes quiet after its first publish, while two real C3s
+    # flashed with the identical image play correctly (live air capture
+    # 2026-08-04: roles negotiated, ball bytes advancing, ~200 frames per node
+    # per 20 s). Twin-only defect.
     drift_ack: 2026-08-04
 
   - id: nucleo-l476rg
