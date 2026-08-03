@@ -104,13 +104,6 @@ fn test_asset_init() {
         std::fs::remove_dir_all(output_dir).ok();
     }
 
-    let root = std::path::PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap())
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .to_path_buf();
-
     // `CARGO_BIN_EXE_labwired` is cargo's own path to the built binary. A
     // hardcoded `target/debug/labwired` is wrong whenever the target dir is
     // not the default — a `CARGO_TARGET_DIR` env var or a `[build] target-dir`
