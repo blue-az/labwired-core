@@ -269,7 +269,7 @@ impl SystemBus {
             .next()?
             .artifacts
             .into_iter()
-            .find(|a| crate::inspect::is_display_artifact(a))
+            .find(crate::inspect::is_display_artifact)
     }
 
     /// The join behind [`Self::inspect_devices`] and [`Self::display_artifact`].
