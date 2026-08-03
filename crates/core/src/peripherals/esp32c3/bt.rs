@@ -540,6 +540,116 @@
 //! two first. Reception is now gated on the control structure's measured
 //! scanning format; see [`CS_FORMAT_SCAN`] for what that costs.
 //!
+//! ### Measured result, CONTINUOUS re-publication — and the rule it taught
+//!
+//! One changed payload is not an application. The same node sketch re-publishes
+//! forever — `adv->stop()`, `setAdvertisementData(counter)`, `adv->start()`,
+//! `TICK n`, `delay(700)` — and that loop used to run exactly twice before the
+//! twin died with the link layer's **own** assertion, ~198 M steps in.
+//!
+//! **Nothing was ever blocked, and it is worth being explicit about that**,
+//! because "the sketch never reaches a second `loop()`" was the working theory
+//! and it was wrong. `adv->stop()`, `setAdvertisementData()` and `adv->start()`
+//! all return; a watch on the sketch's own call sites (`0x4200_039E` and the
+//! four `jal`s inside it) has iteration 1 complete in ~44 k steps. `TICK n`
+//! lands every **112 M steps**, which is the sketch's `delay(700)` at 160 M
+//! steps per simulated second, to the FreeRTOS tick. The loop was on time. It
+//! was the controller underneath it that died:
+//!
+//! ```text
+//! [A] TICK 1                                              (step  42.4 M)
+//! [A] TICK 2                                              (step 154.6 M)
+//! [A] assert ble_util_buf.c 180, param 000000e2 00000205  (step 197.9 M)
+//! [B] assert ble_util_buf.c 180, param 000000e2 00000204
+//! ```
+//!
+//! ### The cause: a payload pointer masked with `0x7FFF`
+//!
+//! `ble_util_buf.c` 180 is `r_ble_util_buf_rx_free` (`0x4000_315C`) refusing a
+//! buffer that is not in the RX pool: it computes `((buf - 0x7805) >> 10) & 0xFF`
+//! and asserts it is `<= 8`. That range check *is* the pool's address map —
+//! nine 1 KiB buffers whose data pointers are `0x7805, 0x7C05, 0x8005, 0x8405,
+//! 0x8805, 0x8C05, 0x9005, 0x9405, 0x9805`, and the descriptor ring in the twin
+//! walks exactly those. **Five of the nine are at or above `0x8000`.**
+//!
+//! This model masked the RX descriptor's `+0x12` — and the TX descriptor's
+//! `+0x4`, and `CS+0x1C` — with `0x7FFF`, on the theory that bit15 was "a flag
+//! whose meaning was not determined", because a live descriptor's `+0x0` read
+//! `0x903C` where its neighbours read `0x103C`. That bit15 is [`RXD_DONE`] and
+//! it belongs to `+0x0`. Every ROM site that reads a payload pointer
+//! (`0x4002_46EE`, `0x4002_4878`) zero-extends the halfword with no mask at all.
+//!
+//! So the mask folded the top five pool buffers onto the bottom 8 KiB of
+//! exchange memory, and the model wrote received advertising payloads into it:
+//!
+//! ```text
+//! 0x8005 -> 0x0005   the EXCHANGE TABLE
+//! 0x8405 -> 0x0405   the CONTROL STRUCTURES
+//! 0x9005 -> 0x1005   the RX DESCRIPTOR RING ITSELF
+//! ```
+//!
+//! The last one closes the loop: bytes 13 and 14 of a 15-byte legacy `ADV_IND`
+//! land on descriptor 0's own `+0x12`, and in the two-node run those two bytes
+//! are the peer's `<tag> <counter>`. Hence `0x0205` on node A and `0x0204` on
+//! node B — the same counter, the two different tags — and hence a free of a
+//! buffer that was never a buffer. It took ~198 M steps because the ring has to
+//! reach its third buffer first, which is why no unit test and neither earlier
+//! gate had ever seen it. See [`RXD_DATA_PTR`].
+//!
+//! ### The second defect it was hiding, and the rule behind it
+//!
+//! Fixing only the descriptor *fields* first made the twin die one assert
+//! earlier instead (`assert emi.c 159, param 0000ff33 0000003f` —
+//! `r_emi_get_mem_addr_by_offset` refusing an offset whose 1 KiB index is 63),
+//! which is how `+0xE` came to be understood: it is the resolving-address-list
+//! pointer, `r_lld_scan_process_pkt_rx_adv_rep` copies it into the advertising
+//! report, and ESP-IDF's handler dereferences it as an exchange-memory pointer
+//! whenever it is non-zero. In the failing runs it was non-zero *because* the
+//! aliased payload writes had scribbled on the descriptor ring — so the pointer
+//! mask was the single root cause of both asserts.
+//!
+//! The field writes stay anyway, and the reason generalises past this bug:
+//! **a hardware-owned field the model leaves alone is not *unmodelled*, it is
+//! *stale*, and firmware cannot tell the difference.** The model now writes
+//! **every** core-owned RX-descriptor field on every reception — `+0x0` bit15,
+//! `+0x2`, `+0x4`, `+0x6`, `+0x8`, `+0xC`, `+0xE`, `+0x10` — with the ones it
+//! has nothing to say about explicitly zeroed and each one's status stated at
+//! its constant ([`RXD_RSSI`], [`RXD_RAL_PTR`], [`RXD_UNKNOWN_10`]). Only
+//! `+0x0` bits[14:0] and `+0x12`, which the ROM's own refill paths own, are
+//! left alone. Reading the ROM for that also *identified* `+0x6`: it is the raw
+//! RSSI byte `rf_api.rssi_convert` is fed, which the earlier pass had recorded
+//! as "looks like it could carry RSSI — nothing measured says so".
+//!
+//! ### Measured result
+//!
+//! Real captured serial, both nodes, no assertion anywhere in the run:
+//!
+//! ```text
+//! TICK 1  42.4 M   TICK 2 154.6 M   TICK 3 266.8 M   TICK 4 379.7 M   TICK 5 491.9 M
+//! [A] PEER tag=5 val=0 / 1 / 2 / 3 / 4 / 5 from=02:00:00:00:00:05
+//! [B] PEER tag=4 val=0 / 1 / 2 / 3 / 4 / 5 from=02:00:00:00:00:04
+//! ```
+//!
+//! i.e. each node's *application* read six successive values the other's
+//! application chose, one per `loop()` iteration — a data stream, not a
+//! payload. `crates/cli/tests/e2e_esp32c3_ble_adv_republish.rs` is the gate
+//! over it (162 s), and it fails on `assert ` appearing in the serial at all —
+//! the sharpest oracle this stack has, and the one that caught both defects.
+//!
+//! **What the advertising stop does NOT do here, stated plainly.**
+//! `r_lld_adv_stop` (`0x4001_898A`), when the activity has an event in flight
+//! (state 1), writes `CS+0x20 = 1` and sets **`RWBLECNTL` bit 25** before
+//! moving the activity to state 2. This model stores that bit and acts on
+//! neither it nor `CS+0x20`: what bit 25 does to an event already programmed —
+//! end it early with `irq_type` 0, or with the abort `irq_type` 1
+//! `r_lld_adv_frm_cbk` also accepts — was **not** determined, and inventing one
+//! would put a fabricated callback path in the middle of the stop sequence. The
+//! measured consequence of not modelling it is bounded and small: the in-flight
+//! event runs to its programmed duration (≤ 2.8 ms of device time) and
+//! `r_lld_adv_frm_isr` then finds state 2 and completes the stop through
+//! `r_lld_adv_end` → `lld_adv_end_ind_handler` exactly as it does on silicon.
+//! The traces above are of a stop that completes that way, every iteration.
+//!
 //! ### Measured result (single node, 500 M steps, `LABWIRED_BT_TRACE=1`)
 //!
 //! `PRE_BLE / BLE_INIT_OK / ADV_ON / ALIVE`, no asserts, 810 BT register
@@ -965,6 +1075,75 @@ const _: () = assert!(RXD_STATUS_GOOD & RXD_STATUS_RELEASED == 0);
 /// advertising-data length from `(lhu >> 8) - 6` and the address type from
 /// bit 6. Live: `0x0C03` — a 12-byte `SCAN_REQ` (type 3), i.e. ScanA + AdvA.
 const RXD_HEADER: u32 = 0x4;
+/// RX descriptor `+0x6`: **the raw RSSI byte**, and the ROM says so outright.
+/// `r_lld_scan_process_pkt_rx_adv_rep` (`0x4002_482C`) does, at `0x4002_49C6`:
+///
+/// ```text
+/// s2 += 6                                  // rxdesc + 6
+/// a0 = lhu(emi(0x1000) + s2) & 0xFF        // the low byte only
+/// jalr *(0x3FCD_FBE8)                      // rwip_rf + 0x20 = rf_api.rssi_convert
+/// sb a0, 116(lld_scan_env[act])            // -> the advertising report's RSSI
+/// ```
+///
+/// The earlier pass looked only at `r_lld_scan_process_pkt_rx_legacy_adv`,
+/// which fabricates a constant `0x7F04` into a *different* field
+/// (`sh 0x7F04, 114(env)`), and concluded "+0x6 looks like it could carry
+/// RSSI — nothing measured says so". The report builder settles it.
+///
+/// This model has **no PHY and therefore no RSSI** (see the module docs), so it
+/// writes **zero** here — which is what the twin's own advertising reports have
+/// always carried (`SCAN_HIT … rssi=0`). What it must NOT do is leave the
+/// halfword at whatever the RAM under exchange memory happened to hold; see
+/// [`RXD_RAL_PTR`] for what leaving a core-owned field stale costs.
+const RXD_RSSI: u32 = 0x6;
+/// RX descriptor `+0xE`: **the resolving-address-list (RAL) entry pointer** the
+/// core writes when it resolved the sender's private address — an exchange-memory
+/// offset, or **0 for "no resolution"**.
+///
+/// This one is load-bearing and cost the whole two-node run. The chain, all
+/// static and all attested:
+///
+/// 1. `r_lld_scan_process_pkt_rx_adv_rep` (`0x4002_482C`) at `0x4002_4978`:
+///    `a5 = lhu(emi(0x1000) + idx*20 + 14)` → `sh a5, 90(lld_scan_env[act])`;
+/// 2. the same function then `memcpy`s 44 bytes from `lld_scan_env+88` into the
+///    `LLD_ADV_REP_IND` message body (`0x4002_49E4`), so `env+90` **is** the
+///    message's halfword at `+2`;
+/// 3. ESP-IDF's own `lld_adv_rep_ind` handler (in `libble_app`, `0x4208_C42C`
+///    in the gate's image) reads `lhu(msg + 2)` into a local, and **when it is
+///    non-zero** treats it as a RAL entry pointer: it recovers the index as
+///    `(ptr - 0xC60) / 52`, and dereferences `emi_get_mem_addr_by_offset(ptr + 24)`
+///    and `emi_get_mem_addr_by_offset(ptr + 46)` to `memcpy` two 6-byte
+///    addresses out of the entry.
+///
+/// So a stale non-zero halfword here is dereferenced as an exchange-memory
+/// pointer. `r_emi_get_mem_addr_by_offset` asserts `offset >> 10 <= 50`
+/// (`emi.c` line 159), and the twin died on exactly that:
+///
+/// ```text
+/// assert emi.c 159, param 0000ff33 0000003f
+/// ```
+///
+/// `0xFF33 = 0xFF05 + 46`, i.e. the `+46` dereference of a garbage pointer, and
+/// `0x3F = 0xFF33 >> 10 = 63 > 50`. The model had never written `+0xE`, so the
+/// descriptor carried whatever the SRAM behind exchange memory last held —
+/// which, in that run, was the wreckage of [`RXD_DATA_PTR`]'s aliased payload
+/// writes. Fixing the pointer removes the *source* of the garbage; writing the
+/// field removes the model's dependence on the SRAM being clean, which is not a
+/// property any model gets to assume.
+///
+/// This air has no privacy and no resolvable private addresses — nothing on it
+/// ever transmits an RPA — so the honest value is **0, "the core resolved
+/// nothing"**, which is also the value every reception that worked was
+/// accidentally getting. Address resolution itself is NOT modelled.
+const RXD_RAL_PTR: u32 = 0xE;
+/// RX descriptor `+0x10`: **meaning not determined.** No ROM site that was read
+/// (`r_lld_rxdesc_check`, `r_lld_rxdesc_free`, `r_lld_scan_process_pkt_rx*`,
+/// `r_lld_adv_pkt_rx`) touches it — the fields those routines use are `+0x0`,
+/// `+0x2`, `+0x4`, `+0x6`, `+0x8`, `+0xC`, `+0xE` and `+0x12`. It is written
+/// as zero for the same reason as [`RXD_RAL_PTR`]: a core-owned field the model
+/// leaves alone is not "unmodelled", it is *stale*, and the link layer cannot
+/// tell the difference. Zero is stated as a choice, not as a measurement.
+const RXD_UNKNOWN_10: u32 = 0x10;
 /// RX descriptor `+0xC`: bits[15:11] carry the **link label** of the activity
 /// that received the packet. `r_lld_rxdesc_check(link_label)` (`0x4002_022C`)
 /// compares `lhu(rxdesc + 12) >> 11` against its argument and reports nothing
@@ -995,6 +1174,53 @@ const RXD_LINK_LABEL_SHIFT: u32 = 11;
 const RXD_TIMESTAMP: u32 = 0x8;
 /// RX descriptor `+0x12`: exchange-memory offset of the received **payload**
 /// (the PDU body, with no header bytes — those live in [`RXD_HEADER`]).
+///
+/// ## It is a FULL 16-BIT offset. Masking bit15 out of it corrupts the world.
+///
+/// Every ROM site reads this halfword and uses it whole:
+/// `r_lld_scan_process_pkt_rx_legacy_adv` (`0x4002_46EE`) and
+/// `r_lld_scan_process_pkt_rx_adv_rep` (`0x4002_4878`) both do
+/// `lhu` → `sll 16` → `srl 16`, i.e. a plain zero-extend with no mask, and
+/// `r_lld_rxdesc_check` (`0x4002_035C`) stores whatever
+/// `ble_util_buf_rx_alloc_in_isr` returned straight into it.
+///
+/// The buffers that allocator hands out are **above 0x8000**.
+/// `r_ble_util_buf_rx_free` (`0x4000_315C`) range-checks its argument as
+/// `((buf - 0x7805) >> 10) & 0xFF <= 8`, i.e. the RX pool is nine 1 KiB
+/// buffers whose data pointers are `0x7805, 0x7C05, 0x8005, 0x8405, 0x8805,
+/// 0x8C05, 0x9005, 0x9405, 0x9805`. Measured in the twin — the descriptor
+/// ring walks exactly those, in that order.
+///
+/// This model used to mask the pointer with `0x7FFF`, on the theory that
+/// bit15 was "a flag whose meaning was not determined" because a live
+/// descriptor's `+0x0` read `0x903C` where its neighbours read `0x103C`. That
+/// bit15 is [`RXD_DONE`], and it belongs to `+0x0` — the ownership flag on the
+/// **next-descriptor link**, not a convention every pointer field shares. The
+/// mask therefore folded the top five buffers of the pool onto the bottom of
+/// exchange memory and the model wrote received advertising payloads into it:
+///
+/// ```text
+/// 0x8005 -> 0x0005   the EXCHANGE TABLE (entries 0 and 1)
+/// 0x8405 -> 0x0405   the CONTROL STRUCTURE array
+/// 0x9005 -> 0x1005   the RX DESCRIPTOR RING ITSELF
+/// ```
+///
+/// and the last of those is self-referential: payload bytes 13 and 14 of a
+/// 15-byte legacy `ADV_IND` land exactly on descriptor 0's own `+0x12`. In the
+/// two-node gate those two bytes are the peer's `<tag> <counter>`, so
+/// descriptor 0's buffer pointer became `0x0205` on node A and `0x0204` on node
+/// B — the peer's tag with the peer's counter above it — and the link layer
+/// then handed that to `ble_util_buf_rx_free`, which asserted:
+///
+/// ```text
+/// [A] assert ble_util_buf.c 180, param 000000e2 00000205
+/// [B] assert ble_util_buf.c 180, param 000000e2 00000204
+/// ```
+///
+/// (`0xE2 = ((0x205 - 0x7805) >> 10) & 0xFF`, the failed range check.) It took
+/// ~198 M steps to show up because the ring has to reach the third buffer
+/// first, which is why no unit test and neither earlier gate ever saw it.
+///
 /// `r_lld_scan_process_pkt_rx_legacy_adv` reads this halfword and `memcpy`s
 /// six bytes from `emi_get_mem_addr_by_offset(that + 0)` to get the
 /// advertiser address.
@@ -1617,11 +1843,16 @@ impl Esp32c3Bt {
         let Some(tx_desc_ptr) = self.em_read_u16(bus, cs + CS_TX_DESC_PTR) else {
             return false;
         };
-        // Bit15 of a descriptor pointer is a flag the RX descriptor chain also
-        // carries (a live descriptor read `0x903C` where its neighbours read
-        // `0x103C`); its meaning was not determined, so it is masked off the
-        // address and nothing is inferred from it.
-        let tx_desc = u32::from(tx_desc_ptr & 0x7FFF);
+        // FULL 16 BITS. The `0x903C`-vs-`0x103C` observation that used to
+        // justify masking bit15 out of every descriptor pointer was of the RX
+        // descriptor's `+0x0`, whose bit15 is [`RXD_DONE`] — an ownership flag
+        // on the NEXT-descriptor link, not a convention shared by pointers in
+        // general. Nothing measured says bit15 means anything here, and
+        // masking it is not "ignoring an unknown flag": it silently aliases
+        // every exchange-memory offset at or above 0x8000 onto the first
+        // 8 KiB, where the exchange table and the control structures live.
+        // See [`RXD_DATA_PTR`] for what that cost on the receive side.
+        let tx_desc = u32::from(tx_desc_ptr);
         if tx_desc == 0 {
             return false; // an event that only listens
         }
@@ -1642,7 +1873,8 @@ impl Esp32c3Bt {
         for b in 0..u32::from(TXD_ADDR_PREFIX_LEN) {
             payload.push(self.em_read_u8(bus, cs + CS_BDADDR + b).unwrap_or(0));
         }
-        let data_off = u32::from(data_ptr & 0x7FFF);
+        // Full 16 bits, same reasoning as the descriptor pointer above.
+        let data_off = u32::from(data_ptr);
         for b in 0..u32::from(len - TXD_ADDR_PREFIX_LEN) {
             payload.push(self.em_read_u8(bus, data_off + b).unwrap_or(0));
         }
@@ -1758,7 +1990,12 @@ impl Esp32c3Bt {
         let payload = &frame.pdu[2..];
         let len = payload.len() as u16;
 
-        let data_off = u32::from(data_ptr & 0x7FFF);
+        // FULL 16 BITS — no `& 0x7FFF`. See [`RXD_DATA_PTR`]: bit15 is the
+        // ownership flag of `+0x0`, and masking it out of a *buffer* pointer
+        // aliased the top half of the RX pool onto exchange memory's first
+        // 8 KiB, which is where the exchange table, the control structures and
+        // the descriptor ring itself live.
+        let data_off = u32::from(data_ptr);
         for (i, b) in payload.iter().enumerate() {
             let Some(addr) = self.em_cpu_addr(data_off + i as u32) else {
                 return false;
@@ -1777,6 +2014,22 @@ impl Esp32c3Bt {
             rxd + RXD_LINK_LABEL,
             link_label << RXD_LINK_LABEL_SHIFT,
         );
+        // EVERY core-owned field, every reception — including the ones this
+        // model has nothing to say about. A descriptor field the core writes
+        // and the model does not is not "unmodelled", it is whatever the SRAM
+        // behind exchange memory last held, and the link layer reads it as
+        // hardware output either way. `+0xE` is the one that proved it: the
+        // twin ran fine for ~150 M steps and then died on
+        // `assert emi.c 159, param 0000ff33 0000003f` — ESP-IDF's advertising
+        // report handler dereferencing a stale halfword as a resolving-list
+        // pointer. See [`RXD_RSSI`], [`RXD_RAL_PTR`] and [`RXD_UNKNOWN_10`] for
+        // what each one is and why zero is the honest value here.
+        //
+        // `+0x0` bits[14:0] (the next-descriptor link) and `+0x12` (the buffer
+        // offset) are SOFTWARE-owned and are deliberately left alone.
+        let _ = self.em_write_u16(bus, rxd + RXD_RSSI, 0);
+        let _ = self.em_write_u16(bus, rxd + RXD_RAL_PTR, 0);
+        let _ = self.em_write_u16(bus, rxd + RXD_UNKNOWN_10, 0);
         // `RXDONE` LAST, after every other field and the payload: it is the
         // handshake `r_lld_rxdesc_check` gates on, so setting it earlier would
         // let firmware read a half-written descriptor.
@@ -3061,6 +3314,191 @@ mod tests {
             "link label = the control-structure index: this scan activity's CS \
              is at EM 0x45A = 1024 + 1*90, i.e. index 1, while the advertising \
              activity next to it is index 0"
+        );
+    }
+
+    /// A receive buffer ABOVE 0x8000 is written where the ROM would read it —
+    /// the descriptor's payload pointer is a FULL 16-bit exchange-memory
+    /// offset, not a 15-bit one with a flag on top.
+    ///
+    /// ## Derived from the ROM, not from this file
+    ///
+    /// `r_ble_util_buf_rx_free` (`0x4000_315C`) range-checks the buffer it is
+    /// handed as `((buf - 0x7805) >> 10) & 0xFF <= 8`, so the RX pool is nine
+    /// 1 KiB buffers whose data pointers are `0x7805, 0x7C05, 0x8005, 0x8405,
+    /// 0x8805, 0x8C05, 0x9005, 0x9405, 0x9805`. **Five of the nine are at or
+    /// above 0x8000.** `r_lld_scan_process_pkt_rx_legacy_adv` (`0x4002_46EE`)
+    /// and `r_lld_scan_process_pkt_rx_adv_rep` (`0x4002_4878`) read `+0x12`
+    /// with `lhu` and a plain zero-extend — no mask anywhere.
+    ///
+    /// So this test uses `0x8005`, one of the pool's real offsets, and asserts
+    /// the bytes land in the 1 KiB window mapped for EM `0x8000`. It also
+    /// asserts they do NOT land at `0x0005`, which is where the 0x7FFF mask
+    /// this model used to apply put them: inside the EXCHANGE TABLE. That
+    /// aliasing is what produced
+    /// `assert ble_util_buf.c 180, param 000000e2 00000205` ~198 M steps into
+    /// the two-node run — see [`RXD_DATA_PTR`].
+    #[cfg(feature = "event-scheduler")]
+    #[test]
+    fn a_receive_buffer_above_0x8000_is_not_aliased_into_the_exchange_table() {
+        use crate::peripherals::ble_air::{BleAirBus, BleAirFrame};
+        use crate::sched::EventScheduler;
+
+        let clock = CycleClock::default();
+        let mut bt = advertising_part(&clock);
+        let air = BleAirBus::new();
+        bt.air = air.clone();
+        let mut bus = RamBus::default();
+        let mut sched = EventScheduler::new();
+        stage_advertising_event(&mut bt, &mut bus, 0);
+        let (rxd_cpu, _) = stage_scan_event(&mut bt, &mut bus, 1, 1, 0);
+
+        // Repoint the descriptor at a REAL pool buffer — the third of the nine,
+        // the first one with bit15 set — and map the 1 KiB EM bucket it lives
+        // in somewhere far away from every other window in the fixture.
+        const POOL_BUF: u16 = 0x8005;
+        let high_cpu = FIXTURE_EM_BASE + 0x4000;
+        bt.write_u32(EM_BASE_REG_BANK_A + 24, em_base_reg(0x8000, high_cpu))
+            .unwrap();
+        bus.put(rxd_cpu + u64::from(RXD_DATA_PTR), &POOL_BUF.to_le_bytes());
+
+        let et0_before: Vec<u8> = (5..9u64)
+            .map(|i| bus.read_u8(FIXTURE_EM_BASE + i).unwrap())
+            .collect();
+
+        air.transmit(BleAirFrame {
+            seq: 0,
+            source: bt.node_id + 1,
+            channel: 39,
+            access_address: 0x8E89_BED6,
+            crc_init: 0x0055_5555,
+            pdu: vec![0x20, 0x04, 0xDE, 0xAD, 0xBE, 0xEF],
+        });
+
+        bt.write_u32(PROG_PUSH, 0x8000_0001).unwrap();
+        let token = bt.take_scheduled_events()[0].1;
+        let end = 0x0AF7 * 2 * CYCLES_PER_FINE_TICK;
+        for at in [0, end] {
+            sched.advance_to(at);
+            clock.publish(at);
+            bt.on_event(token, &mut sched, &mut bus);
+        }
+
+        let et0_after: Vec<u8> = (5..9u64)
+            .map(|i| bus.read_u8(FIXTURE_EM_BASE + i).unwrap())
+            .collect();
+
+        // EM 0x8005 is 5 bytes into the bucket mapped at `high_cpu`.
+        for (i, b) in [0xDEu8, 0xAD, 0xBE, 0xEF].iter().enumerate() {
+            assert_eq!(
+                bus.read_u8(high_cpu + 5 + i as u64).unwrap(),
+                *b,
+                "payload byte {i} must land at EM {POOL_BUF:#06x}, the offset \
+                 the descriptor names and the ROM reads back"
+            );
+        }
+        // And NOT at the 15-bit alias. EM 0x0005 is 5 bytes into the exchange
+        // table, whose bucket the fixture maps at FIXTURE_EM_BASE; writing
+        // there corrupts exchange-table entry 0 in place. Compared against what
+        // the fixture staged rather than against zero, because "unchanged" is
+        // the property and zero is not what is there.
+        assert_eq!(
+            &et0_after[..],
+            &et0_before[..],
+            "exchange-table entry 0 bytes 5..9 were overwritten by the received \
+             payload — the buffer pointer is being masked with 0x7FFF, which \
+             folds the top five RX pool buffers onto EM 0x0000..0x1FFF (and \
+             0x9005 onto the descriptor ring itself)"
+        );
+        assert_eq!(
+            bus.u16_at(rxd_cpu + u64::from(RXD_DATA_PTR)),
+            POOL_BUF,
+            "the buffer pointer is SOFTWARE-owned; the core must not touch it"
+        );
+    }
+
+    /// A reception writes EVERY core-owned descriptor field, including the ones
+    /// this model has nothing to say about.
+    ///
+    /// A hardware-owned field the model leaves alone is not "unmodelled", it is
+    /// whatever the SRAM behind exchange memory last held, and the link layer
+    /// reads it as hardware output either way. `+0xE` is the one that proved
+    /// it: `r_lld_scan_process_pkt_rx_adv_rep` (`0x4002_4978`) copies it into
+    /// the advertising report, and ESP-IDF's `lld_adv_rep_ind` handler
+    /// dereferences it as a resolving-list exchange-memory pointer whenever it
+    /// is non-zero.
+    ///
+    /// The descriptor is POISONED first, because that is the only way this test
+    /// can fail: a zero-initialised fixture cannot tell "written 0" from "never
+    /// written".
+    #[cfg(feature = "event-scheduler")]
+    #[test]
+    fn a_reception_writes_every_core_owned_descriptor_field() {
+        use crate::peripherals::ble_air::{BleAirBus, BleAirFrame};
+        use crate::sched::EventScheduler;
+
+        let clock = CycleClock::default();
+        let mut bt = advertising_part(&clock);
+        let air = BleAirBus::new();
+        bt.air = air.clone();
+        let mut bus = RamBus::default();
+        let mut sched = EventScheduler::new();
+        stage_advertising_event(&mut bt, &mut bus, 0);
+        let (rxd_cpu, rxbuf_cpu) = stage_scan_event(&mut bt, &mut bus, 1, 1, 0);
+
+        // Poison every core-owned field with a value that would be catastrophic
+        // if it survived. 0xFF05 is the exact shape that killed the twin: the
+        // handler dereferences `emi_get_mem_addr_by_offset(0xFF05 + 46)` and the
+        // ROM asserts `emi.c 159` because `0xFF33 >> 10 = 63 > 50`.
+        for off in [RXD_RSSI, RXD_RAL_PTR, RXD_UNKNOWN_10] {
+            bus.put(rxd_cpu + u64::from(off), &0xFF05u16.to_le_bytes());
+        }
+
+        air.transmit(BleAirFrame {
+            seq: 0,
+            source: bt.node_id + 1,
+            channel: 39,
+            access_address: 0x8E89_BED6,
+            crc_init: 0x0055_5555,
+            pdu: vec![0x20, 0x02, 0x11, 0x22],
+        });
+
+        bt.write_u32(PROG_PUSH, 0x8000_0001).unwrap();
+        let token = bt.take_scheduled_events()[0].1;
+        let end = 0x0AF7 * 2 * CYCLES_PER_FINE_TICK;
+        for at in [0, end] {
+            sched.advance_to(at);
+            clock.publish(at);
+            bt.on_event(token, &mut sched, &mut bus);
+        }
+
+        assert_eq!(
+            bus.u16_at(rxd_cpu + u64::from(RXD_RAL_PTR)),
+            0,
+            "+0xE is the resolving-list pointer ESP-IDF's lld_adv_rep_ind \
+             handler dereferences when non-zero. Address resolution is not \
+             modelled, so the core must write 0 — leaving the field alone hands \
+             the link layer a stale exchange-memory pointer"
+        );
+        assert_eq!(
+            bus.u16_at(rxd_cpu + u64::from(RXD_RSSI)),
+            0,
+            "+0x6 low byte is the raw RSSI r_lld_scan_process_pkt_rx_adv_rep \
+             feeds to rf_api.rssi_convert; there is no PHY here, so 0"
+        );
+        assert_eq!(
+            bus.u16_at(rxd_cpu + u64::from(RXD_UNKNOWN_10)),
+            0,
+            "+0x10 has no identified reader, but stale is not the same as \
+             unmodelled"
+        );
+        // The reception itself still landed, so this is not passing because
+        // nothing happened.
+        assert_eq!(bus.read_u8(rxbuf_cpu).unwrap(), 0x11);
+        assert_eq!(bus.read_u8(rxbuf_cpu + 1).unwrap(), 0x22);
+        assert_eq!(
+            bus.u16_at(rxd_cpu + u64::from(RXD_NEXT)) & RXD_DONE,
+            RXD_DONE
         );
     }
 
