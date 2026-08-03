@@ -776,7 +776,26 @@ boards:
     # `lact_counts_and_latches_when_declared` keeps that guard from passing
     # vacuously. No C3 register layout, base address or reset value moved, so
     # the 2026-06-17 reset-state oracle cannot move. No live re-capture.
-    drift_ack: 2026-08-02
+    # 2026-08-03: mapped and modelled the BLE baseband window 0x6003_1000 (bt.rs)
+    # plus the shared air (peripherals/ble_air.rs). The window was previously
+    # UNMAPPED — the chip yaml jumped i2s0 0x6002_D000 -> aes 0x6003_A000 — so it is
+    # not among the 29 declarative blocks the reset-state oracle asserts, and no
+    # captured value can move. Silicon capture 2026-08-02 (C3 SuperMini
+    # 38:44:be:42:f5:58, USB-JTAG) confirms the whole window reads 0x00000000 at
+    # `reset halt` (clock-gated), which is what the model starts from; the non-zero
+    # state only appears once firmware enables the controller. Seeded values are
+    # evidenced, not chosen: VERSION 0x09001b00 is firmware-attested (the controller
+    # asserts `lld.c 318, param 00000000 09001b00` when it reads 0), the 312.5 us
+    # native tick is measured (3396 counts/1 s, 6559/2 s), and register semantics were
+    # read from the ROM's own symbols in esp32c3_rev3_rom.elf — verified to BE this
+    # silicon by reading 0x4002E64A back over JTAG and matching word for word.
+    # Evidence re-run on this commit: lib 2645/0 with --features event-scheduler, and
+    # the C3 heavy differentials 13/13 run the real way (--release --features
+    # event-scheduler -- --ignored), including every walk-on-vs-scheduler byte-identity
+    # gate and the walk-pinner ledger — kept empty by migrating the model to the event
+    # scheduler, NOT by widening EXPECTED_PINNERS. No live reset re-capture; capturing
+    # the window's post-enable state on a second board is owed and tracked.
+    drift_ack: 2026-08-03
 
   - id: nucleo-l476rg
     doc: docs/boards/nucleo-l476rg.md

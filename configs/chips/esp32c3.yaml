@@ -231,6 +231,27 @@ peripherals:
     base_address: 0x6002D000
     config:
       path: "../peripherals/esp32c3/i2s0.yaml"
+  # Bluetooth LE link-layer / baseband (0x6003_1000, 4 KiB). Behavioral model
+  # (crates/core/src/peripherals/esp32c3/bt.rs): a register-backed window plus
+  # the Bluetooth native clock (CLKN, 312.5 us) + sub-tick fine counter that the
+  # BT ROM's event scheduler reads and re-reads around arming its next-event
+  # comparator. Espressif publishes nothing for this window, so the whole thing
+  # was reverse-engineered from a live ESP32-C3 running Arduino BLEDevice::init()
+  # over OpenOCD watchpoints (silicon capture 2026-08-02) -- provenance and the
+  # explicit list of what is NOT modelled are in the module docs. Before this
+  # entry the window was unmapped and BLE init died on the first store
+  # (`unmapped_mmio` @ 0x60031204).
+  # It also raises real interrupts: the three RW-BLE timer comparators
+  # (+0x0E4 / +0x0E8 / +0x0EC) latch INTRAWSTAT, INTSTAT = raw & INTCNTL drives
+  # interrupt-matrix source 8 (RWBLE_IRQ), and the ROM ISR's IRQ FIFO (+0x2D8)
+  # is modelled so r_rwble_isr can actually dispatch. No `irq:` key here on
+  # purpose -- the level is exported through matrix_irq_sources, like wifi_mac.
+  # Radio-event interrupts (sch_prog tx/rx/end/skip) are NOT raised: there is
+  # no RF in this model, and that is where an advertising run now parks.
+  - id: "bt"
+    type: "esp32c3_bt"
+    base_address: 0x60031000
+    size: "4KB"
   # (Hardware RNG is not a separate window: RNG_DATA lives at APB_CTRL+0xB0,
   # already modeled as apb_ctrl's RND_DATA register.)
   # Crypto accelerator estate

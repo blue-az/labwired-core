@@ -92,6 +92,9 @@ pub const MODEL_TYPES: &[&str] = &[
     "rp2040_xip_ssi",
     "rp2040_usb",
     // ESP32-C3 behavioral models (esp32 factory).
+    // MUST be listed: without membership the fuzzy fallback would coerce the
+    // BLE baseband window onto some unrelated register map instead of erroring.
+    "esp32c3_bt",
     "esp32c3_i2c",
     "esp32c3_spi",
     "esp32c3_gpio",

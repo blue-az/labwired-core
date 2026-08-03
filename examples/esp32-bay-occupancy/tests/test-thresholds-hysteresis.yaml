@@ -21,7 +21,16 @@ inputs:
   system: "../system.yaml"
   firmware: "../firmware/.pio/build/adafruit_feather_esp32_v2/firmware.elf"
 limits:
-  max_steps: 3000000000
+  # The budget is in STEPS; the stimuli below fire on CYCLES, and the ratio
+  # between them is not a constant -- it depends on how much real firmware code
+  # the run executes. At 3e9 steps this reached 510M cycles while the last
+  # stimulus needs 400M, so the margin was 28%. Running the real newlib/log path
+  # instead of nop stubs costs 27% more steps per modelled cycle (the firmware
+  # now waits on genuine UART TX backpressure), which took the same budget to
+  # 371M cycles -- 7% short, and the hysteresis assertion silently stopped being
+  # reached. 4e9 restores the original headroom. If you make the twin faster or
+  # slower, check this number rather than assuming it still holds.
+  max_steps: 4000000000
 assertions:
   - uart_contains: "bay-occupancy ready"
   - uart_contains: "BAY 0 ready"
