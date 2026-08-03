@@ -20,8 +20,8 @@
 //!
 //!     [A] MYTAG 4          A's own BLE address ends 04
 //!     [B] MYTAG 5          B's ends 05
-//!     [A] PEER tag=5 ...   A's application read B's advertisement
-//!     [B] PEER tag=4 ...   B's application read A's advertisement
+//!     [A] PEER tag=5 val=0/1 ...   A's application read B's advertisement
+//!     [B] PEER tag=4 val=0/1 ...   B's application read A's advertisement
 //!
 //! Those `PEER` lines are the firmware's own `Serial.print`s out of the
 //! modelled UART0, from inside an `onResult` callback that only fires when
@@ -53,14 +53,30 @@
 //! `LABWIRED_REQUIRE_C3_BLE=1` turns absence into a hard failure, the same
 //! contract `e2e_esp32c3_ble_arduino.rs` holds.
 //!
+//! ⚠ IT NEEDS `--features event-scheduler`, AND IT IS COMPILED OUT WITHOUT IT
+//! ========================================================================
+//! The BLE baseband's radio engine runs from `Peripheral::on_event` — the one
+//! hook handed the bus, which it needs to read the controller's exchange
+//! memory. Without the `event-scheduler` feature the model stays on the legacy
+//! per-cycle walk, no programmed event ever executes, and nothing reaches the
+//! air: the gate would fail for a reason that has nothing to do with the
+//! receive path. So the whole file is `#![cfg(feature = "event-scheduler")]`,
+//! the same shape the C3 heavy differentials use.
+//!
+//! The consequence is the one everybody trips on: a plain
+//! `cargo test -p labwired-cli` runs **0 tests** from this file, silently and
+//! green. That is not this gate passing. Run it the real way:
+//!
 //! Running it
 //! ==========
-//! `#[ignore]`d: two faithful ROM boots stepping in lockstep is a long run.
+//! `#[ignore]`d on top of the feature gate: two faithful ROM boots stepping in
+//! lockstep is a long run (~14 s in release; ~46 M steps each).
 //!
 //!     scripts/ci/fetch-c3-ble-flash.sh fixtures/esp32c3-ble \
 //!         scripts/ci/c3-ble-node-flash.sha256
-//!     cargo test --release -p labwired-cli --test e2e_esp32c3_ble_two_node \
-//!         -- --ignored --nocapture
+//!     cargo test --release --features event-scheduler -p labwired-cli \
+//!         --test e2e_esp32c3_ble_two_node -- --ignored --nocapture
+#![cfg(feature = "event-scheduler")]
 
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
@@ -81,15 +97,19 @@ const DEFAULT_FLASH: &str = "fixtures/esp32c3-ble/esp32c3-ble-node-flash.bin";
 /// The run stops the moment BOTH nodes have printed a `PEER` line
 /// (`LABWIRED_BLE_DUAL_STOP_ON`), so a healthy engine never reaches this. It
 /// only bounds how long a broken one is allowed to flail. MEASURED on this
-/// tree: both nodes had reported by **44 M steps**. The ceiling is more than an
+/// tree: both nodes had read a CHANGED peer value by **46 M steps**. The ceiling is more than an
 /// order of magnitude above that, which is deliberate — the variance here is
 /// the advertising interval's random delay deciding when the two nodes'
 /// channel-39 dwells overlap, and a gate that fails because two pseudo-random
 /// schedules took a few extra intervals to line up is a flake, not a finding.
 const TWO_NODE_MAX_STEPS: u64 = 600_000_000;
 
-/// Substring both nodes must print before the run may stop early.
-const STOP_ON: &str = "PEER tag=";
+/// Substring both nodes must print before the run may stop early. `val=1` and
+/// not just `PEER` on purpose: `val=0` is what each node advertises from
+/// `setup()`, `val=1` is its first `loop()` update, so waiting for `val=1`
+/// means waiting for a *changed* byte to cross the air and be read — the thing
+/// that separates a data exchange from one lucky report.
+const STOP_ON: &str = "val=1";
 
 fn pinned_image_sha(root: &Path) -> String {
     let manifest = root.join("scripts/ci/c3-ble-node-flash.sha256");
@@ -226,25 +246,39 @@ fn two_c3_nodes_exchange_advertising_data_at_the_application_level() {
         "node B tag\nserial:\n{stdout}"
     );
 
-    // The verdict: each application read the OTHER node's advertisement.
+    // The verdict, in both directions and with the bytes CHANGING.
+    //
+    // Each node advertises `val=0` from setup() and `val=1` from its first
+    // loop() iteration. Requiring BOTH values is what makes this a data
+    // exchange rather than a single lucky report: a model that delivered one
+    // frame and then went deaf — which is exactly what a node advertising and
+    // scanning at once did before the receive path was gated on the scanning
+    // control-structure format — passes "saw a peer" and fails this.
+    //
     // Cross-checked on the tag AND the source address, so a report echoing a
-    // node's own transmission back at it could not pass.
-    assert!(
-        stdout.lines().any(|l| l.starts_with("[A]")
-            && l.contains("PEER tag=5")
-            && l.contains("from=02:00:00:00:00:05")),
-        "node A's application never saw node B's advertisement. The controller \
-         may be receiving fine — check the RX descriptor ownership bits in \
-         crates/core/src/peripherals/esp32c3/bt.rs (RXD_DONE, \
-         RXD_STATUS_RELEASED, RXD_LINK_LABEL): r_lld_rxdesc_check silently \
-         reports nothing when any of them is wrong.\nserial:\n{stdout}\nstderr:\n{stderr}"
-    );
-    assert!(
-        stdout
-            .lines()
-            .any(|l| l.starts_with("[B]") && l.contains("PEER tag=4") && l.contains("from=02:00:00:00:00:04")),
-        "node B's application never saw node A's advertisement.\nserial:\n{stdout}\nstderr:\n{stderr}"
-    );
+    // node's own transmission back at it could not pass either.
+    for (node, peer_tag, peer_addr) in [
+        ("[A]", "PEER tag=5", "from=02:00:00:00:00:05"),
+        ("[B]", "PEER tag=4", "from=02:00:00:00:00:04"),
+    ] {
+        for val in ["val=0", "val=1"] {
+            assert!(
+                stdout.lines().any(|l| l.starts_with(node)
+                    && l.contains(peer_tag)
+                    && l.contains(val)
+                    && l.contains(peer_addr)),
+                "node {node}'s application never read {val} from its peer \
+                 ({peer_tag} {peer_addr}). The controller may be receiving fine \
+                 — check the RX descriptor ownership bits in \
+                 crates/core/src/peripherals/esp32c3/bt.rs (RXD_DONE, \
+                 RXD_STATUS_RELEASED, RXD_LINK_LABEL), which \
+                 r_lld_rxdesc_check gates the host report on and which fail \
+                 SILENTLY, and CS_FORMAT_SCAN, which stops an advertising event \
+                 swallowing the frame and wedging the ring.\
+                 \nserial:\n{stdout}\nstderr:\n{stderr}"
+            );
+        }
+    }
 
     // And the run must have stopped on the acceptance condition rather than
     // grinding the ceiling — otherwise the budget, not the engine, is what this
