@@ -1,0 +1,171 @@
+peripheral: CC_DIN_S
+version: 0.1.0
+registers:
+- id: DIN_BUFFER
+  address_offset: 3072
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: This register is mapped into 8 addresses in order to enable a CPU burst.
+  side_effects: null
+- id: DIN_DMA_MEM_BUSY
+  address_offset: 3104
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: STATUS
+    bit_range:
+    - 0
+    - 0
+    description: DIN memory DMA engine status.
+  side_effects: null
+- id: SRC_MEM_ADDR
+  address_offset: 3112
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 31
+    - 0
+    description: Source address in memory.
+  side_effects: null
+- id: SRC_MEM_SIZE
+  address_offset: 3116
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: SIZE
+    bit_range:
+    - 29
+    - 0
+    description: Total number of bytes to read from memory.
+  - name: FIRST
+    bit_range:
+    - 30
+    - 30
+    description: This field is reserved
+  - name: LAST
+    bit_range:
+    - 31
+    - 31
+    description: This field is reserved
+  side_effects: null
+- id: SRC_SRAM_ADDR
+  address_offset: 3120
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 31
+    - 0
+    description: Source address in RNG SRAM.
+  side_effects: null
+- id: SRC_SRAM_SIZE
+  address_offset: 3124
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: SIZE
+    bit_range:
+    - 31
+    - 0
+    description: Total number of bytes to read from RNG SRAM.
+  side_effects: null
+- id: DIN_DMA_SRAM_BUSY
+  address_offset: 3128
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: STATUS
+    bit_range:
+    - 0
+    - 0
+    description: DIN RNG SRAM DMA engine status.
+  side_effects: null
+- id: DIN_DMA_SRAM_ENDIANNESS
+  address_offset: 3132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENDIAN
+    bit_range:
+    - 0
+    - 0
+    description: Endianness of DIN DMA transactions towards RNG SRAM. The default value is little-endian.
+  side_effects: null
+- id: DIN_SW_RESET
+  address_offset: 3140
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: RESET
+    bit_range:
+    - 0
+    - 0
+    description: Writing any value to this address resets the DIN DMA engine. The reset takes 4 CPU clock cycles to complete.
+  side_effects: null
+- id: DIN_CPU_DATA
+  address_offset: 3144
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: SIZE
+    bit_range:
+    - 15
+    - 0
+    description: When using CPU direct write to the DIN_BUFFER, the size of input data in bytes should be written to this register.
+  side_effects: null
+- id: DIN_WRITE_ALIGN
+  address_offset: 3148
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: LAST
+    bit_range:
+    - 0
+    - 0
+    description: Next CPU write to the DIN_BUFFER is the last word.
+  side_effects: null
+- id: DIN_FIFO_EMPTY
+  address_offset: 3152
+  size: 32
+  access: READ_ONLY
+  reset_value: 1
+  fields:
+  - name: STATUS
+    bit_range:
+    - 0
+    - 0
+    description: DIN FIFO status
+  side_effects: null
+- id: DIN_FIFO_RESET
+  address_offset: 3160
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: RESET
+    bit_range:
+    - 0
+    - 0
+    description: Writing any value to this address resets the DIN FIFO.
+  side_effects: null
+interrupts: null
+timing: null

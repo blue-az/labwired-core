@@ -26,6 +26,7 @@ peripherals:
     base_address: 0x40021000
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32l476/rcc.yaml"
       profile: "stm32l4"
 
   - id: "gpioa"
@@ -33,6 +34,7 @@ peripherals:
     base_address: 0x48000000
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32l476/gpioa.yaml"
       profile: "stm32v2"
     # GPIOA is clocked from RCC_AHB2ENR.GPIOAEN (bit 0). Unclocked out of reset,
     # so register writes are dropped until firmware enables it (RM0351 §6.4.17).
@@ -43,6 +45,7 @@ peripherals:
     base_address: 0x48000400
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32l476/gpiob.yaml"
       profile: "stm32v2"
     # GPIOB is clocked from RCC_AHB2ENR.GPIOBEN (bit 1).
     clock: { reg: "ahb2enr", bit: 1 }
@@ -52,6 +55,7 @@ peripherals:
     base_address: 0x48000800
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32l476/gpioc.yaml"
       profile: "stm32v2"
     # GPIOC is clocked from RCC_AHB2ENR.GPIOCEN (bit 2).
     clock: { reg: "ahb2enr", bit: 2 }
@@ -61,6 +65,7 @@ peripherals:
     base_address: 0x48000C00
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32l476/gpiod.yaml"
       profile: "stm32v2"
 
   - id: "gpioe"
@@ -68,6 +73,7 @@ peripherals:
     base_address: 0x48001000
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32l476/gpioe.yaml"
       profile: "stm32v2"
 
   - id: "gpioh"
@@ -75,11 +81,14 @@ peripherals:
     base_address: 0x48001C00
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32l476/gpioh.yaml"
       profile: "stm32v2"
 
   - id: "systick"
     type: "systick"
     base_address: 0xE000E010
+    config:
+      debug_schema: "../peripherals/stm32l476/stk.yaml"
 
   - id: "uart2"
     type: "uart"
@@ -87,6 +96,7 @@ peripherals:
     size: "1KB"
     irq: 38
     config:
+      debug_schema: "../peripherals/stm32l476/usart2.yaml"
       profile: "stm32v2"
     # USART2 is on APB1: RCC_APB1ENR1.USART2EN (bit 17). Unclocked out of reset,
     # so ISR.TXE/RXNE never assert until firmware enables the clock (RM0351 §6.4.19).
@@ -98,6 +108,7 @@ peripherals:
     size: "1KB"
     irq: 37
     config:
+      debug_schema: "../peripherals/stm32l476/usart1.yaml"
       profile: "stm32v2"
     # USART1 is on APB2: RCC_APB2ENR.USART1EN (bit 14). Unclocked out of reset
     # (RM0351 §6.4.21).
@@ -109,6 +120,7 @@ peripherals:
     size: "1KB"
     irq: 39
     config:
+      debug_schema: "../peripherals/stm32l476/usart3.yaml"
       profile: "stm32v2"
 
   - id: "uart4"
@@ -117,6 +129,7 @@ peripherals:
     size: "1KB"
     irq: 52
     config:
+      debug_schema: "../peripherals/stm32l476/uart4.yaml"
       profile: "stm32v2"
 
   - id: "uart5"
@@ -125,6 +138,7 @@ peripherals:
     size: "1KB"
     irq: 53
     config:
+      debug_schema: "../peripherals/stm32l476/uart5.yaml"
       profile: "stm32v2"
 
   # LPUART1 — same register layout as USART (modern stm32v2).
@@ -134,6 +148,7 @@ peripherals:
     size: "1KB"
     irq: 70
     config:
+      debug_schema: "../peripherals/stm32l476/lpuart1.yaml"
       profile: "stm32v2"
 
   - id: "spi1"
@@ -142,6 +157,7 @@ peripherals:
     size: "1KB"
     irq: 35
     config:
+      debug_schema: "../peripherals/stm32l476/spi1.yaml"
       profile: "stm32_fifo"
     # SPI1 is on APB2: RCC_APB2ENR.SPI1EN (bit 12). Unclocked out of reset, so
     # SR.RXNE/TXE never assert until firmware enables the clock (RM0351 §6.4.21).
@@ -153,6 +169,7 @@ peripherals:
     size: "1KB"
     irq: 36
     config:
+      debug_schema: "../peripherals/stm32l476/spi2.yaml"
       profile: "stm32_fifo"
 
   - id: "spi3"
@@ -161,6 +178,7 @@ peripherals:
     size: "1KB"
     irq: 51
     config:
+      debug_schema: "../peripherals/stm32l476/spi3.yaml"
       profile: "stm32_fifo"
 
   - id: "i2c1"
@@ -169,6 +187,7 @@ peripherals:
     size: "1KB"
     irq: 31
     config:
+      debug_schema: "../peripherals/stm32l476/i2c1.yaml"
       profile: "stm32l4"
 
   - id: "i2c2"
@@ -177,6 +196,7 @@ peripherals:
     size: "1KB"
     irq: 33
     config:
+      debug_schema: "../peripherals/stm32l476/i2c2.yaml"
       profile: "stm32l4"
 
   - id: "i2c3"
@@ -185,6 +205,7 @@ peripherals:
     size: "1KB"
     irq: 72
     config:
+      debug_schema: "../peripherals/stm32l476/i2c3.yaml"
       profile: "stm32l4"
 
   - id: "adc1"
@@ -195,6 +216,7 @@ peripherals:
     size: "1KB"
     irq: 18
     config:
+      debug_schema: "../peripherals/stm32l476/adc1.yaml"
       profile: "stm32l4"
 
   - id: "dma1"
@@ -202,33 +224,45 @@ peripherals:
     base_address: 0x40020000
     size: "1KB"
     irq: 11
+    config:
+      debug_schema: "../peripherals/stm32l476/dma1.yaml"
 
   - id: "dma2"
     type: "dma"
     base_address: 0x40020400
     size: "1KB"
     irq: 56
+    config:
+      debug_schema: "../peripherals/stm32l476/dma2.yaml"
 
   - id: "pwr"
     type: "pwr"
     base_address: 0x40007000
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32l476/pwr.yaml"
 
   - id: "flash"
     type: "flash"
     base_address: 0x40022000
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32l476/flash.yaml"
 
   - id: "rng"
     type: "rng"
     base_address: 0x50060800
     size: "1KB"
     irq: 80
+    config:
+      debug_schema: "../peripherals/stm32l476/rng.yaml"
 
   - id: "crc"
     type: "crc"
     base_address: 0x40023000
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32l476/crc.yaml"
 
   # General-purpose 32-bit timer (TIM2 — STM32L4 RM0351 §29).
   - id: "tim2"
@@ -237,6 +271,7 @@ peripherals:
     size: "1KB"
     irq: 28
     config:
+      debug_schema: "../peripherals/stm32l476/tim2.yaml"
       width: 32
 
   # 32-bit general-purpose TIM5.
@@ -246,6 +281,7 @@ peripherals:
     size: "1KB"
     irq: 50
     config:
+      debug_schema: "../peripherals/stm32l476/tim5.yaml"
       width: 32
 
   # 16-bit general-purpose TIM3, TIM4.
@@ -254,12 +290,16 @@ peripherals:
     base_address: 0x40000400
     size: "1KB"
     irq: 29
+    config:
+      debug_schema: "../peripherals/stm32l476/tim3.yaml"
 
   - id: "tim4"
     type: "timer"
     base_address: 0x40000800
     size: "1KB"
     irq: 30
+    config:
+      debug_schema: "../peripherals/stm32l476/tim4.yaml"
 
   # 16-bit basic timers TIM6, TIM7 — used by HAL as time base.
   # `basic: true` → counter + UIF only, no capture/compare channels (so an
@@ -271,6 +311,7 @@ peripherals:
     size: "1KB"
     irq: 54
     config:
+      debug_schema: "../peripherals/stm32l476/tim6.yaml"
       basic: true
 
   - id: "tim7"
@@ -279,6 +320,7 @@ peripherals:
     size: "1KB"
     irq: 55
     config:
+      debug_schema: "../peripherals/stm32l476/tim7.yaml"
       basic: true
 
   # Advanced-control timers TIM1 / TIM8 — full register file with BDTR
@@ -290,6 +332,7 @@ peripherals:
     size: "1KB"
     irq: 27
     config:
+      debug_schema: "../peripherals/stm32l476/tim1.yaml"
       advanced: true
 
   - id: "tim8"
@@ -298,6 +341,7 @@ peripherals:
     size: "1KB"
     irq: 46
     config:
+      debug_schema: "../peripherals/stm32l476/tim8.yaml"
       advanced: true
 
   # General-purpose 16-bit timers TIM15 / TIM16 / TIM17.
@@ -306,39 +350,53 @@ peripherals:
     base_address: 0x40014000
     size: "1KB"
     irq: 24
+    config:
+      debug_schema: "../peripherals/stm32l476/tim15.yaml"
 
   - id: "tim16"
     type: "timer"
     base_address: 0x40014400
     size: "1KB"
     irq: 25
+    config:
+      debug_schema: "../peripherals/stm32l476/tim16.yaml"
 
   - id: "tim17"
     type: "timer"
     base_address: 0x40014800
     size: "1KB"
     irq: 26
+    config:
+      debug_schema: "../peripherals/stm32l476/tim17.yaml"
 
   - id: "rtc"
     type: "rtc"
     base_address: 0x40002800
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32l476/rtc.yaml"
 
   - id: "iwdg"
     type: "iwdg"
     base_address: 0x40003000
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32l476/iwdg.yaml"
 
   - id: "wwdg"
     type: "wwdg"
     base_address: 0x40002C00
     size: "1KB"
     irq: 0
+    config:
+      debug_schema: "../peripherals/stm32l476/wwdg.yaml"
 
   - id: "dac"
     type: "dac"
     base_address: 0x40007400
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32l476/dac.yaml"
 
   # EXTI — 40 lines, two-bank layout (RM0351 §13).
   - id: "exti"
@@ -346,6 +404,7 @@ peripherals:
     base_address: 0x40010400
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32l476/exti.yaml"
       profile: "stm32l4"
 
   # SYSCFG — system config (mostly EXTI line source selection); modeled as stub.
@@ -353,6 +412,8 @@ peripherals:
     type: "stub"
     base_address: 0x40010000
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32l476/syscfg.yaml"
 
   # Low-power timers.
   - id: "lptim1"
@@ -360,6 +421,8 @@ peripherals:
     base_address: 0x40007C00
     size: "1KB"
     irq: 65
+    config:
+      debug_schema: "../peripherals/stm32l476/lptim1.yaml"
 
   - id: "lptim2"
     type: "lptim"
@@ -367,6 +430,8 @@ peripherals:
     size: "1KB"
     # STM32L476 LPTIM2_IRQn = 66 (SVD); 78 is LCD.
     irq: 66
+    config:
+      debug_schema: "../peripherals/stm32l476/lptim2.yaml"
 
   # QUADSPI — quad-SPI memory interface (RM0351 §14).
   - id: "quadspi"
@@ -374,6 +439,8 @@ peripherals:
     base_address: 0xA0001000
     size: "1KB"
     irq: 71
+    config:
+      debug_schema: "../peripherals/stm32l476/quadspi.yaml"
 
   # SAI1 / SAI2 — serial audio interface.
   - id: "sai1"
@@ -381,12 +448,16 @@ peripherals:
     base_address: 0x40015400
     size: "1KB"
     irq: 74
+    config:
+      debug_schema: "../peripherals/stm32l476/sai1.yaml"
 
   - id: "sai2"
     type: "sai"
     base_address: 0x40015800
     size: "1KB"
     irq: 75
+    config:
+      debug_schema: "../peripherals/stm32l476/sai2.yaml"
 
   # USB OTG FS — Synopsys DWC2 controller (RM0351 §44).
   - id: "usb_otg_fs"
@@ -395,6 +466,8 @@ peripherals:
     # Full DWC2 register window is 256KB; we model only the first 4KB.
     size: "4KB"
     irq: 67
+    config:
+      debug_schema: "../peripherals/stm32l476/otg_fs_global.yaml"
 
   # bxCAN1 — basic-extended CAN.
   - id: "can1"
@@ -402,6 +475,8 @@ peripherals:
     base_address: 0x40006400
     size: "1KB"
     irq: 19
+    config:
+      debug_schema: "../peripherals/stm32l476/can1.yaml"
 
   # SDMMC1 — SD/MMC card host (RM0351 §38).
   - id: "sdmmc1"
@@ -409,6 +484,8 @@ peripherals:
     base_address: 0x40012800
     size: "1KB"
     irq: 49
+    config:
+      debug_schema: "../peripherals/stm32l476/sdmmc1.yaml"
 
   # COMP — analog comparators (COMP1 + COMP2 sharing one window).
   - id: "comp"
@@ -416,6 +493,8 @@ peripherals:
     base_address: 0x40010200
     size: "1KB"
     irq: 64
+    config:
+      debug_schema: "../peripherals/stm32l476/comp.yaml"
 
   # TSC — touch sensing controller (RM0351 §21).
   - id: "tsc"
@@ -423,6 +502,8 @@ peripherals:
     base_address: 0x40024000
     size: "1KB"
     irq: 77
+    config:
+      debug_schema: "../peripherals/stm32l476/tsc.yaml"
 
   # FMC — flexible memory controller (RM0351 §13).
   - id: "fmc"
@@ -430,22 +511,29 @@ peripherals:
     base_address: 0xA0000000
     size: "1KB"
     irq: 48
+    config:
+      debug_schema: "../peripherals/stm32l476/fmc.yaml"
 
   - id: "scb"
     type: "scb"
     base_address: 0xE000ED00
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32l476/scb.yaml"
 
   - id: "nvic"
     type: "nvic"
     base_address: 0xE000E100
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32l476/nvic.yaml"
 
   - id: "dbgmcu"
     type: "dbgmcu"
     base_address: 0xE0042000
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32l476/dbgmcu.yaml"
       # DBGMCU_IDCODE for STM32L476RG: REV_ID=0x1007 (Rev Z), DEV_ID=0x415.
       # Verified against real hardware via SWD probe.
       idcode: "0x10076415"

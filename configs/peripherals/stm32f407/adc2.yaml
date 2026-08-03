@@ -1,0 +1,482 @@
+peripheral: ADC2
+version: 0.1.0
+registers:
+- id: SR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OVR
+    bit_range:
+    - 5
+    - 5
+    description: Overrun
+  - name: STRT
+    bit_range:
+    - 4
+    - 4
+    description: Regular channel start flag
+  - name: JSTRT
+    bit_range:
+    - 3
+    - 3
+    description: Injected channel start flag
+  - name: JEOC
+    bit_range:
+    - 2
+    - 2
+    description: Injected channel end of conversion
+  - name: EOC
+    bit_range:
+    - 1
+    - 1
+    description: Regular channel end of conversion
+  - name: AWD
+    bit_range:
+    - 0
+    - 0
+    description: Analog watchdog flag
+  side_effects: null
+- id: CR1
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OVRIE
+    bit_range:
+    - 26
+    - 26
+    description: Overrun interrupt enable
+  - name: RES
+    bit_range:
+    - 25
+    - 24
+    description: Resolution
+  - name: AWDEN
+    bit_range:
+    - 23
+    - 23
+    description: Analog watchdog enable on regular channels
+  - name: JAWDEN
+    bit_range:
+    - 22
+    - 22
+    description: Analog watchdog enable on injected channels
+  - name: DISCNUM
+    bit_range:
+    - 15
+    - 13
+    description: Discontinuous mode channel count
+  - name: JDISCEN
+    bit_range:
+    - 12
+    - 12
+    description: Discontinuous mode on injected channels
+  - name: DISCEN
+    bit_range:
+    - 11
+    - 11
+    description: Discontinuous mode on regular channels
+  - name: JAUTO
+    bit_range:
+    - 10
+    - 10
+    description: Automatic injected group conversion
+  - name: AWDSGL
+    bit_range:
+    - 9
+    - 9
+    description: Enable the watchdog on a single channel in scan mode
+  - name: SCAN
+    bit_range:
+    - 8
+    - 8
+    description: Scan mode
+  - name: JEOCIE
+    bit_range:
+    - 7
+    - 7
+    description: Interrupt enable for injected channels
+  - name: AWDIE
+    bit_range:
+    - 6
+    - 6
+    description: Analog watchdog interrupt enable
+  - name: EOCIE
+    bit_range:
+    - 5
+    - 5
+    description: Interrupt enable for EOC
+  - name: AWDCH
+    bit_range:
+    - 4
+    - 0
+    description: Analog watchdog channel select bits
+  side_effects: null
+- id: CR2
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SWSTART
+    bit_range:
+    - 30
+    - 30
+    description: Start conversion of regular channels
+  - name: EXTEN
+    bit_range:
+    - 29
+    - 28
+    description: External trigger enable for regular channels
+  - name: EXTSEL
+    bit_range:
+    - 27
+    - 24
+    description: External event select for regular group
+  - name: JSWSTART
+    bit_range:
+    - 22
+    - 22
+    description: Start conversion of injected channels
+  - name: JEXTEN
+    bit_range:
+    - 21
+    - 20
+    description: External trigger enable for injected channels
+  - name: JEXTSEL
+    bit_range:
+    - 19
+    - 16
+    description: External event select for injected group
+  - name: ALIGN
+    bit_range:
+    - 11
+    - 11
+    description: Data alignment
+  - name: EOCS
+    bit_range:
+    - 10
+    - 10
+    description: End of conversion selection
+  - name: DDS
+    bit_range:
+    - 9
+    - 9
+    description: DMA disable selection (for single ADC mode)
+  - name: DMA
+    bit_range:
+    - 8
+    - 8
+    description: Direct memory access mode (for single ADC mode)
+  - name: CONT
+    bit_range:
+    - 1
+    - 1
+    description: Continuous conversion
+  - name: ADON
+    bit_range:
+    - 0
+    - 0
+    description: A/D Converter ON / OFF
+  side_effects: null
+- id: SMPR1
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SMPx_x
+    bit_range:
+    - 31
+    - 0
+    description: Sample time bits
+  side_effects: null
+- id: SMPR2
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SMPx_x
+    bit_range:
+    - 31
+    - 0
+    description: Sample time bits
+  side_effects: null
+- id: JOFR1
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: JOFFSET1
+    bit_range:
+    - 11
+    - 0
+    description: Data offset for injected channel x
+  side_effects: null
+- id: JOFR2
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: JOFFSET2
+    bit_range:
+    - 11
+    - 0
+    description: Data offset for injected channel x
+  side_effects: null
+- id: JOFR3
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: JOFFSET3
+    bit_range:
+    - 11
+    - 0
+    description: Data offset for injected channel x
+  side_effects: null
+- id: JOFR4
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: JOFFSET4
+    bit_range:
+    - 11
+    - 0
+    description: Data offset for injected channel x
+  side_effects: null
+- id: HTR
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 4095
+  fields:
+  - name: HT
+    bit_range:
+    - 11
+    - 0
+    description: Analog watchdog higher threshold
+  side_effects: null
+- id: LTR
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LT
+    bit_range:
+    - 11
+    - 0
+    description: Analog watchdog lower threshold
+  side_effects: null
+- id: SQR1
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: L
+    bit_range:
+    - 23
+    - 20
+    description: Regular channel sequence length
+  - name: SQ16
+    bit_range:
+    - 19
+    - 15
+    description: 16th conversion in regular sequence
+  - name: SQ15
+    bit_range:
+    - 14
+    - 10
+    description: 15th conversion in regular sequence
+  - name: SQ14
+    bit_range:
+    - 9
+    - 5
+    description: 14th conversion in regular sequence
+  - name: SQ13
+    bit_range:
+    - 4
+    - 0
+    description: 13th conversion in regular sequence
+  side_effects: null
+- id: SQR2
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SQ12
+    bit_range:
+    - 29
+    - 25
+    description: 12th conversion in regular sequence
+  - name: SQ11
+    bit_range:
+    - 24
+    - 20
+    description: 11th conversion in regular sequence
+  - name: SQ10
+    bit_range:
+    - 19
+    - 15
+    description: 10th conversion in regular sequence
+  - name: SQ9
+    bit_range:
+    - 14
+    - 10
+    description: 9th conversion in regular sequence
+  - name: SQ8
+    bit_range:
+    - 9
+    - 5
+    description: 8th conversion in regular sequence
+  - name: SQ7
+    bit_range:
+    - 4
+    - 0
+    description: 7th conversion in regular sequence
+  side_effects: null
+- id: SQR3
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SQ6
+    bit_range:
+    - 29
+    - 25
+    description: 6th conversion in regular sequence
+  - name: SQ5
+    bit_range:
+    - 24
+    - 20
+    description: 5th conversion in regular sequence
+  - name: SQ4
+    bit_range:
+    - 19
+    - 15
+    description: 4th conversion in regular sequence
+  - name: SQ3
+    bit_range:
+    - 14
+    - 10
+    description: 3rd conversion in regular sequence
+  - name: SQ2
+    bit_range:
+    - 9
+    - 5
+    description: 2nd conversion in regular sequence
+  - name: SQ1
+    bit_range:
+    - 4
+    - 0
+    description: 1st conversion in regular sequence
+  side_effects: null
+- id: JSQR
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: JL
+    bit_range:
+    - 21
+    - 20
+    description: Injected sequence length
+  - name: JSQ4
+    bit_range:
+    - 19
+    - 15
+    description: 4th conversion in injected sequence
+  - name: JSQ3
+    bit_range:
+    - 14
+    - 10
+    description: 3rd conversion in injected sequence
+  - name: JSQ2
+    bit_range:
+    - 9
+    - 5
+    description: 2nd conversion in injected sequence
+  - name: JSQ1
+    bit_range:
+    - 4
+    - 0
+    description: 1st conversion in injected sequence
+  side_effects: null
+- id: JDR1
+  address_offset: 60
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: JDATA
+    bit_range:
+    - 15
+    - 0
+    description: Injected data
+  side_effects: null
+- id: JDR2
+  address_offset: 64
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: JDATA
+    bit_range:
+    - 15
+    - 0
+    description: Injected data
+  side_effects: null
+- id: JDR3
+  address_offset: 68
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: JDATA
+    bit_range:
+    - 15
+    - 0
+    description: Injected data
+  side_effects: null
+- id: JDR4
+  address_offset: 72
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: JDATA
+    bit_range:
+    - 15
+    - 0
+    description: Injected data
+  side_effects: null
+- id: DR
+  address_offset: 76
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 15
+    - 0
+    description: Regular data
+  side_effects: null
+interrupts:
+  ADC: 18
+  ADC: 18
+timing: null

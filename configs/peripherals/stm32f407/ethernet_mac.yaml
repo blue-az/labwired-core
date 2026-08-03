@@ -1,0 +1,557 @@
+peripheral: Ethernet_MAC
+version: 0.1.0
+registers:
+- id: MACCR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 32768
+  fields:
+  - name: RE
+    bit_range:
+    - 2
+    - 2
+    description: RE
+  - name: TE
+    bit_range:
+    - 3
+    - 3
+    description: TE
+  - name: DC
+    bit_range:
+    - 4
+    - 4
+    description: DC
+  - name: BL
+    bit_range:
+    - 6
+    - 5
+    description: BL
+  - name: APCS
+    bit_range:
+    - 7
+    - 7
+    description: APCS
+  - name: RD
+    bit_range:
+    - 9
+    - 9
+    description: RD
+  - name: IPCO
+    bit_range:
+    - 10
+    - 10
+    description: IPCO
+  - name: DM
+    bit_range:
+    - 11
+    - 11
+    description: DM
+  - name: LM
+    bit_range:
+    - 12
+    - 12
+    description: LM
+  - name: ROD
+    bit_range:
+    - 13
+    - 13
+    description: ROD
+  - name: FES
+    bit_range:
+    - 14
+    - 14
+    description: FES
+  - name: CSD
+    bit_range:
+    - 16
+    - 16
+    description: CSD
+  - name: IFG
+    bit_range:
+    - 19
+    - 17
+    description: IFG
+  - name: JD
+    bit_range:
+    - 22
+    - 22
+    description: JD
+  - name: WD
+    bit_range:
+    - 23
+    - 23
+    description: WD
+  - name: CSTF
+    bit_range:
+    - 25
+    - 25
+    description: CSTF
+  side_effects: null
+- id: MACFFR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PM
+    bit_range:
+    - 0
+    - 0
+    description: PM
+  - name: HU
+    bit_range:
+    - 1
+    - 1
+    description: HU
+  - name: HM
+    bit_range:
+    - 2
+    - 2
+    description: HM
+  - name: DAIF
+    bit_range:
+    - 3
+    - 3
+    description: DAIF
+  - name: RAM
+    bit_range:
+    - 4
+    - 4
+    description: RAM
+  - name: BFD
+    bit_range:
+    - 5
+    - 5
+    description: BFD
+  - name: PCF
+    bit_range:
+    - 6
+    - 6
+    description: PCF
+  - name: SAIF
+    bit_range:
+    - 7
+    - 7
+    description: SAIF
+  - name: SAF
+    bit_range:
+    - 8
+    - 8
+    description: SAF
+  - name: HPF
+    bit_range:
+    - 9
+    - 9
+    description: HPF
+  - name: RA
+    bit_range:
+    - 31
+    - 31
+    description: RA
+  side_effects: null
+- id: MACHTHR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HTH
+    bit_range:
+    - 31
+    - 0
+    description: HTH
+  side_effects: null
+- id: MACHTLR
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HTL
+    bit_range:
+    - 31
+    - 0
+    description: HTL
+  side_effects: null
+- id: MACMIIAR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MB
+    bit_range:
+    - 0
+    - 0
+    description: MB
+  - name: MW
+    bit_range:
+    - 1
+    - 1
+    description: MW
+  - name: CR
+    bit_range:
+    - 4
+    - 2
+    description: CR
+  - name: MR
+    bit_range:
+    - 10
+    - 6
+    description: MR
+  - name: PA
+    bit_range:
+    - 15
+    - 11
+    description: PA
+  side_effects: null
+- id: MACMIIDR
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TD
+    bit_range:
+    - 15
+    - 0
+    description: TD
+  side_effects: null
+- id: MACFCR
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FCB
+    bit_range:
+    - 0
+    - 0
+    description: FCB
+  - name: TFCE
+    bit_range:
+    - 1
+    - 1
+    description: TFCE
+  - name: RFCE
+    bit_range:
+    - 2
+    - 2
+    description: RFCE
+  - name: UPFD
+    bit_range:
+    - 3
+    - 3
+    description: UPFD
+  - name: PLT
+    bit_range:
+    - 5
+    - 4
+    description: PLT
+  - name: ZQPD
+    bit_range:
+    - 7
+    - 7
+    description: ZQPD
+  - name: PT
+    bit_range:
+    - 31
+    - 16
+    description: PT
+  side_effects: null
+- id: MACVLANTR
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VLANTI
+    bit_range:
+    - 15
+    - 0
+    description: VLANTI
+  - name: VLANTC
+    bit_range:
+    - 16
+    - 16
+    description: VLANTC
+  side_effects: null
+- id: MACPMTCSR
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PD
+    bit_range:
+    - 0
+    - 0
+    description: PD
+  - name: MPE
+    bit_range:
+    - 1
+    - 1
+    description: MPE
+  - name: WFE
+    bit_range:
+    - 2
+    - 2
+    description: WFE
+  - name: MPR
+    bit_range:
+    - 5
+    - 5
+    description: MPR
+  - name: WFR
+    bit_range:
+    - 6
+    - 6
+    description: WFR
+  - name: GU
+    bit_range:
+    - 9
+    - 9
+    description: GU
+  - name: WFFRPR
+    bit_range:
+    - 31
+    - 31
+    description: WFFRPR
+  side_effects: null
+- id: MACDBGR
+  address_offset: 52
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: CR
+    bit_range:
+    - 0
+    - 0
+    description: CR
+  - name: CSR
+    bit_range:
+    - 1
+    - 1
+    description: CSR
+  - name: ROR
+    bit_range:
+    - 2
+    - 2
+    description: ROR
+  - name: MCF
+    bit_range:
+    - 3
+    - 3
+    description: MCF
+  - name: MCP
+    bit_range:
+    - 4
+    - 4
+    description: MCP
+  - name: MCFHP
+    bit_range:
+    - 5
+    - 5
+    description: MCFHP
+  side_effects: null
+- id: MACSR
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PMTS
+    bit_range:
+    - 3
+    - 3
+    description: PMTS
+  - name: MMCS
+    bit_range:
+    - 4
+    - 4
+    description: MMCS
+  - name: MMCRS
+    bit_range:
+    - 5
+    - 5
+    description: MMCRS
+  - name: MMCTS
+    bit_range:
+    - 6
+    - 6
+    description: MMCTS
+  - name: TSTS
+    bit_range:
+    - 9
+    - 9
+    description: TSTS
+  side_effects: null
+- id: MACIMR
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PMTIM
+    bit_range:
+    - 3
+    - 3
+    description: PMTIM
+  - name: TSTIM
+    bit_range:
+    - 9
+    - 9
+    description: TSTIM
+  side_effects: null
+- id: MACA0HR
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 1114111
+  fields:
+  - name: MACA0H
+    bit_range:
+    - 15
+    - 0
+    description: MAC address0 high
+  - name: MO
+    bit_range:
+    - 31
+    - 31
+    description: Always 1
+  side_effects: null
+- id: MACA0LR
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: MACA0L
+    bit_range:
+    - 31
+    - 0
+    description: 0
+  side_effects: null
+- id: MACA1HR
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: MACA1H
+    bit_range:
+    - 15
+    - 0
+    description: MACA1H
+  - name: MBC
+    bit_range:
+    - 29
+    - 24
+    description: MBC
+  - name: SA
+    bit_range:
+    - 30
+    - 30
+    description: SA
+  - name: AE
+    bit_range:
+    - 31
+    - 31
+    description: AE
+  side_effects: null
+- id: MACA1LR
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: MACA1LR
+    bit_range:
+    - 31
+    - 0
+    description: MACA1LR
+  side_effects: null
+- id: MACA2HR
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: MAC2AH
+    bit_range:
+    - 15
+    - 0
+    description: MAC2AH
+  - name: MBC
+    bit_range:
+    - 29
+    - 24
+    description: MBC
+  - name: SA
+    bit_range:
+    - 30
+    - 30
+    description: SA
+  - name: AE
+    bit_range:
+    - 31
+    - 31
+    description: AE
+  side_effects: null
+- id: MACA2LR
+  address_offset: 84
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: MACA2L
+    bit_range:
+    - 30
+    - 0
+    description: MACA2L
+  side_effects: null
+- id: MACA3HR
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: MACA3H
+    bit_range:
+    - 15
+    - 0
+    description: MACA3H
+  - name: MBC
+    bit_range:
+    - 29
+    - 24
+    description: MBC
+  - name: SA
+    bit_range:
+    - 30
+    - 30
+    description: SA
+  - name: AE
+    bit_range:
+    - 31
+    - 31
+    description: AE
+  side_effects: null
+- id: MACA3LR
+  address_offset: 92
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: MBCA3L
+    bit_range:
+    - 31
+    - 0
+    description: MBCA3L
+  side_effects: null
+interrupts:
+  ETH: 61
+  ETH_WKUP: 62
+timing: null

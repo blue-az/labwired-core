@@ -201,7 +201,7 @@ fn build_xtensa_node(
 ) -> anyhow::Result<Box<dyn MachineTrait>> {
     let core = chip.core.as_deref().unwrap_or("").to_ascii_lowercase();
     if core.contains("lx7") {
-        return build_esp32s3_node(id, chip, firmware);
+        return build_esp32s3_node(id, chip, system, firmware);
     }
 
     let NodeFirmware::Elf(bytes) = firmware else {
@@ -220,6 +220,9 @@ fn build_xtensa_node(
     let pro_cpu = crate::system::xtensa::configure_xtensa_esp32(&mut bus);
     crate::system::xtensa::attach_esp32_external_devices(&mut bus, system)
         .with_context(|| format!("node '{id}': attach external devices"))?;
+    // Debugger register names still come from the chip YAML even though the
+    // peripheral bank is programmatic — see `SystemBus::attach_debug_schemas`.
+    bus.attach_debug_schemas(chip, system);
     bus.refresh_peripheral_index();
     let app_cpu = crate::cpu::xtensa_lx7::XtensaLx7::new_app_cpu();
 
@@ -250,6 +253,7 @@ fn build_xtensa_node(
 fn build_esp32s3_node(
     id: &str,
     chip: &ChipDescriptor,
+    system: &SystemManifest,
     firmware: NodeFirmware,
 ) -> anyhow::Result<Box<dyn MachineTrait>> {
     use crate::cpu::xtensa_lx7::XtensaLx7;
@@ -268,6 +272,9 @@ fn build_esp32s3_node(
         ..Esp32s3Opts::default()
     };
     let wiring = configure_xtensa_esp32s3(&mut bus, &opts);
+    // Debugger register names still come from the chip YAML even though the
+    // peripheral bank is programmatic — see `SystemBus::attach_debug_schemas`.
+    bus.attach_debug_schemas(chip, system);
     let boot_mode = wiring.boot_mode;
     let mut cpu = wiring.cpu;
 

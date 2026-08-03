@@ -1,0 +1,913 @@
+peripheral: EXTI
+version: 0.1.0
+registers:
+- id: IMR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 4286840832
+  fields:
+  - name: IM0
+    bit_range:
+    - 0
+    - 0
+    description: Interrupt Mask on line 0
+  - name: IM1
+    bit_range:
+    - 1
+    - 1
+    description: Interrupt Mask on line 1
+  - name: IM2
+    bit_range:
+    - 2
+    - 2
+    description: Interrupt Mask on line 2
+  - name: IM3
+    bit_range:
+    - 3
+    - 3
+    description: Interrupt Mask on line 3
+  - name: IM4
+    bit_range:
+    - 4
+    - 4
+    description: Interrupt Mask on line 4
+  - name: IM5
+    bit_range:
+    - 5
+    - 5
+    description: Interrupt Mask on line 5
+  - name: IM6
+    bit_range:
+    - 6
+    - 6
+    description: Interrupt Mask on line 6
+  - name: IM7
+    bit_range:
+    - 7
+    - 7
+    description: Interrupt Mask on line 7
+  - name: IM8
+    bit_range:
+    - 8
+    - 8
+    description: Interrupt Mask on line 8
+  - name: IM9
+    bit_range:
+    - 9
+    - 9
+    description: Interrupt Mask on line 9
+  - name: IM10
+    bit_range:
+    - 10
+    - 10
+    description: Interrupt Mask on line 10
+  - name: IM11
+    bit_range:
+    - 11
+    - 11
+    description: Interrupt Mask on line 11
+  - name: IM12
+    bit_range:
+    - 12
+    - 12
+    description: Interrupt Mask on line 12
+  - name: IM13
+    bit_range:
+    - 13
+    - 13
+    description: Interrupt Mask on line 13
+  - name: IM14
+    bit_range:
+    - 14
+    - 14
+    description: Interrupt Mask on line 14
+  - name: IM15
+    bit_range:
+    - 15
+    - 15
+    description: Interrupt Mask on line 15
+  - name: IM16
+    bit_range:
+    - 16
+    - 16
+    description: Interrupt Mask on line 16
+  - name: IM17
+    bit_range:
+    - 17
+    - 17
+    description: Interrupt Mask on line 17
+  - name: IM18
+    bit_range:
+    - 18
+    - 18
+    description: Interrupt Mask on line 18
+  - name: IM19
+    bit_range:
+    - 19
+    - 19
+    description: Interrupt Mask on line 19
+  - name: IM20
+    bit_range:
+    - 20
+    - 20
+    description: Interrupt Mask on line 20
+  - name: IM21
+    bit_range:
+    - 21
+    - 21
+    description: Interrupt Mask on line 21
+  - name: IM22
+    bit_range:
+    - 22
+    - 22
+    description: Interrupt Mask on line 22
+  - name: IM23
+    bit_range:
+    - 23
+    - 23
+    description: Interrupt Mask on line 23
+  - name: IM24
+    bit_range:
+    - 24
+    - 24
+    description: Interrupt Mask on line 24
+  - name: IM25
+    bit_range:
+    - 25
+    - 25
+    description: Interrupt Mask on line 25
+  - name: IM26
+    bit_range:
+    - 26
+    - 26
+    description: Interrupt Mask on line 27
+  - name: IM28
+    bit_range:
+    - 28
+    - 28
+    description: Interrupt Mask on line 27
+  - name: IM29
+    bit_range:
+    - 29
+    - 29
+    description: Interrupt Mask on line 27
+  side_effects: null
+- id: EMR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EM0
+    bit_range:
+    - 0
+    - 0
+    description: Event Mask on line 0
+  - name: EM1
+    bit_range:
+    - 1
+    - 1
+    description: Event Mask on line 1
+  - name: EM2
+    bit_range:
+    - 2
+    - 2
+    description: Event Mask on line 2
+  - name: EM3
+    bit_range:
+    - 3
+    - 3
+    description: Event Mask on line 3
+  - name: EM4
+    bit_range:
+    - 4
+    - 4
+    description: Event Mask on line 4
+  - name: EM5
+    bit_range:
+    - 5
+    - 5
+    description: Event Mask on line 5
+  - name: EM6
+    bit_range:
+    - 6
+    - 6
+    description: Event Mask on line 6
+  - name: EM7
+    bit_range:
+    - 7
+    - 7
+    description: Event Mask on line 7
+  - name: EM8
+    bit_range:
+    - 8
+    - 8
+    description: Event Mask on line 8
+  - name: EM9
+    bit_range:
+    - 9
+    - 9
+    description: Event Mask on line 9
+  - name: EM10
+    bit_range:
+    - 10
+    - 10
+    description: Event Mask on line 10
+  - name: EM11
+    bit_range:
+    - 11
+    - 11
+    description: Event Mask on line 11
+  - name: EM12
+    bit_range:
+    - 12
+    - 12
+    description: Event Mask on line 12
+  - name: EM13
+    bit_range:
+    - 13
+    - 13
+    description: Event Mask on line 13
+  - name: EM14
+    bit_range:
+    - 14
+    - 14
+    description: Event Mask on line 14
+  - name: EM15
+    bit_range:
+    - 15
+    - 15
+    description: Event Mask on line 15
+  - name: EM16
+    bit_range:
+    - 16
+    - 16
+    description: Event Mask on line 16
+  - name: EM17
+    bit_range:
+    - 17
+    - 17
+    description: Event Mask on line 17
+  - name: EM18
+    bit_range:
+    - 18
+    - 18
+    description: Event Mask on line 18
+  - name: EM19
+    bit_range:
+    - 19
+    - 19
+    description: Event Mask on line 19
+  - name: EM20
+    bit_range:
+    - 20
+    - 20
+    description: Event Mask on line 20
+  - name: EM21
+    bit_range:
+    - 21
+    - 21
+    description: Event Mask on line 21
+  - name: EM22
+    bit_range:
+    - 22
+    - 22
+    description: Event Mask on line 22
+  - name: EM23
+    bit_range:
+    - 23
+    - 23
+    description: Event Mask on line 23
+  - name: EM24
+    bit_range:
+    - 24
+    - 24
+    description: Event Mask on line 24
+  - name: EM25
+    bit_range:
+    - 25
+    - 25
+    description: Event Mask on line 25
+  - name: EM26
+    bit_range:
+    - 26
+    - 26
+    description: Event Mask on line 26
+  - name: EM28
+    bit_range:
+    - 28
+    - 28
+    description: Event Mask on line 28
+  - name: EM29
+    bit_range:
+    - 29
+    - 29
+    description: Event Mask on line 29
+  side_effects: null
+- id: RTSR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RT0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Rising trigger event configuration of
+                    line 0
+  - name: RT1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Rising trigger event configuration of
+                    line 1
+  - name: RT2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Rising trigger event configuration of
+                    line 2
+  - name: RT3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Rising trigger event configuration of
+                    line 3
+  - name: RT4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Rising trigger event configuration of
+                    line 4
+  - name: RT5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Rising trigger event configuration of
+                    line 5
+  - name: RT6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Rising trigger event configuration of
+                    line 6
+  - name: RT7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Rising trigger event configuration of
+                    line 7
+  - name: RT8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Rising trigger event configuration of
+                    line 8
+  - name: RT9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Rising trigger event configuration of
+                    line 9
+  - name: RT10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Rising trigger event configuration of
+                    line 10
+  - name: RT11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Rising trigger event configuration of
+                    line 11
+  - name: RT12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Rising trigger event configuration of
+                    line 12
+  - name: RT13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Rising trigger event configuration of
+                    line 13
+  - name: RT14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Rising trigger event configuration of
+                    line 14
+  - name: RT15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Rising trigger event configuration of
+                    line 15
+  - name: RT16
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      Rising trigger event configuration of
+                    line 16
+  - name: RT17
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      Rising trigger event configuration of
+                    line 17
+  - name: RT19
+    bit_range:
+    - 19
+    - 19
+    description: |-
+      Rising trigger event configuration of
+                    line 19
+  - name: RT20
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      Rising trigger event configuration of
+                    line 20
+  - name: RT21
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      Rising trigger event configuration of
+                    line 21
+  - name: RT22
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      Rising trigger event configuration of
+                    line 22
+  side_effects: null
+- id: FTSR
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FT0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Falling trigger event configuration of
+                    line 0
+  - name: FT1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Falling trigger event configuration of
+                    line 1
+  - name: FT2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Falling trigger event configuration of
+                    line 2
+  - name: FT3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Falling trigger event configuration of
+                    line 3
+  - name: FT4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Falling trigger event configuration of
+                    line 4
+  - name: FT5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Falling trigger event configuration of
+                    line 5
+  - name: FT6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Falling trigger event configuration of
+                    line 6
+  - name: FT7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Falling trigger event configuration of
+                    line 7
+  - name: FT8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Falling trigger event configuration of
+                    line 8
+  - name: FT9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Falling trigger event configuration of
+                    line 9
+  - name: FT10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Falling trigger event configuration of
+                    line 10
+  - name: FT11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Falling trigger event configuration of
+                    line 11
+  - name: FT12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Falling trigger event configuration of
+                    line 12
+  - name: FT13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Falling trigger event configuration of
+                    line 13
+  - name: FT14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Falling trigger event configuration of
+                    line 14
+  - name: FT15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Falling trigger event configuration of
+                    line 15
+  - name: FT16
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      Falling trigger event configuration of
+                    line 16
+  - name: FT17
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      Falling trigger event configuration of
+                    line 17
+  - name: FT19
+    bit_range:
+    - 19
+    - 19
+    description: |-
+      Falling trigger event configuration of
+                    line 19
+  - name: FT20
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      Falling trigger event configuration of
+                    line 20
+  - name: FT21
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      Falling trigger event configuration of
+                    line 21
+  - name: FT22
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      Falling trigger event configuration of
+                    line 22
+  side_effects: null
+- id: SWIER
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SWI0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Software Interrupt on line
+                    0
+  - name: SWI1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Software Interrupt on line
+                    1
+  - name: SWI2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Software Interrupt on line
+                    2
+  - name: SWI3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Software Interrupt on line
+                    3
+  - name: SWI4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Software Interrupt on line
+                    4
+  - name: SWI5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Software Interrupt on line
+                    5
+  - name: SWI6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Software Interrupt on line
+                    6
+  - name: SWI7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Software Interrupt on line
+                    7
+  - name: SWI8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Software Interrupt on line
+                    8
+  - name: SWI9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Software Interrupt on line
+                    9
+  - name: SWI10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Software Interrupt on line
+                    10
+  - name: SWI11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Software Interrupt on line
+                    11
+  - name: SWI12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Software Interrupt on line
+                    12
+  - name: SWI13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Software Interrupt on line
+                    13
+  - name: SWI14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Software Interrupt on line
+                    14
+  - name: SWI15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Software Interrupt on line
+                    15
+  - name: SWI16
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      Software Interrupt on line
+                    16
+  - name: SWI17
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      Software Interrupt on line
+                    17
+  - name: SWI19
+    bit_range:
+    - 19
+    - 19
+    description: |-
+      Software Interrupt on line
+                    19
+  - name: SWI20
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      Software Interrupt on line
+                    20
+  - name: SWI21
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      Software Interrupt on line
+                    21
+  - name: SWI22
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      Software Interrupt on line
+                    22
+  side_effects: null
+- id: PR
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PIF0
+    bit_range:
+    - 0
+    - 0
+    description: Pending bit 0
+  - name: PIF1
+    bit_range:
+    - 1
+    - 1
+    description: Pending bit 1
+  - name: PIF2
+    bit_range:
+    - 2
+    - 2
+    description: Pending bit 2
+  - name: PIF3
+    bit_range:
+    - 3
+    - 3
+    description: Pending bit 3
+  - name: PIF4
+    bit_range:
+    - 4
+    - 4
+    description: Pending bit 4
+  - name: PIF5
+    bit_range:
+    - 5
+    - 5
+    description: Pending bit 5
+  - name: PIF6
+    bit_range:
+    - 6
+    - 6
+    description: Pending bit 6
+  - name: PIF7
+    bit_range:
+    - 7
+    - 7
+    description: Pending bit 7
+  - name: PIF8
+    bit_range:
+    - 8
+    - 8
+    description: Pending bit 8
+  - name: PIF9
+    bit_range:
+    - 9
+    - 9
+    description: Pending bit 9
+  - name: PIF10
+    bit_range:
+    - 10
+    - 10
+    description: Pending bit 10
+  - name: PIF11
+    bit_range:
+    - 11
+    - 11
+    description: Pending bit 11
+  - name: PIF12
+    bit_range:
+    - 12
+    - 12
+    description: Pending bit 12
+  - name: PIF13
+    bit_range:
+    - 13
+    - 13
+    description: Pending bit 13
+  - name: PIF14
+    bit_range:
+    - 14
+    - 14
+    description: Pending bit 14
+  - name: PIF15
+    bit_range:
+    - 15
+    - 15
+    description: Pending bit 15
+  - name: PIF16
+    bit_range:
+    - 16
+    - 16
+    description: Pending bit 16
+  - name: PIF17
+    bit_range:
+    - 17
+    - 17
+    description: Pending bit 17
+  - name: PIF19
+    bit_range:
+    - 19
+    - 19
+    description: Pending bit 19
+  - name: PIF20
+    bit_range:
+    - 20
+    - 20
+    description: Pending bit 20
+  - name: PIF21
+    bit_range:
+    - 21
+    - 21
+    description: Pending bit 21
+  - name: PIF22
+    bit_range:
+    - 22
+    - 22
+    description: Pending bit 22
+  side_effects: null
+interrupts:
+  PVD: 1
+  EXTI0_1: 5
+  EXTI2_3: 6
+  EXTI4_15: 7
+timing: null

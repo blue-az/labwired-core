@@ -525,6 +525,65 @@ pub struct SystemBus {
     /// Authoritative pin → (gpio peripheral, bit) map, built from the chip
     /// config's `pins:`. Empty when the chip declares none (→ label parse).
     pub(crate) pin_map: std::collections::HashMap<String, (String, u8)>,
+    /// What the system manifest DECLARED under `external_devices:`, verbatim.
+    ///
+    /// Purely identity metadata for [`crate::Machine::inspect`], which joins it
+    /// onto the live models it finds by walking controllers. Nothing on the
+    /// simulation path reads it and nothing here can influence dispatch — it is
+    /// the same "side map, not part of a peripheral's identity" arrangement as
+    /// [`Self::debug_schemas`], for the same reason.
+    ///
+    /// It is a record of what was WRITTEN, not of what was built. A declaration
+    /// that no live model matches is therefore never reported as a device —
+    /// see [`crate::inspect::DeviceInspect::declared`].
+    pub external_device_decls: Vec<ExternalDeviceDecl>,
+}
+
+/// One `external_devices:` entry, reduced to the fields inspect joins on.
+///
+/// Kept as its own type rather than holding
+/// [`labwired_config::ExternalDevice`] so the bus does not carry the whole
+/// on-disk config shape (route maps, free-form YAML config) around for the sake
+/// of four fields.
+#[derive(Debug, Clone)]
+pub struct ExternalDeviceDecl {
+    pub id: String,
+    pub device_type: String,
+    /// A controller peripheral id (`"i2c0"`), or another declaration's `id`
+    /// when this device sits behind an I²C bus switch.
+    pub connection: String,
+    /// Bus-switch channel, when `connection` names a switch.
+    pub channel: Option<u8>,
+    /// `config.i2c_address`, when declared.
+    pub address: Option<u8>,
+    /// `config.cs_pin`, when declared.
+    pub cs_pin: Option<String>,
+}
+
+impl ExternalDeviceDecl {
+    /// Reduce a manifest entry. `i2c_address` is read as an integer; a manifest
+    /// that omits it (leaving the device model's own default to stand) yields
+    /// `None`, and the inspect join falls back to positional matching.
+    pub fn from_manifest(ext: &labwired_config::ExternalDevice) -> Self {
+        let addr = ext
+            .config
+            .get("i2c_address")
+            .and_then(|v| v.as_u64())
+            .and_then(|v| u8::try_from(v).ok());
+        let cs = ext
+            .config
+            .get("cs_pin")
+            .and_then(|v| v.as_str())
+            .map(str::to_string);
+        Self {
+            id: ext.id.clone(),
+            device_type: ext.r#type.clone(),
+            connection: ext.connection.clone(),
+            channel: ext.channel,
+            address: addr,
+            cs_pin: cs,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

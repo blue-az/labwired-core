@@ -712,6 +712,12 @@ impl Peripheral for Nrf52Twim {
         }
         false
     }
+
+    fn for_each_attached_device(&self, f: &mut dyn FnMut(crate::inspect::AttachedDeviceRef<'_>)) {
+        for cell in &self.attached_devices {
+            crate::inspect::visit_i2c_device(&**cell.borrow(), f);
+        }
+    }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

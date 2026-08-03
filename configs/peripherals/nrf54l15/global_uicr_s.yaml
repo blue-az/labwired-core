@@ -1,0 +1,5031 @@
+peripheral: GLOBAL_UICR_S
+version: 0.1.0
+registers:
+- id: APPROTECT0_PROTECT0
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: PALL
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: APPROTECT0_PROTECT1
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: PALL
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: SECUREAPPROTECT0_PROTECT0
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: PALL
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: SECUREAPPROTECT0_PROTECT1
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: PALL
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: AUXAPPROTECT0_PROTECT0
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: PALL
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: AUXAPPROTECT0_PROTECT1
+  address_offset: 92
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: PALL
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: ERASEPROTECT0_PROTECT0
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: PALL
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: ERASEPROTECT0_PROTECT1
+  address_offset: 124
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: PALL
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BOOTCONF
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: READ
+    bit_range:
+    - 0
+    - 0
+    description: Read access
+  - name: WRITE
+    bit_range:
+    - 1
+    - 1
+    description: Write access
+  - name: EXECUTE
+    bit_range:
+    - 2
+    - 2
+    description: Execute access
+  - name: SECURE
+    bit_range:
+    - 3
+    - 3
+    description: Secure access
+  - name: WRITEONCE
+    bit_range:
+    - 12
+    - 12
+    description: Write-once
+  - name: LOCK
+    bit_range:
+    - 13
+    - 13
+    description: Enable lock of configuration register
+  - name: SIZE
+    bit_range:
+    - 20
+    - 16
+    description: Immutable boot region size
+  side_effects: null
+- id: USER_ROT_PUBKEY0_DIGEST0
+  address_offset: 512
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY0_DIGEST1
+  address_offset: 516
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY0_DIGEST2
+  address_offset: 520
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY0_DIGEST3
+  address_offset: 524
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY0_DIGEST4
+  address_offset: 528
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY0_DIGEST5
+  address_offset: 532
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY0_DIGEST6
+  address_offset: 536
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY0_DIGEST7
+  address_offset: 540
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY0_REVOKE0
+  address_offset: 544
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: STATUS
+    bit_range:
+    - 31
+    - 0
+    description: Revocation status.
+  side_effects: null
+- id: USER_ROT_PUBKEY0_REVOKE1
+  address_offset: 548
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: STATUS
+    bit_range:
+    - 31
+    - 0
+    description: Revocation status.
+  side_effects: null
+- id: USER_ROT_PUBKEY0_REVOKE2
+  address_offset: 552
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: STATUS
+    bit_range:
+    - 31
+    - 0
+    description: Revocation status.
+  side_effects: null
+- id: USER_ROT_PUBKEY1_DIGEST0
+  address_offset: 556
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY1_DIGEST1
+  address_offset: 560
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY1_DIGEST2
+  address_offset: 564
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY1_DIGEST3
+  address_offset: 568
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY1_DIGEST4
+  address_offset: 572
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY1_DIGEST5
+  address_offset: 576
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY1_DIGEST6
+  address_offset: 580
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY1_DIGEST7
+  address_offset: 584
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY1_REVOKE0
+  address_offset: 588
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: STATUS
+    bit_range:
+    - 31
+    - 0
+    description: Revocation status.
+  side_effects: null
+- id: USER_ROT_PUBKEY1_REVOKE1
+  address_offset: 592
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: STATUS
+    bit_range:
+    - 31
+    - 0
+    description: Revocation status.
+  side_effects: null
+- id: USER_ROT_PUBKEY1_REVOKE2
+  address_offset: 596
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: STATUS
+    bit_range:
+    - 31
+    - 0
+    description: Revocation status.
+  side_effects: null
+- id: USER_ROT_PUBKEY2_DIGEST0
+  address_offset: 600
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY2_DIGEST1
+  address_offset: 604
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY2_DIGEST2
+  address_offset: 608
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY2_DIGEST3
+  address_offset: 612
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY2_DIGEST4
+  address_offset: 616
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY2_DIGEST5
+  address_offset: 620
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY2_DIGEST6
+  address_offset: 624
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY2_DIGEST7
+  address_offset: 628
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY2_REVOKE0
+  address_offset: 632
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: STATUS
+    bit_range:
+    - 31
+    - 0
+    description: Revocation status.
+  side_effects: null
+- id: USER_ROT_PUBKEY2_REVOKE1
+  address_offset: 636
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: STATUS
+    bit_range:
+    - 31
+    - 0
+    description: Revocation status.
+  side_effects: null
+- id: USER_ROT_PUBKEY2_REVOKE2
+  address_offset: 640
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: STATUS
+    bit_range:
+    - 31
+    - 0
+    description: Revocation status.
+  side_effects: null
+- id: USER_ROT_PUBKEY3_DIGEST0
+  address_offset: 644
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY3_DIGEST1
+  address_offset: 648
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY3_DIGEST2
+  address_offset: 652
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY3_DIGEST3
+  address_offset: 656
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY3_DIGEST4
+  address_offset: 660
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY3_DIGEST5
+  address_offset: 664
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY3_DIGEST6
+  address_offset: 668
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY3_DIGEST7
+  address_offset: 672
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_PUBKEY3_REVOKE0
+  address_offset: 676
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: STATUS
+    bit_range:
+    - 31
+    - 0
+    description: Revocation status.
+  side_effects: null
+- id: USER_ROT_PUBKEY3_REVOKE1
+  address_offset: 680
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: STATUS
+    bit_range:
+    - 31
+    - 0
+    description: Revocation status.
+  side_effects: null
+- id: USER_ROT_PUBKEY3_REVOKE2
+  address_offset: 684
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: STATUS
+    bit_range:
+    - 31
+    - 0
+    description: Revocation status.
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY0_DIGEST0
+  address_offset: 688
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY0_DIGEST1
+  address_offset: 692
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY0_DIGEST2
+  address_offset: 696
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY0_DIGEST3
+  address_offset: 700
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY0_DIGEST4
+  address_offset: 704
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY0_DIGEST5
+  address_offset: 708
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY0_DIGEST6
+  address_offset: 712
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY0_DIGEST7
+  address_offset: 716
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY0_REVOKE0
+  address_offset: 720
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: STATUS
+    bit_range:
+    - 31
+    - 0
+    description: Revocation status.
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY0_REVOKE1
+  address_offset: 724
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: STATUS
+    bit_range:
+    - 31
+    - 0
+    description: Revocation status.
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY0_REVOKE2
+  address_offset: 728
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: STATUS
+    bit_range:
+    - 31
+    - 0
+    description: Revocation status.
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY1_DIGEST0
+  address_offset: 732
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY1_DIGEST1
+  address_offset: 736
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY1_DIGEST2
+  address_offset: 740
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY1_DIGEST3
+  address_offset: 744
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY1_DIGEST4
+  address_offset: 748
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY1_DIGEST5
+  address_offset: 752
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY1_DIGEST6
+  address_offset: 756
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY1_DIGEST7
+  address_offset: 760
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY1_REVOKE0
+  address_offset: 764
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: STATUS
+    bit_range:
+    - 31
+    - 0
+    description: Revocation status.
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY1_REVOKE1
+  address_offset: 768
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: STATUS
+    bit_range:
+    - 31
+    - 0
+    description: Revocation status.
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY1_REVOKE2
+  address_offset: 772
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: STATUS
+    bit_range:
+    - 31
+    - 0
+    description: Revocation status.
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY2_DIGEST0
+  address_offset: 776
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY2_DIGEST1
+  address_offset: 780
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY2_DIGEST2
+  address_offset: 784
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY2_DIGEST3
+  address_offset: 788
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY2_DIGEST4
+  address_offset: 792
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY2_DIGEST5
+  address_offset: 796
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY2_DIGEST6
+  address_offset: 800
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY2_DIGEST7
+  address_offset: 804
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY2_REVOKE0
+  address_offset: 808
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: STATUS
+    bit_range:
+    - 31
+    - 0
+    description: Revocation status.
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY2_REVOKE1
+  address_offset: 812
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: STATUS
+    bit_range:
+    - 31
+    - 0
+    description: Revocation status.
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY2_REVOKE2
+  address_offset: 816
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: STATUS
+    bit_range:
+    - 31
+    - 0
+    description: Revocation status.
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY3_DIGEST0
+  address_offset: 820
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY3_DIGEST1
+  address_offset: 824
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY3_DIGEST2
+  address_offset: 828
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY3_DIGEST3
+  address_offset: 832
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY3_DIGEST4
+  address_offset: 836
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY3_DIGEST5
+  address_offset: 840
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY3_DIGEST6
+  address_offset: 844
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY3_DIGEST7
+  address_offset: 848
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value for word [o] in the key digest [n].
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY3_REVOKE0
+  address_offset: 852
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: STATUS
+    bit_range:
+    - 31
+    - 0
+    description: Revocation status.
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY3_REVOKE1
+  address_offset: 856
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: STATUS
+    bit_range:
+    - 31
+    - 0
+    description: Revocation status.
+  side_effects: null
+- id: USER_ROT_AUTHOPKEY3_REVOKE2
+  address_offset: 860
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: STATUS
+    bit_range:
+    - 31
+    - 0
+    description: Revocation status.
+  side_effects: null
+- id: OTP0
+  address_offset: 1280
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP1
+  address_offset: 1284
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP2
+  address_offset: 1288
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP3
+  address_offset: 1292
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP4
+  address_offset: 1296
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP5
+  address_offset: 1300
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP6
+  address_offset: 1304
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP7
+  address_offset: 1308
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP8
+  address_offset: 1312
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP9
+  address_offset: 1316
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP10
+  address_offset: 1320
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP11
+  address_offset: 1324
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP12
+  address_offset: 1328
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP13
+  address_offset: 1332
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP14
+  address_offset: 1336
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP15
+  address_offset: 1340
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP16
+  address_offset: 1344
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP17
+  address_offset: 1348
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP18
+  address_offset: 1352
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP19
+  address_offset: 1356
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP20
+  address_offset: 1360
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP21
+  address_offset: 1364
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP22
+  address_offset: 1368
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP23
+  address_offset: 1372
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP24
+  address_offset: 1376
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP25
+  address_offset: 1380
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP26
+  address_offset: 1384
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP27
+  address_offset: 1388
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP28
+  address_offset: 1392
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP29
+  address_offset: 1396
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP30
+  address_offset: 1400
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP31
+  address_offset: 1404
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP32
+  address_offset: 1408
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP33
+  address_offset: 1412
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP34
+  address_offset: 1416
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP35
+  address_offset: 1420
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP36
+  address_offset: 1424
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP37
+  address_offset: 1428
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP38
+  address_offset: 1432
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP39
+  address_offset: 1436
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP40
+  address_offset: 1440
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP41
+  address_offset: 1444
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP42
+  address_offset: 1448
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP43
+  address_offset: 1452
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP44
+  address_offset: 1456
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP45
+  address_offset: 1460
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP46
+  address_offset: 1464
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP47
+  address_offset: 1468
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP48
+  address_offset: 1472
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP49
+  address_offset: 1476
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP50
+  address_offset: 1480
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP51
+  address_offset: 1484
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP52
+  address_offset: 1488
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP53
+  address_offset: 1492
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP54
+  address_offset: 1496
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP55
+  address_offset: 1500
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP56
+  address_offset: 1504
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP57
+  address_offset: 1508
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP58
+  address_offset: 1512
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP59
+  address_offset: 1516
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP60
+  address_offset: 1520
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP61
+  address_offset: 1524
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP62
+  address_offset: 1528
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP63
+  address_offset: 1532
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP64
+  address_offset: 1536
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP65
+  address_offset: 1540
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP66
+  address_offset: 1544
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP67
+  address_offset: 1548
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP68
+  address_offset: 1552
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP69
+  address_offset: 1556
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP70
+  address_offset: 1560
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP71
+  address_offset: 1564
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP72
+  address_offset: 1568
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP73
+  address_offset: 1572
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP74
+  address_offset: 1576
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP75
+  address_offset: 1580
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP76
+  address_offset: 1584
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP77
+  address_offset: 1588
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP78
+  address_offset: 1592
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP79
+  address_offset: 1596
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP80
+  address_offset: 1600
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP81
+  address_offset: 1604
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP82
+  address_offset: 1608
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP83
+  address_offset: 1612
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP84
+  address_offset: 1616
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP85
+  address_offset: 1620
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP86
+  address_offset: 1624
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP87
+  address_offset: 1628
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP88
+  address_offset: 1632
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP89
+  address_offset: 1636
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP90
+  address_offset: 1640
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP91
+  address_offset: 1644
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP92
+  address_offset: 1648
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP93
+  address_offset: 1652
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP94
+  address_offset: 1656
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP95
+  address_offset: 1660
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP96
+  address_offset: 1664
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP97
+  address_offset: 1668
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP98
+  address_offset: 1672
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP99
+  address_offset: 1676
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP100
+  address_offset: 1680
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP101
+  address_offset: 1684
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP102
+  address_offset: 1688
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP103
+  address_offset: 1692
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP104
+  address_offset: 1696
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP105
+  address_offset: 1700
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP106
+  address_offset: 1704
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP107
+  address_offset: 1708
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP108
+  address_offset: 1712
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP109
+  address_offset: 1716
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP110
+  address_offset: 1720
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP111
+  address_offset: 1724
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP112
+  address_offset: 1728
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP113
+  address_offset: 1732
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP114
+  address_offset: 1736
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP115
+  address_offset: 1740
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP116
+  address_offset: 1744
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP117
+  address_offset: 1748
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP118
+  address_offset: 1752
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP119
+  address_offset: 1756
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP120
+  address_offset: 1760
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP121
+  address_offset: 1764
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP122
+  address_offset: 1768
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP123
+  address_offset: 1772
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP124
+  address_offset: 1776
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP125
+  address_offset: 1780
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP126
+  address_offset: 1784
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP127
+  address_offset: 1788
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP128
+  address_offset: 1792
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP129
+  address_offset: 1796
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP130
+  address_offset: 1800
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP131
+  address_offset: 1804
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP132
+  address_offset: 1808
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP133
+  address_offset: 1812
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP134
+  address_offset: 1816
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP135
+  address_offset: 1820
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP136
+  address_offset: 1824
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP137
+  address_offset: 1828
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP138
+  address_offset: 1832
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP139
+  address_offset: 1836
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP140
+  address_offset: 1840
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP141
+  address_offset: 1844
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP142
+  address_offset: 1848
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP143
+  address_offset: 1852
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP144
+  address_offset: 1856
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP145
+  address_offset: 1860
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP146
+  address_offset: 1864
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP147
+  address_offset: 1868
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP148
+  address_offset: 1872
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP149
+  address_offset: 1876
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP150
+  address_offset: 1880
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP151
+  address_offset: 1884
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP152
+  address_offset: 1888
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP153
+  address_offset: 1892
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP154
+  address_offset: 1896
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP155
+  address_offset: 1900
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP156
+  address_offset: 1904
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP157
+  address_offset: 1908
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP158
+  address_offset: 1912
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP159
+  address_offset: 1916
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP160
+  address_offset: 1920
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP161
+  address_offset: 1924
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP162
+  address_offset: 1928
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP163
+  address_offset: 1932
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP164
+  address_offset: 1936
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP165
+  address_offset: 1940
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP166
+  address_offset: 1944
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP167
+  address_offset: 1948
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP168
+  address_offset: 1952
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP169
+  address_offset: 1956
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP170
+  address_offset: 1960
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP171
+  address_offset: 1964
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP172
+  address_offset: 1968
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP173
+  address_offset: 1972
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP174
+  address_offset: 1976
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP175
+  address_offset: 1980
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP176
+  address_offset: 1984
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP177
+  address_offset: 1988
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP178
+  address_offset: 1992
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP179
+  address_offset: 1996
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP180
+  address_offset: 2000
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP181
+  address_offset: 2004
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP182
+  address_offset: 2008
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP183
+  address_offset: 2012
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP184
+  address_offset: 2016
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP185
+  address_offset: 2020
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP186
+  address_offset: 2024
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP187
+  address_offset: 2028
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP188
+  address_offset: 2032
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP189
+  address_offset: 2036
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP190
+  address_offset: 2040
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP191
+  address_offset: 2044
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP192
+  address_offset: 2048
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP193
+  address_offset: 2052
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP194
+  address_offset: 2056
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP195
+  address_offset: 2060
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP196
+  address_offset: 2064
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP197
+  address_offset: 2068
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP198
+  address_offset: 2072
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP199
+  address_offset: 2076
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP200
+  address_offset: 2080
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP201
+  address_offset: 2084
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP202
+  address_offset: 2088
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP203
+  address_offset: 2092
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP204
+  address_offset: 2096
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP205
+  address_offset: 2100
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP206
+  address_offset: 2104
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP207
+  address_offset: 2108
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP208
+  address_offset: 2112
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP209
+  address_offset: 2116
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP210
+  address_offset: 2120
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP211
+  address_offset: 2124
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP212
+  address_offset: 2128
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP213
+  address_offset: 2132
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP214
+  address_offset: 2136
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP215
+  address_offset: 2140
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP216
+  address_offset: 2144
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP217
+  address_offset: 2148
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP218
+  address_offset: 2152
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP219
+  address_offset: 2156
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP220
+  address_offset: 2160
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP221
+  address_offset: 2164
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP222
+  address_offset: 2168
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP223
+  address_offset: 2172
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP224
+  address_offset: 2176
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP225
+  address_offset: 2180
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP226
+  address_offset: 2184
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP227
+  address_offset: 2188
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP228
+  address_offset: 2192
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP229
+  address_offset: 2196
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP230
+  address_offset: 2200
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP231
+  address_offset: 2204
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP232
+  address_offset: 2208
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP233
+  address_offset: 2212
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP234
+  address_offset: 2216
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP235
+  address_offset: 2220
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP236
+  address_offset: 2224
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP237
+  address_offset: 2228
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP238
+  address_offset: 2232
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP239
+  address_offset: 2236
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP240
+  address_offset: 2240
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP241
+  address_offset: 2244
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP242
+  address_offset: 2248
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP243
+  address_offset: 2252
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP244
+  address_offset: 2256
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP245
+  address_offset: 2260
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP246
+  address_offset: 2264
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP247
+  address_offset: 2268
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP248
+  address_offset: 2272
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP249
+  address_offset: 2276
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP250
+  address_offset: 2280
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP251
+  address_offset: 2284
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP252
+  address_offset: 2288
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP253
+  address_offset: 2292
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP254
+  address_offset: 2296
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP255
+  address_offset: 2300
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP256
+  address_offset: 2304
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP257
+  address_offset: 2308
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP258
+  address_offset: 2312
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP259
+  address_offset: 2316
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP260
+  address_offset: 2320
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP261
+  address_offset: 2324
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP262
+  address_offset: 2328
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP263
+  address_offset: 2332
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP264
+  address_offset: 2336
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP265
+  address_offset: 2340
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP266
+  address_offset: 2344
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP267
+  address_offset: 2348
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP268
+  address_offset: 2352
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP269
+  address_offset: 2356
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP270
+  address_offset: 2360
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP271
+  address_offset: 2364
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP272
+  address_offset: 2368
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP273
+  address_offset: 2372
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP274
+  address_offset: 2376
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP275
+  address_offset: 2380
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP276
+  address_offset: 2384
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP277
+  address_offset: 2388
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP278
+  address_offset: 2392
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP279
+  address_offset: 2396
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP280
+  address_offset: 2400
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP281
+  address_offset: 2404
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP282
+  address_offset: 2408
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP283
+  address_offset: 2412
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP284
+  address_offset: 2416
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP285
+  address_offset: 2420
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP286
+  address_offset: 2424
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP287
+  address_offset: 2428
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP288
+  address_offset: 2432
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP289
+  address_offset: 2436
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP290
+  address_offset: 2440
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP291
+  address_offset: 2444
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP292
+  address_offset: 2448
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP293
+  address_offset: 2452
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP294
+  address_offset: 2456
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP295
+  address_offset: 2460
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP296
+  address_offset: 2464
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP297
+  address_offset: 2468
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP298
+  address_offset: 2472
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP299
+  address_offset: 2476
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP300
+  address_offset: 2480
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP301
+  address_offset: 2484
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP302
+  address_offset: 2488
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP303
+  address_offset: 2492
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP304
+  address_offset: 2496
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP305
+  address_offset: 2500
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP306
+  address_offset: 2504
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP307
+  address_offset: 2508
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP308
+  address_offset: 2512
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP309
+  address_offset: 2516
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP310
+  address_offset: 2520
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP311
+  address_offset: 2524
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP312
+  address_offset: 2528
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP313
+  address_offset: 2532
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP314
+  address_offset: 2536
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP315
+  address_offset: 2540
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP316
+  address_offset: 2544
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP317
+  address_offset: 2548
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP318
+  address_offset: 2552
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+- id: OTP319
+  address_offset: 2556
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: OTP
+    bit_range:
+    - 31
+    - 0
+    description: OTP word
+  side_effects: null
+interrupts: null
+timing: null

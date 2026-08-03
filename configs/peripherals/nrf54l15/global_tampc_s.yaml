@@ -1,0 +1,692 @@
+peripheral: GLOBAL_TAMPC_S
+version: 0.1.0
+registers:
+- id: EVENTS_TAMPER
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_TAMPER
+    bit_range:
+    - 0
+    - 0
+    description: Tamper controller detected an error.
+  side_effects: null
+- id: EVENTS_WRITEERROR
+  address_offset: 260
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_WRITEERROR
+    bit_range:
+    - 0
+    - 0
+    description: Attempt to write a VALUE in PROTECT registers without clearing the WRITEPROTECT.
+  side_effects: null
+- id: INTEN
+  address_offset: 768
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAMPER
+    bit_range:
+    - 0
+    - 0
+    description: Enable or disable interrupt for event TAMPER
+  - name: WRITEERROR
+    bit_range:
+    - 1
+    - 1
+    description: Enable or disable interrupt for event WRITEERROR
+  side_effects: null
+- id: INTENSET
+  address_offset: 772
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAMPER
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to enable interrupt for event TAMPER
+  - name: WRITEERROR
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to enable interrupt for event WRITEERROR
+  side_effects: null
+- id: INTENCLR
+  address_offset: 776
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAMPER
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to disable interrupt for event TAMPER
+  - name: WRITEERROR
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to disable interrupt for event WRITEERROR
+  side_effects: null
+- id: INTPEND
+  address_offset: 780
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: TAMPER
+    bit_range:
+    - 0
+    - 0
+    description: Read pending status of interrupt for event TAMPER
+  - name: WRITEERROR
+    bit_range:
+    - 1
+    - 1
+    description: Read pending status of interrupt for event WRITEERROR
+  side_effects: null
+- id: STATUS
+  address_offset: 1024
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ACTIVESHIELD
+    bit_range:
+    - 0
+    - 0
+    description: Active shield detector detected an error.
+  - name: PROTECT
+    bit_range:
+    - 4
+    - 4
+    description: Error detected for the protected signals.
+  - name: CRACENTAMP
+    bit_range:
+    - 5
+    - 5
+    description: CRACEN detected an error.
+  - name: GLITCHSLOWDOMAIN_0
+    bit_range:
+    - 8
+    - 8
+    description: Slow domain glitch detector 0 detected an error.
+  - name: GLITCHFASTDOMAIN_0
+    bit_range:
+    - 12
+    - 12
+    description: Fast domain glitch detector 0 detected an error.
+  - name: GLITCHFASTDOMAIN_1
+    bit_range:
+    - 13
+    - 13
+    description: Fast domain glitch detector 1 detected an error.
+  - name: GLITCHFASTDOMAIN_2
+    bit_range:
+    - 14
+    - 14
+    description: Fast domain glitch detector 2 detected an error.
+  - name: GLITCHFASTDOMAIN_3
+    bit_range:
+    - 15
+    - 15
+    description: Fast domain glitch detector 3 detected an error.
+  side_effects:
+    read_action: null
+    write_action: write_one_to_clear
+    on_read: null
+    on_write: null
+- id: ACTIVESHIELD_CHEN
+  address_offset: 1028
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CH_0
+    bit_range:
+    - 0
+    - 0
+    description: Enable or disable active shield channel 0.
+  - name: CH_1
+    bit_range:
+    - 1
+    - 1
+    description: Enable or disable active shield channel 1.
+  - name: CH_2
+    bit_range:
+    - 2
+    - 2
+    description: Enable or disable active shield channel 2.
+  - name: CH_3
+    bit_range:
+    - 3
+    - 3
+    description: Enable or disable active shield channel 3.
+  side_effects: null
+- id: PROTECT_DOMAIN0_DBGEN_CTRL
+  address_offset: 1280
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: VALUE
+    bit_range:
+    - 0
+    - 0
+    description: Set value of dbgen signal.
+  - name: LOCK
+    bit_range:
+    - 1
+    - 1
+    description: Lock this register to prevent changes to the VALUE field until next reset.
+  - name: WRITEPROTECTION
+    bit_range:
+    - 7
+    - 4
+    description: The write protection must be cleared to allow updates to the VALUE field.
+  - name: KEY
+    bit_range:
+    - 31
+    - 16
+    description: Required write key for upper 16 bits. Must be included in all register write operations.
+  side_effects: null
+- id: PROTECT_DOMAIN0_DBGEN_STATUS
+  address_offset: 1284
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ERROR
+    bit_range:
+    - 0
+    - 0
+    description: Error detection status.
+  side_effects:
+    read_action: null
+    write_action: write_one_to_clear
+    on_read: null
+    on_write: null
+- id: PROTECT_DOMAIN0_NIDEN_CTRL
+  address_offset: 1288
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: VALUE
+    bit_range:
+    - 0
+    - 0
+    description: Set value of niden signal.
+  - name: LOCK
+    bit_range:
+    - 1
+    - 1
+    description: Lock this register to prevent changes to the VALUE field until next reset.
+  - name: WRITEPROTECTION
+    bit_range:
+    - 7
+    - 4
+    description: The write protection must be cleared to allow updates to the VALUE field.
+  - name: KEY
+    bit_range:
+    - 31
+    - 16
+    description: Required write key for upper 16 bits. Must be included in all register write operations.
+  side_effects: null
+- id: PROTECT_DOMAIN0_NIDEN_STATUS
+  address_offset: 1292
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ERROR
+    bit_range:
+    - 0
+    - 0
+    description: Error detection status.
+  side_effects:
+    read_action: null
+    write_action: write_one_to_clear
+    on_read: null
+    on_write: null
+- id: PROTECT_DOMAIN0_SPIDEN_CTRL
+  address_offset: 1296
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: VALUE
+    bit_range:
+    - 0
+    - 0
+    description: Set value of spiden signal.
+  - name: LOCK
+    bit_range:
+    - 1
+    - 1
+    description: Lock this register to prevent changes to the VALUE field until next reset.
+  - name: WRITEPROTECTION
+    bit_range:
+    - 7
+    - 4
+    description: The write protection must be cleared to allow updates to the VALUE field.
+  - name: KEY
+    bit_range:
+    - 31
+    - 16
+    description: Required write key for upper 16 bits. Must be included in all register write operations.
+  side_effects: null
+- id: PROTECT_DOMAIN0_SPIDEN_STATUS
+  address_offset: 1300
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ERROR
+    bit_range:
+    - 0
+    - 0
+    description: Error detection status.
+  side_effects:
+    read_action: null
+    write_action: write_one_to_clear
+    on_read: null
+    on_write: null
+- id: PROTECT_DOMAIN0_SPNIDEN_CTRL
+  address_offset: 1304
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: VALUE
+    bit_range:
+    - 0
+    - 0
+    description: Set value of spniden signal.
+  - name: LOCK
+    bit_range:
+    - 1
+    - 1
+    description: Lock this register to prevent changes to the VALUE field until next reset.
+  - name: WRITEPROTECTION
+    bit_range:
+    - 7
+    - 4
+    description: The write protection must be cleared to allow updates to the VALUE field.
+  - name: KEY
+    bit_range:
+    - 31
+    - 16
+    description: Required write key for upper 16 bits. Must be included in all register write operations.
+  side_effects: null
+- id: PROTECT_DOMAIN0_SPNIDEN_STATUS
+  address_offset: 1308
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ERROR
+    bit_range:
+    - 0
+    - 0
+    description: Error detection status.
+  side_effects:
+    read_action: null
+    write_action: write_one_to_clear
+    on_read: null
+    on_write: null
+- id: PROTECT_AP0_DBGEN_CTRL
+  address_offset: 1792
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: VALUE
+    bit_range:
+    - 0
+    - 0
+    description: Set value of dbgen signal.
+  - name: LOCK
+    bit_range:
+    - 1
+    - 1
+    description: Lock this register to prevent changes to the VALUE field until next reset.
+  - name: WRITEPROTECTION
+    bit_range:
+    - 7
+    - 4
+    description: The write protection must be cleared to allow updates to the VALUE field.
+  - name: KEY
+    bit_range:
+    - 31
+    - 16
+    description: Required write key for upper 16 bits. Must be included in all register write operations.
+  side_effects: null
+- id: PROTECT_AP0_DBGEN_STATUS
+  address_offset: 1796
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ERROR
+    bit_range:
+    - 0
+    - 0
+    description: Error detection status.
+  side_effects:
+    read_action: null
+    write_action: write_one_to_clear
+    on_read: null
+    on_write: null
+- id: PROTECT_ACTIVESHIELD_CTRL
+  address_offset: 2304
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: VALUE
+    bit_range:
+    - 0
+    - 0
+    description: Set value of active shield enable signal.
+  - name: LOCK
+    bit_range:
+    - 1
+    - 1
+    description: Lock this register to prevent changes to the VALUE field until next reset.
+  - name: WRITEPROTECTION
+    bit_range:
+    - 7
+    - 4
+    description: The write protection must be cleared to allow updates to the VALUE field.
+  - name: KEY
+    bit_range:
+    - 31
+    - 16
+    description: Required write key for upper 16 bits. Must be included in all register write operations.
+  side_effects: null
+- id: PROTECT_ACTIVESHIELD_STATUS
+  address_offset: 2308
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ERROR
+    bit_range:
+    - 0
+    - 0
+    description: Error detection status.
+  side_effects:
+    read_action: null
+    write_action: write_one_to_clear
+    on_read: null
+    on_write: null
+- id: PROTECT_CRACENTAMP_CTRL
+  address_offset: 2360
+  size: 32
+  access: READ_WRITE
+  reset_value: 17
+  fields:
+  - name: VALUE
+    bit_range:
+    - 0
+    - 0
+    description: Set value of CRACEN tamper detector enable signal.
+  - name: LOCK
+    bit_range:
+    - 1
+    - 1
+    description: Lock this register to prevent changes to the VALUE field until next reset.
+  - name: WRITEPROTECTION
+    bit_range:
+    - 7
+    - 4
+    description: The write protection must be cleared to allow updates to the VALUE field.
+  - name: KEY
+    bit_range:
+    - 31
+    - 16
+    description: Required write key for upper 16 bits. Must be included in all register write operations.
+  side_effects: null
+- id: PROTECT_CRACENTAMP_STATUS
+  address_offset: 2364
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ERROR
+    bit_range:
+    - 0
+    - 0
+    description: Error detection status.
+  side_effects:
+    read_action: null
+    write_action: write_one_to_clear
+    on_read: null
+    on_write: null
+- id: PROTECT_GLITCHSLOWDOMAIN_CTRL
+  address_offset: 2368
+  size: 32
+  access: READ_WRITE
+  reset_value: 17
+  fields:
+  - name: VALUE
+    bit_range:
+    - 0
+    - 0
+    description: Set value of slow domain glitch detectors enable signal.
+  - name: LOCK
+    bit_range:
+    - 1
+    - 1
+    description: Lock this register to prevent changes to the VALUE field until next reset.
+  - name: WRITEPROTECTION
+    bit_range:
+    - 7
+    - 4
+    description: The write protection must be cleared to allow updates to the VALUE field.
+  - name: KEY
+    bit_range:
+    - 31
+    - 16
+    description: Required write key for upper 16 bits. Must be included in all register write operations.
+  side_effects: null
+- id: PROTECT_GLITCHSLOWDOMAIN_STATUS
+  address_offset: 2372
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ERROR
+    bit_range:
+    - 0
+    - 0
+    description: Error detection status.
+  side_effects:
+    read_action: null
+    write_action: write_one_to_clear
+    on_read: null
+    on_write: null
+- id: PROTECT_GLITCHFASTDOMAIN_CTRL
+  address_offset: 2376
+  size: 32
+  access: READ_WRITE
+  reset_value: 17
+  fields:
+  - name: VALUE
+    bit_range:
+    - 0
+    - 0
+    description: Set value of fast domain glitch detector's enable signal.
+  - name: LOCK
+    bit_range:
+    - 1
+    - 1
+    description: Lock this register to prevent changes to the VALUE field until next reset.
+  - name: WRITEPROTECTION
+    bit_range:
+    - 7
+    - 4
+    description: The write protection must be cleared to allow updates to the VALUE field.
+  - name: KEY
+    bit_range:
+    - 31
+    - 16
+    description: Required write key for upper 16 bits. Must be included in all register write operations.
+  side_effects: null
+- id: PROTECT_GLITCHFASTDOMAIN_STATUS
+  address_offset: 2380
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ERROR
+    bit_range:
+    - 0
+    - 0
+    description: Error detection status.
+  side_effects:
+    read_action: null
+    write_action: write_one_to_clear
+    on_read: null
+    on_write: null
+- id: PROTECT_EXTRESETEN_CTRL
+  address_offset: 2416
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: VALUE
+    bit_range:
+    - 0
+    - 0
+    description: Set value of external tamper reset enable signal.
+  - name: LOCK
+    bit_range:
+    - 1
+    - 1
+    description: Lock this register to prevent changes to the VALUE field until next reset.
+  - name: WRITEPROTECTION
+    bit_range:
+    - 7
+    - 4
+    description: The write protection must be cleared to allow updates to the VALUE field.
+  - name: KEY
+    bit_range:
+    - 31
+    - 16
+    description: Required write key for upper 16 bits. Must be included in all register write operations.
+  side_effects: null
+- id: PROTECT_EXTRESETEN_STATUS
+  address_offset: 2420
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ERROR
+    bit_range:
+    - 0
+    - 0
+    description: Error detection status.
+  side_effects:
+    read_action: null
+    write_action: write_one_to_clear
+    on_read: null
+    on_write: null
+- id: PROTECT_INTRESETEN_CTRL
+  address_offset: 2424
+  size: 32
+  access: READ_WRITE
+  reset_value: 17
+  fields:
+  - name: VALUE
+    bit_range:
+    - 0
+    - 0
+    description: Set value of internal tamper reset enable signal.
+  - name: LOCK
+    bit_range:
+    - 1
+    - 1
+    description: Lock this register to prevent changes to the VALUE field until next reset.
+  - name: WRITEPROTECTION
+    bit_range:
+    - 7
+    - 4
+    description: The write protection must be cleared to allow updates to the VALUE field.
+  - name: KEY
+    bit_range:
+    - 31
+    - 16
+    description: Required write key for upper 16 bits. Must be included in all register write operations.
+  side_effects: null
+- id: PROTECT_INTRESETEN_STATUS
+  address_offset: 2428
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ERROR
+    bit_range:
+    - 0
+    - 0
+    description: Error detection status.
+  side_effects:
+    read_action: null
+    write_action: write_one_to_clear
+    on_read: null
+    on_write: null
+- id: PROTECT_ERASEPROTECT_CTRL
+  address_offset: 2432
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: VALUE
+    bit_range:
+    - 0
+    - 0
+    description: Set value of eraseprotect signal.
+  - name: LOCK
+    bit_range:
+    - 1
+    - 1
+    description: Lock this register to prevent changes to the VALUE field until next reset.
+  - name: WRITEPROTECTION
+    bit_range:
+    - 7
+    - 4
+    description: The write protection must be cleared to allow updates to the VALUE field.
+  - name: KEY
+    bit_range:
+    - 31
+    - 16
+    description: Required write key for upper 16 bits. Must be included in all register write operations.
+  side_effects: null
+- id: PROTECT_ERASEPROTECT_STATUS
+  address_offset: 2436
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ERROR
+    bit_range:
+    - 0
+    - 0
+    description: Error detection status.
+  side_effects:
+    read_action: null
+    write_action: write_one_to_clear
+    on_read: null
+    on_write: null
+interrupts:
+  TAMPC: 220
+timing: null

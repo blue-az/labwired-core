@@ -1,0 +1,2809 @@
+peripheral: MCPWM0
+version: 0.1.0
+registers:
+- id: CLK_CFG
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CLK_PRESCALE
+    bit_range:
+    - 7
+    - 0
+    description: Period of PWM_clk = 6.25ns * (PWM_CLK_PRESCALE + 1)
+  side_effects: null
+- id: TIMER0_CFG0
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 65280
+  fields:
+  - name: TIMER0_PRESCALE
+    bit_range:
+    - 7
+    - 0
+    description: period of PT0_clk = Period of PWM_clk * (PWM_TIMER0_PRESCALE + 1)
+  - name: TIMER0_PERIOD
+    bit_range:
+    - 23
+    - 8
+    description: period shadow register of PWM timer0
+  - name: TIMER0_PERIOD_UPMETHOD
+    bit_range:
+    - 25
+    - 24
+    description: 'Update method for active register of PWM timer0 period, 0: immediate, 1: TEZ, 2: sync, 3: TEZ | sync. TEZ here and below means timer equal zero event'
+  side_effects: null
+- id: TIMER0_CFG1
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIMER0_START
+    bit_range:
+    - 2
+    - 0
+    description: 'PWM timer0 start and stop control. 0: if PWM timer0 starts, then stops at TEZ, 1: if timer0 starts, then stops at TEP, 2: PWM timer0 starts and runs on, 3: timer0 starts and stops at the next TEZ, 4: timer0 starts and stops at the next TEP. TEP here and below means the event that happens when the timer equals to period'
+  - name: TIMER0_MOD
+    bit_range:
+    - 4
+    - 3
+    description: 'PWM timer0 working mode, 0: freeze, 1: increase mode, 2: decrease mode, 3: up-down mode'
+  side_effects: null
+- id: TIMER0_SYNC
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIMER0_SYNCI_EN
+    bit_range:
+    - 0
+    - 0
+    description: When set, timer reloading with phase on sync input event is enabled.
+  - name: SW
+    bit_range:
+    - 1
+    - 1
+    description: Toggling this bit will trigger a software sync.
+  - name: TIMER0_SYNCO_SEL
+    bit_range:
+    - 3
+    - 2
+    description: 'PWM timer0 sync_out selection, 0: synci, 1: TEZ, 2: TEP, otherwise:sync out is software sync'
+  - name: TIMER0_PHASE
+    bit_range:
+    - 19
+    - 4
+    description: phase for timer reload on sync event
+  - name: TIMER0_PHASE_DIRECTION
+    bit_range:
+    - 20
+    - 20
+    description: 'Configure the PWM timer0''s direction when timer0 mode is up-down mode. 0: increase; 1: decrease.'
+  side_effects: null
+- id: TIMER0_STATUS
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIMER0_VALUE
+    bit_range:
+    - 15
+    - 0
+    description: current PWM timer0 counter value
+  - name: TIMER0_DIRECTION
+    bit_range:
+    - 16
+    - 16
+    description: 'current PWM timer0 counter direction, 0: increment 1: decrement'
+  side_effects: null
+- id: TIMER1_CFG0
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 65280
+  fields:
+  - name: TIMER1_PRESCALE
+    bit_range:
+    - 7
+    - 0
+    description: period of PT0_clk = Period of PWM_clk * (PWM_timer1_PRESCALE + 1)
+  - name: TIMER1_PERIOD
+    bit_range:
+    - 23
+    - 8
+    description: period shadow register of PWM timer1
+  - name: TIMER1_PERIOD_UPMETHOD
+    bit_range:
+    - 25
+    - 24
+    description: 'Update method for active register of PWM timer1 period, 0: immediate, 1: TEZ, 2: sync, 3: TEZ | sync. TEZ here and below means timer equal zero event'
+  side_effects: null
+- id: TIMER1_CFG1
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIMER1_START
+    bit_range:
+    - 2
+    - 0
+    description: 'PWM timer1 start and stop control. 0: if PWM timer1 starts, then stops at TEZ, 1: if timer1 starts, then stops at TEP, 2: PWM timer1 starts and runs on, 3: timer1 starts and stops at the next TEZ, 4: timer1 starts and stops at the next TEP. TEP here and below means the event that happens when the timer equals to period'
+  - name: TIMER1_MOD
+    bit_range:
+    - 4
+    - 3
+    description: 'PWM timer1 working mode, 0: freeze, 1: increase mode, 2: decrease mode, 3: up-down mode'
+  side_effects: null
+- id: TIMER1_SYNC
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIMER1_SYNCI_EN
+    bit_range:
+    - 0
+    - 0
+    description: When set, timer reloading with phase on sync input event is enabled.
+  - name: SW
+    bit_range:
+    - 1
+    - 1
+    description: Toggling this bit will trigger a software sync.
+  - name: TIMER1_SYNCO_SEL
+    bit_range:
+    - 3
+    - 2
+    description: 'PWM timer1 sync_out selection, 0: synci, 1: TEZ, 2: TEP, otherwise:sync out is software sync'
+  - name: TIMER1_PHASE
+    bit_range:
+    - 19
+    - 4
+    description: phase for timer reload on sync event
+  - name: TIMER1_PHASE_DIRECTION
+    bit_range:
+    - 20
+    - 20
+    description: 'Configure the PWM timer1''s direction when timer1 mode is up-down mode. 0: increase; 1: decrease.'
+  side_effects: null
+- id: TIMER1_STATUS
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIMER1_VALUE
+    bit_range:
+    - 15
+    - 0
+    description: current PWM timer1 counter value
+  - name: TIMER1_DIRECTION
+    bit_range:
+    - 16
+    - 16
+    description: 'current PWM timer1 counter direction, 0: increment 1: decrement'
+  side_effects: null
+- id: TIMER2_CFG0
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 65280
+  fields:
+  - name: TIMER2_PRESCALE
+    bit_range:
+    - 7
+    - 0
+    description: period of PT0_clk = Period of PWM_clk * (PWM_timer2_PRESCALE + 1)
+  - name: TIMER2_PERIOD
+    bit_range:
+    - 23
+    - 8
+    description: period shadow register of PWM timer2
+  - name: TIMER2_PERIOD_UPMETHOD
+    bit_range:
+    - 25
+    - 24
+    description: 'Update method for active register of PWM timer2 period, 0: immediate, 1: TEZ, 2: sync, 3: TEZ | sync. TEZ here and below means timer equal zero event'
+  side_effects: null
+- id: TIMER2_CFG1
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIMER2_START
+    bit_range:
+    - 2
+    - 0
+    description: 'PWM timer2 start and stop control. 0: if PWM timer2 starts, then stops at TEZ, 1: if timer2 starts, then stops at TEP, 2: PWM timer2 starts and runs on, 3: timer2 starts and stops at the next TEZ, 4: timer2 starts and stops at the next TEP. TEP here and below means the event that happens when the timer equals to period'
+  - name: TIMER2_MOD
+    bit_range:
+    - 4
+    - 3
+    description: 'PWM timer2 working mode, 0: freeze, 1: increase mode, 2: decrease mode, 3: up-down mode'
+  side_effects: null
+- id: TIMER2_SYNC
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIMER2_SYNCI_EN
+    bit_range:
+    - 0
+    - 0
+    description: When set, timer reloading with phase on sync input event is enabled.
+  - name: SW
+    bit_range:
+    - 1
+    - 1
+    description: Toggling this bit will trigger a software sync.
+  - name: TIMER2_SYNCO_SEL
+    bit_range:
+    - 3
+    - 2
+    description: 'PWM timer2 sync_out selection, 0: synci, 1: TEZ, 2: TEP, otherwise:sync out is software sync'
+  - name: TIMER2_PHASE
+    bit_range:
+    - 19
+    - 4
+    description: phase for timer reload on sync event
+  - name: TIMER2_PHASE_DIRECTION
+    bit_range:
+    - 20
+    - 20
+    description: 'Configure the PWM timer2''s direction when timer2 mode is up-down mode. 0: increase; 1: decrease.'
+  side_effects: null
+- id: TIMER2_STATUS
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIMER2_VALUE
+    bit_range:
+    - 15
+    - 0
+    description: current PWM timer2 counter value
+  - name: TIMER2_DIRECTION
+    bit_range:
+    - 16
+    - 16
+    description: 'current PWM timer2 counter direction, 0: increment 1: decrement'
+  side_effects: null
+- id: TIMER_SYNCI_CFG
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIMER0_SYNCISEL
+    bit_range:
+    - 2
+    - 0
+    description: 'select sync input for PWM timer0, 1: PWM timer0 sync_out, 2: PWM timer1 sync_out, 3: PWM timer2 sync_out, 4: SYNC0 from GPIO matrix, 5: SYNC1 from GPIO matrix, 6: SYNC2 from GPIO matrix, other values: no sync input selected'
+  - name: TIMER1_SYNCISEL
+    bit_range:
+    - 5
+    - 3
+    description: 'select sync input for PWM timer1, 1: PWM timer0 sync_out, 2: PWM timer1 sync_out, 3: PWM timer2 sync_out, 4: SYNC0 from GPIO matrix, 5: SYNC1 from GPIO matrix, 6: SYNC2 from GPIO matrix, other values: no sync input selected'
+  - name: TIMER2_SYNCISEL
+    bit_range:
+    - 8
+    - 6
+    description: 'select sync input for PWM timer2, 1: PWM timer0 sync_out, 2: PWM timer1 sync_out, 3: PWM timer2 sync_out, 4: SYNC0 from GPIO matrix, 5: SYNC1 from GPIO matrix, 6: SYNC2 from GPIO matrix, other values: no sync input selected'
+  - name: EXTERNAL_SYNCI0_INVERT
+    bit_range:
+    - 9
+    - 9
+    description: invert SYNC0 from GPIO matrix
+  - name: EXTERNAL_SYNCI1_INVERT
+    bit_range:
+    - 10
+    - 10
+    description: invert SYNC1 from GPIO matrix
+  - name: EXTERNAL_SYNCI2_INVERT
+    bit_range:
+    - 11
+    - 11
+    description: invert SYNC2 from GPIO matrix
+  side_effects: null
+- id: OPERATOR_TIMERSEL
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OPERATOR0_TIMERSEL
+    bit_range:
+    - 1
+    - 0
+    description: 'Select which PWM timer''s is the timing reference for PWM operator0, 0: timer0, 1: timer1, 2: timer2'
+  - name: OPERATOR1_TIMERSEL
+    bit_range:
+    - 3
+    - 2
+    description: 'Select which PWM timer''s is the timing reference for PWM operator1, 0: timer0, 1: timer1, 2: timer2'
+  - name: OPERATOR2_TIMERSEL
+    bit_range:
+    - 5
+    - 4
+    description: 'Select which PWM timer''s is the timing reference for PWM operator2, 0: timer0, 1: timer1, 2: timer2'
+  side_effects: null
+- id: CMPR0_CFG
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CMPR0_A_UPMETHOD
+    bit_range:
+    - 3
+    - 0
+    description: 'Update method for PWM generator 0 time stamp A''s active register. When all bits are set to 0: immediately, when bit0 is set to 1: TEZ, when bit1 is set to 1: TEP,when bit2 is set to 1: sync, when bit3 is set to 1: disable the update.'
+  - name: CMPR0_B_UPMETHOD
+    bit_range:
+    - 7
+    - 4
+    description: 'Update method for PWM generator 0 time stamp B''s active register. When all bits are set to 0: immediately, when bit0 is set to 1: TEZ, when bit1 is set to 1: TEP,when bit2 is set to 1: sync, when bit3 is set to 1: disable the update.'
+  - name: CMPR0_A_SHDW_FULL
+    bit_range:
+    - 8
+    - 8
+    description: Set and reset by hardware. If set, PWM generator 0 time stamp A's shadow reg is filled and waiting to be transferred to A's active reg. If cleared, A's active reg has been updated with shadow register latest value
+  - name: CMPR0_B_SHDW_FULL
+    bit_range:
+    - 9
+    - 9
+    description: Set and reset by hardware. If set, PWM generator 0 time stamp B's shadow reg is filled and waiting to be transferred to B's active reg. If cleared, B's active reg has been updated with shadow register latest value
+  side_effects: null
+- id: CMPR0_VALUE0
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CMPR0_A
+    bit_range:
+    - 15
+    - 0
+    description: PWM generator 0 time stamp A's shadow register
+  side_effects: null
+- id: CMPR0_VALUE1
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CMPR0_B
+    bit_range:
+    - 15
+    - 0
+    description: PWM generator 0 time stamp B's shadow register
+  side_effects: null
+- id: GEN0_CFG0
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: GEN0_CFG_UPMETHOD
+    bit_range:
+    - 3
+    - 0
+    description: 'Update method for PWM generator 0''s active register of configuration. When all bits are set to 0: immediately, when bit0 is set to 1: TEZ, when bit1 is set to 1:'
+  - name: GEN0_T0_SEL
+    bit_range:
+    - 6
+    - 4
+    description: 'Source selection for PWM generator 0 event_t0, take effect immediately, 0: fault_event0, 1: fault_event1, 2: fault_event2, 3: sync_taken, 4: none'
+  - name: GEN0_T1_SEL
+    bit_range:
+    - 9
+    - 7
+    description: 'Source selection for PWM generator 0 event_t1, take effect immediately, 0: fault_event0, 1: fault_event1, 2: fault_event2, 3: sync_taken, 4: none'
+  side_effects: null
+- id: GEN0_FORCE
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 32
+  fields:
+  - name: GEN0_CNTUFORCE_UPMETHOD
+    bit_range:
+    - 5
+    - 0
+    description: 'Updating method for continuous software force of PWM generator0. When all bits are set to 0: immediately, when bit0 is set to 1: TEZ,,when bit1 is set to 1: TEP, when bit2 is set to 1: TEA, when bit3 is set to 1: TEB, when bit4 is set to 1: sync, when bit5 is set to 1: disable update. (TEA/B here and below means an event generated when the timer''s value equals to that of register A/B.)'
+  - name: GEN0_A_CNTUFORCE_MODE
+    bit_range:
+    - 7
+    - 6
+    description: 'Continuous software force mode for PWM0A. 0: disabled, 1: low, 2: high, 3: disabled'
+  - name: GEN0_B_CNTUFORCE_MODE
+    bit_range:
+    - 9
+    - 8
+    description: 'Continuous software force mode for PWM0B. 0: disabled, 1: low, 2: high, 3: disabled'
+  - name: GEN0_A_NCIFORCE
+    bit_range:
+    - 10
+    - 10
+    description: Trigger of non-continuous immediate software-force event for PWM0A, a toggle will trigger a force event.
+  - name: GEN0_A_NCIFORCE_MODE
+    bit_range:
+    - 12
+    - 11
+    description: 'non-continuous immediate software force mode for PWM0A, 0: disabled, 1: low, 2: high, 3: disabled'
+  - name: GEN0_B_NCIFORCE
+    bit_range:
+    - 13
+    - 13
+    description: Trigger of non-continuous immediate software-force event for PWM0B, a toggle will trigger a force event.
+  - name: GEN0_B_NCIFORCE_MODE
+    bit_range:
+    - 15
+    - 14
+    description: 'non-continuous immediate software force mode for PWM0B, 0: disabled, 1: low, 2: high, 3: disabled'
+  side_effects: null
+- id: GEN0_A
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: UTEZ
+    bit_range:
+    - 1
+    - 0
+    description: Action on PWM0A triggered by event TEZ when timer increasing
+  - name: UTEP
+    bit_range:
+    - 3
+    - 2
+    description: Action on PWM0A triggered by event TEP when timer increasing
+  - name: UTEA
+    bit_range:
+    - 5
+    - 4
+    description: Action on PWM0A triggered by event TEA when timer increasing
+  - name: UTEB
+    bit_range:
+    - 7
+    - 6
+    description: Action on PWM0A triggered by event TEB when timer increasing
+  - name: UT0
+    bit_range:
+    - 9
+    - 8
+    description: Action on PWM0A triggered by event_t0 when timer increasing
+  - name: UT1
+    bit_range:
+    - 11
+    - 10
+    description: Action on PWM0A triggered by event_t1 when timer increasing
+  - name: DTEZ
+    bit_range:
+    - 13
+    - 12
+    description: Action on PWM0A triggered by event TEZ when timer decreasing
+  - name: DTEP
+    bit_range:
+    - 15
+    - 14
+    description: Action on PWM0A triggered by event TEP when timer decreasing
+  - name: DTEA
+    bit_range:
+    - 17
+    - 16
+    description: Action on PWM0A triggered by event TEA when timer decreasing
+  - name: DTEB
+    bit_range:
+    - 19
+    - 18
+    description: Action on PWM0A triggered by event TEB when timer decreasing
+  - name: DT0
+    bit_range:
+    - 21
+    - 20
+    description: Action on PWM0A triggered by event_t0 when timer decreasing
+  - name: DT1
+    bit_range:
+    - 23
+    - 22
+    description: 'Action on PWM0A triggered by event_t1 when timer decreasing. 0: no change, 1: low, 2: high, 3: toggle'
+  side_effects: null
+- id: GEN0_B
+  address_offset: 84
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: UTEZ
+    bit_range:
+    - 1
+    - 0
+    description: Action on PWM0B triggered by event TEZ when timer increasing
+  - name: UTEP
+    bit_range:
+    - 3
+    - 2
+    description: Action on PWM0B triggered by event TEP when timer increasing
+  - name: UTEA
+    bit_range:
+    - 5
+    - 4
+    description: Action on PWM0B triggered by event TEA when timer increasing
+  - name: UTEB
+    bit_range:
+    - 7
+    - 6
+    description: Action on PWM0B triggered by event TEB when timer increasing
+  - name: UT0
+    bit_range:
+    - 9
+    - 8
+    description: Action on PWM0B triggered by event_t0 when timer increasing
+  - name: UT1
+    bit_range:
+    - 11
+    - 10
+    description: Action on PWM0B triggered by event_t1 when timer increasing
+  - name: DTEZ
+    bit_range:
+    - 13
+    - 12
+    description: Action on PWM0B triggered by event TEZ when timer decreasing
+  - name: DTEP
+    bit_range:
+    - 15
+    - 14
+    description: Action on PWM0B triggered by event TEP when timer decreasing
+  - name: DTEA
+    bit_range:
+    - 17
+    - 16
+    description: Action on PWM0B triggered by event TEA when timer decreasing
+  - name: DTEB
+    bit_range:
+    - 19
+    - 18
+    description: Action on PWM0B triggered by event TEB when timer decreasing
+  - name: DT0
+    bit_range:
+    - 21
+    - 20
+    description: Action on PWM0B triggered by event_t0 when timer decreasing
+  - name: DT1
+    bit_range:
+    - 23
+    - 22
+    description: 'Action on PWM0B triggered by event_t1 when timer decreasing. 0: no change, 1: low, 2: high, 3: toggle'
+  side_effects: null
+- id: DB0_CFG
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 98304
+  fields:
+  - name: DB0_FED_UPMETHOD
+    bit_range:
+    - 3
+    - 0
+    description: 'Update method for FED (falling edge delay) active register. 0: immediate, bit0: tez, bit1: tep, bit2: sync, bit3: freeze'
+  - name: DB0_RED_UPMETHOD
+    bit_range:
+    - 7
+    - 4
+    description: 'Update method for RED (rising edge delay) active register. 0: immediate, bit0: tez, bit1: tep, bit2: sync, bit3: freeze'
+  - name: DB0_DEB_MODE
+    bit_range:
+    - 8
+    - 8
+    description: 'S8 in documentation, dual-edge B mode, 0: fed/red take effect on different path separately, 1: fed/red take effect on B path, A out is in bypass or dulpB mode'
+  - name: DB0_A_OUTSWAP
+    bit_range:
+    - 9
+    - 9
+    description: S6 in documentation
+  - name: DB0_B_OUTSWAP
+    bit_range:
+    - 10
+    - 10
+    description: S7 in documentation
+  - name: DB0_RED_INSEL
+    bit_range:
+    - 11
+    - 11
+    description: S4 in documentation
+  - name: DB0_FED_INSEL
+    bit_range:
+    - 12
+    - 12
+    description: S5 in documentation
+  - name: DB0_RED_OUTINVERT
+    bit_range:
+    - 13
+    - 13
+    description: S2 in documentation
+  - name: DB0_FED_OUTINVERT
+    bit_range:
+    - 14
+    - 14
+    description: S3 in documentation
+  - name: DB0_A_OUTBYPASS
+    bit_range:
+    - 15
+    - 15
+    description: S1 in documentation
+  - name: DB0_B_OUTBYPASS
+    bit_range:
+    - 16
+    - 16
+    description: S0 in documentation
+  - name: DB0_CLK_SEL
+    bit_range:
+    - 17
+    - 17
+    description: 'Dead time generator 0 clock selection. 0: PWM_clk, 1: PT_clk'
+  side_effects: null
+- id: DB0_FED_CFG
+  address_offset: 92
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DB0_FED
+    bit_range:
+    - 15
+    - 0
+    description: Shadow register for FED
+  side_effects: null
+- id: DB0_RED_CFG
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DB0_RED
+    bit_range:
+    - 15
+    - 0
+    description: Shadow register for RED
+  side_effects: null
+- id: CHOPPER0_CFG
+  address_offset: 100
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHOPPER0_EN
+    bit_range:
+    - 0
+    - 0
+    description: When set, carrier0 function is enabled. When cleared, carrier0 is bypassed
+  - name: CHOPPER0_PRESCALE
+    bit_range:
+    - 4
+    - 1
+    description: PWM carrier0 clock (PC_clk) prescale value. Period of PC_clk = period of PWM_clk * (PWM_CARRIER0_PRESCALE + 1)
+  - name: CHOPPER0_DUTY
+    bit_range:
+    - 7
+    - 5
+    description: carrier duty selection. Duty = PWM_CARRIER0_DUTY / 8
+  - name: CHOPPER0_OSHTWTH
+    bit_range:
+    - 11
+    - 8
+    description: width of the fist pulse in number of periods of the carrier
+  - name: CHOPPER0_OUT_INVERT
+    bit_range:
+    - 12
+    - 12
+    description: when set, invert the output of PWM0A and PWM0B for this submodule
+  - name: CHOPPER0_IN_INVERT
+    bit_range:
+    - 13
+    - 13
+    description: when set, invert the input of PWM0A and PWM0B for this submodule
+  side_effects: null
+- id: TZ0_CFG0
+  address_offset: 104
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TZ0_SW_CBC
+    bit_range:
+    - 0
+    - 0
+    description: 'Enable register for software force cycle-by-cycle mode action. 0: disable, 1: enable'
+  - name: TZ0_F2_CBC
+    bit_range:
+    - 1
+    - 1
+    description: 'event_f2 will trigger cycle-by-cycle mode action. 0: disable, 1: enable'
+  - name: TZ0_F1_CBC
+    bit_range:
+    - 2
+    - 2
+    description: 'event_f1 will trigger cycle-by-cycle mode action. 0: disable, 1: enable'
+  - name: TZ0_F0_CBC
+    bit_range:
+    - 3
+    - 3
+    description: 'event_f0 will trigger cycle-by-cycle mode action. 0: disable, 1: enable'
+  - name: TZ0_SW_OST
+    bit_range:
+    - 4
+    - 4
+    description: 'Enable register for software force one-shot mode action. 0: disable, 1: enable'
+  - name: TZ0_F2_OST
+    bit_range:
+    - 5
+    - 5
+    description: 'event_f2 will trigger one-shot mode action. 0: disable, 1: enable'
+  - name: TZ0_F1_OST
+    bit_range:
+    - 6
+    - 6
+    description: 'event_f1 will trigger one-shot mode action. 0: disable, 1: enable'
+  - name: TZ0_F0_OST
+    bit_range:
+    - 7
+    - 7
+    description: 'event_f0 will trigger one-shot mode action. 0: disable, 1: enable'
+  - name: TZ0_A_CBC_D
+    bit_range:
+    - 9
+    - 8
+    description: 'Cycle-by-cycle mode action on PWM0A when fault event occurs and timer is decreasing. 0: do nothing, 1: force lo, 2: force hi, 3: toggle'
+  - name: TZ0_A_CBC_U
+    bit_range:
+    - 11
+    - 10
+    description: 'Cycle-by-cycle mode action on PWM0A when fault event occurs and timer is increasing. 0: do nothing, 1: force lo, 2: force hi, 3: toggle'
+  - name: TZ0_A_OST_D
+    bit_range:
+    - 13
+    - 12
+    description: 'One-shot mode action on PWM0A when fault event occurs and timer is decreasing. 0: do nothing, 1: force lo, 2: force hi, 3: toggle'
+  - name: TZ0_A_OST_U
+    bit_range:
+    - 15
+    - 14
+    description: 'One-shot mode action on PWM0A when fault event occurs and timer is increasing. 0: do nothing, 1: force lo, 2: force hi, 3: toggle'
+  - name: TZ0_B_CBC_D
+    bit_range:
+    - 17
+    - 16
+    description: 'Cycle-by-cycle mode action on PWM0B when fault event occurs and timer is decreasing. 0: do nothing, 1: force lo, 2: force hi, 3: toggle'
+  - name: TZ0_B_CBC_U
+    bit_range:
+    - 19
+    - 18
+    description: 'Cycle-by-cycle mode action on PWM0B when fault event occurs and timer is increasing. 0: do nothing, 1: force lo, 2: force hi, 3: toggle'
+  - name: TZ0_B_OST_D
+    bit_range:
+    - 21
+    - 20
+    description: 'One-shot mode action on PWM0B when fault event occurs and timer is decreasing. 0: do nothing, 1: force lo, 2: force hi, 3: toggle'
+  - name: TZ0_B_OST_U
+    bit_range:
+    - 23
+    - 22
+    description: 'One-shot mode action on PWM0B when fault event occurs and timer is increasing. 0: do nothing, 1: force lo, 2: force hi, 3: toggle'
+  side_effects: null
+- id: TZ0_CFG1
+  address_offset: 108
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TZ0_CLR_OST
+    bit_range:
+    - 0
+    - 0
+    description: a rising edge will clear on going one-shot mode action
+  - name: TZ0_CBCPULSE
+    bit_range:
+    - 2
+    - 1
+    description: 'cycle-by-cycle mode action refresh moment selection. Bit0: TEZ, bit1:TEP'
+  - name: TZ0_FORCE_CBC
+    bit_range:
+    - 3
+    - 3
+    description: a toggle trigger a cycle-by-cycle mode action
+  - name: TZ0_FORCE_OST
+    bit_range:
+    - 4
+    - 4
+    description: a toggle (software negate its value) triggers a one-shot mode action
+  side_effects: null
+- id: TZ0_STATUS
+  address_offset: 112
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TZ0_CBC_ON
+    bit_range:
+    - 0
+    - 0
+    description: Set and reset by hardware. If set, a cycle-by-cycle mode action is on going
+  - name: TZ0_OST_ON
+    bit_range:
+    - 1
+    - 1
+    description: Set and reset by hardware. If set, an one-shot mode action is on going
+  side_effects: null
+- id: CMPR1_CFG
+  address_offset: 116
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CMPR1_A_UPMETHOD
+    bit_range:
+    - 3
+    - 0
+    description: 'Update method for PWM generator 1 time stamp A''s active register. When all bits are set to 0: immediately, when bit0 is set to 1: TEZ, when bit1 is set to 1: TEP,when bit2 is set to 1: sync, when bit3 is set to 1: disable the update.'
+  - name: CMPR1_B_UPMETHOD
+    bit_range:
+    - 7
+    - 4
+    description: 'Update method for PWM generator 1 time stamp B''s active register. When all bits are set to 0: immediately, when bit0 is set to 1: TEZ, when bit1 is set to 1: TEP,when bit2 is set to 1: sync, when bit3 is set to 1: disable the update.'
+  - name: CMPR1_A_SHDW_FULL
+    bit_range:
+    - 8
+    - 8
+    description: Set and reset by hardware. If set, PWM generator 1 time stamp A's shadow reg is filled and waiting to be transferred to A's active reg. If cleared, A's active reg has been updated with shadow register latest value
+  - name: CMPR1_B_SHDW_FULL
+    bit_range:
+    - 9
+    - 9
+    description: Set and reset by hardware. If set, PWM generator 1 time stamp B's shadow reg is filled and waiting to be transferred to B's active reg. If cleared, B's active reg has been updated with shadow register latest value
+  side_effects: null
+- id: CMPR1_VALUE0
+  address_offset: 120
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CMPR1_A
+    bit_range:
+    - 15
+    - 0
+    description: PWM generator 1 time stamp A's shadow register
+  side_effects: null
+- id: CMPR1_VALUE1
+  address_offset: 124
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CMPR1_B
+    bit_range:
+    - 15
+    - 0
+    description: PWM generator 1 time stamp B's shadow register
+  side_effects: null
+- id: GEN1_CFG0
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: GEN1_CFG_UPMETHOD
+    bit_range:
+    - 3
+    - 0
+    description: 'Update method for PWM generator 1''s active register of configuration. When all bits are set to 0: immediately, when bit0 is set to 1: TEZ, when bit1 is set to 1:'
+  - name: GEN1_T0_SEL
+    bit_range:
+    - 6
+    - 4
+    description: 'Source selection for PWM generator 1 event_t0, take effect immediately, 0: fault_event0, 1: fault_event1, 2: fault_event2, 3: sync_taken, 4: none'
+  - name: GEN1_T1_SEL
+    bit_range:
+    - 9
+    - 7
+    description: 'Source selection for PWM generator 1 event_t1, take effect immediately, 0: fault_event0, 1: fault_event1, 2: fault_event2, 3: sync_taken, 4: none'
+  side_effects: null
+- id: GEN1_FORCE
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 32
+  fields:
+  - name: GEN1_CNTUFORCE_UPMETHOD
+    bit_range:
+    - 5
+    - 0
+    description: 'Updating method for continuous software force of PWM generator 1. When all bits are set to 0: immediately, when bit0 is set to 1: TEZ,,when bit1 is set to 1: TEP, when bit2 is set to 1: TEA, when bit3 is set to 1: TEB, when bit4 is set to 1: sync, when bit5 is set to 1: disable update. (TEA/B here and below means an event generated when the timer''s value equals to that of register A/B.)'
+  - name: GEN1_A_CNTUFORCE_MODE
+    bit_range:
+    - 7
+    - 6
+    description: 'Continuous software force mode for PWM1A. 0: disabled, 1: low, 2: high, 3: disabled'
+  - name: GEN1_B_CNTUFORCE_MODE
+    bit_range:
+    - 9
+    - 8
+    description: 'Continuous software force mode for PWM1B. 0: disabled, 1: low, 2: high, 3: disabled'
+  - name: GEN1_A_NCIFORCE
+    bit_range:
+    - 10
+    - 10
+    description: Trigger of non-continuous immediate software-force event for PWM1A, a toggle will trigger a force event.
+  - name: GEN1_A_NCIFORCE_MODE
+    bit_range:
+    - 12
+    - 11
+    description: 'non-continuous immediate software force mode for PWM1A, 0: disabled, 1: low, 2: high, 3: disabled'
+  - name: GEN1_B_NCIFORCE
+    bit_range:
+    - 13
+    - 13
+    description: Trigger of non-continuous immediate software-force event for PWM1B, a toggle will trigger a force event.
+  - name: GEN1_B_NCIFORCE_MODE
+    bit_range:
+    - 15
+    - 14
+    description: 'non-continuous immediate software force mode for PWM1B, 0: disabled, 1: low, 2: high, 3: disabled'
+  side_effects: null
+- id: GEN1_A
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: UTEZ
+    bit_range:
+    - 1
+    - 0
+    description: Action on PWM1A triggered by event TEZ when timer increasing
+  - name: UTEP
+    bit_range:
+    - 3
+    - 2
+    description: Action on PWM1A triggered by event TEP when timer increasing
+  - name: UTEA
+    bit_range:
+    - 5
+    - 4
+    description: Action on PWM1A triggered by event TEA when timer increasing
+  - name: UTEB
+    bit_range:
+    - 7
+    - 6
+    description: Action on PWM1A triggered by event TEB when timer increasing
+  - name: UT0
+    bit_range:
+    - 9
+    - 8
+    description: Action on PWM1A triggered by event_t0 when timer increasing
+  - name: UT1
+    bit_range:
+    - 11
+    - 10
+    description: Action on PWM1A triggered by event_t1 when timer increasing
+  - name: DTEZ
+    bit_range:
+    - 13
+    - 12
+    description: Action on PWM1A triggered by event TEZ when timer decreasing
+  - name: DTEP
+    bit_range:
+    - 15
+    - 14
+    description: Action on PWM1A triggered by event TEP when timer decreasing
+  - name: DTEA
+    bit_range:
+    - 17
+    - 16
+    description: Action on PWM1A triggered by event TEA when timer decreasing
+  - name: DTEB
+    bit_range:
+    - 19
+    - 18
+    description: Action on PWM1A triggered by event TEB when timer decreasing
+  - name: DT0
+    bit_range:
+    - 21
+    - 20
+    description: Action on PWM1A triggered by event_t0 when timer decreasing
+  - name: DT1
+    bit_range:
+    - 23
+    - 22
+    description: 'Action on PWM1A triggered by event_t1 when timer decreasing. 0: no change, 1: low, 2: high, 3: toggle'
+  side_effects: null
+- id: GEN1_B
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: UTEZ
+    bit_range:
+    - 1
+    - 0
+    description: Action on PWM1B triggered by event TEZ when timer increasing
+  - name: UTEP
+    bit_range:
+    - 3
+    - 2
+    description: Action on PWM1B triggered by event TEP when timer increasing
+  - name: UTEA
+    bit_range:
+    - 5
+    - 4
+    description: Action on PWM1B triggered by event TEA when timer increasing
+  - name: UTEB
+    bit_range:
+    - 7
+    - 6
+    description: Action on PWM1B triggered by event TEB when timer increasing
+  - name: UT0
+    bit_range:
+    - 9
+    - 8
+    description: Action on PWM1B triggered by event_t0 when timer increasing
+  - name: UT1
+    bit_range:
+    - 11
+    - 10
+    description: Action on PWM1B triggered by event_t1 when timer increasing
+  - name: DTEZ
+    bit_range:
+    - 13
+    - 12
+    description: Action on PWM1B triggered by event TEZ when timer decreasing
+  - name: DTEP
+    bit_range:
+    - 15
+    - 14
+    description: Action on PWM1B triggered by event TEP when timer decreasing
+  - name: DTEA
+    bit_range:
+    - 17
+    - 16
+    description: Action on PWM1B triggered by event TEA when timer decreasing
+  - name: DTEB
+    bit_range:
+    - 19
+    - 18
+    description: Action on PWM1B triggered by event TEB when timer decreasing
+  - name: DT0
+    bit_range:
+    - 21
+    - 20
+    description: Action on PWM1B triggered by event_t0 when timer decreasing
+  - name: DT1
+    bit_range:
+    - 23
+    - 22
+    description: 'Action on PWM1B triggered by event_t1 when timer decreasing. 0: no change, 1: low, 2: high, 3: toggle'
+  side_effects: null
+- id: DB1_CFG
+  address_offset: 144
+  size: 32
+  access: READ_WRITE
+  reset_value: 98304
+  fields:
+  - name: DB1_FED_UPMETHOD
+    bit_range:
+    - 3
+    - 0
+    description: 'Update method for FED (falling edge delay) active register. 0: immediate, bit0: tez, bit1: tep, bit2: sync, bit3: freeze'
+  - name: DB1_RED_UPMETHOD
+    bit_range:
+    - 7
+    - 4
+    description: 'Update method for RED (rising edge delay) active register. 0: immediate, bit0: tez, bit1: tep, bit2: sync, bit3: freeze'
+  - name: DB1_DEB_MODE
+    bit_range:
+    - 8
+    - 8
+    description: 'S8 in documentation, dual-edge B mode, 0: fed/red take effect on different path separately, 1: fed/red take effect on B path, A out is in bypass or dulpB mode'
+  - name: DB1_A_OUTSWAP
+    bit_range:
+    - 9
+    - 9
+    description: S6 in documentation
+  - name: DB1_B_OUTSWAP
+    bit_range:
+    - 10
+    - 10
+    description: S7 in documentation
+  - name: DB1_RED_INSEL
+    bit_range:
+    - 11
+    - 11
+    description: S4 in documentation
+  - name: DB1_FED_INSEL
+    bit_range:
+    - 12
+    - 12
+    description: S5 in documentation
+  - name: DB1_RED_OUTINVERT
+    bit_range:
+    - 13
+    - 13
+    description: S2 in documentation
+  - name: DB1_FED_OUTINVERT
+    bit_range:
+    - 14
+    - 14
+    description: S3 in documentation
+  - name: DB1_A_OUTBYPASS
+    bit_range:
+    - 15
+    - 15
+    description: S1 in documentation
+  - name: DB1_B_OUTBYPASS
+    bit_range:
+    - 16
+    - 16
+    description: S0 in documentation
+  - name: DB1_CLK_SEL
+    bit_range:
+    - 17
+    - 17
+    description: 'Dead time generator 1 clock selection. 0: PWM_clk, 1: PT_clk'
+  side_effects: null
+- id: DB1_FED_CFG
+  address_offset: 148
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DB1_FED
+    bit_range:
+    - 15
+    - 0
+    description: Shadow register for FED
+  side_effects: null
+- id: DB1_RED_CFG
+  address_offset: 152
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DB1_RED
+    bit_range:
+    - 15
+    - 0
+    description: Shadow register for RED
+  side_effects: null
+- id: CHOPPER1_CFG
+  address_offset: 156
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHOPPER1_EN
+    bit_range:
+    - 0
+    - 0
+    description: When set, carrier0 function is enabled. When cleared, carrier0 is bypassed
+  - name: CHOPPER1_PRESCALE
+    bit_range:
+    - 4
+    - 1
+    description: PWM carrier0 clock (PC_clk) prescale value. Period of PC_clk = period of PWM_clk * (PWM_CARRIER0_PRESCALE + 1)
+  - name: CHOPPER1_DUTY
+    bit_range:
+    - 7
+    - 5
+    description: carrier duty selection. Duty = PWM_CARRIER0_DUTY / 8
+  - name: CHOPPER1_OSHTWTH
+    bit_range:
+    - 11
+    - 8
+    description: width of the fist pulse in number of periods of the carrier
+  - name: CHOPPER1_OUT_INVERT
+    bit_range:
+    - 12
+    - 12
+    description: when set, invert the output of PWM1A and PWM1B for this submodule
+  - name: CHOPPER1_IN_INVERT
+    bit_range:
+    - 13
+    - 13
+    description: when set, invert the input of PWM1A and PWM1B for this submodule
+  side_effects: null
+- id: TZ1_CFG0
+  address_offset: 160
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TZ1_SW_CBC
+    bit_range:
+    - 0
+    - 0
+    description: 'Enable register for software force cycle-by-cycle mode action. 0: disable, 1: enable'
+  - name: TZ1_F2_CBC
+    bit_range:
+    - 1
+    - 1
+    description: 'event_f2 will trigger cycle-by-cycle mode action. 0: disable, 1: enable'
+  - name: TZ1_F1_CBC
+    bit_range:
+    - 2
+    - 2
+    description: 'event_f1 will trigger cycle-by-cycle mode action. 0: disable, 1: enable'
+  - name: TZ1_F0_CBC
+    bit_range:
+    - 3
+    - 3
+    description: 'event_f0 will trigger cycle-by-cycle mode action. 0: disable, 1: enable'
+  - name: TZ1_SW_OST
+    bit_range:
+    - 4
+    - 4
+    description: 'Enable register for software force one-shot mode action. 0: disable, 1: enable'
+  - name: TZ1_F2_OST
+    bit_range:
+    - 5
+    - 5
+    description: 'event_f2 will trigger one-shot mode action. 0: disable, 1: enable'
+  - name: TZ1_F1_OST
+    bit_range:
+    - 6
+    - 6
+    description: 'event_f1 will trigger one-shot mode action. 0: disable, 1: enable'
+  - name: TZ1_F0_OST
+    bit_range:
+    - 7
+    - 7
+    description: 'event_f0 will trigger one-shot mode action. 0: disable, 1: enable'
+  - name: TZ1_A_CBC_D
+    bit_range:
+    - 9
+    - 8
+    description: 'Cycle-by-cycle mode action on PWM1A when fault event occurs and timer is decreasing. 0: do nothing, 1: force lo, 2: force hi, 3: toggle'
+  - name: TZ1_A_CBC_U
+    bit_range:
+    - 11
+    - 10
+    description: 'Cycle-by-cycle mode action on PWM1A when fault event occurs and timer is increasing. 0: do nothing, 1: force lo, 2: force hi, 3: toggle'
+  - name: TZ1_A_OST_D
+    bit_range:
+    - 13
+    - 12
+    description: 'One-shot mode action on PWM1A when fault event occurs and timer is decreasing. 0: do nothing, 1: force lo, 2: force hi, 3: toggle'
+  - name: TZ1_A_OST_U
+    bit_range:
+    - 15
+    - 14
+    description: 'One-shot mode action on PWM1A when fault event occurs and timer is increasing. 0: do nothing, 1: force lo, 2: force hi, 3: toggle'
+  - name: TZ1_B_CBC_D
+    bit_range:
+    - 17
+    - 16
+    description: 'Cycle-by-cycle mode action on PWM1B when fault event occurs and timer is decreasing. 0: do nothing, 1: force lo, 2: force hi, 3: toggle'
+  - name: TZ1_B_CBC_U
+    bit_range:
+    - 19
+    - 18
+    description: 'Cycle-by-cycle mode action on PWM1B when fault event occurs and timer is increasing. 0: do nothing, 1: force lo, 2: force hi, 3: toggle'
+  - name: TZ1_B_OST_D
+    bit_range:
+    - 21
+    - 20
+    description: 'One-shot mode action on PWM1B when fault event occurs and timer is decreasing. 0: do nothing, 1: force lo, 2: force hi, 3: toggle'
+  - name: TZ1_B_OST_U
+    bit_range:
+    - 23
+    - 22
+    description: 'One-shot mode action on PWM1B when fault event occurs and timer is increasing. 0: do nothing, 1: force lo, 2: force hi, 3: toggle'
+  side_effects: null
+- id: TZ1_CFG1
+  address_offset: 164
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TZ1_CLR_OST
+    bit_range:
+    - 0
+    - 0
+    description: a rising edge will clear on going one-shot mode action
+  - name: TZ1_CBCPULSE
+    bit_range:
+    - 2
+    - 1
+    description: 'cycle-by-cycle mode action refresh moment selection. Bit0: TEZ, bit1:TEP'
+  - name: TZ1_FORCE_CBC
+    bit_range:
+    - 3
+    - 3
+    description: a toggle trigger a cycle-by-cycle mode action
+  - name: TZ1_FORCE_OST
+    bit_range:
+    - 4
+    - 4
+    description: a toggle (software negate its value) triggers a one-shot mode action
+  side_effects: null
+- id: TZ1_STATUS
+  address_offset: 168
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TZ1_CBC_ON
+    bit_range:
+    - 0
+    - 0
+    description: Set and reset by hardware. If set, a cycle-by-cycle mode action is on going
+  - name: TZ1_OST_ON
+    bit_range:
+    - 1
+    - 1
+    description: Set and reset by hardware. If set, an one-shot mode action is on going
+  side_effects: null
+- id: CMPR2_CFG
+  address_offset: 172
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CMPR2_A_UPMETHOD
+    bit_range:
+    - 3
+    - 0
+    description: 'Update method for PWM generator 2 time stamp A''s active register. When all bits are set to 0: immediately, when bit0 is set to 1: TEZ, when bit1 is set to 1: TEP,when bit2 is set to 1: sync, when bit3 is set to 1: disable the update.'
+  - name: CMPR2_B_UPMETHOD
+    bit_range:
+    - 7
+    - 4
+    description: 'Update method for PWM generator 2 time stamp B''s active register. When all bits are set to 0: immediately, when bit0 is set to 1: TEZ, when bit1 is set to 1: TEP,when bit2 is set to 1: sync, when bit3 is set to 1: disable the update.'
+  - name: CMPR2_A_SHDW_FULL
+    bit_range:
+    - 8
+    - 8
+    description: Set and reset by hardware. If set, PWM generator 2 time stamp A's shadow reg is filled and waiting to be transferred to A's active reg. If cleared, A's active reg has been updated with shadow register latest value
+  - name: CMPR2_B_SHDW_FULL
+    bit_range:
+    - 9
+    - 9
+    description: Set and reset by hardware. If set, PWM generator 2 time stamp B's shadow reg is filled and waiting to be transferred to B's active reg. If cleared, B's active reg has been updated with shadow register latest value
+  side_effects: null
+- id: CMPR2_VALUE0
+  address_offset: 176
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CMPR2_A
+    bit_range:
+    - 15
+    - 0
+    description: PWM generator 2 time stamp A's shadow register
+  side_effects: null
+- id: CMPR2_VALUE1
+  address_offset: 180
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CMPR2_B
+    bit_range:
+    - 15
+    - 0
+    description: PWM generator 2 time stamp B's shadow register
+  side_effects: null
+- id: GEN2_CFG0
+  address_offset: 184
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: GEN2_CFG_UPMETHOD
+    bit_range:
+    - 3
+    - 0
+    description: 'Update method for PWM generator 2''s active register of configuration. When all bits are set to 0: immediately, when bit0 is set to 1: TEZ, when bit1 is set to 1:'
+  - name: GEN2_T0_SEL
+    bit_range:
+    - 6
+    - 4
+    description: 'Source selection for PWM generator 2 event_t0, take effect immediately, 0: fault_event0, 1: fault_event1, 2: fault_event2, 3: sync_taken, 4: none'
+  - name: GEN2_T1_SEL
+    bit_range:
+    - 9
+    - 7
+    description: 'Source selection for PWM generator 2 event_t1, take effect immediately, 0: fault_event0, 1: fault_event1, 2: fault_event2, 3: sync_taken, 4: none'
+  side_effects: null
+- id: GEN2_FORCE
+  address_offset: 188
+  size: 32
+  access: READ_WRITE
+  reset_value: 32
+  fields:
+  - name: GEN2_CNTUFORCE_UPMETHOD
+    bit_range:
+    - 5
+    - 0
+    description: 'Updating method for continuous software force of PWM generator 2. When all bits are set to 0: immediately, when bit0 is set to 1: TEZ,,when bit1 is set to 1: TEP, when bit2 is set to 1: TEA, when bit3 is set to 1: TEB, when bit4 is set to 1: sync, when bit5 is set to 1: disable update. (TEA/B here and below means an event generated when the timer''s value equals to that of register A/B.)'
+  - name: GEN2_A_CNTUFORCE_MODE
+    bit_range:
+    - 7
+    - 6
+    description: 'Continuous software force mode for PWM2A. 0: disabled, 1: low, 2: high, 3: disabled'
+  - name: GEN2_B_CNTUFORCE_MODE
+    bit_range:
+    - 9
+    - 8
+    description: 'Continuous software force mode for PWM2B. 0: disabled, 1: low, 2: high, 3: disabled'
+  - name: GEN2_A_NCIFORCE
+    bit_range:
+    - 10
+    - 10
+    description: Trigger of non-continuous immediate software-force event for PWM2A, a toggle will trigger a force event.
+  - name: GEN2_A_NCIFORCE_MODE
+    bit_range:
+    - 12
+    - 11
+    description: 'non-continuous immediate software force mode for PWM2A, 0: disabled, 1: low, 2: high, 3: disabled'
+  - name: GEN2_B_NCIFORCE
+    bit_range:
+    - 13
+    - 13
+    description: Trigger of non-continuous immediate software-force event for PWM2B, a toggle will trigger a force event.
+  - name: GEN2_B_NCIFORCE_MODE
+    bit_range:
+    - 15
+    - 14
+    description: 'non-continuous immediate software force mode for PWM2B, 0: disabled, 1: low, 2: high, 3: disabled'
+  side_effects: null
+- id: GEN2_A
+  address_offset: 192
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: UTEZ
+    bit_range:
+    - 1
+    - 0
+    description: Action on PWM2A triggered by event TEZ when timer increasing
+  - name: UTEP
+    bit_range:
+    - 3
+    - 2
+    description: Action on PWM2A triggered by event TEP when timer increasing
+  - name: UTEA
+    bit_range:
+    - 5
+    - 4
+    description: Action on PWM2A triggered by event TEA when timer increasing
+  - name: UTEB
+    bit_range:
+    - 7
+    - 6
+    description: Action on PWM2A triggered by event TEB when timer increasing
+  - name: UT0
+    bit_range:
+    - 9
+    - 8
+    description: Action on PWM2A triggered by event_t0 when timer increasing
+  - name: UT1
+    bit_range:
+    - 11
+    - 10
+    description: Action on PWM2A triggered by event_t1 when timer increasing
+  - name: DTEZ
+    bit_range:
+    - 13
+    - 12
+    description: Action on PWM2A triggered by event TEZ when timer decreasing
+  - name: DTEP
+    bit_range:
+    - 15
+    - 14
+    description: Action on PWM2A triggered by event TEP when timer decreasing
+  - name: DTEA
+    bit_range:
+    - 17
+    - 16
+    description: Action on PWM2A triggered by event TEA when timer decreasing
+  - name: DTEB
+    bit_range:
+    - 19
+    - 18
+    description: Action on PWM2A triggered by event TEB when timer decreasing
+  - name: DT0
+    bit_range:
+    - 21
+    - 20
+    description: Action on PWM2A triggered by event_t0 when timer decreasing
+  - name: DT1
+    bit_range:
+    - 23
+    - 22
+    description: 'Action on PWM2A triggered by event_t1 when timer decreasing. 0: no change, 1: low, 2: high, 3: toggle'
+  side_effects: null
+- id: GEN2_B
+  address_offset: 196
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: UTEZ
+    bit_range:
+    - 1
+    - 0
+    description: Action on PWM2B triggered by event TEZ when timer increasing
+  - name: UTEP
+    bit_range:
+    - 3
+    - 2
+    description: Action on PWM2B triggered by event TEP when timer increasing
+  - name: UTEA
+    bit_range:
+    - 5
+    - 4
+    description: Action on PWM2B triggered by event TEA when timer increasing
+  - name: UTEB
+    bit_range:
+    - 7
+    - 6
+    description: Action on PWM2B triggered by event TEB when timer increasing
+  - name: UT0
+    bit_range:
+    - 9
+    - 8
+    description: Action on PWM2B triggered by event_t0 when timer increasing
+  - name: UT1
+    bit_range:
+    - 11
+    - 10
+    description: Action on PWM2B triggered by event_t1 when timer increasing
+  - name: DTEZ
+    bit_range:
+    - 13
+    - 12
+    description: Action on PWM2B triggered by event TEZ when timer decreasing
+  - name: DTEP
+    bit_range:
+    - 15
+    - 14
+    description: Action on PWM2B triggered by event TEP when timer decreasing
+  - name: DTEA
+    bit_range:
+    - 17
+    - 16
+    description: Action on PWM2B triggered by event TEA when timer decreasing
+  - name: DTEB
+    bit_range:
+    - 19
+    - 18
+    description: Action on PWM2B triggered by event TEB when timer decreasing
+  - name: DT0
+    bit_range:
+    - 21
+    - 20
+    description: Action on PWM2B triggered by event_t0 when timer decreasing
+  - name: DT1
+    bit_range:
+    - 23
+    - 22
+    description: 'Action on PWM2B triggered by event_t1 when timer decreasing. 0: no change, 1: low, 2: high, 3: toggle'
+  side_effects: null
+- id: DB2_CFG
+  address_offset: 200
+  size: 32
+  access: READ_WRITE
+  reset_value: 98304
+  fields:
+  - name: DB2_FED_UPMETHOD
+    bit_range:
+    - 3
+    - 0
+    description: 'Update method for FED (falling edge delay) active register. 0: immediate, bit0: tez, bit1: tep, bit2: sync, bit3: freeze'
+  - name: DB2_RED_UPMETHOD
+    bit_range:
+    - 7
+    - 4
+    description: 'Update method for RED (rising edge delay) active register. 0: immediate, bit0: tez, bit1: tep, bit2: sync, bit3: freeze'
+  - name: DB2_DEB_MODE
+    bit_range:
+    - 8
+    - 8
+    description: 'S8 in documentation, dual-edge B mode, 0: fed/red take effect on different path separately, 1: fed/red take effect on B path, A out is in bypass or dulpB mode'
+  - name: DB2_A_OUTSWAP
+    bit_range:
+    - 9
+    - 9
+    description: S6 in documentation
+  - name: DB2_B_OUTSWAP
+    bit_range:
+    - 10
+    - 10
+    description: S7 in documentation
+  - name: DB2_RED_INSEL
+    bit_range:
+    - 11
+    - 11
+    description: S4 in documentation
+  - name: DB2_FED_INSEL
+    bit_range:
+    - 12
+    - 12
+    description: S5 in documentation
+  - name: DB2_RED_OUTINVERT
+    bit_range:
+    - 13
+    - 13
+    description: S2 in documentation
+  - name: DB2_FED_OUTINVERT
+    bit_range:
+    - 14
+    - 14
+    description: S3 in documentation
+  - name: DB2_A_OUTBYPASS
+    bit_range:
+    - 15
+    - 15
+    description: S1 in documentation
+  - name: DB2_B_OUTBYPASS
+    bit_range:
+    - 16
+    - 16
+    description: S0 in documentation
+  - name: DB2_CLK_SEL
+    bit_range:
+    - 17
+    - 17
+    description: 'Dead time generator 2 clock selection. 0: PWM_clk, 1: PT_clk'
+  side_effects: null
+- id: DB2_FED_CFG
+  address_offset: 204
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DB2_FED
+    bit_range:
+    - 15
+    - 0
+    description: Shadow register for FED
+  side_effects: null
+- id: DB2_RED_CFG
+  address_offset: 208
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DB2_RED
+    bit_range:
+    - 15
+    - 0
+    description: Shadow register for RED
+  side_effects: null
+- id: CHOPPER2_CFG
+  address_offset: 212
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHOPPER2_EN
+    bit_range:
+    - 0
+    - 0
+    description: When set, carrier0 function is enabled. When cleared, carrier0 is bypassed
+  - name: CHOPPER2_PRESCALE
+    bit_range:
+    - 4
+    - 1
+    description: PWM carrier0 clock (PC_clk) prescale value. Period of PC_clk = period of PWM_clk * (PWM_CARRIER0_PRESCALE + 1)
+  - name: CHOPPER2_DUTY
+    bit_range:
+    - 7
+    - 5
+    description: carrier duty selection. Duty = PWM_CARRIER0_DUTY / 8
+  - name: CHOPPER2_OSHTWTH
+    bit_range:
+    - 11
+    - 8
+    description: width of the fist pulse in number of periods of the carrier
+  - name: CHOPPER2_OUT_INVERT
+    bit_range:
+    - 12
+    - 12
+    description: when set, invert the output of PWM2A and PWM2B for this submodule
+  - name: CHOPPER2_IN_INVERT
+    bit_range:
+    - 13
+    - 13
+    description: when set, invert the input of PWM2A and PWM2B for this submodule
+  side_effects: null
+- id: TZ2_CFG0
+  address_offset: 216
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TZ2_SW_CBC
+    bit_range:
+    - 0
+    - 0
+    description: 'Enable register for software force cycle-by-cycle mode action. 0: disable, 1: enable'
+  - name: TZ2_F2_CBC
+    bit_range:
+    - 1
+    - 1
+    description: 'event_f2 will trigger cycle-by-cycle mode action. 0: disable, 1: enable'
+  - name: TZ2_F1_CBC
+    bit_range:
+    - 2
+    - 2
+    description: 'event_f1 will trigger cycle-by-cycle mode action. 0: disable, 1: enable'
+  - name: TZ2_F0_CBC
+    bit_range:
+    - 3
+    - 3
+    description: 'event_f0 will trigger cycle-by-cycle mode action. 0: disable, 1: enable'
+  - name: TZ2_SW_OST
+    bit_range:
+    - 4
+    - 4
+    description: 'Enable register for software force one-shot mode action. 0: disable, 1: enable'
+  - name: TZ2_F2_OST
+    bit_range:
+    - 5
+    - 5
+    description: 'event_f2 will trigger one-shot mode action. 0: disable, 1: enable'
+  - name: TZ2_F1_OST
+    bit_range:
+    - 6
+    - 6
+    description: 'event_f1 will trigger one-shot mode action. 0: disable, 1: enable'
+  - name: TZ2_F0_OST
+    bit_range:
+    - 7
+    - 7
+    description: 'event_f0 will trigger one-shot mode action. 0: disable, 1: enable'
+  - name: TZ2_A_CBC_D
+    bit_range:
+    - 9
+    - 8
+    description: 'Cycle-by-cycle mode action on PWM2A when fault event occurs and timer is decreasing. 0: do nothing, 1: force lo, 2: force hi, 3: toggle'
+  - name: TZ2_A_CBC_U
+    bit_range:
+    - 11
+    - 10
+    description: 'Cycle-by-cycle mode action on PWM2A when fault event occurs and timer is increasing. 0: do nothing, 1: force lo, 2: force hi, 3: toggle'
+  - name: TZ2_A_OST_D
+    bit_range:
+    - 13
+    - 12
+    description: 'One-shot mode action on PWM2A when fault event occurs and timer is decreasing. 0: do nothing, 1: force lo, 2: force hi, 3: toggle'
+  - name: TZ2_A_OST_U
+    bit_range:
+    - 15
+    - 14
+    description: 'One-shot mode action on PWM2A when fault event occurs and timer is increasing. 0: do nothing, 1: force lo, 2: force hi, 3: toggle'
+  - name: TZ2_B_CBC_D
+    bit_range:
+    - 17
+    - 16
+    description: 'Cycle-by-cycle mode action on PWM2B when fault event occurs and timer is decreasing. 0: do nothing, 1: force lo, 2: force hi, 3: toggle'
+  - name: TZ2_B_CBC_U
+    bit_range:
+    - 19
+    - 18
+    description: 'Cycle-by-cycle mode action on PWM2B when fault event occurs and timer is increasing. 0: do nothing, 1: force lo, 2: force hi, 3: toggle'
+  - name: TZ2_B_OST_D
+    bit_range:
+    - 21
+    - 20
+    description: 'One-shot mode action on PWM2B when fault event occurs and timer is decreasing. 0: do nothing, 1: force lo, 2: force hi, 3: toggle'
+  - name: TZ2_B_OST_U
+    bit_range:
+    - 23
+    - 22
+    description: 'One-shot mode action on PWM2B when fault event occurs and timer is increasing. 0: do nothing, 1: force lo, 2: force hi, 3: toggle'
+  side_effects: null
+- id: TZ2_CFG1
+  address_offset: 220
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TZ2_CLR_OST
+    bit_range:
+    - 0
+    - 0
+    description: a rising edge will clear on going one-shot mode action
+  - name: TZ2_CBCPULSE
+    bit_range:
+    - 2
+    - 1
+    description: 'cycle-by-cycle mode action refresh moment selection. Bit0: TEZ, bit1:TEP'
+  - name: TZ2_FORCE_CBC
+    bit_range:
+    - 3
+    - 3
+    description: a toggle trigger a cycle-by-cycle mode action
+  - name: TZ2_FORCE_OST
+    bit_range:
+    - 4
+    - 4
+    description: a toggle (software negate its value) triggers a one-shot mode action
+  side_effects: null
+- id: TZ2_STATUS
+  address_offset: 224
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TZ2_CBC_ON
+    bit_range:
+    - 0
+    - 0
+    description: Set and reset by hardware. If set, a cycle-by-cycle mode action is on going
+  - name: TZ2_OST_ON
+    bit_range:
+    - 1
+    - 1
+    description: Set and reset by hardware. If set, an one-shot mode action is on going
+  side_effects: null
+- id: FAULT_DETECT
+  address_offset: 228
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: F0_EN
+    bit_range:
+    - 0
+    - 0
+    description: When set, event_f0 generation is enabled
+  - name: F1_EN
+    bit_range:
+    - 1
+    - 1
+    description: When set, event_f1 generation is enabled
+  - name: F2_EN
+    bit_range:
+    - 2
+    - 2
+    description: When set, event_f2 generation is enabled
+  - name: F0_POLE
+    bit_range:
+    - 3
+    - 3
+    description: 'Set event_f0 trigger polarity on FAULT2 source from GPIO matrix. 0: level low, 1: level high'
+  - name: F1_POLE
+    bit_range:
+    - 4
+    - 4
+    description: 'Set event_f1 trigger polarity on FAULT2 source from GPIO matrix. 0: level low, 1: level high'
+  - name: F2_POLE
+    bit_range:
+    - 5
+    - 5
+    description: 'Set event_f2 trigger polarity on FAULT2 source from GPIO matrix. 0: level low, 1: level high'
+  - name: EVENT_F0
+    bit_range:
+    - 6
+    - 6
+    description: Set and reset by hardware. If set, event_f0 is on going
+  - name: EVENT_F1
+    bit_range:
+    - 7
+    - 7
+    description: Set and reset by hardware. If set, event_f1 is on going
+  - name: EVENT_F2
+    bit_range:
+    - 8
+    - 8
+    description: Set and reset by hardware. If set, event_f2 is on going
+  side_effects: null
+- id: CAP_TIMER_CFG
+  address_offset: 232
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CAP_TIMER_EN
+    bit_range:
+    - 0
+    - 0
+    description: When set, capture timer incrementing under APB_clk is enabled.
+  - name: CAP_SYNCI_EN
+    bit_range:
+    - 1
+    - 1
+    description: When set, capture timer sync is enabled.
+  - name: CAP_SYNCI_SEL
+    bit_range:
+    - 4
+    - 2
+    description: 'capture module sync input selection. 0: none, 1: timer0 sync_out, 2: timer1 sync_out, 3: timer2 sync_out, 4: SYNC0 from GPIO matrix, 5: SYNC1 from GPIO matrix, 6: SYNC2 from GPIO matrix'
+  - name: CAP_SYNC_SW
+    bit_range:
+    - 5
+    - 5
+    description: Write 1 will force a capture timer sync, capture timer is loaded with value in phase register.
+  side_effects: null
+- id: CAP_TIMER_PHASE
+  address_offset: 236
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CAP_PHASE
+    bit_range:
+    - 31
+    - 0
+    description: Phase value for capture timer sync operation.
+  side_effects: null
+- id: CAP_CH0_CFG
+  address_offset: 240
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CAP0_EN
+    bit_range:
+    - 0
+    - 0
+    description: When set, capture on channel 0 is enabled
+  - name: CAP0_MODE
+    bit_range:
+    - 2
+    - 1
+    description: 'Edge of capture on channel 0 after prescaling. When bit0 is set to 1: enable capture on the negative edge, When bit1 is set to 1: enable capture on the positive edge.'
+  - name: CAP0_PRESCALE
+    bit_range:
+    - 10
+    - 3
+    description: Value of prescaling on possitive edge of CAP0. Prescale value = PWM_CAP0_PRESCALE + 1
+  - name: CAP0_IN_INVERT
+    bit_range:
+    - 11
+    - 11
+    description: when set, CAP0 form GPIO matrix is inverted before prescale
+  - name: CAP0_SW
+    bit_range:
+    - 12
+    - 12
+    description: Write 1 will trigger a software forced capture on channel 0
+  side_effects: null
+- id: CAP_CH1_CFG
+  address_offset: 244
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CAP1_EN
+    bit_range:
+    - 0
+    - 0
+    description: When set, capture on channel 2 is enabled
+  - name: CAP1_MODE
+    bit_range:
+    - 2
+    - 1
+    description: 'Edge of capture on channel 1 after prescaling. When bit0 is set to 1: enable capture on the negative edge, When bit1 is set to 1: enable capture on the positive edge.'
+  - name: CAP1_PRESCALE
+    bit_range:
+    - 10
+    - 3
+    description: Value of prescaling on possitive edge of CAP1. Prescale value = PWM_CAP1_PRESCALE + 1
+  - name: CAP1_IN_INVERT
+    bit_range:
+    - 11
+    - 11
+    description: when set, CAP1 form GPIO matrix is inverted before prescale
+  - name: CAP1_SW
+    bit_range:
+    - 12
+    - 12
+    description: Write 1 will trigger a software forced capture on channel 1
+  side_effects: null
+- id: CAP_CH2_CFG
+  address_offset: 248
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CAP2_EN
+    bit_range:
+    - 0
+    - 0
+    description: When set, capture on channel 2 is enabled
+  - name: CAP2_MODE
+    bit_range:
+    - 2
+    - 1
+    description: 'Edge of capture on channel 2 after prescaling. When bit0 is set to 1: enable capture on the negative edge, When bit1 is set to 1: enable capture on the positive edge.'
+  - name: CAP2_PRESCALE
+    bit_range:
+    - 10
+    - 3
+    description: Value of prescaling on possitive edge of CAP2. Prescale value = PWM_CAP2_PRESCALE + 1
+  - name: CAP2_IN_INVERT
+    bit_range:
+    - 11
+    - 11
+    description: when set, CAP2 form GPIO matrix is inverted before prescale
+  - name: CAP2_SW
+    bit_range:
+    - 12
+    - 12
+    description: Write 1 will trigger a software forced capture on channel 2
+  side_effects: null
+- id: CAP_CH0
+  address_offset: 252
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CAP0_VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value of last capture on channel 0
+  side_effects: null
+- id: CAP_CH1
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CAP1_VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value of last capture on channel 1
+  side_effects: null
+- id: CAP_CH2
+  address_offset: 260
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CAP2_VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Value of last capture on channel 2
+  side_effects: null
+- id: CAP_STATUS
+  address_offset: 264
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CAP0_EDGE
+    bit_range:
+    - 0
+    - 0
+    description: 'Edge of last capture trigger on channel 0, 0: posedge, 1: negedge'
+  - name: CAP1_EDGE
+    bit_range:
+    - 1
+    - 1
+    description: 'Edge of last capture trigger on channel 1, 0: posedge, 1: negedge'
+  - name: CAP2_EDGE
+    bit_range:
+    - 2
+    - 2
+    description: 'Edge of last capture trigger on channel 2, 0: posedge, 1: negedge'
+  side_effects: null
+- id: UPDATE_CFG
+  address_offset: 268
+  size: 32
+  access: READ_WRITE
+  reset_value: 85
+  fields:
+  - name: GLOBAL_UP_EN
+    bit_range:
+    - 0
+    - 0
+    description: The global enable of update of all active registers in MCPWM module
+  - name: GLOBAL_FORCE_UP
+    bit_range:
+    - 1
+    - 1
+    description: a toggle (software invert its value) will trigger a forced update of all active registers in MCPWM module
+  - name: OP0_UP_EN
+    bit_range:
+    - 2
+    - 2
+    description: When set and PWM_GLOBAL_UP_EN is set, update of active registers in PWM operator 0 are enabled
+  - name: OP0_FORCE_UP
+    bit_range:
+    - 3
+    - 3
+    description: a toggle (software invert its value) will trigger a forced update of active registers in PWM operator 0
+  - name: OP1_UP_EN
+    bit_range:
+    - 4
+    - 4
+    description: When set and PWM_GLOBAL_UP_EN is set, update of active registers in PWM operator 1 are enabled
+  - name: OP1_FORCE_UP
+    bit_range:
+    - 5
+    - 5
+    description: a toggle (software invert its value) will trigger a forced update of active registers in PWM operator 1
+  - name: OP2_UP_EN
+    bit_range:
+    - 6
+    - 6
+    description: When set and PWM_GLOBAL_UP_EN is set, update of active registers in PWM operator 2 are enabled
+  - name: OP2_FORCE_UP
+    bit_range:
+    - 7
+    - 7
+    description: a toggle (software invert its value) will trigger a forced update of active registers in PWM operator 2
+  side_effects: null
+- id: INT_ENA
+  address_offset: 272
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIMER0_STOP_INT_ENA
+    bit_range:
+    - 0
+    - 0
+    description: The enable bit for the interrupt triggered when the timer 0 stops.
+  - name: TIMER1_STOP_INT_ENA
+    bit_range:
+    - 1
+    - 1
+    description: The enable bit for the interrupt triggered when the timer 1 stops.
+  - name: TIMER2_STOP_INT_ENA
+    bit_range:
+    - 2
+    - 2
+    description: The enable bit for the interrupt triggered when the timer 2 stops.
+  - name: TIMER0_TEZ_INT_ENA
+    bit_range:
+    - 3
+    - 3
+    description: The enable bit for the interrupt triggered by a PWM timer 0 TEZ event.
+  - name: TIMER1_TEZ_INT_ENA
+    bit_range:
+    - 4
+    - 4
+    description: The enable bit for the interrupt triggered by a PWM timer 1 TEZ event.
+  - name: TIMER2_TEZ_INT_ENA
+    bit_range:
+    - 5
+    - 5
+    description: The enable bit for the interrupt triggered by a PWM timer 2 TEZ event.
+  - name: TIMER0_TEP_INT_ENA
+    bit_range:
+    - 6
+    - 6
+    description: The enable bit for the interrupt triggered by a PWM timer 0 TEP event.
+  - name: TIMER1_TEP_INT_ENA
+    bit_range:
+    - 7
+    - 7
+    description: The enable bit for the interrupt triggered by a PWM timer 1 TEP event.
+  - name: TIMER2_TEP_INT_ENA
+    bit_range:
+    - 8
+    - 8
+    description: The enable bit for the interrupt triggered by a PWM timer 2 TEP event.
+  - name: FAULT0_INT_ENA
+    bit_range:
+    - 9
+    - 9
+    description: The enable bit for the interrupt triggered when event_f0 starts.
+  - name: FAULT1_INT_ENA
+    bit_range:
+    - 10
+    - 10
+    description: The enable bit for the interrupt triggered when event_f1 starts.
+  - name: FAULT2_INT_ENA
+    bit_range:
+    - 11
+    - 11
+    description: The enable bit for the interrupt triggered when event_f2 starts.
+  - name: FAULT0_CLR_INT_ENA
+    bit_range:
+    - 12
+    - 12
+    description: The enable bit for the interrupt triggered when event_f0 ends.
+  - name: FAULT1_CLR_INT_ENA
+    bit_range:
+    - 13
+    - 13
+    description: The enable bit for the interrupt triggered when event_f1 ends.
+  - name: FAULT2_CLR_INT_ENA
+    bit_range:
+    - 14
+    - 14
+    description: The enable bit for the interrupt triggered when event_f2 ends.
+  - name: CMPR0_TEA_INT_ENA
+    bit_range:
+    - 15
+    - 15
+    description: The enable bit for the interrupt triggered by a PWM operator 0 TEA event
+  - name: CMPR1_TEA_INT_ENA
+    bit_range:
+    - 16
+    - 16
+    description: The enable bit for the interrupt triggered by a PWM operator 1 TEA event
+  - name: CMPR2_TEA_INT_ENA
+    bit_range:
+    - 17
+    - 17
+    description: The enable bit for the interrupt triggered by a PWM operator 2 TEA event
+  - name: CMPR0_TEB_INT_ENA
+    bit_range:
+    - 18
+    - 18
+    description: The enable bit for the interrupt triggered by a PWM operator 0 TEB event
+  - name: CMPR1_TEB_INT_ENA
+    bit_range:
+    - 19
+    - 19
+    description: The enable bit for the interrupt triggered by a PWM operator 1 TEB event
+  - name: CMPR2_TEB_INT_ENA
+    bit_range:
+    - 20
+    - 20
+    description: The enable bit for the interrupt triggered by a PWM operator 2 TEB event
+  - name: TZ0_CBC_INT_ENA
+    bit_range:
+    - 21
+    - 21
+    description: The enable bit for the interrupt triggered by a cycle-by-cycle mode action on PWM0.
+  - name: TZ1_CBC_INT_ENA
+    bit_range:
+    - 22
+    - 22
+    description: The enable bit for the interrupt triggered by a cycle-by-cycle mode action on PWM1.
+  - name: TZ2_CBC_INT_ENA
+    bit_range:
+    - 23
+    - 23
+    description: The enable bit for the interrupt triggered by a cycle-by-cycle mode action on PWM2.
+  - name: TZ0_OST_INT_ENA
+    bit_range:
+    - 24
+    - 24
+    description: The enable bit for the interrupt triggered by a one-shot mode action on PWM0.
+  - name: TZ1_OST_INT_ENA
+    bit_range:
+    - 25
+    - 25
+    description: The enable bit for the interrupt triggered by a one-shot mode action on PWM1.
+  - name: TZ2_OST_INT_ENA
+    bit_range:
+    - 26
+    - 26
+    description: The enable bit for the interrupt triggered by a one-shot mode action on PWM2.
+  - name: CAP0_INT_ENA
+    bit_range:
+    - 27
+    - 27
+    description: The enable bit for the interrupt triggered by capture on channel 0.
+  - name: CAP1_INT_ENA
+    bit_range:
+    - 28
+    - 28
+    description: The enable bit for the interrupt triggered by capture on channel 1.
+  - name: CAP2_INT_ENA
+    bit_range:
+    - 29
+    - 29
+    description: The enable bit for the interrupt triggered by capture on channel 2.
+  side_effects: null
+- id: INT_RAW
+  address_offset: 276
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIMER0_STOP_INT_RAW
+    bit_range:
+    - 0
+    - 0
+    description: The raw status bit for the interrupt triggered when the timer 0 stops.
+  - name: TIMER1_STOP_INT_RAW
+    bit_range:
+    - 1
+    - 1
+    description: The raw status bit for the interrupt triggered when the timer 1 stops.
+  - name: TIMER2_STOP_INT_RAW
+    bit_range:
+    - 2
+    - 2
+    description: The raw status bit for the interrupt triggered when the timer 2 stops.
+  - name: TIMER0_TEZ_INT_RAW
+    bit_range:
+    - 3
+    - 3
+    description: The raw status bit for the interrupt triggered by a PWM timer 0 TEZ event.
+  - name: TIMER1_TEZ_INT_RAW
+    bit_range:
+    - 4
+    - 4
+    description: The raw status bit for the interrupt triggered by a PWM timer 1 TEZ event.
+  - name: TIMER2_TEZ_INT_RAW
+    bit_range:
+    - 5
+    - 5
+    description: The raw status bit for the interrupt triggered by a PWM timer 2 TEZ event.
+  - name: TIMER0_TEP_INT_RAW
+    bit_range:
+    - 6
+    - 6
+    description: The raw status bit for the interrupt triggered by a PWM timer 0 TEP event.
+  - name: TIMER1_TEP_INT_RAW
+    bit_range:
+    - 7
+    - 7
+    description: The raw status bit for the interrupt triggered by a PWM timer 1 TEP event.
+  - name: TIMER2_TEP_INT_RAW
+    bit_range:
+    - 8
+    - 8
+    description: The raw status bit for the interrupt triggered by a PWM timer 2 TEP event.
+  - name: FAULT0_INT_RAW
+    bit_range:
+    - 9
+    - 9
+    description: The raw status bit for the interrupt triggered when event_f0 starts.
+  - name: FAULT1_INT_RAW
+    bit_range:
+    - 10
+    - 10
+    description: The raw status bit for the interrupt triggered when event_f1 starts.
+  - name: FAULT2_INT_RAW
+    bit_range:
+    - 11
+    - 11
+    description: The raw status bit for the interrupt triggered when event_f2 starts.
+  - name: FAULT0_CLR_INT_RAW
+    bit_range:
+    - 12
+    - 12
+    description: The raw status bit for the interrupt triggered when event_f0 ends.
+  - name: FAULT1_CLR_INT_RAW
+    bit_range:
+    - 13
+    - 13
+    description: The raw status bit for the interrupt triggered when event_f1 ends.
+  - name: FAULT2_CLR_INT_RAW
+    bit_range:
+    - 14
+    - 14
+    description: The raw status bit for the interrupt triggered when event_f2 ends.
+  - name: CMPR0_TEA_INT_RAW
+    bit_range:
+    - 15
+    - 15
+    description: The raw status bit for the interrupt triggered by a PWM operator 0 TEA event
+  - name: CMPR1_TEA_INT_RAW
+    bit_range:
+    - 16
+    - 16
+    description: The raw status bit for the interrupt triggered by a PWM operator 1 TEA event
+  - name: CMPR2_TEA_INT_RAW
+    bit_range:
+    - 17
+    - 17
+    description: The raw status bit for the interrupt triggered by a PWM operator 2 TEA event
+  - name: CMPR0_TEB_INT_RAW
+    bit_range:
+    - 18
+    - 18
+    description: The raw status bit for the interrupt triggered by a PWM operator 0 TEB event
+  - name: CMPR1_TEB_INT_RAW
+    bit_range:
+    - 19
+    - 19
+    description: The raw status bit for the interrupt triggered by a PWM operator 1 TEB event
+  - name: CMPR2_TEB_INT_RAW
+    bit_range:
+    - 20
+    - 20
+    description: The raw status bit for the interrupt triggered by a PWM operator 2 TEB event
+  - name: TZ0_CBC_INT_RAW
+    bit_range:
+    - 21
+    - 21
+    description: The raw status bit for the interrupt triggered by a cycle-by-cycle mode action on PWM0.
+  - name: TZ1_CBC_INT_RAW
+    bit_range:
+    - 22
+    - 22
+    description: The raw status bit for the interrupt triggered by a cycle-by-cycle mode action on PWM1.
+  - name: TZ2_CBC_INT_RAW
+    bit_range:
+    - 23
+    - 23
+    description: The raw status bit for the interrupt triggered by a cycle-by-cycle mode action on PWM2.
+  - name: TZ0_OST_INT_RAW
+    bit_range:
+    - 24
+    - 24
+    description: The raw status bit for the interrupt triggered by a one-shot mode action on PWM0.
+  - name: TZ1_OST_INT_RAW
+    bit_range:
+    - 25
+    - 25
+    description: The raw status bit for the interrupt triggered by a one-shot mode action on PWM1.
+  - name: TZ2_OST_INT_RAW
+    bit_range:
+    - 26
+    - 26
+    description: The raw status bit for the interrupt triggered by a one-shot mode action on PWM2.
+  - name: CAP0_INT_RAW
+    bit_range:
+    - 27
+    - 27
+    description: The raw status bit for the interrupt triggered by capture on channel 0.
+  - name: CAP1_INT_RAW
+    bit_range:
+    - 28
+    - 28
+    description: The raw status bit for the interrupt triggered by capture on channel 1.
+  - name: CAP2_INT_RAW
+    bit_range:
+    - 29
+    - 29
+    description: The raw status bit for the interrupt triggered by capture on channel 2.
+  side_effects: null
+- id: INT_ST
+  address_offset: 280
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIMER0_STOP_INT_ST
+    bit_range:
+    - 0
+    - 0
+    description: The masked status bit for the interrupt triggered when the timer 0 stops.
+  - name: TIMER1_STOP_INT_ST
+    bit_range:
+    - 1
+    - 1
+    description: The masked status bit for the interrupt triggered when the timer 1 stops.
+  - name: TIMER2_STOP_INT_ST
+    bit_range:
+    - 2
+    - 2
+    description: The masked status bit for the interrupt triggered when the timer 2 stops.
+  - name: TIMER0_TEZ_INT_ST
+    bit_range:
+    - 3
+    - 3
+    description: The masked status bit for the interrupt triggered by a PWM timer 0 TEZ event.
+  - name: TIMER1_TEZ_INT_ST
+    bit_range:
+    - 4
+    - 4
+    description: The masked status bit for the interrupt triggered by a PWM timer 1 TEZ event.
+  - name: TIMER2_TEZ_INT_ST
+    bit_range:
+    - 5
+    - 5
+    description: The masked status bit for the interrupt triggered by a PWM timer 2 TEZ event.
+  - name: TIMER0_TEP_INT_ST
+    bit_range:
+    - 6
+    - 6
+    description: The masked status bit for the interrupt triggered by a PWM timer 0 TEP event.
+  - name: TIMER1_TEP_INT_ST
+    bit_range:
+    - 7
+    - 7
+    description: The masked status bit for the interrupt triggered by a PWM timer 1 TEP event.
+  - name: TIMER2_TEP_INT_ST
+    bit_range:
+    - 8
+    - 8
+    description: The masked status bit for the interrupt triggered by a PWM timer 2 TEP event.
+  - name: FAULT0_INT_ST
+    bit_range:
+    - 9
+    - 9
+    description: The masked status bit for the interrupt triggered when event_f0 starts.
+  - name: FAULT1_INT_ST
+    bit_range:
+    - 10
+    - 10
+    description: The masked status bit for the interrupt triggered when event_f1 starts.
+  - name: FAULT2_INT_ST
+    bit_range:
+    - 11
+    - 11
+    description: The masked status bit for the interrupt triggered when event_f2 starts.
+  - name: FAULT0_CLR_INT_ST
+    bit_range:
+    - 12
+    - 12
+    description: The masked status bit for the interrupt triggered when event_f0 ends.
+  - name: FAULT1_CLR_INT_ST
+    bit_range:
+    - 13
+    - 13
+    description: The masked status bit for the interrupt triggered when event_f1 ends.
+  - name: FAULT2_CLR_INT_ST
+    bit_range:
+    - 14
+    - 14
+    description: The masked status bit for the interrupt triggered when event_f2 ends.
+  - name: CMPR0_TEA_INT_ST
+    bit_range:
+    - 15
+    - 15
+    description: The masked status bit for the interrupt triggered by a PWM operator 0 TEA event
+  - name: CMPR1_TEA_INT_ST
+    bit_range:
+    - 16
+    - 16
+    description: The masked status bit for the interrupt triggered by a PWM operator 1 TEA event
+  - name: CMPR2_TEA_INT_ST
+    bit_range:
+    - 17
+    - 17
+    description: The masked status bit for the interrupt triggered by a PWM operator 2 TEA event
+  - name: CMPR0_TEB_INT_ST
+    bit_range:
+    - 18
+    - 18
+    description: The masked status bit for the interrupt triggered by a PWM operator 0 TEB event
+  - name: CMPR1_TEB_INT_ST
+    bit_range:
+    - 19
+    - 19
+    description: The masked status bit for the interrupt triggered by a PWM operator 1 TEB event
+  - name: CMPR2_TEB_INT_ST
+    bit_range:
+    - 20
+    - 20
+    description: The masked status bit for the interrupt triggered by a PWM operator 2 TEB event
+  - name: TZ0_CBC_INT_ST
+    bit_range:
+    - 21
+    - 21
+    description: The masked status bit for the interrupt triggered by a cycle-by-cycle mode action on PWM0.
+  - name: TZ1_CBC_INT_ST
+    bit_range:
+    - 22
+    - 22
+    description: The masked status bit for the interrupt triggered by a cycle-by-cycle mode action on PWM1.
+  - name: TZ2_CBC_INT_ST
+    bit_range:
+    - 23
+    - 23
+    description: The masked status bit for the interrupt triggered by a cycle-by-cycle mode action on PWM2.
+  - name: TZ0_OST_INT_ST
+    bit_range:
+    - 24
+    - 24
+    description: The masked status bit for the interrupt triggered by a one-shot mode action on PWM0.
+  - name: TZ1_OST_INT_ST
+    bit_range:
+    - 25
+    - 25
+    description: The masked status bit for the interrupt triggered by a one-shot mode action on PWM1.
+  - name: TZ2_OST_INT_ST
+    bit_range:
+    - 26
+    - 26
+    description: The masked status bit for the interrupt triggered by a one-shot mode action on PWM2.
+  - name: CAP0_INT_ST
+    bit_range:
+    - 27
+    - 27
+    description: The masked status bit for the interrupt triggered by capture on channel 0.
+  - name: CAP1_INT_ST
+    bit_range:
+    - 28
+    - 28
+    description: The masked status bit for the interrupt triggered by capture on channel 1.
+  - name: CAP2_INT_ST
+    bit_range:
+    - 29
+    - 29
+    description: The masked status bit for the interrupt triggered by capture on channel 2.
+  side_effects: null
+- id: INT_CLR
+  address_offset: 284
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIMER0_STOP_INT_CLR
+    bit_range:
+    - 0
+    - 0
+    description: Set this bit to clear the interrupt triggered when the timer 0 stops.
+  - name: TIMER1_STOP_INT_CLR
+    bit_range:
+    - 1
+    - 1
+    description: Set this bit to clear the interrupt triggered when the timer 1 stops.
+  - name: TIMER2_STOP_INT_CLR
+    bit_range:
+    - 2
+    - 2
+    description: Set this bit to clear the interrupt triggered when the timer 2 stops.
+  - name: TIMER0_TEZ_INT_CLR
+    bit_range:
+    - 3
+    - 3
+    description: Set this bit to clear the interrupt triggered by a PWM timer 0 TEZ event.
+  - name: TIMER1_TEZ_INT_CLR
+    bit_range:
+    - 4
+    - 4
+    description: Set this bit to clear the interrupt triggered by a PWM timer 1 TEZ event.
+  - name: TIMER2_TEZ_INT_CLR
+    bit_range:
+    - 5
+    - 5
+    description: Set this bit to clear the interrupt triggered by a PWM timer 2 TEZ event.
+  - name: TIMER0_TEP_INT_CLR
+    bit_range:
+    - 6
+    - 6
+    description: Set this bit to clear the interrupt triggered by a PWM timer 0 TEP event.
+  - name: TIMER1_TEP_INT_CLR
+    bit_range:
+    - 7
+    - 7
+    description: Set this bit to clear the interrupt triggered by a PWM timer 1 TEP event.
+  - name: TIMER2_TEP_INT_CLR
+    bit_range:
+    - 8
+    - 8
+    description: Set this bit to clear the interrupt triggered by a PWM timer 2 TEP event.
+  - name: FAULT0_INT_CLR
+    bit_range:
+    - 9
+    - 9
+    description: Set this bit to clear the interrupt triggered when event_f0 starts.
+  - name: FAULT1_INT_CLR
+    bit_range:
+    - 10
+    - 10
+    description: Set this bit to clear the interrupt triggered when event_f1 starts.
+  - name: FAULT2_INT_CLR
+    bit_range:
+    - 11
+    - 11
+    description: Set this bit to clear the interrupt triggered when event_f2 starts.
+  - name: FAULT0_CLR_INT_CLR
+    bit_range:
+    - 12
+    - 12
+    description: Set this bit to clear the interrupt triggered when event_f0 ends.
+  - name: FAULT1_CLR_INT_CLR
+    bit_range:
+    - 13
+    - 13
+    description: Set this bit to clear the interrupt triggered when event_f1 ends.
+  - name: FAULT2_CLR_INT_CLR
+    bit_range:
+    - 14
+    - 14
+    description: Set this bit to clear the interrupt triggered when event_f2 ends.
+  - name: CMPR0_TEA_INT_CLR
+    bit_range:
+    - 15
+    - 15
+    description: Set this bit to clear the interrupt triggered by a PWM operator 0 TEA event
+  - name: CMPR1_TEA_INT_CLR
+    bit_range:
+    - 16
+    - 16
+    description: Set this bit to clear the interrupt triggered by a PWM operator 1 TEA event
+  - name: CMPR2_TEA_INT_CLR
+    bit_range:
+    - 17
+    - 17
+    description: Set this bit to clear the interrupt triggered by a PWM operator 2 TEA event
+  - name: CMPR0_TEB_INT_CLR
+    bit_range:
+    - 18
+    - 18
+    description: Set this bit to clear the interrupt triggered by a PWM operator 0 TEB event
+  - name: CMPR1_TEB_INT_CLR
+    bit_range:
+    - 19
+    - 19
+    description: Set this bit to clear the interrupt triggered by a PWM operator 1 TEB event
+  - name: CMPR2_TEB_INT_CLR
+    bit_range:
+    - 20
+    - 20
+    description: Set this bit to clear the interrupt triggered by a PWM operator 2 TEB event
+  - name: TZ0_CBC_INT_CLR
+    bit_range:
+    - 21
+    - 21
+    description: Set this bit to clear the interrupt triggered by a cycle-by-cycle mode action on PWM0.
+  - name: TZ1_CBC_INT_CLR
+    bit_range:
+    - 22
+    - 22
+    description: Set this bit to clear the interrupt triggered by a cycle-by-cycle mode action on PWM1.
+  - name: TZ2_CBC_INT_CLR
+    bit_range:
+    - 23
+    - 23
+    description: Set this bit to clear the interrupt triggered by a cycle-by-cycle mode action on PWM2.
+  - name: TZ0_OST_INT_CLR
+    bit_range:
+    - 24
+    - 24
+    description: Set this bit to clear the interrupt triggered by a one-shot mode action on PWM0.
+  - name: TZ1_OST_INT_CLR
+    bit_range:
+    - 25
+    - 25
+    description: Set this bit to clear the interrupt triggered by a one-shot mode action on PWM1.
+  - name: TZ2_OST_INT_CLR
+    bit_range:
+    - 26
+    - 26
+    description: Set this bit to clear the interrupt triggered by a one-shot mode action on PWM2.
+  - name: CAP0_INT_CLR
+    bit_range:
+    - 27
+    - 27
+    description: Set this bit to clear the interrupt triggered by capture on channel 0.
+  - name: CAP1_INT_CLR
+    bit_range:
+    - 28
+    - 28
+    description: Set this bit to clear the interrupt triggered by capture on channel 1.
+  - name: CAP2_INT_CLR
+    bit_range:
+    - 29
+    - 29
+    description: Set this bit to clear the interrupt triggered by capture on channel 2.
+  side_effects: null
+- id: CLK
+  address_offset: 288
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Force clock on for this register file
+  side_effects: null
+- id: VERSION
+  address_offset: 292
+  size: 32
+  access: READ_WRITE
+  reset_value: 22057232
+  fields:
+  - name: DATE
+    bit_range:
+    - 27
+    - 0
+    description: Version of this register file
+  side_effects: null
+interrupts:
+  MCPWM0: 31
+timing: null

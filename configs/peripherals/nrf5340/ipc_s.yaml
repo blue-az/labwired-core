@@ -1,0 +1,4059 @@
+peripheral: IPC_S
+version: 0.1.0
+registers:
+- id: TASKS_SEND0
+  address_offset: 0
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: Trigger events on IPC channel enabled in SEND_CNF[n]
+  side_effects: null
+- id: TASKS_SEND1
+  address_offset: 4
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: Trigger events on IPC channel enabled in SEND_CNF[n]
+  side_effects: null
+- id: TASKS_SEND2
+  address_offset: 8
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: Trigger events on IPC channel enabled in SEND_CNF[n]
+  side_effects: null
+- id: TASKS_SEND3
+  address_offset: 12
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: Trigger events on IPC channel enabled in SEND_CNF[n]
+  side_effects: null
+- id: TASKS_SEND4
+  address_offset: 16
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: Trigger events on IPC channel enabled in SEND_CNF[n]
+  side_effects: null
+- id: TASKS_SEND5
+  address_offset: 20
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: Trigger events on IPC channel enabled in SEND_CNF[n]
+  side_effects: null
+- id: TASKS_SEND6
+  address_offset: 24
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: Trigger events on IPC channel enabled in SEND_CNF[n]
+  side_effects: null
+- id: TASKS_SEND7
+  address_offset: 28
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: Trigger events on IPC channel enabled in SEND_CNF[n]
+  side_effects: null
+- id: TASKS_SEND8
+  address_offset: 32
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: Trigger events on IPC channel enabled in SEND_CNF[n]
+  side_effects: null
+- id: TASKS_SEND9
+  address_offset: 36
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: Trigger events on IPC channel enabled in SEND_CNF[n]
+  side_effects: null
+- id: TASKS_SEND10
+  address_offset: 40
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: Trigger events on IPC channel enabled in SEND_CNF[n]
+  side_effects: null
+- id: TASKS_SEND11
+  address_offset: 44
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: Trigger events on IPC channel enabled in SEND_CNF[n]
+  side_effects: null
+- id: TASKS_SEND12
+  address_offset: 48
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: Trigger events on IPC channel enabled in SEND_CNF[n]
+  side_effects: null
+- id: TASKS_SEND13
+  address_offset: 52
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: Trigger events on IPC channel enabled in SEND_CNF[n]
+  side_effects: null
+- id: TASKS_SEND14
+  address_offset: 56
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: Trigger events on IPC channel enabled in SEND_CNF[n]
+  side_effects: null
+- id: TASKS_SEND15
+  address_offset: 60
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: Trigger events on IPC channel enabled in SEND_CNF[n]
+  side_effects: null
+- id: SUBSCRIBE_SEND0
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND1
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND2
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND3
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND4
+  address_offset: 144
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND5
+  address_offset: 148
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND6
+  address_offset: 152
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND7
+  address_offset: 156
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND8
+  address_offset: 160
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND9
+  address_offset: 164
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND10
+  address_offset: 168
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND11
+  address_offset: 172
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND12
+  address_offset: 176
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND13
+  address_offset: 180
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND14
+  address_offset: 184
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND15
+  address_offset: 188
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: EVENTS_RECEIVE0
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: Event received on one or more of the enabled IPC channels in RECEIVE_CNF[n]
+  side_effects: null
+- id: EVENTS_RECEIVE1
+  address_offset: 260
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: Event received on one or more of the enabled IPC channels in RECEIVE_CNF[n]
+  side_effects: null
+- id: EVENTS_RECEIVE2
+  address_offset: 264
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: Event received on one or more of the enabled IPC channels in RECEIVE_CNF[n]
+  side_effects: null
+- id: EVENTS_RECEIVE3
+  address_offset: 268
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: Event received on one or more of the enabled IPC channels in RECEIVE_CNF[n]
+  side_effects: null
+- id: EVENTS_RECEIVE4
+  address_offset: 272
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: Event received on one or more of the enabled IPC channels in RECEIVE_CNF[n]
+  side_effects: null
+- id: EVENTS_RECEIVE5
+  address_offset: 276
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: Event received on one or more of the enabled IPC channels in RECEIVE_CNF[n]
+  side_effects: null
+- id: EVENTS_RECEIVE6
+  address_offset: 280
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: Event received on one or more of the enabled IPC channels in RECEIVE_CNF[n]
+  side_effects: null
+- id: EVENTS_RECEIVE7
+  address_offset: 284
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: Event received on one or more of the enabled IPC channels in RECEIVE_CNF[n]
+  side_effects: null
+- id: EVENTS_RECEIVE8
+  address_offset: 288
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: Event received on one or more of the enabled IPC channels in RECEIVE_CNF[n]
+  side_effects: null
+- id: EVENTS_RECEIVE9
+  address_offset: 292
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: Event received on one or more of the enabled IPC channels in RECEIVE_CNF[n]
+  side_effects: null
+- id: EVENTS_RECEIVE10
+  address_offset: 296
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: Event received on one or more of the enabled IPC channels in RECEIVE_CNF[n]
+  side_effects: null
+- id: EVENTS_RECEIVE11
+  address_offset: 300
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: Event received on one or more of the enabled IPC channels in RECEIVE_CNF[n]
+  side_effects: null
+- id: EVENTS_RECEIVE12
+  address_offset: 304
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: Event received on one or more of the enabled IPC channels in RECEIVE_CNF[n]
+  side_effects: null
+- id: EVENTS_RECEIVE13
+  address_offset: 308
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: Event received on one or more of the enabled IPC channels in RECEIVE_CNF[n]
+  side_effects: null
+- id: EVENTS_RECEIVE14
+  address_offset: 312
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: Event received on one or more of the enabled IPC channels in RECEIVE_CNF[n]
+  side_effects: null
+- id: EVENTS_RECEIVE15
+  address_offset: 316
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: Event received on one or more of the enabled IPC channels in RECEIVE_CNF[n]
+  side_effects: null
+- id: PUBLISH_RECEIVE0
+  address_offset: 384
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE1
+  address_offset: 388
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE2
+  address_offset: 392
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE3
+  address_offset: 396
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE4
+  address_offset: 400
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE5
+  address_offset: 404
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE6
+  address_offset: 408
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE7
+  address_offset: 412
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE8
+  address_offset: 416
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE9
+  address_offset: 420
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE10
+  address_offset: 424
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE11
+  address_offset: 428
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE12
+  address_offset: 432
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE13
+  address_offset: 436
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE14
+  address_offset: 440
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE15
+  address_offset: 444
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: INTEN
+  address_offset: 768
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RECEIVE0
+    bit_range:
+    - 0
+    - 0
+    description: Enable or disable interrupt for event RECEIVE[0]
+  - name: RECEIVE1
+    bit_range:
+    - 1
+    - 1
+    description: Enable or disable interrupt for event RECEIVE[1]
+  - name: RECEIVE2
+    bit_range:
+    - 2
+    - 2
+    description: Enable or disable interrupt for event RECEIVE[2]
+  - name: RECEIVE3
+    bit_range:
+    - 3
+    - 3
+    description: Enable or disable interrupt for event RECEIVE[3]
+  - name: RECEIVE4
+    bit_range:
+    - 4
+    - 4
+    description: Enable or disable interrupt for event RECEIVE[4]
+  - name: RECEIVE5
+    bit_range:
+    - 5
+    - 5
+    description: Enable or disable interrupt for event RECEIVE[5]
+  - name: RECEIVE6
+    bit_range:
+    - 6
+    - 6
+    description: Enable or disable interrupt for event RECEIVE[6]
+  - name: RECEIVE7
+    bit_range:
+    - 7
+    - 7
+    description: Enable or disable interrupt for event RECEIVE[7]
+  - name: RECEIVE8
+    bit_range:
+    - 8
+    - 8
+    description: Enable or disable interrupt for event RECEIVE[8]
+  - name: RECEIVE9
+    bit_range:
+    - 9
+    - 9
+    description: Enable or disable interrupt for event RECEIVE[9]
+  - name: RECEIVE10
+    bit_range:
+    - 10
+    - 10
+    description: Enable or disable interrupt for event RECEIVE[10]
+  - name: RECEIVE11
+    bit_range:
+    - 11
+    - 11
+    description: Enable or disable interrupt for event RECEIVE[11]
+  - name: RECEIVE12
+    bit_range:
+    - 12
+    - 12
+    description: Enable or disable interrupt for event RECEIVE[12]
+  - name: RECEIVE13
+    bit_range:
+    - 13
+    - 13
+    description: Enable or disable interrupt for event RECEIVE[13]
+  - name: RECEIVE14
+    bit_range:
+    - 14
+    - 14
+    description: Enable or disable interrupt for event RECEIVE[14]
+  - name: RECEIVE15
+    bit_range:
+    - 15
+    - 15
+    description: Enable or disable interrupt for event RECEIVE[15]
+  side_effects: null
+- id: INTENSET
+  address_offset: 772
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RECEIVE0
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to enable interrupt for event RECEIVE[0]
+  - name: RECEIVE1
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to enable interrupt for event RECEIVE[1]
+  - name: RECEIVE2
+    bit_range:
+    - 2
+    - 2
+    description: Write '1' to enable interrupt for event RECEIVE[2]
+  - name: RECEIVE3
+    bit_range:
+    - 3
+    - 3
+    description: Write '1' to enable interrupt for event RECEIVE[3]
+  - name: RECEIVE4
+    bit_range:
+    - 4
+    - 4
+    description: Write '1' to enable interrupt for event RECEIVE[4]
+  - name: RECEIVE5
+    bit_range:
+    - 5
+    - 5
+    description: Write '1' to enable interrupt for event RECEIVE[5]
+  - name: RECEIVE6
+    bit_range:
+    - 6
+    - 6
+    description: Write '1' to enable interrupt for event RECEIVE[6]
+  - name: RECEIVE7
+    bit_range:
+    - 7
+    - 7
+    description: Write '1' to enable interrupt for event RECEIVE[7]
+  - name: RECEIVE8
+    bit_range:
+    - 8
+    - 8
+    description: Write '1' to enable interrupt for event RECEIVE[8]
+  - name: RECEIVE9
+    bit_range:
+    - 9
+    - 9
+    description: Write '1' to enable interrupt for event RECEIVE[9]
+  - name: RECEIVE10
+    bit_range:
+    - 10
+    - 10
+    description: Write '1' to enable interrupt for event RECEIVE[10]
+  - name: RECEIVE11
+    bit_range:
+    - 11
+    - 11
+    description: Write '1' to enable interrupt for event RECEIVE[11]
+  - name: RECEIVE12
+    bit_range:
+    - 12
+    - 12
+    description: Write '1' to enable interrupt for event RECEIVE[12]
+  - name: RECEIVE13
+    bit_range:
+    - 13
+    - 13
+    description: Write '1' to enable interrupt for event RECEIVE[13]
+  - name: RECEIVE14
+    bit_range:
+    - 14
+    - 14
+    description: Write '1' to enable interrupt for event RECEIVE[14]
+  - name: RECEIVE15
+    bit_range:
+    - 15
+    - 15
+    description: Write '1' to enable interrupt for event RECEIVE[15]
+  side_effects: null
+- id: INTENCLR
+  address_offset: 776
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RECEIVE0
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to disable interrupt for event RECEIVE[0]
+  - name: RECEIVE1
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to disable interrupt for event RECEIVE[1]
+  - name: RECEIVE2
+    bit_range:
+    - 2
+    - 2
+    description: Write '1' to disable interrupt for event RECEIVE[2]
+  - name: RECEIVE3
+    bit_range:
+    - 3
+    - 3
+    description: Write '1' to disable interrupt for event RECEIVE[3]
+  - name: RECEIVE4
+    bit_range:
+    - 4
+    - 4
+    description: Write '1' to disable interrupt for event RECEIVE[4]
+  - name: RECEIVE5
+    bit_range:
+    - 5
+    - 5
+    description: Write '1' to disable interrupt for event RECEIVE[5]
+  - name: RECEIVE6
+    bit_range:
+    - 6
+    - 6
+    description: Write '1' to disable interrupt for event RECEIVE[6]
+  - name: RECEIVE7
+    bit_range:
+    - 7
+    - 7
+    description: Write '1' to disable interrupt for event RECEIVE[7]
+  - name: RECEIVE8
+    bit_range:
+    - 8
+    - 8
+    description: Write '1' to disable interrupt for event RECEIVE[8]
+  - name: RECEIVE9
+    bit_range:
+    - 9
+    - 9
+    description: Write '1' to disable interrupt for event RECEIVE[9]
+  - name: RECEIVE10
+    bit_range:
+    - 10
+    - 10
+    description: Write '1' to disable interrupt for event RECEIVE[10]
+  - name: RECEIVE11
+    bit_range:
+    - 11
+    - 11
+    description: Write '1' to disable interrupt for event RECEIVE[11]
+  - name: RECEIVE12
+    bit_range:
+    - 12
+    - 12
+    description: Write '1' to disable interrupt for event RECEIVE[12]
+  - name: RECEIVE13
+    bit_range:
+    - 13
+    - 13
+    description: Write '1' to disable interrupt for event RECEIVE[13]
+  - name: RECEIVE14
+    bit_range:
+    - 14
+    - 14
+    description: Write '1' to disable interrupt for event RECEIVE[14]
+  - name: RECEIVE15
+    bit_range:
+    - 15
+    - 15
+    description: Write '1' to disable interrupt for event RECEIVE[15]
+  side_effects: null
+- id: INTPEND
+  address_offset: 780
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: RECEIVE0
+    bit_range:
+    - 0
+    - 0
+    description: Read pending status of interrupt for event RECEIVE[0]
+  - name: RECEIVE1
+    bit_range:
+    - 1
+    - 1
+    description: Read pending status of interrupt for event RECEIVE[1]
+  - name: RECEIVE2
+    bit_range:
+    - 2
+    - 2
+    description: Read pending status of interrupt for event RECEIVE[2]
+  - name: RECEIVE3
+    bit_range:
+    - 3
+    - 3
+    description: Read pending status of interrupt for event RECEIVE[3]
+  - name: RECEIVE4
+    bit_range:
+    - 4
+    - 4
+    description: Read pending status of interrupt for event RECEIVE[4]
+  - name: RECEIVE5
+    bit_range:
+    - 5
+    - 5
+    description: Read pending status of interrupt for event RECEIVE[5]
+  - name: RECEIVE6
+    bit_range:
+    - 6
+    - 6
+    description: Read pending status of interrupt for event RECEIVE[6]
+  - name: RECEIVE7
+    bit_range:
+    - 7
+    - 7
+    description: Read pending status of interrupt for event RECEIVE[7]
+  - name: RECEIVE8
+    bit_range:
+    - 8
+    - 8
+    description: Read pending status of interrupt for event RECEIVE[8]
+  - name: RECEIVE9
+    bit_range:
+    - 9
+    - 9
+    description: Read pending status of interrupt for event RECEIVE[9]
+  - name: RECEIVE10
+    bit_range:
+    - 10
+    - 10
+    description: Read pending status of interrupt for event RECEIVE[10]
+  - name: RECEIVE11
+    bit_range:
+    - 11
+    - 11
+    description: Read pending status of interrupt for event RECEIVE[11]
+  - name: RECEIVE12
+    bit_range:
+    - 12
+    - 12
+    description: Read pending status of interrupt for event RECEIVE[12]
+  - name: RECEIVE13
+    bit_range:
+    - 13
+    - 13
+    description: Read pending status of interrupt for event RECEIVE[13]
+  - name: RECEIVE14
+    bit_range:
+    - 14
+    - 14
+    description: Read pending status of interrupt for event RECEIVE[14]
+  - name: RECEIVE15
+    bit_range:
+    - 15
+    - 15
+    description: Read pending status of interrupt for event RECEIVE[15]
+  side_effects: null
+- id: SEND_CNF0
+  address_offset: 1296
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable broadcasting on IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable broadcasting on IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable broadcasting on IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable broadcasting on IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable broadcasting on IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable broadcasting on IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable broadcasting on IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable broadcasting on IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable broadcasting on IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable broadcasting on IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable broadcasting on IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable broadcasting on IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable broadcasting on IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable broadcasting on IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable broadcasting on IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable broadcasting on IPC channel 15
+  side_effects: null
+- id: SEND_CNF1
+  address_offset: 1300
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable broadcasting on IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable broadcasting on IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable broadcasting on IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable broadcasting on IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable broadcasting on IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable broadcasting on IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable broadcasting on IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable broadcasting on IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable broadcasting on IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable broadcasting on IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable broadcasting on IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable broadcasting on IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable broadcasting on IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable broadcasting on IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable broadcasting on IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable broadcasting on IPC channel 15
+  side_effects: null
+- id: SEND_CNF2
+  address_offset: 1304
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable broadcasting on IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable broadcasting on IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable broadcasting on IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable broadcasting on IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable broadcasting on IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable broadcasting on IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable broadcasting on IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable broadcasting on IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable broadcasting on IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable broadcasting on IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable broadcasting on IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable broadcasting on IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable broadcasting on IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable broadcasting on IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable broadcasting on IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable broadcasting on IPC channel 15
+  side_effects: null
+- id: SEND_CNF3
+  address_offset: 1308
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable broadcasting on IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable broadcasting on IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable broadcasting on IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable broadcasting on IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable broadcasting on IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable broadcasting on IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable broadcasting on IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable broadcasting on IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable broadcasting on IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable broadcasting on IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable broadcasting on IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable broadcasting on IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable broadcasting on IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable broadcasting on IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable broadcasting on IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable broadcasting on IPC channel 15
+  side_effects: null
+- id: SEND_CNF4
+  address_offset: 1312
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable broadcasting on IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable broadcasting on IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable broadcasting on IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable broadcasting on IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable broadcasting on IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable broadcasting on IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable broadcasting on IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable broadcasting on IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable broadcasting on IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable broadcasting on IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable broadcasting on IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable broadcasting on IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable broadcasting on IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable broadcasting on IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable broadcasting on IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable broadcasting on IPC channel 15
+  side_effects: null
+- id: SEND_CNF5
+  address_offset: 1316
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable broadcasting on IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable broadcasting on IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable broadcasting on IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable broadcasting on IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable broadcasting on IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable broadcasting on IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable broadcasting on IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable broadcasting on IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable broadcasting on IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable broadcasting on IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable broadcasting on IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable broadcasting on IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable broadcasting on IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable broadcasting on IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable broadcasting on IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable broadcasting on IPC channel 15
+  side_effects: null
+- id: SEND_CNF6
+  address_offset: 1320
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable broadcasting on IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable broadcasting on IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable broadcasting on IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable broadcasting on IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable broadcasting on IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable broadcasting on IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable broadcasting on IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable broadcasting on IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable broadcasting on IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable broadcasting on IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable broadcasting on IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable broadcasting on IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable broadcasting on IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable broadcasting on IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable broadcasting on IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable broadcasting on IPC channel 15
+  side_effects: null
+- id: SEND_CNF7
+  address_offset: 1324
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable broadcasting on IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable broadcasting on IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable broadcasting on IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable broadcasting on IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable broadcasting on IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable broadcasting on IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable broadcasting on IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable broadcasting on IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable broadcasting on IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable broadcasting on IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable broadcasting on IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable broadcasting on IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable broadcasting on IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable broadcasting on IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable broadcasting on IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable broadcasting on IPC channel 15
+  side_effects: null
+- id: SEND_CNF8
+  address_offset: 1328
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable broadcasting on IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable broadcasting on IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable broadcasting on IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable broadcasting on IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable broadcasting on IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable broadcasting on IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable broadcasting on IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable broadcasting on IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable broadcasting on IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable broadcasting on IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable broadcasting on IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable broadcasting on IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable broadcasting on IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable broadcasting on IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable broadcasting on IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable broadcasting on IPC channel 15
+  side_effects: null
+- id: SEND_CNF9
+  address_offset: 1332
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable broadcasting on IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable broadcasting on IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable broadcasting on IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable broadcasting on IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable broadcasting on IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable broadcasting on IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable broadcasting on IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable broadcasting on IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable broadcasting on IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable broadcasting on IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable broadcasting on IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable broadcasting on IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable broadcasting on IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable broadcasting on IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable broadcasting on IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable broadcasting on IPC channel 15
+  side_effects: null
+- id: SEND_CNF10
+  address_offset: 1336
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable broadcasting on IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable broadcasting on IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable broadcasting on IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable broadcasting on IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable broadcasting on IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable broadcasting on IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable broadcasting on IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable broadcasting on IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable broadcasting on IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable broadcasting on IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable broadcasting on IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable broadcasting on IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable broadcasting on IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable broadcasting on IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable broadcasting on IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable broadcasting on IPC channel 15
+  side_effects: null
+- id: SEND_CNF11
+  address_offset: 1340
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable broadcasting on IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable broadcasting on IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable broadcasting on IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable broadcasting on IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable broadcasting on IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable broadcasting on IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable broadcasting on IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable broadcasting on IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable broadcasting on IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable broadcasting on IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable broadcasting on IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable broadcasting on IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable broadcasting on IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable broadcasting on IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable broadcasting on IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable broadcasting on IPC channel 15
+  side_effects: null
+- id: SEND_CNF12
+  address_offset: 1344
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable broadcasting on IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable broadcasting on IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable broadcasting on IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable broadcasting on IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable broadcasting on IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable broadcasting on IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable broadcasting on IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable broadcasting on IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable broadcasting on IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable broadcasting on IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable broadcasting on IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable broadcasting on IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable broadcasting on IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable broadcasting on IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable broadcasting on IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable broadcasting on IPC channel 15
+  side_effects: null
+- id: SEND_CNF13
+  address_offset: 1348
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable broadcasting on IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable broadcasting on IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable broadcasting on IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable broadcasting on IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable broadcasting on IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable broadcasting on IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable broadcasting on IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable broadcasting on IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable broadcasting on IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable broadcasting on IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable broadcasting on IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable broadcasting on IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable broadcasting on IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable broadcasting on IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable broadcasting on IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable broadcasting on IPC channel 15
+  side_effects: null
+- id: SEND_CNF14
+  address_offset: 1352
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable broadcasting on IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable broadcasting on IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable broadcasting on IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable broadcasting on IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable broadcasting on IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable broadcasting on IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable broadcasting on IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable broadcasting on IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable broadcasting on IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable broadcasting on IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable broadcasting on IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable broadcasting on IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable broadcasting on IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable broadcasting on IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable broadcasting on IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable broadcasting on IPC channel 15
+  side_effects: null
+- id: SEND_CNF15
+  address_offset: 1356
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable broadcasting on IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable broadcasting on IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable broadcasting on IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable broadcasting on IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable broadcasting on IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable broadcasting on IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable broadcasting on IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable broadcasting on IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable broadcasting on IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable broadcasting on IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable broadcasting on IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable broadcasting on IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable broadcasting on IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable broadcasting on IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable broadcasting on IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable broadcasting on IPC channel 15
+  side_effects: null
+- id: RECEIVE_CNF0
+  address_offset: 1424
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable subscription to IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable subscription to IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable subscription to IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable subscription to IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable subscription to IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable subscription to IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable subscription to IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable subscription to IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable subscription to IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable subscription to IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable subscription to IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable subscription to IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable subscription to IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable subscription to IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable subscription to IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable subscription to IPC channel 15
+  side_effects: null
+- id: RECEIVE_CNF1
+  address_offset: 1428
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable subscription to IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable subscription to IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable subscription to IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable subscription to IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable subscription to IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable subscription to IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable subscription to IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable subscription to IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable subscription to IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable subscription to IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable subscription to IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable subscription to IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable subscription to IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable subscription to IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable subscription to IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable subscription to IPC channel 15
+  side_effects: null
+- id: RECEIVE_CNF2
+  address_offset: 1432
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable subscription to IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable subscription to IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable subscription to IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable subscription to IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable subscription to IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable subscription to IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable subscription to IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable subscription to IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable subscription to IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable subscription to IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable subscription to IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable subscription to IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable subscription to IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable subscription to IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable subscription to IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable subscription to IPC channel 15
+  side_effects: null
+- id: RECEIVE_CNF3
+  address_offset: 1436
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable subscription to IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable subscription to IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable subscription to IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable subscription to IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable subscription to IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable subscription to IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable subscription to IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable subscription to IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable subscription to IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable subscription to IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable subscription to IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable subscription to IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable subscription to IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable subscription to IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable subscription to IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable subscription to IPC channel 15
+  side_effects: null
+- id: RECEIVE_CNF4
+  address_offset: 1440
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable subscription to IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable subscription to IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable subscription to IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable subscription to IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable subscription to IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable subscription to IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable subscription to IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable subscription to IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable subscription to IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable subscription to IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable subscription to IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable subscription to IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable subscription to IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable subscription to IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable subscription to IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable subscription to IPC channel 15
+  side_effects: null
+- id: RECEIVE_CNF5
+  address_offset: 1444
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable subscription to IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable subscription to IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable subscription to IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable subscription to IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable subscription to IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable subscription to IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable subscription to IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable subscription to IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable subscription to IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable subscription to IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable subscription to IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable subscription to IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable subscription to IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable subscription to IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable subscription to IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable subscription to IPC channel 15
+  side_effects: null
+- id: RECEIVE_CNF6
+  address_offset: 1448
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable subscription to IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable subscription to IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable subscription to IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable subscription to IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable subscription to IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable subscription to IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable subscription to IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable subscription to IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable subscription to IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable subscription to IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable subscription to IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable subscription to IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable subscription to IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable subscription to IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable subscription to IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable subscription to IPC channel 15
+  side_effects: null
+- id: RECEIVE_CNF7
+  address_offset: 1452
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable subscription to IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable subscription to IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable subscription to IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable subscription to IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable subscription to IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable subscription to IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable subscription to IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable subscription to IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable subscription to IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable subscription to IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable subscription to IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable subscription to IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable subscription to IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable subscription to IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable subscription to IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable subscription to IPC channel 15
+  side_effects: null
+- id: RECEIVE_CNF8
+  address_offset: 1456
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable subscription to IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable subscription to IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable subscription to IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable subscription to IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable subscription to IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable subscription to IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable subscription to IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable subscription to IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable subscription to IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable subscription to IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable subscription to IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable subscription to IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable subscription to IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable subscription to IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable subscription to IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable subscription to IPC channel 15
+  side_effects: null
+- id: RECEIVE_CNF9
+  address_offset: 1460
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable subscription to IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable subscription to IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable subscription to IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable subscription to IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable subscription to IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable subscription to IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable subscription to IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable subscription to IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable subscription to IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable subscription to IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable subscription to IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable subscription to IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable subscription to IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable subscription to IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable subscription to IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable subscription to IPC channel 15
+  side_effects: null
+- id: RECEIVE_CNF10
+  address_offset: 1464
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable subscription to IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable subscription to IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable subscription to IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable subscription to IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable subscription to IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable subscription to IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable subscription to IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable subscription to IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable subscription to IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable subscription to IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable subscription to IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable subscription to IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable subscription to IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable subscription to IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable subscription to IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable subscription to IPC channel 15
+  side_effects: null
+- id: RECEIVE_CNF11
+  address_offset: 1468
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable subscription to IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable subscription to IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable subscription to IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable subscription to IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable subscription to IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable subscription to IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable subscription to IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable subscription to IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable subscription to IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable subscription to IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable subscription to IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable subscription to IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable subscription to IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable subscription to IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable subscription to IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable subscription to IPC channel 15
+  side_effects: null
+- id: RECEIVE_CNF12
+  address_offset: 1472
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable subscription to IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable subscription to IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable subscription to IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable subscription to IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable subscription to IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable subscription to IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable subscription to IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable subscription to IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable subscription to IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable subscription to IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable subscription to IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable subscription to IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable subscription to IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable subscription to IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable subscription to IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable subscription to IPC channel 15
+  side_effects: null
+- id: RECEIVE_CNF13
+  address_offset: 1476
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable subscription to IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable subscription to IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable subscription to IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable subscription to IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable subscription to IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable subscription to IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable subscription to IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable subscription to IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable subscription to IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable subscription to IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable subscription to IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable subscription to IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable subscription to IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable subscription to IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable subscription to IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable subscription to IPC channel 15
+  side_effects: null
+- id: RECEIVE_CNF14
+  address_offset: 1480
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable subscription to IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable subscription to IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable subscription to IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable subscription to IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable subscription to IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable subscription to IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable subscription to IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable subscription to IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable subscription to IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable subscription to IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable subscription to IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable subscription to IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable subscription to IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable subscription to IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable subscription to IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable subscription to IPC channel 15
+  side_effects: null
+- id: RECEIVE_CNF15
+  address_offset: 1484
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHEN0
+    bit_range:
+    - 0
+    - 0
+    description: Enable subscription to IPC channel 0
+  - name: CHEN1
+    bit_range:
+    - 1
+    - 1
+    description: Enable subscription to IPC channel 1
+  - name: CHEN2
+    bit_range:
+    - 2
+    - 2
+    description: Enable subscription to IPC channel 2
+  - name: CHEN3
+    bit_range:
+    - 3
+    - 3
+    description: Enable subscription to IPC channel 3
+  - name: CHEN4
+    bit_range:
+    - 4
+    - 4
+    description: Enable subscription to IPC channel 4
+  - name: CHEN5
+    bit_range:
+    - 5
+    - 5
+    description: Enable subscription to IPC channel 5
+  - name: CHEN6
+    bit_range:
+    - 6
+    - 6
+    description: Enable subscription to IPC channel 6
+  - name: CHEN7
+    bit_range:
+    - 7
+    - 7
+    description: Enable subscription to IPC channel 7
+  - name: CHEN8
+    bit_range:
+    - 8
+    - 8
+    description: Enable subscription to IPC channel 8
+  - name: CHEN9
+    bit_range:
+    - 9
+    - 9
+    description: Enable subscription to IPC channel 9
+  - name: CHEN10
+    bit_range:
+    - 10
+    - 10
+    description: Enable subscription to IPC channel 10
+  - name: CHEN11
+    bit_range:
+    - 11
+    - 11
+    description: Enable subscription to IPC channel 11
+  - name: CHEN12
+    bit_range:
+    - 12
+    - 12
+    description: Enable subscription to IPC channel 12
+  - name: CHEN13
+    bit_range:
+    - 13
+    - 13
+    description: Enable subscription to IPC channel 13
+  - name: CHEN14
+    bit_range:
+    - 14
+    - 14
+    description: Enable subscription to IPC channel 14
+  - name: CHEN15
+    bit_range:
+    - 15
+    - 15
+    description: Enable subscription to IPC channel 15
+  side_effects: null
+- id: GPMEM0
+  address_offset: 1552
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: GPMEM
+    bit_range:
+    - 31
+    - 0
+    description: General purpose memory
+  side_effects: null
+- id: GPMEM1
+  address_offset: 1556
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: GPMEM
+    bit_range:
+    - 31
+    - 0
+    description: General purpose memory
+  side_effects: null
+interrupts:
+  IPC: 42
+  IPC: 42
+timing: null

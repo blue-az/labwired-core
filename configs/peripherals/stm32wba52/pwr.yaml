@@ -1,0 +1,1232 @@
+peripheral: PWR
+version: 0.1.0
+registers:
+- id: PWR_CR1
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LPMS
+    bit_range:
+    - 2
+    - 0
+    description: |-
+      Low-power mode selection
+      These bits select the low-power mode entered when the CPU enters the SleepDeep mode.
+      10x: Standby mode
+      others reserved
+  - name: R2RSB1
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      SRAM2 retention in Standby mode
+      This bit is used to keep the SRAM2 content in Standby retention mode.
+  - name: ULPMEN
+    bit_range:
+    - 7
+    - 7
+    description: "BOR0 ultra-low-power mode. \nThis bit is used to reduce the consumption by configuring the BOR0 in discontinuous mode for Stop 1 and Standby modes. Discontinuous mode is only available when BOR levels 1 to 4 and PVD are disabled.\nNote: This bit must be set to reach the lowest power consumption in the low-power modes.\nNote: This bit must not be set together with autonomous peripherals using HSI16 as kernel clock.\nNote: When BOR level 1 to 4 or PVD is enabled continuous mode applies independent from ULPMEN."
+  - name: RADIORSB
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      2.4 GHz RADIO SRAMs (RXTXRAM and Sequence RAM) and Sleep clock retention in Standby mode.
+      This bit is used to keep the 2.4 GHz RADIO SRAMs content in Standby retention mode and the 2.4 GHz RADIO sleep timer counter operational.
+  - name: R1RSB1
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      SRAM1 retention in Standby mode
+      This bit is used to keep the SRAM1 content in Standby retention mode.
+  side_effects: null
+- id: PWR_CR2
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SRAM1PDS1
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      SRAM1 power-down in Stop modes (Stop 0, 1)
+      Note: The SRAM1 retention in Standby mode is controlled by R1RSB1 bit in PWR_CR1.
+  - name: SRAM2PDS1
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      SRAM2 power-down in Stop modes (Stop 0, 1)
+      Note: The SRAM2 retention in Standby mode is controlled by R2RSB1 bit in PWR_CR1.
+  - name: ICRAMPDS
+    bit_range:
+    - 8
+    - 8
+    description: ICACHE SRAM power-down in Stop modes (Stop 0, 1)
+  - name: FLASHFWU
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Flash memory fast wakeup from Stop modes (Stop 0, 1)
+      This bit is used to obtain the best trade-off between low-power consumption and wakeup time when exiting the Stop 0 or Stop 1 modes.
+      When this bit is set, the Flash memory remains in normal mode in Stop 0 and Stop 1 modes, which offers a faster startup time with higher consumption.
+  side_effects: null
+- id: PWR_CR3
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: REGSEL
+    bit_range:
+    - 1
+    - 1
+    description: Regulator selection
+  - name: FSTEN
+    bit_range:
+    - 2
+    - 2
+    description: Fast soft start
+  side_effects: null
+- id: PWR_VOSR
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 32768
+  fields:
+  - name: VOSRDY
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Ready bit for VsubCORE/sub voltage scaling output selection
+      Set and cleared by hardware. When decreasing the voltage scaling range, VOSRDY must be one before increasing the SYSCLK frequency.
+  - name: VOS
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      Voltage scaling range selection
+      Set a and cleared by software.
+      Cleared by hardware when entering Stop 1 mode.
+      Access can be secured by RCC SYSCLKSEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  side_effects: null
+- id: PWR_SVMCR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PVDE
+    bit_range:
+    - 4
+    - 4
+    description: Programmable voltage detector enable
+  - name: PVDLS
+    bit_range:
+    - 7
+    - 5
+    description: |-
+      Programmable voltage detector level selection
+      These bits select the voltage threshold detected by the programmable voltage detector:
+  side_effects: null
+- id: PWR_WUCR1
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WUPEN1
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Wakeup and interrupt pin WKUP1 enable
+      Access can be secured by PWR WUP1SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: WUPEN2
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Wakeup and interrupt pin WKUP2 enable
+      Access can be secured by PWR WUP2SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: WUPEN3
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Wakeup and interrupt pin WKUP3 enable
+      Access can be secured by PWR WUP3SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: WUPEN4
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Wakeup and interrupt pin WKUP4 enable
+      Access can be secured by PWR WUP4SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: WUPEN5
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Wakeup and interrupt pin WKUP5 enable
+      Access can be secured by PWR WUP5SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: WUPEN6
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Wakeup and interrupt pin WKUP6 enable
+      Access can be secured by PWR WUP6SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: WUPEN7
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Wakeup and interrupt pin WKUP7 enable
+      Access can be secured by PWR WUP7SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: WUPEN8
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Wakeup and interrupt pin WKUP8 enable
+      Access can be secured by PWR WUP8SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  side_effects: null
+- id: PWR_WUCR2
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WUPP1
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Wakeup pin WKUP1 polarity.
+      This bit must be configured when WUPEN1 = 0.
+      Access can be secured by PWR WUP1SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: WUPP2
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Wakeup pin WKUP2 polarity
+      This bit must be configured when WUPEN2 = 0.
+      Access can be secured by PWR WUP2SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: WUPP3
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Wakeup pin WKUP3 polarity
+      This bit must be configured when WUPEN3 = 0.
+      Access can be secured by PWR WUP3SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: WUPP4
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Wakeup pin WKUP4 polarity
+      This bit must be configured when WUPEN4 = 0.
+      Access can be secured by PWR WUP4SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: WUPP5
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Wakeup pin WKUP5 polarity
+      This bit must be configured when WUPEN5 = 0.
+      Access can be secured by PWR WUP5SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: WUPP6
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Wakeup pin WKUP6 polarity
+      This bit must be configured when WUPEN6 = 0.
+      Access can be secured by PWR WUP6SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: WUPP7
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Wakeup pin WKUP7 polarity
+      This bit must be configured when WUPEN7 = 0.
+      Access can be secured by PWR WUP7SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: WUPP8
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Wakeup pin WKUP8 polarity
+      This bit must be configured when WUPEN8 = 0.
+      Access can be secured by PWR WUP8SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  side_effects: null
+- id: PWR_WUCR3
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WUSEL1
+    bit_range:
+    - 1
+    - 0
+    description: |-
+      Wakeup and interrupt pin WKUP1 selection
+      This field must be configured when WUPEN1 = 0.
+      Access can be secured by PWR WUP1SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: WUSEL2
+    bit_range:
+    - 3
+    - 2
+    description: |-
+      Wakeup and interrupt pin WKUP2 selection
+      This field must be configured when WUPEN2 = 0.
+      Access can be secured by PWR WUP2SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: WUSEL3
+    bit_range:
+    - 5
+    - 4
+    description: |-
+      Wakeup and interrupt pin WKUP3 selection
+      This field must be configured when WUPEN3 = 0.
+      Access can be secured by PWR WUP3SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: WUSEL4
+    bit_range:
+    - 7
+    - 6
+    description: |-
+      Wakeup and interrupt pin WKUP4 selection
+      This field must be configured when WUPEN4 = 0.
+      Access can be secured by PWR WUP4SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: WUSEL5
+    bit_range:
+    - 9
+    - 8
+    description: |-
+      Wakeup and interrupt pin WKUP5 selection
+      This field must be configured when WUPEN5 = 0.
+      Access can be secured by PWR WUP5SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: WUSEL6
+    bit_range:
+    - 11
+    - 10
+    description: |-
+      Wakeup and interrupt pin WKUP6 selection
+      This field must be configured when WUPEN6 = 0.
+      Access can be secured by PWR WUP6SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: WUSEL7
+    bit_range:
+    - 13
+    - 12
+    description: |-
+      Wakeup and interrupt pin WKUP7 selection
+      This field must be configured when WUPEN7 = 0.
+      Access can be secured by PWR WUP7SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: WUSEL8
+    bit_range:
+    - 15
+    - 14
+    description: |-
+      Wakeup and interrupt pin WKUP8 selection
+      This field must be configured when WUPEN8 = 0.
+      Access can be secured by PWR WUP8SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  side_effects: null
+- id: PWR_DBPR
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DBP
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Disable Backup domain write protection
+      In reset state, all registers and SRAM in Backup domain are protected against parasitic write access. This bit must be set to enable the write access to these registers.
+  side_effects: null
+- id: PWR_SECCFGR
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WUP1SEC
+    bit_range:
+    - 0
+    - 0
+    description: WUP1 secure protection
+  - name: WUP2SEC
+    bit_range:
+    - 1
+    - 1
+    description: WUP2 secure protection
+  - name: WUP3SEC
+    bit_range:
+    - 2
+    - 2
+    description: WUP3 secure protection
+  - name: WUP4SEC
+    bit_range:
+    - 3
+    - 3
+    description: WUP4 secure protection
+  - name: WUP5SEC
+    bit_range:
+    - 4
+    - 4
+    description: WUP5 secure protection
+  - name: WUP6SEC
+    bit_range:
+    - 5
+    - 5
+    description: WUP6 secure protection
+  - name: WUP7SEC
+    bit_range:
+    - 6
+    - 6
+    description: WUP7 secure protection
+  - name: WUP8SEC
+    bit_range:
+    - 7
+    - 7
+    description: WUP8 secure protection
+  - name: LPMSEC
+    bit_range:
+    - 12
+    - 12
+    description: Low-power modes secure protection
+  - name: VDMSEC
+    bit_range:
+    - 13
+    - 13
+    description: Voltage detection secure protection
+  - name: VBSEC
+    bit_range:
+    - 14
+    - 14
+    description: Backup domain secure protection
+  side_effects: null
+- id: PWR_PRIVCFGR
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SPRIV
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      PWR secure functions privilege configuration
+      This bit is set and reset by software.
+      It can be written only by a secure privileged access.
+  - name: NSPRIV
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      PWR non-secure functions privilege configuration
+      This bit is set and reset by software.
+      It can be written only by privileged access, secure or non-secure.
+  side_effects: null
+- id: PWR_SR
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CSSF
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Clear Stop and Standby flags
+      Access can be secured by PWR LPMSEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+      Writing 1 to this bit clears the STOPF and SBF flags.
+  - name: STOPF
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Stop flag
+      This bit is set by hardware when the device enters a Stop or Standby mode at the same time as the sysclk has been set by hardware to select HSI16. It's cleared by software by writing 1 to the CSSF bit and by hardware when SBF is set.
+  - name: SBF
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Standby flag
+      This bit is set by hardware when the device enters the Standby mode and the CPU restart from its reset vector. It's cleared by writing 1 to the CSSF bit, or by a power-on reset. It is not cleared by the system reset.
+  side_effects: null
+- id: PWR_SVMSR
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 32768
+  fields:
+  - name: REGS
+    bit_range:
+    - 1
+    - 1
+    description: Regulator selection
+  - name: PVDO
+    bit_range:
+    - 4
+    - 4
+    description: Programmable voltage detector output
+  - name: ACTVOSRDY
+    bit_range:
+    - 15
+    - 15
+    description: Voltage level ready for currently used VOS
+  - name: ACTVOS
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      VOS currently applied to VsubCORE/sub
+      This field provides the last VOS value.
+  side_effects: null
+- id: PWR_WUSR
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WUF1
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Wakeup and interrupt pending flag 1
+      This bit is set when a wakeup event is detected on WKUP1 pin. This bit is cleared by writing 1 in the CWUF1 bit of PWR_WUSCR or by hardware when WUPEN1 = 0.
+  - name: WUF2
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Wakeup and interrupt pending flag 2
+      This bit is set when a wakeup event is detected on WKUP2 pin. This bit is cleared by writing 1 in the CWUF2 bit of PWR_WUSCR or by hardware when WUPEN2 = 0.
+  - name: WUF3
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Wakeup and interrupt pending flag 3
+      This bit is set when a wakeup event is detected on WKUP3 pin. This bit is cleared by writing 1 in the CWUF3 bit of PWR_WUSCR or by hardware when WUPEN3 = 0.
+  - name: WUF4
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Wakeup and interrupt pending flag 4
+      This bit is set when a wakeup event is detected on WKUP4 pin. This bit is cleared by writing 1 in the CWUF4 bit of PWR_WUSCR or by hardware when WUPEN4 = 0.
+  - name: WUF5
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Wakeup and interrupt pending flag 5
+      This bit is set when a wakeup event is detected on WKUP5 pin. This bit is cleared by writing 1 in the CWUF5 bit of PWR_WUSCR or by hardware when WUPEN5 = 0.
+  - name: WUF6
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Wakeup and interrupt pending flag 6
+      This bit is set when a wakeup event is detected on WKUP6 pin. This bit is cleared by writing 1 in the CWUF6 bit of PWR_WUSCR when WUSEL6 different 11, or by hardware when WUPEN6 = 0.
+      When WUSEL6 = 11, this bit is cleared by hardware when all associated internal wakeup source are cleared.
+      When WUSEL6 = 11, no WKUP interrupt is generated
+  - name: WUF7
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Wakeup and interrupt pending flag 7
+      This bit is set when a wakeup event is detected on WKUP7 pin. This bit is cleared by writing 1 in the CWUF7 bit of PWR_WUSCR when WUSEL7 different 11, or by hardware when WUPEN7 = 0.
+      When WUSEL7 = 11, this bit is cleared by hardware when all associated internal wakeup source are cleared.
+      When WUSEL7 = 11, no WKUP interrupt is generated.
+  - name: WUF8
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Wakeup and interrupt pending flag 8
+      This bit is set when a wakeup event is detected on WKUP8 pin. This bit is cleared by writing 1 in the CWUF8 bit of PWR_WUSCR when WUSEL8 different 11, or by hardware when WUPEN8 = 0.
+      When WUSEL8 = 11, this bit is cleared by hardware when all associated internal wakeup source are cleared.
+      When WUSEL8 = 11, no WKUP interrupt is generated
+  side_effects: null
+- id: PWR_WUSCR
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CWUF1
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Clear wakeup flag 1
+      Access can be secured by PWR WUP1SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+      Writing 1 to this bit clears the WUF1 flag in PWR_WUSR.
+  - name: CWUF2
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Clear wakeup flag 2
+      Access can be secured by PWR WUP2SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+      Writing 1 to this bit clears the WUF2 flag in PWR_WUSR.
+  - name: CWUF3
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Clear wakeup flag 3
+      Access can be secured by PWR WUP3SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+      Writing 1 to this bit clears the WUF3 flag in PWR_WUSR.
+  - name: CWUF4
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Clear wakeup flag 4
+      Access can be secured by PWR WUP4SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+      Writing 1 to this bit clears the WUF4 flag in PWR_WUSR.
+  - name: CWUF5
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Clear wakeup flag 5
+      Access can be secured by PWR WUP5SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+      Writing 1 to this bit clears the WUF5 flag in PWR_WUSR.
+  - name: CWUF6
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Clear wakeup flag 6
+      Access can be secured by PWR WUP6SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+      Writing 1 to this bit clears the WUF6 flag in PWR_WUSR.
+  - name: CWUF7
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Clear wakeup flag 7
+      Access can be secured by PWR WUP7SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+      Writing 1 to this bit clears the WUF7 flag in PWR_WUSR.
+  - name: CWUF8
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Clear wakeup flag 8
+      Access can be secured by PWR WUP8SEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+      Writing 1 to this bit clears the WUF8 flag in PWR_WUSR.
+  side_effects: null
+- id: PWR_IORETENRA
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port A Standby GPIO retention enable
+      Access can be protected by GPIOA SECy, privilege protection is controlled by PWR SPRIV or PWR NSPRIV.
+      When set, each bit enables the Standby GPIO retention feature for PAy
+  - name: EN1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port A Standby GPIO retention enable
+      Access can be protected by GPIOA SECy, privilege protection is controlled by PWR SPRIV or PWR NSPRIV.
+      When set, each bit enables the Standby GPIO retention feature for PAy
+  - name: EN2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port A Standby GPIO retention enable
+      Access can be protected by GPIOA SECy, privilege protection is controlled by PWR SPRIV or PWR NSPRIV.
+      When set, each bit enables the Standby GPIO retention feature for PAy
+  - name: EN3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port A Standby GPIO retention enable
+      Access can be protected by GPIOA SECy, privilege protection is controlled by PWR SPRIV or PWR NSPRIV.
+      When set, each bit enables the Standby GPIO retention feature for PAy
+  - name: EN5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port A Standby GPIO retention enable
+      Access can be secured by GPIOA SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: EN6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port A Standby GPIO retention enable
+      Access can be secured by GPIOA SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: EN7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port A Standby GPIO retention enable
+      Access can be secured by GPIOA SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: EN8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port A Standby GPIO retention enable
+      Access can be secured by GPIOA SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: EN9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port A Standby GPIO retention enable
+      Access can be secured by GPIOA SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: EN10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port A Standby GPIO retention enable
+      Access can be secured by GPIOA SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: EN11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port A Standby GPIO retention enable
+      Access can be secured by GPIOA SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: EN12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port A Standby GPIO retention enable
+      Access can be secured by GPIOA SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: EN13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port A Standby GPIO retention enable
+      Access can be secured by GPIOA SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: EN14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port A Standby GPIO retention enable
+      Access can be secured by GPIOA SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: EN15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port A Standby GPIO retention enable
+      Access can be secured by GPIOA SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  side_effects: null
+- id: PWR_IORETRA
+  address_offset: 84
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RET0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port A Standby GPIO retention active
+      Access can be protected by GPIOA SECy, privilege protection is controlled by PWR SPRIV or PWR NSPRIV.
+  - name: RET1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port A Standby GPIO retention active
+      Access can be protected by GPIOA SECy, privilege protection is controlled by PWR SPRIV or PWR NSPRIV.
+  - name: RET2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port A Standby GPIO retention active
+      Access can be protected by GPIOA SECy, privilege protection is controlled by PWR SPRIV or PWR NSPRIV.
+  - name: RET3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port A Standby GPIO retention active
+      Access can be protected by GPIOA SECy, privilege protection is controlled by PWR SPRIV or PWR NSPRIV.
+  - name: RET5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port A Standby GPIO retention active
+      Access can be secured by GPIOA SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: RET6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port A Standby GPIO retention active
+      Access can be secured by GPIOA SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: RET7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port A Standby GPIO retention active
+      Access can be secured by GPIOA SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: RET8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port A Standby GPIO retention active
+      Access can be secured by GPIOA SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: RET9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port A Standby GPIO retention active
+      Access can be secured by GPIOA SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: RET10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port A Standby GPIO retention active
+      Access can be secured by GPIOA SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: RET11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port A Standby GPIO retention active
+      Access can be secured by GPIOA SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: RET12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port A Standby GPIO retention active
+      Access can be secured by GPIOA SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: RET13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port A Standby GPIO retention active
+      Access can be secured by GPIOA SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: RET14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port A Standby GPIO retention active
+      Access can be secured by GPIOA SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: RET15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port A Standby GPIO retention active
+      Access can be secured by GPIOA SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  side_effects: null
+- id: PWR_IORETENRB
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port B Standby GPIO retention enable
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: EN1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port B Standby GPIO retention enable
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: EN2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port B Standby GPIO retention enable
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: EN3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port B Standby GPIO retention enable
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: EN4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port B Standby GPIO retention enable
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: EN5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port B Standby GPIO retention enable
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: EN6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port B Standby GPIO retention enable
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: EN7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port B Standby GPIO retention enable
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: EN8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port B Standby GPIO retention enable
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: EN9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port B Standby GPIO retention enable
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: EN10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port B Standby GPIO retention enable
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: EN11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port B Standby GPIO retention enable
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: EN12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port B Standby GPIO retention enable
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: EN13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port B Standby GPIO retention enable
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: EN14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port B Standby GPIO retention enable
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: EN15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port B Standby GPIO retention enable
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  side_effects: null
+- id: PWR_IORETRB
+  address_offset: 92
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RET0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port B Standby GPIO retention active
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: RET1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port B Standby GPIO retention active
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: RET2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port B Standby GPIO retention active
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: RET3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port B Standby GPIO retention active
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: RET4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port B Standby GPIO retention active
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: RET5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port B Standby GPIO retention active
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: RET6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port B Standby GPIO retention active
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: RET7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port B Standby GPIO retention active
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: RET8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port B Standby GPIO retention active
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: RET9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port B Standby GPIO retention active
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: RET10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port B Standby GPIO retention active
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: RET11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port B Standby GPIO retention active
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: RET12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port B Standby GPIO retention active
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: RET13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port B Standby GPIO retention active
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: RET14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port B Standby GPIO retention active
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: RET15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port B Standby GPIO retention active
+      Access can be secured by GPIOB SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  side_effects: null
+- id: PWR_IORETENRC
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port C Standby GPIO retention enable
+      Access can be secured by GPIOC SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: EN14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port C Standby GPIO retention enable
+      Access can be secured by GPIOC SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: EN15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port C Standby GPIO retention enable
+      Access can be secured by GPIOC SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  side_effects: null
+- id: PWR_IORETRC
+  address_offset: 100
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RET13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port C Standby GPIO retention active
+      Access can be secured by GPIOC SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: RET14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port C Standby GPIO retention active
+      Access can be secured by GPIOC SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  - name: RET15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port C Standby GPIO retention active
+      Access can be secured by GPIOC SECy. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  side_effects: null
+- id: PWR_IORETENRH
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port H Standby GPIO retention enable
+      Access can be secured by GPIOH SEC3. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  side_effects: null
+- id: PWR_IORETRH
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RET3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port H Standby GPIO retention active
+      Access can be secured by GPIOH SEC3. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with PWR SPRIV or when non-secure with PWR NSPRIV.
+  side_effects: null
+- id: PWR_RADIOSCR
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MODE
+    bit_range:
+    - 1
+    - 0
+    description: |-
+      2.4 GHz RADIO operating mode.
+      1x: 2.4 GHz RADIO active mode
+  - name: PHYMODE
+    bit_range:
+    - 2
+    - 2
+    description: 2.4 GHz RADIO PHY operating mode
+  - name: ENCMODE
+    bit_range:
+    - 3
+    - 3
+    description: 2.4 GHz RADIO encryption function operating mode
+  - name: RFVDDHPA
+    bit_range:
+    - 12
+    - 8
+    description: |-
+      2.4 GHz RADIO VDDHPA control word.
+      Bits [3:0] see Table 81: PA output power table format for definition.
+      Bit [4] rf_event.
+  - name: REGPARDYVDDRFPA
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Ready bit for VsubDDHPA/sub voltage level when selecting VDDRFPA input.
+      Note: REGPARDYVDDRFPA does not allow to detect correct VsubDDHPA/sub voltage level when request to lower the level.
+  side_effects: null
+interrupts:
+  WKUP: 67
+timing: null

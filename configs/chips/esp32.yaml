@@ -58,43 +58,69 @@ peripherals:
     type: "uart"
     base_address: 0x3FF40000
     size: "256B"
+    config:
+      debug_schema: "../peripherals/esp32/uart0.yaml"
   # Declared for the Tier-1 matrix class derivation (wiring stays programmatic
   # in configure_xtensa_esp32 — see header note). Bases match the model files.
   - id: "gpio"
     type: "gpio_esp32"
     base_address: 0x3FF44000
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/esp32/gpio.yaml"
   - id: "timg0"
     type: "timer_group"
     base_address: 0x3FF5F000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/esp32/timg0.yaml"
   - id: "rtc_cntl"
     type: "rtc_cntl_stub"
     base_address: 0x3FF48000
     size: "1KB"
-  - id: "dport_intmatrix"
+    config:
+      debug_schema: "../peripherals/esp32/rtc_cntl.yaml"
+  # DPORT (TRM §5) — the interrupt matrix lives in this block. Registered by
+  # configure_xtensa_esp32 as `dport`; the id must match that name or nothing
+  # keyed on it (debug_schema, peek_peripheral) can ever reach it. The
+  # `intmatrix_stub` type is kept: it is what declares this chip's `irq`
+  # Tier-1 class.
+  - id: "dport"
     type: "intmatrix_stub"
     base_address: 0x3FF00000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/esp32/dport.yaml"
   # SPI3 / VSPI (TRM §7). Real Esp32Spi model wired by configure_xtensa_esp32;
   # base matches ESP32_PERIPHERALS (spi3 = 0x3FF6_5000).
   - id: "spi3"
     type: "esp32_spi"
     base_address: 0x3FF65000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/esp32/spi3.yaml"
   # I2C0 / I2C_EXT0 (TRM §11). Real Esp32I2c command-list engine wired by
   # configure_xtensa_esp32; base matches ESP32_PERIPHERALS (i2c0 = 0x3FF5_3000).
   - id: "i2c0"
     type: "esp32_i2c"
     base_address: 0x3FF53000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/esp32/i2c0.yaml"
   # SENS SAR-ADC one-shot engine (TRM §29.4). Real Esp32SarAdc model wired by
   # configure_xtensa_esp32 at the SENS block base 0x3FF4_8800; backs the adc
   # matrix class. ADC1 (adc1_get_raw) + ADC2 (adc2_get_raw) one-shot reads.
-  - id: "sar_adc"
+  # Registered by configure_xtensa_esp32 as `sens_sar_adc`, not `sar_adc` —
+  # and the bus DOES carry a different peripheral called `sar_adc`, a
+  # round-trip stub at 0x3FF4_C000 (which the SVD says is UHCI1). Wiring the
+  # SENS register map under the old id would have painted SENS names onto that
+  # stub. 0x3FF4_8800 = SVD SENS, so the descriptor here is `sens.yaml`.
+  - id: "sens_sar_adc"
     type: "esp32_sar_adc"
     base_address: 0x3FF48800
     size: "256B"
+    config:
+      debug_schema: "../peripherals/esp32/sens.yaml"
   # LEDC — LED PWM controller (TRM §14). Real Ledc model; base matches
   # ESP32_PERIPHERALS (ledc = 0x3FF5_9000). Backs the pwm matrix class
   # (the matrix aliases ledc -> pwm).
@@ -102,3 +128,134 @@ peripherals:
     type: "esp32_ledc"
     base_address: 0x3FF59000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/esp32/ledc.yaml"
+  # --- The rest of the bank configure_xtensa_esp32 actually registers.
+  # ---
+  # Everything below was already on the bus at runtime but undeclared here, so
+  # nothing could hang a `debug_schema` on it and all of it inspected as
+  # `registers: []`. Each id is the name the Rust wiring registers
+  # (ESP32_PERIPHERALS / the catch-all stub table in
+  # crates/core/src/system/xtensa/esp32.rs); each base was matched against
+  # tests/fixtures/real_world/esp32.svd BY ADDRESS, never by name — ESP32,
+  # ESP32-C3 and ESP32-S3 share Rust models but not register maps, and the
+  # classic part's TIMG0 0x70..0x8C is LACT*, where the C3 has
+  # INT_ENA/INT_ST/INT_CLR_TIMERS.
+  #
+  # These add no behaviour: the peripherals already exist, and the Xtensa
+  # builder ignores this list when wiring the bus (see the header note).
+  - id: "io_mux"
+    type: "system_stub"
+    base_address: 0x3FF49000
+    size: "4KB"
+    config:
+      debug_schema: "../peripherals/esp32/io_mux.yaml"
+  - id: "uart1"
+    type: "esp32_uart"
+    base_address: 0x3FF50000
+    size: "256B"
+    config:
+      debug_schema: "../peripherals/esp32/uart1.yaml"
+  - id: "uart2"
+    type: "esp32_uart"
+    base_address: 0x3FF6E000
+    size: "256B"
+    config:
+      debug_schema: "../peripherals/esp32/uart2.yaml"
+  - id: "spi0"
+    type: "esp32_spi"
+    base_address: 0x3FF43000
+    size: "4KB"
+    config:
+      debug_schema: "../peripherals/esp32/spi0.yaml"
+  - id: "spi1"
+    type: "esp32_spi"
+    base_address: 0x3FF42000
+    size: "4KB"
+    config:
+      debug_schema: "../peripherals/esp32/spi1.yaml"
+  - id: "sha"
+    type: "esp32_sha"
+    base_address: 0x3FF03000
+    size: "256B"
+    config:
+      debug_schema: "../peripherals/esp32/sha.yaml"
+  - id: "timg1"
+    type: "esp32_timg"
+    base_address: 0x3FF60000
+    size: "4KB"
+    config:
+      debug_schema: "../peripherals/esp32/timg1.yaml"
+  - id: "efuse"
+    type: "esp32_efuse"
+    base_address: 0x3FF5A000
+    size: "4KB"
+    config:
+      debug_schema: "../peripherals/esp32/efuse.yaml"
+  # SVD spells the CAN controller TWAI0; the model registers as `twai`.
+  - id: "twai"
+    type: "esp32_twai"
+    base_address: 0x3FF6B000
+    size: "4KB"
+    config:
+      debug_schema: "../peripherals/esp32/twai0.yaml"
+  - id: "mcpwm0"
+    type: "esp32_mcpwm"
+    base_address: 0x3FF5E000
+    size: "4KB"
+    config:
+      debug_schema: "../peripherals/esp32/mcpwm0.yaml"
+  # 0x3FF5_8000 is SVD SLC. The bus calls it `host_slc`; the peripheral it
+  # calls `slc` is a stub at 0x3FF4_B000, which the SVD says is HINF — so the
+  # descriptor here follows the ADDRESS, not either name.
+  - id: "host_slc"
+    type: "esp32_sdio"
+    base_address: 0x3FF58000
+    size: "4KB"
+    config:
+      debug_schema: "../peripherals/esp32/slc.yaml"
+  # SYSCON and APB_CTRL are one block on classic ESP32 (0x3FF6_6000); the SVD
+  # names it APB_CTRL. The separate `apb_ctrl` peripheral the bus registers at
+  # 0x3FF6_6100 is an overlay with no SVD block of its own and is left unwired.
+  - id: "syscon"
+    type: "esp32_syscon"
+    base_address: 0x3FF66000
+    size: "256B"
+    config:
+      debug_schema: "../peripherals/esp32/apb_ctrl.yaml"
+  - id: "rtcio"
+    type: "system_stub"
+    base_address: 0x3FF48400
+    size: "4KB"
+    config:
+      debug_schema: "../peripherals/esp32/rtc_io.yaml"
+  - id: "i2s0"
+    type: "system_stub"
+    base_address: 0x3FF4F000
+    size: "4KB"
+    config:
+      debug_schema: "../peripherals/esp32/i2s0.yaml"
+  - id: "i2s1"
+    type: "system_stub"
+    base_address: 0x3FF6D000
+    size: "4KB"
+    config:
+      debug_schema: "../peripherals/esp32/i2s1.yaml"
+  - id: "uhci0"
+    type: "system_stub"
+    base_address: 0x3FF54000
+    size: "4KB"
+    config:
+      debug_schema: "../peripherals/esp32/uhci0.yaml"
+  - id: "rmt"
+    type: "system_stub"
+    base_address: 0x3FF56000
+    size: "4KB"
+    config:
+      debug_schema: "../peripherals/esp32/rmt.yaml"
+  - id: "pcnt"
+    type: "system_stub"
+    base_address: 0x3FF57000
+    size: "4KB"
+    config:
+      debug_schema: "../peripherals/esp32/pcnt.yaml"

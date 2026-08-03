@@ -1,0 +1,905 @@
+peripheral: Flash
+version: 0.1.0
+registers:
+- id: ACR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 55
+  fields:
+  - name: LATENCY
+    bit_range:
+    - 3
+    - 0
+    description: Read latency
+  - name: WRHIGHFREQ
+    bit_range:
+    - 5
+    - 4
+    description: Flash signal delay
+  side_effects: null
+- id: KEYR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: KEYKEYRR
+    bit_range:
+    - 31
+    - 0
+    description: |-
+      access configuration unlock
+                    key
+  side_effects: null
+- id: OPTKEYR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OPTKEYR
+    bit_range:
+    - 31
+    - 0
+    description: Unlock key option bytes
+  side_effects: null
+- id: CR
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LOCK
+    bit_range:
+    - 0
+    - 0
+    description: configuration lock bit
+  - name: PG
+    bit_range:
+    - 1
+    - 1
+    description: program enable bit
+  - name: SER
+    bit_range:
+    - 2
+    - 2
+    description: sector erase request
+  - name: BER
+    bit_range:
+    - 3
+    - 3
+    description: erase request
+  - name: PSIZE
+    bit_range:
+    - 5
+    - 4
+    description: program size
+  - name: FW
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      write forcing control
+                    bit
+  - name: START
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      bank or sector erase start
+                    control bit
+  - name: SNB
+    bit_range:
+    - 10
+    - 8
+    description: |-
+      sector erase selection
+                    number
+  - name: CRC_EN
+    bit_range:
+    - 15
+    - 15
+    description: CRC control bit
+  - name: EOPIE
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      end-of-program interrupt control
+                    bit
+  - name: WRPERRIE
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      write protection error interrupt
+                    enable bit
+  - name: PGSERRIE
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      programming sequence error
+                    interrupt enable bit
+  - name: STRBERRIE
+    bit_range:
+    - 19
+    - 19
+    description: |-
+      strobe error interrupt enable
+                    bit
+  - name: INCERRIE
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      inconsistency error interrupt
+                    enable bit
+  - name: OPERRIE
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      write/erase error interrupt
+                    enable bit
+  - name: RDPERRIE
+    bit_range:
+    - 23
+    - 23
+    description: |-
+      read protection error interrupt
+                    enable bit
+  - name: RDSERRIE
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      secure error interrupt enable
+                    bit
+  - name: SNECCERRIE
+    bit_range:
+    - 25
+    - 25
+    description: |-
+      ECC single correction error
+                    interrupt enable bit
+  - name: DBECCERRIE
+    bit_range:
+    - 26
+    - 26
+    description: |-
+      ECC double detection error
+                    interrupt enable bit
+  - name: CRCENDIE
+    bit_range:
+    - 27
+    - 27
+    description: |-
+      end of CRC calculation interrupt
+                    enable bit
+  - name: CRCRDERRIE
+    bit_range:
+    - 28
+    - 28
+    description: |-
+      CRC read error interrupt enable bit
+      When CRCRDERRIE1 bit is set to 1, an interrupt is generated when a protected area (PCROP or secure-only) has been detected during the last CRC computation on bank 1. CRCRDERRIE1 can be programmed only when LOCK1 is cleared to 0.
+  side_effects: null
+- id: SR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BSY
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      ongoing program
+                    flag
+  - name: WBNE
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      write buffer not empty
+                    flag
+  - name: QW
+    bit_range:
+    - 2
+    - 2
+    description: wait queue flag
+  - name: CRC_BUSY
+    bit_range:
+    - 3
+    - 3
+    description: CRC busy flag
+  - name: EOP
+    bit_range:
+    - 16
+    - 16
+    description: end-of-program flag
+  - name: WRPERR
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      write protection error
+                    flag
+  - name: PGSERR
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      programming sequence error
+                    flag
+  - name: STRBERR
+    bit_range:
+    - 19
+    - 19
+    description: strobe error flag
+  - name: INCERR
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      inconsistency error
+                    flag
+  - name: OPERR
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      write/erase error
+                    flag
+  - name: RDPERR
+    bit_range:
+    - 23
+    - 23
+    description: |-
+      read protection error
+                    flag
+  - name: RDSERR
+    bit_range:
+    - 24
+    - 24
+    description: secure error flag
+  - name: SNECCERR
+    bit_range:
+    - 25
+    - 25
+    description: |-
+      single correction error
+                    flag
+  - name: DBECCERR
+    bit_range:
+    - 26
+    - 26
+    description: |-
+      ECC double detection error
+                    flag
+  - name: CRCEND
+    bit_range:
+    - 27
+    - 27
+    description: CRC-complete flag
+  - name: CRCRDERR
+    bit_range:
+    - 28
+    - 28
+    description: |-
+      CRC read error flag
+      CRCRDERR1 flag is raised when a word is found read protected during a CRC operation on bank 1. An interrupt is generated if CRCRDIE1 and CRCEND1 are set to 1. Writing 1 to CLR_CRCRDERR1 bit in FLASH_CCR1 register clears CRCRDERR1.
+      Note: This flag is valid only when CRCEND1 bit is set to 1
+  side_effects: null
+- id: CCR
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CLR_EOP
+    bit_range:
+    - 16
+    - 16
+    description: EOP1 flag clear bit
+  - name: CLR_WRPERR
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      WRPERR1 flag clear
+                    bit
+  - name: CLR_PGSERR
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      PGSERR flag clear
+                    bi
+  - name: CLR_STRBERR
+    bit_range:
+    - 19
+    - 19
+    description: |-
+      STRBERR flag clear
+                    bit
+  - name: CLR_INCERR
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      INCERR flag clear
+                    bit
+  - name: CLR_OPERR
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      OPERR flag clear
+                    bit
+  - name: CLR_RDPERR
+    bit_range:
+    - 23
+    - 23
+    description: |-
+      RDPERR flag clear
+                    bit
+  - name: CLR_RDSERR
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      RDSERR flag clear
+                    bit
+  - name: CLR_SNECCERR
+    bit_range:
+    - 25
+    - 25
+    description: |-
+      SNECCERR flag clear
+                    bit
+  - name: CLR_DBECCERR
+    bit_range:
+    - 26
+    - 26
+    description: |-
+      DBECCERR flag clear
+                    bit
+  - name: CLR_CRCEND
+    bit_range:
+    - 27
+    - 27
+    description: |-
+      CRCEND flag clear
+                    bit
+  - name: CLR_CRCRDERR
+    bit_range:
+    - 28
+    - 28
+    description: |-
+      CRCRDERR1 flag clear bit
+      Setting this bit to 1 resets to 0 CRCRDERR1 flag in FLASH_SR1 register.
+  side_effects: null
+- id: OPTCR
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OPTLOCK
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      FLASH_OPTCR lock option configuration
+                    bit
+  - name: OPTSTART
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Option byte start change option
+                    configuration bit
+  - name: OPTCHANGEERRIE
+    bit_range:
+    - 30
+    - 30
+    description: |-
+      Option byte change error interrupt
+                    enable bit
+  side_effects: null
+- id: OPTSR_CUR
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OPT_BUSY
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Option byte change ongoing
+                    flag
+  - name: BOR_LEV
+    bit_range:
+    - 3
+    - 2
+    description: |-
+      Brownout level option status
+                    bit
+  - name: IWDG1_SW
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      IWDG1 control option status
+                    bit
+  - name: NRST_STOP_D1
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      D1 DStop entry reset option status
+                    bit
+  - name: NRST_STBY_D1
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      D1 DStandby entry reset option status
+                    bit
+  - name: RDP
+    bit_range:
+    - 15
+    - 8
+    description: |-
+      Readout protection level option status
+                    byte
+  - name: IWDG_FZ_STOP
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      IWDG Stop mode freeze option status
+                    bit
+  - name: IWDG_FZ_SDBY
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      IWDG Standby mode freeze option status
+                    bit
+  - name: ST_RAM_SIZE
+    bit_range:
+    - 20
+    - 19
+    description: |-
+      DTCM RAM size option
+                    status
+  - name: SECURITY
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      Security enable option status
+                    bit
+  - name: IO_HSLV
+    bit_range:
+    - 29
+    - 29
+    description: |-
+      I/O high-speed at low-voltage status bit
+                    (PRODUCT_BELOW_25V)
+  - name: OPTCHANGEERR
+    bit_range:
+    - 30
+    - 30
+    description: |-
+      Option byte change error
+                    flag
+  side_effects: null
+- id: OPTSR_PRG
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BOR_LEV
+    bit_range:
+    - 3
+    - 2
+    description: |-
+      BOR reset level option configuration
+                    bits
+  - name: IWDG1_SW
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      IWDG1 option configuration
+                    bit
+  - name: NRST_STOP_D1
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Option byte erase after D1 DStop option
+                    configuration bit
+  - name: NRST_STBY_D1
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Option byte erase after D1 DStandby
+                    option configuration bit
+  - name: RDP
+    bit_range:
+    - 15
+    - 8
+    description: |-
+      Readout protection level option
+                    configuration byte
+  - name: IWDG_FZ_STOP
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      IWDG Stop mode freeze option
+                    configuration bit
+  - name: IWDG_FZ_SDBY
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      IWDG Standby mode freeze option
+                    configuration bit
+  - name: ST_RAM_SIZE
+    bit_range:
+    - 20
+    - 19
+    description: |-
+      DTCM size select option configuration
+                    bits
+  - name: SECURITY
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      Security option configuration
+                    bit
+  - name: IO_HSLV
+    bit_range:
+    - 29
+    - 29
+    description: |-
+      I/O high-speed at low-voltage
+                    (PRODUCT_BELOW_25V)
+  side_effects: null
+- id: OPTCCR
+  address_offset: 36
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: CLR_OPTCHANGEERR
+    bit_range:
+    - 30
+    - 30
+    description: OPTCHANGEERR reset bit
+  side_effects: null
+- id: PRAR_CUR
+  address_offset: 40
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROT_AREA_START
+    bit_range:
+    - 11
+    - 0
+    description: |-
+      lowest PCROP protected
+                    address
+  - name: PROT_AREA_END
+    bit_range:
+    - 27
+    - 16
+    description: |-
+      highest PCROP protected
+                    address
+  - name: DMEP
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      PCROP protected erase enable
+                    option status bit
+  side_effects: null
+- id: PRAR_PRG
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROT_AREA_START
+    bit_range:
+    - 11
+    - 0
+    description: |-
+      lowest PCROP protected address
+                    configuration
+  - name: PROT_AREA_END
+    bit_range:
+    - 27
+    - 16
+    description: |-
+      highest PCROP protected address
+                    configuration
+  - name: DMEP
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      PCROP protected erase enable
+                    option configuration bit
+  side_effects: null
+- id: SCAR_CUR
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SEC_AREA_START
+    bit_range:
+    - 11
+    - 0
+    description: |-
+      lowest secure protected
+                    address
+  - name: SEC_AREA_END
+    bit_range:
+    - 27
+    - 16
+    description: |-
+      highest secure protected
+                    address
+  - name: DMES
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      secure protected erase enable
+                    option status bit
+  side_effects: null
+- id: SCAR_PRG
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SEC_AREA_START
+    bit_range:
+    - 11
+    - 0
+    description: |-
+      lowest secure protected address
+                    configuration
+  - name: SEC_AREA_END
+    bit_range:
+    - 27
+    - 16
+    description: |-
+      highest secure protected address
+                    configuration
+  - name: DMES
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      secure protected erase enable
+                    option configuration bit
+  side_effects: null
+- id: WPSN_CUR
+  address_offset: 56
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: WRPSn
+    bit_range:
+    - 7
+    - 0
+    description: |-
+      sector write protection option
+                    status byte
+  side_effects: null
+- id: WPSN_PRG
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WRPSn
+    bit_range:
+    - 7
+    - 0
+    description: |-
+      sector write protection
+                    configuration byte
+  side_effects: null
+- id: BOOT_CUR
+  address_offset: 64
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: BOOT_CM_ADD0
+    bit_range:
+    - 15
+    - 0
+    description: Boot address 0
+  - name: BOOT_CM_ADD1
+    bit_range:
+    - 31
+    - 16
+    description: Boot address 1
+  side_effects: null
+- id: BOOT_PRG
+  address_offset: 68
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: BOOT_CM_ADD0
+    bit_range:
+    - 15
+    - 0
+    description: Boot address 0
+  - name: BOOT_CM_ADD1
+    bit_range:
+    - 31
+    - 16
+    description: Boot address 1
+  side_effects: null
+- id: CRCCR
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CRC_SECT
+    bit_range:
+    - 2
+    - 0
+    description: CRC sector number
+  - name: CRC_BY_SECT
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      CRC sector mode select
+                    bit
+  - name: ADD_SECT
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      CRC sector select
+                    bit
+  - name: CLEAN_SECT
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      CRC sector list clear
+                    bit
+  - name: START_CRC
+    bit_range:
+    - 16
+    - 16
+    description: CRC start bit
+  - name: CLEAN_CRC
+    bit_range:
+    - 17
+    - 17
+    description: CRC clear bit
+  - name: CRC_BURST
+    bit_range:
+    - 21
+    - 20
+    description: CRC burst size
+  - name: ALL_BANK
+    bit_range:
+    - 22
+    - 22
+    description: Bank 1 CRC select bit
+  side_effects: null
+- id: CRCSADDR
+  address_offset: 84
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CRC_START_ADDR
+    bit_range:
+    - 19
+    - 2
+    description: CRC start address on bank 1
+  side_effects: null
+- id: CRCEADDR
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CRC_END_ADDR
+    bit_range:
+    - 19
+    - 2
+    description: CRC end address on bank 1
+  side_effects: null
+- id: CRCDATAR
+  address_offset: 92
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CRC_DATA
+    bit_range:
+    - 31
+    - 0
+    description: CRC result
+  side_effects: null
+- id: ECC_FAR
+  address_offset: 96
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: FAIL_ECC_ADDR
+    bit_range:
+    - 14
+    - 0
+    description: ECC error address
+  side_effects: null
+- id: OPTSR2_CUR
+  address_offset: 112
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: TCM_AXI_SHARED
+    bit_range:
+    - 1
+    - 0
+    description: TCM RAM sharing status bit
+  - name: CPUFREQ_BOOST
+    bit_range:
+    - 2
+    - 2
+    description: CPU frequency boost status bit
+  side_effects: null
+- id: OPTSR2_PRG
+  address_offset: 116
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TCM_AXI_SHARED
+    bit_range:
+    - 1
+    - 0
+    description: TCM RAM sharing status bit
+  - name: CPUFREQ_BOOST
+    bit_range:
+    - 2
+    - 2
+    description: CPU frequency boost status bit
+  side_effects: null
+interrupts:
+  FLASH: 4
+timing: null

@@ -26,76 +26,107 @@ peripherals:
     base_address: 0x40000000
     size: "1KB"
     irq: 28
+    config:
+      debug_schema: "../peripherals/stm32f401/tim2.yaml"
   - id: "tim3"
     type: "timer"
     base_address: 0x40000400
     size: "1KB"
     irq: 29
+    config:
+      debug_schema: "../peripherals/stm32f401/tim3.yaml"
   - id: "tim4"
     type: "timer"
     base_address: 0x40000800
     size: "1KB"
     irq: 30
+    config:
+      debug_schema: "../peripherals/stm32f401/tim4.yaml"
   - id: "tim5"
     type: "timer"
     base_address: 0x40000C00
     size: "1KB"
     irq: 50
+    config:
+      debug_schema: "../peripherals/stm32f401/tim5.yaml"
   - id: "rtc"
     type: "stub"
     base_address: 0x40002800
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f401/rtc.yaml"
   - id: "wwdg"
     type: "stub"
     base_address: 0x40002C00
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f401/wwdg.yaml"
   - id: "iwdg"
     type: "stub"
     base_address: 0x40003000
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f401/iwdg.yaml"
   - id: "i2s2ext"
     type: "stub"
     base_address: 0x40003400
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f401/i2s2ext.yaml"
   - id: "spi2"
     type: "spi"
     base_address: 0x40003800
     size: "1KB"
     irq: 36
+    config:
+      debug_schema: "../peripherals/stm32f401/spi2.yaml"
   - id: "spi3"
     type: "spi"
     base_address: 0x40003C00
     size: "1KB"
     irq: 51
+    config:
+      debug_schema: "../peripherals/stm32f401/spi3.yaml"
   - id: "i2s3ext"
     type: "stub"
     base_address: 0x40004000
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f401/i2s3ext.yaml"
   - id: "usart2"
     type: "uart"
     base_address: 0x40004400
     size: "1KB"
     irq: 38
+    config:
+      debug_schema: "../peripherals/stm32f401/usart2.yaml"
   - id: "i2c1"
     type: "i2c"
     base_address: 0x40005400
     size: "1KB"
     irq: 31
+    config:
+      debug_schema: "../peripherals/stm32f401/i2c1.yaml"
   - id: "i2c2"
     type: "i2c"
     base_address: 0x40005800
     size: "1KB"
     irq: 33
+    config:
+      debug_schema: "../peripherals/stm32f401/i2c2.yaml"
   - id: "i2c3"
     type: "i2c"
     base_address: 0x40005C00
     size: "1KB"
     irq: 72
+    config:
+      debug_schema: "../peripherals/stm32f401/i2c3.yaml"
   - id: "pwr"
     type: "pwr"
     base_address: 0x40007000
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32f401/pwr.yaml"
       # F4 PWR (RM0368 §5.4): only PWR_CR/PWR_CSR exist, both reset 0. The
       # default L4 model surfaced CR1=0x200 / CR3=0x8000 and phantom PUCRx regs.
       profile: "stm32f4"
@@ -103,71 +134,99 @@ peripherals:
     type: "timer"
     base_address: 0x40010000
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f401/tim1.yaml"
   - id: "usart1"
     type: "uart"
     base_address: 0x40011000
     size: "1KB"
     irq: 37
+    config:
+      debug_schema: "../peripherals/stm32f401/usart1.yaml"
   - id: "usart6"
     type: "uart"
     base_address: 0x40011400
     size: "1KB"
     irq: 71
+    config:
+      debug_schema: "../peripherals/stm32f401/usart6.yaml"
   - id: "adc1"
     type: "adc"
     base_address: 0x40012000
     size: "1KB"
     irq: 18
+    config:
+      debug_schema: "../peripherals/stm32f401/adc1.yaml"
   - id: "sdio"
     type: "stub"
     base_address: 0x40012C00
     size: "1KB"
     irq: 49
+    config:
+      debug_schema: "../peripherals/stm32f401/sdio.yaml"
   - id: "spi1"
     type: "spi"
     base_address: 0x40013000
     size: "1KB"
     irq: 35
+    config:
+      debug_schema: "../peripherals/stm32f401/spi1.yaml"
   - id: "spi4"
     type: "spi"
     base_address: 0x40013400
     size: "1KB"
     irq: 84
+    config:
+      debug_schema: "../peripherals/stm32f401/spi4.yaml"
   - id: "syscfg"
     type: "stub"
     base_address: 0x40013800
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f401/syscfg.yaml"
   - id: "exti"
     type: "exti"
     base_address: 0x40013C00
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f401/exti.yaml"
   - id: "tim9"
     type: "timer"
     base_address: 0x40014000
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f401/tim9.yaml"
   - id: "tim10"
     type: "timer"
     base_address: 0x40014400
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f401/tim10.yaml"
   - id: "tim11"
     type: "timer"
     base_address: 0x40014800
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f401/tim11.yaml"
   - id: "rcc"
     type: "rcc"
     base_address: 0x40023800
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32f401/rcc.yaml"
       profile: "stm32f4"
   - id: "crc"
     type: "stub"
     base_address: 0x40023000
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f401/crc.yaml"
   - id: "flash_ctrl"
     type: "flash"
     base_address: 0x40023C00
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32f401/flash.yaml"
       # F4 embedded-flash interface (RM0368 §3.8): ACR reset 0 (no F1-style
       # prefetch default), CR LOCK at bit 31, OPTCR present. The F1 profile's
       # 0x30 ACR default and bit-7 LOCK are silicon-wrong for F401.
@@ -176,15 +235,20 @@ peripherals:
     type: "stub"
     base_address: 0x40026000
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f401/dma1.yaml"
   - id: "dma2"
     type: "stub"
     base_address: 0x40026400
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f401/dma2.yaml"
   - id: "gpioa"
     type: "gpio"
     base_address: 0x40020000
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32f401/gpioa.yaml"
       profile: "stm32v2"
       # SWD/JTAG defaults (RM0368 §8.4 / STM32F401 SVD): PA13/14/15 in AF mode.
       reset_moder: 0xA8000000
@@ -194,6 +258,7 @@ peripherals:
     base_address: 0x40020400
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32f401/gpiob.yaml"
       profile: "stm32v2"
       # JTAG defaults (RM0368 §8.4 / STM32F401 SVD): PB3 (JTDO/SWO), PB4 (NJTRST).
       reset_moder: 0x00000280
@@ -204,41 +269,53 @@ peripherals:
     base_address: 0x40020800
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32f401/gpioc.yaml"
       profile: "stm32v2"
   - id: "gpiod"
     type: "gpio"
     base_address: 0x40020C00
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32f401/gpiod.yaml"
       profile: "stm32v2"
   - id: "gpioe"
     type: "gpio"
     base_address: 0x40021000
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32f401/gpioe.yaml"
       profile: "stm32v2"
   - id: "gpioh"
     type: "gpio"
     base_address: 0x40021C00
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32f401/gpioh.yaml"
       profile: "stm32v2"
   - id: "otg_fs_global"
     type: "stub"
     base_address: 0x50000000
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f401/otg_fs_global.yaml"
   - id: "otg_fs_host"
     type: "stub"
     base_address: 0x50000400
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f401/otg_fs_host.yaml"
   - id: "otg_fs_device"
     type: "stub"
     base_address: 0x50000800
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f401/otg_fs_device.yaml"
   - id: "otg_fs_pwrclk"
     type: "stub"
     base_address: 0x50000E00
     size: "512B"
+    config:
+      debug_schema: "../peripherals/stm32f401/otg_fs_pwrclk.yaml"
   - id: "systick"
     type: "systick"
     base_address: 0xE000E010
@@ -246,3 +323,5 @@ peripherals:
     type: "stub"
     base_address: 0xE0042000
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f401/dbg.yaml"

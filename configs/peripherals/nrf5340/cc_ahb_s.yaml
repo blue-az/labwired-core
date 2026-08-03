@@ -1,0 +1,58 @@
+peripheral: CC_AHB_S
+version: 0.1.0
+registers:
+- id: AHBM_SINGLES
+  address_offset: 2816
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: AHB_SINGLES
+    bit_range:
+    - 0
+    - 0
+    description: Force AHB singles
+  side_effects: null
+- id: AHBM_HPROT
+  address_offset: 2820
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: AHB_HPROT
+    bit_range:
+    - 3
+    - 0
+    description: The AHB HPROT value
+  side_effects: null
+- id: AHBM_HMASTLOCK
+  address_offset: 2824
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: AHB_HMASTLOCK
+    bit_range:
+    - 0
+    - 0
+    description: The AHB HMASTLOCK value.
+  side_effects: null
+- id: AHBM_HNONSEC
+  address_offset: 2828
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: AHB_WRITE_HNONSEC
+    bit_range:
+    - 0
+    - 0
+    description: The AHB HNONSEC value for write transaction.
+  - name: AHB_READ_HNONSEC
+    bit_range:
+    - 1
+    - 1
+    description: The AHB HNONSEC value for read transaction.
+  side_effects: null
+interrupts: null
+timing: null

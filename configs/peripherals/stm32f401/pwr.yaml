@@ -1,0 +1,105 @@
+peripheral: PWR
+version: 0.1.0
+registers:
+- id: CR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VOS
+    bit_range:
+    - 15
+    - 14
+    description: Regulator voltage scaling output selection
+  - name: ADCDC1
+    bit_range:
+    - 13
+    - 13
+    description: ADCDC1
+  - name: FPDS
+    bit_range:
+    - 9
+    - 9
+    description: Flash power down in Stop mode
+  - name: DBP
+    bit_range:
+    - 8
+    - 8
+    description: Disable backup domain write protection
+  - name: PLS
+    bit_range:
+    - 7
+    - 5
+    description: PVD level selection
+  - name: PVDE
+    bit_range:
+    - 4
+    - 4
+    description: Power voltage detector enable
+  - name: CSBF
+    bit_range:
+    - 3
+    - 3
+    description: Clear standby flag
+  - name: CWUF
+    bit_range:
+    - 2
+    - 2
+    description: Clear wakeup flag
+  - name: PDDS
+    bit_range:
+    - 1
+    - 1
+    description: Power down deepsleep
+  - name: LPDS
+    bit_range:
+    - 0
+    - 0
+    description: Low-power deep sleep
+  side_effects: null
+- id: CSR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WUF
+    bit_range:
+    - 0
+    - 0
+    description: Wakeup flag
+  - name: SBF
+    bit_range:
+    - 1
+    - 1
+    description: Standby flag
+  - name: PVDO
+    bit_range:
+    - 2
+    - 2
+    description: PVD output
+  - name: BRR
+    bit_range:
+    - 3
+    - 3
+    description: Backup regulator ready
+  - name: EWUP
+    bit_range:
+    - 8
+    - 8
+    description: Enable WKUP pin
+  - name: BRE
+    bit_range:
+    - 9
+    - 9
+    description: Backup regulator enable
+  - name: VOSRDY
+    bit_range:
+    - 14
+    - 14
+    description: Regulator voltage scaling output selection ready bit
+  side_effects: null
+interrupts:
+  EXTI16_PVD: 1
+timing: null

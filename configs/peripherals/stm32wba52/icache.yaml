@@ -1,0 +1,312 @@
+peripheral: ICACHE
+version: 0.1.0
+registers:
+- id: ICACHE_CR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 4
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: enable
+  - name: CACHEINV
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      cache invalidation
+      Set by software and cleared by hardware when the BUSYF flag is set (during cache maintenance operation). Writing 0 has no effect.
+  - name: WAYSEL
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      cache associativity mode selection
+      This bit allows user to choose ICACHE set-associativity. It can be written by software only when cache is disabled (EN=0).
+  - name: HITMEN
+    bit_range:
+    - 16
+    - 16
+    description: hit monitor enable
+  - name: MISSMEN
+    bit_range:
+    - 17
+    - 17
+    description: miss monitor enable
+  - name: HITMRST
+    bit_range:
+    - 18
+    - 18
+    description: hit monitor reset
+  - name: MISSMRST
+    bit_range:
+    - 19
+    - 19
+    description: miss monitor reset
+  side_effects: null
+- id: ICACHE_SR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: BUSYF
+    bit_range:
+    - 0
+    - 0
+    description: busy flag
+  - name: BSYENDF
+    bit_range:
+    - 1
+    - 1
+    description: busy end flag
+  - name: ERRF
+    bit_range:
+    - 2
+    - 2
+    description: cache error flag
+  side_effects: null
+- id: ICACHE_IER
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BSYENDIE
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      interrupt enable on busy end
+      Set by software to enable an interrupt generation at the end of a cache invalidate operation.
+  - name: ERRIE
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      interrupt enable on cache error
+      Set by software to enable an interrupt generation in case of cache functional error (cacheable write access)
+  side_effects: null
+- id: ICACHE_FCR
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CBSYENDF
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      clear busy end flag
+      Set by software.
+  - name: CERRF
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      clear cache error flag
+      Set by software.
+  side_effects: null
+- id: ICACHE_HMONR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HITMON
+    bit_range:
+    - 31
+    - 0
+    description: cache hit monitor counter
+  side_effects: null
+- id: ICACHE_MMONR
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MISSMON
+    bit_range:
+    - 15
+    - 0
+    description: cache miss monitor counter
+  side_effects: null
+- id: ICACHE_CRR0
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 512
+  fields:
+  - name: BASEADDR
+    bit_range:
+    - 7
+    - 0
+    description: |-
+      base address for region x
+      This alias address is replaced by REMAPADDR field.
+      The only useful bits are [28:RI], where 21 less than or equal RI less than or equal 27 is the number of bits of RSIZE (see Section 18.4.7). If the programmed value has more LSBs, the useless bits are ignored.
+  - name: RSIZE
+    bit_range:
+    - 11
+    - 9
+    description: size for region x
+  - name: REN
+    bit_range:
+    - 15
+    - 15
+    description: enable for region x
+  - name: REMAPADDR
+    bit_range:
+    - 26
+    - 16
+    description: |-
+      remapped address for region x
+      This field replaces the alias address defined by BASEADDR field.
+      The only useful bits are [31:RI], where 21 less than or equal RI less than or equal 27 is the number of bits of RSIZE (see Section 18.4.7). If the programmed value has more LSBs, the useless bits are ignored.
+  - name: MSTSEL
+    bit_range:
+    - 28
+    - 28
+    description: AHB cache master selection for region x
+  - name: HBURST
+    bit_range:
+    - 31
+    - 31
+    description: output burst type for region x
+  side_effects: null
+- id: ICACHE_CRR1
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 512
+  fields:
+  - name: BASEADDR
+    bit_range:
+    - 7
+    - 0
+    description: |-
+      base address for region x
+      This alias address is replaced by REMAPADDR field.
+      The only useful bits are [28:RI], where 21 less than or equal RI less than or equal 27 is the number of bits of RSIZE (see Section 18.4.7). If the programmed value has more LSBs, the useless bits are ignored.
+  - name: RSIZE
+    bit_range:
+    - 11
+    - 9
+    description: size for region x
+  - name: REN
+    bit_range:
+    - 15
+    - 15
+    description: enable for region x
+  - name: REMAPADDR
+    bit_range:
+    - 26
+    - 16
+    description: |-
+      remapped address for region x
+      This field replaces the alias address defined by BASEADDR field.
+      The only useful bits are [31:RI], where 21 less than or equal RI less than or equal 27 is the number of bits of RSIZE (see Section 18.4.7). If the programmed value has more LSBs, the useless bits are ignored.
+  - name: MSTSEL
+    bit_range:
+    - 28
+    - 28
+    description: AHB cache master selection for region x
+  - name: HBURST
+    bit_range:
+    - 31
+    - 31
+    description: output burst type for region x
+  side_effects: null
+- id: ICACHE_CRR2
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 512
+  fields:
+  - name: BASEADDR
+    bit_range:
+    - 7
+    - 0
+    description: |-
+      base address for region x
+      This alias address is replaced by REMAPADDR field.
+      The only useful bits are [28:RI], where 21 less than or equal RI less than or equal 27 is the number of bits of RSIZE (see Section 18.4.7). If the programmed value has more LSBs, the useless bits are ignored.
+  - name: RSIZE
+    bit_range:
+    - 11
+    - 9
+    description: size for region x
+  - name: REN
+    bit_range:
+    - 15
+    - 15
+    description: enable for region x
+  - name: REMAPADDR
+    bit_range:
+    - 26
+    - 16
+    description: |-
+      remapped address for region x
+      This field replaces the alias address defined by BASEADDR field.
+      The only useful bits are [31:RI], where 21 less than or equal RI less than or equal 27 is the number of bits of RSIZE (see Section 18.4.7). If the programmed value has more LSBs, the useless bits are ignored.
+  - name: MSTSEL
+    bit_range:
+    - 28
+    - 28
+    description: AHB cache master selection for region x
+  - name: HBURST
+    bit_range:
+    - 31
+    - 31
+    description: output burst type for region x
+  side_effects: null
+- id: ICACHE_CRR3
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 512
+  fields:
+  - name: BASEADDR
+    bit_range:
+    - 7
+    - 0
+    description: |-
+      base address for region x
+      This alias address is replaced by REMAPADDR field.
+      The only useful bits are [28:RI], where 21 less than or equal RI less than or equal 27 is the number of bits of RSIZE (see Section 18.4.7). If the programmed value has more LSBs, the useless bits are ignored.
+  - name: RSIZE
+    bit_range:
+    - 11
+    - 9
+    description: size for region x
+  - name: REN
+    bit_range:
+    - 15
+    - 15
+    description: enable for region x
+  - name: REMAPADDR
+    bit_range:
+    - 26
+    - 16
+    description: |-
+      remapped address for region x
+      This field replaces the alias address defined by BASEADDR field.
+      The only useful bits are [31:RI], where 21 less than or equal RI less than or equal 27 is the number of bits of RSIZE (see Section 18.4.7). If the programmed value has more LSBs, the useless bits are ignored.
+  - name: MSTSEL
+    bit_range:
+    - 28
+    - 28
+    description: AHB cache master selection for region x
+  - name: HBURST
+    bit_range:
+    - 31
+    - 31
+    description: output burst type for region x
+  side_effects: null
+interrupts:
+  ICACHE: 64
+timing: null

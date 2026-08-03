@@ -1,0 +1,468 @@
+peripheral: Ethernet_DMA
+version: 0.1.0
+registers:
+- id: DMABMR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 8449
+  fields:
+  - name: SR
+    bit_range:
+    - 0
+    - 0
+    description: SR
+  - name: DA
+    bit_range:
+    - 1
+    - 1
+    description: DA
+  - name: DSL
+    bit_range:
+    - 6
+    - 2
+    description: DSL
+  - name: EDFE
+    bit_range:
+    - 7
+    - 7
+    description: EDFE
+  - name: PBL
+    bit_range:
+    - 13
+    - 8
+    description: PBL
+  - name: RTPR
+    bit_range:
+    - 15
+    - 14
+    description: RTPR
+  - name: FB
+    bit_range:
+    - 16
+    - 16
+    description: FB
+  - name: RDP
+    bit_range:
+    - 22
+    - 17
+    description: RDP
+  - name: USP
+    bit_range:
+    - 23
+    - 23
+    description: USP
+  - name: FPM
+    bit_range:
+    - 24
+    - 24
+    description: FPM
+  - name: AAB
+    bit_range:
+    - 25
+    - 25
+    description: AAB
+  - name: MB
+    bit_range:
+    - 26
+    - 26
+    description: MB
+  side_effects: null
+- id: DMATPDR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TPD
+    bit_range:
+    - 31
+    - 0
+    description: TPD
+  side_effects: null
+- id: DMARPDR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RPD
+    bit_range:
+    - 31
+    - 0
+    description: RPD
+  side_effects: null
+- id: DMARDLAR
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SRL
+    bit_range:
+    - 31
+    - 0
+    description: SRL
+  side_effects: null
+- id: DMATDLAR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STL
+    bit_range:
+    - 31
+    - 0
+    description: STL
+  side_effects: null
+- id: DMASR
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TS
+    bit_range:
+    - 0
+    - 0
+    description: TS
+  - name: TPSS
+    bit_range:
+    - 1
+    - 1
+    description: TPSS
+  - name: TBUS
+    bit_range:
+    - 2
+    - 2
+    description: TBUS
+  - name: TJTS
+    bit_range:
+    - 3
+    - 3
+    description: TJTS
+  - name: ROS
+    bit_range:
+    - 4
+    - 4
+    description: ROS
+  - name: TUS
+    bit_range:
+    - 5
+    - 5
+    description: TUS
+  - name: RS
+    bit_range:
+    - 6
+    - 6
+    description: RS
+  - name: RBUS
+    bit_range:
+    - 7
+    - 7
+    description: RBUS
+  - name: RPSS
+    bit_range:
+    - 8
+    - 8
+    description: RPSS
+  - name: PWTS
+    bit_range:
+    - 9
+    - 9
+    description: PWTS
+  - name: ETS
+    bit_range:
+    - 10
+    - 10
+    description: ETS
+  - name: FBES
+    bit_range:
+    - 13
+    - 13
+    description: FBES
+  - name: ERS
+    bit_range:
+    - 14
+    - 14
+    description: ERS
+  - name: AIS
+    bit_range:
+    - 15
+    - 15
+    description: AIS
+  - name: NIS
+    bit_range:
+    - 16
+    - 16
+    description: NIS
+  - name: RPS
+    bit_range:
+    - 19
+    - 17
+    description: RPS
+  - name: TPS
+    bit_range:
+    - 22
+    - 20
+    description: TPS
+  - name: EBS
+    bit_range:
+    - 25
+    - 23
+    description: EBS
+  - name: MMCS
+    bit_range:
+    - 27
+    - 27
+    description: MMCS
+  - name: PMTS
+    bit_range:
+    - 28
+    - 28
+    description: PMTS
+  - name: TSTS
+    bit_range:
+    - 29
+    - 29
+    description: TSTS
+  side_effects: null
+- id: DMAOMR
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SR
+    bit_range:
+    - 1
+    - 1
+    description: SR
+  - name: OSF
+    bit_range:
+    - 2
+    - 2
+    description: OSF
+  - name: RTC
+    bit_range:
+    - 4
+    - 3
+    description: RTC
+  - name: FUGF
+    bit_range:
+    - 6
+    - 6
+    description: FUGF
+  - name: FEF
+    bit_range:
+    - 7
+    - 7
+    description: FEF
+  - name: ST
+    bit_range:
+    - 13
+    - 13
+    description: ST
+  - name: TTC
+    bit_range:
+    - 16
+    - 14
+    description: TTC
+  - name: FTF
+    bit_range:
+    - 20
+    - 20
+    description: FTF
+  - name: TSF
+    bit_range:
+    - 21
+    - 21
+    description: TSF
+  - name: DFRF
+    bit_range:
+    - 24
+    - 24
+    description: DFRF
+  - name: RSF
+    bit_range:
+    - 25
+    - 25
+    description: RSF
+  - name: DTCEFD
+    bit_range:
+    - 26
+    - 26
+    description: DTCEFD
+  side_effects: null
+- id: DMAIER
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIE
+    bit_range:
+    - 0
+    - 0
+    description: TIE
+  - name: TPSIE
+    bit_range:
+    - 1
+    - 1
+    description: TPSIE
+  - name: TBUIE
+    bit_range:
+    - 2
+    - 2
+    description: TBUIE
+  - name: TJTIE
+    bit_range:
+    - 3
+    - 3
+    description: TJTIE
+  - name: ROIE
+    bit_range:
+    - 4
+    - 4
+    description: ROIE
+  - name: TUIE
+    bit_range:
+    - 5
+    - 5
+    description: TUIE
+  - name: RIE
+    bit_range:
+    - 6
+    - 6
+    description: RIE
+  - name: RBUIE
+    bit_range:
+    - 7
+    - 7
+    description: RBUIE
+  - name: RPSIE
+    bit_range:
+    - 8
+    - 8
+    description: RPSIE
+  - name: RWTIE
+    bit_range:
+    - 9
+    - 9
+    description: RWTIE
+  - name: ETIE
+    bit_range:
+    - 10
+    - 10
+    description: ETIE
+  - name: FBEIE
+    bit_range:
+    - 13
+    - 13
+    description: FBEIE
+  - name: ERIE
+    bit_range:
+    - 14
+    - 14
+    description: ERIE
+  - name: AISE
+    bit_range:
+    - 15
+    - 15
+    description: AISE
+  - name: NISE
+    bit_range:
+    - 16
+    - 16
+    description: NISE
+  side_effects: null
+- id: DMAMFBOCR
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MFC
+    bit_range:
+    - 15
+    - 0
+    description: MFC
+  - name: OMFC
+    bit_range:
+    - 16
+    - 16
+    description: OMFC
+  - name: MFA
+    bit_range:
+    - 27
+    - 17
+    description: MFA
+  - name: OFOC
+    bit_range:
+    - 28
+    - 28
+    description: OFOC
+  side_effects: null
+- id: DMARSWTR
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RSWTC
+    bit_range:
+    - 7
+    - 0
+    description: RSWTC
+  side_effects: null
+- id: DMACHTDR
+  address_offset: 72
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: HTDAP
+    bit_range:
+    - 31
+    - 0
+    description: HTDAP
+  side_effects: null
+- id: DMACHRDR
+  address_offset: 76
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: HRDAP
+    bit_range:
+    - 31
+    - 0
+    description: HRDAP
+  side_effects: null
+- id: DMACHTBAR
+  address_offset: 80
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: HTBAP
+    bit_range:
+    - 31
+    - 0
+    description: HTBAP
+  side_effects: null
+- id: DMACHRBAR
+  address_offset: 84
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: HRBAP
+    bit_range:
+    - 31
+    - 0
+    description: HRBAP
+  side_effects: null
+interrupts: null
+timing: null

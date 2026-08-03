@@ -1,0 +1,94 @@
+peripheral: NVMC_S
+version: 0.1.0
+registers:
+- id: READY
+  address_offset: 1024
+  size: 32
+  access: READ_ONLY
+  reset_value: 1
+  fields:
+  - name: READY
+    bit_range:
+    - 0
+    - 0
+    description: NVMC is ready or busy
+  side_effects: null
+- id: READYNEXT
+  address_offset: 1032
+  size: 32
+  access: READ_ONLY
+  reset_value: 1
+  fields:
+  - name: READYNEXT
+    bit_range:
+    - 0
+    - 0
+    description: NVMC can accept a new write operation
+  side_effects: null
+- id: CONFIG
+  address_offset: 1284
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WEN
+    bit_range:
+    - 2
+    - 0
+    description: Program memory access mode. It is strongly recommended to only activate erase and write modes when they are actively used.
+  side_effects: null
+- id: ERASEALL
+  address_offset: 1292
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: ERASEALL
+    bit_range:
+    - 0
+    - 0
+    description: Erase all non-volatile memory including UICR registers. Before the non-volatile memory can be erased, erasing must be enabled by setting CONFIG.WEN=Een.
+  side_effects: null
+- id: ERASEPAGEPARTIALCFG
+  address_offset: 1308
+  size: 32
+  access: READ_WRITE
+  reset_value: 10
+  fields:
+  - name: DURATION
+    bit_range:
+    - 6
+    - 0
+    description: Duration of the partial erase in milliseconds
+  side_effects: null
+- id: CONFIGNS
+  address_offset: 1412
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WEN
+    bit_range:
+    - 1
+    - 0
+    description: Program memory access mode. It is strongly recommended to only activate erase and write modes when they are actively used.
+  side_effects: null
+- id: WRITEUICRNS
+  address_offset: 1416
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: SET
+    bit_range:
+    - 0
+    - 0
+    description: Allow non-secure code to set APPROTECT
+  - name: KEY
+    bit_range:
+    - 31
+    - 4
+    description: Key to write in order to validate the write operation
+  side_effects: null
+interrupts: null
+timing: null

@@ -1,0 +1,99 @@
+peripheral: REGULATORS_S
+version: 0.1.0
+registers:
+- id: MAINREGSTATUS
+  address_offset: 1064
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: VREGH
+    bit_range:
+    - 0
+    - 0
+    description: VREGH status
+  side_effects: null
+- id: SYSTEMOFF
+  address_offset: 1280
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: SYSTEMOFF
+    bit_range:
+    - 0
+    - 0
+    description: Enable System OFF mode
+  side_effects: null
+- id: POFCON
+  address_offset: 1296
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: POF
+    bit_range:
+    - 0
+    - 0
+    description: Enable or disable power-fail comparator
+  - name: THRESHOLD
+    bit_range:
+    - 4
+    - 1
+    description: Power-fail comparator threshold setting
+  - name: THRESHOLDVDDH
+    bit_range:
+    - 11
+    - 8
+    description: Power-fail comparator threshold setting for voltage supply on VDDH
+  side_effects: null
+- id: VREGMAIN_DCDCEN
+  address_offset: 1796
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DCDCEN
+    bit_range:
+    - 0
+    - 0
+    description: Enable or disable DC/DC converter
+  side_effects: null
+- id: VREGRADIO_DCDCEN
+  address_offset: 2308
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DCDCEN
+    bit_range:
+    - 0
+    - 0
+    description: Enable or disable DC/DC converter
+  side_effects: null
+- id: VREGH_DCDCEN
+  address_offset: 2816
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DCDCEN
+    bit_range:
+    - 0
+    - 0
+    description: Enable or disable DC/DC converter
+  side_effects: null
+- id: VREGH_EXTSILENTEN
+  address_offset: 2880
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: EXTSILENTEN
+    bit_range:
+    - 0
+    - 0
+    description: Enable silent external DC/DC supply
+  side_effects: null
+interrupts: null
+timing: null

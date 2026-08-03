@@ -1,0 +1,46 @@
+peripheral: OSCILLATORS_NS
+version: 0.1.0
+registers:
+- id: XOSC32MCAPS
+  address_offset: 1476
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CAPVALUE
+    bit_range:
+    - 4
+    - 0
+    description: Value representing capacitance, calculated using provided equation
+  - name: ENABLE
+    bit_range:
+    - 8
+    - 8
+    description: Enable on-chip capacitors on XC1 and XC2
+  side_effects: null
+- id: XOSC32KI_BYPASS
+  address_offset: 1728
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BYPASS
+    bit_range:
+    - 0
+    - 0
+    description: Enable or disable bypass of LFCLK crystal oscillator with external clock source
+  side_effects: null
+- id: XOSC32KI_INTCAP
+  address_offset: 1744
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: INTCAP
+    bit_range:
+    - 1
+    - 0
+    description: Control usage of internal load capacitors
+  side_effects: null
+interrupts: null
+timing: null

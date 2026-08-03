@@ -1,0 +1,581 @@
+peripheral: SHA
+version: 0.1.0
+registers:
+- id: TEXT0
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT1
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT2
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT3
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT4
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT5
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT6
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT7
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT8
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT9
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT10
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT11
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT12
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT13
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT14
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT15
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT16
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT17
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT18
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT19
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT20
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT21
+  address_offset: 84
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT22
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT23
+  address_offset: 92
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT24
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT25
+  address_offset: 100
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT26
+  address_offset: 104
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT27
+  address_offset: 108
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT28
+  address_offset: 112
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT29
+  address_offset: 116
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT30
+  address_offset: 120
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: TEXT31
+  address_offset: 124
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 31
+    - 0
+    description: SHA Message block and hash result register.
+  side_effects: null
+- id: SHA1_START
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SHA1_START
+    bit_range:
+    - 0
+    - 0
+    description: Write 1 to start an SHA-1 operation on the first message block.
+  side_effects: null
+- id: SHA1_CONTINUE
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SHA1_CONTINUE
+    bit_range:
+    - 0
+    - 0
+    description: Write 1 to continue the SHA-1 operation with subsequent blocks.
+  side_effects: null
+- id: SHA1_LOAD
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SHA1_LOAD
+    bit_range:
+    - 0
+    - 0
+    description: Write 1 to finish the SHA-1 operation to calculate the final message hash.
+  side_effects: null
+- id: SHA1_BUSY
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SHA1_BUSY
+    bit_range:
+    - 0
+    - 0
+    description: 'SHA-1 operation status: 1 if the SHA accelerator is processing data, 0 if it is idle.'
+  side_effects: null
+- id: SHA256_START
+  address_offset: 144
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SHA256_START
+    bit_range:
+    - 0
+    - 0
+    description: Write 1 to start an SHA-256 operation on the first message block.
+  side_effects: null
+- id: SHA256_LOAD
+  address_offset: 152
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SHA256_LOAD
+    bit_range:
+    - 0
+    - 0
+    description: Write 1 to finish the SHA-256 operation to calculate the final message hash.
+  side_effects: null
+- id: SHA256_CONTINUE
+  address_offset: 148
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SHA256_CONTINUE
+    bit_range:
+    - 0
+    - 0
+    description: Write 1 to continue the SHA-256 operation with subsequent blocks.
+  side_effects: null
+- id: SHA256_BUSY
+  address_offset: 156
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SHA256_BUSY
+    bit_range:
+    - 0
+    - 0
+    description: 'SHA-256 operation status: 1 if the SHA accelerator is processing data, 0 if it is idle.'
+  side_effects: null
+- id: SHA384_START
+  address_offset: 160
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SHA384_START
+    bit_range:
+    - 0
+    - 0
+    description: Write 1 to start an SHA-384 operation on the first message block.
+  side_effects: null
+- id: SHA384_CONTINUE
+  address_offset: 164
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SHA384_CONTINUE
+    bit_range:
+    - 0
+    - 0
+    description: Write 1 to continue the SHA-384 operation with subsequent blocks.
+  side_effects: null
+- id: SHA384_LOAD
+  address_offset: 168
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SHA384_LOAD
+    bit_range:
+    - 0
+    - 0
+    description: Write 1 to finish the SHA-384 operation to calculate the final message hash.
+  side_effects: null
+- id: SHA384_BUSY
+  address_offset: 172
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SHA384_BUSY
+    bit_range:
+    - 0
+    - 0
+    description: 'SHA-384 operation status: 1 if the SHA accelerator is processing data, 0 if it is idle.'
+  side_effects: null
+- id: SHA512_START
+  address_offset: 176
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SHA512_START
+    bit_range:
+    - 0
+    - 0
+    description: Write 1 to start an SHA-512 operation on the first message block.
+  side_effects: null
+- id: SHA512_CONTINUE
+  address_offset: 180
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SHA512_CONTINUE
+    bit_range:
+    - 0
+    - 0
+    description: Write 1 to continue the SHA-512 operation with subsequent blocks.
+  side_effects: null
+- id: SHA512_LOAD
+  address_offset: 184
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SHA512_LOAD
+    bit_range:
+    - 0
+    - 0
+    description: Write 1 to finish the SHA-512 operation to calculate the final message hash.
+  side_effects: null
+- id: SHA512_BUSY
+  address_offset: 188
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SHA512_BUSY
+    bit_range:
+    - 0
+    - 0
+    description: 'SHA-512 operation status: 1 if the SHA accelerator is processing data, 0 if it is idle.'
+  side_effects: null
+interrupts: null
+timing: null

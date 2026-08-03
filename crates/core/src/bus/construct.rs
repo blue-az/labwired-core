@@ -112,6 +112,7 @@ impl SystemBus {
             bus_trace: bus_trace::new_log(),
             logic_tap: crate::logic_capture::LogicTap::new(),
             pin_map: std::collections::HashMap::new(),
+            external_device_decls: Vec::new(),
         };
         bus.rebuild_peripheral_ranges();
         bus
@@ -189,6 +190,7 @@ impl SystemBus {
             bus_trace: bus_trace::new_log(),
             logic_tap: crate::logic_capture::LogicTap::new(),
             pin_map: std::collections::HashMap::new(),
+            external_device_decls: Vec::new(),
         };
         bus.rebuild_peripheral_ranges();
         bus
@@ -367,6 +369,29 @@ impl SystemBus {
             .and_then(|a| a.downcast_ref::<crate::peripherals::esp32::dport::Dport>())
             .map(|dport| dport.cross_core_pending(core_id))
             .unwrap_or(0)
+    }
+
+    /// Record `manifest.external_devices` on the bus so
+    /// [`crate::Machine::inspect`] can name the live models it finds.
+    ///
+    /// The ONE home for this. Every path that attaches manifest-declared
+    /// external devices must call it, and there are exactly two:
+    /// [`Self::from_config`] (every MCU family that loads peripherals from a
+    /// chip descriptor) and
+    /// [`crate::system::xtensa::attach_esp32_external_devices`] (classic ESP32,
+    /// whose peripheral bank is built in Rust and bypasses `from_config`'s
+    /// peripheral loop). `record_external_devices_has_one_home` in
+    /// `crates/core/tests/inspect_external_devices.rs` fails if a third path
+    /// appears.
+    ///
+    /// Idempotent: recording replaces, so a bus built through both paths does
+    /// not list a device twice.
+    pub fn record_external_devices(&mut self, manifest: &labwired_config::SystemManifest) {
+        self.external_device_decls = manifest
+            .external_devices
+            .iter()
+            .map(crate::bus::ExternalDeviceDecl::from_manifest)
+            .collect();
     }
 
     /// Attach a UART TX capture sink to any UART peripherals on this bus.

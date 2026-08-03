@@ -1,0 +1,1942 @@
+peripheral: PWR
+version: 0.1.0
+registers:
+- id: PWR_CR1
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 512
+  fields:
+  - name: LPMS
+    bit_range:
+    - 2
+    - 0
+    description: |-
+      Low-power mode selection
+      These bits select the low-power mode entered when CPU enters the deepsleep mode.
+      1xx: Shutdown mode
+      Note: In Standby mode, SRAM2 can be preserved or not, depending on RRS bit configuration in PWR_CR3.
+  - name: FPD_STOP
+    bit_range:
+    - 3
+    - 3
+    description: FPD_STOP
+  - name: DBP
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Disable backup domain write protection
+      In reset state, the RTC and backup registers are protected against parasitic write access. This bit must be set to enable write access to these registers.
+  - name: VOS
+    bit_range:
+    - 10
+    - 9
+    description: Voltage scaling range selection
+  - name: LPR
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Low-power run
+      When this bit is set, the regulator is switched from main mode (MR) to low-power mode (LPR).
+  side_effects: null
+- id: PWR_CR2
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PVDE
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Programmable voltage detector enable
+      Note: This bit is write-protected when the PVDL bit is set in the SYSCFG_CFGR2 register. The protection can be reset only by a system reset.
+  - name: PVDLS
+    bit_range:
+    - 3
+    - 1
+    description: |-
+      Programmable voltage detector level selection.
+      These bits select the PVD falling threshold:
+      Note: These bits are write-protected when the PVDL bit is set in the SYSCFG_CFGR2 register. The protection can be reset only by a system reset.
+  - name: PVMEN1
+    bit_range:
+    - 6
+    - 6
+    description: 'Peripheral voltage monitoring 3 enable: V<sub>DDA</sub> vs. ADC/COMP min voltage 1.62V'
+  - name: PVMEN2
+    bit_range:
+    - 7
+    - 7
+    description: 'Peripheral voltage monitoring 4 enable: V<sub>DDA</sub> vs. DAC 1MSPS /DAC 15MSPS min voltage.'
+  side_effects: null
+- id: PWR_CR3
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 32768
+  fields:
+  - name: EWUP1
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Enable Wakeup pin WKUP1
+      When this bit is set, the external wakeup pin WKUP1 is enabled and triggers a wakeup from Standby or Shutdown event when a rising or a falling edge occurs. The active edge is configured via the WP1 bit in the PWR_CR4 register.
+  - name: EWUP2
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Enable Wakeup pin WKUP2
+      When this bit is set, the external wakeup pin WKUP2 is enabled and triggers a wakeup from Standby or Shutdown event when a rising or a falling edge occurs. The active edge is configured via the WP2 bit in the PWR_CR4 register.
+  - name: EWUP3
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Enable Wakeup pin WKUP3
+      When this bit is set, the external wakeup pin WKUP3 is enabled and triggers a wakeup from Standby or Shutdown event when a rising or a falling edge occurs. The active edge is configured via the WP3 bit in the PWR_CR4 register.
+  - name: EWUP4
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Enable Wakeup pin WKUP4
+      When this bit is set, the external wakeup pin WKUP4 is enabled and triggers a wakeup from Standby or Shutdown event when a rising or a falling edge occurs. The active edge is configured via the WP4 bit in the PWR_CR4 register.
+  - name: EWUP5
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Enable Wakeup pin WKUP5
+      When this bit is set, the external wakeup pin WKUP5 is enabled and triggers a wakeup from Standby or Shutdown event when a rising or a falling edge occurs.The active edge is configured via the WP5 bit in the PWR_CR4 register.
+  - name: RRS
+    bit_range:
+    - 8
+    - 8
+    description: SRAM2 retention in Standby mode
+  - name: APC
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Apply pull-up and pull-down configuration
+      When this bit is set, the I/O pull-up and pull-down configurations defined in the PWR_PUCRx
+      and PWR_PDCRx registers are applied. When this bit is cleared, the PWR_PUCRx and
+      PWR_PDCRx registers are not applied to the I/Os.
+  - name: UCPD1_STDBY
+    bit_range:
+    - 13
+    - 13
+    description: UCPD1_STDBY USB Type-C and Power Delivery standby mode.
+  - name: UCPD1_DBDIS
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      USB Type-C and Power Delivery Dead Battery disable.
+      After exiting reset, the USB Type-C “dead battery” behavior is enabled, which may have
+      a pull-down effect on CC1 and CC2 pins. It is recommended to disable it in all cases, either
+      to stop this pull-down or to hand over control to the UCPD1 (which should therefore be
+      initialized before doing the disable).
+  - name: EIWUL
+    bit_range:
+    - 15
+    - 15
+    description: Enable internal wakeup line
+  side_effects: null
+- id: PWR_CR4
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WP1
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Wakeup pin WKUP1 polarity
+      This bit defines the polarity used for an event detection on external wake-up pin, WKUP1
+  - name: WP2
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Wakeup pin WKUP2 polarity
+      This bit defines the polarity used for an event detection on external wake-up pin, WKUP2
+  - name: WP3
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Wakeup pin WKUP3 polarity
+      This bit defines the polarity used for an event detection on external wake-up pin, WKUP3
+  - name: WP4
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Wakeup pin WKUP4 polarity
+      This bit defines the polarity used for an event detection on external wake-up pin, WKUP4
+  - name: WP5
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Wakeup pin WKUP5 polarity
+      This bit defines the polarity used for an event detection on external wake-up pin, WKUP5
+  - name: VBE
+    bit_range:
+    - 8
+    - 8
+    description: V<sub>BAT</sub> battery charging enable
+  - name: VBRS
+    bit_range:
+    - 9
+    - 9
+    description: V<sub>BAT</sub> battery charging resistor selection
+  side_effects: null
+- id: PWR_SR1
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WUF1
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Wakeup flag 1
+      This bit is set when a wakeup event is detected on wakeup pin, WKUP1. It is cleared by writing ‘1’ in the CWUF1 bit of the PWR_SCR register.
+  - name: WUF2
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Wakeup flag 2
+      This bit is set when a wakeup event is detected on wakeup pin, WKUP2. It is cleared by writing ‘1’ in the CWUF2 bit of the PWR_SCR register.
+  - name: WUF3
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Wakeup flag 3
+      This bit is set when a wakeup event is detected on wakeup pin, WKUP3. It is cleared by writing ‘1’ in the CWUF3 bit of the PWR_SCR register.
+  - name: WUF4
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Wakeup flag 4
+      This bit is set when a wakeup event is detected on wakeup pin,WKUP4. It is cleared by writing ‘1’ in the CWUF4 bit of the PWR_SCR register.
+  - name: WUF5
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Wakeup flag 5
+      This bit is set when a wakeup event is detected on wakeup pin, WKUP5. It is cleared by writing ‘1’ in the CWUF5 bit of the PWR_SCR register.
+  - name: SBF
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Standby flag
+      This bit is set by hardware when the device enters the Standby mode and is cleared by setting the CSBF bit in the PWR_SCR register, or by a power-on reset. It is not cleared by the system reset.
+  - name: WUFI
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Wakeup flag internal
+      This bit is set when a wakeup is detected on the internal wakeup line. It is cleared when all internal wakeup sources are cleared.
+  side_effects: null
+- id: PWR_SR2
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: REGLPS
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Low-power regulator started
+      This bit provides the information whether the low-power regulator is ready after a power-on
+      reset or a Standby/Shutdown. If the Standby mode is entered while REGLPS bit is still cleared, the wakeup from Standby mode time may be increased.
+  - name: REGLPF
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Low-power regulator flag
+      This bit is set by hardware when the MCU is in Low-power run mode. When the MCU exits
+      the Low-power run mode, this bit remains at 1 until the regulator is ready in main mode. A polling on this bit must be done before increasing the product frequency.
+      This bit is cleared by hardware when the regulator is ready.
+  - name: VOSF
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Voltage scaling flag
+      A delay is required for the internal regulator to be ready after the voltage scaling has been changed. VOSF indicates that the regulator reached the voltage level defined with VOS bits of the PWR_CR1 register.
+  - name: PVDO
+    bit_range:
+    - 11
+    - 11
+    description: Programmable voltage detector output
+  - name: PVMO1
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Peripheral voltage monitoring output: V<sub>DDA</sub> vs. 1.62 V
+      Note: PVMO1 is cleared when PVM1 is disabled (PVME = 0). After enabling PVM1, the PVM1 output is valid after the PVM1 wakeup time.
+  - name: PVMO2
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Peripheral voltage monitoring output: V<sub>DDA</sub> vs. 1.8 V
+      Note: PVMO2 is cleared when PVM2 is disabled (PVME = 0). After enabling PVM2, the PVM2 output is valid after the PVM2 wakeup time.
+  side_effects: null
+- id: PWR_SCR
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CWUF1
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Clear wakeup flag 1
+      Setting this bit clears the WUF1 flag in the PWR_SR1 register.
+  - name: CWUF2
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Clear wakeup flag 2
+      Setting this bit clears the WUF2 flag in the PWR_SR1 register.
+  - name: CWUF3
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Clear wakeup flag 3
+      Setting this bit clears the WUF3 flag in the PWR_SR1 register.
+  - name: CWUF4
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Clear wakeup flag 4
+      Setting this bit clears the WUF4 flag in the PWR_SR1 register.
+  - name: CWUF5
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Clear wakeup flag 5
+      Setting this bit clears the WUF5 flag in the PWR_SR1 register.
+  - name: CSBF
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Clear standby flag
+      Setting this bit clears the SBF flag in the PWR_SR1 register.
+  side_effects: null
+- id: PWR_PUCRA
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PU0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port A pull-up bit y (y=0..13)
+      When set, this bit activates the pull-up on PA[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port A pull-up bit y (y=0..13)
+      When set, this bit activates the pull-up on PA[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port A pull-up bit y (y=0..13)
+      When set, this bit activates the pull-up on PA[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port A pull-up bit y (y=0..13)
+      When set, this bit activates the pull-up on PA[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port A pull-up bit y (y=0..13)
+      When set, this bit activates the pull-up on PA[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port A pull-up bit y (y=0..13)
+      When set, this bit activates the pull-up on PA[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port A pull-up bit y (y=0..13)
+      When set, this bit activates the pull-up on PA[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port A pull-up bit y (y=0..13)
+      When set, this bit activates the pull-up on PA[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port A pull-up bit y (y=0..13)
+      When set, this bit activates the pull-up on PA[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port A pull-up bit y (y=0..13)
+      When set, this bit activates the pull-up on PA[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port A pull-up bit y (y=0..13)
+      When set, this bit activates the pull-up on PA[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port A pull-up bit y (y=0..13)
+      When set, this bit activates the pull-up on PA[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port A pull-up bit y (y=0..13)
+      When set, this bit activates the pull-up on PA[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port A pull-up bit y (y=0..13)
+      When set, this bit activates the pull-up on PA[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port A pull-up bit 15
+      When set, this bit activates the pull-up on PA[15] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PD15 bit is also set.
+  side_effects: null
+- id: PWR_PDCRA
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PD0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port A pull-down bit y (y=0..12)
+      When set, this bit activates the pull-down on PA[y] when APC bit is set in PWR_CR3 register.
+  - name: PD1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port A pull-down bit y (y=0..12)
+      When set, this bit activates the pull-down on PA[y] when APC bit is set in PWR_CR3 register.
+  - name: PD2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port A pull-down bit y (y=0..12)
+      When set, this bit activates the pull-down on PA[y] when APC bit is set in PWR_CR3 register.
+  - name: PD3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port A pull-down bit y (y=0..12)
+      When set, this bit activates the pull-down on PA[y] when APC bit is set in PWR_CR3 register.
+  - name: PD4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port A pull-down bit y (y=0..12)
+      When set, this bit activates the pull-down on PA[y] when APC bit is set in PWR_CR3 register.
+  - name: PD5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port A pull-down bit y (y=0..12)
+      When set, this bit activates the pull-down on PA[y] when APC bit is set in PWR_CR3 register.
+  - name: PD6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port A pull-down bit y (y=0..12)
+      When set, this bit activates the pull-down on PA[y] when APC bit is set in PWR_CR3 register.
+  - name: PD7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port A pull-down bit y (y=0..12)
+      When set, this bit activates the pull-down on PA[y] when APC bit is set in PWR_CR3 register.
+  - name: PD8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port A pull-down bit y (y=0..12)
+      When set, this bit activates the pull-down on PA[y] when APC bit is set in PWR_CR3 register.
+  - name: PD9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port A pull-down bit y (y=0..12)
+      When set, this bit activates the pull-down on PA[y] when APC bit is set in PWR_CR3 register.
+  - name: PD10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port A pull-down bit y (y=0..12)
+      When set, this bit activates the pull-down on PA[y] when APC bit is set in PWR_CR3 register.
+  - name: PD11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port A pull-down bit y (y=0..12)
+      When set, this bit activates the pull-down on PA[y] when APC bit is set in PWR_CR3 register.
+  - name: PD12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port A pull-down bit y (y=0..12)
+      When set, this bit activates the pull-down on PA[y] when APC bit is set in PWR_CR3 register.
+  - name: PD14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port A pull-down bit 14
+      When set, this bit activates the pull-down on PA[14] when APC bit is set in PWR_CR3 register.
+  side_effects: null
+- id: PWR_PUCRB
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PU0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port B pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PB[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port B pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PB[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port B pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PB[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port B pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PB[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port B pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PB[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port B pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PB[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port B pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PB[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port B pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PB[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port B pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PB[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port B pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PB[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port B pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PB[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port B pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PB[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port B pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PB[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port B pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PB[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port B pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PB[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port B pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PB[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  side_effects: null
+- id: PWR_PDCRB
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PD0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port B pull-down bit y (y=0..3)
+      When set, this bit activates the pull-down on PB[y] when APC bit is set in PWR_CR3 register.
+  - name: PD1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port B pull-down bit y (y=0..3)
+      When set, this bit activates the pull-down on PB[y] when APC bit is set in PWR_CR3 register.
+  - name: PD2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port B pull-down bit y (y=0..3)
+      When set, this bit activates the pull-down on PB[y] when APC bit is set in PWR_CR3 register.
+  - name: PD3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port B pull-down bit y (y=0..3)
+      When set, this bit activates the pull-down on PB[y] when APC bit is set in PWR_CR3 register.
+  - name: PD5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port B pull-down bit y (y=5..15)
+      When set, this bit activates the pull-down on PB[y] when APC bit is set in PWR_CR3 register.
+  - name: PD6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port B pull-down bit y (y=5..15)
+      When set, this bit activates the pull-down on PB[y] when APC bit is set in PWR_CR3 register.
+  - name: PD7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port B pull-down bit y (y=5..15)
+      When set, this bit activates the pull-down on PB[y] when APC bit is set in PWR_CR3 register.
+  - name: PD8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port B pull-down bit y (y=5..15)
+      When set, this bit activates the pull-down on PB[y] when APC bit is set in PWR_CR3 register.
+  - name: PD9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port B pull-down bit y (y=5..15)
+      When set, this bit activates the pull-down on PB[y] when APC bit is set in PWR_CR3 register.
+  - name: PD10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port B pull-down bit y (y=5..15)
+      When set, this bit activates the pull-down on PB[y] when APC bit is set in PWR_CR3 register.
+  - name: PD11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port B pull-down bit y (y=5..15)
+      When set, this bit activates the pull-down on PB[y] when APC bit is set in PWR_CR3 register.
+  - name: PD12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port B pull-down bit y (y=5..15)
+      When set, this bit activates the pull-down on PB[y] when APC bit is set in PWR_CR3 register.
+  - name: PD13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port B pull-down bit y (y=5..15)
+      When set, this bit activates the pull-down on PB[y] when APC bit is set in PWR_CR3 register.
+  - name: PD14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port B pull-down bit y (y=5..15)
+      When set, this bit activates the pull-down on PB[y] when APC bit is set in PWR_CR3 register.
+  - name: PD15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port B pull-down bit y (y=5..15)
+      When set, this bit activates the pull-down on PB[y] when APC bit is set in PWR_CR3 register.
+  side_effects: null
+- id: PWR_PUCRC
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PU0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port C pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PC[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port C pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PC[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port C pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PC[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port C pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PC[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port C pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PC[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port C pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PC[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port C pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PC[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port C pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PC[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port C pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PC[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port C pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PC[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port C pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PC[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port C pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PC[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port C pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PC[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port C pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PC[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port C pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PC[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port C pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PC[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  side_effects: null
+- id: PWR_PDCRC
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PD0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port C pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PC[y] when APC bit is set in PWR_CR3 register.
+  - name: PD1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port C pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PC[y] when APC bit is set in PWR_CR3 register.
+  - name: PD2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port C pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PC[y] when APC bit is set in PWR_CR3 register.
+  - name: PD3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port C pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PC[y] when APC bit is set in PWR_CR3 register.
+  - name: PD4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port C pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PC[y] when APC bit is set in PWR_CR3 register.
+  - name: PD5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port C pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PC[y] when APC bit is set in PWR_CR3 register.
+  - name: PD6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port C pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PC[y] when APC bit is set in PWR_CR3 register.
+  - name: PD7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port C pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PC[y] when APC bit is set in PWR_CR3 register.
+  - name: PD8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port C pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PC[y] when APC bit is set in PWR_CR3 register.
+  - name: PD9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port C pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PC[y] when APC bit is set in PWR_CR3 register.
+  - name: PD10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port C pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PC[y] when APC bit is set in PWR_CR3 register.
+  - name: PD11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port C pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PC[y] when APC bit is set in PWR_CR3 register.
+  - name: PD12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port C pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PC[y] when APC bit is set in PWR_CR3 register.
+  - name: PD13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port C pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PC[y] when APC bit is set in PWR_CR3 register.
+  - name: PD14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port C pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PC[y] when APC bit is set in PWR_CR3 register.
+  - name: PD15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port C pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PC[y] when APC bit is set in PWR_CR3 register.
+  side_effects: null
+- id: PWR_PUCRD
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PU0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port D pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PD[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port D pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PD[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port D pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PD[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port D pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PD[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port D pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PD[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port D pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PD[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port D pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PD[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port D pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PD[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port D pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PD[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port D pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PD[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port D pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PD[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port D pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PD[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port D pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PD[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port D pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PD[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port D pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PD[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port D pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PD[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  side_effects: null
+- id: PWR_PDCRD
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PD0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port D pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PD[y] when APC bit is set in PWR_CR3 register.
+  - name: PD1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port D pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PD[y] when APC bit is set in PWR_CR3 register.
+  - name: PD2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port D pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PD[y] when APC bit is set in PWR_CR3 register.
+  - name: PD3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port D pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PD[y] when APC bit is set in PWR_CR3 register.
+  - name: PD4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port D pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PD[y] when APC bit is set in PWR_CR3 register.
+  - name: PD5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port D pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PD[y] when APC bit is set in PWR_CR3 register.
+  - name: PD6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port D pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PD[y] when APC bit is set in PWR_CR3 register.
+  - name: PD7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port D pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PD[y] when APC bit is set in PWR_CR3 register.
+  - name: PD8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port D pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PD[y] when APC bit is set in PWR_CR3 register.
+  - name: PD9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port D pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PD[y] when APC bit is set in PWR_CR3 register.
+  - name: PD10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port D pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PD[y] when APC bit is set in PWR_CR3 register.
+  - name: PD11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port D pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PD[y] when APC bit is set in PWR_CR3 register.
+  - name: PD12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port D pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PD[y] when APC bit is set in PWR_CR3 register.
+  - name: PD13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port D pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PD[y] when APC bit is set in PWR_CR3 register.
+  - name: PD14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port D pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PD[y] when APC bit is set in PWR_CR3 register.
+  - name: PD15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port D pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PD[y] when APC bit is set in PWR_CR3 register.
+  side_effects: null
+- id: PWR_PUCRE
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PU0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port E pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PE[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port E pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PE[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port E pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PE[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port E pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PE[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port E pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PE[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port E pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PE[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port E pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PE[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port E pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PE[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port E pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PE[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port E pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PE[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port E pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PE[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port E pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PE[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port E pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PE[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port E pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PE[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port E pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PE[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port E pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PE[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  side_effects: null
+- id: PWR_PDCRE
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PD0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port E pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PE[y] when APC bit is set in PWR_CR3 register.
+  - name: PD1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port E pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PE[y] when APC bit is set in PWR_CR3 register.
+  - name: PD2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port E pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PE[y] when APC bit is set in PWR_CR3 register.
+  - name: PD3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port E pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PE[y] when APC bit is set in PWR_CR3 register.
+  - name: PD4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port E pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PE[y] when APC bit is set in PWR_CR3 register.
+  - name: PD5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port E pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PE[y] when APC bit is set in PWR_CR3 register.
+  - name: PD6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port E pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PE[y] when APC bit is set in PWR_CR3 register.
+  - name: PD7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port E pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PE[y] when APC bit is set in PWR_CR3 register.
+  - name: PD8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port E pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PE[y] when APC bit is set in PWR_CR3 register.
+  - name: PD9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port E pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PE[y] when APC bit is set in PWR_CR3 register.
+  - name: PD10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port E pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PE[y] when APC bit is set in PWR_CR3 register.
+  - name: PD11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port E pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PE[y] when APC bit is set in PWR_CR3 register.
+  - name: PD12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port E pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PE[y] when APC bit is set in PWR_CR3 register.
+  - name: PD13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port E pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PE[y] when APC bit is set in PWR_CR3 register.
+  - name: PD14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port E pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PE[y] when APC bit is set in PWR_CR3 register.
+  - name: PD15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port E pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PE[y] when APC bit is set in PWR_CR3 register.
+  side_effects: null
+- id: PWR_PUCRF
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PU0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port F pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PF[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port F pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PF[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port F pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PF[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port F pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PF[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port F pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PF[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port F pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PF[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port F pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PF[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port F pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PF[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port F pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PF[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port F pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PF[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port F pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PF[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port F pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PF[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port F pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PF[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port F pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PF[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port F pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PF[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port F pull-up bit y (y=0..15)
+      When set, this bit activates the pull-up on PF[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  side_effects: null
+- id: PWR_PDCRF
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PD0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port F pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PF[y] when APC bit is set in PWR_CR3 register.
+  - name: PD1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port F pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PF[y] when APC bit is set in PWR_CR3 register.
+  - name: PD2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port F pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PF[y] when APC bit is set in PWR_CR3 register.
+  - name: PD3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port F pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PF[y] when APC bit is set in PWR_CR3 register.
+  - name: PD4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port F pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PF[y] when APC bit is set in PWR_CR3 register.
+  - name: PD5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port F pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PF[y] when APC bit is set in PWR_CR3 register.
+  - name: PD6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port F pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PF[y] when APC bit is set in PWR_CR3 register.
+  - name: PD7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port F pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PF[y] when APC bit is set in PWR_CR3 register.
+  - name: PD8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port F pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PF[y] when APC bit is set in PWR_CR3 register.
+  - name: PD9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port F pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PF[y] when APC bit is set in PWR_CR3 register.
+  - name: PD10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port F pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PF[y] when APC bit is set in PWR_CR3 register.
+  - name: PD11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port F pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PF[y] when APC bit is set in PWR_CR3 register.
+  - name: PD12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port F pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PF[y] when APC bit is set in PWR_CR3 register.
+  - name: PD13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port F pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PF[y] when APC bit is set in PWR_CR3 register.
+  - name: PD14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port F pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PF[y] when APC bit is set in PWR_CR3 register.
+  - name: PD15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port F pull-down bit y (y=0..15)
+      When set, this bit activates the pull-down on PF[y] when APC bit is set in PWR_CR3 register.
+  side_effects: null
+- id: PWR_PUCRG
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PU0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port G pull-up bit y (y=0..10)
+      When set, this bit activates the pull-up on PG[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port G pull-up bit y (y=0..10)
+      When set, this bit activates the pull-up on PG[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port G pull-up bit y (y=0..10)
+      When set, this bit activates the pull-up on PG[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port G pull-up bit y (y=0..10)
+      When set, this bit activates the pull-up on PG[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port G pull-up bit y (y=0..10)
+      When set, this bit activates the pull-up on PG[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port G pull-up bit y (y=0..10)
+      When set, this bit activates the pull-up on PG[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port G pull-up bit y (y=0..10)
+      When set, this bit activates the pull-up on PG[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port G pull-up bit y (y=0..10)
+      When set, this bit activates the pull-up on PG[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port G pull-up bit y (y=0..10)
+      When set, this bit activates the pull-up on PG[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port G pull-up bit y (y=0..10)
+      When set, this bit activates the pull-up on PG[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  - name: PU10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port G pull-up bit y (y=0..10)
+      When set, this bit activates the pull-up on PG[y] when APC bit is set in PWR_CR3 register. The pull-up is not activated if the corresponding PDy bit is also set.
+  side_effects: null
+- id: PWR_PDCRG
+  address_offset: 84
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PD0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port G pull-down bit y (y=0..10)
+      When set, this bit activates the pull-down on PG[y] when APC bit is set in PWR_CR3 register.
+  - name: PD1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port G pull-down bit y (y=0..10)
+      When set, this bit activates the pull-down on PG[y] when APC bit is set in PWR_CR3 register.
+  - name: PD2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port G pull-down bit y (y=0..10)
+      When set, this bit activates the pull-down on PG[y] when APC bit is set in PWR_CR3 register.
+  - name: PD3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port G pull-down bit y (y=0..10)
+      When set, this bit activates the pull-down on PG[y] when APC bit is set in PWR_CR3 register.
+  - name: PD4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port G pull-down bit y (y=0..10)
+      When set, this bit activates the pull-down on PG[y] when APC bit is set in PWR_CR3 register.
+  - name: PD5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port G pull-down bit y (y=0..10)
+      When set, this bit activates the pull-down on PG[y] when APC bit is set in PWR_CR3 register.
+  - name: PD6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port G pull-down bit y (y=0..10)
+      When set, this bit activates the pull-down on PG[y] when APC bit is set in PWR_CR3 register.
+  - name: PD7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port G pull-down bit y (y=0..10)
+      When set, this bit activates the pull-down on PG[y] when APC bit is set in PWR_CR3 register.
+  - name: PD8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port G pull-down bit y (y=0..10)
+      When set, this bit activates the pull-down on PG[y] when APC bit is set in PWR_CR3 register.
+  - name: PD9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port G pull-down bit y (y=0..10)
+      When set, this bit activates the pull-down on PG[y] when APC bit is set in PWR_CR3 register.
+  - name: PD10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port G pull-down bit y (y=0..10)
+      When set, this bit activates the pull-down on PG[y] when APC bit is set in PWR_CR3 register.
+  side_effects: null
+- id: PWR_CR5
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 256
+  fields:
+  - name: R1MODE
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Main regular range 1 mode
+      This bit is only valid for the main regulator in range 1 and has no effect on range 2. It is recommended to reset this bit when the system frequency is greater than 150 MHz. Refer to
+  side_effects: null
+interrupts: null
+timing: null

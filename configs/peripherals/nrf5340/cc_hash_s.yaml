@@ -1,0 +1,290 @@
+peripheral: CC_HASH_S
+version: 0.1.0
+registers:
+- id: HASH_H0
+  address_offset: 1600
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Write the initial hash value before start of digest operation, and read the final hash value result after the digest operation has been completed.
+  side_effects: null
+- id: HASH_H1
+  address_offset: 1604
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Write the initial hash value before start of digest operation, and read the final hash value result after the digest operation has been completed.
+  side_effects: null
+- id: HASH_H2
+  address_offset: 1608
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Write the initial hash value before start of digest operation, and read the final hash value result after the digest operation has been completed.
+  side_effects: null
+- id: HASH_H3
+  address_offset: 1612
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Write the initial hash value before start of digest operation, and read the final hash value result after the digest operation has been completed.
+  side_effects: null
+- id: HASH_H4
+  address_offset: 1616
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Write the initial hash value before start of digest operation, and read the final hash value result after the digest operation has been completed.
+  side_effects: null
+- id: HASH_H5
+  address_offset: 1620
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Write the initial hash value before start of digest operation, and read the final hash value result after the digest operation has been completed.
+  side_effects: null
+- id: HASH_H6
+  address_offset: 1624
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Write the initial hash value before start of digest operation, and read the final hash value result after the digest operation has been completed.
+  side_effects: null
+- id: HASH_H7
+  address_offset: 1628
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Write the initial hash value before start of digest operation, and read the final hash value result after the digest operation has been completed.
+  side_effects: null
+- id: HASH_PAD_AUTO
+  address_offset: 1668
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: HWPAD
+    bit_range:
+    - 0
+    - 0
+    description: Enable automatic padding in hardware.
+  side_effects: null
+- id: HASH_XOR_DIN
+  address_offset: 1672
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: The value to XOR with the HASH engine input data.
+  side_effects: null
+- id: HASH_INIT_STATE
+  address_offset: 1684
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: LOAD
+    bit_range:
+    - 0
+    - 0
+    description: Enable loading of data to initial state registers. Digest/IV for HASH/AES_MAC.
+  side_effects: null
+- id: HASH_SELECT
+  address_offset: 1700
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: ENGINE
+    bit_range:
+    - 1
+    - 0
+    description: Select HASH or GHASH engine as the digest engine.
+  side_effects: null
+- id: HASH_CONTROL
+  address_offset: 1984
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MODE
+    bit_range:
+    - 3
+    - 0
+    description: Select HASH mode to execute
+  side_effects: null
+- id: HASH_PAD
+  address_offset: 1988
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: ENABLE
+    bit_range:
+    - 0
+    - 0
+    description: Configure hardware padding feature.
+  side_effects: null
+- id: HASH_PAD_FORCE
+  address_offset: 1992
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENABLE
+    bit_range:
+    - 2
+    - 2
+    description: Trigger hardware padding operation.
+  side_effects: null
+- id: HASH_CUR_LEN_0
+  address_offset: 1996
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Bits [31:0] of current length of digested data in bytes.
+  side_effects: null
+- id: HASH_CUR_LEN_1
+  address_offset: 2000
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Bits [63:32] of current length of digested data in bytes.
+  side_effects: null
+- id: HASH_HW_FLAGS
+  address_offset: 2012
+  size: 32
+  access: READ_ONLY
+  reset_value: 73729
+  fields:
+  - name: CW
+    bit_range:
+    - 3
+    - 0
+    description: Indicates the number of concurrent words the hash is using to compute signature.
+  - name: CH
+    bit_range:
+    - 7
+    - 4
+    description: Indicate if Hi adders are present for each Hi value or 1 adder is shared for all Hi.
+  - name: DW
+    bit_range:
+    - 11
+    - 8
+    description: Determine the granularity of word size.
+  - name: SHA_512_EXISTS
+    bit_range:
+    - 12
+    - 12
+    description: If this flag is set, the engine include SHA-512 support.
+  - name: PAD_EXISTS
+    bit_range:
+    - 13
+    - 13
+    description: If this flag is set, the engine include pad block support.
+  - name: MD5_EXISTS
+    bit_range:
+    - 14
+    - 14
+    description: If this flag is set, the engine include MD5 support.
+  - name: HMAC_EXISTS
+    bit_range:
+    - 15
+    - 15
+    description: If this flag is set, the engine include HMAC support.
+  - name: SHA_256_EXISTS
+    bit_range:
+    - 16
+    - 16
+    description: If this flag is set, the engine include SHA-256 support.
+  - name: HASH_COMPARE_EXISTS
+    bit_range:
+    - 17
+    - 17
+    description: If this flag is set, the engine include compare digest logic.
+  - name: DUMP_HASH_TO_DOUT_EXISTS
+    bit_range:
+    - 18
+    - 18
+    description: If this flag is set, the engine include HASH to DOUT support.
+  side_effects: null
+- id: HASH_SW_RESET
+  address_offset: 2020
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: RESET
+    bit_range:
+    - 0
+    - 0
+    description: Writing any value to this address resets the HASH engine. The reset takes 4 CPU clock cycles to complete.
+  side_effects: null
+- id: HASH_ENDIANNESS
+  address_offset: 2024
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: ENDIAN
+    bit_range:
+    - 0
+    - 0
+    description: Endianness of HASH data and padding generation. The default value is little-endian.
+  side_effects: null
+interrupts: null
+timing: null

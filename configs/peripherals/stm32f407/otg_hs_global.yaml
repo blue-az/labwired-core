@@ -1,0 +1,924 @@
+peripheral: OTG_HS_GLOBAL
+version: 0.1.0
+registers:
+- id: OTG_HS_GOTGCTL
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 2048
+  fields:
+  - name: SRQSCS
+    bit_range:
+    - 0
+    - 0
+    description: Session request success
+  - name: SRQ
+    bit_range:
+    - 1
+    - 1
+    description: Session request
+  - name: HNGSCS
+    bit_range:
+    - 8
+    - 8
+    description: Host negotiation success
+  - name: HNPRQ
+    bit_range:
+    - 9
+    - 9
+    description: HNP request
+  - name: HSHNPEN
+    bit_range:
+    - 10
+    - 10
+    description: Host set HNP enable
+  - name: DHNPEN
+    bit_range:
+    - 11
+    - 11
+    description: Device HNP enabled
+  - name: CIDSTS
+    bit_range:
+    - 16
+    - 16
+    description: Connector ID status
+  - name: DBCT
+    bit_range:
+    - 17
+    - 17
+    description: Long/short debounce time
+  - name: ASVLD
+    bit_range:
+    - 18
+    - 18
+    description: A-session valid
+  - name: BSVLD
+    bit_range:
+    - 19
+    - 19
+    description: B-session valid
+  side_effects: null
+- id: OTG_HS_GOTGINT
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SEDET
+    bit_range:
+    - 2
+    - 2
+    description: Session end detected
+  - name: SRSSCHG
+    bit_range:
+    - 8
+    - 8
+    description: Session request success status change
+  - name: HNSSCHG
+    bit_range:
+    - 9
+    - 9
+    description: Host negotiation success status change
+  - name: HNGDET
+    bit_range:
+    - 17
+    - 17
+    description: Host negotiation detected
+  - name: ADTOCHG
+    bit_range:
+    - 18
+    - 18
+    description: A-device timeout change
+  - name: DBCDNE
+    bit_range:
+    - 19
+    - 19
+    description: Debounce done
+  side_effects: null
+- id: OTG_HS_GAHBCFG
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: GINT
+    bit_range:
+    - 0
+    - 0
+    description: Global interrupt mask
+  - name: HBSTLEN
+    bit_range:
+    - 4
+    - 1
+    description: Burst length/type
+  - name: DMAEN
+    bit_range:
+    - 5
+    - 5
+    description: DMA enable
+  - name: TXFELVL
+    bit_range:
+    - 7
+    - 7
+    description: TxFIFO empty level
+  - name: PTXFELVL
+    bit_range:
+    - 8
+    - 8
+    description: Periodic TxFIFO empty level
+  side_effects: null
+- id: OTG_HS_GUSBCFG
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 2560
+  fields:
+  - name: TOCAL
+    bit_range:
+    - 2
+    - 0
+    description: FS timeout calibration
+  - name: PHYSEL
+    bit_range:
+    - 6
+    - 6
+    description: USB 2.0 high-speed ULPI PHY or USB 1.1 full-speed serial transceiver select
+  - name: SRPCAP
+    bit_range:
+    - 8
+    - 8
+    description: SRP-capable
+  - name: HNPCAP
+    bit_range:
+    - 9
+    - 9
+    description: HNP-capable
+  - name: TRDT
+    bit_range:
+    - 13
+    - 10
+    description: USB turnaround time
+  - name: PHYLPCS
+    bit_range:
+    - 15
+    - 15
+    description: PHY Low-power clock select
+  - name: ULPIFSLS
+    bit_range:
+    - 17
+    - 17
+    description: ULPI FS/LS select
+  - name: ULPIAR
+    bit_range:
+    - 18
+    - 18
+    description: ULPI Auto-resume
+  - name: ULPICSM
+    bit_range:
+    - 19
+    - 19
+    description: ULPI Clock SuspendM
+  - name: ULPIEVBUSD
+    bit_range:
+    - 20
+    - 20
+    description: ULPI External VBUS Drive
+  - name: ULPIEVBUSI
+    bit_range:
+    - 21
+    - 21
+    description: ULPI external VBUS indicator
+  - name: TSDPS
+    bit_range:
+    - 22
+    - 22
+    description: TermSel DLine pulsing selection
+  - name: PCCI
+    bit_range:
+    - 23
+    - 23
+    description: Indicator complement
+  - name: PTCI
+    bit_range:
+    - 24
+    - 24
+    description: Indicator pass through
+  - name: ULPIIPD
+    bit_range:
+    - 25
+    - 25
+    description: ULPI interface protect disable
+  - name: FHMOD
+    bit_range:
+    - 29
+    - 29
+    description: Forced host mode
+  - name: FDMOD
+    bit_range:
+    - 30
+    - 30
+    description: Forced peripheral mode
+  - name: CTXPKT
+    bit_range:
+    - 31
+    - 31
+    description: Corrupt Tx packet
+  side_effects: null
+- id: OTG_HS_GRSTCTL
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 536870912
+  fields:
+  - name: CSRST
+    bit_range:
+    - 0
+    - 0
+    description: Core soft reset
+  - name: HSRST
+    bit_range:
+    - 1
+    - 1
+    description: HCLK soft reset
+  - name: FCRST
+    bit_range:
+    - 2
+    - 2
+    description: Host frame counter reset
+  - name: RXFFLSH
+    bit_range:
+    - 4
+    - 4
+    description: RxFIFO flush
+  - name: TXFFLSH
+    bit_range:
+    - 5
+    - 5
+    description: TxFIFO flush
+  - name: TXFNUM
+    bit_range:
+    - 10
+    - 6
+    description: TxFIFO number
+  - name: DMAREQ
+    bit_range:
+    - 30
+    - 30
+    description: DMA request signal
+  - name: AHBIDL
+    bit_range:
+    - 31
+    - 31
+    description: AHB master idle
+  side_effects: null
+- id: OTG_HS_GINTSTS
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 67108896
+  fields:
+  - name: CMOD
+    bit_range:
+    - 0
+    - 0
+    description: Current mode of operation
+  - name: MMIS
+    bit_range:
+    - 1
+    - 1
+    description: Mode mismatch interrupt
+  - name: OTGINT
+    bit_range:
+    - 2
+    - 2
+    description: OTG interrupt
+  - name: SOF
+    bit_range:
+    - 3
+    - 3
+    description: Start of frame
+  - name: RXFLVL
+    bit_range:
+    - 4
+    - 4
+    description: RxFIFO nonempty
+  - name: NPTXFE
+    bit_range:
+    - 5
+    - 5
+    description: Nonperiodic TxFIFO empty
+  - name: GINAKEFF
+    bit_range:
+    - 6
+    - 6
+    description: Global IN nonperiodic NAK effective
+  - name: BOUTNAKEFF
+    bit_range:
+    - 7
+    - 7
+    description: Global OUT NAK effective
+  - name: ESUSP
+    bit_range:
+    - 10
+    - 10
+    description: Early suspend
+  - name: USBSUSP
+    bit_range:
+    - 11
+    - 11
+    description: USB suspend
+  - name: USBRST
+    bit_range:
+    - 12
+    - 12
+    description: USB reset
+  - name: ENUMDNE
+    bit_range:
+    - 13
+    - 13
+    description: Enumeration done
+  - name: ISOODRP
+    bit_range:
+    - 14
+    - 14
+    description: Isochronous OUT packet dropped interrupt
+  - name: EOPF
+    bit_range:
+    - 15
+    - 15
+    description: End of periodic frame interrupt
+  - name: IEPINT
+    bit_range:
+    - 18
+    - 18
+    description: IN endpoint interrupt
+  - name: OEPINT
+    bit_range:
+    - 19
+    - 19
+    description: OUT endpoint interrupt
+  - name: IISOIXFR
+    bit_range:
+    - 20
+    - 20
+    description: Incomplete isochronous IN transfer
+  - name: PXFR_INCOMPISOOUT
+    bit_range:
+    - 21
+    - 21
+    description: Incomplete periodic transfer
+  - name: DATAFSUSP
+    bit_range:
+    - 22
+    - 22
+    description: Data fetch suspended
+  - name: HPRTINT
+    bit_range:
+    - 24
+    - 24
+    description: Host port interrupt
+  - name: HCINT
+    bit_range:
+    - 25
+    - 25
+    description: Host channels interrupt
+  - name: PTXFE
+    bit_range:
+    - 26
+    - 26
+    description: Periodic TxFIFO empty
+  - name: CIDSCHG
+    bit_range:
+    - 28
+    - 28
+    description: Connector ID status change
+  - name: DISCINT
+    bit_range:
+    - 29
+    - 29
+    description: Disconnect detected interrupt
+  - name: SRQINT
+    bit_range:
+    - 30
+    - 30
+    description: Session request/new session detected interrupt
+  - name: WKUINT
+    bit_range:
+    - 31
+    - 31
+    description: Resume/remote wakeup detected interrupt
+  side_effects: null
+- id: OTG_HS_GINTMSK
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MMISM
+    bit_range:
+    - 1
+    - 1
+    description: Mode mismatch interrupt mask
+  - name: OTGINT
+    bit_range:
+    - 2
+    - 2
+    description: OTG interrupt mask
+  - name: SOFM
+    bit_range:
+    - 3
+    - 3
+    description: Start of frame mask
+  - name: RXFLVLM
+    bit_range:
+    - 4
+    - 4
+    description: Receive FIFO nonempty mask
+  - name: NPTXFEM
+    bit_range:
+    - 5
+    - 5
+    description: Nonperiodic TxFIFO empty mask
+  - name: GINAKEFFM
+    bit_range:
+    - 6
+    - 6
+    description: Global nonperiodic IN NAK effective mask
+  - name: GONAKEFFM
+    bit_range:
+    - 7
+    - 7
+    description: Global OUT NAK effective mask
+  - name: ESUSPM
+    bit_range:
+    - 10
+    - 10
+    description: Early suspend mask
+  - name: USBSUSPM
+    bit_range:
+    - 11
+    - 11
+    description: USB suspend mask
+  - name: USBRST
+    bit_range:
+    - 12
+    - 12
+    description: USB reset mask
+  - name: ENUMDNEM
+    bit_range:
+    - 13
+    - 13
+    description: Enumeration done mask
+  - name: ISOODRPM
+    bit_range:
+    - 14
+    - 14
+    description: Isochronous OUT packet dropped interrupt mask
+  - name: EOPFM
+    bit_range:
+    - 15
+    - 15
+    description: End of periodic frame interrupt mask
+  - name: EPMISM
+    bit_range:
+    - 17
+    - 17
+    description: Endpoint mismatch interrupt mask
+  - name: IEPINT
+    bit_range:
+    - 18
+    - 18
+    description: IN endpoints interrupt mask
+  - name: OEPINT
+    bit_range:
+    - 19
+    - 19
+    description: OUT endpoints interrupt mask
+  - name: IISOIXFRM
+    bit_range:
+    - 20
+    - 20
+    description: Incomplete isochronous IN transfer mask
+  - name: PXFRM_IISOOXFRM
+    bit_range:
+    - 21
+    - 21
+    description: Incomplete periodic transfer mask
+  - name: FSUSPM
+    bit_range:
+    - 22
+    - 22
+    description: Data fetch suspended mask
+  - name: PRTIM
+    bit_range:
+    - 24
+    - 24
+    description: Host port interrupt mask
+  - name: HCIM
+    bit_range:
+    - 25
+    - 25
+    description: Host channels interrupt mask
+  - name: PTXFEM
+    bit_range:
+    - 26
+    - 26
+    description: Periodic TxFIFO empty mask
+  - name: CIDSCHGM
+    bit_range:
+    - 28
+    - 28
+    description: Connector ID status change mask
+  - name: DISCINT
+    bit_range:
+    - 29
+    - 29
+    description: Disconnect detected interrupt mask
+  - name: SRQIM
+    bit_range:
+    - 30
+    - 30
+    description: Session request/new session detected interrupt mask
+  - name: WUIM
+    bit_range:
+    - 31
+    - 31
+    description: Resume/remote wakeup detected interrupt mask
+  side_effects: null
+- id: OTG_HS_GRXSTSR_Host
+  address_offset: 28
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: CHNUM
+    bit_range:
+    - 3
+    - 0
+    description: Channel number
+  - name: BCNT
+    bit_range:
+    - 14
+    - 4
+    description: Byte count
+  - name: DPID
+    bit_range:
+    - 16
+    - 15
+    description: Data PID
+  - name: PKTSTS
+    bit_range:
+    - 20
+    - 17
+    description: Packet status
+  side_effects: null
+- id: OTG_HS_GRXSTSP_Host
+  address_offset: 32
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: CHNUM
+    bit_range:
+    - 3
+    - 0
+    description: Channel number
+  - name: BCNT
+    bit_range:
+    - 14
+    - 4
+    description: Byte count
+  - name: DPID
+    bit_range:
+    - 16
+    - 15
+    description: Data PID
+  - name: PKTSTS
+    bit_range:
+    - 20
+    - 17
+    description: Packet status
+  side_effects: null
+- id: OTG_HS_GRXFSIZ
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 512
+  fields:
+  - name: RXFD
+    bit_range:
+    - 15
+    - 0
+    description: RxFIFO depth
+  side_effects: null
+- id: OTG_HS_GNPTXFSIZ_Host
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 512
+  fields:
+  - name: NPTXFSA
+    bit_range:
+    - 15
+    - 0
+    description: Nonperiodic transmit RAM start address
+  - name: NPTXFD
+    bit_range:
+    - 31
+    - 16
+    description: Nonperiodic TxFIFO depth
+  side_effects: null
+- id: OTG_HS_TX0FSIZ_Peripheral
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 512
+  fields:
+  - name: TX0FSA
+    bit_range:
+    - 15
+    - 0
+    description: Endpoint 0 transmit RAM start address
+  - name: TX0FD
+    bit_range:
+    - 31
+    - 16
+    description: Endpoint 0 TxFIFO depth
+  side_effects: null
+- id: OTG_HS_GNPTXSTS
+  address_offset: 44
+  size: 32
+  access: READ_ONLY
+  reset_value: 524800
+  fields:
+  - name: NPTXFSAV
+    bit_range:
+    - 15
+    - 0
+    description: Nonperiodic TxFIFO space available
+  - name: NPTQXSAV
+    bit_range:
+    - 23
+    - 16
+    description: Nonperiodic transmit request queue space available
+  - name: NPTXQTOP
+    bit_range:
+    - 30
+    - 24
+    description: Top of the nonperiodic transmit request queue
+  side_effects: null
+- id: OTG_HS_GCCFG
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PWRDWN
+    bit_range:
+    - 16
+    - 16
+    description: Power down
+  - name: I2CPADEN
+    bit_range:
+    - 17
+    - 17
+    description: Enable I2C bus connection for the external I2C PHY interface
+  - name: VBUSASEN
+    bit_range:
+    - 18
+    - 18
+    description: Enable the VBUS sensing device
+  - name: VBUSBSEN
+    bit_range:
+    - 19
+    - 19
+    description: Enable the VBUS sensing device
+  - name: SOFOUTEN
+    bit_range:
+    - 20
+    - 20
+    description: SOF output enable
+  - name: NOVBUSSENS
+    bit_range:
+    - 21
+    - 21
+    description: VBUS sensing disable option
+  side_effects: null
+- id: OTG_HS_CID
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 4608
+  fields:
+  - name: PRODUCT_ID
+    bit_range:
+    - 31
+    - 0
+    description: Product ID field
+  side_effects: null
+- id: OTG_HS_HPTXFSIZ
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 33555968
+  fields:
+  - name: PTXSA
+    bit_range:
+    - 15
+    - 0
+    description: Host periodic TxFIFO start address
+  - name: PTXFD
+    bit_range:
+    - 31
+    - 16
+    description: Host periodic TxFIFO depth
+  side_effects: null
+- id: OTG_HS_DIEPTXF1
+  address_offset: 260
+  size: 32
+  access: READ_WRITE
+  reset_value: 33555456
+  fields:
+  - name: INEPTXSA
+    bit_range:
+    - 15
+    - 0
+    description: IN endpoint FIFOx transmit RAM start address
+  - name: INEPTXFD
+    bit_range:
+    - 31
+    - 16
+    description: IN endpoint TxFIFO depth
+  side_effects: null
+- id: OTG_HS_DIEPTXF2
+  address_offset: 264
+  size: 32
+  access: READ_WRITE
+  reset_value: 33555456
+  fields:
+  - name: INEPTXSA
+    bit_range:
+    - 15
+    - 0
+    description: IN endpoint FIFOx transmit RAM start address
+  - name: INEPTXFD
+    bit_range:
+    - 31
+    - 16
+    description: IN endpoint TxFIFO depth
+  side_effects: null
+- id: OTG_HS_DIEPTXF3
+  address_offset: 284
+  size: 32
+  access: READ_WRITE
+  reset_value: 33555456
+  fields:
+  - name: INEPTXSA
+    bit_range:
+    - 15
+    - 0
+    description: IN endpoint FIFOx transmit RAM start address
+  - name: INEPTXFD
+    bit_range:
+    - 31
+    - 16
+    description: IN endpoint TxFIFO depth
+  side_effects: null
+- id: OTG_HS_DIEPTXF4
+  address_offset: 288
+  size: 32
+  access: READ_WRITE
+  reset_value: 33555456
+  fields:
+  - name: INEPTXSA
+    bit_range:
+    - 15
+    - 0
+    description: IN endpoint FIFOx transmit RAM start address
+  - name: INEPTXFD
+    bit_range:
+    - 31
+    - 16
+    description: IN endpoint TxFIFO depth
+  side_effects: null
+- id: OTG_HS_DIEPTXF5
+  address_offset: 292
+  size: 32
+  access: READ_WRITE
+  reset_value: 33555456
+  fields:
+  - name: INEPTXSA
+    bit_range:
+    - 15
+    - 0
+    description: IN endpoint FIFOx transmit RAM start address
+  - name: INEPTXFD
+    bit_range:
+    - 31
+    - 16
+    description: IN endpoint TxFIFO depth
+  side_effects: null
+- id: OTG_HS_DIEPTXF6
+  address_offset: 296
+  size: 32
+  access: READ_WRITE
+  reset_value: 33555456
+  fields:
+  - name: INEPTXSA
+    bit_range:
+    - 15
+    - 0
+    description: IN endpoint FIFOx transmit RAM start address
+  - name: INEPTXFD
+    bit_range:
+    - 31
+    - 16
+    description: IN endpoint TxFIFO depth
+  side_effects: null
+- id: OTG_HS_DIEPTXF7
+  address_offset: 300
+  size: 32
+  access: READ_WRITE
+  reset_value: 33555456
+  fields:
+  - name: INEPTXSA
+    bit_range:
+    - 15
+    - 0
+    description: IN endpoint FIFOx transmit RAM start address
+  - name: INEPTXFD
+    bit_range:
+    - 31
+    - 16
+    description: IN endpoint TxFIFO depth
+  side_effects: null
+- id: OTG_HS_GRXSTSR_Peripheral
+  address_offset: 28
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: EPNUM
+    bit_range:
+    - 3
+    - 0
+    description: Endpoint number
+  - name: BCNT
+    bit_range:
+    - 14
+    - 4
+    description: Byte count
+  - name: DPID
+    bit_range:
+    - 16
+    - 15
+    description: Data PID
+  - name: PKTSTS
+    bit_range:
+    - 20
+    - 17
+    description: Packet status
+  - name: FRMNUM
+    bit_range:
+    - 24
+    - 21
+    description: Frame number
+  side_effects: null
+- id: OTG_HS_GRXSTSP_Peripheral
+  address_offset: 32
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: EPNUM
+    bit_range:
+    - 3
+    - 0
+    description: Endpoint number
+  - name: BCNT
+    bit_range:
+    - 14
+    - 4
+    description: Byte count
+  - name: DPID
+    bit_range:
+    - 16
+    - 15
+    description: Data PID
+  - name: PKTSTS
+    bit_range:
+    - 20
+    - 17
+    description: Packet status
+  - name: FRMNUM
+    bit_range:
+    - 24
+    - 21
+    description: Frame number
+  side_effects: null
+interrupts:
+  OTG_HS_EP1_OUT: 74
+  OTG_HS_EP1_IN: 75
+  OTG_HS_WKUP: 76
+  OTG_HS: 77
+timing: null

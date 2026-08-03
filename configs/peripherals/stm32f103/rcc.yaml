@@ -1,0 +1,786 @@
+peripheral: RCC
+version: 0.1.0
+registers:
+- id: CR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 131
+  fields:
+  - name: HSION
+    bit_range:
+    - 0
+    - 0
+    description: Internal High Speed clock enable
+  - name: HSIRDY
+    bit_range:
+    - 1
+    - 1
+    description: Internal High Speed clock ready flag
+  - name: HSITRIM
+    bit_range:
+    - 7
+    - 3
+    description: Internal High Speed clock trimming
+  - name: HSICAL
+    bit_range:
+    - 15
+    - 8
+    description: Internal High Speed clock Calibration
+  - name: HSEON
+    bit_range:
+    - 16
+    - 16
+    description: External High Speed clock enable
+  - name: HSERDY
+    bit_range:
+    - 17
+    - 17
+    description: External High Speed clock ready flag
+  - name: HSEBYP
+    bit_range:
+    - 18
+    - 18
+    description: External High Speed clock Bypass
+  - name: CSSON
+    bit_range:
+    - 19
+    - 19
+    description: Clock Security System enable
+  - name: PLLON
+    bit_range:
+    - 24
+    - 24
+    description: PLL enable
+  - name: PLLRDY
+    bit_range:
+    - 25
+    - 25
+    description: PLL clock ready flag
+  side_effects: null
+- id: CFGR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SW
+    bit_range:
+    - 1
+    - 0
+    description: System clock Switch
+  - name: SWS
+    bit_range:
+    - 3
+    - 2
+    description: System Clock Switch Status
+  - name: HPRE
+    bit_range:
+    - 7
+    - 4
+    description: AHB prescaler
+  - name: PPRE1
+    bit_range:
+    - 10
+    - 8
+    description: APB Low speed prescaler (APB1)
+  - name: PPRE2
+    bit_range:
+    - 13
+    - 11
+    description: APB High speed prescaler (APB2)
+  - name: ADCPRE
+    bit_range:
+    - 15
+    - 14
+    description: ADC prescaler
+  - name: PLLSRC
+    bit_range:
+    - 16
+    - 16
+    description: PLL entry clock source
+  - name: PLLXTPRE
+    bit_range:
+    - 17
+    - 17
+    description: HSE divider for PLL entry
+  - name: PLLMUL
+    bit_range:
+    - 21
+    - 18
+    description: PLL Multiplication Factor
+  - name: OTGFSPRE
+    bit_range:
+    - 22
+    - 22
+    description: USB OTG FS prescaler
+  - name: MCO
+    bit_range:
+    - 26
+    - 24
+    description: Microcontroller clock output
+  side_effects: null
+- id: CIR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LSIRDYF
+    bit_range:
+    - 0
+    - 0
+    description: LSI Ready Interrupt flag
+  - name: LSERDYF
+    bit_range:
+    - 1
+    - 1
+    description: LSE Ready Interrupt flag
+  - name: HSIRDYF
+    bit_range:
+    - 2
+    - 2
+    description: HSI Ready Interrupt flag
+  - name: HSERDYF
+    bit_range:
+    - 3
+    - 3
+    description: HSE Ready Interrupt flag
+  - name: PLLRDYF
+    bit_range:
+    - 4
+    - 4
+    description: PLL Ready Interrupt flag
+  - name: CSSF
+    bit_range:
+    - 7
+    - 7
+    description: Clock Security System Interrupt flag
+  - name: LSIRDYIE
+    bit_range:
+    - 8
+    - 8
+    description: LSI Ready Interrupt Enable
+  - name: LSERDYIE
+    bit_range:
+    - 9
+    - 9
+    description: LSE Ready Interrupt Enable
+  - name: HSIRDYIE
+    bit_range:
+    - 10
+    - 10
+    description: HSI Ready Interrupt Enable
+  - name: HSERDYIE
+    bit_range:
+    - 11
+    - 11
+    description: HSE Ready Interrupt Enable
+  - name: PLLRDYIE
+    bit_range:
+    - 12
+    - 12
+    description: PLL Ready Interrupt Enable
+  - name: LSIRDYC
+    bit_range:
+    - 16
+    - 16
+    description: LSI Ready Interrupt Clear
+  - name: LSERDYC
+    bit_range:
+    - 17
+    - 17
+    description: LSE Ready Interrupt Clear
+  - name: HSIRDYC
+    bit_range:
+    - 18
+    - 18
+    description: HSI Ready Interrupt Clear
+  - name: HSERDYC
+    bit_range:
+    - 19
+    - 19
+    description: HSE Ready Interrupt Clear
+  - name: PLLRDYC
+    bit_range:
+    - 20
+    - 20
+    description: PLL Ready Interrupt Clear
+  - name: CSSC
+    bit_range:
+    - 23
+    - 23
+    description: Clock security system interrupt clear
+  side_effects: null
+- id: APB2RSTR
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: AFIORST
+    bit_range:
+    - 0
+    - 0
+    description: Alternate function I/O reset
+  - name: IOPARST
+    bit_range:
+    - 2
+    - 2
+    description: IO port A reset
+  - name: IOPBRST
+    bit_range:
+    - 3
+    - 3
+    description: IO port B reset
+  - name: IOPCRST
+    bit_range:
+    - 4
+    - 4
+    description: IO port C reset
+  - name: IOPDRST
+    bit_range:
+    - 5
+    - 5
+    description: IO port D reset
+  - name: IOPERST
+    bit_range:
+    - 6
+    - 6
+    description: IO port E reset
+  - name: IOPFRST
+    bit_range:
+    - 7
+    - 7
+    description: IO port F reset
+  - name: IOPGRST
+    bit_range:
+    - 8
+    - 8
+    description: IO port G reset
+  - name: ADC1RST
+    bit_range:
+    - 9
+    - 9
+    description: ADC 1 interface reset
+  - name: ADC2RST
+    bit_range:
+    - 10
+    - 10
+    description: ADC 2 interface reset
+  - name: TIM1RST
+    bit_range:
+    - 11
+    - 11
+    description: TIM1 timer reset
+  - name: SPI1RST
+    bit_range:
+    - 12
+    - 12
+    description: SPI 1 reset
+  - name: TIM8RST
+    bit_range:
+    - 13
+    - 13
+    description: TIM8 timer reset
+  - name: USART1RST
+    bit_range:
+    - 14
+    - 14
+    description: USART1 reset
+  - name: ADC3RST
+    bit_range:
+    - 15
+    - 15
+    description: ADC 3 interface reset
+  - name: TIM9RST
+    bit_range:
+    - 19
+    - 19
+    description: TIM9 timer reset
+  - name: TIM10RST
+    bit_range:
+    - 20
+    - 20
+    description: TIM10 timer reset
+  - name: TIM11RST
+    bit_range:
+    - 21
+    - 21
+    description: TIM11 timer reset
+  side_effects: null
+- id: APB1RSTR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIM2RST
+    bit_range:
+    - 0
+    - 0
+    description: Timer 2 reset
+  - name: TIM3RST
+    bit_range:
+    - 1
+    - 1
+    description: Timer 3 reset
+  - name: TIM4RST
+    bit_range:
+    - 2
+    - 2
+    description: Timer 4 reset
+  - name: TIM5RST
+    bit_range:
+    - 3
+    - 3
+    description: Timer 5 reset
+  - name: TIM6RST
+    bit_range:
+    - 4
+    - 4
+    description: Timer 6 reset
+  - name: TIM7RST
+    bit_range:
+    - 5
+    - 5
+    description: Timer 7 reset
+  - name: TIM12RST
+    bit_range:
+    - 6
+    - 6
+    description: Timer 12 reset
+  - name: TIM13RST
+    bit_range:
+    - 7
+    - 7
+    description: Timer 13 reset
+  - name: TIM14RST
+    bit_range:
+    - 8
+    - 8
+    description: Timer 14 reset
+  - name: WWDGRST
+    bit_range:
+    - 11
+    - 11
+    description: Window watchdog reset
+  - name: SPI2RST
+    bit_range:
+    - 14
+    - 14
+    description: SPI2 reset
+  - name: SPI3RST
+    bit_range:
+    - 15
+    - 15
+    description: SPI3 reset
+  - name: USART2RST
+    bit_range:
+    - 17
+    - 17
+    description: USART 2 reset
+  - name: USART3RST
+    bit_range:
+    - 18
+    - 18
+    description: USART 3 reset
+  - name: UART4RST
+    bit_range:
+    - 19
+    - 19
+    description: UART 4 reset
+  - name: UART5RST
+    bit_range:
+    - 20
+    - 20
+    description: UART 5 reset
+  - name: I2C1RST
+    bit_range:
+    - 21
+    - 21
+    description: I2C1 reset
+  - name: I2C2RST
+    bit_range:
+    - 22
+    - 22
+    description: I2C2 reset
+  - name: USBRST
+    bit_range:
+    - 23
+    - 23
+    description: USB reset
+  - name: CANRST
+    bit_range:
+    - 25
+    - 25
+    description: CAN reset
+  - name: BKPRST
+    bit_range:
+    - 27
+    - 27
+    description: Backup interface reset
+  - name: PWRRST
+    bit_range:
+    - 28
+    - 28
+    description: Power interface reset
+  - name: DACRST
+    bit_range:
+    - 29
+    - 29
+    description: DAC interface reset
+  side_effects: null
+- id: AHBENR
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 20
+  fields:
+  - name: DMA1EN
+    bit_range:
+    - 0
+    - 0
+    description: DMA1 clock enable
+  - name: DMA2EN
+    bit_range:
+    - 1
+    - 1
+    description: DMA2 clock enable
+  - name: SRAMEN
+    bit_range:
+    - 2
+    - 2
+    description: SRAM interface clock enable
+  - name: FLITFEN
+    bit_range:
+    - 4
+    - 4
+    description: FLITF clock enable
+  - name: CRCEN
+    bit_range:
+    - 6
+    - 6
+    description: CRC clock enable
+  - name: FSMCEN
+    bit_range:
+    - 8
+    - 8
+    description: FSMC clock enable
+  - name: SDIOEN
+    bit_range:
+    - 10
+    - 10
+    description: SDIO clock enable
+  side_effects: null
+- id: APB2ENR
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: AFIOEN
+    bit_range:
+    - 0
+    - 0
+    description: Alternate function I/O clock enable
+  - name: IOPAEN
+    bit_range:
+    - 2
+    - 2
+    description: I/O port A clock enable
+  - name: IOPBEN
+    bit_range:
+    - 3
+    - 3
+    description: I/O port B clock enable
+  - name: IOPCEN
+    bit_range:
+    - 4
+    - 4
+    description: I/O port C clock enable
+  - name: IOPDEN
+    bit_range:
+    - 5
+    - 5
+    description: I/O port D clock enable
+  - name: IOPEEN
+    bit_range:
+    - 6
+    - 6
+    description: I/O port E clock enable
+  - name: IOPFEN
+    bit_range:
+    - 7
+    - 7
+    description: I/O port F clock enable
+  - name: IOPGEN
+    bit_range:
+    - 8
+    - 8
+    description: I/O port G clock enable
+  - name: ADC1EN
+    bit_range:
+    - 9
+    - 9
+    description: ADC 1 interface clock enable
+  - name: ADC2EN
+    bit_range:
+    - 10
+    - 10
+    description: ADC 2 interface clock enable
+  - name: TIM1EN
+    bit_range:
+    - 11
+    - 11
+    description: TIM1 Timer clock enable
+  - name: SPI1EN
+    bit_range:
+    - 12
+    - 12
+    description: SPI 1 clock enable
+  - name: TIM8EN
+    bit_range:
+    - 13
+    - 13
+    description: TIM8 Timer clock enable
+  - name: USART1EN
+    bit_range:
+    - 14
+    - 14
+    description: USART1 clock enable
+  - name: ADC3EN
+    bit_range:
+    - 15
+    - 15
+    description: ADC3 interface clock enable
+  - name: TIM9EN
+    bit_range:
+    - 19
+    - 19
+    description: TIM9 Timer clock enable
+  - name: TIM10EN
+    bit_range:
+    - 20
+    - 20
+    description: TIM10 Timer clock enable
+  - name: TIM11EN
+    bit_range:
+    - 21
+    - 21
+    description: TIM11 Timer clock enable
+  side_effects: null
+- id: APB1ENR
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIM2EN
+    bit_range:
+    - 0
+    - 0
+    description: Timer 2 clock enable
+  - name: TIM3EN
+    bit_range:
+    - 1
+    - 1
+    description: Timer 3 clock enable
+  - name: TIM4EN
+    bit_range:
+    - 2
+    - 2
+    description: Timer 4 clock enable
+  - name: TIM5EN
+    bit_range:
+    - 3
+    - 3
+    description: Timer 5 clock enable
+  - name: TIM6EN
+    bit_range:
+    - 4
+    - 4
+    description: Timer 6 clock enable
+  - name: TIM7EN
+    bit_range:
+    - 5
+    - 5
+    description: Timer 7 clock enable
+  - name: TIM12EN
+    bit_range:
+    - 6
+    - 6
+    description: Timer 12 clock enable
+  - name: TIM13EN
+    bit_range:
+    - 7
+    - 7
+    description: Timer 13 clock enable
+  - name: TIM14EN
+    bit_range:
+    - 8
+    - 8
+    description: Timer 14 clock enable
+  - name: WWDGEN
+    bit_range:
+    - 11
+    - 11
+    description: Window watchdog clock enable
+  - name: SPI2EN
+    bit_range:
+    - 14
+    - 14
+    description: SPI 2 clock enable
+  - name: SPI3EN
+    bit_range:
+    - 15
+    - 15
+    description: SPI 3 clock enable
+  - name: USART2EN
+    bit_range:
+    - 17
+    - 17
+    description: USART 2 clock enable
+  - name: USART3EN
+    bit_range:
+    - 18
+    - 18
+    description: USART 3 clock enable
+  - name: UART4EN
+    bit_range:
+    - 19
+    - 19
+    description: UART 4 clock enable
+  - name: UART5EN
+    bit_range:
+    - 20
+    - 20
+    description: UART 5 clock enable
+  - name: I2C1EN
+    bit_range:
+    - 21
+    - 21
+    description: I2C 1 clock enable
+  - name: I2C2EN
+    bit_range:
+    - 22
+    - 22
+    description: I2C 2 clock enable
+  - name: USBEN
+    bit_range:
+    - 23
+    - 23
+    description: USB clock enable
+  - name: CANEN
+    bit_range:
+    - 25
+    - 25
+    description: CAN clock enable
+  - name: BKPEN
+    bit_range:
+    - 27
+    - 27
+    description: Backup interface clock enable
+  - name: PWREN
+    bit_range:
+    - 28
+    - 28
+    description: Power interface clock enable
+  - name: DACEN
+    bit_range:
+    - 29
+    - 29
+    description: DAC interface clock enable
+  side_effects: null
+- id: BDCR
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LSEON
+    bit_range:
+    - 0
+    - 0
+    description: External Low Speed oscillator enable
+  - name: LSERDY
+    bit_range:
+    - 1
+    - 1
+    description: External Low Speed oscillator ready
+  - name: LSEBYP
+    bit_range:
+    - 2
+    - 2
+    description: External Low Speed oscillator bypass
+  - name: RTCSEL
+    bit_range:
+    - 9
+    - 8
+    description: RTC clock source selection
+  - name: RTCEN
+    bit_range:
+    - 15
+    - 15
+    description: RTC clock enable
+  - name: BDRST
+    bit_range:
+    - 16
+    - 16
+    description: Backup domain software reset
+  side_effects: null
+- id: CSR
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 201326592
+  fields:
+  - name: LSION
+    bit_range:
+    - 0
+    - 0
+    description: Internal low speed oscillator enable
+  - name: LSIRDY
+    bit_range:
+    - 1
+    - 1
+    description: Internal low speed oscillator ready
+  - name: RMVF
+    bit_range:
+    - 24
+    - 24
+    description: Remove reset flag
+  - name: PINRSTF
+    bit_range:
+    - 26
+    - 26
+    description: PIN reset flag
+  - name: PORRSTF
+    bit_range:
+    - 27
+    - 27
+    description: POR/PDR reset flag
+  - name: SFTRSTF
+    bit_range:
+    - 28
+    - 28
+    description: Software reset flag
+  - name: IWDGRSTF
+    bit_range:
+    - 29
+    - 29
+    description: Independent watchdog reset flag
+  - name: WWDGRSTF
+    bit_range:
+    - 30
+    - 30
+    description: Window watchdog reset flag
+  - name: LPWRRSTF
+    bit_range:
+    - 31
+    - 31
+    description: Low-power reset flag
+  side_effects: null
+interrupts:
+  RCC: 5
+timing: null

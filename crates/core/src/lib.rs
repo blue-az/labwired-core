@@ -861,6 +861,24 @@ pub trait Peripheral: std::fmt::Debug + Send {
         None
     }
 
+    /// Walk the external (off-chip) devices attached to this controller,
+    /// including anything nested behind an I²C bus switch.
+    ///
+    /// The inspect counterpart of
+    /// [`Self::for_each_attached_sim_input`], and it exists for the same
+    /// reason: an I²C slave or SPI display is owned by its CONTROLLER, not by
+    /// [`crate::bus::SystemBus::peripherals`], so a walk over the peripheral
+    /// list alone cannot see it. On a real customer rig — a TCA9548A plus four
+    /// VCNL4010s plus an ILI9341 — `inspect` reported 52 chip-internal
+    /// peripherals and not one of the six devices the author actually placed.
+    ///
+    /// Implementations should delegate to
+    /// [`crate::inspect::visit_i2c_device`] /
+    /// [`crate::inspect::visit_spi_device`] rather than emitting records
+    /// themselves, so the mux unfolding stays in one place. Default: no
+    /// attached devices, which is correct for every non-controller peripheral.
+    fn for_each_attached_device(&self, _f: &mut dyn FnMut(crate::inspect::AttachedDeviceRef<'_>)) {}
+
     /// Uniform, snapshot-semantics inspection. The default decodes
     /// [`Self::describe_registers`] against live bytes via [`Self::peek`]
     /// (side-effect-free), so most peripherals need no override. Peripherals
@@ -2544,7 +2562,131 @@ impl<C: Cpu> Machine<C> {
                 }
             })
             .collect();
-        crate::inspect::MachineInspect { peripherals }
+        let devices = self.inspect_devices(filter, opts);
+        crate::inspect::MachineInspect {
+            peripherals,
+            devices,
+        }
+    }
+
+    /// Enumerate the external (off-chip) devices attached to this machine's
+    /// controllers, joining each live model to the manifest declaration that
+    /// asked for it.
+    ///
+    /// Two halves, deliberately in that order:
+    ///
+    /// 1. **What is really there** comes from walking the bus
+    ///    ([`Peripheral::for_each_attached_device`]). A device is listed
+    ///    because a live model was found on a controller, never because a
+    ///    manifest mentioned one. A declaration that failed to build (the
+    ///    `"unsupported type … skipping"` path) therefore produces no entry —
+    ///    the record cannot claim a device the engine does not have.
+    /// 2. **What it is called** comes from
+    ///    [`crate::bus::SystemBus::external_device_decls`]. When no declaration
+    ///    matches, the id is synthesized from the attachment and `declared` is
+    ///    `false`, so a caller can always tell a named device from a guessed
+    ///    one.
+    fn inspect_devices(
+        &self,
+        filter: Option<&str>,
+        opts: &crate::inspect::InspectOpts,
+    ) -> Vec<crate::inspect::DeviceInspect> {
+        let decls = &self.bus.external_device_decls;
+        // A declaration's controller is its own `connection` unless that names
+        // another declaration (a bus switch), in which case it inherits the
+        // switch's controller and address. Resolved once, up front.
+        let effective: Vec<(usize, String, Option<u8>)> = decls
+            .iter()
+            .enumerate()
+            .map(|(i, d)| match decls.iter().find(|p| p.id == d.connection) {
+                Some(parent) => (i, parent.connection.clone(), parent.address),
+                None => (i, d.connection.clone(), None),
+            })
+            .collect();
+
+        let mut used = vec![false; decls.len()];
+        let mut out = Vec::new();
+        for entry in &self.bus.peripherals {
+            if filter.is_some_and(|f| entry.name != f) {
+                continue;
+            }
+            let bus_name = entry.name.as_str();
+            // Everything happens inside the visitor: `AttachedDeviceRef` borrows
+            // the model, and the controller may be holding a `RefCell` borrow
+            // open for the duration of the call, so the reference deliberately
+            // cannot escape.
+            entry.dev.for_each_attached_device(&mut |d| {
+                // Candidates: declarations that sit on this controller, at this
+                // bus-switch position, and are not already spoken for.
+                let candidates: Vec<usize> = effective
+                    .iter()
+                    .filter(|(i, conn, mux_addr)| {
+                        !used[*i]
+                            && conn == bus_name
+                            && *mux_addr == d.mux_address
+                            && decls[*i].channel == d.channel
+                    })
+                    .map(|(i, _, _)| *i)
+                    .collect();
+                // A declaration that STATES an address (or chip-select) must
+                // match it. Only a declaration that states none falls back to
+                // "the one remaining candidate", which is the case where the
+                // manifest deliberately left the address to the model's own
+                // default. Without that split, the classic-ESP32 board BMP280
+                // at 0x76 — real, on the bus, and declared by nobody — was
+                // handed the `mux` declaration's name purely for being found
+                // first, which is a fabricated identity.
+                let key_of = |i: usize| match d.transport {
+                    "spi" => decls[i].cs_pin.is_some(),
+                    _ => decls[i].address.is_some(),
+                };
+                let hit = |i: usize| match d.transport {
+                    "spi" => decls[i].cs_pin.as_deref() == d.cs_pin,
+                    _ => decls[i].address == d.address,
+                };
+                let exact: Vec<usize> = candidates.iter().copied().filter(|&i| hit(i)).collect();
+                let matched = if exact.len() == 1 {
+                    Some(exact[0])
+                } else if exact.is_empty() {
+                    let loose: Vec<usize> =
+                        candidates.iter().copied().filter(|&i| !key_of(i)).collect();
+                    (loose.len() == 1).then(|| loose[0])
+                } else {
+                    None
+                };
+                if let Some(i) = matched {
+                    used[i] = true;
+                }
+
+                let id = match matched {
+                    Some(i) => decls[i].id.clone(),
+                    None => match (d.address, d.cs_pin) {
+                        (Some(a), _) => format!("{bus_name}@0x{a:02x}"),
+                        (None, Some(cs)) => format!("{bus_name}@{cs}"),
+                        (None, None) => bus_name.to_string(),
+                    },
+                };
+                let artifacts = d
+                    .model
+                    .map(|m| crate::inspect::device_artifacts(m, &id, opts))
+                    .unwrap_or_default();
+                out.push(crate::inspect::DeviceInspect {
+                    device_type: matched.map(|i| decls[i].device_type.clone()),
+                    declared: matched.is_some(),
+                    attachment: crate::inspect::DeviceAttachment {
+                        transport: d.transport.to_string(),
+                        bus: bus_name.to_string(),
+                        address: d.address,
+                        cs_pin: d.cs_pin.map(str::to_string),
+                        mux_address: d.mux_address,
+                        channel: d.channel,
+                    },
+                    id,
+                    artifacts,
+                });
+            });
+        }
+        out
     }
 
     /// Raw escape hatch: read `len` bytes at absolute `addr`, side-effect-free.

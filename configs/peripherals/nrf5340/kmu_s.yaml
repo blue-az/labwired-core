@@ -1,0 +1,172 @@
+peripheral: KMU_S
+version: 0.1.0
+registers:
+- id: TASKS_PUSH_KEYSLOT
+  address_offset: 0
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_PUSH_KEYSLOT
+    bit_range:
+    - 0
+    - 0
+    description: Push a key slot over secure APB
+  side_effects: null
+- id: EVENTS_KEYSLOT_PUSHED
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_KEYSLOT_PUSHED
+    bit_range:
+    - 0
+    - 0
+    description: Key slot successfully pushed over secure APB
+  side_effects: null
+- id: EVENTS_KEYSLOT_REVOKED
+  address_offset: 260
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_KEYSLOT_REVOKED
+    bit_range:
+    - 0
+    - 0
+    description: Key slot has been revoked and cannot be tasked for selection
+  side_effects: null
+- id: EVENTS_KEYSLOT_ERROR
+  address_offset: 264
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_KEYSLOT_ERROR
+    bit_range:
+    - 0
+    - 0
+    description: No key slot selected, no destination address defined, or error during push operation
+  side_effects: null
+- id: INTEN
+  address_offset: 768
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: KEYSLOT_PUSHED
+    bit_range:
+    - 0
+    - 0
+    description: Enable or disable interrupt for event KEYSLOT_PUSHED
+  - name: KEYSLOT_REVOKED
+    bit_range:
+    - 1
+    - 1
+    description: Enable or disable interrupt for event KEYSLOT_REVOKED
+  - name: KEYSLOT_ERROR
+    bit_range:
+    - 2
+    - 2
+    description: Enable or disable interrupt for event KEYSLOT_ERROR
+  side_effects: null
+- id: INTENSET
+  address_offset: 772
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: KEYSLOT_PUSHED
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to enable interrupt for event KEYSLOT_PUSHED
+  - name: KEYSLOT_REVOKED
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to enable interrupt for event KEYSLOT_REVOKED
+  - name: KEYSLOT_ERROR
+    bit_range:
+    - 2
+    - 2
+    description: Write '1' to enable interrupt for event KEYSLOT_ERROR
+  side_effects: null
+- id: INTENCLR
+  address_offset: 776
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: KEYSLOT_PUSHED
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to disable interrupt for event KEYSLOT_PUSHED
+  - name: KEYSLOT_REVOKED
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to disable interrupt for event KEYSLOT_REVOKED
+  - name: KEYSLOT_ERROR
+    bit_range:
+    - 2
+    - 2
+    description: Write '1' to disable interrupt for event KEYSLOT_ERROR
+  side_effects: null
+- id: INTPEND
+  address_offset: 780
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: KEYSLOT_PUSHED
+    bit_range:
+    - 0
+    - 0
+    description: Read pending status of interrupt for event KEYSLOT_PUSHED
+  - name: KEYSLOT_REVOKED
+    bit_range:
+    - 1
+    - 1
+    description: Read pending status of interrupt for event KEYSLOT_REVOKED
+  - name: KEYSLOT_ERROR
+    bit_range:
+    - 2
+    - 2
+    description: Read pending status of interrupt for event KEYSLOT_ERROR
+  side_effects: null
+- id: STATUS
+  address_offset: 1036
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: SELECTED
+    bit_range:
+    - 0
+    - 0
+    description: Key slot ID successfully selected by the KMU
+  - name: BLOCKED
+    bit_range:
+    - 1
+    - 1
+    description: Violation status
+  side_effects: null
+- id: SELECTKEYSLOT
+  address_offset: 1280
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ID
+    bit_range:
+    - 7
+    - 0
+    description: 'Select key slot ID to be read over AHB, or pushed over secure APB, when TASKS_PUSH_KEYSLOT is started. NOTE: ID=0 is not a valid key slot ID. The 0 ID should be used when the KMU is idle or not in use. NOTE: Index N in UICR-&gt;KEYSLOT.KEY[N] and UICR-&gt;KEYSLOT.CONFIG[N] corresponds to KMU key slot ID=N+1.'
+  side_effects: null
+interrupts:
+  KMU: 57
+  KMU: 57
+timing: null

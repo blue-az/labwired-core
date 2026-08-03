@@ -285,6 +285,30 @@ impl Peripheral for Esp32Uart {
         Ok(core.read_reg_word(offset & !3))
     }
 
+    /// Side-effect-free probe, so `inspect` shows this UART's real registers
+    /// instead of reporting them unreadable.
+    ///
+    /// `read_reg_word` already takes `&self` and is a pure function of model
+    /// state, so every register except one delegates straight to it. The
+    /// exception is OFF_FIFO: a read there POPS the RX FIFO, and a debugger
+    /// looking at the port must not swallow the byte the firmware was about to
+    /// receive. Peek reports the byte a read WOULD return and leaves it queued.
+    fn peek(&self, offset: u64) -> Option<u8> {
+        let core = self.core.lock().ok()?;
+        let word_off = offset & !3;
+        if word_off == OFF_FIFO {
+            // Front of queue, not popped. Non-zero byte lanes read 0, matching
+            // `read`'s own behaviour for this register.
+            return Some(if offset & 3 == 0 {
+                core.rx_fifo.front().copied().unwrap_or(0)
+            } else {
+                0
+            });
+        }
+        let word = core.read_reg_word(word_off);
+        Some(((word >> ((offset & 3) * 8)) & 0xFF) as u8)
+    }
+
     fn write(&mut self, offset: u64, value: u8) -> SimResult<()> {
         let mut core = self.core.lock().unwrap();
         let word_off = offset & !3;
@@ -451,6 +475,54 @@ mod tests {
         assert_eq!(u.read_u32(OFF_FIFO).unwrap(), b'A' as u32, "pops A");
         assert_eq!(u.read(OFF_FIFO).unwrap(), b'B', "pops B");
         assert_eq!(status(&u) & 0xFF, 0, "RX empty");
+    }
+
+    /// Looking at a port in a debugger must not eat the byte the firmware was
+    /// about to receive. Derived from the contract, not from the implementation:
+    /// peek the RX FIFO twice, then read it, and require the read to still get
+    /// the first byte.
+    #[test]
+    fn peek_does_not_consume_the_rx_fifo() {
+        let mut u = Esp32Uart::new(false, 35);
+        u.push_rx(b'A');
+        u.push_rx(b'B');
+        assert_eq!(u.peek(OFF_FIFO), Some(b'A'), "peek reports the head byte");
+        assert_eq!(
+            u.peek(OFF_FIFO),
+            Some(b'A'),
+            "and again -- nothing consumed"
+        );
+        assert_eq!(status(&u) & 0xFF, 2, "RXFIFO_CNT unchanged by peeking");
+        assert_eq!(
+            u.read_u32(OFF_FIFO).unwrap(),
+            b'A' as u32,
+            "the read still gets A"
+        );
+        assert_eq!(u.peek(OFF_FIFO), Some(b'B'), "peek now sees the next byte");
+        assert_eq!(
+            status(&u) & 0xFF,
+            1,
+            "exactly one byte was consumed, by the read"
+        );
+    }
+
+    /// Everywhere else, a debugger and the firmware must agree byte for byte --
+    /// otherwise the register view is its own separate model.
+    #[test]
+    fn peek_agrees_with_read_on_every_non_fifo_register() {
+        let mut u = Esp32Uart::new(false, 35);
+        u.push_rx(b'Z');
+        u.core.lock().unwrap().push_tx(b'Q');
+        for word_off in [0x04u64, 0x08, 0x0C, 0x10, 0x14, 0x1C, 0x20, 0x24] {
+            for lane in 0..4u64 {
+                let off = word_off + lane;
+                assert_eq!(
+                    u.peek(off),
+                    Some(u.read(off).unwrap()),
+                    "peek and read disagree at offset {off:#04x}"
+                );
+            }
+        }
     }
 
     #[test]

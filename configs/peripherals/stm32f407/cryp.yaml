@@ -1,0 +1,2373 @@
+peripheral: CRYP
+version: 0.1.0
+registers:
+- id: CR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ALGODIR
+    bit_range:
+    - 2
+    - 2
+    description: Algorithm direction
+  - name: ALGOMODE0
+    bit_range:
+    - 5
+    - 3
+    description: Algorithm mode
+  - name: DATATYPE
+    bit_range:
+    - 7
+    - 6
+    description: Data type selection
+  - name: KEYSIZE
+    bit_range:
+    - 9
+    - 8
+    description: Key size selection (AES mode only)
+  - name: FFLUSH
+    bit_range:
+    - 14
+    - 14
+    description: FIFO flush
+  - name: CRYPEN
+    bit_range:
+    - 15
+    - 15
+    description: Cryptographic processor enable
+  - name: GCM_CCMPH
+    bit_range:
+    - 17
+    - 16
+    description: GCM_CCMPH
+  - name: ALGOMODE3
+    bit_range:
+    - 19
+    - 19
+    description: ALGOMODE
+  side_effects: null
+- id: SR
+  address_offset: 4
+  size: 32
+  access: READ_ONLY
+  reset_value: 3
+  fields:
+  - name: BUSY
+    bit_range:
+    - 4
+    - 4
+    description: Busy bit
+  - name: OFFU
+    bit_range:
+    - 3
+    - 3
+    description: Output FIFO full
+  - name: OFNE
+    bit_range:
+    - 2
+    - 2
+    description: Output FIFO not empty
+  - name: IFNF
+    bit_range:
+    - 1
+    - 1
+    description: Input FIFO not full
+  - name: IFEM
+    bit_range:
+    - 0
+    - 0
+    description: Input FIFO empty
+  side_effects: null
+- id: DIN
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATAIN
+    bit_range:
+    - 31
+    - 0
+    description: Data input
+  side_effects: null
+- id: DOUT
+  address_offset: 12
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DATAOUT
+    bit_range:
+    - 31
+    - 0
+    description: Data output
+  side_effects: null
+- id: DMACR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DOEN
+    bit_range:
+    - 1
+    - 1
+    description: DMA output enable
+  - name: DIEN
+    bit_range:
+    - 0
+    - 0
+    description: DMA input enable
+  side_effects: null
+- id: IMSCR
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OUTIM
+    bit_range:
+    - 1
+    - 1
+    description: Output FIFO service interrupt mask
+  - name: INIM
+    bit_range:
+    - 0
+    - 0
+    description: Input FIFO service interrupt mask
+  side_effects: null
+- id: RISR
+  address_offset: 24
+  size: 32
+  access: READ_ONLY
+  reset_value: 1
+  fields:
+  - name: OUTRIS
+    bit_range:
+    - 1
+    - 1
+    description: Output FIFO service raw interrupt status
+  - name: INRIS
+    bit_range:
+    - 0
+    - 0
+    description: Input FIFO service raw interrupt status
+  side_effects: null
+- id: MISR
+  address_offset: 28
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: OUTMIS
+    bit_range:
+    - 1
+    - 1
+    description: Output FIFO service masked interrupt status
+  - name: INMIS
+    bit_range:
+    - 0
+    - 0
+    description: Input FIFO service masked interrupt status
+  side_effects: null
+- id: K0LR
+  address_offset: 32
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: b224
+    bit_range:
+    - 0
+    - 0
+    description: b224
+  - name: b225
+    bit_range:
+    - 1
+    - 1
+    description: b225
+  - name: b226
+    bit_range:
+    - 2
+    - 2
+    description: b226
+  - name: b227
+    bit_range:
+    - 3
+    - 3
+    description: b227
+  - name: b228
+    bit_range:
+    - 4
+    - 4
+    description: b228
+  - name: b229
+    bit_range:
+    - 5
+    - 5
+    description: b229
+  - name: b230
+    bit_range:
+    - 6
+    - 6
+    description: b230
+  - name: b231
+    bit_range:
+    - 7
+    - 7
+    description: b231
+  - name: b232
+    bit_range:
+    - 8
+    - 8
+    description: b232
+  - name: b233
+    bit_range:
+    - 9
+    - 9
+    description: b233
+  - name: b234
+    bit_range:
+    - 10
+    - 10
+    description: b234
+  - name: b235
+    bit_range:
+    - 11
+    - 11
+    description: b235
+  - name: b236
+    bit_range:
+    - 12
+    - 12
+    description: b236
+  - name: b237
+    bit_range:
+    - 13
+    - 13
+    description: b237
+  - name: b238
+    bit_range:
+    - 14
+    - 14
+    description: b238
+  - name: b239
+    bit_range:
+    - 15
+    - 15
+    description: b239
+  - name: b240
+    bit_range:
+    - 16
+    - 16
+    description: b240
+  - name: b241
+    bit_range:
+    - 17
+    - 17
+    description: b241
+  - name: b242
+    bit_range:
+    - 18
+    - 18
+    description: b242
+  - name: b243
+    bit_range:
+    - 19
+    - 19
+    description: b243
+  - name: b244
+    bit_range:
+    - 20
+    - 20
+    description: b244
+  - name: b245
+    bit_range:
+    - 21
+    - 21
+    description: b245
+  - name: b246
+    bit_range:
+    - 22
+    - 22
+    description: b246
+  - name: b247
+    bit_range:
+    - 23
+    - 23
+    description: b247
+  - name: b248
+    bit_range:
+    - 24
+    - 24
+    description: b248
+  - name: b249
+    bit_range:
+    - 25
+    - 25
+    description: b249
+  - name: b250
+    bit_range:
+    - 26
+    - 26
+    description: b250
+  - name: b251
+    bit_range:
+    - 27
+    - 27
+    description: b251
+  - name: b252
+    bit_range:
+    - 28
+    - 28
+    description: b252
+  - name: b253
+    bit_range:
+    - 29
+    - 29
+    description: b253
+  - name: b254
+    bit_range:
+    - 30
+    - 30
+    description: b254
+  - name: b255
+    bit_range:
+    - 31
+    - 31
+    description: b255
+  side_effects: null
+- id: K0RR
+  address_offset: 36
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: b192
+    bit_range:
+    - 0
+    - 0
+    description: b192
+  - name: b193
+    bit_range:
+    - 1
+    - 1
+    description: b193
+  - name: b194
+    bit_range:
+    - 2
+    - 2
+    description: b194
+  - name: b195
+    bit_range:
+    - 3
+    - 3
+    description: b195
+  - name: b196
+    bit_range:
+    - 4
+    - 4
+    description: b196
+  - name: b197
+    bit_range:
+    - 5
+    - 5
+    description: b197
+  - name: b198
+    bit_range:
+    - 6
+    - 6
+    description: b198
+  - name: b199
+    bit_range:
+    - 7
+    - 7
+    description: b199
+  - name: b200
+    bit_range:
+    - 8
+    - 8
+    description: b200
+  - name: b201
+    bit_range:
+    - 9
+    - 9
+    description: b201
+  - name: b202
+    bit_range:
+    - 10
+    - 10
+    description: b202
+  - name: b203
+    bit_range:
+    - 11
+    - 11
+    description: b203
+  - name: b204
+    bit_range:
+    - 12
+    - 12
+    description: b204
+  - name: b205
+    bit_range:
+    - 13
+    - 13
+    description: b205
+  - name: b206
+    bit_range:
+    - 14
+    - 14
+    description: b206
+  - name: b207
+    bit_range:
+    - 15
+    - 15
+    description: b207
+  - name: b208
+    bit_range:
+    - 16
+    - 16
+    description: b208
+  - name: b209
+    bit_range:
+    - 17
+    - 17
+    description: b209
+  - name: b210
+    bit_range:
+    - 18
+    - 18
+    description: b210
+  - name: b211
+    bit_range:
+    - 19
+    - 19
+    description: b211
+  - name: b212
+    bit_range:
+    - 20
+    - 20
+    description: b212
+  - name: b213
+    bit_range:
+    - 21
+    - 21
+    description: b213
+  - name: b214
+    bit_range:
+    - 22
+    - 22
+    description: b214
+  - name: b215
+    bit_range:
+    - 23
+    - 23
+    description: b215
+  - name: b216
+    bit_range:
+    - 24
+    - 24
+    description: b216
+  - name: b217
+    bit_range:
+    - 25
+    - 25
+    description: b217
+  - name: b218
+    bit_range:
+    - 26
+    - 26
+    description: b218
+  - name: b219
+    bit_range:
+    - 27
+    - 27
+    description: b219
+  - name: b220
+    bit_range:
+    - 28
+    - 28
+    description: b220
+  - name: b221
+    bit_range:
+    - 29
+    - 29
+    description: b221
+  - name: b222
+    bit_range:
+    - 30
+    - 30
+    description: b222
+  - name: b223
+    bit_range:
+    - 31
+    - 31
+    description: b223
+  side_effects: null
+- id: K1LR
+  address_offset: 40
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: b160
+    bit_range:
+    - 0
+    - 0
+    description: b160
+  - name: b161
+    bit_range:
+    - 1
+    - 1
+    description: b161
+  - name: b162
+    bit_range:
+    - 2
+    - 2
+    description: b162
+  - name: b163
+    bit_range:
+    - 3
+    - 3
+    description: b163
+  - name: b164
+    bit_range:
+    - 4
+    - 4
+    description: b164
+  - name: b165
+    bit_range:
+    - 5
+    - 5
+    description: b165
+  - name: b166
+    bit_range:
+    - 6
+    - 6
+    description: b166
+  - name: b167
+    bit_range:
+    - 7
+    - 7
+    description: b167
+  - name: b168
+    bit_range:
+    - 8
+    - 8
+    description: b168
+  - name: b169
+    bit_range:
+    - 9
+    - 9
+    description: b169
+  - name: b170
+    bit_range:
+    - 10
+    - 10
+    description: b170
+  - name: b171
+    bit_range:
+    - 11
+    - 11
+    description: b171
+  - name: b172
+    bit_range:
+    - 12
+    - 12
+    description: b172
+  - name: b173
+    bit_range:
+    - 13
+    - 13
+    description: b173
+  - name: b174
+    bit_range:
+    - 14
+    - 14
+    description: b174
+  - name: b175
+    bit_range:
+    - 15
+    - 15
+    description: b175
+  - name: b176
+    bit_range:
+    - 16
+    - 16
+    description: b176
+  - name: b177
+    bit_range:
+    - 17
+    - 17
+    description: b177
+  - name: b178
+    bit_range:
+    - 18
+    - 18
+    description: b178
+  - name: b179
+    bit_range:
+    - 19
+    - 19
+    description: b179
+  - name: b180
+    bit_range:
+    - 20
+    - 20
+    description: b180
+  - name: b181
+    bit_range:
+    - 21
+    - 21
+    description: b181
+  - name: b182
+    bit_range:
+    - 22
+    - 22
+    description: b182
+  - name: b183
+    bit_range:
+    - 23
+    - 23
+    description: b183
+  - name: b184
+    bit_range:
+    - 24
+    - 24
+    description: b184
+  - name: b185
+    bit_range:
+    - 25
+    - 25
+    description: b185
+  - name: b186
+    bit_range:
+    - 26
+    - 26
+    description: b186
+  - name: b187
+    bit_range:
+    - 27
+    - 27
+    description: b187
+  - name: b188
+    bit_range:
+    - 28
+    - 28
+    description: b188
+  - name: b189
+    bit_range:
+    - 29
+    - 29
+    description: b189
+  - name: b190
+    bit_range:
+    - 30
+    - 30
+    description: b190
+  - name: b191
+    bit_range:
+    - 31
+    - 31
+    description: b191
+  side_effects: null
+- id: K1RR
+  address_offset: 44
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: b128
+    bit_range:
+    - 0
+    - 0
+    description: b128
+  - name: b129
+    bit_range:
+    - 1
+    - 1
+    description: b129
+  - name: b130
+    bit_range:
+    - 2
+    - 2
+    description: b130
+  - name: b131
+    bit_range:
+    - 3
+    - 3
+    description: b131
+  - name: b132
+    bit_range:
+    - 4
+    - 4
+    description: b132
+  - name: b133
+    bit_range:
+    - 5
+    - 5
+    description: b133
+  - name: b134
+    bit_range:
+    - 6
+    - 6
+    description: b134
+  - name: b135
+    bit_range:
+    - 7
+    - 7
+    description: b135
+  - name: b136
+    bit_range:
+    - 8
+    - 8
+    description: b136
+  - name: b137
+    bit_range:
+    - 9
+    - 9
+    description: b137
+  - name: b138
+    bit_range:
+    - 10
+    - 10
+    description: b138
+  - name: b139
+    bit_range:
+    - 11
+    - 11
+    description: b139
+  - name: b140
+    bit_range:
+    - 12
+    - 12
+    description: b140
+  - name: b141
+    bit_range:
+    - 13
+    - 13
+    description: b141
+  - name: b142
+    bit_range:
+    - 14
+    - 14
+    description: b142
+  - name: b143
+    bit_range:
+    - 15
+    - 15
+    description: b143
+  - name: b144
+    bit_range:
+    - 16
+    - 16
+    description: b144
+  - name: b145
+    bit_range:
+    - 17
+    - 17
+    description: b145
+  - name: b146
+    bit_range:
+    - 18
+    - 18
+    description: b146
+  - name: b147
+    bit_range:
+    - 19
+    - 19
+    description: b147
+  - name: b148
+    bit_range:
+    - 20
+    - 20
+    description: b148
+  - name: b149
+    bit_range:
+    - 21
+    - 21
+    description: b149
+  - name: b150
+    bit_range:
+    - 22
+    - 22
+    description: b150
+  - name: b151
+    bit_range:
+    - 23
+    - 23
+    description: b151
+  - name: b152
+    bit_range:
+    - 24
+    - 24
+    description: b152
+  - name: b153
+    bit_range:
+    - 25
+    - 25
+    description: b153
+  - name: b154
+    bit_range:
+    - 26
+    - 26
+    description: b154
+  - name: b155
+    bit_range:
+    - 27
+    - 27
+    description: b155
+  - name: b156
+    bit_range:
+    - 28
+    - 28
+    description: b156
+  - name: b157
+    bit_range:
+    - 29
+    - 29
+    description: b157
+  - name: b158
+    bit_range:
+    - 30
+    - 30
+    description: b158
+  - name: b159
+    bit_range:
+    - 31
+    - 31
+    description: b159
+  side_effects: null
+- id: K2LR
+  address_offset: 48
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: b96
+    bit_range:
+    - 0
+    - 0
+    description: b96
+  - name: b97
+    bit_range:
+    - 1
+    - 1
+    description: b97
+  - name: b98
+    bit_range:
+    - 2
+    - 2
+    description: b98
+  - name: b99
+    bit_range:
+    - 3
+    - 3
+    description: b99
+  - name: b100
+    bit_range:
+    - 4
+    - 4
+    description: b100
+  - name: b101
+    bit_range:
+    - 5
+    - 5
+    description: b101
+  - name: b102
+    bit_range:
+    - 6
+    - 6
+    description: b102
+  - name: b103
+    bit_range:
+    - 7
+    - 7
+    description: b103
+  - name: b104
+    bit_range:
+    - 8
+    - 8
+    description: b104
+  - name: b105
+    bit_range:
+    - 9
+    - 9
+    description: b105
+  - name: b106
+    bit_range:
+    - 10
+    - 10
+    description: b106
+  - name: b107
+    bit_range:
+    - 11
+    - 11
+    description: b107
+  - name: b108
+    bit_range:
+    - 12
+    - 12
+    description: b108
+  - name: b109
+    bit_range:
+    - 13
+    - 13
+    description: b109
+  - name: b110
+    bit_range:
+    - 14
+    - 14
+    description: b110
+  - name: b111
+    bit_range:
+    - 15
+    - 15
+    description: b111
+  - name: b112
+    bit_range:
+    - 16
+    - 16
+    description: b112
+  - name: b113
+    bit_range:
+    - 17
+    - 17
+    description: b113
+  - name: b114
+    bit_range:
+    - 18
+    - 18
+    description: b114
+  - name: b115
+    bit_range:
+    - 19
+    - 19
+    description: b115
+  - name: b116
+    bit_range:
+    - 20
+    - 20
+    description: b116
+  - name: b117
+    bit_range:
+    - 21
+    - 21
+    description: b117
+  - name: b118
+    bit_range:
+    - 22
+    - 22
+    description: b118
+  - name: b119
+    bit_range:
+    - 23
+    - 23
+    description: b119
+  - name: b120
+    bit_range:
+    - 24
+    - 24
+    description: b120
+  - name: b121
+    bit_range:
+    - 25
+    - 25
+    description: b121
+  - name: b122
+    bit_range:
+    - 26
+    - 26
+    description: b122
+  - name: b123
+    bit_range:
+    - 27
+    - 27
+    description: b123
+  - name: b124
+    bit_range:
+    - 28
+    - 28
+    description: b124
+  - name: b125
+    bit_range:
+    - 29
+    - 29
+    description: b125
+  - name: b126
+    bit_range:
+    - 30
+    - 30
+    description: b126
+  - name: b127
+    bit_range:
+    - 31
+    - 31
+    description: b127
+  side_effects: null
+- id: K2RR
+  address_offset: 52
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: b64
+    bit_range:
+    - 0
+    - 0
+    description: b64
+  - name: b65
+    bit_range:
+    - 1
+    - 1
+    description: b65
+  - name: b66
+    bit_range:
+    - 2
+    - 2
+    description: b66
+  - name: b67
+    bit_range:
+    - 3
+    - 3
+    description: b67
+  - name: b68
+    bit_range:
+    - 4
+    - 4
+    description: b68
+  - name: b69
+    bit_range:
+    - 5
+    - 5
+    description: b69
+  - name: b70
+    bit_range:
+    - 6
+    - 6
+    description: b70
+  - name: b71
+    bit_range:
+    - 7
+    - 7
+    description: b71
+  - name: b72
+    bit_range:
+    - 8
+    - 8
+    description: b72
+  - name: b73
+    bit_range:
+    - 9
+    - 9
+    description: b73
+  - name: b74
+    bit_range:
+    - 10
+    - 10
+    description: b74
+  - name: b75
+    bit_range:
+    - 11
+    - 11
+    description: b75
+  - name: b76
+    bit_range:
+    - 12
+    - 12
+    description: b76
+  - name: b77
+    bit_range:
+    - 13
+    - 13
+    description: b77
+  - name: b78
+    bit_range:
+    - 14
+    - 14
+    description: b78
+  - name: b79
+    bit_range:
+    - 15
+    - 15
+    description: b79
+  - name: b80
+    bit_range:
+    - 16
+    - 16
+    description: b80
+  - name: b81
+    bit_range:
+    - 17
+    - 17
+    description: b81
+  - name: b82
+    bit_range:
+    - 18
+    - 18
+    description: b82
+  - name: b83
+    bit_range:
+    - 19
+    - 19
+    description: b83
+  - name: b84
+    bit_range:
+    - 20
+    - 20
+    description: b84
+  - name: b85
+    bit_range:
+    - 21
+    - 21
+    description: b85
+  - name: b86
+    bit_range:
+    - 22
+    - 22
+    description: b86
+  - name: b87
+    bit_range:
+    - 23
+    - 23
+    description: b87
+  - name: b88
+    bit_range:
+    - 24
+    - 24
+    description: b88
+  - name: b89
+    bit_range:
+    - 25
+    - 25
+    description: b89
+  - name: b90
+    bit_range:
+    - 26
+    - 26
+    description: b90
+  - name: b91
+    bit_range:
+    - 27
+    - 27
+    description: b91
+  - name: b92
+    bit_range:
+    - 28
+    - 28
+    description: b92
+  - name: b93
+    bit_range:
+    - 29
+    - 29
+    description: b93
+  - name: b94
+    bit_range:
+    - 30
+    - 30
+    description: b94
+  - name: b95
+    bit_range:
+    - 31
+    - 31
+    description: b95
+  side_effects: null
+- id: K3LR
+  address_offset: 56
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: b32
+    bit_range:
+    - 0
+    - 0
+    description: b32
+  - name: b33
+    bit_range:
+    - 1
+    - 1
+    description: b33
+  - name: b34
+    bit_range:
+    - 2
+    - 2
+    description: b34
+  - name: b35
+    bit_range:
+    - 3
+    - 3
+    description: b35
+  - name: b36
+    bit_range:
+    - 4
+    - 4
+    description: b36
+  - name: b37
+    bit_range:
+    - 5
+    - 5
+    description: b37
+  - name: b38
+    bit_range:
+    - 6
+    - 6
+    description: b38
+  - name: b39
+    bit_range:
+    - 7
+    - 7
+    description: b39
+  - name: b40
+    bit_range:
+    - 8
+    - 8
+    description: b40
+  - name: b41
+    bit_range:
+    - 9
+    - 9
+    description: b41
+  - name: b42
+    bit_range:
+    - 10
+    - 10
+    description: b42
+  - name: b43
+    bit_range:
+    - 11
+    - 11
+    description: b43
+  - name: b44
+    bit_range:
+    - 12
+    - 12
+    description: b44
+  - name: b45
+    bit_range:
+    - 13
+    - 13
+    description: b45
+  - name: b46
+    bit_range:
+    - 14
+    - 14
+    description: b46
+  - name: b47
+    bit_range:
+    - 15
+    - 15
+    description: b47
+  - name: b48
+    bit_range:
+    - 16
+    - 16
+    description: b48
+  - name: b49
+    bit_range:
+    - 17
+    - 17
+    description: b49
+  - name: b50
+    bit_range:
+    - 18
+    - 18
+    description: b50
+  - name: b51
+    bit_range:
+    - 19
+    - 19
+    description: b51
+  - name: b52
+    bit_range:
+    - 20
+    - 20
+    description: b52
+  - name: b53
+    bit_range:
+    - 21
+    - 21
+    description: b53
+  - name: b54
+    bit_range:
+    - 22
+    - 22
+    description: b54
+  - name: b55
+    bit_range:
+    - 23
+    - 23
+    description: b55
+  - name: b56
+    bit_range:
+    - 24
+    - 24
+    description: b56
+  - name: b57
+    bit_range:
+    - 25
+    - 25
+    description: b57
+  - name: b58
+    bit_range:
+    - 26
+    - 26
+    description: b58
+  - name: b59
+    bit_range:
+    - 27
+    - 27
+    description: b59
+  - name: b60
+    bit_range:
+    - 28
+    - 28
+    description: b60
+  - name: b61
+    bit_range:
+    - 29
+    - 29
+    description: b61
+  - name: b62
+    bit_range:
+    - 30
+    - 30
+    description: b62
+  - name: b63
+    bit_range:
+    - 31
+    - 31
+    description: b63
+  side_effects: null
+- id: K3RR
+  address_offset: 60
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: b0
+    bit_range:
+    - 0
+    - 0
+    description: b0
+  - name: b1
+    bit_range:
+    - 1
+    - 1
+    description: b1
+  - name: b2
+    bit_range:
+    - 2
+    - 2
+    description: b2
+  - name: b3
+    bit_range:
+    - 3
+    - 3
+    description: b3
+  - name: b4
+    bit_range:
+    - 4
+    - 4
+    description: b4
+  - name: b5
+    bit_range:
+    - 5
+    - 5
+    description: b5
+  - name: b6
+    bit_range:
+    - 6
+    - 6
+    description: b6
+  - name: b7
+    bit_range:
+    - 7
+    - 7
+    description: b7
+  - name: b8
+    bit_range:
+    - 8
+    - 8
+    description: b8
+  - name: b9
+    bit_range:
+    - 9
+    - 9
+    description: b9
+  - name: b10
+    bit_range:
+    - 10
+    - 10
+    description: b10
+  - name: b11
+    bit_range:
+    - 11
+    - 11
+    description: b11
+  - name: b12
+    bit_range:
+    - 12
+    - 12
+    description: b12
+  - name: b13
+    bit_range:
+    - 13
+    - 13
+    description: b13
+  - name: b14
+    bit_range:
+    - 14
+    - 14
+    description: b14
+  - name: b15
+    bit_range:
+    - 15
+    - 15
+    description: b15
+  - name: b16
+    bit_range:
+    - 16
+    - 16
+    description: b16
+  - name: b17
+    bit_range:
+    - 17
+    - 17
+    description: b17
+  - name: b18
+    bit_range:
+    - 18
+    - 18
+    description: b18
+  - name: b19
+    bit_range:
+    - 19
+    - 19
+    description: b19
+  - name: b20
+    bit_range:
+    - 20
+    - 20
+    description: b20
+  - name: b21
+    bit_range:
+    - 21
+    - 21
+    description: b21
+  - name: b22
+    bit_range:
+    - 22
+    - 22
+    description: b22
+  - name: b23
+    bit_range:
+    - 23
+    - 23
+    description: b23
+  - name: b24
+    bit_range:
+    - 24
+    - 24
+    description: b24
+  - name: b25
+    bit_range:
+    - 25
+    - 25
+    description: b25
+  - name: b26
+    bit_range:
+    - 26
+    - 26
+    description: b26
+  - name: b27
+    bit_range:
+    - 27
+    - 27
+    description: b27
+  - name: b28
+    bit_range:
+    - 28
+    - 28
+    description: b28
+  - name: b29
+    bit_range:
+    - 29
+    - 29
+    description: b29
+  - name: b30
+    bit_range:
+    - 30
+    - 30
+    description: b30
+  - name: b31
+    bit_range:
+    - 31
+    - 31
+    description: b31
+  side_effects: null
+- id: IV0LR
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IV31
+    bit_range:
+    - 0
+    - 0
+    description: IV31
+  - name: IV30
+    bit_range:
+    - 1
+    - 1
+    description: IV30
+  - name: IV29
+    bit_range:
+    - 2
+    - 2
+    description: IV29
+  - name: IV28
+    bit_range:
+    - 3
+    - 3
+    description: IV28
+  - name: IV27
+    bit_range:
+    - 4
+    - 4
+    description: IV27
+  - name: IV26
+    bit_range:
+    - 5
+    - 5
+    description: IV26
+  - name: IV25
+    bit_range:
+    - 6
+    - 6
+    description: IV25
+  - name: IV24
+    bit_range:
+    - 7
+    - 7
+    description: IV24
+  - name: IV23
+    bit_range:
+    - 8
+    - 8
+    description: IV23
+  - name: IV22
+    bit_range:
+    - 9
+    - 9
+    description: IV22
+  - name: IV21
+    bit_range:
+    - 10
+    - 10
+    description: IV21
+  - name: IV20
+    bit_range:
+    - 11
+    - 11
+    description: IV20
+  - name: IV19
+    bit_range:
+    - 12
+    - 12
+    description: IV19
+  - name: IV18
+    bit_range:
+    - 13
+    - 13
+    description: IV18
+  - name: IV17
+    bit_range:
+    - 14
+    - 14
+    description: IV17
+  - name: IV16
+    bit_range:
+    - 15
+    - 15
+    description: IV16
+  - name: IV15
+    bit_range:
+    - 16
+    - 16
+    description: IV15
+  - name: IV14
+    bit_range:
+    - 17
+    - 17
+    description: IV14
+  - name: IV13
+    bit_range:
+    - 18
+    - 18
+    description: IV13
+  - name: IV12
+    bit_range:
+    - 19
+    - 19
+    description: IV12
+  - name: IV11
+    bit_range:
+    - 20
+    - 20
+    description: IV11
+  - name: IV10
+    bit_range:
+    - 21
+    - 21
+    description: IV10
+  - name: IV9
+    bit_range:
+    - 22
+    - 22
+    description: IV9
+  - name: IV8
+    bit_range:
+    - 23
+    - 23
+    description: IV8
+  - name: IV7
+    bit_range:
+    - 24
+    - 24
+    description: IV7
+  - name: IV6
+    bit_range:
+    - 25
+    - 25
+    description: IV6
+  - name: IV5
+    bit_range:
+    - 26
+    - 26
+    description: IV5
+  - name: IV4
+    bit_range:
+    - 27
+    - 27
+    description: IV4
+  - name: IV3
+    bit_range:
+    - 28
+    - 28
+    description: IV3
+  - name: IV2
+    bit_range:
+    - 29
+    - 29
+    description: IV2
+  - name: IV1
+    bit_range:
+    - 30
+    - 30
+    description: IV1
+  - name: IV0
+    bit_range:
+    - 31
+    - 31
+    description: IV0
+  side_effects: null
+- id: IV0RR
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IV63
+    bit_range:
+    - 0
+    - 0
+    description: IV63
+  - name: IV62
+    bit_range:
+    - 1
+    - 1
+    description: IV62
+  - name: IV61
+    bit_range:
+    - 2
+    - 2
+    description: IV61
+  - name: IV60
+    bit_range:
+    - 3
+    - 3
+    description: IV60
+  - name: IV59
+    bit_range:
+    - 4
+    - 4
+    description: IV59
+  - name: IV58
+    bit_range:
+    - 5
+    - 5
+    description: IV58
+  - name: IV57
+    bit_range:
+    - 6
+    - 6
+    description: IV57
+  - name: IV56
+    bit_range:
+    - 7
+    - 7
+    description: IV56
+  - name: IV55
+    bit_range:
+    - 8
+    - 8
+    description: IV55
+  - name: IV54
+    bit_range:
+    - 9
+    - 9
+    description: IV54
+  - name: IV53
+    bit_range:
+    - 10
+    - 10
+    description: IV53
+  - name: IV52
+    bit_range:
+    - 11
+    - 11
+    description: IV52
+  - name: IV51
+    bit_range:
+    - 12
+    - 12
+    description: IV51
+  - name: IV50
+    bit_range:
+    - 13
+    - 13
+    description: IV50
+  - name: IV49
+    bit_range:
+    - 14
+    - 14
+    description: IV49
+  - name: IV48
+    bit_range:
+    - 15
+    - 15
+    description: IV48
+  - name: IV47
+    bit_range:
+    - 16
+    - 16
+    description: IV47
+  - name: IV46
+    bit_range:
+    - 17
+    - 17
+    description: IV46
+  - name: IV45
+    bit_range:
+    - 18
+    - 18
+    description: IV45
+  - name: IV44
+    bit_range:
+    - 19
+    - 19
+    description: IV44
+  - name: IV43
+    bit_range:
+    - 20
+    - 20
+    description: IV43
+  - name: IV42
+    bit_range:
+    - 21
+    - 21
+    description: IV42
+  - name: IV41
+    bit_range:
+    - 22
+    - 22
+    description: IV41
+  - name: IV40
+    bit_range:
+    - 23
+    - 23
+    description: IV40
+  - name: IV39
+    bit_range:
+    - 24
+    - 24
+    description: IV39
+  - name: IV38
+    bit_range:
+    - 25
+    - 25
+    description: IV38
+  - name: IV37
+    bit_range:
+    - 26
+    - 26
+    description: IV37
+  - name: IV36
+    bit_range:
+    - 27
+    - 27
+    description: IV36
+  - name: IV35
+    bit_range:
+    - 28
+    - 28
+    description: IV35
+  - name: IV34
+    bit_range:
+    - 29
+    - 29
+    description: IV34
+  - name: IV33
+    bit_range:
+    - 30
+    - 30
+    description: IV33
+  - name: IV32
+    bit_range:
+    - 31
+    - 31
+    description: IV32
+  side_effects: null
+- id: IV1LR
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IV95
+    bit_range:
+    - 0
+    - 0
+    description: IV95
+  - name: IV94
+    bit_range:
+    - 1
+    - 1
+    description: IV94
+  - name: IV93
+    bit_range:
+    - 2
+    - 2
+    description: IV93
+  - name: IV92
+    bit_range:
+    - 3
+    - 3
+    description: IV92
+  - name: IV91
+    bit_range:
+    - 4
+    - 4
+    description: IV91
+  - name: IV90
+    bit_range:
+    - 5
+    - 5
+    description: IV90
+  - name: IV89
+    bit_range:
+    - 6
+    - 6
+    description: IV89
+  - name: IV88
+    bit_range:
+    - 7
+    - 7
+    description: IV88
+  - name: IV87
+    bit_range:
+    - 8
+    - 8
+    description: IV87
+  - name: IV86
+    bit_range:
+    - 9
+    - 9
+    description: IV86
+  - name: IV85
+    bit_range:
+    - 10
+    - 10
+    description: IV85
+  - name: IV84
+    bit_range:
+    - 11
+    - 11
+    description: IV84
+  - name: IV83
+    bit_range:
+    - 12
+    - 12
+    description: IV83
+  - name: IV82
+    bit_range:
+    - 13
+    - 13
+    description: IV82
+  - name: IV81
+    bit_range:
+    - 14
+    - 14
+    description: IV81
+  - name: IV80
+    bit_range:
+    - 15
+    - 15
+    description: IV80
+  - name: IV79
+    bit_range:
+    - 16
+    - 16
+    description: IV79
+  - name: IV78
+    bit_range:
+    - 17
+    - 17
+    description: IV78
+  - name: IV77
+    bit_range:
+    - 18
+    - 18
+    description: IV77
+  - name: IV76
+    bit_range:
+    - 19
+    - 19
+    description: IV76
+  - name: IV75
+    bit_range:
+    - 20
+    - 20
+    description: IV75
+  - name: IV74
+    bit_range:
+    - 21
+    - 21
+    description: IV74
+  - name: IV73
+    bit_range:
+    - 22
+    - 22
+    description: IV73
+  - name: IV72
+    bit_range:
+    - 23
+    - 23
+    description: IV72
+  - name: IV71
+    bit_range:
+    - 24
+    - 24
+    description: IV71
+  - name: IV70
+    bit_range:
+    - 25
+    - 25
+    description: IV70
+  - name: IV69
+    bit_range:
+    - 26
+    - 26
+    description: IV69
+  - name: IV68
+    bit_range:
+    - 27
+    - 27
+    description: IV68
+  - name: IV67
+    bit_range:
+    - 28
+    - 28
+    description: IV67
+  - name: IV66
+    bit_range:
+    - 29
+    - 29
+    description: IV66
+  - name: IV65
+    bit_range:
+    - 30
+    - 30
+    description: IV65
+  - name: IV64
+    bit_range:
+    - 31
+    - 31
+    description: IV64
+  side_effects: null
+- id: IV1RR
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IV127
+    bit_range:
+    - 0
+    - 0
+    description: IV127
+  - name: IV126
+    bit_range:
+    - 1
+    - 1
+    description: IV126
+  - name: IV125
+    bit_range:
+    - 2
+    - 2
+    description: IV125
+  - name: IV124
+    bit_range:
+    - 3
+    - 3
+    description: IV124
+  - name: IV123
+    bit_range:
+    - 4
+    - 4
+    description: IV123
+  - name: IV122
+    bit_range:
+    - 5
+    - 5
+    description: IV122
+  - name: IV121
+    bit_range:
+    - 6
+    - 6
+    description: IV121
+  - name: IV120
+    bit_range:
+    - 7
+    - 7
+    description: IV120
+  - name: IV119
+    bit_range:
+    - 8
+    - 8
+    description: IV119
+  - name: IV118
+    bit_range:
+    - 9
+    - 9
+    description: IV118
+  - name: IV117
+    bit_range:
+    - 10
+    - 10
+    description: IV117
+  - name: IV116
+    bit_range:
+    - 11
+    - 11
+    description: IV116
+  - name: IV115
+    bit_range:
+    - 12
+    - 12
+    description: IV115
+  - name: IV114
+    bit_range:
+    - 13
+    - 13
+    description: IV114
+  - name: IV113
+    bit_range:
+    - 14
+    - 14
+    description: IV113
+  - name: IV112
+    bit_range:
+    - 15
+    - 15
+    description: IV112
+  - name: IV111
+    bit_range:
+    - 16
+    - 16
+    description: IV111
+  - name: IV110
+    bit_range:
+    - 17
+    - 17
+    description: IV110
+  - name: IV109
+    bit_range:
+    - 18
+    - 18
+    description: IV109
+  - name: IV108
+    bit_range:
+    - 19
+    - 19
+    description: IV108
+  - name: IV107
+    bit_range:
+    - 20
+    - 20
+    description: IV107
+  - name: IV106
+    bit_range:
+    - 21
+    - 21
+    description: IV106
+  - name: IV105
+    bit_range:
+    - 22
+    - 22
+    description: IV105
+  - name: IV104
+    bit_range:
+    - 23
+    - 23
+    description: IV104
+  - name: IV103
+    bit_range:
+    - 24
+    - 24
+    description: IV103
+  - name: IV102
+    bit_range:
+    - 25
+    - 25
+    description: IV102
+  - name: IV101
+    bit_range:
+    - 26
+    - 26
+    description: IV101
+  - name: IV100
+    bit_range:
+    - 27
+    - 27
+    description: IV100
+  - name: IV99
+    bit_range:
+    - 28
+    - 28
+    description: IV99
+  - name: IV98
+    bit_range:
+    - 29
+    - 29
+    description: IV98
+  - name: IV97
+    bit_range:
+    - 30
+    - 30
+    description: IV97
+  - name: IV96
+    bit_range:
+    - 31
+    - 31
+    description: IV96
+  side_effects: null
+- id: CSGCMCCM0R
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CSGCMCCM0R
+    bit_range:
+    - 31
+    - 0
+    description: CSGCMCCM0R
+  side_effects: null
+- id: CSGCMCCM1R
+  address_offset: 84
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CSGCMCCM1R
+    bit_range:
+    - 31
+    - 0
+    description: CSGCMCCM1R
+  side_effects: null
+- id: CSGCMCCM2R
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CSGCMCCM2R
+    bit_range:
+    - 31
+    - 0
+    description: CSGCMCCM2R
+  side_effects: null
+- id: CSGCMCCM3R
+  address_offset: 92
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CSGCMCCM3R
+    bit_range:
+    - 31
+    - 0
+    description: CSGCMCCM3R
+  side_effects: null
+- id: CSGCMCCM4R
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CSGCMCCM4R
+    bit_range:
+    - 31
+    - 0
+    description: CSGCMCCM4R
+  side_effects: null
+- id: CSGCMCCM5R
+  address_offset: 100
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CSGCMCCM5R
+    bit_range:
+    - 31
+    - 0
+    description: CSGCMCCM5R
+  side_effects: null
+- id: CSGCMCCM6R
+  address_offset: 104
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CSGCMCCM6R
+    bit_range:
+    - 31
+    - 0
+    description: CSGCMCCM6R
+  side_effects: null
+- id: CSGCMCCM7R
+  address_offset: 108
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CSGCMCCM7R
+    bit_range:
+    - 31
+    - 0
+    description: CSGCMCCM7R
+  side_effects: null
+- id: CSGCM0R
+  address_offset: 112
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CSGCM0R
+    bit_range:
+    - 31
+    - 0
+    description: CSGCM0R
+  side_effects: null
+- id: CSGCM1R
+  address_offset: 116
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CSGCM1R
+    bit_range:
+    - 31
+    - 0
+    description: CSGCM1R
+  side_effects: null
+- id: CSGCM2R
+  address_offset: 120
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CSGCM2R
+    bit_range:
+    - 31
+    - 0
+    description: CSGCM2R
+  side_effects: null
+- id: CSGCM3R
+  address_offset: 124
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CSGCM3R
+    bit_range:
+    - 31
+    - 0
+    description: CSGCM3R
+  side_effects: null
+- id: CSGCM4R
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CSGCM4R
+    bit_range:
+    - 31
+    - 0
+    description: CSGCM4R
+  side_effects: null
+- id: CSGCM5R
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CSGCM5R
+    bit_range:
+    - 31
+    - 0
+    description: CSGCM5R
+  side_effects: null
+- id: CSGCM6R
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CSGCM6R
+    bit_range:
+    - 31
+    - 0
+    description: CSGCM6R
+  side_effects: null
+- id: CSGCM7R
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CSGCM7R
+    bit_range:
+    - 31
+    - 0
+    description: CSGCM7R
+  side_effects: null
+interrupts:
+  CRYP: 79
+timing: null

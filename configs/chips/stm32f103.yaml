@@ -22,6 +22,8 @@ peripherals:
     type: "rcc"
     base_address: 0x40021000
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f103/rcc.yaml"
   - id: "gpioa"
     type: "gpio"
     base_address: 0x40010800
@@ -31,18 +33,21 @@ peripherals:
     # silicon — modelled here so the sim fails the same way (RM0008 §7.3.7).
     clock: { reg: "apb2enr", bit: 2 }
     config:
+      debug_schema: "../peripherals/stm32f103/gpioa.yaml"
       profile: "stm32f1"
   - id: "gpiob"
     type: "gpio"
     base_address: 0x40010C00
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32f103/gpiob.yaml"
       profile: "stm32f1"
   - id: "gpioc"
     type: "gpio"
     base_address: 0x40011000
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32f103/gpioc.yaml"
       profile: "stm32f1"
   - id: "systick"
     type: "systick"
@@ -56,11 +61,15 @@ peripherals:
     # reset, so SR.TXE never asserts until firmware enables the clock — the exact
     # real-hardware behaviour the differential test proved the sim was missing.
     clock: { reg: "apb2enr", bit: 14 }
+    config:
+      debug_schema: "../peripherals/stm32f103/usart1.yaml"
   - id: "uart2"
     type: "uart"
     base_address: 0x40004400
     size: "1KB"
     irq: 38
+    config:
+      debug_schema: "../peripherals/stm32f103/usart2.yaml"
   - id: "i2c1"
     type: "i2c"
     base_address: 0x40005400
@@ -74,12 +83,15 @@ peripherals:
     # ER under CR2.ITERREN, and an interrupt-mode HAL (STM32duino 3.x uses
     # HAL_I2C_Master_Transmit_IT) only learns an address was NACKed there.
     config:
+      debug_schema: "../peripherals/stm32f103/i2c1.yaml"
       irq_error: 32
   - id: "i2c2"
     type: "i2c"
     base_address: 0x40005800
     size: "1KB"
     irq: 33
+    config:
+      debug_schema: "../peripherals/stm32f103/i2c2.yaml"
   - id: "spi1"
     type: "spi"
     base_address: 0x40013000
@@ -88,17 +100,23 @@ peripherals:
     # SPI1 is clocked from RCC_APB2ENR.SPI1EN (bit 12). Unclocked out of reset
     # (RM0008 §7.3.7) — SR.TXE never asserts until the clock is enabled.
     clock: { reg: "apb2enr", bit: 12 }
+    config:
+      debug_schema: "../peripherals/stm32f103/spi1.yaml"
   - id: "spi2"
     type: "spi"
     base_address: 0x40003800
     size: "1KB"
     irq: 36
+    config:
+      debug_schema: "../peripherals/stm32f103/spi2.yaml"
   - id: "afio"
     type: "afio"
     base_address: 0x40010000
     size: "1KB"
     # AFIO is clocked from RCC_APB2ENR.AFIOEN (bit 0). Unclocked out of reset.
     clock: { reg: "apb2enr", bit: 0 }
+    config:
+      debug_schema: "../peripherals/stm32f103/afio.yaml"
   - id: "exti"
     type: "exti"
     base_address: 0x40010400
@@ -106,6 +124,7 @@ peripherals:
     # F103 implements 19 EXTI lines (0-18): 16 GPIO + PVD + RTC alarm + USB
     # wakeup. Silicon-confirmed writable mask 0x0007FFFF on the bench F103.
     config:
+      debug_schema: "../peripherals/stm32f103/exti.yaml"
       lines: 19
   - id: "dma1"
     type: "dma"
@@ -114,6 +133,8 @@ peripherals:
     # DMA1 is clocked from RCC_AHBENR.DMA1EN (bit 0). Unclocked out of reset
     # (RM0008 §7.3.6) — channel registers read 0 / drop writes until enabled.
     clock: { reg: "ahbenr", bit: 0 }
+    config:
+      debug_schema: "../peripherals/stm32f103/dma1.yaml"
   # ─── STM32F1-family peripherals, reset values verified against ─────────
   # ─── STM32F103C8 silicon (Blue Pill, ST-LINK V2, 2026-06-04). ──────────
   # Each `profile` selects the chip-family layout in the peripheral model
@@ -123,34 +144,45 @@ peripherals:
     base_address: 0x40022000
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32f103/flash.yaml"
       profile: "stm32f1"
   - id: "dbgmcu"
     type: "dbgmcu"
     base_address: 0xE0042000
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32f103/dbg.yaml"
       idcode: "0x20036410"  # STM32F103C8 — silicon-verified
   - id: "pwr"
     type: "pwr"
     base_address: 0x40007000
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f103/pwr.yaml"
   - id: "iwdg"
     type: "iwdg"
     base_address: 0x40003000
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f103/iwdg.yaml"
   - id: "wwdg"
     type: "wwdg"
     base_address: 0x40002C00
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f103/wwdg.yaml"
   - id: "rtc"
     type: "rtc_f1"
     base_address: 0x40002800
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f103/rtc.yaml"
   - id: "crc"
     type: "crc"
     base_address: 0x40023000
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32f103/crc.yaml"
       idr_width: 8  # STM32F1 CRC_IDR is 8-bit (RM0008 §6.4.2)
   # bxCAN + USB share SRAM @ 0x4000_6000; bxCAN registers at 0x6400.
   - id: "bxcan1"
@@ -161,10 +193,14 @@ peripherals:
     # so MSR.INAK never asserts (the chip never enters init mode) until firmware
     # enables the clock — matching real silicon (RM0008 §7.3.8).
     clock: { reg: "apb1enr", bit: 25 }
+    config:
+      debug_schema: "../peripherals/stm32f103/can.yaml"
   - id: "usb_dev"
     type: "stub"
     base_address: 0x40005C00
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f103/usb.yaml"
   - id: "bkp"
     type: "stub"
     base_address: 0x40006C00
@@ -180,6 +216,7 @@ peripherals:
     size: "1KB"
     irq: 25
     config:
+      debug_schema: "../peripherals/stm32f103/tim1.yaml"
       advanced: true
   - id: "tim2"
     type: "timer"
@@ -189,16 +226,22 @@ peripherals:
     # TIM2 is clocked from RCC_APB1ENR.TIM2EN (bit 0). Unclocked out of reset
     # (RM0008 §7.3.8) — ARR reads its 0xFFFF reset only once the clock is on.
     clock: { reg: "apb1enr", bit: 0 }
+    config:
+      debug_schema: "../peripherals/stm32f103/tim2.yaml"
   - id: "tim3"
     type: "timer"
     base_address: 0x40000400
     size: "1KB"
     irq: 29
+    config:
+      debug_schema: "../peripherals/stm32f103/tim3.yaml"
   - id: "tim4"
     type: "timer"
     base_address: 0x40000800
     size: "1KB"
     irq: 30
+    config:
+      debug_schema: "../peripherals/stm32f103/tim4.yaml"
   - id: "adc1"
     type: "adc"
     base_address: 0x40012400
@@ -207,12 +250,18 @@ peripherals:
     # ADC1 is clocked from RCC_APB2ENR.ADC1EN (bit 9). Unclocked out of reset
     # (RM0008 §7.3.7) — the converter is dead until the clock is enabled.
     clock: { reg: "apb2enr", bit: 9 }
+    config:
+      debug_schema: "../peripherals/stm32f103/adc1.yaml"
   - id: "adc2"
     type: "adc"
     base_address: 0x40012800
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f103/adc2.yaml"
   - id: "usart3"
     type: "uart"
     base_address: 0x40004800
     size: "1KB"
     irq: 39
+    config:
+      debug_schema: "../peripherals/stm32f103/usart3.yaml"

@@ -1,0 +1,2253 @@
+peripheral: FLASH
+version: 0.1.0
+registers:
+- id: FLASH_ACR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: LATENCY
+    bit_range:
+    - 3
+    - 0
+    description: |-
+      Latency
+      These bits represent the ratio between the AHB hclk1 clock period and the Flash memory access time.
+      Access to the bit can be secured by RCC SYSCLKSEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with FLASH SPRIV or when non-secure with FLASH NSPRIV.
+      ...
+      Note: Before entering Stop 1 mode software must set FLASH wait state latency to at least 1.
+  - name: PRFTEN
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Prefetch enable
+      This bit enables the prefetch buffer in the embedded Flash memory.
+      This bit can be protected against unprivileged access by FLASH NSPRIV.
+  - name: LPM
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Low-power read mode
+      This bit puts the Flash memory in low-power read mode.
+      Access to the bit can be secured by PWR LPMSEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with FLASH SPRIV or when non-secure with FLASH NSPRIV.
+      This bit can't be written when a Flash program or erase operation is busy (BSY = 1) or when the write buffer is not empty (WDW = 1). Changing this bit while a Flash program or erase operation is busy (BSY = 1) is rejected.
+  - name: PDREQ
+    bit_range:
+    - 12
+    - 12
+    description: "Flash power-down mode request\nThis bit requests Flash to enter power-down mode. When Flash enters power-down mode, this bit is cleared by hardware and the PDKEYR is locked.\nThis bit is write-protected with FLASH_PDKEYR. \nAccess to the bit can be secured by PWR LPMSEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with FLASH SPRIV or when non-secure with FLASH NSPRIV."
+  - name: SLEEP_PD
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Flash memory power-down mode during Sleep mode
+      This bit determines whether the Flash memory is in power-down mode or Idle mode when the device is in Sleep mode.
+      Access to the bit can be secured by PWR LPMSEC. When secure, a non-secure read/write access is RAZ/WI. It does not generate an illegal access interrupt. This bit can be protected against unprivileged access when secure with FLASH SPRIV or when non-secure with FLASH NSPRIV.
+      The Flash must not be put in power-down while a program or an erase operation is ongoing.
+  side_effects: null
+- id: FLASH_NSKEYR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NSKEY
+    bit_range:
+    - 31
+    - 0
+    description: |-
+      Flash memory non-secure key
+      The following values must be written consecutively to unlock the FLASH_NSCR1 register, allowing the Flash memory non-secure programming/erasing operations:
+      KEY1: 0x45670123
+      KEY2: 0xCDEF89AB
+  side_effects: null
+- id: FLASH_SECKEYR
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SECKEY
+    bit_range:
+    - 31
+    - 0
+    description: |-
+      Flash memory secure key
+      The following values must be written consecutively to unlock the FLASH_SECCR1 register, allowing the Flash memory secure programming/erasing operations:
+      KEY1: 0x45670123
+      KEY2: 0xCDEF89AB
+  side_effects: null
+- id: FLASH_OPTKEYR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OPTKEY
+    bit_range:
+    - 31
+    - 0
+    description: |-
+      Option byte key
+      The LOCK bit in the FLASH_NSCR1 must be cleared before doing the unlock sequence for OPTLOCK bit. The following values must be written consecutively to unlock the FLASH_NSCR1.OPTSTRT and OBL_LAUNCH register bits concerning user option operations:
+      KEY1: 0x08192A3B
+      KEY2: 0x4C5D6E7F
+  side_effects: null
+- id: FLASH_PDKEYR
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PDKEY1
+    bit_range:
+    - 31
+    - 0
+    description: |-
+      Flash power-down key
+      The following values must be written consecutively to unlock the PDREQ bit in FLASH_ACR:
+      PDKEY_1: 0x04152637
+      PDKEY_2: 0xFAFBFCFD
+  side_effects: null
+- id: FLASH_NSSR
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EOP
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Non-secure end of operation
+      This bit is set by hardware when one or more Flash memory non-secure operation (program/erase) has been completed successfully. This bit is set only if the non-secure end of operation interrupts are enabled (EOPIE = 1 in FLASH_NSCR1). This bit is cleared by writing1.
+  - name: OPERR
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Non-secure operation error
+      This bit is set by hardware when a Flash memory non-secure operation (program/erase) completes unsuccessfully. This bit is set only if non-secure error interrupts are enabled (NSERRIE = 1). This bit is cleared by writing 1.
+  - name: PROGERR
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Non-secure programming error
+      This bit is set by hardware when a non-secure quad-word address to be programmed contains a value different from all 1 before programming, except if the data to write is all 0. This bit is cleared by writing 1.
+  - name: WRPERR
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Non-secure write protection error
+      This bit is set by hardware when a non-secure address to be erased/programmed belongs to a write-protected part (by WRP or HDP) of the Flash memory. This bit is cleared by writing 1.
+      Refer to Section7.3.10: Flash memory errors flags for full conditions of error flag setting.
+  - name: PGAERR
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Non-secure programming alignment error
+      This bit is set by hardware when the first word to be programmed is not aligned with a quad-word address, or the second, third or forth word does not belong to the same quad-word address. This bit is cleared by writing 1.
+  - name: SIZERR
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Non-secure size error
+      This bit is set by hardware when the size of the access is a byte or half-word during a non-secure program sequence. Only quad-word programming is allowed by means of successive word accesses. This bit is cleared by writing 1.
+  - name: PGSERR
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Non-secure programming sequence error
+      This bit is set by hardware when programming sequence is not correct. It is cleared by writing 1.
+      Refer to Section7.3.10: Flash memory errors flags for full conditions of error flag setting.
+  - name: OPTWERR
+    bit_range:
+    - 13
+    - 13
+    description: "Option write error \nThis bit is set by hardware when the options bytes are written with an invalid configuration or when modifying options in RDP level 2.. It is cleared by writing 1.\nRefer to Section7.3.10: Flash memory errors flags for full conditions of error flag setting."
+  - name: BSY
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      Non-secure busy
+      This indicates that a Flash memory secure or non-secure operation is in progress. This bit is set at the beginning of a Flash operation and reset when the operation finishes or when an error occurs.
+  - name: WDW
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      Non-secure wait data to write
+      This bit indicates that the Flash memory write buffer has been written by a secure or non-secure operation. It is set when the first data is stored in the buffer and cleared when the write is performed in the Flash memory.
+  - name: OEM1LOCK
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      OEM1 key RDP lock
+      This bit indicates that the OEM1 key read during the OBL is not virgin. When set, the OEM1 key RDP lock mechanism is active.
+  - name: OEM2LOCK
+    bit_range:
+    - 19
+    - 19
+    description: |-
+      OEM2 key RDP lock
+      This bit indicates that the OEM2 key read during the OBL is not virgin. When set, the OEM2 key RDP lock mechanism is active.
+  - name: PD
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      Flash in power-down mode
+      This bit indicates that the Flash memory is in power-down state. It is reset when Flash is in normal mode or being awaken.
+  side_effects: null
+- id: FLASH_SECSR
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EOP
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Secure end of operation
+      This bit is set by hardware when one or more Flash memory secure operation (program/erase) has been completed successfully. This bit is set only if the secure end of operation interrupts are enabled (EOPIE = 1 in FLASH_SECCR1). This bit is cleared by writing1.
+  - name: OPERR
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Secure operation error
+      This bit is set by hardware when a Flash memory secure operation (program/erase) completes unsuccessfully. This bit is set only if secure error interrupts are enabled (SECERRIE = 1). This bit is cleared by writing 1.
+  - name: PROGERR
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Secure programming error
+      This bit is set by hardware when a secure quad-word address to be programmed contains a value different from all 1 before programming, except if the data to write is all 0. This bit is cleared by writing 1.
+  - name: WRPERR
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Secure write protection error
+      This bit is set by hardware when an secure address to be erased/programmed belongs to a write-protected part (by WRP or HDP) of the Flash memory. This bit is cleared by writing 1.
+      Refer to Section7.3.10: Flash memory errors flags for full conditions of error flag setting.
+  - name: PGAERR
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Secure programming alignment error
+      This bit is set by hardware when the first word to be programmed is not aligned with a quad-word address, or the second, third or forth word does not belong to the same quad-word address.This bit is cleared by writing 1.
+  - name: SIZERR
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Secure size error
+      This bit is set by hardware when the size of the access is a byte or half-word during a secure program sequence. Only quad-word programming is allowed by means of successive word accesses.This bit is cleared by writing 1.
+  - name: PGSERR
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Secure programming sequence error
+      This bit is set by hardware when programming sequence is not correct. It is cleared by writing 1.
+      Refer to Section7.3.10: Flash memory errors flags for full conditions of error flag setting.
+  - name: BSY
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      Secure busy
+      This bit indicates that a Flash memory secure or non-secure operation is in progress. This is set on the beginning of a Flash operation and reset when the operation finishes or when an error occurs.
+  - name: WDW
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      Secure wait data to write
+      This bit indicates that the Flash memory write buffer has been written by a secure or non-secure operation. It is set when the first data is stored in the buffer and cleared when the write is performed in the Flash memory.
+  side_effects: null
+- id: FLASH_NSCR1
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 3221225472
+  fields:
+  - name: PG
+    bit_range:
+    - 0
+    - 0
+    description: Non-secure programming
+  - name: PER
+    bit_range:
+    - 1
+    - 1
+    description: Non-secure page erase
+  - name: MER
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Non-secure Flash mass erase
+      This bit triggers the Flash non-secure mass erase (all Flash user pages) when set.
+  - name: PNB
+    bit_range:
+    - 9
+    - 3
+    description: |-
+      Non-secure page number selection
+      These bits select the page to erase.
+      ...
+      Note that bit 9 is reserved on STM32WBA5xEx devices.
+  - name: BWR
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Non-secure burst write programming mode
+      When set, this bit selects the burst write programming mode.
+  - name: STRT
+    bit_range:
+    - 16
+    - 16
+    description: "Non-secure operation start \nThis bit triggers a non-secure erase operation when set. If MER and PER bits are reset and the STRT bit is set, the PGSERR bit in FLASH_NSSR is set (this condition is forbidden).\nThis bit is set only by software and is cleared when the BSY bit is cleared in FLASH_NSSR."
+  - name: OPTSTRT
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      Options modification start
+      This bit triggers an option bytes erase and program operation when set. This bit is write-protected with OPTLOCK.. This bit is set only by software, and is cleared when the BSY bit is cleared in FLASH_NSSR.
+  - name: EOPIE
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      Non-secure end of operation interrupt enable
+      This bit enables the interrupt generation when the EOP bit in the FLASH_NSSR is set to 1.
+  - name: ERRIE
+    bit_range:
+    - 25
+    - 25
+    description: |-
+      Non-secure error interrupt enable
+      This bit enables the interrupt generation when the OPERR bit in the FLASH_NSSR is set to 1.
+  - name: OBL_LAUNCH
+    bit_range:
+    - 27
+    - 27
+    description: |-
+      Force the option byte loading
+      When set to 1, this bit forces the option byte reloading. This bit is cleared only when the option byte loading is complete. This bit is write-protected with OPTLOCK.
+      Note: The LSE oscillator must be disabled, LSEON = 0 and LSERDY = 0, before starting OBL_LAUNCH.
+  - name: OPTLOCK
+    bit_range:
+    - 30
+    - 30
+    description: |-
+      Option lock
+      This bit is set only. When set, the FLASH_NSCR1.OPTSRT and OBL_LAUNCH bits concerning user options write access is locked. This bit is cleared by hardware after detecting the unlock sequence in FLASH_OPTKEYR. The FLASH_NSCR1.LOCK bit must be cleared before doing the FLASH_OPTKEYR unlock sequence.
+      In case of an unsuccessful unlock operation, this bit remains set until the next reset.
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      Non-secure lock
+      This bit is set only.
+      When set, the FLASH_NSCR1 register write access is locked. This bit is cleared by hardware after detecting the unlock sequence in FLASH_NSKEYR.
+      In case of an unsuccessful unlock operation, this bit remains set until the next system reset.
+  side_effects: null
+- id: FLASH_SECCR1
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483648
+  fields:
+  - name: PG
+    bit_range:
+    - 0
+    - 0
+    description: Secure programming
+  - name: PER
+    bit_range:
+    - 1
+    - 1
+    description: Secure page erase
+  - name: MER
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Secure Flash mass erase
+      This bit triggers the Flash secure mass erase (all Flash user pages) when set.
+  - name: PNB
+    bit_range:
+    - 9
+    - 3
+    description: |-
+      Secure page number selection
+      These bits select the page to erase:
+      ...
+      Note that bit 9 is reserved on STM32WBA5xEx devices.
+  - name: BWR
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Secure burst write programming mode
+      When set, this bit selects the burst write programming mode.
+  - name: STRT
+    bit_range:
+    - 16
+    - 16
+    description: "Secure start \nThis bit triggers a secure erase operation when set. If MER and PER bits are reset and the STRT bit is set, the PGSERR in the FLASH_SECSR is set (this condition is forbidden).\nThis bit is set only by software and is cleared when the BSY bit is cleared in FLASH_SECSR."
+  - name: EOPIE
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      Secure End of operation interrupt enable
+      This bit enables the interrupt generation when the EOP bit in FLASH_SECSR is set to 1.
+  - name: ERRIE
+    bit_range:
+    - 25
+    - 25
+    description: |-
+      Secure error interrupt enable
+      This bit enables the interrupt generation when the OPERR bit in FLASH_SECSR is set to 1.
+  - name: INV
+    bit_range:
+    - 29
+    - 29
+    description: |-
+      Flash memory security state invert
+      This bit inverts the Flash memory security state.
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      Secure lock
+      This bit is set only. When set, the FLASH_SECCR1 register is locked. It is cleared by hardware after detecting the unlock sequence in FLASH_SECKEYR register.
+      In case of an unsuccessful unlock operation, this bit remains set until the next system reset.
+  side_effects: null
+- id: FLASH_ECCR
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR_ECC
+    bit_range:
+    - 19
+    - 0
+    description: |-
+      ECC fail address
+      This field indicates which address is concerned by the ECC error correction or by the double ECC error detection. The address is given relative to Flash base address, from offset 0x00000 to 0xFFFF0.
+      Note that bit 19 is reserved on STM32WBAxEx devices.
+  - name: SYSF_ECC
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      System Flash memory ECC fail
+      This bit indicates that the ECC error correction or double ECC error detection is located in the system Flash memory.
+  - name: ECCIE
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      ECC correction interrupt enable
+      This bit enables the interrupt generation when the ECCC bit in the FLASH_ECCR register is set.
+  - name: ECCC
+    bit_range:
+    - 30
+    - 30
+    description: |-
+      ECC correction
+      This bit is set by hardware when one ECC error has been detected and corrected (only if ECCC and ECCD were previously cleared). An interrupt is generated if ECCIE is set. This bit is cleared by writing 1.
+  - name: ECCD
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      ECC detection
+      This bit is set by hardware when two ECC errors have been detected (only if ECCC and ECCD were previously cleared). When this bit is set, a NMI is generated. This bit is cleared by writing 1.
+  side_effects: null
+- id: FLASH_OPSR
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR_OP
+    bit_range:
+    - 19
+    - 0
+    description: |-
+      Interrupted operation address
+      This field indicates which address in the Flash memory was accessed when reset occurred. The address is given relative to the Flash base address, from offset 0x00000 to 0xFFFF0.
+      Note that bit 19 is reserved on STM32WBAxEx devices.
+  - name: SYSF_OP
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      Operation in system Flash memory interrupted
+      This bit indicates that the reset occurred during an operation in the system Flash memory.
+  - name: CODE_OP
+    bit_range:
+    - 31
+    - 29
+    description: |-
+      Flash memory operation code
+      This field indicates which Flash memory operation has been interrupted by a system reset:
+  side_effects: null
+- id: FLASH_NSCR2
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PS
+    bit_range:
+    - 0
+    - 0
+    description: Program suspend request
+  - name: ES
+    bit_range:
+    - 1
+    - 1
+    description: Erase suspend request
+  side_effects: null
+- id: FLASH_SECCR2
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PS
+    bit_range:
+    - 0
+    - 0
+    description: Program suspend request
+  - name: ES
+    bit_range:
+    - 1
+    - 1
+    description: Erase suspend request
+  side_effects: null
+- id: FLASH_OPTR
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RDP
+    bit_range:
+    - 7
+    - 0
+    description: |-
+      Readout protection level
+      Others: Level 1 (memories readout protection active)
+      Note: Refer to Section7.6.2: Readout protection (RDP) for more details.
+  - name: BOR_LEV
+    bit_range:
+    - 10
+    - 8
+    description: |-
+      BOR reset level
+      These bits contain the VsubDD/sub supply level threshold that activates/releases the reset.
+  - name: NRST_STOP
+    bit_range:
+    - 12
+    - 12
+    description: Reset generation in Stop mode
+  - name: NRST_STDBY
+    bit_range:
+    - 13
+    - 13
+    description: Reset generation in Standby mode
+  - name: SRAM1_RST
+    bit_range:
+    - 15
+    - 15
+    description: SRAM1 erase upon system reset
+  - name: IWDG_SW
+    bit_range:
+    - 16
+    - 16
+    description: Independent watchdog enable selection
+  - name: IWDG_STOP
+    bit_range:
+    - 17
+    - 17
+    description: Independent watchdog counter freeze in Stop mode
+  - name: IWDG_STDBY
+    bit_range:
+    - 18
+    - 18
+    description: Independent watchdog counter freeze in Standby mode
+  - name: WWDG_SW
+    bit_range:
+    - 19
+    - 19
+    description: Window watchdog selection
+  - name: SRAM2_PE
+    bit_range:
+    - 24
+    - 24
+    description: SRAM2 parity check enable
+  - name: SRAM2_RST
+    bit_range:
+    - 25
+    - 25
+    description: SRAM2 erase when system reset
+  - name: NSWBOOT0
+    bit_range:
+    - 26
+    - 26
+    description: Software BOOT0
+  - name: NBOOT0
+    bit_range:
+    - 27
+    - 27
+    description: NBOOT0 option bit
+  - name: TZEN
+    bit_range:
+    - 31
+    - 31
+    description: Global TrustZone security enable
+  side_effects: null
+- id: FLASH_NSBOOTADD0R
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 15
+  fields:
+  - name: NSBOOTADD0
+    bit_range:
+    - 31
+    - 7
+    description: |-
+      Non-secure boot base address 0
+      This address is only used when TZEN = 0.
+      The non-secure boot memory address can be programmed to any address in the valid address range (see Table 28: Boot space versus RDP protection) with a granularity of 128 bytes. These bits correspond to address [31:7]. The NSBOOTADD0 option bytes are selected following the BOOT0 pin or NSWBOOT0 state.
+      Examples:
+      NSBOOTADD0[24:0] = 0x0100000: Boot from Flash memory (0x0800 0000)
+      NSBOOTADD0[24:0] = 0x017F100: Boot from system memory bootloader (0x0BF8 8000)
+      NSBOOTADD0[24:0] = 0x0400200: Boot from SRAM2 on S-Bus (0x2001 0000)
+  side_effects: null
+- id: FLASH_NSBOOTADD1R
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 15
+  fields:
+  - name: NSBOOTADD1
+    bit_range:
+    - 31
+    - 7
+    description: "Non-secure boot address 1\nThis address is only used when TZEN = 0.\nThe non-secure boot memory address can be programmed to any address in the valid address range (see Table 28: Boot space versus RDP protection) with a granularity of 128 bytes. These bits correspond to address [31:7]. The NSBOOTADD0 option bytes are selected following the BOOT0 pin or NSWBOOT0 state. \nExamples:\nNSBOOTADD1[24:0] = 0x0100000: Boot from Flash memory (0x0800 0000)\nNSBOOTADD1[24:0] = 0x017F100: Boot from system memory bootloader (0x0BF8 8000)\nNSBOOTADD1[24:0] = 0x0400200: Boot from SRAM2 (0x2001 0000)"
+  side_effects: null
+- id: FLASH_SECBOOTADD0R
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BOOT_LOCK
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Boot lock
+      This lock is only used when TZEN = 0.
+      When set, the boot is always forced to base address value programmed in SECBOOTADD0[24:0] option bytes whatever the boot selection option. When set, this bit can only be cleared by an RDP regression level 1 to level 0.
+  - name: SECBOOTADD0
+    bit_range:
+    - 31
+    - 7
+    description: "Secure boot base address 0\nThis address is only used when TZEN = 1.\nThe secure boot memory address can be programmed to any address in the valid address range (see Table28: Boot space versus RDP protection) with a granularity of 128 bytes. This bits correspond to address [31:7] The SECBOOTADD0 option bytes are selected following the BOOT0 pin or NSWBOOT0 state. \nExamples:\nSECBOOTADD0[24:0] = 0x018 0000: Boot from secure user Flash memory (0x0C00 0000)\nSECBOOTADD0[24:0] = 0x01F F000: Boot from RSS system Flash memory (0x0FF8 0000)\nSECBOOTADD0[24:0] = 0x060 0000: Boot from secure SRAM1 on S-Bus (0x3000 0000)"
+  side_effects: null
+- id: FLASH_SECWMR1
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 4278255360
+  fields:
+  - name: SECWM_PSTRT
+    bit_range:
+    - 6
+    - 0
+    description: |-
+      Start page of secure area
+      This field contains the first page of the secure area.
+  - name: SECWM_PEND
+    bit_range:
+    - 22
+    - 16
+    description: |-
+      End page of secure area
+      This field contains the last page of the secure area.
+  side_effects: null
+- id: FLASH_SECWMR2
+  address_offset: 84
+  size: 32
+  access: READ_WRITE
+  reset_value: 251662080
+  fields:
+  - name: HDP_PEND
+    bit_range:
+    - 22
+    - 16
+    description: |-
+      End page of secure hide protection area
+      This field contains the last page of the secure HDP area.
+  - name: HDPEN
+    bit_range:
+    - 31
+    - 31
+    description: Secure Hide protection area enable
+  side_effects: null
+- id: FLASH_WRPAR
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 251723520
+  fields:
+  - name: WRPA_PSTRT
+    bit_range:
+    - 6
+    - 0
+    description: |-
+      WPR area A start page
+      This field contains the first page of the WPR area A.
+      Note that bit 6 is reserved on STM32WBAxEx devices.
+  - name: WRPA_PEND
+    bit_range:
+    - 22
+    - 16
+    description: |-
+      WPR area A end page
+      This field contains the last page of the WPR area A.
+      Note that bit 22 is reserved on STM32WBAxEx devices.
+  - name: UNLOCK
+    bit_range:
+    - 31
+    - 31
+    description: WPR area A unlock
+  side_effects: null
+- id: FLASH_WRPBR
+  address_offset: 92
+  size: 32
+  access: READ_WRITE
+  reset_value: 251723520
+  fields:
+  - name: WRPB_PSTRT
+    bit_range:
+    - 6
+    - 0
+    description: |-
+      WRP area B start page
+      This field contains the first page of the WRP area B.
+      Note that bit 6 is reserved on STM32WBAxEx devices.
+  - name: WRPB_PEND
+    bit_range:
+    - 22
+    - 16
+    description: |-
+      WRP area B end page
+      This field contains the last page of the WRP area B.
+      Note that bit 22 is reserved on STM32WBAxEx devices.
+  - name: UNLOCK
+    bit_range:
+    - 31
+    - 31
+    description: WPR area B unlock
+  side_effects: null
+- id: FLASH_OEM1KEYR1
+  address_offset: 112
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OEM1KEY
+    bit_range:
+    - 31
+    - 0
+    description: OEM1 key least significant bytes
+  side_effects: null
+- id: FLASH_OEM1KEYR2
+  address_offset: 116
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OEM1KEY
+    bit_range:
+    - 31
+    - 0
+    description: OEM1 key most significant bytes
+  side_effects: null
+- id: FLASH_OEM2KEYR1
+  address_offset: 120
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OEM2KEY
+    bit_range:
+    - 31
+    - 0
+    description: OEM2 key least significant bytes
+  side_effects: null
+- id: FLASH_OEM2KEYR2
+  address_offset: 124
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OEM2KEY
+    bit_range:
+    - 31
+    - 0
+    description: OEM2 key most significant bytes
+  side_effects: null
+- id: FLASH_SECBBR1
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SECBB0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB16
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB17
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB18
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB19
+    bit_range:
+    - 19
+    - 19
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB20
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB21
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB22
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB23
+    bit_range:
+    - 23
+    - 23
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB24
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB25
+    bit_range:
+    - 25
+    - 25
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB26
+    bit_range:
+    - 26
+    - 26
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB27
+    bit_range:
+    - 27
+    - 27
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB28
+    bit_range:
+    - 28
+    - 28
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB29
+    bit_range:
+    - 29
+    - 29
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB30
+    bit_range:
+    - 30
+    - 30
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB31
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  side_effects: null
+- id: FLASH_SECBBR2
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SECBB0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB16
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB17
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB18
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB19
+    bit_range:
+    - 19
+    - 19
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB20
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB21
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB22
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB23
+    bit_range:
+    - 23
+    - 23
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB24
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB25
+    bit_range:
+    - 25
+    - 25
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB26
+    bit_range:
+    - 26
+    - 26
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB27
+    bit_range:
+    - 27
+    - 27
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB28
+    bit_range:
+    - 28
+    - 28
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB29
+    bit_range:
+    - 29
+    - 29
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB30
+    bit_range:
+    - 30
+    - 30
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  - name: SECBB31
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      page secure/non-secure attribution
+      Each bit is used to set one page security attribution.
+  side_effects: null
+- id: FLASH_SECHDPCR
+  address_offset: 192
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HDP_ACCDIS
+    bit_range:
+    - 0
+    - 0
+    description: "Secure HDP area access disable \nWhen set, this bit is only cleared by a system reset."
+  side_effects: null
+- id: FLASH_PRIFCFGR
+  address_offset: 196
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SPRIV
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Privileged protection for secure registers
+      This bit is secure write protected. It can only be written by a secure privileged access when TrustZone is enabled (TZEN=1).
+  - name: NSPRIV
+    bit_range:
+    - 1
+    - 1
+    description: Privileged protection for non-secure registers
+  side_effects: null
+- id: FLASH_PRIVBBR1
+  address_offset: 208
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRIVBB0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB16
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB17
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB18
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB19
+    bit_range:
+    - 19
+    - 19
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB20
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB21
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB22
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB23
+    bit_range:
+    - 23
+    - 23
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB24
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB25
+    bit_range:
+    - 25
+    - 25
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB26
+    bit_range:
+    - 26
+    - 26
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB27
+    bit_range:
+    - 27
+    - 27
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB28
+    bit_range:
+    - 28
+    - 28
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB29
+    bit_range:
+    - 29
+    - 29
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB30
+    bit_range:
+    - 30
+    - 30
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB31
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  side_effects: null
+- id: FLASH_PRIVBBR2
+  address_offset: 212
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRIVBB0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB16
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB17
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB18
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB19
+    bit_range:
+    - 19
+    - 19
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB20
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB21
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB22
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB23
+    bit_range:
+    - 23
+    - 23
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB24
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB25
+    bit_range:
+    - 25
+    - 25
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB26
+    bit_range:
+    - 26
+    - 26
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB27
+    bit_range:
+    - 27
+    - 27
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB28
+    bit_range:
+    - 28
+    - 28
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB29
+    bit_range:
+    - 29
+    - 29
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB30
+    bit_range:
+    - 30
+    - 30
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB31
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  side_effects: null
+- id: FLASH_PRIVBBR3
+  address_offset: 216
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRIVBB0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB16
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB17
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB18
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB19
+    bit_range:
+    - 19
+    - 19
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB20
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB21
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB22
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB23
+    bit_range:
+    - 23
+    - 23
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB24
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB25
+    bit_range:
+    - 25
+    - 25
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB26
+    bit_range:
+    - 26
+    - 26
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB27
+    bit_range:
+    - 27
+    - 27
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB28
+    bit_range:
+    - 28
+    - 28
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB29
+    bit_range:
+    - 29
+    - 29
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB30
+    bit_range:
+    - 30
+    - 30
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB31
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  side_effects: null
+- id: FLASH_PRIVBBR4
+  address_offset: 220
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRIVBB0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB16
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB17
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB18
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB19
+    bit_range:
+    - 19
+    - 19
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB20
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB21
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB22
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB23
+    bit_range:
+    - 23
+    - 23
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB24
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB25
+    bit_range:
+    - 25
+    - 25
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB26
+    bit_range:
+    - 26
+    - 26
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB27
+    bit_range:
+    - 27
+    - 27
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB28
+    bit_range:
+    - 28
+    - 28
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB29
+    bit_range:
+    - 29
+    - 29
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB30
+    bit_range:
+    - 30
+    - 30
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  - name: PRIVBB31
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      page privileged/unprivileged attribution
+      Each bit is used to set one page privilege attribution in Flash.
+  side_effects: null
+interrupts:
+  FLASH: 6
+timing: null

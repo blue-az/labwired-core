@@ -1,0 +1,275 @@
+peripheral: Flash
+version: 0.1.0
+registers:
+- id: ACR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LATENCY
+    bit_range:
+    - 0
+    - 0
+    description: Latency
+  - name: PRFTEN
+    bit_range:
+    - 1
+    - 1
+    description: Prefetch enable
+  - name: SLEEP_PD
+    bit_range:
+    - 3
+    - 3
+    description: Flash mode during Sleep
+  - name: RUN_PD
+    bit_range:
+    - 4
+    - 4
+    description: Flash mode during Run
+  - name: DESAB_BUF
+    bit_range:
+    - 5
+    - 5
+    description: Disable Buffer
+  - name: PRE_READ
+    bit_range:
+    - 6
+    - 6
+    description: Pre-read data address
+  side_effects: null
+- id: PECR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 7
+  fields:
+  - name: PELOCK
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      FLASH_PECR and data EEPROM
+                    lock
+  - name: PRGLOCK
+    bit_range:
+    - 1
+    - 1
+    description: Program memory lock
+  - name: OPTLOCK
+    bit_range:
+    - 2
+    - 2
+    description: Option bytes block lock
+  - name: PROG
+    bit_range:
+    - 3
+    - 3
+    description: Program memory selection
+  - name: DATA
+    bit_range:
+    - 4
+    - 4
+    description: Data EEPROM selection
+  - name: FTDW
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Fixed time data write for Byte, Half
+                    Word and Word programming
+  - name: ERASE
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Page or Double Word erase
+                    mode
+  - name: FPRG
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Half Page/Double Word programming
+                    mode
+  - name: PARALLELBANK
+    bit_range:
+    - 15
+    - 15
+    description: Parallel bank mode
+  - name: EOPIE
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      End of programming interrupt
+                    enable
+  - name: ERRIE
+    bit_range:
+    - 17
+    - 17
+    description: Error interrupt enable
+  - name: OBL_LAUNCH
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      Launch the option byte
+                    loading
+  side_effects: null
+- id: PDKEYR
+  address_offset: 8
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: PDKEYR
+    bit_range:
+    - 31
+    - 0
+    description: RUN_PD in FLASH_ACR key
+  side_effects: null
+- id: PEKEYR
+  address_offset: 12
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: PEKEYR
+    bit_range:
+    - 31
+    - 0
+    description: |-
+      FLASH_PEC and data EEPROM
+                    key
+  side_effects: null
+- id: PRGKEYR
+  address_offset: 16
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: PRGKEYR
+    bit_range:
+    - 31
+    - 0
+    description: Program memory key
+  side_effects: null
+- id: OPTKEYR
+  address_offset: 20
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: OPTKEYR
+    bit_range:
+    - 31
+    - 0
+    description: Option byte key
+  side_effects: null
+- id: SR
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 4
+  fields:
+  - name: BSY
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Write/erase operations in
+                    progress
+  - name: EOP
+    bit_range:
+    - 1
+    - 1
+    description: End of operation
+  - name: ENDHV
+    bit_range:
+    - 2
+    - 2
+    description: End of high voltage
+  - name: READY
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Flash memory module ready after low
+                    power mode
+  - name: WRPERR
+    bit_range:
+    - 8
+    - 8
+    description: Write protected error
+  - name: PGAERR
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Programming alignment
+                    error
+  - name: SIZERR
+    bit_range:
+    - 10
+    - 10
+    description: Size error
+  - name: OPTVERR
+    bit_range:
+    - 11
+    - 11
+    description: Option validity error
+  - name: RDERR
+    bit_range:
+    - 14
+    - 14
+    description: RDERR
+  - name: NOTZEROERR
+    bit_range:
+    - 16
+    - 16
+    description: NOTZEROERR
+  - name: FWWERR
+    bit_range:
+    - 17
+    - 17
+    description: FWWERR
+  side_effects: null
+- id: OBR
+  address_offset: 28
+  size: 32
+  access: READ_ONLY
+  reset_value: 16252928
+  fields:
+  - name: RDPRT
+    bit_range:
+    - 7
+    - 0
+    description: Read protection
+  - name: SPRMOD
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Selection of protection mode of WPR
+                    bits
+  - name: BOR_LEV
+    bit_range:
+    - 19
+    - 16
+    description: BOR_LEV
+  side_effects: null
+- id: WRPR
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WRP
+    bit_range:
+    - 15
+    - 0
+    description: Write protection
+  side_effects: null
+interrupts: null
+timing: null
