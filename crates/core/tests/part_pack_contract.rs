@@ -151,7 +151,10 @@ fn shadowing_a_builtin_without_declaring_it_is_refused() {
     let pack = ACME_PACK.replace("\"acme:tmp999\"", "tmp102");
     let src = manifest_yaml(&[&pack], "tmp102");
 
-    let msg = build_error(&src, "silently replacing a built-in model must not be possible");
+    let msg = build_error(
+        &src,
+        "silently replacing a built-in model must not be possible",
+    );
     assert!(
         msg.contains("shadows a built-in"),
         "the error must say what happened, got: {msg}"
@@ -168,9 +171,10 @@ fn shadowing_a_builtin_without_declaring_it_is_refused() {
 
 #[test]
 fn declaring_the_override_replaces_the_builtin_model() {
-    let pack = ACME_PACK
-        .replace("\"acme:tmp999\"", "tmp102")
-        .replace("source: acme-private", "source: acme-private\noverrides: tmp102");
+    let pack = ACME_PACK.replace("\"acme:tmp999\"", "tmp102").replace(
+        "source: acme-private",
+        "source: acme-private\noverrides: tmp102",
+    );
     let src = manifest_yaml(&[&pack], "tmp102");
     let mut bus = build_bus(&src).expect("a declared override must build");
 
@@ -193,7 +197,10 @@ fn two_packs_for_one_type_is_an_error_not_a_race() {
     let src = manifest_yaml(&[ACME_PACK, &other], "acme:tmp999");
 
     let msg = build_error(&src, "one part is one document");
-    assert!(msg.contains("acme-private") && msg.contains("someone-else"), "both sources must be named, got: {msg}");
+    assert!(
+        msg.contains("acme-private") && msg.contains("someone-else"),
+        "both sources must be named, got: {msg}"
+    );
 }
 
 #[test]
@@ -308,5 +315,8 @@ external_devices:
     dev.transfer(0x80); // read, address 0x00
     let devid = dev.transfer(0x00);
     dev.cs_release();
-    assert_eq!(devid, 0xE5, "the pack's declared reset value must clock out");
+    assert_eq!(
+        devid, 0xE5,
+        "the pack's declared reset value must clock out"
+    );
 }

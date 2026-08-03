@@ -114,14 +114,12 @@ pub(crate) fn kit_for(pack: &DeviceDescriptor) -> Result<Option<&'static dyn Per
     }
 
     let kit: &'static dyn PeripheralKit = match transport {
-        Transport::I2c => Box::leak(Box::new(
-            DeclarativeI2cKit::from_yaml(&key)
-                .with_context(|| format!("part pack '{}' is not a valid i2c_device", pack.r#type))?,
-        )),
-        Transport::Spi => Box::leak(Box::new(
-            DeclarativeSpiKit::from_yaml(&key)
-                .with_context(|| format!("part pack '{}' is not a valid spi_device", pack.r#type))?,
-        )),
+        Transport::I2c => Box::leak(Box::new(DeclarativeI2cKit::from_yaml(&key).with_context(
+            || format!("part pack '{}' is not a valid i2c_device", pack.r#type),
+        )?)),
+        Transport::Spi => Box::leak(Box::new(DeclarativeSpiKit::from_yaml(&key).with_context(
+            || format!("part pack '{}' is not a valid spi_device", pack.r#type),
+        )?)),
     };
     interned.insert(key, kit);
     Ok(Some(kit))
