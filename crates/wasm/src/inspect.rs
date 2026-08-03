@@ -686,7 +686,6 @@ impl WasmSimulator {
 
     /// Return the visible text of the LCD1602 identified by `device_id`.
     ///
-    /// `device_id` must match a `board_io` binding with `device_type: "lcd1602"`.
     /// Returns exactly 32 characters — row 0 then row 1, no separator — so the
     /// caller slices `[0..16]` and `[16..32]`. A display the firmware has not
     /// switched on reads as all spaces, matching the dark panel.
@@ -765,8 +764,7 @@ impl WasmSimulator {
     /// Return the character shown on the direct-drive 7-segment digit
     /// identified by `device_id`.
     ///
-    /// `device_id` must match a `board_io` binding with `device_type:
-    /// "seven-segment"`. Returns the single decoded character, with `'.'`
+    /// Returns the single decoded character, with `'.'`
     /// appended when the decimal point is lit — so a blank digit is `" "`,
     /// a lit `0` is `"0"`, and `0` with the dp is `"0."`. An unrecognised
     /// segment pattern decodes to `"?"` rather than silently blanking.
