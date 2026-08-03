@@ -811,6 +811,46 @@ boards:
     # receive gate in 13.3 s). No live re-capture; the scanning-format value 0x0208 is
     # measured from firmware in the twin, NOT off the board, and is flagged as such in
     # the model.
+    # 2026-08-03 (later still): made advertising re-publication survive repetition in
+    # the same window (bt.rs). Two changes, both in the exchange-memory read/write
+    # path, both ADDITIVE to the same UNMAPPED window — no declarative descriptor,
+    # base address or reset value moved, so the 2026-06-17 reset-state oracle still
+    # cannot move.
+    #   1. Descriptor payload pointers are FULL 16-bit exchange-memory offsets. The
+    #      model masked RX `+0x12`, TX `+0x4` and CS `+0x1C` with 0x7FFF on a bit15
+    #      convention that the ROM only applies to RX `+0x0` (RXDONE). ROM evidence:
+    #      r_lld_scan_process_pkt_rx_legacy_adv (0x400246EE) and
+    #      r_lld_scan_process_pkt_rx_adv_rep (0x40024878) zero-extend the halfword with
+    #      no mask; r_ble_util_buf_rx_free (0x4000315C) range-checks the RX pool as
+    #      ((buf - 0x7805) >> 10) & 0xFF <= 8, i.e. nine buffers at 0x7805..0x9805 —
+    #      five of them ABOVE 0x8000. The mask aliased those onto EM 0x0000..0x1FFF
+    #      and the model wrote received payloads over the exchange table, the control
+    #      structures and the RX descriptor ring. Only pointers >= 0x8000 change
+    #      behaviour, so every previously-passing run is byte-identical.
+    #   2. Every CORE-OWNED RX descriptor field is now written on each reception,
+    #      including the ones the model has nothing to say about (`+0x6`, `+0xE`,
+    #      `+0x10`), because a hardware-owned field left alone is stale, not
+    #      unmodelled. `+0x6` is newly IDENTIFIED as the raw RSSI byte —
+    #      r_lld_scan_process_pkt_rx_adv_rep at 0x400249C6 feeds
+    #      lhu(rxdesc+6) & 0xFF to rf_api.rssi_convert — correcting the earlier
+    #      "could be RSSI, nothing measured says so" note; there is no PHY here, so it
+    #      is written 0 and that is stated as a choice. `+0xE` is the resolving-list
+    #      pointer ESP-IDF's lld_adv_rep_ind handler dereferences when non-zero;
+    #      address resolution is NOT modelled, so 0 is the honest value. `+0x10` is
+    #      still unidentified and is zeroed for the same staleness reason, flagged as a
+    #      choice.
+    # NOT modelled and called out rather than invented: RWBLECNTL bit 25, which
+    # r_lld_adv_stop (0x4001898A) sets alongside CS+0x20 = 1 when it aborts an
+    # in-flight advertising event. What that does to an already-programmed event was
+    # not determined; the measured cost of ignoring it is that the event runs its
+    # programmed duration (<= 2.8 ms) before lld_adv_frm_isr completes the stop.
+    # Evidence re-run on this commit: lib 2535/0 default and 2649/0 with --features
+    # event-scheduler, C3 heavy differentials 13/13 the real way, clippy clean both
+    # feature configs with --all-targets, cargo fmt clean, both existing BLE gates
+    # green, and a new gate (e2e_esp32c3_ble_adv_republish) requiring five completed
+    # loop() iterations per node and five different successive counter values read by
+    # the peer's application, both ways, with NO firmware assertion in the serial.
+    # No live re-capture.
     drift_ack: 2026-08-03
 
   - id: nucleo-l476rg
