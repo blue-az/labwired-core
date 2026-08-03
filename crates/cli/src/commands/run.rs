@@ -83,6 +83,13 @@ pub(crate) fn run_firmware_riscv(args: RunArgs, _chip_yaml: String) -> ExitCode 
         return run_two_c3_wifi(&args, &chip, &manifest);
     }
 
+    // Two-node BLE run (env LABWIRED_BLE_DUAL): boot two C3 instances with
+    // different firmware onto the shared BLE air, so one advertises while the
+    // other scans and the scanner's stack sees the advertiser's PDU.
+    if args.rom_boot && std::env::var("LABWIRED_BLE_DUAL").is_ok() {
+        return crate::run_two_c3_ble(&args, &chip, &manifest);
+    }
+
     // Single-station WiFi run (env LABWIRED_WIFI_SOLO): one C3 on the shared
     // VirtualWifi medium — associates, gets a DHCP lease, and reaches the AP's
     // DHCP + HTTP servers (the LBC3.1 stats-device demo). Uses its own minimal

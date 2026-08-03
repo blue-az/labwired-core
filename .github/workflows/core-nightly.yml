@@ -185,6 +185,55 @@ jobs:
         # None by design, breaking the ROM-provisioning tests).
         run: cargo test --release -p labwired-core --features esp32s3-fixtures --test e2e_blinky --test e2e_hello_world --test e2e_i2c_tmp102
 
+  # ── ESP32-C3 BLE baseband: the only gate that runs a real BLE stack ────────
+  #
+  # `crates/core/src/peripherals/esp32c3/bt.rs` models the BLE baseband window
+  # at 0x6003_1000. Its unit tests assert what the model does with a write;
+  # NOTHING asserted that the compiled Arduino/Bluedroid stack gets through it.
+  # Both real failures of that model were invisible to every unit test in the
+  # tree — an unmapped register (memory violation at 0x6003_1204) and a command
+  # bit that did not self-clear (controller spins on its own kick forever) —
+  # and both only surface a few hundred million steps into a genuine ROM boot.
+  # This job is what notices.
+  #
+  # Heavy by nature (~360M steps, release-only), so it lives in nightly rather
+  # than the PR gate, in line with the rest of the heavy-gate layering. Run it
+  # on demand with `workflow_dispatch` when touching the BT model.
+  esp32c3-ble-e2e:
+    name: ESP32-C3 BLE Baseband E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@1.95.0
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: core-nightly-esp32c3-ble
+          workspaces: |
+            . -> target
+
+      # The composed image is 4 MiB and deliberately NOT committed: it would be
+      # a stale-able binary in git. The four content-addressed flash parts are
+      # fetched and recomposed here, with every digest pinned in
+      # scripts/ci/c3-ble-flash.sha256 — a mismatch fails loudly rather than
+      # letting the gate measure a binary nobody reviewed.
+      - name: Fetch + compose the pinned BLE probe flash image
+        run: scripts/ci/fetch-c3-ble-flash.sh
+
+      # LABWIRED_REQUIRE_C3_BLE=1 turns a missing image into a HARD failure.
+      # Without it the test skips itself, and a gate that can silently skip in
+      # CI is exactly the hole this job was added to close.
+      - name: ESP32-C3 BLE e2e (real Arduino BLE firmware through the mask ROM)
+        env:
+          LABWIRED_REQUIRE_C3_BLE: "1"
+        run: >
+          cargo test --release -p labwired-cli
+          --test e2e_esp32c3_ble_arduino -- --ignored --nocapture
+
   tier1-fixture-drift:
     name: Tier-1 Fixture Drift Check
     runs-on: ubuntu-latest
