@@ -628,8 +628,10 @@ mod registry_agreement {
 
         let mut unreachable: Vec<String> = Vec::new();
         for family in ["esp32", "esp32c3", "esp32s3", "nrf52", "nrf54l"] {
-            let src = std::fs::read_to_string(src_root.join("peripherals").join(family).join("factory.rs"))
-                .unwrap_or_else(|e| panic!("read {family}/factory.rs: {e}"));
+            let src = std::fs::read_to_string(
+                src_root.join("peripherals").join(family).join("factory.rs"),
+            )
+            .unwrap_or_else(|e| panic!("read {family}/factory.rs: {e}"));
             for line in src.lines() {
                 let Some((head, _)) = line.split_once("=>") else {
                     continue;
