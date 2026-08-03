@@ -331,6 +331,17 @@ pub struct SystemManifest {
     pub memory_overrides: HashMap<String, String>,
     #[serde(default)]
     pub external_devices: Vec<ExternalDevice>,
+    /// Part packs this system carries — the parts that are NOT built into the
+    /// engine. An `external_devices` entry whose `type:` names a pack here is
+    /// modelled from that pack, so a private/vendor/customer catalog connects
+    /// with no code in this repository and nothing published. See
+    /// `docs/part-packs.md` for the `labwired.part/v1` contract.
+    ///
+    /// Packs ride in the manifest so every transport that already carries a
+    /// manifest carries them too: the CLI, the browser wasm build, and the
+    /// hosted builder's `/run`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub parts: Vec<PartPack>,
     #[serde(default)]
     pub cosim_models: Vec<CosimModelConfig>,
     #[serde(default)]
@@ -782,7 +793,73 @@ impl SystemManifest {
                 }
             }
         }
+        // `parts: [- path: ./acme.yaml]` is the same CLI convenience: read it
+        // here so the core only ever sees an inline pack (wasm has no fs).
+        for entry in &mut manifest.parts {
+            let rel = match entry {
+                PartPack::Path(p) => p.path.clone(),
+                PartPack::Inline(_) => continue,
+            };
+            let full = base.join(&rel);
+            let text = std::fs::read_to_string(&full)
+                .map_err(|e| anyhow::anyhow!("part pack {:?}: cannot read {e}", full))?;
+            let origin = full.display().to_string();
+            *entry = PartPack::Inline(Box::new(parse_part_pack(&text, &origin)?));
+        }
+        manifest.validate_parts()?;
         Ok(manifest)
+    }
+
+    /// The ONE lookup for a manifest-carried part. Returns the pack whose
+    /// `type:` matches, or `None` when this system carries no such part (the
+    /// caller then falls through to the built-in registries).
+    ///
+    /// Call [`Self::validate_parts`] before relying on this — it is what
+    /// guarantees the match is unambiguous.
+    pub fn resolve_part(&self, device_type: &str) -> Option<&DeviceDescriptor> {
+        self.parts
+            .iter()
+            .filter_map(PartPack::descriptor)
+            .find(|d| d.r#type == device_type)
+    }
+
+    /// Enforce the contract across the whole `parts:` list: every entry is a
+    /// resolved, well-formed pack, and no two packs claim the same `type`.
+    ///
+    /// Two packs for one type is the failure this exists to prevent. Picking a
+    /// winner would mean a customer's firmware silently runs against whichever
+    /// catalog happened to load last — so it is an error, named, with both
+    /// sources in the message.
+    pub fn validate_parts(&self) -> Result<()> {
+        let mut seen: HashMap<&str, Option<&str>> = HashMap::new();
+        for entry in &self.parts {
+            let pack = match entry {
+                PartPack::Inline(d) => d.as_ref(),
+                PartPack::Path(p) => anyhow::bail!(
+                    "part pack '{}' was never loaded. `path:` is a CLI convenience that \
+                     SystemManifest::from_file inlines; a manifest handed to the engine \
+                     directly (browser, hosted runner) must carry the pack inline.",
+                    p.path
+                ),
+            };
+            let origin = pack
+                .source
+                .as_deref()
+                .map(|s| format!("source: {s}"))
+                .unwrap_or_else(|| "no declared source".to_string());
+            validate_part_pack(pack, &origin)?;
+            if let Some(prev) = seen.insert(pack.r#type.as_str(), pack.source.as_deref()) {
+                anyhow::bail!(
+                    "two part packs both define '{}' (sources: {} and {}). \
+                     One part is one document — rename one, or namespace them \
+                     `vendor:part`.",
+                    pack.r#type,
+                    prev.unwrap_or("undeclared"),
+                    pack.source.as_deref().unwrap_or("undeclared"),
+                );
+            }
+        }
+        Ok(())
     }
 
     pub fn validate_cosim_models(&self) -> Vec<String> {
@@ -960,6 +1037,111 @@ pub struct DeviceDescriptor {
     /// schema still parse.
     #[serde(default)]
     pub metadata: Option<DeviceMetadata>,
+    /// Contract version, `labwired.part/v1`. Required of a pack that arrives
+    /// through a manifest's `parts:`; absent on the descriptors bundled in
+    /// `configs/devices/` (they predate the contract and are validated by
+    /// being in-tree). Declaring it is what lets us change the schema later
+    /// without guessing at what an out-of-tree file meant.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub schema: Option<String>,
+    /// Provenance: which catalog/vendor/customer shipped this pack. Carried so
+    /// an error message and a bug report can name where the model came from —
+    /// "which model ran?" must never be answered by a shrug.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
+    /// The built-in part `type` this pack deliberately replaces. Shadowing a
+    /// built-in is otherwise a hard error, so a replacement is always explicit
+    /// and attributable rather than a silent win for whoever loaded last.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub overrides: Option<String>,
+    /// The app-layer catalog record (pin declarations, device class, ref
+    /// prefix). Opaque here — the simulation core has no use for it — but
+    /// carried so one pack file describes the part end to end instead of
+    /// splitting into a half that simulates and a half that draws.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub catalog: Option<serde_yaml::Value>,
+}
+
+/// The contract version a manifest-carried part pack must declare.
+pub const PART_PACK_SCHEMA: &str = "labwired.part/v1";
+
+/// One entry in a manifest's `parts:` list.
+///
+/// `path:` is a `labwired` CLI convenience — [`SystemManifest::from_file`]
+/// reads the file and replaces the entry with its contents, exactly as it
+/// already does for a `can-player`'s `path:`. The simulation core only ever
+/// sees [`PartPack::Inline`]: it has no filesystem under wasm, and a contract
+/// that works on only one of our three runtimes is not a contract.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(untagged)]
+pub enum PartPack {
+    /// A path to a pack file, relative to the manifest. CLI-only; inlined on load.
+    Path(PartPackPath),
+    /// The pack itself, verbatim.
+    Inline(Box<DeviceDescriptor>),
+}
+
+/// The `- path: ./acme-tmp999.yaml` spelling of a [`PartPack`].
+///
+/// `deny_unknown_fields` is load-bearing: it is what stops serde's untagged
+/// matching from swallowing a malformed inline pack into this variant and
+/// reporting "missing field: path" for a file that plainly has `type:` and
+/// `behavior:` in it.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct PartPackPath {
+    pub path: String,
+}
+
+impl PartPack {
+    /// The pack body, or `None` for a still-unresolved `path:` entry.
+    pub fn descriptor(&self) -> Option<&DeviceDescriptor> {
+        match self {
+            PartPack::Inline(d) => Some(d),
+            PartPack::Path(_) => None,
+        }
+    }
+}
+
+/// Parse a part pack from YAML and enforce the `labwired.part/v1` contract.
+///
+/// Unlike [`DeviceDescriptor::from_yaml`] (which also parses the in-tree
+/// `configs/devices/*.yaml` bodies) this REQUIRES the `schema:` declaration,
+/// because an out-of-tree file is the one case where we cannot tell by
+/// inspection which schema its author was writing against.
+pub fn parse_part_pack(yaml: &str, origin: &str) -> Result<DeviceDescriptor> {
+    let pack = DeviceDescriptor::from_yaml(yaml)
+        .with_context(|| format!("part pack {origin} is not a valid descriptor"))?;
+    validate_part_pack(&pack, origin)?;
+    Ok(pack)
+}
+
+/// Enforce the parts of the contract that are true of every pack, wherever it
+/// came from: the schema declaration, a non-empty type, and a `behavior` that
+/// names a primitive.
+pub fn validate_part_pack(pack: &DeviceDescriptor, origin: &str) -> Result<()> {
+    match pack.schema.as_deref() {
+        Some(PART_PACK_SCHEMA) => {}
+        Some(other) => anyhow::bail!(
+            "part pack {origin} declares unknown schema '{other}'; \
+             this engine speaks '{PART_PACK_SCHEMA}'"
+        ),
+        None => anyhow::bail!(
+            "part pack {origin} is missing `schema: {PART_PACK_SCHEMA}`. \
+             Declaring the contract version is what lets the schema change \
+             later without guessing what your file meant."
+        ),
+    }
+    if pack.r#type.trim().is_empty() {
+        anyhow::bail!("part pack {origin} has an empty `type:`");
+    }
+    if pack.behavior.primitive.trim().is_empty() {
+        anyhow::bail!(
+            "part pack '{}' ({origin}) has an empty `behavior.primitive:`",
+            pack.r#type
+        );
+    }
+    Ok(())
 }
 
 /// Display + runtime metadata for a declarative device. Only `inputs` is
@@ -2148,6 +2330,7 @@ impl ResolvedSystem {
         ChipDescriptor::resolve(chip, Path::new("."))?;
         Ok(Self {
             manifest: SystemManifest {
+                parts: Vec::new(),
                 schema_version: default_schema_version(),
                 name: chip.to_string(),
                 chip: chip.to_string(),

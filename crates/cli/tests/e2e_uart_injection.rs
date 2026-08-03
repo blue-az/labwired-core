@@ -15,6 +15,7 @@
 
 use std::path::PathBuf;
 use std::process::Command;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 fn repo_root() -> PathBuf {
@@ -60,10 +61,22 @@ struct InjectionRun {
 }
 
 fn run_script(root: &std::path::Path, script_yaml: &str) -> InjectionRun {
-    let nonce = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_nanos();
+    // Timestamp PLUS a process-wide counter. `as_nanos()` is not actually
+    // nanosecond-granular on macOS, so sibling tests starting in the same
+    // microsecond used to land in the SAME directory and overwrite each
+    // other's script.yaml/result.json — a random subset of this file failed
+    // on every parallel run, a different subset each time, while
+    // `--test-threads=1` always passed. The counter makes the name unique
+    // regardless of what the clock resolves to.
+    static SEQ: AtomicU64 = AtomicU64::new(0);
+    let nonce = format!(
+        "{}-{}",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos(),
+        SEQ.fetch_add(1, Ordering::Relaxed)
+    );
     let out_dir = std::env::temp_dir().join(format!("labwired-uart-injection-{nonce}"));
     std::fs::create_dir_all(&out_dir).expect("create out dir");
     let script_path = out_dir.join("script.yaml");

@@ -120,6 +120,11 @@ impl SystemBus {
     }
 
     pub fn from_config(chip: &ChipDescriptor, manifest: &SystemManifest) -> anyhow::Result<Self> {
+        // Part-pack contract, enforced HERE rather than in the manifest loader:
+        // `from_file` is the CLI's path, and the browser and hosted runners
+        // parse with `from_yaml`. Validating at load time only would mean two
+        // of our three runtimes silently accept documents the third rejects.
+        manifest.validate_parts()?;
         let flash_size = parse_size(&chip.flash.size)?;
         let ram_size = parse_size(&chip.ram.size)?;
 
@@ -734,6 +739,23 @@ impl SystemBus {
             // to the generic arms — it is handled, so re-processing it here
             // would emit a spurious "Unsupported external device" WARN.
             if attached_i2c_ext_ids.contains(ext.id.as_str()) {
+                continue;
+            }
+            // Zeroth-pass: parts this manifest CARRIES (`parts:`), i.e. parts
+            // that are not built into the engine at all — a private catalog, a
+            // vendor library, a customer's own sensor. They resolve first
+            // because they are the most specific thing anyone said about this
+            // system; shadowing a built-in is rejected inside `lookup` rather
+            // than silently allowed here. See `super::part_pack`.
+            if let Some(pack) = super::part_pack::lookup(manifest, &ext.r#type)? {
+                if let Some(kit) = super::part_pack::kit_for(pack)? {
+                    let mut ctx = crate::peripherals::kit::AttachCtx::new(&mut bus, ext);
+                    kit.attach(&mut ctx)?;
+                } else {
+                    // Not bus-resident: the GPIO / pin-timing primitives, which
+                    // take the same path an embedded descriptor takes.
+                    bus.attach_declarative_device(ext, pack)?;
+                }
                 continue;
             }
             // First-pass: peripherals that have migrated to the unified

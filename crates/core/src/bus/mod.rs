@@ -30,6 +30,7 @@ mod faults;
 mod from_config;
 mod mmio_activity;
 mod mmio_words;
+pub(crate) mod part_pack;
 mod policy;
 mod profiles;
 mod resident_device;
