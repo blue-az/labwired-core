@@ -302,6 +302,104 @@ fn i2c0_level_drops_when_firmware_masks_the_source() {
     );
 }
 
+/// THROUGHPUT: what the event chain actually costs, in mean batch width.
+///
+/// Mean batch width (`cpu_instructions / cpu_batches`) is a pure function of
+/// the model — bit-deterministic and machine-independent — which is why
+/// `esp32c3_shipped_lab_batch_gate` asserts on it rather than on wall clock.
+/// It is also the direct proxy for this failure class in both directions: a
+/// per-cycle scheduler wakeup pins every batch to width 1.
+///
+/// Two configurations, both on the shipped Pico bus at
+/// `peripheral_tick_interval = 512`:
+///
+/// * **masked** — `IC_INTR_MASK = 0`. Every shipped RP2040 lab (Arduino `Wire`
+///   polls). The chain never arms, so this must stay at the full 512.
+/// * **armed** — `IC_INTR_MASK = TX_EMPTY` with the level up. The chain fires
+///   at delay 1, so the batch narrows — by design, and only here. Real
+///   DW_apb_i2c silicon holds its level line up in exactly this state and the
+///   CPU would be in the ISR, so a wide batch would be the wrong answer.
+///
+/// Caveat on the printed numbers: `CycleCpu` retires exactly one instruction
+/// per `step()` and never signals idle, so `cpu_batches` tracks
+/// `cpu_instructions` and the mean-batch figure is pinned at 1.00 by the
+/// HARNESS, identically before and after this change. The deterministic
+/// quantity that does move on this bus is `peripheral_ticks` (64 ticks per
+/// 32768 cycles = interval 512, masked and armed alike), printed alongside.
+/// A real mean-batch instrument needs real firmware, which the RP2040 side of
+/// the repo does not have a shipped-flash harness for — the C3 side does, and
+/// `esp32c3_shipped_lab_batch_gate` is where that number comes from.
+///
+/// So the cost claim below is made STRUCTURALLY instead of statistically: with
+/// the source masked the chain provably schedules nothing, therefore it cannot
+/// narrow any batch. That is a stronger statement than a measurement on a
+/// harness whose batch width is fixed by construction.
+#[test]
+fn i2c0_event_chain_batch_width_cost_is_confined_to_the_armed_case() {
+    fn measure(arm: bool) -> (f64, u64, bool) {
+        let bus = bus_rp2040_pico();
+        let mut machine = Machine::new(CycleCpu::default(), bus);
+        machine.config.peripheral_tick_interval = RECOMMENDED_TICK_INTERVAL;
+        machine.bus.config.peripheral_tick_interval = RECOMMENDED_TICK_INTERVAL;
+        machine.bus.write_u32(IC_ENABLE, 1).unwrap();
+        if arm {
+            machine.bus.write_u32(IC_INTR_MASK, INTR_TX_EMPTY).unwrap();
+        }
+        let cycle_accurate = machine.bus.requires_cycle_accurate();
+        machine.reset_step_profile();
+        for _ in 0..64 {
+            machine
+                .advance(AdvanceRequest::run(Some(512)).with_breakpoints(BreakpointPolicy::Ignore))
+                .expect("Machine::advance");
+        }
+        let p = machine.step_profile();
+        (
+            p.cpu_instructions as f64 / p.cpu_batches.max(1) as f64,
+            p.peripheral_ticks,
+            cycle_accurate,
+        )
+    }
+
+    let (masked, masked_ticks, ca) = measure(false);
+    let (armed, armed_ticks, _) = measure(true);
+    println!(
+        "rp2040-pico: mean_batch masked={masked:.2} armed={armed:.2}  \
+         peripheral_ticks masked={masked_ticks} armed={armed_ticks}  \
+         requires_cycle_accurate={ca}"
+    );
+
+    // THE COST STATEMENT, structural rather than statistical: with the source
+    // masked — every shipped RP2040 lab, because Arduino `Wire` polls — the
+    // chain never arms, so it schedules nothing and can cost nothing. A wakeup
+    // here would be the regression that collapses batch width for labs that
+    // never touch an I2C interrupt.
+    let mut i2c = crate_i2c_masked();
+    assert!(
+        labwired_core::Peripheral::take_scheduled_events(&mut i2c).is_empty(),
+        "REGRESSION: masked I2C0 armed a scheduler event; the chain must be \
+         inert while (IC_RAW_INTR_STAT & IC_INTR_MASK) == 0"
+    );
+    let mut i2c = crate_i2c_armed();
+    assert!(
+        !labwired_core::Peripheral::take_scheduled_events(&mut i2c).is_empty(),
+        "the chain must arm when the level IS up, or the gate above is vacuous"
+    );
+}
+
+/// A standalone enabled `Rp2040I2c` with interrupts MASKED (Arduino `Wire`).
+fn crate_i2c_masked() -> labwired_core::peripherals::rp2040::i2c::Rp2040I2c {
+    let mut i2c = labwired_core::peripherals::rp2040::i2c::Rp2040I2c::new();
+    labwired_core::Peripheral::write_u32(&mut i2c, 0x6c, 1).unwrap();
+    i2c
+}
+
+/// The same model with TX_EMPTY unmasked (pico-sdk / embassy-rp).
+fn crate_i2c_armed() -> labwired_core::peripherals::rp2040::i2c::Rp2040I2c {
+    let mut i2c = crate_i2c_masked();
+    labwired_core::Peripheral::write_u32(&mut i2c, 0x30, INTR_TX_EMPTY).unwrap();
+    i2c
+}
+
 /// The Pico bus must STILL derive walk deletion after the fix.
 ///
 /// The alternative repair — `needs_legacy_walk() -> true` — would put the whole
