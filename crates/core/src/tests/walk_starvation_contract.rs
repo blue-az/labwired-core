@@ -631,6 +631,43 @@ fn scheduler_driven_peripherals_declare_a_delivery_path() {
 // Rule C
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// True for a literal `legacy_walk_disabled = true` assignment.
+///
+/// Deliberately narrow: `= self.derive_walk_deletable()`,
+/// `= match manifest.walk_deleted { .. }` and every comparison / read are the
+/// legitimate forms. Split out so it can be falsified directly — see
+/// [`rule_c_detector_is_not_vacuous`], which matters because rule C's only
+/// current subject is exempted while its fix is in flight, and an
+/// always-passing detector would look identical.
+fn is_hand_walk_assert(normalised_line: &str) -> bool {
+    normalised_line.contains("legacy_walk_disabled = true")
+        && !normalised_line.contains("==")
+        && !normalised_line.contains("!=")
+}
+
+/// Rule C's detector must fire on the shape it exists to catch.
+#[test]
+fn rule_c_detector_is_not_vacuous() {
+    // The exact classic-ESP32 line (crates/core/src/system/xtensa/esp32.rs).
+    assert!(is_hand_walk_assert("bus.legacy_walk_disabled = true;"));
+    assert!(is_hand_walk_assert("self.legacy_walk_disabled = true;"));
+    // Legitimate forms must NOT fire.
+    assert!(!is_hand_walk_assert(
+        "bus.legacy_walk_disabled = bus.derive_walk_deletable();"
+    ));
+    assert!(!is_hand_walk_assert(
+        "self.legacy_walk_disabled = self.derive_walk_deletable();"
+    ));
+    assert!(!is_hand_walk_assert(
+        "bus.legacy_walk_disabled = match manifest.walk_deleted {"
+    ));
+    assert!(!is_hand_walk_assert(
+        "if self.legacy_walk_disabled == true {"
+    ));
+    assert!(!is_hand_walk_assert("legacy_walk_disabled: false,"));
+    assert!(!is_hand_walk_assert("return self.legacy_walk_disabled;"));
+}
+
 /// Walk deletion is DERIVED from the peripheral set, never asserted by hand.
 ///
 /// `bus.legacy_walk_disabled = true` is a claim about every peripheral on the
@@ -646,6 +683,7 @@ fn walk_deletion_is_derived_not_asserted() {
     let mut files = Vec::new();
     rust_files(&root, &mut files);
     let pending: BTreeSet<&str> = RULE_C_PENDING_FIX.iter().map(|(f, _)| *f).collect();
+    let mut pending_seen: BTreeSet<String> = BTreeSet::new();
     let mut violations = Vec::new();
     let mut scanned_any = false;
 
@@ -666,14 +704,25 @@ fn walk_deletion_is_derived_not_asserted() {
             if !l.contains("legacy_walk_disabled") {
                 continue;
             }
-            // Only literal `= true` assignments; `= derive_walk_deletable()`,
-            // `= match manifest.walk_deleted { .. }` and reads are fine.
-            let is_hand_assert = l.contains("legacy_walk_disabled = true")
-                && !l.contains("==")
-                && !l.contains("!=");
-            if is_hand_assert && !pending.contains(rel.as_str()) {
-                violations.push(format!("  {rel}:{}  {l}", n + 1));
+            if is_hand_walk_assert(&l) {
+                if pending.contains(rel.as_str()) {
+                    pending_seen.insert(rel.clone());
+                } else {
+                    violations.push(format!("  {rel}:{}  {l}", n + 1));
+                }
             }
+        }
+    }
+
+    // A pending entry that no longer fires is not a failure — it is expected to
+    // stop firing when the in-flight fix lands, and failing here would make two
+    // correct branches conflict. Say so loudly instead.
+    for (f, _) in RULE_C_PENDING_FIX {
+        if !pending_seen.contains(*f) {
+            println!(
+                "NOTE: RULE_C_PENDING_FIX entry `{f}` no longer hand-asserts \
+                 walk deletion — the in-flight fix has landed. Delete the entry."
+            );
         }
     }
 
