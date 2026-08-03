@@ -86,14 +86,21 @@ fn repo_root(rel: &str) -> PathBuf {
 const WASM_SOURCES: &[&str] = &["crates/wasm/src/inspect.rs", "crates/wasm/src/inputs.rs"];
 
 /// A `device_type` value looks like `oled-ssd1306` / `ssd1680_tricolor_290` —
-/// lowercase, no whitespace. This filter is what keeps the scan from mistaking
-/// a neighbouring `format!("No lcd1602 board_io binding '{}'", …)` for an
+/// a single bare token. This filter is what keeps the scan from mistaking a
+/// neighbouring `format!("No lcd1602 board_io binding '{}'", …)` for an
 /// identity literal; the message is prose, a device type never is.
+///
+/// Deliberately NOT restricted to lowercase, even though every registered type
+/// is lowercase today. The point of the gate is to catch a spelling the engine
+/// does not know, and `oled-SH1107` is exactly such a spelling — excluding it
+/// from the scan would make the gate blind to one of the typos it exists to
+/// catch. That was not hypothetical: the first deliberate-break run of this
+/// gate stayed green for precisely that reason.
 fn looks_like_a_device_type(s: &str) -> bool {
     !s.is_empty()
         && s.len() <= 48
         && s.bytes()
-            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-' || b == b'_')
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
         && s.bytes().next().is_some_and(|b| b.is_ascii_alphanumeric())
 }
 
@@ -311,7 +318,10 @@ mod scanner_controls {
             "adxl345",
             "mpu6050",
         ] {
-            assert!(found.contains(want), "shape not recognised: {want} in {found:?}");
+            assert!(
+                found.contains(want),
+                "shape not recognised: {want} in {found:?}"
+            );
         }
     }
 
@@ -325,7 +335,10 @@ mod scanner_controls {
             })?;
         "#;
         let found = identity_literals(src);
-        assert!(found.contains("pcd8544"), "missed the real predicate: {found:?}");
+        assert!(
+            found.contains("pcd8544"),
+            "missed the real predicate: {found:?}"
+        );
         assert!(
             !found.contains("oled-sh1107"),
             "a doc comment is not a second home: {found:?}"

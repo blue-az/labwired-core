@@ -7,6 +7,7 @@
 //! A second #[wasm_bindgen] impl block, split out of lib.rs.
 
 use crate::*;
+use labwired_core::peripherals::kit::registry::canonical_device_type;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -884,11 +885,14 @@ impl WasmSimulator {
             .board_io
             .iter()
             .find(|b| {
+                // Alias resolution has ONE home: registry::TYPE_ALIASES,
+                // reached through canonical_device_type(). Matching the legacy
+                // spelling here by hand is what dropped `gxepd2_290_c90c` and
+                // rendered a real, driven panel dark.
                 b.id == device_id
-                    && matches!(
-                        b.device_type.as_deref(),
-                        Some("ssd1680_tricolor_290") | Some("epd-2in9-tricolor")
-                    )
+                    && b.device_type
+                        .as_deref()
+                        .is_some_and(|t| canonical_device_type(t) == "ssd1680_tricolor_290")
             })
             .ok_or_else(|| {
                 JsValue::from_str(&format!(
@@ -967,11 +971,14 @@ impl WasmSimulator {
             .board_io
             .iter()
             .find(|b| {
+                // Alias resolution has ONE home: registry::TYPE_ALIASES,
+                // reached through canonical_device_type(). Matching the legacy
+                // spelling here by hand is what dropped `gxepd2_290_c90c` and
+                // rendered a real, driven panel dark.
                 b.id == device_id
-                    && matches!(
-                        b.device_type.as_deref(),
-                        Some("ssd1680_tricolor_290") | Some("epd-2in9-tricolor")
-                    )
+                    && b.device_type
+                        .as_deref()
+                        .is_some_and(|t| canonical_device_type(t) == "ssd1680_tricolor_290")
             })
             .ok_or_else(|| {
                 JsValue::from_str(&format!(
