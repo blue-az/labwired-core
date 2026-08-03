@@ -87,14 +87,18 @@ fn bus_esp32c3_devkit() -> SystemBus {
 /// Bind matrix source `RMT_SOURCE` to CPU line `LINE` at priority 15 and enable
 /// it — exactly what esp-idf's `intr_alloc` writes.
 fn route_rmt_to_cpu(bus: &mut SystemBus) {
-    bus.write_u32(INTC + u64::from(RMT_SOURCE) * 4, LINE).unwrap();
-    bus.write_u32(INTC + 0x114 + u64::from(LINE) * 4, 15).unwrap();
+    bus.write_u32(INTC + u64::from(RMT_SOURCE) * 4, LINE)
+        .unwrap();
+    bus.write_u32(INTC + 0x114 + u64::from(LINE) * 4, 15)
+        .unwrap();
     bus.write_u32(INTC + 0x104, 1 << LINE).unwrap();
     bus.write_u32(INTC + 0x194, 1).unwrap();
 }
 
 fn rmt_base(bus: &SystemBus) -> u64 {
-    let idx = bus.find_peripheral_index_by_name("rmt").expect("rmt present");
+    let idx = bus
+        .find_peripheral_index_by_name("rmt")
+        .expect("rmt present");
     bus.peripherals[idx].base
 }
 

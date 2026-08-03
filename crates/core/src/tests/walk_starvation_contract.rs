@@ -470,10 +470,7 @@ fn walk_free_peripherals_have_a_default_tick() {
         impls.len()
     );
 
-    let allow: BTreeSet<(&str, &str)> = RULE_A_ALLOWLIST
-        .iter()
-        .map(|(f, t, _)| (*f, *t))
-        .collect();
+    let allow: BTreeSet<(&str, &str)> = RULE_A_ALLOWLIST.iter().map(|(f, t, _)| (*f, *t)).collect();
     let mut violations = Vec::new();
     let mut hit: BTreeSet<(String, String)> = BTreeSet::new();
 
@@ -492,7 +489,9 @@ fn walk_free_peripherals_have_a_default_tick() {
             "  {}::{}\n      needs_legacy_walk() -> false, but tick() = {}",
             i.file,
             i.ty,
-            i.body("tick").or_else(|| i.body("tick_elapsed")).unwrap_or("")
+            i.body("tick")
+                .or_else(|| i.body("tick_elapsed"))
+                .unwrap_or("")
         ));
     }
 
