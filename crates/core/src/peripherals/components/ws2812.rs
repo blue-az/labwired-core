@@ -94,6 +94,9 @@ pub struct Ws2812 {
     high_threshold_cycles: u64,
     /// LOW-gap reset/latch threshold, in sim cycles (derived from `cpu_hz`).
     reset_threshold_cycles: u64,
+    /// The `external_devices:` id this strip was declared as, stamped at
+    /// attach. Identity, not behaviour: nothing in the decoder reads it.
+    component_id: Option<String>,
     state: Mutex<DecodeState>,
 }
 
@@ -107,8 +110,21 @@ impl Ws2812 {
             num_pixels: num_pixels.max(1),
             high_threshold_cycles: ns_to_cycles(HIGH_THRESHOLD_NS, cpu_hz),
             reset_threshold_cycles: ns_to_cycles(RESET_THRESHOLD_NS, cpu_hz),
+            component_id: None,
             state: Mutex::new(DecodeState::default()),
         }
+    }
+
+    /// Stamp the manifest id this strip was declared as, so `inspect` can name
+    /// it as the author did rather than reporting anonymous hardware.
+    pub fn with_component_id(mut self, id: impl Into<String>) -> Self {
+        self.component_id = Some(id.into());
+        self
+    }
+
+    /// The manifest id this strip was declared as, when it was declared.
+    pub fn component_id(&self) -> Option<&str> {
+        self.component_id.as_deref()
     }
 
     /// The GPIO pin this strip's data wire is on.

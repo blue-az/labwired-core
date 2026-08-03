@@ -27,6 +27,25 @@ pub trait I2cDevice: Send {
     fn start(&mut self) {}
     fn stop(&mut self) {}
 
+    /// What this device can show of itself — its own inspect evidence.
+    ///
+    /// The ONE place a an I²C device's artifacts are decided is the model
+    /// itself, next to the buffers it owns. Default: nothing, which is correct
+    /// for a sensor with no display surface and honest for anything else —
+    /// absent means "this engine has nothing to show", never "the screen was
+    /// blank". See [`crate::inspect::DeviceEvidence`] for why this is not a
+    /// central match on concrete types.
+    ///
+    /// Implementations must read the model's REAL buffer and synthesize
+    /// nothing; a panel that was never painted reports zero.
+    fn artifacts(
+        &self,
+        _id: &str,
+        _opts: &crate::inspect::InspectOpts,
+    ) -> Vec<crate::inspect::Artifact> {
+        Vec::new()
+    }
+
     /// Does this device answer to `addr` on the wire *right now*?
     ///
     /// A plain slave owns exactly one address, so the default is the obvious
@@ -1704,9 +1723,9 @@ impl crate::Peripheral for I2c {
     /// a cheap `generation` hash so callers skip unchanged buffers.
     ///
     /// What each panel's artifact CONTAINS is not decided here: it comes from
-    /// [`crate::inspect::device_artifacts`], the single emitter shared with the
-    /// machine-level device walk, so a panel cannot report one thing on this
-    /// controller and something else on another.
+    /// the device model's own [`I2cDevice::artifacts`], the single emitter
+    /// shared with the machine-level device walk, so a panel cannot report one
+    /// thing on this controller and something else on another.
     fn inspect(
         &self,
         base: u64,
@@ -1718,13 +1737,8 @@ impl crate::Peripheral for I2c {
         for dev_cell in self.attached_devices() {
             let dev = dev_cell.borrow();
             let addr = dev.address();
-            if let Some(model) = dev.as_any() {
-                pi.artifacts.extend(crate::inspect::device_artifacts(
-                    model,
-                    &format!("i2c@0x{:02x}", addr),
-                    opts,
-                ));
-            }
+            pi.artifacts
+                .extend(dev.artifacts(&format!("i2c@0x{:02x}", addr), opts));
         }
         pi
     }

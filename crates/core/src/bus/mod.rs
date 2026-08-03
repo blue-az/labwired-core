@@ -19,6 +19,7 @@ use std::sync::Mutex;
 
 mod accessors;
 mod attach;
+mod attached_devices;
 pub mod bus_trace;
 mod can_devices;
 mod construct;

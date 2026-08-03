@@ -477,6 +477,51 @@ impl Ili9341 {
 }
 
 impl SpiDevice for Ili9341 {
+    /// An RGB565 TFT has no e-paper "refresh": frame memory IS the screen, so
+    /// the evidence is DISPON plus how much of the buffer the firmware actually
+    /// wrote. `painted_bytes` counts non-zero bytes — the SAME definition the
+    /// CLI's `painted bytes=` line prints, so the two agree by construction
+    /// instead of by coincidence.
+    ///
+    /// Moved here verbatim from the central `device_artifacts` match; the keys
+    /// and their definitions are unchanged.
+    fn artifacts(
+        &self,
+        id: &str,
+        opts: &crate::inspect::InspectOpts,
+    ) -> Vec<crate::inspect::Artifact> {
+        let fb = self.framebuffer();
+        let painted = fb.iter().filter(|&&b| b != 0x00).count();
+        let (w, h) = self.dimensions();
+        // The most common non-black pixel: says WHAT was drawn, not merely that
+        // something was. "6352 bytes changed" cannot be checked against a photo
+        // of real silicon; "top colour 0x07E0" (RGB565 green) can.
+        let mut counts: std::collections::HashMap<u16, usize> = std::collections::HashMap::new();
+        for px in fb.chunks_exact(2) {
+            let v = u16::from_be_bytes([px[0], px[1]]);
+            if v != 0 {
+                *counts.entry(v).or_default() += 1;
+            }
+        }
+        let top = counts.iter().max_by_key(|&(_, n)| *n);
+        vec![crate::inspect::Artifact {
+            kind: "framebuffer".to_string(),
+            id: id.to_string(),
+            meta: serde_json::json!({
+                "w": w,
+                "h": h,
+                "format": "rgb565_be",
+                "generation": crate::inspect::artifact_generation(fb),
+                "display_on": self.display_on(),
+                "painted_bytes": painted,
+                "total_bytes": fb.len(),
+                "top_colour": top.map(|(v, _)| format!("0x{v:04X}")),
+                "top_colour_pixels": top.map(|(_, n)| *n),
+            }),
+            bytes: crate::inspect::artifact_bytes(fb, opts),
+        }]
+    }
+
     fn cs_pin(&self) -> &str {
         &self.cs_pin
     }

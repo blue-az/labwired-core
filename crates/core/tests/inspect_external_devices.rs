@@ -116,7 +116,7 @@ fn manifest_external_devices_are_visible_in_inspect() {
     let mux = device(&inspect.devices, "mux");
     assert_eq!(mux.device_type.as_deref(), Some("tca9548a"));
     assert_eq!(mux.attachment.transport, "i2c");
-    assert_eq!(mux.attachment.bus, "i2c0");
+    assert_eq!(mux.attachment.bus.as_deref(), Some("i2c0"));
     assert_eq!(mux.attachment.address, Some(0x70));
     assert_eq!(
         mux.attachment.channel, None,
@@ -126,7 +126,11 @@ fn manifest_external_devices_are_visible_in_inspect() {
     for (n, id) in ["bay0", "bay1", "bay2", "bay3"].iter().enumerate() {
         let bay = device(&inspect.devices, id);
         assert_eq!(bay.device_type.as_deref(), Some("vcnl4010"));
-        assert_eq!(bay.attachment.bus, "i2c0", "{id} reports its controller");
+        assert_eq!(
+            bay.attachment.bus.as_deref(),
+            Some("i2c0"),
+            "{id} reports its controller"
+        );
         assert_eq!(
             bay.attachment.address,
             Some(0x13),
@@ -147,7 +151,7 @@ fn manifest_external_devices_are_visible_in_inspect() {
     let tft = device(&inspect.devices, "tft");
     assert_eq!(tft.device_type.as_deref(), Some("ili9341"));
     assert_eq!(tft.attachment.transport, "spi");
-    assert_eq!(tft.attachment.bus, "spi3");
+    assert_eq!(tft.attachment.bus.as_deref(), Some("spi3"));
     assert_eq!(tft.attachment.cs_pin.as_deref(), Some("GPIO15"));
     assert_eq!(tft.attachment.address, None, "SPI has no bus address");
 }

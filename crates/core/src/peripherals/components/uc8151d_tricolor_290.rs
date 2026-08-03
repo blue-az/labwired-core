@@ -290,6 +290,52 @@ struct Uc8151dSnap {
 }
 
 impl SpiDevice for Uc8151dTricolor290 {
+    /// A tri-color e-paper is not one framebuffer, so it is not reported as
+    /// one. It has TWO independent 1-bpp planes and a refresh that decides
+    /// whether either is on the glass, and all three facts are evidence:
+    ///
+    /// * The planes are erased to `0xFF` — the panel's own convention, where a
+    ///   set bit is "no ink" — so an inked cell is a byte that is NOT `0xFF`.
+    ///   That is the same count the CLI's `black-plane non-FF bytes=` line
+    ///   prints, so the two agree by construction.
+    /// * `refresh_generation` is the only thing that distinguishes "RAM was
+    ///   written" from "the image is on the glass". `labwired_verify`'s
+    ///   `min_refresh_generation` clause resolves against it and was
+    ///   unreachable for every e-paper until this existed.
+    /// * `bytes` carries the black plane followed by the red plane, with
+    ///   `plane_bytes` giving the split, because one payload field cannot hold
+    ///   two planes and inventing a composite image would be synthesizing a
+    ///   picture the model never produced.
+    fn artifacts(
+        &self,
+        id: &str,
+        opts: &crate::inspect::InspectOpts,
+    ) -> Vec<crate::inspect::Artifact> {
+        let (w, h) = self.dimensions();
+        let black = self.black_plane();
+        let red = self.red_plane();
+        let ink = |plane: &[u8]| plane.iter().filter(|&&b| b != 0xFF).count();
+        let mut both = Vec::with_capacity(black.len() + red.len());
+        both.extend_from_slice(black);
+        both.extend_from_slice(red);
+        vec![crate::inspect::Artifact {
+            kind: "framebuffer".to_string(),
+            id: id.to_string(),
+            meta: serde_json::json!({
+                "w": w,
+                "h": h,
+                "format": "epaper_tricolor_1bpp_planes",
+                "generation": crate::inspect::artifact_generation(&both),
+                "plane_bytes": black.len(),
+                "black_ink_bytes": ink(black),
+                "red_ink_bytes": ink(red),
+                "refresh_generation": self.refresh_generation(),
+                "power_on": self.power_on(),
+            }),
+            bytes: crate::inspect::artifact_bytes(&both, opts),
+        }]
+    }
+
     fn cs_pin(&self) -> &str {
         &self.cs_pin
     }

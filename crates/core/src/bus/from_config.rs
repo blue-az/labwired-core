@@ -804,10 +804,12 @@ impl SystemBus {
                             data
                         )
                     })?;
-                    let strip =
-                        std::sync::Arc::new(crate::peripherals::components::ws2812::Ws2812::new(
+                    let strip = std::sync::Arc::new(
+                        crate::peripherals::components::ws2812::Ws2812::new(
                             pin, num_pixels, cpu_hz,
-                        ));
+                        )
+                        .with_component_id(ext.id.clone()),
+                    );
                     // Install as a GPIO observer on the S3 GPIO peripheral, if one
                     // is registered (walk-free: filters by pin internally).
                     if let Some(idx) = bus.find_peripheral_index_by_name("gpio") {
@@ -927,7 +929,8 @@ impl SystemBus {
                             in1,
                             in2,
                             en,
-                        ),
+                        )
+                        .with_declared_id(ext.id.clone()),
                     );
                     Self::install_gpio_observer(&mut bus, motor.clone());
                     bus.h_bridge_motors.push(motor);
@@ -955,7 +958,8 @@ impl SystemBus {
                                     b1,
                                     b2,
                                     enb,
-                                ),
+                                )
+                                .with_declared_id(ext.id.clone()),
                             );
                             Self::install_gpio_observer(&mut bus, motor_b.clone());
                             bus.h_bridge_motors.push(motor_b);

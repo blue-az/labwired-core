@@ -26,6 +26,7 @@ pub struct HBridgeMotor {
     en_pin: Option<u8>,
     state: Mutex<State>,
     id: String,
+    declared_id: Option<String>,
 }
 
 impl HBridgeMotor {
@@ -39,7 +40,25 @@ impl HBridgeMotor {
                 ..State::default()
             }),
             id: id.into(),
+            declared_id: None,
         }
+    }
+
+    /// Record the `external_devices:` entry this channel was built from.
+    ///
+    /// One H-bridge declaration builds up to two channel models (`<id>-a`,
+    /// `<id>-b`), so [`Self::id`] is NOT the manifest id. Inspect joins a
+    /// bus-resident device to its declaration by name, and without this the
+    /// channels would report as undeclared hardware on a rig that plainly
+    /// declared them.
+    pub fn with_declared_id(mut self, declared: impl Into<String>) -> Self {
+        self.declared_id = Some(declared.into());
+        self
+    }
+
+    /// The manifest entry this channel came from, when it came from one.
+    pub fn declared_id(&self) -> Option<&str> {
+        self.declared_id.as_deref()
     }
 
     pub fn id(&self) -> &str {
