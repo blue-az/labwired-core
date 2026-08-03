@@ -526,8 +526,21 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
         match serde_json::to_vec(&inspect_block) {
             Ok(json) => match std::fs::write(&inspect_path, &json) {
                 Ok(()) => eprintln!(
-                    "labwired-cli snapshot: inspect {} peripheral(s) -> {:?}",
+                    "labwired-cli snapshot: inspect {} peripheral(s), {} external device(s), \
+                     {}/{} registers model-backed -> {:?}",
                     inspect_block.peripherals.len(),
+                    inspect_block.devices.len(),
+                    inspect_block
+                        .peripherals
+                        .iter()
+                        .flat_map(|p| &p.registers)
+                        .filter(|r| r.value.is_some())
+                        .count(),
+                    inspect_block
+                        .peripherals
+                        .iter()
+                        .map(|p| p.registers.len())
+                        .sum::<usize>(),
                     inspect_path
                 ),
                 Err(e) => eprintln!("labwired-cli snapshot: warn: write {inspect_path:?}: {e}"),

@@ -123,6 +123,12 @@ impl Peripheral for Rp2040I2c {
         Some(self)
     }
 
+    fn for_each_attached_device(&self, f: &mut dyn FnMut(crate::inspect::AttachedDeviceRef<'_>)) {
+        for cell in &self.attached_devices {
+            crate::inspect::visit_i2c_device(&**cell.borrow(), f);
+        }
+    }
+
     fn read_u32(&self, offset: u64) -> SimResult<u32> {
         let val = match offset {
             IC_CON => self.con,

@@ -410,6 +410,12 @@ impl Peripheral for Esp32I2c {
         }
         false
     }
+
+    fn for_each_attached_device(&self, f: &mut dyn FnMut(crate::inspect::AttachedDeviceRef<'_>)) {
+        for dev in &self.slaves {
+            crate::inspect::visit_i2c_device(&**dev, f);
+        }
+    }
 }
 
 impl Esp32I2c {

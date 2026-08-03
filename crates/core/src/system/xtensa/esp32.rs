@@ -49,6 +49,13 @@ pub fn attach_esp32_external_devices(
     bus: &mut SystemBus,
     manifest: &labwired_config::SystemManifest,
 ) -> anyhow::Result<()> {
+    // Classic ESP32 builds its peripheral bank in Rust and never runs
+    // `SystemBus::from_config`'s peripheral loop, so it must record the
+    // manifest's external-device declarations itself. Without this the devices
+    // still attach and still work — they simply inspect as anonymous
+    // `i2c0@0x70` entries instead of by the ids the author wrote.
+    bus.record_external_devices(manifest);
+
     // Devices wired behind an I²C bus switch are attached as part of that
     // switch by `build_i2c_tree`, never straight onto a controller.
     let mux_children = crate::peripherals::components::i2c_mux_child_ids(manifest);

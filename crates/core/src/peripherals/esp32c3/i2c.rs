@@ -1104,10 +1104,21 @@ impl Peripheral for Esp32c3I2c {
         false
     }
 
+    fn for_each_attached_device(&self, f: &mut dyn FnMut(crate::inspect::AttachedDeviceRef<'_>)) {
+        for dev in &self.slaves {
+            crate::inspect::visit_i2c_device(&**dev, f);
+        }
+    }
+
     /// Custom inspection: generic register decode plus a `framebuffer` artifact
-    /// for any attached SSD1306 OLED. Same pattern as the generic `I2c`
-    /// controller — the C3 command-list controller walks its own slaves so the
-    /// leo air-quality OLED surfaces through the universal inspect interface.
+    /// for any attached panel. Same pattern as the generic `I2c` controller —
+    /// the C3 command-list controller walks its own slaves so the leo
+    /// air-quality OLED surfaces through the universal inspect interface.
+    ///
+    /// The artifact's CONTENTS come from [`crate::inspect::device_artifacts`],
+    /// not from here. This used to carry its own copy of the SSD1306 arm, one
+    /// of three such copies; a panel that reported one thing on the C3 and
+    /// another on STM32 was a matter of which copy someone remembered to edit.
     fn inspect(
         &self,
         base: u64,
@@ -1118,28 +1129,12 @@ impl Peripheral for Esp32c3I2c {
         pi.kind = "i2c".to_string();
         for dev in self.attached_slaves() {
             let addr = dev.address();
-            if let Some(oled) = dev
-                .as_any()
-                .and_then(|a| a.downcast_ref::<crate::peripherals::components::Ssd1306>())
-            {
-                let fb = oled.framebuffer();
-                pi.artifacts.push(crate::inspect::Artifact {
-                    kind: "framebuffer".to_string(),
-                    id: format!("i2c@0x{:02x}", addr),
-                    meta: serde_json::json!({
-                        "w": oled.width(),
-                        "h": oled.height(),
-                        "format": "ssd1306_page",
-                        "generation": crate::inspect::artifact_generation(fb),
-                        "ink_bytes": oled.ink_bytes(),
-                        "lit_pixels": oled.lit_pixels(),
-                    }),
-                    bytes: if opts.include_bytes {
-                        Some(fb.to_vec())
-                    } else {
-                        None
-                    },
-                });
+            if let Some(model) = dev.as_any() {
+                pi.artifacts.extend(crate::inspect::device_artifacts(
+                    model,
+                    &format!("i2c@0x{:02x}", addr),
+                    opts,
+                ));
             }
         }
         pi

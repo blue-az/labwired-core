@@ -551,7 +551,13 @@ impl LabwiredAdapter {
                             "name": r.name,
                             "offset": r.offset,
                             "size": r.size,
+                            // `null` when the model did not answer the probe.
+                            // Rendering that as 0 is what made every named-but-
+                            // unmodeled register look like real data; `readable`
+                            // is the same fact as a flag for clients that would
+                            // rather branch than null-check.
                             "value": r.value,
+                            "readable": r.value.is_some(),
                             "access": r.access,
                             "fields": fields,
                         })
