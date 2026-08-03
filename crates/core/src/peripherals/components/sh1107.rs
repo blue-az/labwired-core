@@ -175,6 +175,37 @@ impl Sh1107 {
 }
 
 impl I2cDevice for Sh1107 {
+    /// Same shape as the SSD1306's: a page-addressed 1-bpp OLED reports the
+    /// bytes that carry ink and the pixels that are lit, read off the real
+    /// GDDRAM. Only the `format` differs, because the page geometry does
+    /// (16 pages of 128 columns, not 8).
+    ///
+    /// This panel painted a full console in the browser while `inspect`
+    /// reported no artifact at all: the renderer had an accessor for it and the
+    /// evidence layer had no arm for it. Both were telling the truth about
+    /// their own path.
+    fn artifacts(
+        &self,
+        id: &str,
+        opts: &crate::inspect::InspectOpts,
+    ) -> Vec<crate::inspect::Artifact> {
+        let fb = self.framebuffer();
+        vec![crate::inspect::Artifact {
+            kind: "framebuffer".to_string(),
+            id: id.to_string(),
+            meta: serde_json::json!({
+                "w": self.width(),
+                "h": self.height(),
+                "format": "sh1107_page",
+                "generation": crate::inspect::artifact_generation(fb),
+                "ink_bytes": self.ink_bytes(),
+                "lit_pixels": self.lit_pixels(),
+                "display_on": self.display_on(),
+            }),
+            bytes: crate::inspect::artifact_bytes(fb, opts),
+        }]
+    }
+
     fn address(&self) -> u8 {
         self.address
     }

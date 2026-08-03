@@ -35,6 +35,25 @@ pub trait SpiDevice: Send {
     /// CS pin label this device is wired to (e.g. "PA4" or numeric pin ID). Used by the bus
     /// dispatcher to pick which device responds when the firmware drives a particular CS line.
     fn cs_pin(&self) -> &str;
+
+    /// What this device can show of itself — its own inspect evidence.
+    ///
+    /// The ONE place a a SPI device's artifacts are decided is the model
+    /// itself, next to the buffers it owns. Default: nothing, which is correct
+    /// for a sensor with no display surface and honest for anything else —
+    /// absent means "this engine has nothing to show", never "the screen was
+    /// blank". See [`crate::inspect::DeviceEvidence`] for why this is not a
+    /// central match on concrete types.
+    ///
+    /// Implementations must read the model's REAL buffer and synthesize
+    /// nothing; a panel that was never painted reports zero.
+    fn artifacts(
+        &self,
+        _id: &str,
+        _opts: &crate::inspect::InspectOpts,
+    ) -> Vec<crate::inspect::Artifact> {
+        Vec::new()
+    }
     /// Data/Command (D/C) pin label this device observes, if any (e.g. "PB6").
     ///
     /// Displays like the Nokia 5110 (PCD8544) distinguish command bytes from

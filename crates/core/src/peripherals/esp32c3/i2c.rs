@@ -1115,8 +1115,8 @@ impl Peripheral for Esp32c3I2c {
     /// the C3 command-list controller walks its own slaves so the leo
     /// air-quality OLED surfaces through the universal inspect interface.
     ///
-    /// The artifact's CONTENTS come from [`crate::inspect::device_artifacts`],
-    /// not from here. This used to carry its own copy of the SSD1306 arm, one
+    /// The artifact's CONTENTS come from the device model's own
+    /// [`crate::peripherals::i2c::I2cDevice::artifacts`], not from here. This used to carry its own copy of the SSD1306 arm, one
     /// of three such copies; a panel that reported one thing on the C3 and
     /// another on STM32 was a matter of which copy someone remembered to edit.
     fn inspect(
@@ -1129,13 +1129,8 @@ impl Peripheral for Esp32c3I2c {
         pi.kind = "i2c".to_string();
         for dev in self.attached_slaves() {
             let addr = dev.address();
-            if let Some(model) = dev.as_any() {
-                pi.artifacts.extend(crate::inspect::device_artifacts(
-                    model,
-                    &format!("i2c@0x{:02x}", addr),
-                    opts,
-                ));
-            }
+            pi.artifacts
+                .extend(dev.artifacts(&format!("i2c@0x{:02x}", addr), opts));
         }
         pi
     }

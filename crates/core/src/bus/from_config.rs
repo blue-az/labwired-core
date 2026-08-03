@@ -120,6 +120,11 @@ impl SystemBus {
     }
 
     pub fn from_config(chip: &ChipDescriptor, manifest: &SystemManifest) -> anyhow::Result<Self> {
+        // Part-pack contract, enforced HERE rather than in the manifest loader:
+        // `from_file` is the CLI's path, and the browser and hosted runners
+        // parse with `from_yaml`. Validating at load time only would mean two
+        // of our three runtimes silently accept documents the third rejects.
+        manifest.validate_parts()?;
         let flash_size = parse_size(&chip.flash.size)?;
         let ram_size = parse_size(&chip.ram.size)?;
 
@@ -736,6 +741,23 @@ impl SystemBus {
             if attached_i2c_ext_ids.contains(ext.id.as_str()) {
                 continue;
             }
+            // Zeroth-pass: parts this manifest CARRIES (`parts:`), i.e. parts
+            // that are not built into the engine at all — a private catalog, a
+            // vendor library, a customer's own sensor. They resolve first
+            // because they are the most specific thing anyone said about this
+            // system; shadowing a built-in is rejected inside `lookup` rather
+            // than silently allowed here. See `super::part_pack`.
+            if let Some(pack) = super::part_pack::lookup(manifest, &ext.r#type)? {
+                if let Some(kit) = super::part_pack::kit_for(pack)? {
+                    let mut ctx = crate::peripherals::kit::AttachCtx::new(&mut bus, ext);
+                    kit.attach(&mut ctx)?;
+                } else {
+                    // Not bus-resident: the GPIO / pin-timing primitives, which
+                    // take the same path an embedded descriptor takes.
+                    bus.attach_declarative_device(ext, pack)?;
+                }
+                continue;
+            }
             // First-pass: peripherals that have migrated to the unified
             // `PeripheralKit` contract are dispatched through the registry,
             // so each one ships its own `attach` next to its model instead
@@ -804,10 +826,12 @@ impl SystemBus {
                             data
                         )
                     })?;
-                    let strip =
-                        std::sync::Arc::new(crate::peripherals::components::ws2812::Ws2812::new(
+                    let strip = std::sync::Arc::new(
+                        crate::peripherals::components::ws2812::Ws2812::new(
                             pin, num_pixels, cpu_hz,
-                        ));
+                        )
+                        .with_component_id(ext.id.clone()),
+                    );
                     // Install as a GPIO observer on the S3 GPIO peripheral, if one
                     // is registered (walk-free: filters by pin internally).
                     if let Some(idx) = bus.find_peripheral_index_by_name("gpio") {
@@ -927,7 +951,8 @@ impl SystemBus {
                             in1,
                             in2,
                             en,
-                        ),
+                        )
+                        .with_declared_id(ext.id.clone()),
                     );
                     Self::install_gpio_observer(&mut bus, motor.clone());
                     bus.h_bridge_motors.push(motor);
@@ -955,7 +980,8 @@ impl SystemBus {
                                     b1,
                                     b2,
                                     enb,
-                                ),
+                                )
+                                .with_declared_id(ext.id.clone()),
                             );
                             Self::install_gpio_observer(&mut bus, motor_b.clone());
                             bus.h_bridge_motors.push(motor_b);

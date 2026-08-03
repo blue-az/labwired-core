@@ -19,6 +19,7 @@ use std::sync::Mutex;
 
 mod accessors;
 mod attach;
+mod attached_devices;
 pub mod bus_trace;
 mod can_devices;
 mod construct;
@@ -29,6 +30,7 @@ mod faults;
 mod from_config;
 mod mmio_activity;
 mod mmio_words;
+pub(crate) mod part_pack;
 mod policy;
 mod profiles;
 mod resident_device;

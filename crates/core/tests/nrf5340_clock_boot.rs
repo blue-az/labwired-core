@@ -42,6 +42,7 @@ fn nrf5340_bus() -> SystemBus {
         .join("../../configs/chips/nrf5340.yaml");
     let chip = ChipDescriptor::from_file(&path).expect("load nrf5340 chip");
     let manifest = labwired_config::SystemManifest {
+        parts: Vec::new(),
         walk_deleted: Some(false),
         schema_version: "1.0".to_string(),
         name: "nrf5340-clock-boot".to_string(),

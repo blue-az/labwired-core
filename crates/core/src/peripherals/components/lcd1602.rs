@@ -339,6 +339,34 @@ impl Lcd1602 {
 }
 
 impl I2cDevice for Lcd1602 {
+    /// A character LCD holds text, not pixels, so its evidence is the text —
+    /// decoded from the real DDRAM, not from anything the driver claims it
+    /// sent. `kind` is `"text_display"` rather than `"framebuffer"` because a
+    /// consumer that renders framebuffers cannot render this and should not be
+    /// handed something that looks like one.
+    fn artifacts(
+        &self,
+        id: &str,
+        opts: &crate::inspect::InspectOpts,
+    ) -> Vec<crate::inspect::Artifact> {
+        let ddram = self.ddram();
+        let text = self.text();
+        vec![crate::inspect::Artifact {
+            kind: "text_display".to_string(),
+            id: id.to_string(),
+            meta: serde_json::json!({
+                "format": "hd44780_ddram",
+                "generation": crate::inspect::artifact_generation(&ddram),
+                "text": text,
+                "printable_chars": text.chars().filter(|c| !c.is_whitespace()).count(),
+                "display_on": self.display_on(),
+                "backlight": self.backlight(),
+                "two_line": self.two_line(),
+            }),
+            bytes: crate::inspect::artifact_bytes(&ddram, opts),
+        }]
+    }
+
     fn address(&self) -> u8 {
         self.address
     }
