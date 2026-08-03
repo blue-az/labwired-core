@@ -7,12 +7,13 @@
 //! A second #[wasm_bindgen] impl block, split out of lib.rs.
 
 use crate::*;
+use labwired_core::inspect::artifact_format as F;
 use wasm_bindgen::prelude::*;
 
 /// Both tri-color e-paper models emit this format. They are interchangeable to
 /// a reader on purpose — see [`WasmSimulator::panel_artifact`] and
 /// [`labwired_core::bus::SystemBus::device_artifact_at`].
-const EPAPER_TRICOLOR: &[&str] = &["epaper_tricolor_1bpp_planes"];
+const EPAPER_TRICOLOR: &[&str] = &[F::EPAPER_TRICOLOR_PLANES];
 
 /// How this crate reads a display: through the ONE device-evidence seam
 /// `inspect` walks, never through a downcast chain of its own.
@@ -539,7 +540,7 @@ impl WasmSimulator {
     /// Returns a JS error if the device is not found.
     #[wasm_bindgen]
     pub fn get_ssd1306_framebuffer(&self, device_id: &str) -> Result<Box<[u8]>, JsValue> {
-        self.panel_bytes(device_id, &["ssd1306_page"], Some(0x3C), "SSD1306")
+        self.panel_bytes(device_id, &[F::SSD1306_PAGE], Some(0x3C), "SSD1306")
     }
 
     /// Return the visible text of the LCD1602 identified by `device_id`.
@@ -557,7 +558,7 @@ impl WasmSimulator {
     pub fn get_lcd1602_text(&self, device_id: &str) -> Result<String, JsValue> {
         let text = self.panel_meta(
             device_id,
-            &["hd44780_ddram"],
+            &[F::HD44780_DDRAM],
             Some(0x27),
             "LCD1602",
             "text",
@@ -574,7 +575,7 @@ impl WasmSimulator {
     /// Returns a JS error if the device is not found.
     #[wasm_bindgen]
     pub fn get_sh1107_framebuffer(&self, device_id: &str) -> Result<Box<[u8]>, JsValue> {
-        self.panel_bytes(device_id, &["sh1107_page"], Some(0x3C), "SH1107")
+        self.panel_bytes(device_id, &[F::SH1107_PAGE], Some(0x3C), "SH1107")
     }
 
     /// Return the ILI9341 RGB565 framebuffer for the device identified by `device_id`.
@@ -583,7 +584,7 @@ impl WasmSimulator {
     /// Returns a JS error if the device is not found.
     #[wasm_bindgen]
     pub fn get_ili9341_framebuffer(&self, device_id: &str) -> Result<Box<[u8]>, JsValue> {
-        self.panel_bytes(device_id, &["rgb565_be"], None, "ILI9341")
+        self.panel_bytes(device_id, &[F::RGB565_BE], None, "ILI9341")
     }
 
     /// Return the PCD8544 (Nokia 5110) framebuffer for the device identified
@@ -593,7 +594,7 @@ impl WasmSimulator {
     /// bit `(y % 8)` of byte `[(y / 8) * 84 + x]` (1 = on/dark).
     #[wasm_bindgen]
     pub fn get_pcd8544_framebuffer(&self, device_id: &str) -> Result<Box<[u8]>, JsValue> {
-        self.panel_bytes(device_id, &["pcd8544_bank"], None, "PCD8544")
+        self.panel_bytes(device_id, &[F::PCD8544_BANK], None, "PCD8544")
     }
 
     /// Return the decoded four-character text currently latched into a TM1637
@@ -703,7 +704,7 @@ impl WasmSimulator {
     /// Returns a JS error if the device is not found.
     #[wasm_bindgen]
     pub fn get_led_matrix_framebuffer(&self, device_id: &str) -> Result<Box<[u8]>, JsValue> {
-        self.panel_bytes(device_id, &["max7219_rows"], None, "MAX7219")
+        self.panel_bytes(device_id, &[F::MAX7219_ROWS], None, "MAX7219")
     }
 
     /// Read back the current state of each SPI sensor declared in `board_io`.
