@@ -207,33 +207,29 @@ fn placement_query_refuses_the_wrong_placement() {
     let format = panel.artifact.meta["format"].as_str().expect("format");
 
     assert!(
-        bus
-            .device_artifact_at(&panel.bus, panel.address, &[format], &panel.id, &opts)
+        bus.device_artifact_at(&panel.bus, panel.address, &[format], &panel.id, &opts)
             .is_some(),
         "control: the real placement answers"
     );
     assert!(
-        bus
-            .device_artifact_at("i2c99", panel.address, &[format], &panel.id, &opts)
+        bus.device_artifact_at("i2c99", panel.address, &[format], &panel.id, &opts)
             .is_none(),
         "a controller the panel is not on must not answer for it"
     );
     assert!(
-        bus
-            .device_artifact_at(&panel.bus, Some(0x77), &[format], &panel.id, &opts)
+        bus.device_artifact_at(&panel.bus, Some(0x77), &[format], &panel.id, &opts)
             .is_none(),
         "an address the panel does not answer to must not answer for it"
     );
     assert!(
-        bus
-            .device_artifact_at(
-                &panel.bus,
-                panel.address,
-                &[fmt::RGB565_BE],
-                &panel.id,
-                &opts
-            )
-            .is_none(),
+        bus.device_artifact_at(
+            &panel.bus,
+            panel.address,
+            &[fmt::RGB565_BE],
+            &panel.id,
+            &opts
+        )
+        .is_none(),
         "a panel must not be handed to a caller asking for a different format — \
          that is what stops an OLED being painted as a TFT framebuffer"
     );

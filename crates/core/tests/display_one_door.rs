@@ -114,7 +114,11 @@ fn every_placed_display_answers_the_one_door() {
         // what a per-accessor doc contract ("153,600 bytes = 240x320x2,
         // big-endian RGB565") cannot give it.
         assert!(
-            artifact.meta.get("format").and_then(|v| v.as_str()).is_some(),
+            artifact
+                .meta
+                .get("format")
+                .and_then(|v| v.as_str())
+                .is_some(),
             "{lab}: '{id}' must say how its bytes are packed"
         );
         assert!(
@@ -269,7 +273,9 @@ fn every_display_in_every_shipped_rig_answers_the_one_door() {
         }
     }
 
-    println!("one door served {displays_checked} displays across {rigs_with_a_display} shipped rigs");
+    println!(
+        "one door served {displays_checked} displays across {rigs_with_a_display} shipped rigs"
+    );
     // Without this the test passes just as happily if the scan finds nothing,
     // which is the shape of every gate that was green while broken.
     assert!(

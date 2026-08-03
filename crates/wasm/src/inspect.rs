@@ -216,13 +216,8 @@ impl WasmSimulator {
     /// Both tri-color panels report it under the same `meta` key, so there is
     /// one implementation rather than two that must be kept in step.
     fn refresh_generation(&self, device_id: &str, what: &str) -> Result<u32, JsValue> {
-        let value = self.panel_meta(
-            device_id,
-            EPAPER_TRICOLOR,
-            None,
-            what,
-            "refresh_generation",
-        )?;
+        let value =
+            self.panel_meta(device_id, EPAPER_TRICOLOR, None, what, "refresh_generation")?;
         value
             .as_u64()
             .and_then(|v| u32::try_from(v).ok())

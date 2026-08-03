@@ -94,11 +94,13 @@ fn body_of_opt(source: &str, signature: &str) -> Option<String> {
 
 /// The body of `signature`, brace-matched from its opening `{`.
 fn body_of(source: &str, signature: &str) -> String {
-    let start = source
-        .find(signature)
-        .unwrap_or_else(|| panic!("crates/wasm/src/inspect.rs no longer defines `{signature}` — \
+    let start = source.find(signature).unwrap_or_else(|| {
+        panic!(
+            "crates/wasm/src/inspect.rs no longer defines `{signature}` — \
              if it was renamed, rename it here; if it was deleted, delete it here. \
-             A guard that silently stops covering its subject is worse than no guard."));
+             A guard that silently stops covering its subject is worse than no guard."
+        )
+    });
     let open = source[start..]
         .find('{')
         .map(|i| start + i)
