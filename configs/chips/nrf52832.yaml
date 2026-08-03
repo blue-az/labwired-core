@@ -73,6 +73,10 @@ peripherals:
     size: "4KB"
     irq: 35
     config:
+      # Nordic SPIM, stated explicitly. SpiRegisterLayout derives Default = Stm32,
+      # so omitting this did not mean "pick the right one" -- this nRF52 peripheral
+      # was answering reads with the STM32 SPI register map, silently.
+      profile: "nrf52_spim"
       debug_schema: "../peripherals/nrf52832/spi2.yaml"
   - id: "rtc0"
     type: "nrf52840_rtc"

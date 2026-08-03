@@ -323,6 +323,20 @@ impl SystemBus {
                     .or_else(|| {
                         crate::peripherals::esp32c3::factory::try_build(&canonical_type, p_cfg)
                     })
+                    // ESP32-classic was missing from this chain. Its factory has
+                    // always existed with all 14 `esp32_*` types, but only the
+                    // Xtensa builder called it, so a plain `from_config` bus --
+                    // the path a system manifest takes -- could not construct an
+                    // ESP32 peripheral at all. Declaring `uart1` in esp32.yaml
+                    // therefore failed the build outright with "no register
+                    // layout modelled yet", when the model was sitting right
+                    // there. That guard was doing its job: refusing to map an
+                    // ESP32 UART onto an STM32 layout is exactly right, and the
+                    // fix it asks for ("add a dedicated model") was to call the
+                    // model that already existed.
+                    .or_else(|| {
+                        crate::peripherals::esp32::factory::try_build(&canonical_type, p_cfg)
+                    })
                     .or_else(|| {
                         crate::peripherals::nrf52::factory::try_build(
                             &canonical_type,

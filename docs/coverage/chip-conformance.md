@@ -8,7 +8,7 @@ Reg match = verifiable cold-reset registers reproduced. "Excluded" = registers a
 |------|-------|--------|-------------|------------------------|----------|---------------|
 | esp32c3 | **L2** | ✓ | 39 | 380/402 (94%) | 190 | firmware_survival::test_esp32c3_demo_survival |
 | nrf54l15 | **L1** | ✓ | 28 | — | — | firmware_survival::test_nrf54l15_zephyr_survival |
-| esp32 | **L0** | ✓ | 14 | — | — | — |
+| esp32 | **L0** | ✓ | 32 | — | — | — |
 | esp32s3 | **L0** | ✓ | 10 | — | — | — |
 | esp32s3-zero | **L0** | ✓ | 17 | — | — | — |
 | stm32f401cdu6 | **L1** | ✓ | 45 | — | — | onboarding-stm32f401cdu6 |

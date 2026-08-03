@@ -160,6 +160,23 @@ impl SystemBus {
         Ok(None)
     }
 
+    /// Resolve a register layout from `config.profile`, defaulting only where
+    /// the default is actually right.
+    ///
+    /// Every `*RegisterLayout` here derives `Default` as an STM32 variant, so
+    /// "no profile" used to mean "STM32 register map" for ANY silicon. That is
+    /// not a fallback, it is a wrong answer delivered silently: an nRF52840's
+    /// `spi2` was modelled with the STM32 SPI layout, so firmware read fields
+    /// that do not exist on that die and nothing anywhere errored.
+    ///
+    /// So the default now applies only to STM32 parts, which are the silicon
+    /// those layouts describe. Anything else must say which layout it wants.
+    /// Better to fail unmodelled than to model wrongly — an error names the gap,
+    /// a wrong model hides it behind plausible-looking reads.
+    ///
+    /// This mirrors what the UART path has always done (see `uart_layout_for`:
+    /// "it will NOT be silently mapped onto an STM32"). SPI, I2C, ADC, RCC,
+    /// FLASH and EXTI had no such rule.
     pub(crate) fn parse_profile_or_default<T>(
         p_cfg: &PeripheralConfig,
         peripheral_kind: &str,
@@ -168,6 +185,27 @@ impl SystemBus {
         T: FromStr<Err = String> + Default,
     {
         let Some(profile_name) = Self::profile_name(p_cfg)? else {
+            let t = p_cfg.r#type.to_ascii_lowercase();
+            // Generic spellings (`spi`, `i2c`, `adc`, `rcc`, …) and explicit
+            // stm32* types are the STM32 parts these layouts model. A vendor
+            // name that is neither is a different die.
+            let is_stm32_or_generic = t.starts_with("stm32")
+                || !t.contains('_') && !t.starts_with("nrf") && !t.starts_with("esp32")
+                || t.starts_with("efm32")
+                || t.starts_with("gd32")
+                || t.starts_with("at32");
+            if !is_stm32_or_generic {
+                anyhow::bail!(
+                    "Peripheral '{}' (type '{}') has no `config.profile`, and the default {} \
+                     register layout is STM32's. Refusing to model this silicon with another \
+                     vendor's register map: an unmodelled peripheral is a gap you can see, a \
+                     wrongly modelled one answers reads with registers that do not exist on \
+                     this part. Set `config: {{ profile: <layout> }}` explicitly.",
+                    p_cfg.id,
+                    p_cfg.r#type,
+                    peripheral_kind
+                );
+            }
             return Ok(T::default());
         };
         T::from_str(profile_name).map_err(|e| {
