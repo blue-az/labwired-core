@@ -1,0 +1,40 @@
+# SHA-256 pins for the ESP32-C3 Arduino BLE **two-way node** flash image that
+# `crates/cli/tests/e2e_esp32c3_ble_two_node.rs` boots — TWICE, as both nodes of
+# a two-node run over the shared BLE air.
+#
+# WHAT THIS FIRMWARE IS
+# ---------------------
+# A stock Arduino-ESP32 sketch (framework-arduinoespressif32 on esp-idf
+# v4.4.7 38eeba213a, built 2024-03-05 by arduino-lib-builder) that advertises
+# AND scans at the same time, and narrates both halves on Serial:
+#
+#     BLEDevice::init("lw-node");                     -> "BLE_INIT_OK"
+#     myTag = last byte of BLEDevice::getAddress();   -> "MYTAG <n>"
+#     advertise manufacturer data E5 02 <myTag> <counter>
+#     BLEDevice::getAdvertising()->start();           -> "ADV_ON"
+#     BLEDevice::getScan()->start(0, nullptr, false); -> "SCAN_ON"
+#     loop(): counter++, re-publish, "TICK <counter>"
+#     onResult(dev): "PEER tag=<t> val=<v> from=<addr>"
+#
+# ONE binary, both nodes: the tag is derived from the device's own BLE address,
+# which the twin gives each node distinctly (they are booted with different
+# factory MACs), so node A prints the tag node B is advertising and vice versa.
+# That is what makes the gate a *bidirectional* exchange rather than a one-way
+# report — and `val` is a counter each node increments, so the bytes crossing
+# the air demonstrably change.
+#
+# WHY DIGESTS AND NOT THE FILE
+# ----------------------------
+# Same reasoning as scripts/ci/c3-ble-flash.sha256, and the same fetch/compose
+# script shape: a 4 MiB binary in git goes stale silently. Pinning is what
+# keeps "PEER tag=..." evidence about THIS engine rather than about whatever
+# the blob store happened to serve.
+#
+# Columns: <sha256>  <flash-offset>  <part>
+30d47ab1f344cfa69f6b2f718ffa72fc7baea6db047eaabefea162db29e6821c  0x0      bootloader
+148b959cbff1c38aa8e1d5c0ba9d612c54997b945e56a63f41223eef650653a1  0x8000   partition-table
+f94c5d786a7a8fab06ac5d10e33bf37711a6697636dc037559ea19cc410a17f0  0xe000   otadata
+c15b1ab612563788dd22015e1f430b2e0c89bb905afad9a4cee56ccdded01f1a  0x10000  app
+#
+# The composed image, re-verified by the test itself before it boots.
+a6584194fbc59961b0fe42d44c9c379d98ceeb3588d6280a27eb0a88410dc63f  image    esp32c3-ble-node-flash.bin
