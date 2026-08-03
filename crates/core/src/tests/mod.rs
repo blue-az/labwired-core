@@ -38,3 +38,5 @@ pub mod stm32_spi_waveform;
 pub mod test_cycles;
 #[cfg(test)]
 pub mod walk_starvation_contract;
+#[cfg(test)]
+pub mod yaml_owned_base_contract;
