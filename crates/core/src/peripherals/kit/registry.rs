@@ -113,12 +113,37 @@ const TYPE_ALIASES: &[(&str, &str)] = &[
     ("epd-2in9-uc8151d", "uc8151d_tricolor_290"),
 ];
 
-/// Lookup a kit by the `device_type` string used in `system.yaml`.
-pub fn lookup(device_type: &str) -> Option<&'static dyn PeripheralKit> {
-    let canonical = TYPE_ALIASES
+/// Resolve a `device_type` spelling to its canonical form.
+///
+/// This is the ONE home for alias resolution. Anything that decides "is this
+/// binding the device I want?" must go through here rather than matching the
+/// legacy spelling itself — a second copy of the table is invisible until
+/// somebody authors a manifest with the one row that copy left out, and then
+/// the device is simply not found. Unknown spellings pass through unchanged so
+/// the caller's own "not found" path still reports the string the author wrote.
+pub fn canonical_device_type(device_type: &str) -> &str {
+    TYPE_ALIASES
         .iter()
         .find(|(alias, _)| *alias == device_type)
-        .map_or(device_type, |(_, canonical)| *canonical);
+        .map_or(device_type, |(_, canonical)| *canonical)
+}
+
+/// Every `device_type` spelling the engine accepts — canonical kit types plus
+/// the legacy aliases. Ordered and de-duplicated.
+pub fn known_device_types() -> Vec<String> {
+    let mut out: Vec<String> = KITS
+        .iter()
+        .map(|k| k.metadata().device_type.to_string())
+        .chain(TYPE_ALIASES.iter().map(|(alias, _)| alias.to_string()))
+        .collect();
+    out.sort();
+    out.dedup();
+    out
+}
+
+/// Lookup a kit by the `device_type` string used in `system.yaml`.
+pub fn lookup(device_type: &str) -> Option<&'static dyn PeripheralKit> {
+    let canonical = canonical_device_type(device_type);
     KITS.iter()
         .copied()
         .find(|k| k.metadata().device_type == canonical)

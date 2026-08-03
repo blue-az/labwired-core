@@ -755,19 +755,50 @@ pub fn configure_xtensa_esp32(bus: &mut SystemBus) -> XtensaLx7 {
     // installs putc1 during a boot path we skip. See `seed_rom_console_state`.
     super::seed_rom_console_state(bus);
 
-    // Phase 2B.3c (issue #192): every peripheral registered above is either
-    // migrated to the event scheduler (uart0, gpio, rtc_cntl, timg0/1) or
-    // inert (esp32 spi, efuse, syscon, and the SystemStub batch). So under the
-    // `event-scheduler` feature the per-cycle peripheral walk is skipped
-    // entirely — the ~2.4x throughput win. Verified: the full ESP32-classic
-    // test suite passes with the walk disabled (e2e renders byte-perfect).
-    // No effect with the feature off (the flag is only read there).
-    bus.legacy_walk_disabled = true;
+    // Walk-deletion decision. DERIVED, never asserted — see
+    // `SystemBus::derive_walk_deletable`. The flag is only read under the
+    // `event-scheduler` feature, which the browser crate enables
+    // (`crates/wasm/Cargo.toml`) and the CLI deliberately does not
+    // (`crates/cli/Cargo.toml`), so a wrong value here is invisible to every
+    // CLI lane in this repo and shows up only in the browser.
+    //
+    // This line used to read `bus.legacy_walk_disabled = true;` under a comment
+    // claiming "uart0, gpio, rtc_cntl, timg0/1 migrated to the event
+    // scheduler". gpio / rtc_cntl / timg did migrate (`uses_scheduler() ==
+    // true`). **uart0 never did.** Classic ESP32 has its own
+    // `peripherals::esp32::uart::Esp32Uart`, forked from the shared
+    // `peripherals::esp_uart::EspUart` that the C3/S3 use; only the shared one
+    // grew `uses_scheduler` / `take_scheduled_events` / `on_event`. `Esp32Uart`
+    // still drains `tx_fifo` from `tick()` and nowhere else, and declares
+    // neither `uses_scheduler()` nor `needs_legacy_walk() == false`.
+    //
+    // So under `event-scheduler` the hand flag deleted the walk out from under
+    // a model that needs it: `Esp32Uart::tick()` was never called, `tx_fifo`
+    // never drained, `UART_STATUS.TXFIFO_CNT` pinned at its high-water mark,
+    // and arduino-esp32's `uart_ll_write_txfifo` wait-for-space loop
+    // (`while (128 - txfifo_cnt) < 2`) spun forever — the firmware booted,
+    // burned billions of cycles, painted nothing and never reached `loop()`.
+    // Exactly the failure mode `Peripheral::needs_legacy_walk` warns about.
+    //
+    // The derivation is conservative by construction and cannot make that
+    // mistake: it deletes the walk only when EVERY peripheral is provably
+    // walk-independent. On this bus `Esp32Uart` (uart0/1/2) forces it back on,
+    // which costs classic-ESP32 browser throughput (no interval-512 batching,
+    // no idle fast-forward) until `Esp32Uart` is genuinely migrated — that
+    // migration additionally needs a DPORT arm in
+    // `SystemBus::deliver_scheduled_irq_levels`, which today handles only the
+    // C3 and S3 matrices, or the UART's TXFIFO_EMPTY interrupt would stop
+    // being routed. A slow lab beats a wedged one; see the gate in
+    // `crates/core/tests/esp32_classic_walk_differential.rs`.
 
     // Default flash image: app XIP MMU seed for cache2phys + SPI0/1 backing.
     // Callers (diag / labwired test) overlay partitions.bin at 0x8000 via
     // `seed_esp32_flash_image` before load_firmware.
     let _ = crate::peripherals::esp32::flash_mmu::seed_esp32_flash_image(bus, None);
+
+    // Derived LAST, so it sees the final peripheral set (mirrors the rom-boot
+    // path in `boot::esp32c3_rom` and the tail of `SystemBus::from_config`).
+    bus.recompute_walk_deletable();
 
     XtensaLx7::new()
 }

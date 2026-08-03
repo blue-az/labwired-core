@@ -28,7 +28,7 @@
 
 use labwired_config::{ChipDescriptor, SystemManifest};
 use labwired_core::bus::SystemBus;
-use labwired_core::inspect::InspectOpts;
+use labwired_core::inspect::{artifact_format as fmt, InspectOpts};
 use std::path::PathBuf;
 
 fn repo(rel: &str) -> PathBuf {
@@ -120,6 +120,79 @@ fn every_placed_display_answers_the_one_door() {
         assert!(
             !artifact.id.is_empty(),
             "{lab}: '{id}' must come back stamped with the id it was addressed by"
+        );
+    }
+}
+
+/// The legacy-spelling regression, restated as behaviour.
+///
+/// core#759 fixed this at the level of a string comparison: the two SSD1680
+/// accessors each inlined two of `TYPE_ALIASES`' three rows, dropped
+/// `gxepd2_290_c90c`, and a lab authored with that spelling attached a real
+/// panel, drove it, and rendered dark. The fix routed both through
+/// `canonical_device_type`.
+///
+/// The one door removes the comparison rather than correcting it: resolution
+/// joins on the id the author gave the device and on where it was found, so no
+/// spelling of `device_type` is ever matched and no alias table is ever
+/// consulted. That is a stronger guarantee than canonicalising — there is no
+/// list left to be missing a row from — but "stronger by construction" is an
+/// argument, and #759 was closed with evidence. So this asserts the OUTCOME the
+/// fix existed for, on the exact spelling that was dropped: a panel declared as
+/// `gxepd2_290_c90c` renders.
+///
+/// The two other rows are checked alongside it, so a future alias that resolves
+/// in the engine but not in the browser fails here rather than in a lab.
+#[test]
+fn a_panel_declared_by_any_legacy_spelling_still_renders() {
+    let opts = InspectOpts {
+        include_bytes: true,
+        peripheral: None,
+    };
+    // Every spelling `registry::lookup` accepts for this panel, canonical first.
+    for spelling in [
+        "ssd1680_tricolor_290",
+        "epd-2in9-tricolor",
+        "gxepd2_290_c90c",
+    ] {
+        let yaml = format!(
+            r#"
+name: "alias-fixture"
+chip: "../chips/stm32f103.yaml"
+external_devices:
+  - id: "epaper"
+    type: "{spelling}"
+    connection: "spi1"
+    config:
+      cs_pin: "PA4"
+"#
+        );
+        let manifest: SystemManifest =
+            serde_yaml::from_str(&yaml).expect("parse the synthesized manifest");
+        let chip_path = repo("configs/chips/stm32f103.yaml");
+        let chip = ChipDescriptor::from_file(&chip_path).expect("chip");
+        let mut bus = SystemBus::from_config(&chip, &manifest).unwrap_or_else(|e| {
+            panic!("{spelling}: the engine refused to build a panel it accepts: {e}")
+        });
+        let _ = labwired_core::system::cortex_m::configure_cortex_m(&mut bus);
+        bus.refresh_peripheral_index();
+
+        let artifact = bus.display_artifact("epaper", &opts).unwrap_or_else(|| {
+            panic!(
+                "a panel declared as `{spelling}` attaches and is driven, but the one door \
+                 returns nothing for it — this is exactly the dark-panel regression core#759 \
+                 closed, reopened"
+            )
+        });
+        assert_eq!(
+            artifact.meta.get("format").and_then(|v| v.as_str()),
+            Some(fmt::EPAPER_TRICOLOR_PLANES),
+            "`{spelling}` must resolve to the same panel as its canonical spelling"
+        );
+        assert_eq!(
+            artifact.bytes.as_ref().map(Vec::len),
+            Some(9472),
+            "`{spelling}` must hand back both planes, not a truncated buffer"
         );
     }
 }
