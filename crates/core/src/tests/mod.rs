@@ -3,6 +3,8 @@ pub mod builtin_chip_self_contained;
 #[cfg(test)]
 pub mod bus_proof_matrix;
 #[cfg(test)]
+pub mod bus_trace_one_home;
+#[cfg(test)]
 pub mod device_identity_one_home;
 #[cfg(test)]
 pub mod esp32;
