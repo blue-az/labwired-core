@@ -15,6 +15,36 @@ use wasm_bindgen::prelude::*;
 /// [`labwired_core::bus::SystemBus::device_artifact_at`].
 const EPAPER_TRICOLOR: &[&str] = &[F::EPAPER_TRICOLOR_PLANES];
 
+/// Rewrite integers that JavaScript cannot hold exactly as decimal STRINGS.
+///
+/// `serde_wasm_bindgen` does not truncate a `u64` past 2^53 — it fails the whole
+/// serialization, and `to_value(..).unwrap_or(JsValue::NULL)` then hands the UI
+/// a silent `null`. `meta.generation` is a 64-bit FNV hash, so it trips this
+/// essentially always: `WasmSimulator::inspect` returns `null` for every machine
+/// that has a device with an artifact, which is every machine with a panel.
+///
+/// A string keeps the value exact and keeps it comparable (`!==` is all a
+/// change-detector needs), where an `f64` would silently alias two different
+/// buffers to one generation and a `BigInt` would make `JSON.stringify` throw.
+fn js_safe_meta(meta: &serde_json::Value) -> serde_json::Value {
+    const MAX_EXACT: u64 = 1 << 53;
+    match meta {
+        serde_json::Value::Number(n) => match n.as_u64() {
+            Some(v) if v >= MAX_EXACT => serde_json::Value::String(v.to_string()),
+            _ => meta.clone(),
+        },
+        serde_json::Value::Array(items) => {
+            serde_json::Value::Array(items.iter().map(js_safe_meta).collect())
+        }
+        serde_json::Value::Object(map) => serde_json::Value::Object(
+            map.iter()
+                .map(|(k, v)| (k.clone(), js_safe_meta(v)))
+                .collect(),
+        ),
+        _ => meta.clone(),
+    }
+}
+
 /// How this crate reads a display: through the ONE device-evidence seam
 /// `inspect` walks, never through a downcast chain of its own.
 ///
@@ -56,7 +86,51 @@ const EPAPER_TRICOLOR: &[&str] = &[F::EPAPER_TRICOLOR_PLANES];
 ///   `get_uc8151d_framebuffer` already ignored it. What the device IS comes from
 ///   `meta.format`, which the model writes next to the buffer it describes.
 impl WasmSimulator {
+    /// THE door: whatever the display called `device_id` is showing.
+    ///
+    /// One resolution, tried in the order the two id registries are authoritative:
+    ///
+    /// 1. **The manifest name.** [`labwired_core::bus::SystemBus::display_artifact`]
+    ///    joins the walk to `external_devices:`, so this reaches a display
+    ///    however it was bound — I²C slave, SPI panel, a slave behind a bus
+    ///    switch, or a bit-banged module that has no controller at all. This is
+    ///    the step that was missing: every accessor this replaces started from
+    ///    `board_io`, so a display declared only under `external_devices:` had
+    ///    no placement to query and painted nothing on every chip, for every
+    ///    model.
+    /// 2. **The `board_io` placement**, when and only when the manifest join did
+    ///    not produce this id — a model attached programmatically rather than
+    ///    from a declaration (the ESP32 quirks path) has a synthesized id, and
+    ///    the binding still states the wire it is on. Not a parallel system: it
+    ///    is a second key into the SAME walk and the SAME
+    ///    [`labwired_core::inspect::DeviceEvidence::artifacts`] call.
+    fn display_artifact(
+        &self,
+        device_id: &str,
+        include_bytes: bool,
+    ) -> Option<labwired_core::inspect::Artifact> {
+        let machine = self.machine.as_ref()?;
+        let opts = labwired_core::inspect::InspectOpts {
+            include_bytes,
+            peripheral: None,
+        };
+        if let Some(found) = machine.bus.display_artifact(device_id, &opts) {
+            return Some(found);
+        }
+        let binding = self.board_io.iter().find(|b| b.id == device_id)?;
+        machine.bus.device_artifact_at_any(
+            &binding.peripheral,
+            binding.i2c_address,
+            device_id,
+            &opts,
+        )
+    }
+
     /// The artifact of the display bound to `device_id`, read through the seam.
+    ///
+    /// Kept for the per-model shims, which pass a `formats` filter so that two
+    /// panels on one controller cannot be handed to each other. The door above
+    /// needs no such filter: it is keyed by the id the author gave the device.
     fn panel_artifact(
         &self,
         device_id: &str,
@@ -65,6 +139,19 @@ impl WasmSimulator {
         include_bytes: bool,
         what: &str,
     ) -> Result<labwired_core::inspect::Artifact, JsValue> {
+        // The one door first, so a per-model accessor inherits every route the
+        // door can resolve — including the `external_devices:`-only rigs that
+        // have no binding at all.
+        if let Some(found) = self.display_artifact(device_id, include_bytes) {
+            if found
+                .meta
+                .get("format")
+                .and_then(|f| f.as_str())
+                .is_some_and(|f| formats.contains(&f))
+            {
+                return Ok(found);
+            }
+        }
         let machine = self.machine.as_ref().unwrap();
         let binding = self
             .board_io
@@ -531,6 +618,60 @@ impl WasmSimulator {
         serde_wasm_bindgen::to_value(&states).unwrap_or(JsValue::NULL)
     }
 
+    /// **THE door.** Whatever the display called `device_id` is showing — any
+    /// model, any transport, any chip, however it was bound.
+    ///
+    /// Returns `null` when there is no such display, otherwise:
+    ///
+    /// ```text
+    /// { id, kind, format, width, height, bytes, text, meta }
+    /// ```
+    ///
+    /// * `kind` — `"framebuffer"` (packed pixels) or `"text_display"` (decoded
+    ///   characters). Between them, every way this engine has of saying "a human
+    ///   can see this".
+    /// * `format` — how `bytes` are packed (`"rgb565_be"`, `"ssd1306_page"`,
+    ///   `"epaper_tricolor_1bpp_planes"`, …).
+    /// * `width` / `height` — the panel's own geometry, in pixels (or in
+    ///   characters, for a text display), `null` when the model reports none.
+    /// * `bytes` — the payload, present only when `include_bytes`.
+    /// * `text` — the decoded string, for a `text_display`.
+    /// * `meta` — everything else the model chose to report (ink counts, power
+    ///   state, `generation`, `refresh_generation`), so a caller can poll for
+    ///   change without pulling pixels.
+    ///
+    /// **Geometry and packing are DATA, deliberately.** The accessors this
+    /// replaces carried them as prose in a doc comment — "153,600 bytes =
+    /// 240×320×2, big-endian RGB565" — which is lore that lives in the reader.
+    /// A model that arrives tomorrow cannot put anything into last year's doc
+    /// comment, so every new panel needed a new accessor AND a new renderer
+    /// branch before it could show a single pixel. Here a caller can paint a
+    /// display it has never heard of, and a new model is renderable the day its
+    /// own `artifacts()` lands.
+    ///
+    /// `generation` is stringified: it is a 64-bit FNV hash, and a `u64` past
+    /// 2^53 makes `serde_wasm_bindgen` refuse the WHOLE payload. That is not
+    /// hypothetical — it is why [`Self::inspect`] currently returns `null` for
+    /// every machine that has a device with an artifact.
+    #[wasm_bindgen]
+    pub fn get_display(&self, device_id: &str, include_bytes: bool) -> JsValue {
+        let Some(artifact) = self.display_artifact(device_id, include_bytes) else {
+            return JsValue::NULL;
+        };
+        let meta = js_safe_meta(&artifact.meta);
+        let out = serde_json::json!({
+            "id": artifact.id,
+            "kind": artifact.kind,
+            "format": meta.get("format").cloned().unwrap_or(serde_json::Value::Null),
+            "width": meta.get("w").cloned().unwrap_or(serde_json::Value::Null),
+            "height": meta.get("h").cloned().unwrap_or(serde_json::Value::Null),
+            "text": meta.get("text").cloned().unwrap_or(serde_json::Value::Null),
+            "bytes": artifact.bytes,
+            "meta": meta,
+        });
+        serde_wasm_bindgen::to_value(&out).unwrap_or(JsValue::NULL)
+    }
+
     /// Return the SSD1306 GDDRAM framebuffer for the device identified by `device_id`.
     ///
     /// Returns a 1024-byte `Uint8Array` (128 columns × 8 pages, page-major) for
@@ -850,7 +991,17 @@ impl WasmSimulator {
             peripheral: None,
         };
         let mi = machine.inspect(name.as_deref(), &opts);
-        serde_wasm_bindgen::to_value(&mi).unwrap_or(JsValue::NULL)
+        // Round-trip through `serde_json` so `js_safe_meta` can reach the
+        // artifact `generation` values. Without it this returned `null` — not
+        // for a filtered peripheral, but for the WHOLE payload, on every
+        // machine that has a panel: a 64-bit FNV hash is past 2^53 and
+        // `serde_wasm_bindgen` refuses the entire document rather than the
+        // field. Every inspect surface in the browser has been blind to
+        // exactly the machines it exists to describe.
+        let Ok(value) = serde_json::to_value(&mi) else {
+            return JsValue::NULL;
+        };
+        serde_wasm_bindgen::to_value(&js_safe_meta(&value)).unwrap_or(JsValue::NULL)
     }
 
     /// Raw escape hatch: read `len` bytes at absolute `addr`, side-effect-free.

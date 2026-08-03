@@ -223,6 +223,67 @@ impl SystemBus {
         filter: Option<&str>,
         opts: &crate::inspect::InspectOpts,
     ) -> Vec<crate::inspect::DeviceInspect> {
+        self.join_devices(filter, None, opts)
+    }
+
+    /// What the device the author called `id` is currently showing — THE door
+    /// for reading a display, whatever bound it.
+    ///
+    /// One call, one argument: the name in the manifest. Not the model, not the
+    /// transport, not the controller, and above all not a `board_io` binding.
+    ///
+    /// Each of those used to be a clause a panel could fail. The accessors this
+    /// replaces began by looking the display up in `board_io`, so a display
+    /// declared only under `external_devices:` — which is a perfectly ordinary
+    /// way to place one, and what several shipped rigs do — had no placement for
+    /// the renderer to query and painted nothing. Not for one model: for every
+    /// model, on every chip. Then, having found a binding, each accessor
+    /// re-enumerated by downcast the controllers it believed that panel could
+    /// hang off, so a chip whose SPI block was missing from one list rendered
+    /// blank there and only there.
+    ///
+    /// This asks the same walk `inspect` asks and joins on the same manifest
+    /// name, so it reaches a bus-resident TM1637 on GPIO pads and an I²C slave
+    /// behind a bus switch by the same code path that reaches an SPI panel. A
+    /// display the walk cannot reach is invisible to `inspect` too — which is a
+    /// bug with one home and one fix, instead of a surface that silently
+    /// disagrees with its sibling.
+    ///
+    /// The answer carries geometry and packing as DATA (`meta.w`, `meta.h`,
+    /// `meta.format`), because a caller must be able to render a panel it has
+    /// never heard of. A per-accessor doc contract — "153,600 bytes, 240×320,
+    /// big-endian RGB565" — is lore that lives in the reader; a new model
+    /// cannot supply it, so every new model needed a new accessor and a new
+    /// renderer branch.
+    ///
+    /// Evidence is extracted for the matched device ONLY: the join computes an
+    /// id before it asks anything to describe itself, so polling one panel does
+    /// not build every other panel's framebuffer.
+    pub fn display_artifact(
+        &self,
+        id: &str,
+        opts: &crate::inspect::InspectOpts,
+    ) -> Option<crate::inspect::Artifact> {
+        self.join_devices(None, Some(id), opts)
+            .into_iter()
+            .next()?
+            .artifacts
+            .into_iter()
+            .find(|a| crate::inspect::is_display_artifact(a))
+    }
+
+    /// The join behind [`Self::inspect_devices`] and [`Self::display_artifact`].
+    ///
+    /// `only_id` restricts the result to the single device that resolves to that
+    /// id. It is applied AFTER the id is resolved and BEFORE evidence is asked
+    /// for, which is what keeps a single-panel poll cheap without giving the
+    /// one-device path its own, subtly different, copy of the join.
+    fn join_devices(
+        &self,
+        filter: Option<&str>,
+        only_id: Option<&str>,
+        opts: &crate::inspect::InspectOpts,
+    ) -> Vec<crate::inspect::DeviceInspect> {
         let decls = &self.external_device_decls;
         // A declaration's controller is its own `connection` unless that names
         // another declaration (a bus switch), in which case it inherits the
@@ -275,6 +336,9 @@ impl SystemBus {
                     }
                 }
             };
+            if only_id.is_some_and(|want| want != id) {
+                return;
+            }
             // The device decides what it can show; this only supplies the id
             // it is addressed by, which is not known until the join above.
             let artifacts = d
@@ -371,6 +435,38 @@ impl SystemBus {
                     .and_then(serde_json::Value::as_str)
                     .is_some_and(|f| formats.contains(&f))
             });
+        });
+        found
+    }
+
+    /// [`Self::device_artifact_at`] without a format filter: whatever DISPLAY
+    /// sits at this placement, whichever model it turns out to be.
+    ///
+    /// The second key of the one door — used only when the manifest join could
+    /// not name the device (a model attached programmatically), where the
+    /// caller's binding still knows the wire.
+    pub fn device_artifact_at_any(
+        &self,
+        bus: &str,
+        address: Option<u8>,
+        id: &str,
+        opts: &crate::inspect::InspectOpts,
+    ) -> Option<crate::inspect::Artifact> {
+        let mut found: Option<crate::inspect::Artifact> = None;
+        self.for_each_attached_device(&mut |on, d| {
+            if found.is_some() || on != Some(bus) {
+                return;
+            }
+            if address.is_some() && d.address != address {
+                return;
+            }
+            let Some(evidence) = d.evidence else {
+                return;
+            };
+            found = evidence
+                .artifacts(id, opts)
+                .into_iter()
+                .find(crate::inspect::is_display_artifact);
         });
         found
     }

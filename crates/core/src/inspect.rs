@@ -545,6 +545,18 @@ impl DeviceEvidence for SpiEvidence<'_> {
     }
 }
 
+/// Is this artifact something a display surface can paint?
+///
+/// Kind, not model. `"framebuffer"` is packed pixels and `"text_display"` is
+/// decoded characters (an HD44780 panel, a TM1637 module, one 7-segment digit) —
+/// between them that is every way this engine has of saying "a human can see
+/// this". A reader asks the question once, here, instead of each caller keeping
+/// a list of the models it believes are screens; a new panel that reports either
+/// kind is renderable the day its model lands.
+pub fn is_display_artifact(artifact: &Artifact) -> bool {
+    matches!(artifact.kind.as_str(), "framebuffer" | "text_display")
+}
+
 /// The `meta.format` string each display model stamps on its own artifact —
 /// the ONE name for "how are these bytes packed".
 ///
