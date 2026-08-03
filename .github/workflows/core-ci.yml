@@ -152,7 +152,8 @@ jobs:
   # WHY A SEPARATE JOB RATHER THAN A STEP IN `pr-gate` (measured, not guessed):
   #   * the feature-variant recompile of `labwired-core` costs ~45s on a warm
   #     cache (measured: the `Feature gate — scheduler IRQ delivery` step in
-  #     `core-integrity`, run 30838517438, `Finished ... in 44.79s`);
+  #     `core-integrity`, run 30838517438, `Finished ... in 44.79s`; this job
+  #     builds it COLD in 46.32s, so ~45-50s either way);
   #   * a PASSING observable arm exits on the first 500k-step batch, but a
   #     FAILING one burns the whole 20M-step budget — locally 15s pass vs 129s
   #     fail, ~8x. `pr-gate` has `timeout-minutes: 5` and already runs 3.0-4.5
@@ -178,21 +179,21 @@ jobs:
       # (`tests/fixtures/tier1/esp32.elf`) is a plain committed binary, not LFS.
       - uses: actions/checkout@v4
 
+      # No rustfmt/clippy components: this job lints nothing.
       - name: Install Rust
         uses: dtolnay/rust-toolchain@1.95.0
 
-      # Deliberately shares `core-integrity`'s cache key and never writes to it:
-      # that cache is rebuilt on every push to main and already contains the
-      # third-party deps for this toolchain, so this job starts warm on its very
-      # first run. A private `shared-key` would instead be branch-scoped, which
-      # means a cold full build on every new PR branch.
-      - name: Cache dependencies (read-only, from core-integrity)
-        uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: core-ci
-          save-if: false
-          workspaces: |
-            . -> target
+      # NO CACHE STEP, ON PURPOSE — measured, not assumed. The first cut of this
+      # job used `Swatinem/rust-cache@v2` with `shared-key: core-ci` +
+      # `save-if: false`, on the theory that it would restore `core-integrity`'s
+      # warm target dir. Run 30842338316 reported `... Restoring cache ... No
+      # cache found.`: rust-cache's key folds in the installed toolchain
+      # components, and `core-integrity` installs rustfmt + clippy, so the two
+      # jobs never share a key. The cold build cost 46.32s and the whole job 71s
+      # — while `core-integrity`'s WARM feature-variant compile of the same
+      # crate is 44.79s. The cache was buying ~0s and would have cost an ~18s
+      # restore plus repo cache storage, so it is gone. Keep it that way unless
+      # a measurement says otherwise.
 
       # `--nocapture` on purpose: on PASS the arm prints
       # `uart0: CLKDIV=... TXFIFO_CNT=... sink_bytes=N`, which is the evidence
