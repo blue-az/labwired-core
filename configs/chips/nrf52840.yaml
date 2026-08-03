@@ -108,6 +108,12 @@ peripherals:
     size: "4KB"
     irq: 35
     config:
+      # Nordic SPIM, stated explicitly. `SpiRegisterLayout` derives Default =
+      # Stm32, so leaving this out did not mean "pick the right one" -- it meant
+      # this nRF52840 peripheral was answering reads with the STM32 SPI register
+      # map. Silently: nothing errored, and firmware ran against silicon that
+      # does not exist on this part. Found by reject_cross_family_coercion.
+      profile: "nrf52_spim"
       debug_schema: "../peripherals/nrf52840/spi2.yaml"
   - id: "gpiote"
     type: "nrf52840_gpiotasksevents"

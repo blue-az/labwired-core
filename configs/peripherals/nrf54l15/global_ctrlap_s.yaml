@@ -1,0 +1,183 @@
+peripheral: GLOBAL_CTRLAP_S
+version: 0.1.0
+registers:
+- id: EVENTS_RXREADY
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RXREADY
+    bit_range:
+    - 0
+    - 0
+    description: RXSTATUS is changed to DataPending.
+  side_effects: null
+- id: EVENTS_TXDONE
+  address_offset: 260
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_TXDONE
+    bit_range:
+    - 0
+    - 0
+    description: TXSTATUS is changed to NoDataPending.
+  side_effects: null
+- id: INTEN
+  address_offset: 768
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RXREADY
+    bit_range:
+    - 0
+    - 0
+    description: Enable or disable interrupt for event RXREADY
+  - name: TXDONE
+    bit_range:
+    - 1
+    - 1
+    description: Enable or disable interrupt for event TXDONE
+  side_effects: null
+- id: INTENSET
+  address_offset: 772
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RXREADY
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to enable interrupt for event RXREADY
+  - name: TXDONE
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to enable interrupt for event TXDONE
+  side_effects: null
+- id: INTENCLR
+  address_offset: 776
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RXREADY
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to disable interrupt for event RXREADY
+  - name: TXDONE
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to disable interrupt for event TXDONE
+  side_effects: null
+- id: INTPEND
+  address_offset: 780
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: RXREADY
+    bit_range:
+    - 0
+    - 0
+    description: Read pending status of interrupt for event RXREADY
+  - name: TXDONE
+    bit_range:
+    - 1
+    - 1
+    description: Read pending status of interrupt for event TXDONE
+  side_effects: null
+- id: MAILBOX_RXDATA
+  address_offset: 1024
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: RXDATA
+    bit_range:
+    - 31
+    - 0
+    description: Data received from debugger.
+  side_effects: null
+- id: MAILBOX_RXSTATUS
+  address_offset: 1028
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: RXSTATUS
+    bit_range:
+    - 0
+    - 0
+    description: Status of data in register RXDATA.
+  side_effects: null
+- id: MAILBOX_TXDATA
+  address_offset: 1152
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TXDATA
+    bit_range:
+    - 31
+    - 0
+    description: Data sent to debugger.
+  side_effects: null
+- id: MAILBOX_TXSTATUS
+  address_offset: 1156
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: TXSTATUS
+    bit_range:
+    - 0
+    - 0
+    description: Status of data in register TXDATA.
+  side_effects: null
+- id: ERASEPROTECT_LOCK
+  address_offset: 1280
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LOCK
+    bit_range:
+    - 0
+    - 0
+    description: Lock ERASEPROTECT.DISABLE register from being written until next reset.
+  side_effects: null
+- id: ERASEPROTECT_DISABLE
+  address_offset: 1284
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: KEY
+    bit_range:
+    - 31
+    - 0
+    description: The ERASEALL sequence is initiated if the value of the KEY fields are non-zero and the KEY fields match on both the CPU and debugger sides.
+  side_effects: null
+- id: RESET
+  address_offset: 1312
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: RESET
+    bit_range:
+    - 2
+    - 0
+    description: Reset request
+  side_effects: null
+interrupts:
+  CTRLAP: 82
+  CTRLAP: 82
+timing: null

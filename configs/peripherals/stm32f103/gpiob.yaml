@@ -1,0 +1,699 @@
+peripheral: GPIOB
+version: 0.1.0
+registers:
+- id: CRL
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 1145324612
+  fields:
+  - name: MODE0
+    bit_range:
+    - 1
+    - 0
+    description: Port n.0 mode bits
+  - name: CNF0
+    bit_range:
+    - 3
+    - 2
+    description: Port n.0 configuration bits
+  - name: MODE1
+    bit_range:
+    - 5
+    - 4
+    description: Port n.1 mode bits
+  - name: CNF1
+    bit_range:
+    - 7
+    - 6
+    description: Port n.1 configuration bits
+  - name: MODE2
+    bit_range:
+    - 9
+    - 8
+    description: Port n.2 mode bits
+  - name: CNF2
+    bit_range:
+    - 11
+    - 10
+    description: Port n.2 configuration bits
+  - name: MODE3
+    bit_range:
+    - 13
+    - 12
+    description: Port n.3 mode bits
+  - name: CNF3
+    bit_range:
+    - 15
+    - 14
+    description: Port n.3 configuration bits
+  - name: MODE4
+    bit_range:
+    - 17
+    - 16
+    description: Port n.4 mode bits
+  - name: CNF4
+    bit_range:
+    - 19
+    - 18
+    description: Port n.4 configuration bits
+  - name: MODE5
+    bit_range:
+    - 21
+    - 20
+    description: Port n.5 mode bits
+  - name: CNF5
+    bit_range:
+    - 23
+    - 22
+    description: Port n.5 configuration bits
+  - name: MODE6
+    bit_range:
+    - 25
+    - 24
+    description: Port n.6 mode bits
+  - name: CNF6
+    bit_range:
+    - 27
+    - 26
+    description: Port n.6 configuration bits
+  - name: MODE7
+    bit_range:
+    - 29
+    - 28
+    description: Port n.7 mode bits
+  - name: CNF7
+    bit_range:
+    - 31
+    - 30
+    description: Port n.7 configuration bits
+  side_effects: null
+- id: CRH
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 1145324612
+  fields:
+  - name: MODE8
+    bit_range:
+    - 1
+    - 0
+    description: Port n.8 mode bits
+  - name: CNF8
+    bit_range:
+    - 3
+    - 2
+    description: Port n.8 configuration bits
+  - name: MODE9
+    bit_range:
+    - 5
+    - 4
+    description: Port n.9 mode bits
+  - name: CNF9
+    bit_range:
+    - 7
+    - 6
+    description: Port n.9 configuration bits
+  - name: MODE10
+    bit_range:
+    - 9
+    - 8
+    description: Port n.10 mode bits
+  - name: CNF10
+    bit_range:
+    - 11
+    - 10
+    description: Port n.10 configuration bits
+  - name: MODE11
+    bit_range:
+    - 13
+    - 12
+    description: Port n.11 mode bits
+  - name: CNF11
+    bit_range:
+    - 15
+    - 14
+    description: Port n.11 configuration bits
+  - name: MODE12
+    bit_range:
+    - 17
+    - 16
+    description: Port n.12 mode bits
+  - name: CNF12
+    bit_range:
+    - 19
+    - 18
+    description: Port n.12 configuration bits
+  - name: MODE13
+    bit_range:
+    - 21
+    - 20
+    description: Port n.13 mode bits
+  - name: CNF13
+    bit_range:
+    - 23
+    - 22
+    description: Port n.13 configuration bits
+  - name: MODE14
+    bit_range:
+    - 25
+    - 24
+    description: Port n.14 mode bits
+  - name: CNF14
+    bit_range:
+    - 27
+    - 26
+    description: Port n.14 configuration bits
+  - name: MODE15
+    bit_range:
+    - 29
+    - 28
+    description: Port n.15 mode bits
+  - name: CNF15
+    bit_range:
+    - 31
+    - 30
+    description: Port n.15 configuration bits
+  side_effects: null
+- id: IDR
+  address_offset: 8
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: IDR0
+    bit_range:
+    - 0
+    - 0
+    description: Port input data
+  - name: IDR1
+    bit_range:
+    - 1
+    - 1
+    description: Port input data
+  - name: IDR2
+    bit_range:
+    - 2
+    - 2
+    description: Port input data
+  - name: IDR3
+    bit_range:
+    - 3
+    - 3
+    description: Port input data
+  - name: IDR4
+    bit_range:
+    - 4
+    - 4
+    description: Port input data
+  - name: IDR5
+    bit_range:
+    - 5
+    - 5
+    description: Port input data
+  - name: IDR6
+    bit_range:
+    - 6
+    - 6
+    description: Port input data
+  - name: IDR7
+    bit_range:
+    - 7
+    - 7
+    description: Port input data
+  - name: IDR8
+    bit_range:
+    - 8
+    - 8
+    description: Port input data
+  - name: IDR9
+    bit_range:
+    - 9
+    - 9
+    description: Port input data
+  - name: IDR10
+    bit_range:
+    - 10
+    - 10
+    description: Port input data
+  - name: IDR11
+    bit_range:
+    - 11
+    - 11
+    description: Port input data
+  - name: IDR12
+    bit_range:
+    - 12
+    - 12
+    description: Port input data
+  - name: IDR13
+    bit_range:
+    - 13
+    - 13
+    description: Port input data
+  - name: IDR14
+    bit_range:
+    - 14
+    - 14
+    description: Port input data
+  - name: IDR15
+    bit_range:
+    - 15
+    - 15
+    description: Port input data
+  side_effects: null
+- id: ODR
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ODR0
+    bit_range:
+    - 0
+    - 0
+    description: Port output data
+  - name: ODR1
+    bit_range:
+    - 1
+    - 1
+    description: Port output data
+  - name: ODR2
+    bit_range:
+    - 2
+    - 2
+    description: Port output data
+  - name: ODR3
+    bit_range:
+    - 3
+    - 3
+    description: Port output data
+  - name: ODR4
+    bit_range:
+    - 4
+    - 4
+    description: Port output data
+  - name: ODR5
+    bit_range:
+    - 5
+    - 5
+    description: Port output data
+  - name: ODR6
+    bit_range:
+    - 6
+    - 6
+    description: Port output data
+  - name: ODR7
+    bit_range:
+    - 7
+    - 7
+    description: Port output data
+  - name: ODR8
+    bit_range:
+    - 8
+    - 8
+    description: Port output data
+  - name: ODR9
+    bit_range:
+    - 9
+    - 9
+    description: Port output data
+  - name: ODR10
+    bit_range:
+    - 10
+    - 10
+    description: Port output data
+  - name: ODR11
+    bit_range:
+    - 11
+    - 11
+    description: Port output data
+  - name: ODR12
+    bit_range:
+    - 12
+    - 12
+    description: Port output data
+  - name: ODR13
+    bit_range:
+    - 13
+    - 13
+    description: Port output data
+  - name: ODR14
+    bit_range:
+    - 14
+    - 14
+    description: Port output data
+  - name: ODR15
+    bit_range:
+    - 15
+    - 15
+    description: Port output data
+  side_effects: null
+- id: BSRR
+  address_offset: 16
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: BS0
+    bit_range:
+    - 0
+    - 0
+    description: Set bit 0
+  - name: BS1
+    bit_range:
+    - 1
+    - 1
+    description: Set bit 1
+  - name: BS2
+    bit_range:
+    - 2
+    - 2
+    description: Set bit 1
+  - name: BS3
+    bit_range:
+    - 3
+    - 3
+    description: Set bit 3
+  - name: BS4
+    bit_range:
+    - 4
+    - 4
+    description: Set bit 4
+  - name: BS5
+    bit_range:
+    - 5
+    - 5
+    description: Set bit 5
+  - name: BS6
+    bit_range:
+    - 6
+    - 6
+    description: Set bit 6
+  - name: BS7
+    bit_range:
+    - 7
+    - 7
+    description: Set bit 7
+  - name: BS8
+    bit_range:
+    - 8
+    - 8
+    description: Set bit 8
+  - name: BS9
+    bit_range:
+    - 9
+    - 9
+    description: Set bit 9
+  - name: BS10
+    bit_range:
+    - 10
+    - 10
+    description: Set bit 10
+  - name: BS11
+    bit_range:
+    - 11
+    - 11
+    description: Set bit 11
+  - name: BS12
+    bit_range:
+    - 12
+    - 12
+    description: Set bit 12
+  - name: BS13
+    bit_range:
+    - 13
+    - 13
+    description: Set bit 13
+  - name: BS14
+    bit_range:
+    - 14
+    - 14
+    description: Set bit 14
+  - name: BS15
+    bit_range:
+    - 15
+    - 15
+    description: Set bit 15
+  - name: BR0
+    bit_range:
+    - 16
+    - 16
+    description: Reset bit 0
+  - name: BR1
+    bit_range:
+    - 17
+    - 17
+    description: Reset bit 1
+  - name: BR2
+    bit_range:
+    - 18
+    - 18
+    description: Reset bit 2
+  - name: BR3
+    bit_range:
+    - 19
+    - 19
+    description: Reset bit 3
+  - name: BR4
+    bit_range:
+    - 20
+    - 20
+    description: Reset bit 4
+  - name: BR5
+    bit_range:
+    - 21
+    - 21
+    description: Reset bit 5
+  - name: BR6
+    bit_range:
+    - 22
+    - 22
+    description: Reset bit 6
+  - name: BR7
+    bit_range:
+    - 23
+    - 23
+    description: Reset bit 7
+  - name: BR8
+    bit_range:
+    - 24
+    - 24
+    description: Reset bit 8
+  - name: BR9
+    bit_range:
+    - 25
+    - 25
+    description: Reset bit 9
+  - name: BR10
+    bit_range:
+    - 26
+    - 26
+    description: Reset bit 10
+  - name: BR11
+    bit_range:
+    - 27
+    - 27
+    description: Reset bit 11
+  - name: BR12
+    bit_range:
+    - 28
+    - 28
+    description: Reset bit 12
+  - name: BR13
+    bit_range:
+    - 29
+    - 29
+    description: Reset bit 13
+  - name: BR14
+    bit_range:
+    - 30
+    - 30
+    description: Reset bit 14
+  - name: BR15
+    bit_range:
+    - 31
+    - 31
+    description: Reset bit 15
+  side_effects: null
+- id: BRR
+  address_offset: 20
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: BR0
+    bit_range:
+    - 0
+    - 0
+    description: Reset bit 0
+  - name: BR1
+    bit_range:
+    - 1
+    - 1
+    description: Reset bit 1
+  - name: BR2
+    bit_range:
+    - 2
+    - 2
+    description: Reset bit 1
+  - name: BR3
+    bit_range:
+    - 3
+    - 3
+    description: Reset bit 3
+  - name: BR4
+    bit_range:
+    - 4
+    - 4
+    description: Reset bit 4
+  - name: BR5
+    bit_range:
+    - 5
+    - 5
+    description: Reset bit 5
+  - name: BR6
+    bit_range:
+    - 6
+    - 6
+    description: Reset bit 6
+  - name: BR7
+    bit_range:
+    - 7
+    - 7
+    description: Reset bit 7
+  - name: BR8
+    bit_range:
+    - 8
+    - 8
+    description: Reset bit 8
+  - name: BR9
+    bit_range:
+    - 9
+    - 9
+    description: Reset bit 9
+  - name: BR10
+    bit_range:
+    - 10
+    - 10
+    description: Reset bit 10
+  - name: BR11
+    bit_range:
+    - 11
+    - 11
+    description: Reset bit 11
+  - name: BR12
+    bit_range:
+    - 12
+    - 12
+    description: Reset bit 12
+  - name: BR13
+    bit_range:
+    - 13
+    - 13
+    description: Reset bit 13
+  - name: BR14
+    bit_range:
+    - 14
+    - 14
+    description: Reset bit 14
+  - name: BR15
+    bit_range:
+    - 15
+    - 15
+    description: Reset bit 15
+  side_effects: null
+- id: LCKR
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LCK0
+    bit_range:
+    - 0
+    - 0
+    description: Port A Lock bit 0
+  - name: LCK1
+    bit_range:
+    - 1
+    - 1
+    description: Port A Lock bit 1
+  - name: LCK2
+    bit_range:
+    - 2
+    - 2
+    description: Port A Lock bit 2
+  - name: LCK3
+    bit_range:
+    - 3
+    - 3
+    description: Port A Lock bit 3
+  - name: LCK4
+    bit_range:
+    - 4
+    - 4
+    description: Port A Lock bit 4
+  - name: LCK5
+    bit_range:
+    - 5
+    - 5
+    description: Port A Lock bit 5
+  - name: LCK6
+    bit_range:
+    - 6
+    - 6
+    description: Port A Lock bit 6
+  - name: LCK7
+    bit_range:
+    - 7
+    - 7
+    description: Port A Lock bit 7
+  - name: LCK8
+    bit_range:
+    - 8
+    - 8
+    description: Port A Lock bit 8
+  - name: LCK9
+    bit_range:
+    - 9
+    - 9
+    description: Port A Lock bit 9
+  - name: LCK10
+    bit_range:
+    - 10
+    - 10
+    description: Port A Lock bit 10
+  - name: LCK11
+    bit_range:
+    - 11
+    - 11
+    description: Port A Lock bit 11
+  - name: LCK12
+    bit_range:
+    - 12
+    - 12
+    description: Port A Lock bit 12
+  - name: LCK13
+    bit_range:
+    - 13
+    - 13
+    description: Port A Lock bit 13
+  - name: LCK14
+    bit_range:
+    - 14
+    - 14
+    description: Port A Lock bit 14
+  - name: LCK15
+    bit_range:
+    - 15
+    - 15
+    description: Port A Lock bit 15
+  - name: LCKK
+    bit_range:
+    - 16
+    - 16
+    description: Lock key
+  side_effects: null
+interrupts: null
+timing: null

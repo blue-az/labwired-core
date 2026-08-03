@@ -1,0 +1,233 @@
+peripheral: UART4
+version: 0.1.0
+registers:
+- id: SR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PE
+    bit_range:
+    - 0
+    - 0
+    description: Parity error
+  - name: FE
+    bit_range:
+    - 1
+    - 1
+    description: Framing error
+  - name: NE
+    bit_range:
+    - 2
+    - 2
+    description: Noise error flag
+  - name: ORE
+    bit_range:
+    - 3
+    - 3
+    description: Overrun error
+  - name: IDLE
+    bit_range:
+    - 4
+    - 4
+    description: IDLE line detected
+  - name: RXNE
+    bit_range:
+    - 5
+    - 5
+    description: Read data register not empty
+  - name: TC
+    bit_range:
+    - 6
+    - 6
+    description: Transmission complete
+  - name: TXE
+    bit_range:
+    - 7
+    - 7
+    description: Transmit data register empty
+  - name: LBD
+    bit_range:
+    - 8
+    - 8
+    description: LIN break detection flag
+  side_effects: null
+- id: DR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DR
+    bit_range:
+    - 8
+    - 0
+    description: DR
+  side_effects: null
+- id: BRR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DIV_Fraction
+    bit_range:
+    - 3
+    - 0
+    description: DIV_Fraction
+  - name: DIV_Mantissa
+    bit_range:
+    - 15
+    - 4
+    description: DIV_Mantissa
+  side_effects: null
+- id: CR1
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SBK
+    bit_range:
+    - 0
+    - 0
+    description: Send break
+  - name: RWU
+    bit_range:
+    - 1
+    - 1
+    description: Receiver wakeup
+  - name: RE
+    bit_range:
+    - 2
+    - 2
+    description: Receiver enable
+  - name: TE
+    bit_range:
+    - 3
+    - 3
+    description: Transmitter enable
+  - name: IDLEIE
+    bit_range:
+    - 4
+    - 4
+    description: IDLE interrupt enable
+  - name: RXNEIE
+    bit_range:
+    - 5
+    - 5
+    description: RXNE interrupt enable
+  - name: TCIE
+    bit_range:
+    - 6
+    - 6
+    description: Transmission complete interrupt enable
+  - name: TXEIE
+    bit_range:
+    - 7
+    - 7
+    description: TXE interrupt enable
+  - name: PEIE
+    bit_range:
+    - 8
+    - 8
+    description: PE interrupt enable
+  - name: PS
+    bit_range:
+    - 9
+    - 9
+    description: Parity selection
+  - name: PCE
+    bit_range:
+    - 10
+    - 10
+    description: Parity control enable
+  - name: WAKE
+    bit_range:
+    - 11
+    - 11
+    description: Wakeup method
+  - name: M
+    bit_range:
+    - 12
+    - 12
+    description: Word length
+  - name: UE
+    bit_range:
+    - 13
+    - 13
+    description: USART enable
+  side_effects: null
+- id: CR2
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADD
+    bit_range:
+    - 3
+    - 0
+    description: Address of the USART node
+  - name: LBDL
+    bit_range:
+    - 5
+    - 5
+    description: lin break detection length
+  - name: LBDIE
+    bit_range:
+    - 6
+    - 6
+    description: LIN break detection interrupt enable
+  - name: STOP
+    bit_range:
+    - 13
+    - 12
+    description: STOP bits
+  - name: LINEN
+    bit_range:
+    - 14
+    - 14
+    description: LIN mode enable
+  side_effects: null
+- id: CR3
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EIE
+    bit_range:
+    - 0
+    - 0
+    description: Error interrupt enable
+  - name: IREN
+    bit_range:
+    - 1
+    - 1
+    description: IrDA mode enable
+  - name: IRLP
+    bit_range:
+    - 2
+    - 2
+    description: IrDA low-power
+  - name: HDSEL
+    bit_range:
+    - 3
+    - 3
+    description: Half-duplex selection
+  - name: DMAR
+    bit_range:
+    - 6
+    - 6
+    description: DMA enable receiver
+  - name: DMAT
+    bit_range:
+    - 7
+    - 7
+    description: DMA enable transmitter
+  side_effects: null
+interrupts:
+  UART4: 52
+timing: null

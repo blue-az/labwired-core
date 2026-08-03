@@ -1,0 +1,232 @@
+peripheral: SCB
+version: 0.1.0
+registers:
+- id: CPUID
+  address_offset: 0
+  size: 32
+  access: READ_ONLY
+  reset_value: 1091551809
+  fields:
+  - name: Revision
+    bit_range:
+    - 3
+    - 0
+    description: Revision number
+  - name: PartNo
+    bit_range:
+    - 15
+    - 4
+    description: |-
+      Part number of the
+                    processor
+  - name: Architecture
+    bit_range:
+    - 19
+    - 16
+    description: Reads as 0xF
+  - name: Variant
+    bit_range:
+    - 23
+    - 20
+    description: Variant number
+  - name: Implementer
+    bit_range:
+    - 31
+    - 24
+    description: Implementer code
+  side_effects: null
+- id: ICSR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VECTACTIVE
+    bit_range:
+    - 8
+    - 0
+    description: Active vector
+  - name: RETTOBASE
+    bit_range:
+    - 11
+    - 11
+    description: Return to base level
+  - name: VECTPENDING
+    bit_range:
+    - 18
+    - 12
+    description: Pending vector
+  - name: ISRPENDING
+    bit_range:
+    - 22
+    - 22
+    description: Interrupt pending flag
+  - name: PENDSTCLR
+    bit_range:
+    - 25
+    - 25
+    description: |-
+      SysTick exception clear-pending
+                    bit
+  - name: PENDSTSET
+    bit_range:
+    - 26
+    - 26
+    description: |-
+      SysTick exception set-pending
+                    bit
+  - name: PENDSVCLR
+    bit_range:
+    - 27
+    - 27
+    description: PendSV clear-pending bit
+  - name: PENDSVSET
+    bit_range:
+    - 28
+    - 28
+    description: PendSV set-pending bit
+  - name: NMIPENDSET
+    bit_range:
+    - 31
+    - 31
+    description: NMI set-pending bit.
+  side_effects: null
+- id: VTOR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TBLOFF
+    bit_range:
+    - 31
+    - 7
+    description: |-
+      Vector table base offset
+                    field
+  side_effects: null
+- id: AIRCR
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VECTCLRACTIVE
+    bit_range:
+    - 1
+    - 1
+    description: VECTCLRACTIVE
+  - name: SYSRESETREQ
+    bit_range:
+    - 2
+    - 2
+    description: SYSRESETREQ
+  - name: ENDIANESS
+    bit_range:
+    - 15
+    - 15
+    description: ENDIANESS
+  - name: VECTKEYSTAT
+    bit_range:
+    - 31
+    - 16
+    description: Register key
+  side_effects: null
+- id: SCR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SLEEPONEXIT
+    bit_range:
+    - 1
+    - 1
+    description: SLEEPONEXIT
+  - name: SLEEPDEEP
+    bit_range:
+    - 2
+    - 2
+    description: SLEEPDEEP
+  - name: SEVEONPEND
+    bit_range:
+    - 4
+    - 4
+    description: Send Event on Pending bit
+  side_effects: null
+- id: CCR
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NONBASETHRDENA
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Configures how the processor enters
+                    Thread mode
+  - name: USERSETMPEND
+    bit_range:
+    - 1
+    - 1
+    description: USERSETMPEND
+  - name: UNALIGN__TRP
+    bit_range:
+    - 3
+    - 3
+    description: UNALIGN_ TRP
+  - name: DIV_0_TRP
+    bit_range:
+    - 4
+    - 4
+    description: DIV_0_TRP
+  - name: BFHFNMIGN
+    bit_range:
+    - 8
+    - 8
+    description: BFHFNMIGN
+  - name: STKALIGN
+    bit_range:
+    - 9
+    - 9
+    description: STKALIGN
+  side_effects: null
+- id: SHPR2
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRI_11
+    bit_range:
+    - 31
+    - 24
+    description: |-
+      Priority of system handler
+                    11
+  side_effects: null
+- id: SHPR3
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRI_14
+    bit_range:
+    - 23
+    - 16
+    description: |-
+      Priority of system handler
+                    14
+  - name: PRI_15
+    bit_range:
+    - 31
+    - 24
+    description: |-
+      Priority of system handler
+                    15
+  side_effects: null
+interrupts: null
+timing: null

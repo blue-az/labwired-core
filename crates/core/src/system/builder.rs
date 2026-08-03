@@ -70,15 +70,39 @@ pub fn build_esp32_system_from_manifest(
 ) -> anyhow::Result<(SystemBus, XtensaLx7, XtensaLx7)> {
     let chip_dir = system_path.parent().unwrap_or_else(|| Path::new("."));
     info!("Loading chip descriptor: {}", manifest.chip);
-    let _chip = labwired_config::ChipDescriptor::resolve(&manifest.chip, chip_dir)?;
+    let chip = labwired_config::ChipDescriptor::resolve(&manifest.chip, chip_dir)?;
 
     let mut bus = SystemBus::new();
     let pro_cpu = crate::system::xtensa::configure_xtensa_esp32(&mut bus);
     crate::system::xtensa::attach_esp32_external_devices(&mut bus, manifest)?;
+    // The peripheral BANK is programmatic (above), but the chip YAML is still
+    // where a peripheral's debugger register schema is declared. Without this,
+    // every `debug_schema:` on an Xtensa chip is inert and the whole bank
+    // inspects as `registers: []`.
+    bus.attach_debug_schemas(&chip, &anchor_chip_path(manifest, chip_dir));
     bus.refresh_peripheral_index();
     let app_cpu = XtensaLx7::new_app_cpu();
 
     Ok((bus, pro_cpu, app_cpu))
+}
+
+/// A copy of `manifest` whose `chip:` is anchored to `chip_dir`, mirroring what
+/// [`build_system_bus`] does before `from_config`.
+///
+/// `SystemBus::resolve_peripheral_path` resolves a chip-relative descriptor path
+/// against `manifest.chip`'s directory, so a manifest carrying a chip path
+/// relative to ITSELF would resolve descriptors against the process CWD instead.
+/// A built-in chip name has no directory and is left as the name — its
+/// descriptors come from the embedded registry, not the filesystem.
+pub fn anchor_chip_path(
+    manifest: &labwired_config::SystemManifest,
+    chip_dir: &Path,
+) -> labwired_config::SystemManifest {
+    let mut anchored = manifest.clone();
+    if !labwired_config::is_builtin_chip_spec(&anchored.chip) {
+        anchored.chip = chip_dir.join(&anchored.chip).to_string_lossy().into_owned();
+    }
+    anchored
 }
 
 /// Thin wrapper around [`build_esp32_system_from_manifest`] for callers that

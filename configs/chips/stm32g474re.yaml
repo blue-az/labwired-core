@@ -14,62 +14,75 @@ peripherals:
     type: "rcc"
     base_address: 0x40021000
     config:
+      debug_schema: "../peripherals/stm32g474re/rcc.yaml"
       profile: "stm32g4"
   - id: "gpioa"
     type: "gpio"
     base_address: 0x48000000
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32g474re/gpioa.yaml"
       profile: "stm32v2"
   - id: "gpiob"
     type: "gpio"
     base_address: 0x48000400
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32g474re/gpiob.yaml"
       profile: "stm32v2"
   - id: "gpioc"
     type: "gpio"
     base_address: 0x48000800
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32g474re/gpioc.yaml"
       profile: "stm32v2"
   - id: "gpiod"
     type: "gpio"
     base_address: 0x48000c00
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32g474re/gpiod.yaml"
       profile: "stm32v2"
   - id: "systick"
     type: "systick"
     base_address: 0xE000E010
+    config:
+      debug_schema: "../peripherals/stm32g474re/stk.yaml"
   - id: "usart1"
     type: "uart"
     base_address: 0x40013800
     irq: 37
     config:
+      debug_schema: "../peripherals/stm32g474re/usart1.yaml"
       profile: "stm32v2"
   - id: "usart2"
     type: "uart"
     base_address: 0x40004400
     irq: 38
     config:
+      debug_schema: "../peripherals/stm32g474re/usart2.yaml"
       profile: "stm32v2"
   - id: "lpuart1"
     type: "uart"
     base_address: 0x40008000
     irq: 91
     config:
+      debug_schema: "../peripherals/stm32g474re/lpuart1.yaml"
       profile: "stm32v2"
   - id: "flash"
     type: "flash"
     base_address: 0x40022000
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32g474re/flash.yaml"
       profile: "l4"
   - id: "pwr"
     type: "pwr"
     base_address: 0x40007000
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32g474re/pwr.yaml"
   # ── Tier-1 peripherals (RM0440). The RCC model is profile stm32g4, so the
   # clock-gate `reg:` names resolve to the RM0440 enable-register offsets
   # (ahb2enr@0x4C, apb1enr1@0x58, apb2enr@0x60 — the same offsets ST's CMSIS
@@ -82,6 +95,7 @@ peripherals:
     size: "1KB"
     irq: 28
     config:
+      debug_schema: "../peripherals/stm32g474re/tim2.yaml"
       width: 32
     clock: { reg: "apb1enr", bit: 0 }
   # TIM1 — advanced-control PWM timer (APB2). The `_pwm` id suffix declares the
@@ -92,6 +106,7 @@ peripherals:
     size: "1KB"
     irq: 24
     config:
+      debug_schema: "../peripherals/stm32g474re/tim1.yaml"
       advanced: true
     clock: { reg: "apb2enr", bit: 11 }
   # I2C1 (APB1) — modern v2 controller. RCC_APB1ENR1.I2C1EN (bit 21).
@@ -101,6 +116,7 @@ peripherals:
     size: "1KB"
     irq: 31
     config:
+      debug_schema: "../peripherals/stm32g474re/i2c1.yaml"
       profile: "stm32l4"
     clock: { reg: "apb1enr", bit: 21 }
   # SPI1 (APB2). RCC_APB2ENR.SPI1EN (bit 12).
@@ -110,6 +126,7 @@ peripherals:
     size: "1KB"
     irq: 35
     config:
+      debug_schema: "../peripherals/stm32g474re/spi1.yaml"
       profile: "stm32_fifo"
     clock: { reg: "apb2enr", bit: 12 }
   # ADC1 (AHB2). RCC_AHB2ENR.ADC12EN (bit 13). Model has no conversion engine
@@ -121,6 +138,7 @@ peripherals:
     size: "1KB"
     irq: 18
     config:
+      debug_schema: "../peripherals/stm32g474re/adc1.yaml"
       profile: "stm32l4"
     clock: { reg: "ahb2enr", bit: 13 }
   # DMA1 (AHB1, 7-channel + DMAMUX). RM0440 puts DMA1EN on AHB1ENR (bit 0). The
@@ -132,11 +150,15 @@ peripherals:
     base_address: 0x40020000
     size: "1KB"
     irq: 11
+    config:
+      debug_schema: "../peripherals/stm32g474re/dma1.yaml"
   # IWDG — clocked by the LSI, no RCC enable gate on silicon (ungated).
   - id: "iwdg"
     type: "iwdg"
     base_address: 0x40003000
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32g474re/iwdg.yaml"
   # RTC (APB1) — register interface gated by RCC_APB1ENR1.RTCAPBEN (bit 10).
   - id: "rtc"
     type: "rtc"
@@ -144,9 +166,13 @@ peripherals:
     size: "1KB"
     irq: 2
     clock: { reg: "apb1enr", bit: 10 }
+    config:
+      debug_schema: "../peripherals/stm32g474re/rtc.yaml"
   # NVIC is wired unconditionally for Cortex-M machines; this entry declares
   # the tier1 irq class and pins the canonical base.
   - id: "nvic"
     type: "nvic"
     base_address: 0xE000E100
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32g474re/nvic.yaml"

@@ -1,0 +1,457 @@
+peripheral: ADC
+version: 0.1.0
+registers:
+- id: ISR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADRDY
+    bit_range:
+    - 0
+    - 0
+    description: ADC ready
+  - name: EOSMP
+    bit_range:
+    - 1
+    - 1
+    description: End of sampling flag
+  - name: EOC
+    bit_range:
+    - 2
+    - 2
+    description: End of conversion flag
+  - name: EOS
+    bit_range:
+    - 3
+    - 3
+    description: End of sequence flag
+  - name: OVR
+    bit_range:
+    - 4
+    - 4
+    description: ADC overrun
+  - name: AWD
+    bit_range:
+    - 7
+    - 7
+    description: Analog watchdog flag
+  - name: EOCAL
+    bit_range:
+    - 11
+    - 11
+    description: End Of Calibration flag
+  side_effects: null
+- id: IER
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADRDYIE
+    bit_range:
+    - 0
+    - 0
+    description: ADC ready interrupt enable
+  - name: EOSMPIE
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      End of sampling flag interrupt
+                    enable
+  - name: EOCIE
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      End of conversion interrupt
+                    enable
+  - name: EOSIE
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      End of conversion sequence interrupt
+                    enable
+  - name: OVRIE
+    bit_range:
+    - 4
+    - 4
+    description: Overrun interrupt enable
+  - name: AWDIE
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Analog watchdog interrupt
+                    enable
+  - name: EOCALIE
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      End of calibration interrupt
+                    enable
+  side_effects: null
+- id: CR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADEN
+    bit_range:
+    - 0
+    - 0
+    description: ADC enable command
+  - name: ADDIS
+    bit_range:
+    - 1
+    - 1
+    description: ADC disable command
+  - name: ADSTART
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      ADC start conversion
+                    command
+  - name: ADSTP
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      ADC stop conversion
+                    command
+  - name: ADVREGEN
+    bit_range:
+    - 28
+    - 28
+    description: |-
+      ADC Voltage Regulator
+                    Enable
+  - name: ADCAL
+    bit_range:
+    - 31
+    - 31
+    description: ADC calibration
+  side_effects: null
+- id: CFGR1
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DMAEN
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Direct memory access
+                    enable
+  - name: DMACFG
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Direct memery access
+                    configuration
+  - name: SCANDIR
+    bit_range:
+    - 2
+    - 2
+    description: Scan sequence direction
+  - name: RES
+    bit_range:
+    - 4
+    - 3
+    description: Data resolution
+  - name: ALIGN
+    bit_range:
+    - 5
+    - 5
+    description: Data alignment
+  - name: EXTSEL
+    bit_range:
+    - 8
+    - 6
+    description: External trigger selection
+  - name: EXTEN
+    bit_range:
+    - 11
+    - 10
+    description: |-
+      External trigger enable and polarity
+                    selection
+  - name: OVRMOD
+    bit_range:
+    - 12
+    - 12
+    description: Overrun management mode
+  - name: CONT
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Single / continuous conversion
+                    mode
+  - name: AUTDLY
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Auto-delayed conversion
+                    mode
+  - name: AUTOFF
+    bit_range:
+    - 15
+    - 15
+    description: Auto-off mode
+  - name: DISCEN
+    bit_range:
+    - 16
+    - 16
+    description: Discontinuous mode
+  - name: AWDSGL
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      Enable the watchdog on a single channel
+                    or on all channels
+  - name: AWDEN
+    bit_range:
+    - 23
+    - 23
+    description: Analog watchdog enable
+  - name: AWDCH
+    bit_range:
+    - 30
+    - 26
+    description: |-
+      Analog watchdog channel
+                    selection
+  side_effects: null
+- id: CFGR2
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OVSE
+    bit_range:
+    - 0
+    - 0
+    description: Oversampler Enable
+  - name: OVSR
+    bit_range:
+    - 4
+    - 2
+    description: Oversampling ratio
+  - name: OVSS
+    bit_range:
+    - 8
+    - 5
+    description: Oversampling shift
+  - name: TOVS
+    bit_range:
+    - 9
+    - 9
+    description: Triggered Oversampling
+  - name: CKMODE
+    bit_range:
+    - 31
+    - 30
+    description: ADC clock mode
+  side_effects: null
+- id: SMPR
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SMPR
+    bit_range:
+    - 2
+    - 0
+    description: Sampling time selection
+  side_effects: null
+- id: TR
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 268369920
+  fields:
+  - name: LT
+    bit_range:
+    - 11
+    - 0
+    description: |-
+      Analog watchdog lower
+                    threshold
+  - name: HT
+    bit_range:
+    - 27
+    - 16
+    description: |-
+      Analog watchdog higher
+                    threshold
+  side_effects: null
+- id: CHSELR
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHSEL0
+    bit_range:
+    - 0
+    - 0
+    description: Channel-x selection
+  - name: CHSEL1
+    bit_range:
+    - 1
+    - 1
+    description: Channel-x selection
+  - name: CHSEL2
+    bit_range:
+    - 2
+    - 2
+    description: Channel-x selection
+  - name: CHSEL3
+    bit_range:
+    - 3
+    - 3
+    description: Channel-x selection
+  - name: CHSEL4
+    bit_range:
+    - 4
+    - 4
+    description: Channel-x selection
+  - name: CHSEL5
+    bit_range:
+    - 5
+    - 5
+    description: Channel-x selection
+  - name: CHSEL6
+    bit_range:
+    - 6
+    - 6
+    description: Channel-x selection
+  - name: CHSEL7
+    bit_range:
+    - 7
+    - 7
+    description: Channel-x selection
+  - name: CHSEL8
+    bit_range:
+    - 8
+    - 8
+    description: Channel-x selection
+  - name: CHSEL9
+    bit_range:
+    - 9
+    - 9
+    description: Channel-x selection
+  - name: CHSEL10
+    bit_range:
+    - 10
+    - 10
+    description: Channel-x selection
+  - name: CHSEL11
+    bit_range:
+    - 11
+    - 11
+    description: Channel-x selection
+  - name: CHSEL12
+    bit_range:
+    - 12
+    - 12
+    description: Channel-x selection
+  - name: CHSEL13
+    bit_range:
+    - 13
+    - 13
+    description: Channel-x selection
+  - name: CHSEL14
+    bit_range:
+    - 14
+    - 14
+    description: Channel-x selection
+  - name: CHSEL15
+    bit_range:
+    - 15
+    - 15
+    description: Channel-x selection
+  - name: CHSEL16
+    bit_range:
+    - 16
+    - 16
+    description: Channel-x selection
+  - name: CHSEL17
+    bit_range:
+    - 17
+    - 17
+    description: Channel-x selection
+  - name: CHSEL18
+    bit_range:
+    - 18
+    - 18
+    description: Channel-x selection
+  side_effects: null
+- id: DR
+  address_offset: 64
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 15
+    - 0
+    description: Converted data
+  side_effects: null
+- id: CALFACT
+  address_offset: 180
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CALFACT
+    bit_range:
+    - 6
+    - 0
+    description: Calibration factor
+  side_effects: null
+- id: CCR
+  address_offset: 776
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRESC
+    bit_range:
+    - 21
+    - 18
+    description: ADC prescaler
+  - name: VREFEN
+    bit_range:
+    - 22
+    - 22
+    description: VREFINT enable
+  - name: TSEN
+    bit_range:
+    - 23
+    - 23
+    description: Temperature sensor enable
+  - name: LFMEN
+    bit_range:
+    - 25
+    - 25
+    description: Low Frequency Mode enable
+  side_effects: null
+interrupts:
+  EXTI2_3: 6
+timing: null

@@ -1,0 +1,381 @@
+peripheral: CC_HOST_RGF_S
+version: 0.1.0
+registers:
+- id: IRR
+  address_offset: 2560
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: SRAM_TO_DIN_INT
+    bit_range:
+    - 4
+    - 4
+    description: The RNG SRAM to DIN DMA done interrupt status. This interrupt is asserted when all data was delivered from RNG SRAM to DIN buffer.
+  - name: DOUT_TO_SRAM_INT
+    bit_range:
+    - 5
+    - 5
+    description: The DOUT to RNG SRAM DMA done interrupt status. This interrupt is asserted when all data was delivered from DOUT buffer to RNG SRAM.
+  - name: MEM_TO_DIN_INT
+    bit_range:
+    - 6
+    - 6
+    description: The memory to DIN DMA done interrupt status. This interrupt is asserted when all data was delivered from memory to DIN buffer.
+  - name: DOUT_TO_MEM_INT
+    bit_range:
+    - 7
+    - 7
+    description: The DOUT to memory DMA done interrupt status. This interrupt is asserted when all data was delivered from DOUT buffer to memory.
+  - name: AHB_ERR_INT
+    bit_range:
+    - 8
+    - 8
+    description: The AHB error interrupt status.
+  - name: PKA_INT
+    bit_range:
+    - 9
+    - 9
+    description: The PKA end of operation interrupt status.
+  - name: RNG_INT
+    bit_range:
+    - 10
+    - 10
+    description: The RNG interrupt status.
+  - name: SYM_DMA_INT
+    bit_range:
+    - 11
+    - 11
+    description: The symmetric engine DMA completed interrupt status.
+  side_effects: null
+- id: IMR
+  address_offset: 2564
+  size: 32
+  access: READ_WRITE
+  reset_value: 4095
+  fields:
+  - name: SRAM_TO_DIN_MASK
+    bit_range:
+    - 4
+    - 4
+    description: The RNG SRAM to DIN DMA done interrupt mask.
+  - name: DOUT_TO_SRAM_MASK
+    bit_range:
+    - 5
+    - 5
+    description: The DOUT to RNG SRAM DMA done interrupt mask.
+  - name: MEM_TO_DIN_MASK
+    bit_range:
+    - 6
+    - 6
+    description: The memory to DIN DMA done interrupt mask.
+  - name: DOUT_TO_MEM_MASK
+    bit_range:
+    - 7
+    - 7
+    description: The DOUT to memory DMA done interrupt mask.
+  - name: AHB_ERR_MASK
+    bit_range:
+    - 8
+    - 8
+    description: The AHB error interrupt mask.
+  - name: PKA_MASK
+    bit_range:
+    - 9
+    - 9
+    description: The PKA end of operation interrupt mask.
+  - name: RNG_MASK
+    bit_range:
+    - 10
+    - 10
+    description: The RNG interrupt mask.
+  - name: SYM_DMA_MASK
+    bit_range:
+    - 11
+    - 11
+    description: The symmetric engine DMA completed interrupt mask.
+  side_effects: null
+- id: ICR
+  address_offset: 2568
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: SRAM_TO_DIN_CLEAR
+    bit_range:
+    - 4
+    - 4
+    description: The RNG SRAM to DIN DMA done interrupt clear.
+  - name: DOUT_TO_SRAM_CLEAR
+    bit_range:
+    - 5
+    - 5
+    description: The DOUT to RNG SRAM DMA done interrupt clear.
+  - name: MEM_TO_DIN_CLEAR
+    bit_range:
+    - 6
+    - 6
+    description: The memory to DIN DMA done interrupt clear.
+  - name: DOUT_TO_MEM_CLEAR
+    bit_range:
+    - 7
+    - 7
+    description: The DOUT to memory DMA done interrupt clear.
+  - name: AHB_ERR_CLEAR
+    bit_range:
+    - 8
+    - 8
+    description: The AHB error interrupt clear.
+  - name: PKA_CLEAR
+    bit_range:
+    - 9
+    - 9
+    description: The PKA end of operation interrupt clear.
+  - name: RNG_CLEAR
+    bit_range:
+    - 10
+    - 10
+    description: The RNG interrupt clear. Register RNG_ISR in the RNG engine must be cleared before this interrupt can be cleared.
+  - name: SYM_DMA_CLEAR
+    bit_range:
+    - 11
+    - 11
+    description: The symmetric engine DMA completed interrupt clear.
+  side_effects: null
+- id: ENDIANNESS
+  address_offset: 2572
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DOUT_WR_BG
+    bit_range:
+    - 3
+    - 3
+    description: DOUT write endianness.
+  - name: DIN_RD_BG
+    bit_range:
+    - 7
+    - 7
+    description: DIN read endianness.
+  - name: DOUT_WR_WBG
+    bit_range:
+    - 11
+    - 11
+    description: DOUT write word endianness.
+  - name: DIN_RD_WBG
+    bit_range:
+    - 15
+    - 15
+    description: DIN read word endianness.
+  side_effects: null
+- id: HOST_SIGNATURE
+  address_offset: 2596
+  size: 32
+  access: READ_ONLY
+  reset_value: 283115520
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Fixed-value identification signature used by host driver to verify CRYPTOCELL presence at this address.
+  side_effects: null
+- id: HOST_BOOT
+  address_offset: 2600
+  size: 32
+  access: READ_ONLY
+  reset_value: 1583519790
+  fields:
+  - name: POWER_GATING_EXISTS_LOCAL
+    bit_range:
+    - 0
+    - 0
+    description: If this flag is set, full power gating is implemented
+  - name: LARGE_RKEK_LOCAL
+    bit_range:
+    - 1
+    - 1
+    description: If this flag is set, large RKEK is supported
+  - name: HASH_IN_FUSES_LOCAL
+    bit_range:
+    - 2
+    - 2
+    description: If this flag is set, HASH in fuses is supported
+  - name: EXT_MEM_SECURED_LOCAL
+    bit_range:
+    - 3
+    - 3
+    description: If this flag is set, external secure memory is supported
+  - name: RKEK_ECC_EXISTS_LOCAL_N
+    bit_range:
+    - 5
+    - 5
+    description: If this flag is set, RKEK ECC is supported
+  - name: SRAM_SIZE_LOCAL
+    bit_range:
+    - 8
+    - 6
+    description: SRAM size
+  - name: DSCRPTR_EXISTS_LOCAL
+    bit_range:
+    - 9
+    - 9
+    description: If this flag is set, Descriptors are supported
+  - name: PAU_EXISTS_LOCAL
+    bit_range:
+    - 10
+    - 10
+    description: If this flag is set, PAU is supported
+  - name: RNG_EXISTS_LOCAL
+    bit_range:
+    - 11
+    - 11
+    description: If this flag is set, the RNG engine is present
+  - name: PKA_EXISTS_LOCAL
+    bit_range:
+    - 12
+    - 12
+    description: If this flag is set, the PKA engine is present
+  - name: RC4_EXISTS_LOCAL
+    bit_range:
+    - 13
+    - 13
+    description: If this flag is set, the RC4 engine is present
+  - name: SHA_512_PRSNT_LOCAL
+    bit_range:
+    - 14
+    - 14
+    description: If this flag is set, the HASH engine supports SHA512
+  - name: SHA_256_PRSNT_LOCAL
+    bit_range:
+    - 15
+    - 15
+    description: If this flag is set, the HASH engine supports SHA256
+  - name: MD5_PRSNT_LOCAL
+    bit_range:
+    - 16
+    - 16
+    description: If this flag is set, the HASH engine supports MD5
+  - name: HASH_EXISTS_LOCAL
+    bit_range:
+    - 17
+    - 17
+    description: If this flag is set, the HASH engine is present
+  - name: C2_EXISTS_LOCAL
+    bit_range:
+    - 18
+    - 18
+    description: If this flag is set, the C2 engine is present
+  - name: DES_EXISTS_LOCAL
+    bit_range:
+    - 19
+    - 19
+    description: If this flag is set, the DES engine is present
+  - name: AES_XCBC_MAC_EXISTS_LOCAL
+    bit_range:
+    - 20
+    - 20
+    description: If this flag is set, AES XCBC-MAC mode is supported
+  - name: AES_CMAC_EXISTS_LOCAL
+    bit_range:
+    - 21
+    - 21
+    description: If this flag is set, AES CMAC mode is supported
+  - name: AES_CCM_EXISTS_LOCAL
+    bit_range:
+    - 22
+    - 22
+    description: If this flag is set, AES CCM mode is supported
+  - name: AES_XEX_HW_T_CALC_LOCAL
+    bit_range:
+    - 23
+    - 23
+    description: If this flag is set, AES XEX mode T-value calculation in HW is supported
+  - name: AES_XEX_EXISTS_LOCAL
+    bit_range:
+    - 24
+    - 24
+    description: If this flag is set, AES XEX mode is supported
+  - name: CTR_EXISTS_LOCAL
+    bit_range:
+    - 25
+    - 25
+    description: If this flag is set, AES CTR mode is supported
+  - name: AES_DIN_BYTE_RESOLUTION_LOCAL
+    bit_range:
+    - 26
+    - 26
+    description: If this flag is set, the AES engine data input support byte size resolution
+  - name: TUNNELING_ENB_LOCAL
+    bit_range:
+    - 27
+    - 27
+    description: If this flag is set, the AES engine supports tunneling operations
+  - name: SUPPORT_256_192_KEY_LOCAL
+    bit_range:
+    - 28
+    - 28
+    description: If this flag is set, the AES engine supports 192/256 bits key sizes
+  - name: ONLY_ENCRYPT_LOCAL
+    bit_range:
+    - 29
+    - 29
+    description: If this flag is set, the AES engine only support encryption
+  - name: AES_EXISTS_LOCAL
+    bit_range:
+    - 30
+    - 30
+    description: If this flag is set, the AES engine is present
+  side_effects: null
+- id: HOST_CC_IS_IDLE
+  address_offset: 2684
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: HOST_CC_IS_IDLE
+    bit_range:
+    - 0
+    - 0
+    description: CRYPTOCELL idle state.
+  - name: SYM_IS_BUSY
+    bit_range:
+    - 2
+    - 2
+    description: Symmetric flow busy state.
+  - name: AHB_IS_IDLE
+    bit_range:
+    - 3
+    - 3
+    description: AHB state machine idle state.
+  - name: RNG_IS_IDLE
+    bit_range:
+    - 7
+    - 7
+    description: RNG engine idle state.
+  - name: PKA_IS_IDLE
+    bit_range:
+    - 8
+    - 8
+    description: PKA engine idle state.
+  - name: CRYPTO_IS_IDLE
+    bit_range:
+    - 9
+    - 9
+    description: Cryptographic flow idle state.
+  side_effects: null
+- id: HOST_POWERDOWN
+  address_offset: 2688
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_POWERDOWN
+    bit_range:
+    - 0
+    - 0
+    description: Power down enable register.
+  side_effects: null
+interrupts: null
+timing: null

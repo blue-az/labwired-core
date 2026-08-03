@@ -1,0 +1,167 @@
+peripheral: COMP
+version: 0.1.0
+registers:
+- id: COMP1_CSR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: COMP1_EN
+    bit_range:
+    - 0
+    - 0
+    description: Comparator 1 enable bit
+  - name: COMP1_PWRMODE
+    bit_range:
+    - 3
+    - 2
+    description: |-
+      Power Mode of the comparator
+                    1
+  - name: COMP1_INMSEL
+    bit_range:
+    - 6
+    - 4
+    description: |-
+      Comparator 1 Input Minus connection
+                    configuration bit
+  - name: COMP1_INPSEL
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Comparator1 input plus selection
+                    bit
+  - name: COMP1_POLARITY
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Comparator 1 polarity selection
+                    bit
+  - name: COMP1_HYST
+    bit_range:
+    - 17
+    - 16
+    description: |-
+      Comparator 1 hysteresis selection
+                    bits
+  - name: COMP1_BLANKING
+    bit_range:
+    - 20
+    - 18
+    description: |-
+      Comparator 1 blanking source selection
+                    bits
+  - name: COMP1_BRGEN
+    bit_range:
+    - 22
+    - 22
+    description: Scaler bridge enable
+  - name: COMP1_SCALEN
+    bit_range:
+    - 23
+    - 23
+    description: Voltage scaler enable bit
+  - name: COMP1_VALUE
+    bit_range:
+    - 30
+    - 30
+    description: |-
+      Comparator 1 output status
+                    bit
+  - name: COMP1_LOCK
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      COMP1_CSR register lock
+                    bit
+  side_effects: null
+- id: COMP2_CSR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: COMP2_EN
+    bit_range:
+    - 0
+    - 0
+    description: Comparator 2 enable bit
+  - name: COMP2_PWRMODE
+    bit_range:
+    - 3
+    - 2
+    description: |-
+      Power Mode of the comparator
+                    2
+  - name: COMP2_INMSEL
+    bit_range:
+    - 6
+    - 4
+    description: |-
+      Comparator 2 Input Minus connection
+                    configuration bit
+  - name: COMP2_INPSEL
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Comparator 2 Input Plus connection
+                    configuration bit
+  - name: COMP2_WINMODE
+    bit_range:
+    - 9
+    - 9
+    description: Windows mode selection bit
+  - name: COMP2_POLARITY
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Comparator 2 polarity selection
+                    bit
+  - name: COMP2_HYST
+    bit_range:
+    - 17
+    - 16
+    description: |-
+      Comparator 2 hysteresis selection
+                    bits
+  - name: COMP2_BLANKING
+    bit_range:
+    - 20
+    - 18
+    description: |-
+      Comparator 2 blanking source selection
+                    bits
+  - name: COMP2_BRGEN
+    bit_range:
+    - 22
+    - 22
+    description: Scaler bridge enable
+  - name: COMP2_SCALEN
+    bit_range:
+    - 23
+    - 23
+    description: Voltage scaler enable bit
+  - name: COMP2_VALUE
+    bit_range:
+    - 30
+    - 30
+    description: |-
+      Comparator 2 output status
+                    bit
+  - name: COMP2_LOCK
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      COMP2_CSR register lock
+                    bit
+  side_effects: null
+interrupts:
+  COMP: 64
+timing: null

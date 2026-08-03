@@ -1,0 +1,1764 @@
+peripheral: FLASH
+version: 0.1.0
+registers:
+- id: FLASH_ACR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 19
+  fields:
+  - name: LATENCY
+    bit_range:
+    - 3
+    - 0
+    description: |-
+      Read latency
+      These bits are used to control the number of wait states used during read operations on both nonvolatile memory banks. The application software has to program them to the correct value depending on the embedded flash memory interface frequency and voltage conditions.
+      ...
+      Note: No check is performed by hardware to verify that the configuration is correct.
+  - name: WRHIGHFREQ
+    bit_range:
+    - 5
+    - 4
+    description: "Flash signal delay \nThese bits are used to control the delay between nonvolatile memory signals during programming operations. Application software has to program them to the correct value depending on the embedded flash memory interface frequency. Please refer to Table44 for details.\nNote: No check is performed to verify that the configuration is correct. \nNote: Two WRHIGHFREQ values can be selected for some frequencies."
+  - name: PRFTEN
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Prefetch enable. When bit value is modified, user must read back ACR register to be sure PRFTEN has been taken into account.
+      Bits used to control the prefetch.
+  side_effects: null
+- id: FLASH_NSKEYR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NSKEY
+    bit_range:
+    - 31
+    - 0
+    description: Non-volatile memory non-secure configuration access unlock key
+  side_effects: null
+- id: FLASH_SECKEYR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SECKEY
+    bit_range:
+    - 31
+    - 0
+    description: Non-volatile memory secure configuration access unlock key
+  side_effects: null
+- id: FLASH_OPTKEYR
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OPTKEY
+    bit_range:
+    - 31
+    - 0
+    description: FLASH option bytes control access unlock key
+  side_effects: null
+- id: FLASH_NSOBKKEYR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NSOBKKEY
+    bit_range:
+    - 31
+    - 0
+    description: FLASH non-secure option bytes keys control access unlock key
+  side_effects: null
+- id: FLASH_SECOBKKEYR
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SECOBKKEY
+    bit_range:
+    - 31
+    - 0
+    description: FLASH secure option bytes keys control access unlock key
+  side_effects: null
+- id: FLASH_OPSR
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR_OP
+    bit_range:
+    - 19
+    - 0
+    description: Interrupted operation address
+  - name: DATA_OP
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      Flash high-cycle data area operation interrupted
+      It indicates if flash high-cycle data area is concerned by operation.
+  - name: BK_OP
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      Interrupted operation bank
+      It indicates which bank was concerned by operation.
+  - name: SYSF_OP
+    bit_range:
+    - 23
+    - 23
+    description: "Operation in system flash memory interrupted \nIndicates that reset interrupted an ongoing operation in system flash."
+  - name: OTP_OP
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      OTP operation interrupted
+      Indicates that reset interrupted an ongoing operation in OTP area (or OBKeys area).
+  - name: CODE_OP
+    bit_range:
+    - 31
+    - 29
+    description: Flash memory operation code
+  side_effects: null
+- id: FLASH_OPTCR
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: OPTLOCK
+    bit_range:
+    - 0
+    - 0
+    description: "FLASH_OPTCR lock option configuration bit\nThe OPTLOCK bit locks the FLASH_OPTCR register as well as all _PRG registers. The correct write sequence to FLASH_OPTKEYR register unlocks this bit. If a wrong sequence is executed, or the unlock sequence to FLASH_OPTKEYR is performed twice, this bit remains locked until next system reset. \nIt is possible to set OPTLOCK by programming it to 1. When set to 1, a new unlock sequence is mandatory to unlock it. When OPTLOCK changes from 0 to 1, the others bits of FLASH_OPTCR register do not change."
+  - name: OPTSTRT
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Option byte start change option configuration bit
+      OPTSTRT triggers an option byte change operation. The user can set OPTSTRT only when the OPTLOCK bit is cleared to 0. It is set only by Software and cleared when the option byte change is completed or an error occurs (PGSERR or OPTCHANGEERR). It is reseted at the same time as BSY bit.
+      The user application cannot modify any FLASH_XXX_PRG flash interface register until the option change operation has been completed.
+      Before setting this bit, the user has to write the required values in the FLASH_XXX_PRG registers. The FLASH_XXX_PRG registers are locked until the option byte change operation has been executed in nonvolatile memory.
+  - name: SWAP_BANK
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      Bank swapping option configuration bit
+      SWAP_BANK controls whether Bank1 and Bank2 are swapped or not. This bit is loaded with the SWAP_BANK bit of FLASH_OPTSR_CUR register only after reset or POR.
+  side_effects: null
+- id: FLASH_NSSR
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BSY
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      busy flag
+      BSY flag indicates that a flash memory is busy by an operation (write, erase, option byte change, OBK operation). It is set at the beginning of a flash memory operation and cleared when the operation finishes, or an error occurs.
+  - name: WBNE
+    bit_range:
+    - 1
+    - 1
+    description: "write buffer not empty flag \nWBNE flag is set when the flash interface is waiting for new data to complete the write buffer. In this state, the write buffer is not empty. WBNE is reset by hardware each time the write buffer is complete or the write buffer is emptied following one of the event below:\nthe application software forces the write operation using FW bit in FLASH_NSCR\nthe embedded flash memory detects an error that involves data loss\nThis bit cannot be reset by software writing 0 directly. To reset it, clear the write buffer by performing any of the above listed actions, or send the missing data."
+  - name: DBNE
+    bit_range:
+    - 3
+    - 3
+    description: "data buffer not empty flag \nDBNE flag is set when the flash interface is processing 6-bits ECC data in dedicated buffer. This bit cannot be set to 0 by software. The hardware resets it once the buffer is free."
+  - name: EOP
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      end of operation flag
+      EOP flag is set when a operation (program/erase) completes. An interrupt is generated if the EOPIE is set to 1. It is not necessary to reset EOP before starting a new operation. EOP bit is cleared by writing 1 to CLR_EOP bit in FLASH_NSCCR register.
+  - name: WRPERR
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      write protection error flag
+      WRPERR flag is raised when a protection error occurs during a program operation. An interrupt is also generated if the WRPERRIE is set to 1. Writing 1 to CLR_WRPERR bit in FLASH_NSCCR register clears WRPERR.
+  - name: PGSERR
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      programming sequence error flag
+      PGSERR flag is raised when a sequence error occurs. An interrupt is generated if the PGSERRIE bit is set to 1. Writing 1 to CLR_PGSERR bit in FLASH_NSCCR register clears PGSERR.
+  - name: STRBERR
+    bit_range:
+    - 19
+    - 19
+    description: "strobe error flag \nSTRBERR flag is raised when a strobe error occurs (when the master attempts to write several times the same byte in the write buffer). An interrupt is generated if the STRBERRIE bit is set to 1. Writing 1 to CLR_STRBERR bit in FLASH_NSCCR register clears STRBERR."
+  - name: INCERR
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      inconsistency error flag
+      NSINCERR flag is raised when a inconsistency error occurs. An interrupt is generated if INCERRIE is set to 1. Writing 1 to CLR_INCERR bit in the FLASH_NSCCR register clears NSINCERR.
+  - name: OBKERR
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      OBK general error flag
+      OBKERR flag is raised when the OBK-HDPL signal from the SBS does not match the HDPL value associated with the key slot during access to the key location. Alternatively also when the ALT_SECT is unexpectedly changed while the write buffer is being filled.
+  - name: OBKWERR
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      OBK write error flag
+      OBKWERR flag is raised when the address is not virgin on a write access to the OBK storage. Alternatively also when the OBK selector in the alternate sector is not virgin during a swap operation.
+  - name: OPTCHANGEERR
+    bit_range:
+    - 23
+    - 23
+    description: "Option byte change error flag \nOPTCHANGEERR flag indicates that an error occurred during an option byte change operation. When OPTCHANGEERR is set to 1, the option byte change operation did not successfully complete. An interrupt is generated when this flag is raised if the OPTCHANGEERRIE bit of FLASH_NSCR register is set to 1. \nWriting 1 to CLR_OPTCHANGEERR of register FLASH_NSCCR clears OPTCHANGEERR.\nNote: The OPTSTRT bit in FLASH_OPTCR cannot be set while OPTCHANGEERR is set."
+  side_effects: null
+- id: FLASH_SECSR
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BSY
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      busy flag
+      BSY flag indicates that a FLASH memory is busy (write, erase, option byte change, OBK operations). It is set at the beginning of a flash memory operation and cleared when the operation finishes or an error occurs.
+  - name: WBNE
+    bit_range:
+    - 1
+    - 1
+    description: "write buffer not empty flag \nWBNE flag is set when the flash interface is waiting for new data to complete the write buffer. In this state, the write buffer is not empty. WBNE is reset by hardware each time the write buffer is complete or the write buffer is emptied following one of the event below:\nthe application software forces the write operation using FW bit in FLASH_SECCR\nthe flash interface detects an error that involves data loss\nThis bit cannot be reset by writing 0 directly by software. To reset it, clear the write buffer by performing any of the above listed actions, or send the missing data."
+  - name: DBNE
+    bit_range:
+    - 3
+    - 3
+    description: "data buffer not empty flag \nDBNE flag is set when the embedded flash memory interface is processing 6-bits ECC data in dedicated buffer. This bit cannot be set to 0 by software. The hardware resets it once the buffer is free."
+  - name: EOP
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      end of operation flag
+      EOP flag is set when a operation (program/erase) completes. An interrupt is generated if the EOPIE is set to. It is not necessary to reset EOP before starting a new operation. EOP bit is cleared by writing 1 to CLR_EOP bit in FLASH_SECCCR register.
+  - name: WRPERR
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      write protection error flag
+      WRPERR flag is raised when a protection error occurs during a program operation. An interrupt is also generated if the WRPERRIE is set to 1. Writing 1 to CLR_WRPERR bit in FLASH_SECCCR register clears WRPERR.
+  - name: PGSERR
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      programming sequence error flag
+      PGSERR flag is raised when a sequence error occurs. An interrupt is generated if the PGSERRIE bit is set to 1. Writing 1 to CLR_PGSERR bit in FLASH_SECCCR register clears PGSERR.
+  - name: STRBERR
+    bit_range:
+    - 19
+    - 19
+    description: "strobe error flag \nSTRBERR flag is raised when a strobe error occurs (when the master attempts to write several times the same byte in the write buffer). An interrupt is generated if the STRBERRIE bit is set to 1. Writing 1 to CLR_STRBERR bit in FLASH_SECCCR register clears STRBERR."
+  - name: INCERR
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      inconsistency error flag
+      INCERR flag is raised when a inconsistency error occurs. An interrupt is generated if INCERRIE is set to 1. Writing 1 to CLR_INCERR bit in the FLASH_SECCCR register clears INCERR.
+  - name: OBKERR
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      OBK general error flag
+      OBKERR flag is raised when the OBK-HDPL signal from the SBS does not match the HDPL value associated with the key slot during access to the key location. Alternatively also when the ALT_SECT is unexpectedly changed while the write buffer is being filled.
+  - name: OBKWERR
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      OBK write error flag
+      OBKWERR flag is raised when the address is not virgin on a write access to the OBK storage. Alternatively also when the OBK selector in the alternate sector is not virgin during a swap operation.
+  side_effects: null
+- id: FLASH_NSCR
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: LOCK
+    bit_range:
+    - 0
+    - 0
+    description: "configuration lock bit\nThis bit locks the FLASH_NSCR register. The correct write sequence to FLASH_NSKEYR register unlocks this bit. If a wrong sequence is executed, or if the unlock sequence to FLASH_NSKEYR is performed twice, this bit remains locked until the next system reset. \nLOCK can be set by programming it to 1. When set to 1, a new unlock sequence is mandatory to unlock it. When LOCK changes from 0 to 1, the other bits of FLASH_NSCR register do not change."
+  - name: PG
+    bit_range:
+    - 1
+    - 1
+    description: "programming control bit\nPG can be programmed only when LOCK is cleared to 0. \nPG allows programming in Bank1 and Bank2."
+  - name: SER
+    bit_range:
+    - 2
+    - 2
+    description: "sector erase request\nSetting SER bit to 1 requests a sector erase. SER can be programmed only when LOCK is cleared to 0. \nIf MER and SER are also set, a PGSERR is raised."
+  - name: BER
+    bit_range:
+    - 3
+    - 3
+    description: "erase request\nSetting BER bit to 1 requests a bank erase operation (user flash memory only). BER can be programmed only when LOCK is cleared to 0. \nIf MER and SER are also set, a PGSERR is raised.\nNote: Write protection error is triggered when a bank erase is required and some sectors are protected."
+  - name: FW
+    bit_range:
+    - 4
+    - 4
+    description: "write forcing control bit\nFW forces a write operation even if the write buffer is not full. In this case all bits not written are set to 1 by hardware. FW can be programmed only when LOCK is cleared to 0. \nThe embedded flash memory resets FW when the corresponding operation has been acknowledged. \nNote: Using a force-write operation prevents the application from updating later the missing bits with something else than 1, because it is likely that it leads to permanent ECC error.\nWrite forcing is effective only if the write buffer is not empty and was filled by non-secure access (in particular, FW does not start several write operations when the force-write operations are performed consecutively). \nSince there is just one write buffer, FW can force a write in bank1 or bank2."
+  - name: STRT
+    bit_range:
+    - 5
+    - 5
+    description: "erase start control bit\nSTRT bit is used to start a sector erase or a bank erase operation. STRT can be programmed only when LOCK is cleared to 0. \nSTRT is reset at the end of the operation or when an error occurs. It cannot be reseted by software."
+  - name: SNB
+    bit_range:
+    - 12
+    - 6
+    description: |-
+      sector erase selection number
+      These bits are used to select the target sector for an erase operation (they are unused otherwise). SNB can be programmed only when LOCK is cleared to 0.
+      ..
+  - name: MER
+    bit_range:
+    - 15
+    - 15
+    description: "Mass erase request\nSetting MER bit to 1 requests a mass erase operation (user flash memory only). MER can be programmed only when LOCK is cleared to 0. \nIf BER or SER are both set, a PGSERR is raised.\nError is triggered when a mass erase is required and some sectors are protected."
+  - name: EOPIE
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      end of operation interrupt control bit
+      Setting EOPIE bit to 1 enables the generation of an interrupt at the end of a program or erase operation. EOPIE can be programmed only when LOCK is cleared to 0.
+  - name: WRPERRIE
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      write protection error interrupt enable bit
+      When this bit is set to 1, an interrupt is generated when a protection error occurs during a program operation. WRPERRIE can be programmed only when LOCK is cleared to 0.
+  - name: PGSERRIE
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      programming sequence error interrupt enable bit
+      When this bit is set to 1, an interrupt is generated when a sequence error occurs during a program operation. PGSERRIE can be programmed only when LOCK is cleared to 0.
+  - name: STRBERRIE
+    bit_range:
+    - 19
+    - 19
+    description: |-
+      strobe error interrupt enable bit
+      When STRBERRIE bit is set to 1, an interrupt is generated when a strobe error occurs (the master programs several times the same byte in the write buffer) during a write operation. STRBERRIE can be programmed only when LOCK is cleared to 0.
+  - name: INCERRIE
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      inconsistency error interrupt enable bit
+      When INCERRIE bit is set to 1, an interrupt is generated when an inconsistency error occurs during a write operation. INCERRIE can be programmed only when LOCK is cleared to 0.
+  - name: OBKERRIE
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      OBK general error interrupt enable bit
+      OBKERRIE enables generating an interrupt in case of OBK specific access error. This bit can be programmed only when LOCK bit is cleared to 0.
+  - name: OBKWERRIE
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      OBK write error interrupt enable bit
+      OBKWERRIE enables generation of interrupt in case of OBK specific write error. This bit can be programmed only when LOCK bit is cleared to 0.
+  - name: OPTCHANGEERRIE
+    bit_range:
+    - 23
+    - 23
+    description: |-
+      Option byte change error interrupt enable bit
+      This bit controls if an interrupt must be generated when an error occurs during an option byte change. It can be programmed only when LOCK bit is cleared to 0.
+  - name: BKSEL
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      Bank selector bit
+      BKSEL can only be programmed when LOCK is cleared to 0. The bit selects physical bank, SWAP_BANK setting is ignored.
+  side_effects: null
+- id: FLASH_SECCR
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: LOCK
+    bit_range:
+    - 0
+    - 0
+    description: "configuration lock bit \nThis bit locks the FLASH_SECCR register. The correct write sequence to FLASH_SECKEYR register unlocks this bit. If a wrong sequence is executed, or if the unlock sequence to FLASH_NSKEYR is performed twice, this bit remains locked until the next system reset. \nLOCK can be set by programming it to 1. When set to 1, a new unlock sequence is mandatory to unlock it. When LOCK changes from 0 to 1, the other bits of FLASH_SECCR register do not change."
+  - name: PG
+    bit_range:
+    - 1
+    - 1
+    description: "programming control bit\nPG can be programmed only when LOCK is cleared to 0. \nPG allows programming in Bank1 and Bank2."
+  - name: SER
+    bit_range:
+    - 2
+    - 2
+    description: "sector erase request\nSetting SER bit to 1 requests a sector erase. SER can be programmed only when LOCK is cleared to 0. \nIf BER and MER are also set, a PGSERR is raised."
+  - name: BER
+    bit_range:
+    - 3
+    - 3
+    description: "erase request \nSetting BER bit to 1 requests a bank erase operation (user flash memory only). BER can be programmed only when LOCK is cleared to 0. \nIf MER and SER are also set, a PGSERR is raised.\nNote: Write protection error is triggered when a bank erase is required and some sectors are protected."
+  - name: FW
+    bit_range:
+    - 4
+    - 4
+    description: "write forcing control bit\nFW forces a write operation even if the write buffer is not full. In this case all bits not written are set to 1 by hardware. FW can be programmed only when LOCK is cleared to 0. \nThe embedded flash memory resets FW when the corresponding operation has been acknowledged. \nNote: Using a force-write operation prevents the application from updating later the missing bits with something else than 1, because it is likely that it leads to permanent ECC error.\nWrite forcing is effective only if the write buffer is not empty and was filled by secure access (in particular, FW does not start several write operations when the force-write operations are performed consecutively). \nSince there is just one write buffer, FW can force a write in bank1 or bank2."
+  - name: STRT
+    bit_range:
+    - 5
+    - 5
+    description: "erase start control bit\nSTRT bit is used to start a sector erase or a bank erase operation. STRT can be programmed only when LOCK is cleared to 0. \nSTRT is reseted at the end of the operation or when an error occurs. It cannot be reset by software."
+  - name: SNB
+    bit_range:
+    - 12
+    - 6
+    description: |-
+      sector erase selection number
+      These bits are used to select the target sector for an erase operation (they are unused otherwise). SNB can be programmed only when LOCK is cleared to 0.
+      ..
+  - name: MER
+    bit_range:
+    - 15
+    - 15
+    description: "mass erase request\nSetting MER bit to 1 requests a mass erase operation (user flash memory only). MER can be programmed only when LOCK is cleared to 0. \nIf BER or SER are also set, a PGSERR is raised.\nError is triggered when a mass erase is required and some sectors are protected."
+  - name: EOPIE
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      end of operation interrupt control bit
+      Setting EOPIE bit to 1 enables the generation of an interrupt at the end of a program/erase operation. EOPIE can be programmed only when LOCK is cleared to 0.
+  - name: WRPERRIE
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      write protection error interrupt enable bit
+      When WRPERRIE bit is set to 1, an interrupt is generated when a protection error occurs during a program operation. WRPERRIE can be programmed only when LOCK is cleared to 0.
+  - name: PGSERRIE
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      programming sequence error interrupt enable bit
+      When PGSERRIE bit is set to 1, an interrupt is generated when a sequence error occurs during a program operation. PGSERRIE can be programmed only when LOCK is cleared to 0.
+  - name: STRBERRIE
+    bit_range:
+    - 19
+    - 19
+    description: |-
+      strobe error interrupt enable bit
+      When STRBERRIE bit is set to 1, an interrupt is generated when a strobe error occurs (the master programs several times the same byte in the write buffer) during a write operation. STRBERRIE can be programmed only when LOCK is cleared to 0.
+  - name: INCERRIE
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      inconsistency error interrupt enable bit
+      When INCERRIE bit is set to 1, an interrupt is generated when an inconsistency error occurs during a write operation. INCERRIE can be programmed only when LOCK is cleared to 0.
+  - name: OBKERRIE
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      OBK general error interrupt enable bit
+      OBKERRIE enables generating an interrupt in case of OBK specific access error. OBKERRIE can be programmed only when LOCK is cleared to 0.
+  - name: OBKWERRIE
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      OBK write error interrupt enable bit
+      OBKWERRIE enables generation of interrupt in case of OBK specific write error. OBKWERRIE can be programmed only when LOCK is cleared to 0.
+  - name: INV
+    bit_range:
+    - 29
+    - 29
+    description: |-
+      Flash memory security state invert.
+      This bit inverts the flash memory security state.
+  - name: BKSEL
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      bank selector bit
+      BKSEL can only be programmed when LOCK is cleared to 0. The bit selects physical bank, SWAP_BANK setting is ignored.
+  side_effects: null
+- id: FLASH_NSCCR
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CLR_EOP
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      EOP flag clear bit
+      Setting this bit to 1 resets to 0 EOP flag in FLASH_NSSR register.
+  - name: CLR_WRPERR
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      WRPERR flag clear bit
+      Setting this bit to 1 resets to 0 WRPERR flag in FLASH_NSSR register.
+  - name: CLR_PGSERR
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      PGSERR flag clear bit
+      Setting this bit to 1 resets to 0 PGSERR flag in FLASH_NSSR register.
+  - name: CLR_STRBERR
+    bit_range:
+    - 19
+    - 19
+    description: |-
+      STRBERR flag clear bit
+      Setting this bit to 1 resets to 0 STRBERR flag in FLASH_NSSR register.
+  - name: CLR_INCERR
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      INCERR flag clear bit
+      Setting this bit to 1 resets to 0 INCERR flag in FLASH_NSSR register.
+  - name: CLR_OBKERR
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      OBKERR flag clear bit.
+      Setting this bit to 1 resets to 0 OBKERR flag in FLASH_NSSR register.
+  - name: CLR_OBKWERR
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      OBKWERR flag clear bit.
+      Setting this bit to 1 resets to 0 OBKWERR flag in FLASH_NSSR register.
+  - name: CLR_OPTCHANGEERR
+    bit_range:
+    - 23
+    - 23
+    description: Clear the flag corresponding flag in FLASH_NSSR by writing this bit.
+  side_effects: null
+- id: FLASH_SECCCR
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CLR_EOP
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      EOP flag clear bit
+      Setting this bit to 1 resets to 0 EOP flag in FLASH_SECSR register.
+  - name: CLR_WRPERR
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      WRPERR flag clear bit
+      Setting this bit to 1 resets to 0 WRPERR flag in FLASH_SECSR register.
+  - name: CLR_PGSERR
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      PGSERR flag clear bit
+      Setting this bit to 1 resets to 0 PGSERR flag in FLASH_SECSR register.
+  - name: CLR_STRBERR
+    bit_range:
+    - 19
+    - 19
+    description: |-
+      STRBERR flag clear bit
+      Setting this bit to 1 resets to 0 STRBERR flag in FLASH_SECSR register.
+  - name: CLR_INCERR
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      INCERR flag clear bit
+      Setting this bit to 1 resets to 0 INCERR flag in FLASH_SECSR register.
+  - name: CLR_OBKERR
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      OBKWERR flag clear bit
+      Setting this bit to 1 resets to 0 OBKWERR flag in FLASH_SECSR register.
+  - name: CLR_OBKWERR
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      OBKWERR flag clear bit
+      Setting this bit to 1 resets to 0 OBKWERR flag in FLASH_SECSR register.
+  side_effects: null
+- id: FLASH_PRIVCFGR
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SPRIV
+    bit_range:
+    - 0
+    - 0
+    description: privilege attribute for secure registers
+  - name: NSPRIV
+    bit_range:
+    - 1
+    - 1
+    description: privilege attribute for non secure registers
+  side_effects: null
+- id: FLASH_NSOBKCFGR
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 33488896
+  fields:
+  - name: LOCK
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      OBKCFGR lock option configuration bit
+      This bit locks the FLASH_NSOBKCFGR register. The correct write sequence to FLASH_NSOBKKEYR register unlocks this bit. If a wrong sequence is executed, or if the unlock sequence to FLASH_NSOBKKEYR is performed twice, this bit remains locked until the next system reset. LOCK can be set by programming it to 1. When set to 1, a new unlock sequence is mandatory to unlock it. When LOCK changes from 0 to 1, the other bits of FLASH_NSCR register do not change.
+  - name: SWAP_SECT_REQ
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      OBK swap sector request bit
+      When set, all the OBKs which have not been updated in the alternate sector is copied from current sector to alternate one.
+      The SWAP_OFFSET value must be a certain minimum value in order for the swap to be launched in OBK-HDPLdifferent 0. Minimum value is 16 for OBK-HDPL=1, 144 for OBK-HDPL=2 and192 for OBK-HDPL=3.
+  - name: ALT_SECT
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      alternate sector bit
+      This bit must not change while filling the write buffer, otherwise an error (OBKERR) is generated
+  - name: ALT_SECT_ERASE
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      alternate sector erase bit
+      When ALT_SECT bit is set, use this bit to generate an erase command for the OBK alternate sector. It is set only by Software and cleared when the OBK swap operation is completed or an error occurs (PGSERR). It is reseted at the same time as BUSY bit.
+  - name: SWAP_OFFSET
+    bit_range:
+    - 24
+    - 16
+    description: |-
+      Key index (offset /16 bits) pointing for next swap.
+      0x01 means that only the first OBK data (128 bits) is copied from current to alternate OBK sector
+      0x02 means that the two first OBK data is copied
+  side_effects: null
+- id: FLASH_SECOBKCFGR
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 33488896
+  fields:
+  - name: LOCK
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      OBKCFGR lock option configuration bit
+      This bit locks the FLASH_OBKCFGR register. The correct write sequence to FLASH_SECOBKKEYR register unlocks this bit. If a wrong sequence is executed, or if the unlock sequence to FLASH_SECOBKKEYR is performed twice, this bit remains locked until the next system reset. LOCK can be set by programming it to 1. When set to 1, a new unlock sequence is mandatory to unlock it. When LOCK changes from 0 to 1, the other bits of FLASH_NSCR register do not change.
+  - name: SWAP_SECT_REQ
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      OBK swap sector request bit
+      When set, all the OBKs which have not been updated in the alternate sector is copied from current sector to alternate one.
+      The SWAP_OFFSET value must be a certain minimum value in order for the swap to be launched in OBK-HDPLdifferent 0. Minimum value is 16 for OBK-HDPL=1, 144 for OBK-HDPL=2 and 192 for OBK-HDPL=3.
+  - name: ALT_SECT
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      alternate sector bit
+      This bit must not change while filling the write buffer, otherwise an error is generated
+  - name: ALT_SECT_ERASE
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      alternate sector erase bit
+      When ALT_SECT bit is set, use this bit to generate an erase command for the OBK alternate sector. It is set only by Software and cleared when the OBK swap operation is completed or an error occurs (PGSERR). It is reseted at the same time as the BUSY bit.
+  - name: SWAP_OFFSET
+    bit_range:
+    - 24
+    - 16
+    description: key index (offset /16 bits) pointing for next swap.
+  side_effects: null
+- id: FLASH_HDPEXTR
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HDP1_EXT
+    bit_range:
+    - 6
+    - 0
+    description: HDP area extension in 8Kbytes sectors in Bank1. Extension is added after the HDP1_END sector (included).
+  - name: HDP2_EXT
+    bit_range:
+    - 22
+    - 16
+    description: HDP area extension in 8Kbytes sectors in bank 2. Extension is added after the HDP2_END sector (included).
+  side_effects: null
+- id: FLASH_OPTSR_CUR
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BOR_LEV
+    bit_range:
+    - 1
+    - 0
+    description: |-
+      Brownout level option status bit
+      These bits reflects the power level that generates a system reset.
+      00 or 11: BOR Level 1, the threshold level is low (around 2.1V)
+  - name: BORH_EN
+    bit_range:
+    - 2
+    - 2
+    description: Brownout high enable
+  - name: IWDG_SW
+    bit_range:
+    - 3
+    - 3
+    description: IWDG control mode option status bit
+  - name: WWDG_SW
+    bit_range:
+    - 4
+    - 4
+    description: WWDG control mode option status bit
+  - name: NRST_STOP
+    bit_range:
+    - 6
+    - 6
+    description: Core domain Stop entry reset option status bit
+  - name: NRST_STDBY
+    bit_range:
+    - 7
+    - 7
+    description: Core domain Standby entry reset option status bit
+  - name: PRODUCT_STATE
+    bit_range:
+    - 15
+    - 8
+    description: 'Life state code (based on Hamming 8,4). More information in Section7.6.11: Product state transitions.'
+  - name: IO_VDD_HSLV
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      High-speed IO at low Vsub DD/sub  voltage configuration bit.
+      This bit can be set only with Vsub DD/sub  below 2.7V.
+  - name: IO_VDDIO2_HSLV
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      High-speed IO at low Vsub DDIO2/sub  voltage configuration bit.
+      This bit can be set only with Vsub DDIO2/sub  below 2.7V.
+  - name: IWDG_STOP
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      IWDG Stop mode freeze option status bit
+      When set the independent watchdog IWDG is in system Stop mode.
+  - name: IWDG_STDBY
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      IWDG Standby mode freeze option status bit
+      When set the independent watchdog IWDG is frozen in system Standby mode.
+  - name: BOOT_UBE
+    bit_range:
+    - 29
+    - 22
+    description: |-
+      Available only on cryptography enabled devices.
+      Unique boot entry control, selects either ST or OEM iRoT for secure boot.
+  - name: SWAP_BANK
+    bit_range:
+    - 31
+    - 31
+    description: "Bank swapping option status bit\nSWAP_BANK reflects whether Bank1 and Bank2 are swapped or not.  \nSWAP_BANK is loaded to SWAP_BANK of FLASH_OPTCR after a reset."
+  side_effects: null
+- id: FLASH_OPTSR_PRG
+  address_offset: 84
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BOR_LEV
+    bit_range:
+    - 1
+    - 0
+    description: |-
+      Brownout level option configuration bit
+      These bits reflects the power level that generates a system reset.
+      00 or 11: BOR Level 1, the threshold level is low (around 2.1 V)
+  - name: BORH_EN
+    bit_range:
+    - 2
+    - 2
+    description: Brownout high enable configuration bit
+  - name: IWDG_SW
+    bit_range:
+    - 3
+    - 3
+    description: IWDG control mode option configuration bit
+  - name: WWDG_SW
+    bit_range:
+    - 4
+    - 4
+    description: WWDG control mode option configuration bit
+  - name: NRST_STOP
+    bit_range:
+    - 6
+    - 6
+    description: Core domain Stop entry reset option configuration bit
+  - name: NRST_STDBY
+    bit_range:
+    - 7
+    - 7
+    description: Core domain Standby entry reset option configuration bit
+  - name: PRODUCT_STATE
+    bit_range:
+    - 15
+    - 8
+    description: 'Life state code (based on Hamming 8,4). More information in Section7.6.11: Product state transitions.'
+  - name: IO_VDD_HSLV
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      High-speed IO at low VDD voltage configuration bit.
+      This bit can be set only with VDD below 2.7V.
+  - name: IO_VDDIO2_HSLV
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      High-speed IO at low VDDIO2 voltage configuration bit.
+      This bit can be set only with VDDIO2 below 2.7V.
+  - name: IWDG_STOP
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      IWDG Stop mode freeze option status bit
+      When set the independent watchdog IWDG is in system Stop mode.
+  - name: IWDG_STDBY
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      IWDG Standby mode freeze option status bit
+      When set the independent watchdog IWDG is frozen in system Standby mode.
+  - name: BOOT_UBE
+    bit_range:
+    - 29
+    - 22
+    description: "Available only on cryptography enabled devices.\nUnique boot entry control, selects either ST or OEM iRoT for secure boot. \nIn Open PRODUCT_STATE this value selects bootloader. Defaut value."
+  - name: SWAP_BANK
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      Bank swapping option configuration bit
+      SWAP_BANK option bit is used to configure whether the Bank1 and Bank2 are swapped or not. This bit is loaded with the SWAP_BANK bit of FLASH_OPTSR_CUR register after a reset.
+  side_effects: null
+- id: FLASH_NSEPOCHR_CUR
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NS_EPOCH
+    bit_range:
+    - 23
+    - 0
+    description: Non-volatile non-secure EPOCH counter
+  side_effects: null
+- id: FLASH_SECEPOCHR_CUR
+  address_offset: 104
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SEC_EPOCH
+    bit_range:
+    - 23
+    - 0
+    description: Non-volatile secure EPOCH counter
+  side_effects: null
+- id: FLASH_OPTSR2_CUR
+  address_offset: 112
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SRAM13_RST
+    bit_range:
+    - 2
+    - 2
+    description: SRAM1 and SRAM3 erase upon system reset
+  - name: SRAM2_RST
+    bit_range:
+    - 3
+    - 3
+    description: SRAM2 erase when system reset
+  - name: BKPRAM_ECC
+    bit_range:
+    - 4
+    - 4
+    description: Backup RAM ECC detection and correction disable
+  - name: SRAM3_ECC
+    bit_range:
+    - 5
+    - 5
+    description: SRAM3 ECC detection and correction disable
+  - name: SRAM2_ECC
+    bit_range:
+    - 6
+    - 6
+    description: SRAM2 ECC detection and correction disable
+  - name: USBPD_DIS
+    bit_range:
+    - 8
+    - 8
+    description: USB power delivery configuration option bit
+  - name: TZEN
+    bit_range:
+    - 31
+    - 24
+    description: |-
+      TrustZone enable configuration bits
+      This bit enables the device is in TrustZone mode during an option byte change.
+  side_effects: null
+- id: FLASH_OPTSR2_PRG
+  address_offset: 116
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SRAM1_3_RST
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      SRAM1 and SRAM3 erase upon system reset
+      Note: SRAM erase is triggered by option byte change operation, when enabling this feature.
+  - name: SRAM2_RST
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      SRAM2 erase when system reset
+      Note: SRAM erase is triggered by option byte change operation, when enabling this feature.
+  - name: BKPRAM_ECC
+    bit_range:
+    - 4
+    - 4
+    description: Backup RAM ECC detection and correction disable
+  - name: SRAM3_ECC
+    bit_range:
+    - 5
+    - 5
+    description: SRAM3 ECC detection and correction disable
+  - name: SRAM2_ECC
+    bit_range:
+    - 6
+    - 6
+    description: SRAM2 ECC detection and correction disable
+  - name: USBPD_DIS
+    bit_range:
+    - 8
+    - 8
+    description: USB power delivery configuration option bit
+  - name: TZEN
+    bit_range:
+    - 31
+    - 24
+    description: |-
+      TrustZone enable configuration bits
+      This bit enables the device is in TrustZone mode during an option byte change.
+  side_effects: null
+- id: FLASH_NSBOOTR_CUR
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NSBOOT_LOCK
+    bit_range:
+    - 7
+    - 0
+    description: A field locking the values of SWAP_BANK, and NSBOOTADD settings.
+  - name: NSBOOTADD
+    bit_range:
+    - 31
+    - 8
+    description: |-
+      Non secure unique boot entry address
+      These bits reflect the Non secure UBE address
+  side_effects: null
+- id: FLASH_NSBOOTR_PRG
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NSBOOT_LOCK
+    bit_range:
+    - 7
+    - 0
+    description: A field locking the values of SWAP_ BANK, and NSBOOTADD settings.
+  - name: NSBOOTADD
+    bit_range:
+    - 31
+    - 8
+    description: "Non secure unique boot entry address \nThese bits allow configuring the Non secure BOOT address"
+  side_effects: null
+- id: FLASH_SECBOOTR_CUR
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SECBOOT_LOCK
+    bit_range:
+    - 7
+    - 0
+    description: A field locking the values of UBE, SWAP_BANK, and SECBOOTADD settings.
+  - name: SECBOOTADD
+    bit_range:
+    - 31
+    - 8
+    description: "Unique boot entry secure address \nThese bits reflect the Secure UBE address"
+  side_effects: null
+- id: FLASH_BOOTR_PRG
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SECBOOT_LOCK
+    bit_range:
+    - 7
+    - 0
+    description: A field locking the values of UBE, SWAP_ BANK, and SECBOOTADD setting.
+  - name: SECBOOTADD
+    bit_range:
+    - 31
+    - 8
+    description: |-
+      Secure unique boot entry address.
+      These bits allow configuring the secure UBE address.
+  side_effects: null
+- id: FLASH_OTPBLR_CUR
+  address_offset: 144
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LOCKBL
+    bit_range:
+    - 31
+    - 0
+    description: "OTP block lock \nBlock n corresponds to OTP 16-bit word 32 x n to 32 x n + 31.\nLOCKBL[n] = 1 indicates that all OTP 16-bit words in OTP Block n are locked and attempt to program them results in WRPERR.\nLOCKBL[n] = 0 indicates that all OTP 16-bit words in OTP Block n are not locked.\nWhen one block is locked, it's not possible to remove the write protection.\nAlso if not locked, it is not possible to erase OTP words."
+  side_effects: null
+- id: FLASH_OTPBLR_PRG
+  address_offset: 148
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LOCKBL
+    bit_range:
+    - 31
+    - 0
+    description: "OTP block lock \nBlock n corresponds to OTP 16-bit word 32 x n to 32 x n + 31.\nLOCKBL[n] = 1 indicates that all OTP 16-bit words in OTP Block n are locked and attempt to program them results in WRPERR.\nLOCKBL[n] = 0 indicates that all OTP 16-bit words in OTP Block n are not locked.\nWhen one block is locked, it is not possible to remove the write protection.\nLOCKBL bits can be set if the corresponding bit in FLASH_OTPBLR_CUR is cleared."
+  side_effects: null
+- id: FLASH_SECBB1R1
+  address_offset: 160
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SECBB1
+    bit_range:
+    - 31
+    - 0
+    description: Secure/non-secure 8Kbytes flash Bank 1 sector attributes
+  side_effects: null
+- id: FLASH_SECBB1R2
+  address_offset: 164
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SECBB1
+    bit_range:
+    - 31
+    - 0
+    description: Secure/non-secure 8Kbytes flash Bank 1 sector attributes
+  side_effects: null
+- id: FLASH_SECBB1R3
+  address_offset: 168
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SECBB1
+    bit_range:
+    - 31
+    - 0
+    description: Secure/non-secure 8Kbytes flash Bank 1 sector attributes
+  side_effects: null
+- id: FLASH_SECBB1R4
+  address_offset: 172
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SECBB1
+    bit_range:
+    - 31
+    - 0
+    description: Secure/non-secure 8Kbytes flash Bank 1 sector attributes
+  side_effects: null
+- id: FLASH_PRIVBB1R1
+  address_offset: 192
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRIVBB1
+    bit_range:
+    - 31
+    - 0
+    description: Privileged/unprivileged 8-Kbyte flash Bank 1 sector attribute
+  side_effects: null
+- id: FLASH_PRIVBB1R2
+  address_offset: 196
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRIVBB1
+    bit_range:
+    - 31
+    - 0
+    description: Privileged/unprivileged 8-Kbyte flash Bank 1 sector attribute
+  side_effects: null
+- id: FLASH_PRIVBB1R3
+  address_offset: 200
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRIVBB1
+    bit_range:
+    - 31
+    - 0
+    description: Privileged/unprivileged 8-Kbyte flash Bank 1 sector attribute
+  side_effects: null
+- id: FLASH_PRIVBB1R4
+  address_offset: 204
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRIVBB1
+    bit_range:
+    - 31
+    - 0
+    description: Privileged/unprivileged 8-Kbyte flash Bank 1 sector attribute
+  side_effects: null
+- id: FLASH_SECWM1R_CUR
+  address_offset: 224
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SECWM1_STRT
+    bit_range:
+    - 6
+    - 0
+    description: Bank1 security WM area 1 start sector
+  - name: SECWM1_END
+    bit_range:
+    - 22
+    - 16
+    description: Bank1 security WM area 1 end sector
+  side_effects: null
+- id: FLASH_SECWM1R_PRG
+  address_offset: 228
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SECWM1_STRT
+    bit_range:
+    - 6
+    - 0
+    description: Bank1 security WM area 1 start sector
+  - name: SECWM1_END
+    bit_range:
+    - 22
+    - 16
+    description: Bank1 security WM area 1 end sector
+  side_effects: null
+- id: FLASH_WRP1R_CUR
+  address_offset: 232
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WRPSG1
+    bit_range:
+    - 31
+    - 0
+    description: |-
+      Bank 1 sector group protection option status byte
+      Each FLASH_WRP1R_CUR bit reflects the write protection status of the corresponding group of four consecutive sectors in bank 1 (0: the group is write protected; 1: the group is not write protected)
+      Bit 0: Group embedding sectors 0 to 3
+      Bit 1: Group embedding sectors 4 to 7
+      Bit N: Group embedding sectors 4 x N to 4 x N + 3
+      Bit 31: Group embedding sectors 124 to 127
+  side_effects: null
+- id: FLASH_WRP1R_PRG
+  address_offset: 236
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WRPSG1
+    bit_range:
+    - 31
+    - 0
+    description: |-
+      Bank1 sector group protection option status byte
+      Setting WRPSG1 bits to 0 write protects the corresponding group of four consecutive sectors in bank 1 (0: the group is write protected; 1: the group is not write protected)
+      Bit 0: Group embedding sectors 0 to 3
+      Bit 1: Group embedding sectors 4 to 7
+      Bit N: Group embedding sectors 4 x N to 4 x N + 3
+      Bit 31: Group embedding sectors 124 to 127
+  side_effects: null
+- id: FLASH_EDATA1R_CUR
+  address_offset: 240
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EDATA1_STRT
+    bit_range:
+    - 2
+    - 0
+    description: |-
+      EDATA1_STRT contains the start sectors of the flash high-cycle data area in Bank1 There is no hardware effect to those bits. They shall be managed by ST tools in Flasher.
+      ...
+  - name: EDATA1_EN
+    bit_range:
+    - 15
+    - 15
+    description: Bank1 flash high-cycle data enable
+  side_effects: null
+- id: FLASH_EDATA1R_PRG
+  address_offset: 244
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EDATA1_STRT
+    bit_range:
+    - 2
+    - 0
+    description: |-
+      EDATA1_STRT contains the start sectors of the flash high-cycle data area in Bank 1 There is no hardware effect to those bits. They shall be managed by ST tools in Flasher.
+      ...
+      Note: 111: The eight last sectors of the Bank 1 are reserved for flash high-cycle data
+  - name: EDATA1_EN
+    bit_range:
+    - 15
+    - 15
+    description: Bank 1 flash high-cycle data enable
+  side_effects: null
+- id: FLASH_HDP1R_CUR
+  address_offset: 248
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HDP1_STRT
+    bit_range:
+    - 6
+    - 0
+    description: HDPL barrier start set in number of 8-Kbyte sectors
+  - name: HDP1_END
+    bit_range:
+    - 22
+    - 16
+    description: HDPL barrier end set in number of 8-Kbyte sectors
+  side_effects: null
+- id: FLASH_HDP1R_PRG
+  address_offset: 252
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HDP1_STRT
+    bit_range:
+    - 6
+    - 0
+    description: HDPL barrier start set in number of 8-Kbyte sectors
+  - name: HDP1_END
+    bit_range:
+    - 22
+    - 16
+    description: HDPL barrier end set in number of 8-Kbyte sectors
+  side_effects: null
+- id: FLASH_ECCCORR
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR_ECC
+    bit_range:
+    - 15
+    - 0
+    description: "ECC error address\nWhen an ECC error occurs (for single correction) during a read operation, the ADDR_ECC contains the address that generated the error. \nADDR_ECC is reset when the flag error is reset. \nThe flash interface programs the address in this register only when no ECC error flags are set. This means that only the first address that generated an ECC error is saved.\nThe address in ADDR_ECC is relative to the flash memory area where the error occurred (user flash memory, system flash memory, data area, read-only/OTP area)."
+  - name: OBK_ECC
+    bit_range:
+    - 20
+    - 20
+    description: Single ECC error corrected in flash OB Keys storage area. It indicates the OBK storage concerned by ECC error.
+  - name: EDATA_ECC
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      ECC fail for corrected ECC error in flash high-cycle data area
+      It indicates if flash high-cycle data area is concerned by ECC error.
+  - name: BK_ECC
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      ECC fail bank for corrected ECC error
+      It indicates which bank is concerned by ECC error
+  - name: SYSF_ECC
+    bit_range:
+    - 23
+    - 23
+    description: |-
+      ECC fail for corrected ECC error in system flash memory
+      It indicates if system flash memory is concerned by ECC error.
+  - name: OTP_ECC
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      OTP ECC error bit
+      This bit is set to 1 when one single ECC correction occurred during the last successful read operation from the read-only/ OTP area. The address of the ECC error is available in ADDR_ECC bitfield.
+  - name: ECCCIE
+    bit_range:
+    - 25
+    - 25
+    description: |-
+      ECC single correction error interrupt enable bit
+      When ECCCIE bit is set to 1, an interrupt is generated when an ECC single correction error occurs during a read operation.
+  - name: ECCC
+    bit_range:
+    - 30
+    - 30
+    description: |-
+      ECC correction set by hardware when single ECC error has been detected and corrected.
+      Cleared by writing 1.
+  side_effects: null
+- id: FLASH_ECCDETR
+  address_offset: 260
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR_ECC
+    bit_range:
+    - 15
+    - 0
+    description: "ECC error address\nWhen an ECC error occurs (double detection) during a read operation, the ADDR_ECC contains the address that generated the error. \nADDR_ECC is reset when the flag error is reset. \nThe flash interface programs the address in this register only when no ECC error flags are set. This means that only the first address that generated an double ECC error is saved.\nThe address in ADDR_ECC is relative to the flash memory area where the error occurred (user flash memory, system flash memory, data area, read-only/OTP area)."
+  - name: OBK_ECC
+    bit_range:
+    - 20
+    - 20
+    description: ECC fail double ECC error in flash OB Keys storage area. It indicates the OBK storage concerned by ECC error.
+  - name: EDATA_ECC
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      ECC fail double ECC error in flash high-cycle data area
+      It indicates if flash high-cycle data area is concerned by ECC error.
+  - name: BK_ECC
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      ECC fail bank for double ECC error
+      It indicates which bank is concerned by ECC error
+  - name: SYSF_ECC
+    bit_range:
+    - 23
+    - 23
+    description: |-
+      ECC fail for double ECC error in system flash memory
+      It indicates if system flash memory is concerned by ECC error.
+  - name: OTP_ECC
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      OTP ECC error bit
+      This bit is set to 1 when double ECC detection occurred during the last read operation from the read-only/ OTP area. The address of the ECC error is available in ADDR_ECC bitfield.
+  - name: ECCD
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      ECC detection
+      Set by hardware when two ECC error has been detected.
+      When this bit is set, a NMI is generated.
+      Cleared by writing 1. Needs to be cleared in order to detect subsequent double ECC errors.
+  side_effects: null
+- id: FLASH_ECCDR
+  address_offset: 264
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA_ECC
+    bit_range:
+    - 15
+    - 0
+    description: |-
+      ECC error data
+      When an double detection ECC error occurs on special areas with 6-bit ECC on 16-bit data (data area, read-only/OTP area), the failing data is read to this register.
+      By checking if it is possible to determine whether the failure was on a real data, or due to access to uninitialized memory.
+  side_effects: null
+- id: FLASH_SECBB2R1
+  address_offset: 416
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SECBB2
+    bit_range:
+    - 31
+    - 0
+    description: Secure/non-secure flash Bank 2 sector attribute
+  side_effects: null
+- id: FLASH_SECBB2R2
+  address_offset: 420
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SECBB2
+    bit_range:
+    - 31
+    - 0
+    description: Secure/non-secure flash Bank 2 sector attribute
+  side_effects: null
+- id: FLASH_SECBB2R3
+  address_offset: 424
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SECBB2
+    bit_range:
+    - 31
+    - 0
+    description: Secure/non-secure flash Bank 2 sector attribute
+  side_effects: null
+- id: FLASH_SECBB2R4
+  address_offset: 428
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SECBB2
+    bit_range:
+    - 31
+    - 0
+    description: Secure/non-secure flash Bank 2 sector attribute
+  side_effects: null
+- id: FLASH_PRIVBB2R1
+  address_offset: 448
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRIVBB2
+    bit_range:
+    - 31
+    - 0
+    description: Privileged / non-privileged 8-Kbyte flash Bank 2 sector attribute
+  side_effects: null
+- id: FLASH_PRIVBB2R2
+  address_offset: 452
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRIVBB2
+    bit_range:
+    - 31
+    - 0
+    description: Privileged / non-privileged 8-Kbyte flash Bank 2 sector attribute
+  side_effects: null
+- id: FLASH_PRIVBB2R3
+  address_offset: 456
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRIVBB2
+    bit_range:
+    - 31
+    - 0
+    description: Privileged / non-privileged 8-Kbyte flash Bank 2 sector attribute
+  side_effects: null
+- id: FLASH_PRIVBB2R4
+  address_offset: 460
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PRIVBB2
+    bit_range:
+    - 31
+    - 0
+    description: Privileged / non-privileged 8-Kbyte flash Bank 2 sector attribute
+  side_effects: null
+- id: FLASH_SECWM2R_CUR
+  address_offset: 480
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SECWM_STRT2
+    bit_range:
+    - 6
+    - 0
+    description: Bank2 security WM area start sector
+  - name: SECWM_END2
+    bit_range:
+    - 22
+    - 16
+    description: Bank2 security WM end sector
+  side_effects: null
+- id: FLASH_SECWM2R_PRG
+  address_offset: 484
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SECWM_STRT2
+    bit_range:
+    - 6
+    - 0
+    description: Bank 2 security WM area start sector
+  - name: SECWM_END2
+    bit_range:
+    - 22
+    - 16
+    description: Bank 2 security WM area end sector
+  side_effects: null
+- id: FLASH_WRP2R_CUR
+  address_offset: 488
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WRPSG2
+    bit_range:
+    - 31
+    - 0
+    description: |-
+      Bank2 sector group protection option status byte
+      Each FLASH_WRP2R_CUR bit reflects the write protection status of the corresponding group of 4 consecutive sectors in bank 2 (0: group is write protected; 1: group is not write protected)
+      Bit 0: Group embedding sectors 0 to 3
+      Bit 1: Group embedding sectors 4 to 7
+      Bit N: Group embedding sectors 4 x N to 4 x N + 3
+      Bit 31: Group embedding sectors 124 to 127
+  side_effects: null
+- id: FLASH_WRP2R_PRG
+  address_offset: 492
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WRPSG2
+    bit_range:
+    - 31
+    - 0
+    description: |-
+      Bank 2 sector group protection option status byte
+      Setting WRPSGn2 bits to 0 write protects the corresponding group of four consecutive sectors in Bank 2 (0: group is write protected; 1: group is not write protected)
+      Bit 0: Group embedding sectors 0 to 3
+      Bit 1: Group embedding sectors 4 to 7
+      Bit N: Group embedding sectors 4 x N to 4 x N + 3
+      Bit 31: Group embedding sectors 124 to 127
+  side_effects: null
+- id: FLASH_EDATA2R_CUR
+  address_offset: 496
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EDATA2_STRT
+    bit_range:
+    - 2
+    - 0
+    description: |-
+      EDATA2_STRT contains the start sectors of the flash high-cycle data area in Bank 2 There is no hardware effect to those bits. They shall be managed by ST tools in Flasher.
+      ...
+      Note: 111: The eight last sectors of the Bank 2 are reserved for flash high-cycle data
+  - name: EDATA2_EN
+    bit_range:
+    - 15
+    - 15
+    description: Bank2 flash high-cycle data enable
+  side_effects: null
+- id: FLASH_EDATA2R_PRG
+  address_offset: 500
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EDATA2_STRT
+    bit_range:
+    - 2
+    - 0
+    description: |-
+      EDATA2_STRT contains the start sectors of the flash high-cycle data area in Bank 2 There is no hardware effect to those bits. They shall be managed by ST tools in Flasher.
+      ...
+      Note: 111: The eight last sectors of the Bank 2 are reserved for flash high-cycle data.
+  - name: EDATA2_EN
+    bit_range:
+    - 15
+    - 15
+    description: Bank 2 flash high-cycle data enable
+  side_effects: null
+- id: FLASH_HDP2R_CUR
+  address_offset: 504
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HDP2_STRT
+    bit_range:
+    - 6
+    - 0
+    description: HDPL barrier start set in number of 8-Kbyte sectors
+  - name: HDP2_END
+    bit_range:
+    - 22
+    - 16
+    description: HDPL barrier end set in number of 8-Kbyte sectors
+  side_effects: null
+- id: FLASH_HDP2R_PRG
+  address_offset: 508
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HDP2_STRT
+    bit_range:
+    - 6
+    - 0
+    description: HDPL barrier start set in number of 8-Kbyte sectors
+  - name: HDP2_END
+    bit_range:
+    - 22
+    - 16
+    description: HDPL barrier end set in number of 8-Kbyte sectors
+  side_effects: null
+interrupts:
+  FLASH: 6
+  FLASH_S: 7
+timing: null

@@ -1,0 +1,53 @@
+peripheral: GPIO_SD
+version: 0.1.0
+registers:
+- id: SIGMADELTA0-7
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 65280
+  fields:
+  - name: SD0_IN
+    bit_range:
+    - 7
+    - 0
+  - name: SD0_PRESCALE
+    bit_range:
+    - 15
+    - 8
+  side_effects: null
+- id: CG
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SD_CLK_EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: MISC
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SPI_SWAP
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: VERSION
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 22045072
+  fields:
+  - name: SD_DATE
+    bit_range:
+    - 27
+    - 0
+  side_effects: null
+interrupts: null
+timing: null

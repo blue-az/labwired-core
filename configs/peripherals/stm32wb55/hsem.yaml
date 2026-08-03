@@ -1,0 +1,1624 @@
+peripheral: HSEM
+version: 0.1.0
+registers:
+- id: R0
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R1
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R2
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R3
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R4
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R5
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R6
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R7
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R8
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R9
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R10
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R11
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R12
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R13
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R14
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R15
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R16
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R17
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R18
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R19
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R20
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R21
+  address_offset: 84
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R22
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R23
+  address_offset: 92
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R24
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R25
+  address_offset: 100
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R26
+  address_offset: 104
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R27
+  address_offset: 108
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R28
+  address_offset: 112
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R29
+  address_offset: 116
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R30
+  address_offset: 120
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: R31
+  address_offset: 124
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR0
+  address_offset: 128
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR1
+  address_offset: 132
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR2
+  address_offset: 136
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR3
+  address_offset: 140
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR4
+  address_offset: 144
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR5
+  address_offset: 148
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR6
+  address_offset: 152
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR7
+  address_offset: 156
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR8
+  address_offset: 160
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR9
+  address_offset: 164
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR10
+  address_offset: 168
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR11
+  address_offset: 172
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR12
+  address_offset: 176
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR13
+  address_offset: 180
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR14
+  address_offset: 184
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR15
+  address_offset: 188
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR16
+  address_offset: 192
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR17
+  address_offset: 196
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR18
+  address_offset: 200
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR19
+  address_offset: 204
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR20
+  address_offset: 208
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR21
+  address_offset: 212
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR22
+  address_offset: 216
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR23
+  address_offset: 220
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR24
+  address_offset: 224
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR25
+  address_offset: 228
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR26
+  address_offset: 232
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR27
+  address_offset: 236
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR28
+  address_offset: 240
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR29
+  address_offset: 244
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR30
+  address_offset: 248
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: RLR31
+  address_offset: 252
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PROCID
+    bit_range:
+    - 7
+    - 0
+    description: Semaphore ProcessID
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: Semaphore CoreID
+  - name: LOCK
+    bit_range:
+    - 31
+    - 31
+    description: lock indication
+  side_effects: null
+- id: C1IER0
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ISEm
+    bit_range:
+    - 31
+    - 0
+    description: CPU(n) semaphore m enable               bit
+  side_effects: null
+- id: C1ICR
+  address_offset: 260
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ISCm
+    bit_range:
+    - 31
+    - 0
+    description: CPU(n) semaphore m clear               bit
+  side_effects: null
+- id: C1ISR
+  address_offset: 264
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: ISFm
+    bit_range:
+    - 31
+    - 0
+    description: CPU(n) semaphore m status bit before               enable (mask)
+  side_effects: null
+- id: C1MISR
+  address_offset: 268
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: MISFm
+    bit_range:
+    - 31
+    - 0
+    description: masked CPU(n) semaphore m status bit               after enable (mask).
+  side_effects: null
+- id: C2IER0
+  address_offset: 272
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ISEm
+    bit_range:
+    - 31
+    - 0
+    description: CPU(2) semaphore m enable               bit.
+  side_effects: null
+- id: C2ICR
+  address_offset: 276
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ISCm
+    bit_range:
+    - 31
+    - 0
+    description: CPU(2) semaphore m clear               bit
+  side_effects: null
+- id: C2ISR
+  address_offset: 280
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: ISFm
+    bit_range:
+    - 31
+    - 0
+    description: CPU(2) semaphore m status bit before               enable (mask).
+  side_effects: null
+- id: C2MISR
+  address_offset: 284
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: MISFm
+    bit_range:
+    - 31
+    - 0
+    description: masked CPU(2) semaphore m status bit               after enable (mask).
+  side_effects: null
+- id: CR
+  address_offset: 320
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: COREID
+    bit_range:
+    - 11
+    - 8
+    description: CoreID of semaphore to be               cleared
+  - name: KEY
+    bit_range:
+    - 31
+    - 16
+    description: Semaphore clear Key
+  side_effects: null
+- id: KEYR
+  address_offset: 324
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: KEY
+    bit_range:
+    - 31
+    - 16
+    description: Semaphore Clear Key
+  side_effects: null
+- id: HWCFGR2
+  address_offset: 1004
+  size: 32
+  access: READ_ONLY
+  reset_value: 132
+  fields:
+  - name: MASTERID1
+    bit_range:
+    - 3
+    - 0
+    description: Hardware Configuration valid bus masters               ID1
+  - name: MASTERID2
+    bit_range:
+    - 7
+    - 4
+    description: Hardware Configuration valid bus masters               ID2
+  - name: MASTERID3
+    bit_range:
+    - 11
+    - 8
+    description: Hardware Configuration valid bus masters               ID3
+  - name: MASTERID4
+    bit_range:
+    - 15
+    - 12
+    description: Hardware Configuration valid bus masters               ID4
+  side_effects: null
+- id: HWCFGR1
+  address_offset: 1008
+  size: 32
+  access: READ_ONLY
+  reset_value: 544
+  fields:
+  - name: NBSEM
+    bit_range:
+    - 7
+    - 0
+    description: Hardware Configuration number of               semaphores
+  - name: NBINT
+    bit_range:
+    - 11
+    - 8
+    description: Hardware Configuration number of               interrupts supported number of master               IDs
+  side_effects: null
+- id: VERR
+  address_offset: 1012
+  size: 32
+  access: READ_ONLY
+  reset_value: 32
+  fields:
+  - name: MINREV
+    bit_range:
+    - 3
+    - 0
+    description: Minor Revision
+  - name: MAJREV
+    bit_range:
+    - 7
+    - 4
+    description: Major Revision
+  side_effects: null
+- id: IPIDR
+  address_offset: 1016
+  size: 32
+  access: READ_ONLY
+  reset_value: 1048690
+  fields:
+  - name: ID
+    bit_range:
+    - 31
+    - 0
+    description: Identification Code
+  side_effects: null
+- id: SIDR
+  address_offset: 1020
+  size: 32
+  access: READ_ONLY
+  reset_value: 2747653377
+  fields:
+  - name: SID
+    bit_range:
+    - 31
+    - 0
+    description: Size Identification Code
+  side_effects: null
+interrupts:
+  HSEM: 46
+timing: null

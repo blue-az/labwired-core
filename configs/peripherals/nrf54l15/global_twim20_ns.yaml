@@ -1,0 +1,1481 @@
+peripheral: GLOBAL_TWIM20_NS
+version: 0.1.0
+registers:
+- id: TASKS_STOP
+  address_offset: 4
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_STOP
+    bit_range:
+    - 0
+    - 0
+    description: Stop TWI transaction. Must be issued while the TWI master is not suspended.
+  side_effects: null
+- id: TASKS_SUSPEND
+  address_offset: 12
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SUSPEND
+    bit_range:
+    - 0
+    - 0
+    description: Suspend TWI transaction
+  side_effects: null
+- id: TASKS_RESUME
+  address_offset: 16
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_RESUME
+    bit_range:
+    - 0
+    - 0
+    description: Resume TWI transaction
+  side_effects: null
+- id: TASKS_DMA_RX_START
+  address_offset: 40
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: START
+    bit_range:
+    - 0
+    - 0
+    description: Starts operation using easyDMA to load the values. See peripheral description for operation using easyDMA.
+  side_effects: null
+- id: TASKS_DMA_RX_STOP
+  address_offset: 44
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: STOP
+    bit_range:
+    - 0
+    - 0
+    description: Stops operation using easyDMA. This does not trigger an END event.
+  side_effects: null
+- id: TASKS_DMA_RX_ENABLEMATCH0
+  address_offset: 48
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: ENABLEMATCH
+    bit_range:
+    - 0
+    - 0
+    description: Enables the MATCH[n] event by setting the ENABLE[n] bit in the CONFIG register.
+  side_effects: null
+- id: TASKS_DMA_RX_ENABLEMATCH1
+  address_offset: 52
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: ENABLEMATCH
+    bit_range:
+    - 0
+    - 0
+    description: Enables the MATCH[n] event by setting the ENABLE[n] bit in the CONFIG register.
+  side_effects: null
+- id: TASKS_DMA_RX_ENABLEMATCH2
+  address_offset: 56
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: ENABLEMATCH
+    bit_range:
+    - 0
+    - 0
+    description: Enables the MATCH[n] event by setting the ENABLE[n] bit in the CONFIG register.
+  side_effects: null
+- id: TASKS_DMA_RX_ENABLEMATCH3
+  address_offset: 60
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: ENABLEMATCH
+    bit_range:
+    - 0
+    - 0
+    description: Enables the MATCH[n] event by setting the ENABLE[n] bit in the CONFIG register.
+  side_effects: null
+- id: TASKS_DMA_RX_DISABLEMATCH0
+  address_offset: 64
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: DISABLEMATCH
+    bit_range:
+    - 0
+    - 0
+    description: Disables the MATCH[n] event by clearing the ENABLE[n] bit in the CONFIG register.
+  side_effects: null
+- id: TASKS_DMA_RX_DISABLEMATCH1
+  address_offset: 68
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: DISABLEMATCH
+    bit_range:
+    - 0
+    - 0
+    description: Disables the MATCH[n] event by clearing the ENABLE[n] bit in the CONFIG register.
+  side_effects: null
+- id: TASKS_DMA_RX_DISABLEMATCH2
+  address_offset: 72
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: DISABLEMATCH
+    bit_range:
+    - 0
+    - 0
+    description: Disables the MATCH[n] event by clearing the ENABLE[n] bit in the CONFIG register.
+  side_effects: null
+- id: TASKS_DMA_RX_DISABLEMATCH3
+  address_offset: 76
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: DISABLEMATCH
+    bit_range:
+    - 0
+    - 0
+    description: Disables the MATCH[n] event by clearing the ENABLE[n] bit in the CONFIG register.
+  side_effects: null
+- id: TASKS_DMA_TX_START
+  address_offset: 80
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: START
+    bit_range:
+    - 0
+    - 0
+    description: Starts operation using easyDMA to load the values. See peripheral description for operation using easyDMA.
+  side_effects: null
+- id: TASKS_DMA_TX_STOP
+  address_offset: 84
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: STOP
+    bit_range:
+    - 0
+    - 0
+    description: Stops operation using easyDMA. This does not trigger an END event.
+  side_effects: null
+- id: SUBSCRIBE_STOP
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task STOP will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SUSPEND
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SUSPEND will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_RESUME
+  address_offset: 144
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task RESUME will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_DMA_RX_START
+  address_offset: 168
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task START will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_DMA_RX_STOP
+  address_offset: 172
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task STOP will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_DMA_RX_ENABLEMATCH0
+  address_offset: 176
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task ENABLEMATCH[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_DMA_RX_ENABLEMATCH1
+  address_offset: 180
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task ENABLEMATCH[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_DMA_RX_ENABLEMATCH2
+  address_offset: 184
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task ENABLEMATCH[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_DMA_RX_ENABLEMATCH3
+  address_offset: 188
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task ENABLEMATCH[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_DMA_RX_DISABLEMATCH0
+  address_offset: 192
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task DISABLEMATCH[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_DMA_RX_DISABLEMATCH1
+  address_offset: 196
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task DISABLEMATCH[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_DMA_RX_DISABLEMATCH2
+  address_offset: 200
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task DISABLEMATCH[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_DMA_RX_DISABLEMATCH3
+  address_offset: 204
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task DISABLEMATCH[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_DMA_TX_START
+  address_offset: 208
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task START will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_DMA_TX_STOP
+  address_offset: 212
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task STOP will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: EVENTS_STOPPED
+  address_offset: 260
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_STOPPED
+    bit_range:
+    - 0
+    - 0
+    description: TWI stopped
+  side_effects: null
+- id: EVENTS_ERROR
+  address_offset: 276
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_ERROR
+    bit_range:
+    - 0
+    - 0
+    description: TWI error
+  side_effects: null
+- id: EVENTS_SUSPENDED
+  address_offset: 296
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_SUSPENDED
+    bit_range:
+    - 0
+    - 0
+    description: SUSPEND task has been issued, TWI traffic is now suspended.
+  side_effects: null
+- id: EVENTS_LASTRX
+  address_offset: 308
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_LASTRX
+    bit_range:
+    - 0
+    - 0
+    description: Byte boundary, starting to receive the last byte
+  side_effects: null
+- id: EVENTS_LASTTX
+  address_offset: 312
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_LASTTX
+    bit_range:
+    - 0
+    - 0
+    description: Byte boundary, starting to transmit the last byte
+  side_effects: null
+- id: EVENTS_DMA_RX_END
+  address_offset: 332
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: END
+    bit_range:
+    - 0
+    - 0
+    description: Generated after all MAXCNT bytes have been transferred
+  side_effects: null
+- id: EVENTS_DMA_RX_READY
+  address_offset: 336
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: READY
+    bit_range:
+    - 0
+    - 0
+    description: Generated when EasyDMA has buffered the .PTR and .MAXCNT registers for the channel, allowing them to be written to prepare for the next sequence.
+  side_effects: null
+- id: EVENTS_DMA_RX_BUSERROR
+  address_offset: 340
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BUSERROR
+    bit_range:
+    - 0
+    - 0
+    description: An error occured during the bus transfer.
+  side_effects: null
+- id: EVENTS_DMA_RX_MATCH0
+  address_offset: 344
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MATCH
+    bit_range:
+    - 0
+    - 0
+    description: Pattern match is detected on the DMA data bus.
+  side_effects: null
+- id: EVENTS_DMA_RX_MATCH1
+  address_offset: 348
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MATCH
+    bit_range:
+    - 0
+    - 0
+    description: Pattern match is detected on the DMA data bus.
+  side_effects: null
+- id: EVENTS_DMA_RX_MATCH2
+  address_offset: 352
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MATCH
+    bit_range:
+    - 0
+    - 0
+    description: Pattern match is detected on the DMA data bus.
+  side_effects: null
+- id: EVENTS_DMA_RX_MATCH3
+  address_offset: 356
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MATCH
+    bit_range:
+    - 0
+    - 0
+    description: Pattern match is detected on the DMA data bus.
+  side_effects: null
+- id: EVENTS_DMA_TX_END
+  address_offset: 360
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: END
+    bit_range:
+    - 0
+    - 0
+    description: Generated after all MAXCNT bytes have been transferred
+  side_effects: null
+- id: EVENTS_DMA_TX_READY
+  address_offset: 364
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: READY
+    bit_range:
+    - 0
+    - 0
+    description: Generated when EasyDMA has buffered the .PTR and .MAXCNT registers for the channel, allowing them to be written to prepare for the next sequence.
+  side_effects: null
+- id: EVENTS_DMA_TX_BUSERROR
+  address_offset: 368
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BUSERROR
+    bit_range:
+    - 0
+    - 0
+    description: An error occured during the bus transfer.
+  side_effects: null
+- id: PUBLISH_STOPPED
+  address_offset: 388
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event STOPPED will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_ERROR
+  address_offset: 404
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event ERROR will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_SUSPENDED
+  address_offset: 424
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event SUSPENDED will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_LASTRX
+  address_offset: 436
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event LASTRX will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_LASTTX
+  address_offset: 440
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event LASTTX will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_DMA_RX_END
+  address_offset: 460
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event END will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_DMA_RX_READY
+  address_offset: 464
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event READY will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_DMA_RX_BUSERROR
+  address_offset: 468
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event BUSERROR will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_DMA_RX_MATCH0
+  address_offset: 472
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event MATCH[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_DMA_RX_MATCH1
+  address_offset: 476
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event MATCH[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_DMA_RX_MATCH2
+  address_offset: 480
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event MATCH[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_DMA_RX_MATCH3
+  address_offset: 484
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event MATCH[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_DMA_TX_END
+  address_offset: 488
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event END will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_DMA_TX_READY
+  address_offset: 492
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event READY will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_DMA_TX_BUSERROR
+  address_offset: 496
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event BUSERROR will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SHORTS
+  address_offset: 512
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LASTTX_DMA_RX_START
+    bit_range:
+    - 7
+    - 7
+    description: Shortcut between event LASTTX and task DMA.RX.START
+  - name: LASTTX_SUSPEND
+    bit_range:
+    - 8
+    - 8
+    description: Shortcut between event LASTTX and task SUSPEND
+  - name: LASTTX_STOP
+    bit_range:
+    - 9
+    - 9
+    description: Shortcut between event LASTTX and task STOP
+  - name: LASTRX_DMA_TX_START
+    bit_range:
+    - 10
+    - 10
+    description: Shortcut between event LASTRX and task DMA.TX.START
+  - name: LASTRX_STOP
+    bit_range:
+    - 12
+    - 12
+    description: Shortcut between event LASTRX and task STOP
+  - name: DMA_RX_MATCH0_DMA_RX_ENABLEMATCH1
+    bit_range:
+    - 21
+    - 21
+    description: Shortcut between event DMA.RX.MATCH[n] and task DMA.RX.ENABLEMATCH[1] Allows daisy-chaining match events.
+  - name: DMA_RX_MATCH1_DMA_RX_ENABLEMATCH2
+    bit_range:
+    - 22
+    - 22
+    description: Shortcut between event DMA.RX.MATCH[n] and task DMA.RX.ENABLEMATCH[2] Allows daisy-chaining match events.
+  - name: DMA_RX_MATCH2_DMA_RX_ENABLEMATCH3
+    bit_range:
+    - 23
+    - 23
+    description: Shortcut between event DMA.RX.MATCH[n] and task DMA.RX.ENABLEMATCH[3] Allows daisy-chaining match events.
+  - name: DMA_RX_MATCH3_DMA_RX_ENABLEMATCH0
+    bit_range:
+    - 24
+    - 24
+    description: Shortcut between event DMA.RX.MATCH[n] and task DMA.RX.ENABLEMATCH[0] Allows daisy-chaining match events.
+  - name: DMA_RX_MATCH0_DMA_RX_DISABLEMATCH0
+    bit_range:
+    - 25
+    - 25
+    description: Shortcut between event DMA.RX.MATCH[n] and task DMA.RX.DISABLEMATCH[n]
+  - name: DMA_RX_MATCH1_DMA_RX_DISABLEMATCH1
+    bit_range:
+    - 26
+    - 26
+    description: Shortcut between event DMA.RX.MATCH[n] and task DMA.RX.DISABLEMATCH[n]
+  - name: DMA_RX_MATCH2_DMA_RX_DISABLEMATCH2
+    bit_range:
+    - 27
+    - 27
+    description: Shortcut between event DMA.RX.MATCH[n] and task DMA.RX.DISABLEMATCH[n]
+  - name: DMA_RX_MATCH3_DMA_RX_DISABLEMATCH3
+    bit_range:
+    - 28
+    - 28
+    description: Shortcut between event DMA.RX.MATCH[n] and task DMA.RX.DISABLEMATCH[n]
+  side_effects: null
+- id: INTEN
+  address_offset: 768
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STOPPED
+    bit_range:
+    - 1
+    - 1
+    description: Enable or disable interrupt for event STOPPED
+  - name: ERROR
+    bit_range:
+    - 5
+    - 5
+    description: Enable or disable interrupt for event ERROR
+  - name: SUSPENDED
+    bit_range:
+    - 10
+    - 10
+    description: Enable or disable interrupt for event SUSPENDED
+  - name: LASTRX
+    bit_range:
+    - 13
+    - 13
+    description: Enable or disable interrupt for event LASTRX
+  - name: LASTTX
+    bit_range:
+    - 14
+    - 14
+    description: Enable or disable interrupt for event LASTTX
+  - name: DMARXEND
+    bit_range:
+    - 19
+    - 19
+    description: Enable or disable interrupt for event DMARXEND
+  - name: DMARXREADY
+    bit_range:
+    - 20
+    - 20
+    description: Enable or disable interrupt for event DMARXREADY
+  - name: DMARXBUSERROR
+    bit_range:
+    - 21
+    - 21
+    description: Enable or disable interrupt for event DMARXBUSERROR
+  - name: DMARXMATCH0
+    bit_range:
+    - 22
+    - 22
+    description: Enable or disable interrupt for event DMARXMATCH[0]
+  - name: DMARXMATCH1
+    bit_range:
+    - 23
+    - 23
+    description: Enable or disable interrupt for event DMARXMATCH[1]
+  - name: DMARXMATCH2
+    bit_range:
+    - 24
+    - 24
+    description: Enable or disable interrupt for event DMARXMATCH[2]
+  - name: DMARXMATCH3
+    bit_range:
+    - 25
+    - 25
+    description: Enable or disable interrupt for event DMARXMATCH[3]
+  - name: DMATXEND
+    bit_range:
+    - 26
+    - 26
+    description: Enable or disable interrupt for event DMATXEND
+  - name: DMATXREADY
+    bit_range:
+    - 27
+    - 27
+    description: Enable or disable interrupt for event DMATXREADY
+  - name: DMATXBUSERROR
+    bit_range:
+    - 28
+    - 28
+    description: Enable or disable interrupt for event DMATXBUSERROR
+  side_effects: null
+- id: INTENSET
+  address_offset: 772
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STOPPED
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to enable interrupt for event STOPPED
+  - name: ERROR
+    bit_range:
+    - 5
+    - 5
+    description: Write '1' to enable interrupt for event ERROR
+  - name: SUSPENDED
+    bit_range:
+    - 10
+    - 10
+    description: Write '1' to enable interrupt for event SUSPENDED
+  - name: LASTRX
+    bit_range:
+    - 13
+    - 13
+    description: Write '1' to enable interrupt for event LASTRX
+  - name: LASTTX
+    bit_range:
+    - 14
+    - 14
+    description: Write '1' to enable interrupt for event LASTTX
+  - name: DMARXEND
+    bit_range:
+    - 19
+    - 19
+    description: Write '1' to enable interrupt for event DMARXEND
+  - name: DMARXREADY
+    bit_range:
+    - 20
+    - 20
+    description: Write '1' to enable interrupt for event DMARXREADY
+  - name: DMARXBUSERROR
+    bit_range:
+    - 21
+    - 21
+    description: Write '1' to enable interrupt for event DMARXBUSERROR
+  - name: DMARXMATCH0
+    bit_range:
+    - 22
+    - 22
+    description: Write '1' to enable interrupt for event DMARXMATCH[0]
+  - name: DMARXMATCH1
+    bit_range:
+    - 23
+    - 23
+    description: Write '1' to enable interrupt for event DMARXMATCH[1]
+  - name: DMARXMATCH2
+    bit_range:
+    - 24
+    - 24
+    description: Write '1' to enable interrupt for event DMARXMATCH[2]
+  - name: DMARXMATCH3
+    bit_range:
+    - 25
+    - 25
+    description: Write '1' to enable interrupt for event DMARXMATCH[3]
+  - name: DMATXEND
+    bit_range:
+    - 26
+    - 26
+    description: Write '1' to enable interrupt for event DMATXEND
+  - name: DMATXREADY
+    bit_range:
+    - 27
+    - 27
+    description: Write '1' to enable interrupt for event DMATXREADY
+  - name: DMATXBUSERROR
+    bit_range:
+    - 28
+    - 28
+    description: Write '1' to enable interrupt for event DMATXBUSERROR
+  side_effects: null
+- id: INTENCLR
+  address_offset: 776
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STOPPED
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to disable interrupt for event STOPPED
+  - name: ERROR
+    bit_range:
+    - 5
+    - 5
+    description: Write '1' to disable interrupt for event ERROR
+  - name: SUSPENDED
+    bit_range:
+    - 10
+    - 10
+    description: Write '1' to disable interrupt for event SUSPENDED
+  - name: LASTRX
+    bit_range:
+    - 13
+    - 13
+    description: Write '1' to disable interrupt for event LASTRX
+  - name: LASTTX
+    bit_range:
+    - 14
+    - 14
+    description: Write '1' to disable interrupt for event LASTTX
+  - name: DMARXEND
+    bit_range:
+    - 19
+    - 19
+    description: Write '1' to disable interrupt for event DMARXEND
+  - name: DMARXREADY
+    bit_range:
+    - 20
+    - 20
+    description: Write '1' to disable interrupt for event DMARXREADY
+  - name: DMARXBUSERROR
+    bit_range:
+    - 21
+    - 21
+    description: Write '1' to disable interrupt for event DMARXBUSERROR
+  - name: DMARXMATCH0
+    bit_range:
+    - 22
+    - 22
+    description: Write '1' to disable interrupt for event DMARXMATCH[0]
+  - name: DMARXMATCH1
+    bit_range:
+    - 23
+    - 23
+    description: Write '1' to disable interrupt for event DMARXMATCH[1]
+  - name: DMARXMATCH2
+    bit_range:
+    - 24
+    - 24
+    description: Write '1' to disable interrupt for event DMARXMATCH[2]
+  - name: DMARXMATCH3
+    bit_range:
+    - 25
+    - 25
+    description: Write '1' to disable interrupt for event DMARXMATCH[3]
+  - name: DMATXEND
+    bit_range:
+    - 26
+    - 26
+    description: Write '1' to disable interrupt for event DMATXEND
+  - name: DMATXREADY
+    bit_range:
+    - 27
+    - 27
+    description: Write '1' to disable interrupt for event DMATXREADY
+  - name: DMATXBUSERROR
+    bit_range:
+    - 28
+    - 28
+    description: Write '1' to disable interrupt for event DMATXBUSERROR
+  side_effects: null
+- id: ERRORSRC
+  address_offset: 1220
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OVERRUN
+    bit_range:
+    - 0
+    - 0
+    description: Overrun error
+  - name: ANACK
+    bit_range:
+    - 1
+    - 1
+    description: NACK received after sending the address (write '1' to clear)
+  - name: DNACK
+    bit_range:
+    - 2
+    - 2
+    description: NACK received after sending a data byte (write '1' to clear)
+  side_effects:
+    read_action: null
+    write_action: write_one_to_clear
+    on_read: null
+    on_write: null
+- id: ENABLE
+  address_offset: 1280
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENABLE
+    bit_range:
+    - 3
+    - 0
+    description: Enable or disable TWIM
+  side_effects: null
+- id: FREQUENCY
+  address_offset: 1316
+  size: 32
+  access: READ_WRITE
+  reset_value: 67108864
+  fields:
+  - name: FREQUENCY
+    bit_range:
+    - 31
+    - 0
+    description: TWI master clock frequency
+  side_effects: null
+- id: ADDRESS
+  address_offset: 1416
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDRESS
+    bit_range:
+    - 6
+    - 0
+    description: Address used in the TWI transfer
+  side_effects: null
+- id: PSEL_SCL
+  address_offset: 1536
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: PIN
+    bit_range:
+    - 4
+    - 0
+    description: Pin number
+  - name: PORT
+    bit_range:
+    - 7
+    - 5
+    description: Port number
+  - name: CONNECT
+    bit_range:
+    - 31
+    - 31
+    description: Connection
+  side_effects: null
+- id: PSEL_SDA
+  address_offset: 1540
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: PIN
+    bit_range:
+    - 4
+    - 0
+    description: Pin number
+  - name: PORT
+    bit_range:
+    - 7
+    - 5
+    description: Port number
+  - name: CONNECT
+    bit_range:
+    - 31
+    - 31
+    description: Connection
+  side_effects: null
+- id: DMA_RX_PTR
+  address_offset: 1796
+  size: 32
+  access: READ_WRITE
+  reset_value: 536870912
+  fields:
+  - name: PTR
+    bit_range:
+    - 31
+    - 0
+    description: RAM buffer start address for this EasyDMA channel. This address is a word aligned Data RAM address.
+  side_effects: null
+- id: DMA_RX_MAXCNT
+  address_offset: 1800
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MAXCNT
+    bit_range:
+    - 15
+    - 0
+    description: Maximum number of bytes in channel buffer
+  side_effects: null
+- id: DMA_RX_AMOUNT
+  address_offset: 1804
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: AMOUNT
+    bit_range:
+    - 15
+    - 0
+    description: Number of bytes transferred in the last transaction. In case of NACK error, includes the NACK'ed byte.
+  side_effects: null
+- id: DMA_RX_TERMINATEONBUSERROR
+  address_offset: 1820
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENABLE
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+- id: DMA_RX_BUSERRORADDRESS
+  address_offset: 1824
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: ADDRESS
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: DMA_RX_MATCH_CONFIG
+  address_offset: 1828
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENABLE_0
+    bit_range:
+    - 0
+    - 0
+    description: Enable match filter 0
+  - name: ENABLE_1
+    bit_range:
+    - 1
+    - 1
+    description: Enable match filter 1
+  - name: ENABLE_2
+    bit_range:
+    - 2
+    - 2
+    description: Enable match filter 2
+  - name: ENABLE_3
+    bit_range:
+    - 3
+    - 3
+    description: Enable match filter 3
+  - name: ONESHOT_0
+    bit_range:
+    - 16
+    - 16
+    description: Configure match filter 0 as one-shot or sticky
+  - name: ONESHOT_1
+    bit_range:
+    - 17
+    - 17
+    description: Configure match filter 1 as one-shot or sticky
+  - name: ONESHOT_2
+    bit_range:
+    - 18
+    - 18
+    description: Configure match filter 2 as one-shot or sticky
+  - name: ONESHOT_3
+    bit_range:
+    - 19
+    - 19
+    description: Configure match filter 3 as one-shot or sticky
+  side_effects: null
+- id: DMA_RX_MATCH_CANDIDATE0
+  address_offset: 1832
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Data to look for
+  side_effects: null
+- id: DMA_RX_MATCH_CANDIDATE1
+  address_offset: 1836
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Data to look for
+  side_effects: null
+- id: DMA_RX_MATCH_CANDIDATE2
+  address_offset: 1840
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Data to look for
+  side_effects: null
+- id: DMA_RX_MATCH_CANDIDATE3
+  address_offset: 1844
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Data to look for
+  side_effects: null
+- id: DMA_TX_PTR
+  address_offset: 1852
+  size: 32
+  access: READ_WRITE
+  reset_value: 536870912
+  fields:
+  - name: PTR
+    bit_range:
+    - 31
+    - 0
+    description: RAM buffer start address for this EasyDMA channel. This address is a word aligned Data RAM address.
+  side_effects: null
+- id: DMA_TX_MAXCNT
+  address_offset: 1856
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MAXCNT
+    bit_range:
+    - 15
+    - 0
+    description: Maximum number of bytes in channel buffer
+  side_effects: null
+- id: DMA_TX_AMOUNT
+  address_offset: 1860
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: AMOUNT
+    bit_range:
+    - 15
+    - 0
+    description: Number of bytes transferred in the last transaction. In case of NACK error, includes the NACK'ed byte.
+  side_effects: null
+- id: DMA_TX_TERMINATEONBUSERROR
+  address_offset: 1876
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENABLE
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+- id: DMA_TX_BUSERRORADDRESS
+  address_offset: 1880
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: ADDRESS
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+interrupts:
+  SERIAL20: 198
+timing: null

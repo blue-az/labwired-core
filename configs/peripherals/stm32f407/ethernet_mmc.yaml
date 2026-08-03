@@ -1,0 +1,202 @@
+peripheral: Ethernet_MMC
+version: 0.1.0
+registers:
+- id: MMCCR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CR
+    bit_range:
+    - 0
+    - 0
+    description: CR
+  - name: CSR
+    bit_range:
+    - 1
+    - 1
+    description: CSR
+  - name: ROR
+    bit_range:
+    - 2
+    - 2
+    description: ROR
+  - name: MCF
+    bit_range:
+    - 3
+    - 3
+    description: MCF
+  - name: MCP
+    bit_range:
+    - 4
+    - 4
+    description: MCP
+  - name: MCFHP
+    bit_range:
+    - 5
+    - 5
+    description: MCFHP
+  side_effects: null
+- id: MMCRIR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RFCES
+    bit_range:
+    - 5
+    - 5
+    description: RFCES
+  - name: RFAES
+    bit_range:
+    - 6
+    - 6
+    description: RFAES
+  - name: RGUFS
+    bit_range:
+    - 17
+    - 17
+    description: RGUFS
+  side_effects: null
+- id: MMCTIR
+  address_offset: 8
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: TGFSCS
+    bit_range:
+    - 14
+    - 14
+    description: TGFSCS
+  - name: TGFMSCS
+    bit_range:
+    - 15
+    - 15
+    description: TGFMSCS
+  - name: TGFS
+    bit_range:
+    - 21
+    - 21
+    description: TGFS
+  side_effects: null
+- id: MMCRIMR
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RFCEM
+    bit_range:
+    - 5
+    - 5
+    description: RFCEM
+  - name: RFAEM
+    bit_range:
+    - 6
+    - 6
+    description: RFAEM
+  - name: RGUFM
+    bit_range:
+    - 17
+    - 17
+    description: RGUFM
+  side_effects: null
+- id: MMCTIMR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TGFSCM
+    bit_range:
+    - 14
+    - 14
+    description: TGFSCM
+  - name: TGFMSCM
+    bit_range:
+    - 15
+    - 15
+    description: TGFMSCM
+  - name: TGFM
+    bit_range:
+    - 16
+    - 16
+    description: TGFM
+  side_effects: null
+- id: MMCTGFSCCR
+  address_offset: 76
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: TGFSCC
+    bit_range:
+    - 31
+    - 0
+    description: TGFSCC
+  side_effects: null
+- id: MMCTGFMSCCR
+  address_offset: 80
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: TGFMSCC
+    bit_range:
+    - 31
+    - 0
+    description: TGFMSCC
+  side_effects: null
+- id: MMCTGFCR
+  address_offset: 104
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: TGFC
+    bit_range:
+    - 31
+    - 0
+    description: HTL
+  side_effects: null
+- id: MMCRFCECR
+  address_offset: 148
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: RFCFC
+    bit_range:
+    - 31
+    - 0
+    description: RFCFC
+  side_effects: null
+- id: MMCRFAECR
+  address_offset: 152
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: RFAEC
+    bit_range:
+    - 31
+    - 0
+    description: RFAEC
+  side_effects: null
+- id: MMCRGUFCR
+  address_offset: 196
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: RGUFC
+    bit_range:
+    - 31
+    - 0
+    description: RGUFC
+  side_effects: null
+interrupts: null
+timing: null

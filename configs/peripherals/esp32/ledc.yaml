@@ -1,0 +1,818 @@
+peripheral: LEDC
+version: 0.1.0
+registers:
+- id: HSCH0-7_CONF0
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIMER_SEL
+    bit_range:
+    - 1
+    - 0
+    description: 'There are four high speed timers  the two bits are used to select one of them for high speed channel0.  2''b00: seletc hstimer0.   2''b01: select hstimer1.  2''b10: select hstimer2.    2''b11: select hstimer3.'
+  - name: SIG_OUT_EN
+    bit_range:
+    - 2
+    - 2
+    description: This is the output enable control bit for high speed channel0
+  - name: IDLE_LV
+    bit_range:
+    - 3
+    - 3
+    description: This bit is used to control the output value when high speed channel0 is off.
+  side_effects: null
+- id: HSCH0-7_HPOINT
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HPOINT
+    bit_range:
+    - 19
+    - 0
+    description: The output value changes to high when htimerx(x=[0 3]) selected by high speed channel0 has reached reg_hpoint_hsch0[19:0]
+  side_effects: null
+- id: HSCH0-7_DUTY
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DUTY
+    bit_range:
+    - 24
+    - 0
+    description: This register represents the current duty of the output signal for high speed channel0.
+  side_effects: null
+- id: HSCH0-7_CONF1
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 1073741824
+  fields:
+  - name: DUTY_SCALE
+    bit_range:
+    - 9
+    - 0
+    description: This register controls the increase or decrease step scale for high speed channel0.
+  - name: DUTY_CYCLE
+    bit_range:
+    - 19
+    - 10
+    description: This register is used to increase or decrease the duty every reg_duty_cycle_hsch0 cycles for high speed channel0.
+  - name: DUTY_NUM
+    bit_range:
+    - 29
+    - 20
+    description: This register is used to control the num of increased or decreased times for high speed channel0.
+  - name: DUTY_INC
+    bit_range:
+    - 30
+    - 30
+    description: This register is used to increase the duty of output signal or decrease the duty of output signal for high speed channel0.
+  - name: DUTY_START
+    bit_range:
+    - 31
+    - 31
+    description: When reg_duty_num_hsch0 reg_duty_cycle_hsch0 and reg_duty_scale_hsch0 has been configured. these register won't take effect until set reg_duty_start_hsch0. this bit is automatically cleared by hardware.
+  side_effects: null
+- id: HSCH0-7_DUTY_R
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DUTY_R
+    bit_range:
+    - 24
+    - 0
+    description: This register represents the current duty cycle of the output signal for high-speed channel %s
+  side_effects: null
+- id: LSCH0-7_CONF0
+  address_offset: 160
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIMER_SEL
+    bit_range:
+    - 1
+    - 0
+    description: 'There are four low speed timers  the two bits are used to select one of them for low speed channel0.  2''b00: seletc lstimer0.   2''b01: select lstimer1.  2''b10: select lstimer2.    2''b11: select lstimer3.'
+  - name: SIG_OUT_EN
+    bit_range:
+    - 2
+    - 2
+    description: This is the output enable control bit for low speed channel0.
+  - name: IDLE_LV
+    bit_range:
+    - 3
+    - 3
+    description: This bit is used to control the output value when low speed channel0 is off.
+  - name: PARA_UP
+    bit_range:
+    - 4
+    - 4
+    description: This bit is used to update register LEDC_LSCH0_HPOINT and LEDC_LSCH0_DUTY for low speed channel0.
+  side_effects: null
+- id: LSCH0-7_HPOINT
+  address_offset: 164
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HPOINT
+    bit_range:
+    - 19
+    - 0
+    description: The output value changes to high when lstimerx(x=[0 3]) selected by low speed channel0 has reached reg_hpoint_lsch0[19:0]
+  side_effects: null
+- id: LSCH0-7_DUTY
+  address_offset: 168
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DUTY
+    bit_range:
+    - 24
+    - 0
+    description: This register represents the current duty of the output signal for low speed channel0.
+  side_effects: null
+- id: LSCH0-7_CONF1
+  address_offset: 172
+  size: 32
+  access: READ_WRITE
+  reset_value: 1073741824
+  fields:
+  - name: DUTY_SCALE
+    bit_range:
+    - 9
+    - 0
+    description: This register controls the increase or decrease step scale for low speed channel0.
+  - name: DUTY_CYCLE
+    bit_range:
+    - 19
+    - 10
+    description: This register is used to increase or decrease the duty every reg_duty_cycle_lsch0 cycles for low speed channel0.
+  - name: DUTY_NUM
+    bit_range:
+    - 29
+    - 20
+    description: This register is used to control the num of increased or decreased times for low speed channel6.
+  - name: DUTY_INC
+    bit_range:
+    - 30
+    - 30
+    description: This register is used to increase the duty of output signal or decrease the duty of output signal for low speed channel6.
+  - name: DUTY_START
+    bit_range:
+    - 31
+    - 31
+    description: When reg_duty_num_hsch1 reg_duty_cycle_hsch1 and reg_duty_scale_hsch1 has been configured. these register won't take effect until set reg_duty_start_hsch1. this bit is automatically cleared by hardware.
+  side_effects: null
+- id: LSCH0-7_DUTY_R
+  address_offset: 176
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DUTY_R
+    bit_range:
+    - 24
+    - 0
+    description: This register represents the current duty cycle of the output signal for low-speed channel %s
+  side_effects: null
+- id: HSTIMER0-3_CONF
+  address_offset: 320
+  size: 32
+  access: READ_WRITE
+  reset_value: 16777216
+  fields:
+  - name: DUTY_RES
+    bit_range:
+    - 4
+    - 0
+    description: This register controls the range of the counter in high speed timer0. the counter range is [0 2**reg_hstimer0_lim] the max bit width for counter is 20.
+  - name: DIV_NUM
+    bit_range:
+    - 22
+    - 5
+    description: This register is used to configure parameter for divider in high speed timer0 the least significant eight bits represent the decimal part.
+  - name: PAUSE
+    bit_range:
+    - 23
+    - 23
+    description: This bit is used to pause the counter in high speed timer0
+  - name: RST
+    bit_range:
+    - 24
+    - 24
+    description: This bit is used to reset high speed timer0 the counter will be 0 after reset.
+  - name: TICK_SEL
+    bit_range:
+    - 25
+    - 25
+    description: This bit is used to choose apb_clk or ref_tick for high speed timer0. 1'b1:apb_clk  0:ref_tick
+  side_effects: null
+- id: HSTIMER0-3_VALUE
+  address_offset: 324
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CNT
+    bit_range:
+    - 19
+    - 0
+    description: software can read this register to get the current counter value in high speed timer0
+  side_effects: null
+- id: LSTIMER0-3_CONF
+  address_offset: 352
+  size: 32
+  access: READ_WRITE
+  reset_value: 16777216
+  fields:
+  - name: DUTY_RES
+    bit_range:
+    - 4
+    - 0
+    description: This register controls the range of the counter in low speed timer0. the counter range is [0 2**reg_lstimer0_lim] the max bit width for counter is 20.
+  - name: DIV_NUM
+    bit_range:
+    - 22
+    - 5
+    description: This register is used to configure parameter for divider in low speed timer0 the least significant eight bits represent the decimal part.
+  - name: PAUSE
+    bit_range:
+    - 23
+    - 23
+    description: This bit is used to pause the counter in low speed timer0.
+  - name: RST
+    bit_range:
+    - 24
+    - 24
+    description: This bit is used to reset low speed timer0 the counter will be 0 after reset.
+  - name: TICK_SEL
+    bit_range:
+    - 25
+    - 25
+    description: This bit is used to choose slow_clk or ref_tick for low speed timer0. 1'b1:slow_clk  0:ref_tick
+  - name: PARA_UP
+    bit_range:
+    - 26
+    - 26
+    description: Set this bit  to update  reg_div_num_lstime0 and  reg_lstimer0_lim.
+  side_effects: null
+- id: LSTIMER0-3_VALUE
+  address_offset: 356
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CNT
+    bit_range:
+    - 19
+    - 0
+    description: software can read this register to get the current counter value in low speed timer0.
+  side_effects: null
+- id: INT_RAW
+  address_offset: 384
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HSTIMER0_OVF_INT_RAW
+    bit_range:
+    - 0
+    - 0
+    description: The interrupt raw bit for high speed channel0  counter overflow.
+  - name: HSTIMER1_OVF_INT_RAW
+    bit_range:
+    - 1
+    - 1
+    description: The interrupt raw bit for high speed channel1  counter overflow.
+  - name: HSTIMER2_OVF_INT_RAW
+    bit_range:
+    - 2
+    - 2
+    description: The interrupt raw bit for high speed channel2  counter overflow.
+  - name: HSTIMER3_OVF_INT_RAW
+    bit_range:
+    - 3
+    - 3
+    description: The interrupt raw bit for high speed channel3  counter overflow.
+  - name: LSTIMER0_OVF_INT_RAW
+    bit_range:
+    - 4
+    - 4
+    description: The interrupt raw bit for low speed channel0  counter overflow.
+  - name: LSTIMER1_OVF_INT_RAW
+    bit_range:
+    - 5
+    - 5
+    description: The interrupt raw bit for low speed channel1  counter overflow.
+  - name: LSTIMER2_OVF_INT_RAW
+    bit_range:
+    - 6
+    - 6
+    description: The interrupt raw bit for low speed channel2  counter overflow.
+  - name: LSTIMER3_OVF_INT_RAW
+    bit_range:
+    - 7
+    - 7
+    description: The interrupt raw bit for low speed channel3  counter overflow.
+  - name: DUTY_CHNG_END_HSCH0_INT_RAW
+    bit_range:
+    - 8
+    - 8
+    description: The interrupt raw bit for high speed channel 0 duty change done.
+  - name: DUTY_CHNG_END_HSCH1_INT_RAW
+    bit_range:
+    - 9
+    - 9
+    description: The interrupt raw bit for high speed channel 1 duty change done.
+  - name: DUTY_CHNG_END_HSCH2_INT_RAW
+    bit_range:
+    - 10
+    - 10
+    description: The interrupt raw bit for high speed channel 2 duty change done.
+  - name: DUTY_CHNG_END_HSCH3_INT_RAW
+    bit_range:
+    - 11
+    - 11
+    description: The interrupt raw bit for high speed channel 3 duty change done.
+  - name: DUTY_CHNG_END_HSCH4_INT_RAW
+    bit_range:
+    - 12
+    - 12
+    description: The interrupt raw bit for high speed channel 4 duty change done.
+  - name: DUTY_CHNG_END_HSCH5_INT_RAW
+    bit_range:
+    - 13
+    - 13
+    description: The interrupt raw bit for high speed channel 5 duty change done.
+  - name: DUTY_CHNG_END_HSCH6_INT_RAW
+    bit_range:
+    - 14
+    - 14
+    description: The interrupt raw bit for high speed channel 6 duty change done.
+  - name: DUTY_CHNG_END_HSCH7_INT_RAW
+    bit_range:
+    - 15
+    - 15
+    description: The interrupt raw bit for high speed channel 7 duty change done.
+  - name: DUTY_CHNG_END_LSCH0_INT_RAW
+    bit_range:
+    - 16
+    - 16
+    description: The interrupt raw bit for low speed channel 0 duty change done.
+  - name: DUTY_CHNG_END_LSCH1_INT_RAW
+    bit_range:
+    - 17
+    - 17
+    description: The interrupt raw bit for low speed channel 1 duty change done.
+  - name: DUTY_CHNG_END_LSCH2_INT_RAW
+    bit_range:
+    - 18
+    - 18
+    description: The interrupt raw bit for low speed channel 2 duty change done.
+  - name: DUTY_CHNG_END_LSCH3_INT_RAW
+    bit_range:
+    - 19
+    - 19
+    description: The interrupt raw bit for low speed channel 3 duty change done.
+  - name: DUTY_CHNG_END_LSCH4_INT_RAW
+    bit_range:
+    - 20
+    - 20
+    description: The interrupt raw bit for low speed channel 4 duty change done.
+  - name: DUTY_CHNG_END_LSCH5_INT_RAW
+    bit_range:
+    - 21
+    - 21
+    description: The interrupt raw bit for low speed channel 5 duty change done.
+  - name: DUTY_CHNG_END_LSCH6_INT_RAW
+    bit_range:
+    - 22
+    - 22
+    description: The interrupt raw bit for low speed channel 6 duty change done.
+  - name: DUTY_CHNG_END_LSCH7_INT_RAW
+    bit_range:
+    - 23
+    - 23
+    description: The interrupt raw bit for low speed channel 7 duty change done.
+  side_effects: null
+- id: INT_ST
+  address_offset: 388
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HSTIMER0_OVF_INT_ST
+    bit_range:
+    - 0
+    - 0
+    description: The interrupt status bit for high speed channel0  counter overflow event.
+  - name: HSTIMER1_OVF_INT_ST
+    bit_range:
+    - 1
+    - 1
+    description: The interrupt status bit for high speed channel1  counter overflow event.
+  - name: HSTIMER2_OVF_INT_ST
+    bit_range:
+    - 2
+    - 2
+    description: The interrupt status bit for high speed channel2  counter overflow event.
+  - name: HSTIMER3_OVF_INT_ST
+    bit_range:
+    - 3
+    - 3
+    description: The interrupt status bit for high speed channel3  counter overflow event.
+  - name: LSTIMER0_OVF_INT_ST
+    bit_range:
+    - 4
+    - 4
+    description: The interrupt status bit for low speed channel0  counter overflow event.
+  - name: LSTIMER1_OVF_INT_ST
+    bit_range:
+    - 5
+    - 5
+    description: The interrupt status bit for low speed channel1  counter overflow event.
+  - name: LSTIMER2_OVF_INT_ST
+    bit_range:
+    - 6
+    - 6
+    description: The interrupt status bit for low speed channel2  counter overflow event.
+  - name: LSTIMER3_OVF_INT_ST
+    bit_range:
+    - 7
+    - 7
+    description: The interrupt status bit for low speed channel3  counter overflow event.
+  - name: DUTY_CHNG_END_HSCH0_INT_ST
+    bit_range:
+    - 8
+    - 8
+    description: The interrupt status bit for high speed channel 0 duty change done event.
+  - name: DUTY_CHNG_END_HSCH1_INT_ST
+    bit_range:
+    - 9
+    - 9
+    description: The interrupt status bit for high speed channel 1 duty change done event.
+  - name: DUTY_CHNG_END_HSCH2_INT_ST
+    bit_range:
+    - 10
+    - 10
+    description: The interrupt status bit for high speed channel 2 duty change done event.
+  - name: DUTY_CHNG_END_HSCH3_INT_ST
+    bit_range:
+    - 11
+    - 11
+    description: The interrupt status bit for high speed channel 3 duty change done event.
+  - name: DUTY_CHNG_END_HSCH4_INT_ST
+    bit_range:
+    - 12
+    - 12
+    description: The interrupt status bit for high speed channel 4 duty change done event.
+  - name: DUTY_CHNG_END_HSCH5_INT_ST
+    bit_range:
+    - 13
+    - 13
+    description: The interrupt status bit for high speed channel 5 duty change done event.
+  - name: DUTY_CHNG_END_HSCH6_INT_ST
+    bit_range:
+    - 14
+    - 14
+    description: The interrupt status bit for high speed channel 6 duty change done event.
+  - name: DUTY_CHNG_END_HSCH7_INT_ST
+    bit_range:
+    - 15
+    - 15
+    description: The interrupt status bit for high speed channel 7 duty change done event.
+  - name: DUTY_CHNG_END_LSCH0_INT_ST
+    bit_range:
+    - 16
+    - 16
+    description: The interrupt status bit for low speed channel 0 duty change done event.
+  - name: DUTY_CHNG_END_LSCH1_INT_ST
+    bit_range:
+    - 17
+    - 17
+    description: The interrupt status bit for low speed channel 1 duty change done event.
+  - name: DUTY_CHNG_END_LSCH2_INT_ST
+    bit_range:
+    - 18
+    - 18
+    description: The interrupt status bit for low speed channel 2 duty change done event.
+  - name: DUTY_CHNG_END_LSCH3_INT_ST
+    bit_range:
+    - 19
+    - 19
+    description: The interrupt status bit for low speed channel 3 duty change done event.
+  - name: DUTY_CHNG_END_LSCH4_INT_ST
+    bit_range:
+    - 20
+    - 20
+    description: The interrupt status bit for low speed channel 4 duty change done event.
+  - name: DUTY_CHNG_END_LSCH5_INT_ST
+    bit_range:
+    - 21
+    - 21
+    description: The interrupt status bit for low speed channel 5 duty change done event.
+  - name: DUTY_CHNG_END_LSCH6_INT_ST
+    bit_range:
+    - 22
+    - 22
+    description: The interrupt status bit for low speed channel 6 duty change done event.
+  - name: DUTY_CHNG_END_LSCH7_INT_ST
+    bit_range:
+    - 23
+    - 23
+    description: The interrupt status bit for low speed channel 7 duty change done event
+  side_effects: null
+- id: INT_ENA
+  address_offset: 392
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HSTIMER0_OVF_INT_ENA
+    bit_range:
+    - 0
+    - 0
+    description: The interrupt enable bit for high speed channel0  counter overflow interrupt.
+  - name: HSTIMER1_OVF_INT_ENA
+    bit_range:
+    - 1
+    - 1
+    description: The interrupt enable bit for high speed channel1  counter overflow interrupt.
+  - name: HSTIMER2_OVF_INT_ENA
+    bit_range:
+    - 2
+    - 2
+    description: The interrupt enable bit for high speed channel2  counter overflow interrupt.
+  - name: HSTIMER3_OVF_INT_ENA
+    bit_range:
+    - 3
+    - 3
+    description: The interrupt enable bit for high speed channel3  counter overflow interrupt.
+  - name: LSTIMER0_OVF_INT_ENA
+    bit_range:
+    - 4
+    - 4
+    description: The interrupt enable bit for low speed channel0  counter overflow interrupt.
+  - name: LSTIMER1_OVF_INT_ENA
+    bit_range:
+    - 5
+    - 5
+    description: The interrupt enable bit for low speed channel1  counter overflow interrupt.
+  - name: LSTIMER2_OVF_INT_ENA
+    bit_range:
+    - 6
+    - 6
+    description: The interrupt enable bit for low speed channel2  counter overflow interrupt.
+  - name: LSTIMER3_OVF_INT_ENA
+    bit_range:
+    - 7
+    - 7
+    description: The interrupt enable bit for low speed channel3  counter overflow interrupt.
+  - name: DUTY_CHNG_END_HSCH0_INT_ENA
+    bit_range:
+    - 8
+    - 8
+    description: The interrupt enable bit for high speed channel 0 duty change done interrupt.
+  - name: DUTY_CHNG_END_HSCH1_INT_ENA
+    bit_range:
+    - 9
+    - 9
+    description: The interrupt enable bit for high speed channel 1 duty change done interrupt.
+  - name: DUTY_CHNG_END_HSCH2_INT_ENA
+    bit_range:
+    - 10
+    - 10
+    description: The interrupt enable bit for high speed channel 2 duty change done interrupt.
+  - name: DUTY_CHNG_END_HSCH3_INT_ENA
+    bit_range:
+    - 11
+    - 11
+    description: The interrupt enable bit for high speed channel 3 duty change done interrupt.
+  - name: DUTY_CHNG_END_HSCH4_INT_ENA
+    bit_range:
+    - 12
+    - 12
+    description: The interrupt enable bit for high speed channel 4 duty change done interrupt.
+  - name: DUTY_CHNG_END_HSCH5_INT_ENA
+    bit_range:
+    - 13
+    - 13
+    description: The interrupt enable bit for high speed channel 5 duty change done interrupt.
+  - name: DUTY_CHNG_END_HSCH6_INT_ENA
+    bit_range:
+    - 14
+    - 14
+    description: The interrupt enable bit for high speed channel 6 duty change done interrupt.
+  - name: DUTY_CHNG_END_HSCH7_INT_ENA
+    bit_range:
+    - 15
+    - 15
+    description: The interrupt enable bit for high speed channel 7 duty change done interrupt.
+  - name: DUTY_CHNG_END_LSCH0_INT_ENA
+    bit_range:
+    - 16
+    - 16
+    description: The interrupt enable bit for low speed channel 0 duty change done interrupt.
+  - name: DUTY_CHNG_END_LSCH1_INT_ENA
+    bit_range:
+    - 17
+    - 17
+    description: The interrupt enable bit for low speed channel 1 duty change done interrupt.
+  - name: DUTY_CHNG_END_LSCH2_INT_ENA
+    bit_range:
+    - 18
+    - 18
+    description: The interrupt enable bit for low speed channel 2 duty change done interrupt.
+  - name: DUTY_CHNG_END_LSCH3_INT_ENA
+    bit_range:
+    - 19
+    - 19
+    description: The interrupt enable bit for low speed channel 3 duty change done interrupt.
+  - name: DUTY_CHNG_END_LSCH4_INT_ENA
+    bit_range:
+    - 20
+    - 20
+    description: The interrupt enable bit for low speed channel 4 duty change done interrupt.
+  - name: DUTY_CHNG_END_LSCH5_INT_ENA
+    bit_range:
+    - 21
+    - 21
+    description: The interrupt enable bit for low speed channel 5 duty change done interrupt.
+  - name: DUTY_CHNG_END_LSCH6_INT_ENA
+    bit_range:
+    - 22
+    - 22
+    description: The interrupt enable bit for low speed channel 6 duty change done interrupt.
+  - name: DUTY_CHNG_END_LSCH7_INT_ENA
+    bit_range:
+    - 23
+    - 23
+    description: The interrupt enable bit for low speed channel 7 duty change done interrupt.
+  side_effects: null
+- id: INT_CLR
+  address_offset: 396
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HSTIMER0_OVF_INT_CLR
+    bit_range:
+    - 0
+    - 0
+    description: Set this  bit to clear  high speed channel0  counter overflow interrupt.
+  - name: HSTIMER1_OVF_INT_CLR
+    bit_range:
+    - 1
+    - 1
+    description: Set this  bit to clear  high speed channel1  counter overflow interrupt.
+  - name: HSTIMER2_OVF_INT_CLR
+    bit_range:
+    - 2
+    - 2
+    description: Set this  bit to clear  high speed channel2  counter overflow interrupt.
+  - name: HSTIMER3_OVF_INT_CLR
+    bit_range:
+    - 3
+    - 3
+    description: Set this  bit to clear  high speed channel3  counter overflow interrupt.
+  - name: LSTIMER0_OVF_INT_CLR
+    bit_range:
+    - 4
+    - 4
+    description: Set this  bit to clear  low speed channel0  counter overflow interrupt.
+  - name: LSTIMER1_OVF_INT_CLR
+    bit_range:
+    - 5
+    - 5
+    description: Set this  bit to clear  low speed channel1  counter overflow interrupt.
+  - name: LSTIMER2_OVF_INT_CLR
+    bit_range:
+    - 6
+    - 6
+    description: Set this  bit to clear  low speed channel2  counter overflow interrupt.
+  - name: LSTIMER3_OVF_INT_CLR
+    bit_range:
+    - 7
+    - 7
+    description: Set this  bit to clear  low speed channel3  counter overflow interrupt.
+  - name: DUTY_CHNG_END_HSCH0_INT_CLR
+    bit_range:
+    - 8
+    - 8
+    description: Set this  bit to clear  high speed channel 0 duty change done interrupt.
+  - name: DUTY_CHNG_END_HSCH1_INT_CLR
+    bit_range:
+    - 9
+    - 9
+    description: Set this  bit to clear  high speed channel 1 duty change done interrupt.
+  - name: DUTY_CHNG_END_HSCH2_INT_CLR
+    bit_range:
+    - 10
+    - 10
+    description: Set this  bit to clear  high speed channel 2 duty change done interrupt.
+  - name: DUTY_CHNG_END_HSCH3_INT_CLR
+    bit_range:
+    - 11
+    - 11
+    description: Set this  bit to clear  high speed channel 3 duty change done interrupt.
+  - name: DUTY_CHNG_END_HSCH4_INT_CLR
+    bit_range:
+    - 12
+    - 12
+    description: Set this  bit to clear  high speed channel 4 duty change done interrupt.
+  - name: DUTY_CHNG_END_HSCH5_INT_CLR
+    bit_range:
+    - 13
+    - 13
+    description: Set this  bit to clear  high speed channel 5 duty change done interrupt.
+  - name: DUTY_CHNG_END_HSCH6_INT_CLR
+    bit_range:
+    - 14
+    - 14
+    description: Set this  bit to clear  high speed channel 6 duty change done interrupt.
+  - name: DUTY_CHNG_END_HSCH7_INT_CLR
+    bit_range:
+    - 15
+    - 15
+    description: Set this  bit to clear  high speed channel 7 duty change done interrupt.
+  - name: DUTY_CHNG_END_LSCH0_INT_CLR
+    bit_range:
+    - 16
+    - 16
+    description: Set this  bit to clear  low speed channel 0 duty change done interrupt.
+  - name: DUTY_CHNG_END_LSCH1_INT_CLR
+    bit_range:
+    - 17
+    - 17
+    description: Set this  bit to clear  low speed channel 1 duty change done interrupt.
+  - name: DUTY_CHNG_END_LSCH2_INT_CLR
+    bit_range:
+    - 18
+    - 18
+    description: Set this  bit to clear  low speed channel 2 duty change done interrupt.
+  - name: DUTY_CHNG_END_LSCH3_INT_CLR
+    bit_range:
+    - 19
+    - 19
+    description: Set this  bit to clear  low speed channel 3 duty change done interrupt.
+  - name: DUTY_CHNG_END_LSCH4_INT_CLR
+    bit_range:
+    - 20
+    - 20
+    description: Set this  bit to clear  low speed channel 4 duty change done interrupt.
+  - name: DUTY_CHNG_END_LSCH5_INT_CLR
+    bit_range:
+    - 21
+    - 21
+    description: Set this  bit to clear  low speed channel 5 duty change done interrupt.
+  - name: DUTY_CHNG_END_LSCH6_INT_CLR
+    bit_range:
+    - 22
+    - 22
+    description: Set this  bit to clear  low speed channel 6 duty change done interrupt.
+  - name: DUTY_CHNG_END_LSCH7_INT_CLR
+    bit_range:
+    - 23
+    - 23
+    description: Set this  bit to clear  low speed channel 7 duty change done interrupt.
+  side_effects: null
+- id: CONF
+  address_offset: 400
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APB_CLK_SEL
+    bit_range:
+    - 0
+    - 0
+    description: This bit is used to set the frequency of slow_clk. 1'b1:80mhz  1'b0:8mhz
+  side_effects: null
+- id: DATE
+  address_offset: 508
+  size: 32
+  access: READ_WRITE
+  reset_value: 369301248
+  fields:
+  - name: DATE
+    bit_range:
+    - 31
+    - 0
+    description: This register represents the version .
+  side_effects: null
+interrupts:
+  LEDC: 43
+  TIMER1: 56
+  TIMER2: 57
+timing: null

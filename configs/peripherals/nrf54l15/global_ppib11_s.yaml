@@ -1,0 +1,1964 @@
+peripheral: GLOBAL_PPIB11_S
+version: 0.1.0
+registers:
+- id: TASKS_SEND0
+  address_offset: 0
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND1
+  address_offset: 4
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND2
+  address_offset: 8
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND3
+  address_offset: 12
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND4
+  address_offset: 16
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND5
+  address_offset: 20
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND6
+  address_offset: 24
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND7
+  address_offset: 28
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND8
+  address_offset: 32
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND9
+  address_offset: 36
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND10
+  address_offset: 40
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND11
+  address_offset: 44
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND12
+  address_offset: 48
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND13
+  address_offset: 52
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND14
+  address_offset: 56
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND15
+  address_offset: 60
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND16
+  address_offset: 64
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND17
+  address_offset: 68
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND18
+  address_offset: 72
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND19
+  address_offset: 76
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND20
+  address_offset: 80
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND21
+  address_offset: 84
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND22
+  address_offset: 88
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND23
+  address_offset: 92
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND24
+  address_offset: 96
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND25
+  address_offset: 100
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND26
+  address_offset: 104
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND27
+  address_offset: 108
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND28
+  address_offset: 112
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND29
+  address_offset: 116
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND30
+  address_offset: 120
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: TASKS_SEND31
+  address_offset: 124
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SEND
+    bit_range:
+    - 0
+    - 0
+    description: This task is unused, but the PPIB provides the SUBSCRIBE task to connect SEND [n] task.
+  side_effects: null
+- id: SUBSCRIBE_SEND0
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND1
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND2
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND3
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND4
+  address_offset: 144
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND5
+  address_offset: 148
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND6
+  address_offset: 152
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND7
+  address_offset: 156
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND8
+  address_offset: 160
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND9
+  address_offset: 164
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND10
+  address_offset: 168
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND11
+  address_offset: 172
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND12
+  address_offset: 176
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND13
+  address_offset: 180
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND14
+  address_offset: 184
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND15
+  address_offset: 188
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND16
+  address_offset: 192
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND17
+  address_offset: 196
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND18
+  address_offset: 200
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND19
+  address_offset: 204
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND20
+  address_offset: 208
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND21
+  address_offset: 212
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND22
+  address_offset: 216
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND23
+  address_offset: 220
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND24
+  address_offset: 224
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND25
+  address_offset: 228
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND26
+  address_offset: 232
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND27
+  address_offset: 236
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND28
+  address_offset: 240
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND29
+  address_offset: 244
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND30
+  address_offset: 248
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SEND31
+  address_offset: 252
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SEND[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: EVENTS_RECEIVE0
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE1
+  address_offset: 260
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE2
+  address_offset: 264
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE3
+  address_offset: 268
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE4
+  address_offset: 272
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE5
+  address_offset: 276
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE6
+  address_offset: 280
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE7
+  address_offset: 284
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE8
+  address_offset: 288
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE9
+  address_offset: 292
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE10
+  address_offset: 296
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE11
+  address_offset: 300
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE12
+  address_offset: 304
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE13
+  address_offset: 308
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE14
+  address_offset: 312
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE15
+  address_offset: 316
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE16
+  address_offset: 320
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE17
+  address_offset: 324
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE18
+  address_offset: 328
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE19
+  address_offset: 332
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE20
+  address_offset: 336
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE21
+  address_offset: 340
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE22
+  address_offset: 344
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE23
+  address_offset: 348
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE24
+  address_offset: 352
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE25
+  address_offset: 356
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE26
+  address_offset: 360
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE27
+  address_offset: 364
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE28
+  address_offset: 368
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE29
+  address_offset: 372
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE30
+  address_offset: 376
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: EVENTS_RECEIVE31
+  address_offset: 380
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RECEIVE
+    bit_range:
+    - 0
+    - 0
+    description: This event is unused, but the PPIB provides the PUBLISH event to connect RECEIVE [n] event.
+  side_effects: null
+- id: PUBLISH_RECEIVE0
+  address_offset: 384
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE1
+  address_offset: 388
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE2
+  address_offset: 392
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE3
+  address_offset: 396
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE4
+  address_offset: 400
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE5
+  address_offset: 404
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE6
+  address_offset: 408
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE7
+  address_offset: 412
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE8
+  address_offset: 416
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE9
+  address_offset: 420
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE10
+  address_offset: 424
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE11
+  address_offset: 428
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE12
+  address_offset: 432
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE13
+  address_offset: 436
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE14
+  address_offset: 440
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE15
+  address_offset: 444
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE16
+  address_offset: 448
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE17
+  address_offset: 452
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE18
+  address_offset: 456
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE19
+  address_offset: 460
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE20
+  address_offset: 464
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE21
+  address_offset: 468
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE22
+  address_offset: 472
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE23
+  address_offset: 476
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE24
+  address_offset: 480
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE25
+  address_offset: 484
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE26
+  address_offset: 488
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE27
+  address_offset: 492
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE28
+  address_offset: 496
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE29
+  address_offset: 500
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE30
+  address_offset: 504
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_RECEIVE31
+  address_offset: 508
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event RECEIVE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: OVERFLOW_SEND
+  address_offset: 1024
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SEND_0
+    bit_range:
+    - 0
+    - 0
+    description: The status for tasks overflow at SUBSCRIBE_SEND[0].
+  - name: SEND_1
+    bit_range:
+    - 1
+    - 1
+    description: The status for tasks overflow at SUBSCRIBE_SEND[1].
+  - name: SEND_2
+    bit_range:
+    - 2
+    - 2
+    description: The status for tasks overflow at SUBSCRIBE_SEND[2].
+  - name: SEND_3
+    bit_range:
+    - 3
+    - 3
+    description: The status for tasks overflow at SUBSCRIBE_SEND[3].
+  - name: SEND_4
+    bit_range:
+    - 4
+    - 4
+    description: The status for tasks overflow at SUBSCRIBE_SEND[4].
+  - name: SEND_5
+    bit_range:
+    - 5
+    - 5
+    description: The status for tasks overflow at SUBSCRIBE_SEND[5].
+  - name: SEND_6
+    bit_range:
+    - 6
+    - 6
+    description: The status for tasks overflow at SUBSCRIBE_SEND[6].
+  - name: SEND_7
+    bit_range:
+    - 7
+    - 7
+    description: The status for tasks overflow at SUBSCRIBE_SEND[7].
+  - name: SEND_8
+    bit_range:
+    - 8
+    - 8
+    description: The status for tasks overflow at SUBSCRIBE_SEND[8].
+  - name: SEND_9
+    bit_range:
+    - 9
+    - 9
+    description: The status for tasks overflow at SUBSCRIBE_SEND[9].
+  - name: SEND_10
+    bit_range:
+    - 10
+    - 10
+    description: The status for tasks overflow at SUBSCRIBE_SEND[10].
+  - name: SEND_11
+    bit_range:
+    - 11
+    - 11
+    description: The status for tasks overflow at SUBSCRIBE_SEND[11].
+  - name: SEND_12
+    bit_range:
+    - 12
+    - 12
+    description: The status for tasks overflow at SUBSCRIBE_SEND[12].
+  - name: SEND_13
+    bit_range:
+    - 13
+    - 13
+    description: The status for tasks overflow at SUBSCRIBE_SEND[13].
+  - name: SEND_14
+    bit_range:
+    - 14
+    - 14
+    description: The status for tasks overflow at SUBSCRIBE_SEND[14].
+  - name: SEND_15
+    bit_range:
+    - 15
+    - 15
+    description: The status for tasks overflow at SUBSCRIBE_SEND[15].
+  - name: SEND_16
+    bit_range:
+    - 16
+    - 16
+    description: The status for tasks overflow at SUBSCRIBE_SEND[16].
+  - name: SEND_17
+    bit_range:
+    - 17
+    - 17
+    description: The status for tasks overflow at SUBSCRIBE_SEND[17].
+  - name: SEND_18
+    bit_range:
+    - 18
+    - 18
+    description: The status for tasks overflow at SUBSCRIBE_SEND[18].
+  - name: SEND_19
+    bit_range:
+    - 19
+    - 19
+    description: The status for tasks overflow at SUBSCRIBE_SEND[19].
+  - name: SEND_20
+    bit_range:
+    - 20
+    - 20
+    description: The status for tasks overflow at SUBSCRIBE_SEND[20].
+  - name: SEND_21
+    bit_range:
+    - 21
+    - 21
+    description: The status for tasks overflow at SUBSCRIBE_SEND[21].
+  - name: SEND_22
+    bit_range:
+    - 22
+    - 22
+    description: The status for tasks overflow at SUBSCRIBE_SEND[22].
+  - name: SEND_23
+    bit_range:
+    - 23
+    - 23
+    description: The status for tasks overflow at SUBSCRIBE_SEND[23].
+  - name: SEND_24
+    bit_range:
+    - 24
+    - 24
+    description: The status for tasks overflow at SUBSCRIBE_SEND[24].
+  - name: SEND_25
+    bit_range:
+    - 25
+    - 25
+    description: The status for tasks overflow at SUBSCRIBE_SEND[25].
+  - name: SEND_26
+    bit_range:
+    - 26
+    - 26
+    description: The status for tasks overflow at SUBSCRIBE_SEND[26].
+  - name: SEND_27
+    bit_range:
+    - 27
+    - 27
+    description: The status for tasks overflow at SUBSCRIBE_SEND[27].
+  - name: SEND_28
+    bit_range:
+    - 28
+    - 28
+    description: The status for tasks overflow at SUBSCRIBE_SEND[28].
+  - name: SEND_29
+    bit_range:
+    - 29
+    - 29
+    description: The status for tasks overflow at SUBSCRIBE_SEND[29].
+  - name: SEND_30
+    bit_range:
+    - 30
+    - 30
+    description: The status for tasks overflow at SUBSCRIBE_SEND[30].
+  - name: SEND_31
+    bit_range:
+    - 31
+    - 31
+    description: The status for tasks overflow at SUBSCRIBE_SEND[31].
+  side_effects: null
+interrupts: null
+timing: null

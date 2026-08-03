@@ -1,0 +1,263 @@
+peripheral: DAC
+version: 0.1.0
+registers:
+- id: CR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN1
+    bit_range:
+    - 0
+    - 0
+    description: DAC channel1 enable
+  - name: BOFF1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      DAC channel1 output buffer
+                    disable
+  - name: TEN1
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      DAC channel1 trigger
+                    enable
+  - name: TSEL1
+    bit_range:
+    - 5
+    - 3
+    description: |-
+      DAC channel1 trigger
+                    selection
+  - name: WAVE1
+    bit_range:
+    - 7
+    - 6
+    description: |-
+      DAC channel1 noise/triangle wave
+                    generation enable
+  - name: MAMP1
+    bit_range:
+    - 11
+    - 8
+    description: |-
+      DAC channel1 mask/amplitude
+                    selector
+  - name: DMAEN1
+    bit_range:
+    - 12
+    - 12
+    description: DAC channel1 DMA enable
+  - name: DMAUDRIE1
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      DAC channel1 DMA Underrun Interrupt
+                    enable
+  side_effects: null
+- id: SWTRIGR
+  address_offset: 4
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: SWTRIG1
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      DAC channel1 software
+                    trigger
+  side_effects: null
+- id: DHR12R1
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DACC1DHR
+    bit_range:
+    - 11
+    - 0
+    description: |-
+      DAC channel1 12-bit right-aligned
+                    data
+  side_effects: null
+- id: DHR12L1
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DACC1DHR
+    bit_range:
+    - 15
+    - 4
+    description: |-
+      DAC channel1 12-bit left-aligned
+                    data
+  side_effects: null
+- id: DHR8R1
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DACC1DHR
+    bit_range:
+    - 7
+    - 0
+    description: |-
+      DAC channel1 8-bit right-aligned
+                    data
+  side_effects: null
+- id: DHR12R2
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DACC2DHR
+    bit_range:
+    - 11
+    - 0
+    description: |-
+      DAC channel2 12-bit right-aligned
+                    data
+  side_effects: null
+- id: DHR12L2
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DACC2DHR
+    bit_range:
+    - 15
+    - 4
+    description: |-
+      DAC channel2 12-bit left-aligned
+                    data
+  side_effects: null
+- id: DHR8R2
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DACC2DHR
+    bit_range:
+    - 7
+    - 0
+    description: |-
+      DAC channel2 8-bit right-aligned
+                    data
+  side_effects: null
+- id: DHR12RD
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DACC1DHR
+    bit_range:
+    - 11
+    - 0
+    description: |-
+      DAC channel1 12-bit right-aligned
+                    data
+  - name: DACC2DHR
+    bit_range:
+    - 27
+    - 16
+    description: |-
+      DAC channel2 12-bit right-aligned
+                    data
+  side_effects: null
+- id: DHR12LD
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DACC1DHR
+    bit_range:
+    - 15
+    - 4
+    description: |-
+      DAC channel1 12-bit left-aligned
+                    data
+  - name: DACC2DHR
+    bit_range:
+    - 31
+    - 20
+    description: |-
+      DAC channel2 12-bit left-aligned
+                    data
+  side_effects: null
+- id: DHR8RD
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DACC1DHR
+    bit_range:
+    - 7
+    - 0
+    description: |-
+      DAC channel1 8-bit right-aligned
+                    data
+  - name: DACC2DHR
+    bit_range:
+    - 15
+    - 8
+    description: |-
+      DAC channel2 8-bit right-aligned
+                    data
+  side_effects: null
+- id: DOR1
+  address_offset: 44
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DACC1DOR
+    bit_range:
+    - 11
+    - 0
+    description: DAC channel1 data output
+  side_effects: null
+- id: DOR2
+  address_offset: 48
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DACC2DOR
+    bit_range:
+    - 11
+    - 0
+    description: DAC channel2 data output
+  side_effects: null
+- id: SR
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DMAUDR1
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      DAC channel1 DMA underrun
+                    flag
+  side_effects: null
+interrupts: null
+timing: null

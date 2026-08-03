@@ -1,0 +1,928 @@
+peripheral: ADC1
+version: 0.1.0
+registers:
+- id: ADC_ISR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADRDY
+    bit_range:
+    - 0
+    - 0
+    description: ADC ready
+  - name: EOSMP
+    bit_range:
+    - 1
+    - 1
+    description: End of sampling flag
+  - name: EOC
+    bit_range:
+    - 2
+    - 2
+    description: End of conversion flag
+  - name: EOS
+    bit_range:
+    - 3
+    - 3
+    description: End of regular sequence flag
+  - name: OVR
+    bit_range:
+    - 4
+    - 4
+    description: ADC overrun
+  - name: JEOC
+    bit_range:
+    - 5
+    - 5
+    description: Injected channel end of conversion flag
+  - name: JEOS
+    bit_range:
+    - 6
+    - 6
+    description: Injected channel end of sequence flag
+  - name: AWD1
+    bit_range:
+    - 7
+    - 7
+    description: Analog watchdog 1 flag
+  - name: AWD2
+    bit_range:
+    - 8
+    - 8
+    description: Analog watchdog 2 flag
+  - name: AWD3
+    bit_range:
+    - 9
+    - 9
+    description: Analog watchdog 3 flag
+  - name: JQOVF
+    bit_range:
+    - 10
+    - 10
+    description: Injected context queue overflow
+  side_effects: null
+- id: ADC_IER
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADRDYIE
+    bit_range:
+    - 0
+    - 0
+    description: ADC ready interrupt enable
+  - name: EOSMPIE
+    bit_range:
+    - 1
+    - 1
+    description: End of sampling flag interrupt enable for regular conversions
+  - name: EOCIE
+    bit_range:
+    - 2
+    - 2
+    description: End of regular conversion interrupt enable
+  - name: EOSIE
+    bit_range:
+    - 3
+    - 3
+    description: End of regular sequence of conversions interrupt enable
+  - name: OVRIE
+    bit_range:
+    - 4
+    - 4
+    description: Overrun interrupt enable
+  - name: JEOCIE
+    bit_range:
+    - 5
+    - 5
+    description: End of injected conversion interrupt enable
+  - name: JEOSIE
+    bit_range:
+    - 6
+    - 6
+    description: End of injected sequence of conversions interrupt enable
+  - name: AWD1IE
+    bit_range:
+    - 7
+    - 7
+    description: Analog watchdog 1 interrupt enable
+  - name: AWD2IE
+    bit_range:
+    - 8
+    - 8
+    description: Analog watchdog 2 interrupt enable
+  - name: AWD3IE
+    bit_range:
+    - 9
+    - 9
+    description: Analog watchdog 3 interrupt enable
+  - name: JQOVFIE
+    bit_range:
+    - 10
+    - 10
+    description: Injected context queue overflow interrupt enable
+  side_effects: null
+- id: ADC_CR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 536870912
+  fields:
+  - name: ADEN
+    bit_range:
+    - 0
+    - 0
+    description: ADC enable control
+  - name: ADDIS
+    bit_range:
+    - 1
+    - 1
+    description: ADC disable command
+  - name: ADSTART
+    bit_range:
+    - 2
+    - 2
+    description: ADC start of regular conversion
+  - name: JADSTART
+    bit_range:
+    - 3
+    - 3
+    description: ADC start of injected conversion
+  - name: ADSTP
+    bit_range:
+    - 4
+    - 4
+    description: ADC stop of regular conversion command
+  - name: JADSTP
+    bit_range:
+    - 5
+    - 5
+    description: ADC stop of injected conversion command
+  - name: ADVREGEN
+    bit_range:
+    - 28
+    - 28
+    description: ADC voltage regulator enable
+  - name: DEEPPWD
+    bit_range:
+    - 29
+    - 29
+    description: Deep-power-down enable
+  - name: ADCALDIF
+    bit_range:
+    - 30
+    - 30
+    description: Differential mode for calibration
+  - name: ADCAL
+    bit_range:
+    - 31
+    - 31
+    description: ADC calibration
+  side_effects: null
+- id: ADC_CFGR
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483648
+  fields:
+  - name: DMAEN
+    bit_range:
+    - 0
+    - 0
+    description: Direct memory access enable
+  - name: DMACFG
+    bit_range:
+    - 1
+    - 1
+    description: Direct memory access configuration
+  - name: RES
+    bit_range:
+    - 4
+    - 3
+    description: Data resolution
+  - name: EXTSEL
+    bit_range:
+    - 9
+    - 5
+    description: |-
+      External trigger selection for regular group
+      These bits select the external event used to trigger the start of conversion of a regular group:
+      ...
+      Note: The software is allowed to write these bits only when ADSTART = 0 (which ensures that no regular conversion is ongoing).
+  - name: EXTEN
+    bit_range:
+    - 11
+    - 10
+    description: External trigger enable and polarity selection for regular channels
+  - name: OVRMOD
+    bit_range:
+    - 12
+    - 12
+    description: Overrun mode
+  - name: CONT
+    bit_range:
+    - 13
+    - 13
+    description: Single / continuous conversion mode for regular conversions
+  - name: AUTDLY
+    bit_range:
+    - 14
+    - 14
+    description: Delayed conversion mode
+  - name: ALIGN
+    bit_range:
+    - 15
+    - 15
+    description: Data alignment
+  - name: DISCEN
+    bit_range:
+    - 16
+    - 16
+    description: Discontinuous mode for regular channels
+  - name: DISCNUM
+    bit_range:
+    - 19
+    - 17
+    description: Discontinuous mode channel count
+  - name: JDISCEN
+    bit_range:
+    - 20
+    - 20
+    description: Discontinuous mode on injected channels
+  - name: JQM
+    bit_range:
+    - 21
+    - 21
+    description: JSQR queue mode
+  - name: AWD1SGL
+    bit_range:
+    - 22
+    - 22
+    description: Enable the watchdog 1 on a single channel or on all channels
+  - name: AWD1EN
+    bit_range:
+    - 23
+    - 23
+    description: Analog watchdog 1 enable on regular channels
+  - name: JAWD1EN
+    bit_range:
+    - 24
+    - 24
+    description: Analog watchdog 1 enable on injected channels
+  - name: JAUTO
+    bit_range:
+    - 25
+    - 25
+    description: Automatic injected group conversion
+  - name: AWD1CH
+    bit_range:
+    - 30
+    - 26
+    description: Analog watchdog 1 channel selection
+  - name: JQDIS
+    bit_range:
+    - 31
+    - 31
+    description: Injected queue disable
+  side_effects: null
+- id: ADC_CFGR2
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ROVSE
+    bit_range:
+    - 0
+    - 0
+    description: Regular oversampling Enable
+  - name: JOVSE
+    bit_range:
+    - 1
+    - 1
+    description: Injected oversampling Enable
+  - name: OVSR
+    bit_range:
+    - 4
+    - 2
+    description: Oversampling ratio
+  - name: OVSS
+    bit_range:
+    - 8
+    - 5
+    description: Oversampling shift
+  - name: TROVS
+    bit_range:
+    - 9
+    - 9
+    description: Triggered Regular oversampling
+  - name: ROVSM
+    bit_range:
+    - 10
+    - 10
+    description: Regular oversampling mode
+  - name: SWTRIG
+    bit_range:
+    - 25
+    - 25
+    description: Software trigger bit for sampling time control trigger mode
+  - name: BULB
+    bit_range:
+    - 26
+    - 26
+    description: Bulb sampling mode
+  - name: SMPTRIG
+    bit_range:
+    - 27
+    - 27
+    description: Sampling time control trigger mode
+  side_effects: null
+- id: ADC_SMPR1
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SMP0
+    bit_range:
+    - 2
+    - 0
+    description: Channel x sampling time selection (x=9 to 0)
+  - name: SMP1
+    bit_range:
+    - 5
+    - 3
+    description: Channel x sampling time selection (x=9 to 0)
+  - name: SMP2
+    bit_range:
+    - 8
+    - 6
+    description: Channel x sampling time selection (x=9 to 0)
+  - name: SMP3
+    bit_range:
+    - 11
+    - 9
+    description: Channel x sampling time selection (x=9 to 0)
+  - name: SMP4
+    bit_range:
+    - 14
+    - 12
+    description: Channel x sampling time selection (x=9 to 0)
+  - name: SMP5
+    bit_range:
+    - 17
+    - 15
+    description: Channel x sampling time selection (x=9 to 0)
+  - name: SMP6
+    bit_range:
+    - 20
+    - 18
+    description: Channel x sampling time selection (x=9 to 0)
+  - name: SMP7
+    bit_range:
+    - 23
+    - 21
+    description: Channel x sampling time selection (x=9 to 0)
+  - name: SMP8
+    bit_range:
+    - 26
+    - 24
+    description: Channel x sampling time selection (x=9 to 0)
+  - name: SMP9
+    bit_range:
+    - 29
+    - 27
+    description: Channel x sampling time selection (x=9 to 0)
+  - name: SMPPLUS
+    bit_range:
+    - 31
+    - 31
+    description: Addition of one clock cycle to the sampling time.
+  side_effects: null
+- id: ADC_SMPR2
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SMP10
+    bit_range:
+    - 2
+    - 0
+    description: Channel x sampling time selection (x=19 to 10)
+  - name: SMP11
+    bit_range:
+    - 5
+    - 3
+    description: Channel x sampling time selection (x=19 to 10)
+  - name: SMP12
+    bit_range:
+    - 8
+    - 6
+    description: Channel x sampling time selection (x=19 to 10)
+  - name: SMP13
+    bit_range:
+    - 11
+    - 9
+    description: Channel x sampling time selection (x=19 to 10)
+  - name: SMP14
+    bit_range:
+    - 14
+    - 12
+    description: Channel x sampling time selection (x=19 to 10)
+  - name: SMP15
+    bit_range:
+    - 17
+    - 15
+    description: Channel x sampling time selection (x=19 to 10)
+  - name: SMP16
+    bit_range:
+    - 20
+    - 18
+    description: Channel x sampling time selection (x=19 to 10)
+  - name: SMP17
+    bit_range:
+    - 23
+    - 21
+    description: Channel x sampling time selection (x=19 to 10)
+  - name: SMP18
+    bit_range:
+    - 26
+    - 24
+    description: Channel x sampling time selection (x=19 to 10)
+  - name: SMP19
+    bit_range:
+    - 29
+    - 27
+    description: Channel x sampling time selection (x=19 to 10)
+  side_effects: null
+- id: ADC_TR1
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 268369920
+  fields:
+  - name: LT1
+    bit_range:
+    - 11
+    - 0
+    description: Analog watchdog 1 lower threshold
+  - name: AWDFILT
+    bit_range:
+    - 14
+    - 12
+    description: Analog watchdog filtering parameter
+  - name: HT1
+    bit_range:
+    - 27
+    - 16
+    description: Analog watchdog 1 higher threshold
+  side_effects: null
+- id: ADC_TR2
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 16711680
+  fields:
+  - name: LT2
+    bit_range:
+    - 7
+    - 0
+    description: Analog watchdog 2 lower threshold
+  - name: HT2
+    bit_range:
+    - 23
+    - 16
+    description: Analog watchdog 2 higher threshold
+  side_effects: null
+- id: ADC_TR3
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 16711680
+  fields:
+  - name: LT3
+    bit_range:
+    - 7
+    - 0
+    description: Analog watchdog 3 lower threshold
+  - name: HT3
+    bit_range:
+    - 23
+    - 16
+    description: Analog watchdog 3 higher threshold
+  side_effects: null
+- id: ADC_SQR1
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: L
+    bit_range:
+    - 3
+    - 0
+    description: Regular channel sequence length
+  - name: SQ1
+    bit_range:
+    - 10
+    - 6
+    description: 1st conversion in regular sequence
+  - name: SQ2
+    bit_range:
+    - 16
+    - 12
+    description: 2nd conversion in regular sequence
+  - name: SQ3
+    bit_range:
+    - 22
+    - 18
+    description: 3rd conversion in regular sequence
+  - name: SQ4
+    bit_range:
+    - 28
+    - 24
+    description: 4th conversion in regular sequence
+  side_effects: null
+- id: ADC_SQR2
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SQ5
+    bit_range:
+    - 4
+    - 0
+    description: 5th conversion in regular sequence
+  - name: SQ6
+    bit_range:
+    - 10
+    - 6
+    description: 6th conversion in regular sequence
+  - name: SQ7
+    bit_range:
+    - 16
+    - 12
+    description: 7th conversion in regular sequence
+  - name: SQ8
+    bit_range:
+    - 22
+    - 18
+    description: 8th conversion in regular sequence
+  - name: SQ9
+    bit_range:
+    - 28
+    - 24
+    description: 9th conversion in regular sequence
+  side_effects: null
+- id: ADC_SQR3
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SQ10
+    bit_range:
+    - 4
+    - 0
+    description: 10th conversion in regular sequence
+  - name: SQ11
+    bit_range:
+    - 10
+    - 6
+    description: 11th conversion in regular sequence
+  - name: SQ12
+    bit_range:
+    - 16
+    - 12
+    description: 12th conversion in regular sequence
+  - name: SQ13
+    bit_range:
+    - 22
+    - 18
+    description: 13th conversion in regular sequence
+  - name: SQ14
+    bit_range:
+    - 28
+    - 24
+    description: 14th conversion in regular sequence
+  side_effects: null
+- id: ADC_SQR4
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SQ15
+    bit_range:
+    - 4
+    - 0
+    description: 15th conversion in regular sequence
+  - name: SQ16
+    bit_range:
+    - 10
+    - 6
+    description: 16th conversion in regular sequence
+  side_effects: null
+- id: ADC_DR
+  address_offset: 64
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: RDATA
+    bit_range:
+    - 15
+    - 0
+    description: Regular data converted
+  side_effects: null
+- id: ADC_JSQR
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: JL
+    bit_range:
+    - 1
+    - 0
+    description: Injected channel sequence length
+  - name: JEXTSEL
+    bit_range:
+    - 6
+    - 2
+    description: External Trigger Selection for injected group
+  - name: JEXTEN
+    bit_range:
+    - 8
+    - 7
+    description: External trigger enable and polarity selection for injected channels
+  - name: JSQ1
+    bit_range:
+    - 13
+    - 9
+    description: 1st conversion in the injected sequence
+  - name: JSQ2
+    bit_range:
+    - 19
+    - 15
+    description: 2nd conversion in the injected sequence
+  - name: JSQ3
+    bit_range:
+    - 25
+    - 21
+    description: 3rd conversion in the injected sequence
+  - name: JSQ4
+    bit_range:
+    - 31
+    - 27
+    description: 4th conversion in the injected sequence
+  side_effects: null
+- id: ADC_OFR1
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OFFSET
+    bit_range:
+    - 11
+    - 0
+    description: Data offset y for the channel programmed into bits OFFSET_CH[4:0]
+  - name: OFFSETPOS
+    bit_range:
+    - 24
+    - 24
+    description: Positive offset
+  - name: SATEN
+    bit_range:
+    - 25
+    - 25
+    description: Saturation enable
+  - name: OFFSET_CH
+    bit_range:
+    - 30
+    - 26
+    description: Channel selection for the data offset y
+  - name: OFFSET_EN
+    bit_range:
+    - 31
+    - 31
+    description: Offset y enable
+  side_effects: null
+- id: ADC_OFR2
+  address_offset: 100
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OFFSET
+    bit_range:
+    - 11
+    - 0
+    description: Data offset y for the channel programmed into bits OFFSET_CH[4:0]
+  - name: OFFSETPOS
+    bit_range:
+    - 24
+    - 24
+    description: Positive offset
+  - name: SATEN
+    bit_range:
+    - 25
+    - 25
+    description: Saturation enable
+  - name: OFFSET_CH
+    bit_range:
+    - 30
+    - 26
+    description: Channel selection for the data offset y
+  - name: OFFSET_EN
+    bit_range:
+    - 31
+    - 31
+    description: Offset y enable
+  side_effects: null
+- id: ADC_OFR3
+  address_offset: 104
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OFFSET
+    bit_range:
+    - 11
+    - 0
+    description: Data offset y for the channel programmed into bits OFFSET_CH[4:0]
+  - name: OFFSETPOS
+    bit_range:
+    - 24
+    - 24
+    description: Positive offset
+  - name: SATEN
+    bit_range:
+    - 25
+    - 25
+    description: Saturation enable
+  - name: OFFSET_CH
+    bit_range:
+    - 30
+    - 26
+    description: Channel selection for the data offset y
+  - name: OFFSET_EN
+    bit_range:
+    - 31
+    - 31
+    description: Offset y enable
+  side_effects: null
+- id: ADC_OFR4
+  address_offset: 108
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OFFSET
+    bit_range:
+    - 11
+    - 0
+    description: Data offset y for the channel programmed into bits OFFSET_CH[4:0]
+  - name: OFFSETPOS
+    bit_range:
+    - 24
+    - 24
+    description: Positive offset
+  - name: SATEN
+    bit_range:
+    - 25
+    - 25
+    description: Saturation enable
+  - name: OFFSET_CH
+    bit_range:
+    - 30
+    - 26
+    description: Channel selection for the data offset y
+  - name: OFFSET_EN
+    bit_range:
+    - 31
+    - 31
+    description: Offset y enable
+  side_effects: null
+- id: ADC_JDR1
+  address_offset: 128
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: JDATA
+    bit_range:
+    - 15
+    - 0
+    description: Injected data
+  side_effects: null
+- id: ADC_JDR2
+  address_offset: 132
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: JDATA
+    bit_range:
+    - 15
+    - 0
+    description: Injected data
+  side_effects: null
+- id: ADC_JDR3
+  address_offset: 136
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: JDATA
+    bit_range:
+    - 15
+    - 0
+    description: Injected data
+  side_effects: null
+- id: ADC_JDR4
+  address_offset: 140
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: JDATA
+    bit_range:
+    - 15
+    - 0
+    description: Injected data
+  side_effects: null
+- id: ADC_AWD2CR
+  address_offset: 160
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: AWD2CH
+    bit_range:
+    - 19
+    - 0
+    description: Analog watchdog 2 channel selection
+  side_effects: null
+- id: ADC_AWD3CR
+  address_offset: 164
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: AWD3CH
+    bit_range:
+    - 19
+    - 0
+    description: Analog watchdog 3 channel selection
+  side_effects: null
+- id: ADC_DIFSEL
+  address_offset: 176
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DIFSEL
+    bit_range:
+    - 19
+    - 0
+    description: Differential mode for channels 19 to 0.
+  side_effects: null
+- id: ADC_CALFACT
+  address_offset: 180
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CALFACT_S
+    bit_range:
+    - 6
+    - 0
+    description: Calibration Factors In single-ended mode
+  - name: CALFACT_D
+    bit_range:
+    - 22
+    - 16
+    description: Calibration Factors in differential mode
+  side_effects: null
+- id: ADC_OR
+  address_offset: 200
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OP0
+    bit_range:
+    - 0
+    - 0
+    description: Option bit 0
+  side_effects: null
+interrupts:
+  ADC1: 37
+timing: null

@@ -1,0 +1,151 @@
+peripheral: EMAC_EXT
+version: 0.1.0
+registers:
+- id: EX_CLKOUT_CONF
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DIV_NUM
+    bit_range:
+    - 3
+    - 0
+  - name: H_DIV_NUM
+    bit_range:
+    - 7
+    - 4
+  - name: DLY_NUM
+    bit_range:
+    - 9
+    - 8
+  side_effects: null
+- id: EX_OSCCLK_CONF
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DIV_NUM_10M
+    bit_range:
+    - 5
+    - 0
+  - name: H_DIV_NUM_10M
+    bit_range:
+    - 11
+    - 6
+  - name: DIV_NUM_100M
+    bit_range:
+    - 17
+    - 12
+  - name: H_DIV_NUM_100M
+    bit_range:
+    - 23
+    - 18
+  - name: CLK_SEL
+    bit_range:
+    - 24
+    - 24
+  side_effects: null
+- id: EX_CLK_CTRL
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EXT_EN
+    bit_range:
+    - 0
+    - 0
+  - name: INT_EN
+    bit_range:
+    - 1
+    - 1
+  - name: RX_125_CLK_EN
+    bit_range:
+    - 2
+    - 2
+  - name: MII_CLK_TX_EN
+    bit_range:
+    - 3
+    - 3
+  - name: MII_CLK_RX_EN
+    bit_range:
+    - 4
+    - 4
+  - name: CLK_EN
+    bit_range:
+    - 5
+    - 5
+  side_effects: null
+- id: EX_PHYINF_CONF
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: INT_REVMII_RX_CLK_SEL
+    bit_range:
+    - 0
+    - 0
+  - name: EXT_REVMII_RX_CLK_SEL
+    bit_range:
+    - 1
+    - 1
+  - name: SBD_FLOWCTRL
+    bit_range:
+    - 2
+    - 2
+  - name: CORE_PHY_ADDR
+    bit_range:
+    - 7
+    - 3
+  - name: REVMII_PHY_ADDR
+    bit_range:
+    - 12
+    - 8
+  - name: PHY_INTF_SEL
+    bit_range:
+    - 15
+    - 13
+  - name: SS_MODE
+    bit_range:
+    - 16
+    - 16
+  - name: SBD_CLK_GATING_EN
+    bit_range:
+    - 17
+    - 17
+  - name: PMT_CTRL_EN
+    bit_range:
+    - 18
+    - 18
+  - name: SCR_SMI_DLY_RX_SYNC
+    bit_range:
+    - 19
+    - 19
+  - name: TX_ERR_OUT_EN
+    bit_range:
+    - 20
+    - 20
+  side_effects: null
+- id: PD_SEL
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RAM_PD_EN
+    bit_range:
+    - 1
+    - 0
+  side_effects: null
+- id: EX_DATE
+  address_offset: 252
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields: []
+  side_effects: null
+interrupts: null
+timing: null

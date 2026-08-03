@@ -1,0 +1,70 @@
+peripheral: WWDG
+version: 0.1.0
+registers:
+- id: WWDG_CR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 127
+  fields:
+  - name: T
+    bit_range:
+    - 6
+    - 0
+    description: |-
+      7-bit counter (MSB to LSB)
+      These bits contain the value of the watchdog counter, decremented every
+      (4096 x 2WDGTB[2:0]) PCLK cycles. A reset is produced when it is decremented from 0x40 to 0x3F (T6 becomes cleared).
+  - name: WDGA
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Activation bit
+      This bit is set by software and only cleared by hardware after a reset. When WDGA = 1, the watchdog can generate a reset.
+  side_effects: null
+- id: WWDG_CFR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 127
+  fields:
+  - name: W
+    bit_range:
+    - 6
+    - 0
+    description: |-
+      7-bit window value
+      These bits contain the window value to be compared with the down-counter.
+  - name: EWI
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Early wakeup interrupt
+      When set, an interrupt occurs whenever the counter reaches the value 0x40. This interrupt is only cleared by hardware after a reset.
+  - name: WDGTB
+    bit_range:
+    - 13
+    - 11
+    description: |-
+      Timer base
+      The timebase of the prescaler can be modified as follows:
+  side_effects: null
+- id: WWDG_SR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EWIF
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Early wakeup interrupt flag
+      This bit is set by hardware when the counter has reached the value 0x40. It must be cleared by software by writing '0'. Writing '1' has no effect. This bit is also set if the interrupt is not enabled.
+  side_effects: null
+interrupts:
+  WWDG: 0
+timing: null

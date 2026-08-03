@@ -1,0 +1,4013 @@
+peripheral: VMC_S
+version: 0.1.0
+registers:
+- id: RAM0_POWER
+  address_offset: 1536
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: S0POWER
+    bit_range:
+    - 0
+    - 0
+    description: Keep RAM section S0 of RAM[n] on or off in System ON mode
+  - name: S1POWER
+    bit_range:
+    - 1
+    - 1
+    description: Keep RAM section S1 of RAM[n] on or off in System ON mode
+  - name: S2POWER
+    bit_range:
+    - 2
+    - 2
+    description: Keep RAM section S2 of RAM[n] on or off in System ON mode
+  - name: S3POWER
+    bit_range:
+    - 3
+    - 3
+    description: Keep RAM section S3 of RAM[n] on or off in System ON mode
+  - name: S4POWER
+    bit_range:
+    - 4
+    - 4
+    description: Keep RAM section S4 of RAM[n] on or off in System ON mode
+  - name: S5POWER
+    bit_range:
+    - 5
+    - 5
+    description: Keep RAM section S5 of RAM[n] on or off in System ON mode
+  - name: S6POWER
+    bit_range:
+    - 6
+    - 6
+    description: Keep RAM section S6 of RAM[n] on or off in System ON mode
+  - name: S7POWER
+    bit_range:
+    - 7
+    - 7
+    description: Keep RAM section S7 of RAM[n] on or off in System ON mode
+  - name: S8POWER
+    bit_range:
+    - 8
+    - 8
+    description: Keep RAM section S8 of RAM[n] on or off in System ON mode
+  - name: S9POWER
+    bit_range:
+    - 9
+    - 9
+    description: Keep RAM section S9 of RAM[n] on or off in System ON mode
+  - name: S10POWER
+    bit_range:
+    - 10
+    - 10
+    description: Keep RAM section S10 of RAM[n] on or off in System ON mode
+  - name: S11POWER
+    bit_range:
+    - 11
+    - 11
+    description: Keep RAM section S11 of RAM[n] on or off in System ON mode
+  - name: S12POWER
+    bit_range:
+    - 12
+    - 12
+    description: Keep RAM section S12 of RAM[n] on or off in System ON mode
+  - name: S13POWER
+    bit_range:
+    - 13
+    - 13
+    description: Keep RAM section S13 of RAM[n] on or off in System ON mode
+  - name: S14POWER
+    bit_range:
+    - 14
+    - 14
+    description: Keep RAM section S14 of RAM[n] on or off in System ON mode
+  - name: S15POWER
+    bit_range:
+    - 15
+    - 15
+    description: Keep RAM section S15 of RAM[n] on or off in System ON mode
+  - name: S0RETENTION
+    bit_range:
+    - 16
+    - 16
+    description: Keep retention on RAM section S0 of RAM[n] when RAM section is switched off
+  - name: S1RETENTION
+    bit_range:
+    - 17
+    - 17
+    description: Keep retention on RAM section S1 of RAM[n] when RAM section is switched off
+  - name: S2RETENTION
+    bit_range:
+    - 18
+    - 18
+    description: Keep retention on RAM section S2 of RAM[n] when RAM section is switched off
+  - name: S3RETENTION
+    bit_range:
+    - 19
+    - 19
+    description: Keep retention on RAM section S3 of RAM[n] when RAM section is switched off
+  - name: S4RETENTION
+    bit_range:
+    - 20
+    - 20
+    description: Keep retention on RAM section S4 of RAM[n] when RAM section is switched off
+  - name: S5RETENTION
+    bit_range:
+    - 21
+    - 21
+    description: Keep retention on RAM section S5 of RAM[n] when RAM section is switched off
+  - name: S6RETENTION
+    bit_range:
+    - 22
+    - 22
+    description: Keep retention on RAM section S6 of RAM[n] when RAM section is switched off
+  - name: S7RETENTION
+    bit_range:
+    - 23
+    - 23
+    description: Keep retention on RAM section S7 of RAM[n] when RAM section is switched off
+  - name: S8RETENTION
+    bit_range:
+    - 24
+    - 24
+    description: Keep retention on RAM section S8 of RAM[n] when RAM section is switched off
+  - name: S9RETENTION
+    bit_range:
+    - 25
+    - 25
+    description: Keep retention on RAM section S9 of RAM[n] when RAM section is switched off
+  - name: S10RETENTION
+    bit_range:
+    - 26
+    - 26
+    description: Keep retention on RAM section S10 of RAM[n] when RAM section is switched off
+  - name: S11RETENTION
+    bit_range:
+    - 27
+    - 27
+    description: Keep retention on RAM section S11 of RAM[n] when RAM section is switched off
+  - name: S12RETENTION
+    bit_range:
+    - 28
+    - 28
+    description: Keep retention on RAM section S12 of RAM[n] when RAM section is switched off
+  - name: S13RETENTION
+    bit_range:
+    - 29
+    - 29
+    description: Keep retention on RAM section S13 of RAM[n] when RAM section is switched off
+  - name: S14RETENTION
+    bit_range:
+    - 30
+    - 30
+    description: Keep retention on RAM section S14 of RAM[n] when RAM section is switched off
+  - name: S15RETENTION
+    bit_range:
+    - 31
+    - 31
+    description: Keep retention on RAM section S15 of RAM[n] when RAM section is switched off
+  side_effects: null
+- id: RAM0_POWERSET
+  address_offset: 1540
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: S0POWER
+    bit_range:
+    - 0
+    - 0
+    description: Keep RAM section S0 of RAM[n] on or off in System ON mode
+  - name: S1POWER
+    bit_range:
+    - 1
+    - 1
+    description: Keep RAM section S1 of RAM[n] on or off in System ON mode
+  - name: S2POWER
+    bit_range:
+    - 2
+    - 2
+    description: Keep RAM section S2 of RAM[n] on or off in System ON mode
+  - name: S3POWER
+    bit_range:
+    - 3
+    - 3
+    description: Keep RAM section S3 of RAM[n] on or off in System ON mode
+  - name: S4POWER
+    bit_range:
+    - 4
+    - 4
+    description: Keep RAM section S4 of RAM[n] on or off in System ON mode
+  - name: S5POWER
+    bit_range:
+    - 5
+    - 5
+    description: Keep RAM section S5 of RAM[n] on or off in System ON mode
+  - name: S6POWER
+    bit_range:
+    - 6
+    - 6
+    description: Keep RAM section S6 of RAM[n] on or off in System ON mode
+  - name: S7POWER
+    bit_range:
+    - 7
+    - 7
+    description: Keep RAM section S7 of RAM[n] on or off in System ON mode
+  - name: S8POWER
+    bit_range:
+    - 8
+    - 8
+    description: Keep RAM section S8 of RAM[n] on or off in System ON mode
+  - name: S9POWER
+    bit_range:
+    - 9
+    - 9
+    description: Keep RAM section S9 of RAM[n] on or off in System ON mode
+  - name: S10POWER
+    bit_range:
+    - 10
+    - 10
+    description: Keep RAM section S10 of RAM[n] on or off in System ON mode
+  - name: S11POWER
+    bit_range:
+    - 11
+    - 11
+    description: Keep RAM section S11 of RAM[n] on or off in System ON mode
+  - name: S12POWER
+    bit_range:
+    - 12
+    - 12
+    description: Keep RAM section S12 of RAM[n] on or off in System ON mode
+  - name: S13POWER
+    bit_range:
+    - 13
+    - 13
+    description: Keep RAM section S13 of RAM[n] on or off in System ON mode
+  - name: S14POWER
+    bit_range:
+    - 14
+    - 14
+    description: Keep RAM section S14 of RAM[n] on or off in System ON mode
+  - name: S15POWER
+    bit_range:
+    - 15
+    - 15
+    description: Keep RAM section S15 of RAM[n] on or off in System ON mode
+  - name: S0RETENTION
+    bit_range:
+    - 16
+    - 16
+    description: Keep retention on RAM section S0 of RAM[n] when RAM section is switched off
+  - name: S1RETENTION
+    bit_range:
+    - 17
+    - 17
+    description: Keep retention on RAM section S1 of RAM[n] when RAM section is switched off
+  - name: S2RETENTION
+    bit_range:
+    - 18
+    - 18
+    description: Keep retention on RAM section S2 of RAM[n] when RAM section is switched off
+  - name: S3RETENTION
+    bit_range:
+    - 19
+    - 19
+    description: Keep retention on RAM section S3 of RAM[n] when RAM section is switched off
+  - name: S4RETENTION
+    bit_range:
+    - 20
+    - 20
+    description: Keep retention on RAM section S4 of RAM[n] when RAM section is switched off
+  - name: S5RETENTION
+    bit_range:
+    - 21
+    - 21
+    description: Keep retention on RAM section S5 of RAM[n] when RAM section is switched off
+  - name: S6RETENTION
+    bit_range:
+    - 22
+    - 22
+    description: Keep retention on RAM section S6 of RAM[n] when RAM section is switched off
+  - name: S7RETENTION
+    bit_range:
+    - 23
+    - 23
+    description: Keep retention on RAM section S7 of RAM[n] when RAM section is switched off
+  - name: S8RETENTION
+    bit_range:
+    - 24
+    - 24
+    description: Keep retention on RAM section S8 of RAM[n] when RAM section is switched off
+  - name: S9RETENTION
+    bit_range:
+    - 25
+    - 25
+    description: Keep retention on RAM section S9 of RAM[n] when RAM section is switched off
+  - name: S10RETENTION
+    bit_range:
+    - 26
+    - 26
+    description: Keep retention on RAM section S10 of RAM[n] when RAM section is switched off
+  - name: S11RETENTION
+    bit_range:
+    - 27
+    - 27
+    description: Keep retention on RAM section S11 of RAM[n] when RAM section is switched off
+  - name: S12RETENTION
+    bit_range:
+    - 28
+    - 28
+    description: Keep retention on RAM section S12 of RAM[n] when RAM section is switched off
+  - name: S13RETENTION
+    bit_range:
+    - 29
+    - 29
+    description: Keep retention on RAM section S13 of RAM[n] when RAM section is switched off
+  - name: S14RETENTION
+    bit_range:
+    - 30
+    - 30
+    description: Keep retention on RAM section S14 of RAM[n] when RAM section is switched off
+  - name: S15RETENTION
+    bit_range:
+    - 31
+    - 31
+    description: Keep retention on RAM section S15 of RAM[n] when RAM section is switched off
+  side_effects: null
+- id: RAM0_POWERCLR
+  address_offset: 1544
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: S0POWER
+    bit_range:
+    - 0
+    - 0
+    description: Keep RAM section S0 of RAM[n] on or off in System ON mode
+  - name: S1POWER
+    bit_range:
+    - 1
+    - 1
+    description: Keep RAM section S1 of RAM[n] on or off in System ON mode
+  - name: S2POWER
+    bit_range:
+    - 2
+    - 2
+    description: Keep RAM section S2 of RAM[n] on or off in System ON mode
+  - name: S3POWER
+    bit_range:
+    - 3
+    - 3
+    description: Keep RAM section S3 of RAM[n] on or off in System ON mode
+  - name: S4POWER
+    bit_range:
+    - 4
+    - 4
+    description: Keep RAM section S4 of RAM[n] on or off in System ON mode
+  - name: S5POWER
+    bit_range:
+    - 5
+    - 5
+    description: Keep RAM section S5 of RAM[n] on or off in System ON mode
+  - name: S6POWER
+    bit_range:
+    - 6
+    - 6
+    description: Keep RAM section S6 of RAM[n] on or off in System ON mode
+  - name: S7POWER
+    bit_range:
+    - 7
+    - 7
+    description: Keep RAM section S7 of RAM[n] on or off in System ON mode
+  - name: S8POWER
+    bit_range:
+    - 8
+    - 8
+    description: Keep RAM section S8 of RAM[n] on or off in System ON mode
+  - name: S9POWER
+    bit_range:
+    - 9
+    - 9
+    description: Keep RAM section S9 of RAM[n] on or off in System ON mode
+  - name: S10POWER
+    bit_range:
+    - 10
+    - 10
+    description: Keep RAM section S10 of RAM[n] on or off in System ON mode
+  - name: S11POWER
+    bit_range:
+    - 11
+    - 11
+    description: Keep RAM section S11 of RAM[n] on or off in System ON mode
+  - name: S12POWER
+    bit_range:
+    - 12
+    - 12
+    description: Keep RAM section S12 of RAM[n] on or off in System ON mode
+  - name: S13POWER
+    bit_range:
+    - 13
+    - 13
+    description: Keep RAM section S13 of RAM[n] on or off in System ON mode
+  - name: S14POWER
+    bit_range:
+    - 14
+    - 14
+    description: Keep RAM section S14 of RAM[n] on or off in System ON mode
+  - name: S15POWER
+    bit_range:
+    - 15
+    - 15
+    description: Keep RAM section S15 of RAM[n] on or off in System ON mode
+  - name: S0RETENTION
+    bit_range:
+    - 16
+    - 16
+    description: Keep retention on RAM section S0 of RAM[n] when RAM section is switched off
+  - name: S1RETENTION
+    bit_range:
+    - 17
+    - 17
+    description: Keep retention on RAM section S1 of RAM[n] when RAM section is switched off
+  - name: S2RETENTION
+    bit_range:
+    - 18
+    - 18
+    description: Keep retention on RAM section S2 of RAM[n] when RAM section is switched off
+  - name: S3RETENTION
+    bit_range:
+    - 19
+    - 19
+    description: Keep retention on RAM section S3 of RAM[n] when RAM section is switched off
+  - name: S4RETENTION
+    bit_range:
+    - 20
+    - 20
+    description: Keep retention on RAM section S4 of RAM[n] when RAM section is switched off
+  - name: S5RETENTION
+    bit_range:
+    - 21
+    - 21
+    description: Keep retention on RAM section S5 of RAM[n] when RAM section is switched off
+  - name: S6RETENTION
+    bit_range:
+    - 22
+    - 22
+    description: Keep retention on RAM section S6 of RAM[n] when RAM section is switched off
+  - name: S7RETENTION
+    bit_range:
+    - 23
+    - 23
+    description: Keep retention on RAM section S7 of RAM[n] when RAM section is switched off
+  - name: S8RETENTION
+    bit_range:
+    - 24
+    - 24
+    description: Keep retention on RAM section S8 of RAM[n] when RAM section is switched off
+  - name: S9RETENTION
+    bit_range:
+    - 25
+    - 25
+    description: Keep retention on RAM section S9 of RAM[n] when RAM section is switched off
+  - name: S10RETENTION
+    bit_range:
+    - 26
+    - 26
+    description: Keep retention on RAM section S10 of RAM[n] when RAM section is switched off
+  - name: S11RETENTION
+    bit_range:
+    - 27
+    - 27
+    description: Keep retention on RAM section S11 of RAM[n] when RAM section is switched off
+  - name: S12RETENTION
+    bit_range:
+    - 28
+    - 28
+    description: Keep retention on RAM section S12 of RAM[n] when RAM section is switched off
+  - name: S13RETENTION
+    bit_range:
+    - 29
+    - 29
+    description: Keep retention on RAM section S13 of RAM[n] when RAM section is switched off
+  - name: S14RETENTION
+    bit_range:
+    - 30
+    - 30
+    description: Keep retention on RAM section S14 of RAM[n] when RAM section is switched off
+  - name: S15RETENTION
+    bit_range:
+    - 31
+    - 31
+    description: Keep retention on RAM section S15 of RAM[n] when RAM section is switched off
+  side_effects: null
+- id: RAM1_POWER
+  address_offset: 1552
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: S0POWER
+    bit_range:
+    - 0
+    - 0
+    description: Keep RAM section S0 of RAM[n] on or off in System ON mode
+  - name: S1POWER
+    bit_range:
+    - 1
+    - 1
+    description: Keep RAM section S1 of RAM[n] on or off in System ON mode
+  - name: S2POWER
+    bit_range:
+    - 2
+    - 2
+    description: Keep RAM section S2 of RAM[n] on or off in System ON mode
+  - name: S3POWER
+    bit_range:
+    - 3
+    - 3
+    description: Keep RAM section S3 of RAM[n] on or off in System ON mode
+  - name: S4POWER
+    bit_range:
+    - 4
+    - 4
+    description: Keep RAM section S4 of RAM[n] on or off in System ON mode
+  - name: S5POWER
+    bit_range:
+    - 5
+    - 5
+    description: Keep RAM section S5 of RAM[n] on or off in System ON mode
+  - name: S6POWER
+    bit_range:
+    - 6
+    - 6
+    description: Keep RAM section S6 of RAM[n] on or off in System ON mode
+  - name: S7POWER
+    bit_range:
+    - 7
+    - 7
+    description: Keep RAM section S7 of RAM[n] on or off in System ON mode
+  - name: S8POWER
+    bit_range:
+    - 8
+    - 8
+    description: Keep RAM section S8 of RAM[n] on or off in System ON mode
+  - name: S9POWER
+    bit_range:
+    - 9
+    - 9
+    description: Keep RAM section S9 of RAM[n] on or off in System ON mode
+  - name: S10POWER
+    bit_range:
+    - 10
+    - 10
+    description: Keep RAM section S10 of RAM[n] on or off in System ON mode
+  - name: S11POWER
+    bit_range:
+    - 11
+    - 11
+    description: Keep RAM section S11 of RAM[n] on or off in System ON mode
+  - name: S12POWER
+    bit_range:
+    - 12
+    - 12
+    description: Keep RAM section S12 of RAM[n] on or off in System ON mode
+  - name: S13POWER
+    bit_range:
+    - 13
+    - 13
+    description: Keep RAM section S13 of RAM[n] on or off in System ON mode
+  - name: S14POWER
+    bit_range:
+    - 14
+    - 14
+    description: Keep RAM section S14 of RAM[n] on or off in System ON mode
+  - name: S15POWER
+    bit_range:
+    - 15
+    - 15
+    description: Keep RAM section S15 of RAM[n] on or off in System ON mode
+  - name: S0RETENTION
+    bit_range:
+    - 16
+    - 16
+    description: Keep retention on RAM section S0 of RAM[n] when RAM section is switched off
+  - name: S1RETENTION
+    bit_range:
+    - 17
+    - 17
+    description: Keep retention on RAM section S1 of RAM[n] when RAM section is switched off
+  - name: S2RETENTION
+    bit_range:
+    - 18
+    - 18
+    description: Keep retention on RAM section S2 of RAM[n] when RAM section is switched off
+  - name: S3RETENTION
+    bit_range:
+    - 19
+    - 19
+    description: Keep retention on RAM section S3 of RAM[n] when RAM section is switched off
+  - name: S4RETENTION
+    bit_range:
+    - 20
+    - 20
+    description: Keep retention on RAM section S4 of RAM[n] when RAM section is switched off
+  - name: S5RETENTION
+    bit_range:
+    - 21
+    - 21
+    description: Keep retention on RAM section S5 of RAM[n] when RAM section is switched off
+  - name: S6RETENTION
+    bit_range:
+    - 22
+    - 22
+    description: Keep retention on RAM section S6 of RAM[n] when RAM section is switched off
+  - name: S7RETENTION
+    bit_range:
+    - 23
+    - 23
+    description: Keep retention on RAM section S7 of RAM[n] when RAM section is switched off
+  - name: S8RETENTION
+    bit_range:
+    - 24
+    - 24
+    description: Keep retention on RAM section S8 of RAM[n] when RAM section is switched off
+  - name: S9RETENTION
+    bit_range:
+    - 25
+    - 25
+    description: Keep retention on RAM section S9 of RAM[n] when RAM section is switched off
+  - name: S10RETENTION
+    bit_range:
+    - 26
+    - 26
+    description: Keep retention on RAM section S10 of RAM[n] when RAM section is switched off
+  - name: S11RETENTION
+    bit_range:
+    - 27
+    - 27
+    description: Keep retention on RAM section S11 of RAM[n] when RAM section is switched off
+  - name: S12RETENTION
+    bit_range:
+    - 28
+    - 28
+    description: Keep retention on RAM section S12 of RAM[n] when RAM section is switched off
+  - name: S13RETENTION
+    bit_range:
+    - 29
+    - 29
+    description: Keep retention on RAM section S13 of RAM[n] when RAM section is switched off
+  - name: S14RETENTION
+    bit_range:
+    - 30
+    - 30
+    description: Keep retention on RAM section S14 of RAM[n] when RAM section is switched off
+  - name: S15RETENTION
+    bit_range:
+    - 31
+    - 31
+    description: Keep retention on RAM section S15 of RAM[n] when RAM section is switched off
+  side_effects: null
+- id: RAM1_POWERSET
+  address_offset: 1556
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: S0POWER
+    bit_range:
+    - 0
+    - 0
+    description: Keep RAM section S0 of RAM[n] on or off in System ON mode
+  - name: S1POWER
+    bit_range:
+    - 1
+    - 1
+    description: Keep RAM section S1 of RAM[n] on or off in System ON mode
+  - name: S2POWER
+    bit_range:
+    - 2
+    - 2
+    description: Keep RAM section S2 of RAM[n] on or off in System ON mode
+  - name: S3POWER
+    bit_range:
+    - 3
+    - 3
+    description: Keep RAM section S3 of RAM[n] on or off in System ON mode
+  - name: S4POWER
+    bit_range:
+    - 4
+    - 4
+    description: Keep RAM section S4 of RAM[n] on or off in System ON mode
+  - name: S5POWER
+    bit_range:
+    - 5
+    - 5
+    description: Keep RAM section S5 of RAM[n] on or off in System ON mode
+  - name: S6POWER
+    bit_range:
+    - 6
+    - 6
+    description: Keep RAM section S6 of RAM[n] on or off in System ON mode
+  - name: S7POWER
+    bit_range:
+    - 7
+    - 7
+    description: Keep RAM section S7 of RAM[n] on or off in System ON mode
+  - name: S8POWER
+    bit_range:
+    - 8
+    - 8
+    description: Keep RAM section S8 of RAM[n] on or off in System ON mode
+  - name: S9POWER
+    bit_range:
+    - 9
+    - 9
+    description: Keep RAM section S9 of RAM[n] on or off in System ON mode
+  - name: S10POWER
+    bit_range:
+    - 10
+    - 10
+    description: Keep RAM section S10 of RAM[n] on or off in System ON mode
+  - name: S11POWER
+    bit_range:
+    - 11
+    - 11
+    description: Keep RAM section S11 of RAM[n] on or off in System ON mode
+  - name: S12POWER
+    bit_range:
+    - 12
+    - 12
+    description: Keep RAM section S12 of RAM[n] on or off in System ON mode
+  - name: S13POWER
+    bit_range:
+    - 13
+    - 13
+    description: Keep RAM section S13 of RAM[n] on or off in System ON mode
+  - name: S14POWER
+    bit_range:
+    - 14
+    - 14
+    description: Keep RAM section S14 of RAM[n] on or off in System ON mode
+  - name: S15POWER
+    bit_range:
+    - 15
+    - 15
+    description: Keep RAM section S15 of RAM[n] on or off in System ON mode
+  - name: S0RETENTION
+    bit_range:
+    - 16
+    - 16
+    description: Keep retention on RAM section S0 of RAM[n] when RAM section is switched off
+  - name: S1RETENTION
+    bit_range:
+    - 17
+    - 17
+    description: Keep retention on RAM section S1 of RAM[n] when RAM section is switched off
+  - name: S2RETENTION
+    bit_range:
+    - 18
+    - 18
+    description: Keep retention on RAM section S2 of RAM[n] when RAM section is switched off
+  - name: S3RETENTION
+    bit_range:
+    - 19
+    - 19
+    description: Keep retention on RAM section S3 of RAM[n] when RAM section is switched off
+  - name: S4RETENTION
+    bit_range:
+    - 20
+    - 20
+    description: Keep retention on RAM section S4 of RAM[n] when RAM section is switched off
+  - name: S5RETENTION
+    bit_range:
+    - 21
+    - 21
+    description: Keep retention on RAM section S5 of RAM[n] when RAM section is switched off
+  - name: S6RETENTION
+    bit_range:
+    - 22
+    - 22
+    description: Keep retention on RAM section S6 of RAM[n] when RAM section is switched off
+  - name: S7RETENTION
+    bit_range:
+    - 23
+    - 23
+    description: Keep retention on RAM section S7 of RAM[n] when RAM section is switched off
+  - name: S8RETENTION
+    bit_range:
+    - 24
+    - 24
+    description: Keep retention on RAM section S8 of RAM[n] when RAM section is switched off
+  - name: S9RETENTION
+    bit_range:
+    - 25
+    - 25
+    description: Keep retention on RAM section S9 of RAM[n] when RAM section is switched off
+  - name: S10RETENTION
+    bit_range:
+    - 26
+    - 26
+    description: Keep retention on RAM section S10 of RAM[n] when RAM section is switched off
+  - name: S11RETENTION
+    bit_range:
+    - 27
+    - 27
+    description: Keep retention on RAM section S11 of RAM[n] when RAM section is switched off
+  - name: S12RETENTION
+    bit_range:
+    - 28
+    - 28
+    description: Keep retention on RAM section S12 of RAM[n] when RAM section is switched off
+  - name: S13RETENTION
+    bit_range:
+    - 29
+    - 29
+    description: Keep retention on RAM section S13 of RAM[n] when RAM section is switched off
+  - name: S14RETENTION
+    bit_range:
+    - 30
+    - 30
+    description: Keep retention on RAM section S14 of RAM[n] when RAM section is switched off
+  - name: S15RETENTION
+    bit_range:
+    - 31
+    - 31
+    description: Keep retention on RAM section S15 of RAM[n] when RAM section is switched off
+  side_effects: null
+- id: RAM1_POWERCLR
+  address_offset: 1560
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: S0POWER
+    bit_range:
+    - 0
+    - 0
+    description: Keep RAM section S0 of RAM[n] on or off in System ON mode
+  - name: S1POWER
+    bit_range:
+    - 1
+    - 1
+    description: Keep RAM section S1 of RAM[n] on or off in System ON mode
+  - name: S2POWER
+    bit_range:
+    - 2
+    - 2
+    description: Keep RAM section S2 of RAM[n] on or off in System ON mode
+  - name: S3POWER
+    bit_range:
+    - 3
+    - 3
+    description: Keep RAM section S3 of RAM[n] on or off in System ON mode
+  - name: S4POWER
+    bit_range:
+    - 4
+    - 4
+    description: Keep RAM section S4 of RAM[n] on or off in System ON mode
+  - name: S5POWER
+    bit_range:
+    - 5
+    - 5
+    description: Keep RAM section S5 of RAM[n] on or off in System ON mode
+  - name: S6POWER
+    bit_range:
+    - 6
+    - 6
+    description: Keep RAM section S6 of RAM[n] on or off in System ON mode
+  - name: S7POWER
+    bit_range:
+    - 7
+    - 7
+    description: Keep RAM section S7 of RAM[n] on or off in System ON mode
+  - name: S8POWER
+    bit_range:
+    - 8
+    - 8
+    description: Keep RAM section S8 of RAM[n] on or off in System ON mode
+  - name: S9POWER
+    bit_range:
+    - 9
+    - 9
+    description: Keep RAM section S9 of RAM[n] on or off in System ON mode
+  - name: S10POWER
+    bit_range:
+    - 10
+    - 10
+    description: Keep RAM section S10 of RAM[n] on or off in System ON mode
+  - name: S11POWER
+    bit_range:
+    - 11
+    - 11
+    description: Keep RAM section S11 of RAM[n] on or off in System ON mode
+  - name: S12POWER
+    bit_range:
+    - 12
+    - 12
+    description: Keep RAM section S12 of RAM[n] on or off in System ON mode
+  - name: S13POWER
+    bit_range:
+    - 13
+    - 13
+    description: Keep RAM section S13 of RAM[n] on or off in System ON mode
+  - name: S14POWER
+    bit_range:
+    - 14
+    - 14
+    description: Keep RAM section S14 of RAM[n] on or off in System ON mode
+  - name: S15POWER
+    bit_range:
+    - 15
+    - 15
+    description: Keep RAM section S15 of RAM[n] on or off in System ON mode
+  - name: S0RETENTION
+    bit_range:
+    - 16
+    - 16
+    description: Keep retention on RAM section S0 of RAM[n] when RAM section is switched off
+  - name: S1RETENTION
+    bit_range:
+    - 17
+    - 17
+    description: Keep retention on RAM section S1 of RAM[n] when RAM section is switched off
+  - name: S2RETENTION
+    bit_range:
+    - 18
+    - 18
+    description: Keep retention on RAM section S2 of RAM[n] when RAM section is switched off
+  - name: S3RETENTION
+    bit_range:
+    - 19
+    - 19
+    description: Keep retention on RAM section S3 of RAM[n] when RAM section is switched off
+  - name: S4RETENTION
+    bit_range:
+    - 20
+    - 20
+    description: Keep retention on RAM section S4 of RAM[n] when RAM section is switched off
+  - name: S5RETENTION
+    bit_range:
+    - 21
+    - 21
+    description: Keep retention on RAM section S5 of RAM[n] when RAM section is switched off
+  - name: S6RETENTION
+    bit_range:
+    - 22
+    - 22
+    description: Keep retention on RAM section S6 of RAM[n] when RAM section is switched off
+  - name: S7RETENTION
+    bit_range:
+    - 23
+    - 23
+    description: Keep retention on RAM section S7 of RAM[n] when RAM section is switched off
+  - name: S8RETENTION
+    bit_range:
+    - 24
+    - 24
+    description: Keep retention on RAM section S8 of RAM[n] when RAM section is switched off
+  - name: S9RETENTION
+    bit_range:
+    - 25
+    - 25
+    description: Keep retention on RAM section S9 of RAM[n] when RAM section is switched off
+  - name: S10RETENTION
+    bit_range:
+    - 26
+    - 26
+    description: Keep retention on RAM section S10 of RAM[n] when RAM section is switched off
+  - name: S11RETENTION
+    bit_range:
+    - 27
+    - 27
+    description: Keep retention on RAM section S11 of RAM[n] when RAM section is switched off
+  - name: S12RETENTION
+    bit_range:
+    - 28
+    - 28
+    description: Keep retention on RAM section S12 of RAM[n] when RAM section is switched off
+  - name: S13RETENTION
+    bit_range:
+    - 29
+    - 29
+    description: Keep retention on RAM section S13 of RAM[n] when RAM section is switched off
+  - name: S14RETENTION
+    bit_range:
+    - 30
+    - 30
+    description: Keep retention on RAM section S14 of RAM[n] when RAM section is switched off
+  - name: S15RETENTION
+    bit_range:
+    - 31
+    - 31
+    description: Keep retention on RAM section S15 of RAM[n] when RAM section is switched off
+  side_effects: null
+- id: RAM2_POWER
+  address_offset: 1568
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: S0POWER
+    bit_range:
+    - 0
+    - 0
+    description: Keep RAM section S0 of RAM[n] on or off in System ON mode
+  - name: S1POWER
+    bit_range:
+    - 1
+    - 1
+    description: Keep RAM section S1 of RAM[n] on or off in System ON mode
+  - name: S2POWER
+    bit_range:
+    - 2
+    - 2
+    description: Keep RAM section S2 of RAM[n] on or off in System ON mode
+  - name: S3POWER
+    bit_range:
+    - 3
+    - 3
+    description: Keep RAM section S3 of RAM[n] on or off in System ON mode
+  - name: S4POWER
+    bit_range:
+    - 4
+    - 4
+    description: Keep RAM section S4 of RAM[n] on or off in System ON mode
+  - name: S5POWER
+    bit_range:
+    - 5
+    - 5
+    description: Keep RAM section S5 of RAM[n] on or off in System ON mode
+  - name: S6POWER
+    bit_range:
+    - 6
+    - 6
+    description: Keep RAM section S6 of RAM[n] on or off in System ON mode
+  - name: S7POWER
+    bit_range:
+    - 7
+    - 7
+    description: Keep RAM section S7 of RAM[n] on or off in System ON mode
+  - name: S8POWER
+    bit_range:
+    - 8
+    - 8
+    description: Keep RAM section S8 of RAM[n] on or off in System ON mode
+  - name: S9POWER
+    bit_range:
+    - 9
+    - 9
+    description: Keep RAM section S9 of RAM[n] on or off in System ON mode
+  - name: S10POWER
+    bit_range:
+    - 10
+    - 10
+    description: Keep RAM section S10 of RAM[n] on or off in System ON mode
+  - name: S11POWER
+    bit_range:
+    - 11
+    - 11
+    description: Keep RAM section S11 of RAM[n] on or off in System ON mode
+  - name: S12POWER
+    bit_range:
+    - 12
+    - 12
+    description: Keep RAM section S12 of RAM[n] on or off in System ON mode
+  - name: S13POWER
+    bit_range:
+    - 13
+    - 13
+    description: Keep RAM section S13 of RAM[n] on or off in System ON mode
+  - name: S14POWER
+    bit_range:
+    - 14
+    - 14
+    description: Keep RAM section S14 of RAM[n] on or off in System ON mode
+  - name: S15POWER
+    bit_range:
+    - 15
+    - 15
+    description: Keep RAM section S15 of RAM[n] on or off in System ON mode
+  - name: S0RETENTION
+    bit_range:
+    - 16
+    - 16
+    description: Keep retention on RAM section S0 of RAM[n] when RAM section is switched off
+  - name: S1RETENTION
+    bit_range:
+    - 17
+    - 17
+    description: Keep retention on RAM section S1 of RAM[n] when RAM section is switched off
+  - name: S2RETENTION
+    bit_range:
+    - 18
+    - 18
+    description: Keep retention on RAM section S2 of RAM[n] when RAM section is switched off
+  - name: S3RETENTION
+    bit_range:
+    - 19
+    - 19
+    description: Keep retention on RAM section S3 of RAM[n] when RAM section is switched off
+  - name: S4RETENTION
+    bit_range:
+    - 20
+    - 20
+    description: Keep retention on RAM section S4 of RAM[n] when RAM section is switched off
+  - name: S5RETENTION
+    bit_range:
+    - 21
+    - 21
+    description: Keep retention on RAM section S5 of RAM[n] when RAM section is switched off
+  - name: S6RETENTION
+    bit_range:
+    - 22
+    - 22
+    description: Keep retention on RAM section S6 of RAM[n] when RAM section is switched off
+  - name: S7RETENTION
+    bit_range:
+    - 23
+    - 23
+    description: Keep retention on RAM section S7 of RAM[n] when RAM section is switched off
+  - name: S8RETENTION
+    bit_range:
+    - 24
+    - 24
+    description: Keep retention on RAM section S8 of RAM[n] when RAM section is switched off
+  - name: S9RETENTION
+    bit_range:
+    - 25
+    - 25
+    description: Keep retention on RAM section S9 of RAM[n] when RAM section is switched off
+  - name: S10RETENTION
+    bit_range:
+    - 26
+    - 26
+    description: Keep retention on RAM section S10 of RAM[n] when RAM section is switched off
+  - name: S11RETENTION
+    bit_range:
+    - 27
+    - 27
+    description: Keep retention on RAM section S11 of RAM[n] when RAM section is switched off
+  - name: S12RETENTION
+    bit_range:
+    - 28
+    - 28
+    description: Keep retention on RAM section S12 of RAM[n] when RAM section is switched off
+  - name: S13RETENTION
+    bit_range:
+    - 29
+    - 29
+    description: Keep retention on RAM section S13 of RAM[n] when RAM section is switched off
+  - name: S14RETENTION
+    bit_range:
+    - 30
+    - 30
+    description: Keep retention on RAM section S14 of RAM[n] when RAM section is switched off
+  - name: S15RETENTION
+    bit_range:
+    - 31
+    - 31
+    description: Keep retention on RAM section S15 of RAM[n] when RAM section is switched off
+  side_effects: null
+- id: RAM2_POWERSET
+  address_offset: 1572
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: S0POWER
+    bit_range:
+    - 0
+    - 0
+    description: Keep RAM section S0 of RAM[n] on or off in System ON mode
+  - name: S1POWER
+    bit_range:
+    - 1
+    - 1
+    description: Keep RAM section S1 of RAM[n] on or off in System ON mode
+  - name: S2POWER
+    bit_range:
+    - 2
+    - 2
+    description: Keep RAM section S2 of RAM[n] on or off in System ON mode
+  - name: S3POWER
+    bit_range:
+    - 3
+    - 3
+    description: Keep RAM section S3 of RAM[n] on or off in System ON mode
+  - name: S4POWER
+    bit_range:
+    - 4
+    - 4
+    description: Keep RAM section S4 of RAM[n] on or off in System ON mode
+  - name: S5POWER
+    bit_range:
+    - 5
+    - 5
+    description: Keep RAM section S5 of RAM[n] on or off in System ON mode
+  - name: S6POWER
+    bit_range:
+    - 6
+    - 6
+    description: Keep RAM section S6 of RAM[n] on or off in System ON mode
+  - name: S7POWER
+    bit_range:
+    - 7
+    - 7
+    description: Keep RAM section S7 of RAM[n] on or off in System ON mode
+  - name: S8POWER
+    bit_range:
+    - 8
+    - 8
+    description: Keep RAM section S8 of RAM[n] on or off in System ON mode
+  - name: S9POWER
+    bit_range:
+    - 9
+    - 9
+    description: Keep RAM section S9 of RAM[n] on or off in System ON mode
+  - name: S10POWER
+    bit_range:
+    - 10
+    - 10
+    description: Keep RAM section S10 of RAM[n] on or off in System ON mode
+  - name: S11POWER
+    bit_range:
+    - 11
+    - 11
+    description: Keep RAM section S11 of RAM[n] on or off in System ON mode
+  - name: S12POWER
+    bit_range:
+    - 12
+    - 12
+    description: Keep RAM section S12 of RAM[n] on or off in System ON mode
+  - name: S13POWER
+    bit_range:
+    - 13
+    - 13
+    description: Keep RAM section S13 of RAM[n] on or off in System ON mode
+  - name: S14POWER
+    bit_range:
+    - 14
+    - 14
+    description: Keep RAM section S14 of RAM[n] on or off in System ON mode
+  - name: S15POWER
+    bit_range:
+    - 15
+    - 15
+    description: Keep RAM section S15 of RAM[n] on or off in System ON mode
+  - name: S0RETENTION
+    bit_range:
+    - 16
+    - 16
+    description: Keep retention on RAM section S0 of RAM[n] when RAM section is switched off
+  - name: S1RETENTION
+    bit_range:
+    - 17
+    - 17
+    description: Keep retention on RAM section S1 of RAM[n] when RAM section is switched off
+  - name: S2RETENTION
+    bit_range:
+    - 18
+    - 18
+    description: Keep retention on RAM section S2 of RAM[n] when RAM section is switched off
+  - name: S3RETENTION
+    bit_range:
+    - 19
+    - 19
+    description: Keep retention on RAM section S3 of RAM[n] when RAM section is switched off
+  - name: S4RETENTION
+    bit_range:
+    - 20
+    - 20
+    description: Keep retention on RAM section S4 of RAM[n] when RAM section is switched off
+  - name: S5RETENTION
+    bit_range:
+    - 21
+    - 21
+    description: Keep retention on RAM section S5 of RAM[n] when RAM section is switched off
+  - name: S6RETENTION
+    bit_range:
+    - 22
+    - 22
+    description: Keep retention on RAM section S6 of RAM[n] when RAM section is switched off
+  - name: S7RETENTION
+    bit_range:
+    - 23
+    - 23
+    description: Keep retention on RAM section S7 of RAM[n] when RAM section is switched off
+  - name: S8RETENTION
+    bit_range:
+    - 24
+    - 24
+    description: Keep retention on RAM section S8 of RAM[n] when RAM section is switched off
+  - name: S9RETENTION
+    bit_range:
+    - 25
+    - 25
+    description: Keep retention on RAM section S9 of RAM[n] when RAM section is switched off
+  - name: S10RETENTION
+    bit_range:
+    - 26
+    - 26
+    description: Keep retention on RAM section S10 of RAM[n] when RAM section is switched off
+  - name: S11RETENTION
+    bit_range:
+    - 27
+    - 27
+    description: Keep retention on RAM section S11 of RAM[n] when RAM section is switched off
+  - name: S12RETENTION
+    bit_range:
+    - 28
+    - 28
+    description: Keep retention on RAM section S12 of RAM[n] when RAM section is switched off
+  - name: S13RETENTION
+    bit_range:
+    - 29
+    - 29
+    description: Keep retention on RAM section S13 of RAM[n] when RAM section is switched off
+  - name: S14RETENTION
+    bit_range:
+    - 30
+    - 30
+    description: Keep retention on RAM section S14 of RAM[n] when RAM section is switched off
+  - name: S15RETENTION
+    bit_range:
+    - 31
+    - 31
+    description: Keep retention on RAM section S15 of RAM[n] when RAM section is switched off
+  side_effects: null
+- id: RAM2_POWERCLR
+  address_offset: 1576
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: S0POWER
+    bit_range:
+    - 0
+    - 0
+    description: Keep RAM section S0 of RAM[n] on or off in System ON mode
+  - name: S1POWER
+    bit_range:
+    - 1
+    - 1
+    description: Keep RAM section S1 of RAM[n] on or off in System ON mode
+  - name: S2POWER
+    bit_range:
+    - 2
+    - 2
+    description: Keep RAM section S2 of RAM[n] on or off in System ON mode
+  - name: S3POWER
+    bit_range:
+    - 3
+    - 3
+    description: Keep RAM section S3 of RAM[n] on or off in System ON mode
+  - name: S4POWER
+    bit_range:
+    - 4
+    - 4
+    description: Keep RAM section S4 of RAM[n] on or off in System ON mode
+  - name: S5POWER
+    bit_range:
+    - 5
+    - 5
+    description: Keep RAM section S5 of RAM[n] on or off in System ON mode
+  - name: S6POWER
+    bit_range:
+    - 6
+    - 6
+    description: Keep RAM section S6 of RAM[n] on or off in System ON mode
+  - name: S7POWER
+    bit_range:
+    - 7
+    - 7
+    description: Keep RAM section S7 of RAM[n] on or off in System ON mode
+  - name: S8POWER
+    bit_range:
+    - 8
+    - 8
+    description: Keep RAM section S8 of RAM[n] on or off in System ON mode
+  - name: S9POWER
+    bit_range:
+    - 9
+    - 9
+    description: Keep RAM section S9 of RAM[n] on or off in System ON mode
+  - name: S10POWER
+    bit_range:
+    - 10
+    - 10
+    description: Keep RAM section S10 of RAM[n] on or off in System ON mode
+  - name: S11POWER
+    bit_range:
+    - 11
+    - 11
+    description: Keep RAM section S11 of RAM[n] on or off in System ON mode
+  - name: S12POWER
+    bit_range:
+    - 12
+    - 12
+    description: Keep RAM section S12 of RAM[n] on or off in System ON mode
+  - name: S13POWER
+    bit_range:
+    - 13
+    - 13
+    description: Keep RAM section S13 of RAM[n] on or off in System ON mode
+  - name: S14POWER
+    bit_range:
+    - 14
+    - 14
+    description: Keep RAM section S14 of RAM[n] on or off in System ON mode
+  - name: S15POWER
+    bit_range:
+    - 15
+    - 15
+    description: Keep RAM section S15 of RAM[n] on or off in System ON mode
+  - name: S0RETENTION
+    bit_range:
+    - 16
+    - 16
+    description: Keep retention on RAM section S0 of RAM[n] when RAM section is switched off
+  - name: S1RETENTION
+    bit_range:
+    - 17
+    - 17
+    description: Keep retention on RAM section S1 of RAM[n] when RAM section is switched off
+  - name: S2RETENTION
+    bit_range:
+    - 18
+    - 18
+    description: Keep retention on RAM section S2 of RAM[n] when RAM section is switched off
+  - name: S3RETENTION
+    bit_range:
+    - 19
+    - 19
+    description: Keep retention on RAM section S3 of RAM[n] when RAM section is switched off
+  - name: S4RETENTION
+    bit_range:
+    - 20
+    - 20
+    description: Keep retention on RAM section S4 of RAM[n] when RAM section is switched off
+  - name: S5RETENTION
+    bit_range:
+    - 21
+    - 21
+    description: Keep retention on RAM section S5 of RAM[n] when RAM section is switched off
+  - name: S6RETENTION
+    bit_range:
+    - 22
+    - 22
+    description: Keep retention on RAM section S6 of RAM[n] when RAM section is switched off
+  - name: S7RETENTION
+    bit_range:
+    - 23
+    - 23
+    description: Keep retention on RAM section S7 of RAM[n] when RAM section is switched off
+  - name: S8RETENTION
+    bit_range:
+    - 24
+    - 24
+    description: Keep retention on RAM section S8 of RAM[n] when RAM section is switched off
+  - name: S9RETENTION
+    bit_range:
+    - 25
+    - 25
+    description: Keep retention on RAM section S9 of RAM[n] when RAM section is switched off
+  - name: S10RETENTION
+    bit_range:
+    - 26
+    - 26
+    description: Keep retention on RAM section S10 of RAM[n] when RAM section is switched off
+  - name: S11RETENTION
+    bit_range:
+    - 27
+    - 27
+    description: Keep retention on RAM section S11 of RAM[n] when RAM section is switched off
+  - name: S12RETENTION
+    bit_range:
+    - 28
+    - 28
+    description: Keep retention on RAM section S12 of RAM[n] when RAM section is switched off
+  - name: S13RETENTION
+    bit_range:
+    - 29
+    - 29
+    description: Keep retention on RAM section S13 of RAM[n] when RAM section is switched off
+  - name: S14RETENTION
+    bit_range:
+    - 30
+    - 30
+    description: Keep retention on RAM section S14 of RAM[n] when RAM section is switched off
+  - name: S15RETENTION
+    bit_range:
+    - 31
+    - 31
+    description: Keep retention on RAM section S15 of RAM[n] when RAM section is switched off
+  side_effects: null
+- id: RAM3_POWER
+  address_offset: 1584
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: S0POWER
+    bit_range:
+    - 0
+    - 0
+    description: Keep RAM section S0 of RAM[n] on or off in System ON mode
+  - name: S1POWER
+    bit_range:
+    - 1
+    - 1
+    description: Keep RAM section S1 of RAM[n] on or off in System ON mode
+  - name: S2POWER
+    bit_range:
+    - 2
+    - 2
+    description: Keep RAM section S2 of RAM[n] on or off in System ON mode
+  - name: S3POWER
+    bit_range:
+    - 3
+    - 3
+    description: Keep RAM section S3 of RAM[n] on or off in System ON mode
+  - name: S4POWER
+    bit_range:
+    - 4
+    - 4
+    description: Keep RAM section S4 of RAM[n] on or off in System ON mode
+  - name: S5POWER
+    bit_range:
+    - 5
+    - 5
+    description: Keep RAM section S5 of RAM[n] on or off in System ON mode
+  - name: S6POWER
+    bit_range:
+    - 6
+    - 6
+    description: Keep RAM section S6 of RAM[n] on or off in System ON mode
+  - name: S7POWER
+    bit_range:
+    - 7
+    - 7
+    description: Keep RAM section S7 of RAM[n] on or off in System ON mode
+  - name: S8POWER
+    bit_range:
+    - 8
+    - 8
+    description: Keep RAM section S8 of RAM[n] on or off in System ON mode
+  - name: S9POWER
+    bit_range:
+    - 9
+    - 9
+    description: Keep RAM section S9 of RAM[n] on or off in System ON mode
+  - name: S10POWER
+    bit_range:
+    - 10
+    - 10
+    description: Keep RAM section S10 of RAM[n] on or off in System ON mode
+  - name: S11POWER
+    bit_range:
+    - 11
+    - 11
+    description: Keep RAM section S11 of RAM[n] on or off in System ON mode
+  - name: S12POWER
+    bit_range:
+    - 12
+    - 12
+    description: Keep RAM section S12 of RAM[n] on or off in System ON mode
+  - name: S13POWER
+    bit_range:
+    - 13
+    - 13
+    description: Keep RAM section S13 of RAM[n] on or off in System ON mode
+  - name: S14POWER
+    bit_range:
+    - 14
+    - 14
+    description: Keep RAM section S14 of RAM[n] on or off in System ON mode
+  - name: S15POWER
+    bit_range:
+    - 15
+    - 15
+    description: Keep RAM section S15 of RAM[n] on or off in System ON mode
+  - name: S0RETENTION
+    bit_range:
+    - 16
+    - 16
+    description: Keep retention on RAM section S0 of RAM[n] when RAM section is switched off
+  - name: S1RETENTION
+    bit_range:
+    - 17
+    - 17
+    description: Keep retention on RAM section S1 of RAM[n] when RAM section is switched off
+  - name: S2RETENTION
+    bit_range:
+    - 18
+    - 18
+    description: Keep retention on RAM section S2 of RAM[n] when RAM section is switched off
+  - name: S3RETENTION
+    bit_range:
+    - 19
+    - 19
+    description: Keep retention on RAM section S3 of RAM[n] when RAM section is switched off
+  - name: S4RETENTION
+    bit_range:
+    - 20
+    - 20
+    description: Keep retention on RAM section S4 of RAM[n] when RAM section is switched off
+  - name: S5RETENTION
+    bit_range:
+    - 21
+    - 21
+    description: Keep retention on RAM section S5 of RAM[n] when RAM section is switched off
+  - name: S6RETENTION
+    bit_range:
+    - 22
+    - 22
+    description: Keep retention on RAM section S6 of RAM[n] when RAM section is switched off
+  - name: S7RETENTION
+    bit_range:
+    - 23
+    - 23
+    description: Keep retention on RAM section S7 of RAM[n] when RAM section is switched off
+  - name: S8RETENTION
+    bit_range:
+    - 24
+    - 24
+    description: Keep retention on RAM section S8 of RAM[n] when RAM section is switched off
+  - name: S9RETENTION
+    bit_range:
+    - 25
+    - 25
+    description: Keep retention on RAM section S9 of RAM[n] when RAM section is switched off
+  - name: S10RETENTION
+    bit_range:
+    - 26
+    - 26
+    description: Keep retention on RAM section S10 of RAM[n] when RAM section is switched off
+  - name: S11RETENTION
+    bit_range:
+    - 27
+    - 27
+    description: Keep retention on RAM section S11 of RAM[n] when RAM section is switched off
+  - name: S12RETENTION
+    bit_range:
+    - 28
+    - 28
+    description: Keep retention on RAM section S12 of RAM[n] when RAM section is switched off
+  - name: S13RETENTION
+    bit_range:
+    - 29
+    - 29
+    description: Keep retention on RAM section S13 of RAM[n] when RAM section is switched off
+  - name: S14RETENTION
+    bit_range:
+    - 30
+    - 30
+    description: Keep retention on RAM section S14 of RAM[n] when RAM section is switched off
+  - name: S15RETENTION
+    bit_range:
+    - 31
+    - 31
+    description: Keep retention on RAM section S15 of RAM[n] when RAM section is switched off
+  side_effects: null
+- id: RAM3_POWERSET
+  address_offset: 1588
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: S0POWER
+    bit_range:
+    - 0
+    - 0
+    description: Keep RAM section S0 of RAM[n] on or off in System ON mode
+  - name: S1POWER
+    bit_range:
+    - 1
+    - 1
+    description: Keep RAM section S1 of RAM[n] on or off in System ON mode
+  - name: S2POWER
+    bit_range:
+    - 2
+    - 2
+    description: Keep RAM section S2 of RAM[n] on or off in System ON mode
+  - name: S3POWER
+    bit_range:
+    - 3
+    - 3
+    description: Keep RAM section S3 of RAM[n] on or off in System ON mode
+  - name: S4POWER
+    bit_range:
+    - 4
+    - 4
+    description: Keep RAM section S4 of RAM[n] on or off in System ON mode
+  - name: S5POWER
+    bit_range:
+    - 5
+    - 5
+    description: Keep RAM section S5 of RAM[n] on or off in System ON mode
+  - name: S6POWER
+    bit_range:
+    - 6
+    - 6
+    description: Keep RAM section S6 of RAM[n] on or off in System ON mode
+  - name: S7POWER
+    bit_range:
+    - 7
+    - 7
+    description: Keep RAM section S7 of RAM[n] on or off in System ON mode
+  - name: S8POWER
+    bit_range:
+    - 8
+    - 8
+    description: Keep RAM section S8 of RAM[n] on or off in System ON mode
+  - name: S9POWER
+    bit_range:
+    - 9
+    - 9
+    description: Keep RAM section S9 of RAM[n] on or off in System ON mode
+  - name: S10POWER
+    bit_range:
+    - 10
+    - 10
+    description: Keep RAM section S10 of RAM[n] on or off in System ON mode
+  - name: S11POWER
+    bit_range:
+    - 11
+    - 11
+    description: Keep RAM section S11 of RAM[n] on or off in System ON mode
+  - name: S12POWER
+    bit_range:
+    - 12
+    - 12
+    description: Keep RAM section S12 of RAM[n] on or off in System ON mode
+  - name: S13POWER
+    bit_range:
+    - 13
+    - 13
+    description: Keep RAM section S13 of RAM[n] on or off in System ON mode
+  - name: S14POWER
+    bit_range:
+    - 14
+    - 14
+    description: Keep RAM section S14 of RAM[n] on or off in System ON mode
+  - name: S15POWER
+    bit_range:
+    - 15
+    - 15
+    description: Keep RAM section S15 of RAM[n] on or off in System ON mode
+  - name: S0RETENTION
+    bit_range:
+    - 16
+    - 16
+    description: Keep retention on RAM section S0 of RAM[n] when RAM section is switched off
+  - name: S1RETENTION
+    bit_range:
+    - 17
+    - 17
+    description: Keep retention on RAM section S1 of RAM[n] when RAM section is switched off
+  - name: S2RETENTION
+    bit_range:
+    - 18
+    - 18
+    description: Keep retention on RAM section S2 of RAM[n] when RAM section is switched off
+  - name: S3RETENTION
+    bit_range:
+    - 19
+    - 19
+    description: Keep retention on RAM section S3 of RAM[n] when RAM section is switched off
+  - name: S4RETENTION
+    bit_range:
+    - 20
+    - 20
+    description: Keep retention on RAM section S4 of RAM[n] when RAM section is switched off
+  - name: S5RETENTION
+    bit_range:
+    - 21
+    - 21
+    description: Keep retention on RAM section S5 of RAM[n] when RAM section is switched off
+  - name: S6RETENTION
+    bit_range:
+    - 22
+    - 22
+    description: Keep retention on RAM section S6 of RAM[n] when RAM section is switched off
+  - name: S7RETENTION
+    bit_range:
+    - 23
+    - 23
+    description: Keep retention on RAM section S7 of RAM[n] when RAM section is switched off
+  - name: S8RETENTION
+    bit_range:
+    - 24
+    - 24
+    description: Keep retention on RAM section S8 of RAM[n] when RAM section is switched off
+  - name: S9RETENTION
+    bit_range:
+    - 25
+    - 25
+    description: Keep retention on RAM section S9 of RAM[n] when RAM section is switched off
+  - name: S10RETENTION
+    bit_range:
+    - 26
+    - 26
+    description: Keep retention on RAM section S10 of RAM[n] when RAM section is switched off
+  - name: S11RETENTION
+    bit_range:
+    - 27
+    - 27
+    description: Keep retention on RAM section S11 of RAM[n] when RAM section is switched off
+  - name: S12RETENTION
+    bit_range:
+    - 28
+    - 28
+    description: Keep retention on RAM section S12 of RAM[n] when RAM section is switched off
+  - name: S13RETENTION
+    bit_range:
+    - 29
+    - 29
+    description: Keep retention on RAM section S13 of RAM[n] when RAM section is switched off
+  - name: S14RETENTION
+    bit_range:
+    - 30
+    - 30
+    description: Keep retention on RAM section S14 of RAM[n] when RAM section is switched off
+  - name: S15RETENTION
+    bit_range:
+    - 31
+    - 31
+    description: Keep retention on RAM section S15 of RAM[n] when RAM section is switched off
+  side_effects: null
+- id: RAM3_POWERCLR
+  address_offset: 1592
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: S0POWER
+    bit_range:
+    - 0
+    - 0
+    description: Keep RAM section S0 of RAM[n] on or off in System ON mode
+  - name: S1POWER
+    bit_range:
+    - 1
+    - 1
+    description: Keep RAM section S1 of RAM[n] on or off in System ON mode
+  - name: S2POWER
+    bit_range:
+    - 2
+    - 2
+    description: Keep RAM section S2 of RAM[n] on or off in System ON mode
+  - name: S3POWER
+    bit_range:
+    - 3
+    - 3
+    description: Keep RAM section S3 of RAM[n] on or off in System ON mode
+  - name: S4POWER
+    bit_range:
+    - 4
+    - 4
+    description: Keep RAM section S4 of RAM[n] on or off in System ON mode
+  - name: S5POWER
+    bit_range:
+    - 5
+    - 5
+    description: Keep RAM section S5 of RAM[n] on or off in System ON mode
+  - name: S6POWER
+    bit_range:
+    - 6
+    - 6
+    description: Keep RAM section S6 of RAM[n] on or off in System ON mode
+  - name: S7POWER
+    bit_range:
+    - 7
+    - 7
+    description: Keep RAM section S7 of RAM[n] on or off in System ON mode
+  - name: S8POWER
+    bit_range:
+    - 8
+    - 8
+    description: Keep RAM section S8 of RAM[n] on or off in System ON mode
+  - name: S9POWER
+    bit_range:
+    - 9
+    - 9
+    description: Keep RAM section S9 of RAM[n] on or off in System ON mode
+  - name: S10POWER
+    bit_range:
+    - 10
+    - 10
+    description: Keep RAM section S10 of RAM[n] on or off in System ON mode
+  - name: S11POWER
+    bit_range:
+    - 11
+    - 11
+    description: Keep RAM section S11 of RAM[n] on or off in System ON mode
+  - name: S12POWER
+    bit_range:
+    - 12
+    - 12
+    description: Keep RAM section S12 of RAM[n] on or off in System ON mode
+  - name: S13POWER
+    bit_range:
+    - 13
+    - 13
+    description: Keep RAM section S13 of RAM[n] on or off in System ON mode
+  - name: S14POWER
+    bit_range:
+    - 14
+    - 14
+    description: Keep RAM section S14 of RAM[n] on or off in System ON mode
+  - name: S15POWER
+    bit_range:
+    - 15
+    - 15
+    description: Keep RAM section S15 of RAM[n] on or off in System ON mode
+  - name: S0RETENTION
+    bit_range:
+    - 16
+    - 16
+    description: Keep retention on RAM section S0 of RAM[n] when RAM section is switched off
+  - name: S1RETENTION
+    bit_range:
+    - 17
+    - 17
+    description: Keep retention on RAM section S1 of RAM[n] when RAM section is switched off
+  - name: S2RETENTION
+    bit_range:
+    - 18
+    - 18
+    description: Keep retention on RAM section S2 of RAM[n] when RAM section is switched off
+  - name: S3RETENTION
+    bit_range:
+    - 19
+    - 19
+    description: Keep retention on RAM section S3 of RAM[n] when RAM section is switched off
+  - name: S4RETENTION
+    bit_range:
+    - 20
+    - 20
+    description: Keep retention on RAM section S4 of RAM[n] when RAM section is switched off
+  - name: S5RETENTION
+    bit_range:
+    - 21
+    - 21
+    description: Keep retention on RAM section S5 of RAM[n] when RAM section is switched off
+  - name: S6RETENTION
+    bit_range:
+    - 22
+    - 22
+    description: Keep retention on RAM section S6 of RAM[n] when RAM section is switched off
+  - name: S7RETENTION
+    bit_range:
+    - 23
+    - 23
+    description: Keep retention on RAM section S7 of RAM[n] when RAM section is switched off
+  - name: S8RETENTION
+    bit_range:
+    - 24
+    - 24
+    description: Keep retention on RAM section S8 of RAM[n] when RAM section is switched off
+  - name: S9RETENTION
+    bit_range:
+    - 25
+    - 25
+    description: Keep retention on RAM section S9 of RAM[n] when RAM section is switched off
+  - name: S10RETENTION
+    bit_range:
+    - 26
+    - 26
+    description: Keep retention on RAM section S10 of RAM[n] when RAM section is switched off
+  - name: S11RETENTION
+    bit_range:
+    - 27
+    - 27
+    description: Keep retention on RAM section S11 of RAM[n] when RAM section is switched off
+  - name: S12RETENTION
+    bit_range:
+    - 28
+    - 28
+    description: Keep retention on RAM section S12 of RAM[n] when RAM section is switched off
+  - name: S13RETENTION
+    bit_range:
+    - 29
+    - 29
+    description: Keep retention on RAM section S13 of RAM[n] when RAM section is switched off
+  - name: S14RETENTION
+    bit_range:
+    - 30
+    - 30
+    description: Keep retention on RAM section S14 of RAM[n] when RAM section is switched off
+  - name: S15RETENTION
+    bit_range:
+    - 31
+    - 31
+    description: Keep retention on RAM section S15 of RAM[n] when RAM section is switched off
+  side_effects: null
+- id: RAM4_POWER
+  address_offset: 1600
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: S0POWER
+    bit_range:
+    - 0
+    - 0
+    description: Keep RAM section S0 of RAM[n] on or off in System ON mode
+  - name: S1POWER
+    bit_range:
+    - 1
+    - 1
+    description: Keep RAM section S1 of RAM[n] on or off in System ON mode
+  - name: S2POWER
+    bit_range:
+    - 2
+    - 2
+    description: Keep RAM section S2 of RAM[n] on or off in System ON mode
+  - name: S3POWER
+    bit_range:
+    - 3
+    - 3
+    description: Keep RAM section S3 of RAM[n] on or off in System ON mode
+  - name: S4POWER
+    bit_range:
+    - 4
+    - 4
+    description: Keep RAM section S4 of RAM[n] on or off in System ON mode
+  - name: S5POWER
+    bit_range:
+    - 5
+    - 5
+    description: Keep RAM section S5 of RAM[n] on or off in System ON mode
+  - name: S6POWER
+    bit_range:
+    - 6
+    - 6
+    description: Keep RAM section S6 of RAM[n] on or off in System ON mode
+  - name: S7POWER
+    bit_range:
+    - 7
+    - 7
+    description: Keep RAM section S7 of RAM[n] on or off in System ON mode
+  - name: S8POWER
+    bit_range:
+    - 8
+    - 8
+    description: Keep RAM section S8 of RAM[n] on or off in System ON mode
+  - name: S9POWER
+    bit_range:
+    - 9
+    - 9
+    description: Keep RAM section S9 of RAM[n] on or off in System ON mode
+  - name: S10POWER
+    bit_range:
+    - 10
+    - 10
+    description: Keep RAM section S10 of RAM[n] on or off in System ON mode
+  - name: S11POWER
+    bit_range:
+    - 11
+    - 11
+    description: Keep RAM section S11 of RAM[n] on or off in System ON mode
+  - name: S12POWER
+    bit_range:
+    - 12
+    - 12
+    description: Keep RAM section S12 of RAM[n] on or off in System ON mode
+  - name: S13POWER
+    bit_range:
+    - 13
+    - 13
+    description: Keep RAM section S13 of RAM[n] on or off in System ON mode
+  - name: S14POWER
+    bit_range:
+    - 14
+    - 14
+    description: Keep RAM section S14 of RAM[n] on or off in System ON mode
+  - name: S15POWER
+    bit_range:
+    - 15
+    - 15
+    description: Keep RAM section S15 of RAM[n] on or off in System ON mode
+  - name: S0RETENTION
+    bit_range:
+    - 16
+    - 16
+    description: Keep retention on RAM section S0 of RAM[n] when RAM section is switched off
+  - name: S1RETENTION
+    bit_range:
+    - 17
+    - 17
+    description: Keep retention on RAM section S1 of RAM[n] when RAM section is switched off
+  - name: S2RETENTION
+    bit_range:
+    - 18
+    - 18
+    description: Keep retention on RAM section S2 of RAM[n] when RAM section is switched off
+  - name: S3RETENTION
+    bit_range:
+    - 19
+    - 19
+    description: Keep retention on RAM section S3 of RAM[n] when RAM section is switched off
+  - name: S4RETENTION
+    bit_range:
+    - 20
+    - 20
+    description: Keep retention on RAM section S4 of RAM[n] when RAM section is switched off
+  - name: S5RETENTION
+    bit_range:
+    - 21
+    - 21
+    description: Keep retention on RAM section S5 of RAM[n] when RAM section is switched off
+  - name: S6RETENTION
+    bit_range:
+    - 22
+    - 22
+    description: Keep retention on RAM section S6 of RAM[n] when RAM section is switched off
+  - name: S7RETENTION
+    bit_range:
+    - 23
+    - 23
+    description: Keep retention on RAM section S7 of RAM[n] when RAM section is switched off
+  - name: S8RETENTION
+    bit_range:
+    - 24
+    - 24
+    description: Keep retention on RAM section S8 of RAM[n] when RAM section is switched off
+  - name: S9RETENTION
+    bit_range:
+    - 25
+    - 25
+    description: Keep retention on RAM section S9 of RAM[n] when RAM section is switched off
+  - name: S10RETENTION
+    bit_range:
+    - 26
+    - 26
+    description: Keep retention on RAM section S10 of RAM[n] when RAM section is switched off
+  - name: S11RETENTION
+    bit_range:
+    - 27
+    - 27
+    description: Keep retention on RAM section S11 of RAM[n] when RAM section is switched off
+  - name: S12RETENTION
+    bit_range:
+    - 28
+    - 28
+    description: Keep retention on RAM section S12 of RAM[n] when RAM section is switched off
+  - name: S13RETENTION
+    bit_range:
+    - 29
+    - 29
+    description: Keep retention on RAM section S13 of RAM[n] when RAM section is switched off
+  - name: S14RETENTION
+    bit_range:
+    - 30
+    - 30
+    description: Keep retention on RAM section S14 of RAM[n] when RAM section is switched off
+  - name: S15RETENTION
+    bit_range:
+    - 31
+    - 31
+    description: Keep retention on RAM section S15 of RAM[n] when RAM section is switched off
+  side_effects: null
+- id: RAM4_POWERSET
+  address_offset: 1604
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: S0POWER
+    bit_range:
+    - 0
+    - 0
+    description: Keep RAM section S0 of RAM[n] on or off in System ON mode
+  - name: S1POWER
+    bit_range:
+    - 1
+    - 1
+    description: Keep RAM section S1 of RAM[n] on or off in System ON mode
+  - name: S2POWER
+    bit_range:
+    - 2
+    - 2
+    description: Keep RAM section S2 of RAM[n] on or off in System ON mode
+  - name: S3POWER
+    bit_range:
+    - 3
+    - 3
+    description: Keep RAM section S3 of RAM[n] on or off in System ON mode
+  - name: S4POWER
+    bit_range:
+    - 4
+    - 4
+    description: Keep RAM section S4 of RAM[n] on or off in System ON mode
+  - name: S5POWER
+    bit_range:
+    - 5
+    - 5
+    description: Keep RAM section S5 of RAM[n] on or off in System ON mode
+  - name: S6POWER
+    bit_range:
+    - 6
+    - 6
+    description: Keep RAM section S6 of RAM[n] on or off in System ON mode
+  - name: S7POWER
+    bit_range:
+    - 7
+    - 7
+    description: Keep RAM section S7 of RAM[n] on or off in System ON mode
+  - name: S8POWER
+    bit_range:
+    - 8
+    - 8
+    description: Keep RAM section S8 of RAM[n] on or off in System ON mode
+  - name: S9POWER
+    bit_range:
+    - 9
+    - 9
+    description: Keep RAM section S9 of RAM[n] on or off in System ON mode
+  - name: S10POWER
+    bit_range:
+    - 10
+    - 10
+    description: Keep RAM section S10 of RAM[n] on or off in System ON mode
+  - name: S11POWER
+    bit_range:
+    - 11
+    - 11
+    description: Keep RAM section S11 of RAM[n] on or off in System ON mode
+  - name: S12POWER
+    bit_range:
+    - 12
+    - 12
+    description: Keep RAM section S12 of RAM[n] on or off in System ON mode
+  - name: S13POWER
+    bit_range:
+    - 13
+    - 13
+    description: Keep RAM section S13 of RAM[n] on or off in System ON mode
+  - name: S14POWER
+    bit_range:
+    - 14
+    - 14
+    description: Keep RAM section S14 of RAM[n] on or off in System ON mode
+  - name: S15POWER
+    bit_range:
+    - 15
+    - 15
+    description: Keep RAM section S15 of RAM[n] on or off in System ON mode
+  - name: S0RETENTION
+    bit_range:
+    - 16
+    - 16
+    description: Keep retention on RAM section S0 of RAM[n] when RAM section is switched off
+  - name: S1RETENTION
+    bit_range:
+    - 17
+    - 17
+    description: Keep retention on RAM section S1 of RAM[n] when RAM section is switched off
+  - name: S2RETENTION
+    bit_range:
+    - 18
+    - 18
+    description: Keep retention on RAM section S2 of RAM[n] when RAM section is switched off
+  - name: S3RETENTION
+    bit_range:
+    - 19
+    - 19
+    description: Keep retention on RAM section S3 of RAM[n] when RAM section is switched off
+  - name: S4RETENTION
+    bit_range:
+    - 20
+    - 20
+    description: Keep retention on RAM section S4 of RAM[n] when RAM section is switched off
+  - name: S5RETENTION
+    bit_range:
+    - 21
+    - 21
+    description: Keep retention on RAM section S5 of RAM[n] when RAM section is switched off
+  - name: S6RETENTION
+    bit_range:
+    - 22
+    - 22
+    description: Keep retention on RAM section S6 of RAM[n] when RAM section is switched off
+  - name: S7RETENTION
+    bit_range:
+    - 23
+    - 23
+    description: Keep retention on RAM section S7 of RAM[n] when RAM section is switched off
+  - name: S8RETENTION
+    bit_range:
+    - 24
+    - 24
+    description: Keep retention on RAM section S8 of RAM[n] when RAM section is switched off
+  - name: S9RETENTION
+    bit_range:
+    - 25
+    - 25
+    description: Keep retention on RAM section S9 of RAM[n] when RAM section is switched off
+  - name: S10RETENTION
+    bit_range:
+    - 26
+    - 26
+    description: Keep retention on RAM section S10 of RAM[n] when RAM section is switched off
+  - name: S11RETENTION
+    bit_range:
+    - 27
+    - 27
+    description: Keep retention on RAM section S11 of RAM[n] when RAM section is switched off
+  - name: S12RETENTION
+    bit_range:
+    - 28
+    - 28
+    description: Keep retention on RAM section S12 of RAM[n] when RAM section is switched off
+  - name: S13RETENTION
+    bit_range:
+    - 29
+    - 29
+    description: Keep retention on RAM section S13 of RAM[n] when RAM section is switched off
+  - name: S14RETENTION
+    bit_range:
+    - 30
+    - 30
+    description: Keep retention on RAM section S14 of RAM[n] when RAM section is switched off
+  - name: S15RETENTION
+    bit_range:
+    - 31
+    - 31
+    description: Keep retention on RAM section S15 of RAM[n] when RAM section is switched off
+  side_effects: null
+- id: RAM4_POWERCLR
+  address_offset: 1608
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: S0POWER
+    bit_range:
+    - 0
+    - 0
+    description: Keep RAM section S0 of RAM[n] on or off in System ON mode
+  - name: S1POWER
+    bit_range:
+    - 1
+    - 1
+    description: Keep RAM section S1 of RAM[n] on or off in System ON mode
+  - name: S2POWER
+    bit_range:
+    - 2
+    - 2
+    description: Keep RAM section S2 of RAM[n] on or off in System ON mode
+  - name: S3POWER
+    bit_range:
+    - 3
+    - 3
+    description: Keep RAM section S3 of RAM[n] on or off in System ON mode
+  - name: S4POWER
+    bit_range:
+    - 4
+    - 4
+    description: Keep RAM section S4 of RAM[n] on or off in System ON mode
+  - name: S5POWER
+    bit_range:
+    - 5
+    - 5
+    description: Keep RAM section S5 of RAM[n] on or off in System ON mode
+  - name: S6POWER
+    bit_range:
+    - 6
+    - 6
+    description: Keep RAM section S6 of RAM[n] on or off in System ON mode
+  - name: S7POWER
+    bit_range:
+    - 7
+    - 7
+    description: Keep RAM section S7 of RAM[n] on or off in System ON mode
+  - name: S8POWER
+    bit_range:
+    - 8
+    - 8
+    description: Keep RAM section S8 of RAM[n] on or off in System ON mode
+  - name: S9POWER
+    bit_range:
+    - 9
+    - 9
+    description: Keep RAM section S9 of RAM[n] on or off in System ON mode
+  - name: S10POWER
+    bit_range:
+    - 10
+    - 10
+    description: Keep RAM section S10 of RAM[n] on or off in System ON mode
+  - name: S11POWER
+    bit_range:
+    - 11
+    - 11
+    description: Keep RAM section S11 of RAM[n] on or off in System ON mode
+  - name: S12POWER
+    bit_range:
+    - 12
+    - 12
+    description: Keep RAM section S12 of RAM[n] on or off in System ON mode
+  - name: S13POWER
+    bit_range:
+    - 13
+    - 13
+    description: Keep RAM section S13 of RAM[n] on or off in System ON mode
+  - name: S14POWER
+    bit_range:
+    - 14
+    - 14
+    description: Keep RAM section S14 of RAM[n] on or off in System ON mode
+  - name: S15POWER
+    bit_range:
+    - 15
+    - 15
+    description: Keep RAM section S15 of RAM[n] on or off in System ON mode
+  - name: S0RETENTION
+    bit_range:
+    - 16
+    - 16
+    description: Keep retention on RAM section S0 of RAM[n] when RAM section is switched off
+  - name: S1RETENTION
+    bit_range:
+    - 17
+    - 17
+    description: Keep retention on RAM section S1 of RAM[n] when RAM section is switched off
+  - name: S2RETENTION
+    bit_range:
+    - 18
+    - 18
+    description: Keep retention on RAM section S2 of RAM[n] when RAM section is switched off
+  - name: S3RETENTION
+    bit_range:
+    - 19
+    - 19
+    description: Keep retention on RAM section S3 of RAM[n] when RAM section is switched off
+  - name: S4RETENTION
+    bit_range:
+    - 20
+    - 20
+    description: Keep retention on RAM section S4 of RAM[n] when RAM section is switched off
+  - name: S5RETENTION
+    bit_range:
+    - 21
+    - 21
+    description: Keep retention on RAM section S5 of RAM[n] when RAM section is switched off
+  - name: S6RETENTION
+    bit_range:
+    - 22
+    - 22
+    description: Keep retention on RAM section S6 of RAM[n] when RAM section is switched off
+  - name: S7RETENTION
+    bit_range:
+    - 23
+    - 23
+    description: Keep retention on RAM section S7 of RAM[n] when RAM section is switched off
+  - name: S8RETENTION
+    bit_range:
+    - 24
+    - 24
+    description: Keep retention on RAM section S8 of RAM[n] when RAM section is switched off
+  - name: S9RETENTION
+    bit_range:
+    - 25
+    - 25
+    description: Keep retention on RAM section S9 of RAM[n] when RAM section is switched off
+  - name: S10RETENTION
+    bit_range:
+    - 26
+    - 26
+    description: Keep retention on RAM section S10 of RAM[n] when RAM section is switched off
+  - name: S11RETENTION
+    bit_range:
+    - 27
+    - 27
+    description: Keep retention on RAM section S11 of RAM[n] when RAM section is switched off
+  - name: S12RETENTION
+    bit_range:
+    - 28
+    - 28
+    description: Keep retention on RAM section S12 of RAM[n] when RAM section is switched off
+  - name: S13RETENTION
+    bit_range:
+    - 29
+    - 29
+    description: Keep retention on RAM section S13 of RAM[n] when RAM section is switched off
+  - name: S14RETENTION
+    bit_range:
+    - 30
+    - 30
+    description: Keep retention on RAM section S14 of RAM[n] when RAM section is switched off
+  - name: S15RETENTION
+    bit_range:
+    - 31
+    - 31
+    description: Keep retention on RAM section S15 of RAM[n] when RAM section is switched off
+  side_effects: null
+- id: RAM5_POWER
+  address_offset: 1616
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: S0POWER
+    bit_range:
+    - 0
+    - 0
+    description: Keep RAM section S0 of RAM[n] on or off in System ON mode
+  - name: S1POWER
+    bit_range:
+    - 1
+    - 1
+    description: Keep RAM section S1 of RAM[n] on or off in System ON mode
+  - name: S2POWER
+    bit_range:
+    - 2
+    - 2
+    description: Keep RAM section S2 of RAM[n] on or off in System ON mode
+  - name: S3POWER
+    bit_range:
+    - 3
+    - 3
+    description: Keep RAM section S3 of RAM[n] on or off in System ON mode
+  - name: S4POWER
+    bit_range:
+    - 4
+    - 4
+    description: Keep RAM section S4 of RAM[n] on or off in System ON mode
+  - name: S5POWER
+    bit_range:
+    - 5
+    - 5
+    description: Keep RAM section S5 of RAM[n] on or off in System ON mode
+  - name: S6POWER
+    bit_range:
+    - 6
+    - 6
+    description: Keep RAM section S6 of RAM[n] on or off in System ON mode
+  - name: S7POWER
+    bit_range:
+    - 7
+    - 7
+    description: Keep RAM section S7 of RAM[n] on or off in System ON mode
+  - name: S8POWER
+    bit_range:
+    - 8
+    - 8
+    description: Keep RAM section S8 of RAM[n] on or off in System ON mode
+  - name: S9POWER
+    bit_range:
+    - 9
+    - 9
+    description: Keep RAM section S9 of RAM[n] on or off in System ON mode
+  - name: S10POWER
+    bit_range:
+    - 10
+    - 10
+    description: Keep RAM section S10 of RAM[n] on or off in System ON mode
+  - name: S11POWER
+    bit_range:
+    - 11
+    - 11
+    description: Keep RAM section S11 of RAM[n] on or off in System ON mode
+  - name: S12POWER
+    bit_range:
+    - 12
+    - 12
+    description: Keep RAM section S12 of RAM[n] on or off in System ON mode
+  - name: S13POWER
+    bit_range:
+    - 13
+    - 13
+    description: Keep RAM section S13 of RAM[n] on or off in System ON mode
+  - name: S14POWER
+    bit_range:
+    - 14
+    - 14
+    description: Keep RAM section S14 of RAM[n] on or off in System ON mode
+  - name: S15POWER
+    bit_range:
+    - 15
+    - 15
+    description: Keep RAM section S15 of RAM[n] on or off in System ON mode
+  - name: S0RETENTION
+    bit_range:
+    - 16
+    - 16
+    description: Keep retention on RAM section S0 of RAM[n] when RAM section is switched off
+  - name: S1RETENTION
+    bit_range:
+    - 17
+    - 17
+    description: Keep retention on RAM section S1 of RAM[n] when RAM section is switched off
+  - name: S2RETENTION
+    bit_range:
+    - 18
+    - 18
+    description: Keep retention on RAM section S2 of RAM[n] when RAM section is switched off
+  - name: S3RETENTION
+    bit_range:
+    - 19
+    - 19
+    description: Keep retention on RAM section S3 of RAM[n] when RAM section is switched off
+  - name: S4RETENTION
+    bit_range:
+    - 20
+    - 20
+    description: Keep retention on RAM section S4 of RAM[n] when RAM section is switched off
+  - name: S5RETENTION
+    bit_range:
+    - 21
+    - 21
+    description: Keep retention on RAM section S5 of RAM[n] when RAM section is switched off
+  - name: S6RETENTION
+    bit_range:
+    - 22
+    - 22
+    description: Keep retention on RAM section S6 of RAM[n] when RAM section is switched off
+  - name: S7RETENTION
+    bit_range:
+    - 23
+    - 23
+    description: Keep retention on RAM section S7 of RAM[n] when RAM section is switched off
+  - name: S8RETENTION
+    bit_range:
+    - 24
+    - 24
+    description: Keep retention on RAM section S8 of RAM[n] when RAM section is switched off
+  - name: S9RETENTION
+    bit_range:
+    - 25
+    - 25
+    description: Keep retention on RAM section S9 of RAM[n] when RAM section is switched off
+  - name: S10RETENTION
+    bit_range:
+    - 26
+    - 26
+    description: Keep retention on RAM section S10 of RAM[n] when RAM section is switched off
+  - name: S11RETENTION
+    bit_range:
+    - 27
+    - 27
+    description: Keep retention on RAM section S11 of RAM[n] when RAM section is switched off
+  - name: S12RETENTION
+    bit_range:
+    - 28
+    - 28
+    description: Keep retention on RAM section S12 of RAM[n] when RAM section is switched off
+  - name: S13RETENTION
+    bit_range:
+    - 29
+    - 29
+    description: Keep retention on RAM section S13 of RAM[n] when RAM section is switched off
+  - name: S14RETENTION
+    bit_range:
+    - 30
+    - 30
+    description: Keep retention on RAM section S14 of RAM[n] when RAM section is switched off
+  - name: S15RETENTION
+    bit_range:
+    - 31
+    - 31
+    description: Keep retention on RAM section S15 of RAM[n] when RAM section is switched off
+  side_effects: null
+- id: RAM5_POWERSET
+  address_offset: 1620
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: S0POWER
+    bit_range:
+    - 0
+    - 0
+    description: Keep RAM section S0 of RAM[n] on or off in System ON mode
+  - name: S1POWER
+    bit_range:
+    - 1
+    - 1
+    description: Keep RAM section S1 of RAM[n] on or off in System ON mode
+  - name: S2POWER
+    bit_range:
+    - 2
+    - 2
+    description: Keep RAM section S2 of RAM[n] on or off in System ON mode
+  - name: S3POWER
+    bit_range:
+    - 3
+    - 3
+    description: Keep RAM section S3 of RAM[n] on or off in System ON mode
+  - name: S4POWER
+    bit_range:
+    - 4
+    - 4
+    description: Keep RAM section S4 of RAM[n] on or off in System ON mode
+  - name: S5POWER
+    bit_range:
+    - 5
+    - 5
+    description: Keep RAM section S5 of RAM[n] on or off in System ON mode
+  - name: S6POWER
+    bit_range:
+    - 6
+    - 6
+    description: Keep RAM section S6 of RAM[n] on or off in System ON mode
+  - name: S7POWER
+    bit_range:
+    - 7
+    - 7
+    description: Keep RAM section S7 of RAM[n] on or off in System ON mode
+  - name: S8POWER
+    bit_range:
+    - 8
+    - 8
+    description: Keep RAM section S8 of RAM[n] on or off in System ON mode
+  - name: S9POWER
+    bit_range:
+    - 9
+    - 9
+    description: Keep RAM section S9 of RAM[n] on or off in System ON mode
+  - name: S10POWER
+    bit_range:
+    - 10
+    - 10
+    description: Keep RAM section S10 of RAM[n] on or off in System ON mode
+  - name: S11POWER
+    bit_range:
+    - 11
+    - 11
+    description: Keep RAM section S11 of RAM[n] on or off in System ON mode
+  - name: S12POWER
+    bit_range:
+    - 12
+    - 12
+    description: Keep RAM section S12 of RAM[n] on or off in System ON mode
+  - name: S13POWER
+    bit_range:
+    - 13
+    - 13
+    description: Keep RAM section S13 of RAM[n] on or off in System ON mode
+  - name: S14POWER
+    bit_range:
+    - 14
+    - 14
+    description: Keep RAM section S14 of RAM[n] on or off in System ON mode
+  - name: S15POWER
+    bit_range:
+    - 15
+    - 15
+    description: Keep RAM section S15 of RAM[n] on or off in System ON mode
+  - name: S0RETENTION
+    bit_range:
+    - 16
+    - 16
+    description: Keep retention on RAM section S0 of RAM[n] when RAM section is switched off
+  - name: S1RETENTION
+    bit_range:
+    - 17
+    - 17
+    description: Keep retention on RAM section S1 of RAM[n] when RAM section is switched off
+  - name: S2RETENTION
+    bit_range:
+    - 18
+    - 18
+    description: Keep retention on RAM section S2 of RAM[n] when RAM section is switched off
+  - name: S3RETENTION
+    bit_range:
+    - 19
+    - 19
+    description: Keep retention on RAM section S3 of RAM[n] when RAM section is switched off
+  - name: S4RETENTION
+    bit_range:
+    - 20
+    - 20
+    description: Keep retention on RAM section S4 of RAM[n] when RAM section is switched off
+  - name: S5RETENTION
+    bit_range:
+    - 21
+    - 21
+    description: Keep retention on RAM section S5 of RAM[n] when RAM section is switched off
+  - name: S6RETENTION
+    bit_range:
+    - 22
+    - 22
+    description: Keep retention on RAM section S6 of RAM[n] when RAM section is switched off
+  - name: S7RETENTION
+    bit_range:
+    - 23
+    - 23
+    description: Keep retention on RAM section S7 of RAM[n] when RAM section is switched off
+  - name: S8RETENTION
+    bit_range:
+    - 24
+    - 24
+    description: Keep retention on RAM section S8 of RAM[n] when RAM section is switched off
+  - name: S9RETENTION
+    bit_range:
+    - 25
+    - 25
+    description: Keep retention on RAM section S9 of RAM[n] when RAM section is switched off
+  - name: S10RETENTION
+    bit_range:
+    - 26
+    - 26
+    description: Keep retention on RAM section S10 of RAM[n] when RAM section is switched off
+  - name: S11RETENTION
+    bit_range:
+    - 27
+    - 27
+    description: Keep retention on RAM section S11 of RAM[n] when RAM section is switched off
+  - name: S12RETENTION
+    bit_range:
+    - 28
+    - 28
+    description: Keep retention on RAM section S12 of RAM[n] when RAM section is switched off
+  - name: S13RETENTION
+    bit_range:
+    - 29
+    - 29
+    description: Keep retention on RAM section S13 of RAM[n] when RAM section is switched off
+  - name: S14RETENTION
+    bit_range:
+    - 30
+    - 30
+    description: Keep retention on RAM section S14 of RAM[n] when RAM section is switched off
+  - name: S15RETENTION
+    bit_range:
+    - 31
+    - 31
+    description: Keep retention on RAM section S15 of RAM[n] when RAM section is switched off
+  side_effects: null
+- id: RAM5_POWERCLR
+  address_offset: 1624
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: S0POWER
+    bit_range:
+    - 0
+    - 0
+    description: Keep RAM section S0 of RAM[n] on or off in System ON mode
+  - name: S1POWER
+    bit_range:
+    - 1
+    - 1
+    description: Keep RAM section S1 of RAM[n] on or off in System ON mode
+  - name: S2POWER
+    bit_range:
+    - 2
+    - 2
+    description: Keep RAM section S2 of RAM[n] on or off in System ON mode
+  - name: S3POWER
+    bit_range:
+    - 3
+    - 3
+    description: Keep RAM section S3 of RAM[n] on or off in System ON mode
+  - name: S4POWER
+    bit_range:
+    - 4
+    - 4
+    description: Keep RAM section S4 of RAM[n] on or off in System ON mode
+  - name: S5POWER
+    bit_range:
+    - 5
+    - 5
+    description: Keep RAM section S5 of RAM[n] on or off in System ON mode
+  - name: S6POWER
+    bit_range:
+    - 6
+    - 6
+    description: Keep RAM section S6 of RAM[n] on or off in System ON mode
+  - name: S7POWER
+    bit_range:
+    - 7
+    - 7
+    description: Keep RAM section S7 of RAM[n] on or off in System ON mode
+  - name: S8POWER
+    bit_range:
+    - 8
+    - 8
+    description: Keep RAM section S8 of RAM[n] on or off in System ON mode
+  - name: S9POWER
+    bit_range:
+    - 9
+    - 9
+    description: Keep RAM section S9 of RAM[n] on or off in System ON mode
+  - name: S10POWER
+    bit_range:
+    - 10
+    - 10
+    description: Keep RAM section S10 of RAM[n] on or off in System ON mode
+  - name: S11POWER
+    bit_range:
+    - 11
+    - 11
+    description: Keep RAM section S11 of RAM[n] on or off in System ON mode
+  - name: S12POWER
+    bit_range:
+    - 12
+    - 12
+    description: Keep RAM section S12 of RAM[n] on or off in System ON mode
+  - name: S13POWER
+    bit_range:
+    - 13
+    - 13
+    description: Keep RAM section S13 of RAM[n] on or off in System ON mode
+  - name: S14POWER
+    bit_range:
+    - 14
+    - 14
+    description: Keep RAM section S14 of RAM[n] on or off in System ON mode
+  - name: S15POWER
+    bit_range:
+    - 15
+    - 15
+    description: Keep RAM section S15 of RAM[n] on or off in System ON mode
+  - name: S0RETENTION
+    bit_range:
+    - 16
+    - 16
+    description: Keep retention on RAM section S0 of RAM[n] when RAM section is switched off
+  - name: S1RETENTION
+    bit_range:
+    - 17
+    - 17
+    description: Keep retention on RAM section S1 of RAM[n] when RAM section is switched off
+  - name: S2RETENTION
+    bit_range:
+    - 18
+    - 18
+    description: Keep retention on RAM section S2 of RAM[n] when RAM section is switched off
+  - name: S3RETENTION
+    bit_range:
+    - 19
+    - 19
+    description: Keep retention on RAM section S3 of RAM[n] when RAM section is switched off
+  - name: S4RETENTION
+    bit_range:
+    - 20
+    - 20
+    description: Keep retention on RAM section S4 of RAM[n] when RAM section is switched off
+  - name: S5RETENTION
+    bit_range:
+    - 21
+    - 21
+    description: Keep retention on RAM section S5 of RAM[n] when RAM section is switched off
+  - name: S6RETENTION
+    bit_range:
+    - 22
+    - 22
+    description: Keep retention on RAM section S6 of RAM[n] when RAM section is switched off
+  - name: S7RETENTION
+    bit_range:
+    - 23
+    - 23
+    description: Keep retention on RAM section S7 of RAM[n] when RAM section is switched off
+  - name: S8RETENTION
+    bit_range:
+    - 24
+    - 24
+    description: Keep retention on RAM section S8 of RAM[n] when RAM section is switched off
+  - name: S9RETENTION
+    bit_range:
+    - 25
+    - 25
+    description: Keep retention on RAM section S9 of RAM[n] when RAM section is switched off
+  - name: S10RETENTION
+    bit_range:
+    - 26
+    - 26
+    description: Keep retention on RAM section S10 of RAM[n] when RAM section is switched off
+  - name: S11RETENTION
+    bit_range:
+    - 27
+    - 27
+    description: Keep retention on RAM section S11 of RAM[n] when RAM section is switched off
+  - name: S12RETENTION
+    bit_range:
+    - 28
+    - 28
+    description: Keep retention on RAM section S12 of RAM[n] when RAM section is switched off
+  - name: S13RETENTION
+    bit_range:
+    - 29
+    - 29
+    description: Keep retention on RAM section S13 of RAM[n] when RAM section is switched off
+  - name: S14RETENTION
+    bit_range:
+    - 30
+    - 30
+    description: Keep retention on RAM section S14 of RAM[n] when RAM section is switched off
+  - name: S15RETENTION
+    bit_range:
+    - 31
+    - 31
+    description: Keep retention on RAM section S15 of RAM[n] when RAM section is switched off
+  side_effects: null
+- id: RAM6_POWER
+  address_offset: 1632
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: S0POWER
+    bit_range:
+    - 0
+    - 0
+    description: Keep RAM section S0 of RAM[n] on or off in System ON mode
+  - name: S1POWER
+    bit_range:
+    - 1
+    - 1
+    description: Keep RAM section S1 of RAM[n] on or off in System ON mode
+  - name: S2POWER
+    bit_range:
+    - 2
+    - 2
+    description: Keep RAM section S2 of RAM[n] on or off in System ON mode
+  - name: S3POWER
+    bit_range:
+    - 3
+    - 3
+    description: Keep RAM section S3 of RAM[n] on or off in System ON mode
+  - name: S4POWER
+    bit_range:
+    - 4
+    - 4
+    description: Keep RAM section S4 of RAM[n] on or off in System ON mode
+  - name: S5POWER
+    bit_range:
+    - 5
+    - 5
+    description: Keep RAM section S5 of RAM[n] on or off in System ON mode
+  - name: S6POWER
+    bit_range:
+    - 6
+    - 6
+    description: Keep RAM section S6 of RAM[n] on or off in System ON mode
+  - name: S7POWER
+    bit_range:
+    - 7
+    - 7
+    description: Keep RAM section S7 of RAM[n] on or off in System ON mode
+  - name: S8POWER
+    bit_range:
+    - 8
+    - 8
+    description: Keep RAM section S8 of RAM[n] on or off in System ON mode
+  - name: S9POWER
+    bit_range:
+    - 9
+    - 9
+    description: Keep RAM section S9 of RAM[n] on or off in System ON mode
+  - name: S10POWER
+    bit_range:
+    - 10
+    - 10
+    description: Keep RAM section S10 of RAM[n] on or off in System ON mode
+  - name: S11POWER
+    bit_range:
+    - 11
+    - 11
+    description: Keep RAM section S11 of RAM[n] on or off in System ON mode
+  - name: S12POWER
+    bit_range:
+    - 12
+    - 12
+    description: Keep RAM section S12 of RAM[n] on or off in System ON mode
+  - name: S13POWER
+    bit_range:
+    - 13
+    - 13
+    description: Keep RAM section S13 of RAM[n] on or off in System ON mode
+  - name: S14POWER
+    bit_range:
+    - 14
+    - 14
+    description: Keep RAM section S14 of RAM[n] on or off in System ON mode
+  - name: S15POWER
+    bit_range:
+    - 15
+    - 15
+    description: Keep RAM section S15 of RAM[n] on or off in System ON mode
+  - name: S0RETENTION
+    bit_range:
+    - 16
+    - 16
+    description: Keep retention on RAM section S0 of RAM[n] when RAM section is switched off
+  - name: S1RETENTION
+    bit_range:
+    - 17
+    - 17
+    description: Keep retention on RAM section S1 of RAM[n] when RAM section is switched off
+  - name: S2RETENTION
+    bit_range:
+    - 18
+    - 18
+    description: Keep retention on RAM section S2 of RAM[n] when RAM section is switched off
+  - name: S3RETENTION
+    bit_range:
+    - 19
+    - 19
+    description: Keep retention on RAM section S3 of RAM[n] when RAM section is switched off
+  - name: S4RETENTION
+    bit_range:
+    - 20
+    - 20
+    description: Keep retention on RAM section S4 of RAM[n] when RAM section is switched off
+  - name: S5RETENTION
+    bit_range:
+    - 21
+    - 21
+    description: Keep retention on RAM section S5 of RAM[n] when RAM section is switched off
+  - name: S6RETENTION
+    bit_range:
+    - 22
+    - 22
+    description: Keep retention on RAM section S6 of RAM[n] when RAM section is switched off
+  - name: S7RETENTION
+    bit_range:
+    - 23
+    - 23
+    description: Keep retention on RAM section S7 of RAM[n] when RAM section is switched off
+  - name: S8RETENTION
+    bit_range:
+    - 24
+    - 24
+    description: Keep retention on RAM section S8 of RAM[n] when RAM section is switched off
+  - name: S9RETENTION
+    bit_range:
+    - 25
+    - 25
+    description: Keep retention on RAM section S9 of RAM[n] when RAM section is switched off
+  - name: S10RETENTION
+    bit_range:
+    - 26
+    - 26
+    description: Keep retention on RAM section S10 of RAM[n] when RAM section is switched off
+  - name: S11RETENTION
+    bit_range:
+    - 27
+    - 27
+    description: Keep retention on RAM section S11 of RAM[n] when RAM section is switched off
+  - name: S12RETENTION
+    bit_range:
+    - 28
+    - 28
+    description: Keep retention on RAM section S12 of RAM[n] when RAM section is switched off
+  - name: S13RETENTION
+    bit_range:
+    - 29
+    - 29
+    description: Keep retention on RAM section S13 of RAM[n] when RAM section is switched off
+  - name: S14RETENTION
+    bit_range:
+    - 30
+    - 30
+    description: Keep retention on RAM section S14 of RAM[n] when RAM section is switched off
+  - name: S15RETENTION
+    bit_range:
+    - 31
+    - 31
+    description: Keep retention on RAM section S15 of RAM[n] when RAM section is switched off
+  side_effects: null
+- id: RAM6_POWERSET
+  address_offset: 1636
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: S0POWER
+    bit_range:
+    - 0
+    - 0
+    description: Keep RAM section S0 of RAM[n] on or off in System ON mode
+  - name: S1POWER
+    bit_range:
+    - 1
+    - 1
+    description: Keep RAM section S1 of RAM[n] on or off in System ON mode
+  - name: S2POWER
+    bit_range:
+    - 2
+    - 2
+    description: Keep RAM section S2 of RAM[n] on or off in System ON mode
+  - name: S3POWER
+    bit_range:
+    - 3
+    - 3
+    description: Keep RAM section S3 of RAM[n] on or off in System ON mode
+  - name: S4POWER
+    bit_range:
+    - 4
+    - 4
+    description: Keep RAM section S4 of RAM[n] on or off in System ON mode
+  - name: S5POWER
+    bit_range:
+    - 5
+    - 5
+    description: Keep RAM section S5 of RAM[n] on or off in System ON mode
+  - name: S6POWER
+    bit_range:
+    - 6
+    - 6
+    description: Keep RAM section S6 of RAM[n] on or off in System ON mode
+  - name: S7POWER
+    bit_range:
+    - 7
+    - 7
+    description: Keep RAM section S7 of RAM[n] on or off in System ON mode
+  - name: S8POWER
+    bit_range:
+    - 8
+    - 8
+    description: Keep RAM section S8 of RAM[n] on or off in System ON mode
+  - name: S9POWER
+    bit_range:
+    - 9
+    - 9
+    description: Keep RAM section S9 of RAM[n] on or off in System ON mode
+  - name: S10POWER
+    bit_range:
+    - 10
+    - 10
+    description: Keep RAM section S10 of RAM[n] on or off in System ON mode
+  - name: S11POWER
+    bit_range:
+    - 11
+    - 11
+    description: Keep RAM section S11 of RAM[n] on or off in System ON mode
+  - name: S12POWER
+    bit_range:
+    - 12
+    - 12
+    description: Keep RAM section S12 of RAM[n] on or off in System ON mode
+  - name: S13POWER
+    bit_range:
+    - 13
+    - 13
+    description: Keep RAM section S13 of RAM[n] on or off in System ON mode
+  - name: S14POWER
+    bit_range:
+    - 14
+    - 14
+    description: Keep RAM section S14 of RAM[n] on or off in System ON mode
+  - name: S15POWER
+    bit_range:
+    - 15
+    - 15
+    description: Keep RAM section S15 of RAM[n] on or off in System ON mode
+  - name: S0RETENTION
+    bit_range:
+    - 16
+    - 16
+    description: Keep retention on RAM section S0 of RAM[n] when RAM section is switched off
+  - name: S1RETENTION
+    bit_range:
+    - 17
+    - 17
+    description: Keep retention on RAM section S1 of RAM[n] when RAM section is switched off
+  - name: S2RETENTION
+    bit_range:
+    - 18
+    - 18
+    description: Keep retention on RAM section S2 of RAM[n] when RAM section is switched off
+  - name: S3RETENTION
+    bit_range:
+    - 19
+    - 19
+    description: Keep retention on RAM section S3 of RAM[n] when RAM section is switched off
+  - name: S4RETENTION
+    bit_range:
+    - 20
+    - 20
+    description: Keep retention on RAM section S4 of RAM[n] when RAM section is switched off
+  - name: S5RETENTION
+    bit_range:
+    - 21
+    - 21
+    description: Keep retention on RAM section S5 of RAM[n] when RAM section is switched off
+  - name: S6RETENTION
+    bit_range:
+    - 22
+    - 22
+    description: Keep retention on RAM section S6 of RAM[n] when RAM section is switched off
+  - name: S7RETENTION
+    bit_range:
+    - 23
+    - 23
+    description: Keep retention on RAM section S7 of RAM[n] when RAM section is switched off
+  - name: S8RETENTION
+    bit_range:
+    - 24
+    - 24
+    description: Keep retention on RAM section S8 of RAM[n] when RAM section is switched off
+  - name: S9RETENTION
+    bit_range:
+    - 25
+    - 25
+    description: Keep retention on RAM section S9 of RAM[n] when RAM section is switched off
+  - name: S10RETENTION
+    bit_range:
+    - 26
+    - 26
+    description: Keep retention on RAM section S10 of RAM[n] when RAM section is switched off
+  - name: S11RETENTION
+    bit_range:
+    - 27
+    - 27
+    description: Keep retention on RAM section S11 of RAM[n] when RAM section is switched off
+  - name: S12RETENTION
+    bit_range:
+    - 28
+    - 28
+    description: Keep retention on RAM section S12 of RAM[n] when RAM section is switched off
+  - name: S13RETENTION
+    bit_range:
+    - 29
+    - 29
+    description: Keep retention on RAM section S13 of RAM[n] when RAM section is switched off
+  - name: S14RETENTION
+    bit_range:
+    - 30
+    - 30
+    description: Keep retention on RAM section S14 of RAM[n] when RAM section is switched off
+  - name: S15RETENTION
+    bit_range:
+    - 31
+    - 31
+    description: Keep retention on RAM section S15 of RAM[n] when RAM section is switched off
+  side_effects: null
+- id: RAM6_POWERCLR
+  address_offset: 1640
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: S0POWER
+    bit_range:
+    - 0
+    - 0
+    description: Keep RAM section S0 of RAM[n] on or off in System ON mode
+  - name: S1POWER
+    bit_range:
+    - 1
+    - 1
+    description: Keep RAM section S1 of RAM[n] on or off in System ON mode
+  - name: S2POWER
+    bit_range:
+    - 2
+    - 2
+    description: Keep RAM section S2 of RAM[n] on or off in System ON mode
+  - name: S3POWER
+    bit_range:
+    - 3
+    - 3
+    description: Keep RAM section S3 of RAM[n] on or off in System ON mode
+  - name: S4POWER
+    bit_range:
+    - 4
+    - 4
+    description: Keep RAM section S4 of RAM[n] on or off in System ON mode
+  - name: S5POWER
+    bit_range:
+    - 5
+    - 5
+    description: Keep RAM section S5 of RAM[n] on or off in System ON mode
+  - name: S6POWER
+    bit_range:
+    - 6
+    - 6
+    description: Keep RAM section S6 of RAM[n] on or off in System ON mode
+  - name: S7POWER
+    bit_range:
+    - 7
+    - 7
+    description: Keep RAM section S7 of RAM[n] on or off in System ON mode
+  - name: S8POWER
+    bit_range:
+    - 8
+    - 8
+    description: Keep RAM section S8 of RAM[n] on or off in System ON mode
+  - name: S9POWER
+    bit_range:
+    - 9
+    - 9
+    description: Keep RAM section S9 of RAM[n] on or off in System ON mode
+  - name: S10POWER
+    bit_range:
+    - 10
+    - 10
+    description: Keep RAM section S10 of RAM[n] on or off in System ON mode
+  - name: S11POWER
+    bit_range:
+    - 11
+    - 11
+    description: Keep RAM section S11 of RAM[n] on or off in System ON mode
+  - name: S12POWER
+    bit_range:
+    - 12
+    - 12
+    description: Keep RAM section S12 of RAM[n] on or off in System ON mode
+  - name: S13POWER
+    bit_range:
+    - 13
+    - 13
+    description: Keep RAM section S13 of RAM[n] on or off in System ON mode
+  - name: S14POWER
+    bit_range:
+    - 14
+    - 14
+    description: Keep RAM section S14 of RAM[n] on or off in System ON mode
+  - name: S15POWER
+    bit_range:
+    - 15
+    - 15
+    description: Keep RAM section S15 of RAM[n] on or off in System ON mode
+  - name: S0RETENTION
+    bit_range:
+    - 16
+    - 16
+    description: Keep retention on RAM section S0 of RAM[n] when RAM section is switched off
+  - name: S1RETENTION
+    bit_range:
+    - 17
+    - 17
+    description: Keep retention on RAM section S1 of RAM[n] when RAM section is switched off
+  - name: S2RETENTION
+    bit_range:
+    - 18
+    - 18
+    description: Keep retention on RAM section S2 of RAM[n] when RAM section is switched off
+  - name: S3RETENTION
+    bit_range:
+    - 19
+    - 19
+    description: Keep retention on RAM section S3 of RAM[n] when RAM section is switched off
+  - name: S4RETENTION
+    bit_range:
+    - 20
+    - 20
+    description: Keep retention on RAM section S4 of RAM[n] when RAM section is switched off
+  - name: S5RETENTION
+    bit_range:
+    - 21
+    - 21
+    description: Keep retention on RAM section S5 of RAM[n] when RAM section is switched off
+  - name: S6RETENTION
+    bit_range:
+    - 22
+    - 22
+    description: Keep retention on RAM section S6 of RAM[n] when RAM section is switched off
+  - name: S7RETENTION
+    bit_range:
+    - 23
+    - 23
+    description: Keep retention on RAM section S7 of RAM[n] when RAM section is switched off
+  - name: S8RETENTION
+    bit_range:
+    - 24
+    - 24
+    description: Keep retention on RAM section S8 of RAM[n] when RAM section is switched off
+  - name: S9RETENTION
+    bit_range:
+    - 25
+    - 25
+    description: Keep retention on RAM section S9 of RAM[n] when RAM section is switched off
+  - name: S10RETENTION
+    bit_range:
+    - 26
+    - 26
+    description: Keep retention on RAM section S10 of RAM[n] when RAM section is switched off
+  - name: S11RETENTION
+    bit_range:
+    - 27
+    - 27
+    description: Keep retention on RAM section S11 of RAM[n] when RAM section is switched off
+  - name: S12RETENTION
+    bit_range:
+    - 28
+    - 28
+    description: Keep retention on RAM section S12 of RAM[n] when RAM section is switched off
+  - name: S13RETENTION
+    bit_range:
+    - 29
+    - 29
+    description: Keep retention on RAM section S13 of RAM[n] when RAM section is switched off
+  - name: S14RETENTION
+    bit_range:
+    - 30
+    - 30
+    description: Keep retention on RAM section S14 of RAM[n] when RAM section is switched off
+  - name: S15RETENTION
+    bit_range:
+    - 31
+    - 31
+    description: Keep retention on RAM section S15 of RAM[n] when RAM section is switched off
+  side_effects: null
+- id: RAM7_POWER
+  address_offset: 1648
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: S0POWER
+    bit_range:
+    - 0
+    - 0
+    description: Keep RAM section S0 of RAM[n] on or off in System ON mode
+  - name: S1POWER
+    bit_range:
+    - 1
+    - 1
+    description: Keep RAM section S1 of RAM[n] on or off in System ON mode
+  - name: S2POWER
+    bit_range:
+    - 2
+    - 2
+    description: Keep RAM section S2 of RAM[n] on or off in System ON mode
+  - name: S3POWER
+    bit_range:
+    - 3
+    - 3
+    description: Keep RAM section S3 of RAM[n] on or off in System ON mode
+  - name: S4POWER
+    bit_range:
+    - 4
+    - 4
+    description: Keep RAM section S4 of RAM[n] on or off in System ON mode
+  - name: S5POWER
+    bit_range:
+    - 5
+    - 5
+    description: Keep RAM section S5 of RAM[n] on or off in System ON mode
+  - name: S6POWER
+    bit_range:
+    - 6
+    - 6
+    description: Keep RAM section S6 of RAM[n] on or off in System ON mode
+  - name: S7POWER
+    bit_range:
+    - 7
+    - 7
+    description: Keep RAM section S7 of RAM[n] on or off in System ON mode
+  - name: S8POWER
+    bit_range:
+    - 8
+    - 8
+    description: Keep RAM section S8 of RAM[n] on or off in System ON mode
+  - name: S9POWER
+    bit_range:
+    - 9
+    - 9
+    description: Keep RAM section S9 of RAM[n] on or off in System ON mode
+  - name: S10POWER
+    bit_range:
+    - 10
+    - 10
+    description: Keep RAM section S10 of RAM[n] on or off in System ON mode
+  - name: S11POWER
+    bit_range:
+    - 11
+    - 11
+    description: Keep RAM section S11 of RAM[n] on or off in System ON mode
+  - name: S12POWER
+    bit_range:
+    - 12
+    - 12
+    description: Keep RAM section S12 of RAM[n] on or off in System ON mode
+  - name: S13POWER
+    bit_range:
+    - 13
+    - 13
+    description: Keep RAM section S13 of RAM[n] on or off in System ON mode
+  - name: S14POWER
+    bit_range:
+    - 14
+    - 14
+    description: Keep RAM section S14 of RAM[n] on or off in System ON mode
+  - name: S15POWER
+    bit_range:
+    - 15
+    - 15
+    description: Keep RAM section S15 of RAM[n] on or off in System ON mode
+  - name: S0RETENTION
+    bit_range:
+    - 16
+    - 16
+    description: Keep retention on RAM section S0 of RAM[n] when RAM section is switched off
+  - name: S1RETENTION
+    bit_range:
+    - 17
+    - 17
+    description: Keep retention on RAM section S1 of RAM[n] when RAM section is switched off
+  - name: S2RETENTION
+    bit_range:
+    - 18
+    - 18
+    description: Keep retention on RAM section S2 of RAM[n] when RAM section is switched off
+  - name: S3RETENTION
+    bit_range:
+    - 19
+    - 19
+    description: Keep retention on RAM section S3 of RAM[n] when RAM section is switched off
+  - name: S4RETENTION
+    bit_range:
+    - 20
+    - 20
+    description: Keep retention on RAM section S4 of RAM[n] when RAM section is switched off
+  - name: S5RETENTION
+    bit_range:
+    - 21
+    - 21
+    description: Keep retention on RAM section S5 of RAM[n] when RAM section is switched off
+  - name: S6RETENTION
+    bit_range:
+    - 22
+    - 22
+    description: Keep retention on RAM section S6 of RAM[n] when RAM section is switched off
+  - name: S7RETENTION
+    bit_range:
+    - 23
+    - 23
+    description: Keep retention on RAM section S7 of RAM[n] when RAM section is switched off
+  - name: S8RETENTION
+    bit_range:
+    - 24
+    - 24
+    description: Keep retention on RAM section S8 of RAM[n] when RAM section is switched off
+  - name: S9RETENTION
+    bit_range:
+    - 25
+    - 25
+    description: Keep retention on RAM section S9 of RAM[n] when RAM section is switched off
+  - name: S10RETENTION
+    bit_range:
+    - 26
+    - 26
+    description: Keep retention on RAM section S10 of RAM[n] when RAM section is switched off
+  - name: S11RETENTION
+    bit_range:
+    - 27
+    - 27
+    description: Keep retention on RAM section S11 of RAM[n] when RAM section is switched off
+  - name: S12RETENTION
+    bit_range:
+    - 28
+    - 28
+    description: Keep retention on RAM section S12 of RAM[n] when RAM section is switched off
+  - name: S13RETENTION
+    bit_range:
+    - 29
+    - 29
+    description: Keep retention on RAM section S13 of RAM[n] when RAM section is switched off
+  - name: S14RETENTION
+    bit_range:
+    - 30
+    - 30
+    description: Keep retention on RAM section S14 of RAM[n] when RAM section is switched off
+  - name: S15RETENTION
+    bit_range:
+    - 31
+    - 31
+    description: Keep retention on RAM section S15 of RAM[n] when RAM section is switched off
+  side_effects: null
+- id: RAM7_POWERSET
+  address_offset: 1652
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: S0POWER
+    bit_range:
+    - 0
+    - 0
+    description: Keep RAM section S0 of RAM[n] on or off in System ON mode
+  - name: S1POWER
+    bit_range:
+    - 1
+    - 1
+    description: Keep RAM section S1 of RAM[n] on or off in System ON mode
+  - name: S2POWER
+    bit_range:
+    - 2
+    - 2
+    description: Keep RAM section S2 of RAM[n] on or off in System ON mode
+  - name: S3POWER
+    bit_range:
+    - 3
+    - 3
+    description: Keep RAM section S3 of RAM[n] on or off in System ON mode
+  - name: S4POWER
+    bit_range:
+    - 4
+    - 4
+    description: Keep RAM section S4 of RAM[n] on or off in System ON mode
+  - name: S5POWER
+    bit_range:
+    - 5
+    - 5
+    description: Keep RAM section S5 of RAM[n] on or off in System ON mode
+  - name: S6POWER
+    bit_range:
+    - 6
+    - 6
+    description: Keep RAM section S6 of RAM[n] on or off in System ON mode
+  - name: S7POWER
+    bit_range:
+    - 7
+    - 7
+    description: Keep RAM section S7 of RAM[n] on or off in System ON mode
+  - name: S8POWER
+    bit_range:
+    - 8
+    - 8
+    description: Keep RAM section S8 of RAM[n] on or off in System ON mode
+  - name: S9POWER
+    bit_range:
+    - 9
+    - 9
+    description: Keep RAM section S9 of RAM[n] on or off in System ON mode
+  - name: S10POWER
+    bit_range:
+    - 10
+    - 10
+    description: Keep RAM section S10 of RAM[n] on or off in System ON mode
+  - name: S11POWER
+    bit_range:
+    - 11
+    - 11
+    description: Keep RAM section S11 of RAM[n] on or off in System ON mode
+  - name: S12POWER
+    bit_range:
+    - 12
+    - 12
+    description: Keep RAM section S12 of RAM[n] on or off in System ON mode
+  - name: S13POWER
+    bit_range:
+    - 13
+    - 13
+    description: Keep RAM section S13 of RAM[n] on or off in System ON mode
+  - name: S14POWER
+    bit_range:
+    - 14
+    - 14
+    description: Keep RAM section S14 of RAM[n] on or off in System ON mode
+  - name: S15POWER
+    bit_range:
+    - 15
+    - 15
+    description: Keep RAM section S15 of RAM[n] on or off in System ON mode
+  - name: S0RETENTION
+    bit_range:
+    - 16
+    - 16
+    description: Keep retention on RAM section S0 of RAM[n] when RAM section is switched off
+  - name: S1RETENTION
+    bit_range:
+    - 17
+    - 17
+    description: Keep retention on RAM section S1 of RAM[n] when RAM section is switched off
+  - name: S2RETENTION
+    bit_range:
+    - 18
+    - 18
+    description: Keep retention on RAM section S2 of RAM[n] when RAM section is switched off
+  - name: S3RETENTION
+    bit_range:
+    - 19
+    - 19
+    description: Keep retention on RAM section S3 of RAM[n] when RAM section is switched off
+  - name: S4RETENTION
+    bit_range:
+    - 20
+    - 20
+    description: Keep retention on RAM section S4 of RAM[n] when RAM section is switched off
+  - name: S5RETENTION
+    bit_range:
+    - 21
+    - 21
+    description: Keep retention on RAM section S5 of RAM[n] when RAM section is switched off
+  - name: S6RETENTION
+    bit_range:
+    - 22
+    - 22
+    description: Keep retention on RAM section S6 of RAM[n] when RAM section is switched off
+  - name: S7RETENTION
+    bit_range:
+    - 23
+    - 23
+    description: Keep retention on RAM section S7 of RAM[n] when RAM section is switched off
+  - name: S8RETENTION
+    bit_range:
+    - 24
+    - 24
+    description: Keep retention on RAM section S8 of RAM[n] when RAM section is switched off
+  - name: S9RETENTION
+    bit_range:
+    - 25
+    - 25
+    description: Keep retention on RAM section S9 of RAM[n] when RAM section is switched off
+  - name: S10RETENTION
+    bit_range:
+    - 26
+    - 26
+    description: Keep retention on RAM section S10 of RAM[n] when RAM section is switched off
+  - name: S11RETENTION
+    bit_range:
+    - 27
+    - 27
+    description: Keep retention on RAM section S11 of RAM[n] when RAM section is switched off
+  - name: S12RETENTION
+    bit_range:
+    - 28
+    - 28
+    description: Keep retention on RAM section S12 of RAM[n] when RAM section is switched off
+  - name: S13RETENTION
+    bit_range:
+    - 29
+    - 29
+    description: Keep retention on RAM section S13 of RAM[n] when RAM section is switched off
+  - name: S14RETENTION
+    bit_range:
+    - 30
+    - 30
+    description: Keep retention on RAM section S14 of RAM[n] when RAM section is switched off
+  - name: S15RETENTION
+    bit_range:
+    - 31
+    - 31
+    description: Keep retention on RAM section S15 of RAM[n] when RAM section is switched off
+  side_effects: null
+- id: RAM7_POWERCLR
+  address_offset: 1656
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: S0POWER
+    bit_range:
+    - 0
+    - 0
+    description: Keep RAM section S0 of RAM[n] on or off in System ON mode
+  - name: S1POWER
+    bit_range:
+    - 1
+    - 1
+    description: Keep RAM section S1 of RAM[n] on or off in System ON mode
+  - name: S2POWER
+    bit_range:
+    - 2
+    - 2
+    description: Keep RAM section S2 of RAM[n] on or off in System ON mode
+  - name: S3POWER
+    bit_range:
+    - 3
+    - 3
+    description: Keep RAM section S3 of RAM[n] on or off in System ON mode
+  - name: S4POWER
+    bit_range:
+    - 4
+    - 4
+    description: Keep RAM section S4 of RAM[n] on or off in System ON mode
+  - name: S5POWER
+    bit_range:
+    - 5
+    - 5
+    description: Keep RAM section S5 of RAM[n] on or off in System ON mode
+  - name: S6POWER
+    bit_range:
+    - 6
+    - 6
+    description: Keep RAM section S6 of RAM[n] on or off in System ON mode
+  - name: S7POWER
+    bit_range:
+    - 7
+    - 7
+    description: Keep RAM section S7 of RAM[n] on or off in System ON mode
+  - name: S8POWER
+    bit_range:
+    - 8
+    - 8
+    description: Keep RAM section S8 of RAM[n] on or off in System ON mode
+  - name: S9POWER
+    bit_range:
+    - 9
+    - 9
+    description: Keep RAM section S9 of RAM[n] on or off in System ON mode
+  - name: S10POWER
+    bit_range:
+    - 10
+    - 10
+    description: Keep RAM section S10 of RAM[n] on or off in System ON mode
+  - name: S11POWER
+    bit_range:
+    - 11
+    - 11
+    description: Keep RAM section S11 of RAM[n] on or off in System ON mode
+  - name: S12POWER
+    bit_range:
+    - 12
+    - 12
+    description: Keep RAM section S12 of RAM[n] on or off in System ON mode
+  - name: S13POWER
+    bit_range:
+    - 13
+    - 13
+    description: Keep RAM section S13 of RAM[n] on or off in System ON mode
+  - name: S14POWER
+    bit_range:
+    - 14
+    - 14
+    description: Keep RAM section S14 of RAM[n] on or off in System ON mode
+  - name: S15POWER
+    bit_range:
+    - 15
+    - 15
+    description: Keep RAM section S15 of RAM[n] on or off in System ON mode
+  - name: S0RETENTION
+    bit_range:
+    - 16
+    - 16
+    description: Keep retention on RAM section S0 of RAM[n] when RAM section is switched off
+  - name: S1RETENTION
+    bit_range:
+    - 17
+    - 17
+    description: Keep retention on RAM section S1 of RAM[n] when RAM section is switched off
+  - name: S2RETENTION
+    bit_range:
+    - 18
+    - 18
+    description: Keep retention on RAM section S2 of RAM[n] when RAM section is switched off
+  - name: S3RETENTION
+    bit_range:
+    - 19
+    - 19
+    description: Keep retention on RAM section S3 of RAM[n] when RAM section is switched off
+  - name: S4RETENTION
+    bit_range:
+    - 20
+    - 20
+    description: Keep retention on RAM section S4 of RAM[n] when RAM section is switched off
+  - name: S5RETENTION
+    bit_range:
+    - 21
+    - 21
+    description: Keep retention on RAM section S5 of RAM[n] when RAM section is switched off
+  - name: S6RETENTION
+    bit_range:
+    - 22
+    - 22
+    description: Keep retention on RAM section S6 of RAM[n] when RAM section is switched off
+  - name: S7RETENTION
+    bit_range:
+    - 23
+    - 23
+    description: Keep retention on RAM section S7 of RAM[n] when RAM section is switched off
+  - name: S8RETENTION
+    bit_range:
+    - 24
+    - 24
+    description: Keep retention on RAM section S8 of RAM[n] when RAM section is switched off
+  - name: S9RETENTION
+    bit_range:
+    - 25
+    - 25
+    description: Keep retention on RAM section S9 of RAM[n] when RAM section is switched off
+  - name: S10RETENTION
+    bit_range:
+    - 26
+    - 26
+    description: Keep retention on RAM section S10 of RAM[n] when RAM section is switched off
+  - name: S11RETENTION
+    bit_range:
+    - 27
+    - 27
+    description: Keep retention on RAM section S11 of RAM[n] when RAM section is switched off
+  - name: S12RETENTION
+    bit_range:
+    - 28
+    - 28
+    description: Keep retention on RAM section S12 of RAM[n] when RAM section is switched off
+  - name: S13RETENTION
+    bit_range:
+    - 29
+    - 29
+    description: Keep retention on RAM section S13 of RAM[n] when RAM section is switched off
+  - name: S14RETENTION
+    bit_range:
+    - 30
+    - 30
+    description: Keep retention on RAM section S14 of RAM[n] when RAM section is switched off
+  - name: S15RETENTION
+    bit_range:
+    - 31
+    - 31
+    description: Keep retention on RAM section S15 of RAM[n] when RAM section is switched off
+  side_effects: null
+interrupts: null
+timing: null

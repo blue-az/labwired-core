@@ -1,0 +1,1481 @@
+peripheral: LCD
+version: 0.1.0
+registers:
+- id: CR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LCDEN
+    bit_range:
+    - 0
+    - 0
+    description: LCD controller enable
+  - name: VSEL
+    bit_range:
+    - 1
+    - 1
+    description: Voltage source selection
+  - name: DUTY
+    bit_range:
+    - 4
+    - 2
+    description: Duty selection
+  - name: BIAS
+    bit_range:
+    - 6
+    - 5
+    description: Bias selector
+  side_effects: null
+- id: FCR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HD
+    bit_range:
+    - 0
+    - 0
+    description: High drive enable
+  - name: SOFIE
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Start of frame interrupt
+                    enable
+  - name: UDDIE
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Update display done interrupt
+                    enable
+  - name: PON
+    bit_range:
+    - 6
+    - 4
+    description: Pulse ON duration
+  - name: DEAD
+    bit_range:
+    - 9
+    - 7
+    description: Dead time duration
+  - name: CC
+    bit_range:
+    - 12
+    - 10
+    description: Contrast control
+  - name: BLINKF
+    bit_range:
+    - 15
+    - 13
+    description: Blink frequency selection
+  - name: BLINK
+    bit_range:
+    - 17
+    - 16
+    description: Blink mode selection
+  - name: DIV
+    bit_range:
+    - 21
+    - 18
+    description: DIV clock divider
+  - name: PS
+    bit_range:
+    - 25
+    - 22
+    description: PS 16-bit prescaler
+  side_effects: null
+- id: SR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 32
+  fields:
+  - name: ENS
+    bit_range:
+    - 0
+    - 0
+    description: ENS
+  - name: SOF
+    bit_range:
+    - 1
+    - 1
+    description: Start of frame flag
+  - name: UDR
+    bit_range:
+    - 2
+    - 2
+    description: Update display request
+  - name: UDD
+    bit_range:
+    - 3
+    - 3
+    description: Update Display Done
+  - name: RDY
+    bit_range:
+    - 4
+    - 4
+    description: Ready flag
+  - name: FCRSF
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      LCD Frame Control Register
+                    Synchronization flag
+  side_effects: null
+- id: CLR
+  address_offset: 12
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: SOFC
+    bit_range:
+    - 1
+    - 1
+    description: Start of frame flag clear
+  - name: UDDC
+    bit_range:
+    - 3
+    - 3
+    description: Update display done clear
+  side_effects: null
+- id: RAM_COM0
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: S00
+    bit_range:
+    - 0
+    - 0
+    description: S00
+  - name: S01
+    bit_range:
+    - 1
+    - 1
+    description: S01
+  - name: S02
+    bit_range:
+    - 2
+    - 2
+    description: S02
+  - name: S03
+    bit_range:
+    - 3
+    - 3
+    description: S03
+  - name: S04
+    bit_range:
+    - 4
+    - 4
+    description: S04
+  - name: S05
+    bit_range:
+    - 5
+    - 5
+    description: S05
+  - name: S06
+    bit_range:
+    - 6
+    - 6
+    description: S06
+  - name: S07
+    bit_range:
+    - 7
+    - 7
+    description: S07
+  - name: S08
+    bit_range:
+    - 8
+    - 8
+    description: S08
+  - name: S09
+    bit_range:
+    - 9
+    - 9
+    description: S09
+  - name: S10
+    bit_range:
+    - 10
+    - 10
+    description: S10
+  - name: S11
+    bit_range:
+    - 11
+    - 11
+    description: S11
+  - name: S12
+    bit_range:
+    - 12
+    - 12
+    description: S12
+  - name: S13
+    bit_range:
+    - 13
+    - 13
+    description: S13
+  - name: S14
+    bit_range:
+    - 14
+    - 14
+    description: S14
+  - name: S15
+    bit_range:
+    - 15
+    - 15
+    description: S15
+  - name: S16
+    bit_range:
+    - 16
+    - 16
+    description: S16
+  - name: S17
+    bit_range:
+    - 17
+    - 17
+    description: S17
+  - name: S18
+    bit_range:
+    - 18
+    - 18
+    description: S18
+  - name: S19
+    bit_range:
+    - 19
+    - 19
+    description: S19
+  - name: S20
+    bit_range:
+    - 20
+    - 20
+    description: S20
+  - name: S21
+    bit_range:
+    - 21
+    - 21
+    description: S21
+  - name: S22
+    bit_range:
+    - 22
+    - 22
+    description: S22
+  - name: S23
+    bit_range:
+    - 23
+    - 23
+    description: S23
+  - name: S24
+    bit_range:
+    - 24
+    - 24
+    description: S24
+  - name: S25
+    bit_range:
+    - 25
+    - 25
+    description: S25
+  - name: S26
+    bit_range:
+    - 26
+    - 26
+    description: S26
+  - name: S27
+    bit_range:
+    - 27
+    - 27
+    description: S27
+  - name: S28
+    bit_range:
+    - 28
+    - 28
+    description: S28
+  - name: S29
+    bit_range:
+    - 29
+    - 29
+    description: S29
+  - name: S30
+    bit_range:
+    - 30
+    - 30
+    description: S30
+  side_effects: null
+- id: RAM_COM1
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: S00
+    bit_range:
+    - 0
+    - 0
+    description: S00
+  - name: S01
+    bit_range:
+    - 1
+    - 1
+    description: S01
+  - name: S02
+    bit_range:
+    - 2
+    - 2
+    description: S02
+  - name: S03
+    bit_range:
+    - 3
+    - 3
+    description: S03
+  - name: S04
+    bit_range:
+    - 4
+    - 4
+    description: S04
+  - name: S05
+    bit_range:
+    - 5
+    - 5
+    description: S05
+  - name: S06
+    bit_range:
+    - 6
+    - 6
+    description: S06
+  - name: S07
+    bit_range:
+    - 7
+    - 7
+    description: S07
+  - name: S08
+    bit_range:
+    - 8
+    - 8
+    description: S08
+  - name: S09
+    bit_range:
+    - 9
+    - 9
+    description: S09
+  - name: S10
+    bit_range:
+    - 10
+    - 10
+    description: S10
+  - name: S11
+    bit_range:
+    - 11
+    - 11
+    description: S11
+  - name: S12
+    bit_range:
+    - 12
+    - 12
+    description: S12
+  - name: S13
+    bit_range:
+    - 13
+    - 13
+    description: S13
+  - name: S14
+    bit_range:
+    - 14
+    - 14
+    description: S14
+  - name: S15
+    bit_range:
+    - 15
+    - 15
+    description: S15
+  - name: S16
+    bit_range:
+    - 16
+    - 16
+    description: S16
+  - name: S17
+    bit_range:
+    - 17
+    - 17
+    description: S17
+  - name: S18
+    bit_range:
+    - 18
+    - 18
+    description: S18
+  - name: S19
+    bit_range:
+    - 19
+    - 19
+    description: S19
+  - name: S20
+    bit_range:
+    - 20
+    - 20
+    description: S20
+  - name: S21
+    bit_range:
+    - 21
+    - 21
+    description: S21
+  - name: S22
+    bit_range:
+    - 22
+    - 22
+    description: S22
+  - name: S23
+    bit_range:
+    - 23
+    - 23
+    description: S23
+  - name: S24
+    bit_range:
+    - 24
+    - 24
+    description: S24
+  - name: S25
+    bit_range:
+    - 25
+    - 25
+    description: S25
+  - name: S26
+    bit_range:
+    - 26
+    - 26
+    description: S26
+  - name: S27
+    bit_range:
+    - 27
+    - 27
+    description: S27
+  - name: S28
+    bit_range:
+    - 28
+    - 28
+    description: S28
+  - name: S29
+    bit_range:
+    - 29
+    - 29
+    description: S29
+  - name: S30
+    bit_range:
+    - 30
+    - 30
+    description: S30
+  - name: S31
+    bit_range:
+    - 31
+    - 31
+    description: S31
+  side_effects: null
+- id: RAM_COM2
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: S00
+    bit_range:
+    - 0
+    - 0
+    description: S00
+  - name: S01
+    bit_range:
+    - 1
+    - 1
+    description: S01
+  - name: S02
+    bit_range:
+    - 2
+    - 2
+    description: S02
+  - name: S03
+    bit_range:
+    - 3
+    - 3
+    description: S03
+  - name: S04
+    bit_range:
+    - 4
+    - 4
+    description: S04
+  - name: S05
+    bit_range:
+    - 5
+    - 5
+    description: S05
+  - name: S06
+    bit_range:
+    - 6
+    - 6
+    description: S06
+  - name: S07
+    bit_range:
+    - 7
+    - 7
+    description: S07
+  - name: S08
+    bit_range:
+    - 8
+    - 8
+    description: S08
+  - name: S09
+    bit_range:
+    - 9
+    - 9
+    description: S09
+  - name: S10
+    bit_range:
+    - 10
+    - 10
+    description: S10
+  - name: S11
+    bit_range:
+    - 11
+    - 11
+    description: S11
+  - name: S12
+    bit_range:
+    - 12
+    - 12
+    description: S12
+  - name: S13
+    bit_range:
+    - 13
+    - 13
+    description: S13
+  - name: S14
+    bit_range:
+    - 14
+    - 14
+    description: S14
+  - name: S15
+    bit_range:
+    - 15
+    - 15
+    description: S15
+  - name: S16
+    bit_range:
+    - 16
+    - 16
+    description: S16
+  - name: S17
+    bit_range:
+    - 17
+    - 17
+    description: S17
+  - name: S18
+    bit_range:
+    - 18
+    - 18
+    description: S18
+  - name: S19
+    bit_range:
+    - 19
+    - 19
+    description: S19
+  - name: S20
+    bit_range:
+    - 20
+    - 20
+    description: S20
+  - name: S21
+    bit_range:
+    - 21
+    - 21
+    description: S21
+  - name: S22
+    bit_range:
+    - 22
+    - 22
+    description: S22
+  - name: S23
+    bit_range:
+    - 23
+    - 23
+    description: S23
+  - name: S24
+    bit_range:
+    - 24
+    - 24
+    description: S24
+  - name: S25
+    bit_range:
+    - 25
+    - 25
+    description: S25
+  - name: S26
+    bit_range:
+    - 26
+    - 26
+    description: S26
+  - name: S27
+    bit_range:
+    - 27
+    - 27
+    description: S27
+  - name: S28
+    bit_range:
+    - 28
+    - 28
+    description: S28
+  - name: S29
+    bit_range:
+    - 29
+    - 29
+    description: S29
+  - name: S30
+    bit_range:
+    - 30
+    - 30
+    description: S30
+  - name: S31
+    bit_range:
+    - 31
+    - 31
+    description: S31
+  side_effects: null
+- id: RAM_COM3
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: S00
+    bit_range:
+    - 0
+    - 0
+    description: S00
+  - name: S01
+    bit_range:
+    - 1
+    - 1
+    description: S01
+  - name: S02
+    bit_range:
+    - 2
+    - 2
+    description: S02
+  - name: S03
+    bit_range:
+    - 3
+    - 3
+    description: S03
+  - name: S04
+    bit_range:
+    - 4
+    - 4
+    description: S04
+  - name: S05
+    bit_range:
+    - 5
+    - 5
+    description: S05
+  - name: S06
+    bit_range:
+    - 6
+    - 6
+    description: S06
+  - name: S07
+    bit_range:
+    - 7
+    - 7
+    description: S07
+  - name: S08
+    bit_range:
+    - 8
+    - 8
+    description: S08
+  - name: S09
+    bit_range:
+    - 9
+    - 9
+    description: S09
+  - name: S10
+    bit_range:
+    - 10
+    - 10
+    description: S10
+  - name: S11
+    bit_range:
+    - 11
+    - 11
+    description: S11
+  - name: S12
+    bit_range:
+    - 12
+    - 12
+    description: S12
+  - name: S13
+    bit_range:
+    - 13
+    - 13
+    description: S13
+  - name: S14
+    bit_range:
+    - 14
+    - 14
+    description: S14
+  - name: S15
+    bit_range:
+    - 15
+    - 15
+    description: S15
+  - name: S16
+    bit_range:
+    - 16
+    - 16
+    description: S16
+  - name: S17
+    bit_range:
+    - 17
+    - 17
+    description: S17
+  - name: S18
+    bit_range:
+    - 18
+    - 18
+    description: S18
+  - name: S19
+    bit_range:
+    - 19
+    - 19
+    description: S19
+  - name: S20
+    bit_range:
+    - 20
+    - 20
+    description: S20
+  - name: S21
+    bit_range:
+    - 21
+    - 21
+    description: S21
+  - name: S22
+    bit_range:
+    - 22
+    - 22
+    description: S22
+  - name: S23
+    bit_range:
+    - 23
+    - 23
+    description: S23
+  - name: S24
+    bit_range:
+    - 24
+    - 24
+    description: S24
+  - name: S25
+    bit_range:
+    - 25
+    - 25
+    description: S25
+  - name: S26
+    bit_range:
+    - 26
+    - 26
+    description: S26
+  - name: S27
+    bit_range:
+    - 27
+    - 27
+    description: S27
+  - name: S28
+    bit_range:
+    - 28
+    - 28
+    description: S28
+  - name: S29
+    bit_range:
+    - 29
+    - 29
+    description: S29
+  - name: S30
+    bit_range:
+    - 30
+    - 30
+    description: S30
+  - name: S31
+    bit_range:
+    - 31
+    - 31
+    description: S31
+  side_effects: null
+- id: RAM_COM4
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: S00
+    bit_range:
+    - 0
+    - 0
+    description: S00
+  - name: S01
+    bit_range:
+    - 1
+    - 1
+    description: S01
+  - name: S02
+    bit_range:
+    - 2
+    - 2
+    description: S02
+  - name: S03
+    bit_range:
+    - 3
+    - 3
+    description: S03
+  - name: S04
+    bit_range:
+    - 4
+    - 4
+    description: S04
+  - name: S05
+    bit_range:
+    - 5
+    - 5
+    description: S05
+  - name: S06
+    bit_range:
+    - 6
+    - 6
+    description: S06
+  - name: S07
+    bit_range:
+    - 7
+    - 7
+    description: S07
+  - name: S08
+    bit_range:
+    - 8
+    - 8
+    description: S08
+  - name: S09
+    bit_range:
+    - 9
+    - 9
+    description: S09
+  - name: S10
+    bit_range:
+    - 10
+    - 10
+    description: S10
+  - name: S11
+    bit_range:
+    - 11
+    - 11
+    description: S11
+  - name: S12
+    bit_range:
+    - 12
+    - 12
+    description: S12
+  - name: S13
+    bit_range:
+    - 13
+    - 13
+    description: S13
+  - name: S14
+    bit_range:
+    - 14
+    - 14
+    description: S14
+  - name: S15
+    bit_range:
+    - 15
+    - 15
+    description: S15
+  - name: S16
+    bit_range:
+    - 16
+    - 16
+    description: S16
+  - name: S17
+    bit_range:
+    - 17
+    - 17
+    description: S17
+  - name: S18
+    bit_range:
+    - 18
+    - 18
+    description: S18
+  - name: S19
+    bit_range:
+    - 19
+    - 19
+    description: S19
+  - name: S20
+    bit_range:
+    - 20
+    - 20
+    description: S20
+  - name: S21
+    bit_range:
+    - 21
+    - 21
+    description: S21
+  - name: S22
+    bit_range:
+    - 22
+    - 22
+    description: S22
+  - name: S23
+    bit_range:
+    - 23
+    - 23
+    description: S23
+  - name: S24
+    bit_range:
+    - 24
+    - 24
+    description: S24
+  - name: S25
+    bit_range:
+    - 25
+    - 25
+    description: S25
+  - name: S26
+    bit_range:
+    - 26
+    - 26
+    description: S26
+  - name: S27
+    bit_range:
+    - 27
+    - 27
+    description: S27
+  - name: S28
+    bit_range:
+    - 28
+    - 28
+    description: S28
+  - name: S29
+    bit_range:
+    - 29
+    - 29
+    description: S29
+  - name: S30
+    bit_range:
+    - 30
+    - 30
+    description: S30
+  - name: S31
+    bit_range:
+    - 31
+    - 31
+    description: S31
+  side_effects: null
+- id: RAM_COM5
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: S00
+    bit_range:
+    - 0
+    - 0
+    description: S00
+  - name: S01
+    bit_range:
+    - 1
+    - 1
+    description: S01
+  - name: S02
+    bit_range:
+    - 2
+    - 2
+    description: S02
+  - name: S03
+    bit_range:
+    - 3
+    - 3
+    description: S03
+  - name: S04
+    bit_range:
+    - 4
+    - 4
+    description: S04
+  - name: S05
+    bit_range:
+    - 5
+    - 5
+    description: S05
+  - name: S06
+    bit_range:
+    - 6
+    - 6
+    description: S06
+  - name: S07
+    bit_range:
+    - 7
+    - 7
+    description: S07
+  - name: S08
+    bit_range:
+    - 8
+    - 8
+    description: S08
+  - name: S09
+    bit_range:
+    - 9
+    - 9
+    description: S09
+  - name: S10
+    bit_range:
+    - 10
+    - 10
+    description: S10
+  - name: S11
+    bit_range:
+    - 11
+    - 11
+    description: S11
+  - name: S12
+    bit_range:
+    - 12
+    - 12
+    description: S12
+  - name: S13
+    bit_range:
+    - 13
+    - 13
+    description: S13
+  - name: S14
+    bit_range:
+    - 14
+    - 14
+    description: S14
+  - name: S15
+    bit_range:
+    - 15
+    - 15
+    description: S15
+  - name: S16
+    bit_range:
+    - 16
+    - 16
+    description: S16
+  - name: S17
+    bit_range:
+    - 17
+    - 17
+    description: S17
+  - name: S18
+    bit_range:
+    - 18
+    - 18
+    description: S18
+  - name: S19
+    bit_range:
+    - 19
+    - 19
+    description: S19
+  - name: S20
+    bit_range:
+    - 20
+    - 20
+    description: S20
+  - name: S21
+    bit_range:
+    - 21
+    - 21
+    description: S21
+  - name: S22
+    bit_range:
+    - 22
+    - 22
+    description: S22
+  - name: S23
+    bit_range:
+    - 23
+    - 23
+    description: S23
+  - name: S24
+    bit_range:
+    - 24
+    - 24
+    description: S24
+  - name: S25
+    bit_range:
+    - 25
+    - 25
+    description: S25
+  - name: S26
+    bit_range:
+    - 26
+    - 26
+    description: S26
+  - name: S27
+    bit_range:
+    - 27
+    - 27
+    description: S27
+  - name: S28
+    bit_range:
+    - 28
+    - 28
+    description: S28
+  - name: S29
+    bit_range:
+    - 29
+    - 29
+    description: S29
+  - name: S30
+    bit_range:
+    - 30
+    - 30
+    description: S30
+  - name: S31
+    bit_range:
+    - 31
+    - 31
+    description: S31
+  side_effects: null
+- id: RAM_COM6
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: S00
+    bit_range:
+    - 0
+    - 0
+    description: S00
+  - name: S01
+    bit_range:
+    - 1
+    - 1
+    description: S01
+  - name: S02
+    bit_range:
+    - 2
+    - 2
+    description: S02
+  - name: S03
+    bit_range:
+    - 3
+    - 3
+    description: S03
+  - name: S04
+    bit_range:
+    - 4
+    - 4
+    description: S04
+  - name: S05
+    bit_range:
+    - 5
+    - 5
+    description: S05
+  - name: S06
+    bit_range:
+    - 6
+    - 6
+    description: S06
+  - name: S07
+    bit_range:
+    - 7
+    - 7
+    description: S07
+  - name: S08
+    bit_range:
+    - 8
+    - 8
+    description: S08
+  - name: S09
+    bit_range:
+    - 9
+    - 9
+    description: S09
+  - name: S10
+    bit_range:
+    - 10
+    - 10
+    description: S10
+  - name: S11
+    bit_range:
+    - 11
+    - 11
+    description: S11
+  - name: S12
+    bit_range:
+    - 12
+    - 12
+    description: S12
+  - name: S13
+    bit_range:
+    - 13
+    - 13
+    description: S13
+  - name: S14
+    bit_range:
+    - 14
+    - 14
+    description: S14
+  - name: S15
+    bit_range:
+    - 15
+    - 15
+    description: S15
+  - name: S16
+    bit_range:
+    - 16
+    - 16
+    description: S16
+  - name: S17
+    bit_range:
+    - 17
+    - 17
+    description: S17
+  - name: S18
+    bit_range:
+    - 18
+    - 18
+    description: S18
+  - name: S19
+    bit_range:
+    - 19
+    - 19
+    description: S19
+  - name: S20
+    bit_range:
+    - 20
+    - 20
+    description: S20
+  - name: S21
+    bit_range:
+    - 21
+    - 21
+    description: S21
+  - name: S22
+    bit_range:
+    - 22
+    - 22
+    description: S22
+  - name: S23
+    bit_range:
+    - 23
+    - 23
+    description: S23
+  - name: S24
+    bit_range:
+    - 24
+    - 24
+    description: S24
+  - name: S25
+    bit_range:
+    - 25
+    - 25
+    description: S25
+  - name: S26
+    bit_range:
+    - 26
+    - 26
+    description: S26
+  - name: S27
+    bit_range:
+    - 27
+    - 27
+    description: S27
+  - name: S28
+    bit_range:
+    - 28
+    - 28
+    description: S28
+  - name: S29
+    bit_range:
+    - 29
+    - 29
+    description: S29
+  - name: S30
+    bit_range:
+    - 30
+    - 30
+    description: S30
+  - name: S31
+    bit_range:
+    - 31
+    - 31
+    description: S31
+  side_effects: null
+- id: RAM_COM7
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: S00
+    bit_range:
+    - 0
+    - 0
+    description: S00
+  - name: S01
+    bit_range:
+    - 1
+    - 1
+    description: S01
+  - name: S02
+    bit_range:
+    - 2
+    - 2
+    description: S02
+  - name: S03
+    bit_range:
+    - 3
+    - 3
+    description: S03
+  - name: S04
+    bit_range:
+    - 4
+    - 4
+    description: S04
+  - name: S05
+    bit_range:
+    - 5
+    - 5
+    description: S05
+  - name: S06
+    bit_range:
+    - 6
+    - 6
+    description: S06
+  - name: S07
+    bit_range:
+    - 7
+    - 7
+    description: S07
+  - name: S08
+    bit_range:
+    - 8
+    - 8
+    description: S08
+  - name: S09
+    bit_range:
+    - 9
+    - 9
+    description: S09
+  - name: S10
+    bit_range:
+    - 10
+    - 10
+    description: S10
+  - name: S11
+    bit_range:
+    - 11
+    - 11
+    description: S11
+  - name: S12
+    bit_range:
+    - 12
+    - 12
+    description: S12
+  - name: S13
+    bit_range:
+    - 13
+    - 13
+    description: S13
+  - name: S14
+    bit_range:
+    - 14
+    - 14
+    description: S14
+  - name: S15
+    bit_range:
+    - 15
+    - 15
+    description: S15
+  - name: S16
+    bit_range:
+    - 16
+    - 16
+    description: S16
+  - name: S17
+    bit_range:
+    - 17
+    - 17
+    description: S17
+  - name: S18
+    bit_range:
+    - 18
+    - 18
+    description: S18
+  - name: S19
+    bit_range:
+    - 19
+    - 19
+    description: S19
+  - name: S20
+    bit_range:
+    - 20
+    - 20
+    description: S20
+  - name: S21
+    bit_range:
+    - 21
+    - 21
+    description: S21
+  - name: S22
+    bit_range:
+    - 22
+    - 22
+    description: S22
+  - name: S23
+    bit_range:
+    - 23
+    - 23
+    description: S23
+  - name: S24
+    bit_range:
+    - 24
+    - 24
+    description: S24
+  - name: S25
+    bit_range:
+    - 25
+    - 25
+    description: S25
+  - name: S26
+    bit_range:
+    - 26
+    - 26
+    description: S26
+  - name: S27
+    bit_range:
+    - 27
+    - 27
+    description: S27
+  - name: S28
+    bit_range:
+    - 28
+    - 28
+    description: S28
+  - name: S29
+    bit_range:
+    - 29
+    - 29
+    description: S29
+  - name: S30
+    bit_range:
+    - 30
+    - 30
+    description: S30
+  - name: S31
+    bit_range:
+    - 31
+    - 31
+    description: S31
+  side_effects: null
+interrupts:
+  LCD: 30
+timing: null

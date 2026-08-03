@@ -277,18 +277,20 @@ impl Peripheral for Esp32I2cAhbFifo {
     }
 }
 
-impl Peripheral for Esp32I2c {
-    fn read(&self, _offset: u64) -> SimResult<u8> {
-        // Byte reads aren't used by the I2C driver; route via read_u32.
-        Ok(0)
-    }
-
-    fn read_u32(&self, offset: u64) -> SimResult<u32> {
-        let v = match offset {
+impl Esp32I2c {
+    /// Decode one 32-bit register WITHOUT touching model state.
+    ///
+    /// One decode, two callers: `read_u32` (which then applies REG_DATA's FIFO
+    /// pop) and `peek` (which does not). Keeping it in one place is why a
+    /// debugger and the firmware cannot disagree about a register's contents.
+    fn decode_word(&self, offset: u64) -> u32 {
+        match offset {
             REG_CTR => self.ctr,
             REG_SR => self.status_register(),
             REG_SLAVE_ADDR => self.slave_addr,
-            REG_DATA => self.rx_fifo.borrow_mut().pop_front().unwrap_or(0) as u32,
+            // The value a read RETURNS; the pop it also causes belongs to
+            // `read_u32`.
+            REG_DATA => self.rx_fifo.borrow().front().copied().unwrap_or(0) as u32,
             REG_FIFO_CONF => self.fifo_conf,
             REG_INT_RAW => self.int_raw,
             REG_INT_CLR => 0,
@@ -300,11 +302,44 @@ impl Peripheral for Esp32I2c {
                 self.cmds.get(idx).copied().unwrap_or(0)
             }
             other => self.other.get(&other).copied().unwrap_or(0),
-        };
+        }
+    }
+}
+
+impl Peripheral for Esp32I2c {
+    fn read(&self, _offset: u64) -> SimResult<u8> {
+        // Byte reads aren't used by the I2C driver; route via read_u32.
+        Ok(0)
+    }
+
+    fn read_u32(&self, offset: u64) -> SimResult<u32> {
+        let v = self.decode_word(offset);
+        if offset == REG_DATA {
+            // The ONLY side effect in this register file: a REG_DATA read pops
+            // the RX FIFO, on silicon and here. `decode_word` reported the byte;
+            // consuming it is the read's job, not the decode's.
+            self.rx_fifo.borrow_mut().pop_front();
+        }
         if i2c_trace_enabled() {
             eprintln!("ESP32 I2C R [0x{offset:02x}] = 0x{v:08x}");
         }
         Ok(v)
+    }
+
+    /// Side-effect-free probe, so `inspect` can show this controller's real
+    /// registers instead of reporting them unreadable.
+    ///
+    /// Shares `decode_word` with `read_u32` rather than repeating the match, so
+    /// a debugger view and a firmware read can never disagree about what a
+    /// register contains. The difference is only what happens afterwards: a
+    /// read of REG_DATA pops the RX FIFO, and a peek must not — otherwise
+    /// looking at the panel in a debugger would eat the byte the firmware was
+    /// about to receive, which is exactly the failure `inspect`'s peek-only
+    /// contract exists to prevent.
+    fn peek(&self, offset: u64) -> Option<u8> {
+        let word_off = offset & !3;
+        let byte_off = (offset & 3) * 8;
+        Some(((self.decode_word(word_off) >> byte_off) & 0xFF) as u8)
     }
 
     fn write(&mut self, _offset: u64, _value: u8) -> SimResult<()> {
@@ -409,6 +444,12 @@ impl Peripheral for Esp32I2c {
             }
         }
         false
+    }
+
+    fn for_each_attached_device(&self, f: &mut dyn FnMut(crate::inspect::AttachedDeviceRef<'_>)) {
+        for dev in &self.slaves {
+            crate::inspect::visit_i2c_device(&**dev, f);
+        }
     }
 }
 
@@ -561,6 +602,76 @@ mod tests {
     /// Encode a 14-bit command word: opcode | byte_num.
     fn cmd(opcode: u8, byte_num: u8) -> u32 {
         ((opcode as u32 & 0x7) << 11) | (byte_num as u32)
+    }
+
+    /// Inspecting a bus in a debugger must not eat the byte the firmware was
+    /// about to read. On this controller a REG_DATA read POPS the RX FIFO, so
+    /// this is the one register where peek and read must differ -- and the
+    /// difference must be that peek leaves the queue alone.
+    #[test]
+    fn peek_does_not_drain_the_rx_fifo() {
+        let i2c = Esp32I2c::new();
+        i2c.rx_fifo.borrow_mut().extend([0x12u8, 0x34]);
+
+        assert_eq!(i2c.peek(REG_DATA), Some(0x12), "peek reports the head byte");
+        assert_eq!(
+            i2c.peek(REG_DATA),
+            Some(0x12),
+            "and again -- nothing consumed"
+        );
+        assert_eq!(
+            i2c.rx_fifo.borrow().len(),
+            2,
+            "peeking left the FIFO untouched"
+        );
+
+        assert_eq!(
+            i2c.read_u32(REG_DATA).unwrap(),
+            0x12,
+            "the read still gets it"
+        );
+        assert_eq!(
+            i2c.rx_fifo.borrow().len(),
+            1,
+            "and the read is what consumed it"
+        );
+        assert_eq!(
+            i2c.peek(REG_DATA),
+            Some(0x34),
+            "peek now sees the next byte"
+        );
+    }
+
+    /// Everywhere else a debugger and the firmware must agree byte for byte,
+    /// or the register view is a second, separate model.
+    #[test]
+    fn peek_agrees_with_read_on_every_non_data_register() {
+        let mut i2c = Esp32I2c::new();
+        i2c.write_u32(REG_CTR, 0x0000_0113).unwrap();
+        i2c.write_u32(REG_SLAVE_ADDR, 0x0000_0076).unwrap();
+        i2c.write_u32(REG_CMD0, cmd(0, 1)).unwrap();
+        for word_off in [
+            REG_CTR,
+            REG_SR,
+            REG_SLAVE_ADDR,
+            REG_FIFO_CONF,
+            REG_INT_RAW,
+            REG_INT_ENA,
+            REG_INT_ST,
+            REG_FIFO_ST,
+            REG_CMD0,
+        ] {
+            let word = i2c.read_u32(word_off).unwrap();
+            for lane in 0..4u64 {
+                let expected = ((word >> (lane * 8)) & 0xFF) as u8;
+                assert_eq!(
+                    i2c.peek(word_off + lane),
+                    Some(expected),
+                    "peek disagrees with read at offset {:#04x}",
+                    word_off + lane
+                );
+            }
+        }
     }
 
     // Classic-ESP32 opcodes: 0=RSTART, 1=WRITE, 2=READ, 3=STOP, 4=END.

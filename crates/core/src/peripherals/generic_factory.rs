@@ -119,6 +119,122 @@ pub const MODEL_TYPES: &[&str] = &[
     // generic STM32 UART layout — it is a distinct silicon register map.
     "nrf54l_uarte",
     "nrf54l_twim",
+    // ESP32-classic behavioral models (esp32 factory). Absent while every C3
+    // sibling was listed: only the Xtensa builder ever built these, and it
+    // registers the bank in Rust without consulting this table, so the gap was
+    // invisible until a chip YAML declared one for a plain `from_config` bus.
+    "esp32_dport",
+    "esp32_efuse",
+    "esp32_gpio",
+    "esp32_i2c",
+    "esp32_ledc",
+    "esp32_mcpwm",
+    "esp32_rtc_cntl",
+    "esp32_sar_adc",
+    "esp32_sdio",
+    "esp32_sha",
+    "esp32_spi",
+    "esp32_syscon",
+    "esp32_timg",
+    "esp32_twai",
+    "esp32_uart",
+    // ESP32-S3 behavioral models (esp32s3 factory). The whole family was absent,
+    // with the same latent hazard: `esp32s3_spi`, `esp32s3_i2c`, `esp32s3_rng`
+    // and `esp32s3_sdmmc` each contain a generic substring, so the fuzzy chain
+    // would coerce them onto STM32 register maps without a word.
+    "esp32s3_aes",
+    "esp32s3_core1_control",
+    "esp32s3_crosscore_ipi",
+    "esp32s3_ds",
+    "esp32s3_extmem",
+    "esp32s3_gdma",
+    "esp32s3_gpio",
+    "esp32s3_hmac",
+    "esp32s3_i2c",
+    "esp32s3_i2s",
+    "esp32s3_io_mux",
+    "esp32s3_lcd_cam",
+    "esp32s3_ledc",
+    "esp32s3_mcpwm",
+    "esp32s3_pcnt",
+    "esp32s3_rmt",
+    "esp32s3_rng",
+    "esp32s3_rsa",
+    "esp32s3_sar_adc",
+    "esp32s3_sdmmc",
+    "esp32s3_sens",
+    "esp32s3_sha",
+    "esp32s3_spi",
+    "esp32s3_system",
+    "esp32s3_system_stub",
+    "esp32s3_systimer",
+    "esp32s3_timer_group",
+    "esp32s3_twai",
+    "esp32s3_uart",
+    "esp32s3_usb_otg",
+    "esp32s3_usb_serial_jtag",
+    // nRF52 behavioral models the factory builds but this table never named.
+    // Alias spellings are deliberately NOT here -- `canonical_peripheral_type`
+    // maps those to their canonical output, and listing an alias INPUT would
+    // short-circuit that mapping.
+    "nrf52840_aar",
+    "nrf52840_acl",
+    "nrf52840_bprot",
+    "nrf52840_ccm",
+    "nrf52840_comp",
+    "nrf52840_cryptocell",
+    "nrf52840_ecb",
+    "nrf52840_egu",
+    "nrf52840_ficr",
+    "nrf52840_i2s",
+    "nrf52840_lpcomp",
+    "nrf52840_mwu",
+    "nrf52840_nfct",
+    "nrf52840_nvmc",
+    "nrf52840_pdm",
+    "nrf52840_ppi",
+    "nrf52840_pwm",
+    "nrf52840_qdec",
+    "nrf52840_radio",
+    "nrf52840_rng",
+    "nrf52840_rtc",
+    "nrf52840_temp",
+    "nrf52840_uicr",
+    "nrf52840_usbd",
+    "nrf52840_usbregulator",
+    "nrf52840_watchdog",
+    "nrf52_aar",
+    "nrf52_acl",
+    "nrf52_bprot",
+    "nrf52_ccm",
+    "nrf52_clock",
+    "nrf52_comp",
+    "nrf52_cryptocell",
+    "nrf52_ecb",
+    "nrf52_egu",
+    "nrf52_ficr",
+    "nrf52_i2s",
+    "nrf52_lpcomp",
+    "nrf52_mwu",
+    "nrf52_nfct",
+    "nrf52_nvmc",
+    "nrf52_pdm",
+    "nrf52_ppi",
+    "nrf52_pwm",
+    "nrf52_qdec",
+    "nrf52_radio",
+    "nrf52_rng",
+    "nrf52_rtc",
+    "nrf52_serial_instance",
+    "nrf52_temp",
+    "nrf52_uicr",
+    "nrf52_usbd",
+    "nrf52_usbregulator",
+    "nrf52_watchdog",
+    "nrf52_wdt",
+    // Further nRF54L factory arms.
+    "nrf54l_clock",
+    "nrf54l_grtc",
 ];
 
 /// True if `t` is already a canonical model-type name (see [`MODEL_TYPES`]).
@@ -472,4 +588,77 @@ pub fn try_build(
         _ => return Ok(None),
     };
     Ok(Some(dev))
+}
+
+#[cfg(test)]
+mod registry_agreement {
+    use super::MODEL_TYPES;
+
+    /// Every type a family factory can build must be REACHABLE — either already
+    /// canonical (in [`MODEL_TYPES`]) or mapped by the alias table in
+    /// `bus::profiles::canonical_peripheral_type`. Anything else falls into the
+    /// fuzzy `contains(...)` chain, which matches on substrings like "uart",
+    /// "spi", "i2c", "adc" and picks a vendor's layout by guesswork.
+    ///
+    /// These were two hand-kept lists that had to agree, and nothing made them.
+    /// ESP32-classic was absent from this table while every ESP32-C3 sibling was
+    /// present, and it stayed invisible because only the Xtensa builder ever
+    /// constructed those peripherals — that path registers the bank in Rust and
+    /// never consults the table. The day a chip YAML declared one for a plain
+    /// `from_config` bus, `esp32_uart` fell through to the fuzzy chain, which
+    /// refused to guess and failed the build. Loud, and lucky: `esp32_spi` and
+    /// `esp32_timg` would instead have been coerced onto STM32 layouts and
+    /// modelled the wrong silicon in silence.
+    ///
+    /// When this first ran it found 103 unreachable types across four families —
+    /// the whole ESP32-S3 set among them. So the expectation is derived from the
+    /// factory sources, not from a third list that could rot the same way.
+    ///
+    /// Note what is deliberately NOT asserted: that a factory type is in
+    /// `MODEL_TYPES` specifically. Alias INPUTS must stay out of it — listing
+    /// one short-circuits the very mapping that makes it canonical.
+    #[test]
+    fn every_family_factory_type_is_reachable() {
+        let src_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let profiles = std::fs::read_to_string(src_root.join("bus/profiles.rs"))
+            .expect("read bus/profiles.rs");
+        let aliases = {
+            let start = profiles.find("const ALIASES").expect("ALIASES table");
+            let end = profiles[start..].find("];").expect("end of ALIASES") + start;
+            &profiles[start..end]
+        };
+        let alias_names: Vec<&str> = aliases.split('"').skip(1).step_by(2).collect();
+
+        let mut unreachable: Vec<String> = Vec::new();
+        for family in ["esp32", "esp32c3", "esp32s3", "nrf52", "nrf54l"] {
+            let src = std::fs::read_to_string(
+                src_root.join("peripherals").join(family).join("factory.rs"),
+            )
+            .unwrap_or_else(|e| panic!("read {family}/factory.rs: {e}"));
+            for line in src.lines() {
+                let Some((head, _)) = line.split_once("=>") else {
+                    continue;
+                };
+                for lit in head.split('"').skip(1).step_by(2) {
+                    if !lit.starts_with(family) {
+                        continue; // config keys and other string literals
+                    }
+                    if !MODEL_TYPES.contains(&lit) && !alias_names.contains(&lit) {
+                        unreachable.push(format!("{family}/factory.rs: {lit}"));
+                    }
+                }
+            }
+        }
+        unreachable.sort();
+        unreachable.dedup();
+        assert!(
+            unreachable.is_empty(),
+            "family factories build types that canonical_peripheral_type cannot \
+             route, so they fall into the fuzzy substring fallback and can be \
+             coerced onto an unrelated vendor's register map — silently wrong, \
+             not an error: {unreachable:#?}\n\
+             Add each to MODEL_TYPES (or to the alias table if its canonical \
+             name differs)."
+        );
+    }
 }

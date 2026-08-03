@@ -1,0 +1,967 @@
+peripheral: GPIOA
+version: 0.1.0
+registers:
+- id: MODER
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 2885681151
+  fields:
+  - name: MODER0
+    bit_range:
+    - 1
+    - 0
+    description: Port x configuration bits (y =               0..15)
+  - name: MODER1
+    bit_range:
+    - 3
+    - 2
+    description: Port x configuration bits (y =               0..15)
+  - name: MODER2
+    bit_range:
+    - 5
+    - 4
+    description: Port x configuration bits (y =               0..15)
+  - name: MODER3
+    bit_range:
+    - 7
+    - 6
+    description: Port x configuration bits (y =               0..15)
+  - name: MODER4
+    bit_range:
+    - 9
+    - 8
+    description: Port x configuration bits (y =               0..15)
+  - name: MODER5
+    bit_range:
+    - 11
+    - 10
+    description: Port x configuration bits (y =               0..15)
+  - name: MODER6
+    bit_range:
+    - 13
+    - 12
+    description: Port x configuration bits (y =               0..15)
+  - name: MODER7
+    bit_range:
+    - 15
+    - 14
+    description: Port x configuration bits (y =               0..15)
+  - name: MODER8
+    bit_range:
+    - 17
+    - 16
+    description: Port x configuration bits (y =               0..15)
+  - name: MODER9
+    bit_range:
+    - 19
+    - 18
+    description: Port x configuration bits (y =               0..15)
+  - name: MODER10
+    bit_range:
+    - 21
+    - 20
+    description: Port x configuration bits (y =               0..15)
+  - name: MODER11
+    bit_range:
+    - 23
+    - 22
+    description: Port x configuration bits (y =               0..15)
+  - name: MODER12
+    bit_range:
+    - 25
+    - 24
+    description: Port x configuration bits (y =               0..15)
+  - name: MODER13
+    bit_range:
+    - 27
+    - 26
+    description: Port x configuration bits (y =               0..15)
+  - name: MODER14
+    bit_range:
+    - 29
+    - 28
+    description: Port x configuration bits (y =               0..15)
+  - name: MODER15
+    bit_range:
+    - 31
+    - 30
+    description: Port x configuration bits (y =               0..15)
+  side_effects: null
+- id: OTYPER
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OT0
+    bit_range:
+    - 0
+    - 0
+    description: Port x configuration bits (y =               0..15)
+  - name: OT1
+    bit_range:
+    - 1
+    - 1
+    description: Port x configuration bits (y =               0..15)
+  - name: OT2
+    bit_range:
+    - 2
+    - 2
+    description: Port x configuration bits (y =               0..15)
+  - name: OT3
+    bit_range:
+    - 3
+    - 3
+    description: Port x configuration bits (y =               0..15)
+  - name: OT4
+    bit_range:
+    - 4
+    - 4
+    description: Port x configuration bits (y =               0..15)
+  - name: OT5
+    bit_range:
+    - 5
+    - 5
+    description: Port x configuration bits (y =               0..15)
+  - name: OT6
+    bit_range:
+    - 6
+    - 6
+    description: Port x configuration bits (y =               0..15)
+  - name: OT7
+    bit_range:
+    - 7
+    - 7
+    description: Port x configuration bits (y =               0..15)
+  - name: OT8
+    bit_range:
+    - 8
+    - 8
+    description: Port x configuration bits (y =               0..15)
+  - name: OT9
+    bit_range:
+    - 9
+    - 9
+    description: Port x configuration bits (y =               0..15)
+  - name: OT10
+    bit_range:
+    - 10
+    - 10
+    description: Port x configuration bits (y =               0..15)
+  - name: OT11
+    bit_range:
+    - 11
+    - 11
+    description: Port x configuration bits (y =               0..15)
+  - name: OT12
+    bit_range:
+    - 12
+    - 12
+    description: Port x configuration bits (y =               0..15)
+  - name: OT13
+    bit_range:
+    - 13
+    - 13
+    description: Port x configuration bits (y =               0..15)
+  - name: OT14
+    bit_range:
+    - 14
+    - 14
+    description: Port x configuration bits (y =               0..15)
+  - name: OT15
+    bit_range:
+    - 15
+    - 15
+    description: Port x configuration bits (y =               0..15)
+  side_effects: null
+- id: OSPEEDR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 201326592
+  fields:
+  - name: OSPEEDR0
+    bit_range:
+    - 1
+    - 0
+    description: Port x configuration bits (y =               0..15)
+  - name: OSPEEDR1
+    bit_range:
+    - 3
+    - 2
+    description: Port x configuration bits (y =               0..15)
+  - name: OSPEEDR2
+    bit_range:
+    - 5
+    - 4
+    description: Port x configuration bits (y =               0..15)
+  - name: OSPEEDR3
+    bit_range:
+    - 7
+    - 6
+    description: Port x configuration bits (y =               0..15)
+  - name: OSPEEDR4
+    bit_range:
+    - 9
+    - 8
+    description: Port x configuration bits (y =               0..15)
+  - name: OSPEEDR5
+    bit_range:
+    - 11
+    - 10
+    description: Port x configuration bits (y =               0..15)
+  - name: OSPEEDR6
+    bit_range:
+    - 13
+    - 12
+    description: Port x configuration bits (y =               0..15)
+  - name: OSPEEDR7
+    bit_range:
+    - 15
+    - 14
+    description: Port x configuration bits (y =               0..15)
+  - name: OSPEEDR8
+    bit_range:
+    - 17
+    - 16
+    description: Port x configuration bits (y =               0..15)
+  - name: OSPEEDR9
+    bit_range:
+    - 19
+    - 18
+    description: Port x configuration bits (y =               0..15)
+  - name: OSPEEDR10
+    bit_range:
+    - 21
+    - 20
+    description: Port x configuration bits (y =               0..15)
+  - name: OSPEEDR11
+    bit_range:
+    - 23
+    - 22
+    description: Port x configuration bits (y =               0..15)
+  - name: OSPEEDR12
+    bit_range:
+    - 25
+    - 24
+    description: Port x configuration bits (y =               0..15)
+  - name: OSPEEDR13
+    bit_range:
+    - 27
+    - 26
+    description: Port x configuration bits (y =               0..15)
+  - name: OSPEEDR14
+    bit_range:
+    - 29
+    - 28
+    description: Port x configuration bits (y =               0..15)
+  - name: OSPEEDR15
+    bit_range:
+    - 31
+    - 30
+    description: Port x configuration bits (y =               0..15)
+  side_effects: null
+- id: PUPDR
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 1677721600
+  fields:
+  - name: PUPDR0
+    bit_range:
+    - 1
+    - 0
+    description: Port x configuration bits (y =               0..15)
+  - name: PUPDR1
+    bit_range:
+    - 3
+    - 2
+    description: Port x configuration bits (y =               0..15)
+  - name: PUPDR2
+    bit_range:
+    - 5
+    - 4
+    description: Port x configuration bits (y =               0..15)
+  - name: PUPDR3
+    bit_range:
+    - 7
+    - 6
+    description: Port x configuration bits (y =               0..15)
+  - name: PUPDR4
+    bit_range:
+    - 9
+    - 8
+    description: Port x configuration bits (y =               0..15)
+  - name: PUPDR5
+    bit_range:
+    - 11
+    - 10
+    description: Port x configuration bits (y =               0..15)
+  - name: PUPDR6
+    bit_range:
+    - 13
+    - 12
+    description: Port x configuration bits (y =               0..15)
+  - name: PUPDR7
+    bit_range:
+    - 15
+    - 14
+    description: Port x configuration bits (y =               0..15)
+  - name: PUPDR8
+    bit_range:
+    - 17
+    - 16
+    description: Port x configuration bits (y =               0..15)
+  - name: PUPDR9
+    bit_range:
+    - 19
+    - 18
+    description: Port x configuration bits (y =               0..15)
+  - name: PUPDR10
+    bit_range:
+    - 21
+    - 20
+    description: Port x configuration bits (y =               0..15)
+  - name: PUPDR11
+    bit_range:
+    - 23
+    - 22
+    description: Port x configuration bits (y =               0..15)
+  - name: PUPDR12
+    bit_range:
+    - 25
+    - 24
+    description: Port x configuration bits (y =               0..15)
+  - name: PUPDR13
+    bit_range:
+    - 27
+    - 26
+    description: Port x configuration bits (y =               0..15)
+  - name: PUPDR14
+    bit_range:
+    - 29
+    - 28
+    description: Port x configuration bits (y =               0..15)
+  - name: PUPDR15
+    bit_range:
+    - 31
+    - 30
+    description: Port x configuration bits (y =               0..15)
+  side_effects: null
+- id: IDR
+  address_offset: 16
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: IDR0
+    bit_range:
+    - 0
+    - 0
+    description: Port input data (y =               0..15)
+  - name: IDR1
+    bit_range:
+    - 1
+    - 1
+    description: Port input data (y =               0..15)
+  - name: IDR2
+    bit_range:
+    - 2
+    - 2
+    description: Port input data (y =               0..15)
+  - name: IDR3
+    bit_range:
+    - 3
+    - 3
+    description: Port input data (y =               0..15)
+  - name: IDR4
+    bit_range:
+    - 4
+    - 4
+    description: Port input data (y =               0..15)
+  - name: IDR5
+    bit_range:
+    - 5
+    - 5
+    description: Port input data (y =               0..15)
+  - name: IDR6
+    bit_range:
+    - 6
+    - 6
+    description: Port input data (y =               0..15)
+  - name: IDR7
+    bit_range:
+    - 7
+    - 7
+    description: Port input data (y =               0..15)
+  - name: IDR8
+    bit_range:
+    - 8
+    - 8
+    description: Port input data (y =               0..15)
+  - name: IDR9
+    bit_range:
+    - 9
+    - 9
+    description: Port input data (y =               0..15)
+  - name: IDR10
+    bit_range:
+    - 10
+    - 10
+    description: Port input data (y =               0..15)
+  - name: IDR11
+    bit_range:
+    - 11
+    - 11
+    description: Port input data (y =               0..15)
+  - name: IDR12
+    bit_range:
+    - 12
+    - 12
+    description: Port input data (y =               0..15)
+  - name: IDR13
+    bit_range:
+    - 13
+    - 13
+    description: Port input data (y =               0..15)
+  - name: IDR14
+    bit_range:
+    - 14
+    - 14
+    description: Port input data (y =               0..15)
+  - name: IDR15
+    bit_range:
+    - 15
+    - 15
+    description: Port input data (y =               0..15)
+  side_effects: null
+- id: ODR
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ODR0
+    bit_range:
+    - 0
+    - 0
+    description: Port output data (y =               0..15)
+  - name: ODR1
+    bit_range:
+    - 1
+    - 1
+    description: Port output data (y =               0..15)
+  - name: ODR2
+    bit_range:
+    - 2
+    - 2
+    description: Port output data (y =               0..15)
+  - name: ODR3
+    bit_range:
+    - 3
+    - 3
+    description: Port output data (y =               0..15)
+  - name: ODR4
+    bit_range:
+    - 4
+    - 4
+    description: Port output data (y =               0..15)
+  - name: ODR5
+    bit_range:
+    - 5
+    - 5
+    description: Port output data (y =               0..15)
+  - name: ODR6
+    bit_range:
+    - 6
+    - 6
+    description: Port output data (y =               0..15)
+  - name: ODR7
+    bit_range:
+    - 7
+    - 7
+    description: Port output data (y =               0..15)
+  - name: ODR8
+    bit_range:
+    - 8
+    - 8
+    description: Port output data (y =               0..15)
+  - name: ODR9
+    bit_range:
+    - 9
+    - 9
+    description: Port output data (y =               0..15)
+  - name: ODR10
+    bit_range:
+    - 10
+    - 10
+    description: Port output data (y =               0..15)
+  - name: ODR11
+    bit_range:
+    - 11
+    - 11
+    description: Port output data (y =               0..15)
+  - name: ODR12
+    bit_range:
+    - 12
+    - 12
+    description: Port output data (y =               0..15)
+  - name: ODR13
+    bit_range:
+    - 13
+    - 13
+    description: Port output data (y =               0..15)
+  - name: ODR14
+    bit_range:
+    - 14
+    - 14
+    description: Port output data (y =               0..15)
+  - name: ODR15
+    bit_range:
+    - 15
+    - 15
+    description: Port output data (y =               0..15)
+  side_effects: null
+- id: BSRR
+  address_offset: 24
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: BS0
+    bit_range:
+    - 0
+    - 0
+    description: Port x set bit y (y=               0..15)
+  - name: BS1
+    bit_range:
+    - 1
+    - 1
+    description: Port x set bit y (y=               0..15)
+  - name: BS2
+    bit_range:
+    - 2
+    - 2
+    description: Port x set bit y (y=               0..15)
+  - name: BS3
+    bit_range:
+    - 3
+    - 3
+    description: Port x set bit y (y=               0..15)
+  - name: BS4
+    bit_range:
+    - 4
+    - 4
+    description: Port x set bit y (y=               0..15)
+  - name: BS5
+    bit_range:
+    - 5
+    - 5
+    description: Port x set bit y (y=               0..15)
+  - name: BS6
+    bit_range:
+    - 6
+    - 6
+    description: Port x set bit y (y=               0..15)
+  - name: BS7
+    bit_range:
+    - 7
+    - 7
+    description: Port x set bit y (y=               0..15)
+  - name: BS8
+    bit_range:
+    - 8
+    - 8
+    description: Port x set bit y (y=               0..15)
+  - name: BS9
+    bit_range:
+    - 9
+    - 9
+    description: Port x set bit y (y=               0..15)
+  - name: BS10
+    bit_range:
+    - 10
+    - 10
+    description: Port x set bit y (y=               0..15)
+  - name: BS11
+    bit_range:
+    - 11
+    - 11
+    description: Port x set bit y (y=               0..15)
+  - name: BS12
+    bit_range:
+    - 12
+    - 12
+    description: Port x set bit y (y=               0..15)
+  - name: BS13
+    bit_range:
+    - 13
+    - 13
+    description: Port x set bit y (y=               0..15)
+  - name: BS14
+    bit_range:
+    - 14
+    - 14
+    description: Port x set bit y (y=               0..15)
+  - name: BS15
+    bit_range:
+    - 15
+    - 15
+    description: Port x set bit y (y=               0..15)
+  - name: BR0
+    bit_range:
+    - 16
+    - 16
+    description: Port x set bit y (y=               0..15)
+  - name: BR1
+    bit_range:
+    - 17
+    - 17
+    description: Port x reset bit y (y =               0..15)
+  - name: BR2
+    bit_range:
+    - 18
+    - 18
+    description: Port x reset bit y (y =               0..15)
+  - name: BR3
+    bit_range:
+    - 19
+    - 19
+    description: Port x reset bit y (y =               0..15)
+  - name: BR4
+    bit_range:
+    - 20
+    - 20
+    description: Port x reset bit y (y =               0..15)
+  - name: BR5
+    bit_range:
+    - 21
+    - 21
+    description: Port x reset bit y (y =               0..15)
+  - name: BR6
+    bit_range:
+    - 22
+    - 22
+    description: Port x reset bit y (y =               0..15)
+  - name: BR7
+    bit_range:
+    - 23
+    - 23
+    description: Port x reset bit y (y =               0..15)
+  - name: BR8
+    bit_range:
+    - 24
+    - 24
+    description: Port x reset bit y (y =               0..15)
+  - name: BR9
+    bit_range:
+    - 25
+    - 25
+    description: Port x reset bit y (y =               0..15)
+  - name: BR10
+    bit_range:
+    - 26
+    - 26
+    description: Port x reset bit y (y =               0..15)
+  - name: BR11
+    bit_range:
+    - 27
+    - 27
+    description: Port x reset bit y (y =               0..15)
+  - name: BR12
+    bit_range:
+    - 28
+    - 28
+    description: Port x reset bit y (y =               0..15)
+  - name: BR13
+    bit_range:
+    - 29
+    - 29
+    description: Port x reset bit y (y =               0..15)
+  - name: BR14
+    bit_range:
+    - 30
+    - 30
+    description: Port x reset bit y (y =               0..15)
+  - name: BR15
+    bit_range:
+    - 31
+    - 31
+    description: Port x reset bit y (y =               0..15)
+  side_effects: null
+- id: LCKR
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LCK0
+    bit_range:
+    - 0
+    - 0
+    description: Port x lock bit y (y=               0..15)
+  - name: LCK1
+    bit_range:
+    - 1
+    - 1
+    description: Port x lock bit y (y=               0..15)
+  - name: LCK2
+    bit_range:
+    - 2
+    - 2
+    description: Port x lock bit y (y=               0..15)
+  - name: LCK3
+    bit_range:
+    - 3
+    - 3
+    description: Port x lock bit y (y=               0..15)
+  - name: LCK4
+    bit_range:
+    - 4
+    - 4
+    description: Port x lock bit y (y=               0..15)
+  - name: LCK5
+    bit_range:
+    - 5
+    - 5
+    description: Port x lock bit y (y=               0..15)
+  - name: LCK6
+    bit_range:
+    - 6
+    - 6
+    description: Port x lock bit y (y=               0..15)
+  - name: LCK7
+    bit_range:
+    - 7
+    - 7
+    description: Port x lock bit y (y=               0..15)
+  - name: LCK8
+    bit_range:
+    - 8
+    - 8
+    description: Port x lock bit y (y=               0..15)
+  - name: LCK9
+    bit_range:
+    - 9
+    - 9
+    description: Port x lock bit y (y=               0..15)
+  - name: LCK10
+    bit_range:
+    - 10
+    - 10
+    description: Port x lock bit y (y=               0..15)
+  - name: LCK11
+    bit_range:
+    - 11
+    - 11
+    description: Port x lock bit y (y=               0..15)
+  - name: LCK12
+    bit_range:
+    - 12
+    - 12
+    description: Port x lock bit y (y=               0..15)
+  - name: LCK13
+    bit_range:
+    - 13
+    - 13
+    description: Port x lock bit y (y=               0..15)
+  - name: LCK14
+    bit_range:
+    - 14
+    - 14
+    description: Port x lock bit y (y=               0..15)
+  - name: LCK15
+    bit_range:
+    - 15
+    - 15
+    description: Port x lock bit y (y=               0..15)
+  - name: LCKK
+    bit_range:
+    - 16
+    - 16
+    description: Port x lock bit y (y=               0..15)
+  side_effects: null
+- id: AFRL
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: AFRL0
+    bit_range:
+    - 3
+    - 0
+    description: Alternate function selection for port x               bit y (y = 0..7)
+  - name: AFRL1
+    bit_range:
+    - 7
+    - 4
+    description: Alternate function selection for port x               bit y (y = 0..7)
+  - name: AFRL2
+    bit_range:
+    - 11
+    - 8
+    description: Alternate function selection for port x               bit y (y = 0..7)
+  - name: AFRL3
+    bit_range:
+    - 15
+    - 12
+    description: Alternate function selection for port x               bit y (y = 0..7)
+  - name: AFRL4
+    bit_range:
+    - 19
+    - 16
+    description: Alternate function selection for port x               bit y (y = 0..7)
+  - name: AFRL5
+    bit_range:
+    - 23
+    - 20
+    description: Alternate function selection for port x               bit y (y = 0..7)
+  - name: AFRL6
+    bit_range:
+    - 27
+    - 24
+    description: Alternate function selection for port x               bit y (y = 0..7)
+  - name: AFRL7
+    bit_range:
+    - 31
+    - 28
+    description: Alternate function selection for port x               bit y (y = 0..7)
+  side_effects: null
+- id: AFRH
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: AFRH8
+    bit_range:
+    - 3
+    - 0
+    description: Alternate function selection for port x               bit y (y = 8..15)
+  - name: AFRH9
+    bit_range:
+    - 7
+    - 4
+    description: Alternate function selection for port x               bit y (y = 8..15)
+  - name: AFRH10
+    bit_range:
+    - 11
+    - 8
+    description: Alternate function selection for port x               bit y (y = 8..15)
+  - name: AFRH11
+    bit_range:
+    - 15
+    - 12
+    description: Alternate function selection for port x               bit y (y = 8..15)
+  - name: AFRH12
+    bit_range:
+    - 19
+    - 16
+    description: Alternate function selection for port x               bit y (y = 8..15)
+  - name: AFRH13
+    bit_range:
+    - 23
+    - 20
+    description: Alternate function selection for port x               bit y (y = 8..15)
+  - name: AFRH14
+    bit_range:
+    - 27
+    - 24
+    description: Alternate function selection for port x               bit y (y = 8..15)
+  - name: AFRH15
+    bit_range:
+    - 31
+    - 28
+    description: Alternate function selection for port x               bit y (y = 8..15)
+  side_effects: null
+- id: BRR
+  address_offset: 40
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: BR0
+    bit_range:
+    - 0
+    - 0
+    description: Port Reset bit
+  - name: BR1
+    bit_range:
+    - 1
+    - 1
+    description: Port Reset bit
+  - name: BR2
+    bit_range:
+    - 2
+    - 2
+    description: Port Reset bit
+  - name: BR3
+    bit_range:
+    - 3
+    - 3
+    description: Port Reset bit
+  - name: BR4
+    bit_range:
+    - 4
+    - 4
+    description: Port Reset bit
+  - name: BR5
+    bit_range:
+    - 5
+    - 5
+    description: Port Reset bit
+  - name: BR6
+    bit_range:
+    - 6
+    - 6
+    description: Port Reset bit
+  - name: BR7
+    bit_range:
+    - 7
+    - 7
+    description: Port Reset bit
+  - name: BR8
+    bit_range:
+    - 8
+    - 8
+    description: Port Reset bit
+  - name: BR9
+    bit_range:
+    - 9
+    - 9
+    description: Port Reset bit
+  - name: BR10
+    bit_range:
+    - 10
+    - 10
+    description: Port Reset bit
+  - name: BR11
+    bit_range:
+    - 11
+    - 11
+    description: Port Reset bit
+  - name: BR12
+    bit_range:
+    - 12
+    - 12
+    description: Port Reset bit
+  - name: BR13
+    bit_range:
+    - 13
+    - 13
+    description: Port Reset bit
+  - name: BR14
+    bit_range:
+    - 14
+    - 14
+    description: Port Reset bit
+  - name: BR15
+    bit_range:
+    - 15
+    - 15
+    description: Port Reset bit
+  side_effects: null
+interrupts: null
+timing: null

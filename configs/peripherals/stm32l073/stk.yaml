@@ -1,0 +1,82 @@
+peripheral: STK
+version: 0.1.0
+registers:
+- id: CSR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENABLE
+    bit_range:
+    - 0
+    - 0
+    description: Counter enable
+  - name: TICKINT
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      SysTick exception request
+                    enable
+  - name: CLKSOURCE
+    bit_range:
+    - 2
+    - 2
+    description: Clock source selection
+  - name: COUNTFLAG
+    bit_range:
+    - 16
+    - 16
+    description: COUNTFLAG
+  side_effects: null
+- id: RVR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RELOAD
+    bit_range:
+    - 23
+    - 0
+    description: RELOAD value
+  side_effects: null
+- id: CVR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CURRENT
+    bit_range:
+    - 23
+    - 0
+    description: Current counter value
+  side_effects: null
+- id: CALIB
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TENMS
+    bit_range:
+    - 23
+    - 0
+    description: Calibration value
+  - name: SKEW
+    bit_range:
+    - 30
+    - 30
+    description: |-
+      SKEW flag: Indicates whether the TENMS
+                    value is exact
+  - name: NOREF
+    bit_range:
+    - 31
+    - 31
+    description: NOREF flag. Reads as zero
+  side_effects: null
+interrupts: null
+timing: null

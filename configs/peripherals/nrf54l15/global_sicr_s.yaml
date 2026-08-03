@@ -1,0 +1,12 @@
+peripheral: GLOBAL_SICR_S
+version: 0.1.0
+registers:
+- id: UNUSED
+  address_offset: 0
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields: []
+  side_effects: null
+interrupts: null
+timing: null

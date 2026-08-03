@@ -1,0 +1,27 @@
+peripheral: OTG_FS_PWRCLK
+version: 0.1.0
+registers:
+- id: FS_PCGCCTL
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STPPCLK
+    bit_range:
+    - 0
+    - 0
+    description: Stop PHY clock
+  - name: GATEHCLK
+    bit_range:
+    - 1
+    - 1
+    description: Gate HCLK
+  - name: PHYSUSP
+    bit_range:
+    - 4
+    - 4
+    description: PHY Suspended
+  side_effects: null
+interrupts: null
+timing: null

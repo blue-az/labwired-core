@@ -1,0 +1,3216 @@
+peripheral: GLOBAL_GRTC_NS
+version: 0.1.0
+registers:
+- id: TASKS_CAPTURE0
+  address_offset: 0
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_CAPTURE
+    bit_range:
+    - 0
+    - 0
+    description: Capture the counter value to CC[n] register
+  side_effects: null
+- id: TASKS_CAPTURE1
+  address_offset: 4
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_CAPTURE
+    bit_range:
+    - 0
+    - 0
+    description: Capture the counter value to CC[n] register
+  side_effects: null
+- id: TASKS_CAPTURE2
+  address_offset: 8
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_CAPTURE
+    bit_range:
+    - 0
+    - 0
+    description: Capture the counter value to CC[n] register
+  side_effects: null
+- id: TASKS_CAPTURE3
+  address_offset: 12
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_CAPTURE
+    bit_range:
+    - 0
+    - 0
+    description: Capture the counter value to CC[n] register
+  side_effects: null
+- id: TASKS_CAPTURE4
+  address_offset: 16
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_CAPTURE
+    bit_range:
+    - 0
+    - 0
+    description: Capture the counter value to CC[n] register
+  side_effects: null
+- id: TASKS_CAPTURE5
+  address_offset: 20
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_CAPTURE
+    bit_range:
+    - 0
+    - 0
+    description: Capture the counter value to CC[n] register
+  side_effects: null
+- id: TASKS_CAPTURE6
+  address_offset: 24
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_CAPTURE
+    bit_range:
+    - 0
+    - 0
+    description: Capture the counter value to CC[n] register
+  side_effects: null
+- id: TASKS_CAPTURE7
+  address_offset: 28
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_CAPTURE
+    bit_range:
+    - 0
+    - 0
+    description: Capture the counter value to CC[n] register
+  side_effects: null
+- id: TASKS_CAPTURE8
+  address_offset: 32
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_CAPTURE
+    bit_range:
+    - 0
+    - 0
+    description: Capture the counter value to CC[n] register
+  side_effects: null
+- id: TASKS_CAPTURE9
+  address_offset: 36
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_CAPTURE
+    bit_range:
+    - 0
+    - 0
+    description: Capture the counter value to CC[n] register
+  side_effects: null
+- id: TASKS_CAPTURE10
+  address_offset: 40
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_CAPTURE
+    bit_range:
+    - 0
+    - 0
+    description: Capture the counter value to CC[n] register
+  side_effects: null
+- id: TASKS_CAPTURE11
+  address_offset: 44
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_CAPTURE
+    bit_range:
+    - 0
+    - 0
+    description: Capture the counter value to CC[n] register
+  side_effects: null
+- id: TASKS_START
+  address_offset: 96
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_START
+    bit_range:
+    - 0
+    - 0
+    description: Start the counter
+  side_effects: null
+- id: TASKS_STOP
+  address_offset: 100
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_STOP
+    bit_range:
+    - 0
+    - 0
+    description: Stop the counter
+  side_effects: null
+- id: TASKS_CLEAR
+  address_offset: 104
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_CLEAR
+    bit_range:
+    - 0
+    - 0
+    description: Clear the counter
+  side_effects: null
+- id: TASKS_PWMSTART
+  address_offset: 108
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_PWMSTART
+    bit_range:
+    - 0
+    - 0
+    description: Start the PWM
+  side_effects: null
+- id: TASKS_PWMSTOP
+  address_offset: 112
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_PWMSTOP
+    bit_range:
+    - 0
+    - 0
+    description: Stop the PWM
+  side_effects: null
+- id: SUBSCRIBE_CAPTURE0
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CAPTURE[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CAPTURE1
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CAPTURE[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CAPTURE2
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CAPTURE[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CAPTURE3
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CAPTURE[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CAPTURE4
+  address_offset: 144
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CAPTURE[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CAPTURE5
+  address_offset: 148
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CAPTURE[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CAPTURE6
+  address_offset: 152
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CAPTURE[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CAPTURE7
+  address_offset: 156
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CAPTURE[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CAPTURE8
+  address_offset: 160
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CAPTURE[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CAPTURE9
+  address_offset: 164
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CAPTURE[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CAPTURE10
+  address_offset: 168
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CAPTURE[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CAPTURE11
+  address_offset: 172
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CAPTURE[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: EVENTS_COMPARE0
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_COMPARE
+    bit_range:
+    - 0
+    - 0
+    description: Compare event on CC[n] match
+  side_effects: null
+- id: EVENTS_COMPARE1
+  address_offset: 260
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_COMPARE
+    bit_range:
+    - 0
+    - 0
+    description: Compare event on CC[n] match
+  side_effects: null
+- id: EVENTS_COMPARE2
+  address_offset: 264
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_COMPARE
+    bit_range:
+    - 0
+    - 0
+    description: Compare event on CC[n] match
+  side_effects: null
+- id: EVENTS_COMPARE3
+  address_offset: 268
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_COMPARE
+    bit_range:
+    - 0
+    - 0
+    description: Compare event on CC[n] match
+  side_effects: null
+- id: EVENTS_COMPARE4
+  address_offset: 272
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_COMPARE
+    bit_range:
+    - 0
+    - 0
+    description: Compare event on CC[n] match
+  side_effects: null
+- id: EVENTS_COMPARE5
+  address_offset: 276
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_COMPARE
+    bit_range:
+    - 0
+    - 0
+    description: Compare event on CC[n] match
+  side_effects: null
+- id: EVENTS_COMPARE6
+  address_offset: 280
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_COMPARE
+    bit_range:
+    - 0
+    - 0
+    description: Compare event on CC[n] match
+  side_effects: null
+- id: EVENTS_COMPARE7
+  address_offset: 284
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_COMPARE
+    bit_range:
+    - 0
+    - 0
+    description: Compare event on CC[n] match
+  side_effects: null
+- id: EVENTS_COMPARE8
+  address_offset: 288
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_COMPARE
+    bit_range:
+    - 0
+    - 0
+    description: Compare event on CC[n] match
+  side_effects: null
+- id: EVENTS_COMPARE9
+  address_offset: 292
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_COMPARE
+    bit_range:
+    - 0
+    - 0
+    description: Compare event on CC[n] match
+  side_effects: null
+- id: EVENTS_COMPARE10
+  address_offset: 296
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_COMPARE
+    bit_range:
+    - 0
+    - 0
+    description: Compare event on CC[n] match
+  side_effects: null
+- id: EVENTS_COMPARE11
+  address_offset: 300
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_COMPARE
+    bit_range:
+    - 0
+    - 0
+    description: Compare event on CC[n] match
+  side_effects: null
+- id: EVENTS_RTCOMPARESYNC
+  address_offset: 356
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RTCOMPARESYNC
+    bit_range:
+    - 0
+    - 0
+    description: The GRTC low frequency timer is synchronized with the SYSCOUNTER
+  side_effects: null
+- id: EVENTS_PWMPERIODEND
+  address_offset: 364
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_PWMPERIODEND
+    bit_range:
+    - 0
+    - 0
+    description: Event on end of each PWM period
+  side_effects: null
+- id: EVENTS_PWMREADY
+  address_offset: 372
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_PWMREADY
+    bit_range:
+    - 0
+    - 0
+    description: Event on STATUS.PWM.READY status changed to ready
+  side_effects: null
+- id: EVENTS_CLKOUTREADY
+  address_offset: 376
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_CLKOUTREADY
+    bit_range:
+    - 0
+    - 0
+    description: Event on STATUS.CLKOUT.READY status changed to ready
+  side_effects: null
+- id: PUBLISH_COMPARE0
+  address_offset: 384
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event COMPARE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_COMPARE1
+  address_offset: 388
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event COMPARE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_COMPARE2
+  address_offset: 392
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event COMPARE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_COMPARE3
+  address_offset: 396
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event COMPARE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_COMPARE4
+  address_offset: 400
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event COMPARE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_COMPARE5
+  address_offset: 404
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event COMPARE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_COMPARE6
+  address_offset: 408
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event COMPARE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_COMPARE7
+  address_offset: 412
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event COMPARE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_COMPARE8
+  address_offset: 416
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event COMPARE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_COMPARE9
+  address_offset: 420
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event COMPARE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_COMPARE10
+  address_offset: 424
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event COMPARE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_COMPARE11
+  address_offset: 428
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event COMPARE[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_PWMREADY
+  address_offset: 500
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event PWMREADY will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_CLKOUTREADY
+  address_offset: 504
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event CLKOUTREADY will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SHORTS
+  address_offset: 512
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RTCOMPARE_CLEAR
+    bit_range:
+    - 0
+    - 0
+    description: Shortcut between event RTCOMPARE and task CLEAR
+  side_effects: null
+- id: INTEN0
+  address_offset: 768
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: COMPARE0
+    bit_range:
+    - 0
+    - 0
+    description: Enable or disable interrupt for event COMPARE[0]
+  - name: COMPARE1
+    bit_range:
+    - 1
+    - 1
+    description: Enable or disable interrupt for event COMPARE[1]
+  - name: COMPARE2
+    bit_range:
+    - 2
+    - 2
+    description: Enable or disable interrupt for event COMPARE[2]
+  - name: COMPARE3
+    bit_range:
+    - 3
+    - 3
+    description: Enable or disable interrupt for event COMPARE[3]
+  - name: COMPARE4
+    bit_range:
+    - 4
+    - 4
+    description: Enable or disable interrupt for event COMPARE[4]
+  - name: COMPARE5
+    bit_range:
+    - 5
+    - 5
+    description: Enable or disable interrupt for event COMPARE[5]
+  - name: COMPARE6
+    bit_range:
+    - 6
+    - 6
+    description: Enable or disable interrupt for event COMPARE[6]
+  - name: COMPARE7
+    bit_range:
+    - 7
+    - 7
+    description: Enable or disable interrupt for event COMPARE[7]
+  - name: COMPARE8
+    bit_range:
+    - 8
+    - 8
+    description: Enable or disable interrupt for event COMPARE[8]
+  - name: COMPARE9
+    bit_range:
+    - 9
+    - 9
+    description: Enable or disable interrupt for event COMPARE[9]
+  - name: COMPARE10
+    bit_range:
+    - 10
+    - 10
+    description: Enable or disable interrupt for event COMPARE[10]
+  - name: COMPARE11
+    bit_range:
+    - 11
+    - 11
+    description: Enable or disable interrupt for event COMPARE[11]
+  - name: RTCOMPARESYNC
+    bit_range:
+    - 25
+    - 25
+    description: Enable or disable interrupt for event RTCOMPARESYNC
+  - name: PWMPERIODEND
+    bit_range:
+    - 27
+    - 27
+    description: Enable or disable interrupt for event PWMPERIODEND
+  - name: PWMREADY
+    bit_range:
+    - 29
+    - 29
+    description: Enable or disable interrupt for event PWMREADY
+  - name: CLKOUTREADY
+    bit_range:
+    - 30
+    - 30
+    description: Enable or disable interrupt for event CLKOUTREADY
+  side_effects: null
+- id: INTENSET0
+  address_offset: 772
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: COMPARE0
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to enable interrupt for event COMPARE[0]
+  - name: COMPARE1
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to enable interrupt for event COMPARE[1]
+  - name: COMPARE2
+    bit_range:
+    - 2
+    - 2
+    description: Write '1' to enable interrupt for event COMPARE[2]
+  - name: COMPARE3
+    bit_range:
+    - 3
+    - 3
+    description: Write '1' to enable interrupt for event COMPARE[3]
+  - name: COMPARE4
+    bit_range:
+    - 4
+    - 4
+    description: Write '1' to enable interrupt for event COMPARE[4]
+  - name: COMPARE5
+    bit_range:
+    - 5
+    - 5
+    description: Write '1' to enable interrupt for event COMPARE[5]
+  - name: COMPARE6
+    bit_range:
+    - 6
+    - 6
+    description: Write '1' to enable interrupt for event COMPARE[6]
+  - name: COMPARE7
+    bit_range:
+    - 7
+    - 7
+    description: Write '1' to enable interrupt for event COMPARE[7]
+  - name: COMPARE8
+    bit_range:
+    - 8
+    - 8
+    description: Write '1' to enable interrupt for event COMPARE[8]
+  - name: COMPARE9
+    bit_range:
+    - 9
+    - 9
+    description: Write '1' to enable interrupt for event COMPARE[9]
+  - name: COMPARE10
+    bit_range:
+    - 10
+    - 10
+    description: Write '1' to enable interrupt for event COMPARE[10]
+  - name: COMPARE11
+    bit_range:
+    - 11
+    - 11
+    description: Write '1' to enable interrupt for event COMPARE[11]
+  - name: RTCOMPARESYNC
+    bit_range:
+    - 25
+    - 25
+    description: Write '1' to enable interrupt for event RTCOMPARESYNC
+  - name: PWMPERIODEND
+    bit_range:
+    - 27
+    - 27
+    description: Write '1' to enable interrupt for event PWMPERIODEND
+  - name: PWMREADY
+    bit_range:
+    - 29
+    - 29
+    description: Write '1' to enable interrupt for event PWMREADY
+  - name: CLKOUTREADY
+    bit_range:
+    - 30
+    - 30
+    description: Write '1' to enable interrupt for event CLKOUTREADY
+  side_effects: null
+- id: INTENCLR0
+  address_offset: 776
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: COMPARE0
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to disable interrupt for event COMPARE[0]
+  - name: COMPARE1
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to disable interrupt for event COMPARE[1]
+  - name: COMPARE2
+    bit_range:
+    - 2
+    - 2
+    description: Write '1' to disable interrupt for event COMPARE[2]
+  - name: COMPARE3
+    bit_range:
+    - 3
+    - 3
+    description: Write '1' to disable interrupt for event COMPARE[3]
+  - name: COMPARE4
+    bit_range:
+    - 4
+    - 4
+    description: Write '1' to disable interrupt for event COMPARE[4]
+  - name: COMPARE5
+    bit_range:
+    - 5
+    - 5
+    description: Write '1' to disable interrupt for event COMPARE[5]
+  - name: COMPARE6
+    bit_range:
+    - 6
+    - 6
+    description: Write '1' to disable interrupt for event COMPARE[6]
+  - name: COMPARE7
+    bit_range:
+    - 7
+    - 7
+    description: Write '1' to disable interrupt for event COMPARE[7]
+  - name: COMPARE8
+    bit_range:
+    - 8
+    - 8
+    description: Write '1' to disable interrupt for event COMPARE[8]
+  - name: COMPARE9
+    bit_range:
+    - 9
+    - 9
+    description: Write '1' to disable interrupt for event COMPARE[9]
+  - name: COMPARE10
+    bit_range:
+    - 10
+    - 10
+    description: Write '1' to disable interrupt for event COMPARE[10]
+  - name: COMPARE11
+    bit_range:
+    - 11
+    - 11
+    description: Write '1' to disable interrupt for event COMPARE[11]
+  - name: RTCOMPARESYNC
+    bit_range:
+    - 25
+    - 25
+    description: Write '1' to disable interrupt for event RTCOMPARESYNC
+  - name: PWMPERIODEND
+    bit_range:
+    - 27
+    - 27
+    description: Write '1' to disable interrupt for event PWMPERIODEND
+  - name: PWMREADY
+    bit_range:
+    - 29
+    - 29
+    description: Write '1' to disable interrupt for event PWMREADY
+  - name: CLKOUTREADY
+    bit_range:
+    - 30
+    - 30
+    description: Write '1' to disable interrupt for event CLKOUTREADY
+  side_effects: null
+- id: INTPEND0
+  address_offset: 780
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: COMPARE0
+    bit_range:
+    - 0
+    - 0
+    description: Read pending status of interrupt for event COMPARE[0]
+  - name: COMPARE1
+    bit_range:
+    - 1
+    - 1
+    description: Read pending status of interrupt for event COMPARE[1]
+  - name: COMPARE2
+    bit_range:
+    - 2
+    - 2
+    description: Read pending status of interrupt for event COMPARE[2]
+  - name: COMPARE3
+    bit_range:
+    - 3
+    - 3
+    description: Read pending status of interrupt for event COMPARE[3]
+  - name: COMPARE4
+    bit_range:
+    - 4
+    - 4
+    description: Read pending status of interrupt for event COMPARE[4]
+  - name: COMPARE5
+    bit_range:
+    - 5
+    - 5
+    description: Read pending status of interrupt for event COMPARE[5]
+  - name: COMPARE6
+    bit_range:
+    - 6
+    - 6
+    description: Read pending status of interrupt for event COMPARE[6]
+  - name: COMPARE7
+    bit_range:
+    - 7
+    - 7
+    description: Read pending status of interrupt for event COMPARE[7]
+  - name: COMPARE8
+    bit_range:
+    - 8
+    - 8
+    description: Read pending status of interrupt for event COMPARE[8]
+  - name: COMPARE9
+    bit_range:
+    - 9
+    - 9
+    description: Read pending status of interrupt for event COMPARE[9]
+  - name: COMPARE10
+    bit_range:
+    - 10
+    - 10
+    description: Read pending status of interrupt for event COMPARE[10]
+  - name: COMPARE11
+    bit_range:
+    - 11
+    - 11
+    description: Read pending status of interrupt for event COMPARE[11]
+  - name: RTCOMPARESYNC
+    bit_range:
+    - 25
+    - 25
+    description: Read pending status of interrupt for event RTCOMPARESYNC
+  - name: PWMPERIODEND
+    bit_range:
+    - 27
+    - 27
+    description: Read pending status of interrupt for event PWMPERIODEND
+  - name: PWMREADY
+    bit_range:
+    - 29
+    - 29
+    description: Read pending status of interrupt for event PWMREADY
+  - name: CLKOUTREADY
+    bit_range:
+    - 30
+    - 30
+    description: Read pending status of interrupt for event CLKOUTREADY
+  side_effects: null
+- id: INTEN1
+  address_offset: 784
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: COMPARE0
+    bit_range:
+    - 0
+    - 0
+    description: Enable or disable interrupt for event COMPARE[0]
+  - name: COMPARE1
+    bit_range:
+    - 1
+    - 1
+    description: Enable or disable interrupt for event COMPARE[1]
+  - name: COMPARE2
+    bit_range:
+    - 2
+    - 2
+    description: Enable or disable interrupt for event COMPARE[2]
+  - name: COMPARE3
+    bit_range:
+    - 3
+    - 3
+    description: Enable or disable interrupt for event COMPARE[3]
+  - name: COMPARE4
+    bit_range:
+    - 4
+    - 4
+    description: Enable or disable interrupt for event COMPARE[4]
+  - name: COMPARE5
+    bit_range:
+    - 5
+    - 5
+    description: Enable or disable interrupt for event COMPARE[5]
+  - name: COMPARE6
+    bit_range:
+    - 6
+    - 6
+    description: Enable or disable interrupt for event COMPARE[6]
+  - name: COMPARE7
+    bit_range:
+    - 7
+    - 7
+    description: Enable or disable interrupt for event COMPARE[7]
+  - name: COMPARE8
+    bit_range:
+    - 8
+    - 8
+    description: Enable or disable interrupt for event COMPARE[8]
+  - name: COMPARE9
+    bit_range:
+    - 9
+    - 9
+    description: Enable or disable interrupt for event COMPARE[9]
+  - name: COMPARE10
+    bit_range:
+    - 10
+    - 10
+    description: Enable or disable interrupt for event COMPARE[10]
+  - name: COMPARE11
+    bit_range:
+    - 11
+    - 11
+    description: Enable or disable interrupt for event COMPARE[11]
+  - name: RTCOMPARESYNC
+    bit_range:
+    - 25
+    - 25
+    description: Enable or disable interrupt for event RTCOMPARESYNC
+  - name: PWMPERIODEND
+    bit_range:
+    - 27
+    - 27
+    description: Enable or disable interrupt for event PWMPERIODEND
+  - name: PWMREADY
+    bit_range:
+    - 29
+    - 29
+    description: Enable or disable interrupt for event PWMREADY
+  - name: CLKOUTREADY
+    bit_range:
+    - 30
+    - 30
+    description: Enable or disable interrupt for event CLKOUTREADY
+  side_effects: null
+- id: INTENSET1
+  address_offset: 788
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: COMPARE0
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to enable interrupt for event COMPARE[0]
+  - name: COMPARE1
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to enable interrupt for event COMPARE[1]
+  - name: COMPARE2
+    bit_range:
+    - 2
+    - 2
+    description: Write '1' to enable interrupt for event COMPARE[2]
+  - name: COMPARE3
+    bit_range:
+    - 3
+    - 3
+    description: Write '1' to enable interrupt for event COMPARE[3]
+  - name: COMPARE4
+    bit_range:
+    - 4
+    - 4
+    description: Write '1' to enable interrupt for event COMPARE[4]
+  - name: COMPARE5
+    bit_range:
+    - 5
+    - 5
+    description: Write '1' to enable interrupt for event COMPARE[5]
+  - name: COMPARE6
+    bit_range:
+    - 6
+    - 6
+    description: Write '1' to enable interrupt for event COMPARE[6]
+  - name: COMPARE7
+    bit_range:
+    - 7
+    - 7
+    description: Write '1' to enable interrupt for event COMPARE[7]
+  - name: COMPARE8
+    bit_range:
+    - 8
+    - 8
+    description: Write '1' to enable interrupt for event COMPARE[8]
+  - name: COMPARE9
+    bit_range:
+    - 9
+    - 9
+    description: Write '1' to enable interrupt for event COMPARE[9]
+  - name: COMPARE10
+    bit_range:
+    - 10
+    - 10
+    description: Write '1' to enable interrupt for event COMPARE[10]
+  - name: COMPARE11
+    bit_range:
+    - 11
+    - 11
+    description: Write '1' to enable interrupt for event COMPARE[11]
+  - name: RTCOMPARESYNC
+    bit_range:
+    - 25
+    - 25
+    description: Write '1' to enable interrupt for event RTCOMPARESYNC
+  - name: PWMPERIODEND
+    bit_range:
+    - 27
+    - 27
+    description: Write '1' to enable interrupt for event PWMPERIODEND
+  - name: PWMREADY
+    bit_range:
+    - 29
+    - 29
+    description: Write '1' to enable interrupt for event PWMREADY
+  - name: CLKOUTREADY
+    bit_range:
+    - 30
+    - 30
+    description: Write '1' to enable interrupt for event CLKOUTREADY
+  side_effects: null
+- id: INTENCLR1
+  address_offset: 792
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: COMPARE0
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to disable interrupt for event COMPARE[0]
+  - name: COMPARE1
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to disable interrupt for event COMPARE[1]
+  - name: COMPARE2
+    bit_range:
+    - 2
+    - 2
+    description: Write '1' to disable interrupt for event COMPARE[2]
+  - name: COMPARE3
+    bit_range:
+    - 3
+    - 3
+    description: Write '1' to disable interrupt for event COMPARE[3]
+  - name: COMPARE4
+    bit_range:
+    - 4
+    - 4
+    description: Write '1' to disable interrupt for event COMPARE[4]
+  - name: COMPARE5
+    bit_range:
+    - 5
+    - 5
+    description: Write '1' to disable interrupt for event COMPARE[5]
+  - name: COMPARE6
+    bit_range:
+    - 6
+    - 6
+    description: Write '1' to disable interrupt for event COMPARE[6]
+  - name: COMPARE7
+    bit_range:
+    - 7
+    - 7
+    description: Write '1' to disable interrupt for event COMPARE[7]
+  - name: COMPARE8
+    bit_range:
+    - 8
+    - 8
+    description: Write '1' to disable interrupt for event COMPARE[8]
+  - name: COMPARE9
+    bit_range:
+    - 9
+    - 9
+    description: Write '1' to disable interrupt for event COMPARE[9]
+  - name: COMPARE10
+    bit_range:
+    - 10
+    - 10
+    description: Write '1' to disable interrupt for event COMPARE[10]
+  - name: COMPARE11
+    bit_range:
+    - 11
+    - 11
+    description: Write '1' to disable interrupt for event COMPARE[11]
+  - name: RTCOMPARESYNC
+    bit_range:
+    - 25
+    - 25
+    description: Write '1' to disable interrupt for event RTCOMPARESYNC
+  - name: PWMPERIODEND
+    bit_range:
+    - 27
+    - 27
+    description: Write '1' to disable interrupt for event PWMPERIODEND
+  - name: PWMREADY
+    bit_range:
+    - 29
+    - 29
+    description: Write '1' to disable interrupt for event PWMREADY
+  - name: CLKOUTREADY
+    bit_range:
+    - 30
+    - 30
+    description: Write '1' to disable interrupt for event CLKOUTREADY
+  side_effects: null
+- id: INTPEND1
+  address_offset: 796
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: COMPARE0
+    bit_range:
+    - 0
+    - 0
+    description: Read pending status of interrupt for event COMPARE[0]
+  - name: COMPARE1
+    bit_range:
+    - 1
+    - 1
+    description: Read pending status of interrupt for event COMPARE[1]
+  - name: COMPARE2
+    bit_range:
+    - 2
+    - 2
+    description: Read pending status of interrupt for event COMPARE[2]
+  - name: COMPARE3
+    bit_range:
+    - 3
+    - 3
+    description: Read pending status of interrupt for event COMPARE[3]
+  - name: COMPARE4
+    bit_range:
+    - 4
+    - 4
+    description: Read pending status of interrupt for event COMPARE[4]
+  - name: COMPARE5
+    bit_range:
+    - 5
+    - 5
+    description: Read pending status of interrupt for event COMPARE[5]
+  - name: COMPARE6
+    bit_range:
+    - 6
+    - 6
+    description: Read pending status of interrupt for event COMPARE[6]
+  - name: COMPARE7
+    bit_range:
+    - 7
+    - 7
+    description: Read pending status of interrupt for event COMPARE[7]
+  - name: COMPARE8
+    bit_range:
+    - 8
+    - 8
+    description: Read pending status of interrupt for event COMPARE[8]
+  - name: COMPARE9
+    bit_range:
+    - 9
+    - 9
+    description: Read pending status of interrupt for event COMPARE[9]
+  - name: COMPARE10
+    bit_range:
+    - 10
+    - 10
+    description: Read pending status of interrupt for event COMPARE[10]
+  - name: COMPARE11
+    bit_range:
+    - 11
+    - 11
+    description: Read pending status of interrupt for event COMPARE[11]
+  - name: RTCOMPARESYNC
+    bit_range:
+    - 25
+    - 25
+    description: Read pending status of interrupt for event RTCOMPARESYNC
+  - name: PWMPERIODEND
+    bit_range:
+    - 27
+    - 27
+    description: Read pending status of interrupt for event PWMPERIODEND
+  - name: PWMREADY
+    bit_range:
+    - 29
+    - 29
+    description: Read pending status of interrupt for event PWMREADY
+  - name: CLKOUTREADY
+    bit_range:
+    - 30
+    - 30
+    description: Read pending status of interrupt for event CLKOUTREADY
+  side_effects: null
+- id: INTEN2
+  address_offset: 800
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: COMPARE0
+    bit_range:
+    - 0
+    - 0
+    description: Enable or disable interrupt for event COMPARE[0]
+  - name: COMPARE1
+    bit_range:
+    - 1
+    - 1
+    description: Enable or disable interrupt for event COMPARE[1]
+  - name: COMPARE2
+    bit_range:
+    - 2
+    - 2
+    description: Enable or disable interrupt for event COMPARE[2]
+  - name: COMPARE3
+    bit_range:
+    - 3
+    - 3
+    description: Enable or disable interrupt for event COMPARE[3]
+  - name: COMPARE4
+    bit_range:
+    - 4
+    - 4
+    description: Enable or disable interrupt for event COMPARE[4]
+  - name: COMPARE5
+    bit_range:
+    - 5
+    - 5
+    description: Enable or disable interrupt for event COMPARE[5]
+  - name: COMPARE6
+    bit_range:
+    - 6
+    - 6
+    description: Enable or disable interrupt for event COMPARE[6]
+  - name: COMPARE7
+    bit_range:
+    - 7
+    - 7
+    description: Enable or disable interrupt for event COMPARE[7]
+  - name: COMPARE8
+    bit_range:
+    - 8
+    - 8
+    description: Enable or disable interrupt for event COMPARE[8]
+  - name: COMPARE9
+    bit_range:
+    - 9
+    - 9
+    description: Enable or disable interrupt for event COMPARE[9]
+  - name: COMPARE10
+    bit_range:
+    - 10
+    - 10
+    description: Enable or disable interrupt for event COMPARE[10]
+  - name: COMPARE11
+    bit_range:
+    - 11
+    - 11
+    description: Enable or disable interrupt for event COMPARE[11]
+  - name: RTCOMPARESYNC
+    bit_range:
+    - 25
+    - 25
+    description: Enable or disable interrupt for event RTCOMPARESYNC
+  - name: PWMPERIODEND
+    bit_range:
+    - 27
+    - 27
+    description: Enable or disable interrupt for event PWMPERIODEND
+  - name: PWMREADY
+    bit_range:
+    - 29
+    - 29
+    description: Enable or disable interrupt for event PWMREADY
+  - name: CLKOUTREADY
+    bit_range:
+    - 30
+    - 30
+    description: Enable or disable interrupt for event CLKOUTREADY
+  side_effects: null
+- id: INTENSET2
+  address_offset: 804
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: COMPARE0
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to enable interrupt for event COMPARE[0]
+  - name: COMPARE1
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to enable interrupt for event COMPARE[1]
+  - name: COMPARE2
+    bit_range:
+    - 2
+    - 2
+    description: Write '1' to enable interrupt for event COMPARE[2]
+  - name: COMPARE3
+    bit_range:
+    - 3
+    - 3
+    description: Write '1' to enable interrupt for event COMPARE[3]
+  - name: COMPARE4
+    bit_range:
+    - 4
+    - 4
+    description: Write '1' to enable interrupt for event COMPARE[4]
+  - name: COMPARE5
+    bit_range:
+    - 5
+    - 5
+    description: Write '1' to enable interrupt for event COMPARE[5]
+  - name: COMPARE6
+    bit_range:
+    - 6
+    - 6
+    description: Write '1' to enable interrupt for event COMPARE[6]
+  - name: COMPARE7
+    bit_range:
+    - 7
+    - 7
+    description: Write '1' to enable interrupt for event COMPARE[7]
+  - name: COMPARE8
+    bit_range:
+    - 8
+    - 8
+    description: Write '1' to enable interrupt for event COMPARE[8]
+  - name: COMPARE9
+    bit_range:
+    - 9
+    - 9
+    description: Write '1' to enable interrupt for event COMPARE[9]
+  - name: COMPARE10
+    bit_range:
+    - 10
+    - 10
+    description: Write '1' to enable interrupt for event COMPARE[10]
+  - name: COMPARE11
+    bit_range:
+    - 11
+    - 11
+    description: Write '1' to enable interrupt for event COMPARE[11]
+  - name: RTCOMPARESYNC
+    bit_range:
+    - 25
+    - 25
+    description: Write '1' to enable interrupt for event RTCOMPARESYNC
+  - name: PWMPERIODEND
+    bit_range:
+    - 27
+    - 27
+    description: Write '1' to enable interrupt for event PWMPERIODEND
+  - name: PWMREADY
+    bit_range:
+    - 29
+    - 29
+    description: Write '1' to enable interrupt for event PWMREADY
+  - name: CLKOUTREADY
+    bit_range:
+    - 30
+    - 30
+    description: Write '1' to enable interrupt for event CLKOUTREADY
+  side_effects: null
+- id: INTENCLR2
+  address_offset: 808
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: COMPARE0
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to disable interrupt for event COMPARE[0]
+  - name: COMPARE1
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to disable interrupt for event COMPARE[1]
+  - name: COMPARE2
+    bit_range:
+    - 2
+    - 2
+    description: Write '1' to disable interrupt for event COMPARE[2]
+  - name: COMPARE3
+    bit_range:
+    - 3
+    - 3
+    description: Write '1' to disable interrupt for event COMPARE[3]
+  - name: COMPARE4
+    bit_range:
+    - 4
+    - 4
+    description: Write '1' to disable interrupt for event COMPARE[4]
+  - name: COMPARE5
+    bit_range:
+    - 5
+    - 5
+    description: Write '1' to disable interrupt for event COMPARE[5]
+  - name: COMPARE6
+    bit_range:
+    - 6
+    - 6
+    description: Write '1' to disable interrupt for event COMPARE[6]
+  - name: COMPARE7
+    bit_range:
+    - 7
+    - 7
+    description: Write '1' to disable interrupt for event COMPARE[7]
+  - name: COMPARE8
+    bit_range:
+    - 8
+    - 8
+    description: Write '1' to disable interrupt for event COMPARE[8]
+  - name: COMPARE9
+    bit_range:
+    - 9
+    - 9
+    description: Write '1' to disable interrupt for event COMPARE[9]
+  - name: COMPARE10
+    bit_range:
+    - 10
+    - 10
+    description: Write '1' to disable interrupt for event COMPARE[10]
+  - name: COMPARE11
+    bit_range:
+    - 11
+    - 11
+    description: Write '1' to disable interrupt for event COMPARE[11]
+  - name: RTCOMPARESYNC
+    bit_range:
+    - 25
+    - 25
+    description: Write '1' to disable interrupt for event RTCOMPARESYNC
+  - name: PWMPERIODEND
+    bit_range:
+    - 27
+    - 27
+    description: Write '1' to disable interrupt for event PWMPERIODEND
+  - name: PWMREADY
+    bit_range:
+    - 29
+    - 29
+    description: Write '1' to disable interrupt for event PWMREADY
+  - name: CLKOUTREADY
+    bit_range:
+    - 30
+    - 30
+    description: Write '1' to disable interrupt for event CLKOUTREADY
+  side_effects: null
+- id: INTPEND2
+  address_offset: 812
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: COMPARE0
+    bit_range:
+    - 0
+    - 0
+    description: Read pending status of interrupt for event COMPARE[0]
+  - name: COMPARE1
+    bit_range:
+    - 1
+    - 1
+    description: Read pending status of interrupt for event COMPARE[1]
+  - name: COMPARE2
+    bit_range:
+    - 2
+    - 2
+    description: Read pending status of interrupt for event COMPARE[2]
+  - name: COMPARE3
+    bit_range:
+    - 3
+    - 3
+    description: Read pending status of interrupt for event COMPARE[3]
+  - name: COMPARE4
+    bit_range:
+    - 4
+    - 4
+    description: Read pending status of interrupt for event COMPARE[4]
+  - name: COMPARE5
+    bit_range:
+    - 5
+    - 5
+    description: Read pending status of interrupt for event COMPARE[5]
+  - name: COMPARE6
+    bit_range:
+    - 6
+    - 6
+    description: Read pending status of interrupt for event COMPARE[6]
+  - name: COMPARE7
+    bit_range:
+    - 7
+    - 7
+    description: Read pending status of interrupt for event COMPARE[7]
+  - name: COMPARE8
+    bit_range:
+    - 8
+    - 8
+    description: Read pending status of interrupt for event COMPARE[8]
+  - name: COMPARE9
+    bit_range:
+    - 9
+    - 9
+    description: Read pending status of interrupt for event COMPARE[9]
+  - name: COMPARE10
+    bit_range:
+    - 10
+    - 10
+    description: Read pending status of interrupt for event COMPARE[10]
+  - name: COMPARE11
+    bit_range:
+    - 11
+    - 11
+    description: Read pending status of interrupt for event COMPARE[11]
+  - name: RTCOMPARESYNC
+    bit_range:
+    - 25
+    - 25
+    description: Read pending status of interrupt for event RTCOMPARESYNC
+  - name: PWMPERIODEND
+    bit_range:
+    - 27
+    - 27
+    description: Read pending status of interrupt for event PWMPERIODEND
+  - name: PWMREADY
+    bit_range:
+    - 29
+    - 29
+    description: Read pending status of interrupt for event PWMREADY
+  - name: CLKOUTREADY
+    bit_range:
+    - 30
+    - 30
+    description: Read pending status of interrupt for event CLKOUTREADY
+  side_effects: null
+- id: INTEN3
+  address_offset: 816
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: COMPARE0
+    bit_range:
+    - 0
+    - 0
+    description: Enable or disable interrupt for event COMPARE[0]
+  - name: COMPARE1
+    bit_range:
+    - 1
+    - 1
+    description: Enable or disable interrupt for event COMPARE[1]
+  - name: COMPARE2
+    bit_range:
+    - 2
+    - 2
+    description: Enable or disable interrupt for event COMPARE[2]
+  - name: COMPARE3
+    bit_range:
+    - 3
+    - 3
+    description: Enable or disable interrupt for event COMPARE[3]
+  - name: COMPARE4
+    bit_range:
+    - 4
+    - 4
+    description: Enable or disable interrupt for event COMPARE[4]
+  - name: COMPARE5
+    bit_range:
+    - 5
+    - 5
+    description: Enable or disable interrupt for event COMPARE[5]
+  - name: COMPARE6
+    bit_range:
+    - 6
+    - 6
+    description: Enable or disable interrupt for event COMPARE[6]
+  - name: COMPARE7
+    bit_range:
+    - 7
+    - 7
+    description: Enable or disable interrupt for event COMPARE[7]
+  - name: COMPARE8
+    bit_range:
+    - 8
+    - 8
+    description: Enable or disable interrupt for event COMPARE[8]
+  - name: COMPARE9
+    bit_range:
+    - 9
+    - 9
+    description: Enable or disable interrupt for event COMPARE[9]
+  - name: COMPARE10
+    bit_range:
+    - 10
+    - 10
+    description: Enable or disable interrupt for event COMPARE[10]
+  - name: COMPARE11
+    bit_range:
+    - 11
+    - 11
+    description: Enable or disable interrupt for event COMPARE[11]
+  - name: RTCOMPARESYNC
+    bit_range:
+    - 25
+    - 25
+    description: Enable or disable interrupt for event RTCOMPARESYNC
+  - name: PWMPERIODEND
+    bit_range:
+    - 27
+    - 27
+    description: Enable or disable interrupt for event PWMPERIODEND
+  - name: PWMREADY
+    bit_range:
+    - 29
+    - 29
+    description: Enable or disable interrupt for event PWMREADY
+  - name: CLKOUTREADY
+    bit_range:
+    - 30
+    - 30
+    description: Enable or disable interrupt for event CLKOUTREADY
+  side_effects: null
+- id: INTENSET3
+  address_offset: 820
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: COMPARE0
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to enable interrupt for event COMPARE[0]
+  - name: COMPARE1
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to enable interrupt for event COMPARE[1]
+  - name: COMPARE2
+    bit_range:
+    - 2
+    - 2
+    description: Write '1' to enable interrupt for event COMPARE[2]
+  - name: COMPARE3
+    bit_range:
+    - 3
+    - 3
+    description: Write '1' to enable interrupt for event COMPARE[3]
+  - name: COMPARE4
+    bit_range:
+    - 4
+    - 4
+    description: Write '1' to enable interrupt for event COMPARE[4]
+  - name: COMPARE5
+    bit_range:
+    - 5
+    - 5
+    description: Write '1' to enable interrupt for event COMPARE[5]
+  - name: COMPARE6
+    bit_range:
+    - 6
+    - 6
+    description: Write '1' to enable interrupt for event COMPARE[6]
+  - name: COMPARE7
+    bit_range:
+    - 7
+    - 7
+    description: Write '1' to enable interrupt for event COMPARE[7]
+  - name: COMPARE8
+    bit_range:
+    - 8
+    - 8
+    description: Write '1' to enable interrupt for event COMPARE[8]
+  - name: COMPARE9
+    bit_range:
+    - 9
+    - 9
+    description: Write '1' to enable interrupt for event COMPARE[9]
+  - name: COMPARE10
+    bit_range:
+    - 10
+    - 10
+    description: Write '1' to enable interrupt for event COMPARE[10]
+  - name: COMPARE11
+    bit_range:
+    - 11
+    - 11
+    description: Write '1' to enable interrupt for event COMPARE[11]
+  - name: RTCOMPARESYNC
+    bit_range:
+    - 25
+    - 25
+    description: Write '1' to enable interrupt for event RTCOMPARESYNC
+  - name: PWMPERIODEND
+    bit_range:
+    - 27
+    - 27
+    description: Write '1' to enable interrupt for event PWMPERIODEND
+  - name: PWMREADY
+    bit_range:
+    - 29
+    - 29
+    description: Write '1' to enable interrupt for event PWMREADY
+  - name: CLKOUTREADY
+    bit_range:
+    - 30
+    - 30
+    description: Write '1' to enable interrupt for event CLKOUTREADY
+  side_effects: null
+- id: INTENCLR3
+  address_offset: 824
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: COMPARE0
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to disable interrupt for event COMPARE[0]
+  - name: COMPARE1
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to disable interrupt for event COMPARE[1]
+  - name: COMPARE2
+    bit_range:
+    - 2
+    - 2
+    description: Write '1' to disable interrupt for event COMPARE[2]
+  - name: COMPARE3
+    bit_range:
+    - 3
+    - 3
+    description: Write '1' to disable interrupt for event COMPARE[3]
+  - name: COMPARE4
+    bit_range:
+    - 4
+    - 4
+    description: Write '1' to disable interrupt for event COMPARE[4]
+  - name: COMPARE5
+    bit_range:
+    - 5
+    - 5
+    description: Write '1' to disable interrupt for event COMPARE[5]
+  - name: COMPARE6
+    bit_range:
+    - 6
+    - 6
+    description: Write '1' to disable interrupt for event COMPARE[6]
+  - name: COMPARE7
+    bit_range:
+    - 7
+    - 7
+    description: Write '1' to disable interrupt for event COMPARE[7]
+  - name: COMPARE8
+    bit_range:
+    - 8
+    - 8
+    description: Write '1' to disable interrupt for event COMPARE[8]
+  - name: COMPARE9
+    bit_range:
+    - 9
+    - 9
+    description: Write '1' to disable interrupt for event COMPARE[9]
+  - name: COMPARE10
+    bit_range:
+    - 10
+    - 10
+    description: Write '1' to disable interrupt for event COMPARE[10]
+  - name: COMPARE11
+    bit_range:
+    - 11
+    - 11
+    description: Write '1' to disable interrupt for event COMPARE[11]
+  - name: RTCOMPARESYNC
+    bit_range:
+    - 25
+    - 25
+    description: Write '1' to disable interrupt for event RTCOMPARESYNC
+  - name: PWMPERIODEND
+    bit_range:
+    - 27
+    - 27
+    description: Write '1' to disable interrupt for event PWMPERIODEND
+  - name: PWMREADY
+    bit_range:
+    - 29
+    - 29
+    description: Write '1' to disable interrupt for event PWMREADY
+  - name: CLKOUTREADY
+    bit_range:
+    - 30
+    - 30
+    description: Write '1' to disable interrupt for event CLKOUTREADY
+  side_effects: null
+- id: INTPEND3
+  address_offset: 828
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: COMPARE0
+    bit_range:
+    - 0
+    - 0
+    description: Read pending status of interrupt for event COMPARE[0]
+  - name: COMPARE1
+    bit_range:
+    - 1
+    - 1
+    description: Read pending status of interrupt for event COMPARE[1]
+  - name: COMPARE2
+    bit_range:
+    - 2
+    - 2
+    description: Read pending status of interrupt for event COMPARE[2]
+  - name: COMPARE3
+    bit_range:
+    - 3
+    - 3
+    description: Read pending status of interrupt for event COMPARE[3]
+  - name: COMPARE4
+    bit_range:
+    - 4
+    - 4
+    description: Read pending status of interrupt for event COMPARE[4]
+  - name: COMPARE5
+    bit_range:
+    - 5
+    - 5
+    description: Read pending status of interrupt for event COMPARE[5]
+  - name: COMPARE6
+    bit_range:
+    - 6
+    - 6
+    description: Read pending status of interrupt for event COMPARE[6]
+  - name: COMPARE7
+    bit_range:
+    - 7
+    - 7
+    description: Read pending status of interrupt for event COMPARE[7]
+  - name: COMPARE8
+    bit_range:
+    - 8
+    - 8
+    description: Read pending status of interrupt for event COMPARE[8]
+  - name: COMPARE9
+    bit_range:
+    - 9
+    - 9
+    description: Read pending status of interrupt for event COMPARE[9]
+  - name: COMPARE10
+    bit_range:
+    - 10
+    - 10
+    description: Read pending status of interrupt for event COMPARE[10]
+  - name: COMPARE11
+    bit_range:
+    - 11
+    - 11
+    description: Read pending status of interrupt for event COMPARE[11]
+  - name: RTCOMPARESYNC
+    bit_range:
+    - 25
+    - 25
+    description: Read pending status of interrupt for event RTCOMPARESYNC
+  - name: PWMPERIODEND
+    bit_range:
+    - 27
+    - 27
+    description: Read pending status of interrupt for event PWMPERIODEND
+  - name: PWMREADY
+    bit_range:
+    - 29
+    - 29
+    description: Read pending status of interrupt for event PWMREADY
+  - name: CLKOUTREADY
+    bit_range:
+    - 30
+    - 30
+    description: Read pending status of interrupt for event CLKOUTREADY
+  side_effects: null
+- id: EVTEN
+  address_offset: 1024
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PWMPERIODEND
+    bit_range:
+    - 27
+    - 27
+    description: Enable or disable event routing for event PWMPERIODEND
+  side_effects: null
+- id: EVTENSET
+  address_offset: 1028
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PWMPERIODEND
+    bit_range:
+    - 27
+    - 27
+    description: Write '1' to enable event routing for event PWMPERIODEND
+  side_effects: null
+- id: EVTENCLR
+  address_offset: 1032
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PWMPERIODEND
+    bit_range:
+    - 27
+    - 27
+    description: Write '1' to disable event routing for event PWMPERIODEND
+  side_effects: null
+- id: MODE
+  address_offset: 1296
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: AUTOEN
+    bit_range:
+    - 0
+    - 0
+    description: Automatic enable to keep the SYSCOUNTER active.
+  - name: SYSCOUNTEREN
+    bit_range:
+    - 1
+    - 1
+    description: Enable the SYSCOUNTER
+  side_effects: null
+- id: CC0_CCL
+  address_offset: 1312
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCL
+    bit_range:
+    - 31
+    - 0
+    description: Capture/Compare low value in 1 us
+  side_effects: null
+- id: CC0_CCH
+  address_offset: 1316
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCH
+    bit_range:
+    - 19
+    - 0
+    description: Capture/Compare high value in 1 us
+  side_effects: null
+- id: CC0_CCADD
+  address_offset: 1320
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 30
+    - 0
+    description: Count to add to CC[n]
+  - name: REFERENCE
+    bit_range:
+    - 31
+    - 31
+    description: Configure the Capture/Compare register
+  side_effects: null
+- id: CC0_CCEN
+  address_offset: 1324
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ACTIVE
+    bit_range:
+    - 0
+    - 0
+    description: Configure the Capture/Compare register
+  side_effects: null
+- id: CC1_CCL
+  address_offset: 1328
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCL
+    bit_range:
+    - 31
+    - 0
+    description: Capture/Compare low value in 1 us
+  side_effects: null
+- id: CC1_CCH
+  address_offset: 1332
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCH
+    bit_range:
+    - 19
+    - 0
+    description: Capture/Compare high value in 1 us
+  side_effects: null
+- id: CC1_CCADD
+  address_offset: 1336
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 30
+    - 0
+    description: Count to add to CC[n]
+  - name: REFERENCE
+    bit_range:
+    - 31
+    - 31
+    description: Configure the Capture/Compare register
+  side_effects: null
+- id: CC1_CCEN
+  address_offset: 1340
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ACTIVE
+    bit_range:
+    - 0
+    - 0
+    description: Configure the Capture/Compare register
+  side_effects: null
+- id: CC2_CCL
+  address_offset: 1344
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCL
+    bit_range:
+    - 31
+    - 0
+    description: Capture/Compare low value in 1 us
+  side_effects: null
+- id: CC2_CCH
+  address_offset: 1348
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCH
+    bit_range:
+    - 19
+    - 0
+    description: Capture/Compare high value in 1 us
+  side_effects: null
+- id: CC2_CCADD
+  address_offset: 1352
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 30
+    - 0
+    description: Count to add to CC[n]
+  - name: REFERENCE
+    bit_range:
+    - 31
+    - 31
+    description: Configure the Capture/Compare register
+  side_effects: null
+- id: CC2_CCEN
+  address_offset: 1356
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ACTIVE
+    bit_range:
+    - 0
+    - 0
+    description: Configure the Capture/Compare register
+  side_effects: null
+- id: CC3_CCL
+  address_offset: 1360
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCL
+    bit_range:
+    - 31
+    - 0
+    description: Capture/Compare low value in 1 us
+  side_effects: null
+- id: CC3_CCH
+  address_offset: 1364
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCH
+    bit_range:
+    - 19
+    - 0
+    description: Capture/Compare high value in 1 us
+  side_effects: null
+- id: CC3_CCADD
+  address_offset: 1368
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 30
+    - 0
+    description: Count to add to CC[n]
+  - name: REFERENCE
+    bit_range:
+    - 31
+    - 31
+    description: Configure the Capture/Compare register
+  side_effects: null
+- id: CC3_CCEN
+  address_offset: 1372
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ACTIVE
+    bit_range:
+    - 0
+    - 0
+    description: Configure the Capture/Compare register
+  side_effects: null
+- id: CC4_CCL
+  address_offset: 1376
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCL
+    bit_range:
+    - 31
+    - 0
+    description: Capture/Compare low value in 1 us
+  side_effects: null
+- id: CC4_CCH
+  address_offset: 1380
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCH
+    bit_range:
+    - 19
+    - 0
+    description: Capture/Compare high value in 1 us
+  side_effects: null
+- id: CC4_CCADD
+  address_offset: 1384
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 30
+    - 0
+    description: Count to add to CC[n]
+  - name: REFERENCE
+    bit_range:
+    - 31
+    - 31
+    description: Configure the Capture/Compare register
+  side_effects: null
+- id: CC4_CCEN
+  address_offset: 1388
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ACTIVE
+    bit_range:
+    - 0
+    - 0
+    description: Configure the Capture/Compare register
+  side_effects: null
+- id: CC5_CCL
+  address_offset: 1392
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCL
+    bit_range:
+    - 31
+    - 0
+    description: Capture/Compare low value in 1 us
+  side_effects: null
+- id: CC5_CCH
+  address_offset: 1396
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCH
+    bit_range:
+    - 19
+    - 0
+    description: Capture/Compare high value in 1 us
+  side_effects: null
+- id: CC5_CCADD
+  address_offset: 1400
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 30
+    - 0
+    description: Count to add to CC[n]
+  - name: REFERENCE
+    bit_range:
+    - 31
+    - 31
+    description: Configure the Capture/Compare register
+  side_effects: null
+- id: CC5_CCEN
+  address_offset: 1404
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ACTIVE
+    bit_range:
+    - 0
+    - 0
+    description: Configure the Capture/Compare register
+  side_effects: null
+- id: CC6_CCL
+  address_offset: 1408
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCL
+    bit_range:
+    - 31
+    - 0
+    description: Capture/Compare low value in 1 us
+  side_effects: null
+- id: CC6_CCH
+  address_offset: 1412
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCH
+    bit_range:
+    - 19
+    - 0
+    description: Capture/Compare high value in 1 us
+  side_effects: null
+- id: CC6_CCADD
+  address_offset: 1416
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 30
+    - 0
+    description: Count to add to CC[n]
+  - name: REFERENCE
+    bit_range:
+    - 31
+    - 31
+    description: Configure the Capture/Compare register
+  side_effects: null
+- id: CC6_CCEN
+  address_offset: 1420
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ACTIVE
+    bit_range:
+    - 0
+    - 0
+    description: Configure the Capture/Compare register
+  side_effects: null
+- id: CC7_CCL
+  address_offset: 1424
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCL
+    bit_range:
+    - 31
+    - 0
+    description: Capture/Compare low value in 1 us
+  side_effects: null
+- id: CC7_CCH
+  address_offset: 1428
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCH
+    bit_range:
+    - 19
+    - 0
+    description: Capture/Compare high value in 1 us
+  side_effects: null
+- id: CC7_CCADD
+  address_offset: 1432
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 30
+    - 0
+    description: Count to add to CC[n]
+  - name: REFERENCE
+    bit_range:
+    - 31
+    - 31
+    description: Configure the Capture/Compare register
+  side_effects: null
+- id: CC7_CCEN
+  address_offset: 1436
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ACTIVE
+    bit_range:
+    - 0
+    - 0
+    description: Configure the Capture/Compare register
+  side_effects: null
+- id: CC8_CCL
+  address_offset: 1440
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCL
+    bit_range:
+    - 31
+    - 0
+    description: Capture/Compare low value in 1 us
+  side_effects: null
+- id: CC8_CCH
+  address_offset: 1444
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCH
+    bit_range:
+    - 19
+    - 0
+    description: Capture/Compare high value in 1 us
+  side_effects: null
+- id: CC8_CCADD
+  address_offset: 1448
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 30
+    - 0
+    description: Count to add to CC[n]
+  - name: REFERENCE
+    bit_range:
+    - 31
+    - 31
+    description: Configure the Capture/Compare register
+  side_effects: null
+- id: CC8_CCEN
+  address_offset: 1452
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ACTIVE
+    bit_range:
+    - 0
+    - 0
+    description: Configure the Capture/Compare register
+  side_effects: null
+- id: CC9_CCL
+  address_offset: 1456
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCL
+    bit_range:
+    - 31
+    - 0
+    description: Capture/Compare low value in 1 us
+  side_effects: null
+- id: CC9_CCH
+  address_offset: 1460
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCH
+    bit_range:
+    - 19
+    - 0
+    description: Capture/Compare high value in 1 us
+  side_effects: null
+- id: CC9_CCADD
+  address_offset: 1464
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 30
+    - 0
+    description: Count to add to CC[n]
+  - name: REFERENCE
+    bit_range:
+    - 31
+    - 31
+    description: Configure the Capture/Compare register
+  side_effects: null
+- id: CC9_CCEN
+  address_offset: 1468
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ACTIVE
+    bit_range:
+    - 0
+    - 0
+    description: Configure the Capture/Compare register
+  side_effects: null
+- id: CC10_CCL
+  address_offset: 1472
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCL
+    bit_range:
+    - 31
+    - 0
+    description: Capture/Compare low value in 1 us
+  side_effects: null
+- id: CC10_CCH
+  address_offset: 1476
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCH
+    bit_range:
+    - 19
+    - 0
+    description: Capture/Compare high value in 1 us
+  side_effects: null
+- id: CC10_CCADD
+  address_offset: 1480
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 30
+    - 0
+    description: Count to add to CC[n]
+  - name: REFERENCE
+    bit_range:
+    - 31
+    - 31
+    description: Configure the Capture/Compare register
+  side_effects: null
+- id: CC10_CCEN
+  address_offset: 1484
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ACTIVE
+    bit_range:
+    - 0
+    - 0
+    description: Configure the Capture/Compare register
+  side_effects: null
+- id: CC11_CCL
+  address_offset: 1488
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCL
+    bit_range:
+    - 31
+    - 0
+    description: Capture/Compare low value in 1 us
+  side_effects: null
+- id: CC11_CCH
+  address_offset: 1492
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCH
+    bit_range:
+    - 19
+    - 0
+    description: Capture/Compare high value in 1 us
+  side_effects: null
+- id: CC11_CCADD
+  address_offset: 1496
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 30
+    - 0
+    description: Count to add to CC[n]
+  - name: REFERENCE
+    bit_range:
+    - 31
+    - 31
+    description: Configure the Capture/Compare register
+  side_effects: null
+- id: CC11_CCEN
+  address_offset: 1500
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ACTIVE
+    bit_range:
+    - 0
+    - 0
+    description: Configure the Capture/Compare register
+  side_effects: null
+- id: TIMEOUT
+  address_offset: 1700
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 15
+    - 0
+    description: Number of 32Ki cycles
+  side_effects: null
+- id: INTERVAL
+  address_offset: 1704
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 15
+    - 0
+    description: Count to add to CC[0]
+  side_effects: null
+- id: WAKETIME
+  address_offset: 1708
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: VALUE
+    bit_range:
+    - 7
+    - 0
+    description: Number of LFCLK clock cycles to wake up before the next scheduled EVENTS_COMPARE event
+  side_effects: null
+- id: STATUS_LFTIMER
+  address_offset: 1712
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: READY
+    bit_range:
+    - 0
+    - 0
+    description: Low frequency timer is ready or busy.
+  side_effects: null
+- id: STATUS_PWM
+  address_offset: 1716
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: READY
+    bit_range:
+    - 0
+    - 0
+    description: PWM is ready or busy.
+  side_effects: null
+- id: STATUS_CLKOUT
+  address_offset: 1720
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: READY
+    bit_range:
+    - 0
+    - 0
+    description: CLKOUT is ready or busy.
+  side_effects: null
+- id: PWMCONFIG
+  address_offset: 1808
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: COMPAREVALUE
+    bit_range:
+    - 7
+    - 0
+    description: The PWM compare value
+  side_effects: null
+- id: CLKOUT
+  address_offset: 1812
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CLKOUT32K
+    bit_range:
+    - 0
+    - 0
+    description: Enable 32Ki clock output on pin
+  - name: CLKOUTFAST
+    bit_range:
+    - 1
+    - 1
+    description: Enable fast clock output on pin
+  side_effects: null
+- id: CLKCFG
+  address_offset: 1816
+  size: 32
+  access: READ_WRITE
+  reset_value: 65537
+  fields:
+  - name: CLKFASTDIV
+    bit_range:
+    - 7
+    - 0
+    description: Fast clock divisor value of clock output
+  - name: CLKSEL
+    bit_range:
+    - 17
+    - 16
+    description: GRTC LFCLK clock source selection
+  side_effects: null
+- id: SYSCOUNTER0_SYSCOUNTERL
+  address_offset: 1824
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: The lower 32-bits of the SYSCOUNTER value.
+  side_effects: null
+- id: SYSCOUNTER0_SYSCOUNTERH
+  address_offset: 1828
+  size: 32
+  access: READ_ONLY
+  reset_value: 1073741824
+  fields:
+  - name: VALUE
+    bit_range:
+    - 19
+    - 0
+    description: The higher 20-bits of the SYSCOUNTER value.
+  - name: BUSY
+    bit_range:
+    - 30
+    - 30
+    description: SYSCOUNTER busy status
+  - name: OVERFLOW
+    bit_range:
+    - 31
+    - 31
+    description: The SYSCOUNTERL overflow indication after reading it.
+  side_effects: null
+- id: SYSCOUNTER0_ACTIVE
+  address_offset: 1832
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ACTIVE
+    bit_range:
+    - 0
+    - 0
+    description: Keep SYSCOUNTER in active state
+  side_effects: null
+- id: SYSCOUNTER1_SYSCOUNTERL
+  address_offset: 1840
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: The lower 32-bits of the SYSCOUNTER value.
+  side_effects: null
+- id: SYSCOUNTER1_SYSCOUNTERH
+  address_offset: 1844
+  size: 32
+  access: READ_ONLY
+  reset_value: 1073741824
+  fields:
+  - name: VALUE
+    bit_range:
+    - 19
+    - 0
+    description: The higher 20-bits of the SYSCOUNTER value.
+  - name: BUSY
+    bit_range:
+    - 30
+    - 30
+    description: SYSCOUNTER busy status
+  - name: OVERFLOW
+    bit_range:
+    - 31
+    - 31
+    description: The SYSCOUNTERL overflow indication after reading it.
+  side_effects: null
+- id: SYSCOUNTER1_ACTIVE
+  address_offset: 1848
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ACTIVE
+    bit_range:
+    - 0
+    - 0
+    description: Keep SYSCOUNTER in active state
+  side_effects: null
+- id: SYSCOUNTER2_SYSCOUNTERL
+  address_offset: 1856
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: The lower 32-bits of the SYSCOUNTER value.
+  side_effects: null
+- id: SYSCOUNTER2_SYSCOUNTERH
+  address_offset: 1860
+  size: 32
+  access: READ_ONLY
+  reset_value: 1073741824
+  fields:
+  - name: VALUE
+    bit_range:
+    - 19
+    - 0
+    description: The higher 20-bits of the SYSCOUNTER value.
+  - name: BUSY
+    bit_range:
+    - 30
+    - 30
+    description: SYSCOUNTER busy status
+  - name: OVERFLOW
+    bit_range:
+    - 31
+    - 31
+    description: The SYSCOUNTERL overflow indication after reading it.
+  side_effects: null
+- id: SYSCOUNTER2_ACTIVE
+  address_offset: 1864
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ACTIVE
+    bit_range:
+    - 0
+    - 0
+    description: Keep SYSCOUNTER in active state
+  side_effects: null
+- id: SYSCOUNTER3_SYSCOUNTERL
+  address_offset: 1872
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: The lower 32-bits of the SYSCOUNTER value.
+  side_effects: null
+- id: SYSCOUNTER3_SYSCOUNTERH
+  address_offset: 1876
+  size: 32
+  access: READ_ONLY
+  reset_value: 1073741824
+  fields:
+  - name: VALUE
+    bit_range:
+    - 19
+    - 0
+    description: The higher 20-bits of the SYSCOUNTER value.
+  - name: BUSY
+    bit_range:
+    - 30
+    - 30
+    description: SYSCOUNTER busy status
+  - name: OVERFLOW
+    bit_range:
+    - 31
+    - 31
+    description: The SYSCOUNTERL overflow indication after reading it.
+  side_effects: null
+- id: SYSCOUNTER3_ACTIVE
+  address_offset: 1880
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ACTIVE
+    bit_range:
+    - 0
+    - 0
+    description: Keep SYSCOUNTER in active state
+  side_effects: null
+interrupts:
+  GRTC_0: 226
+  GRTC_1: 227
+  GRTC_2: 228
+  GRTC_3: 229
+timing: null

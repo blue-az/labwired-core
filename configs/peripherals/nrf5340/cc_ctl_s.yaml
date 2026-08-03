@@ -1,0 +1,53 @@
+peripheral: CC_CTL_S
+version: 0.1.0
+registers:
+- id: CRYPTO_CTL
+  address_offset: 2304
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: MODE
+    bit_range:
+    - 4
+    - 0
+    description: Configure the cryptographic engine mode.
+  side_effects: null
+- id: CRYPTO_BUSY
+  address_offset: 2320
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: STATUS
+    bit_range:
+    - 0
+    - 0
+    description: Cryptographic core engines status.
+  side_effects: null
+- id: HASH_BUSY
+  address_offset: 2332
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: STATUS
+    bit_range:
+    - 0
+    - 0
+    description: Hash engine status.
+  side_effects: null
+- id: CONTEXT_ID
+  address_offset: 2352
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CONTEXT_ID
+    bit_range:
+    - 7
+    - 0
+    description: Context ID
+  side_effects: null
+interrupts: null
+timing: null

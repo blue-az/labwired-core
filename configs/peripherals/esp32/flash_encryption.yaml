@@ -1,0 +1,137 @@
+peripheral: FLASH_ENCRYPTION
+version: 0.1.0
+registers:
+- id: BUFFER_0
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BUFFER
+    bit_range:
+    - 7
+    - 0
+    description: Data buffers for encryption.
+  side_effects: null
+- id: BUFFER_1
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BUFFER
+    bit_range:
+    - 7
+    - 0
+    description: Data buffers for encryption.
+  side_effects: null
+- id: BUFFER_2
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BUFFER
+    bit_range:
+    - 7
+    - 0
+    description: Data buffers for encryption.
+  side_effects: null
+- id: BUFFER_3
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BUFFER
+    bit_range:
+    - 7
+    - 0
+    description: Data buffers for encryption.
+  side_effects: null
+- id: BUFFER_4
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BUFFER
+    bit_range:
+    - 7
+    - 0
+    description: Data buffers for encryption.
+  side_effects: null
+- id: BUFFER_5
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BUFFER
+    bit_range:
+    - 7
+    - 0
+    description: Data buffers for encryption.
+  side_effects: null
+- id: BUFFER_6
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BUFFER
+    bit_range:
+    - 7
+    - 0
+    description: Data buffers for encryption.
+  side_effects: null
+- id: BUFFER_7
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BUFFER
+    bit_range:
+    - 7
+    - 0
+    description: Data buffers for encryption.
+  side_effects: null
+- id: START
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FLASH_START
+    bit_range:
+    - 7
+    - 0
+    description: Set this bit to start encryption operation on data buffer.
+  side_effects: null
+- id: ADDRESS
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDRESS
+    bit_range:
+    - 7
+    - 0
+    description: The physical address on the off-chip flash must be 8-word boundary aligned.
+  side_effects: null
+- id: DONE
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FLASH_DONE
+    bit_range:
+    - 0
+    - 0
+    description: Set this bit when encryption operation is complete.
+  side_effects: null
+interrupts: null
+timing: null

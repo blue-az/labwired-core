@@ -1,0 +1,1170 @@
+peripheral: DMA1
+version: 0.1.0
+registers:
+- id: ISR
+  address_offset: 0
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: GIF1
+    bit_range:
+    - 0
+    - 0
+    description: GIF1
+  - name: TCIF1
+    bit_range:
+    - 1
+    - 1
+    description: TCIF1
+  - name: HTIF1
+    bit_range:
+    - 2
+    - 2
+    description: HTIF1
+  - name: TEIF1
+    bit_range:
+    - 3
+    - 3
+    description: TEIF1
+  - name: GIF2
+    bit_range:
+    - 4
+    - 4
+    description: GIF2
+  - name: TCIF2
+    bit_range:
+    - 5
+    - 5
+    description: TCIF2
+  - name: HTIF2
+    bit_range:
+    - 6
+    - 6
+    description: HTIF2
+  - name: TEIF2
+    bit_range:
+    - 7
+    - 7
+    description: TEIF2
+  - name: GIF3
+    bit_range:
+    - 8
+    - 8
+    description: GIF3
+  - name: TCIF3
+    bit_range:
+    - 9
+    - 9
+    description: TCIF3
+  - name: HTIF3
+    bit_range:
+    - 10
+    - 10
+    description: HTIF3
+  - name: TEIF3
+    bit_range:
+    - 11
+    - 11
+    description: TEIF3
+  - name: GIF4
+    bit_range:
+    - 12
+    - 12
+    description: GIF4
+  - name: TCIF4
+    bit_range:
+    - 13
+    - 13
+    description: TCIF4
+  - name: HTIF4
+    bit_range:
+    - 14
+    - 14
+    description: HTIF4
+  - name: TEIF4
+    bit_range:
+    - 15
+    - 15
+    description: TEIF4
+  - name: GIF5
+    bit_range:
+    - 16
+    - 16
+    description: GIF5
+  - name: TCIF5
+    bit_range:
+    - 17
+    - 17
+    description: TCIF5
+  - name: HTIF5
+    bit_range:
+    - 18
+    - 18
+    description: HTIF5
+  - name: TEIF5
+    bit_range:
+    - 19
+    - 19
+    description: TEIF5
+  - name: GIF6
+    bit_range:
+    - 20
+    - 20
+    description: GIF6
+  - name: TCIF6
+    bit_range:
+    - 21
+    - 21
+    description: TCIF6
+  - name: HTIF6
+    bit_range:
+    - 22
+    - 22
+    description: HTIF6
+  - name: TEIF6
+    bit_range:
+    - 23
+    - 23
+    description: TEIF6
+  - name: GIF7
+    bit_range:
+    - 24
+    - 24
+    description: GIF7
+  - name: TCIF7
+    bit_range:
+    - 25
+    - 25
+    description: TCIF7
+  - name: HTIF7
+    bit_range:
+    - 26
+    - 26
+    description: HTIF7
+  - name: TEIF7
+    bit_range:
+    - 27
+    - 27
+    description: TEIF7
+  - name: GIF8
+    bit_range:
+    - 28
+    - 28
+    description: GIF8
+  - name: TCIF8
+    bit_range:
+    - 29
+    - 29
+    description: TCIF8
+  - name: HTIF8
+    bit_range:
+    - 30
+    - 30
+    description: HTIF8
+  - name: TEIF8
+    bit_range:
+    - 31
+    - 31
+    description: TEIF8
+  side_effects: null
+- id: IFCR
+  address_offset: 4
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: GIF1
+    bit_range:
+    - 0
+    - 0
+    description: GIF1
+  - name: TCIF1
+    bit_range:
+    - 1
+    - 1
+    description: TCIF1
+  - name: HTIF1
+    bit_range:
+    - 2
+    - 2
+    description: HTIF1
+  - name: TEIF1
+    bit_range:
+    - 3
+    - 3
+    description: TEIF1
+  - name: GIF2
+    bit_range:
+    - 4
+    - 4
+    description: GIF2
+  - name: TCIF2
+    bit_range:
+    - 5
+    - 5
+    description: TCIF2
+  - name: HTIF2
+    bit_range:
+    - 6
+    - 6
+    description: HTIF2
+  - name: TEIF2
+    bit_range:
+    - 7
+    - 7
+    description: TEIF2
+  - name: GIF3
+    bit_range:
+    - 8
+    - 8
+    description: GIF3
+  - name: TCIF3
+    bit_range:
+    - 9
+    - 9
+    description: TCIF3
+  - name: HTIF3
+    bit_range:
+    - 10
+    - 10
+    description: HTIF3
+  - name: TEIF3
+    bit_range:
+    - 11
+    - 11
+    description: TEIF3
+  - name: GIF4
+    bit_range:
+    - 12
+    - 12
+    description: GIF4
+  - name: TCIF4
+    bit_range:
+    - 13
+    - 13
+    description: TCIF4
+  - name: HTIF4
+    bit_range:
+    - 14
+    - 14
+    description: HTIF4
+  - name: TEIF4
+    bit_range:
+    - 15
+    - 15
+    description: TEIF4
+  - name: GIF5
+    bit_range:
+    - 16
+    - 16
+    description: GIF5
+  - name: TCIF5
+    bit_range:
+    - 17
+    - 17
+    description: TCIF5
+  - name: HTIF5
+    bit_range:
+    - 18
+    - 18
+    description: HTIF5
+  - name: TEIF5
+    bit_range:
+    - 19
+    - 19
+    description: TEIF5
+  - name: GIF6
+    bit_range:
+    - 20
+    - 20
+    description: GIF6
+  - name: TCIF6
+    bit_range:
+    - 21
+    - 21
+    description: TCIF6
+  - name: HTIF6
+    bit_range:
+    - 22
+    - 22
+    description: HTIF6
+  - name: TEIF6
+    bit_range:
+    - 23
+    - 23
+    description: TEIF6
+  - name: GIF7
+    bit_range:
+    - 24
+    - 24
+    description: GIF7
+  - name: TCIF7
+    bit_range:
+    - 25
+    - 25
+    description: TCIF7
+  - name: HTIF7
+    bit_range:
+    - 26
+    - 26
+    description: HTIF7
+  - name: TEIF7
+    bit_range:
+    - 27
+    - 27
+    description: TEIF7
+  - name: GIF8
+    bit_range:
+    - 28
+    - 28
+    description: GIF8
+  - name: TCIF8
+    bit_range:
+    - 29
+    - 29
+    description: TCIF8
+  - name: HTIF8
+    bit_range:
+    - 30
+    - 30
+    description: HTIF8
+  - name: TEIF8
+    bit_range:
+    - 31
+    - 31
+    description: TEIF8
+  side_effects: null
+- id: CCR1
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: channel enable
+  - name: TCIE
+    bit_range:
+    - 1
+    - 1
+    description: TCIE
+  - name: HTIE
+    bit_range:
+    - 2
+    - 2
+    description: HTIE
+  - name: TEIE
+    bit_range:
+    - 3
+    - 3
+    description: TEIE
+  - name: DIR
+    bit_range:
+    - 4
+    - 4
+    description: DIR
+  - name: CIRC
+    bit_range:
+    - 5
+    - 5
+    description: CIRC
+  - name: PINC
+    bit_range:
+    - 6
+    - 6
+    description: PINC
+  - name: MINC
+    bit_range:
+    - 7
+    - 7
+    description: MINC
+  - name: PSIZE
+    bit_range:
+    - 9
+    - 8
+    description: PSIZE
+  - name: MSIZE
+    bit_range:
+    - 11
+    - 10
+    description: MSIZE
+  - name: PL
+    bit_range:
+    - 13
+    - 12
+    description: PL
+  - name: MEM2MEM
+    bit_range:
+    - 14
+    - 14
+    description: MEM2MEM
+  side_effects: null
+- id: CNDTR1
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NDT
+    bit_range:
+    - 15
+    - 0
+    description: Number of data items to               transfer
+  side_effects: null
+- id: CPAR1
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PA
+    bit_range:
+    - 31
+    - 0
+    description: Peripheral address
+  side_effects: null
+- id: CMAR1
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MA
+    bit_range:
+    - 31
+    - 0
+    description: Memory 1 address (used in case of Double               buffer mode)
+  side_effects: null
+- id: CCR2
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: channel enable
+  - name: TCIE
+    bit_range:
+    - 1
+    - 1
+    description: TCIE
+  - name: HTIE
+    bit_range:
+    - 2
+    - 2
+    description: HTIE
+  - name: TEIE
+    bit_range:
+    - 3
+    - 3
+    description: TEIE
+  - name: DIR
+    bit_range:
+    - 4
+    - 4
+    description: DIR
+  - name: CIRC
+    bit_range:
+    - 5
+    - 5
+    description: CIRC
+  - name: PINC
+    bit_range:
+    - 6
+    - 6
+    description: PINC
+  - name: MINC
+    bit_range:
+    - 7
+    - 7
+    description: MINC
+  - name: PSIZE
+    bit_range:
+    - 9
+    - 8
+    description: PSIZE
+  - name: MSIZE
+    bit_range:
+    - 11
+    - 10
+    description: MSIZE
+  - name: PL
+    bit_range:
+    - 13
+    - 12
+    description: PL
+  - name: MEM2MEM
+    bit_range:
+    - 14
+    - 14
+    description: MEM2MEM
+  side_effects: null
+- id: CNDTR2
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NDT
+    bit_range:
+    - 15
+    - 0
+    description: Number of data items to               transfer
+  side_effects: null
+- id: CPAR2
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PA
+    bit_range:
+    - 31
+    - 0
+    description: Peripheral address
+  side_effects: null
+- id: CMAR2
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MA
+    bit_range:
+    - 31
+    - 0
+    description: Memory 1 address (used in case of Double               buffer mode)
+  side_effects: null
+- id: CCR3
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: channel enable
+  - name: TCIE
+    bit_range:
+    - 1
+    - 1
+    description: TCIE
+  - name: HTIE
+    bit_range:
+    - 2
+    - 2
+    description: HTIE
+  - name: TEIE
+    bit_range:
+    - 3
+    - 3
+    description: TEIE
+  - name: DIR
+    bit_range:
+    - 4
+    - 4
+    description: DIR
+  - name: CIRC
+    bit_range:
+    - 5
+    - 5
+    description: CIRC
+  - name: PINC
+    bit_range:
+    - 6
+    - 6
+    description: PINC
+  - name: MINC
+    bit_range:
+    - 7
+    - 7
+    description: MINC
+  - name: PSIZE
+    bit_range:
+    - 9
+    - 8
+    description: PSIZE
+  - name: MSIZE
+    bit_range:
+    - 11
+    - 10
+    description: MSIZE
+  - name: PL
+    bit_range:
+    - 13
+    - 12
+    description: PL
+  - name: MEM2MEM
+    bit_range:
+    - 14
+    - 14
+    description: MEM2MEM
+  side_effects: null
+- id: CNDTR3
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NDT
+    bit_range:
+    - 15
+    - 0
+    description: Number of data items to               transfer
+  side_effects: null
+- id: CPAR3
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PA
+    bit_range:
+    - 31
+    - 0
+    description: Peripheral address
+  side_effects: null
+- id: CMAR3
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MA
+    bit_range:
+    - 31
+    - 0
+    description: Memory 1 address (used in case of Double               buffer mode)
+  side_effects: null
+- id: CCR4
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: channel enable
+  - name: TCIE
+    bit_range:
+    - 1
+    - 1
+    description: TCIE
+  - name: HTIE
+    bit_range:
+    - 2
+    - 2
+    description: HTIE
+  - name: TEIE
+    bit_range:
+    - 3
+    - 3
+    description: TEIE
+  - name: DIR
+    bit_range:
+    - 4
+    - 4
+    description: DIR
+  - name: CIRC
+    bit_range:
+    - 5
+    - 5
+    description: CIRC
+  - name: PINC
+    bit_range:
+    - 6
+    - 6
+    description: PINC
+  - name: MINC
+    bit_range:
+    - 7
+    - 7
+    description: MINC
+  - name: PSIZE
+    bit_range:
+    - 9
+    - 8
+    description: PSIZE
+  - name: MSIZE
+    bit_range:
+    - 11
+    - 10
+    description: MSIZE
+  - name: PL
+    bit_range:
+    - 13
+    - 12
+    description: PL
+  - name: MEM2MEM
+    bit_range:
+    - 14
+    - 14
+    description: MEM2MEM
+  side_effects: null
+- id: CNDTR4
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NDT
+    bit_range:
+    - 15
+    - 0
+    description: Number of data items to               transfer
+  side_effects: null
+- id: CPAR4
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PA
+    bit_range:
+    - 31
+    - 0
+    description: Peripheral address
+  side_effects: null
+- id: CMAR4
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MA
+    bit_range:
+    - 31
+    - 0
+    description: Memory 1 address (used in case of Double               buffer mode)
+  side_effects: null
+- id: CCR5
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: channel enable
+  - name: TCIE
+    bit_range:
+    - 1
+    - 1
+    description: TCIE
+  - name: HTIE
+    bit_range:
+    - 2
+    - 2
+    description: HTIE
+  - name: TEIE
+    bit_range:
+    - 3
+    - 3
+    description: TEIE
+  - name: DIR
+    bit_range:
+    - 4
+    - 4
+    description: DIR
+  - name: CIRC
+    bit_range:
+    - 5
+    - 5
+    description: CIRC
+  - name: PINC
+    bit_range:
+    - 6
+    - 6
+    description: PINC
+  - name: MINC
+    bit_range:
+    - 7
+    - 7
+    description: MINC
+  - name: PSIZE
+    bit_range:
+    - 9
+    - 8
+    description: PSIZE
+  - name: MSIZE
+    bit_range:
+    - 11
+    - 10
+    description: MSIZE
+  - name: PL
+    bit_range:
+    - 13
+    - 12
+    description: PL
+  - name: MEM2MEM
+    bit_range:
+    - 14
+    - 14
+    description: MEM2MEM
+  side_effects: null
+- id: CNDTR5
+  address_offset: 92
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NDT
+    bit_range:
+    - 15
+    - 0
+    description: Number of data items to               transfer
+  side_effects: null
+- id: CPAR5
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PA
+    bit_range:
+    - 31
+    - 0
+    description: Peripheral address
+  side_effects: null
+- id: CMAR5
+  address_offset: 100
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MA
+    bit_range:
+    - 31
+    - 0
+    description: Memory 1 address (used in case of Double               buffer mode)
+  side_effects: null
+- id: CCR6
+  address_offset: 108
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: channel enable
+  - name: TCIE
+    bit_range:
+    - 1
+    - 1
+    description: TCIE
+  - name: HTIE
+    bit_range:
+    - 2
+    - 2
+    description: HTIE
+  - name: TEIE
+    bit_range:
+    - 3
+    - 3
+    description: TEIE
+  - name: DIR
+    bit_range:
+    - 4
+    - 4
+    description: DIR
+  - name: CIRC
+    bit_range:
+    - 5
+    - 5
+    description: CIRC
+  - name: PINC
+    bit_range:
+    - 6
+    - 6
+    description: PINC
+  - name: MINC
+    bit_range:
+    - 7
+    - 7
+    description: MINC
+  - name: PSIZE
+    bit_range:
+    - 9
+    - 8
+    description: PSIZE
+  - name: MSIZE
+    bit_range:
+    - 11
+    - 10
+    description: MSIZE
+  - name: PL
+    bit_range:
+    - 13
+    - 12
+    description: PL
+  - name: MEM2MEM
+    bit_range:
+    - 14
+    - 14
+    description: MEM2MEM
+  side_effects: null
+- id: CNDTR6
+  address_offset: 112
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NDT
+    bit_range:
+    - 15
+    - 0
+    description: Number of data items to               transfer
+  side_effects: null
+- id: CPAR6
+  address_offset: 116
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PA
+    bit_range:
+    - 31
+    - 0
+    description: Peripheral address
+  side_effects: null
+- id: CMAR6
+  address_offset: 120
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MA
+    bit_range:
+    - 31
+    - 0
+    description: Memory 1 address (used in case of Double               buffer mode)
+  side_effects: null
+- id: CCR7
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: channel enable
+  - name: TCIE
+    bit_range:
+    - 1
+    - 1
+    description: TCIE
+  - name: HTIE
+    bit_range:
+    - 2
+    - 2
+    description: HTIE
+  - name: TEIE
+    bit_range:
+    - 3
+    - 3
+    description: TEIE
+  - name: DIR
+    bit_range:
+    - 4
+    - 4
+    description: DIR
+  - name: CIRC
+    bit_range:
+    - 5
+    - 5
+    description: CIRC
+  - name: PINC
+    bit_range:
+    - 6
+    - 6
+    description: PINC
+  - name: MINC
+    bit_range:
+    - 7
+    - 7
+    description: MINC
+  - name: PSIZE
+    bit_range:
+    - 9
+    - 8
+    description: PSIZE
+  - name: MSIZE
+    bit_range:
+    - 11
+    - 10
+    description: MSIZE
+  - name: PL
+    bit_range:
+    - 13
+    - 12
+    description: PL
+  - name: MEM2MEM
+    bit_range:
+    - 14
+    - 14
+    description: MEM2MEM
+  side_effects: null
+- id: CNDTR7
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NDT
+    bit_range:
+    - 15
+    - 0
+    description: Number of data items to               transfer
+  side_effects: null
+- id: CPAR7
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PA
+    bit_range:
+    - 31
+    - 0
+    description: Peripheral address
+  side_effects: null
+- id: CMAR7
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MA
+    bit_range:
+    - 31
+    - 0
+    description: Memory 1 address (used in case of Double               buffer mode)
+  side_effects: null
+- id: CCR8
+  address_offset: 148
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: channel enable
+  - name: TCIE
+    bit_range:
+    - 1
+    - 1
+    description: TCIE
+  - name: HTIE
+    bit_range:
+    - 2
+    - 2
+    description: HTIE
+  - name: TEIE
+    bit_range:
+    - 3
+    - 3
+    description: TEIE
+  - name: DIR
+    bit_range:
+    - 4
+    - 4
+    description: DIR
+  - name: CIRC
+    bit_range:
+    - 5
+    - 5
+    description: CIRC
+  - name: PINC
+    bit_range:
+    - 6
+    - 6
+    description: PINC
+  - name: MINC
+    bit_range:
+    - 7
+    - 7
+    description: MINC
+  - name: PSIZE
+    bit_range:
+    - 9
+    - 8
+    description: PSIZE
+  - name: MSIZE
+    bit_range:
+    - 11
+    - 10
+    description: MSIZE
+  - name: PL
+    bit_range:
+    - 13
+    - 12
+    description: PL
+  - name: MEM2MEM
+    bit_range:
+    - 14
+    - 14
+    description: MEM2MEM
+  side_effects: null
+- id: CNDTR8
+  address_offset: 152
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NDT
+    bit_range:
+    - 15
+    - 0
+    description: Number of data items to               transfer
+  side_effects: null
+- id: CPAR8
+  address_offset: 156
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PA
+    bit_range:
+    - 31
+    - 0
+    description: Peripheral address
+  side_effects: null
+- id: CMAR8
+  address_offset: 160
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MA
+    bit_range:
+    - 31
+    - 0
+    description: Memory 1 address (used in case of Double               buffer mode)
+  side_effects: null
+interrupts:
+  DMA1_CH5: 15
+  DMA1_CH2: 12
+  DMA1_CH6: 16
+  DMA1_CH8: 96
+  DMA1_CH4: 14
+  DMA1_CH1: 11
+  DMA1_CH3: 13
+timing: null

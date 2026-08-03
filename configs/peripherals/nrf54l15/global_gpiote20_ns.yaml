@@ -1,0 +1,1443 @@
+peripheral: GLOBAL_GPIOTE20_NS
+version: 0.1.0
+registers:
+- id: TASKS_OUT0
+  address_offset: 0
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_OUT
+    bit_range:
+    - 0
+    - 0
+    description: Task for writing to pin specified in CONFIG[n].PSEL. Action on pin is configured in CONFIG[n].POLARITY.
+  side_effects: null
+- id: TASKS_OUT1
+  address_offset: 4
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_OUT
+    bit_range:
+    - 0
+    - 0
+    description: Task for writing to pin specified in CONFIG[n].PSEL. Action on pin is configured in CONFIG[n].POLARITY.
+  side_effects: null
+- id: TASKS_OUT2
+  address_offset: 8
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_OUT
+    bit_range:
+    - 0
+    - 0
+    description: Task for writing to pin specified in CONFIG[n].PSEL. Action on pin is configured in CONFIG[n].POLARITY.
+  side_effects: null
+- id: TASKS_OUT3
+  address_offset: 12
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_OUT
+    bit_range:
+    - 0
+    - 0
+    description: Task for writing to pin specified in CONFIG[n].PSEL. Action on pin is configured in CONFIG[n].POLARITY.
+  side_effects: null
+- id: TASKS_OUT4
+  address_offset: 16
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_OUT
+    bit_range:
+    - 0
+    - 0
+    description: Task for writing to pin specified in CONFIG[n].PSEL. Action on pin is configured in CONFIG[n].POLARITY.
+  side_effects: null
+- id: TASKS_OUT5
+  address_offset: 20
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_OUT
+    bit_range:
+    - 0
+    - 0
+    description: Task for writing to pin specified in CONFIG[n].PSEL. Action on pin is configured in CONFIG[n].POLARITY.
+  side_effects: null
+- id: TASKS_OUT6
+  address_offset: 24
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_OUT
+    bit_range:
+    - 0
+    - 0
+    description: Task for writing to pin specified in CONFIG[n].PSEL. Action on pin is configured in CONFIG[n].POLARITY.
+  side_effects: null
+- id: TASKS_OUT7
+  address_offset: 28
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_OUT
+    bit_range:
+    - 0
+    - 0
+    description: Task for writing to pin specified in CONFIG[n].PSEL. Action on pin is configured in CONFIG[n].POLARITY.
+  side_effects: null
+- id: TASKS_SET0
+  address_offset: 48
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SET
+    bit_range:
+    - 0
+    - 0
+    description: Task for writing to pin specified in CONFIG[n].PSEL. Action on pin is to set it high.
+  side_effects: null
+- id: TASKS_SET1
+  address_offset: 52
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SET
+    bit_range:
+    - 0
+    - 0
+    description: Task for writing to pin specified in CONFIG[n].PSEL. Action on pin is to set it high.
+  side_effects: null
+- id: TASKS_SET2
+  address_offset: 56
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SET
+    bit_range:
+    - 0
+    - 0
+    description: Task for writing to pin specified in CONFIG[n].PSEL. Action on pin is to set it high.
+  side_effects: null
+- id: TASKS_SET3
+  address_offset: 60
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SET
+    bit_range:
+    - 0
+    - 0
+    description: Task for writing to pin specified in CONFIG[n].PSEL. Action on pin is to set it high.
+  side_effects: null
+- id: TASKS_SET4
+  address_offset: 64
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SET
+    bit_range:
+    - 0
+    - 0
+    description: Task for writing to pin specified in CONFIG[n].PSEL. Action on pin is to set it high.
+  side_effects: null
+- id: TASKS_SET5
+  address_offset: 68
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SET
+    bit_range:
+    - 0
+    - 0
+    description: Task for writing to pin specified in CONFIG[n].PSEL. Action on pin is to set it high.
+  side_effects: null
+- id: TASKS_SET6
+  address_offset: 72
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SET
+    bit_range:
+    - 0
+    - 0
+    description: Task for writing to pin specified in CONFIG[n].PSEL. Action on pin is to set it high.
+  side_effects: null
+- id: TASKS_SET7
+  address_offset: 76
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_SET
+    bit_range:
+    - 0
+    - 0
+    description: Task for writing to pin specified in CONFIG[n].PSEL. Action on pin is to set it high.
+  side_effects: null
+- id: TASKS_CLR0
+  address_offset: 96
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_CLR
+    bit_range:
+    - 0
+    - 0
+    description: Task for writing to pin specified in CONFIG[n].PSEL. Action on pin is to set it low.
+  side_effects: null
+- id: TASKS_CLR1
+  address_offset: 100
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_CLR
+    bit_range:
+    - 0
+    - 0
+    description: Task for writing to pin specified in CONFIG[n].PSEL. Action on pin is to set it low.
+  side_effects: null
+- id: TASKS_CLR2
+  address_offset: 104
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_CLR
+    bit_range:
+    - 0
+    - 0
+    description: Task for writing to pin specified in CONFIG[n].PSEL. Action on pin is to set it low.
+  side_effects: null
+- id: TASKS_CLR3
+  address_offset: 108
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_CLR
+    bit_range:
+    - 0
+    - 0
+    description: Task for writing to pin specified in CONFIG[n].PSEL. Action on pin is to set it low.
+  side_effects: null
+- id: TASKS_CLR4
+  address_offset: 112
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_CLR
+    bit_range:
+    - 0
+    - 0
+    description: Task for writing to pin specified in CONFIG[n].PSEL. Action on pin is to set it low.
+  side_effects: null
+- id: TASKS_CLR5
+  address_offset: 116
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_CLR
+    bit_range:
+    - 0
+    - 0
+    description: Task for writing to pin specified in CONFIG[n].PSEL. Action on pin is to set it low.
+  side_effects: null
+- id: TASKS_CLR6
+  address_offset: 120
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_CLR
+    bit_range:
+    - 0
+    - 0
+    description: Task for writing to pin specified in CONFIG[n].PSEL. Action on pin is to set it low.
+  side_effects: null
+- id: TASKS_CLR7
+  address_offset: 124
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_CLR
+    bit_range:
+    - 0
+    - 0
+    description: Task for writing to pin specified in CONFIG[n].PSEL. Action on pin is to set it low.
+  side_effects: null
+- id: SUBSCRIBE_OUT0
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task OUT[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_OUT1
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task OUT[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_OUT2
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task OUT[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_OUT3
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task OUT[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_OUT4
+  address_offset: 144
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task OUT[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_OUT5
+  address_offset: 148
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task OUT[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_OUT6
+  address_offset: 152
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task OUT[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_OUT7
+  address_offset: 156
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task OUT[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SET0
+  address_offset: 176
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SET[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SET1
+  address_offset: 180
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SET[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SET2
+  address_offset: 184
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SET[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SET3
+  address_offset: 188
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SET[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SET4
+  address_offset: 192
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SET[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SET5
+  address_offset: 196
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SET[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SET6
+  address_offset: 200
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SET[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_SET7
+  address_offset: 204
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task SET[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CLR0
+  address_offset: 224
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CLR[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CLR1
+  address_offset: 228
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CLR[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CLR2
+  address_offset: 232
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CLR[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CLR3
+  address_offset: 236
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CLR[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CLR4
+  address_offset: 240
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CLR[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CLR5
+  address_offset: 244
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CLR[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CLR6
+  address_offset: 248
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CLR[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_CLR7
+  address_offset: 252
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CLR[n] will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: EVENTS_IN0
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_IN
+    bit_range:
+    - 0
+    - 0
+    description: Event from pin specified in CONFIG[n].PSEL
+  side_effects: null
+- id: EVENTS_IN1
+  address_offset: 260
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_IN
+    bit_range:
+    - 0
+    - 0
+    description: Event from pin specified in CONFIG[n].PSEL
+  side_effects: null
+- id: EVENTS_IN2
+  address_offset: 264
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_IN
+    bit_range:
+    - 0
+    - 0
+    description: Event from pin specified in CONFIG[n].PSEL
+  side_effects: null
+- id: EVENTS_IN3
+  address_offset: 268
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_IN
+    bit_range:
+    - 0
+    - 0
+    description: Event from pin specified in CONFIG[n].PSEL
+  side_effects: null
+- id: EVENTS_IN4
+  address_offset: 272
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_IN
+    bit_range:
+    - 0
+    - 0
+    description: Event from pin specified in CONFIG[n].PSEL
+  side_effects: null
+- id: EVENTS_IN5
+  address_offset: 276
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_IN
+    bit_range:
+    - 0
+    - 0
+    description: Event from pin specified in CONFIG[n].PSEL
+  side_effects: null
+- id: EVENTS_IN6
+  address_offset: 280
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_IN
+    bit_range:
+    - 0
+    - 0
+    description: Event from pin specified in CONFIG[n].PSEL
+  side_effects: null
+- id: EVENTS_IN7
+  address_offset: 284
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_IN
+    bit_range:
+    - 0
+    - 0
+    description: Event from pin specified in CONFIG[n].PSEL
+  side_effects: null
+- id: EVENTS_PORT0_NONSECURE
+  address_offset: 320
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NONSECURE
+    bit_range:
+    - 0
+    - 0
+    description: Non-secure port event from owner n
+  side_effects: null
+- id: EVENTS_PORT0_SECURE
+  address_offset: 324
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SECURE
+    bit_range:
+    - 0
+    - 0
+    description: Secure port event from owner n
+  side_effects: null
+- id: PUBLISH_IN0
+  address_offset: 384
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event IN[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_IN1
+  address_offset: 388
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event IN[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_IN2
+  address_offset: 392
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event IN[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_IN3
+  address_offset: 396
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event IN[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_IN4
+  address_offset: 400
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event IN[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_IN5
+  address_offset: 404
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event IN[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_IN6
+  address_offset: 408
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event IN[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_IN7
+  address_offset: 412
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event IN[n] will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_PORT0_NONSECURE
+  address_offset: 448
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event PORT[n].NONSECURE will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_PORT0_SECURE
+  address_offset: 452
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event PORT[n].SECURE will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: INTENSET0
+  address_offset: 772
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IN0
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to enable interrupt for event IN[0]
+  - name: IN1
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to enable interrupt for event IN[1]
+  - name: IN2
+    bit_range:
+    - 2
+    - 2
+    description: Write '1' to enable interrupt for event IN[2]
+  - name: IN3
+    bit_range:
+    - 3
+    - 3
+    description: Write '1' to enable interrupt for event IN[3]
+  - name: IN4
+    bit_range:
+    - 4
+    - 4
+    description: Write '1' to enable interrupt for event IN[4]
+  - name: IN5
+    bit_range:
+    - 5
+    - 5
+    description: Write '1' to enable interrupt for event IN[5]
+  - name: IN6
+    bit_range:
+    - 6
+    - 6
+    description: Write '1' to enable interrupt for event IN[6]
+  - name: IN7
+    bit_range:
+    - 7
+    - 7
+    description: Write '1' to enable interrupt for event IN[7]
+  - name: PORT0NONSECURE
+    bit_range:
+    - 16
+    - 16
+    description: Write '1' to enable interrupt for event PORT0NONSECURE
+  - name: PORT0SECURE
+    bit_range:
+    - 17
+    - 17
+    description: Write '1' to enable interrupt for event PORT0SECURE
+  side_effects: null
+- id: INTENCLR0
+  address_offset: 776
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IN0
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to disable interrupt for event IN[0]
+  - name: IN1
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to disable interrupt for event IN[1]
+  - name: IN2
+    bit_range:
+    - 2
+    - 2
+    description: Write '1' to disable interrupt for event IN[2]
+  - name: IN3
+    bit_range:
+    - 3
+    - 3
+    description: Write '1' to disable interrupt for event IN[3]
+  - name: IN4
+    bit_range:
+    - 4
+    - 4
+    description: Write '1' to disable interrupt for event IN[4]
+  - name: IN5
+    bit_range:
+    - 5
+    - 5
+    description: Write '1' to disable interrupt for event IN[5]
+  - name: IN6
+    bit_range:
+    - 6
+    - 6
+    description: Write '1' to disable interrupt for event IN[6]
+  - name: IN7
+    bit_range:
+    - 7
+    - 7
+    description: Write '1' to disable interrupt for event IN[7]
+  - name: PORT0NONSECURE
+    bit_range:
+    - 16
+    - 16
+    description: Write '1' to disable interrupt for event PORT0NONSECURE
+  - name: PORT0SECURE
+    bit_range:
+    - 17
+    - 17
+    description: Write '1' to disable interrupt for event PORT0SECURE
+  side_effects: null
+- id: INTENSET1
+  address_offset: 788
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IN0
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to enable interrupt for event IN[0]
+  - name: IN1
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to enable interrupt for event IN[1]
+  - name: IN2
+    bit_range:
+    - 2
+    - 2
+    description: Write '1' to enable interrupt for event IN[2]
+  - name: IN3
+    bit_range:
+    - 3
+    - 3
+    description: Write '1' to enable interrupt for event IN[3]
+  - name: IN4
+    bit_range:
+    - 4
+    - 4
+    description: Write '1' to enable interrupt for event IN[4]
+  - name: IN5
+    bit_range:
+    - 5
+    - 5
+    description: Write '1' to enable interrupt for event IN[5]
+  - name: IN6
+    bit_range:
+    - 6
+    - 6
+    description: Write '1' to enable interrupt for event IN[6]
+  - name: IN7
+    bit_range:
+    - 7
+    - 7
+    description: Write '1' to enable interrupt for event IN[7]
+  - name: PORT0NONSECURE
+    bit_range:
+    - 16
+    - 16
+    description: Write '1' to enable interrupt for event PORT0NONSECURE
+  - name: PORT0SECURE
+    bit_range:
+    - 17
+    - 17
+    description: Write '1' to enable interrupt for event PORT0SECURE
+  side_effects: null
+- id: INTENCLR1
+  address_offset: 792
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IN0
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to disable interrupt for event IN[0]
+  - name: IN1
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to disable interrupt for event IN[1]
+  - name: IN2
+    bit_range:
+    - 2
+    - 2
+    description: Write '1' to disable interrupt for event IN[2]
+  - name: IN3
+    bit_range:
+    - 3
+    - 3
+    description: Write '1' to disable interrupt for event IN[3]
+  - name: IN4
+    bit_range:
+    - 4
+    - 4
+    description: Write '1' to disable interrupt for event IN[4]
+  - name: IN5
+    bit_range:
+    - 5
+    - 5
+    description: Write '1' to disable interrupt for event IN[5]
+  - name: IN6
+    bit_range:
+    - 6
+    - 6
+    description: Write '1' to disable interrupt for event IN[6]
+  - name: IN7
+    bit_range:
+    - 7
+    - 7
+    description: Write '1' to disable interrupt for event IN[7]
+  - name: PORT0NONSECURE
+    bit_range:
+    - 16
+    - 16
+    description: Write '1' to disable interrupt for event PORT0NONSECURE
+  - name: PORT0SECURE
+    bit_range:
+    - 17
+    - 17
+    description: Write '1' to disable interrupt for event PORT0SECURE
+  side_effects: null
+- id: CONFIG0
+  address_offset: 1296
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MODE
+    bit_range:
+    - 1
+    - 0
+    description: Mode
+  - name: PSEL
+    bit_range:
+    - 8
+    - 4
+    description: GPIO number associated with SET[n], CLR[n], and OUT[n] tasks and IN[n] event
+  - name: PORT
+    bit_range:
+    - 12
+    - 9
+    description: Port number
+  - name: POLARITY
+    bit_range:
+    - 17
+    - 16
+    description: 'When In task mode: Operation to be performed on output when OUT[n] task is triggered. When In event mode: Operation on input that shall trigger IN[n] event.'
+  - name: OUTINIT
+    bit_range:
+    - 20
+    - 20
+    description: 'When in task mode: Initial value of the output when the GPIOTE channel is configured. When in event mode: No effect.'
+  side_effects: null
+- id: CONFIG1
+  address_offset: 1300
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MODE
+    bit_range:
+    - 1
+    - 0
+    description: Mode
+  - name: PSEL
+    bit_range:
+    - 8
+    - 4
+    description: GPIO number associated with SET[n], CLR[n], and OUT[n] tasks and IN[n] event
+  - name: PORT
+    bit_range:
+    - 12
+    - 9
+    description: Port number
+  - name: POLARITY
+    bit_range:
+    - 17
+    - 16
+    description: 'When In task mode: Operation to be performed on output when OUT[n] task is triggered. When In event mode: Operation on input that shall trigger IN[n] event.'
+  - name: OUTINIT
+    bit_range:
+    - 20
+    - 20
+    description: 'When in task mode: Initial value of the output when the GPIOTE channel is configured. When in event mode: No effect.'
+  side_effects: null
+- id: CONFIG2
+  address_offset: 1304
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MODE
+    bit_range:
+    - 1
+    - 0
+    description: Mode
+  - name: PSEL
+    bit_range:
+    - 8
+    - 4
+    description: GPIO number associated with SET[n], CLR[n], and OUT[n] tasks and IN[n] event
+  - name: PORT
+    bit_range:
+    - 12
+    - 9
+    description: Port number
+  - name: POLARITY
+    bit_range:
+    - 17
+    - 16
+    description: 'When In task mode: Operation to be performed on output when OUT[n] task is triggered. When In event mode: Operation on input that shall trigger IN[n] event.'
+  - name: OUTINIT
+    bit_range:
+    - 20
+    - 20
+    description: 'When in task mode: Initial value of the output when the GPIOTE channel is configured. When in event mode: No effect.'
+  side_effects: null
+- id: CONFIG3
+  address_offset: 1308
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MODE
+    bit_range:
+    - 1
+    - 0
+    description: Mode
+  - name: PSEL
+    bit_range:
+    - 8
+    - 4
+    description: GPIO number associated with SET[n], CLR[n], and OUT[n] tasks and IN[n] event
+  - name: PORT
+    bit_range:
+    - 12
+    - 9
+    description: Port number
+  - name: POLARITY
+    bit_range:
+    - 17
+    - 16
+    description: 'When In task mode: Operation to be performed on output when OUT[n] task is triggered. When In event mode: Operation on input that shall trigger IN[n] event.'
+  - name: OUTINIT
+    bit_range:
+    - 20
+    - 20
+    description: 'When in task mode: Initial value of the output when the GPIOTE channel is configured. When in event mode: No effect.'
+  side_effects: null
+- id: CONFIG4
+  address_offset: 1312
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MODE
+    bit_range:
+    - 1
+    - 0
+    description: Mode
+  - name: PSEL
+    bit_range:
+    - 8
+    - 4
+    description: GPIO number associated with SET[n], CLR[n], and OUT[n] tasks and IN[n] event
+  - name: PORT
+    bit_range:
+    - 12
+    - 9
+    description: Port number
+  - name: POLARITY
+    bit_range:
+    - 17
+    - 16
+    description: 'When In task mode: Operation to be performed on output when OUT[n] task is triggered. When In event mode: Operation on input that shall trigger IN[n] event.'
+  - name: OUTINIT
+    bit_range:
+    - 20
+    - 20
+    description: 'When in task mode: Initial value of the output when the GPIOTE channel is configured. When in event mode: No effect.'
+  side_effects: null
+- id: CONFIG5
+  address_offset: 1316
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MODE
+    bit_range:
+    - 1
+    - 0
+    description: Mode
+  - name: PSEL
+    bit_range:
+    - 8
+    - 4
+    description: GPIO number associated with SET[n], CLR[n], and OUT[n] tasks and IN[n] event
+  - name: PORT
+    bit_range:
+    - 12
+    - 9
+    description: Port number
+  - name: POLARITY
+    bit_range:
+    - 17
+    - 16
+    description: 'When In task mode: Operation to be performed on output when OUT[n] task is triggered. When In event mode: Operation on input that shall trigger IN[n] event.'
+  - name: OUTINIT
+    bit_range:
+    - 20
+    - 20
+    description: 'When in task mode: Initial value of the output when the GPIOTE channel is configured. When in event mode: No effect.'
+  side_effects: null
+- id: CONFIG6
+  address_offset: 1320
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MODE
+    bit_range:
+    - 1
+    - 0
+    description: Mode
+  - name: PSEL
+    bit_range:
+    - 8
+    - 4
+    description: GPIO number associated with SET[n], CLR[n], and OUT[n] tasks and IN[n] event
+  - name: PORT
+    bit_range:
+    - 12
+    - 9
+    description: Port number
+  - name: POLARITY
+    bit_range:
+    - 17
+    - 16
+    description: 'When In task mode: Operation to be performed on output when OUT[n] task is triggered. When In event mode: Operation on input that shall trigger IN[n] event.'
+  - name: OUTINIT
+    bit_range:
+    - 20
+    - 20
+    description: 'When in task mode: Initial value of the output when the GPIOTE channel is configured. When in event mode: No effect.'
+  side_effects: null
+- id: CONFIG7
+  address_offset: 1324
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MODE
+    bit_range:
+    - 1
+    - 0
+    description: Mode
+  - name: PSEL
+    bit_range:
+    - 8
+    - 4
+    description: GPIO number associated with SET[n], CLR[n], and OUT[n] tasks and IN[n] event
+  - name: PORT
+    bit_range:
+    - 12
+    - 9
+    description: Port number
+  - name: POLARITY
+    bit_range:
+    - 17
+    - 16
+    description: 'When In task mode: Operation to be performed on output when OUT[n] task is triggered. When In event mode: Operation on input that shall trigger IN[n] event.'
+  - name: OUTINIT
+    bit_range:
+    - 20
+    - 20
+    description: 'When in task mode: Initial value of the output when the GPIOTE channel is configured. When in event mode: No effect.'
+  side_effects: null
+interrupts:
+  GPIOTE20_0: 218
+  GPIOTE20_1: 219
+timing: null

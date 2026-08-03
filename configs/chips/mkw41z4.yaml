@@ -40,6 +40,8 @@ peripherals:
     base_address: 0x40054000
     size: "4KB"
     irq: 12
+    config:
+      debug_schema: "../peripherals/mkw41z4/lpuart0.yaml"
   # --- Cortex-M0+ core timer ---
   # SysTick (ARMv6-M core peripheral @ 0xE000E010). The Zephyr KW41Z port uses
   # the cortex_m_systick driver as the system clock, and any time-based wait
@@ -49,6 +51,8 @@ peripherals:
   - id: "systick"
     type: "systick"
     base_address: 0xE000E010
+    config:
+      debug_schema: "../peripherals/mkw41z4/systick.yaml"
   # --- Clock / system integration ---
   # SIM stays declarative (no status polls on the boot path) but the window must
   # span the "high" register block: SDID @0x1024 and COPC @0x1100 live well past
@@ -68,6 +72,8 @@ peripherals:
     type: "nxp_mcg"
     base_address: 0x40064000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/mkw41z4/mcg.yaml"
   # RSIM gates the 32 MHz radio reference oscillator. BOARD_RfOscInit enables it
   # and spins on RSIM_CONTROL[RF_OSC_READY] (bit 24); the behavioural model
   # (peripherals/rsim.rs) raises it on enable.
@@ -75,6 +81,8 @@ peripherals:
     type: "nxp_rsim"
     base_address: 0x40059000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/mkw41z4/rsim.yaml"
   - id: "pmc"
     type: "declarative"
     base_address: 0x4007D000
@@ -135,6 +143,7 @@ peripherals:
     base_address: 0x400FF080
     size: "64B"
     config:
+      debug_schema: "../peripherals/mkw41z4/gpioc.yaml"
       profile: "kinetis"
   # --- Sensor buses ---
   - id: "i2c0"
@@ -156,6 +165,7 @@ peripherals:
     size: "4KB"
     irq: 9
     config:
+      debug_schema: "../peripherals/mkw41z4/i2c1.yaml"
       profile: "kinetis"
   # SPI0 is BEHAVIOURAL (Kinetis DSPI — peripherals/spi.rs KinetisDspi): MCR /
   # TCR / CTAR / SR / PUSHR / POPR FIFO master. A PUSHR write clocks a frame out
@@ -168,6 +178,7 @@ peripherals:
     # MKW41Z4 SPI0_IRQn = 10 (SVD); 11 is TSI0.
     irq: 10
     config:
+      debug_schema: "../peripherals/mkw41z4/spi0.yaml"
       profile: "kinetis"
   # --- Timers / RNG ---
   - id: "tpm0"

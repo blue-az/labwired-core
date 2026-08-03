@@ -877,7 +877,7 @@ mod tests {
             .find(|r| r.name == "CPU_PER_CONF")
             .expect("CPU_PER_CONF register decoded by name");
         assert_eq!(cpc.offset, 8);
-        assert_eq!(cpc.value, 12, "live reset word read via peek");
+        assert_eq!(cpc.value, Some(12), "live reset word read via peek");
         assert_eq!(cpc.access, "rw");
 
         let period = cpc
@@ -924,11 +924,11 @@ mod tests {
 
         // Inspecting twice yields the same value — read() would have cleared it.
         let first = p.inspect(0, "mock", &InspectOpts::default());
-        assert_eq!(reg_value(&first), 0x1234_5678);
+        assert_eq!(reg_value(&first), Some(0x1234_5678));
         let second = p.inspect(0, "mock", &InspectOpts::default());
         assert_eq!(
             reg_value(&second),
-            0x1234_5678,
+            Some(0x1234_5678),
             "inspect is side-effect-free: read-to-clear reg unchanged"
         );
 

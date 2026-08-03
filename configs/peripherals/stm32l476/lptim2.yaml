@@ -1,0 +1,305 @@
+peripheral: LPTIM2
+version: 0.1.0
+registers:
+- id: ISR
+  address_offset: 0
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: CMPM
+    bit_range:
+    - 0
+    - 0
+    description: Compare match
+  - name: ARRM
+    bit_range:
+    - 1
+    - 1
+    description: Autoreload match
+  - name: EXTTRIG
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      External trigger edge
+                    event
+  - name: CMPOK
+    bit_range:
+    - 3
+    - 3
+    description: Compare register update OK
+  - name: ARROK
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Autoreload register update
+                    OK
+  - name: UP
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Counter direction change down to
+                    up
+  - name: DOWN
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Counter direction change up to
+                    down
+  side_effects: null
+- id: ICR
+  address_offset: 4
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: CMPMCF
+    bit_range:
+    - 0
+    - 0
+    description: compare match Clear Flag
+  - name: ARRMCF
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Autoreload match Clear
+                    Flag
+  - name: EXTTRIGCF
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      External trigger valid edge Clear
+                    Flag
+  - name: CMPOKCF
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Compare register update OK Clear
+                    Flag
+  - name: ARROKCF
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Autoreload register update OK Clear
+                    Flag
+  - name: UPCF
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Direction change to UP Clear
+                    Flag
+  - name: DOWNCF
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Direction change to down Clear
+                    Flag
+  side_effects: null
+- id: IER
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CMPMIE
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Compare match Interrupt
+                    Enable
+  - name: ARRMIE
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Autoreload match Interrupt
+                    Enable
+  - name: EXTTRIGIE
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      External trigger valid edge Interrupt
+                    Enable
+  - name: CMPOKIE
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Compare register update OK Interrupt
+                    Enable
+  - name: ARROKIE
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Autoreload register update OK Interrupt
+                    Enable
+  - name: UPIE
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Direction change to UP Interrupt
+                    Enable
+  - name: DOWNIE
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Direction change to down Interrupt
+                    Enable
+  side_effects: null
+- id: CFGR
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CKSEL
+    bit_range:
+    - 0
+    - 0
+    description: Clock selector
+  - name: CKPOL
+    bit_range:
+    - 2
+    - 1
+    description: Clock Polarity
+  - name: CKFLT
+    bit_range:
+    - 4
+    - 3
+    description: |-
+      Configurable digital filter for external
+                    clock
+  - name: TRGFLT
+    bit_range:
+    - 7
+    - 6
+    description: |-
+      Configurable digital filter for
+                    trigger
+  - name: PRESC
+    bit_range:
+    - 11
+    - 9
+    description: Clock prescaler
+  - name: TRIGSEL
+    bit_range:
+    - 15
+    - 13
+    description: Trigger selector
+  - name: TRIGEN
+    bit_range:
+    - 18
+    - 17
+    description: |-
+      Trigger enable and
+                    polarity
+  - name: TIMOUT
+    bit_range:
+    - 19
+    - 19
+    description: Timeout enable
+  - name: WAVE
+    bit_range:
+    - 20
+    - 20
+    description: Waveform shape
+  - name: WAVPOL
+    bit_range:
+    - 21
+    - 21
+    description: Waveform shape polarity
+  - name: PRELOAD
+    bit_range:
+    - 22
+    - 22
+    description: Registers update mode
+  - name: COUNTMODE
+    bit_range:
+    - 23
+    - 23
+    description: counter mode enabled
+  - name: ENC
+    bit_range:
+    - 24
+    - 24
+    description: Encoder mode enable
+  side_effects: null
+- id: CR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENABLE
+    bit_range:
+    - 0
+    - 0
+    description: LPTIM Enable
+  - name: SNGSTRT
+    bit_range:
+    - 1
+    - 1
+    description: LPTIM start in single mode
+  - name: CNTSTRT
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Timer start in continuous
+                    mode
+  side_effects: null
+- id: CMP
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CMP
+    bit_range:
+    - 15
+    - 0
+    description: Compare value
+  side_effects: null
+- id: ARR
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: ARR
+    bit_range:
+    - 15
+    - 0
+    description: Auto reload value
+  side_effects: null
+- id: CNT
+  address_offset: 28
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: CNT
+    bit_range:
+    - 15
+    - 0
+    description: Counter value
+  side_effects: null
+interrupts:
+  LPTIM1: 65
+  LPTIM2: 66
+timing: null

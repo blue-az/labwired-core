@@ -825,6 +825,21 @@ pub(crate) fn run_test(args: TestArgs) -> ExitCode {
                         );
                         return ExitCode::from(EXIT_CONFIG_ERROR);
                     }
+                    // Debugger register NAMES come from the chip YAML even
+                    // though the S3 bank above is programmatic; without this
+                    // every `debug_schema:` the chip declares is inert. Never
+                    // fatal — a debugger convenience must not fail a run.
+                    let chip_dir = sys_path
+                        .parent()
+                        .unwrap_or_else(|| std::path::Path::new("."));
+                    if let Ok(chip) =
+                        labwired_config::ChipDescriptor::resolve(&manifest.chip, chip_dir)
+                    {
+                        bus.attach_debug_schemas(
+                            &chip,
+                            &labwired_core::system::builder::anchor_chip_path(manifest, chip_dir),
+                        );
+                    }
                     bus.refresh_peripheral_index();
                     // Seed partition table + app image magic into D-cache
                     // identity window (VA 0x3C00_0000 → dcache[off]).

@@ -1,0 +1,2455 @@
+peripheral: SLCHOST
+version: 0.1.0
+registers:
+- id: HOST_SLCHOST_FUNC2_0
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLC_FUNC2_INT
+    bit_range:
+    - 24
+    - 24
+  side_effects: null
+- id: HOST_SLCHOST_FUNC2_1
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLC_FUNC2_INT_EN
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+- id: HOST_SLCHOST_FUNC2_2
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: HOST_SLC_FUNC1_MDSTAT
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+- id: HOST_SLCHOST_GPIO_STATUS0
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_GPIO_SDIO_INT0
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: HOST_SLCHOST_GPIO_STATUS1
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_GPIO_SDIO_INT1
+    bit_range:
+    - 7
+    - 0
+  side_effects: null
+- id: HOST_SLCHOST_GPIO_IN0
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_GPIO_SDIO_IN0
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: HOST_SLCHOST_GPIO_IN1
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_GPIO_SDIO_IN1
+    bit_range:
+    - 7
+    - 0
+  side_effects: null
+- id: HOST_SLC0HOST_TOKEN_RDATA
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLC0_TOKEN0
+    bit_range:
+    - 11
+    - 0
+  - name: HOST_SLC0_RX_PF_VALID
+    bit_range:
+    - 12
+    - 12
+  - name: HOST_HOSTSLC0_TOKEN1
+    bit_range:
+    - 27
+    - 16
+  - name: HOST_SLC0_RX_PF_EOF
+    bit_range:
+    - 31
+    - 28
+  side_effects: null
+- id: HOST_SLC0_HOST_PF
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLC0_PF_DATA
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: HOST_SLC1_HOST_PF
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLC1_PF_DATA
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: HOST_SLC0HOST_INT_RAW
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLC0_TOHOST_BIT0_INT_RAW
+    bit_range:
+    - 0
+    - 0
+  - name: HOST_SLC0_TOHOST_BIT1_INT_RAW
+    bit_range:
+    - 1
+    - 1
+  - name: HOST_SLC0_TOHOST_BIT2_INT_RAW
+    bit_range:
+    - 2
+    - 2
+  - name: HOST_SLC0_TOHOST_BIT3_INT_RAW
+    bit_range:
+    - 3
+    - 3
+  - name: HOST_SLC0_TOHOST_BIT4_INT_RAW
+    bit_range:
+    - 4
+    - 4
+  - name: HOST_SLC0_TOHOST_BIT5_INT_RAW
+    bit_range:
+    - 5
+    - 5
+  - name: HOST_SLC0_TOHOST_BIT6_INT_RAW
+    bit_range:
+    - 6
+    - 6
+  - name: HOST_SLC0_TOHOST_BIT7_INT_RAW
+    bit_range:
+    - 7
+    - 7
+  - name: HOST_SLC0_TOKEN0_1TO0_INT_RAW
+    bit_range:
+    - 8
+    - 8
+  - name: HOST_SLC0_TOKEN1_1TO0_INT_RAW
+    bit_range:
+    - 9
+    - 9
+  - name: HOST_SLC0_TOKEN0_0TO1_INT_RAW
+    bit_range:
+    - 10
+    - 10
+  - name: HOST_SLC0_TOKEN1_0TO1_INT_RAW
+    bit_range:
+    - 11
+    - 11
+  - name: HOST_SLC0HOST_RX_SOF_INT_RAW
+    bit_range:
+    - 12
+    - 12
+  - name: HOST_SLC0HOST_RX_EOF_INT_RAW
+    bit_range:
+    - 13
+    - 13
+  - name: HOST_SLC0HOST_RX_START_INT_RAW
+    bit_range:
+    - 14
+    - 14
+  - name: HOST_SLC0HOST_TX_START_INT_RAW
+    bit_range:
+    - 15
+    - 15
+  - name: HOST_SLC0_RX_UDF_INT_RAW
+    bit_range:
+    - 16
+    - 16
+  - name: HOST_SLC0_TX_OVF_INT_RAW
+    bit_range:
+    - 17
+    - 17
+  - name: HOST_SLC0_RX_PF_VALID_INT_RAW
+    bit_range:
+    - 18
+    - 18
+  - name: HOST_SLC0_EXT_BIT0_INT_RAW
+    bit_range:
+    - 19
+    - 19
+  - name: HOST_SLC0_EXT_BIT1_INT_RAW
+    bit_range:
+    - 20
+    - 20
+  - name: HOST_SLC0_EXT_BIT2_INT_RAW
+    bit_range:
+    - 21
+    - 21
+  - name: HOST_SLC0_EXT_BIT3_INT_RAW
+    bit_range:
+    - 22
+    - 22
+  - name: HOST_SLC0_RX_NEW_PACKET_INT_RAW
+    bit_range:
+    - 23
+    - 23
+  - name: HOST_SLC0_HOST_RD_RETRY_INT_RAW
+    bit_range:
+    - 24
+    - 24
+  - name: HOST_GPIO_SDIO_INT_RAW
+    bit_range:
+    - 25
+    - 25
+  side_effects: null
+- id: HOST_SLC1HOST_INT_RAW
+  address_offset: 84
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLC1_TOHOST_BIT0_INT_RAW
+    bit_range:
+    - 0
+    - 0
+  - name: HOST_SLC1_TOHOST_BIT1_INT_RAW
+    bit_range:
+    - 1
+    - 1
+  - name: HOST_SLC1_TOHOST_BIT2_INT_RAW
+    bit_range:
+    - 2
+    - 2
+  - name: HOST_SLC1_TOHOST_BIT3_INT_RAW
+    bit_range:
+    - 3
+    - 3
+  - name: HOST_SLC1_TOHOST_BIT4_INT_RAW
+    bit_range:
+    - 4
+    - 4
+  - name: HOST_SLC1_TOHOST_BIT5_INT_RAW
+    bit_range:
+    - 5
+    - 5
+  - name: HOST_SLC1_TOHOST_BIT6_INT_RAW
+    bit_range:
+    - 6
+    - 6
+  - name: HOST_SLC1_TOHOST_BIT7_INT_RAW
+    bit_range:
+    - 7
+    - 7
+  - name: HOST_SLC1_TOKEN0_1TO0_INT_RAW
+    bit_range:
+    - 8
+    - 8
+  - name: HOST_SLC1_TOKEN1_1TO0_INT_RAW
+    bit_range:
+    - 9
+    - 9
+  - name: HOST_SLC1_TOKEN0_0TO1_INT_RAW
+    bit_range:
+    - 10
+    - 10
+  - name: HOST_SLC1_TOKEN1_0TO1_INT_RAW
+    bit_range:
+    - 11
+    - 11
+  - name: HOST_SLC1HOST_RX_SOF_INT_RAW
+    bit_range:
+    - 12
+    - 12
+  - name: HOST_SLC1HOST_RX_EOF_INT_RAW
+    bit_range:
+    - 13
+    - 13
+  - name: HOST_SLC1HOST_RX_START_INT_RAW
+    bit_range:
+    - 14
+    - 14
+  - name: HOST_SLC1HOST_TX_START_INT_RAW
+    bit_range:
+    - 15
+    - 15
+  - name: HOST_SLC1_RX_UDF_INT_RAW
+    bit_range:
+    - 16
+    - 16
+  - name: HOST_SLC1_TX_OVF_INT_RAW
+    bit_range:
+    - 17
+    - 17
+  - name: HOST_SLC1_RX_PF_VALID_INT_RAW
+    bit_range:
+    - 18
+    - 18
+  - name: HOST_SLC1_EXT_BIT0_INT_RAW
+    bit_range:
+    - 19
+    - 19
+  - name: HOST_SLC1_EXT_BIT1_INT_RAW
+    bit_range:
+    - 20
+    - 20
+  - name: HOST_SLC1_EXT_BIT2_INT_RAW
+    bit_range:
+    - 21
+    - 21
+  - name: HOST_SLC1_EXT_BIT3_INT_RAW
+    bit_range:
+    - 22
+    - 22
+  - name: HOST_SLC1_WIFI_RX_NEW_PACKET_INT_RAW
+    bit_range:
+    - 23
+    - 23
+  - name: HOST_SLC1_HOST_RD_RETRY_INT_RAW
+    bit_range:
+    - 24
+    - 24
+  - name: HOST_SLC1_BT_RX_NEW_PACKET_INT_RAW
+    bit_range:
+    - 25
+    - 25
+  side_effects: null
+- id: HOST_SLC0HOST_INT_ST
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLC0_TOHOST_BIT0_INT_ST
+    bit_range:
+    - 0
+    - 0
+  - name: HOST_SLC0_TOHOST_BIT1_INT_ST
+    bit_range:
+    - 1
+    - 1
+  - name: HOST_SLC0_TOHOST_BIT2_INT_ST
+    bit_range:
+    - 2
+    - 2
+  - name: HOST_SLC0_TOHOST_BIT3_INT_ST
+    bit_range:
+    - 3
+    - 3
+  - name: HOST_SLC0_TOHOST_BIT4_INT_ST
+    bit_range:
+    - 4
+    - 4
+  - name: HOST_SLC0_TOHOST_BIT5_INT_ST
+    bit_range:
+    - 5
+    - 5
+  - name: HOST_SLC0_TOHOST_BIT6_INT_ST
+    bit_range:
+    - 6
+    - 6
+  - name: HOST_SLC0_TOHOST_BIT7_INT_ST
+    bit_range:
+    - 7
+    - 7
+  - name: HOST_SLC0_TOKEN0_1TO0_INT_ST
+    bit_range:
+    - 8
+    - 8
+  - name: HOST_SLC0_TOKEN1_1TO0_INT_ST
+    bit_range:
+    - 9
+    - 9
+  - name: HOST_SLC0_TOKEN0_0TO1_INT_ST
+    bit_range:
+    - 10
+    - 10
+  - name: HOST_SLC0_TOKEN1_0TO1_INT_ST
+    bit_range:
+    - 11
+    - 11
+  - name: HOST_SLC0HOST_RX_SOF_INT_ST
+    bit_range:
+    - 12
+    - 12
+  - name: HOST_SLC0HOST_RX_EOF_INT_ST
+    bit_range:
+    - 13
+    - 13
+  - name: HOST_SLC0HOST_RX_START_INT_ST
+    bit_range:
+    - 14
+    - 14
+  - name: HOST_SLC0HOST_TX_START_INT_ST
+    bit_range:
+    - 15
+    - 15
+  - name: HOST_SLC0_RX_UDF_INT_ST
+    bit_range:
+    - 16
+    - 16
+  - name: HOST_SLC0_TX_OVF_INT_ST
+    bit_range:
+    - 17
+    - 17
+  - name: HOST_SLC0_RX_PF_VALID_INT_ST
+    bit_range:
+    - 18
+    - 18
+  - name: HOST_SLC0_EXT_BIT0_INT_ST
+    bit_range:
+    - 19
+    - 19
+  - name: HOST_SLC0_EXT_BIT1_INT_ST
+    bit_range:
+    - 20
+    - 20
+  - name: HOST_SLC0_EXT_BIT2_INT_ST
+    bit_range:
+    - 21
+    - 21
+  - name: HOST_SLC0_EXT_BIT3_INT_ST
+    bit_range:
+    - 22
+    - 22
+  - name: HOST_SLC0_RX_NEW_PACKET_INT_ST
+    bit_range:
+    - 23
+    - 23
+  - name: HOST_SLC0_HOST_RD_RETRY_INT_ST
+    bit_range:
+    - 24
+    - 24
+  - name: HOST_GPIO_SDIO_INT_ST
+    bit_range:
+    - 25
+    - 25
+  side_effects: null
+- id: HOST_SLC1HOST_INT_ST
+  address_offset: 92
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLC1_TOHOST_BIT0_INT_ST
+    bit_range:
+    - 0
+    - 0
+  - name: HOST_SLC1_TOHOST_BIT1_INT_ST
+    bit_range:
+    - 1
+    - 1
+  - name: HOST_SLC1_TOHOST_BIT2_INT_ST
+    bit_range:
+    - 2
+    - 2
+  - name: HOST_SLC1_TOHOST_BIT3_INT_ST
+    bit_range:
+    - 3
+    - 3
+  - name: HOST_SLC1_TOHOST_BIT4_INT_ST
+    bit_range:
+    - 4
+    - 4
+  - name: HOST_SLC1_TOHOST_BIT5_INT_ST
+    bit_range:
+    - 5
+    - 5
+  - name: HOST_SLC1_TOHOST_BIT6_INT_ST
+    bit_range:
+    - 6
+    - 6
+  - name: HOST_SLC1_TOHOST_BIT7_INT_ST
+    bit_range:
+    - 7
+    - 7
+  - name: HOST_SLC1_TOKEN0_1TO0_INT_ST
+    bit_range:
+    - 8
+    - 8
+  - name: HOST_SLC1_TOKEN1_1TO0_INT_ST
+    bit_range:
+    - 9
+    - 9
+  - name: HOST_SLC1_TOKEN0_0TO1_INT_ST
+    bit_range:
+    - 10
+    - 10
+  - name: HOST_SLC1_TOKEN1_0TO1_INT_ST
+    bit_range:
+    - 11
+    - 11
+  - name: HOST_SLC1HOST_RX_SOF_INT_ST
+    bit_range:
+    - 12
+    - 12
+  - name: HOST_SLC1HOST_RX_EOF_INT_ST
+    bit_range:
+    - 13
+    - 13
+  - name: HOST_SLC1HOST_RX_START_INT_ST
+    bit_range:
+    - 14
+    - 14
+  - name: HOST_SLC1HOST_TX_START_INT_ST
+    bit_range:
+    - 15
+    - 15
+  - name: HOST_SLC1_RX_UDF_INT_ST
+    bit_range:
+    - 16
+    - 16
+  - name: HOST_SLC1_TX_OVF_INT_ST
+    bit_range:
+    - 17
+    - 17
+  - name: HOST_SLC1_RX_PF_VALID_INT_ST
+    bit_range:
+    - 18
+    - 18
+  - name: HOST_SLC1_EXT_BIT0_INT_ST
+    bit_range:
+    - 19
+    - 19
+  - name: HOST_SLC1_EXT_BIT1_INT_ST
+    bit_range:
+    - 20
+    - 20
+  - name: HOST_SLC1_EXT_BIT2_INT_ST
+    bit_range:
+    - 21
+    - 21
+  - name: HOST_SLC1_EXT_BIT3_INT_ST
+    bit_range:
+    - 22
+    - 22
+  - name: HOST_SLC1_WIFI_RX_NEW_PACKET_INT_ST
+    bit_range:
+    - 23
+    - 23
+  - name: HOST_SLC1_HOST_RD_RETRY_INT_ST
+    bit_range:
+    - 24
+    - 24
+  - name: HOST_SLC1_BT_RX_NEW_PACKET_INT_ST
+    bit_range:
+    - 25
+    - 25
+  side_effects: null
+- id: HOST_SLCHOST_PKT_LEN
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_HOSTSLC0_LEN
+    bit_range:
+    - 19
+    - 0
+  - name: HOST_HOSTSLC0_LEN_CHECK
+    bit_range:
+    - 31
+    - 20
+  side_effects: null
+- id: HOST_SLCHOST_STATE_W0
+  address_offset: 100
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLCHOST_STATE0
+    bit_range:
+    - 7
+    - 0
+  - name: HOST_SLCHOST_STATE1
+    bit_range:
+    - 15
+    - 8
+  - name: HOST_SLCHOST_STATE2
+    bit_range:
+    - 23
+    - 16
+  - name: HOST_SLCHOST_STATE3
+    bit_range:
+    - 31
+    - 24
+  side_effects: null
+- id: HOST_SLCHOST_STATE_W1
+  address_offset: 104
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLCHOST_STATE4
+    bit_range:
+    - 7
+    - 0
+  - name: HOST_SLCHOST_STATE5
+    bit_range:
+    - 15
+    - 8
+  - name: HOST_SLCHOST_STATE6
+    bit_range:
+    - 23
+    - 16
+  - name: HOST_SLCHOST_STATE7
+    bit_range:
+    - 31
+    - 24
+  side_effects: null
+- id: HOST_SLCHOST_CONF_W0
+  address_offset: 108
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLCHOST_CONF0
+    bit_range:
+    - 7
+    - 0
+  - name: HOST_SLCHOST_CONF1
+    bit_range:
+    - 15
+    - 8
+  - name: HOST_SLCHOST_CONF2
+    bit_range:
+    - 23
+    - 16
+  - name: HOST_SLCHOST_CONF3
+    bit_range:
+    - 31
+    - 24
+  side_effects: null
+- id: HOST_SLCHOST_CONF_W1
+  address_offset: 112
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLCHOST_CONF4
+    bit_range:
+    - 7
+    - 0
+  - name: HOST_SLCHOST_CONF5
+    bit_range:
+    - 15
+    - 8
+  - name: HOST_SLCHOST_CONF6
+    bit_range:
+    - 23
+    - 16
+  - name: HOST_SLCHOST_CONF7
+    bit_range:
+    - 31
+    - 24
+  side_effects: null
+- id: HOST_SLCHOST_CONF_W2
+  address_offset: 116
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLCHOST_CONF8
+    bit_range:
+    - 7
+    - 0
+  - name: HOST_SLCHOST_CONF9
+    bit_range:
+    - 15
+    - 8
+  - name: HOST_SLCHOST_CONF10
+    bit_range:
+    - 23
+    - 16
+  - name: HOST_SLCHOST_CONF11
+    bit_range:
+    - 31
+    - 24
+  side_effects: null
+- id: HOST_SLCHOST_CONF_W3
+  address_offset: 120
+  size: 32
+  access: READ_WRITE
+  reset_value: 192
+  fields:
+  - name: HOST_SLCHOST_CONF12
+    bit_range:
+    - 7
+    - 0
+  - name: HOST_SLCHOST_CONF13
+    bit_range:
+    - 15
+    - 8
+  - name: HOST_SLCHOST_CONF14
+    bit_range:
+    - 23
+    - 16
+  - name: HOST_SLCHOST_CONF15
+    bit_range:
+    - 31
+    - 24
+  side_effects: null
+- id: HOST_SLCHOST_CONF_W4
+  address_offset: 124
+  size: 32
+  access: READ_WRITE
+  reset_value: 511
+  fields:
+  - name: HOST_SLCHOST_CONF16
+    bit_range:
+    - 7
+    - 0
+    description: SLC timeout value
+  - name: HOST_SLCHOST_CONF17
+    bit_range:
+    - 15
+    - 8
+    description: SLC timeout enable
+  - name: HOST_SLCHOST_CONF18
+    bit_range:
+    - 23
+    - 16
+  - name: HOST_SLCHOST_CONF19
+    bit_range:
+    - 31
+    - 24
+    description: Interrupt to target CPU
+  side_effects: null
+- id: HOST_SLCHOST_CONF_W5
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLCHOST_CONF20
+    bit_range:
+    - 7
+    - 0
+  - name: HOST_SLCHOST_CONF21
+    bit_range:
+    - 15
+    - 8
+  - name: HOST_SLCHOST_CONF22
+    bit_range:
+    - 23
+    - 16
+  - name: HOST_SLCHOST_CONF23
+    bit_range:
+    - 31
+    - 24
+  side_effects: null
+- id: HOST_SLCHOST_WIN_CMD
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields: []
+  side_effects: null
+- id: HOST_SLCHOST_CONF_W6
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLCHOST_CONF24
+    bit_range:
+    - 7
+    - 0
+  - name: HOST_SLCHOST_CONF25
+    bit_range:
+    - 15
+    - 8
+  - name: HOST_SLCHOST_CONF26
+    bit_range:
+    - 23
+    - 16
+  - name: HOST_SLCHOST_CONF27
+    bit_range:
+    - 31
+    - 24
+  side_effects: null
+- id: HOST_SLCHOST_CONF_W7
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLCHOST_CONF28
+    bit_range:
+    - 7
+    - 0
+  - name: HOST_SLCHOST_CONF29
+    bit_range:
+    - 15
+    - 8
+  - name: HOST_SLCHOST_CONF30
+    bit_range:
+    - 23
+    - 16
+  - name: HOST_SLCHOST_CONF31
+    bit_range:
+    - 31
+    - 24
+  side_effects: null
+- id: HOST_SLCHOST_PKT_LEN0
+  address_offset: 144
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_HOSTSLC0_LEN0
+    bit_range:
+    - 19
+    - 0
+  side_effects: null
+- id: HOST_SLCHOST_PKT_LEN1
+  address_offset: 148
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_HOSTSLC0_LEN1
+    bit_range:
+    - 19
+    - 0
+  side_effects: null
+- id: HOST_SLCHOST_PKT_LEN2
+  address_offset: 152
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_HOSTSLC0_LEN2
+    bit_range:
+    - 19
+    - 0
+  side_effects: null
+- id: HOST_SLCHOST_CONF_W8
+  address_offset: 156
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLCHOST_CONF32
+    bit_range:
+    - 7
+    - 0
+  - name: HOST_SLCHOST_CONF33
+    bit_range:
+    - 15
+    - 8
+  - name: HOST_SLCHOST_CONF34
+    bit_range:
+    - 23
+    - 16
+  - name: HOST_SLCHOST_CONF35
+    bit_range:
+    - 31
+    - 24
+  side_effects: null
+- id: HOST_SLCHOST_CONF_W9
+  address_offset: 160
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLCHOST_CONF36
+    bit_range:
+    - 7
+    - 0
+  - name: HOST_SLCHOST_CONF37
+    bit_range:
+    - 15
+    - 8
+  - name: HOST_SLCHOST_CONF38
+    bit_range:
+    - 23
+    - 16
+  - name: HOST_SLCHOST_CONF39
+    bit_range:
+    - 31
+    - 24
+  side_effects: null
+- id: HOST_SLCHOST_CONF_W10
+  address_offset: 164
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLCHOST_CONF40
+    bit_range:
+    - 7
+    - 0
+  - name: HOST_SLCHOST_CONF41
+    bit_range:
+    - 15
+    - 8
+  - name: HOST_SLCHOST_CONF42
+    bit_range:
+    - 23
+    - 16
+  - name: HOST_SLCHOST_CONF43
+    bit_range:
+    - 31
+    - 24
+  side_effects: null
+- id: HOST_SLCHOST_CONF_W11
+  address_offset: 168
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLCHOST_CONF44
+    bit_range:
+    - 7
+    - 0
+  - name: HOST_SLCHOST_CONF45
+    bit_range:
+    - 15
+    - 8
+  - name: HOST_SLCHOST_CONF46
+    bit_range:
+    - 23
+    - 16
+  - name: HOST_SLCHOST_CONF47
+    bit_range:
+    - 31
+    - 24
+  side_effects: null
+- id: HOST_SLCHOST_CONF_W12
+  address_offset: 172
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLCHOST_CONF48
+    bit_range:
+    - 7
+    - 0
+  - name: HOST_SLCHOST_CONF49
+    bit_range:
+    - 15
+    - 8
+  - name: HOST_SLCHOST_CONF50
+    bit_range:
+    - 23
+    - 16
+  - name: HOST_SLCHOST_CONF51
+    bit_range:
+    - 31
+    - 24
+  side_effects: null
+- id: HOST_SLCHOST_CONF_W13
+  address_offset: 176
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLCHOST_CONF52
+    bit_range:
+    - 7
+    - 0
+  - name: HOST_SLCHOST_CONF53
+    bit_range:
+    - 15
+    - 8
+  - name: HOST_SLCHOST_CONF54
+    bit_range:
+    - 23
+    - 16
+  - name: HOST_SLCHOST_CONF55
+    bit_range:
+    - 31
+    - 24
+  side_effects: null
+- id: HOST_SLCHOST_CONF_W14
+  address_offset: 180
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLCHOST_CONF56
+    bit_range:
+    - 7
+    - 0
+  - name: HOST_SLCHOST_CONF57
+    bit_range:
+    - 15
+    - 8
+  - name: HOST_SLCHOST_CONF58
+    bit_range:
+    - 23
+    - 16
+  - name: HOST_SLCHOST_CONF59
+    bit_range:
+    - 31
+    - 24
+  side_effects: null
+- id: HOST_SLCHOST_CONF_W15
+  address_offset: 184
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLCHOST_CONF60
+    bit_range:
+    - 7
+    - 0
+  - name: HOST_SLCHOST_CONF61
+    bit_range:
+    - 15
+    - 8
+  - name: HOST_SLCHOST_CONF62
+    bit_range:
+    - 23
+    - 16
+  - name: HOST_SLCHOST_CONF63
+    bit_range:
+    - 31
+    - 24
+  side_effects: null
+- id: HOST_SLCHOST_CHECK_SUM0
+  address_offset: 188
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLCHOST_CHECK_SUM0
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: HOST_SLCHOST_CHECK_SUM1
+  address_offset: 192
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLCHOST_CHECK_SUM1
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: HOST_SLC1HOST_TOKEN_RDATA
+  address_offset: 196
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLC1_TOKEN0
+    bit_range:
+    - 11
+    - 0
+  - name: HOST_SLC1_RX_PF_VALID
+    bit_range:
+    - 12
+    - 12
+  - name: HOST_HOSTSLC1_TOKEN1
+    bit_range:
+    - 27
+    - 16
+  - name: HOST_SLC1_RX_PF_EOF
+    bit_range:
+    - 31
+    - 28
+  side_effects: null
+- id: HOST_SLC0HOST_TOKEN_WDATA
+  address_offset: 200
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLC0HOST_TOKEN0_WD
+    bit_range:
+    - 11
+    - 0
+  - name: HOST_SLC0HOST_TOKEN1_WD
+    bit_range:
+    - 27
+    - 16
+  side_effects: null
+- id: HOST_SLC1HOST_TOKEN_WDATA
+  address_offset: 204
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLC1HOST_TOKEN0_WD
+    bit_range:
+    - 11
+    - 0
+  - name: HOST_SLC1HOST_TOKEN1_WD
+    bit_range:
+    - 27
+    - 16
+  side_effects: null
+- id: HOST_SLCHOST_TOKEN_CON
+  address_offset: 208
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLC0HOST_TOKEN0_DEC
+    bit_range:
+    - 0
+    - 0
+  - name: HOST_SLC0HOST_TOKEN1_DEC
+    bit_range:
+    - 1
+    - 1
+  - name: HOST_SLC0HOST_TOKEN0_WR
+    bit_range:
+    - 2
+    - 2
+  - name: HOST_SLC0HOST_TOKEN1_WR
+    bit_range:
+    - 3
+    - 3
+  - name: HOST_SLC1HOST_TOKEN0_DEC
+    bit_range:
+    - 4
+    - 4
+  - name: HOST_SLC1HOST_TOKEN1_DEC
+    bit_range:
+    - 5
+    - 5
+  - name: HOST_SLC1HOST_TOKEN0_WR
+    bit_range:
+    - 6
+    - 6
+  - name: HOST_SLC1HOST_TOKEN1_WR
+    bit_range:
+    - 7
+    - 7
+  - name: HOST_SLC0HOST_LEN_WR
+    bit_range:
+    - 8
+    - 8
+  side_effects: null
+- id: HOST_SLC0HOST_INT_CLR
+  address_offset: 212
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLC0_TOHOST_BIT0_INT_CLR
+    bit_range:
+    - 0
+    - 0
+  - name: HOST_SLC0_TOHOST_BIT1_INT_CLR
+    bit_range:
+    - 1
+    - 1
+  - name: HOST_SLC0_TOHOST_BIT2_INT_CLR
+    bit_range:
+    - 2
+    - 2
+  - name: HOST_SLC0_TOHOST_BIT3_INT_CLR
+    bit_range:
+    - 3
+    - 3
+  - name: HOST_SLC0_TOHOST_BIT4_INT_CLR
+    bit_range:
+    - 4
+    - 4
+  - name: HOST_SLC0_TOHOST_BIT5_INT_CLR
+    bit_range:
+    - 5
+    - 5
+  - name: HOST_SLC0_TOHOST_BIT6_INT_CLR
+    bit_range:
+    - 6
+    - 6
+  - name: HOST_SLC0_TOHOST_BIT7_INT_CLR
+    bit_range:
+    - 7
+    - 7
+  - name: HOST_SLC0_TOKEN0_1TO0_INT_CLR
+    bit_range:
+    - 8
+    - 8
+  - name: HOST_SLC0_TOKEN1_1TO0_INT_CLR
+    bit_range:
+    - 9
+    - 9
+  - name: HOST_SLC0_TOKEN0_0TO1_INT_CLR
+    bit_range:
+    - 10
+    - 10
+  - name: HOST_SLC0_TOKEN1_0TO1_INT_CLR
+    bit_range:
+    - 11
+    - 11
+  - name: HOST_SLC0HOST_RX_SOF_INT_CLR
+    bit_range:
+    - 12
+    - 12
+  - name: HOST_SLC0HOST_RX_EOF_INT_CLR
+    bit_range:
+    - 13
+    - 13
+  - name: HOST_SLC0HOST_RX_START_INT_CLR
+    bit_range:
+    - 14
+    - 14
+  - name: HOST_SLC0HOST_TX_START_INT_CLR
+    bit_range:
+    - 15
+    - 15
+  - name: HOST_SLC0_RX_UDF_INT_CLR
+    bit_range:
+    - 16
+    - 16
+  - name: HOST_SLC0_TX_OVF_INT_CLR
+    bit_range:
+    - 17
+    - 17
+  - name: HOST_SLC0_RX_PF_VALID_INT_CLR
+    bit_range:
+    - 18
+    - 18
+  - name: HOST_SLC0_EXT_BIT0_INT_CLR
+    bit_range:
+    - 19
+    - 19
+  - name: HOST_SLC0_EXT_BIT1_INT_CLR
+    bit_range:
+    - 20
+    - 20
+  - name: HOST_SLC0_EXT_BIT2_INT_CLR
+    bit_range:
+    - 21
+    - 21
+  - name: HOST_SLC0_EXT_BIT3_INT_CLR
+    bit_range:
+    - 22
+    - 22
+  - name: HOST_SLC0_RX_NEW_PACKET_INT_CLR
+    bit_range:
+    - 23
+    - 23
+  - name: HOST_SLC0_HOST_RD_RETRY_INT_CLR
+    bit_range:
+    - 24
+    - 24
+  - name: HOST_GPIO_SDIO_INT_CLR
+    bit_range:
+    - 25
+    - 25
+  side_effects: null
+- id: HOST_SLC1HOST_INT_CLR
+  address_offset: 216
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLC1_TOHOST_BIT0_INT_CLR
+    bit_range:
+    - 0
+    - 0
+  - name: HOST_SLC1_TOHOST_BIT1_INT_CLR
+    bit_range:
+    - 1
+    - 1
+  - name: HOST_SLC1_TOHOST_BIT2_INT_CLR
+    bit_range:
+    - 2
+    - 2
+  - name: HOST_SLC1_TOHOST_BIT3_INT_CLR
+    bit_range:
+    - 3
+    - 3
+  - name: HOST_SLC1_TOHOST_BIT4_INT_CLR
+    bit_range:
+    - 4
+    - 4
+  - name: HOST_SLC1_TOHOST_BIT5_INT_CLR
+    bit_range:
+    - 5
+    - 5
+  - name: HOST_SLC1_TOHOST_BIT6_INT_CLR
+    bit_range:
+    - 6
+    - 6
+  - name: HOST_SLC1_TOHOST_BIT7_INT_CLR
+    bit_range:
+    - 7
+    - 7
+  - name: HOST_SLC1_TOKEN0_1TO0_INT_CLR
+    bit_range:
+    - 8
+    - 8
+  - name: HOST_SLC1_TOKEN1_1TO0_INT_CLR
+    bit_range:
+    - 9
+    - 9
+  - name: HOST_SLC1_TOKEN0_0TO1_INT_CLR
+    bit_range:
+    - 10
+    - 10
+  - name: HOST_SLC1_TOKEN1_0TO1_INT_CLR
+    bit_range:
+    - 11
+    - 11
+  - name: HOST_SLC1HOST_RX_SOF_INT_CLR
+    bit_range:
+    - 12
+    - 12
+  - name: HOST_SLC1HOST_RX_EOF_INT_CLR
+    bit_range:
+    - 13
+    - 13
+  - name: HOST_SLC1HOST_RX_START_INT_CLR
+    bit_range:
+    - 14
+    - 14
+  - name: HOST_SLC1HOST_TX_START_INT_CLR
+    bit_range:
+    - 15
+    - 15
+  - name: HOST_SLC1_RX_UDF_INT_CLR
+    bit_range:
+    - 16
+    - 16
+  - name: HOST_SLC1_TX_OVF_INT_CLR
+    bit_range:
+    - 17
+    - 17
+  - name: HOST_SLC1_RX_PF_VALID_INT_CLR
+    bit_range:
+    - 18
+    - 18
+  - name: HOST_SLC1_EXT_BIT0_INT_CLR
+    bit_range:
+    - 19
+    - 19
+  - name: HOST_SLC1_EXT_BIT1_INT_CLR
+    bit_range:
+    - 20
+    - 20
+  - name: HOST_SLC1_EXT_BIT2_INT_CLR
+    bit_range:
+    - 21
+    - 21
+  - name: HOST_SLC1_EXT_BIT3_INT_CLR
+    bit_range:
+    - 22
+    - 22
+  - name: HOST_SLC1_WIFI_RX_NEW_PACKET_INT_CLR
+    bit_range:
+    - 23
+    - 23
+  - name: HOST_SLC1_HOST_RD_RETRY_INT_CLR
+    bit_range:
+    - 24
+    - 24
+  - name: HOST_SLC1_BT_RX_NEW_PACKET_INT_CLR
+    bit_range:
+    - 25
+    - 25
+  side_effects: null
+- id: HOST_SLC0HOST_FUNC1_INT_ENA
+  address_offset: 220
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_FN1_SLC0_TOHOST_BIT0_INT_ENA
+    bit_range:
+    - 0
+    - 0
+  - name: HOST_FN1_SLC0_TOHOST_BIT1_INT_ENA
+    bit_range:
+    - 1
+    - 1
+  - name: HOST_FN1_SLC0_TOHOST_BIT2_INT_ENA
+    bit_range:
+    - 2
+    - 2
+  - name: HOST_FN1_SLC0_TOHOST_BIT3_INT_ENA
+    bit_range:
+    - 3
+    - 3
+  - name: HOST_FN1_SLC0_TOHOST_BIT4_INT_ENA
+    bit_range:
+    - 4
+    - 4
+  - name: HOST_FN1_SLC0_TOHOST_BIT5_INT_ENA
+    bit_range:
+    - 5
+    - 5
+  - name: HOST_FN1_SLC0_TOHOST_BIT6_INT_ENA
+    bit_range:
+    - 6
+    - 6
+  - name: HOST_FN1_SLC0_TOHOST_BIT7_INT_ENA
+    bit_range:
+    - 7
+    - 7
+  - name: HOST_FN1_SLC0_TOKEN0_1TO0_INT_ENA
+    bit_range:
+    - 8
+    - 8
+  - name: HOST_FN1_SLC0_TOKEN1_1TO0_INT_ENA
+    bit_range:
+    - 9
+    - 9
+  - name: HOST_FN1_SLC0_TOKEN0_0TO1_INT_ENA
+    bit_range:
+    - 10
+    - 10
+  - name: HOST_FN1_SLC0_TOKEN1_0TO1_INT_ENA
+    bit_range:
+    - 11
+    - 11
+  - name: HOST_FN1_SLC0HOST_RX_SOF_INT_ENA
+    bit_range:
+    - 12
+    - 12
+  - name: HOST_FN1_SLC0HOST_RX_EOF_INT_ENA
+    bit_range:
+    - 13
+    - 13
+  - name: HOST_FN1_SLC0HOST_RX_START_INT_ENA
+    bit_range:
+    - 14
+    - 14
+  - name: HOST_FN1_SLC0HOST_TX_START_INT_ENA
+    bit_range:
+    - 15
+    - 15
+  - name: HOST_FN1_SLC0_RX_UDF_INT_ENA
+    bit_range:
+    - 16
+    - 16
+  - name: HOST_FN1_SLC0_TX_OVF_INT_ENA
+    bit_range:
+    - 17
+    - 17
+  - name: HOST_FN1_SLC0_RX_PF_VALID_INT_ENA
+    bit_range:
+    - 18
+    - 18
+  - name: HOST_FN1_SLC0_EXT_BIT0_INT_ENA
+    bit_range:
+    - 19
+    - 19
+  - name: HOST_FN1_SLC0_EXT_BIT1_INT_ENA
+    bit_range:
+    - 20
+    - 20
+  - name: HOST_FN1_SLC0_EXT_BIT2_INT_ENA
+    bit_range:
+    - 21
+    - 21
+  - name: HOST_FN1_SLC0_EXT_BIT3_INT_ENA
+    bit_range:
+    - 22
+    - 22
+  - name: HOST_FN1_SLC0_RX_NEW_PACKET_INT_ENA
+    bit_range:
+    - 23
+    - 23
+  - name: HOST_FN1_SLC0_HOST_RD_RETRY_INT_ENA
+    bit_range:
+    - 24
+    - 24
+  - name: HOST_FN1_GPIO_SDIO_INT_ENA
+    bit_range:
+    - 25
+    - 25
+  side_effects: null
+- id: HOST_SLC1HOST_FUNC1_INT_ENA
+  address_offset: 224
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_FN1_SLC1_TOHOST_BIT0_INT_ENA
+    bit_range:
+    - 0
+    - 0
+  - name: HOST_FN1_SLC1_TOHOST_BIT1_INT_ENA
+    bit_range:
+    - 1
+    - 1
+  - name: HOST_FN1_SLC1_TOHOST_BIT2_INT_ENA
+    bit_range:
+    - 2
+    - 2
+  - name: HOST_FN1_SLC1_TOHOST_BIT3_INT_ENA
+    bit_range:
+    - 3
+    - 3
+  - name: HOST_FN1_SLC1_TOHOST_BIT4_INT_ENA
+    bit_range:
+    - 4
+    - 4
+  - name: HOST_FN1_SLC1_TOHOST_BIT5_INT_ENA
+    bit_range:
+    - 5
+    - 5
+  - name: HOST_FN1_SLC1_TOHOST_BIT6_INT_ENA
+    bit_range:
+    - 6
+    - 6
+  - name: HOST_FN1_SLC1_TOHOST_BIT7_INT_ENA
+    bit_range:
+    - 7
+    - 7
+  - name: HOST_FN1_SLC1_TOKEN0_1TO0_INT_ENA
+    bit_range:
+    - 8
+    - 8
+  - name: HOST_FN1_SLC1_TOKEN1_1TO0_INT_ENA
+    bit_range:
+    - 9
+    - 9
+  - name: HOST_FN1_SLC1_TOKEN0_0TO1_INT_ENA
+    bit_range:
+    - 10
+    - 10
+  - name: HOST_FN1_SLC1_TOKEN1_0TO1_INT_ENA
+    bit_range:
+    - 11
+    - 11
+  - name: HOST_FN1_SLC1HOST_RX_SOF_INT_ENA
+    bit_range:
+    - 12
+    - 12
+  - name: HOST_FN1_SLC1HOST_RX_EOF_INT_ENA
+    bit_range:
+    - 13
+    - 13
+  - name: HOST_FN1_SLC1HOST_RX_START_INT_ENA
+    bit_range:
+    - 14
+    - 14
+  - name: HOST_FN1_SLC1HOST_TX_START_INT_ENA
+    bit_range:
+    - 15
+    - 15
+  - name: HOST_FN1_SLC1_RX_UDF_INT_ENA
+    bit_range:
+    - 16
+    - 16
+  - name: HOST_FN1_SLC1_TX_OVF_INT_ENA
+    bit_range:
+    - 17
+    - 17
+  - name: HOST_FN1_SLC1_RX_PF_VALID_INT_ENA
+    bit_range:
+    - 18
+    - 18
+  - name: HOST_FN1_SLC1_EXT_BIT0_INT_ENA
+    bit_range:
+    - 19
+    - 19
+  - name: HOST_FN1_SLC1_EXT_BIT1_INT_ENA
+    bit_range:
+    - 20
+    - 20
+  - name: HOST_FN1_SLC1_EXT_BIT2_INT_ENA
+    bit_range:
+    - 21
+    - 21
+  - name: HOST_FN1_SLC1_EXT_BIT3_INT_ENA
+    bit_range:
+    - 22
+    - 22
+  - name: HOST_FN1_SLC1_WIFI_RX_NEW_PACKET_INT_ENA
+    bit_range:
+    - 23
+    - 23
+  - name: HOST_FN1_SLC1_HOST_RD_RETRY_INT_ENA
+    bit_range:
+    - 24
+    - 24
+  - name: HOST_FN1_SLC1_BT_RX_NEW_PACKET_INT_ENA
+    bit_range:
+    - 25
+    - 25
+  side_effects: null
+- id: HOST_SLC0HOST_FUNC2_INT_ENA
+  address_offset: 228
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_FN2_SLC0_TOHOST_BIT0_INT_ENA
+    bit_range:
+    - 0
+    - 0
+  - name: HOST_FN2_SLC0_TOHOST_BIT1_INT_ENA
+    bit_range:
+    - 1
+    - 1
+  - name: HOST_FN2_SLC0_TOHOST_BIT2_INT_ENA
+    bit_range:
+    - 2
+    - 2
+  - name: HOST_FN2_SLC0_TOHOST_BIT3_INT_ENA
+    bit_range:
+    - 3
+    - 3
+  - name: HOST_FN2_SLC0_TOHOST_BIT4_INT_ENA
+    bit_range:
+    - 4
+    - 4
+  - name: HOST_FN2_SLC0_TOHOST_BIT5_INT_ENA
+    bit_range:
+    - 5
+    - 5
+  - name: HOST_FN2_SLC0_TOHOST_BIT6_INT_ENA
+    bit_range:
+    - 6
+    - 6
+  - name: HOST_FN2_SLC0_TOHOST_BIT7_INT_ENA
+    bit_range:
+    - 7
+    - 7
+  - name: HOST_FN2_SLC0_TOKEN0_1TO0_INT_ENA
+    bit_range:
+    - 8
+    - 8
+  - name: HOST_FN2_SLC0_TOKEN1_1TO0_INT_ENA
+    bit_range:
+    - 9
+    - 9
+  - name: HOST_FN2_SLC0_TOKEN0_0TO1_INT_ENA
+    bit_range:
+    - 10
+    - 10
+  - name: HOST_FN2_SLC0_TOKEN1_0TO1_INT_ENA
+    bit_range:
+    - 11
+    - 11
+  - name: HOST_FN2_SLC0HOST_RX_SOF_INT_ENA
+    bit_range:
+    - 12
+    - 12
+  - name: HOST_FN2_SLC0HOST_RX_EOF_INT_ENA
+    bit_range:
+    - 13
+    - 13
+  - name: HOST_FN2_SLC0HOST_RX_START_INT_ENA
+    bit_range:
+    - 14
+    - 14
+  - name: HOST_FN2_SLC0HOST_TX_START_INT_ENA
+    bit_range:
+    - 15
+    - 15
+  - name: HOST_FN2_SLC0_RX_UDF_INT_ENA
+    bit_range:
+    - 16
+    - 16
+  - name: HOST_FN2_SLC0_TX_OVF_INT_ENA
+    bit_range:
+    - 17
+    - 17
+  - name: HOST_FN2_SLC0_RX_PF_VALID_INT_ENA
+    bit_range:
+    - 18
+    - 18
+  - name: HOST_FN2_SLC0_EXT_BIT0_INT_ENA
+    bit_range:
+    - 19
+    - 19
+  - name: HOST_FN2_SLC0_EXT_BIT1_INT_ENA
+    bit_range:
+    - 20
+    - 20
+  - name: HOST_FN2_SLC0_EXT_BIT2_INT_ENA
+    bit_range:
+    - 21
+    - 21
+  - name: HOST_FN2_SLC0_EXT_BIT3_INT_ENA
+    bit_range:
+    - 22
+    - 22
+  - name: HOST_FN2_SLC0_RX_NEW_PACKET_INT_ENA
+    bit_range:
+    - 23
+    - 23
+  - name: HOST_FN2_SLC0_HOST_RD_RETRY_INT_ENA
+    bit_range:
+    - 24
+    - 24
+  - name: HOST_FN2_GPIO_SDIO_INT_ENA
+    bit_range:
+    - 25
+    - 25
+  side_effects: null
+- id: HOST_SLC1HOST_FUNC2_INT_ENA
+  address_offset: 232
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_FN2_SLC1_TOHOST_BIT0_INT_ENA
+    bit_range:
+    - 0
+    - 0
+  - name: HOST_FN2_SLC1_TOHOST_BIT1_INT_ENA
+    bit_range:
+    - 1
+    - 1
+  - name: HOST_FN2_SLC1_TOHOST_BIT2_INT_ENA
+    bit_range:
+    - 2
+    - 2
+  - name: HOST_FN2_SLC1_TOHOST_BIT3_INT_ENA
+    bit_range:
+    - 3
+    - 3
+  - name: HOST_FN2_SLC1_TOHOST_BIT4_INT_ENA
+    bit_range:
+    - 4
+    - 4
+  - name: HOST_FN2_SLC1_TOHOST_BIT5_INT_ENA
+    bit_range:
+    - 5
+    - 5
+  - name: HOST_FN2_SLC1_TOHOST_BIT6_INT_ENA
+    bit_range:
+    - 6
+    - 6
+  - name: HOST_FN2_SLC1_TOHOST_BIT7_INT_ENA
+    bit_range:
+    - 7
+    - 7
+  - name: HOST_FN2_SLC1_TOKEN0_1TO0_INT_ENA
+    bit_range:
+    - 8
+    - 8
+  - name: HOST_FN2_SLC1_TOKEN1_1TO0_INT_ENA
+    bit_range:
+    - 9
+    - 9
+  - name: HOST_FN2_SLC1_TOKEN0_0TO1_INT_ENA
+    bit_range:
+    - 10
+    - 10
+  - name: HOST_FN2_SLC1_TOKEN1_0TO1_INT_ENA
+    bit_range:
+    - 11
+    - 11
+  - name: HOST_FN2_SLC1HOST_RX_SOF_INT_ENA
+    bit_range:
+    - 12
+    - 12
+  - name: HOST_FN2_SLC1HOST_RX_EOF_INT_ENA
+    bit_range:
+    - 13
+    - 13
+  - name: HOST_FN2_SLC1HOST_RX_START_INT_ENA
+    bit_range:
+    - 14
+    - 14
+  - name: HOST_FN2_SLC1HOST_TX_START_INT_ENA
+    bit_range:
+    - 15
+    - 15
+  - name: HOST_FN2_SLC1_RX_UDF_INT_ENA
+    bit_range:
+    - 16
+    - 16
+  - name: HOST_FN2_SLC1_TX_OVF_INT_ENA
+    bit_range:
+    - 17
+    - 17
+  - name: HOST_FN2_SLC1_RX_PF_VALID_INT_ENA
+    bit_range:
+    - 18
+    - 18
+  - name: HOST_FN2_SLC1_EXT_BIT0_INT_ENA
+    bit_range:
+    - 19
+    - 19
+  - name: HOST_FN2_SLC1_EXT_BIT1_INT_ENA
+    bit_range:
+    - 20
+    - 20
+  - name: HOST_FN2_SLC1_EXT_BIT2_INT_ENA
+    bit_range:
+    - 21
+    - 21
+  - name: HOST_FN2_SLC1_EXT_BIT3_INT_ENA
+    bit_range:
+    - 22
+    - 22
+  - name: HOST_FN2_SLC1_WIFI_RX_NEW_PACKET_INT_ENA
+    bit_range:
+    - 23
+    - 23
+  - name: HOST_FN2_SLC1_HOST_RD_RETRY_INT_ENA
+    bit_range:
+    - 24
+    - 24
+  - name: HOST_FN2_SLC1_BT_RX_NEW_PACKET_INT_ENA
+    bit_range:
+    - 25
+    - 25
+  side_effects: null
+- id: HOST_SLC0HOST_INT_ENA
+  address_offset: 236
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLC0_TOHOST_BIT0_INT_ENA
+    bit_range:
+    - 0
+    - 0
+  - name: HOST_SLC0_TOHOST_BIT1_INT_ENA
+    bit_range:
+    - 1
+    - 1
+  - name: HOST_SLC0_TOHOST_BIT2_INT_ENA
+    bit_range:
+    - 2
+    - 2
+  - name: HOST_SLC0_TOHOST_BIT3_INT_ENA
+    bit_range:
+    - 3
+    - 3
+  - name: HOST_SLC0_TOHOST_BIT4_INT_ENA
+    bit_range:
+    - 4
+    - 4
+  - name: HOST_SLC0_TOHOST_BIT5_INT_ENA
+    bit_range:
+    - 5
+    - 5
+  - name: HOST_SLC0_TOHOST_BIT6_INT_ENA
+    bit_range:
+    - 6
+    - 6
+  - name: HOST_SLC0_TOHOST_BIT7_INT_ENA
+    bit_range:
+    - 7
+    - 7
+  - name: HOST_SLC0_TOKEN0_1TO0_INT_ENA
+    bit_range:
+    - 8
+    - 8
+  - name: HOST_SLC0_TOKEN1_1TO0_INT_ENA
+    bit_range:
+    - 9
+    - 9
+  - name: HOST_SLC0_TOKEN0_0TO1_INT_ENA
+    bit_range:
+    - 10
+    - 10
+  - name: HOST_SLC0_TOKEN1_0TO1_INT_ENA
+    bit_range:
+    - 11
+    - 11
+  - name: HOST_SLC0HOST_RX_SOF_INT_ENA
+    bit_range:
+    - 12
+    - 12
+  - name: HOST_SLC0HOST_RX_EOF_INT_ENA
+    bit_range:
+    - 13
+    - 13
+  - name: HOST_SLC0HOST_RX_START_INT_ENA
+    bit_range:
+    - 14
+    - 14
+  - name: HOST_SLC0HOST_TX_START_INT_ENA
+    bit_range:
+    - 15
+    - 15
+  - name: HOST_SLC0_RX_UDF_INT_ENA
+    bit_range:
+    - 16
+    - 16
+  - name: HOST_SLC0_TX_OVF_INT_ENA
+    bit_range:
+    - 17
+    - 17
+  - name: HOST_SLC0_RX_PF_VALID_INT_ENA
+    bit_range:
+    - 18
+    - 18
+  - name: HOST_SLC0_EXT_BIT0_INT_ENA
+    bit_range:
+    - 19
+    - 19
+  - name: HOST_SLC0_EXT_BIT1_INT_ENA
+    bit_range:
+    - 20
+    - 20
+  - name: HOST_SLC0_EXT_BIT2_INT_ENA
+    bit_range:
+    - 21
+    - 21
+  - name: HOST_SLC0_EXT_BIT3_INT_ENA
+    bit_range:
+    - 22
+    - 22
+  - name: HOST_SLC0_RX_NEW_PACKET_INT_ENA
+    bit_range:
+    - 23
+    - 23
+  - name: HOST_SLC0_HOST_RD_RETRY_INT_ENA
+    bit_range:
+    - 24
+    - 24
+  - name: HOST_GPIO_SDIO_INT_ENA
+    bit_range:
+    - 25
+    - 25
+  side_effects: null
+- id: HOST_SLC1HOST_INT_ENA
+  address_offset: 240
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLC1_TOHOST_BIT0_INT_ENA
+    bit_range:
+    - 0
+    - 0
+  - name: HOST_SLC1_TOHOST_BIT1_INT_ENA
+    bit_range:
+    - 1
+    - 1
+  - name: HOST_SLC1_TOHOST_BIT2_INT_ENA
+    bit_range:
+    - 2
+    - 2
+  - name: HOST_SLC1_TOHOST_BIT3_INT_ENA
+    bit_range:
+    - 3
+    - 3
+  - name: HOST_SLC1_TOHOST_BIT4_INT_ENA
+    bit_range:
+    - 4
+    - 4
+  - name: HOST_SLC1_TOHOST_BIT5_INT_ENA
+    bit_range:
+    - 5
+    - 5
+  - name: HOST_SLC1_TOHOST_BIT6_INT_ENA
+    bit_range:
+    - 6
+    - 6
+  - name: HOST_SLC1_TOHOST_BIT7_INT_ENA
+    bit_range:
+    - 7
+    - 7
+  - name: HOST_SLC1_TOKEN0_1TO0_INT_ENA
+    bit_range:
+    - 8
+    - 8
+  - name: HOST_SLC1_TOKEN1_1TO0_INT_ENA
+    bit_range:
+    - 9
+    - 9
+  - name: HOST_SLC1_TOKEN0_0TO1_INT_ENA
+    bit_range:
+    - 10
+    - 10
+  - name: HOST_SLC1_TOKEN1_0TO1_INT_ENA
+    bit_range:
+    - 11
+    - 11
+  - name: HOST_SLC1HOST_RX_SOF_INT_ENA
+    bit_range:
+    - 12
+    - 12
+  - name: HOST_SLC1HOST_RX_EOF_INT_ENA
+    bit_range:
+    - 13
+    - 13
+  - name: HOST_SLC1HOST_RX_START_INT_ENA
+    bit_range:
+    - 14
+    - 14
+  - name: HOST_SLC1HOST_TX_START_INT_ENA
+    bit_range:
+    - 15
+    - 15
+  - name: HOST_SLC1_RX_UDF_INT_ENA
+    bit_range:
+    - 16
+    - 16
+  - name: HOST_SLC1_TX_OVF_INT_ENA
+    bit_range:
+    - 17
+    - 17
+  - name: HOST_SLC1_RX_PF_VALID_INT_ENA
+    bit_range:
+    - 18
+    - 18
+  - name: HOST_SLC1_EXT_BIT0_INT_ENA
+    bit_range:
+    - 19
+    - 19
+  - name: HOST_SLC1_EXT_BIT1_INT_ENA
+    bit_range:
+    - 20
+    - 20
+  - name: HOST_SLC1_EXT_BIT2_INT_ENA
+    bit_range:
+    - 21
+    - 21
+  - name: HOST_SLC1_EXT_BIT3_INT_ENA
+    bit_range:
+    - 22
+    - 22
+  - name: HOST_SLC1_WIFI_RX_NEW_PACKET_INT_ENA
+    bit_range:
+    - 23
+    - 23
+  - name: HOST_SLC1_HOST_RD_RETRY_INT_ENA
+    bit_range:
+    - 24
+    - 24
+  - name: HOST_SLC1_BT_RX_NEW_PACKET_INT_ENA
+    bit_range:
+    - 25
+    - 25
+  side_effects: null
+- id: HOST_SLC0HOST_RX_INFOR
+  address_offset: 244
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLC0HOST_RX_INFOR
+    bit_range:
+    - 19
+    - 0
+  side_effects: null
+- id: HOST_SLC1HOST_RX_INFOR
+  address_offset: 248
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLC1HOST_RX_INFOR
+    bit_range:
+    - 19
+    - 0
+  side_effects: null
+- id: HOST_SLC0HOST_LEN_WD
+  address_offset: 252
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLC0HOST_LEN_WD
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: HOST_SLC_APBWIN_WDATA
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLC_APBWIN_WDATA
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: HOST_SLC_APBWIN_CONF
+  address_offset: 260
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLC_APBWIN_ADDR
+    bit_range:
+    - 27
+    - 0
+  - name: HOST_SLC_APBWIN_WR
+    bit_range:
+    - 28
+    - 28
+  - name: HOST_SLC_APBWIN_START
+    bit_range:
+    - 29
+    - 29
+  side_effects: null
+- id: HOST_SLC_APBWIN_RDATA
+  address_offset: 264
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLC_APBWIN_RDATA
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: HOST_SLCHOST_RDCLR0
+  address_offset: 268
+  size: 32
+  access: READ_WRITE
+  reset_value: 245828
+  fields:
+  - name: HOST_SLCHOST_SLC0_BIT7_CLRADDR
+    bit_range:
+    - 8
+    - 0
+  - name: HOST_SLCHOST_SLC0_BIT6_CLRADDR
+    bit_range:
+    - 17
+    - 9
+  side_effects: null
+- id: HOST_SLCHOST_RDCLR1
+  address_offset: 272
+  size: 32
+  access: READ_WRITE
+  reset_value: 246240
+  fields:
+  - name: HOST_SLCHOST_SLC1_BIT7_CLRADDR
+    bit_range:
+    - 8
+    - 0
+  - name: HOST_SLCHOST_SLC1_BIT6_CLRADDR
+    bit_range:
+    - 17
+    - 9
+  side_effects: null
+- id: HOST_SLC0HOST_INT_ENA1
+  address_offset: 276
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLC0_TOHOST_BIT0_INT_ENA1
+    bit_range:
+    - 0
+    - 0
+  - name: HOST_SLC0_TOHOST_BIT1_INT_ENA1
+    bit_range:
+    - 1
+    - 1
+  - name: HOST_SLC0_TOHOST_BIT2_INT_ENA1
+    bit_range:
+    - 2
+    - 2
+  - name: HOST_SLC0_TOHOST_BIT3_INT_ENA1
+    bit_range:
+    - 3
+    - 3
+  - name: HOST_SLC0_TOHOST_BIT4_INT_ENA1
+    bit_range:
+    - 4
+    - 4
+  - name: HOST_SLC0_TOHOST_BIT5_INT_ENA1
+    bit_range:
+    - 5
+    - 5
+  - name: HOST_SLC0_TOHOST_BIT6_INT_ENA1
+    bit_range:
+    - 6
+    - 6
+  - name: HOST_SLC0_TOHOST_BIT7_INT_ENA1
+    bit_range:
+    - 7
+    - 7
+  - name: HOST_SLC0_TOKEN0_1TO0_INT_ENA1
+    bit_range:
+    - 8
+    - 8
+  - name: HOST_SLC0_TOKEN1_1TO0_INT_ENA1
+    bit_range:
+    - 9
+    - 9
+  - name: HOST_SLC0_TOKEN0_0TO1_INT_ENA1
+    bit_range:
+    - 10
+    - 10
+  - name: HOST_SLC0_TOKEN1_0TO1_INT_ENA1
+    bit_range:
+    - 11
+    - 11
+  - name: HOST_SLC0HOST_RX_SOF_INT_ENA1
+    bit_range:
+    - 12
+    - 12
+  - name: HOST_SLC0HOST_RX_EOF_INT_ENA1
+    bit_range:
+    - 13
+    - 13
+  - name: HOST_SLC0HOST_RX_START_INT_ENA1
+    bit_range:
+    - 14
+    - 14
+  - name: HOST_SLC0HOST_TX_START_INT_ENA1
+    bit_range:
+    - 15
+    - 15
+  - name: HOST_SLC0_RX_UDF_INT_ENA1
+    bit_range:
+    - 16
+    - 16
+  - name: HOST_SLC0_TX_OVF_INT_ENA1
+    bit_range:
+    - 17
+    - 17
+  - name: HOST_SLC0_RX_PF_VALID_INT_ENA1
+    bit_range:
+    - 18
+    - 18
+  - name: HOST_SLC0_EXT_BIT0_INT_ENA1
+    bit_range:
+    - 19
+    - 19
+  - name: HOST_SLC0_EXT_BIT1_INT_ENA1
+    bit_range:
+    - 20
+    - 20
+  - name: HOST_SLC0_EXT_BIT2_INT_ENA1
+    bit_range:
+    - 21
+    - 21
+  - name: HOST_SLC0_EXT_BIT3_INT_ENA1
+    bit_range:
+    - 22
+    - 22
+  - name: HOST_SLC0_RX_NEW_PACKET_INT_ENA1
+    bit_range:
+    - 23
+    - 23
+  - name: HOST_SLC0_HOST_RD_RETRY_INT_ENA1
+    bit_range:
+    - 24
+    - 24
+  - name: HOST_GPIO_SDIO_INT_ENA1
+    bit_range:
+    - 25
+    - 25
+  side_effects: null
+- id: HOST_SLC1HOST_INT_ENA1
+  address_offset: 280
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SLC1_TOHOST_BIT0_INT_ENA1
+    bit_range:
+    - 0
+    - 0
+  - name: HOST_SLC1_TOHOST_BIT1_INT_ENA1
+    bit_range:
+    - 1
+    - 1
+  - name: HOST_SLC1_TOHOST_BIT2_INT_ENA1
+    bit_range:
+    - 2
+    - 2
+  - name: HOST_SLC1_TOHOST_BIT3_INT_ENA1
+    bit_range:
+    - 3
+    - 3
+  - name: HOST_SLC1_TOHOST_BIT4_INT_ENA1
+    bit_range:
+    - 4
+    - 4
+  - name: HOST_SLC1_TOHOST_BIT5_INT_ENA1
+    bit_range:
+    - 5
+    - 5
+  - name: HOST_SLC1_TOHOST_BIT6_INT_ENA1
+    bit_range:
+    - 6
+    - 6
+  - name: HOST_SLC1_TOHOST_BIT7_INT_ENA1
+    bit_range:
+    - 7
+    - 7
+  - name: HOST_SLC1_TOKEN0_1TO0_INT_ENA1
+    bit_range:
+    - 8
+    - 8
+  - name: HOST_SLC1_TOKEN1_1TO0_INT_ENA1
+    bit_range:
+    - 9
+    - 9
+  - name: HOST_SLC1_TOKEN0_0TO1_INT_ENA1
+    bit_range:
+    - 10
+    - 10
+  - name: HOST_SLC1_TOKEN1_0TO1_INT_ENA1
+    bit_range:
+    - 11
+    - 11
+  - name: HOST_SLC1HOST_RX_SOF_INT_ENA1
+    bit_range:
+    - 12
+    - 12
+  - name: HOST_SLC1HOST_RX_EOF_INT_ENA1
+    bit_range:
+    - 13
+    - 13
+  - name: HOST_SLC1HOST_RX_START_INT_ENA1
+    bit_range:
+    - 14
+    - 14
+  - name: HOST_SLC1HOST_TX_START_INT_ENA1
+    bit_range:
+    - 15
+    - 15
+  - name: HOST_SLC1_RX_UDF_INT_ENA1
+    bit_range:
+    - 16
+    - 16
+  - name: HOST_SLC1_TX_OVF_INT_ENA1
+    bit_range:
+    - 17
+    - 17
+  - name: HOST_SLC1_RX_PF_VALID_INT_ENA1
+    bit_range:
+    - 18
+    - 18
+  - name: HOST_SLC1_EXT_BIT0_INT_ENA1
+    bit_range:
+    - 19
+    - 19
+  - name: HOST_SLC1_EXT_BIT1_INT_ENA1
+    bit_range:
+    - 20
+    - 20
+  - name: HOST_SLC1_EXT_BIT2_INT_ENA1
+    bit_range:
+    - 21
+    - 21
+  - name: HOST_SLC1_EXT_BIT3_INT_ENA1
+    bit_range:
+    - 22
+    - 22
+  - name: HOST_SLC1_WIFI_RX_NEW_PACKET_INT_ENA1
+    bit_range:
+    - 23
+    - 23
+  - name: HOST_SLC1_HOST_RD_RETRY_INT_ENA1
+    bit_range:
+    - 24
+    - 24
+  - name: HOST_SLC1_BT_RX_NEW_PACKET_INT_ENA1
+    bit_range:
+    - 25
+    - 25
+  side_effects: null
+- id: HOST_SLCHOSTDATE
+  address_offset: 376
+  size: 32
+  access: READ_WRITE
+  reset_value: 369239296
+  fields:
+  - name: HOST_SLCHOST_DATE
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: HOST_SLCHOSTID
+  address_offset: 380
+  size: 32
+  access: READ_WRITE
+  reset_value: 1536
+  fields:
+  - name: HOST_SLCHOST_ID
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: HOST_SLCHOST_CONF
+  address_offset: 496
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_FRC_SDIO11
+    bit_range:
+    - 4
+    - 0
+  - name: HOST_FRC_SDIO20
+    bit_range:
+    - 9
+    - 5
+  - name: HOST_FRC_NEG_SAMP
+    bit_range:
+    - 14
+    - 10
+  - name: HOST_FRC_POS_SAMP
+    bit_range:
+    - 19
+    - 15
+  - name: HOST_FRC_QUICK_IN
+    bit_range:
+    - 24
+    - 20
+  - name: HOST_SDIO20_INT_DELAY
+    bit_range:
+    - 25
+    - 25
+  - name: HOST_SDIO_PAD_PULLUP
+    bit_range:
+    - 26
+    - 26
+  - name: HOST_HSPEED_CON_EN
+    bit_range:
+    - 27
+    - 27
+  side_effects: null
+- id: HOST_SLCHOST_INF_ST
+  address_offset: 500
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HOST_SDIO20_MODE
+    bit_range:
+    - 4
+    - 0
+  - name: HOST_SDIO_NEG_SAMP
+    bit_range:
+    - 9
+    - 5
+  - name: HOST_SDIO_QUICK_IN
+    bit_range:
+    - 14
+    - 10
+  side_effects: null
+interrupts: null
+timing: null

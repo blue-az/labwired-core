@@ -34,30 +34,48 @@ peripherals:
     type: "flash_xip"
     base_address: 0x3C000000
     size: "4MiB"
+  # --- Debugger register schemas. Matched by BASE ADDRESS against
+  # --- tests/fixtures/svd/esp32s3.svd (the vendored Espressif S3 SVD), NEVER by
+  # --- peripheral name and never borrowed from another part: at RTC_CNTL+0xB4
+  # --- the S3 has SWD_CONF where the classic ESP32 has STORE5 and the C3 has
+  # --- SW_CPU_STALL. `debug_schema` names registers only; it changes nothing
+  # --- the bus does, and a peripheral that describes itself still wins.
   - id: "usb_serial_jtag"
     type: "usb_serial_jtag"
     base_address: 0x60038000
     size: "4KiB"
+    config:
+      debug_schema: "../peripherals/esp32s3/usb_device.yaml"
   - id: "systimer"
     type: "systimer"
     base_address: 0x60023000
     size: "4KiB"
+    config:
+      debug_schema: "../peripherals/esp32s3/systimer.yaml"
   - id: "system"
     type: "system_stub"
     base_address: 0x600C0000
     size: "4KiB"
+    config:
+      debug_schema: "../peripherals/esp32s3/system.yaml"
   - id: "rtc_cntl"
     type: "rtc_cntl_stub"
     base_address: 0x60008000
     size: "4KiB"
+    config:
+      debug_schema: "../peripherals/esp32s3/rtc_cntl.yaml"
   - id: "efuse"
     type: "efuse_stub"
     base_address: 0x60007000
     size: "4KiB"
+    config:
+      debug_schema: "../peripherals/esp32s3/efuse.yaml"
   - id: "i2c0"
     type: "i2c"
     base_address: 0x60013000
     size: "4KiB"
+    config:
+      debug_schema: "../peripherals/esp32s3/i2c0.yaml"
   # Address-map declarations matching configure_xtensa_esp32s3's
   # programmatic registrations (model sources in
   # crates/core/src/peripherals/esp32s3/).
@@ -65,6 +83,8 @@ peripherals:
     type: "uart"
     base_address: 0x60000000
     size: "512B"
+    config:
+      debug_schema: "../peripherals/esp32s3/uart0.yaml"
   - id: "gpio"
     type: "gpio"
     base_address: 0x60004000
@@ -80,19 +100,29 @@ peripherals:
     type: "timer_group"
     base_address: 0x6001F000
     size: "4KiB"
+    config:
+      debug_schema: "../peripherals/esp32s3/timg0.yaml"
   - id: "interrupt_core0"
     type: "intmatrix"
     base_address: 0x600C2000
     size: "4KiB"
+    config:
+      debug_schema: "../peripherals/esp32s3/interrupt_core0.yaml"
   - id: "gdma"
     type: "gdma"
     base_address: 0x6003F000
     size: "4KiB"
+    config:
+      debug_schema: "../peripherals/esp32s3/dma.yaml"
   - id: "mcpwm0"
     type: "mcpwm"
     base_address: 0x6001E000
     size: "4KiB"
+    config:
+      debug_schema: "../peripherals/esp32s3/mcpwm0.yaml"
   - id: "rmt"
     type: "rmt"
     base_address: 0x60016000
     size: "4KiB"
+    config:
+      debug_schema: "../peripherals/esp32s3/rmt.yaml"

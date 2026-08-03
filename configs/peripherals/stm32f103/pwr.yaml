@@ -1,0 +1,75 @@
+peripheral: PWR
+version: 0.1.0
+registers:
+- id: CR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LPDS
+    bit_range:
+    - 0
+    - 0
+    description: Low Power Deep Sleep
+  - name: PDDS
+    bit_range:
+    - 1
+    - 1
+    description: Power Down Deep Sleep
+  - name: CWUF
+    bit_range:
+    - 2
+    - 2
+    description: Clear Wake-up Flag
+  - name: CSBF
+    bit_range:
+    - 3
+    - 3
+    description: Clear STANDBY Flag
+  - name: PVDE
+    bit_range:
+    - 4
+    - 4
+    description: Power Voltage Detector Enable
+  - name: PLS
+    bit_range:
+    - 7
+    - 5
+    description: PVD Level Selection
+  - name: DBP
+    bit_range:
+    - 8
+    - 8
+    description: Disable Backup Domain write protection
+  side_effects: null
+- id: CSR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WUF
+    bit_range:
+    - 0
+    - 0
+    description: Wake-Up Flag
+  - name: SBF
+    bit_range:
+    - 1
+    - 1
+    description: STANDBY Flag
+  - name: PVDO
+    bit_range:
+    - 2
+    - 2
+    description: PVD Output
+  - name: EWUP
+    bit_range:
+    - 8
+    - 8
+    description: Enable WKUP pin
+  side_effects: null
+interrupts:
+  PVD: 1
+timing: null

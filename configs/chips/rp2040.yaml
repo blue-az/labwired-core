@@ -47,10 +47,14 @@ peripherals:
     type: "rp2040_dma"
     base_address: 0x50000000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/rp2040/dma.yaml"
   - id: "pio0"
     type: "pio"
     base_address: 0x50200000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/rp2040/pio0.yaml"
   # CLOCKS / RESETS / PSM / XOSC / PLL_SYS / PLL_USB as one block. Models the
   # boot "ready" bits (RESET_DONE, XOSC STABLE, PLL LOCK, CLK_*_SELECTED) so
   # Zephyr's clock bring-up completes; everything else is register storage.
@@ -59,10 +63,13 @@ peripherals:
     type: "rp2040_clkrst"
     base_address: 0x40008000
     size: "160KB"
+    config:
+      debug_schema: "../peripherals/rp2040/clocks.yaml"
   - id: "uart0"
     type: "uart"
     base_address: 0x40034000
     config:
+      debug_schema: "../peripherals/rp2040/uart0.yaml"
       profile: "pl011"
   # ROSC (ring oscillator): same model, separate window above UART0. Models
   # ROSC.STATUS.STABLE so the ROSC start-up poll terminates.
@@ -70,6 +77,8 @@ peripherals:
     type: "rp2040_clkrst"
     base_address: 0x40060000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/rp2040/rosc.yaml"
   # WATCHDOG + tick generator (datasheet §4.7). Behavioural model — TICK.CYCLES
   # divides the reference clock into watchdog ticks (RUNNING needs a non-zero
   # ratio, which is why the reset state reads 0x200), and the counter decrements
@@ -83,6 +92,8 @@ peripherals:
     type: "rp2040_watchdog"
     base_address: 0x40058000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/rp2040/watchdog.yaml"
   # ADC + temperature sensor (datasheet §4.9). Behavioural model — a 12-bit SAR
   # over five inputs (0..3 = GPIO26..29, 4 = the on-die sensor) with the 8-entry
   # sample FIFO, the round-robin sequencer and DIV-paced free-running mode.
@@ -96,6 +107,8 @@ peripherals:
     base_address: 0x4004c000
     size: "4KB"
     irq: 22
+    config:
+      debug_schema: "../peripherals/rp2040/adc.yaml"
   # RTC (datasheet §4.8). Behavioural model — a real calendar (year/month/day/
   # dotw/hour/min/sec) clocked at one second per CLKDIV_M1+1 ticks, with the
   # RP2040's own leap rule (year % 4, hence CTRL.FORCE_NOTLEAPYEAR) and the
@@ -108,8 +121,12 @@ peripherals:
     base_address: 0x4005c000
     size: "4KB"
     irq: 25
+    config:
+      debug_schema: "../peripherals/rp2040/rtc.yaml"
   # NVIC — installed unconditionally for Cortex-M (see system/cortex_m.rs);
   # declared here so the tier1 irq class is claimed rather than reading `na`.
+  # No `debug_schema`: an ARMv7-M/ARMv8-M core peripheral, absent from this
+  # vendor SVD (which starts at the PPB), so there is no base match to attach.
   - id: "nvic"
     type: "nvic"
     base_address: 0xE000E100
@@ -123,6 +140,8 @@ peripherals:
     base_address: 0x40050000
     size: "4KB"
     irq: 4
+    config:
+      debug_schema: "../peripherals/rp2040/pwm.yaml"
   # TIMER: 64-bit free-running microsecond timer (datasheet §4.6). Behavioural
   # model — the counter advances on every tick, sampled via TIMERAWL/TIMERAWH
   # (and TIMELR/TIMEHR); PAUSE freezes it.
@@ -130,12 +149,16 @@ peripherals:
     type: "rp2040_timer"
     base_address: 0x40054000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/rp2040/timer.yaml"
   # SPI0: PL022 SSP (datasheet §4.4). Behavioural model — internal-loopback
   # (SSPCR1.LBM) transfer round-trip through SSPDR with SSPSR FIFO flags.
   - id: "spi0"
     type: "rp2040_spi"
     base_address: 0x4003c000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/rp2040/spi0.yaml"
   # I2C0: Synopsys DW_apb_i2c (datasheet §4.3). Behavioural master engine — a
   # command to an unconnected target raises TX_ABRT with a 7-bit address NACK,
   # the genuine no-slave bus response.
@@ -147,11 +170,15 @@ peripherals:
     # interrupt-driven (TX_EMPTY / STOP_DET → device_sync_sem); without this
     # the transfer times out with -EAGAIN.
     irq: 23
+    config:
+      debug_schema: "../peripherals/rp2040/i2c0.yaml"
   # Cortex-M0+ SysTick (SCS). Behavioural model: the ARMv7-M SysTick timer
   # (edge-triggered — raises system exception 15 only on the count-down to
   # zero, and only while ENABLE+TICKINT are set). The Arduino Mbed-OS core
   # drives the RTX kernel tick off SysTick, so a storage stub left the RTOS
   # without a scheduler tick and it faulted on the first mutex lock.
+  # No `debug_schema`: an ARMv7-M/ARMv8-M core peripheral, absent from this
+  # vendor SVD (which starts at the PPB), so there is no base match to attach.
   - id: "systick"
     type: "systick"
     base_address: 0xE000E010
@@ -165,6 +192,8 @@ peripherals:
     type: "rp2040_sio"
     base_address: 0xD0000000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/rp2040/sio.yaml"
   # XIP_SSI: Synopsys DW_apb_ssi flash controller (datasheet §4.10). The
   # second-stage bootloader (boot2) programs it to bring up the QSPI flash and
   # switch to execute-in-place; the pico-sdk runtime re-runs a RAM copy of boot2
@@ -177,6 +206,8 @@ peripherals:
     type: "rp2040_xip_ssi"
     base_address: 0x18000000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/rp2040/ssi.yaml"
   # USB device controller (datasheet §4.1). One window spans both the 4KB DPRAM
   # (0x50100000) and the register block (0x50110000); the atomic SET/CLR/XOR
   # aliases resolve into it. Behavioural model with an attached simulated USB
@@ -189,6 +220,8 @@ peripherals:
     type: "rp2040_usb"
     base_address: 0x50100000
     size: "80KB"
+    config:
+      debug_schema: "../peripherals/rp2040/usb_dpram.yaml"
   # TBMAN (Test Bench Manager, datasheet §2.20). The pico-sdk runtime probes
   # TBMAN.PLATFORM in running_on_fpga()/running_on_asic() during clock bring-up.
   # Storage stub: PLATFORM reads 0, so the FPGA bit (bit 1) is clear and the
@@ -218,3 +251,5 @@ peripherals:
     type: "stub"
     base_address: 0x4006c000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/rp2040/tbman.yaml"

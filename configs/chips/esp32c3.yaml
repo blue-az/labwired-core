@@ -60,13 +60,19 @@ peripherals:
     irq: 21 # ETS_UART0_INTR_SOURCE
     base_address: 0x60000000
     size: "512B"
+    config:
+      debug_schema: "../peripherals/esp32c3/uart0.yaml"
   - id: "gpio"
     type: "esp32c3_gpio"
     base_address: 0x60004000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/esp32c3/gpio.yaml"
   - id: "timg0"
     type: "esp32_timg"
     base_address: 0x6001F000
+    config:
+      debug_schema: "../peripherals/esp32c3/timg0.yaml"
   - id: "interrupt_core0"
     type: "declarative"
     base_address: 0x600C2000
@@ -80,9 +86,13 @@ peripherals:
     irq: 22 # ETS_UART1_INTR_SOURCE
     base_address: 0x60010000
     size: "512B"
+    config:
+      debug_schema: "../peripherals/esp32c3/uart1.yaml"
   - id: "timg1"
     type: "esp32_timg"
     base_address: 0x60020000
+    config:
+      debug_schema: "../peripherals/esp32c3/timg1.yaml"
   - id: "system"
     type: "declarative"
     base_address: 0x600C0000
@@ -98,15 +108,23 @@ peripherals:
     base_address: 0x60026000
     config:
       path: "../peripherals/esp32c3/apb_ctrl.yaml"
+  # Declared declarative, but at runtime the bus carries the NATIVE
+  # `peripherals::esp32s3::systimer::Systimer` at this base (the C3 and S3
+  # SYSTIMER are the same IP: all 30 C3 registers agree offset-for-offset with
+  # the S3 SVD, which adds 6 REAL_TARGETn_* the C3 does not have). The native
+  # model advertises no registers, so name them from the C3 descriptor — the
+  # part we are actually simulating.
   - id: "systimer"
     type: "declarative"
     base_address: 0x60023000
     config:
       path: "../peripherals/esp32c3/systimer.yaml"
+      debug_schema: "../peripherals/esp32c3/systimer.yaml"
   - id: "io_mux"
     type: "esp32c3_io_mux"
     base_address: 0x60009000
     config:
+      debug_schema: "../peripherals/esp32c3/io_mux.yaml"
       path: "../peripherals/esp32c3/io_mux.yaml"
   # Behavioral I²C0 controller (command-list engine). The C3 I²C is the same
   # Espressif IP family as the S3, so this drives attached I2cDevice slaves
@@ -119,6 +137,8 @@ peripherals:
     type: "esp32c3_i2c"
     base_address: 0x60013000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/esp32c3/i2c0.yaml"
   # GP-SPI2 (FSPI) behavioral master: the CPU/W-buffer transaction engine
   # (crates/core/src/peripherals/esp32c3/spi.rs). Same Espressif GP-SPI IP
   # family as the S3 SPI2; the register layout still matches
@@ -129,6 +149,8 @@ peripherals:
     type: "esp32c3_spi"
     base_address: 0x60024000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/esp32c3/spi2.yaml"
   # Behavioral LEDC (LED PWM) controller
   # (crates/core/src/peripherals/esp32c3/ledc.rs): the four low-speed timers
   # run as live up-counters clocked by elapsed cycles, each wrapping at its
@@ -139,6 +161,8 @@ peripherals:
     type: "esp32c3_ledc"
     base_address: 0x60019000
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/esp32c3/ledc.yaml"
   # Behavioral RMT (instant TX_END + TX_START count / LogicTap edges).
   # Arduino LED_BUILTIN / pin 30 → rgbLedWrite → RMT TX. Declarative SVD
   # stub never completed TX → digitalWrite hung; dual-stack add in test left
@@ -147,6 +171,8 @@ peripherals:
     type: "esp32c3_rmt"
     base_address: 0x60016000
     size: "2KB"
+    config:
+      debug_schema: "../peripherals/esp32c3/rmt.yaml"
   # --- Estate completion 2026-06-11: the remaining SVD-documented blocks the
   # --- ESP32-C3 silicon exposes. Bases are authoritative from the ESP32-C3 SVD
   # --- (tests/fixtures/real_world/esp32c3.svd). Reset values silicon-validated
@@ -269,6 +295,8 @@ peripherals:
     type: "esp32c3_apb_saradc"
     base_address: 0x60040000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/esp32c3/apb_saradc.yaml"
   # USB Serial/JTAG (the on-chip debug/console port)
   - id: "usb_device"
     type: "declarative"

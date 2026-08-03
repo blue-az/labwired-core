@@ -442,6 +442,12 @@ impl Peripheral for Esp32c3Spi {
         }
         false
     }
+
+    fn for_each_attached_device(&self, f: &mut dyn FnMut(crate::inspect::AttachedDeviceRef<'_>)) {
+        for dev in &self.attached_devices {
+            crate::inspect::visit_spi_device(&**dev, f);
+        }
+    }
 }
 
 #[cfg(test)]

@@ -1,0 +1,74 @@
+peripheral: GLOBAL_REGULATORS_NS
+version: 0.1.0
+registers:
+- id: SYSTEMOFF
+  address_offset: 1280
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: SYSTEMOFF
+    bit_range:
+    - 0
+    - 0
+    description: Enable System OFF mode
+  side_effects: null
+- id: POFCON
+  address_offset: 1328
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: POF
+    bit_range:
+    - 0
+    - 0
+    description: Enable or disable power-fail comparator
+  - name: THRESHOLD
+    bit_range:
+    - 4
+    - 1
+    description: Power-fail comparator threshold setting
+  - name: EVENTDISABLE
+    bit_range:
+    - 7
+    - 7
+    description: Disable the POFWARN power-fail warning event
+  side_effects: null
+- id: POFSTAT
+  address_offset: 1332
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: COMPARATOR
+    bit_range:
+    - 0
+    - 0
+    description: Power-fail comparator status
+  side_effects: null
+- id: VREGMAIN_DCDCEN
+  address_offset: 1536
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VAL
+    bit_range:
+    - 0
+    - 0
+    description: Enable DC/DC buck converter
+  side_effects: null
+- id: VREGMAIN_INDUCTORDET
+  address_offset: 1540
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DETECTED
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+interrupts: null
+timing: null

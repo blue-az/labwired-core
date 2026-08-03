@@ -1,0 +1,17 @@
+peripheral: NVIC_STIR
+version: 0.1.0
+registers:
+- id: STIR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: INTID
+    bit_range:
+    - 8
+    - 0
+    description: Software generated interrupt ID
+  side_effects: null
+interrupts: null
+timing: null

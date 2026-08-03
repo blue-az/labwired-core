@@ -1,0 +1,210 @@
+peripheral: RNG
+version: 0.1.0
+registers:
+- id: RNG_CR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 8855296
+  fields:
+  - name: RNGEN
+    bit_range:
+    - 2
+    - 2
+    description: True random number generator enable
+  - name: IE
+    bit_range:
+    - 3
+    - 3
+    description: Interrupt Enable
+  - name: CED
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Clock error detection
+      The clock error detection cannot be enabled nor disabled on-the-fly when the RNG is enabled, i.e. to enable or disable CED the RNG must be disabled.
+      Writing this bit is taken into account only if CONDRST bit is set to 1 in the same access, while CONFIGLOCK remains at 0. Writing to this bit is ignored if CONFIGLOCK=1.
+  - name: ARDIS
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Auto reset disable
+      When auto-reset is enabled application still need to clear SEIS bit after a noise source error.
+      Writing this bit is taken into account only if CONDRST bit is set to 1 in the same access, while CONFIGLOCK remains at 0. Writing to this bit is ignored if CONFIGLOCK=1.
+  - name: RNG_CONFIG3
+    bit_range:
+    - 11
+    - 8
+    description: |-
+      RNG configuration 3
+      Reserved to the RNG configuration (bitfield 3). Refer to RNG_CONFIG1 bitfield for details.
+      If NISTC bit is cleared in this register RNG_CONFIG3 bitfield values are ignored by RNG.
+  - name: NISTC
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Non NIST compliant
+      four conditioning loops are performed and 512 bits of noise source are used.
+      Writing this bit is taken into account only if CONDRST bit is set to 1 in the same access, while CONFIGLOCK remains at 0. Writing to this bit is ignored if CONFIGLOCK=1.
+  - name: RNG_CONFIG2
+    bit_range:
+    - 15
+    - 13
+    description: |-
+      RNG configuration 2
+      Reserved to the RNG configuration (bitfield 2). Refer to RNG_CONFIG1 bitfield for details.
+  - name: CLKDIV
+    bit_range:
+    - 19
+    - 16
+    description: |-
+      Clock divider factor
+      This value used to configure an internal programmable divider (from 1 to 16) acting on the incoming RNG clock. These bits can be written only when the core is disabled (RNGEN=0).
+      ...
+      Writing these bits is taken into account only if CONDRST bit is set to 1 in the same access, while CONFIGLOCK remains at 0. Writing to this bit is ignored if CONFIGLOCK=1.
+  - name: RNG_CONFIG1
+    bit_range:
+    - 25
+    - 20
+    description: |-
+      RNG configuration 1
+      Reserved to the RNG configuration (bitfield 1). Must be initialized using the recommended value documented in .
+      Writing any bit of RNG_CONFIG1 is taken into account only if CONDRST bit is set to 1 in the same access, while CONFIGLOCK remains at 0. Writing to this bit is ignored if CONFIGLOCK=1.
+  - name: CONDRST
+    bit_range:
+    - 30
+    - 30
+    description: |-
+      Conditioning soft reset
+      Write 1 and then write 0 to reset the conditioning logic, clear all the FIFOs and start a new RNG initialization process, with RNG_SR cleared. Registers RNG_CR and RNG_NSCR are not changed by CONDRST.
+      This bit must be set to 1 in the same access that set any configuration bits [29:4]. In other words, when CONDRST bit is set to 1 correct configuration in bits [29:4] must also be written.
+      When CONDRST is set to 0 by software its value goes to 0 when the reset process is done. It takes about 2 AHB clock cycles + 2 RNG clock cycles.
+  - name: CONFIGLOCK
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      RNG Config Lock
+      This bitfield is set once: if this bit is set it can only be reset to 0 if RNG is reset.
+  side_effects: null
+- id: RNG_SR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DRDY
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Data Ready
+      Once the output buffer becomes empty (after reading the RNG_DR register), this bit returns to 0 until a new random value is generated.
+      Note: The DRDY bit can rise when the peripheral is disabled (RNGEN=0 in the RNG_CR register).
+      If IE=1 in the RNG_CR register, an interrupt is generated when DRDY=1.
+  - name: CECS
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Clock error current status
+      Note: CECS bit is valid only if the CED bit in the RNG_CR register is set to 0.
+  - name: SECS
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Seed error current status
+      Run-time repetition count test failed (noise source has provided more than 24 consecutive bits at a constant value 0' or 1', or more than 32 consecutive occurrence of two bits patterns 01' or 10')
+      Start-up or continuous adaptive proportion test on noise source failed.
+      Start-up post-processing/conditioning sanity check failed.
+  - name: CEIS
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Clock error interrupt status
+      This bit is set at the same time as CECS. It is cleared by writing 0. Writing 1 has no effect.
+      An interrupt is pending if IE = 1 in the RNG_CR register.
+  - name: SEIS
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Seed error interrupt status
+      This bit is set at the same time as SECS. It is cleared by writing 0 (unless CONDRST is used). Writing 1 has no effect.
+      An interrupt is pending if IE = 1 in the RNG_CR register.
+  side_effects: null
+- id: RNG_DR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RNDATA
+    bit_range:
+    - 31
+    - 0
+    description: |-
+      Random data
+      32-bit random data which are valid when DRDY=1. When DRDY=0 RNDATA value is zero.
+      It is recommended to always verify that RNG_DR is different from zero. Because when it is the case a seed error occurred between RNG_SR polling and RND_DR output reading (rare event).
+  side_effects: null
+- id: RNG_NSCR
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 262143
+  fields:
+  - name: EN_OSC1
+    bit_range:
+    - 2
+    - 0
+    description: "When the RNG is enabled (RNGEN bit set), each bit of this bitfield enables one of the three \ninputs from the oscillator instance number 1."
+  - name: EN_OSC2
+    bit_range:
+    - 5
+    - 3
+    description: "When the RNG is enabled (RNGEN bit set), each bit of this bitfield enables one of the three \ninputs from the oscillator instance number 2."
+  - name: EN_OSC3
+    bit_range:
+    - 8
+    - 6
+    description: "When the RNG is enabled (RNGEN bit set), each bit of this bitfield enables one of the three \ninputs from the oscillator instance number 3."
+  - name: EN_OSC4
+    bit_range:
+    - 11
+    - 9
+    description: "When the RNG is enabled (RNGEN bit set), each bit of this bitfield enables one of the three \ninputs from the oscillator instance number 4."
+  - name: EN_OSC5
+    bit_range:
+    - 14
+    - 12
+    description: "When the RNG is enabled (RNGEN bit set), each bit of this bitfield enables one of the three \ninputs from the oscillator instance number 5."
+  - name: EN_OSC6
+    bit_range:
+    - 17
+    - 15
+    description: "When the RNG is enabled (RNGEN bit set), each bit of this bitfield enables one of the three \ninputs from the oscillator instance number 6."
+  side_effects: null
+- id: RNG_HTCR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 29356
+  fields:
+  - name: HTCFG
+    bit_range:
+    - 31
+    - 0
+    description: |-
+      health test configuration
+      This configuration is used by RNG to configure the health tests. See entropy source validation for the recommended value.
+      Note: The RNG behavior, including the read to this register, is not guaranteed if a different value from the recommended value is written.
+  side_effects: null
+interrupts:
+  RNG: 114
+timing: null

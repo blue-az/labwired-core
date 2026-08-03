@@ -1,0 +1,197 @@
+peripheral: MUTEX_S
+version: 0.1.0
+registers:
+- id: MUTEX0
+  address_offset: 1024
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MUTEX
+    bit_range:
+    - 0
+    - 0
+    description: Mutex register n
+  side_effects: null
+- id: MUTEX1
+  address_offset: 1028
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MUTEX
+    bit_range:
+    - 0
+    - 0
+    description: Mutex register n
+  side_effects: null
+- id: MUTEX2
+  address_offset: 1032
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MUTEX
+    bit_range:
+    - 0
+    - 0
+    description: Mutex register n
+  side_effects: null
+- id: MUTEX3
+  address_offset: 1036
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MUTEX
+    bit_range:
+    - 0
+    - 0
+    description: Mutex register n
+  side_effects: null
+- id: MUTEX4
+  address_offset: 1040
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MUTEX
+    bit_range:
+    - 0
+    - 0
+    description: Mutex register n
+  side_effects: null
+- id: MUTEX5
+  address_offset: 1044
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MUTEX
+    bit_range:
+    - 0
+    - 0
+    description: Mutex register n
+  side_effects: null
+- id: MUTEX6
+  address_offset: 1048
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MUTEX
+    bit_range:
+    - 0
+    - 0
+    description: Mutex register n
+  side_effects: null
+- id: MUTEX7
+  address_offset: 1052
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MUTEX
+    bit_range:
+    - 0
+    - 0
+    description: Mutex register n
+  side_effects: null
+- id: MUTEX8
+  address_offset: 1056
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MUTEX
+    bit_range:
+    - 0
+    - 0
+    description: Mutex register n
+  side_effects: null
+- id: MUTEX9
+  address_offset: 1060
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MUTEX
+    bit_range:
+    - 0
+    - 0
+    description: Mutex register n
+  side_effects: null
+- id: MUTEX10
+  address_offset: 1064
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MUTEX
+    bit_range:
+    - 0
+    - 0
+    description: Mutex register n
+  side_effects: null
+- id: MUTEX11
+  address_offset: 1068
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MUTEX
+    bit_range:
+    - 0
+    - 0
+    description: Mutex register n
+  side_effects: null
+- id: MUTEX12
+  address_offset: 1072
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MUTEX
+    bit_range:
+    - 0
+    - 0
+    description: Mutex register n
+  side_effects: null
+- id: MUTEX13
+  address_offset: 1076
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MUTEX
+    bit_range:
+    - 0
+    - 0
+    description: Mutex register n
+  side_effects: null
+- id: MUTEX14
+  address_offset: 1080
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MUTEX
+    bit_range:
+    - 0
+    - 0
+    description: Mutex register n
+  side_effects: null
+- id: MUTEX15
+  address_offset: 1084
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MUTEX
+    bit_range:
+    - 0
+    - 0
+    description: Mutex register n
+  side_effects: null
+interrupts: null
+timing: null

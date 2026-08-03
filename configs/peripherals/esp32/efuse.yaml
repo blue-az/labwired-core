@@ -1,0 +1,1189 @@
+peripheral: EFUSE
+version: 0.1.0
+registers:
+- id: BLK0_RDATA0
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RD_EFUSE_WR_DIS
+    bit_range:
+    - 15
+    - 0
+  - name: RD_EFUSE_RD_DIS
+    bit_range:
+    - 19
+    - 16
+  - name: RD_FLASH_CRYPT_CNT
+    bit_range:
+    - 26
+    - 20
+  - name: RD_UART_DOWNLOAD_DIS
+    bit_range:
+    - 27
+    - 27
+  - name: RESERVED_0_28
+    bit_range:
+    - 31
+    - 28
+  side_effects: null
+- id: BLK0_RDATA1
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RD_MAC
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK0_RDATA2
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RD_MAC_1
+    bit_range:
+    - 15
+    - 0
+  - name: RD_MAC_CRC
+    bit_range:
+    - 23
+    - 16
+  - name: RD_RESERVE_0_88
+    bit_range:
+    - 31
+    - 24
+  side_effects: null
+- id: BLK0_RDATA3
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RD_DISABLE_APP_CPU
+    bit_range:
+    - 0
+    - 0
+  - name: RD_DISABLE_BT
+    bit_range:
+    - 1
+    - 1
+  - name: RD_CHIP_PACKAGE_4BIT
+    bit_range:
+    - 2
+    - 2
+  - name: RD_DIS_CACHE
+    bit_range:
+    - 3
+    - 3
+  - name: RD_SPI_PAD_CONFIG_HD
+    bit_range:
+    - 8
+    - 4
+  - name: RD_CHIP_PACKAGE
+    bit_range:
+    - 11
+    - 9
+  - name: RD_CHIP_CPU_FREQ_LOW
+    bit_range:
+    - 12
+    - 12
+  - name: RD_CHIP_CPU_FREQ_RATED
+    bit_range:
+    - 13
+    - 13
+  - name: RD_BLK3_PART_RESERVE
+    bit_range:
+    - 14
+    - 14
+  - name: RD_CHIP_VER_REV1
+    bit_range:
+    - 15
+    - 15
+  - name: RD_RESERVE_0_112
+    bit_range:
+    - 31
+    - 16
+  side_effects: null
+- id: BLK0_RDATA4
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RD_CLK8M_FREQ
+    bit_range:
+    - 7
+    - 0
+  - name: RD_ADC_VREF
+    bit_range:
+    - 12
+    - 8
+  - name: RD_RESERVE_0_141
+    bit_range:
+    - 13
+    - 13
+  - name: RD_XPD_SDIO
+    bit_range:
+    - 14
+    - 14
+  - name: RD_XPD_SDIO_TIEH
+    bit_range:
+    - 15
+    - 15
+  - name: RD_XPD_SDIO_FORCE
+    bit_range:
+    - 16
+    - 16
+  - name: RD_RESERVE_0_145
+    bit_range:
+    - 31
+    - 17
+  side_effects: null
+- id: BLK0_RDATA5
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RD_SPI_PAD_CONFIG_CLK
+    bit_range:
+    - 4
+    - 0
+  - name: RD_SPI_PAD_CONFIG_Q
+    bit_range:
+    - 9
+    - 5
+  - name: RD_SPI_PAD_CONFIG_D
+    bit_range:
+    - 14
+    - 10
+  - name: RD_SPI_PAD_CONFIG_CS0
+    bit_range:
+    - 19
+    - 15
+  - name: RD_CHIP_VER_REV2
+    bit_range:
+    - 20
+    - 20
+  - name: RD_RESERVE_0_181
+    bit_range:
+    - 21
+    - 21
+  - name: RD_VOL_LEVEL_HP_INV
+    bit_range:
+    - 23
+    - 22
+  - name: RD_WAFER_VERSION_MINOR
+    bit_range:
+    - 25
+    - 24
+  - name: RD_RESERVE_0_186
+    bit_range:
+    - 27
+    - 26
+  - name: RD_FLASH_CRYPT_CONFIG
+    bit_range:
+    - 31
+    - 28
+  side_effects: null
+- id: BLK0_RDATA6
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RD_CODING_SCHEME
+    bit_range:
+    - 1
+    - 0
+  - name: RD_CONSOLE_DEBUG_DISABLE
+    bit_range:
+    - 2
+    - 2
+  - name: RD_DISABLE_SDIO_HOST
+    bit_range:
+    - 3
+    - 3
+  - name: RD_ABS_DONE_0
+    bit_range:
+    - 4
+    - 4
+  - name: RD_ABS_DONE_1
+    bit_range:
+    - 5
+    - 5
+  - name: RD_JTAG_DISABLE
+    bit_range:
+    - 6
+    - 6
+  - name: RD_DISABLE_DL_ENCRYPT
+    bit_range:
+    - 7
+    - 7
+  - name: RD_DISABLE_DL_DECRYPT
+    bit_range:
+    - 8
+    - 8
+  - name: RD_DISABLE_DL_CACHE
+    bit_range:
+    - 9
+    - 9
+  - name: RD_KEY_STATUS
+    bit_range:
+    - 10
+    - 10
+  - name: RD_RESERVE_0_203
+    bit_range:
+    - 31
+    - 11
+  side_effects: null
+- id: BLK0_WDATA0
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WR_DIS
+    bit_range:
+    - 15
+    - 0
+  - name: RD_DIS
+    bit_range:
+    - 19
+    - 16
+  - name: FLASH_CRYPT_CNT
+    bit_range:
+    - 26
+    - 20
+  side_effects: null
+- id: BLK0_WDATA1
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WIFI_MAC_CRC_LOW
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK0_WDATA2
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WIFI_MAC_CRC_HIGH
+    bit_range:
+    - 23
+    - 0
+  side_effects: null
+- id: BLK0_WDATA3
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DISABLE_APP_CPU
+    bit_range:
+    - 0
+    - 0
+  - name: DISABLE_BT
+    bit_range:
+    - 1
+    - 1
+  - name: CHIP_PACKAGE_4BIT
+    bit_range:
+    - 2
+    - 2
+  - name: DIS_CACHE
+    bit_range:
+    - 3
+    - 3
+  - name: SPI_PAD_CONFIG_HD
+    bit_range:
+    - 8
+    - 4
+  - name: CHIP_PACKAGE
+    bit_range:
+    - 11
+    - 9
+  - name: CHIP_CPU_FREQ_LOW
+    bit_range:
+    - 12
+    - 12
+  - name: CHIP_CPU_FREQ_RATED
+    bit_range:
+    - 13
+    - 13
+  - name: BLK3_PART_RESERVE
+    bit_range:
+    - 14
+    - 14
+  - name: CHIP_VER_REV1
+    bit_range:
+    - 15
+    - 15
+  - name: RESERVE_0_112
+    bit_range:
+    - 31
+    - 16
+  side_effects: null
+- id: BLK0_WDATA4
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CLK8M_FREQ
+    bit_range:
+    - 7
+    - 0
+  - name: ADC_VREF
+    bit_range:
+    - 12
+    - 8
+  - name: RESERVE_0_141
+    bit_range:
+    - 13
+    - 13
+  - name: XPD_SDIO
+    bit_range:
+    - 14
+    - 14
+  - name: XPD_SDIO_TIEH
+    bit_range:
+    - 15
+    - 15
+  - name: XPD_SDIO_FORCE
+    bit_range:
+    - 16
+    - 16
+  - name: RESERVE_0_145
+    bit_range:
+    - 31
+    - 17
+  side_effects: null
+- id: BLK0_WDATA5
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SPI_PAD_CONFIG_CLK
+    bit_range:
+    - 4
+    - 0
+  - name: SPI_PAD_CONFIG_Q
+    bit_range:
+    - 9
+    - 5
+  - name: SPI_PAD_CONFIG_D
+    bit_range:
+    - 14
+    - 10
+  - name: SPI_PAD_CONFIG_CS0
+    bit_range:
+    - 19
+    - 15
+  - name: CHIP_VER_REV2
+    bit_range:
+    - 20
+    - 20
+  - name: RESERVE_0_181
+    bit_range:
+    - 21
+    - 21
+  - name: VOL_LEVEL_HP_INV
+    bit_range:
+    - 23
+    - 22
+  - name: WAFER_VERSION_MINOR
+    bit_range:
+    - 25
+    - 24
+  - name: RESERVE_0_186
+    bit_range:
+    - 27
+    - 26
+  - name: FLASH_CRYPT_CONFIG
+    bit_range:
+    - 31
+    - 28
+  side_effects: null
+- id: BLK0_WDATA6
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CODING_SCHEME
+    bit_range:
+    - 1
+    - 0
+  - name: CONSOLE_DEBUG_DISABLE
+    bit_range:
+    - 2
+    - 2
+  - name: DISABLE_SDIO_HOST
+    bit_range:
+    - 3
+    - 3
+  - name: ABS_DONE_0
+    bit_range:
+    - 4
+    - 4
+  - name: ABS_DONE_1
+    bit_range:
+    - 5
+    - 5
+  - name: DISABLE_JTAG
+    bit_range:
+    - 6
+    - 6
+  - name: DISABLE_DL_ENCRYPT
+    bit_range:
+    - 7
+    - 7
+  - name: DISABLE_DL_DECRYPT
+    bit_range:
+    - 8
+    - 8
+  - name: DISABLE_DL_CACHE
+    bit_range:
+    - 9
+    - 9
+  - name: KEY_STATUS
+    bit_range:
+    - 10
+    - 10
+  side_effects: null
+- id: BLK1_RDATA0
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RD_BLOCK1
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK1_RDATA1
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RD_BLOCK1_1
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK1_RDATA2
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RD_BLOCK1_2
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK1_RDATA3
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RD_BLOCK1_3
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK1_RDATA4
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RD_BLOCK1_4
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK1_RDATA5
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RD_BLOCK1_5
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK1_RDATA6
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RD_BLOCK1_6
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK1_RDATA7
+  address_offset: 84
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RD_BLOCK1_7
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK2_RDATA0
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RD_BLOCK2
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK2_RDATA1
+  address_offset: 92
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RD_BLOCK2_1
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK2_RDATA2
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RD_BLOCK2_2
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK2_RDATA3
+  address_offset: 100
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RD_BLOCK2_3
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK2_RDATA4
+  address_offset: 104
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RD_BLOCK2_4
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK2_RDATA5
+  address_offset: 108
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RD_BLOCK2_5
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK2_RDATA6
+  address_offset: 112
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RD_BLOCK2_6
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK2_RDATA7
+  address_offset: 116
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RD_BLOCK2_7
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK3_RDATA0
+  address_offset: 120
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RD_CUSTOM_MAC_CRC
+    bit_range:
+    - 7
+    - 0
+  - name: RD_CUSTOM_MAC
+    bit_range:
+    - 31
+    - 8
+  side_effects: null
+- id: BLK3_RDATA1
+  address_offset: 124
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RD_CUSTOM_MAC_1
+    bit_range:
+    - 23
+    - 0
+  - name: RESERVED_3_56
+    bit_range:
+    - 31
+    - 24
+  side_effects: null
+- id: BLK3_RDATA2
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RD_BLK3_RESERVED_2
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK3_RDATA3
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RD_ADC1_TP_LOW
+    bit_range:
+    - 6
+    - 0
+  - name: RD_ADC1_TP_HIGH
+    bit_range:
+    - 15
+    - 7
+  - name: RD_ADC2_TP_LOW
+    bit_range:
+    - 22
+    - 16
+  - name: RD_ADC2_TP_HIGH
+    bit_range:
+    - 31
+    - 23
+  side_effects: null
+- id: BLK3_RDATA4
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RD_SECURE_VERSION
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK3_RDATA5
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RESERVED_3_160
+    bit_range:
+    - 23
+    - 0
+  - name: RD_MAC_VERSION
+    bit_range:
+    - 31
+    - 24
+  side_effects: null
+- id: BLK3_RDATA6
+  address_offset: 144
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RD_BLK3_RESERVED_6
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK3_RDATA7
+  address_offset: 148
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RD_BLK3_RESERVED_7
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK1_WDATA0
+  address_offset: 152
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BLK1_DIN0
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK1_WDATA1
+  address_offset: 156
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BLK1_DIN1
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK1_WDATA2
+  address_offset: 160
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BLK1_DIN2
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK1_WDATA3
+  address_offset: 164
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BLK1_DIN3
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK1_WDATA4
+  address_offset: 168
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BLK1_DIN4
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK1_WDATA5
+  address_offset: 172
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BLK1_DIN5
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK1_WDATA6
+  address_offset: 176
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BLK1_DIN6
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK1_WDATA7
+  address_offset: 180
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BLK1_DIN7
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK2_WDATA0
+  address_offset: 184
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BLK2_DIN0
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK2_WDATA1
+  address_offset: 188
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BLK2_DIN1
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK2_WDATA2
+  address_offset: 192
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BLK2_DIN2
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK2_WDATA3
+  address_offset: 196
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BLK2_DIN3
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK2_WDATA4
+  address_offset: 200
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BLK2_DIN4
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK2_WDATA5
+  address_offset: 204
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BLK2_DIN5
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK2_WDATA6
+  address_offset: 208
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BLK2_DIN6
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK2_WDATA7
+  address_offset: 212
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BLK2_DIN7
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK3_WDATA0
+  address_offset: 216
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BLK3_DIN0
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK3_WDATA1
+  address_offset: 220
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BLK3_DIN1
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK3_WDATA2
+  address_offset: 224
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BLK3_DIN2
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK3_WDATA3
+  address_offset: 228
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADC1_TP_LOW
+    bit_range:
+    - 6
+    - 0
+  - name: ADC1_TP_HIGH
+    bit_range:
+    - 15
+    - 7
+  - name: ADC2_TP_LOW
+    bit_range:
+    - 22
+    - 16
+  - name: ADC2_TP_HIGH
+    bit_range:
+    - 31
+    - 23
+  side_effects: null
+- id: BLK3_WDATA4
+  address_offset: 232
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SECURE_VERSION
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK3_WDATA5
+  address_offset: 236
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BLK3_DIN5
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK3_WDATA6
+  address_offset: 240
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BLK3_DIN6
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: BLK3_WDATA7
+  address_offset: 244
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BLK3_DIN7
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: CLK
+  address_offset: 248
+  size: 32
+  access: READ_WRITE
+  reset_value: 16466
+  fields:
+  - name: SEL0
+    bit_range:
+    - 7
+    - 0
+  - name: SEL1
+    bit_range:
+    - 15
+    - 8
+  - name: EN
+    bit_range:
+    - 16
+    - 16
+  side_effects: null
+- id: CONF
+  address_offset: 252
+  size: 32
+  access: READ_WRITE
+  reset_value: 65536
+  fields:
+  - name: OP_CODE
+    bit_range:
+    - 15
+    - 0
+  - name: FORCE_NO_WR_RD_DIS
+    bit_range:
+    - 16
+    - 16
+  side_effects: null
+- id: STATUS
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DEBUG
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: CMD
+  address_offset: 260
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: READ_CMD
+    bit_range:
+    - 0
+    - 0
+  - name: PGM_CMD
+    bit_range:
+    - 1
+    - 1
+  side_effects: null
+- id: INT_RAW
+  address_offset: 264
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: READ_DONE_INT_RAW
+    bit_range:
+    - 0
+    - 0
+  - name: PGM_DONE_INT_RAW
+    bit_range:
+    - 1
+    - 1
+  side_effects: null
+- id: INT_ST
+  address_offset: 268
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: READ_DONE_INT_ST
+    bit_range:
+    - 0
+    - 0
+  - name: PGM_DONE_INT_ST
+    bit_range:
+    - 1
+    - 1
+  side_effects: null
+- id: INT_ENA
+  address_offset: 272
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: READ_DONE_INT_ENA
+    bit_range:
+    - 0
+    - 0
+  - name: PGM_DONE_INT_ENA
+    bit_range:
+    - 1
+    - 1
+  side_effects: null
+- id: INT_CLR
+  address_offset: 276
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: READ_DONE_INT_CLR
+    bit_range:
+    - 0
+    - 0
+  - name: PGM_DONE_INT_CLR
+    bit_range:
+    - 1
+    - 1
+  side_effects: null
+- id: DAC_CONF
+  address_offset: 280
+  size: 32
+  access: READ_WRITE
+  reset_value: 40
+  fields:
+  - name: DAC_CLK_DIV
+    bit_range:
+    - 7
+    - 0
+  - name: DAC_CLK_PAD_SEL
+    bit_range:
+    - 8
+    - 8
+  side_effects: null
+- id: DEC_STATUS
+  address_offset: 284
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DEC_WARNINGS
+    bit_range:
+    - 11
+    - 0
+  side_effects: null
+- id: DATE
+  address_offset: 508
+  size: 32
+  access: READ_WRITE
+  reset_value: 369370624
+  fields:
+  - name: DATE
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+interrupts:
+  EFUSE: 44
+timing: null

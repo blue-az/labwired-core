@@ -1,0 +1,2557 @@
+peripheral: P1_NS
+version: 0.1.0
+registers:
+- id: OUT
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PIN0
+    bit_range:
+    - 0
+    - 0
+    description: Pin 0
+  - name: PIN1
+    bit_range:
+    - 1
+    - 1
+    description: Pin 1
+  - name: PIN2
+    bit_range:
+    - 2
+    - 2
+    description: Pin 2
+  - name: PIN3
+    bit_range:
+    - 3
+    - 3
+    description: Pin 3
+  - name: PIN4
+    bit_range:
+    - 4
+    - 4
+    description: Pin 4
+  - name: PIN5
+    bit_range:
+    - 5
+    - 5
+    description: Pin 5
+  - name: PIN6
+    bit_range:
+    - 6
+    - 6
+    description: Pin 6
+  - name: PIN7
+    bit_range:
+    - 7
+    - 7
+    description: Pin 7
+  - name: PIN8
+    bit_range:
+    - 8
+    - 8
+    description: Pin 8
+  - name: PIN9
+    bit_range:
+    - 9
+    - 9
+    description: Pin 9
+  - name: PIN10
+    bit_range:
+    - 10
+    - 10
+    description: Pin 10
+  - name: PIN11
+    bit_range:
+    - 11
+    - 11
+    description: Pin 11
+  - name: PIN12
+    bit_range:
+    - 12
+    - 12
+    description: Pin 12
+  - name: PIN13
+    bit_range:
+    - 13
+    - 13
+    description: Pin 13
+  - name: PIN14
+    bit_range:
+    - 14
+    - 14
+    description: Pin 14
+  - name: PIN15
+    bit_range:
+    - 15
+    - 15
+    description: Pin 15
+  - name: PIN16
+    bit_range:
+    - 16
+    - 16
+    description: Pin 16
+  - name: PIN17
+    bit_range:
+    - 17
+    - 17
+    description: Pin 17
+  - name: PIN18
+    bit_range:
+    - 18
+    - 18
+    description: Pin 18
+  - name: PIN19
+    bit_range:
+    - 19
+    - 19
+    description: Pin 19
+  - name: PIN20
+    bit_range:
+    - 20
+    - 20
+    description: Pin 20
+  - name: PIN21
+    bit_range:
+    - 21
+    - 21
+    description: Pin 21
+  - name: PIN22
+    bit_range:
+    - 22
+    - 22
+    description: Pin 22
+  - name: PIN23
+    bit_range:
+    - 23
+    - 23
+    description: Pin 23
+  - name: PIN24
+    bit_range:
+    - 24
+    - 24
+    description: Pin 24
+  - name: PIN25
+    bit_range:
+    - 25
+    - 25
+    description: Pin 25
+  - name: PIN26
+    bit_range:
+    - 26
+    - 26
+    description: Pin 26
+  - name: PIN27
+    bit_range:
+    - 27
+    - 27
+    description: Pin 27
+  - name: PIN28
+    bit_range:
+    - 28
+    - 28
+    description: Pin 28
+  - name: PIN29
+    bit_range:
+    - 29
+    - 29
+    description: Pin 29
+  - name: PIN30
+    bit_range:
+    - 30
+    - 30
+    description: Pin 30
+  - name: PIN31
+    bit_range:
+    - 31
+    - 31
+    description: Pin 31
+  side_effects: null
+- id: OUTSET
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PIN0
+    bit_range:
+    - 0
+    - 0
+    description: Pin 0
+  - name: PIN1
+    bit_range:
+    - 1
+    - 1
+    description: Pin 1
+  - name: PIN2
+    bit_range:
+    - 2
+    - 2
+    description: Pin 2
+  - name: PIN3
+    bit_range:
+    - 3
+    - 3
+    description: Pin 3
+  - name: PIN4
+    bit_range:
+    - 4
+    - 4
+    description: Pin 4
+  - name: PIN5
+    bit_range:
+    - 5
+    - 5
+    description: Pin 5
+  - name: PIN6
+    bit_range:
+    - 6
+    - 6
+    description: Pin 6
+  - name: PIN7
+    bit_range:
+    - 7
+    - 7
+    description: Pin 7
+  - name: PIN8
+    bit_range:
+    - 8
+    - 8
+    description: Pin 8
+  - name: PIN9
+    bit_range:
+    - 9
+    - 9
+    description: Pin 9
+  - name: PIN10
+    bit_range:
+    - 10
+    - 10
+    description: Pin 10
+  - name: PIN11
+    bit_range:
+    - 11
+    - 11
+    description: Pin 11
+  - name: PIN12
+    bit_range:
+    - 12
+    - 12
+    description: Pin 12
+  - name: PIN13
+    bit_range:
+    - 13
+    - 13
+    description: Pin 13
+  - name: PIN14
+    bit_range:
+    - 14
+    - 14
+    description: Pin 14
+  - name: PIN15
+    bit_range:
+    - 15
+    - 15
+    description: Pin 15
+  - name: PIN16
+    bit_range:
+    - 16
+    - 16
+    description: Pin 16
+  - name: PIN17
+    bit_range:
+    - 17
+    - 17
+    description: Pin 17
+  - name: PIN18
+    bit_range:
+    - 18
+    - 18
+    description: Pin 18
+  - name: PIN19
+    bit_range:
+    - 19
+    - 19
+    description: Pin 19
+  - name: PIN20
+    bit_range:
+    - 20
+    - 20
+    description: Pin 20
+  - name: PIN21
+    bit_range:
+    - 21
+    - 21
+    description: Pin 21
+  - name: PIN22
+    bit_range:
+    - 22
+    - 22
+    description: Pin 22
+  - name: PIN23
+    bit_range:
+    - 23
+    - 23
+    description: Pin 23
+  - name: PIN24
+    bit_range:
+    - 24
+    - 24
+    description: Pin 24
+  - name: PIN25
+    bit_range:
+    - 25
+    - 25
+    description: Pin 25
+  - name: PIN26
+    bit_range:
+    - 26
+    - 26
+    description: Pin 26
+  - name: PIN27
+    bit_range:
+    - 27
+    - 27
+    description: Pin 27
+  - name: PIN28
+    bit_range:
+    - 28
+    - 28
+    description: Pin 28
+  - name: PIN29
+    bit_range:
+    - 29
+    - 29
+    description: Pin 29
+  - name: PIN30
+    bit_range:
+    - 30
+    - 30
+    description: Pin 30
+  - name: PIN31
+    bit_range:
+    - 31
+    - 31
+    description: Pin 31
+  side_effects: null
+- id: OUTCLR
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PIN0
+    bit_range:
+    - 0
+    - 0
+    description: Pin 0
+  - name: PIN1
+    bit_range:
+    - 1
+    - 1
+    description: Pin 1
+  - name: PIN2
+    bit_range:
+    - 2
+    - 2
+    description: Pin 2
+  - name: PIN3
+    bit_range:
+    - 3
+    - 3
+    description: Pin 3
+  - name: PIN4
+    bit_range:
+    - 4
+    - 4
+    description: Pin 4
+  - name: PIN5
+    bit_range:
+    - 5
+    - 5
+    description: Pin 5
+  - name: PIN6
+    bit_range:
+    - 6
+    - 6
+    description: Pin 6
+  - name: PIN7
+    bit_range:
+    - 7
+    - 7
+    description: Pin 7
+  - name: PIN8
+    bit_range:
+    - 8
+    - 8
+    description: Pin 8
+  - name: PIN9
+    bit_range:
+    - 9
+    - 9
+    description: Pin 9
+  - name: PIN10
+    bit_range:
+    - 10
+    - 10
+    description: Pin 10
+  - name: PIN11
+    bit_range:
+    - 11
+    - 11
+    description: Pin 11
+  - name: PIN12
+    bit_range:
+    - 12
+    - 12
+    description: Pin 12
+  - name: PIN13
+    bit_range:
+    - 13
+    - 13
+    description: Pin 13
+  - name: PIN14
+    bit_range:
+    - 14
+    - 14
+    description: Pin 14
+  - name: PIN15
+    bit_range:
+    - 15
+    - 15
+    description: Pin 15
+  - name: PIN16
+    bit_range:
+    - 16
+    - 16
+    description: Pin 16
+  - name: PIN17
+    bit_range:
+    - 17
+    - 17
+    description: Pin 17
+  - name: PIN18
+    bit_range:
+    - 18
+    - 18
+    description: Pin 18
+  - name: PIN19
+    bit_range:
+    - 19
+    - 19
+    description: Pin 19
+  - name: PIN20
+    bit_range:
+    - 20
+    - 20
+    description: Pin 20
+  - name: PIN21
+    bit_range:
+    - 21
+    - 21
+    description: Pin 21
+  - name: PIN22
+    bit_range:
+    - 22
+    - 22
+    description: Pin 22
+  - name: PIN23
+    bit_range:
+    - 23
+    - 23
+    description: Pin 23
+  - name: PIN24
+    bit_range:
+    - 24
+    - 24
+    description: Pin 24
+  - name: PIN25
+    bit_range:
+    - 25
+    - 25
+    description: Pin 25
+  - name: PIN26
+    bit_range:
+    - 26
+    - 26
+    description: Pin 26
+  - name: PIN27
+    bit_range:
+    - 27
+    - 27
+    description: Pin 27
+  - name: PIN28
+    bit_range:
+    - 28
+    - 28
+    description: Pin 28
+  - name: PIN29
+    bit_range:
+    - 29
+    - 29
+    description: Pin 29
+  - name: PIN30
+    bit_range:
+    - 30
+    - 30
+    description: Pin 30
+  - name: PIN31
+    bit_range:
+    - 31
+    - 31
+    description: Pin 31
+  side_effects:
+    read_action: null
+    write_action: write_one_to_clear
+    on_read: null
+    on_write: null
+- id: IN
+  address_offset: 16
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PIN0
+    bit_range:
+    - 0
+    - 0
+    description: Pin 0
+  - name: PIN1
+    bit_range:
+    - 1
+    - 1
+    description: Pin 1
+  - name: PIN2
+    bit_range:
+    - 2
+    - 2
+    description: Pin 2
+  - name: PIN3
+    bit_range:
+    - 3
+    - 3
+    description: Pin 3
+  - name: PIN4
+    bit_range:
+    - 4
+    - 4
+    description: Pin 4
+  - name: PIN5
+    bit_range:
+    - 5
+    - 5
+    description: Pin 5
+  - name: PIN6
+    bit_range:
+    - 6
+    - 6
+    description: Pin 6
+  - name: PIN7
+    bit_range:
+    - 7
+    - 7
+    description: Pin 7
+  - name: PIN8
+    bit_range:
+    - 8
+    - 8
+    description: Pin 8
+  - name: PIN9
+    bit_range:
+    - 9
+    - 9
+    description: Pin 9
+  - name: PIN10
+    bit_range:
+    - 10
+    - 10
+    description: Pin 10
+  - name: PIN11
+    bit_range:
+    - 11
+    - 11
+    description: Pin 11
+  - name: PIN12
+    bit_range:
+    - 12
+    - 12
+    description: Pin 12
+  - name: PIN13
+    bit_range:
+    - 13
+    - 13
+    description: Pin 13
+  - name: PIN14
+    bit_range:
+    - 14
+    - 14
+    description: Pin 14
+  - name: PIN15
+    bit_range:
+    - 15
+    - 15
+    description: Pin 15
+  - name: PIN16
+    bit_range:
+    - 16
+    - 16
+    description: Pin 16
+  - name: PIN17
+    bit_range:
+    - 17
+    - 17
+    description: Pin 17
+  - name: PIN18
+    bit_range:
+    - 18
+    - 18
+    description: Pin 18
+  - name: PIN19
+    bit_range:
+    - 19
+    - 19
+    description: Pin 19
+  - name: PIN20
+    bit_range:
+    - 20
+    - 20
+    description: Pin 20
+  - name: PIN21
+    bit_range:
+    - 21
+    - 21
+    description: Pin 21
+  - name: PIN22
+    bit_range:
+    - 22
+    - 22
+    description: Pin 22
+  - name: PIN23
+    bit_range:
+    - 23
+    - 23
+    description: Pin 23
+  - name: PIN24
+    bit_range:
+    - 24
+    - 24
+    description: Pin 24
+  - name: PIN25
+    bit_range:
+    - 25
+    - 25
+    description: Pin 25
+  - name: PIN26
+    bit_range:
+    - 26
+    - 26
+    description: Pin 26
+  - name: PIN27
+    bit_range:
+    - 27
+    - 27
+    description: Pin 27
+  - name: PIN28
+    bit_range:
+    - 28
+    - 28
+    description: Pin 28
+  - name: PIN29
+    bit_range:
+    - 29
+    - 29
+    description: Pin 29
+  - name: PIN30
+    bit_range:
+    - 30
+    - 30
+    description: Pin 30
+  - name: PIN31
+    bit_range:
+    - 31
+    - 31
+    description: Pin 31
+  side_effects: null
+- id: DIR
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PIN0
+    bit_range:
+    - 0
+    - 0
+    description: Pin 0
+  - name: PIN1
+    bit_range:
+    - 1
+    - 1
+    description: Pin 1
+  - name: PIN2
+    bit_range:
+    - 2
+    - 2
+    description: Pin 2
+  - name: PIN3
+    bit_range:
+    - 3
+    - 3
+    description: Pin 3
+  - name: PIN4
+    bit_range:
+    - 4
+    - 4
+    description: Pin 4
+  - name: PIN5
+    bit_range:
+    - 5
+    - 5
+    description: Pin 5
+  - name: PIN6
+    bit_range:
+    - 6
+    - 6
+    description: Pin 6
+  - name: PIN7
+    bit_range:
+    - 7
+    - 7
+    description: Pin 7
+  - name: PIN8
+    bit_range:
+    - 8
+    - 8
+    description: Pin 8
+  - name: PIN9
+    bit_range:
+    - 9
+    - 9
+    description: Pin 9
+  - name: PIN10
+    bit_range:
+    - 10
+    - 10
+    description: Pin 10
+  - name: PIN11
+    bit_range:
+    - 11
+    - 11
+    description: Pin 11
+  - name: PIN12
+    bit_range:
+    - 12
+    - 12
+    description: Pin 12
+  - name: PIN13
+    bit_range:
+    - 13
+    - 13
+    description: Pin 13
+  - name: PIN14
+    bit_range:
+    - 14
+    - 14
+    description: Pin 14
+  - name: PIN15
+    bit_range:
+    - 15
+    - 15
+    description: Pin 15
+  - name: PIN16
+    bit_range:
+    - 16
+    - 16
+    description: Pin 16
+  - name: PIN17
+    bit_range:
+    - 17
+    - 17
+    description: Pin 17
+  - name: PIN18
+    bit_range:
+    - 18
+    - 18
+    description: Pin 18
+  - name: PIN19
+    bit_range:
+    - 19
+    - 19
+    description: Pin 19
+  - name: PIN20
+    bit_range:
+    - 20
+    - 20
+    description: Pin 20
+  - name: PIN21
+    bit_range:
+    - 21
+    - 21
+    description: Pin 21
+  - name: PIN22
+    bit_range:
+    - 22
+    - 22
+    description: Pin 22
+  - name: PIN23
+    bit_range:
+    - 23
+    - 23
+    description: Pin 23
+  - name: PIN24
+    bit_range:
+    - 24
+    - 24
+    description: Pin 24
+  - name: PIN25
+    bit_range:
+    - 25
+    - 25
+    description: Pin 25
+  - name: PIN26
+    bit_range:
+    - 26
+    - 26
+    description: Pin 26
+  - name: PIN27
+    bit_range:
+    - 27
+    - 27
+    description: Pin 27
+  - name: PIN28
+    bit_range:
+    - 28
+    - 28
+    description: Pin 28
+  - name: PIN29
+    bit_range:
+    - 29
+    - 29
+    description: Pin 29
+  - name: PIN30
+    bit_range:
+    - 30
+    - 30
+    description: Pin 30
+  - name: PIN31
+    bit_range:
+    - 31
+    - 31
+    description: Pin 31
+  side_effects: null
+- id: DIRSET
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PIN0
+    bit_range:
+    - 0
+    - 0
+    description: Set as output pin 0
+  - name: PIN1
+    bit_range:
+    - 1
+    - 1
+    description: Set as output pin 1
+  - name: PIN2
+    bit_range:
+    - 2
+    - 2
+    description: Set as output pin 2
+  - name: PIN3
+    bit_range:
+    - 3
+    - 3
+    description: Set as output pin 3
+  - name: PIN4
+    bit_range:
+    - 4
+    - 4
+    description: Set as output pin 4
+  - name: PIN5
+    bit_range:
+    - 5
+    - 5
+    description: Set as output pin 5
+  - name: PIN6
+    bit_range:
+    - 6
+    - 6
+    description: Set as output pin 6
+  - name: PIN7
+    bit_range:
+    - 7
+    - 7
+    description: Set as output pin 7
+  - name: PIN8
+    bit_range:
+    - 8
+    - 8
+    description: Set as output pin 8
+  - name: PIN9
+    bit_range:
+    - 9
+    - 9
+    description: Set as output pin 9
+  - name: PIN10
+    bit_range:
+    - 10
+    - 10
+    description: Set as output pin 10
+  - name: PIN11
+    bit_range:
+    - 11
+    - 11
+    description: Set as output pin 11
+  - name: PIN12
+    bit_range:
+    - 12
+    - 12
+    description: Set as output pin 12
+  - name: PIN13
+    bit_range:
+    - 13
+    - 13
+    description: Set as output pin 13
+  - name: PIN14
+    bit_range:
+    - 14
+    - 14
+    description: Set as output pin 14
+  - name: PIN15
+    bit_range:
+    - 15
+    - 15
+    description: Set as output pin 15
+  - name: PIN16
+    bit_range:
+    - 16
+    - 16
+    description: Set as output pin 16
+  - name: PIN17
+    bit_range:
+    - 17
+    - 17
+    description: Set as output pin 17
+  - name: PIN18
+    bit_range:
+    - 18
+    - 18
+    description: Set as output pin 18
+  - name: PIN19
+    bit_range:
+    - 19
+    - 19
+    description: Set as output pin 19
+  - name: PIN20
+    bit_range:
+    - 20
+    - 20
+    description: Set as output pin 20
+  - name: PIN21
+    bit_range:
+    - 21
+    - 21
+    description: Set as output pin 21
+  - name: PIN22
+    bit_range:
+    - 22
+    - 22
+    description: Set as output pin 22
+  - name: PIN23
+    bit_range:
+    - 23
+    - 23
+    description: Set as output pin 23
+  - name: PIN24
+    bit_range:
+    - 24
+    - 24
+    description: Set as output pin 24
+  - name: PIN25
+    bit_range:
+    - 25
+    - 25
+    description: Set as output pin 25
+  - name: PIN26
+    bit_range:
+    - 26
+    - 26
+    description: Set as output pin 26
+  - name: PIN27
+    bit_range:
+    - 27
+    - 27
+    description: Set as output pin 27
+  - name: PIN28
+    bit_range:
+    - 28
+    - 28
+    description: Set as output pin 28
+  - name: PIN29
+    bit_range:
+    - 29
+    - 29
+    description: Set as output pin 29
+  - name: PIN30
+    bit_range:
+    - 30
+    - 30
+    description: Set as output pin 30
+  - name: PIN31
+    bit_range:
+    - 31
+    - 31
+    description: Set as output pin 31
+  side_effects: null
+- id: DIRCLR
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PIN0
+    bit_range:
+    - 0
+    - 0
+    description: Set as input pin 0
+  - name: PIN1
+    bit_range:
+    - 1
+    - 1
+    description: Set as input pin 1
+  - name: PIN2
+    bit_range:
+    - 2
+    - 2
+    description: Set as input pin 2
+  - name: PIN3
+    bit_range:
+    - 3
+    - 3
+    description: Set as input pin 3
+  - name: PIN4
+    bit_range:
+    - 4
+    - 4
+    description: Set as input pin 4
+  - name: PIN5
+    bit_range:
+    - 5
+    - 5
+    description: Set as input pin 5
+  - name: PIN6
+    bit_range:
+    - 6
+    - 6
+    description: Set as input pin 6
+  - name: PIN7
+    bit_range:
+    - 7
+    - 7
+    description: Set as input pin 7
+  - name: PIN8
+    bit_range:
+    - 8
+    - 8
+    description: Set as input pin 8
+  - name: PIN9
+    bit_range:
+    - 9
+    - 9
+    description: Set as input pin 9
+  - name: PIN10
+    bit_range:
+    - 10
+    - 10
+    description: Set as input pin 10
+  - name: PIN11
+    bit_range:
+    - 11
+    - 11
+    description: Set as input pin 11
+  - name: PIN12
+    bit_range:
+    - 12
+    - 12
+    description: Set as input pin 12
+  - name: PIN13
+    bit_range:
+    - 13
+    - 13
+    description: Set as input pin 13
+  - name: PIN14
+    bit_range:
+    - 14
+    - 14
+    description: Set as input pin 14
+  - name: PIN15
+    bit_range:
+    - 15
+    - 15
+    description: Set as input pin 15
+  - name: PIN16
+    bit_range:
+    - 16
+    - 16
+    description: Set as input pin 16
+  - name: PIN17
+    bit_range:
+    - 17
+    - 17
+    description: Set as input pin 17
+  - name: PIN18
+    bit_range:
+    - 18
+    - 18
+    description: Set as input pin 18
+  - name: PIN19
+    bit_range:
+    - 19
+    - 19
+    description: Set as input pin 19
+  - name: PIN20
+    bit_range:
+    - 20
+    - 20
+    description: Set as input pin 20
+  - name: PIN21
+    bit_range:
+    - 21
+    - 21
+    description: Set as input pin 21
+  - name: PIN22
+    bit_range:
+    - 22
+    - 22
+    description: Set as input pin 22
+  - name: PIN23
+    bit_range:
+    - 23
+    - 23
+    description: Set as input pin 23
+  - name: PIN24
+    bit_range:
+    - 24
+    - 24
+    description: Set as input pin 24
+  - name: PIN25
+    bit_range:
+    - 25
+    - 25
+    description: Set as input pin 25
+  - name: PIN26
+    bit_range:
+    - 26
+    - 26
+    description: Set as input pin 26
+  - name: PIN27
+    bit_range:
+    - 27
+    - 27
+    description: Set as input pin 27
+  - name: PIN28
+    bit_range:
+    - 28
+    - 28
+    description: Set as input pin 28
+  - name: PIN29
+    bit_range:
+    - 29
+    - 29
+    description: Set as input pin 29
+  - name: PIN30
+    bit_range:
+    - 30
+    - 30
+    description: Set as input pin 30
+  - name: PIN31
+    bit_range:
+    - 31
+    - 31
+    description: Set as input pin 31
+  side_effects:
+    read_action: null
+    write_action: write_one_to_clear
+    on_read: null
+    on_write: null
+- id: LATCH
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PIN0
+    bit_range:
+    - 0
+    - 0
+    description: Status on whether PIN[0] has met criteria set in PIN_CNF[0].SENSE register. Write '1' to clear.
+  - name: PIN1
+    bit_range:
+    - 1
+    - 1
+    description: Status on whether PIN[1] has met criteria set in PIN_CNF[1].SENSE register. Write '1' to clear.
+  - name: PIN2
+    bit_range:
+    - 2
+    - 2
+    description: Status on whether PIN[2] has met criteria set in PIN_CNF[2].SENSE register. Write '1' to clear.
+  - name: PIN3
+    bit_range:
+    - 3
+    - 3
+    description: Status on whether PIN[3] has met criteria set in PIN_CNF[3].SENSE register. Write '1' to clear.
+  - name: PIN4
+    bit_range:
+    - 4
+    - 4
+    description: Status on whether PIN[4] has met criteria set in PIN_CNF[4].SENSE register. Write '1' to clear.
+  - name: PIN5
+    bit_range:
+    - 5
+    - 5
+    description: Status on whether PIN[5] has met criteria set in PIN_CNF[5].SENSE register. Write '1' to clear.
+  - name: PIN6
+    bit_range:
+    - 6
+    - 6
+    description: Status on whether PIN[6] has met criteria set in PIN_CNF[6].SENSE register. Write '1' to clear.
+  - name: PIN7
+    bit_range:
+    - 7
+    - 7
+    description: Status on whether PIN[7] has met criteria set in PIN_CNF[7].SENSE register. Write '1' to clear.
+  - name: PIN8
+    bit_range:
+    - 8
+    - 8
+    description: Status on whether PIN[8] has met criteria set in PIN_CNF[8].SENSE register. Write '1' to clear.
+  - name: PIN9
+    bit_range:
+    - 9
+    - 9
+    description: Status on whether PIN[9] has met criteria set in PIN_CNF[9].SENSE register. Write '1' to clear.
+  - name: PIN10
+    bit_range:
+    - 10
+    - 10
+    description: Status on whether PIN[10] has met criteria set in PIN_CNF[10].SENSE register. Write '1' to clear.
+  - name: PIN11
+    bit_range:
+    - 11
+    - 11
+    description: Status on whether PIN[11] has met criteria set in PIN_CNF[11].SENSE register. Write '1' to clear.
+  - name: PIN12
+    bit_range:
+    - 12
+    - 12
+    description: Status on whether PIN[12] has met criteria set in PIN_CNF[12].SENSE register. Write '1' to clear.
+  - name: PIN13
+    bit_range:
+    - 13
+    - 13
+    description: Status on whether PIN[13] has met criteria set in PIN_CNF[13].SENSE register. Write '1' to clear.
+  - name: PIN14
+    bit_range:
+    - 14
+    - 14
+    description: Status on whether PIN[14] has met criteria set in PIN_CNF[14].SENSE register. Write '1' to clear.
+  - name: PIN15
+    bit_range:
+    - 15
+    - 15
+    description: Status on whether PIN[15] has met criteria set in PIN_CNF[15].SENSE register. Write '1' to clear.
+  - name: PIN16
+    bit_range:
+    - 16
+    - 16
+    description: Status on whether PIN[16] has met criteria set in PIN_CNF[16].SENSE register. Write '1' to clear.
+  - name: PIN17
+    bit_range:
+    - 17
+    - 17
+    description: Status on whether PIN[17] has met criteria set in PIN_CNF[17].SENSE register. Write '1' to clear.
+  - name: PIN18
+    bit_range:
+    - 18
+    - 18
+    description: Status on whether PIN[18] has met criteria set in PIN_CNF[18].SENSE register. Write '1' to clear.
+  - name: PIN19
+    bit_range:
+    - 19
+    - 19
+    description: Status on whether PIN[19] has met criteria set in PIN_CNF[19].SENSE register. Write '1' to clear.
+  - name: PIN20
+    bit_range:
+    - 20
+    - 20
+    description: Status on whether PIN[20] has met criteria set in PIN_CNF[20].SENSE register. Write '1' to clear.
+  - name: PIN21
+    bit_range:
+    - 21
+    - 21
+    description: Status on whether PIN[21] has met criteria set in PIN_CNF[21].SENSE register. Write '1' to clear.
+  - name: PIN22
+    bit_range:
+    - 22
+    - 22
+    description: Status on whether PIN[22] has met criteria set in PIN_CNF[22].SENSE register. Write '1' to clear.
+  - name: PIN23
+    bit_range:
+    - 23
+    - 23
+    description: Status on whether PIN[23] has met criteria set in PIN_CNF[23].SENSE register. Write '1' to clear.
+  - name: PIN24
+    bit_range:
+    - 24
+    - 24
+    description: Status on whether PIN[24] has met criteria set in PIN_CNF[24].SENSE register. Write '1' to clear.
+  - name: PIN25
+    bit_range:
+    - 25
+    - 25
+    description: Status on whether PIN[25] has met criteria set in PIN_CNF[25].SENSE register. Write '1' to clear.
+  - name: PIN26
+    bit_range:
+    - 26
+    - 26
+    description: Status on whether PIN[26] has met criteria set in PIN_CNF[26].SENSE register. Write '1' to clear.
+  - name: PIN27
+    bit_range:
+    - 27
+    - 27
+    description: Status on whether PIN[27] has met criteria set in PIN_CNF[27].SENSE register. Write '1' to clear.
+  - name: PIN28
+    bit_range:
+    - 28
+    - 28
+    description: Status on whether PIN[28] has met criteria set in PIN_CNF[28].SENSE register. Write '1' to clear.
+  - name: PIN29
+    bit_range:
+    - 29
+    - 29
+    description: Status on whether PIN[29] has met criteria set in PIN_CNF[29].SENSE register. Write '1' to clear.
+  - name: PIN30
+    bit_range:
+    - 30
+    - 30
+    description: Status on whether PIN[30] has met criteria set in PIN_CNF[30].SENSE register. Write '1' to clear.
+  - name: PIN31
+    bit_range:
+    - 31
+    - 31
+    description: Status on whether PIN[31] has met criteria set in PIN_CNF[31].SENSE register. Write '1' to clear.
+  side_effects: null
+- id: DETECTMODE
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DETECTMODE
+    bit_range:
+    - 0
+    - 0
+    description: Select between default DETECT signal behavior and LDETECT mode
+  side_effects: null
+- id: DETECTMODE_SEC
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DETECTMODE
+    bit_range:
+    - 0
+    - 0
+    description: Select between default DETECT signal behavior and LDETECT mode
+  side_effects: null
+- id: PIN_CNF0
+  address_offset: 512
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF1
+  address_offset: 516
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF2
+  address_offset: 520
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF3
+  address_offset: 524
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF4
+  address_offset: 528
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF5
+  address_offset: 532
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF6
+  address_offset: 536
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF7
+  address_offset: 540
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF8
+  address_offset: 544
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF9
+  address_offset: 548
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF10
+  address_offset: 552
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF11
+  address_offset: 556
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF12
+  address_offset: 560
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF13
+  address_offset: 564
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF14
+  address_offset: 568
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF15
+  address_offset: 572
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF16
+  address_offset: 576
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF17
+  address_offset: 580
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF18
+  address_offset: 584
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF19
+  address_offset: 588
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF20
+  address_offset: 592
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF21
+  address_offset: 596
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF22
+  address_offset: 600
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF23
+  address_offset: 604
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF24
+  address_offset: 608
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF25
+  address_offset: 612
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF26
+  address_offset: 616
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF27
+  address_offset: 620
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF28
+  address_offset: 624
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF29
+  address_offset: 628
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF30
+  address_offset: 632
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+- id: PIN_CNF31
+  address_offset: 636
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: DIR
+    bit_range:
+    - 0
+    - 0
+    description: Pin direction. Same physical register as DIR register
+  - name: INPUT
+    bit_range:
+    - 1
+    - 1
+    description: Connect or disconnect input buffer
+  - name: PULL
+    bit_range:
+    - 3
+    - 2
+    description: Pull configuration
+  - name: DRIVE
+    bit_range:
+    - 11
+    - 8
+    description: Drive configuration
+  - name: SENSE
+    bit_range:
+    - 17
+    - 16
+    description: Pin sensing mechanism
+  - name: MCUSEL
+    bit_range:
+    - 30
+    - 28
+    description: 'Select which MCU/Subsystem controls this pin Note: this field is only accessible from secure code.'
+  side_effects: null
+interrupts: null
+timing: null

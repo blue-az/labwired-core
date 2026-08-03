@@ -1,0 +1,44 @@
+peripheral: CC_AO_S
+version: 0.1.0
+registers:
+- id: AO_APB_FILTERING
+  address_offset: 3640
+  size: 32
+  access: READ_WRITE
+  reset_value: 85
+  fields:
+  - name: ONLY_SEC_ACCESS_ALLOWED
+    bit_range:
+    - 0
+    - 0
+    description: When this FW controlled field is set, the APB slave accepts only secure accesses
+  - name: ONLY_SEC_ACCESS_ALLOWED_LOCK
+    bit_range:
+    - 1
+    - 1
+    description: When this FW controlled field is set, the ONLY_SEC_ACCESS_ALLOWED field cannot be modified until the next PoR
+  - name: ONLY_PRIV_ACCESS_ALLOWED
+    bit_range:
+    - 2
+    - 2
+    description: When this FW controlled field is set, the APB slave accepts only privileged accesses
+  - name: ONLY_PRIV_ACCESS_ALLOWED_LOCK
+    bit_range:
+    - 3
+    - 3
+    description: When this FW controlled field is set, the APBC_ONLY_PRIV_ACCESS_ALLOWED field cannot be modified until the next PoR
+  side_effects: null
+- id: CC_SW_RESET
+  address_offset: 3648
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: RESET
+    bit_range:
+    - 0
+    - 0
+    description: Writing any value to this address resets the CRYPTOCELL subsystem. The reset takes 4 CPU clock cycles to complete.
+  side_effects: null
+interrupts: null
+timing: null

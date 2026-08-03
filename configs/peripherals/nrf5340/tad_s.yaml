@@ -1,0 +1,135 @@
+peripheral: TAD_S
+version: 0.1.0
+registers:
+- id: CLOCKSTART
+  address_offset: 4
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: START
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+- id: CLOCKSTOP
+  address_offset: 8
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: STOP
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+- id: ENABLE
+  address_offset: 1280
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENABLE
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+- id: PSEL_TRACECLK
+  address_offset: 1284
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: PIN
+    bit_range:
+    - 4
+    - 0
+    description: Pin number
+  - name: CONNECT
+    bit_range:
+    - 31
+    - 31
+    description: Connection
+  side_effects: null
+- id: PSEL_TRACEDATA0
+  address_offset: 1288
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: PIN
+    bit_range:
+    - 4
+    - 0
+    description: Pin number
+  - name: CONNECT
+    bit_range:
+    - 31
+    - 31
+    description: Connection
+  side_effects: null
+- id: PSEL_TRACEDATA1
+  address_offset: 1292
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: PIN
+    bit_range:
+    - 4
+    - 0
+    description: Pin number
+  - name: CONNECT
+    bit_range:
+    - 31
+    - 31
+    description: Connection
+  side_effects: null
+- id: PSEL_TRACEDATA2
+  address_offset: 1296
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: PIN
+    bit_range:
+    - 4
+    - 0
+    description: Pin number
+  - name: CONNECT
+    bit_range:
+    - 31
+    - 31
+    description: Connection
+  side_effects: null
+- id: PSEL_TRACEDATA3
+  address_offset: 1300
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: PIN
+    bit_range:
+    - 4
+    - 0
+    description: Pin number
+  - name: CONNECT
+    bit_range:
+    - 31
+    - 31
+    description: Connection
+  side_effects: null
+- id: TRACEPORTSPEED
+  address_offset: 1304
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TRACEPORTSPEED
+    bit_range:
+    - 1
+    - 0
+    description: Speed of Trace Port clock. Note that the TRACECLK pin output will be divided again by two from the Trace Port clock.
+  side_effects: null
+interrupts: null
+timing: null

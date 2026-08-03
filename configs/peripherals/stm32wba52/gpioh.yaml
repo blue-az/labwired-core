@@ -1,0 +1,197 @@
+peripheral: GPIOH
+version: 0.1.0
+registers:
+- id: GPIOH_MODER
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 49152
+  fields:
+  - name: MODE3
+    bit_range:
+    - 7
+    - 6
+    description: |-
+      Port H configuration I/O pin 3
+      These bits are written by software to configure the I/O mode.
+      Access can be protected by GPIOH SEC3.
+  side_effects: null
+- id: GPIOH_OTYPER
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OT3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port H configuration I/O pin 3
+      This bit is written by software to configure the I/O output type.
+      Access can be protected by GPIOH SEC3.
+  side_effects: null
+- id: GPIOH_OSPEEDR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OSPEED3
+    bit_range:
+    - 7
+    - 6
+    description: |-
+      Port H configuration I/O pin 3
+      These bits are written by software to configure the I/O output speed.
+      Access can be protected by GPIOH SEC3.
+      Note: Refer to the device datasheet for the frequency specifications and the power supply and load conditions for each speed.
+  side_effects: null
+- id: GPIOH_PUPDR
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PUPD3
+    bit_range:
+    - 7
+    - 6
+    description: |-
+      Port H configuration I/O pin 3
+      These bits are written by software to configure the I/O pull-up or pull-down
+      Access can be protected by GPIOH SEC3.
+  side_effects: null
+- id: GPIOH_IDR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ID3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port H input data I/O pin 3
+      This bit is read-only. It contain the input value of the corresponding I/O port.
+      Access can be protected by GPIOH SEC3.
+  side_effects: null
+- id: GPIOH_ODR
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OD3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port H output data I/O pin 3
+      This bits can be read and written by software.
+      Access can be protected by GPIOH SEC3.
+      Note: For atomic bit set/reset, the OD bit can be individually set and/or reset by writing to the GPIOH_BSRR or GPIOH_BRR registers.
+  side_effects: null
+- id: GPIOH_BSRR
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BS3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port H set I/O pin 3
+      This bit is write-only. A read to this bit returns the value 0.
+      Access can be protected by GPIOH SEC3.
+  - name: BR3
+    bit_range:
+    - 19
+    - 19
+    description: |-
+      Port H reset I/O pin 3
+      This bit is write-only. A read to this bit returns the value 0.
+      Access can be protected by GPIOH SEC3.
+      Note: If both BS3 and BR3 are set, BS3 has priority.
+  side_effects: null
+- id: GPIOH_LCKR
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LCK3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port H lock I/O pin 3
+      This bit is read/write but can only be written when the LCKK bit is 0
+      Access can be protected by GPIOH SEC3.
+  - name: LCKK
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      Lock key
+      This bit can be read any time. It can only be modified using the lock key write sequence.
+      Access is protected by GPIOH SEC3.
+      - LOCK key write sequence:
+      WR LCKR[16] = 1 + LCKR[3]
+      WR LCKR[16] = 0 + LCKR[3]
+      WR LCKR[16] = 1 + LCKR[3]
+      - LOCK key read
+      RD LCKR[16] = 1 (this read operation is optional but it confirms that the lock is active)
+      Note: During the LOCK key write sequence, the value of LCK3 must not change.
+      Note: Any error in the lock sequence aborts the LOCK.
+      Note: After the first LOCK sequence on any bit of the port, any read access on the LCKK bit returns 1 until the next MCU reset or peripheral reset.
+  side_effects: null
+- id: GPIOH_AFRL
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: AFSEL3
+    bit_range:
+    - 15
+    - 12
+    description: |-
+      Alternate function selection for port H I/O pin 3
+      These bits are written by software to configure alternate function I/Os.
+      Access can be protected by GPIOH SEC3.
+  side_effects: null
+- id: GPIOH_BRR
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BR3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port H reset I/O pin 3
+      This bit is write-only. A read to this bit returns the value 0.
+      Access can be protected by GPIOH SEC3.
+  side_effects: null
+- id: GPIOH_SECCFGR
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: SEC3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      I/O pin of port H secure bit enable 3
+      This bit is written by software to enabled the security I/O port pin.
+  side_effects: null
+interrupts: null
+timing: null
