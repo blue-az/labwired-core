@@ -299,6 +299,82 @@ impl SystemBus {
         out
     }
 
+    /// What the device at a given PLACEMENT is currently showing.
+    ///
+    /// [`Self::inspect_devices`] answers "what is attached to this machine, and
+    /// what is each one called". This answers the different question a renderer
+    /// asks sixty times a second: "the panel the author placed on THIS
+    /// controller, at THIS address — what is on its screen right now?"
+    ///
+    /// Both are joins over the same [`Self::for_each_attached_device`] walk and
+    /// both read pixels through [`DeviceEvidence::artifacts`], which is the
+    /// entire point of this existing. `crates/wasm` used to carry a SECOND
+    /// display-evidence system: one bespoke accessor per panel, each
+    /// re-enumerating by downcast every controller that panel might hang off.
+    /// A controller missing from one of those hand-written lists did not fail
+    /// loudly — it rendered a working, actively-painted panel blank. The lists
+    /// did not even agree with each other: the ILI9341 could be read off an
+    /// ESP32-C3 but not off a classic ESP32, for no reason but which arm
+    /// somebody had remembered to write. Controller coverage is now a property
+    /// of the walk, so a controller it reaches is readable from `inspect` and
+    /// from the renderer at the same instant, and one it does not reach is
+    /// invisible to both rather than to one.
+    ///
+    /// Matching is on PLACEMENT and on what the device says it is — never on a
+    /// Rust type and never on a declared type string:
+    ///
+    /// * `bus` — the controller peripheral name, as the caller's binding states
+    ///   it, compared against the name the walk reports for the device.
+    /// * `address` — the I²C address the device answers to. `None` does not
+    ///   constrain, which is what an SPI caller wants: the accessors this
+    ///   replaces never compared chip-selects either.
+    /// * `formats` — accepted `meta.format` values. A model names its own
+    ///   format next to the buffer that format describes, so this asks the
+    ///   DEVICE what it is instead of the caller downcasting to a concrete
+    ///   struct. Panels that genuinely share a wire format share an entry: the
+    ///   SSD1680 and the UC8151D both emit `epaper_tricolor_1bpp_planes`, and
+    ///   treating them as interchangeable is what the UC8151D accessor already
+    ///   did by hand — precisely because the DECLARED type is not reliable
+    ///   (system YAMLs written before the split still say `ssd1680_*` for a
+    ///   panel the ESP32 builder attaches as a `Uc8151dTricolor290`).
+    ///
+    /// `id` is stamped onto the returned artifact exactly as the manifest join
+    /// stamps a declaration id in [`Self::inspect_devices`]; the caller passes
+    /// the id it addressed the device by.
+    ///
+    /// The first matching device wins, in walk order. Evidence is asked for
+    /// only AFTER `bus` and `address` have failed to exclude a device, so a
+    /// panel's (sometimes expensive) artifact is never built to answer a query
+    /// about a different device on a different controller.
+    pub fn device_artifact_at(
+        &self,
+        bus: &str,
+        address: Option<u8>,
+        formats: &[&str],
+        id: &str,
+        opts: &crate::inspect::InspectOpts,
+    ) -> Option<crate::inspect::Artifact> {
+        let mut found: Option<crate::inspect::Artifact> = None;
+        self.for_each_attached_device(&mut |on, d| {
+            if found.is_some() || on != Some(bus) {
+                return;
+            }
+            if address.is_some() && d.address != address {
+                return;
+            }
+            let Some(evidence) = d.evidence else {
+                return;
+            };
+            found = evidence.artifacts(id, opts).into_iter().find(|a| {
+                a.meta
+                    .get("format")
+                    .and_then(serde_json::Value::as_str)
+                    .is_some_and(|f| formats.contains(&f))
+            });
+        });
+        found
+    }
+
     /// The addressed join: which declaration, if any, describes the device
     /// found at this placement.
     ///
