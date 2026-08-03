@@ -63,6 +63,7 @@ pub(crate) fn run_firmware_riscv(args: RunArgs, _chip_yaml: String) -> ExitCode 
     // Minimal system manifest: no external devices, no extra peripherals.
     // All peripherals come from the chip descriptor.
     let manifest = labwired_config::SystemManifest {
+        parts: Vec::new(),
         schema_version: "1.0".to_string(),
         name: chip.name.clone(),
         chip: args.chip.to_string_lossy().into_owned(),

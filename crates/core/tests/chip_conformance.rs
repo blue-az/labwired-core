@@ -295,6 +295,7 @@ fn root(rel: &str) -> PathBuf {
 
 fn dummy_manifest(path: &str) -> SystemManifest {
     SystemManifest {
+        parts: Vec::new(),
         walk_deleted: Some(false),
         schema_version: "1.0".to_string(),
         name: "chip-conformance".to_string(),

@@ -1,0 +1,48 @@
+name: "playground-board"
+chip: "inline"
+cpu_hz: 160_000_000
+parts:
+  - schema: labwired.part/v1
+    type: acme:tmp999
+    source: acme-private
+    behavior:
+      primitive: i2c_device
+      i2c:
+        default_address: 74
+        pointer_mask: 3
+        registers:
+          - name: TEMP
+            addr: 0
+            width: 2
+            endian: be
+            access: r
+            reset: 4660
+    catalog:
+      deviceClass: i2c_device
+      defaultI2cAddress: 74
+      pins:
+        - name: SDA
+          etype: bidirectional
+          role: i2c_sda
+        - name: SCL
+          etype: input
+          role: i2c_scl
+external_devices:
+  - id: "dev"
+    type: "acme:tmp999"
+    connection: "i2c0"
+    route:
+      sda: "GPIO4"
+      scl: "GPIO5"
+    config:
+      i2c_address: 0x4a
+board_io:
+  - id: "dev"
+    kind: "i2c_device"
+    peripheral: "i2c0"
+    pin: 0
+    signal: "input"
+    active_high: true
+    i2c_address: 0x4a
+    device_type: "acme:tmp999"
+

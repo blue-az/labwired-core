@@ -577,6 +577,7 @@ fn test_from_config_attaches_adxl345_external_device_to_i2c() {
         serde_yaml::Value::Number(0x53.into()),
     );
     let manifest = SystemManifest {
+        parts: Vec::new(),
         cosim_models: Vec::new(),
         walk_deleted: Some(false),
         schema_version: "1.0".to_string(),
@@ -997,6 +998,7 @@ fn test_esp32c3_i2c_gpio_matrix_distinguishes_gpio45_from_gpio67() {
             serde_yaml::Value::Number(0x3C.into()),
         );
         let manifest = SystemManifest {
+            parts: Vec::new(),
             cosim_models: Vec::new(),
             walk_deleted: Some(false),
             schema_version: "1.0".to_string(),
@@ -1216,6 +1218,7 @@ fn test_from_config_attaches_bmp280_to_esp32c3_i2c0() {
         serde_yaml::Value::Number(0x76.into()),
     );
     let manifest = SystemManifest {
+        parts: Vec::new(),
         cosim_models: Vec::new(),
         walk_deleted: Some(false),
         schema_version: "1.0".to_string(),
@@ -1367,6 +1370,7 @@ fn test_from_config_attaches_mlx90640_to_esp32c3_i2c0_and_reads_eeprom() {
         serde_yaml::Value::Number(25.0.into()),
     );
     let manifest = SystemManifest {
+        parts: Vec::new(),
         cosim_models: Vec::new(),
         walk_deleted: Some(false),
         schema_version: "1.0".to_string(),
@@ -2183,6 +2187,7 @@ peripherals:
 
 fn empty_manifest() -> SystemManifest {
     SystemManifest {
+        parts: Vec::new(),
         cosim_models: Vec::new(),
         walk_deleted: Some(false),
         schema_version: "1.0".to_string(),
@@ -2322,6 +2327,7 @@ fn manifest_with_external_device(
     config: std::collections::HashMap<String, serde_yaml::Value>,
 ) -> labwired_config::SystemManifest {
     labwired_config::SystemManifest {
+        parts: Vec::new(),
         cosim_models: Vec::new(),
         walk_deleted: Some(false),
         schema_version: "1.0".to_string(),

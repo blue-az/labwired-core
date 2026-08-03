@@ -431,6 +431,7 @@ pub mod integration_tests {
         };
 
         let manifest = SystemManifest {
+            parts: Vec::new(),
             walk_deleted: Some(false),
             schema_version: "1.0".to_string(),
             name: "test-system".to_string(),
@@ -608,6 +609,7 @@ pub mod integration_tests {
         };
 
         let manifest = SystemManifest {
+            parts: Vec::new(),
             walk_deleted: Some(false),
             schema_version: "1.0".to_string(),
             name: "test-system-2".to_string(),
@@ -673,6 +675,7 @@ pub mod integration_tests {
         };
 
         let manifest = SystemManifest {
+            parts: Vec::new(),
             walk_deleted: Some(false),
             schema_version: "1.0".to_string(),
             name: "test-system-3".to_string(),
@@ -733,6 +736,7 @@ pub mod integration_tests {
         };
 
         let manifest = SystemManifest {
+            parts: Vec::new(),
             walk_deleted: Some(false),
             schema_version: "1.0".to_string(),
             name: "test-system-gpio-v2".to_string(),
@@ -799,6 +803,7 @@ pub mod integration_tests {
         };
 
         let manifest = SystemManifest {
+            parts: Vec::new(),
             walk_deleted: Some(false),
             schema_version: "1.0".to_string(),
             name: "test-system-uart-v2".to_string(),
@@ -953,6 +958,7 @@ pub mod integration_tests {
         };
 
         let manifest = SystemManifest {
+            parts: Vec::new(),
             walk_deleted: Some(false),
             schema_version: "1.0".to_string(),
             name: "test-system-two-uarts".to_string(),
@@ -1014,6 +1020,7 @@ pub mod integration_tests {
         };
 
         let manifest = SystemManifest {
+            parts: Vec::new(),
             walk_deleted: Some(false),
             schema_version: "1.0".to_string(),
             name: "test-system-rcc-v2".to_string(),
@@ -1077,6 +1084,7 @@ pub mod integration_tests {
         };
 
         let manifest = SystemManifest {
+            parts: Vec::new(),
             walk_deleted: Some(false),
             schema_version: "1.0".to_string(),
             name: "test-system-rcc-f4".to_string(),
@@ -1140,6 +1148,7 @@ pub mod integration_tests {
         };
 
         let manifest = SystemManifest {
+            parts: Vec::new(),
             walk_deleted: Some(false),
             schema_version: "1.0".to_string(),
             name: "test-system-gpio-v2-alias".to_string(),
@@ -2356,6 +2365,7 @@ pub mod integration_tests {
         };
 
         let manifest = SystemManifest {
+            parts: Vec::new(),
             walk_deleted: Some(false),
             schema_version: "1.0".to_string(),
             name: "test-system".to_string(),
@@ -2446,6 +2456,7 @@ pub mod integration_tests {
         };
 
         let manifest = SystemManifest {
+            parts: Vec::new(),
             cosim_models: Vec::new(),
             walk_deleted: Some(false),
             schema_version: "1.0".to_string(),
@@ -2520,6 +2531,7 @@ pub mod integration_tests {
         };
 
         let manifest = SystemManifest {
+            parts: Vec::new(),
             cosim_models: Vec::new(),
             walk_deleted: Some(false),
             schema_version: "1.0".to_string(),
@@ -2733,6 +2745,7 @@ pub mod integration_tests {
             serde_yaml::Value::Number(0x3C.into()),
         );
         let manifest = SystemManifest {
+            parts: Vec::new(),
             cosim_models: Vec::new(),
             walk_deleted: Some(false),
             schema_version: "1.0".to_string(),
@@ -2873,6 +2886,7 @@ pub mod integration_tests {
                 serde_yaml::Value::Number(0x3C.into()),
             );
             let manifest = SystemManifest {
+                parts: Vec::new(),
                 cosim_models: Vec::new(),
                 walk_deleted: Some(false),
                 schema_version: "1.0".to_string(),

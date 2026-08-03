@@ -126,6 +126,7 @@ fn report(system: &str, bus: &SystemBus) -> Option<String> {
 
 fn dummy_manifest(chip_path: &str) -> SystemManifest {
     SystemManifest {
+        parts: Vec::new(),
         walk_deleted: Some(false),
         schema_version: "1.0".to_string(),
         name: "peripheral-reachability".to_string(),
