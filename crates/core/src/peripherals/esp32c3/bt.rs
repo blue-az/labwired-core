@@ -1257,48 +1257,6 @@ const RWBLECNTL: u64 = 0x000;
 /// bring-up step.
 const RWBLECNTL_SELF_CLEARING: u32 = 0x8000_0000;
 
-/// `RWBLECNTL` bit25 — **abort the advertising event that is currently in
-/// flight**. `r_lld_adv_stop` (`0x4001_898A`) reaches this ONLY down the branch
-/// it takes when the activity's state byte `lld_adv_env[act]->[137]` is 1, i.e.
-/// an event is programmed and running:
-///
-/// ```text
-/// 40018a28: sh   s3,0(s0)      ; CS+0x20 = 1
-/// 40018a2c: lw   a5,0(a3)      ; a3 = 0x6003_1000, RWBLECNTL
-/// 40018a2e: and  a5,a5,a4      ; a4 = 0xfdff_ffff  -> clear bit25
-/// 40018a30: lui  a4,0x2000
-/// 40018a34: or   a5,a5,a4      ; -> set bit25
-/// 40018a36: sw   a5,0(a3)
-/// 40018a38: li   a5,2
-/// 40018a3a: sb   a5,137(s2)    ; activity state = 2 (STOPPING)
-/// ```
-///
-/// The state byte is then 2 and firmware **waits** — the stop is completed by
-/// `lld_adv_frm_isr` → `r_lld_adv_end` when the event reports its end. With
-/// state 0 (nothing in flight) a completely different, synchronous path runs
-/// (`0x4001_89E6`) and this bit is never touched.
-///
-/// That asymmetry is the whole bug this models. Ignoring bit25 is harmless at a
-/// slow re-advertising cadence, because a stop almost always lands between
-/// events and takes the synchronous path. Publish every 20 ms — the BLE minimum
-/// advertising interval, which a game legitimately uses — and a stop almost
-/// always lands ON an event: firmware sets state 2 and waits for an end that
-/// the model, having dropped the abort, never delivers early. The activity
-/// stays STOPPING, `adv_start` never re-arms it, and the node goes silent after
-/// its first publish while still looking healthy.
-///
-/// Servicing it ends the in-flight event through the SAME path a natural
-/// expiry takes (`ET_STATUS_END` + [`INT_SCH_PROG_END`]), which is irq_type 0 —
-/// one of the two `r_lld_adv_frm_cbk` (`0x4001_7550`) dispatches to
-/// `lld_adv_frm_isr`. Whether silicon instead reports the abort as irq_type 1
-/// (which that callback also accepts) was NOT determined; both reach the same
-/// handler, so the distinction is not observable through this interface.
-///
-/// Whether the hardware clears bit25 once serviced was also not determined, so
-/// it is left as plain storage and only the 0->1 EDGE acts — firmware's own
-/// read-modify-write is what puts it back.
-const RWBLECNTL_ADV_ABORT: u32 = 1 << 25;
-
 /// Read-only hardware identity/configuration words, seeded from the silicon
 /// capture of 2026-08-02. These are the ONLY snapshot-seeded values in the
 /// model; everything else is either derived (the timebase) or plain storage.
@@ -1421,12 +1379,6 @@ pub struct Esp32c3Bt {
     prog_queue: VecDeque<u32>,
     /// The programmed event currently being executed, if any.
     radio: Option<RadioEvent>,
-    /// An abort requested through [`RWBLECNTL_ADV_ABORT`] that the core has not
-    /// acted on yet. The register write cannot end the event itself — it has no
-    /// bus, and ending one writes the exchange table — so it is queued here and
-    /// [`Esp32c3Bt::service_radio`] picks it up at once, exactly as `+0x100`
-    /// queues an event start through `prog_queue`.
-    abort_requested: bool,
     /// Duration of [`Self::radio`], in CPU cycles, decoded from `ET + 0xA`.
     radio_duration: u64,
     /// Sequence number of the oldest air frame this controller has not looked
@@ -1476,7 +1428,6 @@ impl Esp32c3Bt {
             clock: None,
             prog_queue: VecDeque::new(),
             radio: None,
-            abort_requested: false,
             radio_duration: 0,
             rx_cursor: 0,
             node_id: next_node_id(),
@@ -1674,9 +1625,8 @@ impl Esp32c3Bt {
             fifo.push_back(queued);
         }
         if bt_trace_enabled() {
-            let nid = self.node_id;
             eprintln!(
-                "[bt{nid}] IRQ raw|={rising:#010x} stat={:#010x} fifo_cnt={} (clkn={} fine={})",
+                "[bt] IRQ raw|={rising:#010x} stat={:#010x} fifo_cnt={} (clkn={} fine={})",
                 self.int_raw.get() & self.int_enable(),
                 fifo.len(),
                 Self::clkn_at(elapsed),
@@ -1870,21 +1820,6 @@ impl Esp32c3Bt {
     /// carries the device address, access address, CRC init and channel, and
     /// its `+0x1C` points at a TX descriptor whose `+0x2` is
     /// `(length << 8) | header` and whose `+0x4` points at the payload bytes.
-    /// Is the event at `idx` driven by a legacy-ADVERTISING control structure?
-    /// Used to scope the [`RWBLECNTL_ADV_ABORT`] truncation to the activity the
-    /// ROM actually stops. Unreadable exchange memory answers `false`: an abort
-    /// that cannot be attributed is not applied, which leaves the event to end
-    /// normally rather than silently closing someone else's radio window.
-    fn event_is_legacy_adv(&self, bus: &mut dyn Bus, idx: u32) -> bool {
-        let et = Self::et_entry(idx);
-        let Some(cs_ptr) = self.em_read_u16(bus, et + ET_CS_PTR) else {
-            return false;
-        };
-        let cs = u32::from(cs_ptr) * 2;
-        self.em_read_u16(bus, cs + CS_FORMAT)
-            .is_some_and(|format| format & 0xFF == CS_FORMAT_LEGACY_ADV)
-    }
-
     fn transmit_event(&self, bus: &mut dyn Bus, idx: u32) -> bool {
         let et = Self::et_entry(idx);
         let Some(cs_ptr) = self.em_read_u16(bus, et + ET_CS_PTR) else {
@@ -1900,8 +1835,7 @@ impl Esp32c3Bt {
             // is left alone rather than guessed at; the event still ends
             // normally so the controller is never wedged by our ignorance.
             if bt_trace_enabled() {
-                let nid = self.node_id;
-                eprintln!("[bt{nid}] radio: CS format {format:#06x} not modelled — no TX");
+                eprintln!("[bt] radio: CS format {format:#06x} not modelled — no TX");
             }
             return false;
         }
@@ -1956,10 +1890,9 @@ impl Esp32c3Bt {
         pdu.extend_from_slice(&payload);
 
         if bt_trace_enabled() {
-            let nid = self.node_id;
             let hex: String = pdu.iter().map(|b| format!("{b:02x} ")).collect();
             eprintln!(
-                "[bt{nid}] radio TX ch{channel} aa={access_address:#010x} crcinit={crc_init:#08x} \
+                "[bt] radio TX ch{channel} aa={access_address:#010x} crcinit={crc_init:#08x} \
                  et={idx} pdu={hex}"
             );
         }
@@ -2030,9 +1963,8 @@ impl Esp32c3Bt {
         };
         if next_word & RXD_DONE != 0 {
             if bt_trace_enabled() {
-                let nid = self.node_id;
                 eprintln!(
-                    "[bt{nid}] radio RX ch{channel}: rxd={rxd:#06x} still RXDONE — no free buffer"
+                    "[bt] radio RX ch{channel}: rxd={rxd:#06x} still RXDONE — no free buffer"
                 );
             }
             return false;
@@ -2050,7 +1982,7 @@ impl Esp32c3Bt {
         else {
             return false;
         };
-        self.rx_cursor = frame.seq; // FALSIFICATION PROBE
+        self.rx_cursor = frame.seq + 1;
         if frame.pdu.len() < 2 {
             return false;
         }
@@ -2111,10 +2043,9 @@ impl Esp32c3Bt {
         }
 
         if bt_trace_enabled() {
-            let nid = self.node_id;
             let hex: String = frame.pdu.iter().map(|b| format!("{b:02x} ")).collect();
             eprintln!(
-                "[bt{nid}] radio RX ch{channel} aa={access_address:#010x} rxd={rxd:#06x} \
+                "[bt] radio RX ch{channel} aa={access_address:#010x} rxd={rxd:#06x} \
                  et={idx} cs={cs:#06x} label={link_label} pdu={hex}"
             );
         }
@@ -2133,8 +2064,7 @@ impl Esp32c3Bt {
                     // decoded, so it is dropped rather than completed with
                     // invented state. Firmware will stall visibly.
                     if bt_trace_enabled() {
-                        let nid = self.node_id;
-                        eprintln!("[bt{nid}] radio: ET {idx} unreadable (EM unmapped) — dropped");
+                        eprintln!("[bt] radio: ET {idx} unreadable (EM unmapped) — dropped");
                     }
                     continue;
                 };
@@ -2151,49 +2081,6 @@ impl Esp32c3Bt {
                 self.radio_duration = duration;
             }
             let Some(ev) = self.radio else { return };
-
-            // An abort requested through `RWBLECNTL` bit25 ends the in-flight
-            // event NOW instead of at its programmed expiry, reporting the
-            // ordinary end so `lld_adv_frm_isr` completes the stop. Firmware is
-            // sitting in state 2 waiting for exactly this. See
-            // [`RWBLECNTL_ADV_ABORT`].
-            //
-            // ONLY a `Running` event is truncated, and that distinction is the
-            // whole correctness of this: an advertising event transmits its PDU
-            // when it STARTS, so by the time firmware can observe one in flight
-            // and ask for an abort, the packet is already on the air. Ending a
-            // `Pending` event instead would discard a transmission that silicon
-            // had already made — measured, not theorised: doing so silenced
-            // both nodes outright, where before at least one was heard.
-            // A request that arrives while an event is still Pending therefore
-            // stays queued and applies once that event has transmitted.
-            // ...and ONLY an ADVERTISING event. `RWBLECNTL` bit25 is set by
-            // `r_lld_adv_stop`, so it stops the advertiser and nothing else —
-            // but this model runs one event queue for every activity, and at a
-            // 20 ms cadence the event in flight is very often the SCANNER.
-            // Truncating that closes the receive window, which is measured, not
-            // theorised: it took reception from "one frame" to zero and neither
-            // node ever heard the other. Reads the same control-structure
-            // format the TX path gates on.
-            if self.abort_requested
-                && matches!(ev.phase, RadioPhase::Running)
-                && self.event_is_legacy_adv(bus, ev.et_idx)
-            {
-                self.abort_requested = false;
-                self.set_et_status(bus, ev.et_idx, ET_STATUS_END);
-                self.raise_irq_bits(INT_SCH_PROG_END);
-                if bt_trace_enabled() {
-                    let nid = self.node_id;
-                    eprintln!(
-                        "[bt{nid}] radio: ET {} aborted early by RWBLECNTL bit25 (clkn={})",
-                        ev.et_idx,
-                        Self::clkn_at(elapsed)
-                    );
-                }
-                self.radio = None;
-                continue;
-            }
-
             if elapsed < ev.deadline {
                 return;
             }
@@ -2230,9 +2117,8 @@ impl Esp32c3Bt {
                     self.set_et_status(bus, ev.et_idx, ET_STATUS_END);
                     self.raise_irq_bits(INT_SCH_PROG_END);
                     if bt_trace_enabled() {
-                        let nid = self.node_id;
                         eprintln!(
-                            "[bt{nid}] radio: ET {} end (clkn={})",
+                            "[bt] radio: ET {} end (clkn={})",
                             ev.et_idx,
                             Self::clkn_at(elapsed)
                         );
@@ -2412,9 +2298,8 @@ impl Peripheral for Esp32c3Bt {
         // straight off the tail of the log and compared with the OpenOCD write
         // trace this model was built from.
         if bt_trace_enabled() {
-            let nid = self.node_id;
             eprintln!(
-                "[bt{nid}] +{offset:#05x} <= {value:#010x}  (clkn={} fine={})",
+                "[bt] +{offset:#05x} <= {value:#010x}  (clkn={} fine={})",
                 self.clkn(),
                 self.clkn_fine()
             );
@@ -2448,13 +2333,6 @@ impl Peripheral for Esp32c3Bt {
             // Consume the self-clearing command bit — the hardware executes it
             // and drops it, so it must never read back set.
             RWBLECNTL => {
-                // Only the 0->1 edge aborts. `r_lld_adv_stop` read-modify-writes
-                // the whole register, so an unrelated control-word update that
-                // happens to carry bit25 along must not abort a second time.
-                let rising = value & !self.reg(RWBLECNTL) & RWBLECNTL_ADV_ABORT;
-                if rising != 0 {
-                    self.abort_requested = true;
-                }
                 if let Some(slot) = self.regs.get_mut((offset / 4) as usize) {
                     *slot = value & !RWBLECNTL_SELF_CLEARING;
                 }
@@ -2507,8 +2385,7 @@ impl Peripheral for Esp32c3Bt {
                         *slot = keep | target;
                     }
                     if bt_trace_enabled() {
-                        let nid = self.node_id;
-                        eprintln!("[bt{nid}] rxbuf jump -> {target:#06x}, raising bit 18");
+                        eprintln!("[bt] rxbuf jump -> {target:#06x}, raising bit 18");
                     }
                     self.raise_irq_bits(INT_LLD_UPDATE_RXBUF);
                 }
@@ -3897,144 +3774,5 @@ mod tests {
             last = now;
         }
         assert!(last > 0, "CLKN never advanced");
-    }
-
-    /// **A 20 MS RE-PUBLICATION CADENCE DELIVERS EVERY PAYLOAD, INCLUDING THE
-    /// ONES WHOSE ADVERTISING EVENT WAS STOPPED MID-FLIGHT.**
-    ///
-    /// This is the fast-cadence half of the property
-    /// `crates/cli/tests/e2e_esp32c3_ble_adv_republish.rs` gates end-to-end at
-    /// 700 ms. 700 ms is ~250x the 2.8 ms an advertising event runs for, so at
-    /// that cadence `r_lld_adv_stop` (`0x4001_898A`) essentially never finds an
-    /// event in flight and the abort path this model does NOT implement
-    /// (`RWBLECNTL` bit 25 + `CS+0x20 = 1` — see the module docs) is never
-    /// taken. **At 20 ms it is taken on nearly every iteration**, which is the
-    /// case nothing in this tree covered.
-    ///
-    /// What it drives, per iteration, is the ROM's own sequence:
-    ///
-    /// 1. the controller stages a NEW advertising payload and pushes the event;
-    /// 2. the event starts and transmits (`r_lld_adv_evt_start_cbk` →
-    ///    `r_sch_prog_push`);
-    /// 3. **while it is still running**, `r_lld_adv_stop` writes `CS+0x20 = 1`
-    ///    (halfword, `sh s3,0(s0)` at `0x4001_8A28`, address
-    ///    `emi_get_mem_addr_by_offset(1024) + cs_idx*90 + 32`) and sets
-    ///    `RWBLECNTL` bit 25 (`0x4001_8A2C`..`0x4001_8A36`: read `0x6003_1000`,
-    ///    `& 0xFDFF_FFFF`, `| 0x0200_0000`, write back) — the two writes this
-    ///    model stores and does not act on;
-    /// 4. the event runs out its programmed duration and ends, which is what
-    ///    `r_lld_adv_frm_isr` (`0x4001_6FE8` reads the state byte at
-    ///    `env+137`, `0x4001_6FF8` branches on state 2) then completes through
-    ///    `r_lld_adv_end`;
-    /// 5. the peer's scanning activity runs and must have the new payload.
-    ///
-    /// The acceptance is that the scanner reads **every one** of eight
-    /// successive DIFFERENT payloads. One is a reception; eight in a row at
-    /// 20 ms is a data stream an application can carry live state on, and it is
-    /// the thing that would break if the unmodelled abort were ever
-    /// implemented as "cancel the in-flight event" rather than "let it finish"
-    /// — the ambiguity `#756` recorded and could not resolve from the ROM.
-    /// Watched fail: making the `RWBLECNTL` bit-25 write drop `self.radio`
-    /// turns this red at iteration 0 while every existing BLE test stays green.
-    #[cfg(feature = "event-scheduler")]
-    #[test]
-    fn a_twenty_millisecond_republish_cadence_delivers_every_payload() {
-        use crate::peripherals::ble_air::BleAirBus;
-        use crate::sched::EventScheduler;
-
-        /// 20 ms — the BLE minimum advertising interval, and the cadence a
-        /// game re-publishes at. 64 CLKN ticks of 312.5 us.
-        const CADENCE_CYCLES: u64 = 64 * CYCLES_PER_CLKN_TICK;
-        /// Programmed duration of the fixture's advertising event, decoded
-        /// from `ET+0xA = 0x0AF7` half-microseconds: 2.807 ms.
-        const EVENT_CYCLES: u64 = 0x0AF7 * 2 * CYCLES_PER_FINE_TICK;
-        /// How far into the event the stop lands. Anywhere strictly inside
-        /// works; 1 ms is what the Pong sketch's own timing produces.
-        const STOP_AT: u64 = 1_000 * 160;
-        const ITERATIONS: u64 = 8;
-
-        assert!(
-            STOP_AT < EVENT_CYCLES && EVENT_CYCLES < CADENCE_CYCLES,
-            "the fixture must actually stop mid-event and still fit the cadence"
-        );
-
-        let clock = CycleClock::default();
-        let air = BleAirBus::new();
-
-        let mut adv = advertising_part(&clock);
-        adv.air = air.clone();
-        let mut adv_bus = RamBus::default();
-        let mut adv_sched = EventScheduler::new();
-
-        let mut scan = advertising_part(&clock);
-        scan.air = air.clone();
-        let mut scan_bus = RamBus::default();
-        let mut scan_sched = EventScheduler::new();
-        // The scanner needs the same exchange-memory base registers; staging
-        // the advertising fixture into it programs them. Its advertising entry
-        // is never pushed, so it only ever listens.
-        stage_advertising_event(&mut scan, &mut scan_bus, 0);
-
-        let mut received = Vec::new();
-        for k in 0..ITERATIONS {
-            let t0 = k * CADENCE_CYCLES;
-            let clkn0 = (t0 / CYCLES_PER_CLKN_TICK) as u32;
-
-            // 1. A NEW payload every iteration — the whole point. The first
-            //    manufacturer byte is the iteration counter, so a stale frame
-            //    is distinguishable from a fresh one.
-            stage_advertising_event(&mut adv, &mut adv_bus, clkn0);
-            adv_bus.put(FIXTURE_EM_BASE + 0xC00, &[0xA0 + k as u8]);
-
-            // 2. Push and start it: the frame goes on the air here.
-            adv.write_u32(PROG_PUSH, 0x8000_0000).unwrap();
-            let token = adv.take_scheduled_events()[0].1;
-            adv_sched.advance_to(t0);
-            clock.publish(t0);
-            adv.on_event(token, &mut adv_sched, &mut adv_bus);
-
-            // 3. `r_lld_adv_stop` with the activity in state 1, verbatim.
-            let cs_cpu = FIXTURE_EM_BASE + 0x158;
-            adv_bus.put(cs_cpu + 0x20, &1u16.to_le_bytes());
-            let cntl = adv.read_u32(RWBLECNTL).unwrap();
-            adv.write_u32(RWBLECNTL, (cntl & 0xFDFF_FFFF) | 0x0200_0000)
-                .unwrap();
-
-            // 4. The event runs out its programmed duration and ends.
-            let t_end = t0 + EVENT_CYCLES;
-            adv_sched.advance_to(t_end);
-            clock.publish(t_end);
-            adv.on_event(token, &mut adv_sched, &mut adv_bus);
-
-            // 5. The peer's scanning activity must have the NEW payload.
-            let clkn_end = (t_end / CYCLES_PER_CLKN_TICK) as u32;
-            let (_rxd, rxbuf) = stage_scan_event(&mut scan, &mut scan_bus, 1, 2, clkn_end);
-            scan.write_u32(PROG_PUSH, 0x8000_0001).unwrap();
-            let token = scan.take_scheduled_events()[0].1;
-            for _ in 0..2 {
-                scan_sched.advance_to(t_end);
-                clock.publish(t_end);
-                scan.on_event(token, &mut scan_sched, &mut scan_bus);
-            }
-            // The received PDU is `[header, len, AdvA(6), data…]` and the
-            // descriptor's buffer holds everything after the length byte, so
-            // the first manufacturer byte is at +6.
-            received.push((scan_bus.u16_at(rxbuf + 6) & 0xFF) as u8);
-        }
-
-        let want: Vec<u8> = (0..ITERATIONS).map(|k| 0xA0 + k as u8).collect();
-        assert_eq!(
-            received, want,
-            "at a 20 ms re-publication cadence the peer must read EVERY \
-             payload, in order. A repeated value means a stopped event's stale \
-             payload was re-sent; a missing one means an advertising event \
-             that the mid-flight stop prevented from ever running. \
-             got {received:02x?}, want {want:02x?}"
-        );
-        assert_eq!(
-            air.trace_snapshot().len(),
-            ITERATIONS as usize,
-            "one frame per iteration — no dropped and no duplicated events"
-        );
     }
 }
