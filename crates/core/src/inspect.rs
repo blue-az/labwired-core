@@ -14,7 +14,14 @@
 //!   register never perturbs it.
 //! * **Honest gaps** — [`crate::Machine::peek`] returns an explicit
 //!   [`PeekByte::Unmapped`] marker for unmodeled address space instead of silent
-//!   zeros, so unmapped regions never look like real data.
+//!   zeros, so unmapped regions never look like real data. The same rule holds
+//!   one level up: [`RegisterView::value`] is `None` when the peripheral's model
+//!   did not answer the probe, so a NAMED register with nothing behind it is
+//!   never reported as containing zero.
+//! * **Naming is not modelling** — a schema contributes names, offsets and bit
+//!   slices, never behaviour. Both [`inspect_with_schema`] and
+//!   [`RegisterView::value`] exist to keep that visible rather than merely
+//!   documented.
 //! * **External devices are not peripherals** — an I²C sensor or SPI panel is
 //!   owned by its controller, not by the bus, so it is enumerated separately in
 //!   [`MachineInspect::devices`] instead of being given an invented base
@@ -74,9 +81,25 @@ pub struct RegisterView {
     pub offset: u64,
     /// Bit width: 8, 16, or 32.
     pub size: u8,
-    /// Live raw word, read side-effect-free via [`Peripheral::peek`].
-    pub value: u32,
-    /// Decoded via `bit_range`; empty when the register carries no field schema.
+    /// Live raw word, read side-effect-free via [`Peripheral::peek`] — or
+    /// `None` (JSON `null`) when the model **did not answer the probe**.
+    ///
+    /// [`Peripheral::peek`] defaults to `None` and only a handful of models
+    /// override it, so most named registers have no value behind them. This
+    /// used to substitute `0`, which a debugger, the web UI and an agent all
+    /// read as "this register genuinely contains zero" — a fabricated reading,
+    /// and worst of all for a [`crate::peripherals::stub::StubPeripheral`],
+    /// whose registers are then confidently named AND permanently wrong.
+    ///
+    /// `null` is the same choice [`PeekByte::Unmapped`] makes for address
+    /// space, for the same reason: absence of an answer must not be
+    /// representable as an answer. A register is `Some` only when EVERY byte of
+    /// it came back from the model.
+    #[serde(default)]
+    pub value: Option<u32>,
+    /// Decoded via `bit_range`. Empty when the register carries no field
+    /// schema — and also when `value` is `None`, because a field extracted from
+    /// a word nobody supplied would be the same fabrication one level down.
     pub fields: Vec<FieldView>,
     /// `"rw"` | `"ro"` | `"wo"`.
     pub access: String,
@@ -237,15 +260,38 @@ fn extract_field(word: u32, bits: [u8; 2]) -> u32 {
 }
 
 /// Assemble a little-endian register word of `size` bits from side-effect-free
-/// [`Peripheral::peek`] byte reads. Bytes the peripheral can't probe read as 0.
-fn peek_word<P: Peripheral + ?Sized>(p: &P, offset: u64, size: u8) -> u32 {
+/// [`Peripheral::peek`] byte reads.
+///
+/// `None` if ANY byte of the register went unanswered. Partial is not a useful
+/// middle ground: half a word from the model and half invented is a word that
+/// looks exactly like data and is not, so the whole register is reported as
+/// unreadable instead. This used to `unwrap_or(0)` each byte, which is where
+/// every named-but-unmodeled register got its confident `0x00000000`.
+fn peek_word<P: Peripheral + ?Sized>(p: &P, offset: u64, size: u8) -> Option<u32> {
     let n = (size / 8).max(1) as u64;
     let mut word: u32 = 0;
     for i in 0..n {
-        let byte = p.peek(offset + i).unwrap_or(0) as u32;
+        let byte = p.peek(offset + i)? as u32;
         word |= byte << (8 * i);
     }
-    word
+    Some(word)
+}
+
+/// Decode a register's named fields, or nothing at all when the model did not
+/// supply the word. Shared by [`default_inspect`] and [`inspect_with_schema`]
+/// so the two cannot disagree about what an unreadable register looks like.
+fn decode_fields(value: Option<u32>, fields: &[FieldSchema]) -> Vec<FieldView> {
+    let Some(value) = value else {
+        return Vec::new();
+    };
+    fields
+        .iter()
+        .map(|f| FieldView {
+            name: f.name.clone(),
+            bits: f.bits,
+            value: extract_field(value, f.bits),
+        })
+        .collect()
 }
 
 /// Generic peripheral inspection: walk the register schema, decode each word
@@ -275,15 +321,7 @@ pub fn default_inspect<P: Peripheral + ?Sized>(
     if let Some(schema) = schema {
         for reg in schema {
             let value = peek_word(p, reg.offset, reg.size);
-            let fields = reg
-                .fields
-                .iter()
-                .map(|f| FieldView {
-                    name: f.name.clone(),
-                    bits: f.bits,
-                    value: extract_field(value, f.bits),
-                })
-                .collect();
+            let fields = decode_fields(value, &reg.fields);
             registers.push(RegisterView {
                 name: reg.name,
                 offset: reg.offset,
@@ -372,15 +410,7 @@ pub fn inspect_with_schema<P: Peripheral + ?Sized>(
                 offset: reg.offset,
                 size: reg.size,
                 value,
-                fields: reg
-                    .fields
-                    .iter()
-                    .map(|f| FieldView {
-                        name: f.name.clone(),
-                        bits: f.bits,
-                        value: extract_field(value, f.bits),
-                    })
-                    .collect(),
+                fields: decode_fields(value, &reg.fields),
                 access: reg.access.to_string(),
             }
         })
@@ -588,6 +618,164 @@ mod tests {
         assert_eq!(
             artifact_generation(&[1, 2, 3]),
             artifact_generation(&[1, 2, 3])
+        );
+    }
+
+    /// A model that answers `peek` and a model that does not must not produce
+    /// the same JSON.
+    ///
+    /// This is the whole point of the nullable value. `Peripheral::peek`
+    /// defaults to `None`, so most native peripherals never answer — and a
+    /// schema names their registers regardless. Reporting `0` for those made
+    /// "nobody asked the model" indistinguishable from "the model says zero",
+    /// which is precisely the confusion this module's own doc comment says it
+    /// exists to prevent. The two peripherals below carry the SAME schema and
+    /// differ only in whether they implement `peek`.
+    #[test]
+    fn unanswered_probe_is_null_not_zero() {
+        use crate::{Peripheral, SimResult};
+
+        fn schema() -> Vec<RegisterSchema> {
+            vec![RegisterSchema {
+                name: "CTRL".into(),
+                offset: 0,
+                size: 32,
+                access: "rw",
+                fields: vec![FieldSchema {
+                    name: "ENABLE".into(),
+                    bits: [0, 0],
+                }],
+            }]
+        }
+
+        /// Answers the probe, and its answer happens to be zero.
+        #[derive(Debug)]
+        struct Answers;
+        impl Peripheral for Answers {
+            fn read(&self, _o: u64) -> SimResult<u8> {
+                Ok(0)
+            }
+            fn write(&mut self, _o: u64, _v: u8) -> SimResult<()> {
+                Ok(())
+            }
+            fn peek(&self, _o: u64) -> Option<u8> {
+                Some(0)
+            }
+            fn describe_registers(&self) -> Option<Vec<RegisterSchema>> {
+                Some(schema())
+            }
+        }
+
+        /// Models nothing probe-able — the overwhelmingly common case.
+        #[derive(Debug)]
+        struct Silent;
+        impl Peripheral for Silent {
+            fn read(&self, _o: u64) -> SimResult<u8> {
+                Ok(0)
+            }
+            fn write(&mut self, _o: u64, _v: u8) -> SimResult<()> {
+                Ok(())
+            }
+            fn describe_registers(&self) -> Option<Vec<RegisterSchema>> {
+                Some(schema())
+            }
+        }
+
+        let opts = InspectOpts::default();
+        let answered = default_inspect(&Answers, 0, "answers", &opts);
+        let silent = default_inspect(&Silent, 0, "silent", &opts);
+
+        assert_eq!(
+            answered.registers[0].value,
+            Some(0),
+            "a model that really reports zero still reports zero"
+        );
+        assert_eq!(
+            answered.registers[0].fields.len(),
+            1,
+            "fields decode from a real word"
+        );
+
+        assert_eq!(
+            silent.registers[0].value, None,
+            "no answer must not be reported as the number zero"
+        );
+        assert!(
+            silent.registers[0].fields.is_empty(),
+            "a field sliced out of a word nobody supplied is the same fabrication"
+        );
+        assert_eq!(
+            silent.registers[0].name, "CTRL",
+            "the register is still NAMED — the schema is honest about layout, \
+             it is the value that was never real"
+        );
+
+        // And the difference survives serialization, which is what every
+        // out-of-process consumer actually sees.
+        let a = serde_json::to_value(&answered.registers[0]).expect("serialize");
+        let s = serde_json::to_value(&silent.registers[0]).expect("serialize");
+        assert_eq!(a["value"], serde_json::json!(0));
+        assert_eq!(s["value"], serde_json::Value::Null);
+    }
+
+    /// The same rule applies to the externally-supplied-schema path, which is
+    /// where the great majority of named native registers come from (the SVD
+    /// import). It must not be a second, laxer implementation.
+    #[test]
+    fn externally_named_registers_are_also_null_when_unanswered() {
+        use crate::{Peripheral, SimResult};
+
+        #[derive(Debug)]
+        struct Silent;
+        impl Peripheral for Silent {
+            fn read(&self, _o: u64) -> SimResult<u8> {
+                Ok(0)
+            }
+            fn write(&mut self, _o: u64, _v: u8) -> SimResult<()> {
+                Ok(())
+            }
+        }
+
+        let schema = vec![RegisterSchema {
+            name: "SR".into(),
+            offset: 4,
+            size: 32,
+            access: "ro",
+            fields: vec![FieldSchema {
+                name: "BUSY".into(),
+                bits: [7, 7],
+            }],
+        }];
+        let pi = inspect_with_schema(&Silent, 0x4000_0000, "quiet", &schema);
+        assert_eq!(pi.registers[0].value, None);
+        assert!(pi.registers[0].fields.is_empty());
+    }
+
+    /// A partly-answered word is reported unreadable rather than half-invented.
+    #[test]
+    fn partially_answered_word_is_unreadable() {
+        use crate::{Peripheral, SimResult};
+
+        #[derive(Debug)]
+        struct HalfSpoken;
+        impl Peripheral for HalfSpoken {
+            fn read(&self, _o: u64) -> SimResult<u8> {
+                Ok(0)
+            }
+            fn write(&mut self, _o: u64, _v: u8) -> SimResult<()> {
+                Ok(())
+            }
+            /// Only the low half of the 32-bit word is modeled.
+            fn peek(&self, o: u64) -> Option<u8> {
+                (o < 2).then_some(0xFF)
+            }
+        }
+
+        assert_eq!(peek_word(&HalfSpoken, 0, 16), Some(0xFFFF), "fully modeled");
+        assert_eq!(
+            peek_word(&HalfSpoken, 0, 32),
+            None,
+            "half from the model and half invented is not a value"
         );
     }
 }

@@ -260,7 +260,11 @@ fn machine_inspect_enumerates_and_filters() {
     assert_eq!(one.peripherals.len(), 1);
     let ctrl = &one.peripherals[0].registers[0];
     assert_eq!(ctrl.name, "CTRL");
-    assert_eq!(ctrl.value, 0x5);
+    assert_eq!(
+        ctrl.value,
+        Some(0x5),
+        "declarative peek answers, so the word is real"
+    );
     assert_eq!(ctrl.fields[0].name, "ENABLE");
     assert_eq!(ctrl.fields[0].value, 1);
 }
