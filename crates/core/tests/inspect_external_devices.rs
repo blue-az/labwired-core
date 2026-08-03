@@ -364,3 +364,130 @@ fn record_external_devices_has_one_home() {
          or its devices inspect as anonymous addresses"
     );
 }
+
+// ── Panels that used to be evidence-blind ────────────────────────────────────
+//
+// Three display models painted correctly and reported nothing. `device_artifacts`
+// was a central `match` on concrete types with exactly two arms — `Ssd1306` and
+// `Ili9341` — so a panel became reportable only if somebody remembered to edit a
+// downcast chain in another file. Nobody did, for SH1107 or either tri-colour
+// e-paper.
+//
+// The cost was not cosmetic. `labwired_verify`'s display oracle resolves
+// `painted` / `min_ink_bytes` / `min_refresh_generation` against these artifacts,
+// so a lab built on one of these panels could never pass a display clause however
+// correct its firmware — and `labwired_verify` documents `panel:
+// "ssd1680_tricolor_290"` as an example value the engine could not emit.
+//
+// Both tests below drive the panel over its OWN wire protocol and check the
+// reported counts against arithmetic on the test's own input. Reading the model's
+// buffer back would prove only that a getter returns what a setter stored.
+
+/// The SH1107 that paints the published "IMAX Console" lab.
+///
+/// It rendered a complete console in the browser — via the wasm layer's own
+/// per-panel accessor — while `inspect` reported no artifact at all. Two pixel
+/// paths, one sighted and one blind.
+#[test]
+fn sh1107_reports_ink_matching_what_was_written() {
+    use labwired_core::peripherals::components::Sh1107;
+    use labwired_core::peripherals::i2c::I2cDevice;
+
+    const INKED_BYTES: usize = 5;
+
+    let mut dev = Sh1107::new(0x3c);
+    let command = |dev: &mut Sh1107, byte: u8| {
+        dev.write(0x00);
+        dev.write(byte);
+        dev.stop();
+    };
+    command(&mut dev, 0xAF); // display on
+    command(&mut dev, 0xB0); // page 0
+    command(&mut dev, 0x00); // column low nibble
+    command(&mut dev, 0x10); // column high nibble
+
+    // Five all-ones bytes: every bit set, so the expected pixel count is
+    // arithmetic on what this test wrote, not a re-read of the framebuffer.
+    dev.write(0x40);
+    for _ in 0..INKED_BYTES {
+        dev.write(0xFF);
+    }
+    dev.stop();
+
+    let arts = dev.artifacts("oled", &InspectOpts::default());
+    let art = arts
+        .iter()
+        .find(|a| a.kind == "framebuffer")
+        .expect("a painted SH1107 must report a framebuffer artifact");
+
+    assert_eq!(art.meta["format"], "sh1107_page");
+    assert_eq!(art.meta["w"], 128);
+    assert_eq!(art.meta["h"], 128, "16 pages of 8 rows, not an SSD1306's 8");
+    assert_eq!(art.meta["ink_bytes"], INKED_BYTES);
+    assert_eq!(art.meta["lit_pixels"], INKED_BYTES * 8);
+    assert_eq!(art.meta["display_on"], true);
+}
+
+/// The SSD1680 tri-colour e-paper behind both published weather labs.
+///
+/// Its planes are erased to `0xFF` (a set bit is "no ink"), so an inked cell is
+/// a byte that is NOT `0xFF` — and `refresh_generation` is the only thing that
+/// separates "RAM was written" from "the image is on the glass".
+#[test]
+fn epaper_reports_ink_and_whether_it_reached_the_glass() {
+    use labwired_core::peripherals::components::Ssd1680Tricolor290;
+
+    const INKED_BYTES: usize = 12;
+
+    let mut dev = Ssd1680Tricolor290::new("PA4");
+    // GxEPD2_290_C90c::_InitDisplay(), trimmed to what sets the RAM window.
+    let init: &[u8] = &[
+        0x12, 0x01, 0x27, 0x01, 0x00, 0x11, 0x03, 0x3C, 0x05, 0x18, 0x80, 0x21, 0x00, 0x80, 0x44,
+        0x00, 0x0F, 0x45, 0x00, 0x00, 0x27, 0x01, 0x4E, 0x00, 0x4F, 0x00, 0x00,
+    ];
+    dev.cs_select();
+    for &b in init {
+        dev.transfer(b);
+    }
+    dev.cs_release();
+
+    let before = dev.artifacts("panel", &InspectOpts::default());
+    assert_eq!(
+        before[0].meta["refresh_generation"], 0,
+        "nothing has been pushed to the glass yet"
+    );
+
+    // Write the black plane: 0x00 bytes are ink under this panel's convention.
+    dev.cs_select();
+    dev.transfer(0x24);
+    for _ in 0..INKED_BYTES {
+        dev.transfer(0x00);
+    }
+    dev.cs_release();
+
+    // Master activation — this is what puts the image on the glass.
+    dev.cs_select();
+    dev.transfer(0x20);
+    dev.cs_release();
+
+    let arts = dev.artifacts("panel", &InspectOpts::default());
+    let art = arts
+        .iter()
+        .find(|a| a.kind == "framebuffer")
+        .expect("a refreshed e-paper must report a framebuffer artifact");
+
+    assert_eq!(art.meta["format"], "epaper_tricolor_1bpp_planes");
+    assert_eq!(
+        art.meta["black_ink_bytes"], INKED_BYTES,
+        "ink is a byte that is not 0xFF, counted off the real plane"
+    );
+    assert_eq!(
+        art.meta["red_ink_bytes"], 0,
+        "this test never wrote the red plane; it must not invent ink there"
+    );
+    assert_eq!(
+        art.meta["refresh_generation"], 1,
+        "min_refresh_generation in the verify oracle resolves against this, and \
+         was unreachable for every e-paper until the panel could report it"
+    );
+}
