@@ -31,6 +31,7 @@
 
 use std::path::PathBuf;
 use std::process::Command;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 fn repo_root() -> PathBuf {
@@ -65,10 +66,22 @@ impl Run {
 /// and system paths are absolute, so the script's location does not matter.
 fn run_script(script_body: &str) -> Run {
     let root = repo_root();
-    let nonce = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_nanos();
+    // Timestamp PLUS a process-wide counter. `as_nanos()` is not actually
+    // nanosecond-granular on macOS, so sibling tests starting in the same
+    // microsecond used to land in the SAME directory and overwrite each
+    // other's script.yaml/result.json — a random subset of this file failed
+    // on every parallel run, a different subset each time, while
+    // `--test-threads=1` always passed. The counter makes the name unique
+    // regardless of what the clock resolves to.
+    static SEQ: AtomicU64 = AtomicU64::new(0);
+    let nonce = format!(
+        "{}-{}",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos(),
+        SEQ.fetch_add(1, Ordering::Relaxed)
+    );
     let dir = std::env::temp_dir().join(format!("labwired-stimulus-report-{nonce}"));
     std::fs::create_dir_all(&dir).expect("create temp dir");
     let script = dir.join("script.yaml");

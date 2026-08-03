@@ -10,7 +10,12 @@ fn test_cli_json_metrics() {
         .unwrap()
         .to_path_buf();
 
-    let bin_path = root.join("target/debug/labwired");
+    // `CARGO_BIN_EXE_labwired` is cargo's own path to the built binary. A
+    // hardcoded `target/debug/labwired` is wrong whenever the target dir is
+    // not the default — a `CARGO_TARGET_DIR` env var or a `[build] target-dir`
+    // in .cargo/config.toml, both of which are ordinary things to set when the
+    // build tree lives on another disk.
+    let bin_path = PathBuf::from(env!("CARGO_BIN_EXE_labwired"));
     let elf_path = root.join("tests/fixtures/uart-ok-thumbv7m.elf");
 
     let mut cmd = Command::new(bin_path);
@@ -49,7 +54,12 @@ fn test_cli_vcd_generation() {
         .unwrap()
         .to_path_buf();
 
-    let bin_path = root.join("target/debug/labwired");
+    // `CARGO_BIN_EXE_labwired` is cargo's own path to the built binary. A
+    // hardcoded `target/debug/labwired` is wrong whenever the target dir is
+    // not the default — a `CARGO_TARGET_DIR` env var or a `[build] target-dir`
+    // in .cargo/config.toml, both of which are ordinary things to set when the
+    // build tree lives on another disk.
+    let bin_path = PathBuf::from(env!("CARGO_BIN_EXE_labwired"));
     let elf_path = root.join("tests/fixtures/uart-ok-thumbv7m.elf");
 
     let mut cmd = Command::new(bin_path);
@@ -101,7 +111,12 @@ fn test_asset_init() {
         .unwrap()
         .to_path_buf();
 
-    let bin_path = root.join("target/debug/labwired");
+    // `CARGO_BIN_EXE_labwired` is cargo's own path to the built binary. A
+    // hardcoded `target/debug/labwired` is wrong whenever the target dir is
+    // not the default — a `CARGO_TARGET_DIR` env var or a `[build] target-dir`
+    // in .cargo/config.toml, both of which are ordinary things to set when the
+    // build tree lives on another disk.
+    let bin_path = PathBuf::from(env!("CARGO_BIN_EXE_labwired"));
 
     let mut cmd = Command::new(bin_path);
     cmd.args(["asset", "init", "-o", output_dir]);
