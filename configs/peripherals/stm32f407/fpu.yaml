@@ -1,0 +1,148 @@
+peripheral: FPU
+version: 0.1.0
+registers:
+- id: FPCCR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LSPACT
+    bit_range:
+    - 0
+    - 0
+    description: LSPACT
+  - name: USER
+    bit_range:
+    - 1
+    - 1
+    description: USER
+  - name: THREAD
+    bit_range:
+    - 3
+    - 3
+    description: THREAD
+  - name: HFRDY
+    bit_range:
+    - 4
+    - 4
+    description: HFRDY
+  - name: MMRDY
+    bit_range:
+    - 5
+    - 5
+    description: MMRDY
+  - name: BFRDY
+    bit_range:
+    - 6
+    - 6
+    description: BFRDY
+  - name: MONRDY
+    bit_range:
+    - 8
+    - 8
+    description: MONRDY
+  - name: LSPEN
+    bit_range:
+    - 30
+    - 30
+    description: LSPEN
+  - name: ASPEN
+    bit_range:
+    - 31
+    - 31
+    description: ASPEN
+  side_effects: null
+- id: FPCAR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDRESS
+    bit_range:
+    - 31
+    - 3
+    description: Location of unpopulated floating-point
+  side_effects: null
+- id: FPSCR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IOC
+    bit_range:
+    - 0
+    - 0
+    description: Invalid operation cumulative exception bit
+  - name: DZC
+    bit_range:
+    - 1
+    - 1
+    description: Division by zero cumulative exception bit.
+  - name: OFC
+    bit_range:
+    - 2
+    - 2
+    description: Overflow cumulative exception bit
+  - name: UFC
+    bit_range:
+    - 3
+    - 3
+    description: Underflow cumulative exception bit
+  - name: IXC
+    bit_range:
+    - 4
+    - 4
+    description: Inexact cumulative exception bit
+  - name: IDC
+    bit_range:
+    - 7
+    - 7
+    description: Input denormal cumulative exception bit.
+  - name: RMode
+    bit_range:
+    - 23
+    - 22
+    description: Rounding Mode control field
+  - name: FZ
+    bit_range:
+    - 24
+    - 24
+    description: 'Flush-to-zero mode control bit:'
+  - name: DN
+    bit_range:
+    - 25
+    - 25
+    description: Default NaN mode control bit
+  - name: AHP
+    bit_range:
+    - 26
+    - 26
+    description: Alternative half-precision control bit
+  - name: V
+    bit_range:
+    - 28
+    - 28
+    description: Overflow condition code flag
+  - name: C
+    bit_range:
+    - 29
+    - 29
+    description: Carry condition code flag
+  - name: Z
+    bit_range:
+    - 30
+    - 30
+    description: Zero condition code flag
+  - name: N
+    bit_range:
+    - 31
+    - 31
+    description: Negative condition code flag
+  side_effects: null
+interrupts:
+  FPU: 81
+  FPU: 81
+timing: null

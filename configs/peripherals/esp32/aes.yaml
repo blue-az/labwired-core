@@ -1,0 +1,197 @@
+peripheral: AES
+version: 0.1.0
+registers:
+- id: START
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: START
+    bit_range:
+    - 0
+    - 0
+    description: Write 1 to start the AES operation.
+  side_effects: null
+- id: IDLE
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IDLE
+    bit_range:
+    - 0
+    - 0
+    description: AES Idle register. Reads ’zero’ while the AES Accelerator is busy processing; reads ’one’ otherwise.
+  side_effects: null
+- id: MODE
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MODE
+    bit_range:
+    - 7
+    - 0
+    description: Selects the AES accelerator mode of operation. See Table 22-1 for details.
+  side_effects: null
+- id: KEY_0
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: KEY
+    bit_range:
+    - 7
+    - 0
+    description: AES key material register.
+  side_effects: null
+- id: KEY_1
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: KEY
+    bit_range:
+    - 7
+    - 0
+    description: AES key material register.
+  side_effects: null
+- id: KEY_2
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: KEY
+    bit_range:
+    - 7
+    - 0
+    description: AES key material register.
+  side_effects: null
+- id: KEY_3
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: KEY
+    bit_range:
+    - 7
+    - 0
+    description: AES key material register.
+  side_effects: null
+- id: KEY_4
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: KEY
+    bit_range:
+    - 7
+    - 0
+    description: AES key material register.
+  side_effects: null
+- id: KEY_5
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: KEY
+    bit_range:
+    - 7
+    - 0
+    description: AES key material register.
+  side_effects: null
+- id: KEY_6
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: KEY
+    bit_range:
+    - 7
+    - 0
+    description: AES key material register.
+  side_effects: null
+- id: KEY_7
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: KEY
+    bit_range:
+    - 7
+    - 0
+    description: AES key material register.
+  side_effects: null
+- id: TEXT_0
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 7
+    - 0
+    description: Plaintext and ciphertext register.
+  side_effects: null
+- id: TEXT_1
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 7
+    - 0
+    description: Plaintext and ciphertext register.
+  side_effects: null
+- id: TEXT_2
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 7
+    - 0
+    description: Plaintext and ciphertext register.
+  side_effects: null
+- id: TEXT_3
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TEXT
+    bit_range:
+    - 7
+    - 0
+    description: Plaintext and ciphertext register.
+  side_effects: null
+- id: ENDIAN
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENDIAN
+    bit_range:
+    - 1
+    - 0
+    description: Endianness selection register. See Table 22-2 for details.
+  side_effects: null
+interrupts: null
+timing: null

@@ -1,0 +1,207 @@
+peripheral: FLASH
+version: 0.1.0
+registers:
+- id: ACR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 48
+  fields:
+  - name: LATENCY
+    bit_range:
+    - 2
+    - 0
+    description: Latency
+  - name: HLFCYA
+    bit_range:
+    - 3
+    - 3
+    description: Flash half cycle access enable
+  - name: PRFTBE
+    bit_range:
+    - 4
+    - 4
+    description: Prefetch buffer enable
+  - name: PRFTBS
+    bit_range:
+    - 5
+    - 5
+    description: Prefetch buffer status
+  side_effects: null
+- id: KEYR
+  address_offset: 4
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: KEY
+    bit_range:
+    - 31
+    - 0
+    description: FPEC key
+  side_effects: null
+- id: OPTKEYR
+  address_offset: 8
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: OPTKEY
+    bit_range:
+    - 31
+    - 0
+    description: Option byte key
+  side_effects: null
+- id: SR
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EOP
+    bit_range:
+    - 5
+    - 5
+    description: End of operation
+  - name: WRPRTERR
+    bit_range:
+    - 4
+    - 4
+    description: Write protection error
+  - name: PGERR
+    bit_range:
+    - 2
+    - 2
+    description: Programming error
+  - name: BSY
+    bit_range:
+    - 0
+    - 0
+    description: Busy
+  side_effects: null
+- id: CR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 128
+  fields:
+  - name: PG
+    bit_range:
+    - 0
+    - 0
+    description: Programming
+  - name: PER
+    bit_range:
+    - 1
+    - 1
+    description: Page Erase
+  - name: MER
+    bit_range:
+    - 2
+    - 2
+    description: Mass Erase
+  - name: OPTPG
+    bit_range:
+    - 4
+    - 4
+    description: Option byte programming
+  - name: OPTER
+    bit_range:
+    - 5
+    - 5
+    description: Option byte erase
+  - name: STRT
+    bit_range:
+    - 6
+    - 6
+    description: Start
+  - name: LOCK
+    bit_range:
+    - 7
+    - 7
+    description: Lock
+  - name: OPTWRE
+    bit_range:
+    - 9
+    - 9
+    description: Option bytes write enable
+  - name: ERRIE
+    bit_range:
+    - 10
+    - 10
+    description: Error interrupt enable
+  - name: EOPIE
+    bit_range:
+    - 12
+    - 12
+    description: End of operation interrupt enable
+  side_effects: null
+- id: AR
+  address_offset: 20
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: FAR
+    bit_range:
+    - 31
+    - 0
+    description: Flash Address
+  side_effects: null
+- id: OBR
+  address_offset: 28
+  size: 32
+  access: READ_ONLY
+  reset_value: 67108860
+  fields:
+  - name: OPTERR
+    bit_range:
+    - 0
+    - 0
+    description: Option byte error
+  - name: RDPRT
+    bit_range:
+    - 1
+    - 1
+    description: Read protection
+  - name: WDG_SW
+    bit_range:
+    - 2
+    - 2
+    description: WDG_SW
+  - name: nRST_STOP
+    bit_range:
+    - 3
+    - 3
+    description: nRST_STOP
+  - name: nRST_STDBY
+    bit_range:
+    - 4
+    - 4
+    description: nRST_STDBY
+  - name: Data0
+    bit_range:
+    - 17
+    - 10
+    description: Data0
+  - name: Data1
+    bit_range:
+    - 25
+    - 18
+    description: Data1
+  side_effects: null
+- id: WRPR
+  address_offset: 32
+  size: 32
+  access: READ_ONLY
+  reset_value: 4294967295
+  fields:
+  - name: WRP
+    bit_range:
+    - 31
+    - 0
+    description: Write protect
+  side_effects: null
+interrupts:
+  FLASH: 4
+timing: null

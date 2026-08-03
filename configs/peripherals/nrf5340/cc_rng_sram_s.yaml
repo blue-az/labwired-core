@@ -1,0 +1,41 @@
+peripheral: CC_RNG_SRAM_S
+version: 0.1.0
+registers:
+- id: SRAM_DATA
+  address_offset: 3840
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SRAM_DATA
+    bit_range:
+    - 31
+    - 0
+    description: 32 bits DMA read/write from/to RNG SRAM. A 'read' or 'write' operation to this register will trigger the DMA address to be automatically incremented.
+  side_effects: null
+- id: SRAM_ADDR
+  address_offset: 3844
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: SRAM_ADDR
+    bit_range:
+    - 14
+    - 0
+    description: RNG SRAM starting address
+  side_effects: null
+- id: SRAM_DATA_READY
+  address_offset: 3848
+  size: 32
+  access: READ_ONLY
+  reset_value: 1
+  fields:
+  - name: SRAM_READY
+    bit_range:
+    - 0
+    - 0
+    description: RNG SRAM DMA status.
+  side_effects: null
+interrupts: null
+timing: null

@@ -1,0 +1,950 @@
+peripheral: I2C0
+version: 0.1.0
+registers:
+- id: SCL_LOW_PERIOD
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SCL_LOW_PERIOD
+    bit_range:
+    - 8
+    - 0
+    description: This register is used to configure for how long SCL remains low in master mode, in I2C module clock cycles.
+  side_effects: null
+- id: CTR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 523
+  fields:
+  - name: SDA_FORCE_OUT
+    bit_range:
+    - 0
+    - 0
+    description: '0: direct output; 1: open drain output.'
+  - name: SCL_FORCE_OUT
+    bit_range:
+    - 1
+    - 1
+    description: '0: direct output; 1: open drain output.'
+  - name: SAMPLE_SCL_LEVEL
+    bit_range:
+    - 2
+    - 2
+    description: 'This register is used to select the sample mode. 1: sample SDA data on the SCL low level. 0: sample SDA data on the SCL high level.'
+  - name: RX_FULL_ACK_LEVEL
+    bit_range:
+    - 3
+    - 3
+    description: This register is used to configure the ACK value that need to sent by master when the rx_fifo_cnt has reached the threshold.
+  - name: MS_MODE
+    bit_range:
+    - 4
+    - 4
+    description: Set this bit to configure the module as an I2C Master. Clear this bit to configure the module as an I2C Slave.
+  - name: TRANS_START
+    bit_range:
+    - 5
+    - 5
+    description: Set this bit to start sending the data in txfifo.
+  - name: TX_LSB_FIRST
+    bit_range:
+    - 6
+    - 6
+    description: 'This bit is used to control the sending mode for data needing to be sent. 1: send data from the least significant bit; 0: send data from the most significant bit.'
+  - name: RX_LSB_FIRST
+    bit_range:
+    - 7
+    - 7
+    description: 'This bit is used to control the storage mode for received data. 1: receive data from the least significant bit; 0: receive data from the most significant bit.'
+  - name: CLK_EN
+    bit_range:
+    - 8
+    - 8
+    description: Reserved
+  - name: ARBITRATION_EN
+    bit_range:
+    - 9
+    - 9
+    description: This is the enable bit for arbitration_lost.
+  - name: FSM_RST
+    bit_range:
+    - 10
+    - 10
+    description: This register is used to reset the scl FMS.
+  - name: CONF_UPGATE
+    bit_range:
+    - 11
+    - 11
+    description: synchronization bit
+  - name: SLV_TX_AUTO_START_EN
+    bit_range:
+    - 12
+    - 12
+    description: This is the enable bit for slave to send data automatically
+  - name: ADDR_10BIT_RW_CHECK_EN
+    bit_range:
+    - 13
+    - 13
+    description: This is the enable bit to check if the r/w bit of 10bit addressing consists with I2C protocol
+  - name: ADDR_BROADCASTING_EN
+    bit_range:
+    - 14
+    - 14
+    description: This is the enable bit to support the 7bit general call function.
+  side_effects: null
+- id: SR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 49152
+  fields:
+  - name: RESP_REC
+    bit_range:
+    - 0
+    - 0
+    description: 'The received ACK value in master mode or slave mode. 0: ACK, 1: NACK.'
+  - name: SLAVE_RW
+    bit_range:
+    - 1
+    - 1
+    description: 'When in slave mode, 1: master reads from slave; 0: master writes to slave.'
+  - name: ARB_LOST
+    bit_range:
+    - 3
+    - 3
+    description: When the I2C controller loses control of SCL line, this register changes to 1.
+  - name: BUS_BUSY
+    bit_range:
+    - 4
+    - 4
+    description: '1: the I2C bus is busy transferring data; 0: the I2C bus is in idle state.'
+  - name: SLAVE_ADDRESSED
+    bit_range:
+    - 5
+    - 5
+    description: When configured as an I2C Slave, and the address sent by the master is equal to the address of the slave, then this bit will be of high level.
+  - name: RXFIFO_CNT
+    bit_range:
+    - 13
+    - 8
+    description: This field represents the amount of data needed to be sent.
+  - name: STRETCH_CAUSE
+    bit_range:
+    - 15
+    - 14
+    description: 'The cause of stretching SCL low in slave mode. 0:  stretching SCL low at the beginning of I2C read data state. 1: stretching SCL low when I2C Tx FIFO is empty in slave mode. 2: stretching SCL low when I2C Rx FIFO is full in slave mode.'
+  - name: TXFIFO_CNT
+    bit_range:
+    - 23
+    - 18
+    description: This field stores the amount of received data in RAM.
+  - name: SCL_MAIN_STATE_LAST
+    bit_range:
+    - 26
+    - 24
+    description: 'This field indicates the states of the I2C module state machine. 0: Idle; 1: Address shift; 2: ACK address; 3: Rx data; 4: Tx data; 5: Send ACK; 6: Wait ACK'
+  - name: SCL_STATE_LAST
+    bit_range:
+    - 30
+    - 28
+    description: 'This field indicates the states of the state machine used to produce SCL. 0: Idle; 1: Start; 2: Negative edge; 3: Low; 4: Positive edge; 5: High; 6: Stop'
+  side_effects: null
+- id: TO
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: TIME_OUT_VALUE
+    bit_range:
+    - 4
+    - 0
+    description: This register is used to configure the timeout for receiving a data bit in APB clock cycles.
+  - name: TIME_OUT_EN
+    bit_range:
+    - 5
+    - 5
+    description: This is the enable bit for time out control.
+  side_effects: null
+- id: SLAVE_ADDR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SLAVE_ADDR
+    bit_range:
+    - 14
+    - 0
+    description: When configured as an I2C Slave, this field is used to configure the slave address.
+  - name: ADDR_10BIT_EN
+    bit_range:
+    - 31
+    - 31
+    description: This field is used to enable the slave 10-bit addressing mode in master mode.
+  side_effects: null
+- id: FIFO_ST
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RXFIFO_RADDR
+    bit_range:
+    - 4
+    - 0
+    description: This is the offset address of the APB reading from rxfifo
+  - name: RXFIFO_WADDR
+    bit_range:
+    - 9
+    - 5
+    description: This is the offset address of i2c module receiving data and writing to rxfifo.
+  - name: TXFIFO_RADDR
+    bit_range:
+    - 14
+    - 10
+    description: This is the offset address of i2c module reading from txfifo.
+  - name: TXFIFO_WADDR
+    bit_range:
+    - 19
+    - 15
+    description: This is the offset address of APB bus writing to txfifo.
+  - name: SLAVE_RW_POINT
+    bit_range:
+    - 29
+    - 22
+    description: The received data in I2C slave mode.
+  side_effects: null
+- id: FIFO_CONF
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 16523
+  fields:
+  - name: RXFIFO_WM_THRHD
+    bit_range:
+    - 4
+    - 0
+    description: The water mark threshold of rx FIFO in nonfifo access mode. When reg_reg_fifo_prt_en is 1 and rx FIFO counter is bigger than reg_rxfifo_wm_thrhd[4:0], reg_rxfifo_wm_int_raw bit will be valid.
+  - name: TXFIFO_WM_THRHD
+    bit_range:
+    - 9
+    - 5
+    description: The water mark threshold of tx FIFO in nonfifo access mode. When reg_reg_fifo_prt_en is 1 and tx FIFO counter is smaller than reg_txfifo_wm_thrhd[4:0], reg_txfifo_wm_int_raw bit will be valid.
+  - name: NONFIFO_EN
+    bit_range:
+    - 10
+    - 10
+    description: Set this bit to enable APB nonfifo access.
+  - name: FIFO_ADDR_CFG_EN
+    bit_range:
+    - 11
+    - 11
+    description: When this bit is set to 1, the byte received after the I2C address byte represents the offset address in the I2C Slave RAM.
+  - name: RX_FIFO_RST
+    bit_range:
+    - 12
+    - 12
+    description: Set this bit to reset rx-fifo.
+  - name: TX_FIFO_RST
+    bit_range:
+    - 13
+    - 13
+    description: Set this bit to reset tx-fifo.
+  - name: FIFO_PRT_EN
+    bit_range:
+    - 14
+    - 14
+    description: The control enable bit of FIFO pointer in non-fifo access mode. This bit controls the valid bits and the interrupts of tx/rx_fifo overflow, underflow, full and empty.
+  side_effects: null
+- id: DATA
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FIFO_RDATA
+    bit_range:
+    - 7
+    - 0
+    description: The value of rx FIFO read data.
+  side_effects: null
+- id: INT_RAW
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: RXFIFO_WM_INT_RAW
+    bit_range:
+    - 0
+    - 0
+    description: The raw interrupt bit for I2C_RXFIFO_WM_INT interrupt.
+  - name: TXFIFO_WM_INT_RAW
+    bit_range:
+    - 1
+    - 1
+    description: The raw interrupt bit for I2C_TXFIFO_WM_INT interrupt.
+  - name: RXFIFO_OVF_INT_RAW
+    bit_range:
+    - 2
+    - 2
+    description: The raw interrupt bit for I2C_RXFIFO_OVF_INT interrupt.
+  - name: END_DETECT_INT_RAW
+    bit_range:
+    - 3
+    - 3
+    description: The raw interrupt bit for the I2C_END_DETECT_INT interrupt.
+  - name: BYTE_TRANS_DONE_INT_RAW
+    bit_range:
+    - 4
+    - 4
+    description: The raw interrupt bit for the I2C_END_DETECT_INT interrupt.
+  - name: ARBITRATION_LOST_INT_RAW
+    bit_range:
+    - 5
+    - 5
+    description: The raw interrupt bit for the I2C_ARBITRATION_LOST_INT interrupt.
+  - name: MST_TXFIFO_UDF_INT_RAW
+    bit_range:
+    - 6
+    - 6
+    description: The raw interrupt bit for I2C_TRANS_COMPLETE_INT interrupt.
+  - name: TRANS_COMPLETE_INT_RAW
+    bit_range:
+    - 7
+    - 7
+    description: The raw interrupt bit for the I2C_TRANS_COMPLETE_INT interrupt.
+  - name: TIME_OUT_INT_RAW
+    bit_range:
+    - 8
+    - 8
+    description: The raw interrupt bit for the I2C_TIME_OUT_INT interrupt.
+  - name: TRANS_START_INT_RAW
+    bit_range:
+    - 9
+    - 9
+    description: The raw interrupt bit for the I2C_TRANS_START_INT interrupt.
+  - name: NACK_INT_RAW
+    bit_range:
+    - 10
+    - 10
+    description: The raw interrupt bit for I2C_SLAVE_STRETCH_INT interrupt.
+  - name: TXFIFO_OVF_INT_RAW
+    bit_range:
+    - 11
+    - 11
+    description: The raw interrupt bit for I2C_TXFIFO_OVF_INT interrupt.
+  - name: RXFIFO_UDF_INT_RAW
+    bit_range:
+    - 12
+    - 12
+    description: The raw interrupt bit for I2C_RXFIFO_UDF_INT  interrupt.
+  - name: SCL_ST_TO_INT_RAW
+    bit_range:
+    - 13
+    - 13
+    description: The raw interrupt bit for I2C_SCL_ST_TO_INT interrupt.
+  - name: SCL_MAIN_ST_TO_INT_RAW
+    bit_range:
+    - 14
+    - 14
+    description: The raw interrupt bit for I2C_SCL_MAIN_ST_TO_INT interrupt.
+  - name: DET_START_INT_RAW
+    bit_range:
+    - 15
+    - 15
+    description: The raw interrupt bit for I2C_DET_START_INT interrupt.
+  - name: SLAVE_STRETCH_INT_RAW
+    bit_range:
+    - 16
+    - 16
+    description: The raw interrupt bit for I2C_SLAVE_STRETCH_INT interrupt.
+  - name: GENERAL_CALL_INT_RAW
+    bit_range:
+    - 17
+    - 17
+    description: The raw interrupt bit for I2C_GENARAL_CALL_INT interrupt.
+  side_effects: null
+- id: INT_CLR
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RXFIFO_WM_INT_CLR
+    bit_range:
+    - 0
+    - 0
+    description: Set this bit to clear I2C_RXFIFO_WM_INT interrupt.
+  - name: TXFIFO_WM_INT_CLR
+    bit_range:
+    - 1
+    - 1
+    description: Set this bit to clear I2C_TXFIFO_WM_INT interrupt.
+  - name: RXFIFO_OVF_INT_CLR
+    bit_range:
+    - 2
+    - 2
+    description: Set this bit to clear I2C_RXFIFO_OVF_INT interrupt.
+  - name: END_DETECT_INT_CLR
+    bit_range:
+    - 3
+    - 3
+    description: Set this bit to clear the I2C_END_DETECT_INT interrupt.
+  - name: BYTE_TRANS_DONE_INT_CLR
+    bit_range:
+    - 4
+    - 4
+    description: Set this bit to clear the I2C_END_DETECT_INT interrupt.
+  - name: ARBITRATION_LOST_INT_CLR
+    bit_range:
+    - 5
+    - 5
+    description: Set this bit to clear the I2C_ARBITRATION_LOST_INT interrupt.
+  - name: MST_TXFIFO_UDF_INT_CLR
+    bit_range:
+    - 6
+    - 6
+    description: Set this bit to clear I2C_TRANS_COMPLETE_INT interrupt.
+  - name: TRANS_COMPLETE_INT_CLR
+    bit_range:
+    - 7
+    - 7
+    description: Set this bit to clear the I2C_TRANS_COMPLETE_INT interrupt.
+  - name: TIME_OUT_INT_CLR
+    bit_range:
+    - 8
+    - 8
+    description: Set this bit to clear the I2C_TIME_OUT_INT interrupt.
+  - name: TRANS_START_INT_CLR
+    bit_range:
+    - 9
+    - 9
+    description: Set this bit to clear the I2C_TRANS_START_INT interrupt.
+  - name: NACK_INT_CLR
+    bit_range:
+    - 10
+    - 10
+    description: Set this bit to clear I2C_SLAVE_STRETCH_INT interrupt.
+  - name: TXFIFO_OVF_INT_CLR
+    bit_range:
+    - 11
+    - 11
+    description: Set this bit to clear I2C_TXFIFO_OVF_INT interrupt.
+  - name: RXFIFO_UDF_INT_CLR
+    bit_range:
+    - 12
+    - 12
+    description: Set this bit to clear I2C_RXFIFO_UDF_INT  interrupt.
+  - name: SCL_ST_TO_INT_CLR
+    bit_range:
+    - 13
+    - 13
+    description: Set this bit to clear I2C_SCL_ST_TO_INT interrupt.
+  - name: SCL_MAIN_ST_TO_INT_CLR
+    bit_range:
+    - 14
+    - 14
+    description: Set this bit to clear I2C_SCL_MAIN_ST_TO_INT interrupt.
+  - name: DET_START_INT_CLR
+    bit_range:
+    - 15
+    - 15
+    description: Set this bit to clear I2C_DET_START_INT interrupt.
+  - name: SLAVE_STRETCH_INT_CLR
+    bit_range:
+    - 16
+    - 16
+    description: Set this bit to clear I2C_SLAVE_STRETCH_INT interrupt.
+  - name: GENERAL_CALL_INT_CLR
+    bit_range:
+    - 17
+    - 17
+    description: Set this bit for I2C_GENARAL_CALL_INT interrupt.
+  side_effects: null
+- id: INT_ENA
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RXFIFO_WM_INT_ENA
+    bit_range:
+    - 0
+    - 0
+    description: The interrupt enable bit for I2C_RXFIFO_WM_INT interrupt.
+  - name: TXFIFO_WM_INT_ENA
+    bit_range:
+    - 1
+    - 1
+    description: The interrupt enable bit for I2C_TXFIFO_WM_INT interrupt.
+  - name: RXFIFO_OVF_INT_ENA
+    bit_range:
+    - 2
+    - 2
+    description: The interrupt enable bit for I2C_RXFIFO_OVF_INT interrupt.
+  - name: END_DETECT_INT_ENA
+    bit_range:
+    - 3
+    - 3
+    description: The interrupt enable bit for the I2C_END_DETECT_INT interrupt.
+  - name: BYTE_TRANS_DONE_INT_ENA
+    bit_range:
+    - 4
+    - 4
+    description: The interrupt enable bit for the I2C_END_DETECT_INT interrupt.
+  - name: ARBITRATION_LOST_INT_ENA
+    bit_range:
+    - 5
+    - 5
+    description: The interrupt enable bit for the I2C_ARBITRATION_LOST_INT interrupt.
+  - name: MST_TXFIFO_UDF_INT_ENA
+    bit_range:
+    - 6
+    - 6
+    description: The interrupt enable bit for I2C_TRANS_COMPLETE_INT interrupt.
+  - name: TRANS_COMPLETE_INT_ENA
+    bit_range:
+    - 7
+    - 7
+    description: The interrupt enable bit for the I2C_TRANS_COMPLETE_INT interrupt.
+  - name: TIME_OUT_INT_ENA
+    bit_range:
+    - 8
+    - 8
+    description: The interrupt enable bit for the I2C_TIME_OUT_INT interrupt.
+  - name: TRANS_START_INT_ENA
+    bit_range:
+    - 9
+    - 9
+    description: The interrupt enable bit for the I2C_TRANS_START_INT interrupt.
+  - name: NACK_INT_ENA
+    bit_range:
+    - 10
+    - 10
+    description: The interrupt enable bit for I2C_SLAVE_STRETCH_INT interrupt.
+  - name: TXFIFO_OVF_INT_ENA
+    bit_range:
+    - 11
+    - 11
+    description: The interrupt enable bit for I2C_TXFIFO_OVF_INT interrupt.
+  - name: RXFIFO_UDF_INT_ENA
+    bit_range:
+    - 12
+    - 12
+    description: The interrupt enable bit for I2C_RXFIFO_UDF_INT  interrupt.
+  - name: SCL_ST_TO_INT_ENA
+    bit_range:
+    - 13
+    - 13
+    description: The interrupt enable bit for I2C_SCL_ST_TO_INT interrupt.
+  - name: SCL_MAIN_ST_TO_INT_ENA
+    bit_range:
+    - 14
+    - 14
+    description: The interrupt enable bit for I2C_SCL_MAIN_ST_TO_INT interrupt.
+  - name: DET_START_INT_ENA
+    bit_range:
+    - 15
+    - 15
+    description: The interrupt enable bit for I2C_DET_START_INT interrupt.
+  - name: SLAVE_STRETCH_INT_ENA
+    bit_range:
+    - 16
+    - 16
+    description: The interrupt enable bit for I2C_SLAVE_STRETCH_INT interrupt.
+  - name: GENERAL_CALL_INT_ENA
+    bit_range:
+    - 17
+    - 17
+    description: The interrupt enable bit for I2C_GENARAL_CALL_INT interrupt.
+  side_effects: null
+- id: INT_STATUS
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RXFIFO_WM_INT_ST
+    bit_range:
+    - 0
+    - 0
+    description: The masked interrupt status bit for I2C_RXFIFO_WM_INT interrupt.
+  - name: TXFIFO_WM_INT_ST
+    bit_range:
+    - 1
+    - 1
+    description: The masked interrupt status bit for I2C_TXFIFO_WM_INT interrupt.
+  - name: RXFIFO_OVF_INT_ST
+    bit_range:
+    - 2
+    - 2
+    description: The masked interrupt status bit for I2C_RXFIFO_OVF_INT interrupt.
+  - name: END_DETECT_INT_ST
+    bit_range:
+    - 3
+    - 3
+    description: The masked interrupt status bit for the I2C_END_DETECT_INT interrupt.
+  - name: BYTE_TRANS_DONE_INT_ST
+    bit_range:
+    - 4
+    - 4
+    description: The masked interrupt status bit for the I2C_END_DETECT_INT interrupt.
+  - name: ARBITRATION_LOST_INT_ST
+    bit_range:
+    - 5
+    - 5
+    description: The masked interrupt status bit for the I2C_ARBITRATION_LOST_INT interrupt.
+  - name: MST_TXFIFO_UDF_INT_ST
+    bit_range:
+    - 6
+    - 6
+    description: The masked interrupt status bit for I2C_TRANS_COMPLETE_INT interrupt.
+  - name: TRANS_COMPLETE_INT_ST
+    bit_range:
+    - 7
+    - 7
+    description: The masked interrupt status bit for the I2C_TRANS_COMPLETE_INT interrupt.
+  - name: TIME_OUT_INT_ST
+    bit_range:
+    - 8
+    - 8
+    description: The masked interrupt status bit for the I2C_TIME_OUT_INT interrupt.
+  - name: TRANS_START_INT_ST
+    bit_range:
+    - 9
+    - 9
+    description: The masked interrupt status bit for the I2C_TRANS_START_INT interrupt.
+  - name: NACK_INT_ST
+    bit_range:
+    - 10
+    - 10
+    description: The masked interrupt status bit for I2C_SLAVE_STRETCH_INT interrupt.
+  - name: TXFIFO_OVF_INT_ST
+    bit_range:
+    - 11
+    - 11
+    description: The masked interrupt status bit for I2C_TXFIFO_OVF_INT interrupt.
+  - name: RXFIFO_UDF_INT_ST
+    bit_range:
+    - 12
+    - 12
+    description: The masked interrupt status bit for I2C_RXFIFO_UDF_INT  interrupt.
+  - name: SCL_ST_TO_INT_ST
+    bit_range:
+    - 13
+    - 13
+    description: The masked interrupt status bit for I2C_SCL_ST_TO_INT interrupt.
+  - name: SCL_MAIN_ST_TO_INT_ST
+    bit_range:
+    - 14
+    - 14
+    description: The masked interrupt status bit for I2C_SCL_MAIN_ST_TO_INT interrupt.
+  - name: DET_START_INT_ST
+    bit_range:
+    - 15
+    - 15
+    description: The masked interrupt status bit for I2C_DET_START_INT interrupt.
+  - name: SLAVE_STRETCH_INT_ST
+    bit_range:
+    - 16
+    - 16
+    description: The masked interrupt status bit for I2C_SLAVE_STRETCH_INT interrupt.
+  - name: GENERAL_CALL_INT_ST
+    bit_range:
+    - 17
+    - 17
+    description: The masked interrupt status bit for I2C_GENARAL_CALL_INT interrupt.
+  side_effects: null
+- id: SDA_HOLD
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIME
+    bit_range:
+    - 8
+    - 0
+    description: This register is used to configure the time to hold the data after the negative edge of SCL, in I2C module clock cycles.
+  side_effects: null
+- id: SDA_SAMPLE
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIME
+    bit_range:
+    - 8
+    - 0
+    description: This register is used to configure for how long SDA is sampled, in I2C module clock cycles.
+  side_effects: null
+- id: SCL_HIGH_PERIOD
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SCL_HIGH_PERIOD
+    bit_range:
+    - 8
+    - 0
+    description: This register is used to configure for how long SCL remains high in master mode, in I2C module clock cycles.
+  - name: SCL_WAIT_HIGH_PERIOD
+    bit_range:
+    - 15
+    - 9
+    description: This register is used to configure for the SCL_FSM's waiting period for SCL high level in master mode, in I2C module clock cycles.
+  side_effects: null
+- id: SCL_START_HOLD
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 8
+  fields:
+  - name: TIME
+    bit_range:
+    - 8
+    - 0
+    description: This register is used to configure the time between the negative edge of SDA and the negative edge of SCL for a START condition, in I2C module clock cycles.
+  side_effects: null
+- id: SCL_RSTART_SETUP
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 8
+  fields:
+  - name: TIME
+    bit_range:
+    - 8
+    - 0
+    description: This register is used to configure the time between the positive edge of SCL and the negative edge of SDA for a RESTART condition, in I2C module clock cycles.
+  side_effects: null
+- id: SCL_STOP_HOLD
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 8
+  fields:
+  - name: TIME
+    bit_range:
+    - 8
+    - 0
+    description: This register is used to configure the delay after the STOP condition, in I2C module clock cycles.
+  side_effects: null
+- id: SCL_STOP_SETUP
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 8
+  fields:
+  - name: TIME
+    bit_range:
+    - 8
+    - 0
+    description: This register is used to configure the time between the positive edge of SCL and the positive edge of SDA, in I2C module clock cycles.
+  side_effects: null
+- id: FILTER_CFG
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 768
+  fields:
+  - name: SCL_FILTER_THRES
+    bit_range:
+    - 3
+    - 0
+    description: When a pulse on the SCL input has smaller width than this register value in I2C module clock cycles, the I2C controller will ignore that pulse.
+  - name: SDA_FILTER_THRES
+    bit_range:
+    - 7
+    - 4
+    description: When a pulse on the SDA input has smaller width than this register value in I2C module clock cycles, the I2C controller will ignore that pulse.
+  - name: SCL_FILTER_EN
+    bit_range:
+    - 8
+    - 8
+    description: This is the filter enable bit for SCL.
+  - name: SDA_FILTER_EN
+    bit_range:
+    - 9
+    - 9
+    description: This is the filter enable bit for SDA.
+  side_effects: null
+- id: CLK_CONF
+  address_offset: 84
+  size: 32
+  access: READ_WRITE
+  reset_value: 2097152
+  fields:
+  - name: SCLK_DIV_NUM
+    bit_range:
+    - 7
+    - 0
+    description: the integral part of the fractional divisor for i2c module
+  - name: SCLK_DIV_A
+    bit_range:
+    - 13
+    - 8
+    description: the numerator of the fractional part of the fractional divisor for i2c module
+  - name: SCLK_DIV_B
+    bit_range:
+    - 19
+    - 14
+    description: the denominator of the fractional part of the fractional divisor for i2c module
+  - name: SCLK_SEL
+    bit_range:
+    - 20
+    - 20
+    description: The clock selection for i2c module:0-XTAL;1-CLK_8MHz.
+  - name: SCLK_ACTIVE
+    bit_range:
+    - 21
+    - 21
+    description: The clock switch for i2c module
+  side_effects: null
+- id: COMD0-7
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: COMMAND
+    bit_range:
+    - 13
+    - 0
+    description: 'This is the content of command 0. It consists of three parts: op_code is the command, 0: RSTART; 1: WRITE; 2: READ; 3: STOP; 4: END. Byte_num represents the number of bytes that need to be sent or received. ack_check_en, ack_exp and ack are used to control the ACK bit. See I2C cmd structure for more Information.'
+  - name: COMMAND_DONE
+    bit_range:
+    - 31
+    - 31
+    description: When command 0 is done in I2C Master mode, this bit changes to high level.
+  side_effects: null
+- id: SCL_ST_TIME_OUT
+  address_offset: 120
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: SCL_ST_TO_I2C
+    bit_range:
+    - 4
+    - 0
+    description: The threshold value of SCL_FSM state unchanged period. It should be o more than 23
+  side_effects: null
+- id: SCL_MAIN_ST_TIME_OUT
+  address_offset: 124
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: SCL_MAIN_ST_TO_I2C
+    bit_range:
+    - 4
+    - 0
+    description: The threshold value of SCL_MAIN_FSM state unchanged period.nIt should be o more than 23
+  side_effects: null
+- id: SCL_SP_CONF
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SCL_RST_SLV_EN
+    bit_range:
+    - 0
+    - 0
+    description: When I2C master is IDLE, set this bit to send out SCL pulses. The number of pulses equals to reg_scl_rst_slv_num[4:0].
+  - name: SCL_RST_SLV_NUM
+    bit_range:
+    - 5
+    - 1
+    description: Configure the pulses of SCL generated in I2C master mode. Valid when reg_scl_rst_slv_en is 1.
+  - name: SCL_PD_EN
+    bit_range:
+    - 6
+    - 6
+    description: 'The power down enable bit for the I2C output SCL line. 1: Power down. 0: Not power down. Set reg_scl_force_out and reg_scl_pd_en to 1 to stretch SCL low.'
+  - name: SDA_PD_EN
+    bit_range:
+    - 7
+    - 7
+    description: 'The power down enable bit for the I2C output SDA line. 1: Power down. 0: Not power down. Set reg_sda_force_out and reg_sda_pd_en to 1 to stretch SDA low.'
+  side_effects: null
+- id: SCL_STRETCH_CONF
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STRETCH_PROTECT_NUM
+    bit_range:
+    - 9
+    - 0
+    description: Configure the period of I2C slave stretching SCL line.
+  - name: SLAVE_SCL_STRETCH_EN
+    bit_range:
+    - 10
+    - 10
+    description: 'The enable bit for slave SCL stretch function. 1: Enable. 0: Disable. The SCL output line will be stretched low when reg_slave_scl_stretch_en is 1 and stretch event happens. The stretch cause can be seen in reg_stretch_cause.'
+  - name: SLAVE_SCL_STRETCH_CLR
+    bit_range:
+    - 11
+    - 11
+    description: Set this bit to clear the I2C slave SCL stretch function.
+  - name: SLAVE_BYTE_ACK_CTL_EN
+    bit_range:
+    - 12
+    - 12
+    description: The enable bit for slave to control ACK level function.
+  - name: SLAVE_BYTE_ACK_LVL
+    bit_range:
+    - 13
+    - 13
+    description: Set the ACK level when slave controlling ACK level function enables.
+  side_effects: null
+- id: DATE
+  address_offset: 248
+  size: 32
+  access: READ_WRITE
+  reset_value: 537330177
+  fields:
+  - name: DATE
+    bit_range:
+    - 31
+    - 0
+    description: This is the the version register.
+  side_effects: null
+- id: TXFIFO_START_ADDR
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TXFIFO_START_ADDR
+    bit_range:
+    - 31
+    - 0
+    description: This is the I2C txfifo first address.
+  side_effects: null
+- id: RXFIFO_START_ADDR
+  address_offset: 384
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RXFIFO_START_ADDR
+    bit_range:
+    - 31
+    - 0
+    description: This is the I2C rxfifo first address.
+  side_effects: null
+interrupts:
+  I2C_MASTER: 11
+  I2C_EXT0: 42
+timing: null

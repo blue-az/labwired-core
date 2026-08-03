@@ -1,0 +1,554 @@
+peripheral: NVIC
+version: 0.1.0
+registers:
+- id: ICTR
+  address_offset: 4
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: INTLINESNUM
+    bit_range:
+    - 3
+    - 0
+    description: Total number of interrupt lines in groups
+  side_effects: null
+- id: STIR
+  address_offset: 3840
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: INTID
+    bit_range:
+    - 8
+    - 0
+    description: interrupt to be triggered
+  side_effects: null
+- id: ISER0
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SETENA
+    bit_range:
+    - 31
+    - 0
+    description: SETENA
+  side_effects: null
+- id: ISER1
+  address_offset: 260
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SETENA
+    bit_range:
+    - 31
+    - 0
+    description: SETENA
+  side_effects: null
+- id: ICER0
+  address_offset: 384
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CLRENA
+    bit_range:
+    - 31
+    - 0
+    description: CLRENA
+  side_effects: null
+- id: ICER1
+  address_offset: 388
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CLRENA
+    bit_range:
+    - 31
+    - 0
+    description: CLRENA
+  side_effects: null
+- id: ISPR0
+  address_offset: 512
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SETPEND
+    bit_range:
+    - 31
+    - 0
+    description: SETPEND
+  side_effects: null
+- id: ISPR1
+  address_offset: 516
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SETPEND
+    bit_range:
+    - 31
+    - 0
+    description: SETPEND
+  side_effects: null
+- id: ICPR0
+  address_offset: 640
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CLRPEND
+    bit_range:
+    - 31
+    - 0
+    description: CLRPEND
+  side_effects: null
+- id: ICPR1
+  address_offset: 644
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CLRPEND
+    bit_range:
+    - 31
+    - 0
+    description: CLRPEND
+  side_effects: null
+- id: IABR0
+  address_offset: 768
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: ACTIVE
+    bit_range:
+    - 31
+    - 0
+    description: ACTIVE
+  side_effects: null
+- id: IABR1
+  address_offset: 772
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: ACTIVE
+    bit_range:
+    - 31
+    - 0
+    description: ACTIVE
+  side_effects: null
+- id: IPR0
+  address_offset: 1024
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IPR_N0
+    bit_range:
+    - 7
+    - 0
+    description: IPR_N0
+  - name: IPR_N1
+    bit_range:
+    - 15
+    - 8
+    description: IPR_N1
+  - name: IPR_N2
+    bit_range:
+    - 23
+    - 16
+    description: IPR_N2
+  - name: IPR_N3
+    bit_range:
+    - 31
+    - 24
+    description: IPR_N3
+  side_effects: null
+- id: IPR1
+  address_offset: 1028
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IPR_N0
+    bit_range:
+    - 7
+    - 0
+    description: IPR_N0
+  - name: IPR_N1
+    bit_range:
+    - 15
+    - 8
+    description: IPR_N1
+  - name: IPR_N2
+    bit_range:
+    - 23
+    - 16
+    description: IPR_N2
+  - name: IPR_N3
+    bit_range:
+    - 31
+    - 24
+    description: IPR_N3
+  side_effects: null
+- id: IPR2
+  address_offset: 1032
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IPR_N0
+    bit_range:
+    - 7
+    - 0
+    description: IPR_N0
+  - name: IPR_N1
+    bit_range:
+    - 15
+    - 8
+    description: IPR_N1
+  - name: IPR_N2
+    bit_range:
+    - 23
+    - 16
+    description: IPR_N2
+  - name: IPR_N3
+    bit_range:
+    - 31
+    - 24
+    description: IPR_N3
+  side_effects: null
+- id: IPR3
+  address_offset: 1036
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IPR_N0
+    bit_range:
+    - 7
+    - 0
+    description: IPR_N0
+  - name: IPR_N1
+    bit_range:
+    - 15
+    - 8
+    description: IPR_N1
+  - name: IPR_N2
+    bit_range:
+    - 23
+    - 16
+    description: IPR_N2
+  - name: IPR_N3
+    bit_range:
+    - 31
+    - 24
+    description: IPR_N3
+  side_effects: null
+- id: IPR4
+  address_offset: 1040
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IPR_N0
+    bit_range:
+    - 7
+    - 0
+    description: IPR_N0
+  - name: IPR_N1
+    bit_range:
+    - 15
+    - 8
+    description: IPR_N1
+  - name: IPR_N2
+    bit_range:
+    - 23
+    - 16
+    description: IPR_N2
+  - name: IPR_N3
+    bit_range:
+    - 31
+    - 24
+    description: IPR_N3
+  side_effects: null
+- id: IPR5
+  address_offset: 1044
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IPR_N0
+    bit_range:
+    - 7
+    - 0
+    description: IPR_N0
+  - name: IPR_N1
+    bit_range:
+    - 15
+    - 8
+    description: IPR_N1
+  - name: IPR_N2
+    bit_range:
+    - 23
+    - 16
+    description: IPR_N2
+  - name: IPR_N3
+    bit_range:
+    - 31
+    - 24
+    description: IPR_N3
+  side_effects: null
+- id: IPR6
+  address_offset: 1048
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IPR_N0
+    bit_range:
+    - 7
+    - 0
+    description: IPR_N0
+  - name: IPR_N1
+    bit_range:
+    - 15
+    - 8
+    description: IPR_N1
+  - name: IPR_N2
+    bit_range:
+    - 23
+    - 16
+    description: IPR_N2
+  - name: IPR_N3
+    bit_range:
+    - 31
+    - 24
+    description: IPR_N3
+  side_effects: null
+- id: IPR7
+  address_offset: 1052
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IPR_N0
+    bit_range:
+    - 7
+    - 0
+    description: IPR_N0
+  - name: IPR_N1
+    bit_range:
+    - 15
+    - 8
+    description: IPR_N1
+  - name: IPR_N2
+    bit_range:
+    - 23
+    - 16
+    description: IPR_N2
+  - name: IPR_N3
+    bit_range:
+    - 31
+    - 24
+    description: IPR_N3
+  side_effects: null
+- id: IPR8
+  address_offset: 1056
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IPR_N0
+    bit_range:
+    - 7
+    - 0
+    description: IPR_N0
+  - name: IPR_N1
+    bit_range:
+    - 15
+    - 8
+    description: IPR_N1
+  - name: IPR_N2
+    bit_range:
+    - 23
+    - 16
+    description: IPR_N2
+  - name: IPR_N3
+    bit_range:
+    - 31
+    - 24
+    description: IPR_N3
+  side_effects: null
+- id: IPR9
+  address_offset: 1060
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IPR_N0
+    bit_range:
+    - 7
+    - 0
+    description: IPR_N0
+  - name: IPR_N1
+    bit_range:
+    - 15
+    - 8
+    description: IPR_N1
+  - name: IPR_N2
+    bit_range:
+    - 23
+    - 16
+    description: IPR_N2
+  - name: IPR_N3
+    bit_range:
+    - 31
+    - 24
+    description: IPR_N3
+  side_effects: null
+- id: IPR10
+  address_offset: 1064
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IPR_N0
+    bit_range:
+    - 7
+    - 0
+    description: IPR_N0
+  - name: IPR_N1
+    bit_range:
+    - 15
+    - 8
+    description: IPR_N1
+  - name: IPR_N2
+    bit_range:
+    - 23
+    - 16
+    description: IPR_N2
+  - name: IPR_N3
+    bit_range:
+    - 31
+    - 24
+    description: IPR_N3
+  side_effects: null
+- id: IPR11
+  address_offset: 1068
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IPR_N0
+    bit_range:
+    - 7
+    - 0
+    description: IPR_N0
+  - name: IPR_N1
+    bit_range:
+    - 15
+    - 8
+    description: IPR_N1
+  - name: IPR_N2
+    bit_range:
+    - 23
+    - 16
+    description: IPR_N2
+  - name: IPR_N3
+    bit_range:
+    - 31
+    - 24
+    description: IPR_N3
+  side_effects: null
+- id: IPR12
+  address_offset: 1072
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IPR_N0
+    bit_range:
+    - 7
+    - 0
+    description: IPR_N0
+  - name: IPR_N1
+    bit_range:
+    - 15
+    - 8
+    description: IPR_N1
+  - name: IPR_N2
+    bit_range:
+    - 23
+    - 16
+    description: IPR_N2
+  - name: IPR_N3
+    bit_range:
+    - 31
+    - 24
+    description: IPR_N3
+  side_effects: null
+- id: IPR13
+  address_offset: 1076
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IPR_N0
+    bit_range:
+    - 7
+    - 0
+    description: IPR_N0
+  - name: IPR_N1
+    bit_range:
+    - 15
+    - 8
+    description: IPR_N1
+  - name: IPR_N2
+    bit_range:
+    - 23
+    - 16
+    description: IPR_N2
+  - name: IPR_N3
+    bit_range:
+    - 31
+    - 24
+    description: IPR_N3
+  side_effects: null
+- id: IPR14
+  address_offset: 1080
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IPR_N0
+    bit_range:
+    - 7
+    - 0
+    description: IPR_N0
+  - name: IPR_N1
+    bit_range:
+    - 15
+    - 8
+    description: IPR_N1
+  - name: IPR_N2
+    bit_range:
+    - 23
+    - 16
+    description: IPR_N2
+  - name: IPR_N3
+    bit_range:
+    - 31
+    - 24
+    description: IPR_N3
+  side_effects: null
+interrupts: null
+timing: null

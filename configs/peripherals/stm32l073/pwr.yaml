@@ -1,0 +1,130 @@
+peripheral: PWR
+version: 0.1.0
+registers:
+- id: CR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 4096
+  fields:
+  - name: LPDS
+    bit_range:
+    - 0
+    - 0
+    description: Low-power deep sleep
+  - name: PDDS
+    bit_range:
+    - 1
+    - 1
+    description: Power down deepsleep
+  - name: CWUF
+    bit_range:
+    - 2
+    - 2
+    description: Clear wakeup flag
+  - name: CSBF
+    bit_range:
+    - 3
+    - 3
+    description: Clear standby flag
+  - name: PVDE
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Power voltage detector
+                    enable
+  - name: PLS
+    bit_range:
+    - 7
+    - 5
+    description: PVD level selection
+  - name: DBP
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Disable backup domain write
+                    protection
+  - name: ULP
+    bit_range:
+    - 9
+    - 9
+    description: Ultra-low-power mode
+  - name: FWU
+    bit_range:
+    - 10
+    - 10
+    description: Fast wakeup
+  - name: VOS
+    bit_range:
+    - 12
+    - 11
+    description: |-
+      Voltage scaling range
+                    selection
+  - name: DS_EE_KOFF
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Deep sleep mode with Flash memory kept
+                    off
+  - name: LPRUN
+    bit_range:
+    - 14
+    - 14
+    description: Low power run mode
+  side_effects: null
+- id: CSR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WUF
+    bit_range:
+    - 0
+    - 0
+    description: Wakeup flag
+  - name: SBF
+    bit_range:
+    - 1
+    - 1
+    description: Standby flag
+  - name: PVDO
+    bit_range:
+    - 2
+    - 2
+    description: PVD output
+  - name: BRR
+    bit_range:
+    - 3
+    - 3
+    description: Backup regulator ready
+  - name: VOSF
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Voltage Scaling select
+                    flag
+  - name: REGLPF
+    bit_range:
+    - 5
+    - 5
+    description: Regulator LP flag
+  - name: EWUP
+    bit_range:
+    - 8
+    - 8
+    description: Enable WKUP pin
+  - name: BRE
+    bit_range:
+    - 9
+    - 9
+    description: Backup regulator enable
+  side_effects: null
+interrupts:
+  I2C3: 21
+timing: null

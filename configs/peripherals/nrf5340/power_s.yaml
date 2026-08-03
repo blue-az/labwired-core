@@ -1,0 +1,237 @@
+peripheral: POWER_S
+version: 0.1.0
+registers:
+- id: TASKS_CONSTLAT
+  address_offset: 120
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_CONSTLAT
+    bit_range:
+    - 0
+    - 0
+    description: Enable Constant Latency mode
+  side_effects: null
+- id: TASKS_LOWPWR
+  address_offset: 124
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_LOWPWR
+    bit_range:
+    - 0
+    - 0
+    description: Enable Low-Power mode (variable latency)
+  side_effects: null
+- id: SUBSCRIBE_CONSTLAT
+  address_offset: 248
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task CONSTLAT will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_LOWPWR
+  address_offset: 252
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task LOWPWR will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: EVENTS_POFWARN
+  address_offset: 264
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_POFWARN
+    bit_range:
+    - 0
+    - 0
+    description: Power failure warning
+  side_effects: null
+- id: EVENTS_SLEEPENTER
+  address_offset: 276
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_SLEEPENTER
+    bit_range:
+    - 0
+    - 0
+    description: CPU entered WFI/WFE sleep
+  side_effects: null
+- id: EVENTS_SLEEPEXIT
+  address_offset: 280
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_SLEEPEXIT
+    bit_range:
+    - 0
+    - 0
+    description: CPU exited WFI/WFE sleep
+  side_effects: null
+- id: PUBLISH_POFWARN
+  address_offset: 392
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event POFWARN will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_SLEEPENTER
+  address_offset: 404
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event SLEEPENTER will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_SLEEPEXIT
+  address_offset: 408
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event SLEEPEXIT will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: INTEN
+  address_offset: 768
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: POFWARN
+    bit_range:
+    - 2
+    - 2
+    description: Enable or disable interrupt for event POFWARN
+  - name: SLEEPENTER
+    bit_range:
+    - 5
+    - 5
+    description: Enable or disable interrupt for event SLEEPENTER
+  - name: SLEEPEXIT
+    bit_range:
+    - 6
+    - 6
+    description: Enable or disable interrupt for event SLEEPEXIT
+  side_effects: null
+- id: INTENSET
+  address_offset: 772
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: POFWARN
+    bit_range:
+    - 2
+    - 2
+    description: Write '1' to enable interrupt for event POFWARN
+  - name: SLEEPENTER
+    bit_range:
+    - 5
+    - 5
+    description: Write '1' to enable interrupt for event SLEEPENTER
+  - name: SLEEPEXIT
+    bit_range:
+    - 6
+    - 6
+    description: Write '1' to enable interrupt for event SLEEPEXIT
+  side_effects: null
+- id: INTENCLR
+  address_offset: 776
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: POFWARN
+    bit_range:
+    - 2
+    - 2
+    description: Write '1' to disable interrupt for event POFWARN
+  - name: SLEEPENTER
+    bit_range:
+    - 5
+    - 5
+    description: Write '1' to disable interrupt for event SLEEPENTER
+  - name: SLEEPEXIT
+    bit_range:
+    - 6
+    - 6
+    description: Write '1' to disable interrupt for event SLEEPEXIT
+  side_effects: null
+- id: GPREGRET0
+  address_offset: 1308
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: GPREGRET
+    bit_range:
+    - 7
+    - 0
+    description: General purpose retention register
+  side_effects: null
+- id: GPREGRET1
+  address_offset: 1312
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: GPREGRET
+    bit_range:
+    - 7
+    - 0
+    description: General purpose retention register
+  side_effects: null
+interrupts:
+  CLOCK_POWER: 5
+  CLOCK_POWER: 5
+timing: null

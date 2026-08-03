@@ -1,0 +1,1007 @@
+peripheral: GLOBAL_MEMCONF_S
+version: 0.1.0
+registers:
+- id: POWER0_CONTROL
+  address_offset: 1280
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: MEM0
+    bit_range:
+    - 0
+    - 0
+    description: Keep the memory block MEM[0] on or off when in System ON mode.
+  - name: MEM1
+    bit_range:
+    - 1
+    - 1
+    description: Keep the memory block MEM[1] on or off when in System ON mode.
+  - name: MEM2
+    bit_range:
+    - 2
+    - 2
+    description: Keep the memory block MEM[2] on or off when in System ON mode.
+  - name: MEM3
+    bit_range:
+    - 3
+    - 3
+    description: Keep the memory block MEM[3] on or off when in System ON mode.
+  - name: MEM4
+    bit_range:
+    - 4
+    - 4
+    description: Keep the memory block MEM[4] on or off when in System ON mode.
+  - name: MEM5
+    bit_range:
+    - 5
+    - 5
+    description: Keep the memory block MEM[5] on or off when in System ON mode.
+  - name: MEM6
+    bit_range:
+    - 6
+    - 6
+    description: Keep the memory block MEM[6] on or off when in System ON mode.
+  - name: MEM7
+    bit_range:
+    - 7
+    - 7
+    description: Keep the memory block MEM[7] on or off when in System ON mode.
+  - name: MEM8
+    bit_range:
+    - 8
+    - 8
+    description: Keep the memory block MEM[8] on or off when in System ON mode.
+  - name: MEM9
+    bit_range:
+    - 9
+    - 9
+    description: Keep the memory block MEM[9] on or off when in System ON mode.
+  - name: MEM10
+    bit_range:
+    - 10
+    - 10
+    description: Keep the memory block MEM[10] on or off when in System ON mode.
+  - name: MEM11
+    bit_range:
+    - 11
+    - 11
+    description: Keep the memory block MEM[11] on or off when in System ON mode.
+  - name: MEM12
+    bit_range:
+    - 12
+    - 12
+    description: Keep the memory block MEM[12] on or off when in System ON mode.
+  - name: MEM13
+    bit_range:
+    - 13
+    - 13
+    description: Keep the memory block MEM[13] on or off when in System ON mode.
+  - name: MEM14
+    bit_range:
+    - 14
+    - 14
+    description: Keep the memory block MEM[14] on or off when in System ON mode.
+  - name: MEM15
+    bit_range:
+    - 15
+    - 15
+    description: Keep the memory block MEM[15] on or off when in System ON mode.
+  - name: MEM16
+    bit_range:
+    - 16
+    - 16
+    description: Keep the memory block MEM[16] on or off when in System ON mode.
+  - name: MEM17
+    bit_range:
+    - 17
+    - 17
+    description: Keep the memory block MEM[17] on or off when in System ON mode.
+  - name: MEM18
+    bit_range:
+    - 18
+    - 18
+    description: Keep the memory block MEM[18] on or off when in System ON mode.
+  - name: MEM19
+    bit_range:
+    - 19
+    - 19
+    description: Keep the memory block MEM[19] on or off when in System ON mode.
+  - name: MEM20
+    bit_range:
+    - 20
+    - 20
+    description: Keep the memory block MEM[20] on or off when in System ON mode.
+  - name: MEM21
+    bit_range:
+    - 21
+    - 21
+    description: Keep the memory block MEM[21] on or off when in System ON mode.
+  - name: MEM22
+    bit_range:
+    - 22
+    - 22
+    description: Keep the memory block MEM[22] on or off when in System ON mode.
+  - name: MEM23
+    bit_range:
+    - 23
+    - 23
+    description: Keep the memory block MEM[23] on or off when in System ON mode.
+  - name: MEM24
+    bit_range:
+    - 24
+    - 24
+    description: Keep the memory block MEM[24] on or off when in System ON mode.
+  - name: MEM25
+    bit_range:
+    - 25
+    - 25
+    description: Keep the memory block MEM[25] on or off when in System ON mode.
+  - name: MEM26
+    bit_range:
+    - 26
+    - 26
+    description: Keep the memory block MEM[26] on or off when in System ON mode.
+  - name: MEM27
+    bit_range:
+    - 27
+    - 27
+    description: Keep the memory block MEM[27] on or off when in System ON mode.
+  - name: MEM28
+    bit_range:
+    - 28
+    - 28
+    description: Keep the memory block MEM[28] on or off when in System ON mode.
+  - name: MEM29
+    bit_range:
+    - 29
+    - 29
+    description: Keep the memory block MEM[29] on or off when in System ON mode.
+  - name: MEM30
+    bit_range:
+    - 30
+    - 30
+    description: Keep the memory block MEM[30] on or off when in System ON mode.
+  - name: MEM31
+    bit_range:
+    - 31
+    - 31
+    description: Keep the memory block MEM[31] on or off when in System ON mode.
+  side_effects: null
+- id: POWER0_RET
+  address_offset: 1288
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: MEM0
+    bit_range:
+    - 0
+    - 0
+    description: Keep the RAM block MEM[0] retained when in System OFF mode.
+  - name: MEM1
+    bit_range:
+    - 1
+    - 1
+    description: Keep the RAM block MEM[1] retained when in System OFF mode.
+  - name: MEM2
+    bit_range:
+    - 2
+    - 2
+    description: Keep the RAM block MEM[2] retained when in System OFF mode.
+  - name: MEM3
+    bit_range:
+    - 3
+    - 3
+    description: Keep the RAM block MEM[3] retained when in System OFF mode.
+  - name: MEM4
+    bit_range:
+    - 4
+    - 4
+    description: Keep the RAM block MEM[4] retained when in System OFF mode.
+  - name: MEM5
+    bit_range:
+    - 5
+    - 5
+    description: Keep the RAM block MEM[5] retained when in System OFF mode.
+  - name: MEM6
+    bit_range:
+    - 6
+    - 6
+    description: Keep the RAM block MEM[6] retained when in System OFF mode.
+  - name: MEM7
+    bit_range:
+    - 7
+    - 7
+    description: Keep the RAM block MEM[7] retained when in System OFF mode.
+  - name: MEM8
+    bit_range:
+    - 8
+    - 8
+    description: Keep the RAM block MEM[8] retained when in System OFF mode.
+  - name: MEM9
+    bit_range:
+    - 9
+    - 9
+    description: Keep the RAM block MEM[9] retained when in System OFF mode.
+  - name: MEM10
+    bit_range:
+    - 10
+    - 10
+    description: Keep the RAM block MEM[10] retained when in System OFF mode.
+  - name: MEM11
+    bit_range:
+    - 11
+    - 11
+    description: Keep the RAM block MEM[11] retained when in System OFF mode.
+  - name: MEM12
+    bit_range:
+    - 12
+    - 12
+    description: Keep the RAM block MEM[12] retained when in System OFF mode.
+  - name: MEM13
+    bit_range:
+    - 13
+    - 13
+    description: Keep the RAM block MEM[13] retained when in System OFF mode.
+  - name: MEM14
+    bit_range:
+    - 14
+    - 14
+    description: Keep the RAM block MEM[14] retained when in System OFF mode.
+  - name: MEM15
+    bit_range:
+    - 15
+    - 15
+    description: Keep the RAM block MEM[15] retained when in System OFF mode.
+  - name: MEM16
+    bit_range:
+    - 16
+    - 16
+    description: Keep the RAM block MEM[16] retained when in System OFF mode.
+  - name: MEM17
+    bit_range:
+    - 17
+    - 17
+    description: Keep the RAM block MEM[17] retained when in System OFF mode.
+  - name: MEM18
+    bit_range:
+    - 18
+    - 18
+    description: Keep the RAM block MEM[18] retained when in System OFF mode.
+  - name: MEM19
+    bit_range:
+    - 19
+    - 19
+    description: Keep the RAM block MEM[19] retained when in System OFF mode.
+  - name: MEM20
+    bit_range:
+    - 20
+    - 20
+    description: Keep the RAM block MEM[20] retained when in System OFF mode.
+  - name: MEM21
+    bit_range:
+    - 21
+    - 21
+    description: Keep the RAM block MEM[21] retained when in System OFF mode.
+  - name: MEM22
+    bit_range:
+    - 22
+    - 22
+    description: Keep the RAM block MEM[22] retained when in System OFF mode.
+  - name: MEM23
+    bit_range:
+    - 23
+    - 23
+    description: Keep the RAM block MEM[23] retained when in System OFF mode.
+  - name: MEM24
+    bit_range:
+    - 24
+    - 24
+    description: Keep the RAM block MEM[24] retained when in System OFF mode.
+  - name: MEM25
+    bit_range:
+    - 25
+    - 25
+    description: Keep the RAM block MEM[25] retained when in System OFF mode.
+  - name: MEM26
+    bit_range:
+    - 26
+    - 26
+    description: Keep the RAM block MEM[26] retained when in System OFF mode.
+  - name: MEM27
+    bit_range:
+    - 27
+    - 27
+    description: Keep the RAM block MEM[27] retained when in System OFF mode.
+  - name: MEM28
+    bit_range:
+    - 28
+    - 28
+    description: Keep the RAM block MEM[28] retained when in System OFF mode.
+  - name: MEM29
+    bit_range:
+    - 29
+    - 29
+    description: Keep the RAM block MEM[29] retained when in System OFF mode.
+  - name: MEM30
+    bit_range:
+    - 30
+    - 30
+    description: Keep the RAM block MEM[30] retained when in System OFF mode.
+  - name: MEM31
+    bit_range:
+    - 31
+    - 31
+    description: Keep the RAM block MEM[31] retained when in System OFF mode.
+  side_effects: null
+- id: POWER0_RET2
+  address_offset: 1292
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MEM0
+    bit_range:
+    - 0
+    - 0
+    description: Keep the second bank in RAM block MEM[0] retained when in System OFF mode.
+  - name: MEM1
+    bit_range:
+    - 1
+    - 1
+    description: Keep the second bank in RAM block MEM[1] retained when in System OFF mode.
+  - name: MEM2
+    bit_range:
+    - 2
+    - 2
+    description: Keep the second bank in RAM block MEM[2] retained when in System OFF mode.
+  - name: MEM3
+    bit_range:
+    - 3
+    - 3
+    description: Keep the second bank in RAM block MEM[3] retained when in System OFF mode.
+  - name: MEM4
+    bit_range:
+    - 4
+    - 4
+    description: Keep the second bank in RAM block MEM[4] retained when in System OFF mode.
+  - name: MEM5
+    bit_range:
+    - 5
+    - 5
+    description: Keep the second bank in RAM block MEM[5] retained when in System OFF mode.
+  - name: MEM6
+    bit_range:
+    - 6
+    - 6
+    description: Keep the second bank in RAM block MEM[6] retained when in System OFF mode.
+  - name: MEM7
+    bit_range:
+    - 7
+    - 7
+    description: Keep the second bank in RAM block MEM[7] retained when in System OFF mode.
+  - name: MEM8
+    bit_range:
+    - 8
+    - 8
+    description: Keep the second bank in RAM block MEM[8] retained when in System OFF mode.
+  - name: MEM9
+    bit_range:
+    - 9
+    - 9
+    description: Keep the second bank in RAM block MEM[9] retained when in System OFF mode.
+  - name: MEM10
+    bit_range:
+    - 10
+    - 10
+    description: Keep the second bank in RAM block MEM[10] retained when in System OFF mode.
+  - name: MEM11
+    bit_range:
+    - 11
+    - 11
+    description: Keep the second bank in RAM block MEM[11] retained when in System OFF mode.
+  - name: MEM12
+    bit_range:
+    - 12
+    - 12
+    description: Keep the second bank in RAM block MEM[12] retained when in System OFF mode.
+  - name: MEM13
+    bit_range:
+    - 13
+    - 13
+    description: Keep the second bank in RAM block MEM[13] retained when in System OFF mode.
+  - name: MEM14
+    bit_range:
+    - 14
+    - 14
+    description: Keep the second bank in RAM block MEM[14] retained when in System OFF mode.
+  - name: MEM15
+    bit_range:
+    - 15
+    - 15
+    description: Keep the second bank in RAM block MEM[15] retained when in System OFF mode.
+  - name: MEM16
+    bit_range:
+    - 16
+    - 16
+    description: Keep the second bank in RAM block MEM[16] retained when in System OFF mode.
+  - name: MEM17
+    bit_range:
+    - 17
+    - 17
+    description: Keep the second bank in RAM block MEM[17] retained when in System OFF mode.
+  - name: MEM18
+    bit_range:
+    - 18
+    - 18
+    description: Keep the second bank in RAM block MEM[18] retained when in System OFF mode.
+  - name: MEM19
+    bit_range:
+    - 19
+    - 19
+    description: Keep the second bank in RAM block MEM[19] retained when in System OFF mode.
+  - name: MEM20
+    bit_range:
+    - 20
+    - 20
+    description: Keep the second bank in RAM block MEM[20] retained when in System OFF mode.
+  - name: MEM21
+    bit_range:
+    - 21
+    - 21
+    description: Keep the second bank in RAM block MEM[21] retained when in System OFF mode.
+  - name: MEM22
+    bit_range:
+    - 22
+    - 22
+    description: Keep the second bank in RAM block MEM[22] retained when in System OFF mode.
+  - name: MEM23
+    bit_range:
+    - 23
+    - 23
+    description: Keep the second bank in RAM block MEM[23] retained when in System OFF mode.
+  - name: MEM24
+    bit_range:
+    - 24
+    - 24
+    description: Keep the second bank in RAM block MEM[24] retained when in System OFF mode.
+  - name: MEM25
+    bit_range:
+    - 25
+    - 25
+    description: Keep the second bank in RAM block MEM[25] retained when in System OFF mode.
+  - name: MEM26
+    bit_range:
+    - 26
+    - 26
+    description: Keep the second bank in RAM block MEM[26] retained when in System OFF mode.
+  - name: MEM27
+    bit_range:
+    - 27
+    - 27
+    description: Keep the second bank in RAM block MEM[27] retained when in System OFF mode.
+  - name: MEM28
+    bit_range:
+    - 28
+    - 28
+    description: Keep the second bank in RAM block MEM[28] retained when in System OFF mode.
+  - name: MEM29
+    bit_range:
+    - 29
+    - 29
+    description: Keep the second bank in RAM block MEM[29] retained when in System OFF mode.
+  - name: MEM30
+    bit_range:
+    - 30
+    - 30
+    description: Keep the second bank in RAM block MEM[30] retained when in System OFF mode.
+  - name: MEM31
+    bit_range:
+    - 31
+    - 31
+    description: Keep the second bank in RAM block MEM[31] retained when in System OFF mode.
+  side_effects: null
+- id: POWER1_CONTROL
+  address_offset: 1296
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: MEM0
+    bit_range:
+    - 0
+    - 0
+    description: Keep the memory block MEM[0] on or off when in System ON mode.
+  - name: MEM1
+    bit_range:
+    - 1
+    - 1
+    description: Keep the memory block MEM[1] on or off when in System ON mode.
+  - name: MEM2
+    bit_range:
+    - 2
+    - 2
+    description: Keep the memory block MEM[2] on or off when in System ON mode.
+  - name: MEM3
+    bit_range:
+    - 3
+    - 3
+    description: Keep the memory block MEM[3] on or off when in System ON mode.
+  - name: MEM4
+    bit_range:
+    - 4
+    - 4
+    description: Keep the memory block MEM[4] on or off when in System ON mode.
+  - name: MEM5
+    bit_range:
+    - 5
+    - 5
+    description: Keep the memory block MEM[5] on or off when in System ON mode.
+  - name: MEM6
+    bit_range:
+    - 6
+    - 6
+    description: Keep the memory block MEM[6] on or off when in System ON mode.
+  - name: MEM7
+    bit_range:
+    - 7
+    - 7
+    description: Keep the memory block MEM[7] on or off when in System ON mode.
+  - name: MEM8
+    bit_range:
+    - 8
+    - 8
+    description: Keep the memory block MEM[8] on or off when in System ON mode.
+  - name: MEM9
+    bit_range:
+    - 9
+    - 9
+    description: Keep the memory block MEM[9] on or off when in System ON mode.
+  - name: MEM10
+    bit_range:
+    - 10
+    - 10
+    description: Keep the memory block MEM[10] on or off when in System ON mode.
+  - name: MEM11
+    bit_range:
+    - 11
+    - 11
+    description: Keep the memory block MEM[11] on or off when in System ON mode.
+  - name: MEM12
+    bit_range:
+    - 12
+    - 12
+    description: Keep the memory block MEM[12] on or off when in System ON mode.
+  - name: MEM13
+    bit_range:
+    - 13
+    - 13
+    description: Keep the memory block MEM[13] on or off when in System ON mode.
+  - name: MEM14
+    bit_range:
+    - 14
+    - 14
+    description: Keep the memory block MEM[14] on or off when in System ON mode.
+  - name: MEM15
+    bit_range:
+    - 15
+    - 15
+    description: Keep the memory block MEM[15] on or off when in System ON mode.
+  - name: MEM16
+    bit_range:
+    - 16
+    - 16
+    description: Keep the memory block MEM[16] on or off when in System ON mode.
+  - name: MEM17
+    bit_range:
+    - 17
+    - 17
+    description: Keep the memory block MEM[17] on or off when in System ON mode.
+  - name: MEM18
+    bit_range:
+    - 18
+    - 18
+    description: Keep the memory block MEM[18] on or off when in System ON mode.
+  - name: MEM19
+    bit_range:
+    - 19
+    - 19
+    description: Keep the memory block MEM[19] on or off when in System ON mode.
+  - name: MEM20
+    bit_range:
+    - 20
+    - 20
+    description: Keep the memory block MEM[20] on or off when in System ON mode.
+  - name: MEM21
+    bit_range:
+    - 21
+    - 21
+    description: Keep the memory block MEM[21] on or off when in System ON mode.
+  - name: MEM22
+    bit_range:
+    - 22
+    - 22
+    description: Keep the memory block MEM[22] on or off when in System ON mode.
+  - name: MEM23
+    bit_range:
+    - 23
+    - 23
+    description: Keep the memory block MEM[23] on or off when in System ON mode.
+  - name: MEM24
+    bit_range:
+    - 24
+    - 24
+    description: Keep the memory block MEM[24] on or off when in System ON mode.
+  - name: MEM25
+    bit_range:
+    - 25
+    - 25
+    description: Keep the memory block MEM[25] on or off when in System ON mode.
+  - name: MEM26
+    bit_range:
+    - 26
+    - 26
+    description: Keep the memory block MEM[26] on or off when in System ON mode.
+  - name: MEM27
+    bit_range:
+    - 27
+    - 27
+    description: Keep the memory block MEM[27] on or off when in System ON mode.
+  - name: MEM28
+    bit_range:
+    - 28
+    - 28
+    description: Keep the memory block MEM[28] on or off when in System ON mode.
+  - name: MEM29
+    bit_range:
+    - 29
+    - 29
+    description: Keep the memory block MEM[29] on or off when in System ON mode.
+  - name: MEM30
+    bit_range:
+    - 30
+    - 30
+    description: Keep the memory block MEM[30] on or off when in System ON mode.
+  - name: MEM31
+    bit_range:
+    - 31
+    - 31
+    description: Keep the memory block MEM[31] on or off when in System ON mode.
+  side_effects: null
+- id: POWER1_RET
+  address_offset: 1304
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: MEM0
+    bit_range:
+    - 0
+    - 0
+    description: Keep the RAM block MEM[0] retained when in System OFF mode.
+  - name: MEM1
+    bit_range:
+    - 1
+    - 1
+    description: Keep the RAM block MEM[1] retained when in System OFF mode.
+  - name: MEM2
+    bit_range:
+    - 2
+    - 2
+    description: Keep the RAM block MEM[2] retained when in System OFF mode.
+  - name: MEM3
+    bit_range:
+    - 3
+    - 3
+    description: Keep the RAM block MEM[3] retained when in System OFF mode.
+  - name: MEM4
+    bit_range:
+    - 4
+    - 4
+    description: Keep the RAM block MEM[4] retained when in System OFF mode.
+  - name: MEM5
+    bit_range:
+    - 5
+    - 5
+    description: Keep the RAM block MEM[5] retained when in System OFF mode.
+  - name: MEM6
+    bit_range:
+    - 6
+    - 6
+    description: Keep the RAM block MEM[6] retained when in System OFF mode.
+  - name: MEM7
+    bit_range:
+    - 7
+    - 7
+    description: Keep the RAM block MEM[7] retained when in System OFF mode.
+  - name: MEM8
+    bit_range:
+    - 8
+    - 8
+    description: Keep the RAM block MEM[8] retained when in System OFF mode.
+  - name: MEM9
+    bit_range:
+    - 9
+    - 9
+    description: Keep the RAM block MEM[9] retained when in System OFF mode.
+  - name: MEM10
+    bit_range:
+    - 10
+    - 10
+    description: Keep the RAM block MEM[10] retained when in System OFF mode.
+  - name: MEM11
+    bit_range:
+    - 11
+    - 11
+    description: Keep the RAM block MEM[11] retained when in System OFF mode.
+  - name: MEM12
+    bit_range:
+    - 12
+    - 12
+    description: Keep the RAM block MEM[12] retained when in System OFF mode.
+  - name: MEM13
+    bit_range:
+    - 13
+    - 13
+    description: Keep the RAM block MEM[13] retained when in System OFF mode.
+  - name: MEM14
+    bit_range:
+    - 14
+    - 14
+    description: Keep the RAM block MEM[14] retained when in System OFF mode.
+  - name: MEM15
+    bit_range:
+    - 15
+    - 15
+    description: Keep the RAM block MEM[15] retained when in System OFF mode.
+  - name: MEM16
+    bit_range:
+    - 16
+    - 16
+    description: Keep the RAM block MEM[16] retained when in System OFF mode.
+  - name: MEM17
+    bit_range:
+    - 17
+    - 17
+    description: Keep the RAM block MEM[17] retained when in System OFF mode.
+  - name: MEM18
+    bit_range:
+    - 18
+    - 18
+    description: Keep the RAM block MEM[18] retained when in System OFF mode.
+  - name: MEM19
+    bit_range:
+    - 19
+    - 19
+    description: Keep the RAM block MEM[19] retained when in System OFF mode.
+  - name: MEM20
+    bit_range:
+    - 20
+    - 20
+    description: Keep the RAM block MEM[20] retained when in System OFF mode.
+  - name: MEM21
+    bit_range:
+    - 21
+    - 21
+    description: Keep the RAM block MEM[21] retained when in System OFF mode.
+  - name: MEM22
+    bit_range:
+    - 22
+    - 22
+    description: Keep the RAM block MEM[22] retained when in System OFF mode.
+  - name: MEM23
+    bit_range:
+    - 23
+    - 23
+    description: Keep the RAM block MEM[23] retained when in System OFF mode.
+  - name: MEM24
+    bit_range:
+    - 24
+    - 24
+    description: Keep the RAM block MEM[24] retained when in System OFF mode.
+  - name: MEM25
+    bit_range:
+    - 25
+    - 25
+    description: Keep the RAM block MEM[25] retained when in System OFF mode.
+  - name: MEM26
+    bit_range:
+    - 26
+    - 26
+    description: Keep the RAM block MEM[26] retained when in System OFF mode.
+  - name: MEM27
+    bit_range:
+    - 27
+    - 27
+    description: Keep the RAM block MEM[27] retained when in System OFF mode.
+  - name: MEM28
+    bit_range:
+    - 28
+    - 28
+    description: Keep the RAM block MEM[28] retained when in System OFF mode.
+  - name: MEM29
+    bit_range:
+    - 29
+    - 29
+    description: Keep the RAM block MEM[29] retained when in System OFF mode.
+  - name: MEM30
+    bit_range:
+    - 30
+    - 30
+    description: Keep the RAM block MEM[30] retained when in System OFF mode.
+  - name: MEM31
+    bit_range:
+    - 31
+    - 31
+    description: Keep the RAM block MEM[31] retained when in System OFF mode.
+  side_effects: null
+- id: POWER1_RET2
+  address_offset: 1308
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MEM0
+    bit_range:
+    - 0
+    - 0
+    description: Keep the second bank in RAM block MEM[0] retained when in System OFF mode.
+  - name: MEM1
+    bit_range:
+    - 1
+    - 1
+    description: Keep the second bank in RAM block MEM[1] retained when in System OFF mode.
+  - name: MEM2
+    bit_range:
+    - 2
+    - 2
+    description: Keep the second bank in RAM block MEM[2] retained when in System OFF mode.
+  - name: MEM3
+    bit_range:
+    - 3
+    - 3
+    description: Keep the second bank in RAM block MEM[3] retained when in System OFF mode.
+  - name: MEM4
+    bit_range:
+    - 4
+    - 4
+    description: Keep the second bank in RAM block MEM[4] retained when in System OFF mode.
+  - name: MEM5
+    bit_range:
+    - 5
+    - 5
+    description: Keep the second bank in RAM block MEM[5] retained when in System OFF mode.
+  - name: MEM6
+    bit_range:
+    - 6
+    - 6
+    description: Keep the second bank in RAM block MEM[6] retained when in System OFF mode.
+  - name: MEM7
+    bit_range:
+    - 7
+    - 7
+    description: Keep the second bank in RAM block MEM[7] retained when in System OFF mode.
+  - name: MEM8
+    bit_range:
+    - 8
+    - 8
+    description: Keep the second bank in RAM block MEM[8] retained when in System OFF mode.
+  - name: MEM9
+    bit_range:
+    - 9
+    - 9
+    description: Keep the second bank in RAM block MEM[9] retained when in System OFF mode.
+  - name: MEM10
+    bit_range:
+    - 10
+    - 10
+    description: Keep the second bank in RAM block MEM[10] retained when in System OFF mode.
+  - name: MEM11
+    bit_range:
+    - 11
+    - 11
+    description: Keep the second bank in RAM block MEM[11] retained when in System OFF mode.
+  - name: MEM12
+    bit_range:
+    - 12
+    - 12
+    description: Keep the second bank in RAM block MEM[12] retained when in System OFF mode.
+  - name: MEM13
+    bit_range:
+    - 13
+    - 13
+    description: Keep the second bank in RAM block MEM[13] retained when in System OFF mode.
+  - name: MEM14
+    bit_range:
+    - 14
+    - 14
+    description: Keep the second bank in RAM block MEM[14] retained when in System OFF mode.
+  - name: MEM15
+    bit_range:
+    - 15
+    - 15
+    description: Keep the second bank in RAM block MEM[15] retained when in System OFF mode.
+  - name: MEM16
+    bit_range:
+    - 16
+    - 16
+    description: Keep the second bank in RAM block MEM[16] retained when in System OFF mode.
+  - name: MEM17
+    bit_range:
+    - 17
+    - 17
+    description: Keep the second bank in RAM block MEM[17] retained when in System OFF mode.
+  - name: MEM18
+    bit_range:
+    - 18
+    - 18
+    description: Keep the second bank in RAM block MEM[18] retained when in System OFF mode.
+  - name: MEM19
+    bit_range:
+    - 19
+    - 19
+    description: Keep the second bank in RAM block MEM[19] retained when in System OFF mode.
+  - name: MEM20
+    bit_range:
+    - 20
+    - 20
+    description: Keep the second bank in RAM block MEM[20] retained when in System OFF mode.
+  - name: MEM21
+    bit_range:
+    - 21
+    - 21
+    description: Keep the second bank in RAM block MEM[21] retained when in System OFF mode.
+  - name: MEM22
+    bit_range:
+    - 22
+    - 22
+    description: Keep the second bank in RAM block MEM[22] retained when in System OFF mode.
+  - name: MEM23
+    bit_range:
+    - 23
+    - 23
+    description: Keep the second bank in RAM block MEM[23] retained when in System OFF mode.
+  - name: MEM24
+    bit_range:
+    - 24
+    - 24
+    description: Keep the second bank in RAM block MEM[24] retained when in System OFF mode.
+  - name: MEM25
+    bit_range:
+    - 25
+    - 25
+    description: Keep the second bank in RAM block MEM[25] retained when in System OFF mode.
+  - name: MEM26
+    bit_range:
+    - 26
+    - 26
+    description: Keep the second bank in RAM block MEM[26] retained when in System OFF mode.
+  - name: MEM27
+    bit_range:
+    - 27
+    - 27
+    description: Keep the second bank in RAM block MEM[27] retained when in System OFF mode.
+  - name: MEM28
+    bit_range:
+    - 28
+    - 28
+    description: Keep the second bank in RAM block MEM[28] retained when in System OFF mode.
+  - name: MEM29
+    bit_range:
+    - 29
+    - 29
+    description: Keep the second bank in RAM block MEM[29] retained when in System OFF mode.
+  - name: MEM30
+    bit_range:
+    - 30
+    - 30
+    description: Keep the second bank in RAM block MEM[30] retained when in System OFF mode.
+  - name: MEM31
+    bit_range:
+    - 31
+    - 31
+    description: Keep the second bank in RAM block MEM[31] retained when in System OFF mode.
+  side_effects: null
+interrupts: null
+timing: null

@@ -1,0 +1,279 @@
+peripheral: RTC_I2C
+version: 0.1.0
+registers:
+- id: SCL_LOW_PERIOD
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SCL_LOW_PERIOD
+    bit_range:
+    - 24
+    - 0
+    description: number of cycles that scl == 0
+  side_effects: null
+- id: CTRL
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SDA_FORCE_OUT
+    bit_range:
+    - 0
+    - 0
+    description: SDA is push-pull (1) or open-drain (0)
+  - name: SCL_FORCE_OUT
+    bit_range:
+    - 1
+    - 1
+    description: SCL is push-pull (1) or open-drain (0)
+  - name: MS_MODE
+    bit_range:
+    - 4
+    - 4
+    description: Master (1) or slave (0)
+  - name: TRANS_START
+    bit_range:
+    - 5
+    - 5
+    description: Force to generate start condition
+  - name: TX_LSB_FIRST
+    bit_range:
+    - 6
+    - 6
+    description: Send LSB first
+  - name: RX_LSB_FIRST
+    bit_range:
+    - 7
+    - 7
+    description: Receive LSB first
+  side_effects: null
+- id: DEBUG_STATUS
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ACK_VAL
+    bit_range:
+    - 0
+    - 0
+    description: The value of an acknowledge signal on the bus
+  - name: SLAVE_RW
+    bit_range:
+    - 1
+    - 1
+    description: When working as a slave, the value of R/W bit received
+  - name: TIMED_OUT
+    bit_range:
+    - 2
+    - 2
+    description: Transfer has timed out
+  - name: ARB_LOST
+    bit_range:
+    - 3
+    - 3
+    description: When working as a master, lost control of I2C bus
+  - name: BUS_BUSY
+    bit_range:
+    - 4
+    - 4
+    description: operation is in progress
+  - name: SLAVE_ADDR_MATCH
+    bit_range:
+    - 5
+    - 5
+    description: When working as a slave, whether address was matched
+  - name: BYTE_TRANS
+    bit_range:
+    - 6
+    - 6
+    description: 8 bit transmit done
+  - name: MAIN_STATE
+    bit_range:
+    - 27
+    - 25
+    description: state of the main state machine
+  - name: SCL_STATE
+    bit_range:
+    - 30
+    - 28
+    description: state of SCL state machine
+  side_effects: null
+- id: TIMEOUT
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIMEOUT
+    bit_range:
+    - 19
+    - 0
+    description: Maximum number of FAST_CLK cycles that the transmission can take
+  side_effects: null
+- id: SLAVE_ADDR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SLAVE_ADDR
+    bit_range:
+    - 14
+    - 0
+    description: local slave address
+  - name: _10BIT
+    bit_range:
+    - 31
+    - 31
+    description: Set if local slave address is 10-bit
+  side_effects: null
+- id: DATA
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields: []
+  side_effects: null
+- id: INT_RAW
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SLAVE_TRANS_COMPLETE_INT_RAW
+    bit_range:
+    - 3
+    - 3
+    description: Slave accepted 1 byte and address matched
+  - name: ARBITRATION_LOST_INT_RAW
+    bit_range:
+    - 4
+    - 4
+    description: Master lost arbitration
+  - name: MASTER_TRANS_COMPLETE_INT_RAW
+    bit_range:
+    - 5
+    - 5
+  - name: TRANS_COMPLETE_INT_RAW
+    bit_range:
+    - 6
+    - 6
+    description: Stop condition has been detected interrupt raw status
+  - name: TIME_OUT_INT_RAW
+    bit_range:
+    - 7
+    - 7
+    description: time out interrupt raw status
+  side_effects: null
+- id: INT_CLR
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SLAVE_TRANS_COMPLETE_INT_CLR
+    bit_range:
+    - 4
+    - 4
+  - name: ARBITRATION_LOST_INT_CLR
+    bit_range:
+    - 5
+    - 5
+  - name: MASTER_TRANS_COMPLETE_INT_CLR
+    bit_range:
+    - 6
+    - 6
+  - name: TRANS_COMPLETE_INT_CLR
+    bit_range:
+    - 7
+    - 7
+  - name: TIME_OUT_INT_CLR
+    bit_range:
+    - 8
+    - 8
+  side_effects: null
+- id: INT_EN
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields: []
+  side_effects: null
+- id: INT_ST
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields: []
+  side_effects: null
+- id: SDA_DUTY
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SDA_DUTY
+    bit_range:
+    - 19
+    - 0
+    description: Number of FAST_CLK cycles SDA will switch after falling edge of SCL
+  side_effects: null
+- id: SCL_HIGH_PERIOD
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SCL_HIGH_PERIOD
+    bit_range:
+    - 19
+    - 0
+    description: Number of FAST_CLK cycles for SCL to be high
+  side_effects: null
+- id: SCL_START_PERIOD
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SCL_START_PERIOD
+    bit_range:
+    - 19
+    - 0
+    description: Number of FAST_CLK cycles to wait before generating start condition
+  side_effects: null
+- id: SCL_STOP_PERIOD
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SCL_STOP_PERIOD
+    bit_range:
+    - 19
+    - 0
+    description: Number of FAST_CLK cycles to wait before generating stop condition
+  side_effects: null
+- id: CMD
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VAL
+    bit_range:
+    - 13
+    - 0
+    description: Command content
+  - name: DONE
+    bit_range:
+    - 31
+    - 31
+    description: Bit is set by HW when command is done
+  side_effects: null
+interrupts: null
+timing: null

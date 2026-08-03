@@ -1,0 +1,1900 @@
+peripheral: DMA1
+version: 0.1.0
+registers:
+- id: LISR
+  address_offset: 0
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: TCIF3
+    bit_range:
+    - 27
+    - 27
+    description: Stream x transfer complete interrupt flag (x = 3..0)
+  - name: HTIF3
+    bit_range:
+    - 26
+    - 26
+    description: Stream x half transfer interrupt flag (x=3..0)
+  - name: TEIF3
+    bit_range:
+    - 25
+    - 25
+    description: Stream x transfer error interrupt flag (x=3..0)
+  - name: DMEIF3
+    bit_range:
+    - 24
+    - 24
+    description: Stream x direct mode error interrupt flag (x=3..0)
+  - name: FEIF3
+    bit_range:
+    - 22
+    - 22
+    description: Stream x FIFO error interrupt flag (x=3..0)
+  - name: TCIF2
+    bit_range:
+    - 21
+    - 21
+    description: Stream x transfer complete interrupt flag (x = 3..0)
+  - name: HTIF2
+    bit_range:
+    - 20
+    - 20
+    description: Stream x half transfer interrupt flag (x=3..0)
+  - name: TEIF2
+    bit_range:
+    - 19
+    - 19
+    description: Stream x transfer error interrupt flag (x=3..0)
+  - name: DMEIF2
+    bit_range:
+    - 18
+    - 18
+    description: Stream x direct mode error interrupt flag (x=3..0)
+  - name: FEIF2
+    bit_range:
+    - 16
+    - 16
+    description: Stream x FIFO error interrupt flag (x=3..0)
+  - name: TCIF1
+    bit_range:
+    - 11
+    - 11
+    description: Stream x transfer complete interrupt flag (x = 3..0)
+  - name: HTIF1
+    bit_range:
+    - 10
+    - 10
+    description: Stream x half transfer interrupt flag (x=3..0)
+  - name: TEIF1
+    bit_range:
+    - 9
+    - 9
+    description: Stream x transfer error interrupt flag (x=3..0)
+  - name: DMEIF1
+    bit_range:
+    - 8
+    - 8
+    description: Stream x direct mode error interrupt flag (x=3..0)
+  - name: FEIF1
+    bit_range:
+    - 6
+    - 6
+    description: Stream x FIFO error interrupt flag (x=3..0)
+  - name: TCIF0
+    bit_range:
+    - 5
+    - 5
+    description: Stream x transfer complete interrupt flag (x = 3..0)
+  - name: HTIF0
+    bit_range:
+    - 4
+    - 4
+    description: Stream x half transfer interrupt flag (x=3..0)
+  - name: TEIF0
+    bit_range:
+    - 3
+    - 3
+    description: Stream x transfer error interrupt flag (x=3..0)
+  - name: DMEIF0
+    bit_range:
+    - 2
+    - 2
+    description: Stream x direct mode error interrupt flag (x=3..0)
+  - name: FEIF0
+    bit_range:
+    - 0
+    - 0
+    description: Stream x FIFO error interrupt flag (x=3..0)
+  side_effects: null
+- id: HISR
+  address_offset: 4
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: TCIF7
+    bit_range:
+    - 27
+    - 27
+    description: Stream x transfer complete interrupt flag (x=7..4)
+  - name: HTIF7
+    bit_range:
+    - 26
+    - 26
+    description: Stream x half transfer interrupt flag (x=7..4)
+  - name: TEIF7
+    bit_range:
+    - 25
+    - 25
+    description: Stream x transfer error interrupt flag (x=7..4)
+  - name: DMEIF7
+    bit_range:
+    - 24
+    - 24
+    description: Stream x direct mode error interrupt flag (x=7..4)
+  - name: FEIF7
+    bit_range:
+    - 22
+    - 22
+    description: Stream x FIFO error interrupt flag (x=7..4)
+  - name: TCIF6
+    bit_range:
+    - 21
+    - 21
+    description: Stream x transfer complete interrupt flag (x=7..4)
+  - name: HTIF6
+    bit_range:
+    - 20
+    - 20
+    description: Stream x half transfer interrupt flag (x=7..4)
+  - name: TEIF6
+    bit_range:
+    - 19
+    - 19
+    description: Stream x transfer error interrupt flag (x=7..4)
+  - name: DMEIF6
+    bit_range:
+    - 18
+    - 18
+    description: Stream x direct mode error interrupt flag (x=7..4)
+  - name: FEIF6
+    bit_range:
+    - 16
+    - 16
+    description: Stream x FIFO error interrupt flag (x=7..4)
+  - name: TCIF5
+    bit_range:
+    - 11
+    - 11
+    description: Stream x transfer complete interrupt flag (x=7..4)
+  - name: HTIF5
+    bit_range:
+    - 10
+    - 10
+    description: Stream x half transfer interrupt flag (x=7..4)
+  - name: TEIF5
+    bit_range:
+    - 9
+    - 9
+    description: Stream x transfer error interrupt flag (x=7..4)
+  - name: DMEIF5
+    bit_range:
+    - 8
+    - 8
+    description: Stream x direct mode error interrupt flag (x=7..4)
+  - name: FEIF5
+    bit_range:
+    - 6
+    - 6
+    description: Stream x FIFO error interrupt flag (x=7..4)
+  - name: TCIF4
+    bit_range:
+    - 5
+    - 5
+    description: Stream x transfer complete interrupt flag (x=7..4)
+  - name: HTIF4
+    bit_range:
+    - 4
+    - 4
+    description: Stream x half transfer interrupt flag (x=7..4)
+  - name: TEIF4
+    bit_range:
+    - 3
+    - 3
+    description: Stream x transfer error interrupt flag (x=7..4)
+  - name: DMEIF4
+    bit_range:
+    - 2
+    - 2
+    description: Stream x direct mode error interrupt flag (x=7..4)
+  - name: FEIF4
+    bit_range:
+    - 0
+    - 0
+    description: Stream x FIFO error interrupt flag (x=7..4)
+  side_effects: null
+- id: LIFCR
+  address_offset: 8
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: CTCIF3
+    bit_range:
+    - 27
+    - 27
+    description: Stream x clear transfer complete interrupt flag (x = 3..0)
+  - name: CHTIF3
+    bit_range:
+    - 26
+    - 26
+    description: Stream x clear half transfer interrupt flag (x = 3..0)
+  - name: CTEIF3
+    bit_range:
+    - 25
+    - 25
+    description: Stream x clear transfer error interrupt flag (x = 3..0)
+  - name: CDMEIF3
+    bit_range:
+    - 24
+    - 24
+    description: Stream x clear direct mode error interrupt flag (x = 3..0)
+  - name: CFEIF3
+    bit_range:
+    - 22
+    - 22
+    description: Stream x clear FIFO error interrupt flag (x = 3..0)
+  - name: CTCIF2
+    bit_range:
+    - 21
+    - 21
+    description: Stream x clear transfer complete interrupt flag (x = 3..0)
+  - name: CHTIF2
+    bit_range:
+    - 20
+    - 20
+    description: Stream x clear half transfer interrupt flag (x = 3..0)
+  - name: CTEIF2
+    bit_range:
+    - 19
+    - 19
+    description: Stream x clear transfer error interrupt flag (x = 3..0)
+  - name: CDMEIF2
+    bit_range:
+    - 18
+    - 18
+    description: Stream x clear direct mode error interrupt flag (x = 3..0)
+  - name: CFEIF2
+    bit_range:
+    - 16
+    - 16
+    description: Stream x clear FIFO error interrupt flag (x = 3..0)
+  - name: CTCIF1
+    bit_range:
+    - 11
+    - 11
+    description: Stream x clear transfer complete interrupt flag (x = 3..0)
+  - name: CHTIF1
+    bit_range:
+    - 10
+    - 10
+    description: Stream x clear half transfer interrupt flag (x = 3..0)
+  - name: CTEIF1
+    bit_range:
+    - 9
+    - 9
+    description: Stream x clear transfer error interrupt flag (x = 3..0)
+  - name: CDMEIF1
+    bit_range:
+    - 8
+    - 8
+    description: Stream x clear direct mode error interrupt flag (x = 3..0)
+  - name: CFEIF1
+    bit_range:
+    - 6
+    - 6
+    description: Stream x clear FIFO error interrupt flag (x = 3..0)
+  - name: CTCIF0
+    bit_range:
+    - 5
+    - 5
+    description: Stream x clear transfer complete interrupt flag (x = 3..0)
+  - name: CHTIF0
+    bit_range:
+    - 4
+    - 4
+    description: Stream x clear half transfer interrupt flag (x = 3..0)
+  - name: CTEIF0
+    bit_range:
+    - 3
+    - 3
+    description: Stream x clear transfer error interrupt flag (x = 3..0)
+  - name: CDMEIF0
+    bit_range:
+    - 2
+    - 2
+    description: Stream x clear direct mode error interrupt flag (x = 3..0)
+  - name: CFEIF0
+    bit_range:
+    - 0
+    - 0
+    description: Stream x clear FIFO error interrupt flag (x = 3..0)
+  side_effects: null
+- id: HIFCR
+  address_offset: 12
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: CTCIF7
+    bit_range:
+    - 27
+    - 27
+    description: Stream x clear transfer complete interrupt flag (x = 7..4)
+  - name: CHTIF7
+    bit_range:
+    - 26
+    - 26
+    description: Stream x clear half transfer interrupt flag (x = 7..4)
+  - name: CTEIF7
+    bit_range:
+    - 25
+    - 25
+    description: Stream x clear transfer error interrupt flag (x = 7..4)
+  - name: CDMEIF7
+    bit_range:
+    - 24
+    - 24
+    description: Stream x clear direct mode error interrupt flag (x = 7..4)
+  - name: CFEIF7
+    bit_range:
+    - 22
+    - 22
+    description: Stream x clear FIFO error interrupt flag (x = 7..4)
+  - name: CTCIF6
+    bit_range:
+    - 21
+    - 21
+    description: Stream x clear transfer complete interrupt flag (x = 7..4)
+  - name: CHTIF6
+    bit_range:
+    - 20
+    - 20
+    description: Stream x clear half transfer interrupt flag (x = 7..4)
+  - name: CTEIF6
+    bit_range:
+    - 19
+    - 19
+    description: Stream x clear transfer error interrupt flag (x = 7..4)
+  - name: CDMEIF6
+    bit_range:
+    - 18
+    - 18
+    description: Stream x clear direct mode error interrupt flag (x = 7..4)
+  - name: CFEIF6
+    bit_range:
+    - 16
+    - 16
+    description: Stream x clear FIFO error interrupt flag (x = 7..4)
+  - name: CTCIF5
+    bit_range:
+    - 11
+    - 11
+    description: Stream x clear transfer complete interrupt flag (x = 7..4)
+  - name: CHTIF5
+    bit_range:
+    - 10
+    - 10
+    description: Stream x clear half transfer interrupt flag (x = 7..4)
+  - name: CTEIF5
+    bit_range:
+    - 9
+    - 9
+    description: Stream x clear transfer error interrupt flag (x = 7..4)
+  - name: CDMEIF5
+    bit_range:
+    - 8
+    - 8
+    description: Stream x clear direct mode error interrupt flag (x = 7..4)
+  - name: CFEIF5
+    bit_range:
+    - 6
+    - 6
+    description: Stream x clear FIFO error interrupt flag (x = 7..4)
+  - name: CTCIF4
+    bit_range:
+    - 5
+    - 5
+    description: Stream x clear transfer complete interrupt flag (x = 7..4)
+  - name: CHTIF4
+    bit_range:
+    - 4
+    - 4
+    description: Stream x clear half transfer interrupt flag (x = 7..4)
+  - name: CTEIF4
+    bit_range:
+    - 3
+    - 3
+    description: Stream x clear transfer error interrupt flag (x = 7..4)
+  - name: CDMEIF4
+    bit_range:
+    - 2
+    - 2
+    description: Stream x clear direct mode error interrupt flag (x = 7..4)
+  - name: CFEIF4
+    bit_range:
+    - 0
+    - 0
+    description: Stream x clear FIFO error interrupt flag (x = 7..4)
+  side_effects: null
+- id: S0CR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHSEL
+    bit_range:
+    - 27
+    - 25
+    description: Channel selection
+  - name: MBURST
+    bit_range:
+    - 24
+    - 23
+    description: Memory burst transfer configuration
+  - name: PBURST
+    bit_range:
+    - 22
+    - 21
+    description: Peripheral burst transfer configuration
+  - name: CT
+    bit_range:
+    - 19
+    - 19
+    description: Current target (only in double buffer mode)
+  - name: DBM
+    bit_range:
+    - 18
+    - 18
+    description: Double buffer mode
+  - name: PL
+    bit_range:
+    - 17
+    - 16
+    description: Priority level
+  - name: PINCOS
+    bit_range:
+    - 15
+    - 15
+    description: Peripheral increment offset size
+  - name: MSIZE
+    bit_range:
+    - 14
+    - 13
+    description: Memory data size
+  - name: PSIZE
+    bit_range:
+    - 12
+    - 11
+    description: Peripheral data size
+  - name: MINC
+    bit_range:
+    - 10
+    - 10
+    description: Memory increment mode
+  - name: PINC
+    bit_range:
+    - 9
+    - 9
+    description: Peripheral increment mode
+  - name: CIRC
+    bit_range:
+    - 8
+    - 8
+    description: Circular mode
+  - name: DIR
+    bit_range:
+    - 7
+    - 6
+    description: Data transfer direction
+  - name: PFCTRL
+    bit_range:
+    - 5
+    - 5
+    description: Peripheral flow controller
+  - name: TCIE
+    bit_range:
+    - 4
+    - 4
+    description: Transfer complete interrupt enable
+  - name: HTIE
+    bit_range:
+    - 3
+    - 3
+    description: Half transfer interrupt enable
+  - name: TEIE
+    bit_range:
+    - 2
+    - 2
+    description: Transfer error interrupt enable
+  - name: DMEIE
+    bit_range:
+    - 1
+    - 1
+    description: Direct mode error interrupt enable
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Stream enable / flag stream ready when read low
+  side_effects: null
+- id: S0NDTR
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NDT
+    bit_range:
+    - 15
+    - 0
+    description: Number of data items to transfer
+  side_effects: null
+- id: S0PAR
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PA
+    bit_range:
+    - 31
+    - 0
+    description: Peripheral address
+  side_effects: null
+- id: S0M0AR
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: M0A
+    bit_range:
+    - 31
+    - 0
+    description: Memory 0 address
+  side_effects: null
+- id: S0M1AR
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: M1A
+    bit_range:
+    - 31
+    - 0
+    description: Memory 1 address (used in case of Double buffer mode)
+  side_effects: null
+- id: S0FCR
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 33
+  fields:
+  - name: FEIE
+    bit_range:
+    - 7
+    - 7
+    description: FIFO error interrupt enable
+  - name: FS
+    bit_range:
+    - 5
+    - 3
+    description: FIFO status
+  - name: DMDIS
+    bit_range:
+    - 2
+    - 2
+    description: Direct mode disable
+  - name: FTH
+    bit_range:
+    - 1
+    - 0
+    description: FIFO threshold selection
+  side_effects: null
+- id: S1CR
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHSEL
+    bit_range:
+    - 27
+    - 25
+    description: Channel selection
+  - name: MBURST
+    bit_range:
+    - 24
+    - 23
+    description: Memory burst transfer configuration
+  - name: PBURST
+    bit_range:
+    - 22
+    - 21
+    description: Peripheral burst transfer configuration
+  - name: ACK
+    bit_range:
+    - 20
+    - 20
+    description: ACK
+  - name: CT
+    bit_range:
+    - 19
+    - 19
+    description: Current target (only in double buffer mode)
+  - name: DBM
+    bit_range:
+    - 18
+    - 18
+    description: Double buffer mode
+  - name: PL
+    bit_range:
+    - 17
+    - 16
+    description: Priority level
+  - name: PINCOS
+    bit_range:
+    - 15
+    - 15
+    description: Peripheral increment offset size
+  - name: MSIZE
+    bit_range:
+    - 14
+    - 13
+    description: Memory data size
+  - name: PSIZE
+    bit_range:
+    - 12
+    - 11
+    description: Peripheral data size
+  - name: MINC
+    bit_range:
+    - 10
+    - 10
+    description: Memory increment mode
+  - name: PINC
+    bit_range:
+    - 9
+    - 9
+    description: Peripheral increment mode
+  - name: CIRC
+    bit_range:
+    - 8
+    - 8
+    description: Circular mode
+  - name: DIR
+    bit_range:
+    - 7
+    - 6
+    description: Data transfer direction
+  - name: PFCTRL
+    bit_range:
+    - 5
+    - 5
+    description: Peripheral flow controller
+  - name: TCIE
+    bit_range:
+    - 4
+    - 4
+    description: Transfer complete interrupt enable
+  - name: HTIE
+    bit_range:
+    - 3
+    - 3
+    description: Half transfer interrupt enable
+  - name: TEIE
+    bit_range:
+    - 2
+    - 2
+    description: Transfer error interrupt enable
+  - name: DMEIE
+    bit_range:
+    - 1
+    - 1
+    description: Direct mode error interrupt enable
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Stream enable / flag stream ready when read low
+  side_effects: null
+- id: S1NDTR
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NDT
+    bit_range:
+    - 15
+    - 0
+    description: Number of data items to transfer
+  side_effects: null
+- id: S1PAR
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PA
+    bit_range:
+    - 31
+    - 0
+    description: Peripheral address
+  side_effects: null
+- id: S1M0AR
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: M0A
+    bit_range:
+    - 31
+    - 0
+    description: Memory 0 address
+  side_effects: null
+- id: S1M1AR
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: M1A
+    bit_range:
+    - 31
+    - 0
+    description: Memory 1 address (used in case of Double buffer mode)
+  side_effects: null
+- id: S1FCR
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 33
+  fields:
+  - name: FEIE
+    bit_range:
+    - 7
+    - 7
+    description: FIFO error interrupt enable
+  - name: FS
+    bit_range:
+    - 5
+    - 3
+    description: FIFO status
+  - name: DMDIS
+    bit_range:
+    - 2
+    - 2
+    description: Direct mode disable
+  - name: FTH
+    bit_range:
+    - 1
+    - 0
+    description: FIFO threshold selection
+  side_effects: null
+- id: S2CR
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHSEL
+    bit_range:
+    - 27
+    - 25
+    description: Channel selection
+  - name: MBURST
+    bit_range:
+    - 24
+    - 23
+    description: Memory burst transfer configuration
+  - name: PBURST
+    bit_range:
+    - 22
+    - 21
+    description: Peripheral burst transfer configuration
+  - name: ACK
+    bit_range:
+    - 20
+    - 20
+    description: ACK
+  - name: CT
+    bit_range:
+    - 19
+    - 19
+    description: Current target (only in double buffer mode)
+  - name: DBM
+    bit_range:
+    - 18
+    - 18
+    description: Double buffer mode
+  - name: PL
+    bit_range:
+    - 17
+    - 16
+    description: Priority level
+  - name: PINCOS
+    bit_range:
+    - 15
+    - 15
+    description: Peripheral increment offset size
+  - name: MSIZE
+    bit_range:
+    - 14
+    - 13
+    description: Memory data size
+  - name: PSIZE
+    bit_range:
+    - 12
+    - 11
+    description: Peripheral data size
+  - name: MINC
+    bit_range:
+    - 10
+    - 10
+    description: Memory increment mode
+  - name: PINC
+    bit_range:
+    - 9
+    - 9
+    description: Peripheral increment mode
+  - name: CIRC
+    bit_range:
+    - 8
+    - 8
+    description: Circular mode
+  - name: DIR
+    bit_range:
+    - 7
+    - 6
+    description: Data transfer direction
+  - name: PFCTRL
+    bit_range:
+    - 5
+    - 5
+    description: Peripheral flow controller
+  - name: TCIE
+    bit_range:
+    - 4
+    - 4
+    description: Transfer complete interrupt enable
+  - name: HTIE
+    bit_range:
+    - 3
+    - 3
+    description: Half transfer interrupt enable
+  - name: TEIE
+    bit_range:
+    - 2
+    - 2
+    description: Transfer error interrupt enable
+  - name: DMEIE
+    bit_range:
+    - 1
+    - 1
+    description: Direct mode error interrupt enable
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Stream enable / flag stream ready when read low
+  side_effects: null
+- id: S2NDTR
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NDT
+    bit_range:
+    - 15
+    - 0
+    description: Number of data items to transfer
+  side_effects: null
+- id: S2PAR
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PA
+    bit_range:
+    - 31
+    - 0
+    description: Peripheral address
+  side_effects: null
+- id: S2M0AR
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: M0A
+    bit_range:
+    - 31
+    - 0
+    description: Memory 0 address
+  side_effects: null
+- id: S2M1AR
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: M1A
+    bit_range:
+    - 31
+    - 0
+    description: Memory 1 address (used in case of Double buffer mode)
+  side_effects: null
+- id: S2FCR
+  address_offset: 84
+  size: 32
+  access: READ_WRITE
+  reset_value: 33
+  fields:
+  - name: FEIE
+    bit_range:
+    - 7
+    - 7
+    description: FIFO error interrupt enable
+  - name: FS
+    bit_range:
+    - 5
+    - 3
+    description: FIFO status
+  - name: DMDIS
+    bit_range:
+    - 2
+    - 2
+    description: Direct mode disable
+  - name: FTH
+    bit_range:
+    - 1
+    - 0
+    description: FIFO threshold selection
+  side_effects: null
+- id: S3CR
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHSEL
+    bit_range:
+    - 27
+    - 25
+    description: Channel selection
+  - name: MBURST
+    bit_range:
+    - 24
+    - 23
+    description: Memory burst transfer configuration
+  - name: PBURST
+    bit_range:
+    - 22
+    - 21
+    description: Peripheral burst transfer configuration
+  - name: ACK
+    bit_range:
+    - 20
+    - 20
+    description: ACK
+  - name: CT
+    bit_range:
+    - 19
+    - 19
+    description: Current target (only in double buffer mode)
+  - name: DBM
+    bit_range:
+    - 18
+    - 18
+    description: Double buffer mode
+  - name: PL
+    bit_range:
+    - 17
+    - 16
+    description: Priority level
+  - name: PINCOS
+    bit_range:
+    - 15
+    - 15
+    description: Peripheral increment offset size
+  - name: MSIZE
+    bit_range:
+    - 14
+    - 13
+    description: Memory data size
+  - name: PSIZE
+    bit_range:
+    - 12
+    - 11
+    description: Peripheral data size
+  - name: MINC
+    bit_range:
+    - 10
+    - 10
+    description: Memory increment mode
+  - name: PINC
+    bit_range:
+    - 9
+    - 9
+    description: Peripheral increment mode
+  - name: CIRC
+    bit_range:
+    - 8
+    - 8
+    description: Circular mode
+  - name: DIR
+    bit_range:
+    - 7
+    - 6
+    description: Data transfer direction
+  - name: PFCTRL
+    bit_range:
+    - 5
+    - 5
+    description: Peripheral flow controller
+  - name: TCIE
+    bit_range:
+    - 4
+    - 4
+    description: Transfer complete interrupt enable
+  - name: HTIE
+    bit_range:
+    - 3
+    - 3
+    description: Half transfer interrupt enable
+  - name: TEIE
+    bit_range:
+    - 2
+    - 2
+    description: Transfer error interrupt enable
+  - name: DMEIE
+    bit_range:
+    - 1
+    - 1
+    description: Direct mode error interrupt enable
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Stream enable / flag stream ready when read low
+  side_effects: null
+- id: S3NDTR
+  address_offset: 92
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NDT
+    bit_range:
+    - 15
+    - 0
+    description: Number of data items to transfer
+  side_effects: null
+- id: S3PAR
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PA
+    bit_range:
+    - 31
+    - 0
+    description: Peripheral address
+  side_effects: null
+- id: S3M0AR
+  address_offset: 100
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: M0A
+    bit_range:
+    - 31
+    - 0
+    description: Memory 0 address
+  side_effects: null
+- id: S3M1AR
+  address_offset: 104
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: M1A
+    bit_range:
+    - 31
+    - 0
+    description: Memory 1 address (used in case of Double buffer mode)
+  side_effects: null
+- id: S3FCR
+  address_offset: 108
+  size: 32
+  access: READ_WRITE
+  reset_value: 33
+  fields:
+  - name: FEIE
+    bit_range:
+    - 7
+    - 7
+    description: FIFO error interrupt enable
+  - name: FS
+    bit_range:
+    - 5
+    - 3
+    description: FIFO status
+  - name: DMDIS
+    bit_range:
+    - 2
+    - 2
+    description: Direct mode disable
+  - name: FTH
+    bit_range:
+    - 1
+    - 0
+    description: FIFO threshold selection
+  side_effects: null
+- id: S4CR
+  address_offset: 112
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHSEL
+    bit_range:
+    - 27
+    - 25
+    description: Channel selection
+  - name: MBURST
+    bit_range:
+    - 24
+    - 23
+    description: Memory burst transfer configuration
+  - name: PBURST
+    bit_range:
+    - 22
+    - 21
+    description: Peripheral burst transfer configuration
+  - name: ACK
+    bit_range:
+    - 20
+    - 20
+    description: ACK
+  - name: CT
+    bit_range:
+    - 19
+    - 19
+    description: Current target (only in double buffer mode)
+  - name: DBM
+    bit_range:
+    - 18
+    - 18
+    description: Double buffer mode
+  - name: PL
+    bit_range:
+    - 17
+    - 16
+    description: Priority level
+  - name: PINCOS
+    bit_range:
+    - 15
+    - 15
+    description: Peripheral increment offset size
+  - name: MSIZE
+    bit_range:
+    - 14
+    - 13
+    description: Memory data size
+  - name: PSIZE
+    bit_range:
+    - 12
+    - 11
+    description: Peripheral data size
+  - name: MINC
+    bit_range:
+    - 10
+    - 10
+    description: Memory increment mode
+  - name: PINC
+    bit_range:
+    - 9
+    - 9
+    description: Peripheral increment mode
+  - name: CIRC
+    bit_range:
+    - 8
+    - 8
+    description: Circular mode
+  - name: DIR
+    bit_range:
+    - 7
+    - 6
+    description: Data transfer direction
+  - name: PFCTRL
+    bit_range:
+    - 5
+    - 5
+    description: Peripheral flow controller
+  - name: TCIE
+    bit_range:
+    - 4
+    - 4
+    description: Transfer complete interrupt enable
+  - name: HTIE
+    bit_range:
+    - 3
+    - 3
+    description: Half transfer interrupt enable
+  - name: TEIE
+    bit_range:
+    - 2
+    - 2
+    description: Transfer error interrupt enable
+  - name: DMEIE
+    bit_range:
+    - 1
+    - 1
+    description: Direct mode error interrupt enable
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Stream enable / flag stream ready when read low
+  side_effects: null
+- id: S4NDTR
+  address_offset: 116
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NDT
+    bit_range:
+    - 15
+    - 0
+    description: Number of data items to transfer
+  side_effects: null
+- id: S4PAR
+  address_offset: 120
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PA
+    bit_range:
+    - 31
+    - 0
+    description: Peripheral address
+  side_effects: null
+- id: S4M0AR
+  address_offset: 124
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: M0A
+    bit_range:
+    - 31
+    - 0
+    description: Memory 0 address
+  side_effects: null
+- id: S4M1AR
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: M1A
+    bit_range:
+    - 31
+    - 0
+    description: Memory 1 address (used in case of Double buffer mode)
+  side_effects: null
+- id: S4FCR
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 33
+  fields:
+  - name: FEIE
+    bit_range:
+    - 7
+    - 7
+    description: FIFO error interrupt enable
+  - name: FS
+    bit_range:
+    - 5
+    - 3
+    description: FIFO status
+  - name: DMDIS
+    bit_range:
+    - 2
+    - 2
+    description: Direct mode disable
+  - name: FTH
+    bit_range:
+    - 1
+    - 0
+    description: FIFO threshold selection
+  side_effects: null
+- id: S5CR
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHSEL
+    bit_range:
+    - 27
+    - 25
+    description: Channel selection
+  - name: MBURST
+    bit_range:
+    - 24
+    - 23
+    description: Memory burst transfer configuration
+  - name: PBURST
+    bit_range:
+    - 22
+    - 21
+    description: Peripheral burst transfer configuration
+  - name: ACK
+    bit_range:
+    - 20
+    - 20
+    description: ACK
+  - name: CT
+    bit_range:
+    - 19
+    - 19
+    description: Current target (only in double buffer mode)
+  - name: DBM
+    bit_range:
+    - 18
+    - 18
+    description: Double buffer mode
+  - name: PL
+    bit_range:
+    - 17
+    - 16
+    description: Priority level
+  - name: PINCOS
+    bit_range:
+    - 15
+    - 15
+    description: Peripheral increment offset size
+  - name: MSIZE
+    bit_range:
+    - 14
+    - 13
+    description: Memory data size
+  - name: PSIZE
+    bit_range:
+    - 12
+    - 11
+    description: Peripheral data size
+  - name: MINC
+    bit_range:
+    - 10
+    - 10
+    description: Memory increment mode
+  - name: PINC
+    bit_range:
+    - 9
+    - 9
+    description: Peripheral increment mode
+  - name: CIRC
+    bit_range:
+    - 8
+    - 8
+    description: Circular mode
+  - name: DIR
+    bit_range:
+    - 7
+    - 6
+    description: Data transfer direction
+  - name: PFCTRL
+    bit_range:
+    - 5
+    - 5
+    description: Peripheral flow controller
+  - name: TCIE
+    bit_range:
+    - 4
+    - 4
+    description: Transfer complete interrupt enable
+  - name: HTIE
+    bit_range:
+    - 3
+    - 3
+    description: Half transfer interrupt enable
+  - name: TEIE
+    bit_range:
+    - 2
+    - 2
+    description: Transfer error interrupt enable
+  - name: DMEIE
+    bit_range:
+    - 1
+    - 1
+    description: Direct mode error interrupt enable
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Stream enable / flag stream ready when read low
+  side_effects: null
+- id: S5NDTR
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NDT
+    bit_range:
+    - 15
+    - 0
+    description: Number of data items to transfer
+  side_effects: null
+- id: S5PAR
+  address_offset: 144
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PA
+    bit_range:
+    - 31
+    - 0
+    description: Peripheral address
+  side_effects: null
+- id: S5M0AR
+  address_offset: 148
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: M0A
+    bit_range:
+    - 31
+    - 0
+    description: Memory 0 address
+  side_effects: null
+- id: S5M1AR
+  address_offset: 152
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: M1A
+    bit_range:
+    - 31
+    - 0
+    description: Memory 1 address (used in case of Double buffer mode)
+  side_effects: null
+- id: S5FCR
+  address_offset: 156
+  size: 32
+  access: READ_WRITE
+  reset_value: 33
+  fields:
+  - name: FEIE
+    bit_range:
+    - 7
+    - 7
+    description: FIFO error interrupt enable
+  - name: FS
+    bit_range:
+    - 5
+    - 3
+    description: FIFO status
+  - name: DMDIS
+    bit_range:
+    - 2
+    - 2
+    description: Direct mode disable
+  - name: FTH
+    bit_range:
+    - 1
+    - 0
+    description: FIFO threshold selection
+  side_effects: null
+- id: S6CR
+  address_offset: 160
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHSEL
+    bit_range:
+    - 27
+    - 25
+    description: Channel selection
+  - name: MBURST
+    bit_range:
+    - 24
+    - 23
+    description: Memory burst transfer configuration
+  - name: PBURST
+    bit_range:
+    - 22
+    - 21
+    description: Peripheral burst transfer configuration
+  - name: ACK
+    bit_range:
+    - 20
+    - 20
+    description: ACK
+  - name: CT
+    bit_range:
+    - 19
+    - 19
+    description: Current target (only in double buffer mode)
+  - name: DBM
+    bit_range:
+    - 18
+    - 18
+    description: Double buffer mode
+  - name: PL
+    bit_range:
+    - 17
+    - 16
+    description: Priority level
+  - name: PINCOS
+    bit_range:
+    - 15
+    - 15
+    description: Peripheral increment offset size
+  - name: MSIZE
+    bit_range:
+    - 14
+    - 13
+    description: Memory data size
+  - name: PSIZE
+    bit_range:
+    - 12
+    - 11
+    description: Peripheral data size
+  - name: MINC
+    bit_range:
+    - 10
+    - 10
+    description: Memory increment mode
+  - name: PINC
+    bit_range:
+    - 9
+    - 9
+    description: Peripheral increment mode
+  - name: CIRC
+    bit_range:
+    - 8
+    - 8
+    description: Circular mode
+  - name: DIR
+    bit_range:
+    - 7
+    - 6
+    description: Data transfer direction
+  - name: PFCTRL
+    bit_range:
+    - 5
+    - 5
+    description: Peripheral flow controller
+  - name: TCIE
+    bit_range:
+    - 4
+    - 4
+    description: Transfer complete interrupt enable
+  - name: HTIE
+    bit_range:
+    - 3
+    - 3
+    description: Half transfer interrupt enable
+  - name: TEIE
+    bit_range:
+    - 2
+    - 2
+    description: Transfer error interrupt enable
+  - name: DMEIE
+    bit_range:
+    - 1
+    - 1
+    description: Direct mode error interrupt enable
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Stream enable / flag stream ready when read low
+  side_effects: null
+- id: S6NDTR
+  address_offset: 164
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NDT
+    bit_range:
+    - 15
+    - 0
+    description: Number of data items to transfer
+  side_effects: null
+- id: S6PAR
+  address_offset: 168
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PA
+    bit_range:
+    - 31
+    - 0
+    description: Peripheral address
+  side_effects: null
+- id: S6M0AR
+  address_offset: 172
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: M0A
+    bit_range:
+    - 31
+    - 0
+    description: Memory 0 address
+  side_effects: null
+- id: S6M1AR
+  address_offset: 176
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: M1A
+    bit_range:
+    - 31
+    - 0
+    description: Memory 1 address (used in case of Double buffer mode)
+  side_effects: null
+- id: S6FCR
+  address_offset: 180
+  size: 32
+  access: READ_WRITE
+  reset_value: 33
+  fields:
+  - name: FEIE
+    bit_range:
+    - 7
+    - 7
+    description: FIFO error interrupt enable
+  - name: FS
+    bit_range:
+    - 5
+    - 3
+    description: FIFO status
+  - name: DMDIS
+    bit_range:
+    - 2
+    - 2
+    description: Direct mode disable
+  - name: FTH
+    bit_range:
+    - 1
+    - 0
+    description: FIFO threshold selection
+  side_effects: null
+- id: S7CR
+  address_offset: 184
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHSEL
+    bit_range:
+    - 27
+    - 25
+    description: Channel selection
+  - name: MBURST
+    bit_range:
+    - 24
+    - 23
+    description: Memory burst transfer configuration
+  - name: PBURST
+    bit_range:
+    - 22
+    - 21
+    description: Peripheral burst transfer configuration
+  - name: ACK
+    bit_range:
+    - 20
+    - 20
+    description: ACK
+  - name: CT
+    bit_range:
+    - 19
+    - 19
+    description: Current target (only in double buffer mode)
+  - name: DBM
+    bit_range:
+    - 18
+    - 18
+    description: Double buffer mode
+  - name: PL
+    bit_range:
+    - 17
+    - 16
+    description: Priority level
+  - name: PINCOS
+    bit_range:
+    - 15
+    - 15
+    description: Peripheral increment offset size
+  - name: MSIZE
+    bit_range:
+    - 14
+    - 13
+    description: Memory data size
+  - name: PSIZE
+    bit_range:
+    - 12
+    - 11
+    description: Peripheral data size
+  - name: MINC
+    bit_range:
+    - 10
+    - 10
+    description: Memory increment mode
+  - name: PINC
+    bit_range:
+    - 9
+    - 9
+    description: Peripheral increment mode
+  - name: CIRC
+    bit_range:
+    - 8
+    - 8
+    description: Circular mode
+  - name: DIR
+    bit_range:
+    - 7
+    - 6
+    description: Data transfer direction
+  - name: PFCTRL
+    bit_range:
+    - 5
+    - 5
+    description: Peripheral flow controller
+  - name: TCIE
+    bit_range:
+    - 4
+    - 4
+    description: Transfer complete interrupt enable
+  - name: HTIE
+    bit_range:
+    - 3
+    - 3
+    description: Half transfer interrupt enable
+  - name: TEIE
+    bit_range:
+    - 2
+    - 2
+    description: Transfer error interrupt enable
+  - name: DMEIE
+    bit_range:
+    - 1
+    - 1
+    description: Direct mode error interrupt enable
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Stream enable / flag stream ready when read low
+  side_effects: null
+- id: S7NDTR
+  address_offset: 188
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NDT
+    bit_range:
+    - 15
+    - 0
+    description: Number of data items to transfer
+  side_effects: null
+- id: S7PAR
+  address_offset: 192
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PA
+    bit_range:
+    - 31
+    - 0
+    description: Peripheral address
+  side_effects: null
+- id: S7M0AR
+  address_offset: 196
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: M0A
+    bit_range:
+    - 31
+    - 0
+    description: Memory 0 address
+  side_effects: null
+- id: S7M1AR
+  address_offset: 200
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: M1A
+    bit_range:
+    - 31
+    - 0
+    description: Memory 1 address (used in case of Double buffer mode)
+  side_effects: null
+- id: S7FCR
+  address_offset: 204
+  size: 32
+  access: READ_WRITE
+  reset_value: 33
+  fields:
+  - name: FEIE
+    bit_range:
+    - 7
+    - 7
+    description: FIFO error interrupt enable
+  - name: FS
+    bit_range:
+    - 5
+    - 3
+    description: FIFO status
+  - name: DMDIS
+    bit_range:
+    - 2
+    - 2
+    description: Direct mode disable
+  - name: FTH
+    bit_range:
+    - 1
+    - 0
+    description: FIFO threshold selection
+  side_effects: null
+interrupts:
+  DMA1_Stream0: 11
+  DMA1_Stream1: 12
+  DMA1_Stream2: 13
+  DMA1_Stream3: 14
+  DMA1_Stream4: 15
+  DMA1_Stream5: 16
+  DMA1_Stream6: 17
+  DMA1_Stream7: 47
+  DMA2_Stream0: 56
+  DMA2_Stream1: 57
+  DMA2_Stream2: 58
+  DMA2_Stream3: 59
+  DMA2_Stream4: 60
+  DMA2_Stream5: 68
+  DMA2_Stream6: 69
+  DMA2_Stream7: 70
+timing: null

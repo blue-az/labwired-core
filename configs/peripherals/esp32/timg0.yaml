@@ -1,0 +1,742 @@
+peripheral: TIMG0
+version: 0.1.0
+registers:
+- id: T0CONFIG
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 1610620928
+  fields:
+  - name: ALARM_EN
+    bit_range:
+    - 10
+    - 10
+    description: When set  alarm is enabled
+  - name: LEVEL_INT_EN
+    bit_range:
+    - 11
+    - 11
+    description: When set  level type interrupt will be generated during alarm
+  - name: EDGE_INT_EN
+    bit_range:
+    - 12
+    - 12
+    description: When set  edge type interrupt will be generated during alarm
+  - name: DIVIDER
+    bit_range:
+    - 28
+    - 13
+    description: Timer 0 clock (T0_clk) prescale value.
+  - name: AUTORELOAD
+    bit_range:
+    - 29
+    - 29
+    description: When set  timer 0 auto-reload at alarming is enabled
+  - name: INCREASE
+    bit_range:
+    - 30
+    - 30
+    description: When set  timer 0 time-base counter increment. When cleared timer 0 time-base counter decrement.
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+    description: When set  timer 0 time-base counter is enabled
+  side_effects: null
+- id: T0LO
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LO
+    bit_range:
+    - 31
+    - 0
+    description: Register to store timer 0 time-base counter current value lower 32 bits.
+  side_effects: null
+- id: T0HI
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HI
+    bit_range:
+    - 31
+    - 0
+    description: Register to store timer 0 time-base counter current value higher 32 bits.
+  side_effects: null
+- id: T0UPDATE
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: UPDATE
+    bit_range:
+    - 31
+    - 0
+    description: Write any value will trigger a timer 0 time-base counter value update (timer 0 current value will be stored in registers above)
+  side_effects: null
+- id: T0ALARMLO
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ALARM_LO
+    bit_range:
+    - 31
+    - 0
+    description: Timer 0 time-base counter value lower 32 bits that will trigger the alarm
+  side_effects: null
+- id: T0ALARMHI
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ALARM_HI
+    bit_range:
+    - 31
+    - 0
+    description: Timer 0 time-base counter value higher 32 bits that will trigger the alarm
+  side_effects: null
+- id: T0LOADLO
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LOAD_LO
+    bit_range:
+    - 31
+    - 0
+    description: Lower 32 bits of the value that will load into timer 0 time-base counter
+  side_effects: null
+- id: T0LOADHI
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LOAD_HI
+    bit_range:
+    - 31
+    - 0
+    description: higher 32 bits of the value that will load into timer 0 time-base counter
+  side_effects: null
+- id: T0LOAD
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LOAD
+    bit_range:
+    - 31
+    - 0
+    description: Write any value will trigger timer 0 time-base counter reload
+  side_effects: null
+- id: T1CONFIG
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 1610620928
+  fields:
+  - name: ALARM_EN
+    bit_range:
+    - 10
+    - 10
+    description: When set  alarm is enabled
+  - name: LEVEL_INT_EN
+    bit_range:
+    - 11
+    - 11
+    description: When set  level type interrupt will be generated during alarm
+  - name: EDGE_INT_EN
+    bit_range:
+    - 12
+    - 12
+    description: When set  edge type interrupt will be generated during alarm
+  - name: DIVIDER
+    bit_range:
+    - 28
+    - 13
+    description: Timer 1 clock (T1_clk) prescale value.
+  - name: AUTORELOAD
+    bit_range:
+    - 29
+    - 29
+    description: When set  timer 1 auto-reload at alarming is enabled
+  - name: INCREASE
+    bit_range:
+    - 30
+    - 30
+    description: When set  timer 1 time-base counter increment. When cleared timer 1 time-base counter decrement.
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+    description: When set  timer 1 time-base counter is enabled
+  side_effects: null
+- id: T1LO
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LO
+    bit_range:
+    - 31
+    - 0
+    description: Register to store timer 1 time-base counter current value lower 32 bits.
+  side_effects: null
+- id: T1HI
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HI
+    bit_range:
+    - 31
+    - 0
+    description: Register to store timer 1 time-base counter current value higher 32 bits.
+  side_effects: null
+- id: T1UPDATE
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: UPDATE
+    bit_range:
+    - 31
+    - 0
+    description: Write any value will trigger a timer 1 time-base counter value update (timer 1 current value will be stored in registers above)
+  side_effects: null
+- id: T1ALARMLO
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ALARM_LO
+    bit_range:
+    - 31
+    - 0
+    description: Timer 1 time-base counter value lower 32 bits that will trigger the alarm
+  side_effects: null
+- id: T1ALARMHI
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ALARM_HI
+    bit_range:
+    - 31
+    - 0
+    description: Timer 1 time-base counter value higher 32 bits that will trigger the alarm
+  side_effects: null
+- id: T1LOADLO
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LOAD_LO
+    bit_range:
+    - 31
+    - 0
+    description: Lower 32 bits of the value that will load into timer 1 time-base counter
+  side_effects: null
+- id: T1LOADHI
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LOAD_HI
+    bit_range:
+    - 31
+    - 0
+    description: higher 32 bits of the value that will load into timer 1 time-base counter
+  side_effects: null
+- id: T1LOAD
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LOAD
+    bit_range:
+    - 31
+    - 0
+    description: Write any value will trigger timer 1 time-base counter reload
+  side_effects: null
+- id: WDTCONFIG0
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 311296
+  fields:
+  - name: WDT_FLASHBOOT_MOD_EN
+    bit_range:
+    - 14
+    - 14
+    description: When set  flash boot protection is enabled
+  - name: WDT_SYS_RESET_LENGTH
+    bit_range:
+    - 17
+    - 15
+    description: 'length of system reset selection. 0: 100ns  1: 200ns  2: 300ns  3: 400ns  4: 500ns  5: 800ns  6: 1.6us  7: 3.2us'
+  - name: WDT_CPU_RESET_LENGTH
+    bit_range:
+    - 20
+    - 18
+    description: 'length of CPU reset selection. 0: 100ns  1: 200ns  2: 300ns 3: 400ns  4: 500ns  5: 800ns  6: 1.6us  7: 3.2us'
+  - name: WDT_LEVEL_INT_EN
+    bit_range:
+    - 21
+    - 21
+    description: When set  level type interrupt generation is enabled
+  - name: WDT_EDGE_INT_EN
+    bit_range:
+    - 22
+    - 22
+    description: When set  edge type interrupt generation is enabled
+  - name: WDT_STG3
+    bit_range:
+    - 24
+    - 23
+    description: 'Stage 3 configuration. 0: off  1: interrupt  2: reset CPU  3: reset system'
+  - name: WDT_STG2
+    bit_range:
+    - 26
+    - 25
+    description: 'Stage 2 configuration. 0: off  1: interrupt  2: reset CPU  3: reset system'
+  - name: WDT_STG1
+    bit_range:
+    - 28
+    - 27
+    description: 'Stage 1 configuration. 0: off  1: interrupt  2: reset CPU  3: reset system'
+  - name: WDT_STG0
+    bit_range:
+    - 30
+    - 29
+    description: 'Stage 0 configuration. 0: off  1: interrupt  2: reset CPU  3: reset system'
+  - name: WDT_EN
+    bit_range:
+    - 31
+    - 31
+    description: When set  SWDT is enabled
+  side_effects: null
+- id: WDTCONFIG1
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 65536
+  fields:
+  - name: WDT_CLK_PRESCALE
+    bit_range:
+    - 31
+    - 16
+    description: SWDT clock prescale value. Period = 12.5ns * value stored in this register
+  side_effects: null
+- id: WDTCONFIG2
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 26000000
+  fields:
+  - name: WDT_STG0_HOLD
+    bit_range:
+    - 31
+    - 0
+    description: Stage 0 timeout value in SWDT clock cycles
+  side_effects: null
+- id: WDTCONFIG3
+  address_offset: 84
+  size: 32
+  access: READ_WRITE
+  reset_value: 134217727
+  fields:
+  - name: WDT_STG1_HOLD
+    bit_range:
+    - 31
+    - 0
+    description: Stage 1 timeout value in SWDT clock cycles
+  side_effects: null
+- id: WDTCONFIG4
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048575
+  fields:
+  - name: WDT_STG2_HOLD
+    bit_range:
+    - 31
+    - 0
+    description: Stage 2 timeout value in SWDT clock cycles
+  side_effects: null
+- id: WDTCONFIG5
+  address_offset: 92
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048575
+  fields:
+  - name: WDT_STG3_HOLD
+    bit_range:
+    - 31
+    - 0
+    description: Stage 3 timeout value in SWDT clock cycles
+  side_effects: null
+- id: WDTFEED
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WDT_FEED
+    bit_range:
+    - 31
+    - 0
+    description: Write any value will feed SWDT
+  side_effects: null
+- id: WDTWPROTECT
+  address_offset: 100
+  size: 32
+  access: READ_WRITE
+  reset_value: 1356348065
+  fields:
+  - name: WDT_WKEY
+    bit_range:
+    - 31
+    - 0
+    description: If change its value from default  then write protection is on.
+  side_effects: null
+- id: RTCCALICFG
+  address_offset: 104
+  size: 32
+  access: READ_WRITE
+  reset_value: 77824
+  fields:
+  - name: RTC_CALI_START_CYCLING
+    bit_range:
+    - 12
+    - 12
+  - name: RTC_CALI_CLK_SEL
+    bit_range:
+    - 14
+    - 13
+  - name: RTC_CALI_RDY
+    bit_range:
+    - 15
+    - 15
+  - name: RTC_CALI_MAX
+    bit_range:
+    - 30
+    - 16
+  - name: RTC_CALI_START
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: RTCCALICFG1
+  address_offset: 108
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RTC_CALI_VALUE
+    bit_range:
+    - 31
+    - 7
+  side_effects: null
+- id: LACTCONFIG
+  address_offset: 112
+  size: 32
+  access: READ_WRITE
+  reset_value: 1610621696
+  fields:
+  - name: LACT_RTC_ONLY
+    bit_range:
+    - 7
+    - 7
+  - name: LACT_CPST_EN
+    bit_range:
+    - 8
+    - 8
+  - name: LACT_LAC_EN
+    bit_range:
+    - 9
+    - 9
+  - name: LACT_ALARM_EN
+    bit_range:
+    - 10
+    - 10
+  - name: LACT_LEVEL_INT_EN
+    bit_range:
+    - 11
+    - 11
+  - name: LACT_EDGE_INT_EN
+    bit_range:
+    - 12
+    - 12
+  - name: LACT_DIVIDER
+    bit_range:
+    - 28
+    - 13
+  - name: LACT_AUTORELOAD
+    bit_range:
+    - 29
+    - 29
+  - name: LACT_INCREASE
+    bit_range:
+    - 30
+    - 30
+  - name: LACT_EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: LACTRTC
+  address_offset: 116
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LACT_RTC_STEP_LEN
+    bit_range:
+    - 31
+    - 6
+  side_effects: null
+- id: LACTLO
+  address_offset: 120
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LACT_LO
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: LACTHI
+  address_offset: 124
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LACT_HI
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: LACTUPDATE
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LACT_UPDATE
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: LACTALARMLO
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LACT_ALARM_LO
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: LACTALARMHI
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LACT_ALARM_HI
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: LACTLOADLO
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LACT_LOAD_LO
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: LACTLOADHI
+  address_offset: 144
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LACT_LOAD_HI
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: LACTLOAD
+  address_offset: 148
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LACT_LOAD
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: INT_ENA_TIMERS
+  address_offset: 152
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: T0_INT_ENA
+    bit_range:
+    - 0
+    - 0
+    description: interrupt when timer0 alarm
+  - name: T1_INT_ENA
+    bit_range:
+    - 1
+    - 1
+    description: interrupt when timer1 alarm
+  - name: WDT_INT_ENA
+    bit_range:
+    - 2
+    - 2
+    description: Interrupt when an interrupt stage timeout
+  - name: LACT_INT_ENA
+    bit_range:
+    - 3
+    - 3
+  side_effects: null
+- id: INT_RAW_TIMERS
+  address_offset: 156
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: T0_INT_RAW
+    bit_range:
+    - 0
+    - 0
+    description: interrupt when timer0 alarm
+  - name: T1_INT_RAW
+    bit_range:
+    - 1
+    - 1
+    description: interrupt when timer1 alarm
+  - name: WDT_INT_RAW
+    bit_range:
+    - 2
+    - 2
+    description: Interrupt when an interrupt stage timeout
+  - name: LACT_INT_RAW
+    bit_range:
+    - 3
+    - 3
+  side_effects: null
+- id: INT_ST_TIMERS
+  address_offset: 160
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: T0_INT_ST
+    bit_range:
+    - 0
+    - 0
+    description: interrupt when timer0 alarm
+  - name: T1_INT_ST
+    bit_range:
+    - 1
+    - 1
+    description: interrupt when timer1 alarm
+  - name: WDT_INT_ST
+    bit_range:
+    - 2
+    - 2
+    description: Interrupt when an interrupt stage timeout
+  - name: LACT_INT_ST
+    bit_range:
+    - 3
+    - 3
+  side_effects: null
+- id: INT_CLR_TIMERS
+  address_offset: 164
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: T0_INT_CLR
+    bit_range:
+    - 0
+    - 0
+    description: interrupt when timer0 alarm
+  - name: T1_INT_CLR
+    bit_range:
+    - 1
+    - 1
+    description: interrupt when timer1 alarm
+  - name: WDT_INT_CLR
+    bit_range:
+    - 2
+    - 2
+    description: Interrupt when an interrupt stage timeout
+  - name: LACT_INT_CLR
+    bit_range:
+    - 3
+    - 3
+  side_effects: null
+- id: NTIMERS_DATE
+  address_offset: 248
+  size: 32
+  access: READ_WRITE
+  reset_value: 23085712
+  fields:
+  - name: NTIMERS_DATE
+    bit_range:
+    - 27
+    - 0
+    description: Version of this regfile
+  side_effects: null
+- id: TIMGCLK
+  address_offset: 252
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CLK_EN
+    bit_range:
+    - 31
+    - 31
+    description: Force clock enable for this regfile
+  side_effects: null
+interrupts:
+  TG0_T0_LEVEL: 14
+  TG0_T1_LEVEL: 15
+  TG0_WDT_LEVEL: 16
+  TG0_LACT_LEVEL: 17
+  TG0_T0_EDGE: 58
+  TG0_T1_EDGE: 59
+  TG0_WDT_EDGE: 60
+  TG0_LACT_EDGE: 61
+timing: null

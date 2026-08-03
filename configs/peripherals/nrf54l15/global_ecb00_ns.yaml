@@ -1,0 +1,236 @@
+peripheral: GLOBAL_ECB00_NS
+version: 0.1.0
+registers:
+- id: TASKS_START
+  address_offset: 0
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_START
+    bit_range:
+    - 0
+    - 0
+    description: Start ECB block encrypt
+  side_effects: null
+- id: TASKS_STOP
+  address_offset: 4
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_STOP
+    bit_range:
+    - 0
+    - 0
+    description: Abort a possible executing ECB operation
+  side_effects: null
+- id: SUBSCRIBE_START
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task START will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_STOP
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task STOP will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: EVENTS_END
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_END
+    bit_range:
+    - 0
+    - 0
+    description: ECB block encrypt complete
+  side_effects: null
+- id: EVENTS_ERROR
+  address_offset: 260
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_ERROR
+    bit_range:
+    - 0
+    - 0
+    description: ECB block encrypt aborted because of a STOP task or due to an error
+  side_effects: null
+- id: PUBLISH_END
+  address_offset: 384
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event END will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: PUBLISH_ERROR
+  address_offset: 388
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event ERROR will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: INTENSET
+  address_offset: 772
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: END
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to enable interrupt for event END
+  - name: ERROR
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to enable interrupt for event ERROR
+  side_effects: null
+- id: INTENCLR
+  address_offset: 776
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: END
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to disable interrupt for event END
+  - name: ERROR
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to disable interrupt for event ERROR
+  side_effects: null
+- id: ERRORSTATUS
+  address_offset: 1024
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: ERRORSTATUS
+    bit_range:
+    - 2
+    - 0
+    description: Error status when the ERROR event is generated
+  side_effects: null
+- id: KEY_VALUE0
+  address_offset: 1296
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: 'AES 128-bit key value, bits (32*(n+1))-1 : (32*n)'
+  side_effects: null
+- id: KEY_VALUE1
+  address_offset: 1300
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: 'AES 128-bit key value, bits (32*(n+1))-1 : (32*n)'
+  side_effects: null
+- id: KEY_VALUE2
+  address_offset: 1304
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: 'AES 128-bit key value, bits (32*(n+1))-1 : (32*n)'
+  side_effects: null
+- id: KEY_VALUE3
+  address_offset: 1308
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: 'AES 128-bit key value, bits (32*(n+1))-1 : (32*n)'
+  side_effects: null
+- id: IN_PTR
+  address_offset: 1328
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PTR
+    bit_range:
+    - 31
+    - 0
+    description: Points to a job list containing unencrypted ECB data structure
+  side_effects: null
+- id: OUT_PTR
+  address_offset: 1336
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PTR
+    bit_range:
+    - 31
+    - 0
+    description: Output pointer
+  side_effects: null
+interrupts:
+  ECB00: 71
+timing: null

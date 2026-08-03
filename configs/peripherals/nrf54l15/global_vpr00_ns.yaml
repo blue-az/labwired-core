@@ -1,0 +1,1229 @@
+peripheral: GLOBAL_VPR00_NS
+version: 0.1.0
+registers:
+- id: TASKS_TRIGGER0
+  address_offset: 0
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_TRIGGER
+    bit_range:
+    - 0
+    - 0
+    description: VPR task [n] register
+  side_effects: null
+- id: TASKS_TRIGGER1
+  address_offset: 4
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_TRIGGER
+    bit_range:
+    - 0
+    - 0
+    description: VPR task [n] register
+  side_effects: null
+- id: TASKS_TRIGGER2
+  address_offset: 8
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_TRIGGER
+    bit_range:
+    - 0
+    - 0
+    description: VPR task [n] register
+  side_effects: null
+- id: TASKS_TRIGGER3
+  address_offset: 12
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_TRIGGER
+    bit_range:
+    - 0
+    - 0
+    description: VPR task [n] register
+  side_effects: null
+- id: TASKS_TRIGGER4
+  address_offset: 16
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_TRIGGER
+    bit_range:
+    - 0
+    - 0
+    description: VPR task [n] register
+  side_effects: null
+- id: TASKS_TRIGGER5
+  address_offset: 20
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_TRIGGER
+    bit_range:
+    - 0
+    - 0
+    description: VPR task [n] register
+  side_effects: null
+- id: TASKS_TRIGGER6
+  address_offset: 24
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_TRIGGER
+    bit_range:
+    - 0
+    - 0
+    description: VPR task [n] register
+  side_effects: null
+- id: SUBSCRIBE_TRIGGER0
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+    description: Subscription enable bit
+  side_effects: null
+- id: SUBSCRIBE_TRIGGER1
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+    description: Subscription enable bit
+  side_effects: null
+- id: SUBSCRIBE_TRIGGER2
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+    description: Subscription enable bit
+  side_effects: null
+- id: SUBSCRIBE_TRIGGER3
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+    description: Subscription enable bit
+  side_effects: null
+- id: EVENTS_TRIGGERED0
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_TRIGGERED
+    bit_range:
+    - 0
+    - 0
+    description: VPR event [n] register
+  side_effects: null
+- id: EVENTS_TRIGGERED1
+  address_offset: 260
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_TRIGGERED
+    bit_range:
+    - 0
+    - 0
+    description: VPR event [n] register
+  side_effects: null
+- id: EVENTS_TRIGGERED2
+  address_offset: 264
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_TRIGGERED
+    bit_range:
+    - 0
+    - 0
+    description: VPR event [n] register
+  side_effects: null
+- id: EVENTS_TRIGGERED3
+  address_offset: 268
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_TRIGGERED
+    bit_range:
+    - 0
+    - 0
+    description: VPR event [n] register
+  side_effects: null
+- id: EVENTS_TRIGGERED4
+  address_offset: 272
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_TRIGGERED
+    bit_range:
+    - 0
+    - 0
+    description: VPR event [n] register
+  side_effects: null
+- id: EVENTS_TRIGGERED5
+  address_offset: 276
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_TRIGGERED
+    bit_range:
+    - 0
+    - 0
+    description: VPR event [n] register
+  side_effects: null
+- id: EVENTS_TRIGGERED6
+  address_offset: 280
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_TRIGGERED
+    bit_range:
+    - 0
+    - 0
+    description: VPR event [n] register
+  side_effects: null
+- id: PUBLISH_TRIGGERED0
+  address_offset: 384
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+    description: Publication enable bit
+  side_effects: null
+- id: PUBLISH_TRIGGERED1
+  address_offset: 388
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+    description: Publication enable bit
+  side_effects: null
+- id: PUBLISH_TRIGGERED2
+  address_offset: 392
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+    description: Publication enable bit
+  side_effects: null
+- id: PUBLISH_TRIGGERED3
+  address_offset: 396
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+    description: Publication enable bit
+  side_effects: null
+- id: INTEN
+  address_offset: 768
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TRIGGERED16
+    bit_range:
+    - 16
+    - 16
+    description: Enable or disable interrupt for event TRIGGERED[16]
+  - name: TRIGGERED17
+    bit_range:
+    - 17
+    - 17
+    description: Enable or disable interrupt for event TRIGGERED[17]
+  - name: TRIGGERED18
+    bit_range:
+    - 18
+    - 18
+    description: Enable or disable interrupt for event TRIGGERED[18]
+  - name: TRIGGERED19
+    bit_range:
+    - 19
+    - 19
+    description: Enable or disable interrupt for event TRIGGERED[19]
+  - name: TRIGGERED20
+    bit_range:
+    - 20
+    - 20
+    description: Enable or disable interrupt for event TRIGGERED[20]
+  - name: TRIGGERED21
+    bit_range:
+    - 21
+    - 21
+    description: Enable or disable interrupt for event TRIGGERED[21]
+  - name: TRIGGERED22
+    bit_range:
+    - 22
+    - 22
+    description: Enable or disable interrupt for event TRIGGERED[22]
+  side_effects: null
+- id: INTENSET
+  address_offset: 772
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TRIGGERED16
+    bit_range:
+    - 16
+    - 16
+    description: Write '1' to enable interrupt for event TRIGGERED[16]
+  - name: TRIGGERED17
+    bit_range:
+    - 17
+    - 17
+    description: Write '1' to enable interrupt for event TRIGGERED[17]
+  - name: TRIGGERED18
+    bit_range:
+    - 18
+    - 18
+    description: Write '1' to enable interrupt for event TRIGGERED[18]
+  - name: TRIGGERED19
+    bit_range:
+    - 19
+    - 19
+    description: Write '1' to enable interrupt for event TRIGGERED[19]
+  - name: TRIGGERED20
+    bit_range:
+    - 20
+    - 20
+    description: Write '1' to enable interrupt for event TRIGGERED[20]
+  - name: TRIGGERED21
+    bit_range:
+    - 21
+    - 21
+    description: Write '1' to enable interrupt for event TRIGGERED[21]
+  - name: TRIGGERED22
+    bit_range:
+    - 22
+    - 22
+    description: Write '1' to enable interrupt for event TRIGGERED[22]
+  side_effects: null
+- id: INTENCLR
+  address_offset: 776
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TRIGGERED16
+    bit_range:
+    - 16
+    - 16
+    description: Write '1' to disable interrupt for event TRIGGERED[16]
+  - name: TRIGGERED17
+    bit_range:
+    - 17
+    - 17
+    description: Write '1' to disable interrupt for event TRIGGERED[17]
+  - name: TRIGGERED18
+    bit_range:
+    - 18
+    - 18
+    description: Write '1' to disable interrupt for event TRIGGERED[18]
+  - name: TRIGGERED19
+    bit_range:
+    - 19
+    - 19
+    description: Write '1' to disable interrupt for event TRIGGERED[19]
+  - name: TRIGGERED20
+    bit_range:
+    - 20
+    - 20
+    description: Write '1' to disable interrupt for event TRIGGERED[20]
+  - name: TRIGGERED21
+    bit_range:
+    - 21
+    - 21
+    description: Write '1' to disable interrupt for event TRIGGERED[21]
+  - name: TRIGGERED22
+    bit_range:
+    - 22
+    - 22
+    description: Write '1' to disable interrupt for event TRIGGERED[22]
+  side_effects: null
+- id: INTPEND
+  address_offset: 780
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: TRIGGERED16
+    bit_range:
+    - 16
+    - 16
+    description: Read pending status of interrupt for event TRIGGERED[16]
+  - name: TRIGGERED17
+    bit_range:
+    - 17
+    - 17
+    description: Read pending status of interrupt for event TRIGGERED[17]
+  - name: TRIGGERED18
+    bit_range:
+    - 18
+    - 18
+    description: Read pending status of interrupt for event TRIGGERED[18]
+  - name: TRIGGERED19
+    bit_range:
+    - 19
+    - 19
+    description: Read pending status of interrupt for event TRIGGERED[19]
+  - name: TRIGGERED20
+    bit_range:
+    - 20
+    - 20
+    description: Read pending status of interrupt for event TRIGGERED[20]
+  - name: TRIGGERED21
+    bit_range:
+    - 21
+    - 21
+    description: Read pending status of interrupt for event TRIGGERED[21]
+  - name: TRIGGERED22
+    bit_range:
+    - 22
+    - 22
+    description: Read pending status of interrupt for event TRIGGERED[22]
+  side_effects: null
+- id: DEBUGIF_DATA0
+  address_offset: 1040
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA0
+    bit_range:
+    - 31
+    - 0
+    description: Abstract Data 0
+  side_effects: null
+- id: DEBUGIF_DATA1
+  address_offset: 1044
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA1
+    bit_range:
+    - 31
+    - 0
+    description: Abstract Data 1
+  side_effects: null
+- id: DEBUGIF_DMCONTROL
+  address_offset: 1088
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DMACTIVE
+    bit_range:
+    - 0
+    - 0
+    description: Reset signal for the debug module.
+  - name: NDMRESET
+    bit_range:
+    - 1
+    - 1
+    description: Reset signal output from the debug module to the system.
+  - name: CLRRESETHALTREQ
+    bit_range:
+    - 2
+    - 2
+    description: Clear the halt on reset request.
+  - name: SETRESETHALTREQ
+    bit_range:
+    - 3
+    - 3
+    description: Set the halt on reset request.
+  - name: HARTSELHI
+    bit_range:
+    - 15
+    - 6
+    description: The high 10 bits of hartsel.
+  - name: HARTSELLO
+    bit_range:
+    - 25
+    - 16
+    description: The low 10 bits of hartsel.
+  - name: HASEL
+    bit_range:
+    - 26
+    - 26
+    description: Definition of currently selected harts.
+  - name: ACKHAVERESET
+    bit_range:
+    - 28
+    - 28
+    description: Clear the havereset.
+  - name: HARTRESET
+    bit_range:
+    - 29
+    - 29
+    description: Reset harts.
+  - name: RESUMEREQ
+    bit_range:
+    - 30
+    - 30
+    description: Resume currently selected harts.
+  - name: HALTREQ
+    bit_range:
+    - 31
+    - 31
+    description: Halt currently selected harts.
+  side_effects: null
+- id: DEBUGIF_DMSTATUS
+  address_offset: 1092
+  size: 32
+  access: READ_ONLY
+  reset_value: 4194434
+  fields:
+  - name: VERSION
+    bit_range:
+    - 3
+    - 0
+    description: Version of the debug module.
+  - name: CONFSTRPTRVALID
+    bit_range:
+    - 4
+    - 4
+    description: Configuration string.
+  - name: HASRESETHALTREQ
+    bit_range:
+    - 5
+    - 5
+    description: Halt-on-reset support status.
+  - name: AUTHBUSY
+    bit_range:
+    - 6
+    - 6
+    description: Authentication busy status.
+  - name: AUTHENTICATED
+    bit_range:
+    - 7
+    - 7
+    description: Authentication status.
+  - name: ANYHALTED
+    bit_range:
+    - 8
+    - 8
+    description: Any currently selected harts halted status.
+  - name: ALLHALTED
+    bit_range:
+    - 9
+    - 9
+    description: All currently selected harts halted status.
+  - name: ANYRUNNING
+    bit_range:
+    - 10
+    - 10
+    description: Any currently selected harts running status.
+  - name: ALLRUNNING
+    bit_range:
+    - 11
+    - 11
+    description: All currently selected harts running status.
+  - name: ANYUNAVAIL
+    bit_range:
+    - 12
+    - 12
+    description: Any currently selected harts unavailable status.
+  - name: ALLUNAVAIL
+    bit_range:
+    - 13
+    - 13
+    description: All currently selected harts unavailable status.
+  - name: ANYNONEXISTENT
+    bit_range:
+    - 14
+    - 14
+    description: Any currently selected harts nonexistent status.
+  - name: ALLNONEXISTENT
+    bit_range:
+    - 15
+    - 15
+    description: All currently selected harts nonexistent status.
+  - name: ANYRESUMEACK
+    bit_range:
+    - 16
+    - 16
+    description: Any currently selected harts acknowledged last resume request.
+  - name: ALLRESUMEACK
+    bit_range:
+    - 17
+    - 17
+    description: All currently selected harts acknowledged last resume
+  - name: ANYHAVERESET
+    bit_range:
+    - 18
+    - 18
+    description: Any currently selected harts have been reset and reset is not acknowledged.
+  - name: ALLHAVERESET
+    bit_range:
+    - 19
+    - 19
+    description: All currently selected harts have been reset and reset is not acknowledge
+  - name: IMPEBREAK
+    bit_range:
+    - 22
+    - 22
+    description: Implicit ebreak instruction at the non-existent word immediately after the Program Buffer.
+  side_effects: null
+- id: DEBUGIF_HARTINFO
+  address_offset: 1096
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATAADDR
+    bit_range:
+    - 11
+    - 0
+    description: Data Address
+  - name: DATASIZE
+    bit_range:
+    - 15
+    - 12
+    description: Data Size
+  - name: DATAACCESS
+    bit_range:
+    - 16
+    - 16
+    description: Data Access
+  - name: NSCRATCH
+    bit_range:
+    - 23
+    - 20
+    description: Number of dscratch registers
+  side_effects: null
+- id: DEBUGIF_HALTSUM1
+  address_offset: 1100
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HALTSUM1
+    bit_range:
+    - 31
+    - 0
+    description: Halt Summary 1
+  side_effects: null
+- id: DEBUGIF_HAWINDOWSEL
+  address_offset: 1104
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HAWINDOWSEL
+    bit_range:
+    - 14
+    - 0
+    description: The high bits of this field may be tied to 0, depending on how large the array mask register is. E.g. on a system with 48 harts only bit 0 of this field may actually be writable.
+  side_effects: null
+- id: DEBUGIF_HAWINDOW
+  address_offset: 1108
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MASKDATA
+    bit_range:
+    - 31
+    - 0
+    description: Mask data.
+  side_effects: null
+- id: DEBUGIF_ABSTRACTCS
+  address_offset: 1112
+  size: 32
+  access: READ_WRITE
+  reset_value: 16777218
+  fields:
+  - name: DATACOUNT
+    bit_range:
+    - 3
+    - 0
+    description: Number of data registers that are implemented as part of the abstract command interface. Valid sizes are 1..12.
+  - name: CMDERR
+    bit_range:
+    - 10
+    - 8
+    description: Command error when the abstract command fails.
+  - name: BUSY
+    bit_range:
+    - 12
+    - 12
+    description: Abstract command execution status.
+  - name: PROGBUFSIZE
+    bit_range:
+    - 28
+    - 24
+    description: Size of the Program Buffer, in 32-bit words. Valid sizes are 0 - 1.
+  side_effects: null
+- id: DEBUGIF_ABSTRACTCMD
+  address_offset: 1116
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: CONTROL
+    bit_range:
+    - 23
+    - 0
+    description: This Field is interpreted in a command specific manner, described for each abstract command.
+  - name: CMDTYPE
+    bit_range:
+    - 31
+    - 24
+    description: The type determines the overall functionality of this abstract command.
+  side_effects: null
+- id: DEBUGIF_ABSTRACTAUTO
+  address_offset: 1120
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: AUTOEXECDATA
+    bit_range:
+    - 11
+    - 0
+    description: When a bit in this field is 1, read or write accesses to the corresponding data word cause the command in command to be executed again.
+  - name: AUTOEXECPROGBUF
+    bit_range:
+    - 31
+    - 16
+    description: When a bit in this field is 1, read or write accesses to the corresponding progbuf word cause the command in command to be executed again.
+  side_effects: null
+- id: DEBUGIF_CONFSTRPTR0
+  address_offset: 1124
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 31
+    - 0
+    description: Address
+  side_effects: null
+- id: DEBUGIF_CONFSTRPTR1
+  address_offset: 1128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 31
+    - 0
+    description: Address
+  side_effects: null
+- id: DEBUGIF_CONFSTRPTR2
+  address_offset: 1132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 31
+    - 0
+    description: Address
+  side_effects: null
+- id: DEBUGIF_CONFSTRPTR3
+  address_offset: 1136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 31
+    - 0
+    description: Address
+  side_effects: null
+- id: DEBUGIF_NEXTDM
+  address_offset: 1140
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDR
+    bit_range:
+    - 31
+    - 0
+    description: Address
+  side_effects: null
+- id: DEBUGIF_PROGBUF0
+  address_offset: 1152
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Data
+  side_effects: null
+- id: DEBUGIF_PROGBUF1
+  address_offset: 1156
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Data
+  side_effects: null
+- id: DEBUGIF_PROGBUF2
+  address_offset: 1160
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Data
+  side_effects: null
+- id: DEBUGIF_PROGBUF3
+  address_offset: 1164
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Data
+  side_effects: null
+- id: DEBUGIF_PROGBUF4
+  address_offset: 1168
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Data
+  side_effects: null
+- id: DEBUGIF_PROGBUF5
+  address_offset: 1172
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Data
+  side_effects: null
+- id: DEBUGIF_PROGBUF6
+  address_offset: 1176
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Data
+  side_effects: null
+- id: DEBUGIF_PROGBUF7
+  address_offset: 1180
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Data
+  side_effects: null
+- id: DEBUGIF_PROGBUF8
+  address_offset: 1184
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Data
+  side_effects: null
+- id: DEBUGIF_PROGBUF9
+  address_offset: 1188
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Data
+  side_effects: null
+- id: DEBUGIF_PROGBUF10
+  address_offset: 1192
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Data
+  side_effects: null
+- id: DEBUGIF_PROGBUF11
+  address_offset: 1196
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Data
+  side_effects: null
+- id: DEBUGIF_PROGBUF12
+  address_offset: 1200
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Data
+  side_effects: null
+- id: DEBUGIF_PROGBUF13
+  address_offset: 1204
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Data
+  side_effects: null
+- id: DEBUGIF_PROGBUF14
+  address_offset: 1208
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Data
+  side_effects: null
+- id: DEBUGIF_PROGBUF15
+  address_offset: 1212
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Data
+  side_effects: null
+- id: DEBUGIF_AUTHDATA
+  address_offset: 1216
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Data
+  side_effects: null
+- id: DEBUGIF_HALTSUM2
+  address_offset: 1232
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HALTSUM2
+    bit_range:
+    - 31
+    - 0
+    description: Halt Summary 2
+  side_effects: null
+- id: DEBUGIF_HALTSUM3
+  address_offset: 1236
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HALTSUM3
+    bit_range:
+    - 31
+    - 0
+    description: Halt Summary 3
+  side_effects: null
+- id: DEBUGIF_SBADDRESS3
+  address_offset: 1244
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDRESS
+    bit_range:
+    - 31
+    - 0
+    description: Accesses bits 127:96 of the physical address in sbaddress (if the system address bus is that wide).
+  side_effects: null
+- id: DEBUGIF_SBCS
+  address_offset: 1248
+  size: 32
+  access: READ_WRITE
+  reset_value: 536870912
+  fields:
+  - name: SBACCESS8
+    bit_range:
+    - 0
+    - 0
+  - name: SBACCESS16
+    bit_range:
+    - 1
+    - 1
+  - name: SBACCESS32
+    bit_range:
+    - 2
+    - 2
+  - name: SBACCESS64
+    bit_range:
+    - 3
+    - 3
+  - name: SBACCESS128
+    bit_range:
+    - 4
+    - 4
+  - name: SBASIZE
+    bit_range:
+    - 11
+    - 5
+    description: Width of system bus addresses in bits. (0 indicates there is no bus access support.)
+  - name: SBERROR
+    bit_range:
+    - 14
+    - 12
+  - name: SBREADONDATA
+    bit_range:
+    - 15
+    - 15
+  - name: SBAUTOINCREMENT
+    bit_range:
+    - 16
+    - 16
+  - name: SBACCESS
+    bit_range:
+    - 19
+    - 17
+  - name: SBREADONADDR
+    bit_range:
+    - 20
+    - 20
+  - name: SBBUSY
+    bit_range:
+    - 21
+    - 21
+  - name: SBBUSYERROR
+    bit_range:
+    - 22
+    - 22
+  - name: SBVERSION
+    bit_range:
+    - 31
+    - 29
+  side_effects: null
+- id: DEBUGIF_SBADDRESS0
+  address_offset: 1252
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDRESS
+    bit_range:
+    - 31
+    - 0
+    description: Accesses bits 31:0 of the physical address in sbaddress.
+  side_effects: null
+- id: DEBUGIF_SBADDRESS1
+  address_offset: 1256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDRESS
+    bit_range:
+    - 31
+    - 0
+    description: Accesses bits 63:32 of the physical address in sbaddress (if the system address bus is that wide).
+  side_effects: null
+- id: DEBUGIF_SBADDRESS2
+  address_offset: 1260
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADDRESS
+    bit_range:
+    - 31
+    - 0
+    description: Accesses bits 95:64 of the physical address in sbaddress (if the system address bus is that wide).
+  side_effects: null
+- id: DEBUGIF_SBDATA0
+  address_offset: 1264
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Accesses bits 31:0 of sbdata
+  side_effects: null
+- id: DEBUGIF_SBDATA1
+  address_offset: 1268
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Accesses bits 63:32 of sbdata (if the system bus is that wide).
+  side_effects: null
+- id: DEBUGIF_SBDATA2
+  address_offset: 1272
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Accesses bits 95:64 of sbdata (if the system bus is that wide).
+  side_effects: null
+- id: DEBUGIF_SBDATA3
+  address_offset: 1276
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: Accesses bits 127:96 of sbdata (if the system bus is that wide).
+  side_effects: null
+- id: DEBUGIF_HALTSUM0
+  address_offset: 1280
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HALTSUM0
+    bit_range:
+    - 31
+    - 0
+    description: Halt summary 0
+  side_effects: null
+- id: CPURUN
+  address_offset: 2048
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Controls CPU running state after a core reset.
+  side_effects: null
+- id: INITPC
+  address_offset: 2056
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: INITPC
+    bit_range:
+    - 31
+    - 0
+    description: Initial value of the PC at CPU start.
+  side_effects: null
+interrupts:
+  VPR00: 76
+timing: null

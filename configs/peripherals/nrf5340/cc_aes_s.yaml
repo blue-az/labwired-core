@@ -1,0 +1,562 @@
+peripheral: CC_AES_S
+version: 0.1.0
+registers:
+- id: AES_KEY_00
+  address_offset: 1024
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: AES non-tunneling or first tunnel stage key value.
+  side_effects: null
+- id: AES_KEY_01
+  address_offset: 1028
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: AES non-tunneling or first tunnel stage key value.
+  side_effects: null
+- id: AES_KEY_02
+  address_offset: 1032
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: AES non-tunneling or first tunnel stage key value.
+  side_effects: null
+- id: AES_KEY_03
+  address_offset: 1036
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: AES non-tunneling or first tunnel stage key value.
+  side_effects: null
+- id: AES_KEY_04
+  address_offset: 1040
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: AES non-tunneling or first tunnel stage key value.
+  side_effects: null
+- id: AES_KEY_05
+  address_offset: 1044
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: AES non-tunneling or first tunnel stage key value.
+  side_effects: null
+- id: AES_KEY_06
+  address_offset: 1048
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: AES non-tunneling or first tunnel stage key value.
+  side_effects: null
+- id: AES_KEY_07
+  address_offset: 1052
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: AES non-tunneling or first tunnel stage key value.
+  side_effects: null
+- id: AES_KEY_10
+  address_offset: 1056
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: AES second tunnel stage key value.
+  side_effects: null
+- id: AES_KEY_11
+  address_offset: 1060
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: AES second tunnel stage key value.
+  side_effects: null
+- id: AES_KEY_12
+  address_offset: 1064
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: AES second tunnel stage key value.
+  side_effects: null
+- id: AES_KEY_13
+  address_offset: 1068
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: AES second tunnel stage key value.
+  side_effects: null
+- id: AES_KEY_14
+  address_offset: 1072
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: AES second tunnel stage key value.
+  side_effects: null
+- id: AES_KEY_15
+  address_offset: 1076
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: AES second tunnel stage key value.
+  side_effects: null
+- id: AES_KEY_16
+  address_offset: 1080
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: AES second tunnel stage key value.
+  side_effects: null
+- id: AES_KEY_17
+  address_offset: 1084
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: AES second tunnel stage key value.
+  side_effects: null
+- id: AES_IV_00
+  address_offset: 1088
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: AES non-tunneling or first tunnel stage IV value.
+  side_effects: null
+- id: AES_IV_01
+  address_offset: 1092
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: AES non-tunneling or first tunnel stage IV value.
+  side_effects: null
+- id: AES_IV_02
+  address_offset: 1096
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: AES non-tunneling or first tunnel stage IV value.
+  side_effects: null
+- id: AES_IV_03
+  address_offset: 1100
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: AES non-tunneling or first tunnel stage IV value.
+  side_effects: null
+- id: AES_IV_10
+  address_offset: 1104
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: AES second tunnel stage IV value.
+  side_effects: null
+- id: AES_IV_11
+  address_offset: 1108
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: AES second tunnel stage IV value.
+  side_effects: null
+- id: AES_IV_12
+  address_offset: 1112
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: AES second tunnel stage IV value.
+  side_effects: null
+- id: AES_IV_13
+  address_offset: 1116
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: AES second tunnel stage IV value.
+  side_effects: null
+- id: AES_CTR0
+  address_offset: 1120
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: AES CTR value.
+  side_effects: null
+- id: AES_CTR1
+  address_offset: 1124
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: AES CTR value.
+  side_effects: null
+- id: AES_CTR2
+  address_offset: 1128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: AES CTR value.
+  side_effects: null
+- id: AES_CTR3
+  address_offset: 1132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: AES CTR value.
+  side_effects: null
+- id: AES_BUSY
+  address_offset: 1136
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: STATUS
+    bit_range:
+    - 0
+    - 0
+    description: AES engine status.
+  side_effects: null
+- id: AES_CMAC_INIT
+  address_offset: 1148
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: ENABLE
+    bit_range:
+    - 0
+    - 0
+    description: Generate K1 and K2 for the AES-CMAC operations.
+  side_effects: null
+- id: AES_REMAINING_BYTES
+  address_offset: 1212
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 31
+    - 0
+    description: Remaining bytes util the end of the current AES operation.
+  side_effects: null
+- id: AES_CONTROL
+  address_offset: 1216
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DEC_KEY0
+    bit_range:
+    - 0
+    - 0
+    description: Set AES encrypt or decrypt mode in non-tunneling operations.
+  - name: MODE0_IS_CBC_CTS
+    bit_range:
+    - 1
+    - 1
+    description: This field allows to add distinction to the CBC and CTR modes defined in field MODE_KEY0. If MODE_KEY0 is set to CBC in combination with this field, AES mode is CBC-CTS. If MODE_KEY0 is set to CTR in combination with this field, AES mode is GCTR.
+  - name: MODE_KEY0
+    bit_range:
+    - 4
+    - 2
+    description: Set the AES mode in non-tunneling operations, or the AES mode of the first stage in tunneling operations.
+  - name: MODE_KEY1
+    bit_range:
+    - 7
+    - 5
+    description: Set the AES mode of the second stage in tunneling operations
+  - name: CBC_IS_ESSIV
+    bit_range:
+    - 8
+    - 8
+    description: If MODE_KEY0 is set to CBC, and this field is set, the mode is CBC with ESSIV.
+  - name: AES_TUNNEL
+    bit_range:
+    - 10
+    - 10
+    description: Configure AES engine for standard non-tunneling or tunneling operations.
+  - name: CBC_IS_BITLOCKER
+    bit_range:
+    - 11
+    - 11
+    description: If MODE_KEY0 is set to CBC, and this field is set, the mode is CBC Bitlocker.
+  - name: NK_KEY0
+    bit_range:
+    - 13
+    - 12
+    description: Set the AES key length in non-tunneling operations, or the AES key length of the first stage in tunneling operations.
+  - name: NK_KEY1
+    bit_range:
+    - 15
+    - 14
+    description: Set the AES key length of the second stage in tunneling operations.
+  - name: AES_TUNNEL1_DECRYPT
+    bit_range:
+    - 22
+    - 22
+    description: Configure if first tunnel stage performs encrypt or decrypt operation.
+  - name: AES_TUN_B1_USES_PADDED_DATA_IN
+    bit_range:
+    - 23
+    - 23
+    description: For tunneling operations this field determine the data that is fed to the second tunneling stage.
+  - name: AES_TUNNEL0_ENCRYPT
+    bit_range:
+    - 24
+    - 24
+    description: Configure if first tunnel stage performs encrypt or decrypt operation.
+  - name: AES_OUTPUT_MID_TUNNEL_DATA
+    bit_range:
+    - 25
+    - 25
+    description: This fields configure if the AES engine output is the result of the first or second tunneling stage.
+  - name: AES_TUNNEL_B1_PAD_EN
+    bit_range:
+    - 26
+    - 26
+    description: This field configure if the input data to the second tunnel stage is to be padded with zeroes according to how many bytes are remaining.
+  - name: AES_OUT_MID_TUN_TO_HASH
+    bit_range:
+    - 28
+    - 28
+    description: This field determines for AES-TO-HASH-AND-DOUT tunneling operations, whether the AES outputs to the HASH the result of the first or the second tunneling stage.
+  - name: DIRECT_ACCESS
+    bit_range:
+    - 31
+    - 31
+    description: Using direct access and not the DIN-DOUT DMA interface
+  side_effects: null
+- id: AES_HW_FLAGS
+  address_offset: 1224
+  size: 32
+  access: READ_ONLY
+  reset_value: 7435
+  fields:
+  - name: SUPPORT_256_192_KEY
+    bit_range:
+    - 0
+    - 0
+    description: If this flag is set, the engine support 192 bits and 256 bits key size.
+  - name: AES_LARGE_RKEK
+    bit_range:
+    - 1
+    - 1
+    description: If this flag is set, the engine support AES_LARGE_RKEK.
+  - name: DPA_CNTRMSR_EXIST
+    bit_range:
+    - 2
+    - 2
+    description: If this flag is set, the engine support DPA countermeasures.
+  - name: CTR_EXIST
+    bit_range:
+    - 3
+    - 3
+    description: If this flag is set, the engine support AES CTR mode.
+  - name: ONLY_ENCRYPT
+    bit_range:
+    - 4
+    - 4
+    description: If this flag is set, the engine only support encrypt operations.
+  - name: USE_SBOX_TABLE
+    bit_range:
+    - 5
+    - 5
+    description: If this flag is set, the engine uses SBOX tables.
+  - name: USE_5_SBOXES
+    bit_range:
+    - 8
+    - 8
+    description: If this flag is set, the engine uses 5 SBOX where each AES round takes 4 cycles.
+  - name: AES_SUPPORT_PREV_IV
+    bit_range:
+    - 9
+    - 9
+    description: If this flag is set, the engine contains the PREV_IV register for faster AES XCBC MAC calculation.
+  - name: AES_TUNNEL_EXIST
+    bit_range:
+    - 10
+    - 10
+    description: If this flag is set, the engine support tunneling operations.
+  - name: SECOND_REGS_SET_EXIST
+    bit_range:
+    - 11
+    - 11
+    description: If this flag is set, the engine support a second register set for tunneling operations.
+  - name: DFA_CNTRMSR_EXIST
+    bit_range:
+    - 12
+    - 12
+    description: If this flag is set, the engine support DFA countermeasures.
+  side_effects: null
+- id: AES_CTR_NO_INCREMENT
+  address_offset: 1240
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENABLE
+    bit_range:
+    - 0
+    - 0
+    description: This field enables the AES CTR no increment mode in which the counter mode is not incremented between two blocks
+  side_effects: null
+- id: AES_SW_RESET
+  address_offset: 1268
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: RESET
+    bit_range:
+    - 0
+    - 0
+    description: Writing any value to this address resets the AES engine. The reset takes 4 CPU clock cycles to complete.
+  side_effects: null
+- id: AES_CMAC_SIZE0_KICK
+  address_offset: 1316
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: ENABLE
+    bit_range:
+    - 0
+    - 0
+    description: Force AES CMAC operation with size 0.
+  side_effects: null
+interrupts: null
+timing: null

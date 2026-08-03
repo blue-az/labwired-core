@@ -1,0 +1,332 @@
+peripheral: GLOBAL_CRACEN_S
+version: 0.1.0
+registers:
+- id: EVENTS_CRYPTOMASTER
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_CRYPTOMASTER
+    bit_range:
+    - 0
+    - 0
+    description: Event indicating that interrupt triggered at Cryptomaster
+  side_effects: null
+- id: EVENTS_RNG
+  address_offset: 260
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_RNG
+    bit_range:
+    - 0
+    - 0
+    description: Event indicating that interrupt triggered at RNG
+  side_effects: null
+- id: EVENTS_PKEIKG
+  address_offset: 264
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_PKEIKG
+    bit_range:
+    - 0
+    - 0
+    description: Event indicating that interrupt triggered at PKE or IKG
+  side_effects: null
+- id: INTEN
+  address_offset: 768
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CRYPTOMASTER
+    bit_range:
+    - 0
+    - 0
+    description: Enable or disable interrupt for event CRYPTOMASTER
+  - name: RNG
+    bit_range:
+    - 1
+    - 1
+    description: Enable or disable interrupt for event RNG
+  - name: PKEIKG
+    bit_range:
+    - 2
+    - 2
+    description: Enable or disable interrupt for event PKEIKG
+  side_effects: null
+- id: INTENSET
+  address_offset: 772
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CRYPTOMASTER
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to enable interrupt for event CRYPTOMASTER
+  - name: RNG
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to enable interrupt for event RNG
+  - name: PKEIKG
+    bit_range:
+    - 2
+    - 2
+    description: Write '1' to enable interrupt for event PKEIKG
+  side_effects: null
+- id: INTENCLR
+  address_offset: 776
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CRYPTOMASTER
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to disable interrupt for event CRYPTOMASTER
+  - name: RNG
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to disable interrupt for event RNG
+  - name: PKEIKG
+    bit_range:
+    - 2
+    - 2
+    description: Write '1' to disable interrupt for event PKEIKG
+  side_effects: null
+- id: INTPEND
+  address_offset: 780
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: CRYPTOMASTER
+    bit_range:
+    - 0
+    - 0
+    description: Read pending status of interrupt for event CRYPTOMASTER
+  - name: RNG
+    bit_range:
+    - 1
+    - 1
+    description: Read pending status of interrupt for event RNG
+  - name: PKEIKG
+    bit_range:
+    - 2
+    - 2
+    description: Read pending status of interrupt for event PKEIKG
+  side_effects: null
+- id: ENABLE
+  address_offset: 1024
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CRYPTOMASTER
+    bit_range:
+    - 0
+    - 0
+    description: Enable cryptomaster
+  - name: RNG
+    bit_range:
+    - 1
+    - 1
+    description: Enable RNG
+  - name: PKEIKG
+    bit_range:
+    - 2
+    - 2
+    description: Enable PKE and IKG
+  side_effects: null
+- id: SEEDVALID
+  address_offset: 1028
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALID
+    bit_range:
+    - 0
+    - 0
+    description: Marks the SEED as valid
+  side_effects: null
+- id: SEED0
+  address_offset: 1040
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VAL
+    bit_range:
+    - 31
+    - 0
+    description: Seed value
+  side_effects: null
+- id: SEED1
+  address_offset: 1044
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VAL
+    bit_range:
+    - 31
+    - 0
+    description: Seed value
+  side_effects: null
+- id: SEED2
+  address_offset: 1048
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VAL
+    bit_range:
+    - 31
+    - 0
+    description: Seed value
+  side_effects: null
+- id: SEED3
+  address_offset: 1052
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VAL
+    bit_range:
+    - 31
+    - 0
+    description: Seed value
+  side_effects: null
+- id: SEED4
+  address_offset: 1056
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VAL
+    bit_range:
+    - 31
+    - 0
+    description: Seed value
+  side_effects: null
+- id: SEED5
+  address_offset: 1060
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VAL
+    bit_range:
+    - 31
+    - 0
+    description: Seed value
+  side_effects: null
+- id: SEED6
+  address_offset: 1064
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VAL
+    bit_range:
+    - 31
+    - 0
+    description: Seed value
+  side_effects: null
+- id: SEED7
+  address_offset: 1068
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VAL
+    bit_range:
+    - 31
+    - 0
+    description: Seed value
+  side_effects: null
+- id: SEED8
+  address_offset: 1072
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VAL
+    bit_range:
+    - 31
+    - 0
+    description: Seed value
+  side_effects: null
+- id: SEED9
+  address_offset: 1076
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VAL
+    bit_range:
+    - 31
+    - 0
+    description: Seed value
+  side_effects: null
+- id: SEED10
+  address_offset: 1080
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VAL
+    bit_range:
+    - 31
+    - 0
+    description: Seed value
+  side_effects: null
+- id: SEED11
+  address_offset: 1084
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: VAL
+    bit_range:
+    - 31
+    - 0
+    description: Seed value
+  side_effects: null
+- id: SEEDLOCK
+  address_offset: 1088
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENABLE
+    bit_range:
+    - 0
+    - 0
+    description: Enable the lock
+  side_effects: null
+- id: PROTECTEDRAMLOCK
+  address_offset: 1092
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENABLE
+    bit_range:
+    - 0
+    - 0
+    description: Enable the lock
+  side_effects: null
+interrupts:
+  CRACEN: 72
+timing: null

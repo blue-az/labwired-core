@@ -1,0 +1,875 @@
+peripheral: ADC1
+version: 0.1.0
+registers:
+- id: ISR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADRDY
+    bit_range:
+    - 0
+    - 0
+    description: ADRDY
+  - name: EOSMP
+    bit_range:
+    - 1
+    - 1
+    description: EOSMP
+  - name: EOC
+    bit_range:
+    - 2
+    - 2
+    description: EOC
+  - name: EOS
+    bit_range:
+    - 3
+    - 3
+    description: EOS
+  - name: OVR
+    bit_range:
+    - 4
+    - 4
+    description: OVR
+  - name: JEOC
+    bit_range:
+    - 5
+    - 5
+    description: JEOC
+  - name: JEOS
+    bit_range:
+    - 6
+    - 6
+    description: JEOS
+  - name: AWD1
+    bit_range:
+    - 7
+    - 7
+    description: AWD1
+  - name: AWD2
+    bit_range:
+    - 8
+    - 8
+    description: AWD2
+  - name: AWD3
+    bit_range:
+    - 9
+    - 9
+    description: AWD3
+  - name: JQOVF
+    bit_range:
+    - 10
+    - 10
+    description: JQOVF
+  side_effects: null
+- id: IER
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADRDYIE
+    bit_range:
+    - 0
+    - 0
+    description: ADRDYIE
+  - name: EOSMPIE
+    bit_range:
+    - 1
+    - 1
+    description: EOSMPIE
+  - name: EOCIE
+    bit_range:
+    - 2
+    - 2
+    description: EOCIE
+  - name: EOSIE
+    bit_range:
+    - 3
+    - 3
+    description: EOSIE
+  - name: OVRIE
+    bit_range:
+    - 4
+    - 4
+    description: OVRIE
+  - name: JEOCIE
+    bit_range:
+    - 5
+    - 5
+    description: JEOCIE
+  - name: JEOSIE
+    bit_range:
+    - 6
+    - 6
+    description: JEOSIE
+  - name: AWD1IE
+    bit_range:
+    - 7
+    - 7
+    description: AWD1IE
+  - name: AWD2IE
+    bit_range:
+    - 8
+    - 8
+    description: AWD2IE
+  - name: AWD3IE
+    bit_range:
+    - 9
+    - 9
+    description: AWD3IE
+  - name: JQOVFIE
+    bit_range:
+    - 10
+    - 10
+    description: JQOVFIE
+  side_effects: null
+- id: CR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADEN
+    bit_range:
+    - 0
+    - 0
+    description: ADEN
+  - name: ADDIS
+    bit_range:
+    - 1
+    - 1
+    description: ADDIS
+  - name: ADSTART
+    bit_range:
+    - 2
+    - 2
+    description: ADSTART
+  - name: JADSTART
+    bit_range:
+    - 3
+    - 3
+    description: JADSTART
+  - name: ADSTP
+    bit_range:
+    - 4
+    - 4
+    description: ADSTP
+  - name: JADSTP
+    bit_range:
+    - 5
+    - 5
+    description: JADSTP
+  - name: ADVREGEN
+    bit_range:
+    - 28
+    - 28
+    description: ADVREGEN
+  - name: DEEPPWD
+    bit_range:
+    - 29
+    - 29
+    description: DEEPPWD
+  - name: ADCALDIF
+    bit_range:
+    - 30
+    - 30
+    description: ADCALDIF
+  - name: ADCAL
+    bit_range:
+    - 31
+    - 31
+    description: ADCAL
+  side_effects: null
+- id: CFGR
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DMAEN
+    bit_range:
+    - 0
+    - 0
+    description: DMAEN
+  - name: DMACFG
+    bit_range:
+    - 1
+    - 1
+    description: DMACFG
+  - name: DFSDMCFG
+    bit_range:
+    - 2
+    - 2
+    description: DFSDMCFG
+  - name: RES
+    bit_range:
+    - 4
+    - 3
+    description: RES
+  - name: ALIGN
+    bit_range:
+    - 5
+    - 5
+    description: ALIGN
+  - name: EXTSEL
+    bit_range:
+    - 9
+    - 6
+    description: EXTSEL
+  - name: EXTEN
+    bit_range:
+    - 11
+    - 10
+    description: EXTEN
+  - name: OVRMOD
+    bit_range:
+    - 12
+    - 12
+    description: OVRMOD
+  - name: CONT
+    bit_range:
+    - 13
+    - 13
+    description: CONT
+  - name: AUTDLY
+    bit_range:
+    - 14
+    - 14
+    description: AUTDLY
+  - name: DISCEN
+    bit_range:
+    - 16
+    - 16
+    description: DISCEN
+  - name: DISCNUM
+    bit_range:
+    - 19
+    - 17
+    description: DISCNUM
+  - name: JDISCEN
+    bit_range:
+    - 20
+    - 20
+    description: JDISCEN
+  - name: JQM
+    bit_range:
+    - 21
+    - 21
+    description: JQM
+  - name: AWD1SGL
+    bit_range:
+    - 22
+    - 22
+    description: AWD1SGL
+  - name: AWD1EN
+    bit_range:
+    - 23
+    - 23
+    description: AWD1EN
+  - name: JAWD1EN
+    bit_range:
+    - 24
+    - 24
+    description: JAWD1EN
+  - name: JAUTO
+    bit_range:
+    - 25
+    - 25
+    description: JAUTO
+  - name: AWDCH1CH
+    bit_range:
+    - 30
+    - 26
+    description: AWDCH1CH
+  - name: JQDIS
+    bit_range:
+    - 31
+    - 31
+    description: Injected Queue disable
+  side_effects: null
+- id: CFGR2
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ROVSE
+    bit_range:
+    - 0
+    - 0
+    description: DMAEN
+  - name: JOVSE
+    bit_range:
+    - 1
+    - 1
+    description: DMACFG
+  - name: OVSR
+    bit_range:
+    - 4
+    - 2
+    description: RES
+  - name: OVSS
+    bit_range:
+    - 8
+    - 5
+    description: ALIGN
+  - name: TROVS
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Triggered Regular
+                    Oversampling
+  - name: ROVSM
+    bit_range:
+    - 10
+    - 10
+    description: EXTEN
+  side_effects: null
+- id: SMPR1
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SMP0
+    bit_range:
+    - 2
+    - 0
+    description: SMP0
+  - name: SMP1
+    bit_range:
+    - 5
+    - 3
+    description: SMP1
+  - name: SMP2
+    bit_range:
+    - 8
+    - 6
+    description: SMP2
+  - name: SMP3
+    bit_range:
+    - 11
+    - 9
+    description: SMP3
+  - name: SMP4
+    bit_range:
+    - 14
+    - 12
+    description: SMP4
+  - name: SMP5
+    bit_range:
+    - 17
+    - 15
+    description: SMP5
+  - name: SMP6
+    bit_range:
+    - 20
+    - 18
+    description: SMP6
+  - name: SMP7
+    bit_range:
+    - 23
+    - 21
+    description: SMP7
+  - name: SMP8
+    bit_range:
+    - 26
+    - 24
+    description: SMP8
+  - name: SMP9
+    bit_range:
+    - 29
+    - 27
+    description: SMP9
+  - name: SMPPLUS
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      Addition of one clock cycle to the
+                    sampling time
+  side_effects: null
+- id: SMPR2
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SMP10
+    bit_range:
+    - 2
+    - 0
+    description: SMP10
+  - name: SMP11
+    bit_range:
+    - 5
+    - 3
+    description: SMP11
+  - name: SMP12
+    bit_range:
+    - 8
+    - 6
+    description: SMP12
+  - name: SMP13
+    bit_range:
+    - 11
+    - 9
+    description: SMP13
+  - name: SMP14
+    bit_range:
+    - 14
+    - 12
+    description: SMP14
+  - name: SMP15
+    bit_range:
+    - 17
+    - 15
+    description: SMP15
+  - name: SMP16
+    bit_range:
+    - 20
+    - 18
+    description: SMP16
+  - name: SMP17
+    bit_range:
+    - 23
+    - 21
+    description: SMP17
+  - name: SMP18
+    bit_range:
+    - 26
+    - 24
+    description: SMP18
+  side_effects: null
+- id: TR1
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 268369920
+  fields:
+  - name: LT1
+    bit_range:
+    - 11
+    - 0
+    description: LT1
+  - name: HT1
+    bit_range:
+    - 27
+    - 16
+    description: HT1
+  side_effects: null
+- id: TR2
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 268369920
+  fields:
+  - name: LT2
+    bit_range:
+    - 7
+    - 0
+    description: LT2
+  - name: HT2
+    bit_range:
+    - 23
+    - 16
+    description: HT2
+  side_effects: null
+- id: TR3
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 268369920
+  fields:
+  - name: LT3
+    bit_range:
+    - 7
+    - 0
+    description: LT3
+  - name: HT3
+    bit_range:
+    - 23
+    - 16
+    description: HT3
+  side_effects: null
+- id: SQR1
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: L
+    bit_range:
+    - 3
+    - 0
+    description: |-
+      Regular channel sequence
+                    length
+  - name: SQ1
+    bit_range:
+    - 10
+    - 6
+    description: SQ1
+  - name: SQ2
+    bit_range:
+    - 16
+    - 12
+    description: SQ2
+  - name: SQ3
+    bit_range:
+    - 22
+    - 18
+    description: SQ3
+  - name: SQ4
+    bit_range:
+    - 28
+    - 24
+    description: SQ4
+  side_effects: null
+- id: SQR2
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SQ5
+    bit_range:
+    - 4
+    - 0
+    description: SQ5
+  - name: SQ6
+    bit_range:
+    - 10
+    - 6
+    description: SQ6
+  - name: SQ7
+    bit_range:
+    - 16
+    - 12
+    description: SQ7
+  - name: SQ8
+    bit_range:
+    - 22
+    - 18
+    description: SQ8
+  - name: SQ9
+    bit_range:
+    - 28
+    - 24
+    description: SQ9
+  side_effects: null
+- id: SQR3
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SQ10
+    bit_range:
+    - 4
+    - 0
+    description: SQ10
+  - name: SQ11
+    bit_range:
+    - 10
+    - 6
+    description: SQ11
+  - name: SQ12
+    bit_range:
+    - 16
+    - 12
+    description: SQ12
+  - name: SQ13
+    bit_range:
+    - 22
+    - 18
+    description: SQ13
+  - name: SQ14
+    bit_range:
+    - 28
+    - 24
+    description: SQ14
+  side_effects: null
+- id: SQR4
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SQ15
+    bit_range:
+    - 4
+    - 0
+    description: SQ15
+  - name: SQ16
+    bit_range:
+    - 10
+    - 6
+    description: SQ16
+  side_effects: null
+- id: DR
+  address_offset: 64
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: RDATA
+    bit_range:
+    - 15
+    - 0
+    description: Regular Data converted
+  side_effects: null
+- id: JSQR
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: JL
+    bit_range:
+    - 1
+    - 0
+    description: JL
+  - name: JEXTSEL
+    bit_range:
+    - 5
+    - 2
+    description: JEXTSEL
+  - name: JEXTEN
+    bit_range:
+    - 7
+    - 6
+    description: JEXTEN
+  - name: JSQ1
+    bit_range:
+    - 12
+    - 8
+    description: JSQ1
+  - name: JSQ2
+    bit_range:
+    - 18
+    - 14
+    description: JSQ2
+  - name: JSQ3
+    bit_range:
+    - 24
+    - 20
+    description: JSQ3
+  - name: JSQ4
+    bit_range:
+    - 30
+    - 26
+    description: JSQ4
+  side_effects: null
+- id: OFR1
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OFFSET1
+    bit_range:
+    - 11
+    - 0
+    description: OFFSET1
+  - name: OFFSET1_CH
+    bit_range:
+    - 30
+    - 26
+    description: OFFSET1_CH
+  - name: OFFSET1_EN
+    bit_range:
+    - 31
+    - 31
+    description: OFFSET1_EN
+  side_effects: null
+- id: OFR2
+  address_offset: 100
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OFFSET2
+    bit_range:
+    - 11
+    - 0
+    description: OFFSET2
+  - name: OFFSET2_CH
+    bit_range:
+    - 30
+    - 26
+    description: OFFSET2_CH
+  - name: OFFSET2_EN
+    bit_range:
+    - 31
+    - 31
+    description: OFFSET2_EN
+  side_effects: null
+- id: OFR3
+  address_offset: 104
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OFFSET3
+    bit_range:
+    - 11
+    - 0
+    description: OFFSET3
+  - name: OFFSET3_CH
+    bit_range:
+    - 30
+    - 26
+    description: OFFSET3_CH
+  - name: OFFSET3_EN
+    bit_range:
+    - 31
+    - 31
+    description: OFFSET3_EN
+  side_effects: null
+- id: OFR4
+  address_offset: 108
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OFFSET4
+    bit_range:
+    - 11
+    - 0
+    description: OFFSET4
+  - name: OFFSET4_CH
+    bit_range:
+    - 30
+    - 26
+    description: OFFSET4_CH
+  - name: OFFSET4_EN
+    bit_range:
+    - 31
+    - 31
+    description: OFFSET4_EN
+  side_effects: null
+- id: JDR1
+  address_offset: 128
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: JDATA1
+    bit_range:
+    - 15
+    - 0
+    description: JDATA1
+  side_effects: null
+- id: JDR2
+  address_offset: 132
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: JDATA2
+    bit_range:
+    - 15
+    - 0
+    description: JDATA2
+  side_effects: null
+- id: JDR3
+  address_offset: 136
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: JDATA3
+    bit_range:
+    - 15
+    - 0
+    description: JDATA3
+  side_effects: null
+- id: JDR4
+  address_offset: 140
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: JDATA4
+    bit_range:
+    - 15
+    - 0
+    description: JDATA4
+  side_effects: null
+- id: AWD2CR
+  address_offset: 160
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: AWD2CH
+    bit_range:
+    - 18
+    - 0
+    description: AWD2CH
+  side_effects: null
+- id: AWD3CR
+  address_offset: 164
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: AWD3CH
+    bit_range:
+    - 18
+    - 0
+    description: AWD3CH
+  side_effects: null
+- id: DIFSEL
+  address_offset: 176
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DIFSEL_0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Differential mode for channels
+                    0
+  - name: DIFSEL_1_15
+    bit_range:
+    - 15
+    - 1
+    description: |-
+      Differential mode for channels 15 to
+                    1
+  - name: DIFSEL_16_18
+    bit_range:
+    - 18
+    - 16
+    description: |-
+      Differential mode for channels 18 to
+                    16
+  side_effects: null
+- id: CALFACT
+  address_offset: 180
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CALFACT_S
+    bit_range:
+    - 6
+    - 0
+    description: CALFACT_S
+  - name: CALFACT_D
+    bit_range:
+    - 22
+    - 16
+    description: CALFACT_D
+  side_effects: null
+interrupts:
+  ADC3: 47
+  ADC1_2: 18
+timing: null

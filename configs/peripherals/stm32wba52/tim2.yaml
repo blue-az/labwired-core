@@ -1,0 +1,1315 @@
+peripheral: TIM2
+version: 0.1.0
+registers:
+- id: TIM_CR1
+  address_offset: 0
+  size: 16
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CEN
+    bit_range:
+    - 0
+    - 0
+    description: "Counter enable\n\nNote: External clock, gated mode and encoder mode can work only if the CEN bit has been previously set by software. However trigger mode can set the CEN bit automatically by hardware. \n\nCEN is cleared automatically in one-pulse mode, when an update event occurs."
+  - name: UDIS
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Update disable
+
+      This bit is set and cleared by software to enable/disable UEV event generation.
+
+      Counter overflow/underflow
+
+      Setting the UG bit
+
+      Update generation through the slave mode controller
+
+      Buffered registers are then loaded with their preload values.
+  - name: URS
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Update request source
+
+      This bit is set and cleared by software to select the UEV event sources.
+
+      Counter overflow/underflow
+
+      Setting the UG bit
+
+      Update generation through the slave mode controller
+  - name: OPM
+    bit_range:
+    - 3
+    - 3
+    description: One-pulse mode
+  - name: DIR
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Direction
+
+      Note: This bit is read only when the timer is configured in Center-aligned mode or Encoder mode.
+  - name: CMS
+    bit_range:
+    - 6
+    - 5
+    description: |-
+      Center-aligned mode selection
+
+      Note: It is not allowed to switch from edge-aligned mode to center-aligned mode as long as the counter is enabled (CEN=1)
+  - name: ARPE
+    bit_range:
+    - 7
+    - 7
+    description: Auto-reload preload enable
+  - name: CKD
+    bit_range:
+    - 9
+    - 8
+    description: |-
+      Clock division
+
+      This bit-field indicates the division ratio between the timer clock (tim_ker_ck) frequency and sampling clock used by the digital filters (tim_etr_in, tim_tix),
+  - name: UIFREMAP
+    bit_range:
+    - 11
+    - 11
+    description: UIF status bit remapping
+  - name: DITHEN
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Dithering Enable
+
+      Note: The DITHEN bit can only be modified when CEN bit is reset.
+  side_effects: null
+- id: TIM_CR2
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCDS
+    bit_range:
+    - 3
+    - 3
+    description: Capture/compare DMA selection
+  - name: MMS
+    bit_range:
+    - 6
+    - 4
+    description: |-
+      MMS[0]: Master mode selection
+
+      These bits allow to select the information to be sent in master mode to slave timers for synchronization (tim_trgo). The combination is as follows:
+
+      When the Counter Enable signal is controlled by the trigger input, there is a delay on tim_trgo, except if the master/slave mode is selected (see the MSM bit description in TIMx_SMCR register).
+
+      Others: Reserved
+
+      Note: The clock of the slave timer or ADC must be enabled prior to receive events from the master timer, and must not be changed on-the-fly while triggers are received from the master timer.
+  - name: TI1S
+    bit_range:
+    - 7
+    - 7
+    description: tim_ti1 selection
+  - name: MMS_1
+    bit_range:
+    - 25
+    - 25
+    description: MMS[3]
+  side_effects: null
+- id: TIM_SMCR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SMS
+    bit_range:
+    - 2
+    - 0
+    description: |-
+      SMS[0]: Slave mode selection
+
+      When external signals are selected the active edge of the trigger signal (tim_trgi) is linked to the polarity selected on the external input (see Input Control register and Control Register description.
+
+      Note: The gated mode must not be used if tim_ti1f_ed is selected as the trigger input (TS=00100). Indeed, tim_ti1f_ed outputs 1 pulse for each transition on tim_ti1f, whereas the gated mode checks the level of the trigger signal.
+
+      Note: The clock of the slave peripherals (timer, ADC, ...) receiving the tim_trgo signal must be enabled prior to receive events from the master timer, and the clock frequency (prescaler) must not be changed on-the-fly while triggers are received from the master timer.
+  - name: OCCS
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      OCREF clear selection
+
+      This bit is used to select the OCREF clear source
+
+      Note: If the OCREF clear selection feature is not supported, this bit is reserved and forced by hardware to '0'. Section 29.3: TIM2/TIM3 implementation.
+  - name: TS
+    bit_range:
+    - 6
+    - 4
+    description: |-
+      TS[0]: Trigger selection
+
+      This bit-field selects the trigger input to be used to synchronize the counter.
+
+      Others: Reserved
+
+      See Section 29.4.2: TIM2/TIM3 pins and internal signals for product specific implementation details.
+
+      Note: These bits must be changed only when they are not used (e.g. when SMS=000) to avoid wrong edge detections at the transition.
+  - name: MSM
+    bit_range:
+    - 7
+    - 7
+    description: Master/Slave mode
+  - name: ETF
+    bit_range:
+    - 11
+    - 8
+    description: |-
+      External trigger filter
+
+      This bit-field then defines the frequency used to sample tim_etrp signal and the length of the digital filter applied to tim_etrp. The digital filter is made of an event counter in which N consecutive events are needed to validate a transition on the output:
+  - name: ETPS
+    bit_range:
+    - 13
+    - 12
+    description: |-
+      External trigger prescaler
+
+      External trigger signal tim_etrp frequency must be at most 1/4 of tim_ker_ck frequency. A prescaler can be enabled to reduce tim_etrp frequency. It is useful when inputting fast external clocks on tim_etr_in.
+  - name: ECE
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      External clock enable
+
+      This bit enables External clock mode 2.
+
+      Setting the ECE bit has the same effect as selecting external clock mode 1 with tim_trgi connected to tim_etrf (SMS=111 and TS=00111).
+
+      It is possible to simultaneously use external clock mode 2 with the following slave modes: reset mode, gated mode and trigger mode. Nevertheless, tim_trgi must not be connected to tim_etrf in this case (TS bits must not be 00111).
+
+      Note: If external clock mode 1 and external clock mode 2 are enabled at the same time, the external clock input is tim_etrf.
+  - name: ETP
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      External trigger polarity
+
+      This bit selects whether tim_etr_in or tim_etr_in is used for trigger operations
+  - name: SMS_1
+    bit_range:
+    - 16
+    - 16
+    description: SMS[3]
+  - name: TS_1
+    bit_range:
+    - 21
+    - 20
+    description: TS[4:3]
+  - name: SMSPE
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      SMS preload enable
+
+      This bit selects whether the SMS[3:0] bitfield is preloaded
+  - name: SMSPS
+    bit_range:
+    - 25
+    - 25
+    description: |-
+      SMS preload source
+
+      This bit selects whether the events that triggers the SMS[3:0] bitfield transfer from preload to active
+  side_effects: null
+- id: TIM_DIER
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: UIE
+    bit_range:
+    - 0
+    - 0
+    description: Update interrupt enable
+  - name: CC1IE
+    bit_range:
+    - 1
+    - 1
+    description: Capture/Compare 1 interrupt enable
+  - name: CC2IE
+    bit_range:
+    - 2
+    - 2
+    description: Capture/Compare 2 interrupt enable
+  - name: CC3IE
+    bit_range:
+    - 3
+    - 3
+    description: Capture/Compare 3 interrupt enable
+  - name: CC4IE
+    bit_range:
+    - 4
+    - 4
+    description: Capture/Compare 4 interrupt enable
+  - name: TIE
+    bit_range:
+    - 6
+    - 6
+    description: Trigger interrupt enable
+  - name: UDE
+    bit_range:
+    - 8
+    - 8
+    description: Update DMA request enable
+  - name: CC1DE
+    bit_range:
+    - 9
+    - 9
+    description: Capture/Compare 1 DMA request enable
+  - name: CC2DE
+    bit_range:
+    - 10
+    - 10
+    description: Capture/Compare 2 DMA request enable
+  - name: CC3DE
+    bit_range:
+    - 11
+    - 11
+    description: Capture/Compare 3 DMA request enable
+  - name: CC4DE
+    bit_range:
+    - 12
+    - 12
+    description: Capture/Compare 4 DMA request enable
+  - name: TDE
+    bit_range:
+    - 14
+    - 14
+    description: Trigger DMA request enable
+  - name: IDXIE
+    bit_range:
+    - 20
+    - 20
+    description: Index interrupt enable
+  - name: DIRIE
+    bit_range:
+    - 21
+    - 21
+    description: Direction change interrupt enable
+  - name: IERRIE
+    bit_range:
+    - 22
+    - 22
+    description: Index error interrupt enable
+  - name: TERRIE
+    bit_range:
+    - 23
+    - 23
+    description: Transition error interrupt enable
+  side_effects: null
+- id: TIM_SR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: UIF
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Update interrupt flag
+
+      This bit is set by hardware on an update event. It is cleared by software.
+
+      At overflow or underflow and if UDIS=0 in the TIMx_CR1 register.
+
+      When CNT is reinitialized by software using the UG bit in TIMx_EGR register, if URS=0 and UDIS=0 in the TIMx_CR1 register.
+
+      When CNT is reinitialized by a trigger event (refer to the synchro control register description), if URS=0 and UDIS=0 in the TIMx_CR1 register.
+  - name: CC1IF
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Capture/compare 1 interrupt flag
+
+      This flag is set by hardware. It is cleared by software (input capture or output compare mode) or by reading the TIMx_CCR1 register (input capture mode only).
+
+      If channel CC1 is configured as output: this flag is set when the content of the counter TIMx_CNT matches the content of the TIMx_CCR1 register. When the content of TIMx_CCR1 is greater than the content of TIMx_ARR, the CC1IF bit goes high on the counter overflow (in up-counting and up/down-counting modes) or underflow (in downcounting mode). There are 3 possible options for flag setting in center-aligned mode, refer to the CMS bits in the TIMx_CR1 register for the full description.
+
+      If channel CC1 is configured as input: this bit is set when counter value has been captured in TIMx_CCR1 register (an edge has been detected on IC1, as per the edge sensitivity defined with the CC1P and CC1NP bits setting, in TIMx_CCER).
+  - name: CC2IF
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Capture/Compare 2 interrupt flag
+
+      Refer to CC1IF description
+  - name: CC3IF
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Capture/Compare 3 interrupt flag
+
+      Refer to CC1IF description
+  - name: CC4IF
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Capture/Compare 4 interrupt flag
+
+      Refer to CC1IF description
+  - name: TIF
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Trigger interrupt flag
+
+      This flag is set by hardware on the TRG trigger event (active edge detected on tim_trgi input when the slave mode controller is enabled in all modes but gated mode. It is set when the counter starts or stops when gated mode is selected. It is cleared by software.
+  - name: CC1OF
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Capture/Compare 1 overcapture flag
+
+      This flag is set by hardware only when the corresponding channel is configured in input capture mode. It is cleared by software by writing it to '0'.
+  - name: CC2OF
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Capture/compare 2 overcapture flag
+
+      refer to CC1OF description
+  - name: CC3OF
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Capture/Compare 3 overcapture flag
+
+      refer to CC1OF description
+  - name: CC4OF
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Capture/Compare 4 overcapture flag
+
+      refer to CC1OF description
+  - name: IDXF
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      Index interrupt flag
+
+      This flag is set by hardware when an index event is detected. It is cleared by software by
+
+      writing it to '0'.
+  - name: DIRF
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      Direction change interrupt flag
+
+      This flag is set by hardware when the direction changes in encoder mode (DIR bit value in
+
+      TIMx_CR is changing). It is cleared by software by writing it to '0'.
+  - name: IERRF
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      Index error interrupt flag
+
+      This flag is set by hardware when an index error is detected. It is cleared by software by
+
+      writing it to '0'.
+  - name: TERRF
+    bit_range:
+    - 23
+    - 23
+    description: |-
+      Transition error interrupt flag
+
+      This flag is set by hardware when a transition error is detected in encoder mode. It is cleared
+
+      by software by writing it to '0'.
+  side_effects: null
+- id: TIM_EGR
+  address_offset: 20
+  size: 16
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: UG
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Update generation
+
+      This bit can be set by software, it is automatically cleared by hardware.
+  - name: CC1G
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Capture/compare 1 generation
+
+      This bit is set by software in order to generate an event, it is automatically cleared by hardware.
+
+      If channel CC1 is configured as output:
+
+      CC1IF flag is set, Corresponding interrupt or DMA request is sent if enabled.
+
+      If channel CC1 is configured as input:
+
+      The current value of the counter is captured in TIMx_CCR1 register. The CC1IF flag is set, the corresponding interrupt or DMA request is sent if enabled. The CC1OF flag is set if the CC1IF flag was already high.
+  - name: CC2G
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Capture/compare 2 generation
+
+      Refer to CC1G description
+  - name: CC3G
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Capture/compare 3 generation
+
+      Refer to CC1G description
+  - name: CC4G
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Capture/compare 4 generation
+
+      Refer to CC1G description
+  - name: TG
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Trigger generation
+
+      This bit is set by software in order to generate an event, it is automatically cleared by hardware.
+  side_effects: null
+- id: TIM_CCMR1_ALTERNATE
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CC1S
+    bit_range:
+    - 1
+    - 0
+    description: "Capture/Compare 1 selection\n\nThis bit-field defines the direction of the channel (input/output) as well as the used input. \n\nNote: CC1S bits are writable only when the channel is OFF (CC1E = 0 in TIMx_CCER)."
+  - name: OC1FE
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Output compare 1 fast enable
+
+      This bit decreases the latency between a trigger event and a transition on the timer output. It must be used in one-pulse mode (OPM bit set in TIMx_CR1 register), to have the output pulse starting as soon as possible after the starting trigger.
+  - name: OC1PE
+    bit_range:
+    - 3
+    - 3
+    description: Output compare 1 preload enable
+  - name: OC1M
+    bit_range:
+    - 6
+    - 4
+    description: |-
+      OC1M[2:0]: Output compare 1 mode
+
+      These bits define the behavior of the output reference signal tim_oc1ref from which tim_oc1 is derived. tim_oc1ref is active high whereas tim_oc1 active level depends on CC1P bit.
+
+      Note: In PWM mode, the tim_ocref_clr level changes only when the result of the comparison changes or when the output compare mode switches from 'frozen' mode to 'PWM' mode.
+  - name: OC1CE
+    bit_range:
+    - 7
+    - 7
+    description: Output compare 1 clear enable
+  - name: CC2S
+    bit_range:
+    - 9
+    - 8
+    description: "Capture/Compare 2 selection\n\nThis bit-field defines the direction of the channel (input/output) as well as the used input. \n\nNote: CC2S bits are writable only when the channel is OFF (CC2E = 0 in TIMx_CCER)."
+  - name: OC2FE
+    bit_range:
+    - 10
+    - 10
+    description: Output compare 2 fast enable
+  - name: OC2PE
+    bit_range:
+    - 11
+    - 11
+    description: Output compare 2 preload enable
+  - name: OC2M
+    bit_range:
+    - 14
+    - 12
+    description: |-
+      OC2M[2:0]: Output compare 2 mode
+
+      refer to OC1M description on bits 6:4
+  - name: OC2CE
+    bit_range:
+    - 15
+    - 15
+    description: Output compare 2 clear enable
+  - name: OC1M_1
+    bit_range:
+    - 16
+    - 16
+    description: OC1M[3]
+  - name: OC2M_1
+    bit_range:
+    - 24
+    - 24
+    description: OC2M[3]
+  side_effects: null
+- id: TIM_CCMR1
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CC1S
+    bit_range:
+    - 1
+    - 0
+    description: "Capture/Compare 1 selection\n\nThis bit-field defines the direction of the channel (input/output) as well as the used input. \n\nNote: CC1S bits are writable only when the channel is OFF (CC1E = 0 in TIMx_CCER)."
+  - name: IC1PSC
+    bit_range:
+    - 3
+    - 2
+    description: |-
+      Input capture 1 prescaler
+
+      This bit-field defines the ratio of the prescaler acting on CC1 input (tim_ic1). The prescaler is reset as soon as CC1E=0 (TIMx_CCER register).
+  - name: IC1F
+    bit_range:
+    - 7
+    - 4
+    description: |-
+      Input capture 1 filter
+
+      This bit-field defines the frequency used to sample tim_ti1 input and the length of the digital filter applied to tim_ti1. The digital filter is made of an event counter in which N consecutive events are needed to validate a transition on the output:
+  - name: CC2S
+    bit_range:
+    - 9
+    - 8
+    description: "Capture/compare 2 selection\n\nThis bit-field defines the direction of the channel (input/output) as well as the used input. \n\nNote: CC2S bits are writable only when the channel is OFF (CC2E = 0 in TIMx_CCER)."
+  - name: IC2PSC
+    bit_range:
+    - 11
+    - 10
+    description: Input capture 2 prescaler
+  - name: IC2F
+    bit_range:
+    - 15
+    - 12
+    description: Input capture 2 filter
+  side_effects: null
+- id: TIM_CCMR2
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CC3S
+    bit_range:
+    - 1
+    - 0
+    description: "Capture/Compare 3 selection\n\nThis bit-field defines the direction of the channel (input/output) as well as the used input. \n\nNote: CC3S bits are writable only when the channel is OFF (CC3E = 0 in TIMx_CCER)."
+  - name: IC3PSC
+    bit_range:
+    - 3
+    - 2
+    description: Input capture 3 prescaler
+  - name: IC3F
+    bit_range:
+    - 7
+    - 4
+    description: Input capture 3 filter
+  - name: CC4S
+    bit_range:
+    - 9
+    - 8
+    description: "Capture/Compare 4 selection\n\nThis bit-field defines the direction of the channel (input/output) as well as the used input. \n\nNote: CC4S bits are writable only when the channel is OFF (CC4E = 0 in TIMx_CCER)."
+  - name: IC4PSC
+    bit_range:
+    - 11
+    - 10
+    description: Input capture 4 prescaler
+  - name: IC4F
+    bit_range:
+    - 15
+    - 12
+    description: Input capture 4 filter
+  side_effects: null
+- id: TIM_CCMR2_ALTERNATE
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CC3S
+    bit_range:
+    - 1
+    - 0
+    description: "Capture/Compare 3 selection\n\nThis bit-field defines the direction of the channel (input/output) as well as the used input. \n\nNote: CC3S bits are writable only when the channel is OFF (CC3E = 0 in TIMx_CCER)."
+  - name: OC3FE
+    bit_range:
+    - 2
+    - 2
+    description: Output compare 3 fast enable
+  - name: OC3PE
+    bit_range:
+    - 3
+    - 3
+    description: Output compare 3 preload enable
+  - name: OC3M
+    bit_range:
+    - 6
+    - 4
+    description: |-
+      OC3M[2:0]: Output compare 3 mode
+
+      Refer to OC1M description (bits 6:4 in TIMx_CCMR1 register)
+  - name: OC3CE
+    bit_range:
+    - 7
+    - 7
+    description: Output compare 3 clear enable
+  - name: CC4S
+    bit_range:
+    - 9
+    - 8
+    description: "Capture/Compare 4 selection\n\nThis bit-field defines the direction of the channel (input/output) as well as the used input. \n\nNote: CC4S bits are writable only when the channel is OFF (CC4E = 0 in TIMx_CCER)."
+  - name: OC4FE
+    bit_range:
+    - 10
+    - 10
+    description: Output compare 4 fast enable
+  - name: OC4PE
+    bit_range:
+    - 11
+    - 11
+    description: Output compare 4 preload enable
+  - name: OC4M
+    bit_range:
+    - 14
+    - 12
+    description: |-
+      OC4M[2:0]: Output compare 4 mode
+
+      Refer to OC1M description (bits 6:4 in TIMx_CCMR1 register)
+  - name: OC4CE
+    bit_range:
+    - 15
+    - 15
+    description: Output compare 4 clear enable
+  - name: OC3M_1
+    bit_range:
+    - 16
+    - 16
+    description: OC3M[3]
+  - name: OC4M_1
+    bit_range:
+    - 24
+    - 24
+    description: OC4M[3]
+  side_effects: null
+- id: TIM_CCER
+  address_offset: 32
+  size: 16
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CC1E
+    bit_range:
+    - 0
+    - 0
+    description: Capture/Compare 1 output enable.
+  - name: CC1P
+    bit_range:
+    - 1
+    - 1
+    description: "Capture/Compare 1 output Polarity.\n\nWhen CC1 channel is configured as input, both CC1NP/CC1P bits select the active polarity of TI1FP1 and TI2FP1 for trigger or capture operations.\n\nCC1NP=0, CC1P=0:\tnon-inverted/rising edge. The circuit is sensitive to TIxFP1 rising edge (capture or trigger operations in reset, external clock or trigger mode), TIxFP1 is not inverted (trigger operation in gated mode or encoder mode).\n\nCC1NP=0, CC1P=1:\tinverted/falling edge. The circuit is sensitive to TIxFP1 falling edge (capture or trigger operations in reset, external clock or trigger mode), TIxFP1 is inverted (trigger operation in gated mode or encoder mode).\n\nCC1NP=1, CC1P=1:\tnon-inverted/both edges. The circuit is sensitive to both TIxFP1 rising and falling edges (capture or trigger operations in reset, external clock or trigger mode), TIxFP1is not inverted (trigger operation in gated mode). This configuration must not be used in encoder mode.\n\nCC1NP=1, CC1P=0:\tthis configuration is reserved, it must not be used."
+  - name: CC1NP
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Capture/Compare 1 output Polarity.
+
+      CC1 channel configured as output: CC1NP must be kept cleared in this case.
+
+      CC1 channel configured as input: This bit is used in conjunction with CC1P to define tim_ti1fp1/tim_ti2fp1 polarity. refer to CC1P description.
+  - name: CC2E
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Capture/Compare 2 output enable.
+
+      Refer to CC1E description
+  - name: CC2P
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Capture/Compare 2 output Polarity.
+
+      refer to CC1P description
+  - name: CC2NP
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Capture/Compare 2 output Polarity.
+
+      Refer to CC1NP description
+  - name: CC3E
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Capture/Compare 3 output enable.
+
+      Refer to CC1E description
+  - name: CC3P
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Capture/Compare 3 output Polarity.
+
+      Refer to CC1P description
+  - name: CC3NP
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Capture/Compare 3 output Polarity.
+
+      Refer to CC1NP description
+  - name: CC4E
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Capture/Compare 4 output enable.
+
+      refer to CC1E description
+  - name: CC4P
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Capture/Compare 4 output Polarity.
+
+      Refer to CC1P description
+  - name: CC4NP
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Capture/Compare 4 output Polarity.
+
+      Refer to CC1NP description
+  side_effects: null
+- id: TIM_CNT
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CNT
+    bit_range:
+    - 30
+    - 0
+    description: |-
+      Least significant part of counter value
+
+      Non-dithering mode (DITHEN = 0)
+
+      The register holds the counter value.
+
+      Dithering mode (DITHEN = 1)
+
+      The register holds the non-dithered part in CNT[30:0]. The fractional part is not available.
+  - name: UIFCPY
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      UIF copy or CNT bit 31
+
+      If TIMx_CR1.UIFREMAP = 0, thisbit means CNT[31], the most significant bit of counter value
+
+      If TIMx_CRT1.UIFREMAP = 1, this bit means UIF Copy, and is a read-only copy of the UIF bit of the TIMx_ISR register
+  side_effects: null
+- id: TIM_PSC
+  address_offset: 40
+  size: 16
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PSC
+    bit_range:
+    - 15
+    - 0
+    description: |-
+      Prescaler value
+
+      The counter clock frequency tim_cnt_ck is equal to fsubtim_psc_ck/sub / (PSC[15:0] + 1).
+
+      PSC contains the value to be loaded in the active prescaler register at each update event (including when the counter is cleared through UG bit of TIMx_EGR register or through trigger controller when configured in 'reset mode').
+  side_effects: null
+- id: TIM_ARR
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: ARR
+    bit_range:
+    - 31
+    - 0
+    description: |-
+      Auto-reload value
+
+      ARR is the value to be loaded in the actual auto-reload register.
+
+      Refer to the Section 29.4.3: Time-base unit on page 1245 for more details about ARR update and behavior.
+
+      The counter is blocked while the auto-reload value is null.
+
+      Non-dithering mode (DITHEN = 0)
+
+      The register holds the auto-reload value.
+
+      Dithering mode (DITHEN = 1)
+
+      The register holds the integer part in ARR[31:4]. The ARR[3:0] bitfield contains the dithered part.
+  side_effects: null
+- id: TIM_CCR1
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCR1
+    bit_range:
+    - 31
+    - 0
+    description: |-
+      Capture/compare 1 value
+
+      If channel CC1 is configured as output:
+
+      CCR1 is the value to be loaded in the actual capture/compare 1 register (preload value). It is loaded permanently if the preload feature is not selected in the TIMx_CCMR1 register (bit OC1PE). Else the preload value is copied in the active capture/compare 1 register when an update event occurs.
+
+      The active capture/compare register contains the value to be compared to the counter TIMx_CNT and signaled on tim_oc1 output.
+
+      Non-dithering mode (DITHEN = 0)
+
+      The register holds the compare value.
+
+      Dithering mode (DITHEN = 1)
+
+      The register holds the integer part in CCR1[31:4]. The CCR1[3:0] bitfield contains the dithered part.
+
+      If channel CC1 is configured as input:
+
+      CCR1 is the counter value transferred by the last input capture 1 event (tim_ic1). The TIMx_CCR1 register is read-only and cannot be programmed.
+
+      Non-dithering mode (DITHEN = 0)
+
+      The register holds the capture value.
+
+      Dithering mode (DITHEN = 1)
+
+      The register holds the capture in CCR1[31:0]. The CCR1[3:0] bits are reset.
+  side_effects: null
+- id: TIM_CCR2
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCR2
+    bit_range:
+    - 31
+    - 0
+    description: |-
+      Capture/compare 2 value
+
+      If channel CC2 is configured as output:
+
+      CCR2 is the value to be loaded in the actual capture/compare 2 register (preload value). It is loaded permanently if the preload feature is not selected in the TIMx_CCMR2 register (bit OC2PE). Else the preload value is copied in the active capture/compare 2 register when an update event occurs.
+
+      The active capture/compare register contains the value to be compared to the counter TIMx_CNT and signaled on tim_oc2 output.
+
+      Non-dithering mode (DITHEN = 0)
+
+      The register holds the compare value.
+
+      Dithering mode (DITHEN = 1)
+
+      The register holds the integer part in CCR2[31:4]. The CCR2[3:0] bitfield contains the dithered part.
+
+      If channel CC2 is configured as input:
+
+      CCR2 is the counter value transferred by the last input capture 2 event (tim_ic2). The TIMx_CCR2 register is read-only and cannot be programmed.
+
+      Non-dithering mode (DITHEN = 0)
+
+      The register holds the capture value.
+
+      Dithering mode (DITHEN = 1)
+
+      The register holds the capture in CCR2[31:0]. The CCR2[3:0] bits are reset.
+  side_effects: null
+- id: TIM_CCR3
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCR3
+    bit_range:
+    - 31
+    - 0
+    description: |-
+      Capture/compare 3 value
+
+      If channel CC3 is configured as output:
+
+      CCR3 is the value to be loaded in the actual capture/compare 3 register (preload value). It is loaded permanently if the preload feature is not selected in the TIMx_CCMR3 register (bit OC3PE). Else the preload value is copied in the active capture/compare 3 register when an update event occurs.
+
+      The active capture/compare register contains the value to be compared to the counter TIMx_CNT and signaled on tim_oc3 output.
+
+      Non-dithering mode (DITHEN = 0)
+
+      The register holds the compare value.
+
+      Dithering mode (DITHEN = 1)
+
+      The register holds the integer part in CCR3[31:4]. The CCR3[3:0] bitfield contains the dithered part.
+
+      If channel CC3 is configured as input:
+
+      CCR3 is the counter value transferred by the last input capture 3 event (tim_ic3). The TIMx_CCR3 register is read-only and cannot be programmed.
+
+      Non-dithering mode (DITHEN = 0)
+
+      The register holds the capture value.
+
+      Dithering mode (DITHEN = 1)
+
+      The register holds the capture in CCR3[31:0]. The CCR3[3:0] bits are reset.
+  side_effects: null
+- id: TIM_CCR4
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CCR4
+    bit_range:
+    - 31
+    - 0
+    description: |-
+      Capture/compare 4 value
+
+      If channel CC4 is configured as output:
+
+      CCR4 is the value to be loaded in the actual capture/compare 4 register (preload value). It is loaded permanently if the preload feature is not selected in the TIMx_CCMR4 register (bit OC4PE). Else the preload value is copied in the active capture/compare 4 register when an update event occurs.
+
+      The active capture/compare register contains the value to be compared to the counter TIMx_CNT and signaled on tim_oc4 output.
+
+      Non-dithering mode (DITHEN = 0)
+
+      The register holds the compare value.
+
+      Dithering mode (DITHEN = 1)
+
+      The register holds the integer part in CCR4[31:4]. The CCR4[3:0] bitfield contains the dithered part.
+
+      If channel CC4 is configured as input:
+
+      CCR4 is the counter value transferred by the last input capture 4 event (tim_ic4). The TIMx_CCR4 register is read-only and cannot be programmed.
+
+      Non-dithering mode (DITHEN = 0)
+
+      The register holds the capture value.
+
+      Dithering mode (DITHEN = 1)
+
+      The register holds the capture in CCR4[31:0]. The CCR4[3:0] bits are reset.
+  side_effects: null
+- id: TIM_ECR
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IE
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Index enable
+
+      This bit indicates if the Index event resets the counter.
+  - name: IDIR
+    bit_range:
+    - 2
+    - 1
+    description: |-
+      Index direction
+
+      This bit indicates in which direction the Index event resets the counter.
+
+      Note: The IDR[1:0] bitfield must be written when IE bit is reset (index disabled).
+  - name: IBLK
+    bit_range:
+    - 4
+    - 3
+    description: |-
+      Index blanking
+
+      This bit indicates if the Index event is conditioned by the tim_ti3 input
+  - name: FIDX
+    bit_range:
+    - 5
+    - 5
+    description: "First index \n\nThis bit indicates if the first index only is taken into account"
+  - name: IPOS
+    bit_range:
+    - 7
+    - 6
+    description: |-
+      Index positioning
+
+      In quadrature encoder mode (SMS[3:0] = 0001, 0010, 0011, 1110, 1111), this bit indicates in which AB input configuration the Index event resets the counter.
+
+      In directional clock mode or clock plus direction mode (SMS[3:0] = 1010, 1011, 1100, 1101), these bits indicates on which level the Index event resets the counter. In bidirectional clock mode, this applies for both clock inputs.
+
+      x0: Index resets the counter when clock is 0
+
+      x1: Index resets the counter when clock is 1
+
+      Note: IPOS[1] bit is not significant
+  - name: PW
+    bit_range:
+    - 23
+    - 16
+    description: |-
+      Pulse width
+
+      This bitfield defines the pulse duration, as following:
+
+      tsubPW/sub = PW[7:0] x tsubPWG/sub
+  - name: PWPRSC
+    bit_range:
+    - 26
+    - 24
+    description: |-
+      Pulse width prescaler
+
+      This bitfield sets the clock prescaler for the pulse generator, as following:
+
+      tsubPWG/sub = (2sup(PWPRSC[2:0])/sup) x tsubtim_ker_ck/sub
+  side_effects: null
+- id: TIM_TISEL
+  address_offset: 92
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TI1SEL
+    bit_range:
+    - 3
+    - 0
+    description: |-
+      Selects tim_ti1[15:0] input
+
+      ...
+
+      Refer to Section 29.4.2: TIM2/TIM3 pins and internal signals for product specific implementation.
+  - name: TI2SEL
+    bit_range:
+    - 11
+    - 8
+    description: |-
+      Selects tim_ti2[15:0] input
+
+      ...
+
+      Refer to Section 29.4.2: TIM2/TIM3 pins and internal signals for product specific implementation.
+  - name: TI3SEL
+    bit_range:
+    - 19
+    - 16
+    description: |-
+      Selects tim_ti3[15:0] input
+
+      ...
+
+      Refer to Section 29.4.2: TIM2/TIM3 pins and internal signals for product specific implementation.
+  - name: TI4SEL
+    bit_range:
+    - 27
+    - 24
+    description: |-
+      Selects tim_ti4[15:0] input
+
+      ...
+
+      Refer to Section 29.4.2: TIM2/TIM3 pins and internal signals for product specific implementation.
+  side_effects: null
+- id: TIM_AF1
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ETRSEL
+    bit_range:
+    - 17
+    - 14
+    description: |-
+      etr_in source selection
+
+      These bits select the etr_in input source.
+
+      ...
+
+      Refer to Section 29.4.2: TIM2/TIM3 pins and internal signals for product specific implementation.
+  side_effects: null
+- id: TIM_AF2
+  address_offset: 100
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OCRSEL
+    bit_range:
+    - 18
+    - 16
+    description: |-
+      ocref_clr source selection
+
+      These bits select the ocref_clr input source.
+
+      ...
+
+      Refer to Section 29.4.2: TIM2/TIM3 pins and internal signals for product specific implementation.
+  side_effects: null
+- id: TIM_DCR
+  address_offset: 988
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DBA
+    bit_range:
+    - 4
+    - 0
+    description: |-
+      DMA base address
+
+      This 5-bits vector defines the base-address for DMA transfers (when read/write access are done through the TIMx_DMAR address). DBA is defined as an offset starting from the address of the TIMx_CR1 register.
+
+      Example:
+
+      ...
+  - name: DBL
+    bit_range:
+    - 12
+    - 8
+    description: |-
+      DMA burst length
+
+      This 5-bit vector defines the length of DMA transfers (the timer recognizes a burst transfer when a read or a write access is done to the TIMx_DMAR address), i.e. the number of transfers. Transfers can be in half-words or in bytes (see example below).
+
+      ...
+
+      Example: Let us consider the following transfer: DBL = 7 bytes & DBA = TIM2_CR1.
+
+      If DBL = 7 bytes and DBA = TIM2_CR1 represents the address of the byte to be transferred, the address of the transfer should be given by the following equation:
+
+      (TIMx_CR1 address) + DBA + (DMA index), where DMA index = DBL
+
+      In this example, 7 bytes are added to (TIMx_CR1 address) + DBA, which gives us the address from/to which the data are copied. In this case, the transfer is done to 7 registers starting from the following address: (TIMx_CR1 address) + DBA
+
+      According to the configuration of the DMA Data Size, several cases may occur:
+
+      If the DMA Data Size is configured in half-words, 16-bit data are transferred to each of the 7 registers.
+
+      If the DMA Data Size is configured in bytes, the data are also transferred to 7 registers: the first register contains the first MSB byte, the second register, the first LSB byte and so on. So with the transfer Timer, one also has to specify the size of data transferred by DMA.
+  - name: DBSS
+    bit_range:
+    - 19
+    - 16
+    description: |-
+      DMA burst source selection
+
+      This bitfield defines the interrupt source that triggers the DMA burst transfers (the timer recognizes a burst transfer when a read or a write access is done to the TIMx_DMAR address).
+
+      Others: reserved
+  side_effects: null
+- id: TIM_DMAR
+  address_offset: 992
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DMAB
+    bit_range:
+    - 31
+    - 0
+    description: "DMA register for burst accesses\n\nA read or write operation to the DMAR register accesses the register located at the address\n\n(TIMx_CR1 address) + (DBA + DMA index) x 4 \n\nwhere TIMx_CR1 address is the address of the control register 1, DBA is the DMA base address configured in TIMx_DCR register, DMA index is automatically controlled by the DMA transfer, and ranges from 0 to DBL (DBL configured in TIMx_DCR)."
+  side_effects: null
+interrupts:
+  TIM2: 41
+timing: null

@@ -1,0 +1,1214 @@
+peripheral: UHCI0
+version: 0.1.0
+registers:
+- id: CONF0
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 3604736
+  fields:
+  - name: IN_RST
+    bit_range:
+    - 0
+    - 0
+    description: Set this bit to reset in link operations.
+  - name: OUT_RST
+    bit_range:
+    - 1
+    - 1
+    description: Set this bit to reset out link operations.
+  - name: AHBM_FIFO_RST
+    bit_range:
+    - 2
+    - 2
+    description: Set this bit to reset dma ahb fifo.
+  - name: AHBM_RST
+    bit_range:
+    - 3
+    - 3
+    description: Set this bit to reset dma  ahb interface.
+  - name: IN_LOOP_TEST
+    bit_range:
+    - 4
+    - 4
+    description: Set this bit to enable loop test for in links.
+  - name: OUT_LOOP_TEST
+    bit_range:
+    - 5
+    - 5
+    description: Set this bit to enable loop test for out links.
+  - name: OUT_AUTO_WRBACK
+    bit_range:
+    - 6
+    - 6
+    description: when in link's length is 0  go on to use the next in link automatically.
+  - name: OUT_NO_RESTART_CLR
+    bit_range:
+    - 7
+    - 7
+    description: don't use
+  - name: OUT_EOF_MODE
+    bit_range:
+    - 8
+    - 8
+    description: Set this bit to produce eof after DMA pops all data  clear this bit to produce eof after DMA pushes all data
+  - name: UART0_CE
+    bit_range:
+    - 9
+    - 9
+    description: Set this bit to use UART to transmit or receive data.
+  - name: UART1_CE
+    bit_range:
+    - 10
+    - 10
+    description: Set this bit to use UART1 to transmit or receive data.
+  - name: UART2_CE
+    bit_range:
+    - 11
+    - 11
+    description: Set this bit to use UART2 to transmit or receive data.
+  - name: OUTDSCR_BURST_EN
+    bit_range:
+    - 12
+    - 12
+    description: Set this bit to enable DMA in links to use burst mode.
+  - name: INDSCR_BURST_EN
+    bit_range:
+    - 13
+    - 13
+    description: Set this bit to enable DMA out links to use burst mode.
+  - name: OUT_DATA_BURST_EN
+    bit_range:
+    - 14
+    - 14
+    description: Set this bit to enable DMA burst MODE
+  - name: MEM_TRANS_EN
+    bit_range:
+    - 15
+    - 15
+  - name: SEPER_EN
+    bit_range:
+    - 16
+    - 16
+    description: Set this bit to use special char to separate the data frame.
+  - name: HEAD_EN
+    bit_range:
+    - 17
+    - 17
+    description: Set this bit to enable to use head packet  before the data frame.
+  - name: CRC_REC_EN
+    bit_range:
+    - 18
+    - 18
+    description: Set this bit to enable receiver''s ability of crc calculation  when crc_en bit in head packet is 1 then there will be crc bytes after data_frame
+  - name: UART_IDLE_EOF_EN
+    bit_range:
+    - 19
+    - 19
+    description: Set this bit to enable to use idle time  when the idle time after data frame is satisfied  this means the end of a data frame.
+  - name: LEN_EOF_EN
+    bit_range:
+    - 20
+    - 20
+    description: Set this bit to enable to use packet_len in packet head  when the received data is equal to packet_len  this means the end of a data frame.
+  - name: ENCODE_CRC_EN
+    bit_range:
+    - 21
+    - 21
+    description: Set this bit to enable crc calculation for data frame when bit6 in the head packet is 1.
+  - name: CLK_EN
+    bit_range:
+    - 22
+    - 22
+    description: Set this bit to enable clock-gating for read or write registers.
+  - name: UART_RX_BRK_EOF_EN
+    bit_range:
+    - 23
+    - 23
+    description: Set this bit to enable to use brk char as the end of a data frame.
+  side_effects: null
+- id: INT_RAW
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RX_START_INT_RAW
+    bit_range:
+    - 0
+    - 0
+    description: when a separator char has been send  it will produce uhci_rx_start_int interrupt.
+  - name: TX_START_INT_RAW
+    bit_range:
+    - 1
+    - 1
+    description: when DMA detects a separator char it will produce uhci_tx_start_int interrupt.
+  - name: RX_HUNG_INT_RAW
+    bit_range:
+    - 2
+    - 2
+    description: when DMA takes a lot of time to receive a data   it will produce uhci_rx_hung_int interrupt.
+  - name: TX_HUNG_INT_RAW
+    bit_range:
+    - 3
+    - 3
+    description: when DMA takes a lot of time to read a data from RAM  it will produce uhci_tx_hung_int interrupt.
+  - name: IN_DONE_INT_RAW
+    bit_range:
+    - 4
+    - 4
+    description: when a in link descriptor has been completed it will produce uhci_in_done_int interrupt.
+  - name: IN_SUC_EOF_INT_RAW
+    bit_range:
+    - 5
+    - 5
+    description: when a data packet has been received  it will produce uhci_in_suc_eof_int interrupt.
+  - name: IN_ERR_EOF_INT_RAW
+    bit_range:
+    - 6
+    - 6
+    description: when there are some errors about eof in in link descriptor  it will produce uhci_in_err_eof_int interrupt.
+  - name: OUT_DONE_INT_RAW
+    bit_range:
+    - 7
+    - 7
+    description: when a out link descriptor is completed  it will produce uhci_out_done_int interrupt.
+  - name: OUT_EOF_INT_RAW
+    bit_range:
+    - 8
+    - 8
+    description: when the current descriptor's eof bit is 1  it will produce uhci_out_eof_int interrupt.
+  - name: IN_DSCR_ERR_INT_RAW
+    bit_range:
+    - 9
+    - 9
+    description: when there are some errors about the out link descriptor  it will produce uhci_in_dscr_err_int interrupt.
+  - name: OUT_DSCR_ERR_INT_RAW
+    bit_range:
+    - 10
+    - 10
+    description: when there are some errors about the in link descriptor  it will produce uhci_out_dscr_err_int interrupt.
+  - name: IN_DSCR_EMPTY_INT_RAW
+    bit_range:
+    - 11
+    - 11
+    description: when there are not enough in links for DMA it will produce uhci_in_dscr_err_int interrupt.
+  - name: OUTLINK_EOF_ERR_INT_RAW
+    bit_range:
+    - 12
+    - 12
+    description: when there are some errors about eof in outlink descriptor  it will produce uhci_outlink_eof_err_int interrupt.
+  - name: OUT_TOTAL_EOF_INT_RAW
+    bit_range:
+    - 13
+    - 13
+    description: When all data have been send  it will produce uhci_out_total_eof_int interrupt.
+  - name: SEND_S_Q_INT_RAW
+    bit_range:
+    - 14
+    - 14
+    description: When use single send registers to send a short packets it will produce this interrupt when dma has send the short packet.
+  - name: SEND_A_Q_INT_RAW
+    bit_range:
+    - 15
+    - 15
+    description: When use always_send registers to send a series of short packets it will produce this interrupt when dma has send the short packet.
+  - name: DMA_INFIFO_FULL_WM_INT_RAW
+    bit_range:
+    - 16
+    - 16
+  side_effects: null
+- id: INT_ST
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RX_START_INT_ST
+    bit_range:
+    - 0
+    - 0
+  - name: TX_START_INT_ST
+    bit_range:
+    - 1
+    - 1
+  - name: RX_HUNG_INT_ST
+    bit_range:
+    - 2
+    - 2
+  - name: TX_HUNG_INT_ST
+    bit_range:
+    - 3
+    - 3
+  - name: IN_DONE_INT_ST
+    bit_range:
+    - 4
+    - 4
+  - name: IN_SUC_EOF_INT_ST
+    bit_range:
+    - 5
+    - 5
+  - name: IN_ERR_EOF_INT_ST
+    bit_range:
+    - 6
+    - 6
+  - name: OUT_DONE_INT_ST
+    bit_range:
+    - 7
+    - 7
+  - name: OUT_EOF_INT_ST
+    bit_range:
+    - 8
+    - 8
+  - name: IN_DSCR_ERR_INT_ST
+    bit_range:
+    - 9
+    - 9
+  - name: OUT_DSCR_ERR_INT_ST
+    bit_range:
+    - 10
+    - 10
+  - name: IN_DSCR_EMPTY_INT_ST
+    bit_range:
+    - 11
+    - 11
+  - name: OUTLINK_EOF_ERR_INT_ST
+    bit_range:
+    - 12
+    - 12
+  - name: OUT_TOTAL_EOF_INT_ST
+    bit_range:
+    - 13
+    - 13
+  - name: SEND_S_Q_INT_ST
+    bit_range:
+    - 14
+    - 14
+  - name: SEND_A_Q_INT_ST
+    bit_range:
+    - 15
+    - 15
+  - name: DMA_INFIFO_FULL_WM_INT_ST
+    bit_range:
+    - 16
+    - 16
+  side_effects: null
+- id: INT_ENA
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RX_START_INT_ENA
+    bit_range:
+    - 0
+    - 0
+  - name: TX_START_INT_ENA
+    bit_range:
+    - 1
+    - 1
+  - name: RX_HUNG_INT_ENA
+    bit_range:
+    - 2
+    - 2
+  - name: TX_HUNG_INT_ENA
+    bit_range:
+    - 3
+    - 3
+  - name: IN_DONE_INT_ENA
+    bit_range:
+    - 4
+    - 4
+  - name: IN_SUC_EOF_INT_ENA
+    bit_range:
+    - 5
+    - 5
+  - name: IN_ERR_EOF_INT_ENA
+    bit_range:
+    - 6
+    - 6
+  - name: OUT_DONE_INT_ENA
+    bit_range:
+    - 7
+    - 7
+  - name: OUT_EOF_INT_ENA
+    bit_range:
+    - 8
+    - 8
+  - name: IN_DSCR_ERR_INT_ENA
+    bit_range:
+    - 9
+    - 9
+  - name: OUT_DSCR_ERR_INT_ENA
+    bit_range:
+    - 10
+    - 10
+  - name: IN_DSCR_EMPTY_INT_ENA
+    bit_range:
+    - 11
+    - 11
+  - name: OUTLINK_EOF_ERR_INT_ENA
+    bit_range:
+    - 12
+    - 12
+  - name: OUT_TOTAL_EOF_INT_ENA
+    bit_range:
+    - 13
+    - 13
+  - name: SEND_S_Q_INT_ENA
+    bit_range:
+    - 14
+    - 14
+  - name: SEND_A_Q_INT_ENA
+    bit_range:
+    - 15
+    - 15
+  - name: DMA_INFIFO_FULL_WM_INT_ENA
+    bit_range:
+    - 16
+    - 16
+  side_effects: null
+- id: INT_CLR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RX_START_INT_CLR
+    bit_range:
+    - 0
+    - 0
+  - name: TX_START_INT_CLR
+    bit_range:
+    - 1
+    - 1
+  - name: RX_HUNG_INT_CLR
+    bit_range:
+    - 2
+    - 2
+  - name: TX_HUNG_INT_CLR
+    bit_range:
+    - 3
+    - 3
+  - name: IN_DONE_INT_CLR
+    bit_range:
+    - 4
+    - 4
+  - name: IN_SUC_EOF_INT_CLR
+    bit_range:
+    - 5
+    - 5
+  - name: IN_ERR_EOF_INT_CLR
+    bit_range:
+    - 6
+    - 6
+  - name: OUT_DONE_INT_CLR
+    bit_range:
+    - 7
+    - 7
+  - name: OUT_EOF_INT_CLR
+    bit_range:
+    - 8
+    - 8
+  - name: IN_DSCR_ERR_INT_CLR
+    bit_range:
+    - 9
+    - 9
+  - name: OUT_DSCR_ERR_INT_CLR
+    bit_range:
+    - 10
+    - 10
+  - name: IN_DSCR_EMPTY_INT_CLR
+    bit_range:
+    - 11
+    - 11
+  - name: OUTLINK_EOF_ERR_INT_CLR
+    bit_range:
+    - 12
+    - 12
+  - name: OUT_TOTAL_EOF_INT_CLR
+    bit_range:
+    - 13
+    - 13
+  - name: SEND_S_Q_INT_CLR
+    bit_range:
+    - 14
+    - 14
+  - name: SEND_A_Q_INT_CLR
+    bit_range:
+    - 15
+    - 15
+  - name: DMA_INFIFO_FULL_WM_INT_CLR
+    bit_range:
+    - 16
+    - 16
+  side_effects: null
+- id: DMA_OUT_STATUS
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: OUT_FULL
+    bit_range:
+    - 0
+    - 0
+    description: 1:DMA out link descriptor's fifo is full.
+  - name: OUT_EMPTY
+    bit_range:
+    - 1
+    - 1
+    description: 1:DMA in link descriptor's fifo is empty.
+  side_effects: null
+- id: DMA_OUT_PUSH
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OUTFIFO_WDATA
+    bit_range:
+    - 8
+    - 0
+    description: This is the data need to be pushed into out link descriptor's fifo.
+  - name: OUTFIFO_PUSH
+    bit_range:
+    - 16
+    - 16
+    description: Set this bit to push data in out link descriptor's fifo.
+  side_effects: null
+- id: DMA_IN_STATUS
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 2
+  fields:
+  - name: IN_FULL
+    bit_range:
+    - 0
+    - 0
+  - name: IN_EMPTY
+    bit_range:
+    - 1
+    - 1
+  - name: RX_ERR_CAUSE
+    bit_range:
+    - 6
+    - 4
+    description: This register stores the errors caused in out link descriptor's data packet.
+  side_effects: null
+- id: DMA_IN_POP
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: INFIFO_RDATA
+    bit_range:
+    - 11
+    - 0
+    description: This register stores the data pop from in link descriptor's fifo.
+  - name: INFIFO_POP
+    bit_range:
+    - 16
+    - 16
+    description: Set this bit to pop data in in link descriptor's fifo.
+  side_effects: null
+- id: DMA_OUT_LINK
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OUTLINK_ADDR
+    bit_range:
+    - 19
+    - 0
+    description: This register stores the least 20 bits of the first out link descriptor's address.
+  - name: OUTLINK_STOP
+    bit_range:
+    - 28
+    - 28
+    description: Set this bit to stop dealing with the out link descriptors.
+  - name: OUTLINK_START
+    bit_range:
+    - 29
+    - 29
+    description: Set this bit to start dealing with the out link descriptors.
+  - name: OUTLINK_RESTART
+    bit_range:
+    - 30
+    - 30
+    description: Set this bit to mount on new out link descriptors
+  - name: OUTLINK_PARK
+    bit_range:
+    - 31
+    - 31
+    description: 1£º the out link descriptor's fsm is in idle state. 0:the out link descriptor's fsm is working.
+  side_effects: null
+- id: DMA_IN_LINK
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048576
+  fields:
+  - name: INLINK_ADDR
+    bit_range:
+    - 19
+    - 0
+    description: This register stores the least 20 bits of the first in link descriptor's address.
+  - name: INLINK_AUTO_RET
+    bit_range:
+    - 20
+    - 20
+    description: 1:when a packet is wrong in link descriptor returns to the descriptor which is lately used.
+  - name: INLINK_STOP
+    bit_range:
+    - 28
+    - 28
+    description: Set this bit to stop dealing with the in link descriptors.
+  - name: INLINK_START
+    bit_range:
+    - 29
+    - 29
+    description: Set this bit to start dealing with the in link descriptors.
+  - name: INLINK_RESTART
+    bit_range:
+    - 30
+    - 30
+    description: Set this bit to mount on new in link descriptors
+  - name: INLINK_PARK
+    bit_range:
+    - 31
+    - 31
+    description: 1:the in link descriptor's fsm is in idle state.   0:the in link descriptor's fsm is working
+  side_effects: null
+- id: CONF1
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 51
+  fields:
+  - name: CHECK_SUM_EN
+    bit_range:
+    - 0
+    - 0
+    description: Set this bit to enable decoder to check  check_sum in packet header.
+  - name: CHECK_SEQ_EN
+    bit_range:
+    - 1
+    - 1
+    description: Set this bit to enable decoder to check seq num in packet header.
+  - name: CRC_DISABLE
+    bit_range:
+    - 2
+    - 2
+    description: Set this bit to disable crc calculation.
+  - name: SAVE_HEAD
+    bit_range:
+    - 3
+    - 3
+    description: Set this bit to save packet header .
+  - name: TX_CHECK_SUM_RE
+    bit_range:
+    - 4
+    - 4
+    description: Set this bit to enable hardware replace check_sum in packet header automatically.
+  - name: TX_ACK_NUM_RE
+    bit_range:
+    - 5
+    - 5
+    description: Set this bit to enable hardware replace ack num in packet header automatically.
+  - name: CHECK_OWNER
+    bit_range:
+    - 6
+    - 6
+    description: Set this bit to check the owner bit in link descriptor.
+  - name: WAIT_SW_START
+    bit_range:
+    - 7
+    - 7
+    description: Set this bit to enable software way to add packet header.
+  - name: SW_START
+    bit_range:
+    - 8
+    - 8
+    description: Set this bit to start inserting the packet header.
+  - name: DMA_INFIFO_FULL_THRS
+    bit_range:
+    - 20
+    - 9
+    description: when data amount in link descriptor's fifo is more than this register value  it will produce uhci_dma_infifo_full_wm_int interrupt.
+  side_effects: null
+- id: STATE0
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STATE0
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: STATE1
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STATE1
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: DMA_OUT_EOF_DES_ADDR
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OUT_EOF_DES_ADDR
+    bit_range:
+    - 31
+    - 0
+    description: This register stores the address of out link descriptoir when eof bit in this descriptor is 1.
+  side_effects: null
+- id: DMA_IN_SUC_EOF_DES_ADDR
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IN_SUC_EOF_DES_ADDR
+    bit_range:
+    - 31
+    - 0
+    description: This register stores the address of in link descriptor when eof bit in this descriptor is 1.
+  side_effects: null
+- id: DMA_IN_ERR_EOF_DES_ADDR
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IN_ERR_EOF_DES_ADDR
+    bit_range:
+    - 31
+    - 0
+    description: This register stores the address of in link descriptor when there are some errors in this descriptor.
+  side_effects: null
+- id: DMA_OUT_EOF_BFR_DES_ADDR
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OUT_EOF_BFR_DES_ADDR
+    bit_range:
+    - 31
+    - 0
+    description: This register stores the address of out link descriptor when there are some errors in this descriptor.
+  side_effects: null
+- id: AHB_TEST
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: AHB_TESTMODE
+    bit_range:
+    - 2
+    - 0
+    description: bit2 is ahb bus test enable ,bit1 is used to choose wrtie(1) or read(0) mode. bit0 is used to choose test only once(1) or continue(0)
+  - name: AHB_TESTADDR
+    bit_range:
+    - 5
+    - 4
+    description: The two bits represent ahb bus address bit[20:19]
+  side_effects: null
+- id: DMA_IN_DSCR
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: INLINK_DSCR
+    bit_range:
+    - 31
+    - 0
+    description: The content of current in link descriptor's third dword
+  side_effects: null
+- id: DMA_IN_DSCR_BF0
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: INLINK_DSCR_BF0
+    bit_range:
+    - 31
+    - 0
+    description: The content of current in link descriptor's first dword
+  side_effects: null
+- id: DMA_IN_DSCR_BF1
+  address_offset: 84
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: INLINK_DSCR_BF1
+    bit_range:
+    - 31
+    - 0
+    description: The content of current in link descriptor's second dword
+  side_effects: null
+- id: DMA_OUT_DSCR
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OUTLINK_DSCR
+    bit_range:
+    - 31
+    - 0
+    description: The content of current out link descriptor's third dword
+  side_effects: null
+- id: DMA_OUT_DSCR_BF0
+  address_offset: 92
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OUTLINK_DSCR_BF0
+    bit_range:
+    - 31
+    - 0
+    description: The content of current out link descriptor's first dword
+  side_effects: null
+- id: DMA_OUT_DSCR_BF1
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OUTLINK_DSCR_BF1
+    bit_range:
+    - 31
+    - 0
+    description: The content of current out link descriptor's second dword
+  side_effects: null
+- id: ESCAPE_CONF
+  address_offset: 100
+  size: 32
+  access: READ_WRITE
+  reset_value: 51
+  fields:
+  - name: TX_C0_ESC_EN
+    bit_range:
+    - 0
+    - 0
+    description: Set this bit to enable  0xc0 char decode when DMA receives data.
+  - name: TX_DB_ESC_EN
+    bit_range:
+    - 1
+    - 1
+    description: Set this bit to enable  0xdb char decode when DMA receives data.
+  - name: TX_11_ESC_EN
+    bit_range:
+    - 2
+    - 2
+    description: Set this bit to enable  flow control char 0x11 decode when DMA receives data.
+  - name: TX_13_ESC_EN
+    bit_range:
+    - 3
+    - 3
+    description: Set this bit to enable flow control char 0x13 decode when DMA receives data.
+  - name: RX_C0_ESC_EN
+    bit_range:
+    - 4
+    - 4
+    description: Set this bit to enable  0xc0 char replace when DMA sends data.
+  - name: RX_DB_ESC_EN
+    bit_range:
+    - 5
+    - 5
+    description: Set this bit to enable  0xdb char replace when DMA sends data.
+  - name: RX_11_ESC_EN
+    bit_range:
+    - 6
+    - 6
+    description: Set this bit to enable  flow control char 0x11 replace when DMA sends data.
+  - name: RX_13_ESC_EN
+    bit_range:
+    - 7
+    - 7
+    description: Set this bit to enable  flow control char 0x13 replace when DMA sends data.
+  side_effects: null
+- id: HUNG_CONF
+  address_offset: 104
+  size: 32
+  access: READ_WRITE
+  reset_value: 8456208
+  fields:
+  - name: TXFIFO_TIMEOUT
+    bit_range:
+    - 7
+    - 0
+    description: This register stores the timeout value.when DMA takes more time than this register value to receive a data  it will produce  uhci_tx_hung_int interrupt.
+  - name: TXFIFO_TIMEOUT_SHIFT
+    bit_range:
+    - 10
+    - 8
+    description: The tick count is cleared when its value >=(17'd8000>>reg_txfifo_timeout_shift)
+  - name: TXFIFO_TIMEOUT_ENA
+    bit_range:
+    - 11
+    - 11
+    description: The enable bit for txfifo receive data  timeout
+  - name: RXFIFO_TIMEOUT
+    bit_range:
+    - 19
+    - 12
+    description: This register stores the timeout value.when DMA takes more time than this register value to read a data from RAM  it will produce  uhci_rx_hung_int interrupt.
+  - name: RXFIFO_TIMEOUT_SHIFT
+    bit_range:
+    - 22
+    - 20
+    description: The tick count is cleared when its value >=(17'd8000>>reg_rxfifo_timeout_shift)
+  - name: RXFIFO_TIMEOUT_ENA
+    bit_range:
+    - 23
+    - 23
+    description: This is the enable bit for DMA  send data timeout
+  side_effects: null
+- id: ACK_NUM
+  address_offset: 108
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields: []
+  side_effects: null
+- id: RX_HEAD
+  address_offset: 112
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RX_HEAD
+    bit_range:
+    - 31
+    - 0
+    description: This register stores the packet header received by DMA
+  side_effects: null
+- id: QUICK_SENT
+  address_offset: 116
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SINGLE_SEND_NUM
+    bit_range:
+    - 2
+    - 0
+    description: The bits are used to choose which short packet
+  - name: SINGLE_SEND_EN
+    bit_range:
+    - 3
+    - 3
+    description: Set this bit to enable  send a short packet
+  - name: ALWAYS_SEND_NUM
+    bit_range:
+    - 6
+    - 4
+    description: The bits are used to choose which short packet
+  - name: ALWAYS_SEND_EN
+    bit_range:
+    - 7
+    - 7
+    description: Set this bit to enable continuously send the same short packet
+  side_effects: null
+- id: Q0_WORD0
+  address_offset: 120
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SEND_Q0_WORD0
+    bit_range:
+    - 31
+    - 0
+    description: This register stores the content of short packet's first dword
+  side_effects: null
+- id: Q0_WORD1
+  address_offset: 124
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SEND_Q0_WORD1
+    bit_range:
+    - 31
+    - 0
+    description: This register stores the content of short packet's second dword
+  side_effects: null
+- id: Q1_WORD0
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SEND_Q1_WORD0
+    bit_range:
+    - 31
+    - 0
+    description: This register stores the content of short packet's first dword
+  side_effects: null
+- id: Q1_WORD1
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SEND_Q1_WORD1
+    bit_range:
+    - 31
+    - 0
+    description: This register stores the content of short packet's second dword
+  side_effects: null
+- id: Q2_WORD0
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SEND_Q2_WORD0
+    bit_range:
+    - 31
+    - 0
+    description: This register stores the content of short packet's first dword
+  side_effects: null
+- id: Q2_WORD1
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SEND_Q2_WORD1
+    bit_range:
+    - 31
+    - 0
+    description: This register stores the content of short packet's second dword
+  side_effects: null
+- id: Q3_WORD0
+  address_offset: 144
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SEND_Q3_WORD0
+    bit_range:
+    - 31
+    - 0
+    description: This register stores the content of short packet's first dword
+  side_effects: null
+- id: Q3_WORD1
+  address_offset: 148
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SEND_Q3_WORD1
+    bit_range:
+    - 31
+    - 0
+    description: This register stores the content of short packet's second dword
+  side_effects: null
+- id: Q4_WORD0
+  address_offset: 152
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SEND_Q4_WORD0
+    bit_range:
+    - 31
+    - 0
+    description: This register stores the content of short packet's first dword
+  side_effects: null
+- id: Q4_WORD1
+  address_offset: 156
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SEND_Q4_WORD1
+    bit_range:
+    - 31
+    - 0
+    description: This register stores the content of short packet's second dword
+  side_effects: null
+- id: Q5_WORD0
+  address_offset: 160
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SEND_Q5_WORD0
+    bit_range:
+    - 31
+    - 0
+    description: This register stores the content of short packet's first dword
+  side_effects: null
+- id: Q5_WORD1
+  address_offset: 164
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SEND_Q5_WORD1
+    bit_range:
+    - 31
+    - 0
+    description: This register stores the content of short packet's second dword
+  side_effects: null
+- id: Q6_WORD0
+  address_offset: 168
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SEND_Q6_WORD0
+    bit_range:
+    - 31
+    - 0
+    description: This register stores the content of short packet's first dword
+  side_effects: null
+- id: Q6_WORD1
+  address_offset: 172
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SEND_Q6_WORD1
+    bit_range:
+    - 31
+    - 0
+    description: This register stores the content of short packet's second dword
+  side_effects: null
+- id: ESC_CONF0
+  address_offset: 176
+  size: 32
+  access: READ_WRITE
+  reset_value: 14474176
+  fields:
+  - name: SEPER_CHAR
+    bit_range:
+    - 7
+    - 0
+    description: This register stores the seperator char  seperator char is used to seperate the data frame.
+  - name: SEPER_ESC_CHAR0
+    bit_range:
+    - 15
+    - 8
+    description: This register stores thee first char used to replace seperator char in data.
+  - name: SEPER_ESC_CHAR1
+    bit_range:
+    - 23
+    - 16
+    description: This register stores the second char used to replace seperator char in data . 0xdc 0xdb replace 0xc0 by default.
+  side_effects: null
+- id: ESC_CONF1
+  address_offset: 180
+  size: 32
+  access: READ_WRITE
+  reset_value: 14539739
+  fields:
+  - name: ESC_SEQ0
+    bit_range:
+    - 7
+    - 0
+    description: This register stores the first substitute char used to replace the seperator char.
+  - name: ESC_SEQ0_CHAR0
+    bit_range:
+    - 15
+    - 8
+    description: This register stores the first char used to replace reg_esc_seq0 in data.
+  - name: ESC_SEQ0_CHAR1
+    bit_range:
+    - 23
+    - 16
+    description: This register stores the second char used to replace the reg_esc_seq0 in data
+  side_effects: null
+- id: ESC_CONF2
+  address_offset: 184
+  size: 32
+  access: READ_WRITE
+  reset_value: 14605073
+  fields:
+  - name: ESC_SEQ1
+    bit_range:
+    - 7
+    - 0
+    description: This register stores the flow control char to turn on the flow_control
+  - name: ESC_SEQ1_CHAR0
+    bit_range:
+    - 15
+    - 8
+    description: This register stores the first char used to replace the reg_esc_seq1 in data.
+  - name: ESC_SEQ1_CHAR1
+    bit_range:
+    - 23
+    - 16
+    description: This register stores the second char used to replace the reg_esc_seq1 in data.
+  side_effects: null
+- id: ESC_CONF3
+  address_offset: 188
+  size: 32
+  access: READ_WRITE
+  reset_value: 14670611
+  fields:
+  - name: ESC_SEQ2
+    bit_range:
+    - 7
+    - 0
+    description: This register stores the flow_control char to turn off the flow_control
+  - name: ESC_SEQ2_CHAR0
+    bit_range:
+    - 15
+    - 8
+    description: This register stores the first char used to replace the reg_esc_seq2 in data.
+  - name: ESC_SEQ2_CHAR1
+    bit_range:
+    - 23
+    - 16
+    description: This register stores  the second char used to replace the reg_esc_seq2 in data.
+  side_effects: null
+- id: PKT_THRES
+  address_offset: 192
+  size: 32
+  access: READ_WRITE
+  reset_value: 128
+  fields:
+  - name: PKT_THRS
+    bit_range:
+    - 12
+    - 0
+    description: when the amount of packet payload is greater than this value the process of receiving data is done.
+  side_effects: null
+- id: DATE
+  address_offset: 252
+  size: 32
+  access: READ_WRITE
+  reset_value: 369364993
+  fields:
+  - name: DATE
+    bit_range:
+    - 31
+    - 0
+    description: version information
+  side_effects: null
+interrupts:
+  UHCI0: 12
+timing: null

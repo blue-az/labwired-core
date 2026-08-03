@@ -80,6 +80,7 @@ peripherals:
     base_address: 0x58024400
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32h735/rcc.yaml"
       profile: "h7"
   # GPIO ports A..H (bonded on the LQFP100 STM32H735VG). Base 0x58020000,
   # stride 0x400. stm32v2 register IP (MODER/OSPEEDR/PUPDR/IDR/ODR/BSRR/BRR).
@@ -88,6 +89,7 @@ peripherals:
     base_address: 0x58020000
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32h735/gpioa.yaml"
       profile: "stm32v2"
       # PA13/PA14 SWD + PA15 JTDI debug defaults (port A not all-analog).
       reset_moder: 0xABFFFFFF
@@ -98,6 +100,7 @@ peripherals:
     base_address: 0x58020400
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32h735/gpiob.yaml"
       profile: "stm32v2"
       # PB3 JTDO/SWO + PB4 NJTRST debug defaults.
       reset_moder: 0xFFFFFEBF
@@ -108,6 +111,7 @@ peripherals:
     base_address: 0x58020800
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32h735/gpioc.yaml"
       profile: "stm32v2"
       reset_moder: 0xFFFFFFFF
   - id: "gpiod"
@@ -115,6 +119,7 @@ peripherals:
     base_address: 0x58020C00
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32h735/gpiod.yaml"
       profile: "stm32v2"
       reset_moder: 0xFFFFFFFF
   - id: "gpioe"
@@ -122,6 +127,7 @@ peripherals:
     base_address: 0x58021000
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32h735/gpioe.yaml"
       profile: "stm32v2"
       reset_moder: 0xFFFFFFFF
   - id: "gpiof"
@@ -129,6 +135,7 @@ peripherals:
     base_address: 0x58021400
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32h735/gpiof.yaml"
       profile: "stm32v2"
       reset_moder: 0xFFFFFFFF
   - id: "gpiog"
@@ -136,6 +143,7 @@ peripherals:
     base_address: 0x58021800
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32h735/gpiog.yaml"
       profile: "stm32v2"
       reset_moder: 0xFFFFFFFF
   - id: "gpioh"
@@ -143,6 +151,7 @@ peripherals:
     base_address: 0x58021C00
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32h735/gpioh.yaml"
       profile: "stm32v2"
       reset_moder: 0xFFFFFFFF
   - id: "systick"
@@ -157,6 +166,7 @@ peripherals:
     size: "1KB"
     irq: 39
     config:
+      debug_schema: "../peripherals/stm32h735/usart3.yaml"
       profile: "stm32v2"
   # USART1 (APB2) — second UART. stm32v2 IP.
   - id: "usart1"
@@ -165,6 +175,7 @@ peripherals:
     size: "1KB"
     irq: 37
     config:
+      debug_schema: "../peripherals/stm32h735/usart1.yaml"
       profile: "stm32v2"
   # LPUART1 (APB4, D3 domain).
   - id: "lpuart1"
@@ -173,6 +184,7 @@ peripherals:
     size: "1KB"
     irq: 142
     config:
+      debug_schema: "../peripherals/stm32h735/lpuart1.yaml"
       profile: "stm32v2"
   # TIM1 advanced-control (APB2). `_pwm` id suffix declares the tier1 pwm class.
   - id: "tim1_pwm"
@@ -181,6 +193,7 @@ peripherals:
     size: "1KB"
     irq: 27
     config:
+      debug_schema: "../peripherals/stm32h735/tim1.yaml"
       advanced: true
     # TIM1 clocked from RCC_APB2ENR.TIM1EN (bit 0). Unclocked out of reset.
     clock: { reg: "apb2enr", bit: 0 }
@@ -191,6 +204,7 @@ peripherals:
     size: "1KB"
     irq: 28
     config:
+      debug_schema: "../peripherals/stm32h735/tim2.yaml"
       width: 32
     # TIM2 clocked from RCC_APB1LENR.TIM2EN (bit 0).
     clock: { reg: "apb1lenr", bit: 0 }
@@ -199,6 +213,8 @@ peripherals:
     base_address: 0x40000400
     size: "1KB"
     irq: 29
+    config:
+      debug_schema: "../peripherals/stm32h735/tim3.yaml"
   # I2C1 (APB1) — I2C v2 IP (TIMINGR/ISR), h5 profile.
   - id: "i2c1"
     type: "i2c"
@@ -206,6 +222,7 @@ peripherals:
     size: "1KB"
     irq: 31
     config:
+      debug_schema: "../peripherals/stm32h735/i2c1.yaml"
       profile: "h5"
     # I2C1 clocked from RCC_APB1LENR.I2C1EN (bit 21).
     clock: { reg: "apb1lenr", bit: 21 }
@@ -215,6 +232,7 @@ peripherals:
     size: "1KB"
     irq: 33
     config:
+      debug_schema: "../peripherals/stm32h735/i2c2.yaml"
       profile: "h5"
   # SPI1 (APB2) — SPI v2 IP (CFG1/CFG2), stm32h5 profile.
   - id: "spi1"
@@ -223,6 +241,7 @@ peripherals:
     size: "1KB"
     irq: 35
     config:
+      debug_schema: "../peripherals/stm32h735/spi1.yaml"
       profile: "stm32h5"
     # SPI1 clocked from RCC_APB2ENR.SPI1EN (bit 12).
     clock: { reg: "apb2enr", bit: 12 }
@@ -232,6 +251,7 @@ peripherals:
     size: "1KB"
     irq: 36
     config:
+      debug_schema: "../peripherals/stm32h735/spi2.yaml"
       profile: "stm32h5"
   # SYSCFG (D2, APB4) — system config (EXTI source select, boost/compensation
   # cell the H7 HAL touches during rcc.freeze). Modeled as a stub (read/store).
@@ -239,6 +259,8 @@ peripherals:
     type: "syscfg"
     base_address: 0x58000400
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32h735/syscfg.yaml"
   # NVIC — installed unconditionally for Cortex-M; declares the tier1 irq class.
   - id: "nvic"
     type: "nvic"
@@ -251,6 +273,7 @@ peripherals:
     base_address: 0x58024800
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32h735/pwr.yaml"
       profile: "h7"
   # FLASH interface (RM0468) — mapped as present for ACR latency read-back so
   # HAL clock bring-up does not fault. Bank-2 / error semantics not H7-faithful.
@@ -259,12 +282,15 @@ peripherals:
     base_address: 0x52002000
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32h735/flash.yaml"
       profile: "stm32h5"
   # IWDG1 (independent watchdog, LSI-clocked — no RCC enable gate).
   - id: "iwdg"
     type: "iwdg"
     base_address: 0x58004800
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32h735/iwdg1.yaml"
   # WWDG (APB3).
   - id: "wwdg"
     type: "wwdg"
@@ -277,6 +303,7 @@ peripherals:
     base_address: 0x58024C00
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32h735/crc.yaml"
       idr_width: 32
   # RNG (AHB2).
   - id: "rng"
@@ -285,10 +312,13 @@ peripherals:
     size: "1KB"
     # STM32H735 RNG shares HASH_RNG_IRQn = 80 (SVD); 141 is LPTIM5.
     irq: 80
+    config:
+      debug_schema: "../peripherals/stm32h735/rng.yaml"
   # DBGMCU (RM0468 §60) @ 0x5C001000. DEV_ID 0x483 (H72x/73x). Nominal IDCODE.
   - id: "dbgmcu"
     type: "dbgmcu"
     base_address: 0x5C001000
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32h735/dbgmcu.yaml"
       idcode: 0x10016483

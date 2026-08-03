@@ -1,0 +1,746 @@
+peripheral: EXTI
+version: 0.1.0
+registers:
+- id: IMR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MR0
+    bit_range:
+    - 0
+    - 0
+    description: Interrupt Mask on line 0
+  - name: MR1
+    bit_range:
+    - 1
+    - 1
+    description: Interrupt Mask on line 1
+  - name: MR2
+    bit_range:
+    - 2
+    - 2
+    description: Interrupt Mask on line 2
+  - name: MR3
+    bit_range:
+    - 3
+    - 3
+    description: Interrupt Mask on line 3
+  - name: MR4
+    bit_range:
+    - 4
+    - 4
+    description: Interrupt Mask on line 4
+  - name: MR5
+    bit_range:
+    - 5
+    - 5
+    description: Interrupt Mask on line 5
+  - name: MR6
+    bit_range:
+    - 6
+    - 6
+    description: Interrupt Mask on line 6
+  - name: MR7
+    bit_range:
+    - 7
+    - 7
+    description: Interrupt Mask on line 7
+  - name: MR8
+    bit_range:
+    - 8
+    - 8
+    description: Interrupt Mask on line 8
+  - name: MR9
+    bit_range:
+    - 9
+    - 9
+    description: Interrupt Mask on line 9
+  - name: MR10
+    bit_range:
+    - 10
+    - 10
+    description: Interrupt Mask on line 10
+  - name: MR11
+    bit_range:
+    - 11
+    - 11
+    description: Interrupt Mask on line 11
+  - name: MR12
+    bit_range:
+    - 12
+    - 12
+    description: Interrupt Mask on line 12
+  - name: MR13
+    bit_range:
+    - 13
+    - 13
+    description: Interrupt Mask on line 13
+  - name: MR14
+    bit_range:
+    - 14
+    - 14
+    description: Interrupt Mask on line 14
+  - name: MR15
+    bit_range:
+    - 15
+    - 15
+    description: Interrupt Mask on line 15
+  - name: MR16
+    bit_range:
+    - 16
+    - 16
+    description: Interrupt Mask on line 16
+  - name: MR17
+    bit_range:
+    - 17
+    - 17
+    description: Interrupt Mask on line 17
+  - name: MR18
+    bit_range:
+    - 18
+    - 18
+    description: Interrupt Mask on line 18
+  - name: MR19
+    bit_range:
+    - 19
+    - 19
+    description: Interrupt Mask on line 19
+  - name: MR20
+    bit_range:
+    - 20
+    - 20
+    description: Interrupt Mask on line 20
+  - name: MR21
+    bit_range:
+    - 21
+    - 21
+    description: Interrupt Mask on line 21
+  - name: MR22
+    bit_range:
+    - 22
+    - 22
+    description: Interrupt Mask on line 22
+  side_effects: null
+- id: EMR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MR0
+    bit_range:
+    - 0
+    - 0
+    description: Event Mask on line 0
+  - name: MR1
+    bit_range:
+    - 1
+    - 1
+    description: Event Mask on line 1
+  - name: MR2
+    bit_range:
+    - 2
+    - 2
+    description: Event Mask on line 2
+  - name: MR3
+    bit_range:
+    - 3
+    - 3
+    description: Event Mask on line 3
+  - name: MR4
+    bit_range:
+    - 4
+    - 4
+    description: Event Mask on line 4
+  - name: MR5
+    bit_range:
+    - 5
+    - 5
+    description: Event Mask on line 5
+  - name: MR6
+    bit_range:
+    - 6
+    - 6
+    description: Event Mask on line 6
+  - name: MR7
+    bit_range:
+    - 7
+    - 7
+    description: Event Mask on line 7
+  - name: MR8
+    bit_range:
+    - 8
+    - 8
+    description: Event Mask on line 8
+  - name: MR9
+    bit_range:
+    - 9
+    - 9
+    description: Event Mask on line 9
+  - name: MR10
+    bit_range:
+    - 10
+    - 10
+    description: Event Mask on line 10
+  - name: MR11
+    bit_range:
+    - 11
+    - 11
+    description: Event Mask on line 11
+  - name: MR12
+    bit_range:
+    - 12
+    - 12
+    description: Event Mask on line 12
+  - name: MR13
+    bit_range:
+    - 13
+    - 13
+    description: Event Mask on line 13
+  - name: MR14
+    bit_range:
+    - 14
+    - 14
+    description: Event Mask on line 14
+  - name: MR15
+    bit_range:
+    - 15
+    - 15
+    description: Event Mask on line 15
+  - name: MR16
+    bit_range:
+    - 16
+    - 16
+    description: Event Mask on line 16
+  - name: MR17
+    bit_range:
+    - 17
+    - 17
+    description: Event Mask on line 17
+  - name: MR18
+    bit_range:
+    - 18
+    - 18
+    description: Event Mask on line 18
+  - name: MR19
+    bit_range:
+    - 19
+    - 19
+    description: Event Mask on line 19
+  - name: MR20
+    bit_range:
+    - 20
+    - 20
+    description: Event Mask on line 20
+  - name: MR21
+    bit_range:
+    - 21
+    - 21
+    description: Event Mask on line 21
+  - name: MR22
+    bit_range:
+    - 22
+    - 22
+    description: Event Mask on line 22
+  side_effects: null
+- id: RTSR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TR0
+    bit_range:
+    - 0
+    - 0
+    description: Rising trigger event configuration of line 0
+  - name: TR1
+    bit_range:
+    - 1
+    - 1
+    description: Rising trigger event configuration of line 1
+  - name: TR2
+    bit_range:
+    - 2
+    - 2
+    description: Rising trigger event configuration of line 2
+  - name: TR3
+    bit_range:
+    - 3
+    - 3
+    description: Rising trigger event configuration of line 3
+  - name: TR4
+    bit_range:
+    - 4
+    - 4
+    description: Rising trigger event configuration of line 4
+  - name: TR5
+    bit_range:
+    - 5
+    - 5
+    description: Rising trigger event configuration of line 5
+  - name: TR6
+    bit_range:
+    - 6
+    - 6
+    description: Rising trigger event configuration of line 6
+  - name: TR7
+    bit_range:
+    - 7
+    - 7
+    description: Rising trigger event configuration of line 7
+  - name: TR8
+    bit_range:
+    - 8
+    - 8
+    description: Rising trigger event configuration of line 8
+  - name: TR9
+    bit_range:
+    - 9
+    - 9
+    description: Rising trigger event configuration of line 9
+  - name: TR10
+    bit_range:
+    - 10
+    - 10
+    description: Rising trigger event configuration of line 10
+  - name: TR11
+    bit_range:
+    - 11
+    - 11
+    description: Rising trigger event configuration of line 11
+  - name: TR12
+    bit_range:
+    - 12
+    - 12
+    description: Rising trigger event configuration of line 12
+  - name: TR13
+    bit_range:
+    - 13
+    - 13
+    description: Rising trigger event configuration of line 13
+  - name: TR14
+    bit_range:
+    - 14
+    - 14
+    description: Rising trigger event configuration of line 14
+  - name: TR15
+    bit_range:
+    - 15
+    - 15
+    description: Rising trigger event configuration of line 15
+  - name: TR16
+    bit_range:
+    - 16
+    - 16
+    description: Rising trigger event configuration of line 16
+  - name: TR17
+    bit_range:
+    - 17
+    - 17
+    description: Rising trigger event configuration of line 17
+  - name: TR18
+    bit_range:
+    - 18
+    - 18
+    description: Rising trigger event configuration of line 18
+  - name: TR19
+    bit_range:
+    - 19
+    - 19
+    description: Rising trigger event configuration of line 19
+  - name: TR20
+    bit_range:
+    - 20
+    - 20
+    description: Rising trigger event configuration of line 20
+  - name: TR21
+    bit_range:
+    - 21
+    - 21
+    description: Rising trigger event configuration of line 21
+  - name: TR22
+    bit_range:
+    - 22
+    - 22
+    description: Rising trigger event configuration of line 22
+  side_effects: null
+- id: FTSR
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TR0
+    bit_range:
+    - 0
+    - 0
+    description: Falling trigger event configuration of line 0
+  - name: TR1
+    bit_range:
+    - 1
+    - 1
+    description: Falling trigger event configuration of line 1
+  - name: TR2
+    bit_range:
+    - 2
+    - 2
+    description: Falling trigger event configuration of line 2
+  - name: TR3
+    bit_range:
+    - 3
+    - 3
+    description: Falling trigger event configuration of line 3
+  - name: TR4
+    bit_range:
+    - 4
+    - 4
+    description: Falling trigger event configuration of line 4
+  - name: TR5
+    bit_range:
+    - 5
+    - 5
+    description: Falling trigger event configuration of line 5
+  - name: TR6
+    bit_range:
+    - 6
+    - 6
+    description: Falling trigger event configuration of line 6
+  - name: TR7
+    bit_range:
+    - 7
+    - 7
+    description: Falling trigger event configuration of line 7
+  - name: TR8
+    bit_range:
+    - 8
+    - 8
+    description: Falling trigger event configuration of line 8
+  - name: TR9
+    bit_range:
+    - 9
+    - 9
+    description: Falling trigger event configuration of line 9
+  - name: TR10
+    bit_range:
+    - 10
+    - 10
+    description: Falling trigger event configuration of line 10
+  - name: TR11
+    bit_range:
+    - 11
+    - 11
+    description: Falling trigger event configuration of line 11
+  - name: TR12
+    bit_range:
+    - 12
+    - 12
+    description: Falling trigger event configuration of line 12
+  - name: TR13
+    bit_range:
+    - 13
+    - 13
+    description: Falling trigger event configuration of line 13
+  - name: TR14
+    bit_range:
+    - 14
+    - 14
+    description: Falling trigger event configuration of line 14
+  - name: TR15
+    bit_range:
+    - 15
+    - 15
+    description: Falling trigger event configuration of line 15
+  - name: TR16
+    bit_range:
+    - 16
+    - 16
+    description: Falling trigger event configuration of line 16
+  - name: TR17
+    bit_range:
+    - 17
+    - 17
+    description: Falling trigger event configuration of line 17
+  - name: TR18
+    bit_range:
+    - 18
+    - 18
+    description: Falling trigger event configuration of line 18
+  - name: TR19
+    bit_range:
+    - 19
+    - 19
+    description: Falling trigger event configuration of line 19
+  - name: TR20
+    bit_range:
+    - 20
+    - 20
+    description: Falling trigger event configuration of line 20
+  - name: TR21
+    bit_range:
+    - 21
+    - 21
+    description: Falling trigger event configuration of line 21
+  - name: TR22
+    bit_range:
+    - 22
+    - 22
+    description: Falling trigger event configuration of line 22
+  side_effects: null
+- id: SWIER
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SWIER0
+    bit_range:
+    - 0
+    - 0
+    description: Software Interrupt on line 0
+  - name: SWIER1
+    bit_range:
+    - 1
+    - 1
+    description: Software Interrupt on line 1
+  - name: SWIER2
+    bit_range:
+    - 2
+    - 2
+    description: Software Interrupt on line 2
+  - name: SWIER3
+    bit_range:
+    - 3
+    - 3
+    description: Software Interrupt on line 3
+  - name: SWIER4
+    bit_range:
+    - 4
+    - 4
+    description: Software Interrupt on line 4
+  - name: SWIER5
+    bit_range:
+    - 5
+    - 5
+    description: Software Interrupt on line 5
+  - name: SWIER6
+    bit_range:
+    - 6
+    - 6
+    description: Software Interrupt on line 6
+  - name: SWIER7
+    bit_range:
+    - 7
+    - 7
+    description: Software Interrupt on line 7
+  - name: SWIER8
+    bit_range:
+    - 8
+    - 8
+    description: Software Interrupt on line 8
+  - name: SWIER9
+    bit_range:
+    - 9
+    - 9
+    description: Software Interrupt on line 9
+  - name: SWIER10
+    bit_range:
+    - 10
+    - 10
+    description: Software Interrupt on line 10
+  - name: SWIER11
+    bit_range:
+    - 11
+    - 11
+    description: Software Interrupt on line 11
+  - name: SWIER12
+    bit_range:
+    - 12
+    - 12
+    description: Software Interrupt on line 12
+  - name: SWIER13
+    bit_range:
+    - 13
+    - 13
+    description: Software Interrupt on line 13
+  - name: SWIER14
+    bit_range:
+    - 14
+    - 14
+    description: Software Interrupt on line 14
+  - name: SWIER15
+    bit_range:
+    - 15
+    - 15
+    description: Software Interrupt on line 15
+  - name: SWIER16
+    bit_range:
+    - 16
+    - 16
+    description: Software Interrupt on line 16
+  - name: SWIER17
+    bit_range:
+    - 17
+    - 17
+    description: Software Interrupt on line 17
+  - name: SWIER18
+    bit_range:
+    - 18
+    - 18
+    description: Software Interrupt on line 18
+  - name: SWIER19
+    bit_range:
+    - 19
+    - 19
+    description: Software Interrupt on line 19
+  - name: SWIER20
+    bit_range:
+    - 20
+    - 20
+    description: Software Interrupt on line 20
+  - name: SWIER21
+    bit_range:
+    - 21
+    - 21
+    description: Software Interrupt on line 21
+  - name: SWIER22
+    bit_range:
+    - 22
+    - 22
+    description: Software Interrupt on line 22
+  side_effects: null
+- id: PR
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PR0
+    bit_range:
+    - 0
+    - 0
+    description: Pending bit 0
+  - name: PR1
+    bit_range:
+    - 1
+    - 1
+    description: Pending bit 1
+  - name: PR2
+    bit_range:
+    - 2
+    - 2
+    description: Pending bit 2
+  - name: PR3
+    bit_range:
+    - 3
+    - 3
+    description: Pending bit 3
+  - name: PR4
+    bit_range:
+    - 4
+    - 4
+    description: Pending bit 4
+  - name: PR5
+    bit_range:
+    - 5
+    - 5
+    description: Pending bit 5
+  - name: PR6
+    bit_range:
+    - 6
+    - 6
+    description: Pending bit 6
+  - name: PR7
+    bit_range:
+    - 7
+    - 7
+    description: Pending bit 7
+  - name: PR8
+    bit_range:
+    - 8
+    - 8
+    description: Pending bit 8
+  - name: PR9
+    bit_range:
+    - 9
+    - 9
+    description: Pending bit 9
+  - name: PR10
+    bit_range:
+    - 10
+    - 10
+    description: Pending bit 10
+  - name: PR11
+    bit_range:
+    - 11
+    - 11
+    description: Pending bit 11
+  - name: PR12
+    bit_range:
+    - 12
+    - 12
+    description: Pending bit 12
+  - name: PR13
+    bit_range:
+    - 13
+    - 13
+    description: Pending bit 13
+  - name: PR14
+    bit_range:
+    - 14
+    - 14
+    description: Pending bit 14
+  - name: PR15
+    bit_range:
+    - 15
+    - 15
+    description: Pending bit 15
+  - name: PR16
+    bit_range:
+    - 16
+    - 16
+    description: Pending bit 16
+  - name: PR17
+    bit_range:
+    - 17
+    - 17
+    description: Pending bit 17
+  - name: PR18
+    bit_range:
+    - 18
+    - 18
+    description: Pending bit 18
+  - name: PR19
+    bit_range:
+    - 19
+    - 19
+    description: Pending bit 19
+  - name: PR20
+    bit_range:
+    - 20
+    - 20
+    description: Pending bit 20
+  - name: PR21
+    bit_range:
+    - 21
+    - 21
+    description: Pending bit 21
+  - name: PR22
+    bit_range:
+    - 22
+    - 22
+    description: Pending bit 22
+  side_effects: null
+interrupts:
+  PVD: 1
+  TAMP_STAMP: 2
+  EXTI0: 6
+  EXTI1: 7
+  EXTI2: 8
+  EXTI3: 9
+  EXTI4: 10
+  EXTI9_5: 23
+  EXTI15_10: 40
+timing: null

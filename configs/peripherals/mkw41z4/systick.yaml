@@ -1,0 +1,78 @@
+peripheral: SysTick
+version: 0.1.0
+registers:
+- id: CSR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENABLE
+    bit_range:
+    - 0
+    - 0
+    description: no description available
+  - name: TICKINT
+    bit_range:
+    - 1
+    - 1
+    description: no description available
+  - name: CLKSOURCE
+    bit_range:
+    - 2
+    - 2
+    description: no description available
+  - name: COUNTFLAG
+    bit_range:
+    - 16
+    - 16
+    description: no description available
+  side_effects: null
+- id: RVR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RELOAD
+    bit_range:
+    - 23
+    - 0
+    description: Value to load into the SysTick Current Value Register when the counter reaches 0
+  side_effects: null
+- id: CVR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CURRENT
+    bit_range:
+    - 23
+    - 0
+    description: Current value at the time the register is accessed
+  side_effects: null
+- id: CALIB
+  address_offset: 12
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: TENMS
+    bit_range:
+    - 23
+    - 0
+    description: Reload value to use for 10ms timing
+  - name: SKEW
+    bit_range:
+    - 30
+    - 30
+    description: no description available
+  - name: NOREF
+    bit_range:
+    - 31
+    - 31
+    description: no description available
+  side_effects: null
+interrupts: null
+timing: null

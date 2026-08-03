@@ -1,0 +1,585 @@
+peripheral: BKP
+version: 0.1.0
+registers:
+- id: DR1
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D1
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR2
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D2
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR3
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D3
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR4
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D4
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR5
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D5
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR6
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D6
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR7
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D7
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR8
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D8
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR9
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D9
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR10
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D10
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR11
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DR11
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR12
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DR12
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR13
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DR13
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR14
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D14
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR15
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D15
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR16
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D16
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR17
+  address_offset: 84
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D17
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR18
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D18
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR19
+  address_offset: 92
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D19
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR20
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D20
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR21
+  address_offset: 100
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D21
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR22
+  address_offset: 104
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D22
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR23
+  address_offset: 108
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D23
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR24
+  address_offset: 112
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D24
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR25
+  address_offset: 116
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D25
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR26
+  address_offset: 120
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D26
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR27
+  address_offset: 124
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D27
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR28
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D28
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR29
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D29
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR30
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D30
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR31
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D31
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR32
+  address_offset: 144
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D32
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR33
+  address_offset: 148
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D33
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR34
+  address_offset: 152
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D34
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR35
+  address_offset: 156
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D35
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR36
+  address_offset: 160
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D36
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR37
+  address_offset: 164
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D37
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR38
+  address_offset: 168
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D38
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR39
+  address_offset: 172
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D39
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR40
+  address_offset: 176
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D40
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR41
+  address_offset: 180
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D41
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: DR42
+  address_offset: 184
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: D42
+    bit_range:
+    - 15
+    - 0
+    description: Backup data
+  side_effects: null
+- id: RTCCR
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CAL
+    bit_range:
+    - 6
+    - 0
+    description: Calibration value
+  - name: CCO
+    bit_range:
+    - 7
+    - 7
+    description: Calibration Clock Output
+  - name: ASOE
+    bit_range:
+    - 8
+    - 8
+    description: Alarm or second output enable
+  - name: ASOS
+    bit_range:
+    - 9
+    - 9
+    description: Alarm or second output selection
+  side_effects: null
+- id: CR
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TPE
+    bit_range:
+    - 0
+    - 0
+    description: Tamper pin enable
+  - name: TPAL
+    bit_range:
+    - 1
+    - 1
+    description: Tamper pin active level
+  side_effects: null
+- id: CSR
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CTE
+    bit_range:
+    - 0
+    - 0
+    description: Clear Tamper event
+  - name: CTI
+    bit_range:
+    - 1
+    - 1
+    description: Clear Tamper Interrupt
+  - name: TPIE
+    bit_range:
+    - 2
+    - 2
+    description: Tamper Pin interrupt enable
+  - name: TEF
+    bit_range:
+    - 8
+    - 8
+    description: Tamper Event Flag
+  - name: TIF
+    bit_range:
+    - 9
+    - 9
+    description: Tamper Interrupt Flag
+  side_effects: null
+interrupts: null
+timing: null

@@ -1,0 +1,135 @@
+peripheral: MPU
+version: 0.1.0
+registers:
+- id: MPU_TYPER
+  address_offset: 0
+  size: 32
+  access: READ_ONLY
+  reset_value: 2048
+  fields:
+  - name: SEPARATE
+    bit_range:
+    - 0
+    - 0
+    description: Separate flag
+  - name: DREGION
+    bit_range:
+    - 15
+    - 8
+    description: Number of MPU data regions
+  - name: IREGION
+    bit_range:
+    - 23
+    - 16
+    description: Number of MPU instruction regions
+  side_effects: null
+- id: MPU_CTRL
+  address_offset: 4
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: ENABLE
+    bit_range:
+    - 0
+    - 0
+    description: Enables the MPU
+  - name: HFNMIENA
+    bit_range:
+    - 1
+    - 1
+    description: Enables the operation of MPU during hard fault
+  - name: PRIVDEFENA
+    bit_range:
+    - 2
+    - 2
+    description: Enable priviliged software access to default memory map
+  side_effects: null
+- id: MPU_RNR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: REGION
+    bit_range:
+    - 7
+    - 0
+    description: MPU region
+  side_effects: null
+- id: MPU_RBAR
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: REGION
+    bit_range:
+    - 3
+    - 0
+    description: MPU region field
+  - name: VALID
+    bit_range:
+    - 4
+    - 4
+    description: MPU region number valid
+  - name: ADDR
+    bit_range:
+    - 31
+    - 5
+    description: Region base address field
+  side_effects: null
+- id: MPU_RASR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENABLE
+    bit_range:
+    - 0
+    - 0
+    description: Region enable bit.
+  - name: SIZE
+    bit_range:
+    - 5
+    - 1
+    description: Size of the MPU protection region
+  - name: SRD
+    bit_range:
+    - 15
+    - 8
+    description: Subregion disable bits
+  - name: B
+    bit_range:
+    - 16
+    - 16
+    description: memory attribute
+  - name: C
+    bit_range:
+    - 17
+    - 17
+    description: memory attribute
+  - name: S
+    bit_range:
+    - 18
+    - 18
+    description: Shareable memory attribute
+  - name: TEX
+    bit_range:
+    - 21
+    - 19
+    description: memory attribute
+  - name: AP
+    bit_range:
+    - 26
+    - 24
+    description: Access permission
+  - name: XN
+    bit_range:
+    - 28
+    - 28
+    description: Instruction access disable bit
+  side_effects: null
+interrupts: null
+timing: null

@@ -1,0 +1,538 @@
+peripheral: GPIO
+version: 0.1.0
+registers:
+- id: BT_SELECT
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BT_SEL
+    bit_range:
+    - 31
+    - 0
+    description: NA
+  side_effects: null
+- id: OUT
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: GPIO0~31 output value
+  side_effects: null
+- id: OUT_W1TS
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OUT_DATA_W1TS
+    bit_range:
+    - 31
+    - 0
+    description: GPIO0~31 output value write 1 to set
+  side_effects: null
+- id: OUT_W1TC
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OUT_DATA_W1TC
+    bit_range:
+    - 31
+    - 0
+    description: GPIO0~31 output value write 1 to clear
+  side_effects: null
+- id: OUT1
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 7
+    - 0
+    description: GPIO32~39 output value
+  side_effects: null
+- id: OUT1_W1TS
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OUT1_DATA_W1TS
+    bit_range:
+    - 7
+    - 0
+    description: GPIO32~39 output value write 1 to set
+  side_effects: null
+- id: OUT1_W1TC
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OUT1_DATA_W1TC
+    bit_range:
+    - 7
+    - 0
+    description: GPIO32~39 output value write 1 to clear
+  side_effects: null
+- id: SDIO_SELECT
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SDIO_SEL
+    bit_range:
+    - 7
+    - 0
+    description: SDIO PADS on/off control from outside
+  side_effects: null
+- id: ENABLE
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: GPIO0~31 output enable
+  side_effects: null
+- id: ENABLE_W1TS
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENABLE_DATA_W1TS
+    bit_range:
+    - 31
+    - 0
+    description: GPIO0~31 output enable write 1 to set
+  side_effects: null
+- id: ENABLE_W1TC
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENABLE_DATA_W1TC
+    bit_range:
+    - 31
+    - 0
+    description: GPIO0~31 output enable write 1 to clear
+  side_effects: null
+- id: ENABLE1
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 7
+    - 0
+    description: GPIO32~39 output enable
+  side_effects: null
+- id: ENABLE1_W1TS
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENABLE1_DATA_W1TS
+    bit_range:
+    - 7
+    - 0
+    description: GPIO32~39 output enable write 1 to set
+  side_effects: null
+- id: ENABLE1_W1TC
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENABLE1_DATA_W1TC
+    bit_range:
+    - 7
+    - 0
+    description: GPIO32~39 output enable write 1 to clear
+  side_effects: null
+- id: STRAP
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STRAPPING
+    bit_range:
+    - 15
+    - 0
+    description: '{10''b0, MTDI, GPIO0, GPIO2, GPIO4, MTDO, GPIO5}'
+  side_effects: null
+- id: IN
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA_NEXT
+    bit_range:
+    - 31
+    - 0
+    description: GPIO0~31 input value
+  side_effects: null
+- id: IN1
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA_NEXT
+    bit_range:
+    - 7
+    - 0
+    description: GPIO32~39 input value
+  side_effects: null
+- id: STATUS
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: INT
+    bit_range:
+    - 31
+    - 0
+    description: GPIO0~31 interrupt status
+  side_effects: null
+- id: STATUS_W1TS
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STATUS_INT_W1TS
+    bit_range:
+    - 31
+    - 0
+    description: GPIO0~31 interrupt status write 1 to set
+  side_effects: null
+- id: STATUS_W1TC
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STATUS_INT_W1TC
+    bit_range:
+    - 31
+    - 0
+    description: GPIO0~31 interrupt status write 1 to clear
+  side_effects: null
+- id: STATUS1
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: INT
+    bit_range:
+    - 7
+    - 0
+    description: GPIO32~39 interrupt status
+  side_effects: null
+- id: STATUS1_W1TS
+  address_offset: 84
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STATUS1_INT_W1TS
+    bit_range:
+    - 7
+    - 0
+    description: GPIO32~39 interrupt status write 1 to set
+  side_effects: null
+- id: STATUS1_W1TC
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STATUS1_INT_W1TC
+    bit_range:
+    - 7
+    - 0
+    description: GPIO32~39 interrupt status write 1 to clear
+  side_effects: null
+- id: ACPU_INT
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APPCPU_INT
+    bit_range:
+    - 31
+    - 0
+    description: GPIO0~31 APP CPU interrupt status
+  side_effects: null
+- id: ACPU_NMI_INT
+  address_offset: 100
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APPCPU_NMI_INT
+    bit_range:
+    - 31
+    - 0
+    description: GPIO0~31 APP CPU non-maskable interrupt status
+  side_effects: null
+- id: PCPU_INT
+  address_offset: 104
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCPU_INT
+    bit_range:
+    - 31
+    - 0
+    description: GPIO0~31 PRO CPU interrupt status
+  side_effects: null
+- id: PCPU_NMI_INT
+  address_offset: 108
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCPU_NMI_INT
+    bit_range:
+    - 31
+    - 0
+    description: GPIO0~31 PRO CPU non-maskable interrupt status
+  side_effects: null
+- id: CPUSDIO_INT
+  address_offset: 112
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SDIO_INT
+    bit_range:
+    - 31
+    - 0
+    description: SDIO's extent GPIO0~31 interrupt
+  side_effects: null
+- id: ACPU_INT1
+  address_offset: 116
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APPCPU_INT_H
+    bit_range:
+    - 7
+    - 0
+    description: GPIO32~39 APP CPU interrupt status
+  side_effects: null
+- id: ACPU_NMI_INT1
+  address_offset: 120
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: APPCPU_NMI_INT_H
+    bit_range:
+    - 7
+    - 0
+    description: GPIO32~39 APP CPU non-maskable interrupt status
+  side_effects: null
+- id: PCPU_INT1
+  address_offset: 124
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCPU_INT_H
+    bit_range:
+    - 7
+    - 0
+    description: GPIO32~39 PRO CPU interrupt status
+  side_effects: null
+- id: PCPU_NMI_INT1
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCPU_NMI_INT_H
+    bit_range:
+    - 7
+    - 0
+    description: GPIO32~39 PRO CPU non-maskable interrupt status
+  side_effects: null
+- id: CPUSDIO_INT1
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SDIO_INT_H
+    bit_range:
+    - 7
+    - 0
+    description: SDIO's extent GPIO32~39 interrupt
+  - name: PIN_PAD_DRIVER
+    bit_range:
+    - 2
+    - 2
+  - name: PIN_INT_TYPE
+    bit_range:
+    - 9
+    - 7
+  - name: PIN_WAKEUP_ENABLE
+    bit_range:
+    - 10
+    - 10
+  - name: PIN_CONFIG
+    bit_range:
+    - 12
+    - 11
+  - name: PIN_INT_ENA
+    bit_range:
+    - 17
+    - 13
+  side_effects: null
+- id: PIN0-39
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PAD_DRIVER
+    bit_range:
+    - 2
+    - 2
+    description: 'if set to 0: normal output  if set to 1: open drain'
+  - name: INT_TYPE
+    bit_range:
+    - 9
+    - 7
+    description: 'if set to 0: GPIO interrupt disable  if set to 1: rising edge trigger  if set to 2: falling edge trigger  if set to 3: any edge trigger  if set to 4: low level trigger  if set to 5: high level trigger'
+  - name: WAKEUP_ENABLE
+    bit_range:
+    - 10
+    - 10
+    description: GPIO wake up enable  only available in light sleep
+  - name: CONFIG
+    bit_range:
+    - 12
+    - 11
+    description: NA
+  - name: INT_ENA
+    bit_range:
+    - 17
+    - 13
+    description: 'bit0: APP CPU interrupt enable  bit1: APP CPU non-maskable interrupt enable  bit3: PRO CPU interrupt enable  bit4:  PRO CPU non-maskable interrupt enable  bit5: SDIO''s extent interrupt enable'
+  side_effects: null
+- id: cali_conf
+  address_offset: 296
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CALI_RTC_MAX
+    bit_range:
+    - 9
+    - 0
+  - name: CALI_START
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: cali_data
+  address_offset: 300
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CALI_VALUE_SYNC2
+    bit_range:
+    - 19
+    - 0
+  - name: CALI_RDY_REAL
+    bit_range:
+    - 30
+    - 30
+  - name: CALI_RDY_SYNC2
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: FUNC0-255_IN_SEL_CFG
+  address_offset: 304
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IN_SEL
+    bit_range:
+    - 5
+    - 0
+    description: select one of the 256 inputs
+  - name: IN_INV_SEL
+    bit_range:
+    - 6
+    - 6
+    description: revert the value of the input if you want to revert  please set the value to 1
+  - name: SEL
+    bit_range:
+    - 7
+    - 7
+    description: if the slow signal bypass the io matrix or not if you want  setting the value to 1
+  side_effects: null
+- id: FUNC0-39_OUT_SEL_CFG
+  address_offset: 1328
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OUT_SEL
+    bit_range:
+    - 8
+    - 0
+    description: select one of the 256 output to 40 GPIO
+  - name: INV_SEL
+    bit_range:
+    - 9
+    - 9
+    description: invert the output value  if you want to revert the output value  setting the value to 1
+  - name: OEN_SEL
+    bit_range:
+    - 10
+    - 10
+    description: weather using the logical oen signal or not using the value setting by the register
+  - name: OEN_INV_SEL
+    bit_range:
+    - 11
+    - 11
+    description: invert the output enable value  if you want to revert the output enable value  setting the value to 1
+  side_effects: null
+interrupts:
+  GPIO: 22
+  GPIO_NMI: 23
+timing: null

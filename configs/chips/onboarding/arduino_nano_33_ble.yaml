@@ -71,6 +71,11 @@ peripherals:
   base_address: 1073754112
 - id: spi2
   type: nrf52840_spi
+  # Nordic SPIM, stated explicitly. SpiRegisterLayout derives Default = Stm32,
+  # so omitting this did not mean "pick the right one" -- this nRF52 peripheral
+  # was answering reads with the STM32 SPI register map, silently.
+  config:
+    profile: "nrf52_spim"
   bus: sysbus
   base_address: 1073885184
 - id: gpio0

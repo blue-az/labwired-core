@@ -468,6 +468,19 @@ impl Peripheral for Esp32Spi {
         Ok(((word >> byte_off) & 0xFF) as u8)
     }
 
+    /// Side-effect-free probe, so `inspect` shows this controller's real
+    /// registers instead of reporting them unreadable.
+    ///
+    /// Delegation is safe here because `read_word` is a pure function of model
+    /// state: this controller's only interior mutability is the `Arc<Mutex<_>>`
+    /// flash backing image, which no register read consumes. Contrast
+    /// `Esp32I2c`, where a REG_DATA read pops the RX FIFO and `peek` therefore
+    /// has to decode without consuming. Check the read path before copying this
+    /// into another peripheral.
+    fn peek(&self, offset: u64) -> Option<u8> {
+        self.read(offset).ok()
+    }
+
     fn write(&mut self, offset: u64, value: u8) -> SimResult<()> {
         let word_off = offset & !3;
         let byte_off = (offset & 3) * 8;
@@ -588,6 +601,12 @@ impl Peripheral for Esp32Spi {
             }
         }
         false
+    }
+
+    fn for_each_attached_device(&self, f: &mut dyn FnMut(crate::inspect::AttachedDeviceRef<'_>)) {
+        for dev in &self.attached_devices {
+            crate::inspect::visit_spi_device(&**dev, f);
+        }
     }
 }
 

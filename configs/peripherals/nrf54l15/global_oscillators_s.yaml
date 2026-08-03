@@ -1,0 +1,53 @@
+peripheral: GLOBAL_OSCILLATORS_S
+version: 0.1.0
+registers:
+- id: XOSC32M_CONFIG_INTCAP
+  address_offset: 1820
+  size: 32
+  access: READ_WRITE
+  reset_value: 32
+  fields:
+  - name: VAL
+    bit_range:
+    - 5
+    - 0
+    description: Crystal load capacitor value
+  side_effects: null
+- id: PLL_FREQ
+  address_offset: 2048
+  size: 32
+  access: READ_WRITE
+  reset_value: 3
+  fields:
+  - name: FREQ
+    bit_range:
+    - 1
+    - 0
+    description: Select CPU speed
+  side_effects: null
+- id: PLL_CURRENTFREQ
+  address_offset: 2052
+  size: 32
+  access: READ_ONLY
+  reset_value: 3
+  fields:
+  - name: CURRENTFREQ
+    bit_range:
+    - 1
+    - 0
+    description: Active CPU speed
+  side_effects: null
+- id: XOSC32KI_INTCAP
+  address_offset: 2308
+  size: 32
+  access: READ_WRITE
+  reset_value: 23
+  fields:
+  - name: VAL
+    bit_range:
+    - 4
+    - 0
+    description: Crystal load capacitor as seen by the crystal across its terminals, including pin capacitance but excluding PCB stray capacitance.
+  side_effects: null
+interrupts: null
+timing: null

@@ -1,0 +1,60 @@
+peripheral: FRC_TIMER
+version: 0.1.0
+registers:
+- id: TIMER_LOAD
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 7
+    - 0
+  side_effects: null
+- id: TIMER_COUNT
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIMER_COUNT
+    bit_range:
+    - 7
+    - 0
+  side_effects: null
+- id: TIMER_CTRL
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIMER_PRESCALER
+    bit_range:
+    - 8
+    - 1
+  side_effects: null
+- id: TIMER_INT
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CLR
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+- id: TIMER_ALARM
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIMER_ALARM
+    bit_range:
+    - 7
+    - 0
+  side_effects: null
+interrupts: null
+timing: null

@@ -1,0 +1,44 @@
+peripheral: NRX
+version: 0.1.0
+registers:
+- id: NRXPD_CTRL
+  address_offset: 212
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DEMAP_FORCE_PD
+    bit_range:
+    - 0
+    - 0
+  - name: DEMAP_FORCE_PU
+    bit_range:
+    - 1
+    - 1
+  - name: VIT_FORCE_PD
+    bit_range:
+    - 2
+    - 2
+  - name: VIT_FORCE_PU
+    bit_range:
+    - 3
+    - 3
+  - name: RX_ROT_FORCE_PD
+    bit_range:
+    - 4
+    - 4
+  - name: RX_ROT_FORCE_PU
+    bit_range:
+    - 5
+    - 5
+  - name: CHAN_EST_FORCE_PD
+    bit_range:
+    - 6
+    - 6
+  - name: CHAN_EST_FORCE_PU
+    bit_range:
+    - 7
+    - 7
+  side_effects: null
+interrupts: null
+timing: null

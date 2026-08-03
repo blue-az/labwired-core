@@ -1,0 +1,622 @@
+peripheral: SDIO
+version: 0.1.0
+registers:
+- id: POWER
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PWRCTRL
+    bit_range:
+    - 1
+    - 0
+    description: PWRCTRL
+  side_effects: null
+- id: CLKCR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HWFC_EN
+    bit_range:
+    - 14
+    - 14
+    description: HW Flow Control enable
+  - name: NEGEDGE
+    bit_range:
+    - 13
+    - 13
+    description: SDIO_CK dephasing selection bit
+  - name: WIDBUS
+    bit_range:
+    - 12
+    - 11
+    description: Wide bus mode enable bit
+  - name: BYPASS
+    bit_range:
+    - 10
+    - 10
+    description: Clock divider bypass enable bit
+  - name: PWRSAV
+    bit_range:
+    - 9
+    - 9
+    description: Power saving configuration bit
+  - name: CLKEN
+    bit_range:
+    - 8
+    - 8
+    description: Clock enable bit
+  - name: CLKDIV
+    bit_range:
+    - 7
+    - 0
+    description: Clock divide factor
+  side_effects: null
+- id: ARG
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CMDARG
+    bit_range:
+    - 31
+    - 0
+    description: Command argument
+  side_effects: null
+- id: CMD
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CE_ATACMD
+    bit_range:
+    - 14
+    - 14
+    description: CE-ATA command
+  - name: nIEN
+    bit_range:
+    - 13
+    - 13
+    description: not Interrupt Enable
+  - name: ENCMDcompl
+    bit_range:
+    - 12
+    - 12
+    description: Enable CMD completion
+  - name: SDIOSuspend
+    bit_range:
+    - 11
+    - 11
+    description: SD I/O suspend command
+  - name: CPSMEN
+    bit_range:
+    - 10
+    - 10
+    description: Command path state machine (CPSM) Enable bit
+  - name: WAITPEND
+    bit_range:
+    - 9
+    - 9
+    description: CPSM Waits for ends of data transfer (CmdPend internal signal).
+  - name: WAITINT
+    bit_range:
+    - 8
+    - 8
+    description: CPSM waits for interrupt request
+  - name: WAITRESP
+    bit_range:
+    - 7
+    - 6
+    description: Wait for response bits
+  - name: CMDINDEX
+    bit_range:
+    - 5
+    - 0
+    description: Command index
+  side_effects: null
+- id: RESPCMD
+  address_offset: 16
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: RESPCMD
+    bit_range:
+    - 5
+    - 0
+    description: Response command index
+  side_effects: null
+- id: RESP1
+  address_offset: 20
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: CARDSTATUS1
+    bit_range:
+    - 31
+    - 0
+    description: Card Status
+  side_effects: null
+- id: RESP2
+  address_offset: 24
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: CARDSTATUS2
+    bit_range:
+    - 31
+    - 0
+    description: Card Status
+  side_effects: null
+- id: RESP3
+  address_offset: 28
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: CARDSTATUS3
+    bit_range:
+    - 31
+    - 0
+    description: Card Status
+  side_effects: null
+- id: RESP4
+  address_offset: 32
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: CARDSTATUS4
+    bit_range:
+    - 31
+    - 0
+    description: Card Status
+  side_effects: null
+- id: DTIMER
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATATIME
+    bit_range:
+    - 31
+    - 0
+    description: Data timeout period
+  side_effects: null
+- id: DLEN
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATALENGTH
+    bit_range:
+    - 24
+    - 0
+    description: Data length value
+  side_effects: null
+- id: DCTRL
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SDIOEN
+    bit_range:
+    - 11
+    - 11
+    description: SD I/O enable functions
+  - name: RWMOD
+    bit_range:
+    - 10
+    - 10
+    description: Read wait mode
+  - name: RWSTOP
+    bit_range:
+    - 9
+    - 9
+    description: Read wait stop
+  - name: RWSTART
+    bit_range:
+    - 8
+    - 8
+    description: Read wait start
+  - name: DBLOCKSIZE
+    bit_range:
+    - 7
+    - 4
+    description: Data block size
+  - name: DMAEN
+    bit_range:
+    - 3
+    - 3
+    description: DMA enable bit
+  - name: DTMODE
+    bit_range:
+    - 2
+    - 2
+    description: 'Data transfer mode selection 1: Stream or SDIO multibyte data transfer.'
+  - name: DTDIR
+    bit_range:
+    - 1
+    - 1
+    description: Data transfer direction selection
+  - name: DTEN
+    bit_range:
+    - 0
+    - 0
+    description: DTEN
+  side_effects: null
+- id: DCOUNT
+  address_offset: 48
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DATACOUNT
+    bit_range:
+    - 24
+    - 0
+    description: Data count value
+  side_effects: null
+- id: STA
+  address_offset: 52
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: CEATAEND
+    bit_range:
+    - 23
+    - 23
+    description: CE-ATA command completion signal received for CMD61
+  - name: SDIOIT
+    bit_range:
+    - 22
+    - 22
+    description: SDIO interrupt received
+  - name: RXDAVL
+    bit_range:
+    - 21
+    - 21
+    description: Data available in receive FIFO
+  - name: TXDAVL
+    bit_range:
+    - 20
+    - 20
+    description: Data available in transmit FIFO
+  - name: RXFIFOE
+    bit_range:
+    - 19
+    - 19
+    description: Receive FIFO empty
+  - name: TXFIFOE
+    bit_range:
+    - 18
+    - 18
+    description: Transmit FIFO empty
+  - name: RXFIFOF
+    bit_range:
+    - 17
+    - 17
+    description: Receive FIFO full
+  - name: TXFIFOF
+    bit_range:
+    - 16
+    - 16
+    description: Transmit FIFO full
+  - name: RXFIFOHF
+    bit_range:
+    - 15
+    - 15
+    description: 'Receive FIFO half full: there are at least 8 words in the FIFO'
+  - name: TXFIFOHE
+    bit_range:
+    - 14
+    - 14
+    description: 'Transmit FIFO half empty: at least 8 words can be written into the FIFO'
+  - name: RXACT
+    bit_range:
+    - 13
+    - 13
+    description: Data receive in progress
+  - name: TXACT
+    bit_range:
+    - 12
+    - 12
+    description: Data transmit in progress
+  - name: CMDACT
+    bit_range:
+    - 11
+    - 11
+    description: Command transfer in progress
+  - name: DBCKEND
+    bit_range:
+    - 10
+    - 10
+    description: Data block sent/received (CRC check passed)
+  - name: STBITERR
+    bit_range:
+    - 9
+    - 9
+    description: Start bit not detected on all data signals in wide bus mode
+  - name: DATAEND
+    bit_range:
+    - 8
+    - 8
+    description: Data end (data counter, SDIDCOUNT, is zero)
+  - name: CMDSENT
+    bit_range:
+    - 7
+    - 7
+    description: Command sent (no response required)
+  - name: CMDREND
+    bit_range:
+    - 6
+    - 6
+    description: Command response received (CRC check passed)
+  - name: RXOVERR
+    bit_range:
+    - 5
+    - 5
+    description: Received FIFO overrun error
+  - name: TXUNDERR
+    bit_range:
+    - 4
+    - 4
+    description: Transmit FIFO underrun error
+  - name: DTIMEOUT
+    bit_range:
+    - 3
+    - 3
+    description: Data timeout
+  - name: CTIMEOUT
+    bit_range:
+    - 2
+    - 2
+    description: Command response timeout
+  - name: DCRCFAIL
+    bit_range:
+    - 1
+    - 1
+    description: Data block sent/received (CRC check failed)
+  - name: CCRCFAIL
+    bit_range:
+    - 0
+    - 0
+    description: Command response received (CRC check failed)
+  side_effects: null
+- id: ICR
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CEATAENDC
+    bit_range:
+    - 23
+    - 23
+    description: CEATAEND flag clear bit
+  - name: SDIOITC
+    bit_range:
+    - 22
+    - 22
+    description: SDIOIT flag clear bit
+  - name: DBCKENDC
+    bit_range:
+    - 10
+    - 10
+    description: DBCKEND flag clear bit
+  - name: STBITERRC
+    bit_range:
+    - 9
+    - 9
+    description: STBITERR flag clear bit
+  - name: DATAENDC
+    bit_range:
+    - 8
+    - 8
+    description: DATAEND flag clear bit
+  - name: CMDSENTC
+    bit_range:
+    - 7
+    - 7
+    description: CMDSENT flag clear bit
+  - name: CMDRENDC
+    bit_range:
+    - 6
+    - 6
+    description: CMDREND flag clear bit
+  - name: RXOVERRC
+    bit_range:
+    - 5
+    - 5
+    description: RXOVERR flag clear bit
+  - name: TXUNDERRC
+    bit_range:
+    - 4
+    - 4
+    description: TXUNDERR flag clear bit
+  - name: DTIMEOUTC
+    bit_range:
+    - 3
+    - 3
+    description: DTIMEOUT flag clear bit
+  - name: CTIMEOUTC
+    bit_range:
+    - 2
+    - 2
+    description: CTIMEOUT flag clear bit
+  - name: DCRCFAILC
+    bit_range:
+    - 1
+    - 1
+    description: DCRCFAIL flag clear bit
+  - name: CCRCFAILC
+    bit_range:
+    - 0
+    - 0
+    description: CCRCFAIL flag clear bit
+  side_effects: null
+- id: MASK
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CEATAENDIE
+    bit_range:
+    - 23
+    - 23
+    description: CE-ATA command completion signal received interrupt enable
+  - name: SDIOITIE
+    bit_range:
+    - 22
+    - 22
+    description: SDIO mode interrupt received interrupt enable
+  - name: RXDAVLIE
+    bit_range:
+    - 21
+    - 21
+    description: Data available in Rx FIFO interrupt enable
+  - name: TXDAVLIE
+    bit_range:
+    - 20
+    - 20
+    description: Data available in Tx FIFO interrupt enable
+  - name: RXFIFOEIE
+    bit_range:
+    - 19
+    - 19
+    description: Rx FIFO empty interrupt enable
+  - name: TXFIFOEIE
+    bit_range:
+    - 18
+    - 18
+    description: Tx FIFO empty interrupt enable
+  - name: RXFIFOFIE
+    bit_range:
+    - 17
+    - 17
+    description: Rx FIFO full interrupt enable
+  - name: TXFIFOFIE
+    bit_range:
+    - 16
+    - 16
+    description: Tx FIFO full interrupt enable
+  - name: RXFIFOHFIE
+    bit_range:
+    - 15
+    - 15
+    description: Rx FIFO half full interrupt enable
+  - name: TXFIFOHEIE
+    bit_range:
+    - 14
+    - 14
+    description: Tx FIFO half empty interrupt enable
+  - name: RXACTIE
+    bit_range:
+    - 13
+    - 13
+    description: Data receive acting interrupt enable
+  - name: TXACTIE
+    bit_range:
+    - 12
+    - 12
+    description: Data transmit acting interrupt enable
+  - name: CMDACTIE
+    bit_range:
+    - 11
+    - 11
+    description: Command acting interrupt enable
+  - name: DBCKENDIE
+    bit_range:
+    - 10
+    - 10
+    description: Data block end interrupt enable
+  - name: STBITERRIE
+    bit_range:
+    - 9
+    - 9
+    description: Start bit error interrupt enable
+  - name: DATAENDIE
+    bit_range:
+    - 8
+    - 8
+    description: Data end interrupt enable
+  - name: CMDSENTIE
+    bit_range:
+    - 7
+    - 7
+    description: Command sent interrupt enable
+  - name: CMDRENDIE
+    bit_range:
+    - 6
+    - 6
+    description: Command response received interrupt enable
+  - name: RXOVERRIE
+    bit_range:
+    - 5
+    - 5
+    description: Rx FIFO overrun error interrupt enable
+  - name: TXUNDERRIE
+    bit_range:
+    - 4
+    - 4
+    description: Tx FIFO underrun error interrupt enable
+  - name: DTIMEOUTIE
+    bit_range:
+    - 3
+    - 3
+    description: Data timeout interrupt enable
+  - name: CTIMEOUTIE
+    bit_range:
+    - 2
+    - 2
+    description: Command timeout interrupt enable
+  - name: DCRCFAILIE
+    bit_range:
+    - 1
+    - 1
+    description: Data CRC fail interrupt enable
+  - name: CCRCFAILIE
+    bit_range:
+    - 0
+    - 0
+    description: Command CRC fail interrupt enable
+  side_effects: null
+- id: FIFOCNT
+  address_offset: 72
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: FIFOCOUNT
+    bit_range:
+    - 23
+    - 0
+    description: Remaining number of words to be written to or read from the FIFO.
+  side_effects: null
+- id: FIFO
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FIFOData
+    bit_range:
+    - 31
+    - 0
+    description: Receive and transmit FIFO data
+  side_effects: null
+interrupts:
+  SDIO: 49
+timing: null

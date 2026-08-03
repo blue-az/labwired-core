@@ -1,0 +1,791 @@
+peripheral: FMC
+version: 0.1.0
+registers:
+- id: BCR1
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 12496
+  fields:
+  - name: MBKEN
+    bit_range:
+    - 0
+    - 0
+    description: MBKEN
+  - name: MUXEN
+    bit_range:
+    - 1
+    - 1
+    description: MUXEN
+  - name: MTYP
+    bit_range:
+    - 3
+    - 2
+    description: MTYP
+  - name: MWID
+    bit_range:
+    - 5
+    - 4
+    description: MWID
+  - name: FACCEN
+    bit_range:
+    - 6
+    - 6
+    description: FACCEN
+  - name: BURSTEN
+    bit_range:
+    - 8
+    - 8
+    description: BURSTEN
+  - name: WAITPOL
+    bit_range:
+    - 9
+    - 9
+    description: WAITPOL
+  - name: WAITCFG
+    bit_range:
+    - 11
+    - 11
+    description: WAITCFG
+  - name: WREN
+    bit_range:
+    - 12
+    - 12
+    description: WREN
+  - name: WAITEN
+    bit_range:
+    - 13
+    - 13
+    description: WAITEN
+  - name: EXTMOD
+    bit_range:
+    - 14
+    - 14
+    description: EXTMOD
+  - name: ASYNCWAIT
+    bit_range:
+    - 15
+    - 15
+    description: ASYNCWAIT
+  - name: CBURSTRW
+    bit_range:
+    - 19
+    - 19
+    description: CBURSTRW
+  - name: CCLKEN
+    bit_range:
+    - 20
+    - 20
+    description: CCLKEN
+  - name: WFDIS
+    bit_range:
+    - 21
+    - 21
+    description: Write FIFO Disable
+  side_effects: null
+- id: BTR1
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: ADDSET
+    bit_range:
+    - 3
+    - 0
+    description: ADDSET
+  - name: ADDHLD
+    bit_range:
+    - 7
+    - 4
+    description: ADDHLD
+  - name: DATAST
+    bit_range:
+    - 15
+    - 8
+    description: DATAST
+  - name: BUSTURN
+    bit_range:
+    - 19
+    - 16
+    description: BUSTURN
+  - name: CLKDIV
+    bit_range:
+    - 23
+    - 20
+    description: CLKDIV
+  - name: DATLAT
+    bit_range:
+    - 27
+    - 24
+    description: DATLAT
+  - name: ACCMOD
+    bit_range:
+    - 29
+    - 28
+    description: ACCMOD
+  side_effects: null
+- id: BCR2
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 12496
+  fields:
+  - name: MBKEN
+    bit_range:
+    - 0
+    - 0
+    description: MBKEN
+  - name: MUXEN
+    bit_range:
+    - 1
+    - 1
+    description: MUXEN
+  - name: MTYP
+    bit_range:
+    - 3
+    - 2
+    description: MTYP
+  - name: MWID
+    bit_range:
+    - 5
+    - 4
+    description: MWID
+  - name: FACCEN
+    bit_range:
+    - 6
+    - 6
+    description: FACCEN
+  - name: BURSTEN
+    bit_range:
+    - 8
+    - 8
+    description: BURSTEN
+  - name: WAITPOL
+    bit_range:
+    - 9
+    - 9
+    description: WAITPOL
+  - name: WRAPMOD
+    bit_range:
+    - 10
+    - 10
+    description: WRAPMOD
+  - name: WAITCFG
+    bit_range:
+    - 11
+    - 11
+    description: WAITCFG
+  - name: WREN
+    bit_range:
+    - 12
+    - 12
+    description: WREN
+  - name: WAITEN
+    bit_range:
+    - 13
+    - 13
+    description: WAITEN
+  - name: EXTMOD
+    bit_range:
+    - 14
+    - 14
+    description: EXTMOD
+  - name: ASYNCWAIT
+    bit_range:
+    - 15
+    - 15
+    description: ASYNCWAIT
+  - name: CBURSTRW
+    bit_range:
+    - 19
+    - 19
+    description: CBURSTRW
+  side_effects: null
+- id: BTR2
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: ADDSET
+    bit_range:
+    - 3
+    - 0
+    description: ADDSET
+  - name: ADDHLD
+    bit_range:
+    - 7
+    - 4
+    description: ADDHLD
+  - name: DATAST
+    bit_range:
+    - 15
+    - 8
+    description: DATAST
+  - name: BUSTURN
+    bit_range:
+    - 19
+    - 16
+    description: BUSTURN
+  - name: CLKDIV
+    bit_range:
+    - 23
+    - 20
+    description: CLKDIV
+  - name: DATLAT
+    bit_range:
+    - 27
+    - 24
+    description: DATLAT
+  - name: ACCMOD
+    bit_range:
+    - 29
+    - 28
+    description: ACCMOD
+  side_effects: null
+- id: BCR3
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 12496
+  fields:
+  - name: MBKEN
+    bit_range:
+    - 0
+    - 0
+    description: MBKEN
+  - name: MUXEN
+    bit_range:
+    - 1
+    - 1
+    description: MUXEN
+  - name: MTYP
+    bit_range:
+    - 3
+    - 2
+    description: MTYP
+  - name: MWID
+    bit_range:
+    - 5
+    - 4
+    description: MWID
+  - name: FACCEN
+    bit_range:
+    - 6
+    - 6
+    description: FACCEN
+  - name: BURSTEN
+    bit_range:
+    - 8
+    - 8
+    description: BURSTEN
+  - name: WAITPOL
+    bit_range:
+    - 9
+    - 9
+    description: WAITPOL
+  - name: WRAPMOD
+    bit_range:
+    - 10
+    - 10
+    description: WRAPMOD
+  - name: WAITCFG
+    bit_range:
+    - 11
+    - 11
+    description: WAITCFG
+  - name: WREN
+    bit_range:
+    - 12
+    - 12
+    description: WREN
+  - name: WAITEN
+    bit_range:
+    - 13
+    - 13
+    description: WAITEN
+  - name: EXTMOD
+    bit_range:
+    - 14
+    - 14
+    description: EXTMOD
+  - name: ASYNCWAIT
+    bit_range:
+    - 15
+    - 15
+    description: ASYNCWAIT
+  - name: CBURSTRW
+    bit_range:
+    - 19
+    - 19
+    description: CBURSTRW
+  side_effects: null
+- id: BTR3
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: ADDSET
+    bit_range:
+    - 3
+    - 0
+    description: ADDSET
+  - name: ADDHLD
+    bit_range:
+    - 7
+    - 4
+    description: ADDHLD
+  - name: DATAST
+    bit_range:
+    - 15
+    - 8
+    description: DATAST
+  - name: BUSTURN
+    bit_range:
+    - 19
+    - 16
+    description: BUSTURN
+  - name: CLKDIV
+    bit_range:
+    - 23
+    - 20
+    description: CLKDIV
+  - name: DATLAT
+    bit_range:
+    - 27
+    - 24
+    description: DATLAT
+  - name: ACCMOD
+    bit_range:
+    - 29
+    - 28
+    description: ACCMOD
+  side_effects: null
+- id: BCR4
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 12496
+  fields:
+  - name: MBKEN
+    bit_range:
+    - 0
+    - 0
+    description: MBKEN
+  - name: MUXEN
+    bit_range:
+    - 1
+    - 1
+    description: MUXEN
+  - name: MTYP
+    bit_range:
+    - 3
+    - 2
+    description: MTYP
+  - name: MWID
+    bit_range:
+    - 5
+    - 4
+    description: MWID
+  - name: FACCEN
+    bit_range:
+    - 6
+    - 6
+    description: FACCEN
+  - name: BURSTEN
+    bit_range:
+    - 8
+    - 8
+    description: BURSTEN
+  - name: WAITPOL
+    bit_range:
+    - 9
+    - 9
+    description: WAITPOL
+  - name: WRAPMOD
+    bit_range:
+    - 10
+    - 10
+    description: WRAPMOD
+  - name: WAITCFG
+    bit_range:
+    - 11
+    - 11
+    description: WAITCFG
+  - name: WREN
+    bit_range:
+    - 12
+    - 12
+    description: WREN
+  - name: WAITEN
+    bit_range:
+    - 13
+    - 13
+    description: WAITEN
+  - name: EXTMOD
+    bit_range:
+    - 14
+    - 14
+    description: EXTMOD
+  - name: ASYNCWAIT
+    bit_range:
+    - 15
+    - 15
+    description: ASYNCWAIT
+  - name: CBURSTRW
+    bit_range:
+    - 19
+    - 19
+    description: CBURSTRW
+  side_effects: null
+- id: BTR4
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294967295
+  fields:
+  - name: ADDSET
+    bit_range:
+    - 3
+    - 0
+    description: ADDSET
+  - name: ADDHLD
+    bit_range:
+    - 7
+    - 4
+    description: ADDHLD
+  - name: DATAST
+    bit_range:
+    - 15
+    - 8
+    description: DATAST
+  - name: BUSTURN
+    bit_range:
+    - 19
+    - 16
+    description: BUSTURN
+  - name: CLKDIV
+    bit_range:
+    - 23
+    - 20
+    description: CLKDIV
+  - name: DATLAT
+    bit_range:
+    - 27
+    - 24
+    description: DATLAT
+  - name: ACCMOD
+    bit_range:
+    - 29
+    - 28
+    description: ACCMOD
+  side_effects: null
+- id: PCR
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 24
+  fields:
+  - name: PWAITEN
+    bit_range:
+    - 1
+    - 1
+    description: PWAITEN
+  - name: PBKEN
+    bit_range:
+    - 2
+    - 2
+    description: PBKEN
+  - name: PTYP
+    bit_range:
+    - 3
+    - 3
+    description: PTYP
+  - name: PWID
+    bit_range:
+    - 5
+    - 4
+    description: PWID
+  - name: ECCEN
+    bit_range:
+    - 6
+    - 6
+    description: ECCEN
+  - name: TCLR
+    bit_range:
+    - 12
+    - 9
+    description: TCLR
+  - name: TAR
+    bit_range:
+    - 16
+    - 13
+    description: TAR
+  - name: ECCPS
+    bit_range:
+    - 19
+    - 17
+    description: ECCPS
+  side_effects: null
+- id: SR
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 64
+  fields:
+  - name: IRS
+    bit_range:
+    - 0
+    - 0
+    description: IRS
+  - name: ILS
+    bit_range:
+    - 1
+    - 1
+    description: ILS
+  - name: IFS
+    bit_range:
+    - 2
+    - 2
+    description: IFS
+  - name: IREN
+    bit_range:
+    - 3
+    - 3
+    description: IREN
+  - name: ILEN
+    bit_range:
+    - 4
+    - 4
+    description: ILEN
+  - name: IFEN
+    bit_range:
+    - 5
+    - 5
+    description: IFEN
+  - name: FEMPT
+    bit_range:
+    - 6
+    - 6
+    description: FEMPT
+  side_effects: null
+- id: PMEM
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 4244438268
+  fields:
+  - name: MEMSETx
+    bit_range:
+    - 7
+    - 0
+    description: MEMSETx
+  - name: MEMWAITx
+    bit_range:
+    - 15
+    - 8
+    description: MEMWAITx
+  - name: MEMHOLDx
+    bit_range:
+    - 23
+    - 16
+    description: MEMHOLDx
+  - name: MEMHIZx
+    bit_range:
+    - 31
+    - 24
+    description: MEMHIZx
+  side_effects: null
+- id: PATT
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 4244438268
+  fields:
+  - name: ATTSETx
+    bit_range:
+    - 7
+    - 0
+    description: ATTSETx
+  - name: ATTWAITx
+    bit_range:
+    - 15
+    - 8
+    description: ATTWAITx
+  - name: ATTHOLDx
+    bit_range:
+    - 23
+    - 16
+    description: ATTHOLDx
+  - name: ATTHIZx
+    bit_range:
+    - 31
+    - 24
+    description: ATTHIZx
+  side_effects: null
+- id: ECCR
+  address_offset: 148
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: ECCx
+    bit_range:
+    - 31
+    - 0
+    description: ECCx
+  side_effects: null
+- id: BWTR1
+  address_offset: 260
+  size: 32
+  access: READ_WRITE
+  reset_value: 268435455
+  fields:
+  - name: ADDSET
+    bit_range:
+    - 3
+    - 0
+    description: ADDSET
+  - name: ADDHLD
+    bit_range:
+    - 7
+    - 4
+    description: ADDHLD
+  - name: DATAST
+    bit_range:
+    - 15
+    - 8
+    description: DATAST
+  - name: CLKDIV
+    bit_range:
+    - 23
+    - 20
+    description: CLKDIV
+  - name: DATLAT
+    bit_range:
+    - 27
+    - 24
+    description: DATLAT
+  - name: ACCMOD
+    bit_range:
+    - 29
+    - 28
+    description: ACCMOD
+  side_effects: null
+- id: BWTR2
+  address_offset: 268
+  size: 32
+  access: READ_WRITE
+  reset_value: 268435455
+  fields:
+  - name: ADDSET
+    bit_range:
+    - 3
+    - 0
+    description: ADDSET
+  - name: ADDHLD
+    bit_range:
+    - 7
+    - 4
+    description: ADDHLD
+  - name: DATAST
+    bit_range:
+    - 15
+    - 8
+    description: DATAST
+  - name: CLKDIV
+    bit_range:
+    - 23
+    - 20
+    description: CLKDIV
+  - name: DATLAT
+    bit_range:
+    - 27
+    - 24
+    description: DATLAT
+  - name: ACCMOD
+    bit_range:
+    - 29
+    - 28
+    description: ACCMOD
+  side_effects: null
+- id: BWTR3
+  address_offset: 276
+  size: 32
+  access: READ_WRITE
+  reset_value: 268435455
+  fields:
+  - name: ADDSET
+    bit_range:
+    - 3
+    - 0
+    description: ADDSET
+  - name: ADDHLD
+    bit_range:
+    - 7
+    - 4
+    description: ADDHLD
+  - name: DATAST
+    bit_range:
+    - 15
+    - 8
+    description: DATAST
+  - name: CLKDIV
+    bit_range:
+    - 23
+    - 20
+    description: CLKDIV
+  - name: DATLAT
+    bit_range:
+    - 27
+    - 24
+    description: DATLAT
+  - name: ACCMOD
+    bit_range:
+    - 29
+    - 28
+    description: ACCMOD
+  side_effects: null
+- id: BWTR4
+  address_offset: 284
+  size: 32
+  access: READ_WRITE
+  reset_value: 268435455
+  fields:
+  - name: ADDSET
+    bit_range:
+    - 3
+    - 0
+    description: ADDSET
+  - name: ADDHLD
+    bit_range:
+    - 7
+    - 4
+    description: ADDHLD
+  - name: DATAST
+    bit_range:
+    - 15
+    - 8
+    description: DATAST
+  - name: CLKDIV
+    bit_range:
+    - 23
+    - 20
+    description: CLKDIV
+  - name: DATLAT
+    bit_range:
+    - 27
+    - 24
+    description: DATLAT
+  - name: ACCMOD
+    bit_range:
+    - 29
+    - 28
+    description: ACCMOD
+  side_effects: null
+interrupts:
+  FMC: 48
+  FPU: 81
+timing: null

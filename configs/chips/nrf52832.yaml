@@ -26,6 +26,8 @@ peripherals:
     base_address: 0x40002000
     size: "4KB"
     irq: 2
+    config:
+      debug_schema: "../peripherals/nrf52832/uart0.yaml"
   # nRF52832 shares the nRF52 series peripheral memory map with the nRF52840;
   # the blocks below mirror the proven nrf52840.yaml declarations for the IP
   # the nrf52832 also carries. nrf52832 has a SINGLE GPIO port (P0) and no P1.
@@ -34,38 +36,55 @@ peripherals:
     base_address: 0x50000000
     size: "4KB"
     config:
+      debug_schema: "../peripherals/nrf52832/p0.yaml"
       profile: "nrf52"
   - id: "clock"
     type: "nrf_clock"
     base_address: 0x40000000
     size: "4KB"
     irq: 0
+    config:
+      debug_schema: "../peripherals/nrf52832/clock.yaml"
   - id: "timer0"
     type: "nrf52840_timer"
     base_address: 0x40008000
     size: "4KB"
     irq: 8
+    config:
+      debug_schema: "../peripherals/nrf52832/timer0.yaml"
   # SPIM0/TWIM0 share 0x40003000 — Zephyr arduino_i2c / i2c0 (and TWIM overlay).
   - id: "i2c0"
     type: "nrf52840_serial"
     base_address: 0x40003000
     size: "4KB"
     irq: 3
+    config:
+      debug_schema: "../peripherals/nrf52832/twim0.yaml"
   - id: "twi1"
     type: "nrf52840_i2c"
     base_address: 0x40004000
     size: "4KB"
     irq: 4
+    config:
+      debug_schema: "../peripherals/nrf52832/twi1.yaml"
   - id: "spi2"
     type: "nrf52840_spi"
     base_address: 0x40023000
     size: "4KB"
     irq: 35
+    config:
+      # Nordic SPIM, stated explicitly. SpiRegisterLayout derives Default = Stm32,
+      # so omitting this did not mean "pick the right one" -- this nRF52 peripheral
+      # was answering reads with the STM32 SPI register map, silently.
+      profile: "nrf52_spim"
+      debug_schema: "../peripherals/nrf52832/spi2.yaml"
   - id: "rtc0"
     type: "nrf52840_rtc"
     base_address: 0x4000b000
     size: "4KB"
     irq: 11
+    config:
+      debug_schema: "../peripherals/nrf52832/rtc0.yaml"
   # RTC1 — Arduino nRF52 `millis()`/`delay()` use RTC1 COUNTER @ 0x504
   # (AppTimer). Must not be shadowed by a mis-addressed RADIO model.
   - id: "rtc1"
@@ -74,27 +93,36 @@ peripherals:
     size: "4KB"
     irq: 17
     config:
+      debug_schema: "../peripherals/nrf52832/rtc1.yaml"
       num_cc: 4
   - id: "wdt"
     type: "nrf52840_watchdog"
     base_address: 0x40010000
     size: "4KB"
     irq: 16
+    config:
+      debug_schema: "../peripherals/nrf52832/wdt.yaml"
   - id: "saadc"
     type: "nrf52840_saadc"
     base_address: 0x40007000
     size: "4KB"
     irq: 7
+    config:
+      debug_schema: "../peripherals/nrf52832/saadc.yaml"
   - id: "pwm0"
     type: "nrf52840_pwm"
     base_address: 0x4001c000
     size: "4KB"
     irq: 28
+    config:
+      debug_schema: "../peripherals/nrf52832/pwm0.yaml"
   # NVMC — flash controller (PS §6.13). Core may probe CONFIG/READY.
   - id: "nvmc"
     type: "nrf52840_nvmc"
     base_address: 0x4001e000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/nrf52832/nvmc.yaml"
   # FICR / UICR — Arduino nRF52 core reads factory config at boot
   # (CODEPAGESIZE etc. @ 0x10000100+). Without FICR, sketches bus-fault at
   # 0x10000130 (see validation/arduino-matrix). Same models as nrf52840.
@@ -102,13 +130,19 @@ peripherals:
     type: "nrf52840_ficr"
     base_address: 0x10000000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/nrf52832/ficr.yaml"
   - id: "uicr"
     type: "nrf52840_uicr"
     base_address: 0x10001000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/nrf52832/uicr.yaml"
   # RADIO — real base is 0x40001000 (PS §6.20), NOT 0x40011000 (that is RTC1).
   - id: "radio"
     type: "nrf52840_radio"
     base_address: 0x40001000
     size: "4KB"
     irq: 1
+    config:
+      debug_schema: "../peripherals/nrf52832/radio.yaml"

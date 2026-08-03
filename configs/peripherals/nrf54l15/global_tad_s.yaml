@@ -1,0 +1,52 @@
+peripheral: GLOBAL_TAD_S
+version: 0.1.0
+registers:
+- id: SYSPWRUPREQ
+  address_offset: 1024
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ACTIVE
+    bit_range:
+    - 0
+    - 0
+    description: Activate power-up request
+  side_effects: null
+- id: DBGPWRUPREQ
+  address_offset: 1028
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ACTIVE
+    bit_range:
+    - 0
+    - 0
+    description: Activate power-up request
+  side_effects: null
+- id: ENABLE
+  address_offset: 1280
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENABLE
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+- id: TRACEPORTSPEED
+  address_offset: 1304
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TRACEPORTSPEED
+    bit_range:
+    - 1
+    - 0
+    description: Trace port speed is divided from CPU clock. The TRACECLK pin output will be divided again by two from the trace port clock.
+  side_effects: null
+interrupts: null
+timing: null

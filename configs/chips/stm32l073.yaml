@@ -51,6 +51,7 @@ peripherals:
     base_address: 0x40021000
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32l073/rcc.yaml"
       profile: "stm32l0"
 
   - id: "pwr"
@@ -58,16 +59,21 @@ peripherals:
     base_address: 0x40007000
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32l073/pwr.yaml"
       profile: "stm32l0"
 
   - id: "flash"
     type: "flash"
     base_address: 0x40022000
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32l073/flash.yaml"
 
   - id: "systick"
     type: "systick"
     base_address: 0xE000E010
+    config:
+      debug_schema: "../peripherals/stm32l073/stk.yaml"
 
   # --- GPIO (IOPORT bus @ 0x50000000 — distinct from L4's 0x48000000) -------
   - id: "gpioa"
@@ -75,6 +81,7 @@ peripherals:
     base_address: 0x50000000
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32l073/gpioa.yaml"
       profile: "stm32v2"
       # Silicon-verified cold reset (NUCLEO-L073RZ SWD, 2026-06-11): PA13/PA14
       # power up in SWD alternate-function mode, so MODER/OSPEEDR/PUPDR are
@@ -88,6 +95,7 @@ peripherals:
     base_address: 0x50000400
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32l073/gpiob.yaml"
       profile: "stm32v2"
 
   - id: "gpioc"
@@ -95,6 +103,7 @@ peripherals:
     base_address: 0x50000800
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32l073/gpioc.yaml"
       profile: "stm32v2"
 
   - id: "gpiod"
@@ -102,6 +111,7 @@ peripherals:
     base_address: 0x50000C00
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32l073/gpiod.yaml"
       profile: "stm32v2"
 
   - id: "gpioe"
@@ -109,6 +119,7 @@ peripherals:
     base_address: 0x50001000
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32l073/gpioe.yaml"
       profile: "stm32v2"
 
   - id: "gpioh"
@@ -116,6 +127,7 @@ peripherals:
     base_address: 0x50001C00
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32l073/gpioh.yaml"
       profile: "stm32v2"
 
   # --- USART / LPUART (modern stm32v2 register layout: ISR 0x1C, TDR 0x28) --
@@ -125,6 +137,7 @@ peripherals:
     size: "1KB"
     irq: 28
     config:
+      debug_schema: "../peripherals/stm32l073/usart2.yaml"
       profile: "stm32v2"
 
   - id: "uart1"
@@ -133,6 +146,7 @@ peripherals:
     size: "1KB"
     irq: 27
     config:
+      debug_schema: "../peripherals/stm32l073/usart1.yaml"
       profile: "stm32v2"
 
   - id: "uart4"
@@ -141,6 +155,7 @@ peripherals:
     size: "1KB"
     irq: 14
     config:
+      debug_schema: "../peripherals/stm32l073/usart4.yaml"
       profile: "stm32v2"
 
   - id: "uart5"
@@ -149,6 +164,7 @@ peripherals:
     size: "1KB"
     irq: 14
     config:
+      debug_schema: "../peripherals/stm32l073/usart5.yaml"
       profile: "stm32v2"
 
   # LPUART1 — same USART register layout as the modern (stm32v2) USART.
@@ -158,6 +174,7 @@ peripherals:
     size: "1KB"
     irq: 29
     config:
+      debug_schema: "../peripherals/stm32l073/lpusart1.yaml"
       profile: "stm32v2"
 
   # --- SPI (L0 has the CLASSIC SPI: no CR2.DS field, CR2 reset 0x0000) -------
@@ -169,6 +186,7 @@ peripherals:
     size: "1KB"
     irq: 25
     config:
+      debug_schema: "../peripherals/stm32l073/spi1.yaml"
       profile: "stm32"
     # SPI1 is clocked from RCC_APB2ENR.SPI1EN (bit 12). Unclocked out of reset
     # (RM0367 §7.3.13) — SR.TXE never asserts until the clock is enabled.
@@ -180,6 +198,7 @@ peripherals:
     size: "1KB"
     irq: 26
     config:
+      debug_schema: "../peripherals/stm32l073/spi2.yaml"
       profile: "stm32"
 
   # --- I2C (v2 TIMINGR-based controller, shared with L4/F7/G0) ---------------
@@ -189,6 +208,7 @@ peripherals:
     size: "1KB"
     irq: 23
     config:
+      debug_schema: "../peripherals/stm32l073/i2c1.yaml"
       profile: "stm32l4"
     # I2C1 is clocked from RCC_APB1ENR.I2C1EN (bit 21). Unclocked out of reset
     # (RM0367 §7.3.12) — registers read 0 / drop writes until the clock is on.
@@ -200,6 +220,7 @@ peripherals:
     size: "1KB"
     irq: 24
     config:
+      debug_schema: "../peripherals/stm32l073/i2c2.yaml"
       profile: "stm32l4"
 
   - id: "i2c3"
@@ -208,6 +229,7 @@ peripherals:
     size: "1KB"
     irq: 21
     config:
+      debug_schema: "../peripherals/stm32l073/i2c3.yaml"
       profile: "stm32l4"
 
   # --- ADC (12-bit SAR; L0 layout approximated by the l4 ADC model) ---------
@@ -217,6 +239,7 @@ peripherals:
     size: "1KB"
     irq: 12
     config:
+      debug_schema: "../peripherals/stm32l073/adc.yaml"
       profile: "stm32l4"
     # ADC1 is clocked from RCC_APB2ENR.ADCEN (bit 9). Unclocked out of reset
     # (RM0367 §7.3.13) — the converter is dead until the clock is enabled.
@@ -226,6 +249,8 @@ peripherals:
     type: "dac"
     base_address: 0x40007400
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32l073/dac.yaml"
 
   # --- DMA (single controller, 7 channels on L0) ----------------------------
   - id: "dma1"
@@ -236,6 +261,8 @@ peripherals:
     # DMA1 is clocked from RCC_AHBENR.DMA1EN (bit 0). Unclocked out of reset
     # (RM0367 §7.3.10) — channel registers read 0 / drop writes until enabled.
     clock: { reg: "ahbenr", bit: 0 }
+    config:
+      debug_schema: "../peripherals/stm32l073/dma1.yaml"
 
   # --- Timers ---------------------------------------------------------------
   # TIM2 — 16-bit general-purpose timer. (RM0367: on STM32L0, TIM2/TIM3 are
@@ -247,6 +274,7 @@ peripherals:
     size: "1KB"
     irq: 15
     config:
+      debug_schema: "../peripherals/stm32l073/tim2.yaml"
       width: 16
     # TIM2 is clocked from RCC_APB1ENR.TIM2EN (bit 0). Unclocked out of reset
     # (RM0367 §7.3.12) — ARR reads its 0xFFFF reset only once the clock is on.
@@ -258,6 +286,8 @@ peripherals:
     base_address: 0x40000400
     size: "1KB"
     irq: 16
+    config:
+      debug_schema: "../peripherals/stm32l073/tim3.yaml"
 
   # TIM6 / TIM7 — 16-bit basic timers (HAL time-base candidates).
   # `basic: true` → counter + UIF only, no capture/compare channels.
@@ -267,6 +297,7 @@ peripherals:
     size: "1KB"
     irq: 17
     config:
+      debug_schema: "../peripherals/stm32l073/tim6.yaml"
       basic: true
 
   - id: "tim7"
@@ -275,6 +306,7 @@ peripherals:
     size: "1KB"
     irq: 18
     config:
+      debug_schema: "../peripherals/stm32l073/tim7.yaml"
       basic: true
 
   # TIM21 / TIM22 — 16-bit general-purpose timers.
@@ -283,12 +315,16 @@ peripherals:
     base_address: 0x40010800
     size: "1KB"
     irq: 20
+    config:
+      debug_schema: "../peripherals/stm32l073/tim21.yaml"
 
   - id: "tim22"
     type: "timer"
     base_address: 0x40011400
     size: "1KB"
     irq: 22
+    config:
+      debug_schema: "../peripherals/stm32l073/tim22.yaml"
 
   # LPTIM1 — low-power timer.
   - id: "lptim1"
@@ -296,23 +332,31 @@ peripherals:
     base_address: 0x40007C00
     size: "1KB"
     irq: 13
+    config:
+      debug_schema: "../peripherals/stm32l073/lptim.yaml"
 
   # --- Watchdogs / RTC ------------------------------------------------------
   - id: "rtc"
     type: "rtc"
     base_address: 0x40002800
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32l073/rtc.yaml"
 
   - id: "iwdg"
     type: "iwdg"
     base_address: 0x40003000
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32l073/iwdg.yaml"
 
   - id: "wwdg"
     type: "wwdg"
     base_address: 0x40002C00
     size: "1KB"
     irq: 0
+    config:
+      debug_schema: "../peripherals/stm32l073/wwdg.yaml"
 
   # --- CRC / RNG ------------------------------------------------------------
   - id: "crc"
@@ -320,6 +364,7 @@ peripherals:
     base_address: 0x40023000
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32l073/crc.yaml"
       idr_width: 8  # STM32L0 CRC_IDR is 8-bit (RM0367 §14)
 
   - id: "rng"
@@ -328,6 +373,8 @@ peripherals:
     size: "1KB"
     # STM32L0 RNG shares AES_RNG_LPUART1_IRQn = 29 (SVD); 20 is TIM21.
     irq: 29
+    config:
+      debug_schema: "../peripherals/stm32l073/rng.yaml"
 
   # --- EXTI (single-bank, <32 lines on L0 → stm32f1-style register file) ----
   - id: "exti"
@@ -335,6 +382,7 @@ peripherals:
     base_address: 0x40010400
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32l073/exti.yaml"
       profile: "stm32f1"
 
   # SYSCFG + COMP window — modeled as a stub (RM0367 §10).
@@ -342,6 +390,8 @@ peripherals:
     type: "stub"
     base_address: 0x40010000
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32l073/syscfg_comp.yaml"
 
   # --- USB FS device (not modeled — stub so reads/writes don't fault) -------
   - id: "usb_fs"
@@ -349,23 +399,31 @@ peripherals:
     base_address: 0x40005C00
     size: "1KB"
     irq: 31
+    config:
+      debug_schema: "../peripherals/stm32l073/usb_fs.yaml"
 
   # LCD glass controller (the L073 superset feature vs L072) — stub.
   - id: "lcd"
     type: "stub"
     base_address: 0x40002400
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32l073/lcd.yaml"
 
   # --- Core debug / interrupt blocks ---------------------------------------
   - id: "scb"
     type: "scb"
     base_address: 0xE000ED00
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32l073/scb.yaml"
 
   - id: "nvic"
     type: "nvic"
     base_address: 0xE000E100
     size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32l073/nvic.yaml"
 
   # DBGMCU — on Cortex-M0+ this is an APB peripheral at 0x40015800 (RM0367
   # §27.4), NOT the 0xE0042000 location used by Cortex-M3/M4 parts (e.g. L4).
@@ -378,4 +436,5 @@ peripherals:
     base_address: 0x40015800
     size: "1KB"
     config:
+      debug_schema: "../peripherals/stm32l073/dbgmcu.yaml"
       idcode: "0x20086447"

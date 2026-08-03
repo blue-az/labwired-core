@@ -1,0 +1,1570 @@
+peripheral: GPIOB
+version: 0.1.0
+registers:
+- id: GPIOB_MODER
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 4294966975
+  fields:
+  - name: MODE0
+    bit_range:
+    - 1
+    - 0
+    description: Port configuration I/O pin 0
+  - name: MODE1
+    bit_range:
+    - 3
+    - 2
+    description: Port configuration I/O pin 1
+  - name: MODE2
+    bit_range:
+    - 5
+    - 4
+    description: Port configuration I/O pin 2
+  - name: MODE3
+    bit_range:
+    - 7
+    - 6
+    description: Port configuration I/O pin 3
+  - name: MODE4
+    bit_range:
+    - 9
+    - 8
+    description: Port configuration I/O pin 4
+  - name: MODE5
+    bit_range:
+    - 11
+    - 10
+    description: Port configuration I/O pin 5
+  - name: MODE6
+    bit_range:
+    - 13
+    - 12
+    description: Port configuration I/O pin 6
+  - name: MODE7
+    bit_range:
+    - 15
+    - 14
+    description: Port configuration I/O pin 7
+  - name: MODE8
+    bit_range:
+    - 17
+    - 16
+    description: Port configuration I/O pin 8
+  - name: MODE9
+    bit_range:
+    - 19
+    - 18
+    description: Port configuration I/O pin 9
+  - name: MODE10
+    bit_range:
+    - 21
+    - 20
+    description: |-
+      Port configuration I/O pin 10
+      Note that bits 21:20 are reserved on STM32WBA55xx devices.
+  - name: MODE11
+    bit_range:
+    - 23
+    - 22
+    description: Port configuration I/O pin 11
+  - name: MODE12
+    bit_range:
+    - 25
+    - 24
+    description: Port configuration I/O pin 12
+  - name: MODE13
+    bit_range:
+    - 27
+    - 26
+    description: Port configuration I/O pin 13
+  - name: MODE14
+    bit_range:
+    - 29
+    - 28
+    description: Port configuration I/O pin 14
+  - name: MODE15
+    bit_range:
+    - 31
+    - 30
+    description: |-
+      Port configuration I/O pin 15
+      These bits are written by software to configure the I/O mode.
+      Access can be protected by GPIOB SEC15.
+  side_effects: null
+- id: GPIOB_OTYPER
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OT0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port configuration I/O pin y
+      These bits are written by software to configure the I/O output type.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: OT1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port configuration I/O pin y
+      These bits are written by software to configure the I/O output type.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: OT2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port configuration I/O pin y
+      These bits are written by software to configure the I/O output type.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: OT3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port configuration I/O pin y
+      These bits are written by software to configure the I/O output type.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: OT4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port configuration I/O pin y
+      These bits are written by software to configure the I/O output type.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: OT5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port configuration I/O pin y
+      These bits are written by software to configure the I/O output type.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: OT6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port configuration I/O pin y
+      These bits are written by software to configure the I/O output type.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: OT7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port configuration I/O pin y
+      These bits are written by software to configure the I/O output type.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: OT8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port configuration I/O pin y
+      These bits are written by software to configure the I/O output type.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: OT9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port configuration I/O pin y
+      These bits are written by software to configure the I/O output type.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: OT10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port configuration I/O pin y
+      These bits are written by software to configure the I/O output type.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: OT11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port configuration I/O pin y
+      These bits are written by software to configure the I/O output type.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: OT12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port configuration I/O pin y
+      These bits are written by software to configure the I/O output type.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: OT13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port configuration I/O pin y
+      These bits are written by software to configure the I/O output type.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: OT14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port configuration I/O pin y
+      These bits are written by software to configure the I/O output type.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: OT15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port configuration I/O pin y
+      These bits are written by software to configure the I/O output type.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  side_effects: null
+- id: GPIOB_OSPEEDR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 128
+  fields:
+  - name: OSPEED0
+    bit_range:
+    - 1
+    - 0
+    description: Port configuration I/O pin 0
+  - name: OSPEED1
+    bit_range:
+    - 3
+    - 2
+    description: Port configuration I/O pin 1
+  - name: OSPEED2
+    bit_range:
+    - 5
+    - 4
+    description: Port configuration I/O pin 2
+  - name: OSPEED3
+    bit_range:
+    - 7
+    - 6
+    description: Port configuration I/O pin 3
+  - name: OSPEED4
+    bit_range:
+    - 9
+    - 8
+    description: Port configuration I/O pin 4
+  - name: OSPEED5
+    bit_range:
+    - 11
+    - 10
+    description: Port configuration I/O pin 5
+  - name: OSPEED6
+    bit_range:
+    - 13
+    - 12
+    description: Port configuration I/O pin 6
+  - name: OSPEED7
+    bit_range:
+    - 15
+    - 14
+    description: Port configuration I/O pin 7
+  - name: OSPEED8
+    bit_range:
+    - 17
+    - 16
+    description: Port configuration I/O pin 8
+  - name: OSPEED9
+    bit_range:
+    - 19
+    - 18
+    description: Port configuration I/O pin 9
+  - name: OSPEED10
+    bit_range:
+    - 21
+    - 20
+    description: |-
+      Port configuration I/O pin 10
+      Note that bits 21:20 are reserved on STM32WBA55xx devices.
+  - name: OSPEED11
+    bit_range:
+    - 23
+    - 22
+    description: Port configuration I/O pin 11
+  - name: OSPEED12
+    bit_range:
+    - 25
+    - 24
+    description: Port configuration I/O pin 12
+  - name: OSPEED13
+    bit_range:
+    - 27
+    - 26
+    description: Port configuration I/O pin 13
+  - name: OSPEED14
+    bit_range:
+    - 29
+    - 28
+    description: Port configuration I/O pin 14
+  - name: OSPEED15
+    bit_range:
+    - 31
+    - 30
+    description: |-
+      Port configuration I/O pin 15
+      These bits are written by software to configure the I/O output speed.
+      Access can be protected by GPIOB SEC15.
+      Note: Refer to the device datasheet for the frequency specifications and the power supply and load conditions for each speed.
+  side_effects: null
+- id: GPIOB_PUPDR
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 256
+  fields:
+  - name: PUPD0
+    bit_range:
+    - 1
+    - 0
+    description: Port configuration I/O pin 0
+  - name: PUPD1
+    bit_range:
+    - 3
+    - 2
+    description: Port configuration I/O pin 1
+  - name: PUPD2
+    bit_range:
+    - 5
+    - 4
+    description: Port configuration I/O pin 2
+  - name: PUPD3
+    bit_range:
+    - 7
+    - 6
+    description: Port configuration I/O pin 3
+  - name: PUPD4
+    bit_range:
+    - 9
+    - 8
+    description: Port configuration I/O pin 4
+  - name: PUPD5
+    bit_range:
+    - 11
+    - 10
+    description: Port configuration I/O pin 5
+  - name: PUPD6
+    bit_range:
+    - 13
+    - 12
+    description: Port configuration I/O pin 6
+  - name: PUPD7
+    bit_range:
+    - 15
+    - 14
+    description: Port configuration I/O pin 7
+  - name: PUPD8
+    bit_range:
+    - 17
+    - 16
+    description: Port configuration I/O pin 8
+  - name: PUPD9
+    bit_range:
+    - 19
+    - 18
+    description: Port configuration I/O pin 9
+  - name: PUPD10
+    bit_range:
+    - 21
+    - 20
+    description: |-
+      Port configuration I/O pin 10
+      Note that bits 21:20 are reserved on STM32WBA55xx devices.
+  - name: PUPD11
+    bit_range:
+    - 23
+    - 22
+    description: Port configuration I/O pin 11
+  - name: PUPD12
+    bit_range:
+    - 25
+    - 24
+    description: Port configuration I/O pin 12
+  - name: PUPD13
+    bit_range:
+    - 27
+    - 26
+    description: Port configuration I/O pin 13
+  - name: PUPD14
+    bit_range:
+    - 29
+    - 28
+    description: Port configuration I/O pin 14
+  - name: PUPD15
+    bit_range:
+    - 31
+    - 30
+    description: |-
+      Port configuration I/O pin 15
+      These bits are written by software to configure the I/O pull-up or pull-down
+      Access can be protected by GPIOB SEC15.
+  side_effects: null
+- id: GPIOB_IDR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ID0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port input data I/O pin y
+      These bits are read-only. They contain the input value of the corresponding I/O port.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: ID1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port input data I/O pin y
+      These bits are read-only. They contain the input value of the corresponding I/O port.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: ID2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port input data I/O pin y
+      These bits are read-only. They contain the input value of the corresponding I/O port.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: ID3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port input data I/O pin y
+      These bits are read-only. They contain the input value of the corresponding I/O port.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: ID4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port input data I/O pin y
+      These bits are read-only. They contain the input value of the corresponding I/O port.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: ID5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port input data I/O pin y
+      These bits are read-only. They contain the input value of the corresponding I/O port.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: ID6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port input data I/O pin y
+      These bits are read-only. They contain the input value of the corresponding I/O port.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: ID7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port input data I/O pin y
+      These bits are read-only. They contain the input value of the corresponding I/O port.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: ID8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port input data I/O pin y
+      These bits are read-only. They contain the input value of the corresponding I/O port.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: ID9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port input data I/O pin y
+      These bits are read-only. They contain the input value of the corresponding I/O port.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: ID10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port input data I/O pin y
+      These bits are read-only. They contain the input value of the corresponding I/O port.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: ID11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port input data I/O pin y
+      These bits are read-only. They contain the input value of the corresponding I/O port.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: ID12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port input data I/O pin y
+      These bits are read-only. They contain the input value of the corresponding I/O port.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: ID13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port input data I/O pin y
+      These bits are read-only. They contain the input value of the corresponding I/O port.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: ID14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port input data I/O pin y
+      These bits are read-only. They contain the input value of the corresponding I/O port.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: ID15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port input data I/O pin y
+      These bits are read-only. They contain the input value of the corresponding I/O port.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  side_effects: null
+- id: GPIOB_ODR
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OD0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port output data I/O pin y
+      These bits can be read and written by software.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+      Note: For atomic bit set/reset, the OD bits can be individually set and/or reset by writing to the GPIOB_BSRR or GPIOB_BRR registers.
+  - name: OD1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port output data I/O pin y
+      These bits can be read and written by software.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+      Note: For atomic bit set/reset, the OD bits can be individually set and/or reset by writing to the GPIOB_BSRR or GPIOB_BRR registers.
+  - name: OD2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port output data I/O pin y
+      These bits can be read and written by software.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+      Note: For atomic bit set/reset, the OD bits can be individually set and/or reset by writing to the GPIOB_BSRR or GPIOB_BRR registers.
+  - name: OD3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port output data I/O pin y
+      These bits can be read and written by software.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+      Note: For atomic bit set/reset, the OD bits can be individually set and/or reset by writing to the GPIOB_BSRR or GPIOB_BRR registers.
+  - name: OD4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port output data I/O pin y
+      These bits can be read and written by software.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+      Note: For atomic bit set/reset, the OD bits can be individually set and/or reset by writing to the GPIOB_BSRR or GPIOB_BRR registers.
+  - name: OD5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port output data I/O pin y
+      These bits can be read and written by software.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+      Note: For atomic bit set/reset, the OD bits can be individually set and/or reset by writing to the GPIOB_BSRR or GPIOB_BRR registers.
+  - name: OD6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port output data I/O pin y
+      These bits can be read and written by software.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+      Note: For atomic bit set/reset, the OD bits can be individually set and/or reset by writing to the GPIOB_BSRR or GPIOB_BRR registers.
+  - name: OD7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port output data I/O pin y
+      These bits can be read and written by software.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+      Note: For atomic bit set/reset, the OD bits can be individually set and/or reset by writing to the GPIOB_BSRR or GPIOB_BRR registers.
+  - name: OD8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port output data I/O pin y
+      These bits can be read and written by software.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+      Note: For atomic bit set/reset, the OD bits can be individually set and/or reset by writing to the GPIOB_BSRR or GPIOB_BRR registers.
+  - name: OD9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port output data I/O pin y
+      These bits can be read and written by software.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+      Note: For atomic bit set/reset, the OD bits can be individually set and/or reset by writing to the GPIOB_BSRR or GPIOB_BRR registers.
+  - name: OD10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port output data I/O pin y
+      These bits can be read and written by software.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+      Note: For atomic bit set/reset, the OD bits can be individually set and/or reset by writing to the GPIOB_BSRR or GPIOB_BRR registers.
+  - name: OD11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port output data I/O pin y
+      These bits can be read and written by software.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+      Note: For atomic bit set/reset, the OD bits can be individually set and/or reset by writing to the GPIOB_BSRR or GPIOB_BRR registers.
+  - name: OD12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port output data I/O pin y
+      These bits can be read and written by software.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+      Note: For atomic bit set/reset, the OD bits can be individually set and/or reset by writing to the GPIOB_BSRR or GPIOB_BRR registers.
+  - name: OD13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port output data I/O pin y
+      These bits can be read and written by software.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+      Note: For atomic bit set/reset, the OD bits can be individually set and/or reset by writing to the GPIOB_BSRR or GPIOB_BRR registers.
+  - name: OD14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port output data I/O pin y
+      These bits can be read and written by software.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+      Note: For atomic bit set/reset, the OD bits can be individually set and/or reset by writing to the GPIOB_BSRR or GPIOB_BRR registers.
+  - name: OD15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port output data I/O pin y
+      These bits can be read and written by software.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+      Note: For atomic bit set/reset, the OD bits can be individually set and/or reset by writing to the GPIOB_BSRR or GPIOB_BRR registers.
+  side_effects: null
+- id: GPIOB_BSRR
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BS0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port set I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BS1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port set I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BS2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port set I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BS3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port set I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BS4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port set I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BS5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port set I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BS6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port set I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BS7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port set I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BS8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port set I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BS9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port set I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BS10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port set I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BS11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port set I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BS12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port set I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BS13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port set I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BS14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port set I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BS15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port set I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BR0
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 26 is reserved on STM32WBA55xx devices.
+      Note: If both BSy and BRy are set, BSy has priority.
+  - name: BR1
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 26 is reserved on STM32WBA55xx devices.
+      Note: If both BSy and BRy are set, BSy has priority.
+  - name: BR2
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 26 is reserved on STM32WBA55xx devices.
+      Note: If both BSy and BRy are set, BSy has priority.
+  - name: BR3
+    bit_range:
+    - 19
+    - 19
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 26 is reserved on STM32WBA55xx devices.
+      Note: If both BSy and BRy are set, BSy has priority.
+  - name: BR4
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 26 is reserved on STM32WBA55xx devices.
+      Note: If both BSy and BRy are set, BSy has priority.
+  - name: BR5
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 26 is reserved on STM32WBA55xx devices.
+      Note: If both BSy and BRy are set, BSy has priority.
+  - name: BR6
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 26 is reserved on STM32WBA55xx devices.
+      Note: If both BSy and BRy are set, BSy has priority.
+  - name: BR7
+    bit_range:
+    - 23
+    - 23
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 26 is reserved on STM32WBA55xx devices.
+      Note: If both BSy and BRy are set, BSy has priority.
+  - name: BR8
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 26 is reserved on STM32WBA55xx devices.
+      Note: If both BSy and BRy are set, BSy has priority.
+  - name: BR9
+    bit_range:
+    - 25
+    - 25
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 26 is reserved on STM32WBA55xx devices.
+      Note: If both BSy and BRy are set, BSy has priority.
+  - name: BR10
+    bit_range:
+    - 26
+    - 26
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 26 is reserved on STM32WBA55xx devices.
+      Note: If both BSy and BRy are set, BSy has priority.
+  - name: BR11
+    bit_range:
+    - 27
+    - 27
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 26 is reserved on STM32WBA55xx devices.
+      Note: If both BSy and BRy are set, BSy has priority.
+  - name: BR12
+    bit_range:
+    - 28
+    - 28
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 26 is reserved on STM32WBA55xx devices.
+      Note: If both BSy and BRy are set, BSy has priority.
+  - name: BR13
+    bit_range:
+    - 29
+    - 29
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 26 is reserved on STM32WBA55xx devices.
+      Note: If both BSy and BRy are set, BSy has priority.
+  - name: BR14
+    bit_range:
+    - 30
+    - 30
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 26 is reserved on STM32WBA55xx devices.
+      Note: If both BSy and BRy are set, BSy has priority.
+  - name: BR15
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 26 is reserved on STM32WBA55xx devices.
+      Note: If both BSy and BRy are set, BSy has priority.
+  side_effects: null
+- id: GPIOB_LCKR
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LCK0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port lock I/O pin y
+      These bits are read/write but can only be written when the LCKK bit is 0
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: LCK1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port lock I/O pin y
+      These bits are read/write but can only be written when the LCKK bit is 0
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: LCK2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port lock I/O pin y
+      These bits are read/write but can only be written when the LCKK bit is 0
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: LCK3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port lock I/O pin y
+      These bits are read/write but can only be written when the LCKK bit is 0
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: LCK4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port lock I/O pin y
+      These bits are read/write but can only be written when the LCKK bit is 0
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: LCK5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port lock I/O pin y
+      These bits are read/write but can only be written when the LCKK bit is 0
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: LCK6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port lock I/O pin y
+      These bits are read/write but can only be written when the LCKK bit is 0
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: LCK7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port lock I/O pin y
+      These bits are read/write but can only be written when the LCKK bit is 0
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: LCK8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port lock I/O pin y
+      These bits are read/write but can only be written when the LCKK bit is 0
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: LCK9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port lock I/O pin y
+      These bits are read/write but can only be written when the LCKK bit is 0
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: LCK10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port lock I/O pin y
+      These bits are read/write but can only be written when the LCKK bit is 0
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: LCK11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port lock I/O pin y
+      These bits are read/write but can only be written when the LCKK bit is 0
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: LCK12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port lock I/O pin y
+      These bits are read/write but can only be written when the LCKK bit is 0
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: LCK13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port lock I/O pin y
+      These bits are read/write but can only be written when the LCKK bit is 0
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: LCK14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port lock I/O pin y
+      These bits are read/write but can only be written when the LCKK bit is 0
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: LCK15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port lock I/O pin y
+      These bits are read/write but can only be written when the LCKK bit is 0
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: LCKK
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      Lock key
+      This bit can be read any time. It can only be modified using the lock key write sequence.
+      Access can be protected by any GPIOB SECy.
+      - LOCK key write sequence:
+      WR LCKR[16] = 1 + LCKR[15:0]
+      WR LCKR[16] = 0 + LCKR[15:0]
+      WR LCKR[16] = 1 + LCKR[15:0]
+      - LOCK key read
+      RD LCKR[16] = 1 (this read operation is optional but it confirms that the lock is active)
+      Note: During the LOCK key write sequence, the value of LCKR[15:0] must not change.
+      Note: Any error in the lock sequence aborts the LOCK.
+      Note: After the first LOCK sequence on any bit of the port, any read access on the LCKK bit returns 1 until the next MCU reset or peripheral reset.
+  side_effects: null
+- id: GPIOB_AFRL
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: AFSEL0
+    bit_range:
+    - 3
+    - 0
+    description: Alternate function selection for port I/O pin 0
+  - name: AFSEL1
+    bit_range:
+    - 7
+    - 4
+    description: Alternate function selection for port I/O pin 1
+  - name: AFSEL2
+    bit_range:
+    - 11
+    - 8
+    description: Alternate function selection for port I/O pin 2
+  - name: AFSEL3
+    bit_range:
+    - 15
+    - 12
+    description: Alternate function selection for port I/O pin 3
+  - name: AFSEL4
+    bit_range:
+    - 19
+    - 16
+    description: Alternate function selection for port I/O pin 4
+  - name: AFSEL5
+    bit_range:
+    - 23
+    - 20
+    description: Alternate function selection for port I/O pin 5
+  - name: AFSEL6
+    bit_range:
+    - 27
+    - 24
+    description: Alternate function selection for port I/O pin 6
+  - name: AFSEL7
+    bit_range:
+    - 31
+    - 28
+    description: |-
+      Alternate function selection for port I/O pin 7
+      These bits are written by software to configure alternate function I/Os.
+      Access can be protected by GPIOB SEC7.
+  side_effects: null
+- id: GPIOB_AFRH
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: AFSEL8
+    bit_range:
+    - 3
+    - 0
+    description: Alternate function selection for port I/O pin 8
+  - name: AFSEL9
+    bit_range:
+    - 7
+    - 4
+    description: Alternate function selection for port I/O pin 9
+  - name: AFSEL10
+    bit_range:
+    - 11
+    - 8
+    description: |-
+      Alternate function selection for port I/O pin 10
+      Note that bit 11:8 are reserved on STM32WBA55xx devices.
+  - name: AFSEL11
+    bit_range:
+    - 15
+    - 12
+    description: Alternate function selection for port I/O pin 11
+  - name: AFSEL12
+    bit_range:
+    - 19
+    - 16
+    description: Alternate function selection for port I/O pin 12
+  - name: AFSEL13
+    bit_range:
+    - 23
+    - 20
+    description: Alternate function selection for port I/O pin 13
+  - name: AFSEL14
+    bit_range:
+    - 27
+    - 24
+    description: Alternate function selection for port I/O pin 14
+  - name: AFSEL15
+    bit_range:
+    - 31
+    - 28
+    description: |-
+      Alternate function selection for port I/O pin 15
+      These bits are written by software to configure alternate function I/Os.
+      Access can be protected by GPIOB SEC15.
+  side_effects: null
+- id: GPIOB_BRR
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: BR0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BR1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BR2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BR3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BR4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BR5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BR6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BR7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BR8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BR9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BR10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BR11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BR12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BR13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BR14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  - name: BR15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port reset I/O pin y
+      These bits are write-only. A read to these bits returns the value 0.
+      Access can be protected by GPIOB SECy.
+      Note that bit 10 is reserved on STM32WBA55xx devices.
+  side_effects: null
+- id: GPIOB_SECCFGR
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: SEC0
+    bit_range:
+    - 0
+    - 0
+    description: "I/O pin of port secure bit enable y\nThese bits are written by software to enabled the security I/O port pin. \nNote that bit 10 is reserved on STM32WBA55xx devices."
+  - name: SEC1
+    bit_range:
+    - 1
+    - 1
+    description: "I/O pin of port secure bit enable y\nThese bits are written by software to enabled the security I/O port pin. \nNote that bit 10 is reserved on STM32WBA55xx devices."
+  - name: SEC2
+    bit_range:
+    - 2
+    - 2
+    description: "I/O pin of port secure bit enable y\nThese bits are written by software to enabled the security I/O port pin. \nNote that bit 10 is reserved on STM32WBA55xx devices."
+  - name: SEC3
+    bit_range:
+    - 3
+    - 3
+    description: "I/O pin of port secure bit enable y\nThese bits are written by software to enabled the security I/O port pin. \nNote that bit 10 is reserved on STM32WBA55xx devices."
+  - name: SEC4
+    bit_range:
+    - 4
+    - 4
+    description: "I/O pin of port secure bit enable y\nThese bits are written by software to enabled the security I/O port pin. \nNote that bit 10 is reserved on STM32WBA55xx devices."
+  - name: SEC5
+    bit_range:
+    - 5
+    - 5
+    description: "I/O pin of port secure bit enable y\nThese bits are written by software to enabled the security I/O port pin. \nNote that bit 10 is reserved on STM32WBA55xx devices."
+  - name: SEC6
+    bit_range:
+    - 6
+    - 6
+    description: "I/O pin of port secure bit enable y\nThese bits are written by software to enabled the security I/O port pin. \nNote that bit 10 is reserved on STM32WBA55xx devices."
+  - name: SEC7
+    bit_range:
+    - 7
+    - 7
+    description: "I/O pin of port secure bit enable y\nThese bits are written by software to enabled the security I/O port pin. \nNote that bit 10 is reserved on STM32WBA55xx devices."
+  - name: SEC8
+    bit_range:
+    - 8
+    - 8
+    description: "I/O pin of port secure bit enable y\nThese bits are written by software to enabled the security I/O port pin. \nNote that bit 10 is reserved on STM32WBA55xx devices."
+  - name: SEC9
+    bit_range:
+    - 9
+    - 9
+    description: "I/O pin of port secure bit enable y\nThese bits are written by software to enabled the security I/O port pin. \nNote that bit 10 is reserved on STM32WBA55xx devices."
+  - name: SEC10
+    bit_range:
+    - 10
+    - 10
+    description: "I/O pin of port secure bit enable y\nThese bits are written by software to enabled the security I/O port pin. \nNote that bit 10 is reserved on STM32WBA55xx devices."
+  - name: SEC11
+    bit_range:
+    - 11
+    - 11
+    description: "I/O pin of port secure bit enable y\nThese bits are written by software to enabled the security I/O port pin. \nNote that bit 10 is reserved on STM32WBA55xx devices."
+  - name: SEC12
+    bit_range:
+    - 12
+    - 12
+    description: "I/O pin of port secure bit enable y\nThese bits are written by software to enabled the security I/O port pin. \nNote that bit 10 is reserved on STM32WBA55xx devices."
+  - name: SEC13
+    bit_range:
+    - 13
+    - 13
+    description: "I/O pin of port secure bit enable y\nThese bits are written by software to enabled the security I/O port pin. \nNote that bit 10 is reserved on STM32WBA55xx devices."
+  - name: SEC14
+    bit_range:
+    - 14
+    - 14
+    description: "I/O pin of port secure bit enable y\nThese bits are written by software to enabled the security I/O port pin. \nNote that bit 10 is reserved on STM32WBA55xx devices."
+  - name: SEC15
+    bit_range:
+    - 15
+    - 15
+    description: "I/O pin of port secure bit enable y\nThese bits are written by software to enabled the security I/O port pin. \nNote that bit 10 is reserved on STM32WBA55xx devices."
+  side_effects: null
+interrupts: null
+timing: null

@@ -1,0 +1,3510 @@
+peripheral: RTC_CNTL
+version: 0.1.0
+registers:
+- id: OPTIONS0
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 469803008
+  fields:
+  - name: SW_STALL_APPCPU_C0
+    bit_range:
+    - 1
+    - 0
+    description: '{reg_sw_stall_appcpu_c1[5:0],  reg_sw_stall_appcpu_c0[1:0]} == 0x86 will stall APP CPU'
+  - name: SW_STALL_PROCPU_C0
+    bit_range:
+    - 3
+    - 2
+    description: '{reg_sw_stall_procpu_c1[5:0],  reg_sw_stall_procpu_c0[1:0]} == 0x86 will stall PRO CPU'
+  - name: SW_APPCPU_RST
+    bit_range:
+    - 4
+    - 4
+    description: APP CPU SW reset
+  - name: SW_PROCPU_RST
+    bit_range:
+    - 5
+    - 5
+    description: PRO CPU SW reset
+  - name: BB_I2C_FORCE_PD
+    bit_range:
+    - 6
+    - 6
+    description: BB_I2C force power down
+  - name: BB_I2C_FORCE_PU
+    bit_range:
+    - 7
+    - 7
+    description: BB_I2C force power up
+  - name: BBPLL_I2C_FORCE_PD
+    bit_range:
+    - 8
+    - 8
+    description: BB_PLL _I2C force power down
+  - name: BBPLL_I2C_FORCE_PU
+    bit_range:
+    - 9
+    - 9
+    description: BB_PLL_I2C force power up
+  - name: BBPLL_FORCE_PD
+    bit_range:
+    - 10
+    - 10
+    description: BB_PLL force power down
+  - name: BBPLL_FORCE_PU
+    bit_range:
+    - 11
+    - 11
+    description: BB_PLL force power up
+  - name: XTL_FORCE_PD
+    bit_range:
+    - 12
+    - 12
+    description: crystall force power down
+  - name: XTL_FORCE_PU
+    bit_range:
+    - 13
+    - 13
+    description: crystall force power up
+  - name: XTL_EN_WAIT
+    bit_range:
+    - 17
+    - 14
+    description: wait bias_sleep and current source wakeup
+  - name: XTL_FORCE_ISO
+    bit_range:
+    - 23
+    - 23
+    description: No public
+  - name: PLL_FORCE_ISO
+    bit_range:
+    - 24
+    - 24
+    description: No public
+  - name: ANALOG_FORCE_ISO
+    bit_range:
+    - 25
+    - 25
+    description: No public
+  - name: XTL_FORCE_NOISO
+    bit_range:
+    - 26
+    - 26
+    description: No public
+  - name: PLL_FORCE_NOISO
+    bit_range:
+    - 27
+    - 27
+    description: No public
+  - name: ANALOG_FORCE_NOISO
+    bit_range:
+    - 28
+    - 28
+    description: No public
+  - name: DG_WRAP_FORCE_RST
+    bit_range:
+    - 29
+    - 29
+    description: digital wrap force reset in deep sleep
+  - name: DG_WRAP_FORCE_NORST
+    bit_range:
+    - 30
+    - 30
+    description: digital core force no reset in deep sleep
+  - name: SW_SYS_RST
+    bit_range:
+    - 31
+    - 31
+    description: SW system reset
+  side_effects: null
+- id: SLP_TIMER0
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SLP_VAL_LO
+    bit_range:
+    - 31
+    - 0
+    description: RTC sleep timer low 32 bits
+  side_effects: null
+- id: SLP_TIMER1
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SLP_VAL_HI
+    bit_range:
+    - 15
+    - 0
+    description: RTC sleep timer high 16 bits
+  - name: MAIN_TIMER_ALARM_EN
+    bit_range:
+    - 16
+    - 16
+    description: timer alarm enable bit
+  side_effects: null
+- id: TIME_UPDATE
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIMER_SYS_STALL
+    bit_range:
+    - 27
+    - 27
+    description: Enable to record system stall time
+  - name: TIMER_XTL_OFF
+    bit_range:
+    - 28
+    - 28
+    description: Enable to record 40M XTAL OFF time
+  - name: TIMER_SYS_RST
+    bit_range:
+    - 29
+    - 29
+    description: enable to record system reset time
+  - name: TIME_UPDATE
+    bit_range:
+    - 31
+    - 31
+    description: 'Set 1: to update register with RTC timer'
+  side_effects: null
+- id: TIME_LOW0
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIMER_VALUE0_LOW
+    bit_range:
+    - 31
+    - 0
+    description: RTC timer low 32 bits
+  side_effects: null
+- id: TIME_HIGH0
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIMER_VALUE0_HIGH
+    bit_range:
+    - 15
+    - 0
+    description: RTC timer high 16 bits
+  side_effects: null
+- id: STATE0
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SW_CPU_INT
+    bit_range:
+    - 0
+    - 0
+    description: rtc software interrupt to main cpu
+  - name: SLP_REJECT_CAUSE_CLR
+    bit_range:
+    - 1
+    - 1
+    description: clear rtc sleep reject cause
+  - name: APB2RTC_BRIDGE_SEL
+    bit_range:
+    - 22
+    - 22
+    description: '1: APB to RTC using bridge,  0: APB to RTC using sync'
+  - name: SDIO_ACTIVE_IND
+    bit_range:
+    - 28
+    - 28
+    description: SDIO active indication
+  - name: SLP_WAKEUP
+    bit_range:
+    - 29
+    - 29
+    description: leep wakeup bit
+  - name: SLP_REJECT
+    bit_range:
+    - 30
+    - 30
+    description: leep reject bit
+  - name: SLEEP_EN
+    bit_range:
+    - 31
+    - 31
+    description: sleep enable bit
+  side_effects: null
+- id: TIMER1
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 672400387
+  fields:
+  - name: CPU_STALL_EN
+    bit_range:
+    - 0
+    - 0
+    description: CPU stall enable bit
+  - name: CPU_STALL_WAIT
+    bit_range:
+    - 5
+    - 1
+    description: CPU stall wait cycles in fast_clk_rtc
+  - name: CK8M_WAIT
+    bit_range:
+    - 13
+    - 6
+    description: CK8M wait cycles in slow_clk_rtc
+  - name: XTL_BUF_WAIT
+    bit_range:
+    - 23
+    - 14
+    description: XTAL wait cycles in slow_clk_rtc
+  - name: PLL_BUF_WAIT
+    bit_range:
+    - 31
+    - 24
+    description: PLL wait cycles in slow_clk_rtc
+  side_effects: null
+- id: TIMER2
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 17301504
+  fields:
+  - name: ULPCP_TOUCH_START_WAIT
+    bit_range:
+    - 23
+    - 15
+    description: wait cycles in slow_clk_rtc before ULP-coprocessor / touch controller start to work
+  - name: MIN_TIME_CK8M_OFF
+    bit_range:
+    - 31
+    - 24
+    description: minimal cycles in slow_clk_rtc for CK8M in power down state
+  side_effects: null
+- id: TIMER3
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 336988680
+  fields:
+  - name: WIFI_WAIT_TIMER
+    bit_range:
+    - 8
+    - 0
+    description: No public
+  - name: WIFI_POWERUP_TIMER
+    bit_range:
+    - 15
+    - 9
+    description: No public
+  - name: BT_WAIT_TIMER
+    bit_range:
+    - 24
+    - 16
+    description: No public
+  - name: BT_POWERUP_TIMER
+    bit_range:
+    - 31
+    - 25
+    description: No public
+  side_effects: null
+- id: TIMER4
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 270535176
+  fields:
+  - name: WAIT_TIMER
+    bit_range:
+    - 8
+    - 0
+    description: No public
+  - name: POWERUP_TIMER
+    bit_range:
+    - 15
+    - 9
+    description: No public
+  - name: DG_WRAP_WAIT_TIMER
+    bit_range:
+    - 24
+    - 16
+    description: No public
+  - name: DG_WRAP_POWERUP_TIMER
+    bit_range:
+    - 31
+    - 25
+    description: No public
+  side_effects: null
+- id: TIMER5
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 32768
+  fields:
+  - name: MIN_SLP_VAL
+    bit_range:
+    - 15
+    - 8
+    description: minimal sleep cycles in slow_clk_rtc
+  side_effects: null
+- id: TIMER6
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 270535176
+  fields:
+  - name: CPU_TOP_WAIT_TIMER
+    bit_range:
+    - 8
+    - 0
+    description: No public
+  - name: CPU_TOP_POWERUP_TIMER
+    bit_range:
+    - 15
+    - 9
+    description: No public
+  - name: DG_PERI_WAIT_TIMER
+    bit_range:
+    - 24
+    - 16
+    description: No public
+  - name: DG_PERI_POWERUP_TIMER
+    bit_range:
+    - 31
+    - 25
+    description: No public
+  side_effects: null
+- id: ANA_CONF
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 4456448
+  fields:
+  - name: I2C_RESET_POR_FORCE_PD
+    bit_range:
+    - 18
+    - 18
+    description: force down I2C_RESET_POR
+  - name: I2C_RESET_POR_FORCE_PU
+    bit_range:
+    - 19
+    - 19
+    description: force on I2C_RESET_POR
+  - name: GLITCH_RST_EN
+    bit_range:
+    - 20
+    - 20
+    description: enable clk glitch
+  - name: SAR_I2C_PU
+    bit_range:
+    - 22
+    - 22
+    description: PLLA force power up
+  - name: ANALOG_TOP_ISO_SLEEP
+    bit_range:
+    - 23
+    - 23
+    description: PLLA force power down
+  - name: ANALOG_TOP_ISO_MONITOR
+    bit_range:
+    - 24
+    - 24
+    description: PLLA force power up
+  - name: BBPLL_CAL_SLP_START
+    bit_range:
+    - 25
+    - 25
+    description: start BBPLL calibration during sleep
+  - name: PVTMON_PU
+    bit_range:
+    - 26
+    - 26
+    description: '1: PVTMON power up,  otherwise power down'
+  - name: TXRF_I2C_PU
+    bit_range:
+    - 27
+    - 27
+    description: '1: TXRF_I2C power up,  otherwise power down'
+  - name: RFRX_PBUS_PU
+    bit_range:
+    - 28
+    - 28
+    description: '1: RFRX_PBUS power up,  otherwise power down'
+  - name: CKGEN_I2C_PU
+    bit_range:
+    - 30
+    - 30
+    description: '1: CKGEN_I2C power up,  otherwise power down'
+  - name: PLL_I2C_PU
+    bit_range:
+    - 31
+    - 31
+    description: power on pll i2c
+  side_effects: null
+- id: RESET_STATE
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 12288
+  fields:
+  - name: RESET_CAUSE_PROCPU
+    bit_range:
+    - 5
+    - 0
+    description: reset cause of PRO CPU
+  - name: RESET_CAUSE_APPCPU
+    bit_range:
+    - 11
+    - 6
+    description: reset cause of APP CPU
+  - name: APPCPU_STAT_VECTOR_SEL
+    bit_range:
+    - 12
+    - 12
+    description: APP CPU state vector sel
+  - name: PROCPU_STAT_VECTOR_SEL
+    bit_range:
+    - 13
+    - 13
+    description: PRO CPU state vector sel
+  - name: RESET_FLAG_PROCPU
+    bit_range:
+    - 14
+    - 14
+    description: PRO CPU reset_flag
+  - name: RESET_FLAG_APPCPU
+    bit_range:
+    - 15
+    - 15
+    description: APP CPU reset flag
+  - name: RESET_FLAG_PROCPU_CLR
+    bit_range:
+    - 16
+    - 16
+    description: clear PRO CPU reset_flag
+  - name: RESET_FLAG_APPCPU_CLR
+    bit_range:
+    - 17
+    - 17
+    description: clear APP CPU reset flag
+  - name: APPCPU_OCD_HALT_ON_RESET
+    bit_range:
+    - 18
+    - 18
+    description: APPCPU OcdHaltOnReset
+  - name: PROCPU_OCD_HALT_ON_RESET
+    bit_range:
+    - 19
+    - 19
+    description: PROCPU OcdHaltOnReset
+  - name: RESET_FLAG_JTAG_PROCPU
+    bit_range:
+    - 20
+    - 20
+    description: jtag reset flag
+  - name: RESET_FLAG_JTAG_APPCPU
+    bit_range:
+    - 21
+    - 21
+    description: jtag reset flag
+  - name: RESET_FLAG_JTAG_PROCPU_CLR
+    bit_range:
+    - 22
+    - 22
+    description: clear jtag reset flag
+  - name: RESET_FLAG_JTAG_APPCPU_CLR
+    bit_range:
+    - 23
+    - 23
+    description: clear jtag reset flag
+  - name: APP_DRESET_MASK
+    bit_range:
+    - 24
+    - 24
+    description: bypass cpu1 dreset
+  - name: PRO_DRESET_MASK
+    bit_range:
+    - 25
+    - 25
+    description: bypass cpu0 dreset
+  side_effects: null
+- id: WAKEUP_STATE
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 393216
+  fields:
+  - name: WAKEUP_ENA
+    bit_range:
+    - 31
+    - 15
+    description: wakeup enable bitmap
+  side_effects: null
+- id: INT_ENA_RTC
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SLP_WAKEUP_INT_ENA
+    bit_range:
+    - 0
+    - 0
+    description: enable sleep wakeup interrupt
+  - name: SLP_REJECT_INT_ENA
+    bit_range:
+    - 1
+    - 1
+    description: enable sleep reject interrupt
+  - name: SDIO_IDLE_INT_ENA
+    bit_range:
+    - 2
+    - 2
+    description: enable SDIO idle interrupt
+  - name: WDT_INT_ENA
+    bit_range:
+    - 3
+    - 3
+    description: enable RTC WDT interrupt
+  - name: TOUCH_SCAN_DONE_INT_ENA
+    bit_range:
+    - 4
+    - 4
+    description: enable touch scan done interrupt
+  - name: ULP_CP_INT_ENA
+    bit_range:
+    - 5
+    - 5
+    description: enable ULP-coprocessor interrupt
+  - name: TOUCH_DONE_INT_ENA
+    bit_range:
+    - 6
+    - 6
+    description: enable touch done interrupt
+  - name: TOUCH_ACTIVE_INT_ENA
+    bit_range:
+    - 7
+    - 7
+    description: enable touch active interrupt
+  - name: TOUCH_INACTIVE_INT_ENA
+    bit_range:
+    - 8
+    - 8
+    description: enable touch inactive interrupt
+  - name: BROWN_OUT_INT_ENA
+    bit_range:
+    - 9
+    - 9
+    description: enable brown out interrupt
+  - name: MAIN_TIMER_INT_ENA
+    bit_range:
+    - 10
+    - 10
+    description: enable RTC main timer interrupt
+  - name: SARADC1_INT_ENA
+    bit_range:
+    - 11
+    - 11
+    description: enable saradc1 interrupt
+  - name: TSENS_INT_ENA
+    bit_range:
+    - 12
+    - 12
+    description: enable tsens interrupt
+  - name: COCPU_INT_ENA
+    bit_range:
+    - 13
+    - 13
+    description: enable riscV cocpu interrupt
+  - name: SARADC2_INT_ENA
+    bit_range:
+    - 14
+    - 14
+    description: enable saradc2 interrupt
+  - name: SWD_INT_ENA
+    bit_range:
+    - 15
+    - 15
+    description: enable super watch dog interrupt
+  - name: XTAL32K_DEAD_INT_ENA
+    bit_range:
+    - 16
+    - 16
+    description: enable xtal32k_dead  interrupt
+  - name: COCPU_TRAP_INT_ENA
+    bit_range:
+    - 17
+    - 17
+    description: enable cocpu trap interrupt
+  - name: TOUCH_TIMEOUT_INT_ENA
+    bit_range:
+    - 18
+    - 18
+    description: enable touch timeout interrupt
+  - name: GLITCH_DET_INT_ENA
+    bit_range:
+    - 19
+    - 19
+    description: enbale gitch det interrupt
+  - name: TOUCH_APPROACH_LOOP_DONE_INT_ENA
+    bit_range:
+    - 20
+    - 20
+    description: touch approach mode loop interrupt
+  side_effects: null
+- id: INT_RAW_RTC
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SLP_WAKEUP_INT_RAW
+    bit_range:
+    - 0
+    - 0
+    description: sleep wakeup interrupt raw
+  - name: SLP_REJECT_INT_RAW
+    bit_range:
+    - 1
+    - 1
+    description: sleep reject interrupt raw
+  - name: SDIO_IDLE_INT_RAW
+    bit_range:
+    - 2
+    - 2
+    description: SDIO idle interrupt raw
+  - name: WDT_INT_RAW
+    bit_range:
+    - 3
+    - 3
+    description: RTC WDT interrupt raw
+  - name: TOUCH_SCAN_DONE_INT_RAW
+    bit_range:
+    - 4
+    - 4
+    description: enable touch scan done interrupt raw
+  - name: ULP_CP_INT_RAW
+    bit_range:
+    - 5
+    - 5
+    description: ULP-coprocessor interrupt raw
+  - name: TOUCH_DONE_INT_RAW
+    bit_range:
+    - 6
+    - 6
+    description: touch interrupt raw
+  - name: TOUCH_ACTIVE_INT_RAW
+    bit_range:
+    - 7
+    - 7
+    description: touch active interrupt raw
+  - name: TOUCH_INACTIVE_INT_RAW
+    bit_range:
+    - 8
+    - 8
+    description: touch inactive interrupt raw
+  - name: BROWN_OUT_INT_RAW
+    bit_range:
+    - 9
+    - 9
+    description: brown out interrupt raw
+  - name: MAIN_TIMER_INT_RAW
+    bit_range:
+    - 10
+    - 10
+    description: RTC main timer interrupt raw
+  - name: SARADC1_INT_RAW
+    bit_range:
+    - 11
+    - 11
+    description: saradc1 interrupt raw
+  - name: TSENS_INT_RAW
+    bit_range:
+    - 12
+    - 12
+    description: tsens interrupt raw
+  - name: COCPU_INT_RAW
+    bit_range:
+    - 13
+    - 13
+    description: riscV cocpu interrupt raw
+  - name: SARADC2_INT_RAW
+    bit_range:
+    - 14
+    - 14
+    description: saradc2 interrupt raw
+  - name: SWD_INT_RAW
+    bit_range:
+    - 15
+    - 15
+    description: super watch dog interrupt raw
+  - name: XTAL32K_DEAD_INT_RAW
+    bit_range:
+    - 16
+    - 16
+    description: xtal32k dead detection interrupt raw
+  - name: COCPU_TRAP_INT_RAW
+    bit_range:
+    - 17
+    - 17
+    description: cocpu trap interrupt raw
+  - name: TOUCH_TIMEOUT_INT_RAW
+    bit_range:
+    - 18
+    - 18
+    description: touch timeout interrupt raw
+  - name: GLITCH_DET_INT_RAW
+    bit_range:
+    - 19
+    - 19
+    description: glitch_det_interrupt_raw
+  - name: TOUCH_APPROACH_LOOP_DONE_INT_RAW
+    bit_range:
+    - 20
+    - 20
+    description: touch approach mode loop interrupt raw
+  side_effects: null
+- id: INT_ST_RTC
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SLP_WAKEUP_INT_ST
+    bit_range:
+    - 0
+    - 0
+    description: sleep wakeup interrupt state
+  - name: SLP_REJECT_INT_ST
+    bit_range:
+    - 1
+    - 1
+    description: sleep reject interrupt state
+  - name: SDIO_IDLE_INT_ST
+    bit_range:
+    - 2
+    - 2
+    description: SDIO idle interrupt state
+  - name: WDT_INT_ST
+    bit_range:
+    - 3
+    - 3
+    description: RTC WDT interrupt state
+  - name: TOUCH_SCAN_DONE_INT_ST
+    bit_range:
+    - 4
+    - 4
+    description: enable touch scan done interrupt raw
+  - name: ULP_CP_INT_ST
+    bit_range:
+    - 5
+    - 5
+    description: ULP-coprocessor interrupt state
+  - name: TOUCH_DONE_INT_ST
+    bit_range:
+    - 6
+    - 6
+    description: touch done interrupt state
+  - name: TOUCH_ACTIVE_INT_ST
+    bit_range:
+    - 7
+    - 7
+    description: touch active interrupt state
+  - name: TOUCH_INACTIVE_INT_ST
+    bit_range:
+    - 8
+    - 8
+    description: touch inactive interrupt state
+  - name: BROWN_OUT_INT_ST
+    bit_range:
+    - 9
+    - 9
+    description: brown out interrupt state
+  - name: MAIN_TIMER_INT_ST
+    bit_range:
+    - 10
+    - 10
+    description: RTC main timer interrupt state
+  - name: SARADC1_INT_ST
+    bit_range:
+    - 11
+    - 11
+    description: saradc1 interrupt state
+  - name: TSENS_INT_ST
+    bit_range:
+    - 12
+    - 12
+    description: tsens interrupt state
+  - name: COCPU_INT_ST
+    bit_range:
+    - 13
+    - 13
+    description: riscV cocpu interrupt state
+  - name: SARADC2_INT_ST
+    bit_range:
+    - 14
+    - 14
+    description: saradc2 interrupt state
+  - name: SWD_INT_ST
+    bit_range:
+    - 15
+    - 15
+    description: super watch dog interrupt state
+  - name: XTAL32K_DEAD_INT_ST
+    bit_range:
+    - 16
+    - 16
+    description: xtal32k dead detection interrupt state
+  - name: COCPU_TRAP_INT_ST
+    bit_range:
+    - 17
+    - 17
+    description: cocpu trap interrupt state
+  - name: TOUCH_TIMEOUT_INT_ST
+    bit_range:
+    - 18
+    - 18
+    description: Touch timeout interrupt state
+  - name: GLITCH_DET_INT_ST
+    bit_range:
+    - 19
+    - 19
+    description: glitch_det_interrupt state
+  - name: TOUCH_APPROACH_LOOP_DONE_INT_ST
+    bit_range:
+    - 20
+    - 20
+    description: touch approach mode loop interrupt state
+  side_effects: null
+- id: INT_CLR_RTC
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SLP_WAKEUP_INT_CLR
+    bit_range:
+    - 0
+    - 0
+    description: Clear sleep wakeup interrupt state
+  - name: SLP_REJECT_INT_CLR
+    bit_range:
+    - 1
+    - 1
+    description: Clear sleep reject interrupt state
+  - name: SDIO_IDLE_INT_CLR
+    bit_range:
+    - 2
+    - 2
+    description: Clear SDIO idle interrupt state
+  - name: WDT_INT_CLR
+    bit_range:
+    - 3
+    - 3
+    description: Clear RTC WDT interrupt state
+  - name: TOUCH_SCAN_DONE_INT_CLR
+    bit_range:
+    - 4
+    - 4
+    description: clear touch scan done interrupt raw
+  - name: ULP_CP_INT_CLR
+    bit_range:
+    - 5
+    - 5
+    description: Clear ULP-coprocessor interrupt state
+  - name: TOUCH_DONE_INT_CLR
+    bit_range:
+    - 6
+    - 6
+    description: Clear touch done interrupt state
+  - name: TOUCH_ACTIVE_INT_CLR
+    bit_range:
+    - 7
+    - 7
+    description: Clear touch active interrupt state
+  - name: TOUCH_INACTIVE_INT_CLR
+    bit_range:
+    - 8
+    - 8
+    description: Clear touch inactive interrupt state
+  - name: BROWN_OUT_INT_CLR
+    bit_range:
+    - 9
+    - 9
+    description: Clear brown out interrupt state
+  - name: MAIN_TIMER_INT_CLR
+    bit_range:
+    - 10
+    - 10
+    description: Clear RTC main timer interrupt state
+  - name: SARADC1_INT_CLR
+    bit_range:
+    - 11
+    - 11
+    description: Clear saradc1 interrupt state
+  - name: TSENS_INT_CLR
+    bit_range:
+    - 12
+    - 12
+    description: Clear tsens interrupt state
+  - name: COCPU_INT_CLR
+    bit_range:
+    - 13
+    - 13
+    description: Clear riscV cocpu interrupt state
+  - name: SARADC2_INT_CLR
+    bit_range:
+    - 14
+    - 14
+    description: Clear saradc2 interrupt state
+  - name: SWD_INT_CLR
+    bit_range:
+    - 15
+    - 15
+    description: Clear super watch dog interrupt state
+  - name: XTAL32K_DEAD_INT_CLR
+    bit_range:
+    - 16
+    - 16
+    description: Clear RTC WDT interrupt state
+  - name: COCPU_TRAP_INT_CLR
+    bit_range:
+    - 17
+    - 17
+    description: Clear cocpu trap interrupt state
+  - name: TOUCH_TIMEOUT_INT_CLR
+    bit_range:
+    - 18
+    - 18
+    description: Clear touch timeout interrupt state
+  - name: GLITCH_DET_INT_CLR
+    bit_range:
+    - 19
+    - 19
+    description: Clear glitch det interrupt state
+  - name: TOUCH_APPROACH_LOOP_DONE_INT_CLR
+    bit_range:
+    - 20
+    - 20
+    description: cleartouch approach mode loop interrupt state
+  side_effects: null
+- id: STORE0
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SCRATCH0
+    bit_range:
+    - 31
+    - 0
+    description: Reserved register
+  side_effects: null
+- id: STORE1
+  address_offset: 84
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SCRATCH1
+    bit_range:
+    - 31
+    - 0
+    description: Reserved register
+  side_effects: null
+- id: STORE2
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SCRATCH2
+    bit_range:
+    - 31
+    - 0
+    description: Reserved register
+  side_effects: null
+- id: STORE3
+  address_offset: 92
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SCRATCH3
+    bit_range:
+    - 31
+    - 0
+    description: Reserved register
+  side_effects: null
+- id: EXT_XTL_CONF
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 420992
+  fields:
+  - name: XTAL32K_WDT_EN
+    bit_range:
+    - 0
+    - 0
+    description: xtal 32k watch dog enable
+  - name: XTAL32K_WDT_CLK_FO
+    bit_range:
+    - 1
+    - 1
+    description: xtal 32k watch dog clock force on
+  - name: XTAL32K_WDT_RESET
+    bit_range:
+    - 2
+    - 2
+    description: xtal 32k watch dog sw reset
+  - name: XTAL32K_EXT_CLK_FO
+    bit_range:
+    - 3
+    - 3
+    description: xtal 32k external xtal clock force on
+  - name: XTAL32K_AUTO_BACKUP
+    bit_range:
+    - 4
+    - 4
+    description: xtal 32k switch to back up clock when xtal is dead
+  - name: XTAL32K_AUTO_RESTART
+    bit_range:
+    - 5
+    - 5
+    description: xtal 32k restart xtal when xtal is dead
+  - name: XTAL32K_AUTO_RETURN
+    bit_range:
+    - 6
+    - 6
+    description: xtal 32k switch back xtal when xtal is restarted
+  - name: XTAL32K_XPD_FORCE
+    bit_range:
+    - 7
+    - 7
+    description: Xtal 32k xpd control by sw or fsm
+  - name: ENCKINIT_XTAL_32K
+    bit_range:
+    - 8
+    - 8
+    description: apply an internal clock to help xtal 32k to start
+  - name: DBUF_XTAL_32K
+    bit_range:
+    - 9
+    - 9
+    description: '0: single-end buffer 1: differential buffer'
+  - name: DGM_XTAL_32K
+    bit_range:
+    - 12
+    - 10
+    description: xtal_32k gm control
+  - name: DRES_XTAL_32K
+    bit_range:
+    - 15
+    - 13
+    description: DRES_XTAL_32K
+  - name: XPD_XTAL_32K
+    bit_range:
+    - 16
+    - 16
+    description: XPD_XTAL_32K
+  - name: DAC_XTAL_32K
+    bit_range:
+    - 19
+    - 17
+    description: DAC_XTAL_32K
+  - name: WDT_STATE
+    bit_range:
+    - 22
+    - 20
+    description: state of 32k_wdt
+  - name: XTAL32K_GPIO_SEL
+    bit_range:
+    - 23
+    - 23
+    description: 'XTAL_32K sel. 0: external XTAL_32K, 1: CLK from RTC pad X32P_C'
+  - name: XTL_EXT_CTR_LV
+    bit_range:
+    - 30
+    - 30
+    description: '0: power down XTAL at high level, 1: power down XTAL at low level'
+  - name: XTL_EXT_CTR_EN
+    bit_range:
+    - 31
+    - 31
+    description: Reserved register
+  side_effects: null
+- id: EXT_WAKEUP_CONF
+  address_offset: 100
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: GPIO_WAKEUP_FILTER
+    bit_range:
+    - 29
+    - 29
+    description: enable filter for gpio wakeup event
+  - name: EXT_WAKEUP0_LV
+    bit_range:
+    - 30
+    - 30
+    description: '0: external wakeup at low level, 1: external wakeup at high level'
+  - name: EXT_WAKEUP1_LV
+    bit_range:
+    - 31
+    - 31
+    description: '0: external wakeup at low level, 1: external wakeup at high level'
+  side_effects: null
+- id: SLP_REJECT_CONF
+  address_offset: 104
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SLEEP_REJECT_ENA
+    bit_range:
+    - 29
+    - 12
+    description: sleep reject enable
+  - name: LIGHT_SLP_REJECT_EN
+    bit_range:
+    - 30
+    - 30
+    description: enable reject for light sleep
+  - name: DEEP_SLP_REJECT_EN
+    bit_range:
+    - 31
+    - 31
+    description: enable reject for deep sleep
+  side_effects: null
+- id: CPU_PERIOD_CONF
+  address_offset: 108
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CPUSEL_CONF
+    bit_range:
+    - 29
+    - 29
+    description: CPU sel option
+  - name: CPUPERIOD_SEL
+    bit_range:
+    - 31
+    - 30
+    description: conigure cpu freq
+  side_effects: null
+- id: SDIO_ACT_CONF
+  address_offset: 112
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SDIO_ACT_DNUM
+    bit_range:
+    - 31
+    - 22
+    description: No public
+  side_effects: null
+- id: CLK_CONF
+  address_offset: 116
+  size: 32
+  access: READ_WRITE
+  reset_value: 290992668
+  fields:
+  - name: EFUSE_CLK_FORCE_GATING
+    bit_range:
+    - 1
+    - 1
+    description: force efuse clk gating
+  - name: EFUSE_CLK_FORCE_NOGATING
+    bit_range:
+    - 2
+    - 2
+    description: force efuse clk nogating
+  - name: CK8M_DIV_SEL_VLD
+    bit_range:
+    - 3
+    - 3
+    description: used to sync reg_ck8m_div_sel bus. Clear vld before set reg_ck8m_div_sel, then set vld to actually switch the clk
+  - name: CK8M_DIV
+    bit_range:
+    - 5
+    - 4
+    description: 'CK8M_D256_OUT divider. 00: div128, 01: div256, 10: div512, 11: div1024.'
+  - name: ENB_CK8M
+    bit_range:
+    - 6
+    - 6
+    description: disable CK8M and CK8M_D256_OUT
+  - name: ENB_CK8M_DIV
+    bit_range:
+    - 7
+    - 7
+    description: '1: CK8M_D256_OUT is actually CK8M, 0: CK8M_D256_OUT is CK8M divided by 256'
+  - name: DIG_XTAL32K_EN
+    bit_range:
+    - 8
+    - 8
+    description: enable CK_XTAL_32K for digital core (no relationship with RTC core)
+  - name: DIG_CLK8M_D256_EN
+    bit_range:
+    - 9
+    - 9
+    description: enable CK8M_D256_OUT for digital core (no relationship with RTC core)
+  - name: DIG_CLK8M_EN
+    bit_range:
+    - 10
+    - 10
+    description: enable CK8M for digital core (no relationship with RTC core)
+  - name: CK8M_DIV_SEL
+    bit_range:
+    - 14
+    - 12
+    description: divider = reg_ck8m_div_sel + 1
+  - name: XTAL_FORCE_NOGATING
+    bit_range:
+    - 15
+    - 15
+    description: XTAL force no gating during sleep
+  - name: CK8M_FORCE_NOGATING
+    bit_range:
+    - 16
+    - 16
+    description: CK8M force no gating during sleep
+  - name: CK8M_DFREQ
+    bit_range:
+    - 24
+    - 17
+    description: CK8M_DFREQ
+  - name: CK8M_FORCE_PD
+    bit_range:
+    - 25
+    - 25
+    description: CK8M force power down
+  - name: CK8M_FORCE_PU
+    bit_range:
+    - 26
+    - 26
+    description: CK8M force power up
+  - name: XTAL_GLOBAL_FORCE_GATING
+    bit_range:
+    - 27
+    - 27
+    description: force global xtal  gating
+  - name: XTAL_GLOBAL_FORCE_NOGATING
+    bit_range:
+    - 28
+    - 28
+    description: force global xtal no gating
+  - name: FAST_CLK_RTC_SEL
+    bit_range:
+    - 29
+    - 29
+    description: 'fast_clk_rtc sel. 0: XTAL div 4, 1: CK8M'
+  - name: ANA_CLK_RTC_SEL
+    bit_range:
+    - 31
+    - 30
+    description: select slow clock
+  side_effects: null
+- id: SLOW_CLK_CONF
+  address_offset: 120
+  size: 32
+  access: READ_WRITE
+  reset_value: 4194304
+  fields:
+  - name: ANA_CLK_DIV_VLD
+    bit_range:
+    - 22
+    - 22
+    description: used to sync div bus. clear vld before set reg_rtc_ana_clk_div, then set vld to actually switch the clk
+  - name: ANA_CLK_DIV
+    bit_range:
+    - 30
+    - 23
+    description: rtc clk div
+  - name: SLOW_CLK_NEXT_EDGE
+    bit_range:
+    - 31
+    - 31
+    description: No public
+  side_effects: null
+- id: SDIO_CONF
+  address_offset: 124
+  size: 32
+  access: READ_WRITE
+  reset_value: 179355146
+  fields:
+  - name: SDIO_TIMER_TARGET
+    bit_range:
+    - 7
+    - 0
+    description: timer count to apply reg_sdio_dcap after sdio power on
+  - name: SDIO_DTHDRV
+    bit_range:
+    - 10
+    - 9
+    description: Tieh = 1 mode drive ability. Initially set to 0 to limit charge current, set to 3 after several us.
+  - name: SDIO_DCAP
+    bit_range:
+    - 12
+    - 11
+    description: ability to prevent LDO from overshoot
+  - name: SDIO_INITI
+    bit_range:
+    - 14
+    - 13
+    description: 'add resistor from ldo output to ground. 0: no res, 1: 6k,2:4k,3:2k'
+  - name: SDIO_EN_INITI
+    bit_range:
+    - 15
+    - 15
+    description: 0 to set init[1:0]=0
+  - name: SDIO_DCURLIM
+    bit_range:
+    - 18
+    - 16
+    description: tune current limit threshold when tieh = 0. About 800mA/(8+d)
+  - name: SDIO_MODECURLIM
+    bit_range:
+    - 19
+    - 19
+    description: select current limit mode
+  - name: SDIO_ENCURLIM
+    bit_range:
+    - 20
+    - 20
+    description: enable current limit
+  - name: SDIO_REG_PD_EN
+    bit_range:
+    - 21
+    - 21
+    description: power down SDIO_REG in sleep. Only active when reg_sdio_force = 0
+  - name: SDIO_FORCE
+    bit_range:
+    - 22
+    - 22
+    description: '1: use SW option to control SDIO_REG, 0: use state machine'
+  - name: SDIO_TIEH
+    bit_range:
+    - 23
+    - 23
+    description: SW option for SDIO_TIEH. Only active when reg_sdio_force = 1
+  - name: REG1P8_READY
+    bit_range:
+    - 24
+    - 24
+    description: read only register for REG1P8_READY
+  - name: DREFL_SDIO
+    bit_range:
+    - 26
+    - 25
+    description: SW option for DREFL_SDIO. Only active when reg_sdio_force = 1
+  - name: DREFM_SDIO
+    bit_range:
+    - 28
+    - 27
+    description: SW option for DREFM_SDIO. Only active when reg_sdio_force = 1
+  - name: DREFH_SDIO
+    bit_range:
+    - 30
+    - 29
+    description: SW option for DREFH_SDIO. Only active when reg_sdio_force = 1
+  - name: XPD_SDIO
+    bit_range:
+    - 31
+    - 31
+    description: power on flash regulator
+  side_effects: null
+- id: BIAS_CONF
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 67584
+  fields:
+  - name: BIAS_BUF_IDLE
+    bit_range:
+    - 10
+    - 10
+    description: No public
+  - name: BIAS_BUF_WAKE
+    bit_range:
+    - 11
+    - 11
+    description: No public
+  - name: BIAS_BUF_DEEP_SLP
+    bit_range:
+    - 12
+    - 12
+    description: No public
+  - name: BIAS_BUF_MONITOR
+    bit_range:
+    - 13
+    - 13
+    description: No public
+  - name: PD_CUR_DEEP_SLP
+    bit_range:
+    - 14
+    - 14
+    description: xpd cur when rtc in sleep_state
+  - name: PD_CUR_MONITOR
+    bit_range:
+    - 15
+    - 15
+    description: xpd cur when rtc in monitor state
+  - name: BIAS_SLEEP_DEEP_SLP
+    bit_range:
+    - 16
+    - 16
+    description: bias_sleep when rtc in sleep_state
+  - name: BIAS_SLEEP_MONITOR
+    bit_range:
+    - 17
+    - 17
+    description: bias_sleep when rtc in monitor state
+  - name: DBG_ATTEN_DEEP_SLP
+    bit_range:
+    - 21
+    - 18
+    description: DBG_ATTEN when rtc in sleep state
+  - name: DBG_ATTEN_MONITOR
+    bit_range:
+    - 25
+    - 22
+    description: DBG_ATTEN when rtc in monitor state
+  - name: DBG_ATTEN_WAKEUP
+    bit_range:
+    - 29
+    - 26
+    description: No public
+  side_effects: null
+- id: RTC
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 2684354560
+  fields:
+  - name: DIG_REG_CAL_EN
+    bit_range:
+    - 7
+    - 7
+    description: enable dig regulator cali
+  - name: SCK_DCAP
+    bit_range:
+    - 21
+    - 14
+    description: SCK_DCAP
+  - name: DBOOST_FORCE_PD
+    bit_range:
+    - 28
+    - 28
+    description: RTC_DBOOST force power down
+  - name: DBOOST_FORCE_PU
+    bit_range:
+    - 29
+    - 29
+    description: RTC_DBOOST force power up
+  - name: REGULATOR_FORCE_PD
+    bit_range:
+    - 30
+    - 30
+    description: RTC_REG force power down (for RTC_REG power down means decrease the voltage to 0.8v or lower )
+  - name: REGULATOR_FORCE_PU
+    bit_range:
+    - 31
+    - 31
+    description: RTC_REG force power on (for RTC_REG power down means decrease the voltage to 0.8v or lower )
+  side_effects: null
+- id: PWC
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 2341
+  fields:
+  - name: FASTMEM_FORCE_NOISO
+    bit_range:
+    - 0
+    - 0
+    description: Fast RTC memory force no ISO
+  - name: FASTMEM_FORCE_ISO
+    bit_range:
+    - 1
+    - 1
+    description: Fast RTC memory force ISO
+  - name: SLOWMEM_FORCE_NOISO
+    bit_range:
+    - 2
+    - 2
+    description: RTC memory force no ISO
+  - name: SLOWMEM_FORCE_ISO
+    bit_range:
+    - 3
+    - 3
+    description: RTC memory force ISO
+  - name: FORCE_ISO
+    bit_range:
+    - 4
+    - 4
+    description: rtc_peri force ISO
+  - name: FORCE_NOISO
+    bit_range:
+    - 5
+    - 5
+    description: rtc_peri force no ISO
+  - name: FASTMEM_FOLW_CPU
+    bit_range:
+    - 6
+    - 6
+    description: '1: Fast RTC memory PD following CPU, 0: fast RTC memory PD following RTC state machine'
+  - name: FASTMEM_FORCE_LPD
+    bit_range:
+    - 7
+    - 7
+    description: Fast RTC memory force PD
+  - name: FASTMEM_FORCE_LPU
+    bit_range:
+    - 8
+    - 8
+    description: Fast RTC memory force no PD
+  - name: SLOWMEM_FOLW_CPU
+    bit_range:
+    - 9
+    - 9
+    description: '1: RTC memory  PD following CPU, 0: RTC memory PD following RTC state machine'
+  - name: SLOWMEM_FORCE_LPD
+    bit_range:
+    - 10
+    - 10
+    description: RTC memory force PD
+  - name: SLOWMEM_FORCE_LPU
+    bit_range:
+    - 11
+    - 11
+    description: RTC memory force no PD
+  - name: FORCE_PD
+    bit_range:
+    - 18
+    - 18
+    description: rtc_peri force power down
+  - name: FORCE_PU
+    bit_range:
+    - 19
+    - 19
+    description: rtc_peri force power up
+  - name: PD_EN
+    bit_range:
+    - 20
+    - 20
+    description: enable power down rtc_peri in sleep
+  - name: PAD_FORCE_HOLD
+    bit_range:
+    - 21
+    - 21
+    description: rtc pad force hold
+  side_effects: null
+- id: REGULATOR_DRV_CTRL
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: REGULATOR_DRV_B_MONITOR
+    bit_range:
+    - 5
+    - 0
+    description: No public
+  - name: REGULATOR_DRV_B_SLP
+    bit_range:
+    - 11
+    - 6
+    description: No public
+  - name: DG_VDD_DRV_B_SLP
+    bit_range:
+    - 19
+    - 12
+    description: No public
+  - name: DG_VDD_DRV_B_MONITOR
+    bit_range:
+    - 27
+    - 20
+    description: No public
+  side_effects: null
+- id: DIG_PWC
+  address_offset: 144
+  size: 32
+  access: READ_WRITE
+  reset_value: 5525520
+  fields:
+  - name: LSLP_MEM_FORCE_PD
+    bit_range:
+    - 3
+    - 3
+    description: memories in digital core force PD in sleep
+  - name: LSLP_MEM_FORCE_PU
+    bit_range:
+    - 4
+    - 4
+    description: memories in digital core force no PD in sleep
+  - name: BT_FORCE_PD
+    bit_range:
+    - 11
+    - 11
+    description: internal SRAM 2 force power down
+  - name: BT_FORCE_PU
+    bit_range:
+    - 12
+    - 12
+    description: internal SRAM 2 force power up
+  - name: DG_PERI_FORCE_PD
+    bit_range:
+    - 13
+    - 13
+    description: internal SRAM 3 force power down
+  - name: DG_PERI_FORCE_PU
+    bit_range:
+    - 14
+    - 14
+    description: internal SRAM 3 force power up
+  - name: WIFI_FORCE_PD
+    bit_range:
+    - 17
+    - 17
+    description: wifi force power down
+  - name: WIFI_FORCE_PU
+    bit_range:
+    - 18
+    - 18
+    description: wifi force power up
+  - name: DG_WRAP_FORCE_PD
+    bit_range:
+    - 19
+    - 19
+    description: digital core force power down
+  - name: DG_WRAP_FORCE_PU
+    bit_range:
+    - 20
+    - 20
+    description: digital core force power up
+  - name: CPU_TOP_FORCE_PD
+    bit_range:
+    - 21
+    - 21
+    description: digital dcdc force power down
+  - name: CPU_TOP_FORCE_PU
+    bit_range:
+    - 22
+    - 22
+    description: digital dcdc force power up
+  - name: BT_PD_EN
+    bit_range:
+    - 27
+    - 27
+    description: enable power down internal SRAM 2 in sleep
+  - name: DG_PERI_PD_EN
+    bit_range:
+    - 28
+    - 28
+    description: enable power down internal SRAM 3 in sleep
+  - name: CPU_TOP_PD_EN
+    bit_range:
+    - 29
+    - 29
+    description: enable power down internal SRAM 4 in sleep
+  - name: WIFI_PD_EN
+    bit_range:
+    - 30
+    - 30
+    description: enable power down wifi in sleep
+  - name: DG_WRAP_PD_EN
+    bit_range:
+    - 31
+    - 31
+    description: enable power down all digital logic
+  side_effects: null
+- id: DIG_ISO
+  address_offset: 148
+  size: 32
+  access: READ_WRITE
+  reset_value: 2860535936
+  fields:
+  - name: FORCE_OFF
+    bit_range:
+    - 7
+    - 7
+    description: No public
+  - name: FORCE_ON
+    bit_range:
+    - 8
+    - 8
+    description: No public
+  - name: DG_PAD_AUTOHOLD
+    bit_range:
+    - 9
+    - 9
+    description: read only register to indicate digital pad auto-hold status
+  - name: CLR_DG_PAD_AUTOHOLD
+    bit_range:
+    - 10
+    - 10
+    description: wtite only register to clear digital pad auto-hold
+  - name: DG_PAD_AUTOHOLD_EN
+    bit_range:
+    - 11
+    - 11
+    description: digital pad enable auto-hold
+  - name: DG_PAD_FORCE_NOISO
+    bit_range:
+    - 12
+    - 12
+    description: digital pad force no ISO
+  - name: DG_PAD_FORCE_ISO
+    bit_range:
+    - 13
+    - 13
+    description: digital pad force ISO
+  - name: DG_PAD_FORCE_UNHOLD
+    bit_range:
+    - 14
+    - 14
+    description: digital pad force un-hold
+  - name: DG_PAD_FORCE_HOLD
+    bit_range:
+    - 15
+    - 15
+    description: digital pad force hold
+  - name: BT_FORCE_ISO
+    bit_range:
+    - 22
+    - 22
+    description: internal SRAM 2 force ISO
+  - name: BT_FORCE_NOISO
+    bit_range:
+    - 23
+    - 23
+    description: internal SRAM 2 force no ISO
+  - name: DG_PERI_FORCE_ISO
+    bit_range:
+    - 24
+    - 24
+    description: internal SRAM 3 force ISO
+  - name: DG_PERI_FORCE_NOISO
+    bit_range:
+    - 25
+    - 25
+    description: internal SRAM 3 force no ISO
+  - name: CPU_TOP_FORCE_ISO
+    bit_range:
+    - 26
+    - 26
+    description: internal SRAM 4 force ISO
+  - name: CPU_TOP_FORCE_NOISO
+    bit_range:
+    - 27
+    - 27
+    description: internal SRAM 4 force no ISO
+  - name: WIFI_FORCE_ISO
+    bit_range:
+    - 28
+    - 28
+    description: wifi force ISO
+  - name: WIFI_FORCE_NOISO
+    bit_range:
+    - 29
+    - 29
+    description: wifi force no ISO
+  - name: DG_WRAP_FORCE_ISO
+    bit_range:
+    - 30
+    - 30
+    description: digital core force ISO
+  - name: DG_WRAP_FORCE_NOISO
+    bit_range:
+    - 31
+    - 31
+    description: digita core force no ISO
+  side_effects: null
+- id: WDTCONFIG0
+  address_offset: 152
+  size: 32
+  access: READ_WRITE
+  reset_value: 78356
+  fields:
+  - name: WDT_CHIP_RESET_WIDTH
+    bit_range:
+    - 7
+    - 0
+    description: chip reset siginal pulse width
+  - name: WDT_CHIP_RESET_EN
+    bit_range:
+    - 8
+    - 8
+    description: wdt reset whole chip enable
+  - name: WDT_PAUSE_IN_SLP
+    bit_range:
+    - 9
+    - 9
+    description: pause WDT in sleep
+  - name: WDT_APPCPU_RESET_EN
+    bit_range:
+    - 10
+    - 10
+    description: enable WDT reset APP CPU
+  - name: WDT_PROCPU_RESET_EN
+    bit_range:
+    - 11
+    - 11
+    description: enable WDT reset PRO CPU
+  - name: WDT_FLASHBOOT_MOD_EN
+    bit_range:
+    - 12
+    - 12
+    description: enable WDT in flash boot
+  - name: WDT_SYS_RESET_LENGTH
+    bit_range:
+    - 15
+    - 13
+    description: system reset counter length
+  - name: WDT_CPU_RESET_LENGTH
+    bit_range:
+    - 18
+    - 16
+    description: CPU reset counter length
+  - name: WDT_STG3
+    bit_range:
+    - 21
+    - 19
+    description: '1: interrupt stage en 2: CPU reset stage en 3: system reset stage en 4: RTC reset stage en'
+  - name: WDT_STG2
+    bit_range:
+    - 24
+    - 22
+    description: '1: interrupt stage en 2: CPU reset stage en 3: system reset stage en 4: RTC reset stage en'
+  - name: WDT_STG1
+    bit_range:
+    - 27
+    - 25
+    description: '1: interrupt stage en 2: CPU reset stage en 3: system reset stage en 4: RTC reset stage en'
+  - name: WDT_STG0
+    bit_range:
+    - 30
+    - 28
+    description: '1: interrupt stage en 2: CPU reset stage en 3: system reset stage en 4: RTC reset stage en'
+  - name: WDT_EN
+    bit_range:
+    - 31
+    - 31
+    description: enable rtc watch dog
+  side_effects: null
+- id: WDTCONFIG1
+  address_offset: 156
+  size: 32
+  access: READ_WRITE
+  reset_value: 200000
+  fields:
+  - name: WDT_STG0_HOLD
+    bit_range:
+    - 31
+    - 0
+    description: stage0 hold time
+  side_effects: null
+- id: WDTCONFIG2
+  address_offset: 160
+  size: 32
+  access: READ_WRITE
+  reset_value: 80000
+  fields:
+  - name: WDT_STG1_HOLD
+    bit_range:
+    - 31
+    - 0
+    description: stage1 hold time
+  side_effects: null
+- id: WDTCONFIG3
+  address_offset: 164
+  size: 32
+  access: READ_WRITE
+  reset_value: 4095
+  fields:
+  - name: WDT_STG2_HOLD
+    bit_range:
+    - 31
+    - 0
+    description: stage2 hold time
+  side_effects: null
+- id: WDTCONFIG4
+  address_offset: 168
+  size: 32
+  access: READ_WRITE
+  reset_value: 4095
+  fields:
+  - name: WDT_STG3_HOLD
+    bit_range:
+    - 31
+    - 0
+    description: stage3 hold time
+  side_effects: null
+- id: WDTFEED
+  address_offset: 172
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WDT_FEED
+    bit_range:
+    - 31
+    - 31
+    description: rtc wdt feed
+  side_effects: null
+- id: WDTWPROTECT
+  address_offset: 176
+  size: 32
+  access: READ_WRITE
+  reset_value: 1356348065
+  fields:
+  - name: WDT_WKEY
+    bit_range:
+    - 31
+    - 0
+    description: rtc watch dog key
+  side_effects: null
+- id: SWD_CONF
+  address_offset: 180
+  size: 32
+  access: READ_WRITE
+  reset_value: 78643200
+  fields:
+  - name: SWD_RESET_FLAG
+    bit_range:
+    - 0
+    - 0
+    description: swd reset flag
+  - name: SWD_FEED_INT
+    bit_range:
+    - 1
+    - 1
+    description: swd interrupt for feeding
+  - name: SWD_BYPASS_RST
+    bit_range:
+    - 17
+    - 17
+    description: bypass super watch dog reset
+  - name: SWD_SIGNAL_WIDTH
+    bit_range:
+    - 27
+    - 18
+    description: adjust signal width send to swd
+  - name: SWD_RST_FLAG_CLR
+    bit_range:
+    - 28
+    - 28
+    description: reset swd reset flag
+  - name: SWD_FEED
+    bit_range:
+    - 29
+    - 29
+    description: Sw feed swd
+  - name: SWD_DISABLE
+    bit_range:
+    - 30
+    - 30
+    description: disabel SWD
+  - name: SWD_AUTO_FEED_EN
+    bit_range:
+    - 31
+    - 31
+    description: automatically feed swd when int comes
+  side_effects: null
+- id: SWD_WPROTECT
+  address_offset: 184
+  size: 32
+  access: READ_WRITE
+  reset_value: 2401055018
+  fields:
+  - name: SWD_WKEY
+    bit_range:
+    - 31
+    - 0
+    description: super watch dog key
+  side_effects: null
+- id: SW_CPU_STALL
+  address_offset: 188
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SW_STALL_APPCPU_C1
+    bit_range:
+    - 25
+    - 20
+    description: '{reg_sw_stall_appcpu_c1[5:0],  reg_sw_stall_appcpu_c0[1:0]} == 0x86 will stall APP CPU'
+  - name: SW_STALL_PROCPU_C1
+    bit_range:
+    - 31
+    - 26
+    description: '{reg_sw_stall_appcpu_c1[5:0],  reg_sw_stall_appcpu_c0[1:0]} == 0x86 will stall APP CPU'
+  side_effects: null
+- id: STORE4
+  address_offset: 192
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SCRATCH4
+    bit_range:
+    - 31
+    - 0
+    description: reserved register
+  side_effects: null
+- id: STORE5
+  address_offset: 196
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SCRATCH5
+    bit_range:
+    - 31
+    - 0
+    description: reserved register
+  side_effects: null
+- id: STORE6
+  address_offset: 200
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SCRATCH6
+    bit_range:
+    - 31
+    - 0
+    description: reserved register
+  side_effects: null
+- id: STORE7
+  address_offset: 204
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SCRATCH7
+    bit_range:
+    - 31
+    - 0
+    description: reserved register
+  side_effects: null
+- id: LOW_POWER_ST
+  address_offset: 208
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XPD_ROM0
+    bit_range:
+    - 0
+    - 0
+    description: rom0 power down
+  - name: XPD_DIG_DCDC
+    bit_range:
+    - 2
+    - 2
+    description: External DCDC power down
+  - name: PERI_ISO
+    bit_range:
+    - 3
+    - 3
+    description: rtc peripheral iso
+  - name: XPD_RTC_PERI
+    bit_range:
+    - 4
+    - 4
+    description: rtc peripheral power down
+  - name: WIFI_ISO
+    bit_range:
+    - 5
+    - 5
+    description: wifi iso
+  - name: XPD_WIFI
+    bit_range:
+    - 6
+    - 6
+    description: wifi wrap power down
+  - name: DIG_ISO
+    bit_range:
+    - 7
+    - 7
+    description: digital wrap iso
+  - name: XPD_DIG
+    bit_range:
+    - 8
+    - 8
+    description: digital wrap power down
+  - name: TOUCH_STATE_START
+    bit_range:
+    - 9
+    - 9
+    description: touch should start to work
+  - name: TOUCH_STATE_SWITCH
+    bit_range:
+    - 10
+    - 10
+    description: touch is about to working. Switch rtc main state
+  - name: TOUCH_STATE_SLP
+    bit_range:
+    - 11
+    - 11
+    description: touch is in sleep state
+  - name: TOUCH_STATE_DONE
+    bit_range:
+    - 12
+    - 12
+    description: touch is done
+  - name: COCPU_STATE_START
+    bit_range:
+    - 13
+    - 13
+    description: ulp/cocpu should start to work
+  - name: COCPU_STATE_SWITCH
+    bit_range:
+    - 14
+    - 14
+    description: ulp/cocpu is about to working. Switch rtc main state
+  - name: COCPU_STATE_SLP
+    bit_range:
+    - 15
+    - 15
+    description: ulp/cocpu is in sleep state
+  - name: COCPU_STATE_DONE
+    bit_range:
+    - 16
+    - 16
+    description: ulp/cocpu is done
+  - name: MAIN_STATE_XTAL_ISO
+    bit_range:
+    - 17
+    - 17
+    description: no use any more
+  - name: MAIN_STATE_PLL_ON
+    bit_range:
+    - 18
+    - 18
+    description: rtc main state machine is in states that pll should be running
+  - name: RDY_FOR_WAKEUP
+    bit_range:
+    - 19
+    - 19
+    description: rtc is ready to receive wake up trigger from wake up source
+  - name: MAIN_STATE_WAIT_END
+    bit_range:
+    - 20
+    - 20
+    description: rtc main state machine has been waited for some cycles
+  - name: IN_WAKEUP_STATE
+    bit_range:
+    - 21
+    - 21
+    description: rtc main state machine is in the states of wakeup process
+  - name: IN_LOW_POWER_STATE
+    bit_range:
+    - 22
+    - 22
+    description: rtc main state machine is in the states of low power
+  - name: MAIN_STATE_IN_WAIT_8M
+    bit_range:
+    - 23
+    - 23
+    description: rtc main state machine is in wait 8m state
+  - name: MAIN_STATE_IN_WAIT_PLL
+    bit_range:
+    - 24
+    - 24
+    description: rtc main state machine is in wait pll state
+  - name: MAIN_STATE_IN_WAIT_XTL
+    bit_range:
+    - 25
+    - 25
+    description: rtc main state machine is in wait xtal state
+  - name: MAIN_STATE_IN_SLP
+    bit_range:
+    - 26
+    - 26
+    description: rtc main state machine is in sleep state
+  - name: MAIN_STATE_IN_IDLE
+    bit_range:
+    - 27
+    - 27
+    description: rtc main state machine is in idle state
+  - name: MAIN_STATE
+    bit_range:
+    - 31
+    - 28
+    description: rtc main state machine status
+  side_effects: null
+- id: DIAG0
+  address_offset: 212
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LOW_POWER_DIAG1
+    bit_range:
+    - 31
+    - 0
+    description: No public
+  side_effects: null
+- id: PAD_HOLD
+  address_offset: 216
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TOUCH_PAD0_HOLD
+    bit_range:
+    - 0
+    - 0
+    description: hold rtc pad0
+  - name: TOUCH_PAD1_HOLD
+    bit_range:
+    - 1
+    - 1
+    description: hold rtc pad-1
+  - name: TOUCH_PAD2_HOLD
+    bit_range:
+    - 2
+    - 2
+    description: hold rtc pad-2
+  - name: TOUCH_PAD3_HOLD
+    bit_range:
+    - 3
+    - 3
+    description: hold rtc pad-3
+  - name: TOUCH_PAD4_HOLD
+    bit_range:
+    - 4
+    - 4
+    description: hold rtc pad-4
+  - name: TOUCH_PAD5_HOLD
+    bit_range:
+    - 5
+    - 5
+    description: hold rtc pad-5
+  - name: TOUCH_PAD6_HOLD
+    bit_range:
+    - 6
+    - 6
+    description: hold rtc pad-6
+  - name: TOUCH_PAD7_HOLD
+    bit_range:
+    - 7
+    - 7
+    description: hold rtc pad-7
+  - name: TOUCH_PAD8_HOLD
+    bit_range:
+    - 8
+    - 8
+    description: hold rtc pad-8
+  - name: TOUCH_PAD9_HOLD
+    bit_range:
+    - 9
+    - 9
+    description: hold rtc pad-9
+  - name: TOUCH_PAD10_HOLD
+    bit_range:
+    - 10
+    - 10
+    description: hold rtc pad-10
+  - name: TOUCH_PAD11_HOLD
+    bit_range:
+    - 11
+    - 11
+    description: hold rtc pad-11
+  - name: TOUCH_PAD12_HOLD
+    bit_range:
+    - 12
+    - 12
+    description: hold rtc pad-12
+  - name: TOUCH_PAD13_HOLD
+    bit_range:
+    - 13
+    - 13
+    description: hold rtc pad-13
+  - name: TOUCH_PAD14_HOLD
+    bit_range:
+    - 14
+    - 14
+    description: hold rtc pad-14
+  - name: X32P_HOLD
+    bit_range:
+    - 15
+    - 15
+    description: hold rtc pad-15
+  - name: X32N_HOLD
+    bit_range:
+    - 16
+    - 16
+    description: hold rtc pad-16
+  - name: PDAC1_HOLD
+    bit_range:
+    - 17
+    - 17
+    description: hold rtc pad-17
+  - name: PDAC2_HOLD
+    bit_range:
+    - 18
+    - 18
+    description: hold rtc pad-18
+  - name: PAD19_HOLD
+    bit_range:
+    - 19
+    - 19
+    description: hold rtc pad-19
+  - name: PAD20_HOLD
+    bit_range:
+    - 20
+    - 20
+    description: hold rtc pad-20
+  - name: PAD21_HOLD
+    bit_range:
+    - 21
+    - 21
+    description: hold rtc pad-21
+  side_effects: null
+- id: DIG_PAD_HOLD
+  address_offset: 220
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DIG_PAD_HOLD
+    bit_range:
+    - 31
+    - 0
+    description: configure digtal pad hold
+  side_effects: null
+- id: EXT_WAKEUP1
+  address_offset: 224
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EXT_WAKEUP1_SEL
+    bit_range:
+    - 21
+    - 0
+    description: Bitmap to select RTC pads for ext wakeup1
+  - name: EXT_WAKEUP1_STATUS_CLR
+    bit_range:
+    - 22
+    - 22
+    description: clear ext wakeup1 status
+  side_effects: null
+- id: EXT_WAKEUP1_STATUS
+  address_offset: 228
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EXT_WAKEUP1_STATUS
+    bit_range:
+    - 21
+    - 0
+    description: ext wakeup1 status
+  side_effects: null
+- id: BROWN_OUT
+  address_offset: 232
+  size: 32
+  access: READ_WRITE
+  reset_value: 1140785168
+  fields:
+  - name: BROWN_OUT_INT_WAIT
+    bit_range:
+    - 13
+    - 4
+    description: brown out interrupt wait cycles
+  - name: BROWN_OUT_CLOSE_FLASH_ENA
+    bit_range:
+    - 14
+    - 14
+    description: enable close flash when brown out happens
+  - name: BROWN_OUT_PD_RF_ENA
+    bit_range:
+    - 15
+    - 15
+    description: enable power down RF when brown out happens
+  - name: BROWN_OUT_RST_WAIT
+    bit_range:
+    - 25
+    - 16
+    description: brown out reset wait cycles
+  - name: BROWN_OUT_RST_ENA
+    bit_range:
+    - 26
+    - 26
+    description: enable brown out reset
+  - name: BROWN_OUT_RST_SEL
+    bit_range:
+    - 27
+    - 27
+    description: '1:  4-pos reset,    0:  sys_reset'
+  - name: BROWN_OUT_ANA_RST_EN
+    bit_range:
+    - 28
+    - 28
+    description: enable brown out reset en
+  - name: BROWN_OUT_CNT_CLR
+    bit_range:
+    - 29
+    - 29
+    description: clear brown out counter
+  - name: BROWN_OUT_ENA
+    bit_range:
+    - 30
+    - 30
+    description: enable brown out
+  - name: DET
+    bit_range:
+    - 31
+    - 31
+    description: get brown out detect
+  side_effects: null
+- id: TIME_LOW1
+  address_offset: 236
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIMER_VALUE1_LOW
+    bit_range:
+    - 31
+    - 0
+    description: RTC timer low 32 bits
+  side_effects: null
+- id: TIME_HIGH1
+  address_offset: 240
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIMER_VALUE1_HIGH
+    bit_range:
+    - 15
+    - 0
+    description: RTC timer high 16 bits
+  side_effects: null
+- id: XTAL32K_CLK_FACTOR
+  address_offset: 244
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: XTAL32K_CLK_FACTOR
+    bit_range:
+    - 31
+    - 0
+    description: xtal 32k watch dog backup clock factor
+  side_effects: null
+- id: XTAL32K_CONF
+  address_offset: 248
+  size: 32
+  access: READ_WRITE
+  reset_value: 267386880
+  fields:
+  - name: XTAL32K_RETURN_WAIT
+    bit_range:
+    - 3
+    - 0
+    description: cycles to wait to return noral xtal 32k
+  - name: XTAL32K_RESTART_WAIT
+    bit_range:
+    - 19
+    - 4
+    description: cycles to wait to repower on xtal 32k
+  - name: XTAL32K_WDT_TIMEOUT
+    bit_range:
+    - 27
+    - 20
+    description: If no clock detected for this amount of time 32k is regarded as dead
+  - name: XTAL32K_STABLE_THRES
+    bit_range:
+    - 31
+    - 28
+    description: if restarted xtal32k period is smaller than this, it is regarded as stable
+  side_effects: null
+- id: ULP_CP_TIMER
+  address_offset: 252
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ULP_CP_PC_INIT
+    bit_range:
+    - 10
+    - 0
+    description: ULP-coprocessor PC initial address
+  - name: ULP_CP_GPIO_WAKEUP_ENA
+    bit_range:
+    - 29
+    - 29
+    description: ULP-coprocessor wakeup by GPIO enable
+  - name: ULP_CP_GPIO_WAKEUP_CLR
+    bit_range:
+    - 30
+    - 30
+    description: ULP-coprocessor wakeup by GPIO state clear
+  - name: ULP_CP_SLP_TIMER_EN
+    bit_range:
+    - 31
+    - 31
+    description: ULP-coprocessor timer enable bit
+  side_effects: null
+- id: ULP_CP_CTRL
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 1049088
+  fields:
+  - name: ULP_CP_MEM_ADDR_INIT
+    bit_range:
+    - 10
+    - 0
+    description: No public
+  - name: ULP_CP_MEM_ADDR_SIZE
+    bit_range:
+    - 21
+    - 11
+    description: No public
+  - name: ULP_CP_MEM_OFFST_CLR
+    bit_range:
+    - 22
+    - 22
+    description: No public
+  - name: ULP_CP_CLK_FO
+    bit_range:
+    - 28
+    - 28
+    description: ulp coprocessor clk force on
+  - name: ULP_CP_RESET
+    bit_range:
+    - 29
+    - 29
+    description: ulp coprocessor clk software reset
+  - name: ULP_CP_FORCE_START_TOP
+    bit_range:
+    - 30
+    - 30
+    description: '1: ULP-coprocessor is started by SW'
+  - name: ULP_CP_START_TOP
+    bit_range:
+    - 31
+    - 31
+    description: Write 1 to start ULP-coprocessor
+  side_effects: null
+- id: COCPU_CTRL
+  address_offset: 260
+  size: 32
+  access: READ_WRITE
+  reset_value: 9046032
+  fields:
+  - name: COCPU_CLK_FO
+    bit_range:
+    - 0
+    - 0
+    description: cocpu clk force on
+  - name: COCPU_START_2_RESET_DIS
+    bit_range:
+    - 6
+    - 1
+    description: time from start cocpu to pull down reset
+  - name: COCPU_START_2_INTR_EN
+    bit_range:
+    - 12
+    - 7
+    description: time from start cocpu to give start interrupt
+  - name: COCPU_SHUT
+    bit_range:
+    - 13
+    - 13
+    description: to shut cocpu
+  - name: COCPU_SHUT_2_CLK_DIS
+    bit_range:
+    - 21
+    - 14
+    description: time from shut cocpu to disable clk
+  - name: COCPU_SHUT_RESET_EN
+    bit_range:
+    - 22
+    - 22
+    description: to reset cocpu
+  - name: COCPU_SEL
+    bit_range:
+    - 23
+    - 23
+    description: '1: old ULP 0: new riscV'
+  - name: COCPU_DONE_FORCE
+    bit_range:
+    - 24
+    - 24
+    description: '1: select riscv done 0: select ulp done'
+  - name: COCPU_DONE
+    bit_range:
+    - 25
+    - 25
+    description: done signal used by riscv to control timer.
+  - name: COCPU_SW_INT_TRIGGER
+    bit_range:
+    - 26
+    - 26
+    description: trigger cocpu register interrupt
+  - name: COCPU_CLKGATE_EN
+    bit_range:
+    - 27
+    - 27
+    description: open ulp-riscv clk gate
+  side_effects: null
+- id: TOUCH_CTRL1
+  address_offset: 264
+  size: 32
+  access: READ_WRITE
+  reset_value: 268435712
+  fields:
+  - name: TOUCH_SLEEP_CYCLES
+    bit_range:
+    - 15
+    - 0
+    description: sleep cycles for timer
+  - name: TOUCH_MEAS_NUM
+    bit_range:
+    - 31
+    - 16
+    description: the meas length (in 8MHz)
+  side_effects: null
+- id: TOUCH_CTRL2
+  address_offset: 268
+  size: 32
+  access: READ_WRITE
+  reset_value: 540876
+  fields:
+  - name: TOUCH_DRANGE
+    bit_range:
+    - 3
+    - 2
+    description: TOUCH_DRANGE
+  - name: TOUCH_DREFL
+    bit_range:
+    - 5
+    - 4
+    description: TOUCH_DREFL
+  - name: TOUCH_DREFH
+    bit_range:
+    - 7
+    - 6
+    description: TOUCH_DREFH
+  - name: TOUCH_XPD_BIAS
+    bit_range:
+    - 8
+    - 8
+    description: TOUCH_XPD_BIAS
+  - name: TOUCH_REFC
+    bit_range:
+    - 11
+    - 9
+    description: TOUCH pad0 reference cap
+  - name: TOUCH_DBIAS
+    bit_range:
+    - 12
+    - 12
+    description: 1:use self bias 0:use bandgap bias
+  - name: TOUCH_SLP_TIMER_EN
+    bit_range:
+    - 13
+    - 13
+    description: touch timer enable bit
+  - name: TOUCH_START_FSM_EN
+    bit_range:
+    - 14
+    - 14
+    description: '1: TOUCH_START & TOUCH_XPD is controlled by touch fsm'
+  - name: TOUCH_START_EN
+    bit_range:
+    - 15
+    - 15
+    description: '1: start touch fsm'
+  - name: TOUCH_START_FORCE
+    bit_range:
+    - 16
+    - 16
+    description: '1: to start touch fsm by SW'
+  - name: TOUCH_XPD_WAIT
+    bit_range:
+    - 24
+    - 17
+    description: the waiting cycles (in 8MHz) between TOUCH_START and TOUCH_XPD
+  - name: TOUCH_SLP_CYC_DIV
+    bit_range:
+    - 26
+    - 25
+    description: when a touch pad is active sleep cycle could be divided by this number
+  - name: TOUCH_TIMER_FORCE_DONE
+    bit_range:
+    - 28
+    - 27
+    description: force touch timer done
+  - name: TOUCH_RESET
+    bit_range:
+    - 29
+    - 29
+    description: reset upgrade touch
+  - name: TOUCH_CLK_FO
+    bit_range:
+    - 30
+    - 30
+    description: touch clock force on
+  - name: TOUCH_CLKGATE_EN
+    bit_range:
+    - 31
+    - 31
+    description: touch clock enable
+  side_effects: null
+- id: TOUCH_SCAN_CTRL
+  address_offset: 272
+  size: 32
+  access: READ_WRITE
+  reset_value: 4026532098
+  fields:
+  - name: TOUCH_DENOISE_RES
+    bit_range:
+    - 1
+    - 0
+    description: 'De-noise resolution: 12/10/8/4 bit'
+  - name: TOUCH_DENOISE_EN
+    bit_range:
+    - 2
+    - 2
+    description: touch pad0 will be used to de-noise
+  - name: TOUCH_INACTIVE_CONNECTION
+    bit_range:
+    - 8
+    - 8
+    description: 'inactive touch pads connect to 1: gnd 0: HighZ'
+  - name: TOUCH_SHIELD_PAD_EN
+    bit_range:
+    - 9
+    - 9
+    description: touch pad14 will be used as shield
+  - name: TOUCH_SCAN_PAD_MAP
+    bit_range:
+    - 24
+    - 10
+    description: touch scan mode pad enable map
+  - name: TOUCH_BUFDRV
+    bit_range:
+    - 27
+    - 25
+    description: touch7 buffer driver strength
+  - name: TOUCH_OUT_RING
+    bit_range:
+    - 31
+    - 28
+    description: select out ring pad
+  side_effects: null
+- id: TOUCH_SLP_THRES
+  address_offset: 276
+  size: 32
+  access: READ_WRITE
+  reset_value: 2013265920
+  fields:
+  - name: TOUCH_SLP_TH
+    bit_range:
+    - 21
+    - 0
+    description: the threshold for sleep touch pad
+  - name: TOUCH_SLP_APPROACH_EN
+    bit_range:
+    - 26
+    - 26
+    description: sleep pad approach function enable
+  - name: TOUCH_SLP_PAD
+    bit_range:
+    - 31
+    - 27
+    description: configure which pad as slp pad
+  side_effects: null
+- id: TOUCH_APPROACH
+  address_offset: 280
+  size: 32
+  access: READ_WRITE
+  reset_value: 1342177280
+  fields:
+  - name: TOUCH_SLP_CHANNEL_CLR
+    bit_range:
+    - 23
+    - 23
+    description: clear touch slp channel
+  - name: TOUCH_APPROACH_MEAS_TIME
+    bit_range:
+    - 31
+    - 24
+    description: approach pads total meas times
+  side_effects: null
+- id: TOUCH_FILTER_CTRL
+  address_offset: 284
+  size: 32
+  access: READ_WRITE
+  reset_value: 2527758336
+  fields:
+  - name: TOUCH_BYPASS_NEG_NOISE_THRES
+    bit_range:
+    - 7
+    - 7
+    description: bypass neg noise thres
+  - name: TOUCH_BYPASS_NOISE_THRES
+    bit_range:
+    - 8
+    - 8
+    description: bypaas noise thres
+  - name: TOUCH_SMOOTH_LVL
+    bit_range:
+    - 10
+    - 9
+    description: smooth filter factor
+  - name: TOUCH_JITTER_STEP
+    bit_range:
+    - 14
+    - 11
+    description: touch jitter step
+  - name: TOUCH_NEG_NOISE_LIMIT
+    bit_range:
+    - 18
+    - 15
+    description: negative threshold counter limit
+  - name: TOUCH_NEG_NOISE_THRES
+    bit_range:
+    - 20
+    - 19
+    description: neg noise thres
+  - name: TOUCH_NOISE_THRES
+    bit_range:
+    - 22
+    - 21
+    description: noise thres
+  - name: TOUCH_HYSTERESIS
+    bit_range:
+    - 24
+    - 23
+    description: hysteresis
+  - name: TOUCH_DEBOUNCE
+    bit_range:
+    - 27
+    - 25
+    description: debounce counter
+  - name: TOUCH_FILTER_MODE
+    bit_range:
+    - 30
+    - 28
+    description: '0: IIR ? 1: IIR ? 2: IIR 1/8 3: Jitter'
+  - name: TOUCH_FILTER_EN
+    bit_range:
+    - 31
+    - 31
+    description: touch filter enable
+  side_effects: null
+- id: USB_CONF
+  address_offset: 288
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: USB_VREFH
+    bit_range:
+    - 1
+    - 0
+    description: reg_usb_vrefh
+  - name: USB_VREFL
+    bit_range:
+    - 3
+    - 2
+    description: reg_usb_vrefl
+  - name: USB_VREF_OVERRIDE
+    bit_range:
+    - 4
+    - 4
+    description: reg_usb_vref_override
+  - name: USB_PAD_PULL_OVERRIDE
+    bit_range:
+    - 5
+    - 5
+    description: reg_usb_pad_pull_override
+  - name: USB_DP_PULLUP
+    bit_range:
+    - 6
+    - 6
+    description: reg_usb_dp_pullup
+  - name: USB_DP_PULLDOWN
+    bit_range:
+    - 7
+    - 7
+    description: reg_usb_dp_pulldown
+  - name: USB_DM_PULLUP
+    bit_range:
+    - 8
+    - 8
+    description: reg_usb_dm_pullup
+  - name: USB_DM_PULLDOWN
+    bit_range:
+    - 9
+    - 9
+    description: reg_usb_dm_pulldown
+  - name: USB_PULLUP_VALUE
+    bit_range:
+    - 10
+    - 10
+    description: reg_usb_pullup_value
+  - name: USB_PAD_ENABLE_OVERRIDE
+    bit_range:
+    - 11
+    - 11
+    description: reg_usb_pad_enable_override
+  - name: USB_PAD_ENABLE
+    bit_range:
+    - 12
+    - 12
+    description: reg_usb_pad_enable
+  - name: USB_TXM
+    bit_range:
+    - 13
+    - 13
+    description: reg_usb_txm
+  - name: USB_TXP
+    bit_range:
+    - 14
+    - 14
+    description: reg_usb_txp
+  - name: USB_TX_EN
+    bit_range:
+    - 15
+    - 15
+    description: reg_usb_tx_en
+  - name: USB_TX_EN_OVERRIDE
+    bit_range:
+    - 16
+    - 16
+    description: reg_usb_tx_en_override
+  - name: USB_RESET_DISABLE
+    bit_range:
+    - 17
+    - 17
+    description: reg_usb_reset_disable
+  - name: IO_MUX_RESET_DISABLE
+    bit_range:
+    - 18
+    - 18
+    description: reg_io_mux_reset_disable
+  - name: SW_USB_PHY_SEL
+    bit_range:
+    - 19
+    - 19
+    description: reg_sw_usb_phy_sel
+  - name: SW_HW_USB_PHY_SEL
+    bit_range:
+    - 20
+    - 20
+    description: reg_sw_hw_usb_phy_sel
+  side_effects: null
+- id: TOUCH_TIMEOUT_CTRL
+  address_offset: 292
+  size: 32
+  access: READ_WRITE
+  reset_value: 8388607
+  fields:
+  - name: TOUCH_TIMEOUT_NUM
+    bit_range:
+    - 21
+    - 0
+    description: configure touch timerout time
+  - name: TOUCH_TIMEOUT_EN
+    bit_range:
+    - 22
+    - 22
+    description: enable touch timerout
+  side_effects: null
+- id: SLP_REJECT_CAUSE
+  address_offset: 296
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: REJECT_CAUSE
+    bit_range:
+    - 17
+    - 0
+    description: sleep reject cause
+  side_effects: null
+- id: OPTION1
+  address_offset: 300
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FORCE_DOWNLOAD_BOOT
+    bit_range:
+    - 0
+    - 0
+    description: force chip entry download boot by sw
+  side_effects: null
+- id: SLP_WAKEUP_CAUSE
+  address_offset: 304
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WAKEUP_CAUSE
+    bit_range:
+    - 16
+    - 0
+    description: sleep wakeup cause
+  side_effects: null
+- id: ULP_CP_TIMER_1
+  address_offset: 308
+  size: 32
+  access: READ_WRITE
+  reset_value: 51200
+  fields:
+  - name: ULP_CP_TIMER_SLP_CYCLE
+    bit_range:
+    - 31
+    - 8
+    description: sleep cycles for ULP-coprocessor timer
+  side_effects: null
+- id: INT_ENA_RTC_W1TS
+  address_offset: 312
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SLP_WAKEUP_INT_ENA_W1TS
+    bit_range:
+    - 0
+    - 0
+    description: enable sleep wakeup interrupt
+  - name: SLP_REJECT_INT_ENA_W1TS
+    bit_range:
+    - 1
+    - 1
+    description: enable sleep reject interrupt
+  - name: SDIO_IDLE_INT_ENA_W1TS
+    bit_range:
+    - 2
+    - 2
+    description: enable SDIO idle interrupt
+  - name: WDT_INT_ENA_W1TS
+    bit_range:
+    - 3
+    - 3
+    description: enable RTC WDT interrupt
+  - name: TOUCH_SCAN_DONE_INT_ENA_W1TS
+    bit_range:
+    - 4
+    - 4
+    description: enable touch scan done interrupt
+  - name: ULP_CP_INT_ENA_W1TS
+    bit_range:
+    - 5
+    - 5
+    description: enable ULP-coprocessor interrupt
+  - name: TOUCH_DONE_INT_ENA_W1TS
+    bit_range:
+    - 6
+    - 6
+    description: enable touch done interrupt
+  - name: TOUCH_ACTIVE_INT_ENA_W1TS
+    bit_range:
+    - 7
+    - 7
+    description: enable touch active interrupt
+  - name: TOUCH_INACTIVE_INT_ENA_W1TS
+    bit_range:
+    - 8
+    - 8
+    description: enable touch inactive interrupt
+  - name: BROWN_OUT_INT_ENA_W1TS
+    bit_range:
+    - 9
+    - 9
+    description: enable brown out interrupt
+  - name: MAIN_TIMER_INT_ENA_W1TS
+    bit_range:
+    - 10
+    - 10
+    description: enable RTC main timer interrupt
+  - name: SARADC1_INT_ENA_W1TS
+    bit_range:
+    - 11
+    - 11
+    description: enable saradc1 interrupt
+  - name: TSENS_INT_ENA_W1TS
+    bit_range:
+    - 12
+    - 12
+    description: enable tsens interrupt
+  - name: COCPU_INT_ENA_W1TS
+    bit_range:
+    - 13
+    - 13
+    description: enable riscV cocpu interrupt
+  - name: SARADC2_INT_ENA_W1TS
+    bit_range:
+    - 14
+    - 14
+    description: enable saradc2 interrupt
+  - name: SWD_INT_ENA_W1TS
+    bit_range:
+    - 15
+    - 15
+    description: enable super watch dog interrupt
+  - name: XTAL32K_DEAD_INT_ENA_W1TS
+    bit_range:
+    - 16
+    - 16
+    description: enable xtal32k_dead  interrupt
+  - name: COCPU_TRAP_INT_ENA_W1TS
+    bit_range:
+    - 17
+    - 17
+    description: enable cocpu trap interrupt
+  - name: TOUCH_TIMEOUT_INT_ENA_W1TS
+    bit_range:
+    - 18
+    - 18
+    description: enable touch timeout interrupt
+  - name: GLITCH_DET_INT_ENA_W1TS
+    bit_range:
+    - 19
+    - 19
+    description: enbale gitch det interrupt
+  - name: TOUCH_APPROACH_LOOP_DONE_INT_ENA_W1TS
+    bit_range:
+    - 20
+    - 20
+    description: enbale touch approach_loop done interrupt
+  side_effects: null
+- id: INT_ENA_RTC_W1TC
+  address_offset: 316
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SLP_WAKEUP_INT_ENA_W1TC
+    bit_range:
+    - 0
+    - 0
+    description: enable sleep wakeup interrupt
+  - name: SLP_REJECT_INT_ENA_W1TC
+    bit_range:
+    - 1
+    - 1
+    description: enable sleep reject interrupt
+  - name: SDIO_IDLE_INT_ENA_W1TC
+    bit_range:
+    - 2
+    - 2
+    description: enable SDIO idle interrupt
+  - name: WDT_INT_ENA_W1TC
+    bit_range:
+    - 3
+    - 3
+    description: enable RTC WDT interrupt
+  - name: TOUCH_SCAN_DONE_INT_ENA_W1TC
+    bit_range:
+    - 4
+    - 4
+    description: enable touch scan done interrupt
+  - name: ULP_CP_INT_ENA_W1TC
+    bit_range:
+    - 5
+    - 5
+    description: enable ULP-coprocessor interrupt
+  - name: TOUCH_DONE_INT_ENA_W1TC
+    bit_range:
+    - 6
+    - 6
+    description: enable touch done interrupt
+  - name: TOUCH_ACTIVE_INT_ENA_W1TC
+    bit_range:
+    - 7
+    - 7
+    description: enable touch active interrupt
+  - name: TOUCH_INACTIVE_INT_ENA_W1TC
+    bit_range:
+    - 8
+    - 8
+    description: enable touch inactive interrupt
+  - name: BROWN_OUT_INT_ENA_W1TC
+    bit_range:
+    - 9
+    - 9
+    description: enable brown out interrupt
+  - name: MAIN_TIMER_INT_ENA_W1TC
+    bit_range:
+    - 10
+    - 10
+    description: enable RTC main timer interrupt
+  - name: SARADC1_INT_ENA_W1TC
+    bit_range:
+    - 11
+    - 11
+    description: enable saradc1 interrupt
+  - name: TSENS_INT_ENA_W1TC
+    bit_range:
+    - 12
+    - 12
+    description: enable tsens interrupt
+  - name: COCPU_INT_ENA_W1TC
+    bit_range:
+    - 13
+    - 13
+    description: enable riscV cocpu interrupt
+  - name: SARADC2_INT_ENA_W1TC
+    bit_range:
+    - 14
+    - 14
+    description: enable saradc2 interrupt
+  - name: SWD_INT_ENA_W1TC
+    bit_range:
+    - 15
+    - 15
+    description: enable super watch dog interrupt
+  - name: XTAL32K_DEAD_INT_ENA_W1TC
+    bit_range:
+    - 16
+    - 16
+    description: enable xtal32k_dead  interrupt
+  - name: COCPU_TRAP_INT_ENA_W1TC
+    bit_range:
+    - 17
+    - 17
+    description: enable cocpu trap interrupt
+  - name: TOUCH_TIMEOUT_INT_ENA_W1TC
+    bit_range:
+    - 18
+    - 18
+    description: enable touch timeout interrupt
+  - name: GLITCH_DET_INT_ENA_W1TC
+    bit_range:
+    - 19
+    - 19
+    description: enbale gitch det interrupt
+  - name: TOUCH_APPROACH_LOOP_DONE_INT_ENA_W1TC
+    bit_range:
+    - 20
+    - 20
+    description: enbale touch approach_loop done interrupt
+  side_effects: null
+- id: RETENTION_CTRL
+  address_offset: 320
+  size: 32
+  access: READ_WRITE
+  reset_value: 674496512
+  fields:
+  - name: RETENTION_TAG_MODE
+    bit_range:
+    - 13
+    - 10
+    description: No public
+  - name: RETENTION_TARGET
+    bit_range:
+    - 15
+    - 14
+    description: congfigure retention target cpu and/or tag
+  - name: RETENTION_CLK_SEL
+    bit_range:
+    - 16
+    - 16
+    description: No public
+  - name: RETENTION_DONE_WAIT
+    bit_range:
+    - 19
+    - 17
+    description: wait retention done cycle
+  - name: RETENTION_CLKOFF_WAIT
+    bit_range:
+    - 23
+    - 20
+    description: wait clk off cycle
+  - name: RETENTION_EN
+    bit_range:
+    - 24
+    - 24
+    description: enable retention
+  - name: RETENTION_WAIT
+    bit_range:
+    - 31
+    - 25
+    description: wait cycles for rention operation
+  side_effects: null
+- id: PG_CTRL
+  address_offset: 324
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: POWER_GLITCH_DSENSE
+    bit_range:
+    - 27
+    - 26
+    description: GLITCH_DSENSE
+  - name: POWER_GLITCH_FORCE_PD
+    bit_range:
+    - 28
+    - 28
+    description: force power glitch disable
+  - name: POWER_GLITCH_FORCE_PU
+    bit_range:
+    - 29
+    - 29
+    description: force power glitch enable
+  - name: POWER_GLITCH_EFUSE_SEL
+    bit_range:
+    - 30
+    - 30
+    description: select use analog fib signal
+  - name: POWER_GLITCH_EN
+    bit_range:
+    - 31
+    - 31
+    description: enable power glitch
+  side_effects: null
+- id: FIB_SEL
+  address_offset: 328
+  size: 32
+  access: READ_WRITE
+  reset_value: 7
+  fields:
+  - name: FIB_SEL
+    bit_range:
+    - 2
+    - 0
+    description: No public
+  side_effects: null
+- id: TOUCH_DAC
+  address_offset: 332
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TOUCH_PAD9_DAC
+    bit_range:
+    - 4
+    - 2
+    description: configure touch pad dac9
+  - name: TOUCH_PAD8_DAC
+    bit_range:
+    - 7
+    - 5
+    description: configure touch pad dac8
+  - name: TOUCH_PAD7_DAC
+    bit_range:
+    - 10
+    - 8
+    description: configure touch pad dac7
+  - name: TOUCH_PAD6_DAC
+    bit_range:
+    - 13
+    - 11
+    description: configure touch pad dac6
+  - name: TOUCH_PAD5_DAC
+    bit_range:
+    - 16
+    - 14
+    description: configure touch pad dac5
+  - name: TOUCH_PAD4_DAC
+    bit_range:
+    - 19
+    - 17
+    description: configure touch pad dac4
+  - name: TOUCH_PAD3_DAC
+    bit_range:
+    - 22
+    - 20
+    description: configure touch pad dac3
+  - name: TOUCH_PAD2_DAC
+    bit_range:
+    - 25
+    - 23
+    description: configure touch pad dac2
+  - name: TOUCH_PAD1_DAC
+    bit_range:
+    - 28
+    - 26
+    description: configure touch pad dac1
+  - name: TOUCH_PAD0_DAC
+    bit_range:
+    - 31
+    - 29
+    description: configure touch pad dac0
+  side_effects: null
+- id: TOUCH_DAC1
+  address_offset: 336
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TOUCH_PAD14_DAC
+    bit_range:
+    - 19
+    - 17
+    description: configure touch pad dac14
+  - name: TOUCH_PAD13_DAC
+    bit_range:
+    - 22
+    - 20
+    description: configure touch pad dac13
+  - name: TOUCH_PAD12_DAC
+    bit_range:
+    - 25
+    - 23
+    description: configure touch pad dac12
+  - name: TOUCH_PAD11_DAC
+    bit_range:
+    - 28
+    - 26
+    description: configure touch pad dac11
+  - name: TOUCH_PAD10_DAC
+    bit_range:
+    - 31
+    - 29
+    description: configure touch pad dac10
+  side_effects: null
+- id: COCPU_DISABLE
+  address_offset: 340
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DISABLE_RTC_CPU
+    bit_range:
+    - 31
+    - 31
+    description: configure ulp diable
+  side_effects: null
+- id: DATE
+  address_offset: 508
+  size: 32
+  access: READ_WRITE
+  reset_value: 34607729
+  fields:
+  - name: DATE
+    bit_range:
+    - 27
+    - 0
+    description: version register
+  side_effects: null
+interrupts:
+  RTC_CORE: 39
+timing: null

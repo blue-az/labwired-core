@@ -1,0 +1,1747 @@
+peripheral: GLOBAL_CRACENCORE_S
+version: 0.1.0
+registers:
+- id: CRYPTMSTRDMA_FETCHADDRLSB
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FETCHADDRLSB
+    bit_range:
+    - 31
+    - 0
+    description: Address
+  side_effects: null
+- id: CRYPTMSTRDMA_FETCHADDRMSB
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FETCHADDRMSB
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: CRYPTMSTRDMA_FETCHLEN
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FETCHLEN
+    bit_range:
+    - 27
+    - 0
+    description: Length of data block
+  - name: FETCHCSTADDR
+    bit_range:
+    - 28
+    - 28
+    description: Constant address
+  - name: FETCHREALIGN
+    bit_range:
+    - 29
+    - 29
+    description: Realign length
+  side_effects: null
+- id: CRYPTMSTRDMA_FETCHTAG
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FETCHTAG
+    bit_range:
+    - 31
+    - 0
+    description: User tag
+  side_effects: null
+- id: CRYPTMSTRDMA_PUSHADDRLSB
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PUSHADDRLSB
+    bit_range:
+    - 31
+    - 0
+    description: Address
+  side_effects: null
+- id: CRYPTMSTRDMA_PUSHADDRMSB
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PUSHADDRMSB
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: CRYPTMSTRDMA_PUSHLEN
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PUSHLEN
+    bit_range:
+    - 27
+    - 0
+    description: Length of data block
+  - name: PUSHCSTADDR
+    bit_range:
+    - 28
+    - 28
+    description: Constant address
+  - name: PUSHREALIGN
+    bit_range:
+    - 29
+    - 29
+    description: Realign length
+  - name: PUSHDISCARD
+    bit_range:
+    - 30
+    - 30
+    description: Discard data
+  side_effects: null
+- id: CRYPTMSTRDMA_INTEN
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FETCHERBLOCKEND
+    bit_range:
+    - 0
+    - 0
+    description: Fetcher DMA reached the end of a block (if enabled in the descriptor; scatter-gather only)
+  - name: FETCHERSTOPPED
+    bit_range:
+    - 1
+    - 1
+    description: Fetcher DMA reached the end of a block with Stop=1, or end of direct transfer
+  - name: FETCHERERROR
+    bit_range:
+    - 2
+    - 2
+    description: Bus error during fetcher DMA access
+  - name: PUSHERBLOCKEND
+    bit_range:
+    - 3
+    - 3
+    description: Pusher DMA reached the end of a block (if enabled in the descriptor; scatter-gather only)
+  - name: PUSHERSTOPPED
+    bit_range:
+    - 4
+    - 4
+    description: Pusher DMA reached the end of a block with Stop=1, or end of direct transfer
+  - name: PUSHERERROR
+    bit_range:
+    - 5
+    - 5
+    description: Bus error during pusher DMA access
+  side_effects: null
+- id: CRYPTMSTRDMA_INTENSET
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FETCHERBLOCKEND
+    bit_range:
+    - 0
+    - 0
+    description: Fetcher DMA reached the end of a block (if enabled in the descriptor; scatter-gather only)
+  - name: FETCHERSTOPPED
+    bit_range:
+    - 1
+    - 1
+    description: Fetcher DMA reached the end of a block with Stop=1, or end of direct transfer
+  - name: FETCHERERROR
+    bit_range:
+    - 2
+    - 2
+    description: Bus error during fetcher DMA access
+  - name: PUSHERBLOCKEND
+    bit_range:
+    - 3
+    - 3
+    description: Pusher DMA reached the end of a block (if enabled in the descriptor; scatter-gather only)
+  - name: PUSHERSTOPPED
+    bit_range:
+    - 4
+    - 4
+    description: Pusher DMA reached the end of a block with Stop=1, or end of direct transfer
+  - name: PUSHERERROR
+    bit_range:
+    - 5
+    - 5
+    description: Bus error during pusher DMA access
+  side_effects: null
+- id: CRYPTMSTRDMA_INTENCLR
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FETCHERBLOCKEND
+    bit_range:
+    - 0
+    - 0
+    description: Fetcher DMA reached the end of a block (if enabled in the descriptor; scatter-gather only)
+  - name: FETCHERSTOPPED
+    bit_range:
+    - 1
+    - 1
+    description: Fetcher DMA reached the end of a block with Stop=1, or end of direct transfer
+  - name: FETCHERERROR
+    bit_range:
+    - 2
+    - 2
+    description: Bus error during fetcher DMA access
+  - name: PUSHERBLOCKEND
+    bit_range:
+    - 3
+    - 3
+    description: Pusher DMA reached the end of a block (if enabled in the descriptor; scatter-gather only)
+  - name: PUSHERSTOPPED
+    bit_range:
+    - 4
+    - 4
+    description: Pusher DMA reached the end of a block with Stop=1, or end of direct transfer
+  - name: PUSHERERROR
+    bit_range:
+    - 5
+    - 5
+    description: Bus error during pusher DMA access
+  side_effects: null
+- id: CRYPTMSTRDMA_INTSTATRAW
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FETCHERBLOCKEND
+    bit_range:
+    - 0
+    - 0
+    description: Fetcher DMA reached the end of a block (if enabled in the descriptor; scatter-gather only)
+  - name: FETCHERSTOPPED
+    bit_range:
+    - 1
+    - 1
+    description: Fetcher DMA reached the end of a block with Stop=1, or end of direct transfer
+  - name: FETCHERERROR
+    bit_range:
+    - 2
+    - 2
+    description: Bus error during fetcher DMA access
+  - name: PUSHERBLOCKEND
+    bit_range:
+    - 3
+    - 3
+    description: Pusher DMA reached the end of a block (if enabled in the descriptor; scatter-gather only)
+  - name: PUSHERSTOPPED
+    bit_range:
+    - 4
+    - 4
+    description: Pusher DMA reached the end of a block with Stop=1, or end of direct transfer
+  - name: PUSHERERROR
+    bit_range:
+    - 5
+    - 5
+    description: Bus error during pusher DMA access
+  side_effects: null
+- id: CRYPTMSTRDMA_INTSTAT
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FETCHERBLOCKEND
+    bit_range:
+    - 0
+    - 0
+    description: Fetcher DMA reached the end of a block (if enabled in the descriptor; scatter-gather only)
+  - name: FETCHERSTOPPED
+    bit_range:
+    - 1
+    - 1
+    description: Fetcher DMA reached the end of a block with Stop=1, or end of direct transfer
+  - name: FETCHERERROR
+    bit_range:
+    - 2
+    - 2
+    description: Bus error during fetcher DMA access
+  - name: PUSHERBLOCKEND
+    bit_range:
+    - 3
+    - 3
+    description: Pusher DMA reached the end of a block (if enabled in the descriptor; scatter-gather only)
+  - name: PUSHERSTOPPED
+    bit_range:
+    - 4
+    - 4
+    description: Pusher DMA reached the end of a block with Stop=1, or end of direct transfer
+  - name: PUSHERERROR
+    bit_range:
+    - 5
+    - 5
+    description: Bus error during pusher DMA access
+  side_effects: null
+- id: CRYPTMSTRDMA_INTSTATCLR
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FETCHERBLOCKEND
+    bit_range:
+    - 0
+    - 0
+    description: Fetcher DMA reached the end of a block (if enabled in the descriptor; scatter-gather only)
+  - name: FETCHERSTOPPED
+    bit_range:
+    - 1
+    - 1
+    description: Fetcher DMA reached the end of a block with Stop=1, or end of direct transfer
+  - name: FETCHERERROR
+    bit_range:
+    - 2
+    - 2
+    description: Bus error during fetcher DMA access
+  - name: PUSHERBLOCKEND
+    bit_range:
+    - 3
+    - 3
+    description: Pusher DMA reached the end of a block (if enabled in the descriptor; scatter-gather only)
+  - name: PUSHERSTOPPED
+    bit_range:
+    - 4
+    - 4
+    description: Pusher DMA reached the end of a block with Stop=1, or end of direct transfer
+  - name: PUSHERERROR
+    bit_range:
+    - 5
+    - 5
+    description: Bus error during pusher DMA access
+  side_effects: null
+- id: CRYPTMSTRDMA_CONFIG
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FETCHCTRLINDIRECT
+    bit_range:
+    - 0
+    - 0
+    description: Fetcher scatter/gather.
+  - name: PUSHCTRLINDIRECT
+    bit_range:
+    - 1
+    - 1
+    description: Pusher scatter/gather.
+  - name: FETCHSTOP
+    bit_range:
+    - 2
+    - 2
+    description: Stop fetcher.
+  - name: PUSHSTOP
+    bit_range:
+    - 3
+    - 3
+    description: Stop pusher DMA.
+  - name: SOFTRST
+    bit_range:
+    - 4
+    - 4
+    description: Soft reset the cryptomaster.
+  side_effects: null
+- id: CRYPTMSTRDMA_START
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STARTFETCH
+    bit_range:
+    - 0
+    - 0
+    description: Writing a '1' starts the fetcher DMA. Writing a '0' has no effect.
+  - name: STARTPUSH
+    bit_range:
+    - 1
+    - 1
+    description: Writing a '1' starts the pusher DMA. Writing a '0' has no effect.
+  side_effects: null
+- id: CRYPTMSTRDMA_STATUS
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FETCHBUSY
+    bit_range:
+    - 0
+    - 0
+    description: This bit is high as long as the fetcher DMA is busy.
+  - name: PUSHBUSY
+    bit_range:
+    - 1
+    - 1
+    description: This bit is high as long as the pusher DMA is busy.
+  - name: FETCHNOTEMPTY
+    bit_range:
+    - 4
+    - 4
+    description: Not empty flag for fetcher DMA input FIFO
+  - name: PUSHWAITINGFIFO
+    bit_range:
+    - 5
+    - 5
+    description: Pusher DMA Waiting FIFO. This bit is high when the pusher is waiting for more data in output FIFO.
+  - name: SOFTRSTBUSY
+    bit_range:
+    - 6
+    - 6
+    description: This bit is high when the soft reset is on going
+  - name: PUSHNBDATA
+    bit_range:
+    - 31
+    - 16
+    description: Amount of data in the pusher DMA output FIFO
+  side_effects: null
+- id: CRYPTMSTRHW_INCLIPSHWCFG
+  address_offset: 1024
+  size: 32
+  access: READ_WRITE
+  reset_value: 1905
+  fields:
+  - name: BA411AESINCLUDED
+    bit_range:
+    - 0
+    - 0
+    description: Generic g_IncludeAES value.
+  - name: BA415HPAESGCMINCLUDED
+    bit_range:
+    - 1
+    - 1
+    description: Generic g_IncludeAESGCM value.
+  - name: BA416HPAESXTSINCLUDED
+    bit_range:
+    - 2
+    - 2
+    description: Generic g_IncludeAESXTS value.
+  - name: BA412DESINCLUDED
+    bit_range:
+    - 3
+    - 3
+    description: Generic g_IncludeDES value.
+  - name: BA413HASHINCLUDED
+    bit_range:
+    - 4
+    - 4
+    description: Generic g_IncludeHASH value.
+  - name: BA417CHACHAPOLYINCLUDED
+    bit_range:
+    - 5
+    - 5
+    description: Generic g_IncludeChachaPoly value.
+  - name: BA418SHA3INCLUDED
+    bit_range:
+    - 6
+    - 6
+    description: Generic g_IncludeSHA3  value.
+  - name: BA421ZUCINCLUDED
+    bit_range:
+    - 7
+    - 7
+    description: Generic g_IncludeZUC  value.
+  - name: BA419SM4INCLUDED
+    bit_range:
+    - 8
+    - 8
+    description: Generic g_IncludeSM4  value.
+  - name: BA414EPPKEINCLUDED
+    bit_range:
+    - 9
+    - 9
+    description: Generic g_IncludePKE  value.
+  - name: BA431NDRNGINCLUDED
+    bit_range:
+    - 10
+    - 10
+    description: Generic g_IncludeNDRNG  value.
+  - name: BA420HPCHACHAPOLYINCLUDED
+    bit_range:
+    - 11
+    - 11
+    description: Generic g_IncludeHPChachaPoly  value.
+  - name: BA423SNOW3GINCLUDED
+    bit_range:
+    - 12
+    - 12
+    description: Generic g_IncludeSnow3G  value.
+  - name: BA422KASUMIINCLUDED
+    bit_range:
+    - 13
+    - 13
+    description: Generic g_IncludeKasumi  value.
+  side_effects: null
+- id: CRYPTMSTRHW_BA411EAESHWCFG1
+  address_offset: 1028
+  size: 32
+  access: READ_WRITE
+  reset_value: 117637631
+  fields:
+  - name: BA411EAESHWCFGMODE
+    bit_range:
+    - 8
+    - 0
+    description: Generic g_AesModesPoss value.
+  - name: BA411EAESHWCFGCS
+    bit_range:
+    - 16
+    - 16
+    description: Generic g_CS value.
+  - name: BA411EAESHWCFGMASKING
+    bit_range:
+    - 17
+    - 17
+    description: Generic g_UseMasking value.
+  - name: BA411EAESHWCFGKEYSIZE
+    bit_range:
+    - 26
+    - 24
+    description: Generic g_Keysize value.
+  side_effects: null
+- id: CRYPTMSTRHW_BA411EAESHWCFG2
+  address_offset: 1032
+  size: 32
+  access: READ_WRITE
+  reset_value: 128
+  fields:
+  - name: BA411EAESHWCFG2
+    bit_range:
+    - 15
+    - 0
+    description: Generic g_CtrSize value.
+  side_effects: null
+- id: CRYPTMSTRHW_BA413HASHHWCFG
+  address_offset: 1036
+  size: 32
+  access: READ_WRITE
+  reset_value: 196671
+  fields:
+  - name: BA413HASHHWCFGMASK
+    bit_range:
+    - 6
+    - 0
+    description: Generic g_HashMaskFunc value.
+  - name: BA413HASHHWCFGPADDING
+    bit_range:
+    - 16
+    - 16
+    description: Generic g_HashPadding value.
+  - name: BA413HASHHWCFGHMAC
+    bit_range:
+    - 17
+    - 17
+    description: Generic g_HMAC_enabled value.
+  - name: BA413HASHHWCFGVERIFYDIGEST
+    bit_range:
+    - 18
+    - 18
+    description: Generic g_HashVerifyDigest value.
+  side_effects: null
+- id: CRYPTMSTRHW_BA418SHA3HWCFG
+  address_offset: 1040
+  size: 32
+  access: READ_WRITE
+  reset_value: 1
+  fields:
+  - name: BA418SHA3HWCFG
+    bit_range:
+    - 0
+    - 0
+    description: Generic g_Sha3CtxtEn value.
+  side_effects: null
+- id: CRYPTMSTRHW_BA419SM4HWCFG
+  address_offset: 1044
+  size: 32
+  access: READ_WRITE
+  reset_value: 131583
+  fields:
+  - name: BA419SM4HWCFG
+    bit_range:
+    - 9
+    - 0
+    description: Generic g_SM4ModesPoss value.
+  - name: USEMASKING
+    bit_range:
+    - 17
+    - 17
+    description: Generic g_sm4UseMasking value.
+  side_effects: null
+- id: CRYPTMSTRHW_BA424ARIAHWCFG
+  address_offset: 1048
+  size: 32
+  access: READ_WRITE
+  reset_value: 383
+  fields:
+  - name: BA424ARIAHWCFG
+    bit_range:
+    - 8
+    - 0
+    description: Generic g_aria_modePoss value.
+  side_effects: null
+- id: RNGCONTROL_CONTROL
+  address_offset: 4096
+  size: 32
+  access: READ_WRITE
+  reset_value: 262144
+  fields:
+  - name: ENABLE
+    bit_range:
+    - 0
+    - 0
+    description: Enable the NDRNG.
+  - name: LFSREN
+    bit_range:
+    - 1
+    - 1
+    description: Select between the NDRNG with asynchronous free running oscillators (when 0) and the Pseudo-Random generator with synchronous oscillators for simulation purpose (when 1).
+  - name: TESTEN
+    bit_range:
+    - 2
+    - 2
+    description: 'Select input for conditioning function and continuous tests:'
+  - name: CONDBYPASS
+    bit_range:
+    - 3
+    - 3
+    description: Conditioning function bypass.
+  - name: INTENREP
+    bit_range:
+    - 4
+    - 4
+    description: Interrupt enable for Repetition Count Test failure.
+  - name: INTENPROP
+    bit_range:
+    - 5
+    - 5
+    description: Interrupt enable for Adaptive Proportion Test failure (1024-sample window).
+  - name: INTENFULL
+    bit_range:
+    - 7
+    - 7
+    description: Interrupt enable for FIFO full.
+  - name: SOFTRST
+    bit_range:
+    - 8
+    - 8
+    description: 'Software reset:'
+  - name: INTENPRE
+    bit_range:
+    - 9
+    - 9
+    description: Interrupt enable for AIS31 preliminary noise alarm.
+  - name: INTENALM
+    bit_range:
+    - 10
+    - 10
+    description: Interrupt enable for AIS31 noise alarm.
+  - name: FORCEACTIVEROS
+    bit_range:
+    - 11
+    - 11
+    description: Force oscillators to run when FIFO is full.
+  - name: HEALTHTESTBYPASS
+    bit_range:
+    - 12
+    - 12
+    description: Bypass NIST tests such that the results of the start-up and online test do not affect the FSM state.
+  - name: AIS31BYPASS
+    bit_range:
+    - 13
+    - 13
+    description: Bypass AIS31 tests such that the results of the start-up and online tests do not affect the FSM state.
+  - name: HEALTHTESTSEL
+    bit_range:
+    - 14
+    - 14
+    description: 'Select input to health test module:'
+  - name: AIS31TESTSEL
+    bit_range:
+    - 15
+    - 15
+    description: 'Select input to the AIS31 test module:'
+  - name: NB128BITBLOCKS
+    bit_range:
+    - 19
+    - 16
+    description: Number of 128 bit blocks used in AES-CBCMAC post-processing.
+  - name: FIFOWRITESTARTUP
+    bit_range:
+    - 20
+    - 20
+    description: Enable write of the samples in the FIFO during start-up.
+  side_effects: null
+- id: RNGCONTROL_FIFOLEVEL
+  address_offset: 4100
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FIFOLEVEL
+    bit_range:
+    - 31
+    - 0
+    description: Number of 32 bits words of random values available in the FIFO.
+  side_effects: null
+- id: RNGCONTROL_FIFOTHRESHOLD
+  address_offset: 4104
+  size: 32
+  access: READ_WRITE
+  reset_value: 3
+  fields:
+  - name: FIFOTHRESHOLD
+    bit_range:
+    - 2
+    - 0
+    description: FIFO level below which the module leaves the idle state to refill the FIFO, expressed in number of 128bit blocks.
+  side_effects: null
+- id: RNGCONTROL_FIFODEPTH
+  address_offset: 4108
+  size: 32
+  access: READ_WRITE
+  reset_value: 16
+  fields:
+  - name: FIFODEPTH
+    bit_range:
+    - 31
+    - 0
+    description: 'Maximum number of 32 bits words that can be stored in the FIFO: 2**g_fifodepth.'
+  side_effects: null
+- id: RNGCONTROL_KEY0
+  address_offset: 4112
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: KEY
+    bit_range:
+    - 31
+    - 0
+    description: Key register.
+  side_effects: null
+- id: RNGCONTROL_KEY1
+  address_offset: 4116
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: KEY
+    bit_range:
+    - 31
+    - 0
+    description: Key register.
+  side_effects: null
+- id: RNGCONTROL_KEY2
+  address_offset: 4120
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: KEY
+    bit_range:
+    - 31
+    - 0
+    description: Key register.
+  side_effects: null
+- id: RNGCONTROL_KEY3
+  address_offset: 4124
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: KEY
+    bit_range:
+    - 31
+    - 0
+    description: Key register.
+  side_effects: null
+- id: RNGCONTROL_TESTDATA
+  address_offset: 4128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TESTDATA
+    bit_range:
+    - 31
+    - 0
+    description: Test data register.
+  side_effects: null
+- id: RNGCONTROL_REPEATTHRESHOLD
+  address_offset: 4132
+  size: 32
+  access: READ_WRITE
+  reset_value: 41
+  fields:
+  - name: REPEATTHRESHOLD
+    bit_range:
+    - 5
+    - 0
+    description: Repetition Test Count Cut-Off value.
+  side_effects: null
+- id: RNGCONTROL_PROPTHRESHOLD
+  address_offset: 4136
+  size: 32
+  access: READ_WRITE
+  reset_value: 793
+  fields:
+  - name: PROPTHRESHOLD
+    bit_range:
+    - 9
+    - 0
+    description: Adaptive Proportion Test (1024-sample window) Cut-Off value.
+  side_effects: null
+- id: RNGCONTROL_STATUS
+  address_offset: 4144
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TESTDATABUSY
+    bit_range:
+    - 0
+    - 0
+    description: High when data written to TestData register is being processed.
+  - name: STATE
+    bit_range:
+    - 3
+    - 1
+    description: 'State of the control FSM:'
+  - name: REPFAIL
+    bit_range:
+    - 4
+    - 4
+    description: NIST-800-90B repetition Count Test interrupt status.
+  - name: PROPFAIL
+    bit_range:
+    - 5
+    - 5
+    description: NIST-800-90B adaptive Proportion Test (1024-sample window) interrupt status.
+  - name: FULLINT
+    bit_range:
+    - 7
+    - 7
+    description: FIFO full status.
+  - name: PREINT
+    bit_range:
+    - 8
+    - 8
+    description: AIS31 preliminary noise alarm interrupt status.
+  - name: ALMINT
+    bit_range:
+    - 9
+    - 9
+    description: AIS31 noise alarm interrupt status.
+  - name: STARTUPFAIL
+    bit_range:
+    - 10
+    - 10
+    description: Start-up test failure.
+  - name: FIFOACCFAIL
+    bit_range:
+    - 11
+    - 11
+    description: Set when a FIFO data read is performed while the NDRNG is disabled AND has its FIFO empty (FIFOLevel = 0).
+  side_effects: null
+- id: RNGCONTROL_INITWAITVAL
+  address_offset: 4148
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: INITWAITVAL
+    bit_range:
+    - 15
+    - 0
+    description: Number of clock cycles to wait before sampling data from the noise source.
+  side_effects: null
+- id: RNGCONTROL_DISABLEOSC0
+  address_offset: 4152
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DISABLEOSC
+    bit_range:
+    - 31
+    - 0
+    description: 'Disable oscillator rings #n*32 to #((n+1)*32)-1.'
+  side_effects: null
+- id: RNGCONTROL_DISABLEOSC1
+  address_offset: 4156
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DISABLEOSC
+    bit_range:
+    - 31
+    - 0
+    description: 'Disable oscillator rings #n*32 to #((n+1)*32)-1.'
+  side_effects: null
+- id: RNGCONTROL_SWOFFTMRVAL
+  address_offset: 4160
+  size: 32
+  access: READ_WRITE
+  reset_value: 65535
+  fields:
+  - name: SWOFFTMRVAL
+    bit_range:
+    - 15
+    - 0
+    description: Number of clk cycles to wait before stopping the rings after the FIFO is full.
+  side_effects: null
+- id: RNGCONTROL_CLKDIV
+  address_offset: 4164
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CLKDIV
+    bit_range:
+    - 7
+    - 0
+    description: Sample clock divider.
+  side_effects: null
+- id: RNGCONTROL_AIS31CONF0
+  address_offset: 4168
+  size: 32
+  access: READ_WRITE
+  reset_value: 1128271936
+  fields:
+  - name: STARTUPTHRESHOLD
+    bit_range:
+    - 14
+    - 0
+    description: Start-up test threshold.
+  - name: ONLINETHRESHOLD
+    bit_range:
+    - 30
+    - 16
+    description: Online threshold.
+  side_effects: null
+- id: RNGCONTROL_AIS31CONF1
+  address_offset: 4172
+  size: 32
+  access: READ_WRITE
+  reset_value: 62916224
+  fields:
+  - name: ONLINEREPTHRESHOLD
+    bit_range:
+    - 14
+    - 0
+    description: Online repeat threshold.
+  - name: HEXPECTEDVALUE
+    bit_range:
+    - 30
+    - 16
+    description: Expected history value.
+  side_effects: null
+- id: RNGCONTROL_AIS31CONF2
+  address_offset: 4176
+  size: 32
+  access: READ_WRITE
+  reset_value: 71304000
+  fields:
+  - name: HMIN
+    bit_range:
+    - 14
+    - 0
+    description: Minimum allowed history value.
+  - name: HMAX
+    bit_range:
+    - 30
+    - 16
+    description: Maximum allowed history value.
+  side_effects: null
+- id: RNGCONTROL_AIS31STATUS
+  address_offset: 4180
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NUMPRELIMALARMS
+    bit_range:
+    - 15
+    - 0
+    description: Number of preliminary noise alarms since counter was last cleared.
+  - name: PRELIMNOISEALARMRNG
+    bit_range:
+    - 16
+    - 16
+    description: Last preliminary noise alarm occurred due to history value out of range.
+  - name: PRELIMNOISEALARMREP
+    bit_range:
+    - 17
+    - 17
+    description: Last preliminary noise alarm occurred due to consecutive high Χ**2.
+  side_effects: null
+- id: RNGCONTROL_HWCONFIG
+  address_offset: 4184
+  size: 32
+  access: READ_WRITE
+  reset_value: 823
+  fields:
+  - name: NUMBOFRINGS
+    bit_range:
+    - 7
+    - 0
+    description: Generic g_NumRings value.
+  - name: AIS31
+    bit_range:
+    - 8
+    - 8
+    description: Generic g_AIS31 value.
+  - name: AIS31FULL
+    bit_range:
+    - 9
+    - 9
+    description: Generic g_AIS31Full value.
+  side_effects: null
+- id: RNGCONTROL_FIFO0
+  address_offset: 4224
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: FIFO data
+  side_effects: null
+- id: RNGCONTROL_FIFO1
+  address_offset: 4228
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: FIFO data
+  side_effects: null
+- id: RNGCONTROL_FIFO2
+  address_offset: 4232
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: FIFO data
+  side_effects: null
+- id: RNGCONTROL_FIFO3
+  address_offset: 4236
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: FIFO data
+  side_effects: null
+- id: RNGCONTROL_FIFO4
+  address_offset: 4240
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: FIFO data
+  side_effects: null
+- id: RNGCONTROL_FIFO5
+  address_offset: 4244
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: FIFO data
+  side_effects: null
+- id: RNGCONTROL_FIFO6
+  address_offset: 4248
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: FIFO data
+  side_effects: null
+- id: RNGCONTROL_FIFO7
+  address_offset: 4252
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: FIFO data
+  side_effects: null
+- id: RNGCONTROL_FIFO8
+  address_offset: 4256
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: FIFO data
+  side_effects: null
+- id: RNGCONTROL_FIFO9
+  address_offset: 4260
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: FIFO data
+  side_effects: null
+- id: RNGCONTROL_FIFO10
+  address_offset: 4264
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: FIFO data
+  side_effects: null
+- id: RNGCONTROL_FIFO11
+  address_offset: 4268
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: FIFO data
+  side_effects: null
+- id: RNGCONTROL_FIFO12
+  address_offset: 4272
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: FIFO data
+  side_effects: null
+- id: RNGCONTROL_FIFO13
+  address_offset: 4276
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: FIFO data
+  side_effects: null
+- id: RNGCONTROL_FIFO14
+  address_offset: 4280
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: FIFO data
+  side_effects: null
+- id: RNGCONTROL_FIFO15
+  address_offset: 4284
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 0
+    description: FIFO data
+  side_effects: null
+- id: PK_POINTERS
+  address_offset: 8192
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OPPTRA
+    bit_range:
+    - 3
+    - 0
+    description: When executing primitive arithmetic operations, this pointer defines where operand A is located in memory (location 0x0 to 0xF).
+  - name: OPPTRB
+    bit_range:
+    - 11
+    - 8
+    description: When executing primitive arithmetic operations, this pointer defines where operand B is located in memory (location 0x0 to 0xF).
+  - name: OPPTRC
+    bit_range:
+    - 19
+    - 16
+    description: When executing primitive arithmetic operations, this pointer defines the location (0x0 to 0xF) where the result will be stored in memory.
+  - name: OPPTRN
+    bit_range:
+    - 27
+    - 24
+    description: When executing primitive arithmetic operations, this pointer defines the location where the modulus is located in memory (location 0x0 to 0xF).
+  side_effects: null
+- id: PK_COMMAND
+  address_offset: 8196
+  size: 32
+  access: READ_WRITE
+  reset_value: 15
+  fields:
+  - name: OPEADDR
+    bit_range:
+    - 6
+    - 0
+    description: This field defines the operation to be performed.
+  - name: FIELDF
+    bit_range:
+    - 7
+    - 7
+    description: '0: Field is GF(p) 1: Field is GF(2**m)'
+  - name: OPBYTESM1
+    bit_range:
+    - 17
+    - 8
+    description: This field defines the size (= number of bytes minus one) of the operands for the current operation.
+  - name: RANDMOD
+    bit_range:
+    - 19
+    - 19
+    description: Enable randomization of modulus (counter-measure).
+  - name: SELCURVE
+    bit_range:
+    - 22
+    - 20
+    description: 'Enable accelerator for specific curve modulus:'
+  - name: RANDKE
+    bit_range:
+    - 24
+    - 24
+    description: Enable randomization of exponent/scalar (counter-measure).
+  - name: RANDPROJ
+    bit_range:
+    - 25
+    - 25
+    description: Enable randomization of projective coordinates (counter-measure).
+  - name: EDWARDS
+    bit_range:
+    - 26
+    - 26
+    description: Enable Edwards curve.
+  - name: SWAPBYTES
+    bit_range:
+    - 28
+    - 28
+    description: 'Swap the bytes on AHB interface:'
+  - name: FLAGA
+    bit_range:
+    - 29
+    - 29
+    description: Flag A.
+  - name: FLAGB
+    bit_range:
+    - 30
+    - 30
+    description: Flag B.
+  - name: CALCR2
+    bit_range:
+    - 31
+    - 31
+    description: This bit indicates if the IP has to calculate R**2 mod N for the next operation.
+  side_effects: null
+- id: PK_CONTROL
+  address_offset: 8200
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: START
+    bit_range:
+    - 0
+    - 0
+    description: Writing a 1 starts the processing.
+  - name: CLEARIRQ
+    bit_range:
+    - 1
+    - 1
+    description: Writing a 1 clears the IRQ output.
+  side_effects: null
+- id: PK_STATUS
+  address_offset: 8204
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ERRORFLAGS
+    bit_range:
+    - 15
+    - 4
+    description: These bits indicate an error condition.
+  - name: PKBUSY
+    bit_range:
+    - 16
+    - 16
+    description: This bit reflects the BUSY output value.
+  - name: INTRPTSTATUS
+    bit_range:
+    - 17
+    - 17
+    description: This bit reflects the IRQ output value.
+  - name: FAILPTR
+    bit_range:
+    - 28
+    - 24
+    description: These bits indicate which data location generated the error flag.
+  side_effects: null
+- id: PK_TIMER
+  address_offset: 8212
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIMER
+    bit_range:
+    - 31
+    - 0
+    description: Number of core clock cycles.
+  side_effects: null
+- id: PK_HWCONFIG
+  address_offset: 8216
+  size: 32
+  access: READ_WRITE
+  reset_value: 32973312
+  fields:
+  - name: MAXOPSIZE
+    bit_range:
+    - 11
+    - 0
+    description: Maximum operand size (number of bytes).
+  - name: NBMULT
+    bit_range:
+    - 15
+    - 12
+    description: 'Number of multipliers:'
+  - name: PRIMEFIELD
+    bit_range:
+    - 16
+    - 16
+    description: Support prime field.
+  - name: BINARYFIELD
+    bit_range:
+    - 17
+    - 17
+    description: Support binary field.
+  - name: ECC
+    bit_range:
+    - 18
+    - 18
+    description: Support error correction.
+  - name: P256
+    bit_range:
+    - 20
+    - 20
+    description: Support ECC P256 acceleration.
+  - name: P384
+    bit_range:
+    - 21
+    - 21
+    description: Support ECC P384 acceleration.
+  - name: P521
+    bit_range:
+    - 22
+    - 22
+    description: Support ECC P521 acceleration.
+  - name: P192
+    bit_range:
+    - 23
+    - 23
+    description: Support ECC P192 acceleration.
+  - name: X25519
+    bit_range:
+    - 24
+    - 24
+    description: Support Curve25519/Ed25519 acceleration.
+  - name: AHBMASTER
+    bit_range:
+    - 25
+    - 25
+    description: Memory access
+  - name: DISABLESMX
+    bit_range:
+    - 29
+    - 29
+    description: State of DisableSMx input (high when SM2/SM9 operations are disabled).
+  - name: DISABLECLRMEM
+    bit_range:
+    - 30
+    - 30
+    description: State of DisableClrMem input (high when automatic clear of the RAM after reset is disabled).
+  - name: DISABLECM
+    bit_range:
+    - 31
+    - 31
+    description: State of DisableCM input (high when counter-measures are disabled).
+  side_effects: null
+- id: PK_OPSIZE
+  address_offset: 8220
+  size: 32
+  access: READ_WRITE
+  reset_value: 4096
+  fields:
+  - name: OPSIZE
+    bit_range:
+    - 12
+    - 0
+    description: 'Operand size (number of bytes): This register is used when the memory is accessed via AHB Master'
+  side_effects: null
+- id: PK_RAMERRORINJECT
+  address_offset: 8256
+  size: 32
+  access: READ_WRITE
+  reset_value: 67044351
+  fields:
+  - name: BITERROR1
+    bit_range:
+    - 9
+    - 0
+    description: Bit position of first error
+  - name: BITERROR2
+    bit_range:
+    - 25
+    - 16
+    description: Bit position of second error
+  side_effects: null
+- id: PK_RAMERRORSTATUS
+  address_offset: 8260
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RAMCORRECTION
+    bit_range:
+    - 0
+    - 0
+    description: This bit indicates that a 1-bit error has been detected and corrected on RAM interface
+  - name: RAMFAILURE
+    bit_range:
+    - 1
+    - 1
+    description: This bit indicates that an uncorrectable error has been detected on the data RAM interface
+  side_effects: null
+- id: IKG_START
+  address_offset: 12288
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: START
+    bit_range:
+    - 0
+    - 0
+    description: Start the Isolated Key Generation.
+  side_effects: null
+- id: IKG_STATUS
+  address_offset: 12292
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SEEDERROR
+    bit_range:
+    - 0
+    - 0
+    description: Seed Error during Isolated Key Generation.
+  - name: ENTROPYERROR
+    bit_range:
+    - 1
+    - 1
+    description: Entropy Error during Isolated Key Generation.
+  - name: OKAY
+    bit_range:
+    - 2
+    - 2
+    description: Isolated Key Generation is okay.
+  - name: CTRDRBGBUSY
+    bit_range:
+    - 4
+    - 4
+    description: CTR_DRBG health test is busy (only when g_hw_health_test = true).
+  - name: CATASTROPHICERROR
+    bit_range:
+    - 5
+    - 5
+    description: Catastrophic error during CTR_DRBG health test (only when g_hw_health_test = true).
+  - name: SYMKEYSTORED
+    bit_range:
+    - 6
+    - 6
+    description: Symmetric Keys are stored.
+  - name: PRIVKEYSTORED
+    bit_range:
+    - 7
+    - 7
+    description: Private Keys are stored.
+  side_effects: null
+- id: IKG_INITDATA
+  address_offset: 12296
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: INITDATA
+    bit_range:
+    - 0
+    - 0
+    description: Writing a 1 initialise Nonce and Personalisation_String registers counters, i.e. start writing from the 32 LSB.
+  side_effects: null
+- id: IKG_NONCE
+  address_offset: 12300
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NONCE
+    bit_range:
+    - 31
+    - 0
+    description: Nonce (write/read value 32-bit by 32-bit).
+  side_effects: null
+- id: IKG_PERSONALISATIONSTRING
+  address_offset: 12304
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PERSONALISATIONSTRING
+    bit_range:
+    - 31
+    - 0
+    description: Personalisation String (write/read value 32-bit by 32-bit).
+  side_effects: null
+- id: IKG_RESEEDINTERVALLSB
+  address_offset: 12308
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483648
+  fields:
+  - name: RESEEDINTERVALLSB
+    bit_range:
+    - 31
+    - 0
+    description: Reseed Interval LSB.
+  side_effects: null
+- id: IKG_RESEEDINTERVALMSB
+  address_offset: 12312
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RESEEDINTERVALMSB
+    bit_range:
+    - 15
+    - 0
+    description: Reseed Interval MSB.
+  side_effects: null
+- id: IKG_PKECONTROL
+  address_offset: 12316
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PKESTART
+    bit_range:
+    - 0
+    - 0
+    description: Start the PKE operation or trigger for Secure mode exit.
+  - name: CLEARIRQ
+    bit_range:
+    - 1
+    - 1
+    description: Clear the IRQ output.
+  side_effects: null
+- id: IKG_PKECOMMAND
+  address_offset: 12320
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SECUREMODE
+    bit_range:
+    - 0
+    - 0
+    description: Secure mode.
+  - name: SELECTEDKEY
+    bit_range:
+    - 7
+    - 4
+    description: Select Generated Private Key for PKE operation.
+  - name: OPSEL
+    bit_range:
+    - 9
+    - 8
+    description: Select PKE operation with Isolated Key
+  side_effects: null
+- id: IKG_PKESTATUS
+  address_offset: 12324
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ERROR
+    bit_range:
+    - 0
+    - 0
+    description: Error because either Private Keys are not stored or the operation is not defined.
+  - name: STARTERROR
+    bit_range:
+    - 1
+    - 1
+    description: Error because a new operation is started while the previous one is still busy.
+  - name: IKGPKBUSY
+    bit_range:
+    - 16
+    - 16
+    description: Busy, set when the operation starts and cleared when the operation is finished.
+  - name: IRQSTATUS
+    bit_range:
+    - 17
+    - 17
+    description: IRQ, set when the operation is finished and cleared when the CPU writes the bit 1 of PKE_Control Register or a new operation is started.
+  - name: ERASEBUSY
+    bit_range:
+    - 18
+    - 18
+    description: The PKE Data RAM is being erased.
+  side_effects: null
+- id: IKG_SOFTRST
+  address_offset: 12328
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SOFTRST
+    bit_range:
+    - 0
+    - 0
+    description: 'Software reset:'
+  side_effects: null
+- id: IKG_HWCONFIG
+  address_offset: 12332
+  size: 32
+  access: READ_WRITE
+  reset_value: 3427566354
+  fields:
+  - name: NBSYMKEYS
+    bit_range:
+    - 3
+    - 0
+    description: Number of Symmetric Keys generated.
+  - name: NBPRIVKEYS
+    bit_range:
+    - 7
+    - 4
+    description: Number of Private Keys generated.
+  - name: IKGCM
+    bit_range:
+    - 8
+    - 8
+    description: Countermeasures for IKG operations are implemented when 1.
+  - name: HWHEALTHTEST
+    bit_range:
+    - 9
+    - 9
+    description: CTR_DRBG health test is implemented when 1.
+  - name: CURVE
+    bit_range:
+    - 11
+    - 10
+    description: ECC curve for IKG (input).
+  - name: DF
+    bit_range:
+    - 12
+    - 12
+    description: Derivation function is implemented in the CTR_DRBG when 1.
+  - name: KEYSIZE
+    bit_range:
+    - 15
+    - 13
+    description: AES Key Size support for the AES Core embedded in the CTR_DRBG.
+  - name: ENTROPYINPUTLENGTH
+    bit_range:
+    - 19
+    - 16
+    description: Value of g_entropy_input_length/32.
+  - name: NONCELENGTH
+    bit_range:
+    - 23
+    - 20
+    description: Value of g_nonce_length/32.
+  - name: PERSONALIZATIONSTRINGLENGTH
+    bit_range:
+    - 27
+    - 24
+    description: Value of g_personalization_string_length/32.
+  - name: ADDITIONALINPUTLENGTH
+    bit_range:
+    - 31
+    - 28
+    description: Value of g_additional_input_length/32.
+  side_effects: null
+interrupts: null
+timing: null

@@ -1,0 +1,683 @@
+peripheral: I2C1
+version: 0.1.0
+registers:
+- id: SCL_LOW_PERIOD
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SCL_LOW_PERIOD
+    bit_range:
+    - 13
+    - 0
+    description: This register is used to configure the  low level width of SCL clock.
+  side_effects: null
+- id: CTR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 3
+  fields:
+  - name: SDA_FORCE_OUT
+    bit_range:
+    - 0
+    - 0
+    description: '1: normally ouput sda data   0: exchange the function of sda_o and sda_oe (sda_o is the original internal output sda signal sda_oe is the enable bit for the internal output sda signal)'
+  - name: SCL_FORCE_OUT
+    bit_range:
+    - 1
+    - 1
+    description: '1: normally ouput scl clock  0: exchange the function of scl_o and scl_oe (scl_o is the original internal output scl signal  scl_oe is the enable bit for the internal output scl signal)'
+  - name: SAMPLE_SCL_LEVEL
+    bit_range:
+    - 2
+    - 2
+    description: Set this bit to sample data in SCL low level. clear this bit to sample data in SCL high level.
+  - name: MS_MODE
+    bit_range:
+    - 4
+    - 4
+    description: Set this bit to configure the module as i2c master  clear this bit to configure the module as i2c slave.
+  - name: TRANS_START
+    bit_range:
+    - 5
+    - 5
+    description: Set this bit to start sending data in txfifo.
+  - name: TX_LSB_FIRST
+    bit_range:
+    - 6
+    - 6
+    description: 'This bit is used to control the sending mode for  data need to be send. 1: receive data from most significant bit    0: receive data from least significant bit'
+  - name: RX_LSB_FIRST
+    bit_range:
+    - 7
+    - 7
+    description: 'This bit is used to control the storage mode for received datas. 1: receive data from most significant bit    0: receive data from least significant bit'
+  - name: CLK_EN
+    bit_range:
+    - 8
+    - 8
+    description: This is the clock gating control bit for reading or writing registers.
+  side_effects: null
+- id: SR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ACK_REC
+    bit_range:
+    - 0
+    - 0
+    description: This register stores the value of ACK bit.
+  - name: SLAVE_RW
+    bit_range:
+    - 1
+    - 1
+    description: 'when in slave mode  1: master read slave  0: master write slave.'
+  - name: TIME_OUT
+    bit_range:
+    - 2
+    - 2
+    description: when I2C takes more than time_out_reg clocks to receive a data then this register changes to high level.
+  - name: ARB_LOST
+    bit_range:
+    - 3
+    - 3
+    description: when I2C lost control of SDA line  this register changes to high level.
+  - name: BUS_BUSY
+    bit_range:
+    - 4
+    - 4
+    description: 1:I2C bus is busy transferring data. 0:I2C bus is in idle state.
+  - name: SLAVE_ADDRESSED
+    bit_range:
+    - 5
+    - 5
+    description: when configured as i2c slave  and the address send by master is equal to slave's address  then this bit will be high level.
+  - name: BYTE_TRANS
+    bit_range:
+    - 6
+    - 6
+    description: This register changes to high level when one byte is transferred.
+  - name: RXFIFO_CNT
+    bit_range:
+    - 13
+    - 8
+    description: This register represent the amount of data need to send.
+  - name: TXFIFO_CNT
+    bit_range:
+    - 23
+    - 18
+    description: This register stores the amount of received data  in ram.
+  - name: SCL_MAIN_STATE_LAST
+    bit_range:
+    - 26
+    - 24
+    description: 'This register stores the value of state machine for i2c module.  3''h0: SCL_MAIN_IDLE  3''h1: SCL_ADDRESS_SHIFT 3''h2: SCL_ACK_ADDRESS  3''h3: SCL_RX_DATA  3''h4 SCL_TX_DATA  3''h5:SCL_SEND_ACK 3''h6:SCL_WAIT_ACK'
+  - name: SCL_STATE_LAST
+    bit_range:
+    - 30
+    - 28
+    description: 'This register stores the value of state machine to produce SCL. 3''h0: SCL_IDLE  3''h1:SCL_START   3''h2:SCL_LOW_EDGE  3''h3: SCL_LOW   3''h4:SCL_HIGH_EDGE   3''h5:SCL_HIGH  3''h6:SCL_STOP'
+  side_effects: null
+- id: TO
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIME_OUT
+    bit_range:
+    - 19
+    - 0
+    description: This register is used to configure the max clock number of receiving  a data.
+  side_effects: null
+- id: SLAVE_ADDR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SLAVE_ADDR
+    bit_range:
+    - 14
+    - 0
+    description: when configured as i2c slave  this register is used to configure slave's address.
+  - name: ADDR_10BIT_EN
+    bit_range:
+    - 31
+    - 31
+    description: This register is used to enable slave 10bit address mode.
+  side_effects: null
+- id: RXFIFO_ST
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RXFIFO_START_ADDR
+    bit_range:
+    - 4
+    - 0
+    description: This is the offset address of the last receiving data as described in nonfifo_rx_thres_register.
+  - name: RXFIFO_END_ADDR
+    bit_range:
+    - 9
+    - 5
+    description: This is the offset address of the first receiving data as described in nonfifo_rx_thres_register.
+  - name: TXFIFO_START_ADDR
+    bit_range:
+    - 14
+    - 10
+    description: This is the offset address of the first  sending data as described in nonfifo_tx_thres register.
+  - name: TXFIFO_END_ADDR
+    bit_range:
+    - 19
+    - 15
+    description: This is the offset address of the last  sending data as described in nonfifo_tx_thres register.
+  side_effects: null
+- id: FIFO_CONF
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 22364299
+  fields:
+  - name: RXFIFO_FULL_THRHD
+    bit_range:
+    - 4
+    - 0
+  - name: TXFIFO_EMPTY_THRHD
+    bit_range:
+    - 9
+    - 5
+    description: Config txfifo empty threhd value when using apb fifo access
+  - name: NONFIFO_EN
+    bit_range:
+    - 10
+    - 10
+    description: Set this bit to enble apb nonfifo access.
+  - name: FIFO_ADDR_CFG_EN
+    bit_range:
+    - 11
+    - 11
+    description: When this bit is set to 1 then the byte after address represent the offset address of I2C Slave's ram.
+  - name: RX_FIFO_RST
+    bit_range:
+    - 12
+    - 12
+    description: Set this bit to reset rx fifo when using apb fifo access.
+  - name: TX_FIFO_RST
+    bit_range:
+    - 13
+    - 13
+    description: Set this bit to reset tx fifo when using apb fifo access.
+  - name: NONFIFO_RX_THRES
+    bit_range:
+    - 19
+    - 14
+    description: when I2C receives more than nonfifo_rx_thres data  it will produce rx_send_full_int_raw interrupt and update the current offset address of the receiving data.
+  - name: NONFIFO_TX_THRES
+    bit_range:
+    - 25
+    - 20
+    description: when I2C sends more than nonfifo_tx_thres data  it will produce tx_send_empty_int_raw interrupt and update the current offset address of the sending data.
+  side_effects: null
+- id: DATA
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FIFO_RDATA
+    bit_range:
+    - 7
+    - 0
+    description: The register represent the byte  data read from rxfifo when use apb fifo access
+  side_effects: null
+- id: INT_RAW
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RXFIFO_FULL_INT_RAW
+    bit_range:
+    - 0
+    - 0
+    description: The raw interrupt status bit for rxfifo full when use apb fifo access.
+  - name: TXFIFO_EMPTY_INT_RAW
+    bit_range:
+    - 1
+    - 1
+    description: The raw interrupt status bit for txfifo empty when use apb fifo access.
+  - name: RXFIFO_OVF_INT_RAW
+    bit_range:
+    - 2
+    - 2
+    description: The raw interrupt status bit for receiving data overflow when use apb fifo access.
+  - name: END_DETECT_INT_RAW
+    bit_range:
+    - 3
+    - 3
+    description: The raw interrupt status bit for end_detect_int interrupt. when I2C deals with  the END command  it will produce end_detect_int interrupt.
+  - name: SLAVE_TRAN_COMP_INT_RAW
+    bit_range:
+    - 4
+    - 4
+    description: The raw interrupt status bit for slave_tran_comp_int interrupt. when I2C Slave detectsthe STOP bit  it will produce slave_tran_comp_int interrupt.
+  - name: ARBITRATION_LOST_INT_RAW
+    bit_range:
+    - 5
+    - 5
+    description: The raw interrupt status bit for arbitration_lost_int interrupt.when I2C lost the usage right of I2C BUS it will produce arbitration_lost_int interrupt.
+  - name: MASTER_TRAN_COMP_INT_RAW
+    bit_range:
+    - 6
+    - 6
+    description: The raw interrupt status bit for master_tra_comp_int interrupt. when I2C Master sends or receives a byte it will produce master_tran_comp_int interrupt.
+  - name: TRANS_COMPLETE_INT_RAW
+    bit_range:
+    - 7
+    - 7
+    description: The raw interrupt status bit for trans_complete_int interrupt. when I2C Master finished STOP command  it will produce trans_complete_int interrupt.
+  - name: TIME_OUT_INT_RAW
+    bit_range:
+    - 8
+    - 8
+    description: The raw interrupt status bit for time_out_int interrupt. when I2C takes a lot of time to receive a data  it will produce  time_out_int interrupt.
+  - name: TRANS_START_INT_RAW
+    bit_range:
+    - 9
+    - 9
+    description: The raw interrupt status bit for trans_start_int interrupt. when I2C sends the START bit it will produce trans_start_int interrupt.
+  - name: ACK_ERR_INT_RAW
+    bit_range:
+    - 10
+    - 10
+    description: The raw interrupt status bit for ack_err_int interrupt. when I2C receives a wrong ACK bit  it will produce ack_err_int interrupt..
+  - name: RX_REC_FULL_INT_RAW
+    bit_range:
+    - 11
+    - 11
+    description: The raw interrupt status bit for rx_rec_full_int interrupt. when I2C receives more data  than nonfifo_rx_thres  it will produce rx_rec_full_int interrupt.
+  - name: TX_SEND_EMPTY_INT_RAW
+    bit_range:
+    - 12
+    - 12
+    description: The raw interrupt status bit for tx_send_empty_int interrupt.when I2C sends more data than nonfifo_tx_thres  it will produce tx_send_empty_int interrupt..
+  side_effects: null
+- id: INT_CLR
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RXFIFO_FULL_INT_CLR
+    bit_range:
+    - 0
+    - 0
+    description: Set this bit to clear the rxfifo_full_int interrupt.
+  - name: TXFIFO_EMPTY_INT_CLR
+    bit_range:
+    - 1
+    - 1
+    description: Set this bit to clear the txfifo_empty_int interrupt.
+  - name: RXFIFO_OVF_INT_CLR
+    bit_range:
+    - 2
+    - 2
+    description: Set this bit to clear the rxfifo_ovf_int interrupt.
+  - name: END_DETECT_INT_CLR
+    bit_range:
+    - 3
+    - 3
+    description: Set this bit to clear the end_detect_int interrupt.
+  - name: SLAVE_TRAN_COMP_INT_CLR
+    bit_range:
+    - 4
+    - 4
+    description: Set this bit to clear the slave_tran_comp_int interrupt.
+  - name: ARBITRATION_LOST_INT_CLR
+    bit_range:
+    - 5
+    - 5
+    description: Set this bit to clear the arbitration_lost_int interrupt.
+  - name: MASTER_TRAN_COMP_INT_CLR
+    bit_range:
+    - 6
+    - 6
+    description: Set this bit to clear the master_tran_comp interrupt.
+  - name: TRANS_COMPLETE_INT_CLR
+    bit_range:
+    - 7
+    - 7
+    description: Set this bit to clear the trans_complete_int interrupt.
+  - name: TIME_OUT_INT_CLR
+    bit_range:
+    - 8
+    - 8
+    description: Set this bit to clear the time_out_int interrupt.
+  - name: TRANS_START_INT_CLR
+    bit_range:
+    - 9
+    - 9
+    description: Set this bit to clear the trans_start_int interrupt.
+  - name: ACK_ERR_INT_CLR
+    bit_range:
+    - 10
+    - 10
+    description: Set this bit to clear the ack_err_int interrupt.
+  - name: RX_REC_FULL_INT_CLR
+    bit_range:
+    - 11
+    - 11
+    description: Set this bit to clear the rx_rec_full_int interrupt.
+  - name: TX_SEND_EMPTY_INT_CLR
+    bit_range:
+    - 12
+    - 12
+    description: Set this bit to clear the tx_send_empty_int interrupt.
+  side_effects: null
+- id: INT_ENA
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RXFIFO_FULL_INT_ENA
+    bit_range:
+    - 0
+    - 0
+    description: The enable bit for rxfifo_full_int interrupt.
+  - name: TXFIFO_EMPTY_INT_ENA
+    bit_range:
+    - 1
+    - 1
+    description: The enable bit for txfifo_empty_int interrupt.
+  - name: RXFIFO_OVF_INT_ENA
+    bit_range:
+    - 2
+    - 2
+    description: The enable bit for rxfifo_ovf_int interrupt.
+  - name: END_DETECT_INT_ENA
+    bit_range:
+    - 3
+    - 3
+    description: The enable bit for end_detect_int interrupt.
+  - name: SLAVE_TRAN_COMP_INT_ENA
+    bit_range:
+    - 4
+    - 4
+    description: The enable bit for slave_tran_comp_int interrupt.
+  - name: ARBITRATION_LOST_INT_ENA
+    bit_range:
+    - 5
+    - 5
+    description: The enable bit for arbitration_lost_int interrupt.
+  - name: MASTER_TRAN_COMP_INT_ENA
+    bit_range:
+    - 6
+    - 6
+    description: The enable bit for master_tran_comp_int interrupt.
+  - name: TRANS_COMPLETE_INT_ENA
+    bit_range:
+    - 7
+    - 7
+    description: The enable bit for trans_complete_int interrupt.
+  - name: TIME_OUT_INT_ENA
+    bit_range:
+    - 8
+    - 8
+    description: The enable bit for time_out_int interrupt.
+  - name: TRANS_START_INT_ENA
+    bit_range:
+    - 9
+    - 9
+    description: The enable bit for trans_start_int interrupt.
+  - name: ACK_ERR_INT_ENA
+    bit_range:
+    - 10
+    - 10
+    description: The enable bit for ack_err_int interrupt.
+  - name: RX_REC_FULL_INT_ENA
+    bit_range:
+    - 11
+    - 11
+    description: The enable bit for rx_rec_full_int interrupt.
+  - name: TX_SEND_EMPTY_INT_ENA
+    bit_range:
+    - 12
+    - 12
+    description: The enable bit for tx_send_empty_int interrupt.
+  side_effects: null
+- id: INT_STATUS
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RXFIFO_FULL_INT_ST
+    bit_range:
+    - 0
+    - 0
+    description: The masked interrupt status for rxfifo_full_int interrupt.
+  - name: TXFIFO_EMPTY_INT_ST
+    bit_range:
+    - 1
+    - 1
+    description: The masked interrupt status for txfifo_empty_int interrupt.
+  - name: RXFIFO_OVF_INT_ST
+    bit_range:
+    - 2
+    - 2
+    description: The masked interrupt status for rxfifo_ovf_int interrupt.
+  - name: END_DETECT_INT_ST
+    bit_range:
+    - 3
+    - 3
+    description: The masked interrupt status for end_detect_int interrupt.
+  - name: SLAVE_TRAN_COMP_INT_ST
+    bit_range:
+    - 4
+    - 4
+    description: The masked interrupt status for slave_tran_comp_int interrupt.
+  - name: ARBITRATION_LOST_INT_ST
+    bit_range:
+    - 5
+    - 5
+    description: The masked interrupt status for arbitration_lost_int interrupt.
+  - name: MASTER_TRAN_COMP_INT_ST
+    bit_range:
+    - 6
+    - 6
+    description: The masked interrupt status for master_tran_comp_int interrupt.
+  - name: TRANS_COMPLETE_INT_ST
+    bit_range:
+    - 7
+    - 7
+    description: The masked interrupt status for trans_complete_int interrupt.
+  - name: TIME_OUT_INT_ST
+    bit_range:
+    - 8
+    - 8
+    description: The masked interrupt status for time_out_int interrupt.
+  - name: TRANS_START_INT_ST
+    bit_range:
+    - 9
+    - 9
+    description: The masked interrupt status for trans_start_int interrupt.
+  - name: ACK_ERR_INT_ST
+    bit_range:
+    - 10
+    - 10
+    description: The masked interrupt status for ack_err_int interrupt.
+  - name: RX_REC_FULL_INT_ST
+    bit_range:
+    - 11
+    - 11
+    description: The masked interrupt status for rx_rec_full_int interrupt.
+  - name: TX_SEND_EMPTY_INT_ST
+    bit_range:
+    - 12
+    - 12
+    description: The masked interrupt status for tx_send_empty_int interrupt.
+  side_effects: null
+- id: SDA_HOLD
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIME
+    bit_range:
+    - 9
+    - 0
+    description: This register is used to configure the clock num I2C used to hold the data after the negedge of SCL.
+  side_effects: null
+- id: SDA_SAMPLE
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIME
+    bit_range:
+    - 9
+    - 0
+    description: This register is used to configure the clock num I2C used to sample data on SDA after the posedge of SCL
+  side_effects: null
+- id: SCL_HIGH_PERIOD
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SCL_HIGH_PERIOD
+    bit_range:
+    - 13
+    - 0
+    description: This register is used to configure the clock num during SCL is low level.
+  side_effects: null
+- id: SCL_START_HOLD
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 8
+  fields:
+  - name: TIME
+    bit_range:
+    - 9
+    - 0
+    description: This register is used to configure the clock num between the negedge of SDA and negedge of SCL for start mark.
+  side_effects: null
+- id: SCL_RSTART_SETUP
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 8
+  fields:
+  - name: TIME
+    bit_range:
+    - 9
+    - 0
+    description: This register is used to configure the clock num between the posedge of SCL and the negedge of SDA for restart mark.
+  side_effects: null
+- id: SCL_STOP_HOLD
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIME
+    bit_range:
+    - 13
+    - 0
+    description: This register is used to configure the clock num after the STOP bit's posedge.
+  side_effects: null
+- id: SCL_STOP_SETUP
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIME
+    bit_range:
+    - 9
+    - 0
+    description: This register is used to configure the clock num between the posedge of SCL and the posedge of SDA.
+  side_effects: null
+- id: SCL_FILTER_CFG
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 8
+  fields:
+  - name: SCL_FILTER_THRES
+    bit_range:
+    - 2
+    - 0
+    description: When input SCL's pulse width is smaller than this register value  I2C ignores this pulse.
+  - name: SCL_FILTER_EN
+    bit_range:
+    - 3
+    - 3
+    description: This is the filter enable bit for SCL.
+  side_effects: null
+- id: SDA_FILTER_CFG
+  address_offset: 84
+  size: 32
+  access: READ_WRITE
+  reset_value: 8
+  fields:
+  - name: SDA_FILTER_THRES
+    bit_range:
+    - 2
+    - 0
+    description: When input SCL's pulse width is smaller than this register value  I2C ignores this pulse.
+  - name: SDA_FILTER_EN
+    bit_range:
+    - 3
+    - 3
+    description: This is the filter enable bit for SDA.
+  side_effects: null
+- id: COMD0-15
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: COMMAND
+    bit_range:
+    - 13
+    - 0
+    description: 'This is the content of command0. It consists of three part. op_code is the command  0: RSTART   1: WRITE  2: READ  3: STOP . 4:END.  Byte_num represent the number of data need to be send or data need to be received. ack_check_en  ack_exp and ack value are used to control  the ack bit.'
+  - name: COMMAND_DONE
+    bit_range:
+    - 31
+    - 31
+    description: When command0 is done in I2C Master mode  this bit changes to high level.
+  side_effects: null
+- id: DATE
+  address_offset: 248
+  size: 32
+  access: READ_WRITE
+  reset_value: 369369088
+  fields:
+  - name: DATE
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: FIFO_START_ADDR
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields: []
+  side_effects: null
+interrupts:
+  I2C_EXT1: 50
+  I2C_EXT0: 49
+timing: null

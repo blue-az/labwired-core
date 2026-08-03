@@ -1,0 +1,1480 @@
+peripheral: RTC_IO
+version: 0.1.0
+registers:
+- id: OUT
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DATA
+    bit_range:
+    - 31
+    - 14
+    description: GPIO0~17 output value
+  side_effects: null
+- id: OUT_W1TS
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OUT_DATA_W1TS
+    bit_range:
+    - 31
+    - 14
+    description: GPIO0~17 output value write 1 to set
+  side_effects: null
+- id: OUT_W1TC
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OUT_DATA_W1TC
+    bit_range:
+    - 31
+    - 14
+    description: GPIO0~17 output value write 1 to clear
+  side_effects: null
+- id: ENABLE
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENABLE
+    bit_range:
+    - 31
+    - 14
+    description: GPIO0~17 output enable
+  side_effects: null
+- id: ENABLE_W1TS
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENABLE_W1TS
+    bit_range:
+    - 31
+    - 14
+    description: GPIO0~17 output enable write 1 to set
+  side_effects: null
+- id: ENABLE_W1TC
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENABLE_W1TC
+    bit_range:
+    - 31
+    - 14
+    description: GPIO0~17 output enable write 1 to clear
+  side_effects: null
+- id: STATUS
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: INT
+    bit_range:
+    - 31
+    - 14
+    description: GPIO0~17 interrupt status
+  side_effects: null
+- id: STATUS_W1TS
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STATUS_INT_W1TS
+    bit_range:
+    - 31
+    - 14
+    description: GPIO0~17 interrupt status write 1 to set
+  side_effects: null
+- id: STATUS_W1TC
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STATUS_INT_W1TC
+    bit_range:
+    - 31
+    - 14
+    description: GPIO0~17 interrupt status write 1 to clear
+  side_effects: null
+- id: IN
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NEXT
+    bit_range:
+    - 31
+    - 14
+    description: GPIO0~17 input value
+  side_effects: null
+- id: PIN0-17
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PAD_DRIVER
+    bit_range:
+    - 2
+    - 2
+    description: 'if set to 0: normal output  if set to 1: open drain'
+  - name: INT_TYPE
+    bit_range:
+    - 9
+    - 7
+    description: 'if set to 0: GPIO interrupt disable  if set to 1: rising edge trigger  if set to 2: falling edge trigger  if set to 3: any edge trigger  if set to 4: low level trigger  if set to 5: high level trigger'
+  - name: WAKEUP_ENABLE
+    bit_range:
+    - 10
+    - 10
+    description: GPIO wake up enable  only available in light sleep
+  side_effects: null
+- id: RTC_DEBUG_SEL
+  address_offset: 112
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DEBUG_SEL0
+    bit_range:
+    - 4
+    - 0
+  - name: DEBUG_SEL1
+    bit_range:
+    - 9
+    - 5
+  - name: DEBUG_SEL2
+    bit_range:
+    - 14
+    - 10
+  - name: DEBUG_SEL3
+    bit_range:
+    - 19
+    - 15
+  - name: DEBUG_SEL4
+    bit_range:
+    - 24
+    - 20
+  - name: DEBUG_12M_NO_GATING
+    bit_range:
+    - 25
+    - 25
+  side_effects: null
+- id: DIG_PAD_HOLD
+  address_offset: 116
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DIG_PAD_HOLD
+    bit_range:
+    - 31
+    - 0
+    description: select the digital pad hold value.
+  side_effects: null
+- id: HALL_SENS
+  address_offset: 120
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: HALL_PHASE
+    bit_range:
+    - 30
+    - 30
+    description: Reverse phase of hall sensor
+  - name: XPD_HALL
+    bit_range:
+    - 31
+    - 31
+    description: Power on hall sensor and connect to VP and VN
+  side_effects: null
+- id: SENSOR_PADS
+  address_offset: 124
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SENSE4_FUN_IE
+    bit_range:
+    - 4
+    - 4
+    description: the input enable of the pad
+  - name: SENSE4_SLP_IE
+    bit_range:
+    - 5
+    - 5
+    description: the input enable of the pad in sleep status
+  - name: SENSE4_SLP_SEL
+    bit_range:
+    - 6
+    - 6
+    description: the sleep status selection signal of the pad
+  - name: SENSE4_FUN_SEL
+    bit_range:
+    - 8
+    - 7
+    description: the functional selection signal of the pad
+  - name: SENSE3_FUN_IE
+    bit_range:
+    - 9
+    - 9
+    description: the input enable of the pad
+  - name: SENSE3_SLP_IE
+    bit_range:
+    - 10
+    - 10
+    description: the input enable of the pad in sleep status
+  - name: SENSE3_SLP_SEL
+    bit_range:
+    - 11
+    - 11
+    description: the sleep status selection signal of the pad
+  - name: SENSE3_FUN_SEL
+    bit_range:
+    - 13
+    - 12
+    description: the functional selection signal of the pad
+  - name: SENSE2_FUN_IE
+    bit_range:
+    - 14
+    - 14
+    description: the input enable of the pad
+  - name: SENSE2_SLP_IE
+    bit_range:
+    - 15
+    - 15
+    description: the input enable of the pad in sleep status
+  - name: SENSE2_SLP_SEL
+    bit_range:
+    - 16
+    - 16
+    description: the sleep status selection signal of the pad
+  - name: SENSE2_FUN_SEL
+    bit_range:
+    - 18
+    - 17
+    description: the functional selection signal of the pad
+  - name: SENSE1_FUN_IE
+    bit_range:
+    - 19
+    - 19
+    description: the input enable of the pad
+  - name: SENSE1_SLP_IE
+    bit_range:
+    - 20
+    - 20
+    description: the input enable of the pad in sleep status
+  - name: SENSE1_SLP_SEL
+    bit_range:
+    - 21
+    - 21
+    description: the sleep status selection signal of the pad
+  - name: SENSE1_FUN_SEL
+    bit_range:
+    - 23
+    - 22
+    description: the functional selection signal of the pad
+  - name: SENSE4_MUX_SEL
+    bit_range:
+    - 24
+    - 24
+    description: Ò1Ó select the digital function  Ó0Óslection the rtc function
+  - name: SENSE3_MUX_SEL
+    bit_range:
+    - 25
+    - 25
+    description: Ò1Ó select the digital function  Ó0Óslection the rtc function
+  - name: SENSE2_MUX_SEL
+    bit_range:
+    - 26
+    - 26
+    description: Ò1Ó select the digital function  Ó0Óslection the rtc function
+  - name: SENSE1_MUX_SEL
+    bit_range:
+    - 27
+    - 27
+    description: Ò1Ó select the digital function  Ó0Óslection the rtc function
+  - name: SENSE4_HOLD
+    bit_range:
+    - 28
+    - 28
+    description: hold the current value of the output when setting the hold to Ò1Ó
+  - name: SENSE3_HOLD
+    bit_range:
+    - 29
+    - 29
+    description: hold the current value of the output when setting the hold to Ò1Ó
+  - name: SENSE2_HOLD
+    bit_range:
+    - 30
+    - 30
+    description: hold the current value of the output when setting the hold to Ò1Ó
+  - name: SENSE1_HOLD
+    bit_range:
+    - 31
+    - 31
+    description: hold the current value of the output when setting the hold to Ò1Ó
+  side_effects: null
+- id: ADC_PAD
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ADC2_FUN_IE
+    bit_range:
+    - 18
+    - 18
+    description: the input enable of the pad
+  - name: ADC2_SLP_IE
+    bit_range:
+    - 19
+    - 19
+    description: the input enable of the pad in sleep status
+  - name: ADC2_SLP_SEL
+    bit_range:
+    - 20
+    - 20
+    description: the sleep status selection signal of the pad
+  - name: ADC2_FUN_SEL
+    bit_range:
+    - 22
+    - 21
+    description: the functional selection signal of the pad
+  - name: ADC1_FUN_IE
+    bit_range:
+    - 23
+    - 23
+    description: the input enable of the pad
+  - name: ADC1_SLP_IE
+    bit_range:
+    - 24
+    - 24
+    description: the input enable of the pad in sleep status
+  - name: ADC1_SLP_SEL
+    bit_range:
+    - 25
+    - 25
+    description: the sleep status selection signal of the pad
+  - name: ADC1_FUN_SEL
+    bit_range:
+    - 27
+    - 26
+    description: the functional selection signal of the pad
+  - name: ADC2_MUX_SEL
+    bit_range:
+    - 28
+    - 28
+    description: Ò1Ó select the digital function  Ó0Óslection the rtc function
+  - name: ADC1_MUX_SEL
+    bit_range:
+    - 29
+    - 29
+    description: Ò1Ó select the digital function  Ó0Óslection the rtc function
+  - name: ADC2_HOLD
+    bit_range:
+    - 30
+    - 30
+    description: hold the current value of the output when setting the hold to Ò1Ó
+  - name: ADC1_HOLD
+    bit_range:
+    - 31
+    - 31
+    description: hold the current value of the output when setting the hold to Ò1Ó
+  side_effects: null
+- id: PAD_DAC1
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483648
+  fields:
+  - name: PDAC1_DAC_XPD_FORCE
+    bit_range:
+    - 10
+    - 10
+    description: Power on DAC1. Usually  we need to tristate PDAC1 if we power on the DAC  i.e. IE=0  OE=0  RDE=0  RUE=0
+  - name: PDAC1_FUN_IE
+    bit_range:
+    - 11
+    - 11
+    description: the input enable of the pad
+  - name: PDAC1_SLP_OE
+    bit_range:
+    - 12
+    - 12
+    description: the output enable of the pad in sleep status
+  - name: PDAC1_SLP_IE
+    bit_range:
+    - 13
+    - 13
+    description: the input enable of the pad in sleep status
+  - name: PDAC1_SLP_SEL
+    bit_range:
+    - 14
+    - 14
+    description: the sleep status selection signal of the pad
+  - name: PDAC1_FUN_SEL
+    bit_range:
+    - 16
+    - 15
+    description: the functional selection signal of the pad
+  - name: PDAC1_MUX_SEL
+    bit_range:
+    - 17
+    - 17
+    description: Ò1Ó select the digital function  Ó0Óslection the rtc function
+  - name: PDAC1_XPD_DAC
+    bit_range:
+    - 18
+    - 18
+    description: Power on DAC1. Usually  we need to tristate PDAC1 if we power on the DAC  i.e. IE=0  OE=0  RDE=0  RUE=0
+  - name: PDAC1_DAC
+    bit_range:
+    - 26
+    - 19
+    description: PAD DAC1 control code.
+  - name: PDAC1_RUE
+    bit_range:
+    - 27
+    - 27
+    description: the pull up enable of the pad
+  - name: PDAC1_RDE
+    bit_range:
+    - 28
+    - 28
+    description: the pull down enable of the pad
+  - name: PDAC1_HOLD
+    bit_range:
+    - 29
+    - 29
+    description: hold the current value of the output when setting the hold to Ò1Ó
+  - name: PDAC1_DRV
+    bit_range:
+    - 31
+    - 30
+    description: the driver strength of the pad
+  side_effects: null
+- id: PAD_DAC2
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483648
+  fields:
+  - name: PDAC2_DAC_XPD_FORCE
+    bit_range:
+    - 10
+    - 10
+    description: Power on DAC2. Usually  we need to tristate PDAC2 if we power on the DAC  i.e. IE=0  OE=0  RDE=0  RUE=0
+  - name: PDAC2_FUN_IE
+    bit_range:
+    - 11
+    - 11
+    description: the input enable of the pad
+  - name: PDAC2_SLP_OE
+    bit_range:
+    - 12
+    - 12
+    description: the output enable of the pad in sleep status
+  - name: PDAC2_SLP_IE
+    bit_range:
+    - 13
+    - 13
+    description: the input enable of the pad in sleep status
+  - name: PDAC2_SLP_SEL
+    bit_range:
+    - 14
+    - 14
+    description: the sleep status selection signal of the pad
+  - name: PDAC2_FUN_SEL
+    bit_range:
+    - 16
+    - 15
+    description: the functional selection signal of the pad
+  - name: PDAC2_MUX_SEL
+    bit_range:
+    - 17
+    - 17
+    description: Ò1Ó select the digital function  Ó0Óslection the rtc function
+  - name: PDAC2_XPD_DAC
+    bit_range:
+    - 18
+    - 18
+    description: Power on DAC2. Usually  we need to tristate PDAC1 if we power on the DAC  i.e. IE=0  OE=0  RDE=0  RUE=0
+  - name: PDAC2_DAC
+    bit_range:
+    - 26
+    - 19
+    description: PAD DAC2 control code.
+  - name: PDAC2_RUE
+    bit_range:
+    - 27
+    - 27
+    description: the pull up enable of the pad
+  - name: PDAC2_RDE
+    bit_range:
+    - 28
+    - 28
+    description: the pull down enable of the pad
+  - name: PDAC2_HOLD
+    bit_range:
+    - 29
+    - 29
+    description: hold the current value of the output when setting the hold to Ò1Ó
+  - name: PDAC2_DRV
+    bit_range:
+    - 31
+    - 30
+    description: the driver strength of the pad
+  side_effects: null
+- id: XTAL_32K_PAD
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 2215641104
+  fields:
+  - name: DBIAS_XTAL_32K
+    bit_range:
+    - 2
+    - 1
+    description: 32K XTAL self-bias reference control.
+  - name: DRES_XTAL_32K
+    bit_range:
+    - 4
+    - 3
+    description: 32K XTAL resistor bias control.
+  - name: X32P_FUN_IE
+    bit_range:
+    - 5
+    - 5
+    description: the input enable of the pad
+  - name: X32P_SLP_OE
+    bit_range:
+    - 6
+    - 6
+    description: the output enable of the pad in sleep status
+  - name: X32P_SLP_IE
+    bit_range:
+    - 7
+    - 7
+    description: the input enable of the pad in sleep status
+  - name: X32P_SLP_SEL
+    bit_range:
+    - 8
+    - 8
+    description: the sleep status selection signal of the pad
+  - name: X32P_FUN_SEL
+    bit_range:
+    - 10
+    - 9
+    description: the functional selection signal of the pad
+  - name: X32N_FUN_IE
+    bit_range:
+    - 11
+    - 11
+    description: the input enable of the pad
+  - name: X32N_SLP_OE
+    bit_range:
+    - 12
+    - 12
+    description: the output enable of the pad in sleep status
+  - name: X32N_SLP_IE
+    bit_range:
+    - 13
+    - 13
+    description: the input enable of the pad in sleep status
+  - name: X32N_SLP_SEL
+    bit_range:
+    - 14
+    - 14
+    description: the sleep status selection signal of the pad
+  - name: X32N_FUN_SEL
+    bit_range:
+    - 16
+    - 15
+    description: the functional selection signal of the pad
+  - name: X32P_MUX_SEL
+    bit_range:
+    - 17
+    - 17
+    description: Ò1Ó select the digital function  Ó0Óslection the rtc function
+  - name: X32N_MUX_SEL
+    bit_range:
+    - 18
+    - 18
+    description: Ò1Ó select the digital function  Ó0Óslection the rtc function
+  - name: XPD_XTAL_32K
+    bit_range:
+    - 19
+    - 19
+    description: Power up 32kHz crystal oscillator
+  - name: DAC_XTAL_32K
+    bit_range:
+    - 21
+    - 20
+    description: 32K XTAL bias current DAC.
+  - name: X32P_RUE
+    bit_range:
+    - 22
+    - 22
+    description: the pull up enable of the pad
+  - name: X32P_RDE
+    bit_range:
+    - 23
+    - 23
+    description: the pull down enable of the pad
+  - name: X32P_HOLD
+    bit_range:
+    - 24
+    - 24
+    description: hold the current value of the output when setting the hold to Ò1Ó
+  - name: X32P_DRV
+    bit_range:
+    - 26
+    - 25
+    description: the driver strength of the pad
+  - name: X32N_RUE
+    bit_range:
+    - 27
+    - 27
+    description: the pull up enable of the pad
+  - name: X32N_RDE
+    bit_range:
+    - 28
+    - 28
+    description: the pull down enable of the pad
+  - name: X32N_HOLD
+    bit_range:
+    - 29
+    - 29
+    description: hold the current value of the output when setting the hold to Ò1Ó
+  - name: X32N_DRV
+    bit_range:
+    - 31
+    - 30
+    description: the driver strength of the pad
+  side_effects: null
+- id: TOUCH_CFG
+  address_offset: 144
+  size: 32
+  access: READ_WRITE
+  reset_value: 1711276032
+  fields:
+  - name: TOUCH_DCUR
+    bit_range:
+    - 24
+    - 23
+    description: touch sensor bias current. Should have option to tie with BIAS_SLEEP(When BIAS_SLEEP  this setting is available
+  - name: TOUCH_DRANGE
+    bit_range:
+    - 26
+    - 25
+    description: touch sensor saw wave voltage range.
+  - name: TOUCH_DREFL
+    bit_range:
+    - 28
+    - 27
+    description: touch sensor saw wave bottom voltage.
+  - name: TOUCH_DREFH
+    bit_range:
+    - 30
+    - 29
+    description: touch sensor saw wave top voltage.
+  - name: TOUCH_XPD_BIAS
+    bit_range:
+    - 31
+    - 31
+    description: touch sensor bias power on.
+  side_effects: null
+- id: TOUCH_PAD0
+  address_offset: 148
+  size: 32
+  access: READ_WRITE
+  reset_value: 1375731712
+  fields:
+  - name: TO_GPIO
+    bit_range:
+    - 12
+    - 12
+    description: connect the rtc pad input to digital pad input Ó0Ó is availbale GPIO4
+  - name: FUN_IE
+    bit_range:
+    - 13
+    - 13
+    description: the input enable of the pad
+  - name: SLP_OE
+    bit_range:
+    - 14
+    - 14
+    description: the output enable of the pad in sleep status
+  - name: SLP_IE
+    bit_range:
+    - 15
+    - 15
+    description: the input enable of the pad in sleep status
+  - name: SLP_SEL
+    bit_range:
+    - 16
+    - 16
+    description: the sleep status selection signal of the pad
+  - name: FUN_SEL
+    bit_range:
+    - 18
+    - 17
+    description: the functional selection signal of the pad
+  - name: MUX_SEL
+    bit_range:
+    - 19
+    - 19
+    description: Ò1Ó select the digital function  Ó0Óslection the rtc function
+  - name: XPD
+    bit_range:
+    - 20
+    - 20
+    description: touch sensor power on.
+  - name: TIE_OPT
+    bit_range:
+    - 21
+    - 21
+    description: 'default touch sensor tie option. 0: tie low  1: tie high.'
+  - name: START
+    bit_range:
+    - 22
+    - 22
+    description: start touch sensor.
+  - name: DAC
+    bit_range:
+    - 25
+    - 23
+    description: touch sensor slope control. 3-bit for each touch panel  default 100.
+  - name: RUE
+    bit_range:
+    - 27
+    - 27
+    description: the pull up enable of the pad
+  - name: RDE
+    bit_range:
+    - 28
+    - 28
+    description: the pull down enable of the pad
+  - name: DRV
+    bit_range:
+    - 30
+    - 29
+    description: the driver strength of the pad
+  - name: HOLD
+    bit_range:
+    - 31
+    - 31
+    description: hold the current value of the output when setting the hold to Ò1Ó
+  side_effects: null
+- id: TOUCH_PAD1
+  address_offset: 152
+  size: 32
+  access: READ_WRITE
+  reset_value: 1241513984
+  fields:
+  - name: TO_GPIO
+    bit_range:
+    - 12
+    - 12
+    description: connect the rtc pad input to digital pad input Ó0Ó is availbale.GPIO0
+  - name: FUN_IE
+    bit_range:
+    - 13
+    - 13
+    description: the input enable of the pad
+  - name: SLP_OE
+    bit_range:
+    - 14
+    - 14
+    description: the output enable of the pad in sleep status
+  - name: SLP_IE
+    bit_range:
+    - 15
+    - 15
+    description: the input enable of the pad in sleep status
+  - name: SLP_SEL
+    bit_range:
+    - 16
+    - 16
+    description: the sleep status selection signal of the pad
+  - name: FUN_SEL
+    bit_range:
+    - 18
+    - 17
+    description: the functional selection signal of the pad
+  - name: MUX_SEL
+    bit_range:
+    - 19
+    - 19
+    description: Ò1Ó select the digital function  Ó0Óslection the rtc function
+  - name: XPD
+    bit_range:
+    - 20
+    - 20
+    description: touch sensor power on.
+  - name: TIE_OPT
+    bit_range:
+    - 21
+    - 21
+    description: 'default touch sensor tie option. 0: tie low  1: tie high.'
+  - name: START
+    bit_range:
+    - 22
+    - 22
+    description: start touch sensor.
+  - name: DAC
+    bit_range:
+    - 25
+    - 23
+    description: touch sensor slope control. 3-bit for each touch panel  default 100.
+  - name: RUE
+    bit_range:
+    - 27
+    - 27
+    description: the pull up enable of the pad
+  - name: RDE
+    bit_range:
+    - 28
+    - 28
+    description: the pull down enable of the pad
+  - name: DRV
+    bit_range:
+    - 30
+    - 29
+    description: the driver strength of the pad
+  - name: HOLD
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: TOUCH_PAD2
+  address_offset: 156
+  size: 32
+  access: READ_WRITE
+  reset_value: 1375731712
+  fields:
+  - name: TO_GPIO
+    bit_range:
+    - 12
+    - 12
+    description: connect the rtc pad input to digital pad input Ó0Ó is availbale.GPIO2
+  - name: FUN_IE
+    bit_range:
+    - 13
+    - 13
+    description: the input enable of the pad
+  - name: SLP_OE
+    bit_range:
+    - 14
+    - 14
+    description: the output enable of the pad in sleep status
+  - name: SLP_IE
+    bit_range:
+    - 15
+    - 15
+    description: the input enable of the pad in sleep status
+  - name: SLP_SEL
+    bit_range:
+    - 16
+    - 16
+    description: the sleep status selection signal of the pad
+  - name: FUN_SEL
+    bit_range:
+    - 18
+    - 17
+    description: the functional selection signal of the pad
+  - name: MUX_SEL
+    bit_range:
+    - 19
+    - 19
+    description: Ò1Ó select the digital function  Ó0Óslection the rtc function
+  - name: XPD
+    bit_range:
+    - 20
+    - 20
+    description: touch sensor power on.
+  - name: TIE_OPT
+    bit_range:
+    - 21
+    - 21
+    description: 'default touch sensor tie option. 0: tie low  1: tie high.'
+  - name: START
+    bit_range:
+    - 22
+    - 22
+    description: start touch sensor.
+  - name: DAC
+    bit_range:
+    - 25
+    - 23
+    description: touch sensor slope control. 3-bit for each touch panel  default 100.
+  - name: RUE
+    bit_range:
+    - 27
+    - 27
+    description: the pull up enable of the pad
+  - name: RDE
+    bit_range:
+    - 28
+    - 28
+    description: the pull down enable of the pad
+  - name: DRV
+    bit_range:
+    - 30
+    - 29
+    description: the driver strength of the pad
+  - name: HOLD
+    bit_range:
+    - 31
+    - 31
+    description: hold the current value of the output when setting the hold to Ò1Ó
+  side_effects: null
+- id: TOUCH_PAD3
+  address_offset: 160
+  size: 32
+  access: READ_WRITE
+  reset_value: 1241513984
+  fields:
+  - name: TO_GPIO
+    bit_range:
+    - 12
+    - 12
+    description: connect the rtc pad input to digital pad input Ó0Ó is availbale.MTDO
+  - name: FUN_IE
+    bit_range:
+    - 13
+    - 13
+    description: the input enable of the pad
+  - name: SLP_OE
+    bit_range:
+    - 14
+    - 14
+    description: the output enable of the pad in sleep status
+  - name: SLP_IE
+    bit_range:
+    - 15
+    - 15
+    description: the input enable of the pad in sleep status
+  - name: SLP_SEL
+    bit_range:
+    - 16
+    - 16
+    description: the sleep status selection signal of the pad
+  - name: FUN_SEL
+    bit_range:
+    - 18
+    - 17
+    description: the functional selection signal of the pad
+  - name: MUX_SEL
+    bit_range:
+    - 19
+    - 19
+    description: Ò1Ó select the digital function  Ó0Óslection the rtc function
+  - name: XPD
+    bit_range:
+    - 20
+    - 20
+    description: touch sensor power on.
+  - name: TIE_OPT
+    bit_range:
+    - 21
+    - 21
+    description: 'default touch sensor tie option. 0: tie low  1: tie high.'
+  - name: START
+    bit_range:
+    - 22
+    - 22
+    description: start touch sensor.
+  - name: DAC
+    bit_range:
+    - 25
+    - 23
+    description: touch sensor slope control. 3-bit for each touch panel  default 100.
+  - name: RUE
+    bit_range:
+    - 27
+    - 27
+    description: the pull up enable of the pad
+  - name: RDE
+    bit_range:
+    - 28
+    - 28
+    description: the pull down enable of the pad
+  - name: DRV
+    bit_range:
+    - 30
+    - 29
+    description: the driver strength of the pad
+  - name: HOLD
+    bit_range:
+    - 31
+    - 31
+    description: hold the current value of the output when setting the hold to Ò1Ó
+  side_effects: null
+- id: TOUCH_PAD4
+  address_offset: 164
+  size: 32
+  access: READ_WRITE
+  reset_value: 1375731712
+  fields:
+  - name: TO_GPIO
+    bit_range:
+    - 12
+    - 12
+    description: connect the rtc pad input to digital pad input Ó0Ó is availbale.MTCK
+  - name: FUN_IE
+    bit_range:
+    - 13
+    - 13
+    description: the input enable of the pad
+  - name: SLP_OE
+    bit_range:
+    - 14
+    - 14
+    description: the output enable of the pad in sleep status
+  - name: SLP_IE
+    bit_range:
+    - 15
+    - 15
+    description: the input enable of the pad in sleep status
+  - name: SLP_SEL
+    bit_range:
+    - 16
+    - 16
+    description: the sleep status selection signal of the pad
+  - name: FUN_SEL
+    bit_range:
+    - 18
+    - 17
+    description: the functional selection signal of the pad
+  - name: MUX_SEL
+    bit_range:
+    - 19
+    - 19
+    description: Ò1Ó select the digital function  Ó0Óslection the rtc function
+  - name: XPD
+    bit_range:
+    - 20
+    - 20
+    description: touch sensor power on.
+  - name: TIE_OPT
+    bit_range:
+    - 21
+    - 21
+    description: 'default touch sensor tie option. 0: tie low  1: tie high.'
+  - name: START
+    bit_range:
+    - 22
+    - 22
+    description: start touch sensor.
+  - name: DAC
+    bit_range:
+    - 25
+    - 23
+    description: touch sensor slope control. 3-bit for each touch panel  default 100.
+  - name: RUE
+    bit_range:
+    - 27
+    - 27
+    description: the pull up enable of the pad
+  - name: RDE
+    bit_range:
+    - 28
+    - 28
+    description: the pull down enable of the pad
+  - name: DRV
+    bit_range:
+    - 30
+    - 29
+    description: the driver strength of the pad
+  - name: HOLD
+    bit_range:
+    - 31
+    - 31
+    description: hold the current value of the output when setting the hold to Ò1Ó
+  side_effects: null
+- id: TOUCH_PAD5
+  address_offset: 168
+  size: 32
+  access: READ_WRITE
+  reset_value: 1375731712
+  fields:
+  - name: TO_GPIO
+    bit_range:
+    - 12
+    - 12
+    description: connect the rtc pad input to digital pad input Ó0Ó is availbale.MTDI
+  - name: FUN_IE
+    bit_range:
+    - 13
+    - 13
+    description: the input enable of the pad
+  - name: SLP_OE
+    bit_range:
+    - 14
+    - 14
+    description: the output enable of the pad in sleep status
+  - name: SLP_IE
+    bit_range:
+    - 15
+    - 15
+    description: the input enable of the pad in sleep status
+  - name: SLP_SEL
+    bit_range:
+    - 16
+    - 16
+    description: the sleep status selection signal of the pad
+  - name: FUN_SEL
+    bit_range:
+    - 18
+    - 17
+    description: the functional selection signal of the pad
+  - name: MUX_SEL
+    bit_range:
+    - 19
+    - 19
+    description: Ò1Ó select the digital function  Ó0Óslection the rtc function
+  - name: XPD
+    bit_range:
+    - 20
+    - 20
+    description: touch sensor power on.
+  - name: TIE_OPT
+    bit_range:
+    - 21
+    - 21
+    description: 'default touch sensor tie option. 0: tie low  1: tie high.'
+  - name: START
+    bit_range:
+    - 22
+    - 22
+    description: start touch sensor.
+  - name: DAC
+    bit_range:
+    - 25
+    - 23
+    description: touch sensor slope control. 3-bit for each touch panel  default 100.
+  - name: RUE
+    bit_range:
+    - 27
+    - 27
+    description: the pull up enable of the pad
+  - name: RDE
+    bit_range:
+    - 28
+    - 28
+    description: the pull down enable of the pad
+  - name: DRV
+    bit_range:
+    - 30
+    - 29
+    description: the driver strength of the pad
+  - name: HOLD
+    bit_range:
+    - 31
+    - 31
+    description: hold the current value of the output when setting the hold to Ò1Ó
+  side_effects: null
+- id: TOUCH_PAD6
+  address_offset: 172
+  size: 32
+  access: READ_WRITE
+  reset_value: 1241513984
+  fields:
+  - name: TO_GPIO
+    bit_range:
+    - 12
+    - 12
+    description: connect the rtc pad input to digital pad input Ó0Ó is availbale.MTMS
+  - name: FUN_IE
+    bit_range:
+    - 13
+    - 13
+    description: the input enable of the pad
+  - name: SLP_OE
+    bit_range:
+    - 14
+    - 14
+    description: the output enable of the pad in sleep status
+  - name: SLP_IE
+    bit_range:
+    - 15
+    - 15
+    description: the input enable of the pad in sleep status
+  - name: SLP_SEL
+    bit_range:
+    - 16
+    - 16
+    description: the sleep status selection signal of the pad
+  - name: FUN_SEL
+    bit_range:
+    - 18
+    - 17
+    description: the functional selection signal of the pad
+  - name: MUX_SEL
+    bit_range:
+    - 19
+    - 19
+    description: Ò1Ó select the digital function  Ó0Óslection the rtc function
+  - name: XPD
+    bit_range:
+    - 20
+    - 20
+    description: touch sensor power on.
+  - name: TIE_OPT
+    bit_range:
+    - 21
+    - 21
+    description: 'default touch sensor tie option. 0: tie low  1: tie high.'
+  - name: START
+    bit_range:
+    - 22
+    - 22
+    description: start touch sensor.
+  - name: DAC
+    bit_range:
+    - 25
+    - 23
+    description: touch sensor slope control. 3-bit for each touch panel  default 100.
+  - name: RUE
+    bit_range:
+    - 27
+    - 27
+    description: the pull up enable of the pad
+  - name: RDE
+    bit_range:
+    - 28
+    - 28
+    description: the pull down enable of the pad
+  - name: DRV
+    bit_range:
+    - 30
+    - 29
+    description: the driver strength of the pad
+  - name: HOLD
+    bit_range:
+    - 31
+    - 31
+    description: hold the current value of the output when setting the hold to Ò1Ó
+  side_effects: null
+- id: TOUCH_PAD7
+  address_offset: 176
+  size: 32
+  access: READ_WRITE
+  reset_value: 1107296256
+  fields:
+  - name: TO_GPIO
+    bit_range:
+    - 12
+    - 12
+    description: connect the rtc pad input to digital pad input Ó0Ó is availbale.GPIO27
+  - name: FUN_IE
+    bit_range:
+    - 13
+    - 13
+    description: the input enable of the pad
+  - name: SLP_OE
+    bit_range:
+    - 14
+    - 14
+    description: the output enable of the pad in sleep status
+  - name: SLP_IE
+    bit_range:
+    - 15
+    - 15
+    description: the input enable of the pad in sleep status
+  - name: SLP_SEL
+    bit_range:
+    - 16
+    - 16
+    description: the sleep status selection signal of the pad
+  - name: FUN_SEL
+    bit_range:
+    - 18
+    - 17
+    description: the functional selection signal of the pad
+  - name: MUX_SEL
+    bit_range:
+    - 19
+    - 19
+    description: Ò1Ó select the digital function  Ó0Óslection the rtc function
+  - name: XPD
+    bit_range:
+    - 20
+    - 20
+    description: touch sensor power on.
+  - name: TIE_OPT
+    bit_range:
+    - 21
+    - 21
+    description: 'default touch sensor tie option. 0: tie low  1: tie high.'
+  - name: START
+    bit_range:
+    - 22
+    - 22
+    description: start touch sensor.
+  - name: DAC
+    bit_range:
+    - 25
+    - 23
+    description: touch sensor slope control. 3-bit for each touch panel  default 100.
+  - name: RUE
+    bit_range:
+    - 27
+    - 27
+    description: the pull up enable of the pad
+  - name: RDE
+    bit_range:
+    - 28
+    - 28
+    description: the pull down enable of the pad
+  - name: DRV
+    bit_range:
+    - 30
+    - 29
+    description: the driver strength of the pad
+  - name: HOLD
+    bit_range:
+    - 31
+    - 31
+    description: hold the current value of the output when setting the hold to Ò1Ó
+  side_effects: null
+- id: TOUCH_PAD8
+  address_offset: 180
+  size: 32
+  access: READ_WRITE
+  reset_value: 33554432
+  fields:
+  - name: TO_GPIO
+    bit_range:
+    - 19
+    - 19
+    description: connect the rtc pad input to digital pad input Ó0Ó is availbale
+  - name: XPD
+    bit_range:
+    - 20
+    - 20
+    description: touch sensor power on.
+  - name: TIE_OPT
+    bit_range:
+    - 21
+    - 21
+    description: 'default touch sensor tie option. 0: tie low  1: tie high.'
+  - name: START
+    bit_range:
+    - 22
+    - 22
+    description: start touch sensor.
+  - name: DAC
+    bit_range:
+    - 25
+    - 23
+    description: touch sensor slope control. 3-bit for each touch panel  default 100.
+  side_effects: null
+- id: TOUCH_PAD9
+  address_offset: 184
+  size: 32
+  access: READ_WRITE
+  reset_value: 33554432
+  fields:
+  - name: TO_GPIO
+    bit_range:
+    - 19
+    - 19
+    description: connect the rtc pad input to digital pad input Ó0Ó is availbale
+  - name: XPD
+    bit_range:
+    - 20
+    - 20
+    description: touch sensor power on.
+  - name: TIE_OPT
+    bit_range:
+    - 21
+    - 21
+    description: 'default touch sensor tie option. 0: tie low  1: tie high.'
+  - name: START
+    bit_range:
+    - 22
+    - 22
+    description: start touch sensor.
+  - name: DAC
+    bit_range:
+    - 25
+    - 23
+    description: touch sensor slope control. 3-bit for each touch panel  default 100.
+  side_effects: null
+- id: EXT_WAKEUP0
+  address_offset: 188
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SEL
+    bit_range:
+    - 31
+    - 27
+    description: select the wakeup source Ó0Ó select GPIO0 Ó1Ó select GPIO2 ...Ò17Ó select GPIO17
+  side_effects: null
+- id: XTL_EXT_CTR
+  address_offset: 192
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SEL
+    bit_range:
+    - 31
+    - 27
+    description: select the external xtl power source Ó0Ó select GPIO0 Ó1Ó select GPIO2 ...Ò17Ó select GPIO17
+  side_effects: null
+- id: SAR_I2C_IO
+  address_offset: 196
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SAR_DEBUG_BIT_SEL
+    bit_range:
+    - 27
+    - 23
+  - name: SAR_I2C_SCL_SEL
+    bit_range:
+    - 29
+    - 28
+    description: Ò0Ó using TOUCH_PAD[0] as i2c clk Ò1Ó using TOUCH_PAD[2] as i2c clk
+  - name: SAR_I2C_SDA_SEL
+    bit_range:
+    - 31
+    - 30
+    description: Ò0Ó using TOUCH_PAD[1] as i2c sda Ò1Ó using TOUCH_PAD[3] as i2c sda
+  side_effects: null
+- id: DATE
+  address_offset: 200
+  size: 32
+  access: READ_WRITE
+  reset_value: 23081312
+  fields:
+  - name: IO_DATE
+    bit_range:
+    - 27
+    - 0
+    description: date
+  side_effects: null
+interrupts: null
+timing: null

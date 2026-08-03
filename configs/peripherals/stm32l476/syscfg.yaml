@@ -1,0 +1,448 @@
+peripheral: SYSCFG
+version: 0.1.0
+registers:
+- id: MEMRMP
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MEM_MODE
+    bit_range:
+    - 2
+    - 0
+    description: Memory mapping selection
+  - name: QFS
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      QUADSPI memory mapping
+                    swap
+  - name: FB_MODE
+    bit_range:
+    - 8
+    - 8
+    description: Flash Bank mode selection
+  side_effects: null
+- id: CFGR1
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 2080374785
+  fields:
+  - name: FWDIS
+    bit_range:
+    - 0
+    - 0
+    description: Firewall disable
+  - name: BOOSTEN
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      I/O analog switch voltage booster
+                    enable
+  - name: I2C_PB6_FMP
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      Fast-mode Plus (Fm+) driving capability
+                    activation on PB6
+  - name: I2C_PB7_FMP
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      Fast-mode Plus (Fm+) driving capability
+                    activation on PB7
+  - name: I2C_PB8_FMP
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      Fast-mode Plus (Fm+) driving capability
+                    activation on PB8
+  - name: I2C_PB9_FMP
+    bit_range:
+    - 19
+    - 19
+    description: |-
+      Fast-mode Plus (Fm+) driving capability
+                    activation on PB9
+  - name: I2C1_FMP
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      I2C1 Fast-mode Plus driving capability
+                    activation
+  - name: I2C2_FMP
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      I2C2 Fast-mode Plus driving capability
+                    activation
+  - name: I2C3_FMP
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      I2C3 Fast-mode Plus driving capability
+                    activation
+  - name: FPU_IE
+    bit_range:
+    - 31
+    - 26
+    description: |-
+      Floating Point Unit interrupts enable
+                    bits
+  side_effects: null
+- id: EXTICR1
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EXTI0
+    bit_range:
+    - 2
+    - 0
+    description: EXTI 0 configuration bits
+  - name: EXTI1
+    bit_range:
+    - 6
+    - 4
+    description: EXTI 1 configuration bits
+  - name: EXTI2
+    bit_range:
+    - 10
+    - 8
+    description: EXTI 2 configuration bits
+  - name: EXTI3
+    bit_range:
+    - 14
+    - 12
+    description: EXTI 3 configuration bits
+  side_effects: null
+- id: EXTICR2
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EXTI4
+    bit_range:
+    - 2
+    - 0
+    description: EXTI 4 configuration bits
+  - name: EXTI5
+    bit_range:
+    - 6
+    - 4
+    description: EXTI 5 configuration bits
+  - name: EXTI6
+    bit_range:
+    - 10
+    - 8
+    description: EXTI 6 configuration bits
+  - name: EXTI7
+    bit_range:
+    - 14
+    - 12
+    description: EXTI 7 configuration bits
+  side_effects: null
+- id: EXTICR3
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EXTI8
+    bit_range:
+    - 2
+    - 0
+    description: EXTI 8 configuration bits
+  - name: EXTI9
+    bit_range:
+    - 6
+    - 4
+    description: EXTI 9 configuration bits
+  - name: EXTI10
+    bit_range:
+    - 10
+    - 8
+    description: EXTI 10 configuration bits
+  - name: EXTI11
+    bit_range:
+    - 14
+    - 12
+    description: EXTI 11 configuration bits
+  side_effects: null
+- id: EXTICR4
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EXTI12
+    bit_range:
+    - 2
+    - 0
+    description: EXTI12 configuration bits
+  - name: EXTI13
+    bit_range:
+    - 6
+    - 4
+    description: EXTI13 configuration bits
+  - name: EXTI14
+    bit_range:
+    - 10
+    - 8
+    description: EXTI14 configuration bits
+  - name: EXTI15
+    bit_range:
+    - 14
+    - 12
+    description: EXTI15 configuration bits
+  side_effects: null
+- id: SCSR
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SRAM2ER
+    bit_range:
+    - 0
+    - 0
+    description: SRAM2 Erase
+  - name: SRAM2BSY
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      SRAM2 busy by erase
+                    operation
+  side_effects: null
+- id: CFGR2
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CLL
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Cortex-M4 LOCKUP (Hardfault) output
+                    enable bit
+  - name: SPL
+    bit_range:
+    - 1
+    - 1
+    description: SRAM2 parity lock bit
+  - name: PVDL
+    bit_range:
+    - 2
+    - 2
+    description: PVD lock enable bit
+  - name: ECCL
+    bit_range:
+    - 3
+    - 3
+    description: ECC Lock
+  - name: SPF
+    bit_range:
+    - 8
+    - 8
+    description: SRAM2 parity error flag
+  side_effects: null
+- id: SWPR
+  address_offset: 32
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: P0WP
+    bit_range:
+    - 0
+    - 0
+    description: P0WP
+  - name: P1WP
+    bit_range:
+    - 1
+    - 1
+    description: P1WP
+  - name: P2WP
+    bit_range:
+    - 2
+    - 2
+    description: P2WP
+  - name: P3WP
+    bit_range:
+    - 3
+    - 3
+    description: P3WP
+  - name: P4WP
+    bit_range:
+    - 4
+    - 4
+    description: P4WP
+  - name: P5WP
+    bit_range:
+    - 5
+    - 5
+    description: P5WP
+  - name: P6WP
+    bit_range:
+    - 6
+    - 6
+    description: P6WP
+  - name: P7WP
+    bit_range:
+    - 7
+    - 7
+    description: P7WP
+  - name: P8WP
+    bit_range:
+    - 8
+    - 8
+    description: P8WP
+  - name: P9WP
+    bit_range:
+    - 9
+    - 9
+    description: P9WP
+  - name: P10WP
+    bit_range:
+    - 10
+    - 10
+    description: P10WP
+  - name: P11WP
+    bit_range:
+    - 11
+    - 11
+    description: P11WP
+  - name: P12WP
+    bit_range:
+    - 12
+    - 12
+    description: P12WP
+  - name: P13WP
+    bit_range:
+    - 13
+    - 13
+    description: P13WP
+  - name: P14WP
+    bit_range:
+    - 14
+    - 14
+    description: P14WP
+  - name: P15WP
+    bit_range:
+    - 15
+    - 15
+    description: P15WP
+  - name: P16WP
+    bit_range:
+    - 16
+    - 16
+    description: P16WP
+  - name: P17WP
+    bit_range:
+    - 17
+    - 17
+    description: P17WP
+  - name: P18WP
+    bit_range:
+    - 18
+    - 18
+    description: P18WP
+  - name: P19WP
+    bit_range:
+    - 19
+    - 19
+    description: P19WP
+  - name: P20WP
+    bit_range:
+    - 20
+    - 20
+    description: P20WP
+  - name: P21WP
+    bit_range:
+    - 21
+    - 21
+    description: P21WP
+  - name: P22WP
+    bit_range:
+    - 22
+    - 22
+    description: P22WP
+  - name: P23WP
+    bit_range:
+    - 23
+    - 23
+    description: P23WP
+  - name: P24WP
+    bit_range:
+    - 24
+    - 24
+    description: P24WP
+  - name: P25WP
+    bit_range:
+    - 25
+    - 25
+    description: P25WP
+  - name: P26WP
+    bit_range:
+    - 26
+    - 26
+    description: P26WP
+  - name: P27WP
+    bit_range:
+    - 27
+    - 27
+    description: P27WP
+  - name: P28WP
+    bit_range:
+    - 28
+    - 28
+    description: P28WP
+  - name: P29WP
+    bit_range:
+    - 29
+    - 29
+    description: P29WP
+  - name: P30WP
+    bit_range:
+    - 30
+    - 30
+    description: P30WP
+  - name: P31WP
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      SRAM2 page 31 write
+                    protection
+  side_effects: null
+- id: SKR
+  address_offset: 36
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: KEY
+    bit_range:
+    - 7
+    - 0
+    description: |-
+      SRAM2 write protection key for software
+                    erase
+  side_effects: null
+interrupts: null
+timing: null

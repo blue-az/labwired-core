@@ -1,0 +1,2203 @@
+peripheral: ETM_NS
+version: 0.1.0
+registers:
+- id: TRCPRGCTLR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCPROCSELR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PROCSEL
+    bit_range:
+    - 4
+    - 0
+    description: PE select bits that select the PE to trace.
+  side_effects: null
+- id: TRCSTATR
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IDLE
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  - name: PMSTABLE
+    bit_range:
+    - 1
+    - 1
+    description: Programmers' model stable bit
+  side_effects: null
+- id: TRCCONFIGR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LOADASP0INST
+    bit_range:
+    - 1
+    - 1
+    description: Instruction P0 load field. This field controls whether load instructions are traced as P0 instructions.
+  - name: STOREASP0INST
+    bit_range:
+    - 2
+    - 2
+    description: Instruction P0 field. This field controls whether store instructions are traced as P0 instructions.
+  - name: BB
+    bit_range:
+    - 3
+    - 3
+    description: Branch broadcast mode bit.
+  - name: CCI
+    bit_range:
+    - 4
+    - 4
+    description: Cycle counting instruction trace bit.
+  - name: CID
+    bit_range:
+    - 6
+    - 6
+    description: Context ID tracing bit.
+  - name: VMID
+    bit_range:
+    - 7
+    - 7
+    description: Virtual context identifier tracing bit.
+  - name: COND
+    bit_range:
+    - 10
+    - 8
+    description: Conditional instruction tracing bit.
+  - name: TS
+    bit_range:
+    - 11
+    - 11
+    description: Global timestamp tracing bit.
+  - name: RS
+    bit_range:
+    - 12
+    - 12
+    description: Return stack enable bit.
+  - name: QE
+    bit_range:
+    - 14
+    - 13
+    description: Q element enable field.
+  - name: VMIDOPT
+    bit_range:
+    - 15
+    - 15
+    description: Control bit to select the Virtual context identifier value used by the trace unit, both for trace generation and in the Virtual context identifier comparators.
+  - name: DA
+    bit_range:
+    - 16
+    - 16
+    description: Data address tracing bit.
+  - name: DV
+    bit_range:
+    - 17
+    - 17
+    description: Data value tracing bit.
+  side_effects: null
+- id: TRCEVENTCTL0R
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENT
+    bit_range:
+    - 7
+    - 0
+    description: Select which event should generate trace elements.
+  side_effects: null
+- id: TRCEVENTCTL1R
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: INSTEN_0
+    bit_range:
+    - 0
+    - 0
+    description: Instruction event enable field.
+  - name: INSTEN_1
+    bit_range:
+    - 1
+    - 1
+    description: Instruction event enable field.
+  - name: INSTEN_2
+    bit_range:
+    - 2
+    - 2
+    description: Instruction event enable field.
+  - name: INSTEN_3
+    bit_range:
+    - 3
+    - 3
+    description: Instruction event enable field.
+  - name: DATAEN
+    bit_range:
+    - 4
+    - 4
+    description: Data event enable bit.
+  - name: ATB
+    bit_range:
+    - 11
+    - 11
+    description: AMBA Trace Bus (ATB) trigger enable bit.
+  - name: LPOVERRIDE
+    bit_range:
+    - 12
+    - 12
+    description: Low-power state behavior override bit. Controls how a trace unit behaves in low-power state.
+  side_effects: null
+- id: TRCSTALLCTLR
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LEVEL
+    bit_range:
+    - 3
+    - 0
+    description: 'Threshold level field. If LEVEL is nonzero then a trace unit might suppress the generation of: Global timestamps in the instruction trace stream and the data trace stream. Cycle counting in the instruction trace stream, although the cumulative cycle count remains correct.'
+  - name: ISTALL
+    bit_range:
+    - 8
+    - 8
+    description: Instruction stall bit. Controls if a trace unit can stall the PE when the instruction trace buffer space is less than LEVEL.
+  - name: DSTALL
+    bit_range:
+    - 9
+    - 9
+    description: Data stall bit. Controls if a trace unit can stall the PE when the data trace buffer space is less than LEVEL.
+  - name: INSTPRIORITY
+    bit_range:
+    - 10
+    - 10
+    description: Prioritize instruction trace bit. Controls if a trace unit can prioritize instruction trace when the instruction trace buffer space is less than LEVEL.
+  - name: DATADISCARDLOAD
+    bit_range:
+    - 11
+    - 11
+    description: Data discard field. Controls if a trace unit can discard data trace elements on a load when the data trace buffer space is less than LEVEL.
+  - name: DATADISCARDSTORE
+    bit_range:
+    - 12
+    - 12
+    description: Data discard field. Controls if a trace unit can discard data trace elements on a store when the data trace buffer space is less than LEVEL.
+  - name: NOOVERFLOW
+    bit_range:
+    - 13
+    - 13
+    description: Trace overflow prevention bit.
+  side_effects: null
+- id: TRCTSCTLR
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENT
+    bit_range:
+    - 7
+    - 0
+    description: Select which event should generate time stamps.
+  side_effects: null
+- id: TRCSYNCPR
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PERIOD
+    bit_range:
+    - 4
+    - 0
+    description: Controls how many bytes of trace, the sum of instruction and data, that a trace unit can generate before a trace synchronization request occurs. The number of bytes is always a power of two, calculated by 2^PERIOD
+  side_effects: null
+- id: TRCCCCTLR
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: THRESHOLD
+    bit_range:
+    - 11
+    - 0
+    description: Sets the threshold value for instruction trace cycle counting.
+  side_effects: null
+- id: TRCBBCTLR
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RANGE_0
+    bit_range:
+    - 0
+    - 0
+    description: Address range field. Selects which address range comparator pairs are in use with branch broadcasting. Each field represents an address range comparator pair, so field[0] controls the selection of address range comparator pair 0.
+  - name: RANGE_1
+    bit_range:
+    - 1
+    - 1
+    description: Address range field. Selects which address range comparator pairs are in use with branch broadcasting. Each field represents an address range comparator pair, so field[1] controls the selection of address range comparator pair 1.
+  - name: RANGE_2
+    bit_range:
+    - 2
+    - 2
+    description: Address range field. Selects which address range comparator pairs are in use with branch broadcasting. Each field represents an address range comparator pair, so field[2] controls the selection of address range comparator pair 2.
+  - name: RANGE_3
+    bit_range:
+    - 3
+    - 3
+    description: Address range field. Selects which address range comparator pairs are in use with branch broadcasting. Each field represents an address range comparator pair, so field[3] controls the selection of address range comparator pair 3.
+  - name: RANGE_4
+    bit_range:
+    - 4
+    - 4
+    description: Address range field. Selects which address range comparator pairs are in use with branch broadcasting. Each field represents an address range comparator pair, so field[4] controls the selection of address range comparator pair 4.
+  - name: RANGE_5
+    bit_range:
+    - 5
+    - 5
+    description: Address range field. Selects which address range comparator pairs are in use with branch broadcasting. Each field represents an address range comparator pair, so field[5] controls the selection of address range comparator pair 5.
+  - name: RANGE_6
+    bit_range:
+    - 6
+    - 6
+    description: Address range field. Selects which address range comparator pairs are in use with branch broadcasting. Each field represents an address range comparator pair, so field[6] controls the selection of address range comparator pair 6.
+  - name: RANGE_7
+    bit_range:
+    - 7
+    - 7
+    description: Address range field. Selects which address range comparator pairs are in use with branch broadcasting. Each field represents an address range comparator pair, so field[7] controls the selection of address range comparator pair 7.
+  side_effects: null
+- id: TRCTRACEIDR
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TRACEID
+    bit_range:
+    - 6
+    - 0
+    description: Trace ID field. Sets the trace ID value for instruction trace. Bit[0] must be zero if data trace is enabled. If data trace is enabled then a trace unit sets the trace ID for data trace, to TRACEID+1.
+  side_effects: null
+- id: TRCQCTLR
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RANGE_0
+    bit_range:
+    - 0
+    - 0
+    description: Specifies the address range comparators to be used for controlling Q elements.
+  - name: RANGE_1
+    bit_range:
+    - 1
+    - 1
+    description: Specifies the address range comparators to be used for controlling Q elements.
+  - name: RANGE_2
+    bit_range:
+    - 2
+    - 2
+    description: Specifies the address range comparators to be used for controlling Q elements.
+  - name: RANGE_3
+    bit_range:
+    - 3
+    - 3
+    description: Specifies the address range comparators to be used for controlling Q elements.
+  - name: RANGE_4
+    bit_range:
+    - 4
+    - 4
+    description: Specifies the address range comparators to be used for controlling Q elements.
+  - name: RANGE_5
+    bit_range:
+    - 5
+    - 5
+    description: Specifies the address range comparators to be used for controlling Q elements.
+  - name: RANGE_6
+    bit_range:
+    - 6
+    - 6
+    description: Specifies the address range comparators to be used for controlling Q elements.
+  - name: RANGE_7
+    bit_range:
+    - 7
+    - 7
+    description: Specifies the address range comparators to be used for controlling Q elements.
+  - name: MODE
+    bit_range:
+    - 8
+    - 8
+    description: 'Selects whether the address range comparators selected by the RANGE field indicate address ranges where the trace unit is permitted to generate Q elements or address ranges where the trace unit is not permitted to generate Q elements:'
+  side_effects: null
+- id: TRCVICTLR
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENT_SEL
+    bit_range:
+    - 4
+    - 0
+    description: Select which resource number should be filtered.
+  - name: SSSTATUS
+    bit_range:
+    - 9
+    - 9
+    description: When TRCIDR4.NUMACPAIRS &gt; 0 or TRCIDR4.NUMPC &gt; 0, this bit returns the status of the start/stop logic.
+  - name: TRCRESET
+    bit_range:
+    - 10
+    - 10
+    description: Controls whether a trace unit must trace a Reset exception.
+  - name: TRCERR
+    bit_range:
+    - 11
+    - 11
+    description: When TRCIDR3.TRCERR==1, this bit controls whether a trace unit must trace a System error exception.
+  - name: EXLEVEL0_S
+    bit_range:
+    - 16
+    - 16
+    description: In Secure state, each bit controls whether instruction tracing is enabled for the corresponding Exception level 0.
+  - name: EXLEVEL1_S
+    bit_range:
+    - 17
+    - 17
+    description: In Secure state, each bit controls whether instruction tracing is enabled for the corresponding Exception level 1.
+  - name: EXLEVEL2_S
+    bit_range:
+    - 18
+    - 18
+    description: In Secure state, each bit controls whether instruction tracing is enabled for the corresponding Exception level 2.
+  - name: EXLEVEL3_S
+    bit_range:
+    - 19
+    - 19
+    description: In Secure state, each bit controls whether instruction tracing is enabled for the corresponding Exception level 3.
+  - name: EXLEVEL0_NS
+    bit_range:
+    - 20
+    - 20
+    description: In Non-secure state, each bit controls whether instruction tracing is enabled for the corresponding Exception level 0.
+  - name: EXLEVEL1_NS
+    bit_range:
+    - 21
+    - 21
+    description: In Non-secure state, each bit controls whether instruction tracing is enabled for the corresponding Exception level 1.
+  - name: EXLEVEL2_NS
+    bit_range:
+    - 22
+    - 22
+    description: In Non-secure state, each bit controls whether instruction tracing is enabled for the corresponding Exception level 2.
+  - name: EXLEVEL3_NS
+    bit_range:
+    - 23
+    - 23
+    description: In Non-secure state, each bit controls whether instruction tracing is enabled for the corresponding Exception level 3.
+  side_effects: null
+- id: TRCVIIECTLR
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: INCLUDE_0
+    bit_range:
+    - 0
+    - 0
+    description: Include range field. Selects which address range comparator pairs are in use with ViewInst include control.
+  - name: INCLUDE_1
+    bit_range:
+    - 1
+    - 1
+    description: Include range field. Selects which address range comparator pairs are in use with ViewInst include control.
+  - name: INCLUDE_2
+    bit_range:
+    - 2
+    - 2
+    description: Include range field. Selects which address range comparator pairs are in use with ViewInst include control.
+  - name: INCLUDE_3
+    bit_range:
+    - 3
+    - 3
+    description: Include range field. Selects which address range comparator pairs are in use with ViewInst include control.
+  - name: INCLUDE_4
+    bit_range:
+    - 4
+    - 4
+    description: Include range field. Selects which address range comparator pairs are in use with ViewInst include control.
+  - name: INCLUDE_5
+    bit_range:
+    - 5
+    - 5
+    description: Include range field. Selects which address range comparator pairs are in use with ViewInst include control.
+  - name: INCLUDE_6
+    bit_range:
+    - 6
+    - 6
+    description: Include range field. Selects which address range comparator pairs are in use with ViewInst include control.
+  - name: INCLUDE_7
+    bit_range:
+    - 7
+    - 7
+    description: Include range field. Selects which address range comparator pairs are in use with ViewInst include control.
+  - name: EXCLUDE_0
+    bit_range:
+    - 16
+    - 16
+    description: Exclude range field. Selects which address range comparator pairs are in use with ViewInst exclude control.
+  - name: EXCLUDE_1
+    bit_range:
+    - 17
+    - 17
+    description: Exclude range field. Selects which address range comparator pairs are in use with ViewInst exclude control.
+  - name: EXCLUDE_2
+    bit_range:
+    - 18
+    - 18
+    description: Exclude range field. Selects which address range comparator pairs are in use with ViewInst exclude control.
+  - name: EXCLUDE_3
+    bit_range:
+    - 19
+    - 19
+    description: Exclude range field. Selects which address range comparator pairs are in use with ViewInst exclude control.
+  - name: EXCLUDE_4
+    bit_range:
+    - 20
+    - 20
+    description: Exclude range field. Selects which address range comparator pairs are in use with ViewInst exclude control.
+  - name: EXCLUDE_5
+    bit_range:
+    - 21
+    - 21
+    description: Exclude range field. Selects which address range comparator pairs are in use with ViewInst exclude control.
+  - name: EXCLUDE_6
+    bit_range:
+    - 22
+    - 22
+    description: Exclude range field. Selects which address range comparator pairs are in use with ViewInst exclude control.
+  - name: EXCLUDE_7
+    bit_range:
+    - 23
+    - 23
+    description: Exclude range field. Selects which address range comparator pairs are in use with ViewInst exclude control.
+  side_effects: null
+- id: TRCVISSCTLR
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: START_0
+    bit_range:
+    - 0
+    - 0
+    description: Selects which single address comparators are in use with ViewInst start/stop control, for the purpose of starting trace.
+  - name: START_1
+    bit_range:
+    - 1
+    - 1
+    description: Selects which single address comparators are in use with ViewInst start/stop control, for the purpose of starting trace.
+  - name: START_2
+    bit_range:
+    - 2
+    - 2
+    description: Selects which single address comparators are in use with ViewInst start/stop control, for the purpose of starting trace.
+  - name: START_3
+    bit_range:
+    - 3
+    - 3
+    description: Selects which single address comparators are in use with ViewInst start/stop control, for the purpose of starting trace.
+  - name: START_4
+    bit_range:
+    - 4
+    - 4
+    description: Selects which single address comparators are in use with ViewInst start/stop control, for the purpose of starting trace.
+  - name: START_5
+    bit_range:
+    - 5
+    - 5
+    description: Selects which single address comparators are in use with ViewInst start/stop control, for the purpose of starting trace.
+  - name: START_6
+    bit_range:
+    - 6
+    - 6
+    description: Selects which single address comparators are in use with ViewInst start/stop control, for the purpose of starting trace.
+  - name: START_7
+    bit_range:
+    - 7
+    - 7
+    description: Selects which single address comparators are in use with ViewInst start/stop control, for the purpose of starting trace.
+  - name: STOP_0
+    bit_range:
+    - 16
+    - 16
+    description: Selects which single address comparators are in use with ViewInst start/stop control, for the purpose of stopping trace
+  - name: STOP_1
+    bit_range:
+    - 17
+    - 17
+    description: Selects which single address comparators are in use with ViewInst start/stop control, for the purpose of stopping trace
+  - name: STOP_2
+    bit_range:
+    - 18
+    - 18
+    description: Selects which single address comparators are in use with ViewInst start/stop control, for the purpose of stopping trace
+  - name: STOP_3
+    bit_range:
+    - 19
+    - 19
+    description: Selects which single address comparators are in use with ViewInst start/stop control, for the purpose of stopping trace
+  - name: STOP_4
+    bit_range:
+    - 20
+    - 20
+    description: Selects which single address comparators are in use with ViewInst start/stop control, for the purpose of stopping trace
+  - name: STOP_5
+    bit_range:
+    - 21
+    - 21
+    description: Selects which single address comparators are in use with ViewInst start/stop control, for the purpose of stopping trace
+  - name: STOP_6
+    bit_range:
+    - 22
+    - 22
+    description: Selects which single address comparators are in use with ViewInst start/stop control, for the purpose of stopping trace
+  - name: STOP_7
+    bit_range:
+    - 23
+    - 23
+    description: Selects which single address comparators are in use with ViewInst start/stop control, for the purpose of stopping trace
+  side_effects: null
+- id: TRCVIPCSSCTLR
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: START_0
+    bit_range:
+    - 0
+    - 0
+    description: Selects which PE comparator inputs are in use with ViewInst start/stop control, for the purpose of starting trace
+  - name: START_1
+    bit_range:
+    - 1
+    - 1
+    description: Selects which PE comparator inputs are in use with ViewInst start/stop control, for the purpose of starting trace
+  - name: START_2
+    bit_range:
+    - 2
+    - 2
+    description: Selects which PE comparator inputs are in use with ViewInst start/stop control, for the purpose of starting trace
+  - name: START_3
+    bit_range:
+    - 3
+    - 3
+    description: Selects which PE comparator inputs are in use with ViewInst start/stop control, for the purpose of starting trace
+  - name: START_4
+    bit_range:
+    - 4
+    - 4
+    description: Selects which PE comparator inputs are in use with ViewInst start/stop control, for the purpose of starting trace
+  - name: START_5
+    bit_range:
+    - 5
+    - 5
+    description: Selects which PE comparator inputs are in use with ViewInst start/stop control, for the purpose of starting trace
+  - name: START_6
+    bit_range:
+    - 6
+    - 6
+    description: Selects which PE comparator inputs are in use with ViewInst start/stop control, for the purpose of starting trace
+  - name: START_7
+    bit_range:
+    - 7
+    - 7
+    description: Selects which PE comparator inputs are in use with ViewInst start/stop control, for the purpose of starting trace
+  - name: STOP_0
+    bit_range:
+    - 16
+    - 16
+    description: Selects which PE comparator inputs are in use with ViewInst start/stop control, for the purpose of stopping trace.
+  - name: STOP_1
+    bit_range:
+    - 17
+    - 17
+    description: Selects which PE comparator inputs are in use with ViewInst start/stop control, for the purpose of stopping trace.
+  - name: STOP_2
+    bit_range:
+    - 18
+    - 18
+    description: Selects which PE comparator inputs are in use with ViewInst start/stop control, for the purpose of stopping trace.
+  - name: STOP_3
+    bit_range:
+    - 19
+    - 19
+    description: Selects which PE comparator inputs are in use with ViewInst start/stop control, for the purpose of stopping trace.
+  - name: STOP_4
+    bit_range:
+    - 20
+    - 20
+    description: Selects which PE comparator inputs are in use with ViewInst start/stop control, for the purpose of stopping trace.
+  - name: STOP_5
+    bit_range:
+    - 21
+    - 21
+    description: Selects which PE comparator inputs are in use with ViewInst start/stop control, for the purpose of stopping trace.
+  - name: STOP_6
+    bit_range:
+    - 22
+    - 22
+    description: Selects which PE comparator inputs are in use with ViewInst start/stop control, for the purpose of stopping trace.
+  - name: STOP_7
+    bit_range:
+    - 23
+    - 23
+    description: Selects which PE comparator inputs are in use with ViewInst start/stop control, for the purpose of stopping trace.
+  side_effects: null
+- id: TRCVDCTLR
+  address_offset: 160
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENT_0
+    bit_range:
+    - 0
+    - 0
+    description: Event unit enable bit.
+  - name: EVENT_1
+    bit_range:
+    - 1
+    - 1
+    description: Event unit enable bit.
+  - name: EVENT_2
+    bit_range:
+    - 2
+    - 2
+    description: Event unit enable bit.
+  - name: EVENT_3
+    bit_range:
+    - 3
+    - 3
+    description: Event unit enable bit.
+  - name: EVENT_4
+    bit_range:
+    - 4
+    - 4
+    description: Event unit enable bit.
+  - name: EVENT_5
+    bit_range:
+    - 5
+    - 5
+    description: Event unit enable bit.
+  - name: EVENT_6
+    bit_range:
+    - 6
+    - 6
+    description: Event unit enable bit.
+  - name: EVENT_7
+    bit_range:
+    - 7
+    - 7
+    description: Event unit enable bit.
+  - name: SPREL
+    bit_range:
+    - 9
+    - 8
+    description: Controls whether a trace unit traces data for transfers that are relative to the Stack Pointer (SP).
+  - name: PCREL
+    bit_range:
+    - 10
+    - 10
+    description: Controls whether a trace unit traces data for transfers that are relative to the Program Counter (PC).
+  - name: TBI
+    bit_range:
+    - 11
+    - 11
+    description: Controls which information a trace unit populates in bits[63:56] of the data address.
+  - name: TRCEXDATA
+    bit_range:
+    - 12
+    - 12
+    description: Controls the tracing of data transfers for exceptions and exception returns on Armv6-M, Armv7-M, and Armv8-M PEs.
+  side_effects: null
+- id: TRCVDSACCTLR
+  address_offset: 164
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: INCLUDE_0
+    bit_range:
+    - 0
+    - 0
+    description: Selects which single address comparators are in use with ViewData include control.
+  - name: INCLUDE_1
+    bit_range:
+    - 1
+    - 1
+    description: Selects which single address comparators are in use with ViewData include control.
+  - name: INCLUDE_2
+    bit_range:
+    - 2
+    - 2
+    description: Selects which single address comparators are in use with ViewData include control.
+  - name: INCLUDE_3
+    bit_range:
+    - 3
+    - 3
+    description: Selects which single address comparators are in use with ViewData include control.
+  - name: INCLUDE_4
+    bit_range:
+    - 4
+    - 4
+    description: Selects which single address comparators are in use with ViewData include control.
+  - name: INCLUDE_5
+    bit_range:
+    - 5
+    - 5
+    description: Selects which single address comparators are in use with ViewData include control.
+  - name: INCLUDE_6
+    bit_range:
+    - 6
+    - 6
+    description: Selects which single address comparators are in use with ViewData include control.
+  - name: INCLUDE_7
+    bit_range:
+    - 7
+    - 7
+    description: Selects which single address comparators are in use with ViewData include control.
+  - name: EXCLUDE_0
+    bit_range:
+    - 16
+    - 16
+    description: Selects which single address comparators are in use with ViewData exclude control.
+  - name: EXCLUDE_1
+    bit_range:
+    - 17
+    - 17
+    description: Selects which single address comparators are in use with ViewData exclude control.
+  - name: EXCLUDE_2
+    bit_range:
+    - 18
+    - 18
+    description: Selects which single address comparators are in use with ViewData exclude control.
+  - name: EXCLUDE_3
+    bit_range:
+    - 19
+    - 19
+    description: Selects which single address comparators are in use with ViewData exclude control.
+  - name: EXCLUDE_4
+    bit_range:
+    - 20
+    - 20
+    description: Selects which single address comparators are in use with ViewData exclude control.
+  - name: EXCLUDE_5
+    bit_range:
+    - 21
+    - 21
+    description: Selects which single address comparators are in use with ViewData exclude control.
+  - name: EXCLUDE_6
+    bit_range:
+    - 22
+    - 22
+    description: Selects which single address comparators are in use with ViewData exclude control.
+  - name: EXCLUDE_7
+    bit_range:
+    - 23
+    - 23
+    description: Selects which single address comparators are in use with ViewData exclude control.
+  side_effects: null
+- id: TRCVDARCCTLR
+  address_offset: 168
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: INCLUDE_0
+    bit_range:
+    - 0
+    - 0
+    description: Include range field. Selects which address range comparator pairs are in use with ViewData include control.
+  - name: INCLUDE_1
+    bit_range:
+    - 1
+    - 1
+    description: Include range field. Selects which address range comparator pairs are in use with ViewData include control.
+  - name: INCLUDE_2
+    bit_range:
+    - 2
+    - 2
+    description: Include range field. Selects which address range comparator pairs are in use with ViewData include control.
+  - name: INCLUDE_3
+    bit_range:
+    - 3
+    - 3
+    description: Include range field. Selects which address range comparator pairs are in use with ViewData include control.
+  - name: INCLUDE_4
+    bit_range:
+    - 4
+    - 4
+    description: Include range field. Selects which address range comparator pairs are in use with ViewData include control.
+  - name: INCLUDE_5
+    bit_range:
+    - 5
+    - 5
+    description: Include range field. Selects which address range comparator pairs are in use with ViewData include control.
+  - name: INCLUDE_6
+    bit_range:
+    - 6
+    - 6
+    description: Include range field. Selects which address range comparator pairs are in use with ViewData include control.
+  - name: INCLUDE_7
+    bit_range:
+    - 7
+    - 7
+    description: Include range field. Selects which address range comparator pairs are in use with ViewData include control.
+  - name: EXCLUDE_0
+    bit_range:
+    - 16
+    - 16
+    description: Exclude range field. Selects which address range comparator pairs are in use with ViewData exclude control.
+  - name: EXCLUDE_1
+    bit_range:
+    - 17
+    - 17
+    description: Exclude range field. Selects which address range comparator pairs are in use with ViewData exclude control.
+  - name: EXCLUDE_2
+    bit_range:
+    - 18
+    - 18
+    description: Exclude range field. Selects which address range comparator pairs are in use with ViewData exclude control.
+  - name: EXCLUDE_3
+    bit_range:
+    - 19
+    - 19
+    description: Exclude range field. Selects which address range comparator pairs are in use with ViewData exclude control.
+  - name: EXCLUDE_4
+    bit_range:
+    - 20
+    - 20
+    description: Exclude range field. Selects which address range comparator pairs are in use with ViewData exclude control.
+  - name: EXCLUDE_5
+    bit_range:
+    - 21
+    - 21
+    description: Exclude range field. Selects which address range comparator pairs are in use with ViewData exclude control.
+  - name: EXCLUDE_6
+    bit_range:
+    - 22
+    - 22
+    description: Exclude range field. Selects which address range comparator pairs are in use with ViewData exclude control.
+  - name: EXCLUDE_7
+    bit_range:
+    - 23
+    - 23
+    description: Exclude range field. Selects which address range comparator pairs are in use with ViewData exclude control.
+  side_effects: null
+- id: TRCSEQEVR0
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: F_0
+    bit_range:
+    - 0
+    - 0
+    description: Forward field.
+  - name: F_1
+    bit_range:
+    - 1
+    - 1
+    description: Forward field.
+  - name: F_2
+    bit_range:
+    - 2
+    - 2
+    description: Forward field.
+  - name: F_3
+    bit_range:
+    - 3
+    - 3
+    description: Forward field.
+  - name: F_4
+    bit_range:
+    - 4
+    - 4
+    description: Forward field.
+  - name: F_5
+    bit_range:
+    - 5
+    - 5
+    description: Forward field.
+  - name: F_6
+    bit_range:
+    - 6
+    - 6
+    description: Forward field.
+  - name: F_7
+    bit_range:
+    - 7
+    - 7
+    description: Forward field.
+  - name: B_0
+    bit_range:
+    - 8
+    - 8
+    description: Backward field.
+  - name: B_1
+    bit_range:
+    - 9
+    - 9
+    description: Backward field.
+  - name: B_2
+    bit_range:
+    - 10
+    - 10
+    description: Backward field.
+  - name: B_3
+    bit_range:
+    - 11
+    - 11
+    description: Backward field.
+  - name: B_4
+    bit_range:
+    - 12
+    - 12
+    description: Backward field.
+  - name: B_5
+    bit_range:
+    - 13
+    - 13
+    description: Backward field.
+  - name: B_6
+    bit_range:
+    - 14
+    - 14
+    description: Backward field.
+  - name: B_7
+    bit_range:
+    - 15
+    - 15
+    description: Backward field.
+  side_effects: null
+- id: TRCSEQEVR1
+  address_offset: 260
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: F_0
+    bit_range:
+    - 0
+    - 0
+    description: Forward field.
+  - name: F_1
+    bit_range:
+    - 1
+    - 1
+    description: Forward field.
+  - name: F_2
+    bit_range:
+    - 2
+    - 2
+    description: Forward field.
+  - name: F_3
+    bit_range:
+    - 3
+    - 3
+    description: Forward field.
+  - name: F_4
+    bit_range:
+    - 4
+    - 4
+    description: Forward field.
+  - name: F_5
+    bit_range:
+    - 5
+    - 5
+    description: Forward field.
+  - name: F_6
+    bit_range:
+    - 6
+    - 6
+    description: Forward field.
+  - name: F_7
+    bit_range:
+    - 7
+    - 7
+    description: Forward field.
+  - name: B_0
+    bit_range:
+    - 8
+    - 8
+    description: Backward field.
+  - name: B_1
+    bit_range:
+    - 9
+    - 9
+    description: Backward field.
+  - name: B_2
+    bit_range:
+    - 10
+    - 10
+    description: Backward field.
+  - name: B_3
+    bit_range:
+    - 11
+    - 11
+    description: Backward field.
+  - name: B_4
+    bit_range:
+    - 12
+    - 12
+    description: Backward field.
+  - name: B_5
+    bit_range:
+    - 13
+    - 13
+    description: Backward field.
+  - name: B_6
+    bit_range:
+    - 14
+    - 14
+    description: Backward field.
+  - name: B_7
+    bit_range:
+    - 15
+    - 15
+    description: Backward field.
+  side_effects: null
+- id: TRCSEQEVR2
+  address_offset: 264
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: F_0
+    bit_range:
+    - 0
+    - 0
+    description: Forward field.
+  - name: F_1
+    bit_range:
+    - 1
+    - 1
+    description: Forward field.
+  - name: F_2
+    bit_range:
+    - 2
+    - 2
+    description: Forward field.
+  - name: F_3
+    bit_range:
+    - 3
+    - 3
+    description: Forward field.
+  - name: F_4
+    bit_range:
+    - 4
+    - 4
+    description: Forward field.
+  - name: F_5
+    bit_range:
+    - 5
+    - 5
+    description: Forward field.
+  - name: F_6
+    bit_range:
+    - 6
+    - 6
+    description: Forward field.
+  - name: F_7
+    bit_range:
+    - 7
+    - 7
+    description: Forward field.
+  - name: B_0
+    bit_range:
+    - 8
+    - 8
+    description: Backward field.
+  - name: B_1
+    bit_range:
+    - 9
+    - 9
+    description: Backward field.
+  - name: B_2
+    bit_range:
+    - 10
+    - 10
+    description: Backward field.
+  - name: B_3
+    bit_range:
+    - 11
+    - 11
+    description: Backward field.
+  - name: B_4
+    bit_range:
+    - 12
+    - 12
+    description: Backward field.
+  - name: B_5
+    bit_range:
+    - 13
+    - 13
+    description: Backward field.
+  - name: B_6
+    bit_range:
+    - 14
+    - 14
+    description: Backward field.
+  - name: B_7
+    bit_range:
+    - 15
+    - 15
+    description: Backward field.
+  side_effects: null
+- id: TRCSEQRSTEVR
+  address_offset: 280
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENT
+    bit_range:
+    - 7
+    - 0
+    description: Select which event should reset the sequencer.
+  side_effects: null
+- id: TRCSEQSTR
+  address_offset: 284
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STATE
+    bit_range:
+    - 1
+    - 0
+    description: Sets or returns the state of the sequencer.
+  side_effects: null
+- id: TRCEXTINSELR
+  address_offset: 288
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SEL_0
+    bit_range:
+    - 7
+    - 0
+    description: Each field in this collection selects an external input as a resource for the trace unit.
+  - name: SEL_1
+    bit_range:
+    - 15
+    - 8
+    description: Each field in this collection selects an external input as a resource for the trace unit.
+  - name: SEL_2
+    bit_range:
+    - 23
+    - 16
+    description: Each field in this collection selects an external input as a resource for the trace unit.
+  - name: SEL_3
+    bit_range:
+    - 31
+    - 24
+    description: Each field in this collection selects an external input as a resource for the trace unit.
+  side_effects: null
+- id: TRCCNTRLDVR0
+  address_offset: 320
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 15
+    - 0
+    description: Contains the reload value for counter n. When a reload event occurs for counter n then the trace unit copies the VALUEn field into counter n.
+  side_effects: null
+- id: TRCCNTRLDVR1
+  address_offset: 324
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 15
+    - 0
+    description: Contains the reload value for counter n. When a reload event occurs for counter n then the trace unit copies the VALUEn field into counter n.
+  side_effects: null
+- id: TRCCNTRLDVR2
+  address_offset: 328
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 15
+    - 0
+    description: Contains the reload value for counter n. When a reload event occurs for counter n then the trace unit copies the VALUEn field into counter n.
+  side_effects: null
+- id: TRCCNTRLDVR3
+  address_offset: 332
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 15
+    - 0
+    description: Contains the reload value for counter n. When a reload event occurs for counter n then the trace unit copies the VALUEn field into counter n.
+  side_effects: null
+- id: TRCCNTCTLR0
+  address_offset: 336
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CNTEVENT
+    bit_range:
+    - 7
+    - 0
+    description: Selects an event, that when it occurs causes counter n to decrement.
+  - name: RLDEVENT
+    bit_range:
+    - 15
+    - 8
+    description: Selects an event, that when it occurs causes a reload event for counter n.
+  - name: RLDSELF
+    bit_range:
+    - 16
+    - 16
+    description: Controls whether a reload event occurs for counter n, when counter n reaches zero.
+  - name: CNTCHAIN
+    bit_range:
+    - 17
+    - 17
+    description: For TRCCNTCTLR3 and TRCCNTCTLR1, this bit controls whether counter n decrements when a reload event occurs for counter n-1.
+  side_effects: null
+- id: TRCCNTCTLR1
+  address_offset: 340
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CNTEVENT
+    bit_range:
+    - 7
+    - 0
+    description: Selects an event, that when it occurs causes counter n to decrement.
+  - name: RLDEVENT
+    bit_range:
+    - 15
+    - 8
+    description: Selects an event, that when it occurs causes a reload event for counter n.
+  - name: RLDSELF
+    bit_range:
+    - 16
+    - 16
+    description: Controls whether a reload event occurs for counter n, when counter n reaches zero.
+  - name: CNTCHAIN
+    bit_range:
+    - 17
+    - 17
+    description: For TRCCNTCTLR3 and TRCCNTCTLR1, this bit controls whether counter n decrements when a reload event occurs for counter n-1.
+  side_effects: null
+- id: TRCCNTCTLR2
+  address_offset: 344
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CNTEVENT
+    bit_range:
+    - 7
+    - 0
+    description: Selects an event, that when it occurs causes counter n to decrement.
+  - name: RLDEVENT
+    bit_range:
+    - 15
+    - 8
+    description: Selects an event, that when it occurs causes a reload event for counter n.
+  - name: RLDSELF
+    bit_range:
+    - 16
+    - 16
+    description: Controls whether a reload event occurs for counter n, when counter n reaches zero.
+  - name: CNTCHAIN
+    bit_range:
+    - 17
+    - 17
+    description: For TRCCNTCTLR3 and TRCCNTCTLR1, this bit controls whether counter n decrements when a reload event occurs for counter n-1.
+  side_effects: null
+- id: TRCCNTCTLR3
+  address_offset: 348
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CNTEVENT
+    bit_range:
+    - 7
+    - 0
+    description: Selects an event, that when it occurs causes counter n to decrement.
+  - name: RLDEVENT
+    bit_range:
+    - 15
+    - 8
+    description: Selects an event, that when it occurs causes a reload event for counter n.
+  - name: RLDSELF
+    bit_range:
+    - 16
+    - 16
+    description: Controls whether a reload event occurs for counter n, when counter n reaches zero.
+  - name: CNTCHAIN
+    bit_range:
+    - 17
+    - 17
+    description: For TRCCNTCTLR3 and TRCCNTCTLR1, this bit controls whether counter n decrements when a reload event occurs for counter n-1.
+  side_effects: null
+- id: TRCCNTVR0
+  address_offset: 352
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 15
+    - 0
+    description: Contains the count value of counter n.
+  side_effects: null
+- id: TRCCNTVR1
+  address_offset: 356
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 15
+    - 0
+    description: Contains the count value of counter n.
+  side_effects: null
+- id: TRCCNTVR2
+  address_offset: 360
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 15
+    - 0
+    description: Contains the count value of counter n.
+  side_effects: null
+- id: TRCCNTVR3
+  address_offset: 364
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: VALUE
+    bit_range:
+    - 15
+    - 0
+    description: Contains the count value of counter n.
+  side_effects: null
+- id: TRCRSCTLR0
+  address_offset: 512
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCRSCTLR1
+  address_offset: 516
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCRSCTLR2
+  address_offset: 520
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCRSCTLR3
+  address_offset: 524
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCRSCTLR4
+  address_offset: 528
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCRSCTLR5
+  address_offset: 532
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCRSCTLR6
+  address_offset: 536
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCRSCTLR7
+  address_offset: 540
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCRSCTLR8
+  address_offset: 544
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCRSCTLR9
+  address_offset: 548
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCRSCTLR10
+  address_offset: 552
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCRSCTLR11
+  address_offset: 556
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCRSCTLR12
+  address_offset: 560
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCRSCTLR13
+  address_offset: 564
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCRSCTLR14
+  address_offset: 568
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCRSCTLR15
+  address_offset: 572
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCRSCTLR16
+  address_offset: 576
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCRSCTLR17
+  address_offset: 580
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCRSCTLR18
+  address_offset: 584
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCRSCTLR19
+  address_offset: 588
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCRSCTLR20
+  address_offset: 592
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCRSCTLR21
+  address_offset: 596
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCRSCTLR22
+  address_offset: 600
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCRSCTLR23
+  address_offset: 604
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCRSCTLR24
+  address_offset: 608
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCRSCTLR25
+  address_offset: 612
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCRSCTLR26
+  address_offset: 616
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCRSCTLR27
+  address_offset: 620
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCRSCTLR28
+  address_offset: 624
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCRSCTLR29
+  address_offset: 628
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Trace unit enable bit
+  side_effects: null
+- id: TRCSSCCR0
+  address_offset: 640
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RST
+    bit_range:
+    - 24
+    - 24
+    description: Enables the single-shot comparator resource to be reset when it occurs, to enable another comparator match to be detected
+  side_effects: null
+- id: TRCSSCSR0
+  address_offset: 672
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: INST
+    bit_range:
+    - 0
+    - 0
+    description: Instruction address comparator support
+  - name: DA
+    bit_range:
+    - 1
+    - 1
+    description: Data address comparator support
+  - name: DV
+    bit_range:
+    - 2
+    - 2
+    description: Data value comparator support
+  - name: PC
+    bit_range:
+    - 3
+    - 3
+    description: Process counter value comparator support
+  - name: STATUS
+    bit_range:
+    - 31
+    - 31
+    description: Single-shot status. This indicates whether any of the selected comparators have matched.
+  side_effects: null
+- id: TRCSSPCICR0
+  address_offset: 704
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PC_0
+    bit_range:
+    - 0
+    - 0
+    description: Selects processor comparator 0 inputs for Single-shot control
+  - name: PC_1
+    bit_range:
+    - 1
+    - 1
+    description: Selects processor comparator 1 inputs for Single-shot control
+  - name: PC_2
+    bit_range:
+    - 2
+    - 2
+    description: Selects processor comparator 2 inputs for Single-shot control
+  - name: PC_3
+    bit_range:
+    - 3
+    - 3
+    description: Selects processor comparator 3 inputs for Single-shot control
+  side_effects: null
+- id: TRCPDCR
+  address_offset: 784
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PU
+    bit_range:
+    - 24
+    - 24
+    description: Power up request, to request that power to ETM and access to the trace registers is maintained.
+  side_effects: null
+- id: TRCPDSR
+  address_offset: 788
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: POWER
+    bit_range:
+    - 0
+    - 0
+    description: Indicates ETM is powered up
+  - name: STICKYPD
+    bit_range:
+    - 1
+    - 1
+    description: Sticky power down state. This bit is set to 1 when power to the ETM registers is removed, to indicate that programming state has been lost. It is cleared after a read of the TRCPDSR
+  side_effects: null
+- id: TRCITATBIDR
+  address_offset: 3812
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ID_0
+    bit_range:
+    - 0
+    - 0
+    description: Drives the ATIDMI[0] output pin.
+  - name: ID_1
+    bit_range:
+    - 1
+    - 1
+    description: Drives the ATIDMI[1] output pin.
+  - name: ID_2
+    bit_range:
+    - 2
+    - 2
+    description: Drives the ATIDMI[2] output pin.
+  - name: ID_3
+    bit_range:
+    - 3
+    - 3
+    description: Drives the ATIDMI[3] output pin.
+  - name: ID_4
+    bit_range:
+    - 4
+    - 4
+    description: Drives the ATIDMI[4] output pin.
+  - name: ID_5
+    bit_range:
+    - 5
+    - 5
+    description: Drives the ATIDMI[5] output pin.
+  - name: ID_6
+    bit_range:
+    - 6
+    - 6
+    description: Drives the ATIDMI[6] output pin.
+  side_effects: null
+- id: TRCITIATBINR
+  address_offset: 3828
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ATVALID
+    bit_range:
+    - 0
+    - 0
+    description: Returns the value of the ATVALIDMI input pin.
+  - name: AFREADY
+    bit_range:
+    - 1
+    - 1
+    description: Returns the value of the AFREADYMI input pin.
+  side_effects: null
+- id: TRCITIATBOUTR
+  address_offset: 3836
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ATVALID
+    bit_range:
+    - 0
+    - 0
+    description: Drives the ATVALIDMI output pin.
+  - name: AFREADY
+    bit_range:
+    - 1
+    - 1
+    description: Drives the AFREADYMI output pin.
+  side_effects: null
+- id: TRCITCTRL
+  address_offset: 3840
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IME
+    bit_range:
+    - 0
+    - 0
+    description: Integration mode enable
+  side_effects: null
+- id: TRCCLAIMSET
+  address_offset: 4000
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SET_0
+    bit_range:
+    - 0
+    - 0
+    description: Claim tag set register
+  - name: SET_1
+    bit_range:
+    - 1
+    - 1
+    description: Claim tag set register
+  - name: SET_2
+    bit_range:
+    - 2
+    - 2
+    description: Claim tag set register
+  - name: SET_3
+    bit_range:
+    - 3
+    - 3
+    description: Claim tag set register
+  side_effects: null
+- id: TRCCLAIMCLR
+  address_offset: 4004
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CLR_0
+    bit_range:
+    - 0
+    - 0
+    description: Claim tag clear register
+  - name: CLR_1
+    bit_range:
+    - 1
+    - 1
+    description: Claim tag clear register
+  - name: CLR_2
+    bit_range:
+    - 2
+    - 2
+    description: Claim tag clear register
+  - name: CLR_3
+    bit_range:
+    - 3
+    - 3
+    description: Claim tag clear register
+  side_effects: null
+- id: TRCAUTHSTATUS
+  address_offset: 4024
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NSID
+    bit_range:
+    - 1
+    - 0
+    description: Non-secure Invasive Debug
+  - name: NSNID
+    bit_range:
+    - 3
+    - 2
+    description: Non-secure Non-Invasive Debug
+  - name: SID
+    bit_range:
+    - 5
+    - 4
+    description: Secure Invasive Debug
+  - name: SNID
+    bit_range:
+    - 7
+    - 6
+    description: Secure Non-Invasive Debug
+  side_effects: null
+- id: TRCDEVARCH
+  address_offset: 4028
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: ARCHID
+    bit_range:
+    - 15
+    - 0
+    description: Architecture ID
+  - name: REVISION
+    bit_range:
+    - 19
+    - 16
+    description: Architecture revision
+  - name: PRESENT
+    bit_range:
+    - 20
+    - 20
+    description: This register is implemented
+  - name: ARCHITECT
+    bit_range:
+    - 31
+    - 21
+    description: Defines the architect of the component
+  side_effects: null
+- id: TRCDEVTYPE
+  address_offset: 4044
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: MAJOR
+    bit_range:
+    - 3
+    - 0
+    description: The main type of the component
+  - name: SUB
+    bit_range:
+    - 7
+    - 4
+    description: The sub-type of the component
+  side_effects: null
+- id: TRCPIDR0
+  address_offset: 4048
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields: []
+  side_effects: null
+- id: TRCPIDR1
+  address_offset: 4052
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields: []
+  side_effects: null
+- id: TRCPIDR2
+  address_offset: 4056
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields: []
+  side_effects: null
+- id: TRCPIDR3
+  address_offset: 4060
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields: []
+  side_effects: null
+- id: TRCPIDR4
+  address_offset: 4064
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields: []
+  side_effects: null
+- id: TRCPIDR5
+  address_offset: 4068
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields: []
+  side_effects: null
+- id: TRCPIDR6
+  address_offset: 4072
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields: []
+  side_effects: null
+- id: TRCPIDR7
+  address_offset: 4076
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields: []
+  side_effects: null
+- id: TRCCIDR0
+  address_offset: 4080
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields: []
+  side_effects: null
+- id: TRCCIDR1
+  address_offset: 4084
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields: []
+  side_effects: null
+- id: TRCCIDR2
+  address_offset: 4088
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields: []
+  side_effects: null
+- id: TRCCIDR3
+  address_offset: 4092
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields: []
+  side_effects: null
+interrupts: null
+timing: null

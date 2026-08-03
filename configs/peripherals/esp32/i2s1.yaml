@@ -1,0 +1,1262 @@
+peripheral: I2S1
+version: 0.1.0
+registers:
+- id: CONF
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 197376
+  fields:
+  - name: TX_RESET
+    bit_range:
+    - 0
+    - 0
+  - name: RX_RESET
+    bit_range:
+    - 1
+    - 1
+  - name: TX_FIFO_RESET
+    bit_range:
+    - 2
+    - 2
+  - name: RX_FIFO_RESET
+    bit_range:
+    - 3
+    - 3
+  - name: TX_START
+    bit_range:
+    - 4
+    - 4
+  - name: RX_START
+    bit_range:
+    - 5
+    - 5
+  - name: TX_SLAVE_MOD
+    bit_range:
+    - 6
+    - 6
+  - name: RX_SLAVE_MOD
+    bit_range:
+    - 7
+    - 7
+  - name: TX_RIGHT_FIRST
+    bit_range:
+    - 8
+    - 8
+  - name: RX_RIGHT_FIRST
+    bit_range:
+    - 9
+    - 9
+  - name: TX_MSB_SHIFT
+    bit_range:
+    - 10
+    - 10
+  - name: RX_MSB_SHIFT
+    bit_range:
+    - 11
+    - 11
+  - name: TX_SHORT_SYNC
+    bit_range:
+    - 12
+    - 12
+  - name: RX_SHORT_SYNC
+    bit_range:
+    - 13
+    - 13
+  - name: TX_MONO
+    bit_range:
+    - 14
+    - 14
+  - name: RX_MONO
+    bit_range:
+    - 15
+    - 15
+  - name: TX_MSB_RIGHT
+    bit_range:
+    - 16
+    - 16
+  - name: RX_MSB_RIGHT
+    bit_range:
+    - 17
+    - 17
+  - name: SIG_LOOPBACK
+    bit_range:
+    - 18
+    - 18
+  side_effects: null
+- id: INT_RAW
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RX_TAKE_DATA_INT_RAW
+    bit_range:
+    - 0
+    - 0
+  - name: TX_PUT_DATA_INT_RAW
+    bit_range:
+    - 1
+    - 1
+  - name: RX_WFULL_INT_RAW
+    bit_range:
+    - 2
+    - 2
+  - name: RX_REMPTY_INT_RAW
+    bit_range:
+    - 3
+    - 3
+  - name: TX_WFULL_INT_RAW
+    bit_range:
+    - 4
+    - 4
+  - name: TX_REMPTY_INT_RAW
+    bit_range:
+    - 5
+    - 5
+  - name: RX_HUNG_INT_RAW
+    bit_range:
+    - 6
+    - 6
+  - name: TX_HUNG_INT_RAW
+    bit_range:
+    - 7
+    - 7
+  - name: IN_DONE_INT_RAW
+    bit_range:
+    - 8
+    - 8
+  - name: IN_SUC_EOF_INT_RAW
+    bit_range:
+    - 9
+    - 9
+  - name: IN_ERR_EOF_INT_RAW
+    bit_range:
+    - 10
+    - 10
+  - name: OUT_DONE_INT_RAW
+    bit_range:
+    - 11
+    - 11
+  - name: OUT_EOF_INT_RAW
+    bit_range:
+    - 12
+    - 12
+  - name: IN_DSCR_ERR_INT_RAW
+    bit_range:
+    - 13
+    - 13
+  - name: OUT_DSCR_ERR_INT_RAW
+    bit_range:
+    - 14
+    - 14
+  - name: IN_DSCR_EMPTY_INT_RAW
+    bit_range:
+    - 15
+    - 15
+  - name: OUT_TOTAL_EOF_INT_RAW
+    bit_range:
+    - 16
+    - 16
+  side_effects: null
+- id: INT_ST
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RX_TAKE_DATA_INT_ST
+    bit_range:
+    - 0
+    - 0
+  - name: TX_PUT_DATA_INT_ST
+    bit_range:
+    - 1
+    - 1
+  - name: RX_WFULL_INT_ST
+    bit_range:
+    - 2
+    - 2
+  - name: RX_REMPTY_INT_ST
+    bit_range:
+    - 3
+    - 3
+  - name: TX_WFULL_INT_ST
+    bit_range:
+    - 4
+    - 4
+  - name: TX_REMPTY_INT_ST
+    bit_range:
+    - 5
+    - 5
+  - name: RX_HUNG_INT_ST
+    bit_range:
+    - 6
+    - 6
+  - name: TX_HUNG_INT_ST
+    bit_range:
+    - 7
+    - 7
+  - name: IN_DONE_INT_ST
+    bit_range:
+    - 8
+    - 8
+  - name: IN_SUC_EOF_INT_ST
+    bit_range:
+    - 9
+    - 9
+  - name: IN_ERR_EOF_INT_ST
+    bit_range:
+    - 10
+    - 10
+  - name: OUT_DONE_INT_ST
+    bit_range:
+    - 11
+    - 11
+  - name: OUT_EOF_INT_ST
+    bit_range:
+    - 12
+    - 12
+  - name: IN_DSCR_ERR_INT_ST
+    bit_range:
+    - 13
+    - 13
+  - name: OUT_DSCR_ERR_INT_ST
+    bit_range:
+    - 14
+    - 14
+  - name: IN_DSCR_EMPTY_INT_ST
+    bit_range:
+    - 15
+    - 15
+  - name: OUT_TOTAL_EOF_INT_ST
+    bit_range:
+    - 16
+    - 16
+  side_effects: null
+- id: INT_ENA
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: RX_TAKE_DATA_INT_ENA
+    bit_range:
+    - 0
+    - 0
+  - name: TX_PUT_DATA_INT_ENA
+    bit_range:
+    - 1
+    - 1
+  - name: RX_WFULL_INT_ENA
+    bit_range:
+    - 2
+    - 2
+  - name: RX_REMPTY_INT_ENA
+    bit_range:
+    - 3
+    - 3
+  - name: TX_WFULL_INT_ENA
+    bit_range:
+    - 4
+    - 4
+  - name: TX_REMPTY_INT_ENA
+    bit_range:
+    - 5
+    - 5
+  - name: RX_HUNG_INT_ENA
+    bit_range:
+    - 6
+    - 6
+  - name: TX_HUNG_INT_ENA
+    bit_range:
+    - 7
+    - 7
+  - name: IN_DONE_INT_ENA
+    bit_range:
+    - 8
+    - 8
+  - name: IN_SUC_EOF_INT_ENA
+    bit_range:
+    - 9
+    - 9
+  - name: IN_ERR_EOF_INT_ENA
+    bit_range:
+    - 10
+    - 10
+  - name: OUT_DONE_INT_ENA
+    bit_range:
+    - 11
+    - 11
+  - name: OUT_EOF_INT_ENA
+    bit_range:
+    - 12
+    - 12
+  - name: IN_DSCR_ERR_INT_ENA
+    bit_range:
+    - 13
+    - 13
+  - name: OUT_DSCR_ERR_INT_ENA
+    bit_range:
+    - 14
+    - 14
+  - name: IN_DSCR_EMPTY_INT_ENA
+    bit_range:
+    - 15
+    - 15
+  - name: OUT_TOTAL_EOF_INT_ENA
+    bit_range:
+    - 16
+    - 16
+  side_effects: null
+- id: INT_CLR
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TAKE_DATA_INT_CLR
+    bit_range:
+    - 0
+    - 0
+  - name: PUT_DATA_INT_CLR
+    bit_range:
+    - 1
+    - 1
+  - name: RX_WFULL_INT_CLR
+    bit_range:
+    - 2
+    - 2
+  - name: RX_REMPTY_INT_CLR
+    bit_range:
+    - 3
+    - 3
+  - name: TX_WFULL_INT_CLR
+    bit_range:
+    - 4
+    - 4
+  - name: TX_REMPTY_INT_CLR
+    bit_range:
+    - 5
+    - 5
+  - name: RX_HUNG_INT_CLR
+    bit_range:
+    - 6
+    - 6
+  - name: TX_HUNG_INT_CLR
+    bit_range:
+    - 7
+    - 7
+  - name: IN_DONE_INT_CLR
+    bit_range:
+    - 8
+    - 8
+  - name: IN_SUC_EOF_INT_CLR
+    bit_range:
+    - 9
+    - 9
+  - name: IN_ERR_EOF_INT_CLR
+    bit_range:
+    - 10
+    - 10
+  - name: OUT_DONE_INT_CLR
+    bit_range:
+    - 11
+    - 11
+  - name: OUT_EOF_INT_CLR
+    bit_range:
+    - 12
+    - 12
+  - name: IN_DSCR_ERR_INT_CLR
+    bit_range:
+    - 13
+    - 13
+  - name: OUT_DSCR_ERR_INT_CLR
+    bit_range:
+    - 14
+    - 14
+  - name: IN_DSCR_EMPTY_INT_CLR
+    bit_range:
+    - 15
+    - 15
+  - name: OUT_TOTAL_EOF_INT_CLR
+    bit_range:
+    - 16
+    - 16
+  side_effects: null
+- id: TIMING
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TX_BCK_IN_DELAY
+    bit_range:
+    - 1
+    - 0
+  - name: TX_WS_IN_DELAY
+    bit_range:
+    - 3
+    - 2
+  - name: RX_BCK_IN_DELAY
+    bit_range:
+    - 5
+    - 4
+  - name: RX_WS_IN_DELAY
+    bit_range:
+    - 7
+    - 6
+  - name: RX_SD_IN_DELAY
+    bit_range:
+    - 9
+    - 8
+  - name: TX_BCK_OUT_DELAY
+    bit_range:
+    - 11
+    - 10
+  - name: TX_WS_OUT_DELAY
+    bit_range:
+    - 13
+    - 12
+  - name: TX_SD_OUT_DELAY
+    bit_range:
+    - 15
+    - 14
+  - name: RX_WS_OUT_DELAY
+    bit_range:
+    - 17
+    - 16
+  - name: RX_BCK_OUT_DELAY
+    bit_range:
+    - 19
+    - 18
+  - name: TX_DSYNC_SW
+    bit_range:
+    - 20
+    - 20
+  - name: RX_DSYNC_SW
+    bit_range:
+    - 21
+    - 21
+  - name: DATA_ENABLE_DELAY
+    bit_range:
+    - 23
+    - 22
+  - name: TX_BCK_IN_INV
+    bit_range:
+    - 24
+    - 24
+  side_effects: null
+- id: FIFO_CONF
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 6176
+  fields:
+  - name: RX_DATA_NUM
+    bit_range:
+    - 5
+    - 0
+  - name: TX_DATA_NUM
+    bit_range:
+    - 11
+    - 6
+  - name: DSCR_EN
+    bit_range:
+    - 12
+    - 12
+  - name: TX_FIFO_MOD
+    bit_range:
+    - 15
+    - 13
+  - name: RX_FIFO_MOD
+    bit_range:
+    - 18
+    - 16
+  - name: TX_FIFO_MOD_FORCE_EN
+    bit_range:
+    - 19
+    - 19
+  - name: RX_FIFO_MOD_FORCE_EN
+    bit_range:
+    - 20
+    - 20
+  side_effects: null
+- id: RXEOF_NUM
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 64
+  fields:
+  - name: RX_EOF_NUM
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: CONF_SIGLE_DATA
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SIGLE_DATA
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: CONF_CHAN
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TX_CHAN_MOD
+    bit_range:
+    - 2
+    - 0
+  - name: RX_CHAN_MOD
+    bit_range:
+    - 4
+    - 3
+  side_effects: null
+- id: OUT_LINK
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OUTLINK_ADDR
+    bit_range:
+    - 19
+    - 0
+  - name: OUTLINK_STOP
+    bit_range:
+    - 28
+    - 28
+  - name: OUTLINK_START
+    bit_range:
+    - 29
+    - 29
+  - name: OUTLINK_RESTART
+    bit_range:
+    - 30
+    - 30
+  - name: OUTLINK_PARK
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: IN_LINK
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: INLINK_ADDR
+    bit_range:
+    - 19
+    - 0
+  - name: INLINK_STOP
+    bit_range:
+    - 28
+    - 28
+  - name: INLINK_START
+    bit_range:
+    - 29
+    - 29
+  - name: INLINK_RESTART
+    bit_range:
+    - 30
+    - 30
+  - name: INLINK_PARK
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: OUT_EOF_DES_ADDR
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OUT_EOF_DES_ADDR
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: IN_EOF_DES_ADDR
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: IN_SUC_EOF_DES_ADDR
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: OUT_EOF_BFR_DES_ADDR
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OUT_EOF_BFR_DES_ADDR
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: AHB_TEST
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: AHB_TESTMODE
+    bit_range:
+    - 2
+    - 0
+  - name: AHB_TESTADDR
+    bit_range:
+    - 5
+    - 4
+  side_effects: null
+- id: INLINK_DSCR
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: INLINK_DSCR
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: INLINK_DSCR_BF0
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: INLINK_DSCR_BF0
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: INLINK_DSCR_BF1
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: INLINK_DSCR_BF1
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: OUTLINK_DSCR
+  address_offset: 84
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OUTLINK_DSCR
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: OUTLINK_DSCR_BF0
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OUTLINK_DSCR_BF0
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: OUTLINK_DSCR_BF1
+  address_offset: 92
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OUTLINK_DSCR_BF1
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: LC_CONF
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 256
+  fields:
+  - name: IN_RST
+    bit_range:
+    - 0
+    - 0
+  - name: OUT_RST
+    bit_range:
+    - 1
+    - 1
+  - name: AHBM_FIFO_RST
+    bit_range:
+    - 2
+    - 2
+  - name: AHBM_RST
+    bit_range:
+    - 3
+    - 3
+  - name: OUT_LOOP_TEST
+    bit_range:
+    - 4
+    - 4
+  - name: IN_LOOP_TEST
+    bit_range:
+    - 5
+    - 5
+  - name: OUT_AUTO_WRBACK
+    bit_range:
+    - 6
+    - 6
+  - name: OUT_NO_RESTART_CLR
+    bit_range:
+    - 7
+    - 7
+  - name: OUT_EOF_MODE
+    bit_range:
+    - 8
+    - 8
+  - name: OUTDSCR_BURST_EN
+    bit_range:
+    - 9
+    - 9
+  - name: INDSCR_BURST_EN
+    bit_range:
+    - 10
+    - 10
+  - name: OUT_DATA_BURST_EN
+    bit_range:
+    - 11
+    - 11
+  - name: CHECK_OWNER
+    bit_range:
+    - 12
+    - 12
+  - name: MEM_TRANS_EN
+    bit_range:
+    - 13
+    - 13
+  side_effects: null
+- id: OUTFIFO_PUSH
+  address_offset: 100
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: OUTFIFO_WDATA
+    bit_range:
+    - 8
+    - 0
+  - name: OUTFIFO_PUSH
+    bit_range:
+    - 16
+    - 16
+  side_effects: null
+- id: INFIFO_POP
+  address_offset: 104
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: INFIFO_RDATA
+    bit_range:
+    - 11
+    - 0
+  - name: INFIFO_POP
+    bit_range:
+    - 16
+    - 16
+  side_effects: null
+- id: LC_STATE0
+  address_offset: 108
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LC_STATE0
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: LC_STATE1
+  address_offset: 112
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LC_STATE1
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+- id: LC_HUNG_CONF
+  address_offset: 116
+  size: 32
+  access: READ_WRITE
+  reset_value: 2064
+  fields:
+  - name: LC_FIFO_TIMEOUT
+    bit_range:
+    - 7
+    - 0
+  - name: LC_FIFO_TIMEOUT_SHIFT
+    bit_range:
+    - 10
+    - 8
+  - name: LC_FIFO_TIMEOUT_ENA
+    bit_range:
+    - 11
+    - 11
+  side_effects: null
+- id: CVSD_CONF0
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147516415
+  fields:
+  - name: CVSD_Y_MAX
+    bit_range:
+    - 15
+    - 0
+  - name: CVSD_Y_MIN
+    bit_range:
+    - 31
+    - 16
+  side_effects: null
+- id: CVSD_CONF1
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 656640
+  fields:
+  - name: CVSD_SIGMA_MAX
+    bit_range:
+    - 15
+    - 0
+  - name: CVSD_SIGMA_MIN
+    bit_range:
+    - 31
+    - 16
+  side_effects: null
+- id: CVSD_CONF2
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 328356
+  fields:
+  - name: CVSD_K
+    bit_range:
+    - 2
+    - 0
+  - name: CVSD_J
+    bit_range:
+    - 5
+    - 3
+  - name: CVSD_BETA
+    bit_range:
+    - 15
+    - 6
+  - name: CVSD_H
+    bit_range:
+    - 18
+    - 16
+  side_effects: null
+- id: PLC_CONF0
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 145228601
+  fields:
+  - name: GOOD_PACK_MAX
+    bit_range:
+    - 5
+    - 0
+  - name: N_ERR_SEG
+    bit_range:
+    - 8
+    - 6
+  - name: SHIFT_RATE
+    bit_range:
+    - 11
+    - 9
+  - name: MAX_SLIDE_SAMPLE
+    bit_range:
+    - 19
+    - 12
+  - name: PACK_LEN_8K
+    bit_range:
+    - 24
+    - 20
+  - name: N_MIN_ERR
+    bit_range:
+    - 27
+    - 25
+  side_effects: null
+- id: PLC_CONF1
+  address_offset: 144
+  size: 32
+  access: READ_WRITE
+  reset_value: 2685897221
+  fields:
+  - name: BAD_CEF_ATTEN_PARA
+    bit_range:
+    - 7
+    - 0
+  - name: BAD_CEF_ATTEN_PARA_SHIFT
+    bit_range:
+    - 11
+    - 8
+  - name: BAD_OLA_WIN2_PARA_SHIFT
+    bit_range:
+    - 15
+    - 12
+  - name: BAD_OLA_WIN2_PARA
+    bit_range:
+    - 23
+    - 16
+  - name: SLIDE_WIN_LEN
+    bit_range:
+    - 31
+    - 24
+  side_effects: null
+- id: PLC_CONF2
+  address_offset: 148
+  size: 32
+  access: READ_WRITE
+  reset_value: 40
+  fields:
+  - name: CVSD_SEG_MOD
+    bit_range:
+    - 1
+    - 0
+  - name: MIN_PERIOD
+    bit_range:
+    - 6
+    - 2
+  side_effects: null
+- id: ESCO_CONF0
+  address_offset: 152
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ESCO_EN
+    bit_range:
+    - 0
+    - 0
+  - name: ESCO_CHAN_MOD
+    bit_range:
+    - 1
+    - 1
+  - name: ESCO_CVSD_DEC_PACK_ERR
+    bit_range:
+    - 2
+    - 2
+  - name: ESCO_CVSD_PACK_LEN_8K
+    bit_range:
+    - 7
+    - 3
+  - name: ESCO_CVSD_INF_EN
+    bit_range:
+    - 8
+    - 8
+  - name: CVSD_DEC_START
+    bit_range:
+    - 9
+    - 9
+  - name: CVSD_DEC_RESET
+    bit_range:
+    - 10
+    - 10
+  - name: PLC_EN
+    bit_range:
+    - 11
+    - 11
+  - name: PLC2DMA_EN
+    bit_range:
+    - 12
+    - 12
+  side_effects: null
+- id: SCO_CONF0
+  address_offset: 156
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SCO_WITH_I2S_EN
+    bit_range:
+    - 0
+    - 0
+  - name: SCO_NO_I2S_EN
+    bit_range:
+    - 1
+    - 1
+  - name: CVSD_ENC_START
+    bit_range:
+    - 2
+    - 2
+  - name: CVSD_ENC_RESET
+    bit_range:
+    - 3
+    - 3
+  side_effects: null
+- id: CONF1
+  address_offset: 160
+  size: 32
+  access: READ_WRITE
+  reset_value: 137
+  fields:
+  - name: TX_PCM_CONF
+    bit_range:
+    - 2
+    - 0
+  - name: TX_PCM_BYPASS
+    bit_range:
+    - 3
+    - 3
+  - name: RX_PCM_CONF
+    bit_range:
+    - 6
+    - 4
+  - name: RX_PCM_BYPASS
+    bit_range:
+    - 7
+    - 7
+  - name: TX_STOP_EN
+    bit_range:
+    - 8
+    - 8
+  - name: TX_ZEROS_RM_EN
+    bit_range:
+    - 9
+    - 9
+  side_effects: null
+- id: PD_CONF
+  address_offset: 164
+  size: 32
+  access: READ_WRITE
+  reset_value: 10
+  fields:
+  - name: FIFO_FORCE_PD
+    bit_range:
+    - 0
+    - 0
+  - name: FIFO_FORCE_PU
+    bit_range:
+    - 1
+    - 1
+  - name: PLC_MEM_FORCE_PD
+    bit_range:
+    - 2
+    - 2
+  - name: PLC_MEM_FORCE_PU
+    bit_range:
+    - 3
+    - 3
+  side_effects: null
+- id: CONF2
+  address_offset: 168
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CAMERA_EN
+    bit_range:
+    - 0
+    - 0
+  - name: LCD_TX_WRX2_EN
+    bit_range:
+    - 1
+    - 1
+  - name: LCD_TX_SDX2_EN
+    bit_range:
+    - 2
+    - 2
+  - name: DATA_ENABLE_TEST_EN
+    bit_range:
+    - 3
+    - 3
+  - name: DATA_ENABLE
+    bit_range:
+    - 4
+    - 4
+  - name: LCD_EN
+    bit_range:
+    - 5
+    - 5
+  - name: EXT_ADC_START_EN
+    bit_range:
+    - 6
+    - 6
+  - name: INTER_VALID_EN
+    bit_range:
+    - 7
+    - 7
+  side_effects: null
+- id: CLKM_CONF
+  address_offset: 172
+  size: 32
+  access: READ_WRITE
+  reset_value: 4
+  fields:
+  - name: CLKM_DIV_NUM
+    bit_range:
+    - 7
+    - 0
+  - name: CLKM_DIV_B
+    bit_range:
+    - 13
+    - 8
+  - name: CLKM_DIV_A
+    bit_range:
+    - 19
+    - 14
+  - name: CLK_EN
+    bit_range:
+    - 20
+    - 20
+  - name: CLKA_ENA
+    bit_range:
+    - 21
+    - 21
+  side_effects: null
+- id: SAMPLE_RATE_CONF
+  address_offset: 176
+  size: 32
+  access: READ_WRITE
+  reset_value: 4260230
+  fields:
+  - name: TX_BCK_DIV_NUM
+    bit_range:
+    - 5
+    - 0
+  - name: RX_BCK_DIV_NUM
+    bit_range:
+    - 11
+    - 6
+  - name: TX_BITS_MOD
+    bit_range:
+    - 17
+    - 12
+  - name: RX_BITS_MOD
+    bit_range:
+    - 23
+    - 18
+  side_effects: null
+- id: PDM_CONF
+  address_offset: 180
+  size: 32
+  access: READ_WRITE
+  reset_value: 22347808
+  fields:
+  - name: TX_PDM_EN
+    bit_range:
+    - 0
+    - 0
+  - name: RX_PDM_EN
+    bit_range:
+    - 1
+    - 1
+  - name: PCM2PDM_CONV_EN
+    bit_range:
+    - 2
+    - 2
+  - name: PDM2PCM_CONV_EN
+    bit_range:
+    - 3
+    - 3
+  - name: TX_PDM_SINC_OSR2
+    bit_range:
+    - 7
+    - 4
+  - name: TX_PDM_PRESCALE
+    bit_range:
+    - 15
+    - 8
+  - name: TX_PDM_HP_IN_SHIFT
+    bit_range:
+    - 17
+    - 16
+  - name: TX_PDM_LP_IN_SHIFT
+    bit_range:
+    - 19
+    - 18
+  - name: TX_PDM_SINC_IN_SHIFT
+    bit_range:
+    - 21
+    - 20
+  - name: TX_PDM_SIGMADELTA_IN_SHIFT
+    bit_range:
+    - 23
+    - 22
+  - name: RX_PDM_SINC_DSR_16_EN
+    bit_range:
+    - 24
+    - 24
+  - name: TX_PDM_HP_BYPASS
+    bit_range:
+    - 25
+    - 25
+  side_effects: null
+- id: PDM_FREQ_CONF
+  address_offset: 184
+  size: 32
+  access: READ_WRITE
+  reset_value: 983520
+  fields:
+  - name: TX_PDM_FS
+    bit_range:
+    - 9
+    - 0
+  - name: TX_PDM_FP
+    bit_range:
+    - 19
+    - 10
+  side_effects: null
+- id: STATE
+  address_offset: 188
+  size: 32
+  access: READ_WRITE
+  reset_value: 7
+  fields:
+  - name: TX_IDLE
+    bit_range:
+    - 0
+    - 0
+  - name: TX_FIFO_RESET_BACK
+    bit_range:
+    - 1
+    - 1
+  - name: RX_FIFO_RESET_BACK
+    bit_range:
+    - 2
+    - 2
+  side_effects: null
+- id: DATE
+  address_offset: 252
+  size: 32
+  access: READ_WRITE
+  reset_value: 23085569
+  fields:
+  - name: I2SDATE
+    bit_range:
+    - 31
+    - 0
+  side_effects: null
+interrupts:
+  I2S1: 33
+  I2S0: 32
+timing: null

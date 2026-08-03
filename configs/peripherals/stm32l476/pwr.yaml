@@ -1,0 +1,2042 @@
+peripheral: PWR
+version: 0.1.0
+registers:
+- id: CR1
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 512
+  fields:
+  - name: LPMS
+    bit_range:
+    - 2
+    - 0
+    description: Low-power mode selection
+  - name: DBP
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Disable backup domain write
+                    protection
+  - name: VOS
+    bit_range:
+    - 10
+    - 9
+    description: |-
+      Voltage scaling range
+                    selection
+  - name: LPR
+    bit_range:
+    - 14
+    - 14
+    description: Low-power run
+  side_effects: null
+- id: CR2
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PVDE
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Power voltage detector
+                    enable
+  - name: PLS
+    bit_range:
+    - 3
+    - 1
+    description: |-
+      Power voltage detector level
+                    selection
+  - name: PVME1
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Peripheral voltage monitoring 1 enable:
+                    VDDUSB vs. 1.2V
+  - name: PVME2
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Peripheral voltage monitoring 2 enable:
+                    VDDIO2 vs. 0.9V
+  - name: PVME3
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Peripheral voltage monitoring 3 enable:
+                    VDDA vs. 1.62V
+  - name: PVME4
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Peripheral voltage monitoring 4 enable:
+                    VDDA vs. 2.2V
+  - name: IOSV
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      VDDIO2 Independent I/Os supply
+                    valid
+  - name: USV
+    bit_range:
+    - 10
+    - 10
+    description: VDDUSB USB supply valid
+  side_effects: null
+- id: CR3
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 32768
+  fields:
+  - name: EWUP1
+    bit_range:
+    - 0
+    - 0
+    description: Enable Wakeup pin WKUP1
+  - name: EWUP2
+    bit_range:
+    - 1
+    - 1
+    description: Enable Wakeup pin WKUP2
+  - name: EWUP3
+    bit_range:
+    - 2
+    - 2
+    description: Enable Wakeup pin WKUP3
+  - name: EWUP4
+    bit_range:
+    - 3
+    - 3
+    description: Enable Wakeup pin WKUP4
+  - name: EWUP5
+    bit_range:
+    - 4
+    - 4
+    description: Enable Wakeup pin WKUP5
+  - name: RRS
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      SRAM2 retention in Standby
+                    mode
+  - name: APC
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Apply pull-up and pull-down
+                    configuration
+  - name: EWF
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Enable internal wakeup
+                    line
+  side_effects: null
+- id: CR4
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WP1
+    bit_range:
+    - 0
+    - 0
+    description: Wakeup pin WKUP1 polarity
+  - name: WP2
+    bit_range:
+    - 1
+    - 1
+    description: Wakeup pin WKUP2 polarity
+  - name: WP3
+    bit_range:
+    - 2
+    - 2
+    description: Wakeup pin WKUP3 polarity
+  - name: WP4
+    bit_range:
+    - 3
+    - 3
+    description: Wakeup pin WKUP4 polarity
+  - name: WP5
+    bit_range:
+    - 4
+    - 4
+    description: Wakeup pin WKUP5 polarity
+  - name: VBE
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      VBAT battery charging
+                    enable
+  - name: VBRS
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      VBAT battery charging resistor
+                    selection
+  side_effects: null
+- id: SR1
+  address_offset: 16
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: CWUF1
+    bit_range:
+    - 0
+    - 0
+    description: Wakeup flag 1
+  - name: CWUF2
+    bit_range:
+    - 1
+    - 1
+    description: Wakeup flag 2
+  - name: CWUF3
+    bit_range:
+    - 2
+    - 2
+    description: Wakeup flag 3
+  - name: CWUF4
+    bit_range:
+    - 3
+    - 3
+    description: Wakeup flag 4
+  - name: CWUF5
+    bit_range:
+    - 4
+    - 4
+    description: Wakeup flag 5
+  - name: CSBF
+    bit_range:
+    - 8
+    - 8
+    description: Standby flag
+  - name: WUFI
+    bit_range:
+    - 15
+    - 15
+    description: Wakeup flag internal
+  side_effects: null
+- id: SR2
+  address_offset: 20
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: REGLPS
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Low-power regulator
+                    started
+  - name: REGLPF
+    bit_range:
+    - 9
+    - 9
+    description: Low-power regulator flag
+  - name: VOSF
+    bit_range:
+    - 10
+    - 10
+    description: Voltage scaling flag
+  - name: PVDO
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Power voltage detector
+                    output
+  - name: PVMO1
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Peripheral voltage monitoring output:
+                    VDDUSB vs. 1.2 V
+  - name: PVMO2
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Peripheral voltage monitoring output:
+                    VDDIO2 vs. 0.9 V
+  - name: PVMO3
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Peripheral voltage monitoring output:
+                    VDDA vs. 1.62 V
+  - name: PVMO4
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Peripheral voltage monitoring output:
+                    VDDA vs. 2.2 V
+  side_effects: null
+- id: SCR
+  address_offset: 24
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: WUF1
+    bit_range:
+    - 0
+    - 0
+    description: Clear wakeup flag 1
+  - name: WUF2
+    bit_range:
+    - 1
+    - 1
+    description: Clear wakeup flag 2
+  - name: WUF3
+    bit_range:
+    - 2
+    - 2
+    description: Clear wakeup flag 3
+  - name: WUF4
+    bit_range:
+    - 3
+    - 3
+    description: Clear wakeup flag 4
+  - name: WUF5
+    bit_range:
+    - 4
+    - 4
+    description: Clear wakeup flag 5
+  - name: SBF
+    bit_range:
+    - 8
+    - 8
+    description: Clear standby flag
+  side_effects: null
+- id: PUCRA
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PU0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port A pull-up bit y
+                    (y=0..15)
+  - name: PU1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port A pull-up bit y
+                    (y=0..15)
+  - name: PU2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port A pull-up bit y
+                    (y=0..15)
+  - name: PU3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port A pull-up bit y
+                    (y=0..15)
+  - name: PU4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port A pull-up bit y
+                    (y=0..15)
+  - name: PU5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port A pull-up bit y
+                    (y=0..15)
+  - name: PU6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port A pull-up bit y
+                    (y=0..15)
+  - name: PU7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port A pull-up bit y
+                    (y=0..15)
+  - name: PU8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port A pull-up bit y
+                    (y=0..15)
+  - name: PU9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port A pull-up bit y
+                    (y=0..15)
+  - name: PU10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port A pull-up bit y
+                    (y=0..15)
+  - name: PU11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port A pull-up bit y
+                    (y=0..15)
+  - name: PU12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port A pull-up bit y
+                    (y=0..15)
+  - name: PU13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port A pull-up bit y
+                    (y=0..15)
+  - name: PU14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port A pull-up bit y
+                    (y=0..15)
+  - name: PU15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port A pull-up bit y
+                    (y=0..15)
+  side_effects: null
+- id: PDCRA
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PD0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port A pull-down bit y
+                    (y=0..15)
+  - name: PD1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port A pull-down bit y
+                    (y=0..15)
+  - name: PD2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port A pull-down bit y
+                    (y=0..15)
+  - name: PD3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port A pull-down bit y
+                    (y=0..15)
+  - name: PD4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port A pull-down bit y
+                    (y=0..15)
+  - name: PD5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port A pull-down bit y
+                    (y=0..15)
+  - name: PD6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port A pull-down bit y
+                    (y=0..15)
+  - name: PD7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port A pull-down bit y
+                    (y=0..15)
+  - name: PD8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port A pull-down bit y
+                    (y=0..15)
+  - name: PD9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port A pull-down bit y
+                    (y=0..15)
+  - name: PD10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port A pull-down bit y
+                    (y=0..15)
+  - name: PD11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port A pull-down bit y
+                    (y=0..15)
+  - name: PD12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port A pull-down bit y
+                    (y=0..15)
+  - name: PD13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port A pull-down bit y
+                    (y=0..15)
+  - name: PD14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port A pull-down bit y
+                    (y=0..15)
+  - name: PD15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port A pull-down bit y
+                    (y=0..15)
+  side_effects: null
+- id: PUCRB
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PU0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port B pull-up bit y
+                    (y=0..15)
+  - name: PU1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port B pull-up bit y
+                    (y=0..15)
+  - name: PU2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port B pull-up bit y
+                    (y=0..15)
+  - name: PU3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port B pull-up bit y
+                    (y=0..15)
+  - name: PU4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port B pull-up bit y
+                    (y=0..15)
+  - name: PU5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port B pull-up bit y
+                    (y=0..15)
+  - name: PU6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port B pull-up bit y
+                    (y=0..15)
+  - name: PU7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port B pull-up bit y
+                    (y=0..15)
+  - name: PU8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port B pull-up bit y
+                    (y=0..15)
+  - name: PU9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port B pull-up bit y
+                    (y=0..15)
+  - name: PU10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port B pull-up bit y
+                    (y=0..15)
+  - name: PU11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port B pull-up bit y
+                    (y=0..15)
+  - name: PU12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port B pull-up bit y
+                    (y=0..15)
+  - name: PU13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port B pull-up bit y
+                    (y=0..15)
+  - name: PU14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port B pull-up bit y
+                    (y=0..15)
+  - name: PU15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port B pull-up bit y
+                    (y=0..15)
+  side_effects: null
+- id: PDCRB
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PD0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port B pull-down bit y
+                    (y=0..15)
+  - name: PD1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port B pull-down bit y
+                    (y=0..15)
+  - name: PD2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port B pull-down bit y
+                    (y=0..15)
+  - name: PD3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port B pull-down bit y
+                    (y=0..15)
+  - name: PD4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port B pull-down bit y
+                    (y=0..15)
+  - name: PD5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port B pull-down bit y
+                    (y=0..15)
+  - name: PD6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port B pull-down bit y
+                    (y=0..15)
+  - name: PD7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port B pull-down bit y
+                    (y=0..15)
+  - name: PD8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port B pull-down bit y
+                    (y=0..15)
+  - name: PD9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port B pull-down bit y
+                    (y=0..15)
+  - name: PD10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port B pull-down bit y
+                    (y=0..15)
+  - name: PD11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port B pull-down bit y
+                    (y=0..15)
+  - name: PD12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port B pull-down bit y
+                    (y=0..15)
+  - name: PD13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port B pull-down bit y
+                    (y=0..15)
+  - name: PD14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port B pull-down bit y
+                    (y=0..15)
+  - name: PD15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port B pull-down bit y
+                    (y=0..15)
+  side_effects: null
+- id: PUCRC
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PU0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port C pull-up bit y
+                    (y=0..15)
+  - name: PU1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port C pull-up bit y
+                    (y=0..15)
+  - name: PU2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port C pull-up bit y
+                    (y=0..15)
+  - name: PU3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port C pull-up bit y
+                    (y=0..15)
+  - name: PU4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port C pull-up bit y
+                    (y=0..15)
+  - name: PU5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port C pull-up bit y
+                    (y=0..15)
+  - name: PU6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port C pull-up bit y
+                    (y=0..15)
+  - name: PU7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port C pull-up bit y
+                    (y=0..15)
+  - name: PU8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port C pull-up bit y
+                    (y=0..15)
+  - name: PU9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port C pull-up bit y
+                    (y=0..15)
+  - name: PU10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port C pull-up bit y
+                    (y=0..15)
+  - name: PU11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port C pull-up bit y
+                    (y=0..15)
+  - name: PU12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port C pull-up bit y
+                    (y=0..15)
+  - name: PU13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port C pull-up bit y
+                    (y=0..15)
+  - name: PU14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port C pull-up bit y
+                    (y=0..15)
+  - name: PU15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port C pull-up bit y
+                    (y=0..15)
+  side_effects: null
+- id: PDCRC
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PD0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port C pull-down bit y
+                    (y=0..15)
+  - name: PD1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port C pull-down bit y
+                    (y=0..15)
+  - name: PD2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port C pull-down bit y
+                    (y=0..15)
+  - name: PD3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port C pull-down bit y
+                    (y=0..15)
+  - name: PD4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port C pull-down bit y
+                    (y=0..15)
+  - name: PD5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port C pull-down bit y
+                    (y=0..15)
+  - name: PD6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port C pull-down bit y
+                    (y=0..15)
+  - name: PD7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port C pull-down bit y
+                    (y=0..15)
+  - name: PD8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port C pull-down bit y
+                    (y=0..15)
+  - name: PD9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port C pull-down bit y
+                    (y=0..15)
+  - name: PD10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port C pull-down bit y
+                    (y=0..15)
+  - name: PD11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port C pull-down bit y
+                    (y=0..15)
+  - name: PD12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port C pull-down bit y
+                    (y=0..15)
+  - name: PD13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port C pull-down bit y
+                    (y=0..15)
+  - name: PD14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port C pull-down bit y
+                    (y=0..15)
+  - name: PD15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port C pull-down bit y
+                    (y=0..15)
+  side_effects: null
+- id: PUCRD
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PU0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port D pull-up bit y
+                    (y=0..15)
+  - name: PU1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port D pull-up bit y
+                    (y=0..15)
+  - name: PU2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port D pull-up bit y
+                    (y=0..15)
+  - name: PU3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port D pull-up bit y
+                    (y=0..15)
+  - name: PU4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port D pull-up bit y
+                    (y=0..15)
+  - name: PU5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port D pull-up bit y
+                    (y=0..15)
+  - name: PU6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port D pull-up bit y
+                    (y=0..15)
+  - name: PU7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port D pull-up bit y
+                    (y=0..15)
+  - name: PU8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port D pull-up bit y
+                    (y=0..15)
+  - name: PU9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port D pull-up bit y
+                    (y=0..15)
+  - name: PU10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port D pull-up bit y
+                    (y=0..15)
+  - name: PU11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port D pull-up bit y
+                    (y=0..15)
+  - name: PU12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port D pull-up bit y
+                    (y=0..15)
+  - name: PU13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port D pull-up bit y
+                    (y=0..15)
+  - name: PU14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port D pull-up bit y
+                    (y=0..15)
+  - name: PU15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port D pull-up bit y
+                    (y=0..15)
+  side_effects: null
+- id: PDCRD
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PD0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port D pull-down bit y
+                    (y=0..15)
+  - name: PD1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port D pull-down bit y
+                    (y=0..15)
+  - name: PD2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port D pull-down bit y
+                    (y=0..15)
+  - name: PD3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port D pull-down bit y
+                    (y=0..15)
+  - name: PD4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port D pull-down bit y
+                    (y=0..15)
+  - name: PD5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port D pull-down bit y
+                    (y=0..15)
+  - name: PD6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port D pull-down bit y
+                    (y=0..15)
+  - name: PD7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port D pull-down bit y
+                    (y=0..15)
+  - name: PD8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port D pull-down bit y
+                    (y=0..15)
+  - name: PD9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port D pull-down bit y
+                    (y=0..15)
+  - name: PD10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port D pull-down bit y
+                    (y=0..15)
+  - name: PD11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port D pull-down bit y
+                    (y=0..15)
+  - name: PD12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port D pull-down bit y
+                    (y=0..15)
+  - name: PD13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port D pull-down bit y
+                    (y=0..15)
+  - name: PD14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port D pull-down bit y
+                    (y=0..15)
+  - name: PD15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port D pull-down bit y
+                    (y=0..15)
+  side_effects: null
+- id: PUCRE
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PU0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port E pull-up bit y
+                    (y=0..15)
+  - name: PU1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port E pull-up bit y
+                    (y=0..15)
+  - name: PU2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port E pull-up bit y
+                    (y=0..15)
+  - name: PU3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port E pull-up bit y
+                    (y=0..15)
+  - name: PU4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port E pull-up bit y
+                    (y=0..15)
+  - name: PU5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port E pull-up bit y
+                    (y=0..15)
+  - name: PU6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port E pull-up bit y
+                    (y=0..15)
+  - name: PU7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port E pull-up bit y
+                    (y=0..15)
+  - name: PU8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port E pull-up bit y
+                    (y=0..15)
+  - name: PU9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port E pull-up bit y
+                    (y=0..15)
+  - name: PU10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port E pull-up bit y
+                    (y=0..15)
+  - name: PU11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port E pull-up bit y
+                    (y=0..15)
+  - name: PU12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port E pull-up bit y
+                    (y=0..15)
+  - name: PU13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port E pull-up bit y
+                    (y=0..15)
+  - name: PU14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port E pull-up bit y
+                    (y=0..15)
+  - name: PU15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port E pull-up bit y
+                    (y=0..15)
+  side_effects: null
+- id: PDCRE
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PD0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port E pull-down bit y
+                    (y=0..15)
+  - name: PD1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port E pull-down bit y
+                    (y=0..15)
+  - name: PD2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port E pull-down bit y
+                    (y=0..15)
+  - name: PD3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port E pull-down bit y
+                    (y=0..15)
+  - name: PD4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port E pull-down bit y
+                    (y=0..15)
+  - name: PD5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port E pull-down bit y
+                    (y=0..15)
+  - name: PD6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port E pull-down bit y
+                    (y=0..15)
+  - name: PD7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port E pull-down bit y
+                    (y=0..15)
+  - name: PD8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port E pull-down bit y
+                    (y=0..15)
+  - name: PD9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port E pull-down bit y
+                    (y=0..15)
+  - name: PD10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port E pull-down bit y
+                    (y=0..15)
+  - name: PD11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port E pull-down bit y
+                    (y=0..15)
+  - name: PD12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port E pull-down bit y
+                    (y=0..15)
+  - name: PD13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port E pull-down bit y
+                    (y=0..15)
+  - name: PD14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port E pull-down bit y
+                    (y=0..15)
+  - name: PD15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port E pull-down bit y
+                    (y=0..15)
+  side_effects: null
+- id: PUCRF
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PU0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port F pull-up bit y
+                    (y=0..15)
+  - name: PU1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port F pull-up bit y
+                    (y=0..15)
+  - name: PU2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port F pull-up bit y
+                    (y=0..15)
+  - name: PU3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port F pull-up bit y
+                    (y=0..15)
+  - name: PU4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port F pull-up bit y
+                    (y=0..15)
+  - name: PU5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port F pull-up bit y
+                    (y=0..15)
+  - name: PU6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port F pull-up bit y
+                    (y=0..15)
+  - name: PU7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port F pull-up bit y
+                    (y=0..15)
+  - name: PU8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port F pull-up bit y
+                    (y=0..15)
+  - name: PU9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port F pull-up bit y
+                    (y=0..15)
+  - name: PU10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port F pull-up bit y
+                    (y=0..15)
+  - name: PU11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port F pull-up bit y
+                    (y=0..15)
+  - name: PU12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port F pull-up bit y
+                    (y=0..15)
+  - name: PU13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port F pull-up bit y
+                    (y=0..15)
+  - name: PU14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port F pull-up bit y
+                    (y=0..15)
+  - name: PU15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port F pull-up bit y
+                    (y=0..15)
+  side_effects: null
+- id: PDCRF
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PD0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port F pull-down bit y
+                    (y=0..15)
+  - name: PD1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port F pull-down bit y
+                    (y=0..15)
+  - name: PD2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port F pull-down bit y
+                    (y=0..15)
+  - name: PD3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port F pull-down bit y
+                    (y=0..15)
+  - name: PD4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port F pull-down bit y
+                    (y=0..15)
+  - name: PD5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port F pull-down bit y
+                    (y=0..15)
+  - name: PD6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port F pull-down bit y
+                    (y=0..15)
+  - name: PD7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port F pull-down bit y
+                    (y=0..15)
+  - name: PD8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port F pull-down bit y
+                    (y=0..15)
+  - name: PD9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port F pull-down bit y
+                    (y=0..15)
+  - name: PD10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port F pull-down bit y
+                    (y=0..15)
+  - name: PD11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port F pull-down bit y
+                    (y=0..15)
+  - name: PD12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port F pull-down bit y
+                    (y=0..15)
+  - name: PD13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port F pull-down bit y
+                    (y=0..15)
+  - name: PD14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port F pull-down bit y
+                    (y=0..15)
+  - name: PD15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port F pull-down bit y
+                    (y=0..15)
+  side_effects: null
+- id: PUCRG
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PU0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port G pull-up bit y
+                    (y=0..15)
+  - name: PU1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port G pull-up bit y
+                    (y=0..15)
+  - name: PU2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port G pull-up bit y
+                    (y=0..15)
+  - name: PU3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port G pull-up bit y
+                    (y=0..15)
+  - name: PU4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port G pull-up bit y
+                    (y=0..15)
+  - name: PU5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port G pull-up bit y
+                    (y=0..15)
+  - name: PU6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port G pull-up bit y
+                    (y=0..15)
+  - name: PU7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port G pull-up bit y
+                    (y=0..15)
+  - name: PU8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port G pull-up bit y
+                    (y=0..15)
+  - name: PU9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port G pull-up bit y
+                    (y=0..15)
+  - name: PU10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port G pull-up bit y
+                    (y=0..15)
+  - name: PU11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port G pull-up bit y
+                    (y=0..15)
+  - name: PU12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port G pull-up bit y
+                    (y=0..15)
+  - name: PU13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port G pull-up bit y
+                    (y=0..15)
+  - name: PU14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port G pull-up bit y
+                    (y=0..15)
+  - name: PU15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port G pull-up bit y
+                    (y=0..15)
+  side_effects: null
+- id: PDCRG
+  address_offset: 84
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PD0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port G pull-down bit y
+                    (y=0..15)
+  - name: PD1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port G pull-down bit y
+                    (y=0..15)
+  - name: PD2
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Port G pull-down bit y
+                    (y=0..15)
+  - name: PD3
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      Port G pull-down bit y
+                    (y=0..15)
+  - name: PD4
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      Port G pull-down bit y
+                    (y=0..15)
+  - name: PD5
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      Port G pull-down bit y
+                    (y=0..15)
+  - name: PD6
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      Port G pull-down bit y
+                    (y=0..15)
+  - name: PD7
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      Port G pull-down bit y
+                    (y=0..15)
+  - name: PD8
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Port G pull-down bit y
+                    (y=0..15)
+  - name: PD9
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      Port G pull-down bit y
+                    (y=0..15)
+  - name: PD10
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      Port G pull-down bit y
+                    (y=0..15)
+  - name: PD11
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Port G pull-down bit y
+                    (y=0..15)
+  - name: PD12
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      Port G pull-down bit y
+                    (y=0..15)
+  - name: PD13
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      Port G pull-down bit y
+                    (y=0..15)
+  - name: PD14
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Port G pull-down bit y
+                    (y=0..15)
+  - name: PD15
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Port G pull-down bit y
+                    (y=0..15)
+  side_effects: null
+- id: PUCRH
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PU0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port H pull-up bit y
+                    (y=0..1)
+  - name: PU1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port H pull-up bit y
+                    (y=0..1)
+  side_effects: null
+- id: PDCRH
+  address_offset: 92
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PD0
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Port H pull-down bit y
+                    (y=0..1)
+  - name: PD1
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      Port H pull-down bit y
+                    (y=0..1)
+  side_effects: null
+interrupts: null
+timing: null

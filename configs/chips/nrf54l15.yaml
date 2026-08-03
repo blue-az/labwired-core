@@ -74,11 +74,15 @@ peripherals:
     base_address: 0x500C6000
     size: "4KB"
     irq: 198
+    config:
+      debug_schema: "../peripherals/nrf54l15/global_uarte20_s.yaml"
   - id: "uart30"
     type: "nrf54l_uarte"
     base_address: 0x50104000
     size: "4KB"
     irq: 260
+    config:
+      debug_schema: "../peripherals/nrf54l15/global_uarte30_s.yaml"
 
   # ── TWIM (I²C master) ──────────────────────────────────────────────────
   # Same personality caveat as UARTE20: uart21/spi21/twi21 are one instance at
@@ -101,11 +105,15 @@ peripherals:
     base_address: 0x500C7000
     size: "4KB"
     irq: 199
+    config:
+      debug_schema: "../peripherals/nrf54l15/global_twim21_s.yaml"
   - id: "twi22"
     type: "nrf54l_twim"
     base_address: 0x500C8000
     size: "4KB"
     irq: 200
+    config:
+      debug_schema: "../peripherals/nrf54l15/global_twim22_s.yaml"
 
   # ── SysTick ────────────────────────────────────────────────────────────
   # The 24-bit ARMv8-M architectural SysTick timer, part of the Cortex-M33
@@ -117,6 +125,8 @@ peripherals:
   # connection-event ISR: a periodic exception that busy-holds the CPU for a
   # connection-event window, demonstrating how radio contention starves the
   # sensor drain loop and overflows the PPG FIFO (see smart-ring.yaml).
+  # No `debug_schema`: an ARMv7-M/ARMv8-M core peripheral, absent from this
+  # vendor SVD (which starts at the PPB), so there is no base match to attach.
   - id: "systick"
     type: "systick"
     base_address: 0xE000E010
@@ -131,6 +141,7 @@ peripherals:
     size: "4KB"
     irq: 133
     config:
+      debug_schema: "../peripherals/nrf54l15/global_timer10_s.yaml"
       num_cc: 8
   - id: "timer20"
     type: "nrf52840_timer"
@@ -138,6 +149,7 @@ peripherals:
     size: "4KB"
     irq: 202
     config:
+      debug_schema: "../peripherals/nrf54l15/global_timer20_s.yaml"
       num_cc: 6
   - id: "timer21"
     type: "nrf52840_timer"
@@ -145,6 +157,7 @@ peripherals:
     size: "4KB"
     irq: 203
     config:
+      debug_schema: "../peripherals/nrf54l15/global_timer21_s.yaml"
       num_cc: 6
   - id: "timer22"
     type: "nrf52840_timer"
@@ -152,6 +165,7 @@ peripherals:
     size: "4KB"
     irq: 204
     config:
+      debug_schema: "../peripherals/nrf54l15/global_timer22_s.yaml"
       num_cc: 6
 
   # ── GPIO ───────────────────────────────────────────────────────────────
@@ -183,6 +197,13 @@ peripherals:
   # This is silent when wrong: UART still works and the board still boots, only
   # the pins never move — which is why firmware_survival asserts DIR and OUT at
   # the pin after booting a real ELF rather than trusting the banner.
+  #
+  # These three therefore carry NO `debug_schema`. The SVD's GLOBAL_P0/P1/P2
+  # descriptors are relative to the MDK base (OUT at offset 0x000), while the
+  # window mapped here starts 0x504 lower, so attaching one would name every
+  # register 0x504 off. A debugger stating a wrong name confidently is worse
+  # than showing none. Do not "fix" this by pointing at global_p0_s.yaml — it
+  # would need a hand-authored, offset-shifted descriptor.
   - id: "gpio0"
     type: "gpio"
     base_address: 0x50109AFC
@@ -212,6 +233,8 @@ peripherals:
     base_address: 0x500D7000
     size: "4KB"
     irq: 215
+    config:
+      debug_schema: "../peripherals/nrf54l15/global_temp_s.yaml"
 
   # ── EGU ────────────────────────────────────────────────────────────────
   - id: "egu10"
@@ -219,21 +242,29 @@ peripherals:
     base_address: 0x50087000
     size: "4KB"
     irq: 135
+    config:
+      debug_schema: "../peripherals/nrf54l15/global_egu10_s.yaml"
   - id: "egu20"
     type: "nrf52840_egu"
     base_address: 0x500C9000
     size: "4KB"
     irq: 201
+    config:
+      debug_schema: "../peripherals/nrf54l15/global_egu20_s.yaml"
 
   # ── GPIOTE ─────────────────────────────────────────────────────────────
   - id: "gpiote20"
     type: "nrf52_gpiote"
     base_address: 0x500DA000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/nrf54l15/global_gpiote20_s.yaml"
   - id: "gpiote30"
     type: "nrf52_gpiote"
     base_address: 0x5010C000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/nrf54l15/global_gpiote30_s.yaml"
 
   # ── GRTC ───────────────────────────────────────────────────────────────
   # The Global RTC replaces RTC0/RTC1 on this family and is what Zephyr drives
@@ -270,6 +301,7 @@ peripherals:
     size: "4KB"
     irq: 226
     config:
+      debug_schema: "../peripherals/nrf54l15/global_grtc_s.yaml"
       num_cc: 12
 
   # ── Benign stub windows ────────────────────────────────────────────────
@@ -292,6 +324,8 @@ peripherals:
     base_address: 0x5010E000
     size: "4KB"
     irq: 261
+    config:
+      debug_schema: "../peripherals/nrf54l15/global_clock_s.yaml"
 
   # TAMPC — tamper controller, and the block that gates APPROTECT.
   #
@@ -315,6 +349,8 @@ peripherals:
     type: "nrf54l_tampc_stub"
     base_address: 0x500DC000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/nrf54l15/global_tampc_s.yaml"
 
   # WDT30 / WDT31 — mapped so the MDK's approtect-invalid-state path (which
   # pokes WDT30 to force a reset) writes somewhere real rather than faulting.
@@ -324,10 +360,14 @@ peripherals:
     type: "nrf54l_wdt_stub"
     base_address: 0x50108000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/nrf54l15/global_wdt30_s.yaml"
   - id: "wdt31"
     type: "nrf54l_wdt_stub"
     base_address: 0x50109000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/nrf54l15/global_wdt31_s.yaml"
 
   # RRAM controller — NVM write/erase control. Reads as zero; a firmware that
   # only executes from RRAM never needs it, but the window must exist so a
@@ -336,12 +376,16 @@ peripherals:
     type: "nrf54l_rramc_stub"
     base_address: 0x5004B000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/nrf54l15/global_rramc_s.yaml"
 
   # Regulators (DCDC/LDO selection) — write-only on the boot path.
   - id: "regulators"
     type: "nrf54l_regulators_stub"
     base_address: 0x50120000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/nrf54l15/global_regulators_s.yaml"
 
   # DPPIC / PPIB — event routing fabric. Poked during peripheral init but not
   # polled for a settled value on a UART smoke boot.
@@ -349,10 +393,14 @@ peripherals:
     type: "nrf54l_dppic_stub"
     base_address: 0x500C2000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/nrf54l15/global_dppic20_s.yaml"
   - id: "dppic30"
     type: "nrf54l_dppic_stub"
     base_address: 0x50102000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/nrf54l15/global_dppic30_s.yaml"
 
   # FICR / UICR — factory and user info. NOT inside the 0x5000_0000 window;
   # these are absolute (DT: ficr@ffc000, uicr@ffd000). Unprovisioned UICR reads
@@ -361,7 +409,11 @@ peripherals:
     type: "nrf54l_ficr_stub"
     base_address: 0x00FFC000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/nrf54l15/global_ficr_ns.yaml"
   - id: "uicr"
     type: "nrf54l_uicr_stub"
     base_address: 0x00FFD000
     size: "4KB"
+    config:
+      debug_schema: "../peripherals/nrf54l15/global_uicr_s.yaml"

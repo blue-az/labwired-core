@@ -1,0 +1,1027 @@
+peripheral: DMA1
+version: 0.1.0
+registers:
+- id: ISR
+  address_offset: 0
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: GIF1
+    bit_range:
+    - 0
+    - 0
+    description: Channel 1 Global interrupt flag
+  - name: TCIF1
+    bit_range:
+    - 1
+    - 1
+    description: Channel 1 Transfer Complete flag
+  - name: HTIF1
+    bit_range:
+    - 2
+    - 2
+    description: Channel 1 Half Transfer Complete flag
+  - name: TEIF1
+    bit_range:
+    - 3
+    - 3
+    description: Channel 1 Transfer Error flag
+  - name: GIF2
+    bit_range:
+    - 4
+    - 4
+    description: Channel 2 Global interrupt flag
+  - name: TCIF2
+    bit_range:
+    - 5
+    - 5
+    description: Channel 2 Transfer Complete flag
+  - name: HTIF2
+    bit_range:
+    - 6
+    - 6
+    description: Channel 2 Half Transfer Complete flag
+  - name: TEIF2
+    bit_range:
+    - 7
+    - 7
+    description: Channel 2 Transfer Error flag
+  - name: GIF3
+    bit_range:
+    - 8
+    - 8
+    description: Channel 3 Global interrupt flag
+  - name: TCIF3
+    bit_range:
+    - 9
+    - 9
+    description: Channel 3 Transfer Complete flag
+  - name: HTIF3
+    bit_range:
+    - 10
+    - 10
+    description: Channel 3 Half Transfer Complete flag
+  - name: TEIF3
+    bit_range:
+    - 11
+    - 11
+    description: Channel 3 Transfer Error flag
+  - name: GIF4
+    bit_range:
+    - 12
+    - 12
+    description: Channel 4 Global interrupt flag
+  - name: TCIF4
+    bit_range:
+    - 13
+    - 13
+    description: Channel 4 Transfer Complete flag
+  - name: HTIF4
+    bit_range:
+    - 14
+    - 14
+    description: Channel 4 Half Transfer Complete flag
+  - name: TEIF4
+    bit_range:
+    - 15
+    - 15
+    description: Channel 4 Transfer Error flag
+  - name: GIF5
+    bit_range:
+    - 16
+    - 16
+    description: Channel 5 Global interrupt flag
+  - name: TCIF5
+    bit_range:
+    - 17
+    - 17
+    description: Channel 5 Transfer Complete flag
+  - name: HTIF5
+    bit_range:
+    - 18
+    - 18
+    description: Channel 5 Half Transfer Complete flag
+  - name: TEIF5
+    bit_range:
+    - 19
+    - 19
+    description: Channel 5 Transfer Error flag
+  - name: GIF6
+    bit_range:
+    - 20
+    - 20
+    description: Channel 6 Global interrupt flag
+  - name: TCIF6
+    bit_range:
+    - 21
+    - 21
+    description: Channel 6 Transfer Complete flag
+  - name: HTIF6
+    bit_range:
+    - 22
+    - 22
+    description: Channel 6 Half Transfer Complete flag
+  - name: TEIF6
+    bit_range:
+    - 23
+    - 23
+    description: Channel 6 Transfer Error flag
+  - name: GIF7
+    bit_range:
+    - 24
+    - 24
+    description: Channel 7 Global interrupt flag
+  - name: TCIF7
+    bit_range:
+    - 25
+    - 25
+    description: Channel 7 Transfer Complete flag
+  - name: HTIF7
+    bit_range:
+    - 26
+    - 26
+    description: Channel 7 Half Transfer Complete flag
+  - name: TEIF7
+    bit_range:
+    - 27
+    - 27
+    description: Channel 7 Transfer Error flag
+  side_effects: null
+- id: IFCR
+  address_offset: 4
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: CGIF1
+    bit_range:
+    - 0
+    - 0
+    description: Channel 1 Global interrupt clear
+  - name: CGIF2
+    bit_range:
+    - 4
+    - 4
+    description: Channel 2 Global interrupt clear
+  - name: CGIF3
+    bit_range:
+    - 8
+    - 8
+    description: Channel 3 Global interrupt clear
+  - name: CGIF4
+    bit_range:
+    - 12
+    - 12
+    description: Channel 4 Global interrupt clear
+  - name: CGIF5
+    bit_range:
+    - 16
+    - 16
+    description: Channel 5 Global interrupt clear
+  - name: CGIF6
+    bit_range:
+    - 20
+    - 20
+    description: Channel 6 Global interrupt clear
+  - name: CGIF7
+    bit_range:
+    - 24
+    - 24
+    description: Channel 7 Global interrupt clear
+  - name: CTCIF1
+    bit_range:
+    - 1
+    - 1
+    description: Channel 1 Transfer Complete clear
+  - name: CTCIF2
+    bit_range:
+    - 5
+    - 5
+    description: Channel 2 Transfer Complete clear
+  - name: CTCIF3
+    bit_range:
+    - 9
+    - 9
+    description: Channel 3 Transfer Complete clear
+  - name: CTCIF4
+    bit_range:
+    - 13
+    - 13
+    description: Channel 4 Transfer Complete clear
+  - name: CTCIF5
+    bit_range:
+    - 17
+    - 17
+    description: Channel 5 Transfer Complete clear
+  - name: CTCIF6
+    bit_range:
+    - 21
+    - 21
+    description: Channel 6 Transfer Complete clear
+  - name: CTCIF7
+    bit_range:
+    - 25
+    - 25
+    description: Channel 7 Transfer Complete clear
+  - name: CHTIF1
+    bit_range:
+    - 2
+    - 2
+    description: Channel 1 Half Transfer clear
+  - name: CHTIF2
+    bit_range:
+    - 6
+    - 6
+    description: Channel 2 Half Transfer clear
+  - name: CHTIF3
+    bit_range:
+    - 10
+    - 10
+    description: Channel 3 Half Transfer clear
+  - name: CHTIF4
+    bit_range:
+    - 14
+    - 14
+    description: Channel 4 Half Transfer clear
+  - name: CHTIF5
+    bit_range:
+    - 18
+    - 18
+    description: Channel 5 Half Transfer clear
+  - name: CHTIF6
+    bit_range:
+    - 22
+    - 22
+    description: Channel 6 Half Transfer clear
+  - name: CHTIF7
+    bit_range:
+    - 26
+    - 26
+    description: Channel 7 Half Transfer clear
+  - name: CTEIF1
+    bit_range:
+    - 3
+    - 3
+    description: Channel 1 Transfer Error clear
+  - name: CTEIF2
+    bit_range:
+    - 7
+    - 7
+    description: Channel 2 Transfer Error clear
+  - name: CTEIF3
+    bit_range:
+    - 11
+    - 11
+    description: Channel 3 Transfer Error clear
+  - name: CTEIF4
+    bit_range:
+    - 15
+    - 15
+    description: Channel 4 Transfer Error clear
+  - name: CTEIF5
+    bit_range:
+    - 19
+    - 19
+    description: Channel 5 Transfer Error clear
+  - name: CTEIF6
+    bit_range:
+    - 23
+    - 23
+    description: Channel 6 Transfer Error clear
+  - name: CTEIF7
+    bit_range:
+    - 27
+    - 27
+    description: Channel 7 Transfer Error clear
+  side_effects: null
+- id: CCR1
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Channel enable
+  - name: TCIE
+    bit_range:
+    - 1
+    - 1
+    description: Transfer complete interrupt enable
+  - name: HTIE
+    bit_range:
+    - 2
+    - 2
+    description: Half Transfer interrupt enable
+  - name: TEIE
+    bit_range:
+    - 3
+    - 3
+    description: Transfer error interrupt enable
+  - name: DIR
+    bit_range:
+    - 4
+    - 4
+    description: Data transfer direction
+  - name: CIRC
+    bit_range:
+    - 5
+    - 5
+    description: Circular mode
+  - name: PINC
+    bit_range:
+    - 6
+    - 6
+    description: Peripheral increment mode
+  - name: MINC
+    bit_range:
+    - 7
+    - 7
+    description: Memory increment mode
+  - name: PSIZE
+    bit_range:
+    - 9
+    - 8
+    description: Peripheral size
+  - name: MSIZE
+    bit_range:
+    - 11
+    - 10
+    description: Memory size
+  - name: PL
+    bit_range:
+    - 13
+    - 12
+    description: Channel Priority level
+  - name: MEM2MEM
+    bit_range:
+    - 14
+    - 14
+    description: Memory to memory mode
+  side_effects: null
+- id: CNDTR1
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NDT
+    bit_range:
+    - 15
+    - 0
+    description: Number of data to transfer
+  side_effects: null
+- id: CPAR1
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PA
+    bit_range:
+    - 31
+    - 0
+    description: Peripheral address
+  side_effects: null
+- id: CMAR1
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MA
+    bit_range:
+    - 31
+    - 0
+    description: Memory address
+  side_effects: null
+- id: CCR2
+  address_offset: 28
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Channel enable
+  - name: TCIE
+    bit_range:
+    - 1
+    - 1
+    description: Transfer complete interrupt enable
+  - name: HTIE
+    bit_range:
+    - 2
+    - 2
+    description: Half Transfer interrupt enable
+  - name: TEIE
+    bit_range:
+    - 3
+    - 3
+    description: Transfer error interrupt enable
+  - name: DIR
+    bit_range:
+    - 4
+    - 4
+    description: Data transfer direction
+  - name: CIRC
+    bit_range:
+    - 5
+    - 5
+    description: Circular mode
+  - name: PINC
+    bit_range:
+    - 6
+    - 6
+    description: Peripheral increment mode
+  - name: MINC
+    bit_range:
+    - 7
+    - 7
+    description: Memory increment mode
+  - name: PSIZE
+    bit_range:
+    - 9
+    - 8
+    description: Peripheral size
+  - name: MSIZE
+    bit_range:
+    - 11
+    - 10
+    description: Memory size
+  - name: PL
+    bit_range:
+    - 13
+    - 12
+    description: Channel Priority level
+  - name: MEM2MEM
+    bit_range:
+    - 14
+    - 14
+    description: Memory to memory mode
+  side_effects: null
+- id: CNDTR2
+  address_offset: 32
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NDT
+    bit_range:
+    - 15
+    - 0
+    description: Number of data to transfer
+  side_effects: null
+- id: CPAR2
+  address_offset: 36
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PA
+    bit_range:
+    - 31
+    - 0
+    description: Peripheral address
+  side_effects: null
+- id: CMAR2
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MA
+    bit_range:
+    - 31
+    - 0
+    description: Memory address
+  side_effects: null
+- id: CCR3
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Channel enable
+  - name: TCIE
+    bit_range:
+    - 1
+    - 1
+    description: Transfer complete interrupt enable
+  - name: HTIE
+    bit_range:
+    - 2
+    - 2
+    description: Half Transfer interrupt enable
+  - name: TEIE
+    bit_range:
+    - 3
+    - 3
+    description: Transfer error interrupt enable
+  - name: DIR
+    bit_range:
+    - 4
+    - 4
+    description: Data transfer direction
+  - name: CIRC
+    bit_range:
+    - 5
+    - 5
+    description: Circular mode
+  - name: PINC
+    bit_range:
+    - 6
+    - 6
+    description: Peripheral increment mode
+  - name: MINC
+    bit_range:
+    - 7
+    - 7
+    description: Memory increment mode
+  - name: PSIZE
+    bit_range:
+    - 9
+    - 8
+    description: Peripheral size
+  - name: MSIZE
+    bit_range:
+    - 11
+    - 10
+    description: Memory size
+  - name: PL
+    bit_range:
+    - 13
+    - 12
+    description: Channel Priority level
+  - name: MEM2MEM
+    bit_range:
+    - 14
+    - 14
+    description: Memory to memory mode
+  side_effects: null
+- id: CNDTR3
+  address_offset: 52
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NDT
+    bit_range:
+    - 15
+    - 0
+    description: Number of data to transfer
+  side_effects: null
+- id: CPAR3
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PA
+    bit_range:
+    - 31
+    - 0
+    description: Peripheral address
+  side_effects: null
+- id: CMAR3
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MA
+    bit_range:
+    - 31
+    - 0
+    description: Memory address
+  side_effects: null
+- id: CCR4
+  address_offset: 68
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Channel enable
+  - name: TCIE
+    bit_range:
+    - 1
+    - 1
+    description: Transfer complete interrupt enable
+  - name: HTIE
+    bit_range:
+    - 2
+    - 2
+    description: Half Transfer interrupt enable
+  - name: TEIE
+    bit_range:
+    - 3
+    - 3
+    description: Transfer error interrupt enable
+  - name: DIR
+    bit_range:
+    - 4
+    - 4
+    description: Data transfer direction
+  - name: CIRC
+    bit_range:
+    - 5
+    - 5
+    description: Circular mode
+  - name: PINC
+    bit_range:
+    - 6
+    - 6
+    description: Peripheral increment mode
+  - name: MINC
+    bit_range:
+    - 7
+    - 7
+    description: Memory increment mode
+  - name: PSIZE
+    bit_range:
+    - 9
+    - 8
+    description: Peripheral size
+  - name: MSIZE
+    bit_range:
+    - 11
+    - 10
+    description: Memory size
+  - name: PL
+    bit_range:
+    - 13
+    - 12
+    description: Channel Priority level
+  - name: MEM2MEM
+    bit_range:
+    - 14
+    - 14
+    description: Memory to memory mode
+  side_effects: null
+- id: CNDTR4
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NDT
+    bit_range:
+    - 15
+    - 0
+    description: Number of data to transfer
+  side_effects: null
+- id: CPAR4
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PA
+    bit_range:
+    - 31
+    - 0
+    description: Peripheral address
+  side_effects: null
+- id: CMAR4
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MA
+    bit_range:
+    - 31
+    - 0
+    description: Memory address
+  side_effects: null
+- id: CCR5
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Channel enable
+  - name: TCIE
+    bit_range:
+    - 1
+    - 1
+    description: Transfer complete interrupt enable
+  - name: HTIE
+    bit_range:
+    - 2
+    - 2
+    description: Half Transfer interrupt enable
+  - name: TEIE
+    bit_range:
+    - 3
+    - 3
+    description: Transfer error interrupt enable
+  - name: DIR
+    bit_range:
+    - 4
+    - 4
+    description: Data transfer direction
+  - name: CIRC
+    bit_range:
+    - 5
+    - 5
+    description: Circular mode
+  - name: PINC
+    bit_range:
+    - 6
+    - 6
+    description: Peripheral increment mode
+  - name: MINC
+    bit_range:
+    - 7
+    - 7
+    description: Memory increment mode
+  - name: PSIZE
+    bit_range:
+    - 9
+    - 8
+    description: Peripheral size
+  - name: MSIZE
+    bit_range:
+    - 11
+    - 10
+    description: Memory size
+  - name: PL
+    bit_range:
+    - 13
+    - 12
+    description: Channel Priority level
+  - name: MEM2MEM
+    bit_range:
+    - 14
+    - 14
+    description: Memory to memory mode
+  side_effects: null
+- id: CNDTR5
+  address_offset: 92
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NDT
+    bit_range:
+    - 15
+    - 0
+    description: Number of data to transfer
+  side_effects: null
+- id: CPAR5
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PA
+    bit_range:
+    - 31
+    - 0
+    description: Peripheral address
+  side_effects: null
+- id: CMAR5
+  address_offset: 100
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MA
+    bit_range:
+    - 31
+    - 0
+    description: Memory address
+  side_effects: null
+- id: CCR6
+  address_offset: 108
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Channel enable
+  - name: TCIE
+    bit_range:
+    - 1
+    - 1
+    description: Transfer complete interrupt enable
+  - name: HTIE
+    bit_range:
+    - 2
+    - 2
+    description: Half Transfer interrupt enable
+  - name: TEIE
+    bit_range:
+    - 3
+    - 3
+    description: Transfer error interrupt enable
+  - name: DIR
+    bit_range:
+    - 4
+    - 4
+    description: Data transfer direction
+  - name: CIRC
+    bit_range:
+    - 5
+    - 5
+    description: Circular mode
+  - name: PINC
+    bit_range:
+    - 6
+    - 6
+    description: Peripheral increment mode
+  - name: MINC
+    bit_range:
+    - 7
+    - 7
+    description: Memory increment mode
+  - name: PSIZE
+    bit_range:
+    - 9
+    - 8
+    description: Peripheral size
+  - name: MSIZE
+    bit_range:
+    - 11
+    - 10
+    description: Memory size
+  - name: PL
+    bit_range:
+    - 13
+    - 12
+    description: Channel Priority level
+  - name: MEM2MEM
+    bit_range:
+    - 14
+    - 14
+    description: Memory to memory mode
+  side_effects: null
+- id: CNDTR6
+  address_offset: 112
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NDT
+    bit_range:
+    - 15
+    - 0
+    description: Number of data to transfer
+  side_effects: null
+- id: CPAR6
+  address_offset: 116
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PA
+    bit_range:
+    - 31
+    - 0
+    description: Peripheral address
+  side_effects: null
+- id: CMAR6
+  address_offset: 120
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MA
+    bit_range:
+    - 31
+    - 0
+    description: Memory address
+  side_effects: null
+- id: CCR7
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EN
+    bit_range:
+    - 0
+    - 0
+    description: Channel enable
+  - name: TCIE
+    bit_range:
+    - 1
+    - 1
+    description: Transfer complete interrupt enable
+  - name: HTIE
+    bit_range:
+    - 2
+    - 2
+    description: Half Transfer interrupt enable
+  - name: TEIE
+    bit_range:
+    - 3
+    - 3
+    description: Transfer error interrupt enable
+  - name: DIR
+    bit_range:
+    - 4
+    - 4
+    description: Data transfer direction
+  - name: CIRC
+    bit_range:
+    - 5
+    - 5
+    description: Circular mode
+  - name: PINC
+    bit_range:
+    - 6
+    - 6
+    description: Peripheral increment mode
+  - name: MINC
+    bit_range:
+    - 7
+    - 7
+    description: Memory increment mode
+  - name: PSIZE
+    bit_range:
+    - 9
+    - 8
+    description: Peripheral size
+  - name: MSIZE
+    bit_range:
+    - 11
+    - 10
+    description: Memory size
+  - name: PL
+    bit_range:
+    - 13
+    - 12
+    description: Channel Priority level
+  - name: MEM2MEM
+    bit_range:
+    - 14
+    - 14
+    description: Memory to memory mode
+  side_effects: null
+- id: CNDTR7
+  address_offset: 132
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: NDT
+    bit_range:
+    - 15
+    - 0
+    description: Number of data to transfer
+  side_effects: null
+- id: CPAR7
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PA
+    bit_range:
+    - 31
+    - 0
+    description: Peripheral address
+  side_effects: null
+- id: CMAR7
+  address_offset: 140
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MA
+    bit_range:
+    - 31
+    - 0
+    description: Memory address
+  side_effects: null
+interrupts:
+  DMA1_Channel1: 11
+  DMA1_Channel2: 12
+  DMA1_Channel3: 13
+  DMA1_Channel4: 14
+  DMA1_Channel5: 15
+  DMA1_Channel6: 16
+  DMA1_Channel7: 17
+timing: null

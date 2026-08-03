@@ -1,0 +1,663 @@
+peripheral: GLOBAL_RRAMC_S
+version: 0.1.0
+registers:
+- id: TASKS_WAKEUP
+  address_offset: 0
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_WAKEUP
+    bit_range:
+    - 0
+    - 0
+    description: Wakeup the RRAM from low power mode
+  side_effects: null
+- id: TASKS_COMMITWRITEBUF
+  address_offset: 8
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: TASKS_COMMITWRITEBUF
+    bit_range:
+    - 0
+    - 0
+    description: Commits the data stored in internal write-buffer to RRAM
+  side_effects: null
+- id: SUBSCRIBE_WAKEUP
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task WAKEUP will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: SUBSCRIBE_COMMITWRITEBUF
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that task COMMITWRITEBUF will subscribe to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: EVENTS_WOKENUP
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_WOKENUP
+    bit_range:
+    - 0
+    - 0
+    description: RRAMC is woken up from low power mode
+  side_effects: null
+- id: EVENTS_READY
+  address_offset: 260
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_READY
+    bit_range:
+    - 0
+    - 0
+    description: RRAMC is ready
+  side_effects: null
+- id: EVENTS_READYNEXT
+  address_offset: 264
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_READYNEXT
+    bit_range:
+    - 0
+    - 0
+    description: Ready to accept a new write operation
+  side_effects: null
+- id: EVENTS_ACCESSERROR
+  address_offset: 268
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_ACCESSERROR
+    bit_range:
+    - 0
+    - 0
+    description: RRAM access error
+  side_effects: null
+- id: PUBLISH_WOKENUP
+  address_offset: 384
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: CHIDX
+    bit_range:
+    - 7
+    - 0
+    description: DPPI channel that event WOKENUP will publish to
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+  side_effects: null
+- id: INTEN
+  address_offset: 768
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WOKENUP
+    bit_range:
+    - 0
+    - 0
+    description: Enable or disable interrupt for event WOKENUP
+  - name: READY
+    bit_range:
+    - 1
+    - 1
+    description: Enable or disable interrupt for event READY
+  - name: READYNEXT
+    bit_range:
+    - 2
+    - 2
+    description: Enable or disable interrupt for event READYNEXT
+  - name: ACCESSERROR
+    bit_range:
+    - 3
+    - 3
+    description: Enable or disable interrupt for event ACCESSERROR
+  side_effects: null
+- id: INTENSET
+  address_offset: 772
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WOKENUP
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to enable interrupt for event WOKENUP
+  - name: READY
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to enable interrupt for event READY
+  - name: READYNEXT
+    bit_range:
+    - 2
+    - 2
+    description: Write '1' to enable interrupt for event READYNEXT
+  - name: ACCESSERROR
+    bit_range:
+    - 3
+    - 3
+    description: Write '1' to enable interrupt for event ACCESSERROR
+  side_effects: null
+- id: INTENCLR
+  address_offset: 776
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WOKENUP
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to disable interrupt for event WOKENUP
+  - name: READY
+    bit_range:
+    - 1
+    - 1
+    description: Write '1' to disable interrupt for event READY
+  - name: READYNEXT
+    bit_range:
+    - 2
+    - 2
+    description: Write '1' to disable interrupt for event READYNEXT
+  - name: ACCESSERROR
+    bit_range:
+    - 3
+    - 3
+    description: Write '1' to disable interrupt for event ACCESSERROR
+  side_effects: null
+- id: INTPEND
+  address_offset: 780
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: WOKENUP
+    bit_range:
+    - 0
+    - 0
+    description: Read pending status of interrupt for event WOKENUP
+  - name: READY
+    bit_range:
+    - 1
+    - 1
+    description: Read pending status of interrupt for event READY
+  - name: READYNEXT
+    bit_range:
+    - 2
+    - 2
+    description: Read pending status of interrupt for event READYNEXT
+  - name: ACCESSERROR
+    bit_range:
+    - 3
+    - 3
+    description: Read pending status of interrupt for event ACCESSERROR
+  side_effects: null
+- id: READY
+  address_offset: 1024
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: READY
+    bit_range:
+    - 0
+    - 0
+    description: RRAMC is ready or busy
+  side_effects: null
+- id: READYNEXT
+  address_offset: 1028
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: READYNEXT
+    bit_range:
+    - 0
+    - 0
+    description: RRAMC can accept a new write operation
+  side_effects: null
+- id: ACCESSERRORADDR
+  address_offset: 1032
+  size: 32
+  access: READ_ONLY
+  reset_value: 16777215
+  fields:
+  - name: ADDRESS
+    bit_range:
+    - 31
+    - 0
+    description: Access error address
+  side_effects: null
+- id: BUFSTATUS_WRITEBUFEMPTY
+  address_offset: 1048
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: EMPTY
+    bit_range:
+    - 0
+    - 0
+  side_effects: null
+- id: ECC_ERRORADDR
+  address_offset: 1056
+  size: 32
+  access: READ_ONLY
+  reset_value: 16777215
+  fields:
+  - name: ADDRESS
+    bit_range:
+    - 31
+    - 0
+    description: ECC error address
+  side_effects: null
+- id: CONFIG
+  address_offset: 1280
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WEN
+    bit_range:
+    - 0
+    - 0
+    description: Write enable
+  - name: WRITEBUFSIZE
+    bit_range:
+    - 13
+    - 8
+    description: write-buffer size in number of 128-bit words
+  side_effects: null
+- id: READYNEXTTIMEOUT
+  address_offset: 1292
+  size: 32
+  access: READ_WRITE
+  reset_value: 128
+  fields:
+  - name: VALUE
+    bit_range:
+    - 11
+    - 0
+    description: Preload value for waiting for a next write
+  - name: EN
+    bit_range:
+    - 31
+    - 31
+    description: Enable ready next timeout
+  side_effects: null
+- id: POWER_CONFIG
+  address_offset: 1296
+  size: 32
+  access: READ_WRITE
+  reset_value: 256
+  fields:
+  - name: ACCESSTIMEOUT
+    bit_range:
+    - 15
+    - 0
+    description: Access timeout, in 31.25 ns units, used for going into standby power mode or remain active on wake up
+  - name: POF
+    bit_range:
+    - 16
+    - 16
+    description: Power on failure warning handling configuration
+  side_effects: null
+- id: POWER_LOWPOWERCONFIG
+  address_offset: 1304
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MODE
+    bit_range:
+    - 1
+    - 0
+    description: RRAM low power mode
+  side_effects: null
+- id: ERASE_ERASEALL
+  address_offset: 1344
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ERASE
+    bit_range:
+    - 0
+    - 0
+    description: Erase whole RRAM main block
+  side_effects: null
+- id: REGION0_ADDRESS
+  address_offset: 1360
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STARTADDR
+    bit_range:
+    - 31
+    - 0
+    description: Start address of the region [n]
+  side_effects: null
+- id: REGION0_CONFIG
+  address_offset: 1364
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: READ
+    bit_range:
+    - 0
+    - 0
+    description: Read access
+  - name: WRITE
+    bit_range:
+    - 1
+    - 1
+    description: Write access
+  - name: EXECUTE
+    bit_range:
+    - 2
+    - 2
+    description: Execute access
+  - name: SECURE
+    bit_range:
+    - 3
+    - 3
+    description: Secure access
+  - name: OWNER
+    bit_range:
+    - 7
+    - 4
+    description: Owner ID
+  - name: WRITEONCE
+    bit_range:
+    - 12
+    - 12
+    description: Write-once
+  - name: LOCK
+    bit_range:
+    - 13
+    - 13
+    description: Enable lock
+  - name: SIZE
+    bit_range:
+    - 20
+    - 16
+    description: Size in KBytes of region [n]
+  side_effects: null
+- id: REGION1_ADDRESS
+  address_offset: 1368
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STARTADDR
+    bit_range:
+    - 31
+    - 0
+    description: Start address of the region [n]
+  side_effects: null
+- id: REGION1_CONFIG
+  address_offset: 1372
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: READ
+    bit_range:
+    - 0
+    - 0
+    description: Read access
+  - name: WRITE
+    bit_range:
+    - 1
+    - 1
+    description: Write access
+  - name: EXECUTE
+    bit_range:
+    - 2
+    - 2
+    description: Execute access
+  - name: SECURE
+    bit_range:
+    - 3
+    - 3
+    description: Secure access
+  - name: OWNER
+    bit_range:
+    - 7
+    - 4
+    description: Owner ID
+  - name: WRITEONCE
+    bit_range:
+    - 12
+    - 12
+    description: Write-once
+  - name: LOCK
+    bit_range:
+    - 13
+    - 13
+    description: Enable lock
+  - name: SIZE
+    bit_range:
+    - 20
+    - 16
+    description: Size in KBytes of region [n]
+  side_effects: null
+- id: REGION2_ADDRESS
+  address_offset: 1376
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STARTADDR
+    bit_range:
+    - 31
+    - 0
+    description: Start address of the region [n]
+  side_effects: null
+- id: REGION2_CONFIG
+  address_offset: 1380
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: READ
+    bit_range:
+    - 0
+    - 0
+    description: Read access
+  - name: WRITE
+    bit_range:
+    - 1
+    - 1
+    description: Write access
+  - name: EXECUTE
+    bit_range:
+    - 2
+    - 2
+    description: Execute access
+  - name: SECURE
+    bit_range:
+    - 3
+    - 3
+    description: Secure access
+  - name: OWNER
+    bit_range:
+    - 7
+    - 4
+    description: Owner ID
+  - name: WRITEONCE
+    bit_range:
+    - 12
+    - 12
+    description: Write-once
+  - name: LOCK
+    bit_range:
+    - 13
+    - 13
+    description: Enable lock
+  - name: SIZE
+    bit_range:
+    - 20
+    - 16
+    description: Size in KBytes of region [n]
+  side_effects: null
+- id: REGION3_ADDRESS
+  address_offset: 1384
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STARTADDR
+    bit_range:
+    - 31
+    - 0
+    description: Start address of the region [n]
+  side_effects: null
+- id: REGION3_CONFIG
+  address_offset: 1388
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: READ
+    bit_range:
+    - 0
+    - 0
+    description: Read access
+  - name: WRITE
+    bit_range:
+    - 1
+    - 1
+    description: Write access
+  - name: EXECUTE
+    bit_range:
+    - 2
+    - 2
+    description: Execute access
+  - name: SECURE
+    bit_range:
+    - 3
+    - 3
+    description: Secure access
+  - name: OWNER
+    bit_range:
+    - 7
+    - 4
+    description: Owner ID
+  - name: WRITEONCE
+    bit_range:
+    - 12
+    - 12
+    description: Write-once
+  - name: LOCK
+    bit_range:
+    - 13
+    - 13
+    description: Enable lock
+  - name: SIZE
+    bit_range:
+    - 20
+    - 16
+    description: Size in KBytes of region [n]
+  side_effects: null
+- id: REGION4_ADDRESS
+  address_offset: 1392
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: STARTADDR
+    bit_range:
+    - 31
+    - 0
+    description: Start address of the region [n]
+  side_effects: null
+- id: REGION4_CONFIG
+  address_offset: 1396
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: READ
+    bit_range:
+    - 0
+    - 0
+    description: Read access
+  - name: WRITE
+    bit_range:
+    - 1
+    - 1
+    description: Write access
+  - name: EXECUTE
+    bit_range:
+    - 2
+    - 2
+    description: Execute access
+  - name: SECURE
+    bit_range:
+    - 3
+    - 3
+    description: Secure access
+  - name: OWNER
+    bit_range:
+    - 7
+    - 4
+    description: Owner ID
+  - name: WRITEONCE
+    bit_range:
+    - 12
+    - 12
+    description: Write-once
+  - name: LOCK
+    bit_range:
+    - 13
+    - 13
+    description: Enable lock
+  - name: SIZE
+    bit_range:
+    - 20
+    - 16
+    description: Size in KBytes of region [n]
+  side_effects: null
+interrupts:
+  RRAMC: 75
+timing: null

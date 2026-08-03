@@ -1,0 +1,5915 @@
+peripheral: GLOBAL_SPU20_S
+version: 0.1.0
+registers:
+- id: EVENTS_PERIPHACCERR
+  address_offset: 256
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: EVENTS_PERIPHACCERR
+    bit_range:
+    - 0
+    - 0
+    description: A security violation has been detected on one or several peripherals
+  side_effects: null
+- id: INTEN
+  address_offset: 768
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PERIPHACCERR
+    bit_range:
+    - 0
+    - 0
+    description: Enable or disable interrupt for event PERIPHACCERR
+  side_effects: null
+- id: INTENSET
+  address_offset: 772
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PERIPHACCERR
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to enable interrupt for event PERIPHACCERR
+  side_effects: null
+- id: INTENCLR
+  address_offset: 776
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PERIPHACCERR
+    bit_range:
+    - 0
+    - 0
+    description: Write '1' to disable interrupt for event PERIPHACCERR
+  side_effects: null
+- id: INTPEND
+  address_offset: 780
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: PERIPHACCERR
+    bit_range:
+    - 0
+    - 0
+    description: Read pending status of interrupt for event PERIPHACCERR
+  side_effects: null
+- id: PERIPHACCERR_ADDRESS
+  address_offset: 1028
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: ADDRESS
+    bit_range:
+    - 15
+    - 0
+    description: Address
+  side_effects: null
+- id: PERIPH0_PERM
+  address_offset: 1280
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH1_PERM
+  address_offset: 1284
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH2_PERM
+  address_offset: 1288
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH3_PERM
+  address_offset: 1292
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH4_PERM
+  address_offset: 1296
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH5_PERM
+  address_offset: 1300
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH6_PERM
+  address_offset: 1304
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH7_PERM
+  address_offset: 1308
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH8_PERM
+  address_offset: 1312
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH9_PERM
+  address_offset: 1316
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH10_PERM
+  address_offset: 1320
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH11_PERM
+  address_offset: 1324
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH12_PERM
+  address_offset: 1328
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH13_PERM
+  address_offset: 1332
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH14_PERM
+  address_offset: 1336
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH15_PERM
+  address_offset: 1340
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH16_PERM
+  address_offset: 1344
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH17_PERM
+  address_offset: 1348
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH18_PERM
+  address_offset: 1352
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH19_PERM
+  address_offset: 1356
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH20_PERM
+  address_offset: 1360
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH21_PERM
+  address_offset: 1364
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH22_PERM
+  address_offset: 1368
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH23_PERM
+  address_offset: 1372
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH24_PERM
+  address_offset: 1376
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH25_PERM
+  address_offset: 1380
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH26_PERM
+  address_offset: 1384
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH27_PERM
+  address_offset: 1388
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH28_PERM
+  address_offset: 1392
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH29_PERM
+  address_offset: 1396
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH30_PERM
+  address_offset: 1400
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH31_PERM
+  address_offset: 1404
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH32_PERM
+  address_offset: 1408
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH33_PERM
+  address_offset: 1412
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH34_PERM
+  address_offset: 1416
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH35_PERM
+  address_offset: 1420
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH36_PERM
+  address_offset: 1424
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH37_PERM
+  address_offset: 1428
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH38_PERM
+  address_offset: 1432
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH39_PERM
+  address_offset: 1436
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH40_PERM
+  address_offset: 1440
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH41_PERM
+  address_offset: 1444
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH42_PERM
+  address_offset: 1448
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH43_PERM
+  address_offset: 1452
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH44_PERM
+  address_offset: 1456
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH45_PERM
+  address_offset: 1460
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH46_PERM
+  address_offset: 1464
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH47_PERM
+  address_offset: 1468
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH48_PERM
+  address_offset: 1472
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH49_PERM
+  address_offset: 1476
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH50_PERM
+  address_offset: 1480
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH51_PERM
+  address_offset: 1484
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH52_PERM
+  address_offset: 1488
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH53_PERM
+  address_offset: 1492
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH54_PERM
+  address_offset: 1496
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH55_PERM
+  address_offset: 1500
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH56_PERM
+  address_offset: 1504
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH57_PERM
+  address_offset: 1508
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH58_PERM
+  address_offset: 1512
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH59_PERM
+  address_offset: 1516
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH60_PERM
+  address_offset: 1520
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH61_PERM
+  address_offset: 1524
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH62_PERM
+  address_offset: 1528
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: PERIPH63_PERM
+  address_offset: 1532
+  size: 32
+  access: READ_WRITE
+  reset_value: 2147483690
+  fields:
+  - name: SECUREMAPPING
+    bit_range:
+    - 1
+    - 0
+    description: Read capabilities for TrustZone Cortex-M secure attribute
+  - name: DMA
+    bit_range:
+    - 3
+    - 2
+    description: Read the peripheral DMA capabilities
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: Peripheral security mapping
+  - name: DMASEC
+    bit_range:
+    - 5
+    - 5
+    description: Security attribution for the DMA transfer
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: Register lock
+  - name: PRESENT
+    bit_range:
+    - 31
+    - 31
+    description: Indicates if a peripheral is present with peripheral slave index n
+  side_effects: null
+- id: FEATURE_DPPIC_CH0
+  address_offset: 1664
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CH1
+  address_offset: 1668
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CH2
+  address_offset: 1672
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CH3
+  address_offset: 1676
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CH4
+  address_offset: 1680
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CH5
+  address_offset: 1684
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CH6
+  address_offset: 1688
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CH7
+  address_offset: 1692
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CH8
+  address_offset: 1696
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CH9
+  address_offset: 1700
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CH10
+  address_offset: 1704
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CH11
+  address_offset: 1708
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CH12
+  address_offset: 1712
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CH13
+  address_offset: 1716
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CH14
+  address_offset: 1720
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CH15
+  address_offset: 1724
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CH16
+  address_offset: 1728
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CH17
+  address_offset: 1732
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CH18
+  address_offset: 1736
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CH19
+  address_offset: 1740
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CH20
+  address_offset: 1744
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CH21
+  address_offset: 1748
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CH22
+  address_offset: 1752
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CH23
+  address_offset: 1756
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CHG0
+  address_offset: 1760
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CHG1
+  address_offset: 1764
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CHG2
+  address_offset: 1768
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CHG3
+  address_offset: 1772
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CHG4
+  address_offset: 1776
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CHG5
+  address_offset: 1780
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CHG6
+  address_offset: 1784
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_DPPIC_CHG7
+  address_offset: 1788
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE0_CH0
+  address_offset: 1792
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE0_CH1
+  address_offset: 1796
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE0_CH2
+  address_offset: 1800
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE0_CH3
+  address_offset: 1804
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE0_CH4
+  address_offset: 1808
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE0_CH5
+  address_offset: 1812
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE0_CH6
+  address_offset: 1816
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE0_CH7
+  address_offset: 1820
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE0_INTERRUPT0
+  address_offset: 1824
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE0_INTERRUPT1
+  address_offset: 1828
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE0_INTERRUPT2
+  address_offset: 1832
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE0_INTERRUPT3
+  address_offset: 1836
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE0_INTERRUPT4
+  address_offset: 1840
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE0_INTERRUPT5
+  address_offset: 1844
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE0_INTERRUPT6
+  address_offset: 1848
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE0_INTERRUPT7
+  address_offset: 1852
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE1_CH0
+  address_offset: 1856
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE1_CH1
+  address_offset: 1860
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE1_CH2
+  address_offset: 1864
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE1_CH3
+  address_offset: 1868
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE1_CH4
+  address_offset: 1872
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE1_CH5
+  address_offset: 1876
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE1_CH6
+  address_offset: 1880
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE1_CH7
+  address_offset: 1884
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE1_INTERRUPT0
+  address_offset: 1888
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE1_INTERRUPT1
+  address_offset: 1892
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE1_INTERRUPT2
+  address_offset: 1896
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE1_INTERRUPT3
+  address_offset: 1900
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE1_INTERRUPT4
+  address_offset: 1904
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE1_INTERRUPT5
+  address_offset: 1908
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE1_INTERRUPT6
+  address_offset: 1912
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIOTE1_INTERRUPT7
+  address_offset: 1916
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN0
+  address_offset: 2048
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN1
+  address_offset: 2052
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN2
+  address_offset: 2056
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN3
+  address_offset: 2060
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN4
+  address_offset: 2064
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN5
+  address_offset: 2068
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN6
+  address_offset: 2072
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN7
+  address_offset: 2076
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN8
+  address_offset: 2080
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN9
+  address_offset: 2084
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN10
+  address_offset: 2088
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN11
+  address_offset: 2092
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN12
+  address_offset: 2096
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN13
+  address_offset: 2100
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN14
+  address_offset: 2104
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN15
+  address_offset: 2108
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN16
+  address_offset: 2112
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN17
+  address_offset: 2116
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN18
+  address_offset: 2120
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN19
+  address_offset: 2124
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN20
+  address_offset: 2128
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN21
+  address_offset: 2132
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN22
+  address_offset: 2136
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN23
+  address_offset: 2140
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN24
+  address_offset: 2144
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN25
+  address_offset: 2148
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN26
+  address_offset: 2152
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN27
+  address_offset: 2156
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN28
+  address_offset: 2160
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN29
+  address_offset: 2164
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN30
+  address_offset: 2168
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO0_PIN31
+  address_offset: 2172
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN0
+  address_offset: 2176
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN1
+  address_offset: 2180
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN2
+  address_offset: 2184
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN3
+  address_offset: 2188
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN4
+  address_offset: 2192
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN5
+  address_offset: 2196
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN6
+  address_offset: 2200
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN7
+  address_offset: 2204
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN8
+  address_offset: 2208
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN9
+  address_offset: 2212
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN10
+  address_offset: 2216
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN11
+  address_offset: 2220
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN12
+  address_offset: 2224
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN13
+  address_offset: 2228
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN14
+  address_offset: 2232
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN15
+  address_offset: 2236
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN16
+  address_offset: 2240
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN17
+  address_offset: 2244
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN18
+  address_offset: 2248
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN19
+  address_offset: 2252
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN20
+  address_offset: 2256
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN21
+  address_offset: 2260
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN22
+  address_offset: 2264
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN23
+  address_offset: 2268
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN24
+  address_offset: 2272
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN25
+  address_offset: 2276
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN26
+  address_offset: 2280
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN27
+  address_offset: 2284
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN28
+  address_offset: 2288
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN29
+  address_offset: 2292
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN30
+  address_offset: 2296
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO1_PIN31
+  address_offset: 2300
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN0
+  address_offset: 2304
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN1
+  address_offset: 2308
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN2
+  address_offset: 2312
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN3
+  address_offset: 2316
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN4
+  address_offset: 2320
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN5
+  address_offset: 2324
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN6
+  address_offset: 2328
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN7
+  address_offset: 2332
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN8
+  address_offset: 2336
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN9
+  address_offset: 2340
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN10
+  address_offset: 2344
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN11
+  address_offset: 2348
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN12
+  address_offset: 2352
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN13
+  address_offset: 2356
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN14
+  address_offset: 2360
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN15
+  address_offset: 2364
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN16
+  address_offset: 2368
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN17
+  address_offset: 2372
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN18
+  address_offset: 2376
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN19
+  address_offset: 2380
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN20
+  address_offset: 2384
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN21
+  address_offset: 2388
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN22
+  address_offset: 2392
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN23
+  address_offset: 2396
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN24
+  address_offset: 2400
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN25
+  address_offset: 2404
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN26
+  address_offset: 2408
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN27
+  address_offset: 2412
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN28
+  address_offset: 2416
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN29
+  address_offset: 2420
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN30
+  address_offset: 2424
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GPIO2_PIN31
+  address_offset: 2428
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_CRACEN_SEED
+  address_offset: 2432
+  size: 32
+  access: READ_WRITE
+  reset_value: 131088
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_CC0
+  address_offset: 3328
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_CC1
+  address_offset: 3332
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_CC2
+  address_offset: 3336
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_CC3
+  address_offset: 3340
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_CC4
+  address_offset: 3344
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_CC5
+  address_offset: 3348
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_CC6
+  address_offset: 3352
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_CC7
+  address_offset: 3356
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_CC8
+  address_offset: 3360
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_CC9
+  address_offset: 3364
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_CC10
+  address_offset: 3368
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_CC11
+  address_offset: 3372
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_CC12
+  address_offset: 3376
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_CC13
+  address_offset: 3380
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_CC14
+  address_offset: 3384
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_CC15
+  address_offset: 3388
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_CC16
+  address_offset: 3392
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_CC17
+  address_offset: 3396
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_CC18
+  address_offset: 3400
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_CC19
+  address_offset: 3404
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_CC20
+  address_offset: 3408
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_CC21
+  address_offset: 3412
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_CC22
+  address_offset: 3416
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_CC23
+  address_offset: 3420
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_PWMCONFIG
+  address_offset: 3444
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_CLK
+  address_offset: 3448
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_SYSCOUNTER
+  address_offset: 3452
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_INTERRUPT0
+  address_offset: 3456
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_INTERRUPT1
+  address_offset: 3460
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_INTERRUPT2
+  address_offset: 3464
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_INTERRUPT3
+  address_offset: 3468
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_INTERRUPT4
+  address_offset: 3472
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_INTERRUPT5
+  address_offset: 3476
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_INTERRUPT6
+  address_offset: 3480
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_INTERRUPT7
+  address_offset: 3484
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_INTERRUPT8
+  address_offset: 3488
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_INTERRUPT9
+  address_offset: 3492
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_INTERRUPT10
+  address_offset: 3496
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_INTERRUPT11
+  address_offset: 3500
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_INTERRUPT12
+  address_offset: 3504
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_INTERRUPT13
+  address_offset: 3508
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_INTERRUPT14
+  address_offset: 3512
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+- id: FEATURE_GRTC_INTERRUPT15
+  address_offset: 3516
+  size: 32
+  access: READ_WRITE
+  reset_value: 1048592
+  fields:
+  - name: SECATTR
+    bit_range:
+    - 4
+    - 4
+    description: SECATTR feature
+  - name: LOCK
+    bit_range:
+    - 8
+    - 8
+    description: LOCK feature
+  side_effects: null
+interrupts:
+  SPU20: 192
+  SPU00: 64
+timing: null

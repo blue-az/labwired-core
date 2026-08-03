@@ -1,0 +1,2126 @@
+peripheral: RCC
+version: 0.1.0
+registers:
+- id: CR
+  address_offset: 0
+  size: 32
+  access: READ_WRITE
+  reset_value: 99
+  fields:
+  - name: MSION
+    bit_range:
+    - 0
+    - 0
+    description: MSI clock enable
+  - name: MSIRDY
+    bit_range:
+    - 1
+    - 1
+    description: MSI clock ready flag
+  - name: MSIPLLEN
+    bit_range:
+    - 2
+    - 2
+    description: MSI clock PLL enable
+  - name: MSIRGSEL
+    bit_range:
+    - 3
+    - 3
+    description: MSI clock range selection
+  - name: MSIRANGE
+    bit_range:
+    - 7
+    - 4
+    description: MSI clock ranges
+  - name: HSION
+    bit_range:
+    - 8
+    - 8
+    description: HSI clock enable
+  - name: HSIKERON
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      HSI always enable for peripheral
+                    kernels
+  - name: HSIRDY
+    bit_range:
+    - 10
+    - 10
+    description: HSI clock ready flag
+  - name: HSIASFS
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      HSI automatic start from
+                    Stop
+  - name: HSEON
+    bit_range:
+    - 16
+    - 16
+    description: HSE clock enable
+  - name: HSERDY
+    bit_range:
+    - 17
+    - 17
+    description: HSE clock ready flag
+  - name: HSEBYP
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      HSE crystal oscillator
+                    bypass
+  - name: CSSON
+    bit_range:
+    - 19
+    - 19
+    description: |-
+      Clock security system
+                    enable
+  - name: PLLON
+    bit_range:
+    - 24
+    - 24
+    description: Main PLL enable
+  - name: PLLRDY
+    bit_range:
+    - 25
+    - 25
+    description: Main PLL clock ready flag
+  - name: PLLSAI1ON
+    bit_range:
+    - 26
+    - 26
+    description: SAI1 PLL enable
+  - name: PLLSAI1RDY
+    bit_range:
+    - 27
+    - 27
+    description: SAI1 PLL clock ready flag
+  - name: PLLSAI2ON
+    bit_range:
+    - 28
+    - 28
+    description: SAI2 PLL enable
+  - name: PLLSAI2RDY
+    bit_range:
+    - 29
+    - 29
+    description: SAI2 PLL clock ready flag
+  side_effects: null
+- id: ICSCR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 268435456
+  fields:
+  - name: MSICAL
+    bit_range:
+    - 7
+    - 0
+    description: MSI clock calibration
+  - name: MSITRIM
+    bit_range:
+    - 15
+    - 8
+    description: MSI clock trimming
+  - name: HSICAL
+    bit_range:
+    - 23
+    - 16
+    description: HSI clock calibration
+  - name: HSITRIM
+    bit_range:
+    - 30
+    - 24
+    description: HSI clock trimming
+  side_effects: null
+- id: CFGR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SW
+    bit_range:
+    - 1
+    - 0
+    description: System clock switch
+  - name: SWS
+    bit_range:
+    - 3
+    - 2
+    description: System clock switch status
+  - name: HPRE
+    bit_range:
+    - 7
+    - 4
+    description: AHB prescaler
+  - name: PPRE1
+    bit_range:
+    - 10
+    - 8
+    description: |-
+      PB low-speed prescaler
+                    (APB1)
+  - name: PPRE2
+    bit_range:
+    - 13
+    - 11
+    description: |-
+      APB high-speed prescaler
+                    (APB2)
+  - name: STOPWUCK
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      Wakeup from Stop and CSS backup clock
+                    selection
+  - name: MCOSEL
+    bit_range:
+    - 26
+    - 24
+    description: |-
+      Microcontroller clock
+                    output
+  - name: MCOPRE
+    bit_range:
+    - 30
+    - 28
+    description: |-
+      Microcontroller clock output
+                    prescaler
+  side_effects: null
+- id: PLLCFGR
+  address_offset: 12
+  size: 32
+  access: READ_WRITE
+  reset_value: 4096
+  fields:
+  - name: PLLSRC
+    bit_range:
+    - 1
+    - 0
+    description: |-
+      Main PLL, PLLSAI1 and PLLSAI2 entry
+                    clock source
+  - name: PLLM
+    bit_range:
+    - 6
+    - 4
+    description: |-
+      Division factor for the main PLL and
+                    audio PLL (PLLSAI1 and PLLSAI2) input
+                    clock
+  - name: PLLN
+    bit_range:
+    - 14
+    - 8
+    description: |-
+      Main PLL multiplication factor for
+                    VCO
+  - name: PLLPEN
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      Main PLL PLLSAI3CLK output
+                    enable
+  - name: PLLP
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      Main PLL division factor for PLLSAI3CLK
+                    (SAI1 and SAI2 clock)
+  - name: PLLQEN
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      Main PLL PLLUSB1CLK output
+                    enable
+  - name: PLLQ
+    bit_range:
+    - 22
+    - 21
+    description: |-
+      Main PLL division factor for
+                    PLLUSB1CLK(48 MHz clock)
+  - name: PLLREN
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      Main PLL PLLCLK output
+                    enable
+  - name: PLLR
+    bit_range:
+    - 26
+    - 25
+    description: |-
+      Main PLL division factor for PLLCLK
+                    (system clock)
+  - name: PLLPDIV
+    bit_range:
+    - 31
+    - 27
+    description: |-
+      Main PLL division factor for
+                    PLLSAI2CLK
+  side_effects: null
+- id: PLLSAI1CFGR
+  address_offset: 16
+  size: 32
+  access: READ_WRITE
+  reset_value: 4096
+  fields:
+  - name: PLLSAI1N
+    bit_range:
+    - 14
+    - 8
+    description: |-
+      SAI1PLL multiplication factor for
+                    VCO
+  - name: PLLSAI1PEN
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      SAI1PLL PLLSAI1CLK output
+                    enable
+  - name: PLLSAI1P
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      SAI1PLL division factor for PLLSAI1CLK
+                    (SAI1 or SAI2 clock)
+  - name: PLLSAI1QEN
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      SAI1PLL PLLUSB2CLK output
+                    enable
+  - name: PLLSAI1Q
+    bit_range:
+    - 22
+    - 21
+    description: |-
+      SAI1PLL division factor for PLLUSB2CLK
+                    (48 MHz clock)
+  - name: PLLSAI1REN
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      PLLSAI1 PLLADC1CLK output
+                    enable
+  - name: PLLSAI1R
+    bit_range:
+    - 26
+    - 25
+    description: |-
+      PLLSAI1 division factor for PLLADC1CLK
+                    (ADC clock)
+  - name: PLLSAI1PDIV
+    bit_range:
+    - 31
+    - 27
+    description: |-
+      PLLSAI1 division factor for
+                    PLLSAI1CLK
+  side_effects: null
+- id: PLLSAI2CFGR
+  address_offset: 20
+  size: 32
+  access: READ_WRITE
+  reset_value: 4096
+  fields:
+  - name: PLLSAI2N
+    bit_range:
+    - 14
+    - 8
+    description: |-
+      SAI2PLL multiplication factor for
+                    VCO
+  - name: PLLSAI2PEN
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      SAI2PLL PLLSAI2CLK output
+                    enable
+  - name: PLLSAI2P
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      SAI1PLL division factor for PLLSAI2CLK
+                    (SAI1 or SAI2 clock)
+  - name: PLLSAI2REN
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      PLLSAI2 PLLADC2CLK output
+                    enable
+  - name: PLLSAI2R
+    bit_range:
+    - 26
+    - 25
+    description: |-
+      PLLSAI2 division factor for PLLADC2CLK
+                    (ADC clock)
+  - name: PLLSAI2PDIV
+    bit_range:
+    - 31
+    - 27
+    description: |-
+      PLLSAI2 division factor for
+                    PLLSAI2CLK
+  side_effects: null
+- id: CIER
+  address_offset: 24
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LSIRDYIE
+    bit_range:
+    - 0
+    - 0
+    description: LSI ready interrupt enable
+  - name: LSERDYIE
+    bit_range:
+    - 1
+    - 1
+    description: LSE ready interrupt enable
+  - name: MSIRDYIE
+    bit_range:
+    - 2
+    - 2
+    description: MSI ready interrupt enable
+  - name: HSIRDYIE
+    bit_range:
+    - 3
+    - 3
+    description: HSI ready interrupt enable
+  - name: HSERDYIE
+    bit_range:
+    - 4
+    - 4
+    description: HSE ready interrupt enable
+  - name: PLLRDYIE
+    bit_range:
+    - 5
+    - 5
+    description: PLL ready interrupt enable
+  - name: PLLSAI1RDYIE
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      PLLSAI1 ready interrupt
+                    enable
+  - name: PLLSAI2RDYIE
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      PLLSAI2 ready interrupt
+                    enable
+  - name: LSECSSIE
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      LSE clock security system interrupt
+                    enable
+  - name: HSI48RDYIE
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      HSI48 ready interrupt
+                    enable
+  side_effects: null
+- id: CIFR
+  address_offset: 28
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: LSIRDYF
+    bit_range:
+    - 0
+    - 0
+    description: LSI ready interrupt flag
+  - name: LSERDYF
+    bit_range:
+    - 1
+    - 1
+    description: LSE ready interrupt flag
+  - name: MSIRDYF
+    bit_range:
+    - 2
+    - 2
+    description: MSI ready interrupt flag
+  - name: HSIRDYF
+    bit_range:
+    - 3
+    - 3
+    description: HSI ready interrupt flag
+  - name: HSERDYF
+    bit_range:
+    - 4
+    - 4
+    description: HSE ready interrupt flag
+  - name: PLLRDYF
+    bit_range:
+    - 5
+    - 5
+    description: PLL ready interrupt flag
+  - name: PLLSAI1RDYF
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      PLLSAI1 ready interrupt
+                    flag
+  - name: PLLSAI2RDYF
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      PLLSAI2 ready interrupt
+                    flag
+  - name: CSSF
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Clock security system interrupt
+                    flag
+  - name: LSECSSF
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      LSE Clock security system interrupt
+                    flag
+  - name: HSI48RDYF
+    bit_range:
+    - 10
+    - 10
+    description: HSI48 ready interrupt flag
+  side_effects: null
+- id: CICR
+  address_offset: 32
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: LSIRDYC
+    bit_range:
+    - 0
+    - 0
+    description: LSI ready interrupt clear
+  - name: LSERDYC
+    bit_range:
+    - 1
+    - 1
+    description: LSE ready interrupt clear
+  - name: MSIRDYC
+    bit_range:
+    - 2
+    - 2
+    description: MSI ready interrupt clear
+  - name: HSIRDYC
+    bit_range:
+    - 3
+    - 3
+    description: HSI ready interrupt clear
+  - name: HSERDYC
+    bit_range:
+    - 4
+    - 4
+    description: HSE ready interrupt clear
+  - name: PLLRDYC
+    bit_range:
+    - 5
+    - 5
+    description: PLL ready interrupt clear
+  - name: PLLSAI1RDYC
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      PLLSAI1 ready interrupt
+                    clear
+  - name: PLLSAI2RDYC
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      PLLSAI2 ready interrupt
+                    clear
+  - name: CSSC
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Clock security system interrupt
+                    clear
+  - name: LSECSSC
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      LSE Clock security system interrupt
+                    clear
+  - name: HSI48RDYC
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      HSI48 oscillator ready interrupt
+                    clear
+  side_effects: null
+- id: AHB1RSTR
+  address_offset: 40
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DMA1RST
+    bit_range:
+    - 0
+    - 0
+    description: DMA1 reset
+  - name: DMA2RST
+    bit_range:
+    - 1
+    - 1
+    description: DMA2 reset
+  - name: FLASHRST
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Flash memory interface
+                    reset
+  - name: CRCRST
+    bit_range:
+    - 12
+    - 12
+    description: CRC reset
+  - name: TSCRST
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      Touch Sensing Controller
+                    reset
+  - name: DMA2DRST
+    bit_range:
+    - 17
+    - 17
+    description: DMA2D reset
+  side_effects: null
+- id: AHB2RSTR
+  address_offset: 44
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: GPIOARST
+    bit_range:
+    - 0
+    - 0
+    description: IO port A reset
+  - name: GPIOBRST
+    bit_range:
+    - 1
+    - 1
+    description: IO port B reset
+  - name: GPIOCRST
+    bit_range:
+    - 2
+    - 2
+    description: IO port C reset
+  - name: GPIODRST
+    bit_range:
+    - 3
+    - 3
+    description: IO port D reset
+  - name: GPIOERST
+    bit_range:
+    - 4
+    - 4
+    description: IO port E reset
+  - name: GPIOFRST
+    bit_range:
+    - 5
+    - 5
+    description: IO port F reset
+  - name: GPIOGRST
+    bit_range:
+    - 6
+    - 6
+    description: IO port G reset
+  - name: GPIOHRST
+    bit_range:
+    - 7
+    - 7
+    description: IO port H reset
+  - name: GPIOIRST
+    bit_range:
+    - 8
+    - 8
+    description: IO port I reset
+  - name: OTGFSRST
+    bit_range:
+    - 12
+    - 12
+    description: USB OTG FS reset
+  - name: ADCRST
+    bit_range:
+    - 13
+    - 13
+    description: ADC reset
+  - name: DCMIRST
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      Digital Camera Interface
+                    reset
+  - name: AESRST
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      AES hardware accelerator
+                    reset
+  - name: HASH1RST
+    bit_range:
+    - 17
+    - 17
+    description: Hash reset
+  - name: RNGRST
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      Random number generator
+                    reset
+  side_effects: null
+- id: AHB3RSTR
+  address_offset: 48
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FMCRST
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Flexible memory controller
+                    reset
+  - name: QSPIRST
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Quad SPI memory interface
+                    reset
+  side_effects: null
+- id: APB1RSTR1
+  address_offset: 56
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIM2RST
+    bit_range:
+    - 0
+    - 0
+    description: TIM2 timer reset
+  - name: TIM3RST
+    bit_range:
+    - 1
+    - 1
+    description: TIM3 timer reset
+  - name: TIM4RST
+    bit_range:
+    - 2
+    - 2
+    description: TIM3 timer reset
+  - name: TIM5RST
+    bit_range:
+    - 3
+    - 3
+    description: TIM5 timer reset
+  - name: TIM6RST
+    bit_range:
+    - 4
+    - 4
+    description: TIM6 timer reset
+  - name: TIM7RST
+    bit_range:
+    - 5
+    - 5
+    description: TIM7 timer reset
+  - name: LCDRST
+    bit_range:
+    - 9
+    - 9
+    description: LCD interface reset
+  - name: SPI2RST
+    bit_range:
+    - 14
+    - 14
+    description: SPI2 reset
+  - name: SPI3RST
+    bit_range:
+    - 15
+    - 15
+    description: SPI3 reset
+  - name: USART2RST
+    bit_range:
+    - 17
+    - 17
+    description: USART2 reset
+  - name: USART3RST
+    bit_range:
+    - 18
+    - 18
+    description: USART3 reset
+  - name: UART4RST
+    bit_range:
+    - 19
+    - 19
+    description: UART4 reset
+  - name: UART5RST
+    bit_range:
+    - 20
+    - 20
+    description: UART5 reset
+  - name: I2C1RST
+    bit_range:
+    - 21
+    - 21
+    description: I2C1 reset
+  - name: I2C2RST
+    bit_range:
+    - 22
+    - 22
+    description: I2C2 reset
+  - name: I2C3RST
+    bit_range:
+    - 23
+    - 23
+    description: I2C3 reset
+  - name: CRSRST
+    bit_range:
+    - 24
+    - 24
+    description: CRS reset
+  - name: CAN1RST
+    bit_range:
+    - 25
+    - 25
+    description: CAN1 reset
+  - name: CAN2RST
+    bit_range:
+    - 26
+    - 26
+    description: CAN2 reset
+  - name: PWRRST
+    bit_range:
+    - 28
+    - 28
+    description: Power interface reset
+  - name: DAC1RST
+    bit_range:
+    - 29
+    - 29
+    description: DAC1 interface reset
+  - name: OPAMPRST
+    bit_range:
+    - 30
+    - 30
+    description: OPAMP interface reset
+  - name: LPTIM1RST
+    bit_range:
+    - 31
+    - 31
+    description: Low Power Timer 1 reset
+  side_effects: null
+- id: APB1RSTR2
+  address_offset: 60
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LPUART1RST
+    bit_range:
+    - 0
+    - 0
+    description: Low-power UART 1 reset
+  - name: I2C4RST
+    bit_range:
+    - 1
+    - 1
+    description: I2C4 reset
+  - name: SWPMI1RST
+    bit_range:
+    - 2
+    - 2
+    description: Single wire protocol reset
+  - name: LPTIM2RST
+    bit_range:
+    - 5
+    - 5
+    description: Low-power timer 2 reset
+  side_effects: null
+- id: APB2RSTR
+  address_offset: 64
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SYSCFGRST
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      System configuration (SYSCFG)
+                    reset
+  - name: SDMMCRST
+    bit_range:
+    - 10
+    - 10
+    description: SDMMC reset
+  - name: TIM1RST
+    bit_range:
+    - 11
+    - 11
+    description: TIM1 timer reset
+  - name: SPI1RST
+    bit_range:
+    - 12
+    - 12
+    description: SPI1 reset
+  - name: TIM8RST
+    bit_range:
+    - 13
+    - 13
+    description: TIM8 timer reset
+  - name: USART1RST
+    bit_range:
+    - 14
+    - 14
+    description: USART1 reset
+  - name: TIM15RST
+    bit_range:
+    - 16
+    - 16
+    description: TIM15 timer reset
+  - name: TIM16RST
+    bit_range:
+    - 17
+    - 17
+    description: TIM16 timer reset
+  - name: TIM17RST
+    bit_range:
+    - 18
+    - 18
+    description: TIM17 timer reset
+  - name: SAI1RST
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      Serial audio interface 1 (SAI1)
+                    reset
+  - name: SAI2RST
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      Serial audio interface 2 (SAI2)
+                    reset
+  - name: DFSDMRST
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      Digital filters for sigma-delata
+                    modulators (DFSDM) reset
+  side_effects: null
+- id: AHB1ENR
+  address_offset: 72
+  size: 32
+  access: READ_WRITE
+  reset_value: 256
+  fields:
+  - name: DMA1EN
+    bit_range:
+    - 0
+    - 0
+    description: DMA1 clock enable
+  - name: DMA2EN
+    bit_range:
+    - 1
+    - 1
+    description: DMA2 clock enable
+  - name: FLASHEN
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Flash memory interface clock
+                    enable
+  - name: CRCEN
+    bit_range:
+    - 12
+    - 12
+    description: CRC clock enable
+  - name: TSCEN
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      Touch Sensing Controller clock
+                    enable
+  - name: DMA2DEN
+    bit_range:
+    - 17
+    - 17
+    description: DMA2D clock enable
+  side_effects: null
+- id: AHB2ENR
+  address_offset: 76
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: GPIOAEN
+    bit_range:
+    - 0
+    - 0
+    description: IO port A clock enable
+  - name: GPIOBEN
+    bit_range:
+    - 1
+    - 1
+    description: IO port B clock enable
+  - name: GPIOCEN
+    bit_range:
+    - 2
+    - 2
+    description: IO port C clock enable
+  - name: GPIODEN
+    bit_range:
+    - 3
+    - 3
+    description: IO port D clock enable
+  - name: GPIOEEN
+    bit_range:
+    - 4
+    - 4
+    description: IO port E clock enable
+  - name: GPIOFEN
+    bit_range:
+    - 5
+    - 5
+    description: IO port F clock enable
+  - name: GPIOGEN
+    bit_range:
+    - 6
+    - 6
+    description: IO port G clock enable
+  - name: GPIOHEN
+    bit_range:
+    - 7
+    - 7
+    description: IO port H clock enable
+  - name: GPIOIEN
+    bit_range:
+    - 8
+    - 8
+    description: IO port I clock enable
+  - name: OTGFSEN
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      OTG full speed clock
+                    enable
+  - name: ADCEN
+    bit_range:
+    - 13
+    - 13
+    description: ADC clock enable
+  - name: DCMIEN
+    bit_range:
+    - 14
+    - 14
+    description: DCMI clock enable
+  - name: AESEN
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      AES accelerator clock
+                    enable
+  - name: HASH1EN
+    bit_range:
+    - 17
+    - 17
+    description: HASH clock enable
+  - name: RNGEN
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      Random Number Generator clock
+                    enable
+  side_effects: null
+- id: AHB3ENR
+  address_offset: 80
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: FMCEN
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Flexible memory controller clock
+                    enable
+  - name: QSPIEN
+    bit_range:
+    - 8
+    - 8
+    description: QSPIEN
+  side_effects: null
+- id: APB1ENR1
+  address_offset: 88
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: TIM2EN
+    bit_range:
+    - 0
+    - 0
+    description: TIM2 timer clock enable
+  - name: TIM3EN
+    bit_range:
+    - 1
+    - 1
+    description: TIM3 timer clock enable
+  - name: TIM4EN
+    bit_range:
+    - 2
+    - 2
+    description: TIM4 timer clock enable
+  - name: TIM5EN
+    bit_range:
+    - 3
+    - 3
+    description: TIM5 timer clock enable
+  - name: TIM6EN
+    bit_range:
+    - 4
+    - 4
+    description: TIM6 timer clock enable
+  - name: TIM7EN
+    bit_range:
+    - 5
+    - 5
+    description: TIM7 timer clock enable
+  - name: LCDEN
+    bit_range:
+    - 9
+    - 9
+    description: LCD clock enable
+  - name: RTCAPBEN
+    bit_range:
+    - 10
+    - 10
+    description: RTC APB clock enable
+  - name: WWDGEN
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Window watchdog clock
+                    enable
+  - name: SPI2EN
+    bit_range:
+    - 14
+    - 14
+    description: SPI2 clock enable
+  - name: SP3EN
+    bit_range:
+    - 15
+    - 15
+    description: SPI3 clock enable
+  - name: USART2EN
+    bit_range:
+    - 17
+    - 17
+    description: USART2 clock enable
+  - name: USART3EN
+    bit_range:
+    - 18
+    - 18
+    description: USART3 clock enable
+  - name: UART4EN
+    bit_range:
+    - 19
+    - 19
+    description: UART4 clock enable
+  - name: UART5EN
+    bit_range:
+    - 20
+    - 20
+    description: UART5 clock enable
+  - name: I2C1EN
+    bit_range:
+    - 21
+    - 21
+    description: I2C1 clock enable
+  - name: I2C2EN
+    bit_range:
+    - 22
+    - 22
+    description: I2C2 clock enable
+  - name: I2C3EN
+    bit_range:
+    - 23
+    - 23
+    description: I2C3 clock enable
+  - name: CRSEN
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      Clock Recovery System clock
+                    enable
+  - name: CAN1EN
+    bit_range:
+    - 25
+    - 25
+    description: CAN1 clock enable
+  - name: CAN2EN
+    bit_range:
+    - 26
+    - 26
+    description: CAN2 clock enable
+  - name: PWREN
+    bit_range:
+    - 28
+    - 28
+    description: |-
+      Power interface clock
+                    enable
+  - name: DAC1EN
+    bit_range:
+    - 29
+    - 29
+    description: |-
+      DAC1 interface clock
+                    enable
+  - name: OPAMPEN
+    bit_range:
+    - 30
+    - 30
+    description: |-
+      OPAMP interface clock
+                    enable
+  - name: LPTIM1EN
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      Low power timer 1 clock
+                    enable
+  side_effects: null
+- id: APB1ENR2
+  address_offset: 92
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LPUART1EN
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Low power UART 1 clock
+                    enable
+  - name: I2C4EN
+    bit_range:
+    - 1
+    - 1
+    description: I2C4 clock enable
+  - name: SWPMI1EN
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Single wire protocol clock
+                    enable
+  - name: LPTIM2EN
+    bit_range:
+    - 5
+    - 5
+    description: LPTIM2EN
+  side_effects: null
+- id: APB2ENR
+  address_offset: 96
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: SYSCFGEN
+    bit_range:
+    - 0
+    - 0
+    description: SYSCFG clock enable
+  - name: FIREWALLEN
+    bit_range:
+    - 7
+    - 7
+    description: Firewall clock enable
+  - name: SDMMCEN
+    bit_range:
+    - 10
+    - 10
+    description: SDMMC clock enable
+  - name: TIM1EN
+    bit_range:
+    - 11
+    - 11
+    description: TIM1 timer clock enable
+  - name: SPI1EN
+    bit_range:
+    - 12
+    - 12
+    description: SPI1 clock enable
+  - name: TIM8EN
+    bit_range:
+    - 13
+    - 13
+    description: TIM8 timer clock enable
+  - name: USART1EN
+    bit_range:
+    - 14
+    - 14
+    description: USART1clock enable
+  - name: TIM15EN
+    bit_range:
+    - 16
+    - 16
+    description: TIM15 timer clock enable
+  - name: TIM16EN
+    bit_range:
+    - 17
+    - 17
+    description: TIM16 timer clock enable
+  - name: TIM17EN
+    bit_range:
+    - 18
+    - 18
+    description: TIM17 timer clock enable
+  - name: SAI1EN
+    bit_range:
+    - 21
+    - 21
+    description: SAI1 clock enable
+  - name: SAI2EN
+    bit_range:
+    - 22
+    - 22
+    description: SAI2 clock enable
+  - name: DFSDMEN
+    bit_range:
+    - 24
+    - 24
+    description: DFSDM timer clock enable
+  side_effects: null
+- id: AHB1SMENR
+  address_offset: 104
+  size: 32
+  access: READ_WRITE
+  reset_value: 70403
+  fields:
+  - name: DMA1SMEN
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      DMA1 clocks enable during Sleep and Stop
+                    modes
+  - name: DMA2SMEN
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      DMA2 clocks enable during Sleep and Stop
+                    modes
+  - name: FLASHSMEN
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      Flash memory interface clocks enable
+                    during Sleep and Stop modes
+  - name: SRAM1SMEN
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      SRAM1 interface clocks enable during
+                    Sleep and Stop modes
+  - name: CRCSMEN
+    bit_range:
+    - 12
+    - 12
+    description: CRCSMEN
+  - name: TSCSMEN
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      Touch Sensing Controller clocks enable
+                    during Sleep and Stop modes
+  - name: DMA2DSMEN
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      DMA2D clock enable during Sleep and Stop
+                    modes
+  side_effects: null
+- id: AHB2SMENR
+  address_offset: 108
+  size: 32
+  access: READ_WRITE
+  reset_value: 340735
+  fields:
+  - name: GPIOASMEN
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      IO port A clocks enable during Sleep and
+                    Stop modes
+  - name: GPIOBSMEN
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      IO port B clocks enable during Sleep and
+                    Stop modes
+  - name: GPIOCSMEN
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      IO port C clocks enable during Sleep and
+                    Stop modes
+  - name: GPIODSMEN
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      IO port D clocks enable during Sleep and
+                    Stop modes
+  - name: GPIOESMEN
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      IO port E clocks enable during Sleep and
+                    Stop modes
+  - name: GPIOFSMEN
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      IO port F clocks enable during Sleep and
+                    Stop modes
+  - name: GPIOGSMEN
+    bit_range:
+    - 6
+    - 6
+    description: |-
+      IO port G clocks enable during Sleep and
+                    Stop modes
+  - name: GPIOHSMEN
+    bit_range:
+    - 7
+    - 7
+    description: |-
+      IO port H clocks enable during Sleep and
+                    Stop modes
+  - name: GPIOISMEN
+    bit_range:
+    - 8
+    - 8
+    description: |-
+      IO port I clocks enable during Sleep and
+                    Stop modes
+  - name: SRAM2SMEN
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      SRAM2 interface clocks enable during
+                    Sleep and Stop modes
+  - name: OTGFSSMEN
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      OTG full speed clocks enable during
+                    Sleep and Stop modes
+  - name: ADCFSSMEN
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      ADC clocks enable during Sleep and Stop
+                    modes
+  - name: DCMISMEN
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      DCMI clock enable during Sleep and Stop
+                    modes
+  - name: AESSMEN
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      AES accelerator clocks enable during
+                    Sleep and Stop modes
+  - name: HASH1SMEN
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      HASH clock enable during Sleep and Stop
+                    modes
+  - name: RNGSMEN
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      Random Number Generator clocks enable
+                    during Sleep and Stop modes
+  side_effects: null
+- id: AHB3SMENR
+  address_offset: 112
+  size: 32
+  access: READ_WRITE
+  reset_value: 257
+  fields:
+  - name: FMCSMEN
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Flexible memory controller clocks enable
+                    during Sleep and Stop modes
+  - name: QSPISMEN
+    bit_range:
+    - 8
+    - 8
+    description: QSPISMEN
+  side_effects: null
+- id: APB1SMENR1
+  address_offset: 120
+  size: 32
+  access: READ_WRITE
+  reset_value: 4076784191
+  fields:
+  - name: TIM2SMEN
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      TIM2 timer clocks enable during Sleep
+                    and Stop modes
+  - name: TIM3SMEN
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      TIM3 timer clocks enable during Sleep
+                    and Stop modes
+  - name: TIM4SMEN
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      TIM4 timer clocks enable during Sleep
+                    and Stop modes
+  - name: TIM5SMEN
+    bit_range:
+    - 3
+    - 3
+    description: |-
+      TIM5 timer clocks enable during Sleep
+                    and Stop modes
+  - name: TIM6SMEN
+    bit_range:
+    - 4
+    - 4
+    description: |-
+      TIM6 timer clocks enable during Sleep
+                    and Stop modes
+  - name: TIM7SMEN
+    bit_range:
+    - 5
+    - 5
+    description: |-
+      TIM7 timer clocks enable during Sleep
+                    and Stop modes
+  - name: LCDSMEN
+    bit_range:
+    - 9
+    - 9
+    description: |-
+      LCD clocks enable during Sleep and Stop
+                    modes
+  - name: RTCAPBSMEN
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      RTC APB clock enable during Sleep and
+                    Stop modes
+  - name: WWDGSMEN
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      Window watchdog clocks enable during
+                    Sleep and Stop modes
+  - name: SPI2SMEN
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      SPI2 clocks enable during Sleep and Stop
+                    modes
+  - name: SP3SMEN
+    bit_range:
+    - 15
+    - 15
+    description: |-
+      SPI3 clocks enable during Sleep and Stop
+                    modes
+  - name: USART2SMEN
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      USART2 clocks enable during Sleep and
+                    Stop modes
+  - name: USART3SMEN
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      USART3 clocks enable during Sleep and
+                    Stop modes
+  - name: UART4SMEN
+    bit_range:
+    - 19
+    - 19
+    description: |-
+      UART4 clocks enable during Sleep and
+                    Stop modes
+  - name: UART5SMEN
+    bit_range:
+    - 20
+    - 20
+    description: |-
+      UART5 clocks enable during Sleep and
+                    Stop modes
+  - name: I2C1SMEN
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      I2C1 clocks enable during Sleep and Stop
+                    modes
+  - name: I2C2SMEN
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      I2C2 clocks enable during Sleep and Stop
+                    modes
+  - name: I2C3SMEN
+    bit_range:
+    - 23
+    - 23
+    description: |-
+      I2C3 clocks enable during Sleep and Stop
+                    modes
+  - name: CAN1SMEN
+    bit_range:
+    - 25
+    - 25
+    description: |-
+      CAN1 clocks enable during Sleep and Stop
+                    modes
+  - name: CAN2SMEN
+    bit_range:
+    - 26
+    - 26
+    description: |-
+      CAN2 clocks enable during Sleep and Stop
+                    modes
+  - name: PWRSMEN
+    bit_range:
+    - 28
+    - 28
+    description: |-
+      Power interface clocks enable during
+                    Sleep and Stop modes
+  - name: DAC1SMEN
+    bit_range:
+    - 29
+    - 29
+    description: |-
+      DAC1 interface clocks enable during
+                    Sleep and Stop modes
+  - name: OPAMPSMEN
+    bit_range:
+    - 30
+    - 30
+    description: |-
+      OPAMP interface clocks enable during
+                    Sleep and Stop modes
+  - name: LPTIM1SMEN
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      Low power timer 1 clocks enable during
+                    Sleep and Stop modes
+  side_effects: null
+- id: APB1SMENR2
+  address_offset: 124
+  size: 32
+  access: READ_WRITE
+  reset_value: 37
+  fields:
+  - name: LPUART1SMEN
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      Low power UART 1 clocks enable during
+                    Sleep and Stop modes
+  - name: I2C4SMEN
+    bit_range:
+    - 1
+    - 1
+    description: |-
+      I2C4 clocks enable during Sleep and Stop
+                    modes
+  - name: SWPMI1SMEN
+    bit_range:
+    - 2
+    - 2
+    description: |-
+      Single wire protocol clocks enable
+                    during Sleep and Stop modes
+  - name: LPTIM2SMEN
+    bit_range:
+    - 5
+    - 5
+    description: LPTIM2SMEN
+  side_effects: null
+- id: APB2SMENR
+  address_offset: 128
+  size: 32
+  access: READ_WRITE
+  reset_value: 23559169
+  fields:
+  - name: SYSCFGSMEN
+    bit_range:
+    - 0
+    - 0
+    description: |-
+      SYSCFG clocks enable during Sleep and
+                    Stop modes
+  - name: SDMMCSMEN
+    bit_range:
+    - 10
+    - 10
+    description: |-
+      SDMMC clocks enable during Sleep and
+                    Stop modes
+  - name: TIM1SMEN
+    bit_range:
+    - 11
+    - 11
+    description: |-
+      TIM1 timer clocks enable during Sleep
+                    and Stop modes
+  - name: SPI1SMEN
+    bit_range:
+    - 12
+    - 12
+    description: |-
+      SPI1 clocks enable during Sleep and Stop
+                    modes
+  - name: TIM8SMEN
+    bit_range:
+    - 13
+    - 13
+    description: |-
+      TIM8 timer clocks enable during Sleep
+                    and Stop modes
+  - name: USART1SMEN
+    bit_range:
+    - 14
+    - 14
+    description: |-
+      USART1clocks enable during Sleep and
+                    Stop modes
+  - name: TIM15SMEN
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      TIM15 timer clocks enable during Sleep
+                    and Stop modes
+  - name: TIM16SMEN
+    bit_range:
+    - 17
+    - 17
+    description: |-
+      TIM16 timer clocks enable during Sleep
+                    and Stop modes
+  - name: TIM17SMEN
+    bit_range:
+    - 18
+    - 18
+    description: |-
+      TIM17 timer clocks enable during Sleep
+                    and Stop modes
+  - name: SAI1SMEN
+    bit_range:
+    - 21
+    - 21
+    description: |-
+      SAI1 clocks enable during Sleep and Stop
+                    modes
+  - name: SAI2SMEN
+    bit_range:
+    - 22
+    - 22
+    description: |-
+      SAI2 clocks enable during Sleep and Stop
+                    modes
+  - name: DFSDMSMEN
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      DFSDM timer clocks enable during Sleep
+                    and Stop modes
+  side_effects: null
+- id: CCIPR
+  address_offset: 136
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: USART1SEL
+    bit_range:
+    - 1
+    - 0
+    description: |-
+      USART1 clock source
+                    selection
+  - name: USART2SEL
+    bit_range:
+    - 3
+    - 2
+    description: |-
+      USART2 clock source
+                    selection
+  - name: USART3SEL
+    bit_range:
+    - 5
+    - 4
+    description: |-
+      USART3 clock source
+                    selection
+  - name: UART4SEL
+    bit_range:
+    - 7
+    - 6
+    description: |-
+      UART4 clock source
+                    selection
+  - name: UART5SEL
+    bit_range:
+    - 9
+    - 8
+    description: |-
+      UART5 clock source
+                    selection
+  - name: LPUART1SEL
+    bit_range:
+    - 11
+    - 10
+    description: |-
+      LPUART1 clock source
+                    selection
+  - name: I2C1SEL
+    bit_range:
+    - 13
+    - 12
+    description: |-
+      I2C1 clock source
+                    selection
+  - name: I2C2SEL
+    bit_range:
+    - 15
+    - 14
+    description: |-
+      I2C2 clock source
+                    selection
+  - name: I2C3SEL
+    bit_range:
+    - 17
+    - 16
+    description: |-
+      I2C3 clock source
+                    selection
+  - name: LPTIM1SEL
+    bit_range:
+    - 19
+    - 18
+    description: |-
+      Low power timer 1 clock source
+                    selection
+  - name: LPTIM2SEL
+    bit_range:
+    - 21
+    - 20
+    description: |-
+      Low power timer 2 clock source
+                    selection
+  - name: SAI1SEL
+    bit_range:
+    - 23
+    - 22
+    description: |-
+      SAI1 clock source
+                    selection
+  - name: SAI2SEL
+    bit_range:
+    - 25
+    - 24
+    description: |-
+      SAI2 clock source
+                    selection
+  - name: CLK48SEL
+    bit_range:
+    - 27
+    - 26
+    description: |-
+      48 MHz clock source
+                    selection
+  - name: ADCSEL
+    bit_range:
+    - 29
+    - 28
+    description: |-
+      ADCs clock source
+                    selection
+  - name: SWPMI1SEL
+    bit_range:
+    - 30
+    - 30
+    description: |-
+      SWPMI1 clock source
+                    selection
+  - name: DFSDMSEL
+    bit_range:
+    - 31
+    - 31
+    description: |-
+      DFSDM clock source
+                    selection
+  side_effects: null
+- id: BDCR
+  address_offset: 144
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: LSEON
+    bit_range:
+    - 0
+    - 0
+    description: LSE oscillator enable
+  - name: LSERDY
+    bit_range:
+    - 1
+    - 1
+    description: LSE oscillator ready
+  - name: LSEBYP
+    bit_range:
+    - 2
+    - 2
+    description: LSE oscillator bypass
+  - name: LSEDRV
+    bit_range:
+    - 4
+    - 3
+    description: |-
+      SE oscillator drive
+                    capability
+  - name: LSECSSON
+    bit_range:
+    - 5
+    - 5
+    description: LSECSSON
+  - name: LSECSSD
+    bit_range:
+    - 6
+    - 6
+    description: LSECSSD
+  - name: RTCSEL
+    bit_range:
+    - 9
+    - 8
+    description: RTC clock source selection
+  - name: RTCEN
+    bit_range:
+    - 15
+    - 15
+    description: RTC clock enable
+  - name: BDRST
+    bit_range:
+    - 16
+    - 16
+    description: |-
+      Backup domain software
+                    reset
+  - name: LSCOEN
+    bit_range:
+    - 24
+    - 24
+    description: |-
+      Low speed clock output
+                    enable
+  - name: LSCOSEL
+    bit_range:
+    - 25
+    - 25
+    description: |-
+      Low speed clock output
+                    selection
+  side_effects: null
+- id: CSR
+  address_offset: 148
+  size: 32
+  access: READ_WRITE
+  reset_value: 201328128
+  fields:
+  - name: LSION
+    bit_range:
+    - 0
+    - 0
+    description: LSI oscillator enable
+  - name: LSIRDY
+    bit_range:
+    - 1
+    - 1
+    description: LSI oscillator ready
+  - name: MSISRANGE
+    bit_range:
+    - 11
+    - 8
+    description: |-
+      SI range after Standby
+                    mode
+  - name: RMVF
+    bit_range:
+    - 23
+    - 23
+    description: Remove reset flag
+  - name: FIREWALLRSTF
+    bit_range:
+    - 24
+    - 24
+    description: Firewall reset flag
+  - name: OBLRSTF
+    bit_range:
+    - 25
+    - 25
+    description: |-
+      Option byte loader reset
+                    flag
+  - name: PINRSTF
+    bit_range:
+    - 26
+    - 26
+    description: Pin reset flag
+  - name: BORRSTF
+    bit_range:
+    - 27
+    - 27
+    description: BOR flag
+  - name: SFTRSTF
+    bit_range:
+    - 28
+    - 28
+    description: Software reset flag
+  - name: IWDGRSTF
+    bit_range:
+    - 29
+    - 29
+    description: |-
+      Independent window watchdog reset
+                    flag
+  - name: WWDGRSTF
+    bit_range:
+    - 30
+    - 30
+    description: Window watchdog reset flag
+  - name: LPWRSTF
+    bit_range:
+    - 31
+    - 31
+    description: Low-power reset flag
+  side_effects: null
+interrupts:
+  RCC: 5
+timing: null

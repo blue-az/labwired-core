@@ -1,0 +1,210 @@
+peripheral: CACHE_S
+version: 0.1.0
+registers:
+- id: PROFILING0_IHIT
+  address_offset: 1024
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: HITS
+    bit_range:
+    - 31
+    - 0
+    description: Number of instruction cache hits
+  side_effects: null
+- id: PROFILING0_IMISS
+  address_offset: 1028
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: MISSES
+    bit_range:
+    - 31
+    - 0
+    description: Number of instruction cache misses
+  side_effects: null
+- id: PROFILING0_DHIT
+  address_offset: 1032
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: HITS
+    bit_range:
+    - 31
+    - 0
+    description: Number of data cache hits
+  side_effects: null
+- id: PROFILING0_DMISS
+  address_offset: 1036
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: MISSES
+    bit_range:
+    - 31
+    - 0
+    description: Number of data cache misses
+  side_effects: null
+- id: PROFILING1_IHIT
+  address_offset: 1056
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: HITS
+    bit_range:
+    - 31
+    - 0
+    description: Number of instruction cache hits
+  side_effects: null
+- id: PROFILING1_IMISS
+  address_offset: 1060
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: MISSES
+    bit_range:
+    - 31
+    - 0
+    description: Number of instruction cache misses
+  side_effects: null
+- id: PROFILING1_DHIT
+  address_offset: 1064
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: HITS
+    bit_range:
+    - 31
+    - 0
+    description: Number of data cache hits
+  side_effects: null
+- id: PROFILING1_DMISS
+  address_offset: 1068
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: MISSES
+    bit_range:
+    - 31
+    - 0
+    description: Number of data cache misses
+  side_effects: null
+- id: ENABLE
+  address_offset: 1280
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENABLE
+    bit_range:
+    - 0
+    - 0
+    description: Enable cache
+  side_effects: null
+- id: INVALIDATE
+  address_offset: 1284
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: INVALIDATE
+    bit_range:
+    - 0
+    - 0
+    description: Invalidate the cache
+  side_effects: null
+- id: ERASE
+  address_offset: 1288
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: ERASE
+    bit_range:
+    - 0
+    - 0
+    description: Erase the cache
+  side_effects: null
+- id: PROFILINGENABLE
+  address_offset: 1292
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ENABLE
+    bit_range:
+    - 0
+    - 0
+    description: Enable the profiling counters
+  side_effects: null
+- id: PROFILINGCLEAR
+  address_offset: 1296
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: CLEAR
+    bit_range:
+    - 0
+    - 0
+    description: Clearing the profiling counters
+  side_effects: null
+- id: MODE
+  address_offset: 1300
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: MODE
+    bit_range:
+    - 0
+    - 0
+    description: Cache mode
+  side_effects: null
+- id: DEBUGLOCK
+  address_offset: 1304
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: DEBUGLOCK
+    bit_range:
+    - 0
+    - 0
+    description: Lock debug mode
+  side_effects: null
+- id: ERASESTATUS
+  address_offset: 1308
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: ERASESTATUS
+    bit_range:
+    - 0
+    - 0
+    description: Cache erase status
+  side_effects: null
+- id: WRITELOCK
+  address_offset: 1312
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: WRITELOCK
+    bit_range:
+    - 0
+    - 0
+    description: Lock cache updates
+  side_effects: null
+interrupts:
+  CACHE: 1
+timing: null
