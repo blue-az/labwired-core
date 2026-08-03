@@ -202,7 +202,12 @@ jobs:
   esp32c3-ble-e2e:
     name: ESP32-C3 BLE Baseband E2E
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # 45 covered the first two gates. The re-publication gate below adds ~500 M
+    # steps for each of two twins — the sketch's own 700 ms `delay()` is 112 M
+    # simulated steps per iteration and five iterations is the acceptance — so
+    # the job needs room for a slow runner to finish rather than to be measured
+    # by its own timeout.
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
 
@@ -255,6 +260,28 @@ jobs:
         run: >
           cargo test --release -p labwired-cli --features event-scheduler
           --test e2e_esp32c3_ble_two_node -- --ignored --nocapture
+
+      # CONTINUOUS re-publication, which is a different property from the one
+      # above and the one an application actually needs. The two-node gate
+      # proves the bytes change ONCE (setup's `val=0`, the first loop()'s
+      # `val=1`); this one requires five successive values to cross the air and
+      # be read by the peer, i.e. `stop()/setAdvertisementData()/start()`
+      # surviving repetition. It is also the only gate that fails on the
+      # firmware's own `assert` line, which is how the RX-descriptor staleness
+      # it was written against announced itself ~198 M steps in — long after
+      # every marker a laxer gate stops on.
+      #
+      # Same image, same manifest, same `--features event-scheduler` contract
+      # (the file is `#![cfg(feature = "event-scheduler")]`; without the flag it
+      # is an EMPTY binary reporting "ok. 0 passed"). Slow by construction: the
+      # sketch's own `delay(700)` is 112 M simulated steps per iteration, so
+      # five iterations is ~500 M steps for each of two twins.
+      - name: ESP32-C3 BLE advertising re-publication e2e (five values, both ways)
+        env:
+          LABWIRED_REQUIRE_C3_BLE: "1"
+        run: >
+          cargo test --release -p labwired-cli --features event-scheduler
+          --test e2e_esp32c3_ble_adv_republish -- --ignored --nocapture
 
   tier1-fixture-drift:
     name: Tier-1 Fixture Drift Check
