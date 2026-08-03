@@ -256,6 +256,34 @@ impl PeripheralKit for SevenSegmentKit {
     }
 }
 
+/// A directly-driven 7-segment digit: eight GPIOs and a common pin, no driver
+/// chip. Like the TM1637 it binds on pins, so it reports through the evidence
+/// seam directly. The lit segment mask is combinational — it is whatever the
+/// pins say right now — so "which character" is read off the model, never
+/// remembered from a previous sample.
+impl crate::inspect::DeviceEvidence for SevenSegment {
+    fn artifacts(
+        &self,
+        id: &str,
+        _opts: &crate::inspect::InspectOpts,
+    ) -> Vec<crate::inspect::Artifact> {
+        let segments = self.segments();
+        vec![crate::inspect::Artifact {
+            kind: "text_display".to_string(),
+            id: id.to_string(),
+            meta: serde_json::json!({
+                "format": "seven_segment_mask",
+                "generation": crate::inspect::artifact_generation(&[segments]),
+                "text": self.ch().to_string(),
+                "segments": segments,
+                "lit_segments": segments.count_ones(),
+                "decimal_point": self.decimal_point(),
+            }),
+            bytes: None,
+        }]
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

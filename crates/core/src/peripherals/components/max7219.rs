@@ -170,6 +170,34 @@ impl Max7219 {
 }
 
 impl SpiDevice for Max7219 {
+    /// An 8x8 LED matrix: one byte per row, one bit per LED. `lit_pixels` is
+    /// the count of set bits in the ROWS the scan limit actually drives —
+    /// shutdown is reported rather than folded in, because a module holding a
+    /// pattern while shut down is a different finding from a blank one.
+    fn artifacts(
+        &self,
+        id: &str,
+        opts: &crate::inspect::InspectOpts,
+    ) -> Vec<crate::inspect::Artifact> {
+        let fb = self.framebuffer();
+        vec![crate::inspect::Artifact {
+            kind: "framebuffer".to_string(),
+            id: id.to_string(),
+            meta: serde_json::json!({
+                "w": 8,
+                "h": fb.len(),
+                "format": "max7219_rows",
+                "generation": crate::inspect::artifact_generation(&fb),
+                "ink_bytes": fb.iter().filter(|&&b| b != 0).count(),
+                "lit_pixels": fb.iter().map(|b| b.count_ones() as usize).sum::<usize>(),
+                "shutdown": self.is_shutdown(),
+                "intensity": self.intensity(),
+                "scan_limit": self.scan_limit(),
+            }),
+            bytes: crate::inspect::artifact_bytes(&fb, opts),
+        }]
+    }
+
     fn cs_pin(&self) -> &str {
         &self.cs_pin
     }

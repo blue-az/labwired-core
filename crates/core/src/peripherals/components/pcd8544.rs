@@ -167,6 +167,32 @@ impl Pcd8544 {
 }
 
 impl SpiDevice for Pcd8544 {
+    /// Bank-addressed 1-bpp LCD, same evidence shape as the OLEDs: inked bytes
+    /// and lit pixels off the real buffer, plus the display-control state that
+    /// decides whether any of it is visible.
+    fn artifacts(
+        &self,
+        id: &str,
+        opts: &crate::inspect::InspectOpts,
+    ) -> Vec<crate::inspect::Artifact> {
+        let fb = self.framebuffer();
+        vec![crate::inspect::Artifact {
+            kind: "framebuffer".to_string(),
+            id: id.to_string(),
+            meta: serde_json::json!({
+                "w": WIDTH,
+                "h": BANKS * 8,
+                "format": "pcd8544_bank",
+                "generation": crate::inspect::artifact_generation(fb),
+                "ink_bytes": fb.iter().filter(|&&b| b != 0).count(),
+                "lit_pixels": fb.iter().map(|b| b.count_ones() as usize).sum::<usize>(),
+                "display_on": self.display_on(),
+                "inverse": self.inverse(),
+            }),
+            bytes: crate::inspect::artifact_bytes(fb, opts),
+        }]
+    }
+
     fn transfer(&mut self, mosi_byte: u8) -> u8 {
         if self.dc_level {
             self.handle_data(mosi_byte);

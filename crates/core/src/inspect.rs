@@ -140,11 +140,23 @@ pub struct PeripheralInspect {
 /// and by what address, never that any particular register of it is modeled.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceAttachment {
-    /// `"i2c"` | `"spi"`.
+    /// How the device binds to the machine: `"i2c"` | `"spi"` for an addressed
+    /// slave, `"gpio"` for anything wired to pins (bit-banged, one-wire,
+    /// quadrature, PWM), `"analog"` for a source that drives an ADC channel's
+    /// level, `"can"` for a second node on a CAN bus.
     pub transport: String,
-    /// Controller peripheral the device hangs off (`"i2c0"`, `"spi3"`), i.e. a
-    /// name that appears in [`MachineInspect::peripherals`].
-    pub bus: String,
+    /// Peripheral the device hangs off (`"i2c0"`, `"spi3"`, `"gpioa"`,
+    /// `"adc1"`, `"fdcan1"`), i.e. a name that appears in
+    /// [`MachineInspect::peripherals`].
+    ///
+    /// `None` only when the engine genuinely cannot say: a bus-resident model
+    /// attached programmatically, with no `external_devices:` declaration to
+    /// name its connection and nothing recorded on the model itself. Every
+    /// device that came from a manifest has one, so this key is present for
+    /// every device on a real rig — the option exists so an unknown owner is
+    /// reported as unknown rather than as a plausible-looking guess.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bus: Option<String>,
     /// 7-bit I²C address the model answers to, when the transport has one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub address: Option<u8>,
@@ -154,7 +166,8 @@ pub struct DeviceAttachment {
     /// Address of the I²C bus switch this device sits behind, when it does.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mux_address: Option<u8>,
-    /// Downstream channel of that bus switch.
+    /// Which channel of `bus` the device is on: the downstream channel of an
+    /// I²C bus switch, or the ADC channel an analog source drives.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub channel: Option<u8>,
 }
@@ -425,27 +438,118 @@ pub fn inspect_with_schema<P: Peripheral + ?Sized>(
     }
 }
 
-/// A live external device found hanging off a controller during the inspect
-/// walk — the borrowed, pre-identity form of [`DeviceInspect`].
+/// A live external device found during the inspect walk — the borrowed,
+/// pre-identity form of [`DeviceInspect`].
 ///
-/// Controllers hand these out from
-/// [`Peripheral::for_each_attached_device`](crate::Peripheral::for_each_attached_device).
-/// They carry only what the controller genuinely knows (transport, address,
-/// chip-select, bus-switch position) plus a borrow of the model itself; the
-/// manifest identity is joined on afterwards by
-/// [`crate::Machine::inspect`], which is the only place that has the
-/// declarations.
+/// Two kinds of source hand these out, and the record they produce is the same
+/// either way:
+///
+/// * a **controller**, from
+///   [`Peripheral::for_each_attached_device`](crate::Peripheral::for_each_attached_device),
+///   for anything on a transport with addressing (I²C, SPI). Such a device is
+///   identified by WHERE it answers, so `declared_id` is `None` and the
+///   manifest name is joined on by address afterwards; `bus` is `None` because
+///   the controller that yielded the ref is itself the bus.
+/// * the **bus**, from
+///   [`SystemBus::for_each_attached_device`](crate::bus::SystemBus::for_each_attached_device),
+///   for a device that binds to pins rather than to an address — an HC-SR04 on
+///   TRIG/ECHO, a servo on a PWM pad, a thermistor on an ADC channel, a CAN
+///   tester node. There is no address to join on, so such a model carries the
+///   `external_devices:` id it was stamped with at attach and states it here.
+///
+/// Either way the ref carries only what is genuinely known: the transport, the
+/// placement, and a borrow of the model for artifact extraction. Nothing is
+/// inferred from the Rust type.
 pub struct AttachedDeviceRef<'a> {
-    /// `"i2c"` | `"spi"`.
+    /// `"i2c"` | `"spi"` | `"gpio"` | `"analog"` | `"can"`.
     pub transport: &'static str,
     pub address: Option<u8>,
     pub cs_pin: Option<&'a str>,
     /// Set when this device sits behind an I²C bus switch.
     pub mux_address: Option<u8>,
+    /// Downstream channel of an I²C bus switch, or the ADC channel an analog
+    /// source drives — in both cases "which channel of `bus` this device is on".
     pub channel: Option<u8>,
-    /// The model, for artifact extraction. `None` when the model does not
-    /// expose [`std::any::Any`] — then it can be listed but not read.
-    pub model: Option<&'a dyn std::any::Any>,
+    /// The `external_devices:` id this model was stamped with at attach, for
+    /// devices whose identity is their name rather than their address. `None`
+    /// for I²C/SPI devices: their identity is joined on by address, which is
+    /// what the controller actually knows.
+    pub declared_id: Option<&'a str>,
+    /// This model's own id when ONE declaration built SEVERAL models — an
+    /// H-bridge board's two motor channels (`<id>-a`, `<id>-b`). Such a ref
+    /// does not consume its declaration: its siblings are equally entitled to
+    /// the name, and each is a separately controllable device. `None` (the
+    /// normal case) means the model IS the declaration.
+    pub instance_id: Option<&'a str>,
+    /// The peripheral this device hangs off, when the device names it itself.
+    /// `None` means "whatever yielded this ref is the bus" — always the case
+    /// for a controller-hosted device.
+    pub bus: Option<&'a str>,
+    /// What this device can show of itself, for artifact extraction. `None`
+    /// when the device reports no evidence — never "the screen was blank".
+    ///
+    /// A borrow, not an owned list, because the id an artifact is addressed by
+    /// is only known AFTER the manifest join; the join calls
+    /// [`DeviceEvidence::artifacts`] once it has one.
+    pub evidence: Option<&'a dyn DeviceEvidence>,
+}
+
+/// What an attached device can show of itself — the ONE seam by which a device
+/// model becomes inspect evidence.
+///
+/// This used to be a central `match` in this file that downcast a `&dyn Any` to
+/// each panel type in turn, and it had exactly two arms. Every panel model that
+/// existed had to be enumerated there, by hand, in a file far from the model —
+/// so the SH1107, the SSD1680 and the UC8151D painted perfectly, rendered in
+/// the browser, and reported NOTHING to `inspect` or to `labwired_verify`'s
+/// display oracle. Nobody had remembered to edit a downcast chain in
+/// `inspect.rs` when they added a model, and nothing made them.
+///
+/// A model now reports its own evidence, next to the buffers it owns, by
+/// overriding `artifacts` on the device trait it already implements
+/// ([`crate::peripherals::i2c::I2cDevice`],
+/// [`crate::peripherals::spi::SpiDevice`]). Adding a panel and forgetting its
+/// evidence is now a thing you do in ONE file, where the buffers are, instead
+/// of a thing you forget in another.
+///
+/// **This adds no fidelity.** Every number an implementation reports must be
+/// read straight off the model's own buffer; nothing is synthesized, and a
+/// panel whose driver never painted reports zero rather than something
+/// plausible. A device with no evidence returns an empty list, which is honest:
+/// absent means "this engine has nothing to show", never "the screen was
+/// blank".
+pub trait DeviceEvidence {
+    /// Artifacts describing what this device currently holds, addressed by
+    /// `id` (the manifest id the inspect join resolved). Summary mode
+    /// (`opts.include_bytes == false`) omits large payloads.
+    fn artifacts(&self, id: &str, opts: &InspectOpts) -> Vec<Artifact>;
+}
+
+/// Adapter letting an `&dyn I2cDevice` be carried as evidence. Lives on the
+/// visitor's stack frame — which is sound precisely because
+/// [`AttachedDeviceRef`] deliberately cannot escape the visitor.
+struct I2cEvidence<'a>(&'a dyn crate::peripherals::i2c::I2cDevice);
+
+impl DeviceEvidence for I2cEvidence<'_> {
+    fn artifacts(&self, id: &str, opts: &InspectOpts) -> Vec<Artifact> {
+        self.0.artifacts(id, opts)
+    }
+}
+
+/// SPI twin of [`I2cEvidence`].
+struct SpiEvidence<'a>(&'a dyn crate::peripherals::spi::SpiDevice);
+
+impl DeviceEvidence for SpiEvidence<'_> {
+    fn artifacts(&self, id: &str, opts: &InspectOpts) -> Vec<Artifact> {
+        self.0.artifacts(id, opts)
+    }
+}
+
+/// Shorthand for the payload half of an artifact: the buffer in full mode,
+/// nothing in summary mode. Every panel's `artifacts` impl uses it, so
+/// "summary omits the bytes" is one decision rather than eight.
+pub fn artifact_bytes(buf: &[u8], opts: &InspectOpts) -> Option<Vec<u8>> {
+    opts.include_bytes.then(|| buf.to_vec())
 }
 
 /// Visit one I²C slave, then everything wired behind it if it is a bus switch.
@@ -460,13 +564,17 @@ pub fn visit_i2c_device(
     f: &mut dyn FnMut(AttachedDeviceRef<'_>),
 ) {
     let model = dev.as_any();
+    let evidence = I2cEvidence(dev);
     f(AttachedDeviceRef {
         transport: "i2c",
         address: Some(dev.address()),
         cs_pin: None,
         mux_address: None,
         channel: None,
-        model,
+        declared_id: None,
+        instance_id: None,
+        bus: None,
+        evidence: Some(&evidence),
     });
     let Some(mux) =
         model.and_then(|a| a.downcast_ref::<crate::peripherals::components::tca9548a::Tca9548a>())
@@ -476,13 +584,17 @@ pub fn visit_i2c_device(
     let mux_address = crate::peripherals::i2c::I2cDevice::address(mux);
     for ch in 0..crate::peripherals::components::tca9548a::TCA9548A_CHANNELS as u8 {
         for child in mux.channel_devices(ch) {
+            let evidence = I2cEvidence(&**child);
             f(AttachedDeviceRef {
                 transport: "i2c",
                 address: Some(child.address()),
                 cs_pin: None,
                 mux_address: Some(mux_address),
                 channel: Some(ch),
-                model: child.as_any(),
+                declared_id: None,
+                instance_id: None,
+                bus: None,
+                evidence: Some(&evidence),
             });
         }
     }
@@ -494,94 +606,18 @@ pub fn visit_spi_device(
     dev: &dyn crate::peripherals::spi::SpiDevice,
     f: &mut dyn FnMut(AttachedDeviceRef<'_>),
 ) {
+    let evidence = SpiEvidence(dev);
     f(AttachedDeviceRef {
         transport: "spi",
         address: None,
         cs_pin: Some(dev.cs_pin()),
         mux_address: None,
         channel: None,
-        model: dev.as_any(),
+        declared_id: None,
+        instance_id: None,
+        bus: None,
+        evidence: Some(&evidence),
     });
-}
-
-/// The ONE place that turns an external device model into inspect artifacts.
-///
-/// Before this, panel evidence existed in two disconnected forms: an
-/// `Artifact` that only the STM32 and ESP32-C3 I²C controllers emitted, and
-/// only for an SSD1306; and `eprintln!` lines in the CLI that a shell script
-/// scraped with `sed`. A panel on any other controller — the ILI9341 on
-/// classic-ESP32 `spi3`, say — produced structured evidence for neither.
-///
-/// **This adds no fidelity.** Every number below is read straight off the
-/// model's own buffer; nothing is synthesized, and a panel whose driver never
-/// painted reports zero rather than something plausible. Models with no
-/// arm here simply return no artifacts, which is honest: absent means
-/// "this engine has nothing to show", never "the screen was blank".
-pub fn device_artifacts(model: &dyn std::any::Any, id: &str, opts: &InspectOpts) -> Vec<Artifact> {
-    use crate::peripherals::components::{Ili9341, Ssd1306};
-
-    let mut out = Vec::new();
-    let bytes_of = |buf: &[u8]| {
-        if opts.include_bytes {
-            Some(buf.to_vec())
-        } else {
-            None
-        }
-    };
-
-    if let Some(oled) = model.downcast_ref::<Ssd1306>() {
-        let fb = oled.framebuffer();
-        out.push(Artifact {
-            kind: "framebuffer".to_string(),
-            id: id.to_string(),
-            meta: serde_json::json!({
-                "w": oled.width(),
-                "h": oled.height(),
-                "format": "ssd1306_page",
-                "generation": artifact_generation(fb),
-                "ink_bytes": oled.ink_bytes(),
-                "lit_pixels": oled.lit_pixels(),
-            }),
-            bytes: bytes_of(fb),
-        });
-    } else if let Some(panel) = model.downcast_ref::<Ili9341>() {
-        let fb = panel.framebuffer();
-        // An RGB565 TFT has no e-paper "refresh": frame memory IS the screen,
-        // so the evidence is DISPON plus how much of the buffer the firmware
-        // actually wrote. `painted_bytes` counts non-zero bytes — the SAME
-        // definition the CLI's `painted bytes=` line prints, so the two agree
-        // by construction instead of by coincidence.
-        let painted = fb.iter().filter(|&&b| b != 0x00).count();
-        let (w, h) = panel.dimensions();
-        // The most common non-black pixel: says WHAT was drawn, not merely
-        // that something was. "6352 bytes changed" cannot be checked against a
-        // photo of real silicon; "top colour 0x07E0" (RGB565 green) can.
-        let mut counts: std::collections::HashMap<u16, usize> = std::collections::HashMap::new();
-        for px in fb.chunks_exact(2) {
-            let v = u16::from_be_bytes([px[0], px[1]]);
-            if v != 0 {
-                *counts.entry(v).or_default() += 1;
-            }
-        }
-        let top = counts.iter().max_by_key(|&(_, n)| *n);
-        out.push(Artifact {
-            kind: "framebuffer".to_string(),
-            id: id.to_string(),
-            meta: serde_json::json!({
-                "w": w,
-                "h": h,
-                "format": "rgb565_be",
-                "generation": artifact_generation(fb),
-                "display_on": panel.display_on(),
-                "painted_bytes": painted,
-                "total_bytes": fb.len(),
-                "top_colour": top.map(|(v, _)| format!("0x{v:04X}")),
-                "top_colour_pixels": top.map(|(_, n)| *n),
-            }),
-            bytes: bytes_of(fb),
-        });
-    }
-    out
 }
 
 /// FNV-1a hash of a byte buffer, used as a cheap `meta.generation` so callers
