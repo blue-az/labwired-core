@@ -31,8 +31,6 @@
 # no TTL. Name each object after its sha256 and the URL shape below is
 # unchanged — only C3_BLE_BLOB_BASE_URL moves.
 #
-# Usage: scripts/ci/fetch-c3-ble-flash.sh [dest-dir]
-#        (default dest: fixtures/esp32c3-ble/, which .gitignore covers)
 # Usage: scripts/ci/fetch-c3-ble-flash.sh [dest-dir] [manifest]
 #        default dest:     fixtures/esp32c3-ble/  (.gitignore covers it)
 #        default manifest: scripts/ci/c3-ble-flash.sha256
