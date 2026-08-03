@@ -1,6 +1,8 @@
 #[cfg(test)]
 pub mod builtin_chip_self_contained;
 #[cfg(test)]
+pub mod device_identity_one_home;
+#[cfg(test)]
 pub mod esp32;
 #[cfg(test)]
 pub mod esp32c3_i2c_waveform;
@@ -30,3 +32,5 @@ pub mod scb_reset;
 pub mod stm32_spi_waveform;
 #[cfg(test)]
 pub mod test_cycles;
+#[cfg(test)]
+pub mod walk_starvation_contract;
