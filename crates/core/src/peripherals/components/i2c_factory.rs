@@ -169,6 +169,13 @@ pub fn build_i2c_tree(
     manifest: &labwired_config::SystemManifest,
     ext: &labwired_config::ExternalDevice,
 ) -> anyhow::Result<Option<Box<dyn I2cDevice>>> {
+    // A part this manifest CARRIES outranks the built-in factory: it is the most
+    // specific thing anyone said about this system. A pack can only reach here
+    // for a type we already ship by declaring `overrides:`; otherwise
+    // `bus::part_pack::lookup` refuses it rather than picking a winner.
+    if let Some(device) = crate::bus::part_pack::i2c_device(manifest, ext)? {
+        return Ok(Some(device));
+    }
     let Some(mut device) = build_external_i2c_device(&ext.r#type, &ext.id, &ext.config) else {
         return Ok(None);
     };

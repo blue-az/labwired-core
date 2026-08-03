@@ -518,6 +518,7 @@ channel: 3
 
 fn manifest_with(devices: Vec<labwired_config::ExternalDevice>) -> labwired_config::SystemManifest {
     labwired_config::SystemManifest {
+        parts: Vec::new(),
         external_devices: devices,
         ..manifest_skeleton()
     }

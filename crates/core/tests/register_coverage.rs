@@ -129,6 +129,7 @@ fn root(rel: &str) -> PathBuf {
 
 fn dummy_manifest(path: &str) -> labwired_config::SystemManifest {
     labwired_config::SystemManifest {
+        parts: Vec::new(),
         walk_deleted: Some(false),
         schema_version: "1.0".to_string(),
         name: "coverage".to_string(),
