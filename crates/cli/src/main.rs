@@ -955,6 +955,21 @@ fn run_two_c3_ble(
         }
     }
 
+    // Acceptance stop, the dual-run twin of a test script's
+    // `stop_when_assertions_pass`: `LABWIRED_BLE_DUAL_STOP_ON=<substring>` ends
+    // the run as soon as BOTH nodes' serial contains that substring. Without it
+    // a two-node gate has to burn its whole step ceiling every time, because
+    // there is nothing else that can know the run has proved its point. The
+    // budget stays a CEILING — it only bounds how long a broken model flails.
+    // Polled every 1M steps: the check copies both sinks, so doing it per step
+    // would dominate the run.
+    let stop_on = std::env::var("LABWIRED_BLE_DUAL_STOP_ON").ok();
+    const STOP_POLL_STEPS: u64 = 1_000_000;
+    let seen = |sink: &std::sync::Arc<std::sync::Mutex<Vec<u8>>>, needle: &str| -> bool {
+        let bytes = sink.lock().map(|g| g.clone()).unwrap_or_default();
+        String::from_utf8_lossy(&bytes).contains(needle)
+    };
+
     let limit = args.max_steps.unwrap_or(u64::MAX);
     for i in 0..limit {
         if let Err(e) = a.step() {
@@ -964,6 +979,16 @@ fn run_two_c3_ble(
         if let Err(e) = b.step() {
             eprintln!("[ble] node B halted at step {i}: {e}");
             break;
+        }
+        if let Some(needle) = &stop_on {
+            if i % STOP_POLL_STEPS == 0
+                && i > 0
+                && seen(&sinks[0], needle)
+                && seen(&sinks[1], needle)
+            {
+                eprintln!("[ble] both nodes printed {needle:?} by step {i} — stopping");
+                break;
+            }
         }
     }
     for (label, sink) in [("[A]", &sinks[0]), ("[B]", &sinks[1])] {

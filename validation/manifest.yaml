@@ -795,6 +795,25 @@ boards:
     # gate and the walk-pinner ledger — kept empty by migrating the model to the event
     # scheduler, NOT by widening EXPECTED_PINNERS. No live reset re-capture; capturing
     # the window's post-enable state on a second board is owed and tracked.
+    # 2026-08-03 (later): completed the BLE RECEIVE path in the same window (bt.rs) —
+    # RX-descriptor ownership (`+0x00` bit15 RXDONE, `+0x02` bit15 released, `+0x0C`
+    # link label), the `+0x2D0` buffer-jump handshake that raises interrupt bit 18, and
+    # a scanning-format gate on which activity may receive. ADDITIVE to an already
+    # UNMAPPED window: no declarative descriptor, base address or reset value moved, so
+    # the 2026-06-17 reset-state oracle still cannot move. Semantics come from the same
+    # verified mask-ROM image, not from new silicon: `r_lld_rxdesc_check` (0x4002022C),
+    # `r_lld_rxdesc_free` (0x4001FFE8), `r_lld_update_rxbuf` (0x400213C0) and
+    # `r_lld_scan_evt_start_cbk` (0x400268F8), cross-checked against the 2026-08-02
+    # capture (the live advertiser's CS at EM 0x400 = index 0, and its RX descriptors
+    # read link label 0). Where the ROM was silent — what `+0x02` bit 6 and `+0x0C`
+    # bits[10:0] mean, what the buffer size/count actually reconfigure — nothing was
+    # written. Evidence re-run on this commit: lib 2535/0 default and 2649/0 with
+    # --features event-scheduler, C3 heavy differentials 13/13 the real way, clippy
+    # clean both feature configs, and BOTH end-to-end BLE gates green (the advertising
+    # gate unchanged at 362,274,341 steps / assertions_passed, and the new two-node
+    # receive gate in 13.3 s). No live re-capture; the scanning-format value 0x0208 is
+    # measured from firmware in the twin, NOT off the board, and is flagged as such in
+    # the model.
     drift_ack: 2026-08-03
 
   - id: nucleo-l476rg

@@ -31,15 +31,25 @@
 # no TTL. Name each object after its sha256 and the URL shape below is
 # unchanged — only C3_BLE_BLOB_BASE_URL moves.
 #
-# Usage: scripts/ci/fetch-c3-ble-flash.sh [dest-dir]
-#        (default dest: fixtures/esp32c3-ble/, which .gitignore covers)
+# Usage: scripts/ci/fetch-c3-ble-flash.sh [dest-dir] [manifest]
+#        default dest:     fixtures/esp32c3-ble/  (.gitignore covers it)
+#        default manifest: scripts/ci/c3-ble-flash.sha256
+#
+# The manifest argument is what lets ONE fetch/compose/verify mechanism serve
+# every C3 BLE gate instead of a copy per image. The second manifest in-tree is
+# `c3-ble-node-flash.sha256` (the two-way advertise+scan node image the
+# `e2e_esp32c3_ble_two_node` gate boots as BOTH nodes):
+#
+#   scripts/ci/fetch-c3-ble-flash.sh fixtures/esp32c3-ble \
+#       scripts/ci/c3-ble-node-flash.sha256
+#
 # Env:   C3_BLE_BLOB_BASE_URL  override the blob store (default: production)
 set -euo pipefail
 
 dest="${1:-fixtures/esp32c3-ble}"
 base="${C3_BLE_BLOB_BASE_URL:-https://api.labwired.com/v1/blobs/sha256}"
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-sums="$here/c3-ble-flash.sha256"
+sums="${2:-$here/c3-ble-flash.sha256}"
 
 [ -f "$sums" ] || { echo "missing checksum manifest: $sums" >&2; exit 1; }
 
@@ -54,7 +64,11 @@ else
 fi
 
 mkdir -p "$dest"
-parts_dir="$dest/parts"
+# Bucket the part cache by manifest: two manifests share part NAMES (`app`) with
+# different digests, so one shared directory would make them evict each other on
+# every alternating run. The digest check would still catch it — this only
+# avoids the pointless re-download.
+parts_dir="$dest/parts/$(basename "$sums" .sha256)"
 mkdir -p "$parts_dir"
 
 image_sha=""

@@ -234,6 +234,28 @@ jobs:
           cargo test --release -p labwired-cli
           --test e2e_esp32c3_ble_arduino -- --ignored --nocapture
 
+      # The RECEIVE path needs its own image (advertise AND scan, one binary
+      # booted as both nodes), so it gets its own pinned manifest. Same fetch
+      # script — the manifest is an argument precisely so there is one
+      # fetch/compose/verify mechanism rather than a copy per image.
+      - name: Fetch + compose the pinned BLE two-node flash image
+        run: >
+          scripts/ci/fetch-c3-ble-flash.sh fixtures/esp32c3-ble
+          scripts/ci/c3-ble-node-flash.sha256
+
+      # `--features event-scheduler` is LOAD-BEARING, not belt-and-braces: the
+      # test file is `#![cfg(feature = "event-scheduler")]`, because the radio
+      # engine that carries a frame between the two twins lives in `on_event`.
+      # Drop the flag and this compiles to an empty test binary that reports
+      # "ok. 0 passed" — green while proving nothing. See the gate-vacuity note
+      # in the test's own module docs.
+      - name: ESP32-C3 BLE two-node e2e (app-level data exchange, both ways)
+        env:
+          LABWIRED_REQUIRE_C3_BLE: "1"
+        run: >
+          cargo test --release -p labwired-cli --features event-scheduler
+          --test e2e_esp32c3_ble_two_node -- --ignored --nocapture
+
   tier1-fixture-drift:
     name: Tier-1 Fixture Drift Check
     runs-on: ubuntu-latest
