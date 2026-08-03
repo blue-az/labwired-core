@@ -213,10 +213,18 @@ jobs:
           cargo test --release -p labwired-core --features event-scheduler
           --lib --test event_scheduler --test release_only_cfg_ratchet
 
+      # `esp32_classic_walk_differential` is here and NOT in `pr-gate` for the
+      # same structural reason the rest of this step is: the defect it covers is
+      # only reachable in an `event-scheduler` build, and the CLI (which every
+      # PR-fast lane exercises) deliberately compiles that feature OFF. A
+      # classic-ESP32 lab was 12/12 green on the CLI while livelocked in the
+      # browser because NO lane ran classic ESP32 under the browser's own
+      # feature set. This step is that lane.
       - name: Feature gate — scheduler IRQ delivery (jit + event-scheduler)
         run: >
           cargo test -p labwired-core --features jit,event-scheduler
           --test intmatrix_alarm
+          --test esp32_classic_walk_differential
           --test esp32s3_walk_differential
           --test esp32c3_walk_differential
           --test stm32_timer_walk_differential
