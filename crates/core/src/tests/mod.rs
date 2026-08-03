@@ -1,6 +1,8 @@
 #[cfg(test)]
 pub mod builtin_chip_self_contained;
 #[cfg(test)]
+pub mod bus_proof_matrix;
+#[cfg(test)]
 pub mod device_identity_one_home;
 #[cfg(test)]
 pub mod esp32;
@@ -26,6 +28,8 @@ pub mod nrf52;
 pub mod peripheral_reachability;
 #[cfg(test)]
 pub mod rp2040;
+#[cfg(test)]
+pub mod rp2040_spi_carries_a_byte;
 #[cfg(test)]
 pub mod scb_reset;
 #[cfg(test)]
