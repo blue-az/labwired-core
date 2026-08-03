@@ -171,14 +171,16 @@ impl SystemBus {
             self.emit_resident(f, Resident::gpio(dev.id(), None));
         }
         for dev in &self.tm1637 {
-            self.emit_resident(f, Resident::gpio(&dev.id, None));
+            // A bus-resident DISPLAY: it reports evidence directly, because it
+            // has no controller trait to hang it on.
+            self.emit_resident(f, Resident::gpio(&dev.id, Some(dev)));
         }
         for dev in &self.hx711 {
             let id = dev.component_id().unwrap_or("hx711");
             self.emit_resident(f, Resident::gpio(id, None));
         }
         for dev in &self.seven_segment {
-            self.emit_resident(f, Resident::gpio(&dev.id, None));
+            self.emit_resident(f, Resident::gpio(&dev.id, Some(dev)));
         }
         for dev in &self.analog_inputs {
             // An analog source has no `Any` view, so it is listed but not read:
@@ -363,9 +365,11 @@ struct Resident<'a> {
     bus: Option<&'a str>,
     channel: Option<u8>,
     /// A bus-resident model that can show something of itself implements
-    /// [`crate::inspect::DeviceEvidence`] directly and is passed here. None of
-    /// them does today — a servo and a distance sensor have no display surface
-    /// — and `None` says exactly that rather than promising an empty screen.
+    /// [`crate::inspect::DeviceEvidence`] directly and is passed here — the
+    /// TM1637 and the direct-driven 7-segment digit are displays that happen to
+    /// be wired to pins. `None` is the honest answer for everything else: a
+    /// servo and a distance sensor have no display surface, and `None` says
+    /// that rather than promising an empty screen.
     evidence: Option<&'a dyn DeviceEvidence>,
 }
 

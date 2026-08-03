@@ -173,6 +173,18 @@ impl I2cDevice for TracingI2cDevice {
     fn address(&self) -> u8 {
         self.inner.address()
     }
+    /// Forwarded, like everything else here. A decorator that let this fall
+    /// through to the trait default would silently erase the wrapped panel's
+    /// evidence — the device would still paint, still render, and report
+    /// nothing — which is precisely the failure mode
+    /// [`crate::inspect::DeviceEvidence`] exists to end.
+    fn artifacts(
+        &self,
+        id: &str,
+        opts: &crate::inspect::InspectOpts,
+    ) -> Vec<crate::inspect::Artifact> {
+        self.inner.artifacts(id, opts)
+    }
     fn claims_address(&self, addr: u8) -> bool {
         self.inner.claims_address(addr)
     }
@@ -293,6 +305,18 @@ impl TracingSpiDevice {
 impl SpiDevice for TracingSpiDevice {
     fn cs_select(&mut self) {
         self.inner.cs_select();
+    }
+    /// Forwarded, like everything else here. A decorator that let this fall
+    /// through to the trait default would silently erase the wrapped panel's
+    /// evidence — the device would still paint, still render, and report
+    /// nothing — which is precisely the failure mode
+    /// [`crate::inspect::DeviceEvidence`] exists to end.
+    fn artifacts(
+        &self,
+        id: &str,
+        opts: &crate::inspect::InspectOpts,
+    ) -> Vec<crate::inspect::Artifact> {
+        self.inner.artifacts(id, opts)
     }
     fn cs_release(&mut self) {
         self.inner.cs_release();

@@ -299,6 +299,42 @@ impl PeripheralKit for Tm16377SegKit {
     }
 }
 
+/// A TM1637 is a DISPLAY that happens to be bit-banged on two GPIO lines
+/// rather than addressed on a bus. It binds to the machine through
+/// [`crate::bus::SystemBus`] rather than through a controller, so it has no
+/// `I2cDevice`/`SpiDevice` impl to hang its evidence on — it implements the
+/// evidence seam directly instead.
+///
+/// That this is even possible is the point of walking bindings and evidence on
+/// ONE seam: before, a panel could only report if it happened to sit on a
+/// transport the evidence layer knew about, and this one sat on pins.
+impl crate::inspect::DeviceEvidence for Tm1637 {
+    fn artifacts(
+        &self,
+        id: &str,
+        _opts: &crate::inspect::InspectOpts,
+    ) -> Vec<crate::inspect::Artifact> {
+        let text = self.text();
+        let grids = [self.grid(0), self.grid(1), self.grid(2), self.grid(3)];
+        vec![crate::inspect::Artifact {
+            kind: "text_display".to_string(),
+            id: id.to_string(),
+            meta: serde_json::json!({
+                "format": "tm1637_grid",
+                "generation": crate::inspect::artifact_generation(&grids),
+                "text": text,
+                "lit_segments": grids.iter().map(|g| g.count_ones() as usize).sum::<usize>(),
+                "display_on": self.display_on(),
+                "brightness": self.brightness(),
+                "colon": self.colon(),
+            }),
+            // Four GRID bytes are metadata-sized; there is no payload worth
+            // gating behind `include_bytes`.
+            bytes: None,
+        }]
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
