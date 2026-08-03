@@ -29,10 +29,7 @@
 
 use labwired_config::{ChipDescriptor, SystemManifest};
 use labwired_core::bus::SystemBus;
-use labwired_core::cpu::cortex_m::CortexM;
 use labwired_core::inspect::{artifact_format as fmt, Artifact, InspectOpts};
-use labwired_core::system::cortex_m::configure_cortex_m;
-use labwired_core::Machine;
 use std::path::PathBuf;
 
 fn repo(rel: &str) -> PathBuf {
@@ -44,15 +41,35 @@ fn repo(rel: &str) -> PathBuf {
 /// Assemble the rig with no firmware. Placement is a property of the manifest;
 /// nothing has to run for a panel to be wired, and a test that booted firmware
 /// first would be measuring the boot.
-fn machine_from_example(rel_yaml: &str) -> Machine<CortexM> {
+fn bus_from_example(rel_yaml: &str) -> SystemBus {
     let yaml = repo(rel_yaml);
     let manifest = SystemManifest::from_file(&yaml).expect("load system.yaml");
     let chip_path = yaml.parent().unwrap().join(&manifest.chip);
     let chip = ChipDescriptor::from_file(&chip_path).expect("load chip descriptor");
-    let mut bus = SystemBus::from_config(&chip, &manifest).expect("build bus");
-    let (cpu, _nvic) = configure_cortex_m(&mut bus);
+    let mut bus = match chip.arch {
+        // The classic ESP32 builds its peripherals from the CPU configuration
+        // rather than from the chip's peripheral list, so its external devices
+        // are attached afterwards — see `WasmSimulator::new_from_config`.
+        labwired_config::Arch::Xtensa => {
+            let mut bus = SystemBus::new();
+            let _ = labwired_core::system::xtensa::configure_xtensa_esp32(&mut bus);
+            labwired_core::system::xtensa::attach_esp32_external_devices(&mut bus, &manifest)
+                .expect("attach external devices");
+            bus
+        }
+        labwired_config::Arch::RiscV => {
+            let mut bus = SystemBus::from_config(&chip, &manifest).expect("build bus");
+            let _ = labwired_core::system::riscv::configure_riscv(&mut bus);
+            bus
+        }
+        _ => {
+            let mut bus = SystemBus::from_config(&chip, &manifest).expect("build bus");
+            let _ = labwired_core::system::cortex_m::configure_cortex_m(&mut bus);
+            bus
+        }
+    };
     bus.refresh_peripheral_index();
-    Machine::new(cpu, bus)
+    bus
 }
 
 /// Every artifact `inspect` reports for a device that has a `format`, with the
@@ -65,10 +82,8 @@ struct Reported {
     artifact: Artifact,
 }
 
-fn reported_displays(machine: &Machine<CortexM>, opts: &InspectOpts) -> Vec<Reported> {
-    machine
-        .inspect(None, opts)
-        .devices
+fn reported_displays(bus: &SystemBus, opts: &InspectOpts) -> Vec<Reported> {
+    bus.inspect_devices(None, opts)
         .into_iter()
         .flat_map(|d| {
             let bus = d.attachment.bus.clone();
@@ -120,8 +135,8 @@ fn placement_query_returns_what_inspect_reports_for_every_shipped_panel() {
     let mut panels_checked = 0;
 
     for lab in DISPLAY_LABS {
-        let machine = machine_from_example(lab);
-        let reported = reported_displays(&machine, &opts);
+        let bus = bus_from_example(lab);
+        let reported = reported_displays(&bus, &opts);
         assert!(
             !reported.is_empty(),
             "{lab} places a display but inspect reports no artifact for any device — \
@@ -133,8 +148,7 @@ fn placement_query_returns_what_inspect_reports_for_every_shipped_panel() {
             // Ask the OTHER question, with only what a `board_io` binding
             // knows: which controller, and (for an addressed transport) which
             // address.
-            let by_placement = machine
-                .bus
+            let by_placement = bus
                 .device_artifact_at(&r.bus, r.address, &[format], &r.id, &opts)
                 .unwrap_or_else(|| {
                     panic!(
@@ -187,35 +201,31 @@ fn placement_query_refuses_the_wrong_placement() {
         include_bytes: true,
         peripheral: None,
     };
-    let machine = machine_from_example("examples/ssd1306-hello-lab/system.yaml");
-    let reported = reported_displays(&machine, &opts);
+    let bus = bus_from_example("examples/ssd1306-hello-lab/system.yaml");
+    let reported = reported_displays(&bus, &opts);
     let panel = reported.first().expect("the lab places an OLED");
     let format = panel.artifact.meta["format"].as_str().expect("format");
 
     assert!(
-        machine
-            .bus
+        bus
             .device_artifact_at(&panel.bus, panel.address, &[format], &panel.id, &opts)
             .is_some(),
         "control: the real placement answers"
     );
     assert!(
-        machine
-            .bus
+        bus
             .device_artifact_at("i2c99", panel.address, &[format], &panel.id, &opts)
             .is_none(),
         "a controller the panel is not on must not answer for it"
     );
     assert!(
-        machine
-            .bus
+        bus
             .device_artifact_at(&panel.bus, Some(0x77), &[format], &panel.id, &opts)
             .is_none(),
         "an address the panel does not answer to must not answer for it"
     );
     assert!(
-        machine
-            .bus
+        bus
             .device_artifact_at(
                 &panel.bus,
                 panel.address,
@@ -235,7 +245,7 @@ fn placement_query_refuses_the_wrong_placement() {
 /// second.
 #[test]
 fn summary_mode_keeps_the_metadata_and_drops_only_the_payload() {
-    let machine = machine_from_example("examples/epaper-tricolor-lab/system.yaml");
+    let bus = bus_from_example("examples/epaper-tricolor-lab/system.yaml");
     let full = InspectOpts {
         include_bytes: true,
         peripheral: None,
@@ -244,11 +254,10 @@ fn summary_mode_keeps_the_metadata_and_drops_only_the_payload() {
         include_bytes: false,
         peripheral: None,
     };
-    let reported = reported_displays(&machine, &full);
+    let reported = reported_displays(&bus, &full);
     let panel = reported.first().expect("the lab places an e-paper panel");
 
-    let lean = machine
-        .bus
+    let lean = bus
         .device_artifact_at(
             &panel.bus,
             panel.address,
