@@ -25,11 +25,21 @@ wasm-bindgen = "0.2.92"
 # transitive dep of `serde-wasm-bindgen`; pinning it here makes the direct
 # usage visible at the dep boundary.
 js-sys = "0.3"
-# Phase 2B.3c (issue #192): the browser sim runs ESP32-classic via
-# `configure_xtensa_esp32`, where every peripheral is migrated or inert — so the
-# event-scheduler's per-cycle-walk deletion gives ~2.4x throughput (1.48 -> 3.57
-# MIPS on the epaper firmware). Other arches keep the legacy walk; the feature is
-# behaviour-neutral for them (full suite green flag-on). Enabled here to ship it.
+# Phase 2B.1 (issue #192): the event-driven peripheral scheduler. THIS is the
+# one crate that ships it — the CLI deliberately leaves it off — so any bug that
+# needs the feature to reproduce is a browser-only bug by construction, and only
+# `--features event-scheduler` lanes can see it (see the classic-ESP32 gate in
+# `crates/core/tests/esp32_classic_walk_differential.rs`).
+#
+# The comment that used to live here claimed the browser's ESP32-classic bus had
+# "every peripheral migrated or inert", so the per-cycle-walk deletion was free
+# (~2.4x, 1.48 -> 3.57 MIPS on the epaper firmware). That was NOT true: uart0/1/2
+# and i2c0 are still legacy-walk models, and the classic bus asserted the
+# walk-deleted flag by hand rather than deriving it — which starved the UART of
+# ticks and livelocked arduino-esp32's TX-FIFO wait loop. The flag is derived
+# now, so classic ESP32 keeps its walk (and loses that throughput) until those
+# models are genuinely migrated. Walk deletion still applies on every bus that
+# actually earns it (C3, S3, nRF, RP2040, STM32).
 labwired-core = { path = "../core", features = ["event-scheduler"] }
 labwired-config = { path = "../config" }
 labwired-loader = { path = "../loader" }

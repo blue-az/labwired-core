@@ -339,9 +339,23 @@ impl Peripheral for Esp32Uart {
     }
 
     fn tick(&mut self) -> PeripheralTickResult {
+        self.tick_elapsed(1)
+    }
+
+    /// Shift TX bytes out at the baud rate over `cycles` of ELAPSED TIME.
+    ///
+    /// Measured in cycles, never in tick calls, so the baud rate is independent
+    /// of `peripheral_tick_interval` — the walk hands the batched interval in
+    /// here. This used to be `tick()` with a hardcoded `drain_accum += 1`, which
+    /// silently made the drain `interval`× too slow on any bus that batched
+    /// peripheral ticks (at interval 512, a 115200-baud byte took 512 × 20820
+    /// cycles instead of 20820). Byte-identical at interval 1. Same contract the
+    /// shared C3/S3 twin already documents — see
+    /// [`crate::peripherals::esp_uart::EspUart::tick_elapsed`].
+    fn tick_elapsed(&mut self, cycles: u64) -> PeripheralTickResult {
         let mut core = self.core.lock().unwrap();
         if !core.tx_fifo.is_empty() {
-            core.drain_accum += 1;
+            core.drain_accum += cycles;
             let per_byte = core.cycles_per_byte();
             while core.drain_accum >= per_byte && !core.tx_fifo.is_empty() {
                 core.drain_accum -= per_byte;
