@@ -899,11 +899,7 @@ fn scan_chip_collisions() -> Vec<Collision> {
                 if !overlap {
                     continue;
                 }
-                let (a, b) = if x.id <= y.id {
-                    (x, y)
-                } else {
-                    (y, x)
-                };
+                let (a, b) = if x.id <= y.id { (x, y) } else { (y, x) };
                 let detail = format!(
                     "{} @ {:#010x} (size {}) vs {} @ {:#010x} (size {})",
                     a.id,
@@ -1189,7 +1185,10 @@ mod scanner_unit_tests {
             !code.contains("X_BASE"),
             "test-module const leaked: {code:?}"
         );
-        assert!(code.contains("Y_BASE"), "production const was eaten: {code:?}");
+        assert!(
+            code.contains("Y_BASE"),
+            "production const was eaten: {code:?}"
+        );
     }
 
     #[test]

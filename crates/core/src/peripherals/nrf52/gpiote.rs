@@ -544,7 +544,10 @@ mod tests {
         g.write_u32(OFF_TASKS_OUT_0, 1).unwrap();
         let res = g.tick();
         // POLARITY=LoToHi forces high on TASKS_OUT: GPIO0.IN bit 7 set.
-        assert_eq!(res.mmio_writes, vec![(T_GPIO0_BASE + GPIO_IN_OFFSET, 1 << 7)]);
+        assert_eq!(
+            res.mmio_writes,
+            vec![(T_GPIO0_BASE + GPIO_IN_OFFSET, 1 << 7)]
+        );
     }
 
     #[test]
