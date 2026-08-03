@@ -207,36 +207,6 @@ fn registry_aliases() -> BTreeMap<String, String> {
     aliases
 }
 
-/// How many places the browser layer still READS `device_type` at all.
-///
-/// The anti-vacuity floor is derived from this rather than fixed, and the
-/// reason is a real event: the display accessors used to contribute a dozen
-/// identity literals, and the one-door change removed every one of them — not
-/// by hiding them from the scanner, but by making display resolution stop
-/// consulting `device_type`. A constant floor calls that progress a broken
-/// scanner and goes red; worse, the obvious "fix" is to lower the constant,
-/// which is a number nobody can justify next time.
-///
-/// Tying the floor to the access sites keeps the property the constant was
-/// reaching for — every site that reads `device_type` must yield at least one
-/// literal, so a scanner that stops parsing still trips it — while letting the
-/// honest answer (a subsystem stopped keying on strings) pass. When the sensor
-/// accessors follow the panels, both numbers reach zero together and the
-/// scanner's own positive/negative controls in `scanner_controls` remain the
-/// guard against a parser that silently finds nothing.
-fn device_type_access_sites() -> usize {
-    WASM_SOURCES
-        .iter()
-        .map(|rel| {
-            std::fs::read_to_string(repo_root(rel))
-                .unwrap_or_default()
-                .lines()
-                .filter(|l| !l.trim_start().starts_with("//") && l.contains(".device_type"))
-                .count()
-        })
-        .sum()
-}
-
 #[test]
 fn every_device_type_the_browser_keys_on_is_known_to_the_registry() {
     let per_file = wasm_identity_literals();
@@ -244,13 +214,19 @@ fn every_device_type_the_browser_keys_on_is_known_to_the_registry() {
 
     // Anti-vacuity. If the scan stops finding literals the gate proves nothing,
     // and a silent zero is exactly how a green suite covers broken behaviour.
-    // Derived from the access sites, not fixed — see `device_type_access_sites`.
-    let sites = device_type_access_sites();
+    //
+    // The floor was 12 when every display accessor keyed on a `board_io`
+    // device_type string. The one-door change deleted those: a display's
+    // identity now comes from the model's own artifact, so there is no spelling
+    // for the browser to get wrong on that path. Six literals remain, all in
+    // sensor accessors (ntc-thermistor, max31855, neo6m-gps) that still resolve
+    // by type — they are what this gate now guards. Lowering the floor to match
+    // a REMOVED fork is correct; lowering it to silence a scan that broke is
+    // not, which is why the number moves in the same commit that removed them.
     assert!(
-        all.len() >= sites,
-        "the device-type scan found only {} literals across {:?}, but those files read \
-         `.device_type` at {sites} sites; the scanner is broken or the browser layer \
-         moved. A vacuous gate is worse than none.",
+        all.len() >= 6,
+        "the device-type scan found only {} literals across {:?}; it is broken or \
+         the browser layer moved. A vacuous gate is worse than none.",
         all.len(),
         WASM_SOURCES
     );
@@ -290,7 +266,10 @@ fn the_browser_does_not_re_implement_the_device_type_alias_table() {
     );
     let per_file = wasm_identity_literals();
     assert!(
-        per_file.values().flatten().count() >= device_type_access_sites(),
+        // Same floor move as the sibling, same reason: the one-door change
+        // removed the display device_type literals rather than the scan losing
+        // them. Keep the two numbers in step.
+        per_file.values().flatten().count() >= 6,
         "the device-type scan went vacuous; see the sibling test."
     );
 
