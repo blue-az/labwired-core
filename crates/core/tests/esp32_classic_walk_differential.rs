@@ -33,23 +33,38 @@
 //! TXFIFO_CNT` pinned, and arduino-esp32's `while (128 - txfifo_cnt < 2)`
 //! wait-for-space loop spun forever before `loop()` ever ran.
 //!
-//! Both tests below are meaningful ONLY under `event-scheduler`; with the
-//! feature off `legacy_walk_disabled` is never read and the walk always runs.
-
-#![cfg(feature = "event-scheduler")]
+//! ## Why the two arms are gated differently
+//!
+//! The CONSEQUENCE of the lie needs `event-scheduler` to be observable — with
+//! the feature off, `legacy_walk_disabled` is never read and the walk always
+//! runs. So the observable arm is feature-gated.
+//!
+//! The LIE ITSELF is not. `legacy_walk_disabled`, `derive_walk_deletable` and
+//! `recompute_walk_deletable` exist in every build; only their *effect* is
+//! cfg-gated. So the structural arm compiles and runs under DEFAULT features,
+//! which is what lets the fast PR lane carry it at ~zero marginal cost. A gate
+//! that only runs nightly is a gate this bug can walk back through.
 
 use labwired_core::bus::SystemBus;
-use labwired_core::cpu::xtensa_lx7::XtensaLx7;
 use labwired_core::system::xtensa::configure_xtensa_esp32;
+
+#[cfg(feature = "event-scheduler")]
+use labwired_core::cpu::xtensa_lx7::XtensaLx7;
+#[cfg(feature = "event-scheduler")]
 use labwired_core::{AdvanceRequest, Bus, Cpu, Machine};
+#[cfg(feature = "event-scheduler")]
 use std::path::{Path, PathBuf};
+#[cfg(feature = "event-scheduler")]
 use std::sync::{Arc, Mutex};
 
 /// `UART_STATUS_REG` for UART0 on classic ESP32 (`DR_REG_UART_BASE + 0x1C`).
+#[cfg(feature = "event-scheduler")]
 const UART0_STATUS: u64 = 0x3FF4_001C;
 /// `UART_CLKDIV_REG` for UART0.
+#[cfg(feature = "event-scheduler")]
 const UART0_CLKDIV: u64 = 0x3FF4_0014;
 
+#[cfg(feature = "event-scheduler")]
 fn repo_root() -> PathBuf {
     // CARGO_MANIFEST_DIR = <root>/crates/core
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -62,6 +77,7 @@ fn repo_root() -> PathBuf {
 /// is the same ELF the Tier-1 matrix runs through the CLI, where its serial
 /// transcript is parsed and scored — so the firmware demonstrably emits UART
 /// bytes on the walk path. Here it is run under the BROWSER's policy instead.
+#[cfg(feature = "event-scheduler")]
 fn tier1_esp32_elf() -> PathBuf {
     repo_root().join("tests/fixtures/tier1/esp32.elf")
 }
@@ -69,6 +85,7 @@ fn tier1_esp32_elf() -> PathBuf {
 /// Build the classic-ESP32 machine exactly the way
 /// `WasmSimulator::new_from_config_xtensa_esp32` does: `configure_xtensa_esp32`,
 /// a TX sink on UART0, a real second LX6 as APP_CPU, ELF entry + seeded stacks.
+#[cfg(feature = "event-scheduler")]
 fn browser_like_machine(elf: &Path) -> (Machine<Box<dyn Cpu>>, Arc<Mutex<Vec<u8>>>) {
     let mut bus = SystemBus::new();
     let cpu = configure_xtensa_esp32(&mut bus);
@@ -94,6 +111,7 @@ fn browser_like_machine(elf: &Path) -> (Machine<Box<dyn Cpu>>, Arc<Mutex<Vec<u8>
 /// The browser's own policy knobs (`apply_browser_c3_policy` in
 /// `crates/wasm/src/lib.rs`, and the TS engine init): recommended tick interval
 /// straight from the bus, idle fast-forward on.
+#[cfg(feature = "event-scheduler")]
 fn apply_browser_policy(machine: &mut Machine<Box<dyn Cpu>>) -> u32 {
     let rec = machine.bus.max_safe_tick_interval();
     machine.config.peripheral_tick_interval = rec.max(1);
@@ -145,6 +163,7 @@ fn esp32_classic_walk_flag_is_derived_not_asserted() {
 /// Deliberately asserts on the sink (the thing a user sees in the serial pane),
 /// not on tick counts or on any flag — so it stays honest no matter how the
 /// scheduling is implemented.
+#[cfg(feature = "event-scheduler")]
 #[test]
 fn esp32_classic_serial_reaches_sink_under_browser_policy() {
     let elf = tier1_esp32_elf();

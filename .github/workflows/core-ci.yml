@@ -115,6 +115,21 @@ jobs:
       - name: Unit tests (default-members lib)
         run: cargo test --lib
 
+      # Walk-deletion honesty, on EVERY PR. The structural arm of this test
+      # needs no firmware, no `event-scheduler` recompile and no fixtures — it
+      # only asserts that a chip's `legacy_walk_disabled` is what the
+      # conservative derivation proves rather than a hand-written claim, and
+      # that check compiles under default features. Its observable twin (which
+      # does need `event-scheduler`) stays in `core-integrity`.
+      #
+      # It is here because the bug it covers shipped precisely BECAUSE the only
+      # lanes that could see it were nightly: a classic-ESP32 lab was 12/12 on
+      # the CLI and livelocked in the browser for as long as nobody ran a
+      # browser-configuration lane. A gate nobody runs on PRs is a gate this
+      # class walks back through.
+      - name: Walk-deletion derivation (PR-fast structural arm)
+        run: cargo test -p labwired-core --test esp32_classic_walk_differential
+
   # ── Main-branch integrity (push to main) — fuller than PR, still no matrices ─
   integrity:
     name: core-integrity
