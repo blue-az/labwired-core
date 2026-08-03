@@ -1693,10 +1693,44 @@ mod tests {
             "register needs a name, got {register}"
         );
         assert!(register["offset"].is_number(), "register needs an offset");
-        assert!(register["value"].is_number(), "register needs a value");
         assert!(
             register["fields"].is_array(),
             "register needs a fields array"
+        );
+
+        // `value` is deliberately number-OR-null: a register whose model
+        // implements no `peek` has no answer, and reporting 0 there would be
+        // indistinguishable from a real zero. `readable` must agree with it, so
+        // the tree can render an em dash instead of inventing data.
+        for peripheral in &decoding {
+            for reg in peripheral["registers"].as_array().expect("registers array") {
+                let has_value = reg["value"].is_number();
+                assert!(
+                    has_value || reg["value"].is_null(),
+                    "register value must be a number or null, got {}",
+                    reg["value"]
+                );
+                assert_eq!(
+                    reg["readable"].as_bool(),
+                    Some(has_value),
+                    "`readable` disagrees with `value` on {} — the tree would either \
+                     hide real data or render a null as though it were a reading",
+                    reg["name"]
+                );
+            }
+        }
+
+        // ...and at least one register must actually carry a reading, or the
+        // whole Peripherals tree is names with nothing behind them.
+        let readable_total: usize = decoding
+            .iter()
+            .flat_map(|p| p["registers"].as_array().expect("registers array"))
+            .filter(|r| r["value"].is_number())
+            .count();
+        assert!(
+            readable_total > 0,
+            "every decoded register is unreadable — the tree would show names and \
+             no values at all"
         );
 
         // `kind` is passed through from inspect so the UI can say "native" rather
