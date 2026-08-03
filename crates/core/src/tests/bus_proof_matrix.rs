@@ -502,3 +502,32 @@ fn cell_ordering_detects_a_downgrade() {
     deleted.remove(&cell("esp32", "uart"));
     assert_eq!(downgrades(&base, &deleted).len(), 1);
 }
+
+/// The ratchet's git plumbing must work BEFORE it has anything to compare.
+///
+/// `bus_proof_matrix_never_regresses` cannot bite until this file exists on
+/// `main`: until then `git_show` legitimately returns `None` and the arm skips.
+/// That is a window in which a broken `merge-base` or `git show` would look
+/// exactly like "no baseline yet", so this test closes it by resolving the
+/// merge base and reading a file that has been there all along.
+#[test]
+fn baseline_plumbing_can_read_the_merge_base() {
+    let Some(base) = merge_base_with_trunk() else {
+        assert!(
+            std::env::var("CI").is_err(),
+            "no `git merge-base HEAD origin/main` under CI — the lane needs \
+             fetch-depth: 0 and an origin/main ref"
+        );
+        eprintln!("SKIP: shallow/detached checkout with no origin/main");
+        return;
+    };
+    assert_eq!(base.len(), 40, "merge base is not a full sha: {base:?}");
+    let anchor = git_show(&base, "Cargo.toml")
+        .unwrap_or_else(|| panic!("`git show {base}:Cargo.toml` returned nothing"));
+    assert!(
+        anchor.contains("[workspace]"),
+        "read something from the merge base, but it is not the workspace manifest"
+    );
+    // And a path that has never existed must be reported as absent, not as "".
+    assert!(git_show(&base, "validation/definitely_not_a_file.json").is_none());
+}
