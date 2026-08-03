@@ -1177,7 +1177,7 @@ mod scanner_unit_tests {
             parse_base_const("const GPIO_IN_BASE: u32 = 0x510;"),
             Some(("GPIO_IN_BASE".to_string(), 0x510))
         );
-        assert!(0x510 < MMIO_FLOOR);
+        const { assert!(0x510 < MMIO_FLOOR) };
     }
 
     #[test]
