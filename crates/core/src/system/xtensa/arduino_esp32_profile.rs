@@ -92,7 +92,11 @@ const FIXED_STUBS: &[(&str, u32, rom_thunks::RomThunkFn)] = &[
         0x4008_bbd0,
         rom_thunks::nop_return_zero,
     ),
-    ("setCpuFrequencyMhz", 0x400e_99dc, rom_thunks::nop_return_zero),
+    (
+        "setCpuFrequencyMhz",
+        0x400e_99dc,
+        rom_thunks::nop_return_zero,
+    ),
     (
         "esp_ota_get_running_partition",
         0x400e_ae18,
@@ -236,7 +240,10 @@ const SPECIAL_STUBS: &[(&str, rom_thunks::RomThunkFn)] = &[
     // must run natively (its real ENTRY/RETW manage the window). Thunking the
     // wrapper returns via a0 = the caller's return address, corrupting the
     // first-task dispatch.
-    ("xthal_window_spill_nw", rom_thunks::xthal_window_spill_thunk),
+    (
+        "xthal_window_spill_nw",
+        rom_thunks::xthal_window_spill_thunk,
+    ),
     // Returns the caller's static buffer as the handle. Callers
     // (esp_newlib_locks_init in particular) assert the returned handle equals
     // the buffer they passed in — a nop_return_zero stub fails that check.
