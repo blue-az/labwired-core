@@ -37,7 +37,17 @@ jobs:
     name: pr-gate
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # Was 5. The browser-layer steps below (crates/wasm clippy + lib tests) are
+    # a real ~1.5 min of additional compile — crates/wasm is a cdylib outside
+    # default-members, so nothing earlier in this job has already built it.
+    # Measured runs sat at 3.0-4.6 min before; the first run WITH those steps
+    # hit 5m15s and was killed by this timeout mid-`labwired_wasm` test, which
+    # reads as a test failure and is not one.
+    #
+    # 10 buys headroom on a shared runner without hiding a real slowdown: if
+    # this job starts approaching 10 it has genuinely grown and the browser
+    # steps should move to their own job, the way pr-scheduler-observable did.
+    timeout-minutes: 10
     steps:
       # Full history required: generate_validation_status.py uses
       # `git log -1 --format=%cI -- <model>` for drift. Shallow checkout
