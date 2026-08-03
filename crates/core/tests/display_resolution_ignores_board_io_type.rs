@@ -47,19 +47,19 @@ fn wasm_inspect_source() -> String {
     std::fs::read_to_string(path).expect("read crates/wasm/src/inspect.rs")
 }
 
-/// Function bodies whose job is resolving or serving a DISPLAY.
+/// The display accessors the UI calls. Every one of these exists on `main` too,
+/// which is what makes this guard's red a REAL one: run it against unmodified
+/// `main` and it fails naming `get_ssd1306_framebuffer` and its six siblings,
+/// each of which opens by matching a `board_io` row's `device_type`. It does not
+/// fail because its subject is missing.
 ///
-/// Named individually rather than pattern-matched, so adding a display accessor
-/// means adding it here — a two-second edit that puts the new code under the
-/// guard, versus a regex that silently stops covering whatever it stops
-/// matching.
-const DISPLAY_RESOLUTION_FNS: &[&str] = &[
-    "fn display_artifact(",
-    "fn panel_artifact(",
-    "fn panel_bytes(",
-    "fn panel_meta(",
-    "fn refresh_generation(",
-    "pub fn get_display(",
+/// That distinction is the whole point. A guard whose only pre-fix failure is
+/// "the function I guard does not exist yet" passes vacuously the day someone
+/// deletes the thing it guards and updates the guard to match. These names are
+/// the stable, pre-existing surface; [`NEW_RESOLUTION_FNS`] holds the ones this
+/// change introduced, checked separately so their absence can never be mistaken
+/// for the defect.
+const SHIPPED_DISPLAY_ACCESSORS: &[&str] = &[
     "pub fn get_ssd1306_framebuffer(",
     "pub fn get_sh1107_framebuffer(",
     "pub fn get_ili9341_framebuffer(",
@@ -72,9 +72,27 @@ const DISPLAY_RESOLUTION_FNS: &[&str] = &[
     "pub fn get_uc8151d_refresh_generation(",
 ];
 
-/// The body of `signature`, brace-matched from its opening `{`. Comments are
-/// stripped first: this is about what the code READS, and a doc comment that
-/// mentions the field by name is documentation, not a dependency.
+/// The resolution helpers this change introduced. Absent on `main` by
+/// definition, so a missing one here is reported as "not applicable on this
+/// tree", never as the defect.
+const NEW_RESOLUTION_FNS: &[&str] = &[
+    "fn display_artifact(",
+    "fn panel_artifact(",
+    "fn panel_bytes(",
+    "fn panel_meta(",
+    "fn refresh_generation(",
+    "pub fn get_display(",
+];
+
+/// The body of `signature`, or `None` when this tree does not define it.
+/// Comments are stripped first: this is about what the code READS, and a doc
+/// comment that mentions the field by name is documentation, not a dependency.
+fn body_of_opt(source: &str, signature: &str) -> Option<String> {
+    source.find(signature)?;
+    Some(body_of(source, signature))
+}
+
+/// The body of `signature`, brace-matched from its opening `{`.
 fn body_of(source: &str, signature: &str) -> String {
     let start = source
         .find(signature)
@@ -109,11 +127,31 @@ fn body_of(source: &str, signature: &str) -> String {
 }
 
 /// No display path may decide what a device IS from `board_io`.
+///
+/// **This test fails on unmodified `main`, for the real reason.** Every one of
+/// the ten accessors below exists there and opens by matching a `board_io`
+/// row's `device_type`, so `main` reports:
+///
+/// ```text
+/// `pub fn get_ssd1306_framebuffer(` reads `device_type`. …
+/// ```
+///
+/// which is exactly the defect: a display's identity taken from a `board_io`
+/// row restating what `external_devices:` already declared, on a surface that
+/// only reads one of the two.
 #[test]
 fn no_display_path_resolves_a_device_by_board_io_device_type() {
     let source = wasm_inspect_source();
-    for signature in DISPLAY_RESOLUTION_FNS {
-        let body = body_of(&source, signature);
+    let subjects = SHIPPED_DISPLAY_ACCESSORS
+        .iter()
+        .map(|s| (*s, body_of(&source, s)))
+        // A helper this tree does not have is not evidence either way.
+        .chain(
+            NEW_RESOLUTION_FNS
+                .iter()
+                .filter_map(|s| body_of_opt(&source, s).map(|b| (*s, b))),
+        );
+    for (signature, body) in subjects {
         assert!(
             !body.contains("device_type"),
             "`{signature}` reads `device_type`. A display's identity comes from the model's \
@@ -136,6 +174,20 @@ fn no_display_path_resolves_a_device_by_board_io_device_type() {
 #[test]
 fn the_one_door_resolves_without_a_board_io_row() {
     let source = wasm_inspect_source();
+    // Deliberately a hard failure, not a skip: a guard that goes quiet when its
+    // subject disappears is how the thing it guards gets deleted unnoticed. On a
+    // tree that predates the door this is a "not implemented here" red, NOT a
+    // demonstration of the board_io defect — that one is
+    // `no_display_path_resolves_a_device_by_board_io_device_type`, which fails
+    // on unmodified main naming `get_ssd1306_framebuffer`.
+    assert!(
+        source.contains("pub fn get_display("),
+        "crates/wasm/src/inspect.rs defines no `get_display` — there is no one door on this \
+         tree. If you are running this against a checkout that predates it, that is expected \
+         and this test is not the defect demonstration; see \
+         `no_display_path_resolves_a_device_by_board_io_device_type`. If the door was deleted, \
+         restore it: without it a display declared only in `external_devices:` cannot render."
+    );
     let door = body_of(&source, "pub fn get_display(");
     assert!(
         !door.contains("board_io"),
