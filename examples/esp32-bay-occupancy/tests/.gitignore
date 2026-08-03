@@ -1,0 +1,3 @@
+
+# Local `run-all.sh` output (OUT=... defaults to ./.out).
+.out*/

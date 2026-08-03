@@ -1,6 +1,8 @@
 #[cfg(test)]
 pub mod builtin_chip_self_contained;
 #[cfg(test)]
+pub mod device_identity_one_home;
+#[cfg(test)]
 pub mod esp32;
 #[cfg(test)]
 pub mod esp32c3_i2c_waveform;
