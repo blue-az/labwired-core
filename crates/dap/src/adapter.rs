@@ -1191,6 +1191,7 @@ mod tests {
             memory_overrides: HashMap::new(),
             external_devices: Vec::new(),
             cosim_models: Vec::new(),
+            motor_models: Vec::new(),
             board_io: vec![labwired_config::BoardIoBinding {
                 id: "led".to_string(),
                 kind: labwired_config::BoardIoKind::Led,
@@ -1253,6 +1254,7 @@ mod tests {
             memory_overrides: HashMap::new(),
             external_devices: Vec::new(),
             cosim_models: Vec::new(),
+            motor_models: Vec::new(),
             board_io: vec![
                 labwired_config::BoardIoBinding {
                     id: "led".to_string(),
@@ -1329,6 +1331,7 @@ mod tests {
             memory_overrides: HashMap::new(),
             external_devices: Vec::new(),
             cosim_models: Vec::new(),
+            motor_models: Vec::new(),
             board_io: vec![labwired_config::BoardIoBinding {
                 id: "led".to_string(),
                 kind: labwired_config::BoardIoKind::Led,

@@ -136,6 +136,7 @@ fn dummy_manifest(path: &str) -> labwired_config::SystemManifest {
         chip: path.to_string(),
         external_devices: vec![],
         cosim_models: Vec::new(),
+        motor_models: Vec::new(),
         board_io: vec![],
         debug_uart: None,
         wifi_ap: None,

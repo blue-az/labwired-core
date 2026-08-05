@@ -9,6 +9,8 @@ use std::num::NonZeroU32;
 mod advance;
 mod boundary;
 mod plan;
+#[cfg(test)]
+pub(crate) use boundary::{CoreProgress, ExecutionMode};
 
 /// Controls whether an advance request observes configured breakpoints.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

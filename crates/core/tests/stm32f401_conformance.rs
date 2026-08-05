@@ -27,6 +27,7 @@ fn f401_bus() -> labwired_core::bus::SystemBus {
     let manifest = labwired_config::SystemManifest {
         parts: Vec::new(),
         cosim_models: Vec::new(),
+        motor_models: Vec::new(),
         walk_deleted: Some(false),
         schema_version: "1.0".to_string(),
         name: "stm32f401-conformance".to_string(),

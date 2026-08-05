@@ -31,6 +31,7 @@ fn main() {
     println!("cargo:rustc-link-arg-bin=firmware-l476-l4periphs2=-Tminimal.ld");
     println!("cargo:rustc-link-arg-bin=firmware-l476-cubemx-hal=-Tcubemx.ld");
     println!("cargo:rustc-link-arg-bin=firmware-l476-tim1-advanced=-Tminimal.ld");
+    println!("cargo:rustc-link-arg-bin=firmware-l476-bldc-six-step=-Tminimal.ld");
     println!("cargo:rustc-link-arg-bin=firmware-l476-r11=-Tminimal.ld");
     println!("cargo:rustc-link-arg-bin=firmware-l476-r12=-Tminimal.ld");
     println!("cargo:rerun-if-changed=memory.x");

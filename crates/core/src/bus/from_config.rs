@@ -241,6 +241,8 @@ impl SystemBus {
             servos: Vec::new(),
             step_dir_motors: Vec::new(),
             h_bridge_motors: Vec::new(),
+            motors: Vec::new(),
+            motor_cycle_anchor: 0,
             unipolar_steppers: Vec::new(),
             tm1637: Vec::new(),
             hx711: Vec::new(),
@@ -1194,6 +1196,7 @@ impl SystemBus {
         // peripheral (incl. the RCC, needed to map reg-name → offset) is on the
         // bus. Peripherals without a `clock:` field stay ungated.
         bus.resolve_clock_gates(&merged_peripherals)?;
+        bus.install_motor_models(manifest)?;
         // Walk-deletion decision (only consulted under the `event-scheduler`
         // feature; the legacy build always walks, so this is inert there).
         //

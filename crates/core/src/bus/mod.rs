@@ -32,6 +32,7 @@ mod from_config;
 mod mmio_activity;
 mod mmio_words;
 pub(crate) mod part_pack;
+mod motors;
 mod policy;
 mod profiles;
 mod resident_device;
@@ -43,6 +44,7 @@ pub use can_devices::*;
 pub use resident_device::BusResidentDevice;
 
 pub use bus_trace::{new_log, BusPayload, BusTraceEvent, BusTraceLog, I2cSym};
+pub use motors::MotorSnapshot;
 
 impl SystemBus {
     /// Describe the currently active legacy per-step entries.
@@ -373,6 +375,10 @@ pub struct SystemBus {
     /// H-bridge channels (L298N/TB6612). GPIO-observer driven.
     pub h_bridge_motors:
         Vec<std::sync::Arc<crate::peripherals::components::h_bridge_motor::HBridgeMotor>>,
+    /// Deterministic typed motor plants, resolved from the system manifest.
+    motors: Vec<motors::MotorRuntime>,
+    /// Last simulator-cycle boundary applied to `motors`.
+    motor_cycle_anchor: u64,
     /// 4-phase unipolar steppers (28BYJ-48 + ULN2003). GPIO-observer driven.
     pub unipolar_steppers:
         Vec<std::sync::Arc<crate::peripherals::components::unipolar_stepper::UnipolarStepper>>,

@@ -152,6 +152,12 @@ pub struct Timer {
     /// arrival (token mismatch) instead of racing the fresh chain.
     #[serde(skip)]
     arm_seq: u32,
+    /// Changes only when firmware rewrites timer state that invalidates an
+    /// external phase cursor. Natural counter advancement does not bump it.
+    #[serde(default)]
+    phase_revision: u64,
+    #[serde(skip)]
+    freeze_revision: Cell<u64>,
     /// Bus-published cycle clock (walk-free plan Part 1). `Some` once the bus
     /// registration choke attaches it; `None` keeps the model on the legacy
     /// walk path.
@@ -162,6 +168,41 @@ pub struct Timer {
 /// Full 32-bit ARR sentinel: the walk's `cnt > arr` overflow check can never
 /// fire, so the counter free-runs mod 2^32 with no update events.
 const ARR_NEVER_WRAPS: u32 = u32::MAX;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TimerChannelOutputSnapshot {
+    pub enabled: bool,
+    pub complementary_enabled: bool,
+    pub active_low: bool,
+    pub complementary_active_low: bool,
+    pub duty_fraction: f64,
+    pub mode: TimerChannelOutputMode,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TimerChannelOutputMode {
+    Unsupported,
+    Pwm1,
+    Pwm2,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TimerOutputSnapshot {
+    pub channels: [TimerChannelOutputSnapshot; 4],
+    pub dead_time_ticks: u16,
+    pub main_output_enabled: bool,
+    pub counter_enabled: bool,
+    pub period_ticks: u64,
+    /// Authoritative current counter and prescaler phase. Motor service samples
+    /// this before the timer advances the interval. The timer model currently
+    /// implements edge-aligned up-counting.
+    pub counter_ticks: u32,
+    pub prescaler_divisor: u64,
+    pub prescaler_phase: u32,
+    pub phase_revision: u64,
+    pub counter_frozen: bool,
+    pub freeze_revision: u64,
+}
 
 impl Timer {
     pub fn new() -> Self {
@@ -208,6 +249,8 @@ impl Timer {
             psc_cnt: Cell::new(0),
             anchor: Cell::new(0),
             arm_seq: 0,
+            phase_revision: 0,
+            freeze_revision: Cell::new(0),
             clock: None,
         }
     }
@@ -234,6 +277,51 @@ impl Timer {
     /// from the same bus assembly.
     pub fn force_legacy_walk(&mut self) {
         self.clock = None;
+    }
+
+    /// Read-only PWM state derived from the timer's register-owned truth.
+    pub fn output_snapshot(&self) -> TimerOutputSnapshot {
+        let period = u64::from(self.arr) + 1;
+        let ccr = [self.ccr1, self.ccr2, self.ccr3, self.ccr4];
+        let channels = std::array::from_fn(|channel| {
+            let shift = channel * 4;
+            let (ccmr, lane_shift) = match channel {
+                0 => (self.ccmr1, 0),
+                1 => (self.ccmr1, 8),
+                2 => (self.ccmr2, 0),
+                _ => (self.ccmr2, 8),
+            };
+            let output_mode = if ((ccmr >> lane_shift) & 0x3) != 0 {
+                TimerChannelOutputMode::Unsupported
+            } else {
+                match (ccmr >> (lane_shift + 4)) & 0x7 {
+                    0b110 => TimerChannelOutputMode::Pwm1,
+                    0b111 => TimerChannelOutputMode::Pwm2,
+                    _ => TimerChannelOutputMode::Unsupported,
+                }
+            };
+            TimerChannelOutputSnapshot {
+                enabled: (self.ccer & (1 << shift)) != 0,
+                active_low: (self.ccer & (1 << (shift + 1))) != 0,
+                complementary_enabled: self.advanced && (self.ccer & (1 << (shift + 2))) != 0,
+                complementary_active_low: self.advanced && (self.ccer & (1 << (shift + 3))) != 0,
+                duty_fraction: (f64::from(ccr[channel]) / period as f64).clamp(0.0, 1.0),
+                mode: output_mode,
+            }
+        });
+        TimerOutputSnapshot {
+            channels,
+            dead_time_ticks: decode_dead_time_ticks((self.bdtr & 0xff) as u8),
+            main_output_enabled: self.advanced && (self.bdtr & (1 << 15)) != 0,
+            counter_enabled: (self.cr1 & 1) != 0,
+            period_ticks: period,
+            counter_ticks: self.cnt.get(),
+            prescaler_divisor: u64::from(self.psc) + 1,
+            prescaler_phase: self.psc_cnt.get(),
+            phase_revision: self.phase_revision,
+            counter_frozen: self.irq_level_held(),
+            freeze_revision: self.freeze_revision.get(),
+        }
     }
 
     /// IRQ-level / counter-freeze predicate: the legacy `tick()` returns the
@@ -416,6 +504,7 @@ impl Timer {
     /// choke), so settings changes never straddle a window. Replays the walk
     /// EXACTLY, including the enabled-flag counter freeze.
     fn advance_to(&self, now: u64) {
+        let frozen_before = self.irq_level_held();
         let anchor = self.anchor.get();
         if now <= anchor {
             return;
@@ -482,6 +571,10 @@ impl Timer {
             }
         }
         self.sr.set(sr);
+        if frozen_before != self.irq_level_held() {
+            self.freeze_revision
+                .set(self.freeze_revision.get().wrapping_add(1));
+        }
         self.cnt.set(self.value_after_increments(v, m));
         // Prescaler phase: an increment tick resets it to 0; if the walk
         // froze at increment `m` it stays 0 for the rest of the window,
@@ -551,6 +644,16 @@ impl Timer {
     }
 
     fn write_reg(&mut self, offset: u64, value: u32) {
+        let frozen_before = self.irq_level_held();
+        let phase_mapping_before = (
+            self.cr1 & 1,
+            self.ccmr1,
+            self.ccmr2,
+            self.cnt.get(),
+            self.psc,
+            self.arr,
+        );
+        let explicit_update = offset == 0x14 && (value & 1) != 0;
         match offset {
             0x00 => self.cr1 = value & 0x3FF,
             // CR2 writable bits differ by layout. General-purpose (TIM2-5):
@@ -646,6 +749,30 @@ impl Timer {
             0x60 if self.advanced => self.or2 = value,
             _ => {}
         }
+        let phase_mapping_after = (
+            self.cr1 & 1,
+            self.ccmr1,
+            self.ccmr2,
+            self.cnt.get(),
+            self.psc,
+            self.arr,
+        );
+        if explicit_update || phase_mapping_before != phase_mapping_after {
+            self.phase_revision = self.phase_revision.wrapping_add(1);
+        }
+        if frozen_before != self.irq_level_held() {
+            self.freeze_revision
+                .set(self.freeze_revision.get().wrapping_add(1));
+        }
+    }
+}
+
+fn decode_dead_time_ticks(dtg: u8) -> u16 {
+    match dtg {
+        0x00..=0x7f => u16::from(dtg),
+        0x80..=0xbf => (64 + u16::from(dtg & 0x3f)) * 2,
+        0xc0..=0xdf => (32 + u16::from(dtg & 0x1f)) * 8,
+        _ => (32 + u16::from(dtg & 0x1f)) * 16,
     }
 }
 
@@ -675,6 +802,7 @@ impl crate::Peripheral for Timer {
     }
 
     fn tick(&mut self) -> crate::PeripheralTickResult {
+        let frozen_before = self.irq_level_held();
         // Never runs in scheduler mode (the walk skips `uses_scheduler()`
         // peripherals; the guard keeps a stray direct call from corrupting
         // the lazily-anchored state).
@@ -717,6 +845,10 @@ impl crate::Peripheral for Timer {
                 }
 
                 // Return true if Update Interrupt Enable (UIE) is set
+                if frozen_before != self.irq_level_held() {
+                    self.freeze_revision
+                        .set(self.freeze_revision.get().wrapping_add(1));
+                }
                 return crate::PeripheralTickResult {
                     irq: (self.dier & 1) != 0,
                     cycles: 0,
@@ -733,6 +865,10 @@ impl crate::Peripheral for Timer {
             }
         }
 
+        if frozen_before != self.irq_level_held() {
+            self.freeze_revision
+                .set(self.freeze_revision.get().wrapping_add(1));
+        }
         crate::PeripheralTickResult {
             irq: false,
             cycles: 0,
@@ -845,7 +981,7 @@ impl crate::Peripheral for Timer {
 
 #[cfg(test)]
 mod tests {
-    use super::Timer;
+    use super::{Timer, TimerChannelOutputMode};
     use crate::Peripheral;
 
     #[test]
@@ -929,6 +1065,80 @@ mod tests {
         let bdtr_hi = tim.read(0x45).unwrap();
         assert_eq!(bdtr_lo, 0x40);
         assert_eq!(bdtr_hi, 0x80);
+    }
+
+    #[test]
+    fn timer_output_snapshot_reports_disabled_outputs_and_moe() {
+        let mut tim = Timer::new_with_layout(16, true);
+        tim.write_u32(0x2C, 999).unwrap();
+        tim.write_u32(0x34, 250).unwrap();
+        tim.write_u32(0x20, 0x0005).unwrap(); // CC1E | CC1NE
+
+        let output = tim.output_snapshot();
+        assert!(!output.main_output_enabled);
+        assert_eq!(output.channels[0].duty_fraction, 0.25);
+        assert!(output.channels[0].enabled);
+        assert!(output.channels[0].complementary_enabled);
+        assert!(!output.counter_enabled);
+        assert_eq!(output.period_ticks, 1000);
+        assert_eq!(output.channels[0].mode, TimerChannelOutputMode::Unsupported);
+    }
+
+    #[test]
+    fn timer_output_snapshot_reports_polarity_duty_and_dead_time() {
+        let mut tim = Timer::new_with_layout(16, true);
+        tim.write_u32(0x2C, 99).unwrap();
+        tim.write_u32(0x34, 75).unwrap();
+        tim.write_u32(0x20, 0x000F).unwrap(); // E/P/NE/NP
+        tim.write_u32(0x18, 0x0060).unwrap(); // OC1M = PWM mode 1
+        tim.write_u32(0x44, (1 << 15) | 0x40).unwrap();
+        tim.write_u32(0x28, 3).unwrap(); // PSC=3: four CPU cycles per timer tick
+        tim.write_u32(0x00, 1).unwrap(); // CEN
+        assert!(!tim.tick().irq);
+        assert!(!tim.tick().irq);
+
+        let output = tim.output_snapshot();
+        assert!(output.main_output_enabled);
+        assert_eq!(output.dead_time_ticks, 64);
+        assert_eq!(output.channels[0].duty_fraction, 0.75);
+        assert!(output.channels[0].active_low);
+        assert!(output.channels[0].complementary_active_low);
+        assert!(output.counter_enabled);
+        assert_eq!(output.counter_ticks, 0);
+        assert_eq!(output.prescaler_divisor, 4);
+        assert_eq!(output.prescaler_phase, 2);
+        assert_eq!(output.period_ticks, 100);
+        assert_eq!(output.channels[0].mode, TimerChannelOutputMode::Pwm1);
+    }
+
+    #[test]
+    fn timer_phase_revision_tracks_only_phase_mapping_writes() {
+        let mut tim = Timer::new_with_layout(16, true);
+        assert_eq!(tim.output_snapshot().phase_revision, 0);
+        tim.write_u32(0x34, 25).unwrap(); // CCR is a live waveform change.
+        tim.write_u32(0x20, 1).unwrap(); // CCER/polarity is live too.
+        tim.write_u32(0x44, 1 << 15).unwrap(); // MOE does not remap phase.
+        assert_eq!(tim.output_snapshot().phase_revision, 0);
+
+        for (offset, value) in [
+            (0x24, 7),    // CNT
+            (0x28, 3),    // PSC
+            (0x2c, 99),   // ARR
+            (0x18, 0x60), // PWM mode
+            (0x00, 1),    // CEN transition
+            (0x14, 1),    // explicit update/reset
+        ] {
+            let before = tim.output_snapshot().phase_revision;
+            tim.write_u32(offset, value).unwrap();
+            assert!(tim.output_snapshot().phase_revision > before);
+        }
+        let revision = tim.output_snapshot().phase_revision;
+        assert!(!tim.tick().irq);
+        assert_eq!(
+            tim.output_snapshot().phase_revision,
+            revision,
+            "natural timer advancement must not invalidate an external cursor"
+        );
     }
 
     #[test]

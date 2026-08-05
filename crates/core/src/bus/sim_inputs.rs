@@ -187,6 +187,13 @@ impl SystemBus {
     /// `component` accepts), falling back to the peripheral's bus name.
     pub fn list_inputs(&mut self) -> Vec<(String, crate::sim_input::InputChannel)> {
         let mut out = Vec::new();
+        out.extend(self.motors.iter().map(|motor| {
+            let id = match motor {
+                crate::bus::motors::MotorRuntime::Dc { id, .. }
+                | crate::bus::motors::MotorRuntime::Bldc { id, .. } => id,
+            };
+            (id.clone(), crate::bus::motors::MOTOR_STALL_INPUT)
+        }));
         self.for_each_sim_input(&mut |name, si| {
             let owner = si.component_id().unwrap_or(name).to_string();
             for ch in si.input_channels() {
@@ -218,6 +225,7 @@ impl SystemBus {
         // Count matches first so ambiguity is a typed error, not a silent
         // "first wins".
         let mut matches = 0usize;
+        matches += self.matching_motor_stall_inputs(component, channel);
         self.for_each_sim_input(&mut |name, si| {
             if Self::component_matches(component, name, si)
                 && si.input_channels().iter().any(|c| c.key == channel)
@@ -238,6 +246,9 @@ impl SystemBus {
                 channel: channel.to_string(),
                 matches,
             });
+        }
+        if self.set_motor_input(component, channel, value)? {
+            return Ok(());
         }
         let mut result = Ok(());
         self.for_each_sim_input(&mut |name, si| {

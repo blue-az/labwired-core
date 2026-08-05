@@ -154,6 +154,19 @@ pub(crate) struct NamedU64 {
 pub(crate) struct AssertionResult {
     pub(crate) assertion: TestAssertion,
     pub(crate) passed: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) evidence: Option<AssertionEvidence>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub(crate) enum AssertionEvidence {
+    ShutdownLatency {
+        stimulus_cycle: u64,
+        token_cycle: u64,
+        latency_cycles: u64,
+        configured_max_cycles: u64,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -72,6 +72,7 @@ fn nrf54l15_bus() -> SystemBus {
     let manifest = labwired_config::SystemManifest {
         parts: Vec::new(),
         cosim_models: Vec::new(),
+        motor_models: Vec::new(),
         walk_deleted: Some(false),
         schema_version: "1.0".to_string(),
         name: "nrf54l15-boot".to_string(),

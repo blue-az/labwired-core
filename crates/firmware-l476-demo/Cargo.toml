@@ -37,6 +37,12 @@ test = false
 bench = false
 
 [[bin]]
+name = "firmware-l476-bldc-six-step"
+path = "src/bldc_six_step.rs"
+test = false
+bench = false
+
+[[bin]]
 name = "firmware-l476-r11"
 path = "src/dma_sdmmc_exti.rs"
 test = false

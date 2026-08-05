@@ -308,6 +308,7 @@ impl SystemBus {
         Vec<(String, u32)>,
         Vec<u32>,
     ) {
+        self.service_motor_models();
         let mut interrupts = Vec::new();
         let mut costs = Vec::new();
         let mut dma_requests = Vec::new();
@@ -1120,6 +1121,7 @@ impl SystemBus {
         interrupts: &mut Vec<u32>,
         costs: &mut Vec<PeripheralTickCost>,
     ) {
+        self.service_motor_models();
         interrupts.clear();
         costs.clear();
         // Walk-free fast path (mirror of `tick_peripherals_fully_impl`): the
@@ -1151,6 +1153,7 @@ impl SystemBus {
         &mut self,
         force_scheduler_walk: bool,
     ) -> (Vec<u32>, Vec<PeripheralTickCost>) {
+        self.service_motor_models();
         // Walk-free fast path: on a bus whose per-cycle tick has no orchestration
         // work (walk deleted, no bus-tick/GPIO/CAN services, HC-SR04 event-
         // scheduled), the only per-cycle duty left is aggregating enabled+pending

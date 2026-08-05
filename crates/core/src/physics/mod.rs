@@ -5,6 +5,7 @@
 // See the LICENSE file in the project root for full license information.
 
 pub mod fmi;
+pub mod motor;
 
 /// Interface for physical environmental models.
 pub trait PhysicalModel: Send {

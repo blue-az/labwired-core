@@ -1869,6 +1869,9 @@ impl<C: Cpu> Machine<C> {
                 return 0;
             }
             budget = budget.min(remaining);
+            if let Some(deadline) = self.bus.next_motor_service_deadline_cycle() {
+                budget = budget.min(deadline.saturating_sub(self.total_cycles).max(1));
+            }
 
             // A bus peripheral servicing an external medium (a medium-mode WiFi
             // MAC) must keep being pumped through the idle window or its inbound
@@ -1903,6 +1906,10 @@ impl<C: Cpu> Machine<C> {
             self.total_cycles += skipped as u64;
             self.idle_fast_forward_cycles_skipped += skipped as u64;
             self.bus.set_current_cycle(self.total_cycles);
+            // Motors are not scheduler heap entries. The budget above clamps
+            // to their explicit service deadline, so service them at that
+            // boundary before another idle skip can be planned.
+            self.bus.service_motor_models();
             self.bus.bus_trace.set_cycle(self.total_cycles);
             // Push-mode logic capture: stamp any pad writes made by the
             // scheduler events due at the end of the skipped window with the

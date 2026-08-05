@@ -21,6 +21,9 @@ impl<C: Cpu> Machine<C> {
         if let BatchPolicy::AtMost(cap) = request.batch_policy() {
             count = count.min(u64::from(cap.get()));
         }
+        if let Some(deadline) = self.bus.next_motor_service_deadline_cycle() {
+            count = count.min(deadline.saturating_sub(self.total_cycles).max(1));
+        }
 
         // Dual-core: only lockstep while APP is active or still in reset-hold.
         // WAITI-parked APP (FreeRTOS idle) lets PRO batch.
