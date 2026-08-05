@@ -356,7 +356,13 @@ impl SystemBus {
                         p_cfg,
                     )
                 })
-                .transpose()?;
+                .transpose()
+                .with_context(|| {
+                    format!(
+                        "chip plugin failed to build peripheral '{}' (type '{}')",
+                        p_cfg.id, p_cfg.r#type
+                    )
+                })?;
 
             // Per-family factories own their peripheral arms in their own modules,
             // so this central match stops growing (and shrinks as families migrate

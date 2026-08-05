@@ -45,9 +45,11 @@ pub struct ChipMap<'a> {
 }
 
 impl<'a> ChipMap<'a> {
-    /// Wrap the merged peripheral list. Built once in
-    /// [`crate::bus::SystemBus::from_config`] and passed down to the family
-    /// factories.
+    /// Wrap the merged peripheral list. Cheap (`Copy`, O(1) — a slice
+    /// reference): each call site that needs one constructs its own — the
+    /// nrf52 family factory per peripheral, the plugin dispatch per plugin —
+    /// rather than [`crate::bus::SystemBus::from_config`] building one up
+    /// front and threading it through.
     pub fn new(entries: &'a [PeripheralConfig]) -> Self {
         Self { entries }
     }

@@ -101,8 +101,63 @@ fn plugin_error_propagates_instead_of_falling_through() {
         Ok(_) => panic!("plugin Some(Err) must fail the bus build"),
         Err(e) => e,
     };
+    // `from_config_with_plugins` wraps the plugin's error in peripheral
+    // context, so the top-level message is the context line; the `{:#}`
+    // alternate format walks the whole chain.
+    let chain = format!("{err:#}");
     assert!(
-        err.to_string().contains("mock plugin build failure"),
-        "expected the plugin's own error, got: {err}"
+        chain.contains("mock plugin build failure"),
+        "expected the plugin's own error in the chain, got: {chain}"
     );
+    assert!(
+        chain.contains("mock0"),
+        "expected the peripheral id in the context, got: {chain}"
+    );
+}
+
+struct SystickClaimingPlugin;
+
+impl ChipPlugin for SystickClaimingPlugin {
+    fn api_version(&self) -> u32 {
+        PLUGIN_API_VERSION
+    }
+    fn try_build_peripheral(
+        &self,
+        ctx: &PeripheralBuildCtx<'_>,
+        _p_cfg: &PeripheralConfig,
+    ) -> Option<anyhow::Result<Box<dyn Peripheral>>> {
+        (ctx.canonical_type == "systick")
+            .then(|| Ok(Box::new(ConstPeripheral) as Box<dyn Peripheral>))
+    }
+}
+
+#[test]
+fn plugin_wins_over_in_tree_factory() {
+    // `systick` is built unconditionally by the in-tree generic factory
+    // (`peripherals::generic_factory::try_build`), so a plugin claiming it
+    // only answers when plugin dispatch runs FIRST.
+    let chip_yaml = r#"
+name: "mockchip"
+arch: "arm"
+core: "cortex-m0+"
+flash: { base: 0x0, size: "64KB" }
+ram: { base: 0x20000000, size: "4KB" }
+peripherals:
+  - { id: systick0, type: systick, base_address: 0xE000E010 }
+"#;
+    let chip: ChipDescriptor = serde_yaml::from_str(chip_yaml).expect("chip yaml parses");
+    let manifest = mock_manifest();
+
+    // Guard against a vacuous pass: without the plugin the in-tree model
+    // answers, and it does not return the plugin's marker byte.
+    let plain = SystemBus::from_config_with_plugins(&chip, &manifest, &[]).expect("bus builds");
+    assert_ne!(
+        plain.read_u8(0xE000_E010).ok(),
+        Some(0xA5),
+        "fixture is vacuous: in-tree systick already reads 0xA5"
+    );
+
+    let plugins: [&dyn ChipPlugin; 1] = [&SystickClaimingPlugin];
+    let bus = SystemBus::from_config_with_plugins(&chip, &manifest, &plugins).expect("bus builds");
+    assert_eq!(bus.read_u8(0xE000_E010).ok(), Some(0xA5));
 }
