@@ -1215,6 +1215,16 @@ pub struct InputSpec {
     /// Value the slot holds until driven. Absent ⇒ 0.0.
     #[serde(default)]
     pub default: Option<f64>,
+    /// Gaussian noise sigma applied per read, in `unit` (seeded, replay-safe).
+    #[serde(default)]
+    pub noise_sigma: Option<f64>,
+    /// Constant offset applied to the channel value, in `unit`.
+    #[serde(default)]
+    pub bias: Option<f64>,
+    /// First-order thermal-lag time constant in seconds; requires a bus that
+    /// drives `advance_time_us` (degrades to no lag elsewhere).
+    #[serde(default)]
+    pub thermal_tau_s: Option<f64>,
 }
 
 /// The `behavior.i2c` section of a declarative `i2c_device` — a datasheet-shaped
