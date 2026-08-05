@@ -1200,6 +1200,63 @@ pub fn lookup(descriptor_path: &str) -> Option<&'static str> {
         "stm32f411/wwdg.yaml" => Some(include_str!(
             "../../../../configs/peripherals/stm32f411/wwdg.yaml"
         )),
+        "stm32f767/adc1.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/stm32f767/adc1.yaml"
+        )),
+        "stm32f767/dbg.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/stm32f767/dbg.yaml"
+        )),
+        "stm32f767/dma1.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/stm32f767/dma1.yaml"
+        )),
+        "stm32f767/dma2.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/stm32f767/dma2.yaml"
+        )),
+        "stm32f767/exti.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/stm32f767/exti.yaml"
+        )),
+        "stm32f767/flash.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/stm32f767/flash.yaml"
+        )),
+        "stm32f767/gpioa.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/stm32f767/gpioa.yaml"
+        )),
+        "stm32f767/gpiob.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/stm32f767/gpiob.yaml"
+        )),
+        "stm32f767/gpioc.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/stm32f767/gpioc.yaml"
+        )),
+        "stm32f767/i2c1.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/stm32f767/i2c1.yaml"
+        )),
+        "stm32f767/iwdg.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/stm32f767/iwdg.yaml"
+        )),
+        "stm32f767/pwr.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/stm32f767/pwr.yaml"
+        )),
+        "stm32f767/rcc.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/stm32f767/rcc.yaml"
+        )),
+        "stm32f767/rtc.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/stm32f767/rtc.yaml"
+        )),
+        "stm32f767/spi1.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/stm32f767/spi1.yaml"
+        )),
+        "stm32f767/tim1.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/stm32f767/tim1.yaml"
+        )),
+        "stm32f767/tim2.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/stm32f767/tim2.yaml"
+        )),
+        "stm32f767/usart1.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/stm32f767/usart1.yaml"
+        )),
+        "stm32f767/usart2.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/stm32f767/usart2.yaml"
+        )),
         "stm32g474re/adc1.yaml" => Some(include_str!(
             "../../../../configs/peripherals/stm32g474re/adc1.yaml"
         )),

@@ -1,0 +1,290 @@
+# LabWired - Firmware Simulation Platform
+# Copyright (C) 2026 Andrii Shylenko
+#
+# This software is released under the MIT License.
+# See the LICENSE file in the project root for full license information.
+
+# STM32F767ZI — Cortex-M7, 2MB flash, 512KB SRAM. Reference board: Nucleo-F767ZI.
+# Descriptor reuses the F4-profile shared IP where the F7 carries the same block
+# (RCC/GPIO/USART/SPI/timers/DMA/EXTI/RTC/IWDG/flash/PWR per RM0410 vs RM0368);
+# F7 I2C is the modern v2 peripheral (same IP as L4/H5) and takes the stm32l4
+# profile. F7-only RCC registers (PLLSAICFGR, DCKCFGR1/2) and F7-only
+# peripherals (Ethernet, LTDC/DMA2D, CAN, USB OTG, SAI, QSPI, MDIOS, JPEG,
+# DFSDM, FMC/SDMMC) are NOT declared — see docs/boards/stm32f767.md.
+name: "stm32f767zi"
+arch: "arm"
+core: "cortex-m7"
+registers_count: 150
+flash:
+  base: 0x08000000
+  size: "2MB"
+ram:
+  base: 0x20000000
+  size: "512KB"
+peripherals:
+  - id: "rcc"
+    type: "rcc"
+    base_address: 0x40023800
+    size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f767/rcc.yaml"
+      # F7 RCC CR/PLLCFGR/CFGR/ENR/RSTR/BDCR/CSR match the F4 layout for
+      # bring-up (HSI16 default, PLL ready/SWS semantics). F7-only PLLSAI and
+      # DCKCFGR1/2 (peripheral clock muxing) are not modeled.
+      profile: "stm32f4"
+  - id: "gpioa"
+    type: "gpio"
+    base_address: 0x40020000
+    size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f767/gpioa.yaml"
+      profile: "stm32v2"
+      # SWD/JTAG defaults: PA13/14/15 in AF mode.
+      reset_moder: 0xA8000000
+      reset_pupdr: 0x64000000
+  - id: "gpiob"
+    type: "gpio"
+    base_address: 0x40020400
+    size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f767/gpiob.yaml"
+      profile: "stm32v2"
+      reset_moder: 0x00000280
+      reset_ospeedr: 0x000000C0
+      reset_pupdr: 0x00000100
+  - id: "gpioc"
+    type: "gpio"
+    base_address: 0x40020800
+    size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f767/gpioc.yaml"
+      profile: "stm32v2"
+  # GPIO D–K (RM0410 §7; contiguous 1KB blocks after GPIOC). No per-port
+  # debug schema yet — the v2 model is port-generic.
+  - id: "gpiod"
+    type: "gpio"
+    base_address: 0x40020C00
+    size: "1KB"
+    config:
+      profile: "stm32v2"
+  - id: "gpioe"
+    type: "gpio"
+    base_address: 0x40021000
+    size: "1KB"
+    config:
+      profile: "stm32v2"
+  - id: "gpiof"
+    type: "gpio"
+    base_address: 0x40021400
+    size: "1KB"
+    config:
+      profile: "stm32v2"
+  - id: "gpiog"
+    type: "gpio"
+    base_address: 0x40021800
+    size: "1KB"
+    config:
+      profile: "stm32v2"
+  - id: "gpioh"
+    type: "gpio"
+    base_address: 0x40021C00
+    size: "1KB"
+    config:
+      profile: "stm32v2"
+  - id: "gpioi"
+    type: "gpio"
+    base_address: 0x40022000
+    size: "1KB"
+    config:
+      profile: "stm32v2"
+  - id: "gpioj"
+    type: "gpio"
+    base_address: 0x40022400
+    size: "1KB"
+    config:
+      profile: "stm32v2"
+  - id: "gpiok"
+    type: "gpio"
+    base_address: 0x40022800
+    size: "1KB"
+    config:
+      profile: "stm32v2"
+  - id: "systick"
+    type: "systick"
+    base_address: 0xE000E010
+  - id: "uart2"
+    type: "uart"
+    base_address: 0x40004400
+    size: "1KB"
+    irq: 38
+    config:
+      debug_schema: "../peripherals/stm32f767/usart2.yaml"
+  # Nucleo-F767ZI ST-LINK VCP is on USART3 (PD8/PD9).
+  - id: "usart3"
+    type: "uart"
+    base_address: 0x40004800
+    size: "1KB"
+    irq: 39
+  - id: "uart1"
+    type: "uart"
+    base_address: 0x40011000
+    size: "1KB"
+    irq: 37
+    config:
+      debug_schema: "../peripherals/stm32f767/usart1.yaml"
+  - id: "usart6"
+    type: "uart"
+    base_address: 0x40011400
+    size: "1KB"
+    irq: 71
+  # I2C on F7 is the modern v2 peripheral (RM0410 §26 = L4 IP), not the F1/F4
+  # legacy one — stm32l4 profile. EV/ER NVIC pairs per RM0410 §10 vector table.
+  - id: "i2c1"
+    type: "i2c"
+    base_address: 0x40005400
+    size: "1KB"
+    irq: 31
+    config:
+      debug_schema: "../peripherals/stm32f767/i2c1.yaml"
+      profile: "stm32l4"
+      irq_error: 32
+  - id: "i2c2"
+    type: "i2c"
+    base_address: 0x40005800
+    size: "1KB"
+    irq: 33
+    config:
+      profile: "stm32l4"
+      irq_error: 34
+  - id: "i2c3"
+    type: "i2c"
+    base_address: 0x40005C00
+    size: "1KB"
+    irq: 72
+    config:
+      profile: "stm32l4"
+      irq_error: 73
+  - id: "i2c4"
+    type: "i2c"
+    base_address: 0x40006000
+    size: "1KB"
+    irq: 95
+    config:
+      profile: "stm32l4"
+      irq_error: 96
+  - id: "spi1"
+    type: "spi"
+    base_address: 0x40013000
+    size: "1KB"
+    irq: 35
+    config:
+      debug_schema: "../peripherals/stm32f767/spi1.yaml"
+      cr2_mask: 0xF7
+      cr1_mask: 0xEFFF
+    clock: { reg: "apb2enr", bit: 12 }
+  - id: "spi2"
+    type: "spi"
+    base_address: 0x40003800
+    size: "1KB"
+    irq: 36
+    clock: { reg: "apb1enr", bit: 14 }
+  - id: "spi3"
+    type: "spi"
+    base_address: 0x40003C00
+    size: "1KB"
+    irq: 51
+    clock: { reg: "apb1enr", bit: 15 }
+  - id: "flash"
+    type: "flash"
+    base_address: 0x40023C00
+    size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f767/flash.yaml"
+      # F7 flash interface adds ART accelerator bits; the F4 profile covers
+      # ACR/CR/OPTCR bring-up. F7-only ART reconfiguration is not modeled.
+      profile: "stm32f4"
+  - id: "pwr"
+    type: "pwr"
+    base_address: 0x40007000
+    size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f767/pwr.yaml"
+      profile: "stm32f4"
+  - id: "tim2"
+    type: "timer"
+    base_address: 0x40000000
+    size: "1KB"
+    irq: 28
+    config:
+      debug_schema: "../peripherals/stm32f767/tim2.yaml"
+      width: 32
+    clock: { reg: "apb1enr", bit: 0 }
+  - id: "tim1_pwm"
+    type: "timer"
+    base_address: 0x4001_0000
+    size: "1KB"
+    irq: 25
+    clock: { reg: "apb2enr", bit: 0 }
+    config:
+      debug_schema: "../peripherals/stm32f767/tim1.yaml"
+      advanced: true
+  - id: "adc1"
+    type: "adc"
+    base_address: 0x40012000
+    size: "1KB"
+    irq: 18
+    clock: { reg: "apb2enr", bit: 8 }
+    config:
+      debug_schema: "../peripherals/stm32f767/adc1.yaml"
+  - id: "iwdg"
+    type: "iwdg"
+    base_address: 0x40003000
+    size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f767/iwdg.yaml"
+  - id: "rtc"
+    type: "rtc"
+    base_address: 0x40002800
+    size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f767/rtc.yaml"
+  # EXTI — F767 implements 24 lines (0..23): 16 GPIO + PVD + RTC alarm +
+  # USB OTG FS wakeup + RTC tamper/timestamp + RTC wakeup + USB OTG HS wakeup.
+  - id: "exti"
+    type: "exti"
+    base_address: 0x4001_3C00
+    size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f767/exti.yaml"
+      lines: 24
+  - id: "nvic"
+    type: "nvic"
+    base_address: 0xE000E100
+    size: "1KB"
+  - id: "dbgmcu"
+    type: "dbgmcu"
+    base_address: 0xE004_2000
+    size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32f767/dbg.yaml"
+      # DBGMCU_IDCODE per RM0410 §38.6.1: DEV_ID=0x451 (F76x/F77x),
+      # REV_ID=0x1000.
+      idcode: 0x10006451
+  - id: "dma1"
+    type: "stm32f4_dma"
+    base_address: 0x4002_6000
+    size: "1KB"
+    clock: { reg: "ahb1enr", bit: 21 }
+    config:
+      debug_schema: "../peripherals/stm32f767/dma1.yaml"
+      # DMA1_Stream0..7 NVIC positions, same layout as F4 (RM0410 §10).
+      stream_irqs: [11, 12, 13, 14, 15, 16, 17, 47]
+  - id: "dma2"
+    type: "stm32f4_dma"
+    base_address: 0x4002_6400
+    size: "1KB"
+    clock: { reg: "ahb1enr", bit: 22 }
+    config:
+      debug_schema: "../peripherals/stm32f767/dma2.yaml"
+      dma2: true
+      stream_irqs: [56, 57, 58, 59, 60, 68, 69, 70]

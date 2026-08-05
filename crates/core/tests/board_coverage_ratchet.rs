@@ -405,6 +405,12 @@ fn every_shipped_descriptor_is_ratcheted() {
         // no catalog board, no silicon oracle, no executing-fidelity
         // differential. Promote when a real F405 board ships and is benched.
         "stm32f405",
+        // M7 on the F4-profile shared IP (F7 I2C = v2/stm32l4 profile),
+        // smoke-validated via the nucleo-f767zi example only: no catalog
+        // board, no silicon oracle, and the F7-only RCC registers
+        // (PLLSAI/DCKCFGR) are unmodeled. Promote when benched on F767
+        // silicon and the clock-tree gap closes.
+        "stm32f767",
         // WeAct F411 Black Pill. Has a tier-1 fixture + io-smoke and rides the
         // shared stm32f4 peripheral models, but it is not a bundled-configs.ts
         // catalog board and carries NO executing-fidelity test of its own (no
