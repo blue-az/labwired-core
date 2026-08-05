@@ -676,15 +676,20 @@ impl ChipDescriptor {
 
     /// Like [`Self::resolve`], but bare names not found among the built-ins are
     /// offered to `plugin_chips` (chip name → embedded YAML) before giving up.
+    /// Built-ins win over plugin chips; path-like specs bypass the closure
+    /// entirely; plugin YAML is parsed with the same [`ChipDescriptor`] schema
+    /// as built-ins.
     pub fn resolve_with(
         spec: &str,
         base_dir: &Path,
         plugin_chips: &dyn Fn(&str) -> Option<&'static str>,
     ) -> Result<Self> {
         if is_builtin_chip_spec(spec) {
-            if let Some(yaml) = embedded_chip_yaml(spec).or_else(|| plugin_chips(spec)) {
+            let builtin = embedded_chip_yaml(spec);
+            let source = if builtin.is_some() { "built-in" } else { "plugin" };
+            if let Some(yaml) = builtin.or_else(|| plugin_chips(spec)) {
                 return serde_yaml::from_str(yaml)
-                    .with_context(|| format!("Failed to parse built-in chip descriptor '{spec}'"));
+                    .with_context(|| format!("Failed to parse {source} chip descriptor '{spec}'"));
             }
             if MOVED_CHIP_NAMES.contains(&spec) {
                 anyhow::bail!(
@@ -5328,10 +5333,13 @@ mod builtin_chip_tests {
 
     #[test]
     fn resolve_with_prefers_builtins_over_plugin_chips() {
-        let d = ChipDescriptor::resolve_with("stm32f103", Path::new("."), &|_| {
-            Some("name: \"impostor\"\n")
-        })
-        .unwrap();
+        // A complete, valid descriptor: if precedence inverted, this parses and
+        // the assert below fails on the name — not on a parse panic.
+        let impostor = "name: \"impostor\"\narch: \"arm\"\ncore: \"cortex-m0+\"\n\
+                        flash: { base: 0, size: \"4KB\" }\n\
+                        ram: { base: 0x20000000, size: \"1KB\" }\nperipherals: []\n";
+        let d = ChipDescriptor::resolve_with("stm32f103", Path::new("."), &|_| Some(impostor))
+            .unwrap();
         assert_eq!(d.name, "stm32f103c8");
     }
 
