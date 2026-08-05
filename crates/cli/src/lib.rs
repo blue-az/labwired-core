@@ -2414,16 +2414,16 @@ fn execute_test_loop<C: labwired_core::Cpu>(
     let mut all_passed = true;
     let mut expected_stop_reason_matched = false;
 
-    for (assertion_index, assertion) in assertions.into_iter().enumerate() {
-        let passed = match &assertion {
+    for (assertion_index, assertion) in assertions.iter().enumerate() {
+        let passed = match assertion {
             TestAssertion::UartContains(a) => uart_text.contains(&a.uart_contains),
             TestAssertion::UartRegex(a) => simple_regex_is_match(&a.uart_regex, &uart_text),
             TestAssertion::UartOrdered(_) | TestAssertion::MotorState(_) => {
-                assertion_currently_passes(&assertion, &uart_text, machine)
+                assertion_currently_passes(assertion, &uart_text, machine)
             }
             TestAssertion::MotorSpeedReached(_) => {
                 assertion_latched[assertion_index]
-                    || assertion_currently_passes(&assertion, &uart_text, machine)
+                    || assertion_currently_passes(assertion, &uart_text, machine)
             }
             TestAssertion::ShutdownLatency(a) => shutdown_latency_passes(
                 &a.shutdown_latency,
