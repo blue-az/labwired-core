@@ -486,6 +486,7 @@ fn run_on_machine(
 #[allow(clippy::type_complexity)]
 fn build_bus_and_uart(
     system: &Path,
+    plugins: &[&dyn labwired_core::plugin::ChipPlugin],
 ) -> Result<
     (
         labwired_core::bus::SystemBus,
@@ -497,8 +498,11 @@ fn build_bus_and_uart(
     let resolved = labwired_config::ResolvedSystem::from_manifest_file(system)
         .map_err(|e| format!("failed to load system manifest {}: {e:#}", system.display()))?;
 
-    let mut bus = labwired_core::system::builder::build_system_bus(Some(&resolved))
-        .map_err(|e| format!("failed to build system bus: {e:#}"))?;
+    let mut bus = labwired_core::system::builder::build_system_bus_with_plugins(
+        Some(&resolved),
+        plugins,
+    )
+    .map_err(|e| format!("failed to build system bus: {e:#}"))?;
 
     let manifest = resolved.manifest.clone();
     let debug_uart = manifest.debug_uart.clone();
@@ -535,7 +539,7 @@ fn build_bus_and_uart(
 }
 
 /// Entry point for `labwired debug-probe`.
-pub fn run(args: DebugProbeArgs) -> ExitCode {
+pub fn run(args: DebugProbeArgs, plugins: &[&dyn labwired_core::plugin::ChipPlugin]) -> ExitCode {
     let read = ReadSet::parse(&args.read);
 
     let firmware = match &args.firmware {
@@ -598,7 +602,7 @@ pub fn run(args: DebugProbeArgs) -> ExitCode {
         }
     };
 
-    let (mut bus, uart_tx, _manifest) = match build_bus_and_uart(&args.system) {
+    let (mut bus, uart_tx, _manifest) = match build_bus_and_uart(&args.system, plugins) {
         Ok(v) => v,
         Err(detail) => {
             let mut res = DebugProbeResult::error("SYSTEM_LOAD", &detail);

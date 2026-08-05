@@ -671,16 +671,36 @@ impl ChipDescriptor {
     /// vendor a copy of our chip descriptor — a copy that silently keeps the
     /// bugs we have since fixed.
     pub fn resolve(spec: &str, base_dir: &Path) -> Result<Self> {
+        Self::resolve_with(spec, base_dir, &|_| None)
+    }
+
+    /// Like [`Self::resolve`], but bare names not found among the built-ins are
+    /// offered to `plugin_chips` (chip name → embedded YAML) before giving up.
+    /// Built-ins win over plugin chips; path-like specs bypass the closure
+    /// entirely; plugin YAML is parsed with the same [`ChipDescriptor`] schema
+    /// as built-ins.
+    pub fn resolve_with(
+        spec: &str,
+        base_dir: &Path,
+        plugin_chips: &dyn Fn(&str) -> Option<&'static str>,
+    ) -> Result<Self> {
         if is_builtin_chip_spec(spec) {
-            let yaml = embedded_chip_yaml(spec).ok_or_else(|| {
-                anyhow::anyhow!(
-                    "unknown built-in chip '{spec}'. Available: {}. \
-                     To use your own descriptor, give a path such as './chip.yaml'.",
-                    BUILTIN_CHIP_NAMES.join(", ")
-                )
-            })?;
-            return serde_yaml::from_str(yaml)
-                .with_context(|| format!("Failed to parse built-in chip descriptor '{spec}'"));
+            let builtin = embedded_chip_yaml(spec);
+            let source = if builtin.is_some() { "built-in" } else { "plugin" };
+            if let Some(yaml) = builtin.or_else(|| plugin_chips(spec)) {
+                return serde_yaml::from_str(yaml)
+                    .with_context(|| format!("Failed to parse {source} chip descriptor '{spec}'"));
+            }
+            if MOVED_CHIP_NAMES.contains(&spec) {
+                anyhow::bail!(
+                    "chip '{spec}' is not part of the open catalog; it requires labwired-pro"
+                );
+            }
+            anyhow::bail!(
+                "unknown built-in chip '{spec}'. Available: {}. \
+                 To use your own descriptor, give a path such as './chip.yaml'.",
+                BUILTIN_CHIP_NAMES.join(", ")
+            );
         }
         Self::from_file(base_dir.join(spec))
     }
@@ -723,6 +743,11 @@ pub const BUILTIN_CHIP_NAMES: &[&str] = &[
     "stm32wb55",
     "stm32wba52",
 ];
+
+/// Chips that moved to the private `labwired-ip` repo. Kept so users get a
+/// pointed error instead of "unknown chip". Empty until the first chip
+/// migrates; `resolve`/`resolve_with` check it before the unknown-chip error.
+pub const MOVED_CHIP_NAMES: &[&str] = &[];
 
 /// The embedded `configs/chips/*.yaml` descriptors, keyed by built-in name.
 /// `include_str!` bundles them so a released binary carries them and wasm
@@ -2391,9 +2416,19 @@ impl ResolvedSystem {
 
     /// A bare MCU: the named built-in chip, no external devices, no board I/O.
     pub fn from_builtin_chip(chip: &str) -> Result<Self> {
+        Self::from_builtin_chip_with_plugins(chip, &|_| None)
+    }
+
+    /// Like [`Self::from_builtin_chip`], but bare names not found among the
+    /// built-ins are offered to `plugin_chips` (chip name → embedded YAML)
+    /// before giving up.
+    pub fn from_builtin_chip_with_plugins(
+        chip: &str,
+        plugin_chips: &dyn Fn(&str) -> Option<&'static str>,
+    ) -> Result<Self> {
         // Fail here rather than at first use, so an unknown name is a config
         // error before the run starts.
-        ChipDescriptor::resolve(chip, Path::new("."))?;
+        ChipDescriptor::resolve_with(chip, Path::new("."), plugin_chips)?;
         Ok(Self {
             manifest: SystemManifest {
                 parts: Vec::new(),
@@ -2409,7 +2444,16 @@ impl ResolvedSystem {
 
     /// The chip descriptor this system runs on.
     pub fn chip(&self) -> Result<ChipDescriptor> {
-        ChipDescriptor::resolve(&self.manifest.chip, &self.base_dir)
+        self.chip_with_plugins(&|_| None)
+    }
+
+    /// Like [`Self::chip`], but bare names not found among the built-ins are
+    /// offered to `plugin_chips` (chip name → embedded YAML) before giving up.
+    pub fn chip_with_plugins(
+        &self,
+        plugin_chips: &dyn Fn(&str) -> Option<&'static str>,
+    ) -> Result<ChipDescriptor> {
+        ChipDescriptor::resolve_with(&self.manifest.chip, &self.base_dir, plugin_chips)
     }
 
     pub fn base_dir(&self) -> &Path {
@@ -5292,6 +5336,58 @@ mod builtin_chip_tests {
         assert!(!is_builtin_chip_spec("stm32f103.yaml"));
         assert!(!is_builtin_chip_spec("chips/stm32f103"));
         assert!(is_builtin_chip_spec("stm32f103"));
+    }
+
+    #[test]
+    fn resolve_with_falls_back_to_plugin_chips() {
+        let yaml = "name: \"secret1\"\narch: \"arm\"\ncore: \"cortex-m0+\"\n\
+                    flash: { base: 0, size: \"4KB\" }\n\
+                    ram: { base: 0x20000000, size: \"1KB\" }\nperipherals: []\n";
+        let d = ChipDescriptor::resolve_with("secret1", Path::new("."), &|name| {
+            (name == "secret1").then_some(yaml)
+        })
+        .unwrap();
+        assert_eq!(d.name, "secret1");
+    }
+
+    #[test]
+    fn resolve_with_prefers_builtins_over_plugin_chips() {
+        // A complete, valid descriptor: if precedence inverted, this parses and
+        // the assert below fails on the name — not on a parse panic.
+        let impostor = "name: \"impostor\"\narch: \"arm\"\ncore: \"cortex-m0+\"\n\
+                        flash: { base: 0, size: \"4KB\" }\n\
+                        ram: { base: 0x20000000, size: \"1KB\" }\nperipherals: []\n";
+        let d = ChipDescriptor::resolve_with("stm32f103", Path::new("."), &|_| Some(impostor))
+            .unwrap();
+        assert_eq!(d.name, "stm32f103c8");
+    }
+
+    #[test]
+    fn resolve_with_keeps_the_unknown_chip_error_without_a_plugin_match() {
+        let err = ChipDescriptor::resolve_with("stm32f999", Path::new("."), &|_| None).unwrap_err();
+        let msg = format!("{err:#}");
+        assert!(msg.contains("unknown built-in chip 'stm32f999'"), "{msg}");
+        assert!(msg.contains("stm32f103"), "{msg}");
+    }
+
+    #[test]
+    fn resolve_with_still_loads_paths_from_file() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("custom.yaml"),
+            embedded_chip_yaml("stm32f103").unwrap(),
+        )
+        .unwrap();
+        let chip = ChipDescriptor::resolve_with("./custom.yaml", dir.path(), &|_| None).unwrap();
+        assert_eq!(chip.name, "stm32f103c8");
+    }
+
+    // The `MOVED_CHIP_NAMES` tombstone branch in `resolve_with` is exercised
+    // once the first chip migrates to the private `labwired-ip` repo; until
+    // then the list is empty and there is nothing to resolve against.
+    #[test]
+    fn no_chips_have_migrated_yet() {
+        assert!(MOVED_CHIP_NAMES.is_empty());
     }
 
     fn script_with_inputs(inputs: &str) -> Result<TestScript> {

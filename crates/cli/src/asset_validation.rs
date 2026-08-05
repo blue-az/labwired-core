@@ -130,9 +130,12 @@ impl ValidationResult {
     }
 }
 
-pub fn run_validate(args: ValidateArgs) -> ExitCode {
+pub fn run_validate(
+    args: ValidateArgs,
+    plugins: &[&dyn labwired_core::plugin::ChipPlugin],
+) -> ExitCode {
     if let Some(path) = args.system {
-        validate_system(&path)
+        validate_system(&path, plugins)
     } else if let Some(path) = args.chip {
         validate_chip(&path)
     } else {
@@ -141,7 +144,7 @@ pub fn run_validate(args: ValidateArgs) -> ExitCode {
     }
 }
 
-fn validate_system(path: &PathBuf) -> ExitCode {
+fn validate_system(path: &PathBuf, plugins: &[&dyn labwired_core::plugin::ChipPlugin]) -> ExitCode {
     let mut result = ValidationResult::new(format!("SystemManifest: {:?}", path));
 
     // 1. Load System Manifest
@@ -195,7 +198,11 @@ fn validate_system(path: &PathBuf) -> ExitCode {
         chip_dir.join(&system.chip)
     };
 
-    let chip = match ChipDescriptor::resolve(&system.chip, chip_dir) {
+    let chip = match ChipDescriptor::resolve_with(
+        &system.chip,
+        chip_dir,
+        &crate::plugin_chip_yaml(plugins),
+    ) {
         Ok(c) => c,
         Err(e) => {
             result.add_error(

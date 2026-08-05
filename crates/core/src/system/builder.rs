@@ -14,9 +14,19 @@ use tracing::info;
 pub fn build_system_bus(
     system: Option<&labwired_config::ResolvedSystem>,
 ) -> anyhow::Result<SystemBus> {
+    build_system_bus_with_plugins(system, &[])
+}
+
+/// [`build_system_bus`] with out-of-tree chip plugins: the system's chip
+/// resolves against the plugins' embedded YAMLs, and each peripheral type is
+/// offered to the plugins before the in-tree factories.
+pub fn build_system_bus_with_plugins(
+    system: Option<&labwired_config::ResolvedSystem>,
+    plugins: &[&dyn crate::plugin::ChipPlugin],
+) -> anyhow::Result<SystemBus> {
     let bus = if let Some(system) = system {
         info!("Loading chip descriptor: {}", system.manifest.chip);
-        let chip = system.chip()?;
+        let chip = system.chip_with_plugins(&|name| plugins.iter().find_map(|p| p.chip_yaml(name)))?;
         let mut manifest = system.manifest.clone();
         // Peripheral descriptor paths inside a chip file are resolved relative
         // to it, so a file-backed chip keeps its full path. A built-in name has
@@ -28,7 +38,7 @@ pub fn build_system_bus(
                 .to_string_lossy()
                 .into_owned();
         }
-        SystemBus::from_config(&chip, &manifest)?
+        SystemBus::from_config_with_plugins(&chip, &manifest, plugins)?
     } else {
         info!("Using default hardware configuration");
         SystemBus::new()
@@ -68,9 +78,20 @@ pub fn build_esp32_system_from_manifest(
     manifest: &labwired_config::SystemManifest,
     system_path: &Path,
 ) -> anyhow::Result<(SystemBus, XtensaLx7, XtensaLx7)> {
+    build_esp32_system_from_manifest_with_plugins(manifest, system_path, &|_| None)
+}
+
+/// [`build_esp32_system_from_manifest`] with plugin chip lookup: bare chip
+/// names not found among the built-ins are offered to `plugin_chips` (chip
+/// name → embedded YAML) before giving up.
+pub fn build_esp32_system_from_manifest_with_plugins(
+    manifest: &labwired_config::SystemManifest,
+    system_path: &Path,
+    plugin_chips: &dyn Fn(&str) -> Option<&'static str>,
+) -> anyhow::Result<(SystemBus, XtensaLx7, XtensaLx7)> {
     let chip_dir = system_path.parent().unwrap_or_else(|| Path::new("."));
     info!("Loading chip descriptor: {}", manifest.chip);
-    let chip = labwired_config::ChipDescriptor::resolve(&manifest.chip, chip_dir)?;
+    let chip = labwired_config::ChipDescriptor::resolve_with(&manifest.chip, chip_dir, plugin_chips)?;
 
     let mut bus = SystemBus::new();
     let pro_cpu = crate::system::xtensa::configure_xtensa_esp32(&mut bus);
