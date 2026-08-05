@@ -243,6 +243,7 @@ impl SystemBus {
             h_bridge_motors: Vec::new(),
             motors: Vec::new(),
             motor_cycle_anchor: 0,
+            ili9341_parallel: Vec::new(),
             unipolar_steppers: Vec::new(),
             tm1637: Vec::new(),
             hx711: Vec::new(),
@@ -422,6 +423,13 @@ impl SystemBus {
                 {
                     for ext in &manifest.external_devices {
                         if ext.connection != p_cfg.id {
+                            continue;
+                        }
+                        // Kits are attached by the universal pass after the
+                        // controller is on the bus (nRF factories skip kit
+                        // types in their own loop). Only mark factory-only
+                        // residue as already attached.
+                        if crate::peripherals::kit::registry::lookup(&ext.r#type).is_some() {
                             continue;
                         }
                         // Only suppress the kit pass when the family factory
@@ -1041,6 +1049,9 @@ impl SystemBus {
                     Self::install_gpio_observer(&mut bus, motor.clone());
                     bus.unipolar_steppers.push(motor);
                 }
+                // ili9341-16bit / ili9341_16bit: PeripheralKit registry
+                // (`Ili9341ParallelKit`, Transport::GpioGroup) — see
+                // peripherals::kit and ili9341_parallel.rs.
                 "can-diagnostic-tester" | "uds-diagnostic-tester" => {
                     if bus.find_peripheral_index_by_name(&ext.connection).is_none() {
                         return Err(anyhow::anyhow!(
@@ -1293,7 +1304,10 @@ impl SystemBus {
     }
 
     /// Install a GPIO edge observer on ESP32 / ESP32-S3 GPIO models when present.
-    fn install_gpio_observer<T>(bus: &mut SystemBus, observer: std::sync::Arc<T>)
+    ///
+    /// Public so kits (`Transport::GpioGroup`) and hand arms share one choke
+    /// point — the same path `AttachCtx::install_gpio_observer` uses.
+    pub fn install_gpio_observer<T>(bus: &mut SystemBus, observer: std::sync::Arc<T>)
     where
         T: crate::peripherals::esp32s3::gpio::GpioObserver
             + crate::peripherals::esp32::gpio::GpioObserver

@@ -278,84 +278,19 @@ impl WasmSimulator {
         Ok(())
     }
 
-    /// Read back the current sensor data from each I2C sensor declared in `board_io`.
-    /// Returns `[{ id, kind: "adxl345", x, y, z }, ...]` or `[{ id, kind: "mpu6050", ax, ay, az, gx, gy, gz }, ...]`.
+    /// Read back live I²C sensor samples for the canvas.
     ///
-    /// BME280 is intentionally OMITTED: its component model exposes no
-    /// register-backed temperature/humidity/pressure value to read (static
-    /// factory registers only, not SimInput-drivable). Rather than fabricate a
-    /// number, we emit no entry so the panel shows a tracked gap.
+    /// Identity comes from `external_devices:` (the one home for bus parts) —
+    /// **not** a second `board_io` twin. Returns
+    /// `[{ id, kind: "adxl345", x, y, z }, ...]` or
+    /// `[{ id, kind: "mpu6050", ax, ay, az, gx, gy, gz }, ...]`.
+    ///
+    /// BME280 is intentionally OMITTED: its model has no register-backed
+    /// engineering-unit sample API for the panel (SimInput is the stimulus path).
     #[wasm_bindgen]
     pub fn get_i2c_sensor_states(&self) -> JsValue {
         let machine = self.machine.as_ref().unwrap();
-        let mut states: Vec<serde_json::Value> = Vec::new();
-
-        for binding in &self.board_io {
-            let device_type = match binding.device_type.as_deref() {
-                Some(t) if t == "adxl345" || t == "mpu6050" => t,
-                _ => continue,
-            };
-            let Some(idx) = machine
-                .bus
-                .find_peripheral_index_by_name(&binding.peripheral)
-            else {
-                continue;
-            };
-            let Some(any) = machine.bus.peripherals[idx].dev.as_any() else {
-                continue;
-            };
-            let Some(i2c) = any.downcast_ref::<labwired_core::peripherals::i2c::I2c>() else {
-                continue;
-            };
-
-            if device_type == "adxl345" {
-                let address = binding.i2c_address.unwrap_or(0x53);
-                for device in i2c.attached_devices() {
-                    let device = device.borrow();
-                    if device.address() != address {
-                        continue;
-                    }
-                    if let Some(sensor) = device.as_any().and_then(|any| {
-                        any.downcast_ref::<labwired_core::peripherals::components::Adxl345>()
-                    }) {
-                        let (x, y, z) = sensor.sample();
-                        states.push(serde_json::json!({
-                            "id": binding.id,
-                            "kind": "adxl345",
-                            "x": x,
-                            "y": y,
-                            "z": z,
-                        }));
-                        break;
-                    }
-                }
-            } else if device_type == "mpu6050" {
-                let address = binding.i2c_address.unwrap_or(0x68);
-                for device in i2c.attached_devices() {
-                    let device = device.borrow();
-                    if device.address() != address {
-                        continue;
-                    }
-                    if let Some(sensor) = device.as_any().and_then(|any| {
-                        any.downcast_ref::<labwired_core::peripherals::components::Mpu6050>()
-                    }) {
-                        let (ax, ay, az, gx, gy, gz) = sensor.sample();
-                        states.push(serde_json::json!({
-                            "id": binding.id,
-                            "kind": "mpu6050",
-                            "ax": ax,
-                            "ay": ay,
-                            "az": az,
-                            "gx": gx,
-                            "gy": gy,
-                            "gz": gz,
-                        }));
-                        break;
-                    }
-                }
-            }
-        }
-
+        let states = collect_i2c_sensor_states(&machine.bus);
         serde_wasm_bindgen::to_value(&states).unwrap_or(JsValue::NULL)
     }
 
@@ -389,65 +324,24 @@ impl WasmSimulator {
         Ok(())
     }
 
-    /// Set the simulated temperature on an NTC thermistor attached to an ADC channel.
+    /// Set the simulated temperature on an NTC thermistor.
     ///
-    /// All Steinhart-Hart math lives in Rust core (NtcThermistor::divider_output_mv).
-    /// This function only stores the new temperature, recomputes divider_mv → ADC count
-    /// via core, and injects the result into the ADC peripheral's channel.
-    ///
-    /// `device_id` must match a `board_io` binding with `device_type: "ntc-thermistor"`.
+    /// `device_id` is the `external_devices` id (stamped on the kit at attach).
+    /// Routes through the ONE SimInput path (`temperature` °C → kit → ADC sync).
+    /// No `board_io` twin required.
     #[wasm_bindgen]
     pub fn set_ntc_temperature(
         &mut self,
         device_id: &str,
         temperature_c: f32,
     ) -> Result<(), JsValue> {
-        use labwired_core::peripherals::components::NtcThermistor;
-
-        // Find the board_io binding for this device.
-        let binding = self
-            .board_io
-            .iter()
-            .find(|b| b.id == device_id && b.device_type.as_deref() == Some("ntc-thermistor"))
-            .cloned()
-            .ok_or_else(|| {
-                JsValue::from_str(&format!(
-                    "No ntc-thermistor board_io binding '{}'",
-                    device_id
-                ))
-            })?;
-
-        let channel = binding.pin;
-
-        // Build a temporary NTC model to compute the millivolt output — all math in core.
-        let mut ntc = NtcThermistor::new(channel, temperature_c);
-        ntc.set_temperature(temperature_c);
-        let mv = ntc.divider_output_mv();
-
-        // Inject the computed millivolt value into the matching ADC peripheral's channel.
-        let machine = self.machine.as_mut().unwrap();
-        let idx = machine
-            .bus
-            .find_peripheral_index_by_name(&binding.peripheral)
-            .ok_or_else(|| {
-                JsValue::from_str(&format!(
-                    "ADC peripheral '{}' not found",
-                    binding.peripheral
-                ))
-            })?;
-        let any = machine.bus.peripherals[idx]
-            .dev
-            .as_any_mut()
-            .ok_or_else(|| JsValue::from_str("ADC peripheral does not support downcasting"))?;
-        let adc = any.downcast_mut::<Adc>().ok_or_else(|| {
-            JsValue::from_str(&format!(
-                "Peripheral '{}' is not an ADC",
-                binding.peripheral
-            ))
-        })?;
-
-        adc.set_channel_input(channel, mv);
-        Ok(())
+        let machine = self
+            .machine
+            .as_mut()
+            .ok_or_else(|| JsValue::from_str("simulator not initialized"))?;
+        machine
+            .set_input_on(device_id, "temperature", f64::from(temperature_c))
+            .map_err(|e| JsValue::from_str(&e.to_string()))
     }
 
     /// Set the simulated wiper position on a potentiometer attached to an ADC channel.
@@ -535,6 +429,119 @@ impl WasmSimulator {
             }
         }
         -1
+    }
+}
+
+/// Collect adxl345 / mpu6050 samples from `external_device_decls` + live slaves.
+fn collect_i2c_sensor_states(bus: &SystemBus) -> Vec<serde_json::Value> {
+    let mut states = Vec::new();
+    for decl in &bus.external_device_decls {
+        let kind = match decl.device_type.as_str() {
+            "adxl345" | "mpu6050" => decl.device_type.as_str(),
+            _ => continue,
+        };
+        let default_addr: u8 = if kind == "adxl345" { 0x53 } else { 0x68 };
+        let address = decl.address.unwrap_or(default_addr);
+        if let Some(state) = i2c_sensor_state_on_bus(bus, &decl.connection, kind, address, &decl.id)
+        {
+            states.push(state);
+        }
+    }
+    states
+}
+
+/// Resolve one sensor sample from the live bus using `external_devices` identity.
+///
+/// Walks every known I²C controller family so a kit attached on STM32 `I2c`,
+/// ESP32-C3 command-list, nRF TWIM, etc. is found the same way.
+fn i2c_sensor_state_on_bus(
+    bus: &SystemBus,
+    connection: &str,
+    kind: &str,
+    address: u8,
+    id: &str,
+) -> Option<serde_json::Value> {
+    use labwired_core::peripherals::components::{Adxl345, Mpu6050};
+
+    let mut found: Option<serde_json::Value> = None;
+    for_each_i2c_slave(bus, |ctrl_name, slave| {
+        if found.is_some() {
+            return;
+        }
+        // Prefer the declared controller; fall back to address match only when
+        // the connection names a mux parent (not a peripheral) so daisy-chained
+        // sensors still resolve.
+        let on_declared = ctrl_name == connection;
+        if !on_declared && bus.find_peripheral_index_by_name(connection).is_some() {
+            return;
+        }
+        if slave.address() != address {
+            return;
+        }
+        let Some(any) = slave.as_any() else {
+            return;
+        };
+        found = match kind {
+            "adxl345" => any.downcast_ref::<Adxl345>().map(|s| {
+                let (x, y, z) = s.sample();
+                serde_json::json!({ "id": id, "kind": "adxl345", "x": x, "y": y, "z": z })
+            }),
+            "mpu6050" => any.downcast_ref::<Mpu6050>().map(|s| {
+                let (ax, ay, az, gx, gy, gz) = s.sample();
+                serde_json::json!({
+                    "id": id, "kind": "mpu6050",
+                    "ax": ax, "ay": ay, "az": az, "gx": gx, "gy": gy, "gz": gz
+                })
+            }),
+            _ => None,
+        };
+    });
+    found
+}
+
+fn for_each_i2c_slave(bus: &SystemBus, mut f: impl FnMut(&str, &dyn labwired_core::peripherals::i2c::I2cDevice)) {
+    use labwired_core::peripherals::esp32::i2c::Esp32I2c;
+    use labwired_core::peripherals::esp32c3::i2c::Esp32c3I2c;
+    use labwired_core::peripherals::esp32s3::i2c::Esp32s3I2c;
+    use labwired_core::peripherals::i2c::I2c;
+    use labwired_core::peripherals::nrf52::twim::Nrf52Twim;
+    use labwired_core::peripherals::nrf54l::twim::Nrf54lTwim;
+    use labwired_core::peripherals::rp2040::i2c::Rp2040I2c;
+
+    for p in &bus.peripherals {
+        let name = p.name.as_str();
+        let Some(any) = p.dev.as_any() else {
+            continue;
+        };
+        if let Some(i2c) = any.downcast_ref::<I2c>() {
+            for d in i2c.attached_devices() {
+                f(name, d.borrow().as_ref());
+            }
+        } else if let Some(i2c) = any.downcast_ref::<Esp32c3I2c>() {
+            for d in i2c.attached_slaves() {
+                f(name, d.as_ref());
+            }
+        } else if let Some(i2c) = any.downcast_ref::<Esp32s3I2c>() {
+            for d in i2c.attached_slaves() {
+                f(name, d.as_ref());
+            }
+        } else if let Some(i2c) = any.downcast_ref::<Esp32I2c>() {
+            for d in i2c.attached_slaves() {
+                f(name, d.as_ref());
+            }
+        } else if let Some(i2c) = any.downcast_ref::<Nrf52Twim>() {
+            for d in i2c.attached_devices() {
+                f(name, d.borrow().as_ref());
+            }
+        } else if let Some(i2c) = any.downcast_ref::<Nrf54lTwim>() {
+            for d in i2c.attached_slaves() {
+                f(name, d.as_ref());
+            }
+        } else if let Some(i2c) = any.downcast_ref::<Rp2040I2c>() {
+            for d in i2c.attached_devices() {
+                f(name, d.borrow().as_ref());
+            }
+        }
     }
 }
 
@@ -831,6 +838,77 @@ board_io:
             .find(|b| b.id == "left")
             .expect("left binding");
         sim.read_board_io_state(machine, binding)
+    }
+
+    #[test]
+    fn ntc_temperature_uses_external_devices_sim_input() {
+        let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let chip_yaml =
+            std::fs::read_to_string(root.join("../../configs/chips/stm32f103.yaml")).expect("chip");
+        let chip: ChipDescriptor = serde_yaml::from_str(&chip_yaml).expect("parse chip");
+        let manifest: SystemManifest = serde_yaml::from_str(
+            r#"
+name: "ntc-only"
+chip: "../chips/stm32f103.yaml"
+external_devices:
+  - id: "thermistor"
+    type: "ntc-thermistor"
+    connection: "adc1"
+    config:
+      channel: 0
+board_io: []
+"#,
+        )
+        .expect("manifest");
+        let mut bus = SystemBus::from_config(&chip, &manifest).expect("bus");
+        bus.refresh_peripheral_index();
+        let mut machine = Machine::new(
+            Box::new(labwired_core::cpu::cortex_m::CortexM::new()) as Box<dyn Cpu>,
+            bus,
+        );
+        machine
+            .set_input_on("thermistor", "temperature", 80.0)
+            .expect("drive NTC via external_devices id");
+        // Analog kit should still be addressable; channel seeded.
+        assert!(
+            machine
+                .bus
+                .analog_inputs
+                .iter()
+                .any(|a| a.source.component_id() == Some("thermistor")),
+            "NTC kit must be stamped with external_devices id"
+        );
+    }
+
+    #[test]
+    fn i2c_sensor_states_come_from_external_devices_not_board_io() {
+        // adxl345-sensor-lab shape: external_devices only (no board_io twin).
+        let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let chip_yaml =
+            std::fs::read_to_string(root.join("../../configs/chips/stm32f103.yaml"))
+                .expect("chip");
+        let chip: ChipDescriptor = serde_yaml::from_str(&chip_yaml).expect("parse chip");
+        let manifest: SystemManifest = serde_yaml::from_str(
+            r#"
+name: "adxl-only"
+chip: "../chips/stm32f103.yaml"
+external_devices:
+  - id: "accel"
+    type: "adxl345"
+    connection: "i2c1"
+    config:
+      i2c_address: 0x53
+board_io: []
+"#,
+        )
+        .expect("manifest");
+        let mut bus = SystemBus::from_config(&chip, &manifest).expect("bus");
+        bus.refresh_peripheral_index();
+        let arr = collect_i2c_sensor_states(&bus);
+        assert_eq!(arr.len(), 1, "expected one sensor from external_devices");
+        assert_eq!(arr[0]["id"], "accel");
+        assert_eq!(arr[0]["kind"], "adxl345");
+        assert!(arr[0]["x"].is_number());
     }
 
     #[test]

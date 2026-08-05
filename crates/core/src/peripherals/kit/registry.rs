@@ -50,6 +50,7 @@ pub static KITS: &[&'static dyn PeripheralKit] = &[
     &components::ssd1306::SSD1306_128X32_KIT,
     &components::sh1107::SH1107_KIT,
     &components::ili9341::ILI9341_KIT,
+    &components::ili9341_parallel::ILI9341_PARALLEL_KIT,
     &components::ssd1680_tricolor_290::SSD1680_TRICOLOR_290_KIT,
     &components::uc8151d_tricolor_290::UC8151D_TRICOLOR_290_KIT,
     &components::sn74hc165::SN74HC165_KIT,
@@ -98,6 +99,14 @@ pub static KITS: &[&'static dyn PeripheralKit] = &[
     &components::declarative_spi::ADXL345_KIT,
     &components::declarative_spi::MAX31855_KIT,
     &components::apa102::APA102_KIT,
+    // Migrated from i2c_factory-only → universal kit attach (any MCU).
+    &components::tmp117::TMP117_KIT,
+    &components::bmi270::BMI270_KIT,
+    &components::fxos8700::FXOS8700_KIT,
+    &components::max30102::MAX30102_KIT,
+    &components::cap1188::CAP1188_KIT,
+    &components::drv2605::DRV2605_KIT,
+    &components::mlx90640::MLX90640_KIT,
 ];
 
 /// Borrow the registry slice.
@@ -116,6 +125,10 @@ const TYPE_ALIASES: &[(&str, &str)] = &[
     ("epd-2in9-tricolor", "ssd1680_tricolor_290"),
     ("gxepd2_290_c90c", "ssd1680_tricolor_290"),
     ("epd-2in9-uc8151d", "uc8151d_tricolor_290"),
+    // DRV2605L is the same die / register map for simulation purposes.
+    ("drv2605l", "drv2605"),
+    // Underscore spelling of the parallel ILI9341 kit.
+    ("ili9341_16bit", "ili9341-16bit"),
 ];
 
 /// Resolve a `device_type` spelling to its canonical form.
