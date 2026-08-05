@@ -2095,6 +2095,7 @@ pub fn embedded_device_yaml(device_type: &str) -> Option<&'static str> {
         "bh1750" => Some(include_str!("../../../configs/devices/bh1750.yaml")),
         "veml7700" => Some(include_str!("../../../configs/devices/veml7700.yaml")),
         "tmp102" => Some(include_str!("../../../configs/devices/tmp102.yaml")),
+        "mcp9808" => Some(include_str!("../../../configs/devices/mcp9808.yaml")),
         "pca9685" => Some(include_str!("../../../configs/devices/pca9685.yaml")),
         "vcnl4010" => Some(include_str!("../../../configs/devices/vcnl4010.yaml")),
         "vl53l0x" => Some(include_str!("../../../configs/devices/vl53l0x.yaml")),
