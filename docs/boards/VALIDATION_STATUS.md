@@ -10,12 +10,12 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 | `nrf52840` | 🟢 silicon-verified | 2026-06-17 | 2026-08-05 | ⚠ drift acked 2026-08-05 (re-capture pending) |
 | `seeed-xiao-nrf52840-sense` | 🟢 silicon-verified | 2026-06-17 | 2026-08-05 | ⚠ drift acked 2026-08-05 (re-capture pending) |
 | `stm32h563` | 🟢 silicon-verified | 2026-06-22 | 2026-08-03 | ⚠ drift acked 2026-08-03 (re-capture pending) |
-| `esp32c3` | 🟢 silicon-verified | 2026-06-17 | 2026-08-04 | ⚠ drift acked 2026-08-05 (re-capture pending) |
+| `esp32c3` | 🟢 silicon-verified | 2026-06-17 | 2026-08-05 | ⚠ drift acked 2026-08-05 (re-capture pending) |
 | `nucleo-l476rg` | 🟢 silicon-verified | 2026-06-20 | 2026-08-03 | ⚠ drift acked 2026-08-03 (re-capture pending) |
 | `nucleo-l073rz` | 🟢 silicon-verified | 2026-06-20 | 2026-08-03 | ⚠ drift acked 2026-08-03 (re-capture pending) |
 | `stm32f103` | 🟢 silicon-verified | 2026-06-20 | 2026-08-03 | ⚠ drift acked 2026-08-03 (re-capture pending) |
 | `stm32f407` | 🟢 silicon-smoke | 2026-06-20 | 2026-08-03 | ⚠ drift acked 2026-08-03 (re-capture pending) |
-| `esp32s3` | 🟢 silicon-verified | 2026-07-15 | 2026-08-03 | ⚠ drift acked 2026-08-05 (re-capture pending) |
+| `esp32s3` | 🟢 silicon-verified | 2026-07-15 | 2026-08-05 | ⚠ drift acked 2026-08-05 (re-capture pending) |
 | `stm32f401` | 🟡 smoke-manual | — | 2026-08-03 | no silicon capture |
 | `stm32wba52` | 🟡 smoke-manual | — | 2026-08-03 | no silicon capture |
 | `nrf52832` | ⚪ structural | — | 2026-08-03 | no silicon capture |
