@@ -1,4 +1,4 @@
-# LabWired - NUCLEO-F401RE IO/UART smoke test
+# LabWired - Feather-STM32F405 IO/UART smoke test (lab entry)
 schema_version: "1.0"
 inputs:
   firmware: "../../../target/thumbv7em-none-eabi/release/firmware-f401-demo"
