@@ -1,0 +1,23 @@
+# LabWired — nRF52840 secure boot / root-of-trust lab.
+#
+# A bare nRF52840 running the secure-boot + signed-OTA demo firmware. The
+# story is on-chip: RNG (TRNG) -> UICR (one-time flash key storage +
+# anti-rollback counter) -> ECB (hardware AES-128) -> APPROTECT, across real
+# CPU reboots (AIRCR.SYSRESETREQ). Signed OTA packages arrive over uart0 RX.
+#
+# The SSD1306 OLED on TWIM0 is the demo dashboard: each boot phase paints its
+# verdict on the panel ("SECURE BOOT OK", "COMMITTED v2", "ROLLBACK REJECTED",
+# "CRA READY") so the run is visible in the playground / live dashboard.
+name: "nrf52840-secure-boot-lab"
+chip: "../../configs/chips/nrf52840.yaml"
+external_devices:
+  - id: "oled"
+    type: "oled-ssd1306"
+    connection: "i2c0"
+    config:
+      i2c_address: 0x3C
+  - id: "se"
+    type: "atecc608a"
+    connection: "i2c0"
+    config:
+      i2c_address: 0x60

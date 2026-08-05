@@ -198,6 +198,44 @@ impl crate::Bus for SystemBus {
             }
         }
 
+        // nRF52 NVMC write-enable gate (mirrors the H5 gate above, nRF52
+        // rules): a flash-region store is DROPPED unless CONFIG.Wen is set —
+        // silicon ignores program writes while the NVMC is not in write mode.
+        // With Wen set, the store commits as `existing & new`: flash bits
+        // only flip 1→0. `None` (non-nRF52 bus) ⇒ skipped, byte-identical.
+        if let Some(nvmc_idx) = self.nrf52_nvmc_idx {
+            let region_off = if self.flash.read_u8(addr).is_some() {
+                Some(addr - self.flash.base_addr)
+            } else if self.flash.base_addr != 0 && addr < self.flash.data.len() as u64 {
+                Some(addr) // boot-alias write: offset is addr itself
+            } else {
+                None
+            };
+            if let Some(off) = region_off {
+                let allowed = self.peripherals[nvmc_idx]
+                    .dev
+                    .as_any()
+                    .and_then(|a| {
+                        a.downcast_ref::<crate::peripherals::nrf52::nvmc::Nrf52Nvmc>()
+                    })
+                    .is_some_and(|n| n.write_enabled());
+                if !allowed {
+                    // Dropped on silicon: no commit, no error, no observers.
+                    return Ok(());
+                }
+                let existing = self
+                    .flash
+                    .read_u8(self.flash.base_addr + off)
+                    .unwrap_or(0xFF);
+                self.flash
+                    .write_u8(self.flash.base_addr + off, existing & value);
+                for observer in &self.observers {
+                    observer.on_memory_write(addr, old_value, value);
+                }
+                return Ok(());
+            }
+        }
+
         let flash_alias_write = self.flash.base_addr != 0
             && addr < self.flash.data.len() as u64
             && self.flash.write_u8(self.flash.base_addr + addr, value);

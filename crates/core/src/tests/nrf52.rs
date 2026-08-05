@@ -39,7 +39,10 @@ fn test_nrf52_full_smoke() {
 
     let load_addr = 0x00000000; // nRF52 flash base
     for (i, byte) in code.iter().enumerate() {
-        bus.write_u8(load_addr + i as u64, *byte).unwrap();
+        // Host-side code load goes straight to the flash backing (like the
+        // ELF loader's `load_from_segment`): the bus write path is NVMC
+        // Wen-gated, as firmware program stores are on silicon.
+        assert!(bus.flash.write_u8(load_addr + i as u64, *byte));
     }
 
     let mut cpu = CortexM::new();

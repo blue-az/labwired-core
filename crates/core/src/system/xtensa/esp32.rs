@@ -64,20 +64,13 @@ pub fn attach_esp32_external_devices(
         if mux_children.contains(&ext.id.as_str()) {
             continue;
         }
-        // 1. The kit registry, the same lookup `bus::from_config` performs for
-        //    every other MCU. A kit owns its own transport, so an I²C kit and
-        //    an SPI kit both land here and neither needs an arm below.
-        //
-        //    This used to sit BELOW the I²C factory and carry only a
-        //    `potentiometer` special case, with a hand-written e-paper arm
-        //    after it that re-parsed cs/dc/busy and matched panel types itself.
-        //    That arm was a second implementation of wiring the kits already
-        //    own, so a pin or panel added to a kit worked on every chip EXCEPT
-        //    classic ESP32 — the chip the shipped e-reader demo runs on — and
-        //    it failed silently, as an "unsupported type" skip.
-        if let Some(kit) = crate::peripherals::kit::registry::lookup(&ext.r#type) {
-            let mut ctx = crate::peripherals::kit::AttachCtx::new(bus, ext);
-            kit.attach(&mut ctx)?;
+        // 1. The canonical universal pass (parts → kit registry → declarative
+        //    descriptors), shared with `from_config` so resolution can never
+        //    diverge per chip family. See `bus::external_devices`.
+        if matches!(
+            crate::bus::external_devices::attach_external_device_universal(bus, manifest, ext)?,
+            crate::bus::external_devices::UniversalResolution::Attached
+        ) {
             continue;
         }
 
@@ -97,11 +90,12 @@ pub fn attach_esp32_external_devices(
             continue;
         }
 
-        tracing::warn!(
-            "ESP32 external_devices: unsupported type '{}' on '{}'; skipping",
-            ext.r#type,
-            ext.id
-        );
+        // 3. Nothing claims this type: hard error. A green run with a
+        //    silently missing device is worse than no run — the simulator's
+        //    worst failure mode is a pass that proves nothing.
+        return Err(crate::bus::external_devices::unsupported_external_device_error(
+            "ESP32", ext,
+        ));
     }
     Ok(())
 }

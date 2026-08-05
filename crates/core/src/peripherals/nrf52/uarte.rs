@@ -13,14 +13,22 @@
 //!
 //! Models the full register surface including PSEL, BAUDRATE, CONFIG and the DMA
 //! pointer/maxcnt/amount registers used by zephyr/nrfx drivers, plus the legacy
-//! single-byte TXD path used by the Adafruit/Arduino nRF52 core. Dynamic RX is
-//! not modelled — firmware that programs the peripheral and reads config
-//! registers back will see its writes round-trip.
+//! single-byte TXD path used by the Adafruit/Arduino nRF52 core.
+//!
+//! RX: host-injected serial input arrives through the shared `rx_source` queue
+//! (see `Bus::attach_uart_rx_source_named`, which downcasts to this model).
+//! UARTE personality: TASKS_STARTRX arms an EasyDMA drain — up to RXD.MAXCNT
+//! queued bytes are written to RAM at RXD.PTR, RXD.AMOUNT is set and ENDRX
+//! raised. Bytes that arrive AFTER STARTRX are picked up by a periodic re-arm
+//! (scheduler path, ~1024-cycle poll); the bare-bus `tick_with_bus` path only
+//! drains when the queue is non-empty. Legacy personality: RXD (0x518) pops one
+//! queued byte per read and RXDRDY reflects queue-non-empty. Baud-rate timing
+//! is not modelled; transfers complete at the next scheduler event.
 //!
 //! EVENTS: hardware-generated. SW write-1 is ignored; write-0 clears.
 
 use crate::{Bus, Peripheral, SimResult};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, VecDeque};
 use std::io::{self, Write};
 use std::sync::{Arc, Mutex};
 
@@ -125,6 +133,13 @@ pub struct Nrf52Uarte {
     /// bus_tick_indices) or `on_event` (Machine + event-scheduler, delay-0).
     /// Deferred because `write_u32` has no bus handle for the RAM read.
     tx_pending: bool,
+    /// Set by a STARTRX task write (UARTE personality); consumed by
+    /// `do_easydma_rx` once the RX queue has bytes to drain.
+    rx_pending: bool,
+    /// Host-injected serial input. Shared with the runner via
+    /// `Bus::attach_uart_rx_source_named`; bytes pushed there sit in the
+    /// queue until firmware reads them (RXD pop or EasyDMA drain).
+    rx_source: Arc<Mutex<VecDeque<u8>>>,
     /// Captured TX bytes for `test`-mode assertions (`uart_contains`).
     sink: Option<Arc<Mutex<Vec<u8>>>>,
     /// Echo transmitted bytes to the process stdout (console behaviour).
@@ -169,6 +184,16 @@ impl Nrf52Uarte {
     pub fn set_sink(&mut self, sink: Option<Arc<Mutex<Vec<u8>>>>, echo_stdout: bool) {
         self.sink = sink;
         self.echo_stdout = echo_stdout;
+    }
+
+    /// Shared handle to the RX injection queue, mirroring `Uart::rx_buffer`
+    /// so `Bus::attach_uart_rx_source_named` can drive nRF52 serial input.
+    pub fn rx_buffer(&self) -> Arc<Mutex<VecDeque<u8>>> {
+        self.rx_source.clone()
+    }
+
+    fn rx_queued(&self) -> usize {
+        self.rx_source.lock().map(|q| q.len()).unwrap_or(0)
     }
 
     fn emit_byte(&mut self, byte: u8) {
@@ -245,7 +270,9 @@ impl Peripheral for Nrf52Uarte {
             // Events
             OFF_EVENTS_CTS => self.events_cts,
             OFF_EVENTS_NCTS => self.events_ncts,
-            OFF_EVENTS_RXDRDY => self.events_rxdrdy,
+            // RXDRDY additionally reflects queued-but-unread injection bytes,
+            // so a legacy driver polling RXDRDY-then-RXD sees data-ready.
+            OFF_EVENTS_RXDRDY => self.events_rxdrdy | (self.rx_queued() > 0) as u32,
             OFF_EVENTS_ENDRX => self.events_endrx,
             OFF_EVENTS_TXDRDY => self.events_txdrdy,
             OFF_EVENTS_ENDTX => self.events_endtx,
@@ -275,9 +302,16 @@ impl Peripheral for Nrf52Uarte {
             OFF_TXD_AMOUNT => self.txd_amount & 0xFFFF,
             // CONFIG: bits [4:0]
             OFF_CONFIG => self.config & 0x1F,
-            // Legacy UART data: TXD is write-only (reads 0), RXD has no modelled
-            // receiver so it reads 0 (no byte pending).
-            OFF_TXD_LEGACY | OFF_RXD_LEGACY => 0,
+            // Legacy UART data: TXD is write-only (reads 0). RXD pops one
+            // byte from the injection queue per read (0 when empty), matching
+            // a polling legacy driver that waits on RXDRDY first.
+            OFF_TXD_LEGACY => 0,
+            OFF_RXD_LEGACY => self
+                .rx_source
+                .lock()
+                .ok()
+                .and_then(|mut q| q.pop_front())
+                .unwrap_or(0) as u32,
             _ => self.extra.get(&offset).copied().unwrap_or(0),
         })
     }
@@ -295,7 +329,11 @@ impl Peripheral for Nrf52Uarte {
             // STOPTX completes immediately in this model: raise TXSTOPPED so a
             // driver waiting on it (nrfx is_tx_ready) makes progress.
             OFF_TASKS_STOPTX => self.events_txstopped = 1,
-            // Remaining tasks are RX/flush — no TX-path effect yet.
+            // STARTRX (UARTE personality) arms an EasyDMA drain of the RX
+            // injection queue; the RAM write happens in `do_easydma_rx`.
+            OFF_TASKS_STARTRX if self.enable != ENABLE_UART_LEGACY => self.rx_pending = true,
+            // Legacy-personality STARTRX and the stop/flush tasks: accepted,
+            // no modelled effect (legacy RX is byte-pull driven by RXD reads).
             OFF_TASKS_STARTRX | OFF_TASKS_STOPRX | OFF_TASKS_FLUSHRX => {}
             // EVENTS: hardware-generated; SW write-1 ignored, write-0 clears
             OFF_EVENTS_CTS if value == 0 => self.events_cts = 0,
@@ -358,13 +396,19 @@ impl Peripheral for Nrf52Uarte {
     }
 
     /// Dual path: bus_tick for bare-bus tests; on_event for scheduler.
+    /// The bare-bus path only fires when there is drainable work: a pending
+    /// TX, or a pending RX with bytes already queued (no wake-on-inject here —
+    /// the scheduler path's periodic re-arm covers late-arriving bytes).
     fn needs_bus_tick(&self) -> bool {
-        self.tx_pending
+        self.tx_pending || (self.rx_pending && self.rx_queued() > 0)
     }
 
     fn tick_with_bus(&mut self, bus: &mut dyn Bus) {
         if self.tx_pending {
             self.do_easydma_tx(bus);
+        }
+        if self.rx_pending && self.rx_queued() > 0 {
+            self.do_easydma_rx(bus);
         }
     }
 
@@ -373,11 +417,17 @@ impl Peripheral for Nrf52Uarte {
     }
 
     fn take_scheduled_events(&mut self) -> Vec<(u64, u32)> {
+        let mut events = Vec::new();
         if self.tx_pending {
-            vec![(0, 1)] // STARTTX EasyDMA drain (delay-0 → next cycle)
-        } else {
-            Vec::new()
+            events.push((0, 1)); // STARTTX EasyDMA drain (delay-0 → next cycle)
         }
+        if self.rx_pending {
+            // Bytes already queued: drain next cycle. Empty queue: poll at a
+            // modest cadence until the host injects something (STARTRX with
+            // nothing to receive must not busy-spin the scheduler at delay-0).
+            events.push((if self.rx_queued() > 0 { 0 } else { 1023 }, 2));
+        }
+        events
     }
 
     fn on_event(
@@ -388,6 +438,17 @@ impl Peripheral for Nrf52Uarte {
     ) -> crate::sched::EventResult {
         if event_token == 1 && self.tx_pending {
             self.do_easydma_tx(bus);
+        }
+        if event_token == 2 && self.rx_pending {
+            if self.rx_queued() > 0 {
+                self.do_easydma_rx(bus);
+            } else {
+                // Nothing to receive yet: stay armed, poll again later.
+                return crate::sched::EventResult {
+                    reschedule_delay: Some(1023),
+                    ..Default::default()
+                };
+            }
         }
         crate::sched::EventResult::default()
     }
@@ -431,6 +492,36 @@ impl Nrf52Uarte {
         self.events_txdrdy = 1;
         self.events_endtx = 1;
         self.events_txstopped = 1;
+    }
+
+    /// EasyDMA RX engine shared by `tick_with_bus` and `on_event` so the two
+    /// paths cannot drift. Drains up to RXD.MAXCNT bytes from the injection
+    /// queue into RAM at RXD.PTR in one shot (instantaneous, like TX), sets
+    /// RXD.AMOUNT and raises RXSTARTED/RXDRDY/ENDRX. Callers must guarantee
+    /// the queue is non-empty; `rx_pending` is consumed here.
+    fn do_easydma_rx(&mut self, bus: &mut dyn Bus) {
+        if !self.rx_pending {
+            return;
+        }
+        self.rx_pending = false;
+
+        let max = (self.rxd_maxcnt & 0xFFFF) as usize;
+        let mut n = 0usize;
+        if let Ok(mut q) = self.rx_source.lock() {
+            while n < max {
+                let Some(b) = q.pop_front() else { break };
+                if bus.write_u8(self.rxd_ptr as u64 + n as u64, b).is_ok() {
+                    n += 1;
+                }
+            }
+        }
+        self.rxd_amount = n as u32;
+
+        self.events_rxstarted = 1;
+        if n > 0 {
+            self.events_rxdrdy = 1;
+        }
+        self.events_endrx = 1;
     }
 }
 
@@ -557,12 +648,75 @@ mod tests {
     }
 
     #[test]
+    fn easydma_rx_writes_queued_bytes_to_ram() {
+        use crate::bus::SystemBus;
+        use crate::memory::LinearMemory;
+        use crate::Bus;
+
+        let mut bus = SystemBus::empty();
+        bus.ram = LinearMemory::new(256, 0x2000_0000);
+
+        let mut u = Nrf52Uarte::new();
+        u.rx_buffer().lock().unwrap().extend([0xDE, 0xAD, 0xBE, 0xEF]);
+
+        u.write_u32(OFF_ENABLE, ENABLE_UARTE).unwrap();
+        u.write_u32(OFF_RXD_PTR, 0x2000_0020).unwrap();
+        u.write_u32(OFF_RXD_MAXCNT, 3).unwrap(); // MAXCNT < queued: drains 3
+        u.write_u32(OFF_TASKS_STARTRX, 1).unwrap();
+        assert!(u.needs_bus_tick(), "STARTRX with queued bytes arms RX DMA");
+
+        u.tick_with_bus(&mut bus);
+
+        assert_eq!(bus.read_u8(0x2000_0020).unwrap(), 0xDE);
+        assert_eq!(bus.read_u8(0x2000_0021).unwrap(), 0xAD);
+        assert_eq!(bus.read_u8(0x2000_0022).unwrap(), 0xBE);
+        assert_eq!(u.read_u32(OFF_RXD_AMOUNT).unwrap(), 3);
+        assert_eq!(u.read_u32(OFF_EVENTS_ENDRX).unwrap(), 1);
+        assert_eq!(u.read_u32(OFF_EVENTS_RXSTARTED).unwrap(), 1);
+        assert_eq!(u.rx_queued(), 1, "one byte beyond MAXCNT stays queued");
+        assert!(!u.rx_pending, "drain consumes pending");
+    }
+
+    #[test]
+    fn easydma_rx_empty_queue_stays_armed() {
+        let mut u = Nrf52Uarte::new();
+        u.write_u32(OFF_ENABLE, ENABLE_UARTE).unwrap();
+        u.write_u32(OFF_TASKS_STARTRX, 1).unwrap();
+        // Bare-bus path: no work until bytes exist (no busy-spin).
+        assert!(!u.needs_bus_tick());
+        // Scheduler path: re-arms at the poll cadence, not delay-0.
+        assert_eq!(u.take_scheduled_events(), vec![(1023, 2)]);
+        // Bytes arrive → next event drains immediately.
+        u.rx_buffer().lock().unwrap().push_back(0x42);
+        assert_eq!(u.take_scheduled_events(), vec![(0, 2)]);
+    }
+
+    #[test]
+    fn legacy_rxd_pops_injection_queue() {
+        let mut u = Nrf52Uarte::new();
+        u.rx_buffer().lock().unwrap().extend([b'O', b'K']);
+        u.write_u32(OFF_ENABLE, ENABLE_UART_LEGACY).unwrap();
+        assert_eq!(u.read_u32(OFF_EVENTS_RXDRDY).unwrap(), 1);
+        assert_eq!(u.read_u32(OFF_RXD_LEGACY).unwrap(), b'O' as u32);
+        assert_eq!(u.read_u32(OFF_RXD_LEGACY).unwrap(), b'K' as u32);
+        assert_eq!(u.read_u32(OFF_EVENTS_RXDRDY).unwrap(), 0);
+        assert_eq!(u.read_u32(OFF_RXD_LEGACY).unwrap(), 0);
+    }
+
+    #[test]
+    fn legacy_startrx_does_not_arm_easydma() {
+        let mut u = Nrf52Uarte::new();
+        u.write_u32(OFF_ENABLE, ENABLE_UART_LEGACY).unwrap();
+        u.write_u32(OFF_TASKS_STARTRX, 1).unwrap();
+        assert!(!u.rx_pending);
+    }
+
+    #[test]
     fn psel_defaults_to_disconnected() {
         let u = Nrf52Uarte::new();
         assert_eq!(u.read_u32(OFF_PSEL_TXD).unwrap(), 0xFFFF_FFFF);
         assert_eq!(u.read_u32(OFF_PSEL_RXD).unwrap(), 0xFFFF_FFFF);
     }
-
     #[test]
     fn baudrate_reset_is_115200() {
         let u = Nrf52Uarte::new();

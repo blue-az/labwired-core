@@ -654,6 +654,23 @@
       "inputs": []
     },
     {
+      "device_type": "atecc608a",
+      "label": "ATECC608A Secure Element",
+      "summary": "I²C secure element: P-256 sign/verify, RNG, key slots (HSM/TPM role).",
+      "detail": "ATECC608A-style command set (INFO/RANDOM/READ/NONCE/VERIFY/SIGN) with real p256 ECDSA. Data slot 0 holds the OEM update-verify public key; a fixed device key signs attestation challenges. Deterministic RNG (SHA-256 chain) for reproducible tests.",
+      "transport": "i2c",
+      "category": "i2c",
+      "config_keys": [
+        {
+          "name": "i2c_address",
+          "ty": "int",
+          "doc": "7-bit slave address. Defaults to 0x60."
+        }
+      ],
+      "labs": [],
+      "inputs": []
+    },
+    {
       "device_type": "pn532",
       "label": "PN532 NFC",
       "summary": "NXP PN532 I²C NFC controller probe shell (no RF).",

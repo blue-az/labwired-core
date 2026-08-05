@@ -67,6 +67,13 @@ impl Nrf52Uicr {
     fn flash_write(slot: &mut u32, value: u32) {
         *slot &= value;
     }
+
+    /// ERASEUICR: back to the all-erased state (every field 0xFFFFFFFF,
+    /// except the silicon-fixed NFCPINS default). Drained by the machine
+    /// boundary when the NVMC latches the request.
+    pub fn erase(&mut self) {
+        *self = Self::default();
+    }
 }
 
 impl Peripheral for Nrf52Uicr {
@@ -86,6 +93,14 @@ impl Peripheral for Nrf52Uicr {
 
     fn write(&mut self, _offset: u64, _value: u8) -> SimResult<()> {
         Ok(())
+    }
+
+    fn as_any(&self) -> Option<&dyn std::any::Any> {
+        Some(self)
+    }
+
+    fn as_any_mut(&mut self) -> Option<&mut dyn std::any::Any> {
+        Some(self)
     }
 
     fn read_u32(&self, offset: u64) -> SimResult<u32> {

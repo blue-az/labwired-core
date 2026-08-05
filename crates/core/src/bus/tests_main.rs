@@ -2402,7 +2402,7 @@ fn test_from_config_errors_for_external_device_on_non_i2c_connection() {
 }
 
 #[test]
-fn test_from_config_skips_unsupported_external_device_type() {
+fn test_from_config_errors_on_unsupported_external_device_type() {
     let chip = chip_with_i2c_and_uart();
     let mut config = std::collections::HashMap::new();
     config.insert(
@@ -2413,12 +2413,14 @@ fn test_from_config_skips_unsupported_external_device_type() {
     // real components now, so we need something the factory will refuse.
     let manifest = manifest_with_external_device("definitely_not_a_device", "i2c1", config);
 
-    let mut bus = SystemBus::from_config(&chip, &manifest).unwrap();
-    let i2c_idx = bus.find_peripheral_index_by_name("i2c1").unwrap();
-    let any = bus.peripherals[i2c_idx].dev.as_any_mut().unwrap();
-    let i2c = any.downcast_mut::<crate::peripherals::i2c::I2c>().unwrap();
-
-    assert_eq!(i2c.attached_devices().len(), 0);
+    // An unattachable declaration is a hard error (same policy as the Xtensa
+    // path): a green run with a silently missing device proves nothing.
+    let err = expect_from_config_error(&chip, &manifest);
+    let msg = format!("{err:#}");
+    assert!(
+        msg.contains("definitely_not_a_device"),
+        "error must name the offending type, got: {msg}"
+    );
 }
 
 #[test]
@@ -2481,7 +2483,7 @@ fn test_system_bus_memory_observer() {
 #[test]
 fn test_flash_boot_alias_read_and_write() {
     let mut bus = SystemBus {
-        flash: LinearMemory::new(256, 0x0800_0000),
+        flash: LinearMemory::new_erased(256, 0x0800_0000),
         ram: LinearMemory::new(256, 0x2000_0000),
         extra_mem: Vec::new(),
         peripherals: Vec::new(),
@@ -2544,6 +2546,7 @@ fn test_flash_boot_alias_read_and_write() {
         nordic_gpio_service: false,
         hcsr04_scheduling_disabled: false,
         flash_error_flags_idx: None,
+        nrf52_nvmc_idx: None,
         bus_trace: bus_trace::new_log(),
         logic_tap: crate::logic_capture::LogicTap::new(),
         pin_map: std::collections::HashMap::new(),
@@ -2565,7 +2568,7 @@ fn test_flash_boot_alias_read_and_write() {
 /// after erase) and an H5 FLASH register peripheral at 0x4002_2000, with the
 /// opt-in program-error gate set to `gate`.
 fn h5_flash_bus(gate: bool) -> SystemBus {
-    let mut flash = LinearMemory::new(0x400, 0x0800_0000);
+    let mut flash = LinearMemory::new_erased(0x400, 0x0800_0000);
     // Erased state is all-ones; the gate's not-erased check keys off this.
     flash.data.iter_mut().for_each(|b| *b = 0xFF);
     let mut bus = SystemBus {
@@ -2645,6 +2648,7 @@ fn h5_flash_bus(gate: bool) -> SystemBus {
         nordic_gpio_service: false,
         hcsr04_scheduling_disabled: false,
         flash_error_flags_idx: None,
+        nrf52_nvmc_idx: None,
         bus_trace: bus_trace::new_log(),
         logic_tap: crate::logic_capture::LogicTap::new(),
         pin_map: std::collections::HashMap::new(),
@@ -2818,7 +2822,7 @@ impl crate::Cpu for PcCpu {
 /// erase op straight away.
 fn h5_rww_bus(gate: bool) -> SystemBus {
     use crate::peripherals::flash::h5;
-    let mut flash = LinearMemory::new((2 * h5::BANK_SIZE) as usize, h5::FLASH_BASE);
+    let mut flash = LinearMemory::new_erased((2 * h5::BANK_SIZE) as usize, h5::FLASH_BASE);
     flash.data.iter_mut().for_each(|b| *b = 0xFF);
     let mut bus = SystemBus {
         flash,
@@ -2897,6 +2901,7 @@ fn h5_rww_bus(gate: bool) -> SystemBus {
         nordic_gpio_service: false,
         hcsr04_scheduling_disabled: false,
         flash_error_flags_idx: None,
+        nrf52_nvmc_idx: None,
         bus_trace: bus_trace::new_log(),
         logic_tap: crate::logic_capture::LogicTap::new(),
         pin_map: std::collections::HashMap::new(),
@@ -3065,7 +3070,7 @@ fn rww_gate_off_same_bank_erase_succeeds_silently() {
 #[test]
 fn test_peripheral_range_index_lookup() {
     let mut bus = SystemBus {
-        flash: LinearMemory::new(256, 0x0800_0000),
+        flash: LinearMemory::new_erased(256, 0x0800_0000),
         ram: LinearMemory::new(256, 0x2000_0000),
         extra_mem: Vec::new(),
         peripherals: vec![
@@ -3147,6 +3152,7 @@ fn test_peripheral_range_index_lookup() {
         nordic_gpio_service: false,
         hcsr04_scheduling_disabled: false,
         flash_error_flags_idx: None,
+        nrf52_nvmc_idx: None,
         bus_trace: bus_trace::new_log(),
         logic_tap: crate::logic_capture::LogicTap::new(),
         pin_map: std::collections::HashMap::new(),
@@ -3181,7 +3187,7 @@ fn test_execute_dma_copy_request() {
 #[test]
 fn test_dma_tick_executes_copy_and_raises_irq() {
     let mut bus = SystemBus {
-        flash: LinearMemory::new(256, 0x0800_0000),
+        flash: LinearMemory::new_erased(256, 0x0800_0000),
         ram: LinearMemory::new(256, 0x2000_0000),
         extra_mem: Vec::new(),
         peripherals: vec![PeripheralEntry {
@@ -3252,6 +3258,7 @@ fn test_dma_tick_executes_copy_and_raises_irq() {
         nordic_gpio_service: false,
         hcsr04_scheduling_disabled: false,
         flash_error_flags_idx: None,
+        nrf52_nvmc_idx: None,
         bus_trace: bus_trace::new_log(),
         logic_tap: crate::logic_capture::LogicTap::new(),
         pin_map: std::collections::HashMap::new(),

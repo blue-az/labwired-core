@@ -49,6 +49,15 @@ impl LinearMemory {
         }
     }
 
+    /// Erased-NVM fill: untouched flash reads 0xFF on silicon, not 0x00.
+    /// Use for flash regions; RAM keeps the zero fill of `new`.
+    pub fn new_erased(size: usize, base_addr: u64) -> Self {
+        Self {
+            data: vec![0xFF; size],
+            base_addr,
+        }
+    }
+
     pub fn read_u8(&self, addr: u64) -> Option<u8> {
         if addr >= self.base_addr && addr < self.base_addr + self.data.len() as u64 {
             Some(self.data[(addr - self.base_addr) as usize])

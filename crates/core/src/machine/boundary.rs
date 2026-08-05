@@ -267,6 +267,48 @@ impl<C: Cpu> Machine<C> {
             tracing::debug!("SCB SYSRESETREQ: CPU rebooted through vector table");
         }
 
+        // nRF52 NVMC erase drain (same clean-boundary contract as the SCB
+        // reset above): ERASEPAGE/ERASEALL/ERASEUICR latched during this
+        // instruction are applied here, so no observer sees a half-erased
+        // page. Erase latency is not modelled (READY always reads 1).
+        {
+            let op = self.bus.peripherals.iter_mut().find_map(|p| {
+                p.dev
+                    .as_any_mut()?
+                    .downcast_mut::<crate::peripherals::nrf52::nvmc::Nrf52Nvmc>()?
+                    .take_pending_op()
+            });
+            if let Some(op) = op {
+                use crate::peripherals::nrf52::nvmc::Nrf52NvmcOp;
+                match op {
+                    Nrf52NvmcOp::ErasePage(addr) => {
+                        let page = addr & !0xFFF;
+                        for a in page..page + 0x1000 {
+                            self.bus.flash.write_u8(a, 0xFF);
+                        }
+                        tracing::debug!("NVMC ERASEPAGE: blanked 4 KiB at 0x{page:08X}");
+                    }
+                    Nrf52NvmcOp::EraseAll => {
+                        self.bus.flash.data.fill(0xFF);
+                        tracing::debug!("NVMC ERASEALL: blanked entire flash region");
+                    }
+                    Nrf52NvmcOp::EraseUicr => {
+                        for p in &mut self.bus.peripherals {
+                            if let Some(uicr) = p
+                                .dev
+                                .as_any_mut()
+                                .and_then(|a| a.downcast_mut::<crate::peripherals::nrf52::uicr::Nrf52Uicr>())
+                            {
+                                uicr.erase();
+                                tracing::debug!("NVMC ERASEUICR: UICR reset to erased state");
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // H5 FLASH pending ops: sector erase fills flash with 0xFF; bank-swap
         // swaps the two 1 MB banks in the flash buffer then re-runs reset so
         // the CPU boots from the new bank-1 vector table. Also drained on the
