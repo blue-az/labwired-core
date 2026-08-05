@@ -1,0 +1,17 @@
+# LabWired - NUCLEO-F767ZI Example System Configuration
+name: "nucleo-f767zi-example"
+chip: "../../configs/chips/stm32f767.yaml"
+external_devices: []
+board_io:
+  - id: "led1_pb0"
+    kind: "led"
+    peripheral: "gpiob"
+    pin: 0
+    signal: "output"
+    active_high: true
+  - id: "button_user_pc13"
+    kind: "button"
+    peripheral: "gpioc"
+    pin: 13
+    signal: "input"
+    active_high: true

@@ -1,0 +1,58 @@
+peripheral: IWDG
+version: 0.1.0
+registers:
+- id: KR
+  address_offset: 0
+  size: 32
+  access: WRITE_ONLY
+  reset_value: 0
+  fields:
+  - name: KEY
+    bit_range:
+    - 15
+    - 0
+    description: Key value
+  side_effects: null
+- id: PR
+  address_offset: 4
+  size: 32
+  access: READ_WRITE
+  reset_value: 0
+  fields:
+  - name: PR
+    bit_range:
+    - 2
+    - 0
+    description: Prescaler divider
+  side_effects: null
+- id: RLR
+  address_offset: 8
+  size: 32
+  access: READ_WRITE
+  reset_value: 4095
+  fields:
+  - name: RL
+    bit_range:
+    - 11
+    - 0
+    description: Watchdog counter reload value
+  side_effects: null
+- id: SR
+  address_offset: 12
+  size: 32
+  access: READ_ONLY
+  reset_value: 0
+  fields:
+  - name: RVU
+    bit_range:
+    - 1
+    - 1
+    description: Watchdog counter reload value update
+  - name: PVU
+    bit_range:
+    - 0
+    - 0
+    description: Watchdog prescaler value update
+  side_effects: null
+interrupts: null
+timing: null
