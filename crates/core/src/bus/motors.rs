@@ -54,7 +54,7 @@ pub struct MotorSnapshot {
 pub(super) enum MotorRuntime {
     Dc {
         id: String,
-        plant: BrushedDcMotor,
+        plant: Box<BrushedDcMotor>,
         encoder: QuadratureEncoder,
         pwm: ResolvedPin,
         direction: ResolvedPin,
@@ -68,7 +68,7 @@ pub(super) enum MotorRuntime {
     },
     Bldc {
         id: String,
-        plant: BldcMotor,
+        plant: Box<BldcMotor>,
         encoder: QuadratureEncoder,
         timer: usize,
         enable: ResolvedPin,
@@ -103,8 +103,8 @@ impl SystemBus {
     pub(super) fn install_motor_models(&mut self, manifest: &SystemManifest) -> anyhow::Result<()> {
         for config in manifest.resolved_motor_models()? {
             self.motors.push(match config {
-                MotorModelConfig::Dc(config) => self.build_dc_motor(config)?,
-                MotorModelConfig::Bldc(config) => self.build_bldc_motor(config)?,
+                MotorModelConfig::Dc(config) => self.build_dc_motor(*config)?,
+                MotorModelConfig::Bldc(config) => self.build_bldc_motor(*config)?,
             });
         }
         self.motor_cycle_anchor = self.current_cycle;
@@ -178,7 +178,7 @@ impl SystemBus {
             control_state: "coast".to_owned(),
             encoder: QuadratureEncoder::new(c.encoder_cpr)?,
             id: c.id,
-            plant,
+            plant: Box::new(plant),
         })
     }
 
@@ -224,7 +224,7 @@ impl SystemBus {
         })?;
         Ok(MotorRuntime::Bldc {
             id: c.id.clone(),
-            plant,
+            plant: Box::new(plant),
             encoder: QuadratureEncoder::new(c.encoder_cpr)?,
             timer,
             enable: self.resolve_motor_pin(&c.id, "enable", &c.enable_pin)?,

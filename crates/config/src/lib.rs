@@ -215,8 +215,8 @@ pub struct ExternalDevice {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(tag = "kind", rename_all = "kebab-case")]
 pub enum MotorModelConfig {
-    Dc(BrushedMotorConfig),
-    Bldc(BldcMotorConfig),
+    Dc(Box<BrushedMotorConfig>),
+    Bldc(Box<BldcMotorConfig>),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]

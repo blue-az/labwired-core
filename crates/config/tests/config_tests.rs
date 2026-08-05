@@ -5,7 +5,7 @@
 // See the LICENSE file in the project root for full license information.
 
 use labwired_config::{
-    BldcMotorConfig, BrushedMotorConfig, ChipDescriptor, CosimAdapter, DeviceDescriptor,
+    ChipDescriptor, CosimAdapter, DeviceDescriptor,
     MemoryValueDetails, MotorModelConfig, SystemManifest,
 };
 
@@ -169,22 +169,14 @@ encoder_index_pin: PB8
 #[test]
 fn motor_model_parses_valid_dc_and_roundtrips_stably() {
     let model: MotorModelConfig = serde_yaml::from_str(valid_dc_motor_yaml()).unwrap();
-    let MotorModelConfig::Dc(BrushedMotorConfig {
-        id,
-        encoder_cpr,
-        encoder_index_pin,
-        simulation_clock_hz,
-        fault_pin,
-        ..
-    }) = &model
-    else {
+    let MotorModelConfig::Dc(cfg) = &model else {
         panic!("expected dc motor");
     };
-    assert_eq!(id, "drive_motor");
-    assert_eq!(*encoder_cpr, 1024);
-    assert_eq!(encoder_index_pin.as_deref(), Some("PB8"));
-    assert_eq!(*simulation_clock_hz, 80_000_000);
-    assert_eq!(fault_pin, &None);
+    assert_eq!(cfg.id, "drive_motor");
+    assert_eq!(cfg.encoder_cpr, 1024);
+    assert_eq!(cfg.encoder_index_pin.as_deref(), Some("PB8"));
+    assert_eq!(cfg.simulation_clock_hz, 80_000_000);
+    assert_eq!(cfg.fault_pin, None);
     assert!(model.validate().is_empty());
 
     let yaml = serde_yaml::to_string(&model).unwrap();
@@ -228,32 +220,19 @@ overcurrent_fault_pin: PB6
 undervoltage_fault_pin: PB5
 "#;
     let model: MotorModelConfig = serde_yaml::from_str(yaml).unwrap();
-    let MotorModelConfig::Bldc(BldcMotorConfig {
-        id,
-        pole_pairs,
-        encoder_index_pin,
-        simulation_clock_hz,
-        motor_fault_pin,
-        inverter_fault_pin,
-        current_limit_a,
-        overcurrent_trip_steps,
-        overcurrent_fault_pin,
-        undervoltage_fault_pin,
-        ..
-    }) = &model
-    else {
+    let MotorModelConfig::Bldc(cfg) = &model else {
         panic!("expected bldc motor");
     };
-    assert_eq!(id, "spindle");
-    assert_eq!(*pole_pairs, 7);
-    assert_eq!(encoder_index_pin, &None);
-    assert_eq!(*simulation_clock_hz, 80_000_000);
-    assert_eq!(motor_fault_pin, &None);
-    assert_eq!(inverter_fault_pin, &None);
-    assert_eq!(*current_limit_a, Some(40.0));
-    assert_eq!(*overcurrent_trip_steps, 4);
-    assert_eq!(overcurrent_fault_pin.as_deref(), Some("PB6"));
-    assert_eq!(undervoltage_fault_pin.as_deref(), Some("PB5"));
+    assert_eq!(cfg.id, "spindle");
+    assert_eq!(cfg.pole_pairs, 7);
+    assert_eq!(cfg.encoder_index_pin, None);
+    assert_eq!(cfg.simulation_clock_hz, 80_000_000);
+    assert_eq!(cfg.motor_fault_pin, None);
+    assert_eq!(cfg.inverter_fault_pin, None);
+    assert_eq!(cfg.current_limit_a, Some(40.0));
+    assert_eq!(cfg.overcurrent_trip_steps, 4);
+    assert_eq!(cfg.overcurrent_fault_pin.as_deref(), Some("PB6"));
+    assert_eq!(cfg.undervoltage_fault_pin.as_deref(), Some("PB5"));
     assert!(model.validate().is_empty());
     assert_eq!(
         serde_yaml::from_str::<MotorModelConfig>(&serde_yaml::to_string(&model).unwrap()).unwrap(),
