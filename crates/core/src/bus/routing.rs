@@ -319,6 +319,16 @@ impl SystemBus {
                 .and_then(|a| a.downcast_ref::<crate::peripherals::flash::Flash>())
                 .is_some_and(|f| f.h5_error_flags_enabled())
         });
+        // Cache the nRF52 NVMC (if this chip has one): the flash-region write
+        // path consults it for Wen gating + 1→0 AND semantics.
+        self.nrf52_nvmc_idx = self.peripherals.iter().position(|p| {
+            p.dev
+                .as_any()
+                .and_then(|a| {
+                    a.downcast_ref::<crate::peripherals::nrf52::nvmc::Nrf52Nvmc>()
+                })
+                .is_some()
+        });
         self.esp32c3_system_idx = self
             .peripherals
             .iter()

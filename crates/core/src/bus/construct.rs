@@ -11,7 +11,7 @@ impl SystemBus {
         // Default initialization for tests
         let mut bus = Self {
             flash_thunks: std::collections::HashMap::new(),
-            flash: LinearMemory::new(1024 * 1024, 0x0),
+            flash: LinearMemory::new_erased(1024 * 1024, 0x0),
             ram: LinearMemory::new(1024 * 1024, 0x2000_0000),
             extra_mem: Vec::new(),
             peripherals: vec![
@@ -109,6 +109,7 @@ impl SystemBus {
             nordic_gpio_service: false,
             hcsr04_scheduling_disabled: false,
             flash_error_flags_idx: None,
+            nrf52_nvmc_idx: None,
             bus_trace: bus_trace::new_log(),
             logic_tap: crate::logic_capture::LogicTap::new(),
             pin_map: std::collections::HashMap::new(),
@@ -126,7 +127,7 @@ impl SystemBus {
     pub fn empty() -> Self {
         let mut bus = Self {
             flash_thunks: std::collections::HashMap::new(),
-            flash: LinearMemory::new(0, 0),
+            flash: LinearMemory::new_erased(0, 0),
             ram: LinearMemory::new(0, 0),
             extra_mem: Vec::new(),
             peripherals: Vec::new(),
@@ -187,6 +188,7 @@ impl SystemBus {
             nordic_gpio_service: false,
             hcsr04_scheduling_disabled: false,
             flash_error_flags_idx: None,
+            nrf52_nvmc_idx: None,
             bus_trace: bus_trace::new_log(),
             logic_tap: crate::logic_capture::LogicTap::new(),
             pin_map: std::collections::HashMap::new(),
@@ -550,6 +552,14 @@ impl SystemBus {
                 // The Espressif twin (ESP32-S3 UART0/1/2, and the ESP32-C3's
                 // UART0/1, which are the same IP) exposes the same handle.
                 sources.push(uart.rx_buffer());
+            } else if let Some(uarte) =
+                any.downcast_ref::<crate::peripherals::nrf52::uarte::Nrf52Uarte>()
+            {
+                sources.push(uarte.rx_buffer());
+            } else if let Some(uarte) =
+                any.downcast_ref::<crate::peripherals::nrf54l::uarte::Nrf54lUarte>()
+            {
+                sources.push(uarte.rx_buffer());
             }
         }
         sources
@@ -570,6 +580,19 @@ impl SystemBus {
             let any = p.dev.as_any()?;
             if let Some(uart) = any.downcast_ref::<Uart>() {
                 return Some(uart.rx_buffer());
+            }
+            // nRF52 UARTE/legacy-UART twin: same injection queue, drained by
+            // EasyDMA (UARTE personality) or RXD pops (legacy personality).
+            if let Some(uarte) =
+                any.downcast_ref::<crate::peripherals::nrf52::uarte::Nrf52Uarte>()
+            {
+                return Some(uarte.rx_buffer());
+            }
+            // nRF54L UARTE: DMA.RX-cluster generation, same queue contract.
+            if let Some(uarte) =
+                any.downcast_ref::<crate::peripherals::nrf54l::uarte::Nrf54lUarte>()
+            {
+                return Some(uarte.rx_buffer());
             }
             return any
                 .downcast_ref::<crate::peripherals::esp_uart::EspUart>()

@@ -42,6 +42,7 @@ pub static KITS: &[&'static dyn PeripheralKit] = &[
     &components::rc522::RC522_KIT,
     &components::sht30::SHT30_KIT,
     &components::at24c256::AT24C256_KIT,
+    &components::atecc608a::ATECC608A_KIT,
     &components::pn532::PN532_KIT,
     &components::lora_sx1278::LORA_SX1278_KIT,
     &components::sim800l::SIM800L_KIT,

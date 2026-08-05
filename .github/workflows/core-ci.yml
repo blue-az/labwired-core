@@ -30,9 +30,220 @@ jobs:
       - name: Verify release runner contract
         run: bash scripts/ci/verify-release-runner-contract.sh
 
+  # ── Formatting is APPLIED, not demanded (PR only) ─────────────────────────
+  #
+  # `cargo fmt --all -- --check` used to sit in `pr-gate`, i.e. a REQUIRED
+  # check. It failed three times in one evening on a change whose content was
+  # already correct: the machine printed the exact diff it wanted and then
+  # refused to apply it. Whitespace is the one class of review comment a
+  # machine can settle by itself, so it does. This job runs `cargo fmt --all`
+  # and pushes the result back to the PR branch; the blocking `--check` step is
+  # gone from `pr-gate`.
+  #
+  # ─────────────────────────────────────────────────────────────────────────
+  # WHY A PAT AND NOT `GITHUB_TOKEN` + `permissions: contents: write`
+  # ─────────────────────────────────────────────────────────────────────────
+  # `GITHUB_TOKEN` CAN push here — one line of `permissions:` and it works.
+  # The problem is what happens next, and it is not "a check re-runs
+  # needlessly", it is "the PR can never be merged again":
+  #
+  #   * `main` requires exactly two contexts (`gh api
+  #     repos/w1ne/labwired-core/branches/main/protection`):
+  #     **pr-gate** and **release-runner-contract**;
+  #   * `enforce_admins` is ON, so nobody — including the repo owner — can
+  #     merge past a missing one;
+  #   * BOTH of those jobs are `pull_request`-only (`pr-gate` is gated on
+  #     `github.event_name == 'pull_request'`; `release-runner-contract` has no
+  #     `push`-to-branch trigger either, this workflow's `push` filter is
+  #     `branches: [main]`);
+  #   * required contexts are evaluated against the PR's **head SHA**;
+  #   * a push made with `GITHUB_TOKEN` deliberately triggers NO workflow run.
+  #
+  # Put together: the fixup commit advances the head SHA, no `pull_request`
+  # run fires for it, and the new head therefore carries ZERO of the two
+  # required contexts. The PR reads `BLOCKED` / "Expected — waiting for status
+  # to be reported" while every check it did run is green, and the only way out
+  # is a human pushing another commit. That is a strictly worse developer
+  # experience than the red `fmt --check` this job replaces — it is the same
+  # failure mode that stranded #1207/#1208/#1195 in the superproject, and it is
+  # why `.github/workflows/submodule-bump.yml` in the superproject also refuses
+  # to fall back to `GITHUB_TOKEN`.
+  #
+  # A PAT push is an ordinary user push: it fires `pull_request` → both
+  # required contexts are re-reported against the new head, and the PR stays
+  # mergeable. `permissions: contents: read` below is deliberate — the write
+  # capability comes from the PAT the checkout is given, so nothing here can
+  # push with the ambient token by accident.
+  #
+  # NO `[skip ci]` IN THE FIXUP COMMIT, for the same reason: it would suppress
+  # the very run that re-reports the required checks.
+  #
+  # ⚠️ The PAT needs only `contents: write` on this repo. If it is absent the
+  # job GREEN-SKIPS with a message (see below) rather than failing — a
+  # formatting job that goes red is exactly what is being removed here.
+  #
+  # ─────────────────────────────────────────────────────────────────────────
+  # WHERE FORMATTING IS STILL ENFORCED
+  # ─────────────────────────────────────────────────────────────────────────
+  # Dropping `--check` from `pr-gate` does NOT mean unformatted code can reach
+  # main unnoticed. `core-integrity` (push to main / nightly / dispatch) keeps
+  # its `Check Formatting` step, so main is still asserted formatted on every
+  # merge — it just reports there instead of gating the merge. That step is the
+  # backstop for the paths this job cannot cover: fork PRs, a missing PAT, and
+  # anything pushed to main outside the PR flow.
+  fmt-autofix:
+    name: fmt-autofix
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Read-only on purpose — see the PAT note above.
+    permissions:
+      contents: read
+    steps:
+      # Green-skip, never red. Two ways this job legitimately has nothing to
+      # do, and neither is an error:
+      #
+      #   1. FORK PR. `pull_request` from a fork gets a read-only `GITHUB_TOKEN`
+      #      and no access to secrets at all, so the push cannot work by
+      #      construction. This repo is effectively single-owner so this is a
+      #      landmine, not a daily path — but an unhandled landmine is how a
+      #      first outside contributor meets a red X they cannot fix.
+      #   2. NO PAT CONFIGURED. Same reasoning as submodule-bump.yml: a red
+      #      cron/PR job every morning trains people to ignore it.
+      - name: Can this run push to the PR branch?
+        id: gate
+        env:
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          THIS_REPO: ${{ github.repository }}
+          PAT: ${{ secrets.CI_FMT_PAT }}
+        run: |
+          set -euo pipefail
+          if [ "$HEAD_REPO" != "$THIS_REPO" ]; then
+            echo "::notice title=fmt-autofix skipped::PR head is a fork ($HEAD_REPO). A fork PR's token is read-only and secrets are withheld, so the fixup cannot be pushed. Run 'cargo fmt --all' locally; 'core-integrity' still asserts formatting on main."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          elif [ -z "${PAT:-}" ]; then
+            echo "::notice title=fmt-autofix skipped::Secret CI_FMT_PAT is not set. GITHUB_TOKEN is not a fallback: its pushes fire no workflow run, so the new head SHA would carry neither required context (pr-gate, release-runner-contract) and the PR would be unmergeable. Add a PAT with contents:write to enable auto-formatting."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # The PR BRANCH TIP, not the merge commit `pull_request` checks out by
+      # default: the fixup has to land on the branch, and a detached merge
+      # commit has nowhere to push to.
+      - name: Checkout the PR branch tip
+        if: steps.gate.outputs.ok == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          token: ${{ secrets.CI_FMT_PAT }}
+          persist-credentials: true
+          # Depth 1 is enough: one new commit whose parent the remote already
+          # has pushes fine from a shallow clone, and this job runs no
+          # history-dependent gate.
+          fetch-depth: 1
+
+      # ⚠️ PINNED, and it must stay pinned to whatever `pr-gate` /
+      # `core-integrity` use. rustfmt output is toolchain-dependent — the same
+      # drift that made `clippy::redundant_closure` fire only in CI would here
+      # mean CI reformats what the developer's local `cargo fmt` just
+      # formatted, on every push, forever. No `components: clippy`: this job
+      # lints nothing and compiles nothing, so it needs no cache either.
+      - name: Install Rust (pinned — must match pr-gate)
+        if: steps.gate.outputs.ok == 'true'
+        uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          components: rustfmt
+
+      - name: Format, and push the result if anything moved
+        if: steps.gate.outputs.ok == 'true'
+        env:
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+          MARKER: "style: cargo fmt --all [ci-autofix]"
+        run: |
+          set -euo pipefail
+
+          # Evidence in the log that the PINNED formatter ran, not whatever the
+          # runner image happened to ship.
+          cargo fmt --version
+          rustc --version
+
+          # LOOP GUARD. A PAT push fires a fresh `pull_request` run, so this
+          # job sees its own commit — that is the point (it is how the required
+          # checks get re-reported), but it must terminate. It does, because
+          # rustfmt is idempotent: the re-run reformats nothing and pushes
+          # nothing, so at most ONE fixup exists per human push.
+          #
+          # This flag exists for the case where that is NOT true. If the tip is
+          # already a fixup and `cargo fmt` STILL wants changes, formatting is
+          # not converging (two toolchains fighting, a rustfmt bug, an
+          # unparseable file) and the honest answer is to stop and say so
+          # rather than push a second time and start a cycle. That is the one
+          # condition under which this job goes red, and it should.
+          tip_subject=$(git log -1 --format=%s)
+          tip_is_fixup=false
+          if [ "$tip_subject" = "$MARKER" ]; then
+            tip_is_fixup=true
+            echo "Tip commit is a previous autofix — this run must not push again."
+          fi
+
+          cargo fmt --all
+
+          if git diff --quiet; then
+            if [ "$tip_is_fixup" = true ]; then
+              echo "Formatting converged: the previous autofix is stable under a re-run."
+            else
+              echo "Already formatted — nothing to push."
+            fi
+            echo "### Formatting: clean" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          echo "rustfmt wants these changes:"
+          git --no-pager diff --stat
+
+          if [ "$tip_is_fixup" = true ]; then
+            echo "::error title=rustfmt is not converging::The tip commit is already a '${MARKER}' fixup and 'cargo fmt --all' still reports a diff. Pushing again would loop, so this run stops. Reproduce with the pinned 1.95.0 toolchain."
+            git --no-pager diff
+            exit 1
+          fi
+
+          git config user.name "Andrii Shylenko"
+          git config user.email "14119286+w1ne@users.noreply.github.com"
+          git add -A
+          # Subject is the loop-guard marker above — keep the two in step.
+          # No '[skip ci]': the run this push triggers is what re-reports
+          # pr-gate and release-runner-contract on the new head SHA.
+          git commit -m "$MARKER" \
+            -m "Applied by the fmt-autofix job in .github/workflows/core-ci.yml with the pinned 1.95.0 toolchain. Formatting only — no other step wrote to the tree."
+
+          # Never force. If the branch moved while this ran, the push is
+          # rejected and that is FINE: the newer push has its own fmt-autofix
+          # run which will do the same work against the current tip. Losing
+          # that race must not turn this job red.
+          if git push origin "HEAD:refs/heads/${BRANCH}"; then
+            echo "Pushed the formatting fixup to ${BRANCH}."
+            {
+              echo "### Formatting applied"
+              echo
+              echo 'Pushed `'"$MARKER"'`. A fresh CI run is now in flight against the new head SHA.'
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::notice title=fmt-autofix push skipped::${BRANCH} moved while this job was running, so the fixup was not pushed. The newer commit has its own fmt-autofix run."
+          fi
+
   # ── PR merge gate (REQUIRED) — target wall clock under ~1 minute ───────────
-  # fmt + focused clippy/tests only. No firmware builds, no feature-variant
+  # focused clippy/tests only. No firmware builds, no feature-variant
   # recompiles, no coverage/onboarding/arduino matrices (those are nightly).
+  #
+  # NO FORMATTING STEP HERE, ON PURPOSE. `cargo fmt --all -- --check` used to
+  # be the first thing that could fail this required check, and it failed on
+  # changes that were otherwise correct while printing the exact patch that
+  # would fix them. The `fmt-autofix` job above applies that patch instead.
+  # `core-integrity` still runs `--check` on push to main, so "formatted" is
+  # still asserted — it just is not a merge gate. Do not re-add a `--check`
+  # step here.
   pr-gate:
     name: pr-gate
     if: github.event_name == 'pull_request'
@@ -95,9 +306,6 @@ jobs:
             echo "Run scripts/regen-all.sh locally and commit the result."
             exit 1
           fi
-
-      - name: Check Formatting
-        run: cargo fmt --all -- --check
 
       # Clippy + lib tests over the workspace's default-members — cli, core,
       # dap, loader, labwired-fuzz. Feature lanes and the firmware/matrix
@@ -277,6 +485,14 @@ jobs:
           python3 scripts/generate_validation_status.py --check --drift
           python3 scripts/generate_firmware_exercise_matrix.py --check
 
+      # THE FORMATTING BACKSTOP. This is now the ONLY `--check` in the file —
+      # `pr-gate` no longer has one, because `fmt-autofix` applies formatting to
+      # PR branches instead of demanding it. Keep this step: it is what makes
+      # "formatting is no longer enforced anywhere" false. It reports on main
+      # rather than gating a merge (this job is not a required context), and it
+      # covers exactly the paths `fmt-autofix` cannot: fork PRs, a run with no
+      # CI_FMT_PAT configured, and anything that reaches main outside the PR
+      # flow. If it ever goes red, run `cargo fmt --all` on 1.95.0.
       - name: Check Formatting
         run: cargo fmt --all -- --check
 

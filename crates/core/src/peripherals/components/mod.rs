@@ -10,6 +10,7 @@ pub mod aht20;
 pub mod apa102;
 pub mod as5600;
 pub mod at24c256;
+pub mod atecc608a;
 pub mod bg770a;
 pub mod bme280;
 pub mod bmi270;

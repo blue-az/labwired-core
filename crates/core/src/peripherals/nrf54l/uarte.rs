@@ -38,11 +38,19 @@
 //!
 //! Not modelled: DPPI routing. The SUBSCRIBE_* (0x09C..0x0D4) and PUBLISH_*
 //! (0x180..0x1F4) windows accept writes and read back, but connecting a
-//! channel has no effect. RX has no input source — the RX tasks are accepted
-//! and leave the RX events clear rather than fabricating received data.
+//! channel has no effect.
+//!
+//! RX: host-injected serial input arrives through the shared `rx_source`
+//! queue (see `Bus::attach_uart_rx_source_named`). `TASKS_DMA.RX.START` arms
+//! an EasyDMA drain — up to DMA.RX.MAXCNT queued bytes land in RAM at
+//! DMA.RX.PTR, DMA.RX.AMOUNT is set and DMA.RX.END raised. RXDRDY reflects
+//! queue-non-empty. The bare-bus `tick_with_bus` path only drains when the
+//! queue is non-empty (no wake-on-inject there); bytes arriving after START
+//! on a live machine are picked up because the bus re-arms the bus-tick
+//! index on every MMIO write.
 
 use crate::{Bus, Peripheral, PeripheralTickResult, SimResult};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, VecDeque};
 use std::io::{self, Write};
 use std::sync::{Arc, Mutex};
 
@@ -65,14 +73,12 @@ const OFF_EVENTS_CTS: u64 = 0x100;
 #[cfg(test)]
 const OFF_EVENTS_NCTS: u64 = 0x104;
 const OFF_EVENTS_TXDRDY: u64 = 0x10C;
-#[cfg(test)]
 const OFF_EVENTS_RXDRDY: u64 = 0x110;
 #[cfg(test)]
 const OFF_EVENTS_ERROR: u64 = 0x114;
 #[cfg(test)]
 const OFF_EVENTS_RXTO: u64 = 0x124;
 const OFF_EVENTS_TXSTOPPED: u64 = 0x130;
-#[cfg(test)]
 const OFF_EVENTS_DMA_RX_END: u64 = 0x14C;
 const OFF_EVENTS_DMA_TX_END: u64 = 0x168;
 const OFF_EVENTS_DMA_TX_READY: u64 = 0x16C;
@@ -167,6 +173,12 @@ pub struct Nrf54lUarte {
     /// The transfer is deferred to the bus-aware tick because `write_u32` has
     /// no bus handle.
     tx_pending: bool,
+    /// Set by a `TASKS_DMA.RX.START` write; consumed by `tick_with_bus` once
+    /// the RX queue has bytes to drain.
+    rx_pending: bool,
+    /// Host-injected serial input, shared with the runner via
+    /// `Bus::attach_uart_rx_source_named`.
+    rx_source: Arc<Mutex<VecDeque<u8>>>,
     /// Level of `inten & pending_events` at the last tick, so the IRQ is
     /// raised on the 0→1 edge instead of every cycle the event stays set.
     irq_level: bool,
@@ -216,6 +228,17 @@ impl Nrf54lUarte {
         self.echo_stdout = echo_stdout;
     }
 
+    /// Shared handle to the RX injection queue, mirroring
+    /// `Nrf52Uarte::rx_buffer` so `Bus::attach_uart_rx_source_named` can
+    /// drive nRF54L serial input the same way.
+    pub fn rx_buffer(&self) -> Arc<Mutex<VecDeque<u8>>> {
+        self.rx_source.clone()
+    }
+
+    fn rx_queued(&self) -> usize {
+        self.rx_source.lock().map(|q| q.len()).unwrap_or(0)
+    }
+
     fn emit_byte(&mut self, byte: u8) {
         // The one place a TX byte leaves this UARTE, so the one place it is
         // traced. See `attach_bus_trace`.
@@ -257,6 +280,31 @@ impl Nrf54lUarte {
         }
         mask
     }
+
+    /// EasyDMA RX: drain up to DMA.RX.MAXCNT bytes from the injection queue
+    /// into RAM at DMA.RX.PTR in one shot (instantaneous, like TX), set
+    /// DMA.RX.AMOUNT and raise RXDRDY/DMA.RX.END. Callers guarantee the queue
+    /// is non-empty; `rx_pending` is consumed here.
+    fn do_dma_rx(&mut self, bus: &mut dyn Bus) {
+        self.rx_pending = false;
+
+        let max = (self.dma_rx_maxcnt & 0xFFFF) as usize;
+        let mut n = 0usize;
+        if let Ok(mut q) = self.rx_source.lock() {
+            while n < max {
+                let Some(b) = q.pop_front() else { break };
+                if bus.write_u8(self.dma_rx_ptr as u64 + n as u64, b).is_ok() {
+                    n += 1;
+                }
+            }
+        }
+        self.dma_rx_amount = n as u32;
+
+        if n > 0 {
+            self.set_event(OFF_EVENTS_RXDRDY);
+        }
+        self.set_event(OFF_EVENTS_DMA_RX_END);
+    }
 }
 
 impl Peripheral for Nrf54lUarte {
@@ -279,6 +327,10 @@ impl Peripheral for Nrf54lUarte {
     }
 
     fn read_u32(&self, offset: u64) -> SimResult<u32> {
+        // RXDRDY additionally reflects queued-but-unread injection bytes.
+        if offset == OFF_EVENTS_RXDRDY {
+            return Ok(self.events[event_index(offset).unwrap()] | (self.rx_queued() > 0) as u32);
+        }
         // Events first: one contiguous window, index == INTEN bit.
         if let Some(i) = event_index(offset) {
             return Ok(self.events[i]);
@@ -337,11 +389,11 @@ impl Peripheral for Nrf54lUarte {
             // TASKS_DMA.TX.STOP completes immediately in this model: raise
             // TXSTOPPED so a driver waiting on it makes progress.
             OFF_TASKS_DMA_TX_STOP => self.set_event(OFF_EVENTS_TXSTOPPED),
-            // RX tasks are accepted but inert: no RX source is modelled, so
-            // fabricating RX events (or an ENDRX with junk data) would be a
-            // lie. Leaving them clear is the honest state and does not hang a
-            // driver that only ever polls the TX path.
-            OFF_TASKS_DMA_RX_START | OFF_TASKS_DMA_RX_STOP | OFF_TASKS_FLUSHRX => {}
+            // TASKS_DMA.RX.START arms an EasyDMA drain of the RX injection
+            // queue; the RAM write happens in `tick_with_bus` (same deferred
+            // pattern as TX). STOPRX/FLUSHRX accepted, no modelled effect.
+            OFF_TASKS_DMA_RX_START => self.rx_pending = true,
+            OFF_TASKS_DMA_RX_STOP | OFF_TASKS_FLUSHRX => {}
             OFF_SHORTS => self.shorts = value,
             OFF_INTEN => self.inten = value,
             OFF_INTENSET => self.inten |= value,
@@ -379,11 +431,16 @@ impl Peripheral for Nrf54lUarte {
     /// EasyDMA needs to read the firmware-owned TX buffer out of RAM, which is
     /// only reachable with a bus handle — so the transfer is performed here,
     /// in the bus-aware pre-tick pass, rather than in `write_u32`.
+    /// The bare-bus path only fires when there is drainable work: a pending
+    /// TX, or a pending RX with bytes already queued (no wake-on-inject here).
     fn needs_bus_tick(&self) -> bool {
-        self.tx_pending
+        self.tx_pending || (self.rx_pending && self.rx_queued() > 0)
     }
 
     fn tick_with_bus(&mut self, bus: &mut dyn Bus) {
+        if self.rx_pending && self.rx_queued() > 0 {
+            self.do_dma_rx(bus);
+        }
         if !self.tx_pending {
             return;
         }
@@ -482,6 +539,40 @@ mod tests {
         u.set_sink(Some(sink.clone()), false);
         u.write_u32(OFF_ENABLE, 8).unwrap();
         (u, bus, sink)
+    }
+
+    #[test]
+    fn dma_rx_writes_queued_bytes_to_ram() {
+        let (mut u, mut bus, _sink) = fixture(0x2000_0010, b"");
+        u.rx_buffer().lock().unwrap().extend([0xDE, 0xAD, 0xBE, 0xEF]);
+
+        u.write_u32(OFF_DMA_RX_PTR, 0x2000_0020).unwrap();
+        u.write_u32(OFF_DMA_RX_MAXCNT, 3).unwrap(); // MAXCNT < queued: drains 3
+        u.write_u32(OFF_TASKS_DMA_RX_START, 1).unwrap();
+        assert!(u.needs_bus_tick(), "RX.START with queued bytes arms RX DMA");
+
+        u.tick_with_bus(&mut bus);
+
+        assert_eq!(bus.read_u8(0x2000_0020).unwrap(), 0xDE);
+        assert_eq!(bus.read_u8(0x2000_0021).unwrap(), 0xAD);
+        assert_eq!(bus.read_u8(0x2000_0022).unwrap(), 0xBE);
+        assert_eq!(u.read_u32(OFF_DMA_RX_AMOUNT).unwrap(), 3);
+        assert_eq!(u.read_u32(OFF_EVENTS_DMA_RX_END).unwrap(), 1);
+        assert_eq!(u.rx_queued(), 1, "one byte beyond MAXCNT stays queued");
+        assert!(!u.rx_pending, "drain consumes pending");
+    }
+
+    #[test]
+    fn dma_rx_empty_queue_stays_armed_without_bus_work() {
+        let (mut u, _bus, _sink) = fixture(0x2000_0010, b"");
+        u.write_u32(OFF_TASKS_DMA_RX_START, 1).unwrap();
+        // Bare-bus path: no work until bytes exist (no busy-spin).
+        assert!(!u.needs_bus_tick());
+        // RXDRDY reads 0 while the queue is empty, 1 once a byte lands.
+        assert_eq!(u.read_u32(OFF_EVENTS_RXDRDY).unwrap(), 0);
+        u.rx_buffer().lock().unwrap().push_back(0x42);
+        assert!(u.needs_bus_tick());
+        assert_eq!(u.read_u32(OFF_EVENTS_RXDRDY).unwrap(), 1);
     }
 
     #[test]
