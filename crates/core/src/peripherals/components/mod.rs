@@ -46,6 +46,7 @@ pub mod mcp2515;
 pub mod microsd;
 pub mod mlx90614;
 pub mod mlx90640;
+pub mod mma8451q;
 pub mod mpu6050;
 pub mod mq6;
 /// Shared fixture for the per-controller TCA9548A coverage tests. Each I²C
@@ -123,6 +124,7 @@ pub use ldr::Ldr;
 pub use max30102::{Max30102, MAX30102_ADDR};
 pub use max7219::Max7219;
 pub use mlx90640::{Mlx90640, ThermalScene, MLX90640_ADDR};
+pub use mma8451q::Mma8451q;
 pub use mpu6050::Mpu6050;
 pub use neo6m::Neo6mGps;
 pub use ntc_thermistor::NtcThermistor;

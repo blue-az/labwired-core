@@ -483,6 +483,50 @@
       ]
     },
     {
+      "device_type": "mma8451q",
+      "label": "MMA8451Q Accelerometer",
+      "summary": "3-axis 14-bit accelerometer over I2C with standby/active gating.",
+      "detail": "NXP MMA8451Q, WHO_AM_I = 0x1A. XYZ held at zero in standby, converts while CTRL_REG1.ACTIVE; 2/4/8 g full scale. Optional seeded noise via noise_sigma (g). Tap/FIFO/interrupts not modelled.",
+      "transport": "i2c",
+      "category": "i2c",
+      "config_keys": [
+        {
+          "name": "i2c_address",
+          "ty": "int",
+          "doc": "7-bit slave address. Defaults to 0x1C; 0x1D selects SA0=high."
+        },
+        {
+          "name": "noise_sigma",
+          "ty": "float",
+          "doc": "Optional Gaussian noise sigma in g, seeded and replay-safe."
+        }
+      ],
+      "labs": [],
+      "inputs": [
+        {
+          "key": "x",
+          "label": "Accel X",
+          "unit": "g",
+          "min": -8.0,
+          "max": 8.0
+        },
+        {
+          "key": "y",
+          "label": "Accel Y",
+          "unit": "g",
+          "min": -8.0,
+          "max": 8.0
+        },
+        {
+          "key": "z",
+          "label": "Accel Z",
+          "unit": "g",
+          "min": -8.0,
+          "max": 8.0
+        }
+      ]
+    },
+    {
       "device_type": "bme280",
       "label": "BME280 Weather",
       "summary": "Bosch BME280 temp + humidity + pressure sensor over I2C.",
