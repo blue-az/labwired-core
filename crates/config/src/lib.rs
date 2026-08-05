@@ -2416,9 +2416,19 @@ impl ResolvedSystem {
 
     /// A bare MCU: the named built-in chip, no external devices, no board I/O.
     pub fn from_builtin_chip(chip: &str) -> Result<Self> {
+        Self::from_builtin_chip_with_plugins(chip, &|_| None)
+    }
+
+    /// Like [`Self::from_builtin_chip`], but bare names not found among the
+    /// built-ins are offered to `plugin_chips` (chip name → embedded YAML)
+    /// before giving up.
+    pub fn from_builtin_chip_with_plugins(
+        chip: &str,
+        plugin_chips: &dyn Fn(&str) -> Option<&'static str>,
+    ) -> Result<Self> {
         // Fail here rather than at first use, so an unknown name is a config
         // error before the run starts.
-        ChipDescriptor::resolve(chip, Path::new("."))?;
+        ChipDescriptor::resolve_with(chip, Path::new("."), plugin_chips)?;
         Ok(Self {
             manifest: SystemManifest {
                 parts: Vec::new(),
@@ -2434,7 +2444,16 @@ impl ResolvedSystem {
 
     /// The chip descriptor this system runs on.
     pub fn chip(&self) -> Result<ChipDescriptor> {
-        ChipDescriptor::resolve(&self.manifest.chip, &self.base_dir)
+        self.chip_with_plugins(&|_| None)
+    }
+
+    /// Like [`Self::chip`], but bare names not found among the built-ins are
+    /// offered to `plugin_chips` (chip name → embedded YAML) before giving up.
+    pub fn chip_with_plugins(
+        &self,
+        plugin_chips: &dyn Fn(&str) -> Option<&'static str>,
+    ) -> Result<ChipDescriptor> {
+        ChipDescriptor::resolve_with(&self.manifest.chip, &self.base_dir, plugin_chips)
     }
 
     pub fn base_dir(&self) -> &Path {

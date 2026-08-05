@@ -49,7 +49,11 @@ pub(crate) fn export_bus_trace_if_requested(
     }
 }
 
-pub(crate) fn run_firmware_riscv(args: RunArgs, _chip_yaml: String) -> ExitCode {
+pub(crate) fn run_firmware_riscv(
+    args: RunArgs,
+    _chip_yaml: String,
+    plugins: &[&dyn labwired_core::plugin::ChipPlugin],
+) -> ExitCode {
     use labwired_core::bus::SystemBus;
 
     let chip = match labwired_config::ChipDescriptor::from_file(&args.chip) {
@@ -81,14 +85,14 @@ pub(crate) fn run_firmware_riscv(args: RunArgs, _chip_yaml: String) -> ExitCode 
     // distinct MACs onto the shared VirtualWifi medium so they associate, get
     // distinct DHCP leases, and exchange traffic over one virtual AP.
     if args.rom_boot && std::env::var("LABWIRED_WIFI_DUAL").is_ok() {
-        return run_two_c3_wifi(&args, &chip, &manifest);
+        return run_two_c3_wifi(&args, &chip, &manifest, plugins);
     }
 
     // Two-node BLE run (env LABWIRED_BLE_DUAL): boot two C3 instances with
     // different firmware onto the shared BLE air, so one advertises while the
     // other scans and the scanner's stack sees the advertiser's PDU.
     if args.rom_boot && std::env::var("LABWIRED_BLE_DUAL").is_ok() {
-        return crate::run_two_c3_ble(&args, &chip, &manifest);
+        return crate::run_two_c3_ble(&args, &chip, &manifest, plugins);
     }
 
     // Single-station WiFi run (env LABWIRED_WIFI_SOLO): one C3 on the shared
@@ -97,10 +101,10 @@ pub(crate) fn run_firmware_riscv(args: RunArgs, _chip_yaml: String) -> ExitCode 
     // step loop like the dual path; bolting medium mode onto the standard run
     // loop below does not keep the MAC resident (auth never completes).
     if args.rom_boot && std::env::var("LABWIRED_WIFI_SOLO").is_ok() {
-        return crate::run_one_c3_wifi(&args, &chip, &manifest);
+        return crate::run_one_c3_wifi(&args, &chip, &manifest, plugins);
     }
 
-    let mut bus = match SystemBus::from_config(&chip, &manifest) {
+    let mut bus = match SystemBus::from_config_with_plugins(&chip, &manifest, plugins) {
         Ok(b) => b,
         Err(e) => {
             eprintln!("error: failed to build system bus: {e:#}");
@@ -514,7 +518,10 @@ pub(crate) fn run_firmware_esp32(args: &RunArgs) -> ExitCode {
     ExitCode::from(EXIT_PASS)
 }
 
-pub(crate) fn run_firmware(args: RunArgs) -> ExitCode {
+pub(crate) fn run_firmware(
+    args: RunArgs,
+    plugins: &[&dyn labwired_core::plugin::ChipPlugin],
+) -> ExitCode {
     use labwired_core::boot::esp32s3::{fast_boot, BootOpts};
     use labwired_core::bus::SystemBus;
     use labwired_core::system::xtensa::{configure_xtensa_esp32s3, Esp32s3BootMode, Esp32s3Opts};
@@ -533,14 +540,14 @@ pub(crate) fn run_firmware(args: RunArgs) -> ExitCode {
     // through a Cortex-M machine, and stream UART bytes to stdout so the
     // TIER1 protocol lines are visible to the caller.
     if chip_yaml.contains("arch: \"arm\"") || chip_yaml.contains("arch: arm") {
-        return run_firmware_arm(&args, &chip_yaml);
+        return run_firmware_arm(&args, &chip_yaml, plugins);
     }
 
     // RISC-V fast-boot path: load peripherals from the chip YAML and run the
     // RV32I core. This is the path used by Tier-1 fixtures for RISC-V chips
     // (e.g. ESP32-C3) which cannot go through the Xtensa boot sequence.
     if chip_yaml.contains("arch: \"riscv\"") || chip_yaml.contains("arch: riscv") {
-        return run_firmware_riscv(args, chip_yaml);
+        return run_firmware_riscv(args, chip_yaml, plugins);
     }
 
     // Classic ESP32 (Xtensa LX6) fast-boot path.
@@ -975,7 +982,10 @@ pub(crate) fn run_firmware(args: RunArgs) -> ExitCode {
     ExitCode::from(EXIT_PASS)
 }
 
-pub(crate) fn run_interactive(cli: Cli) -> ExitCode {
+pub(crate) fn run_interactive(
+    cli: Cli,
+    plugins: &[&dyn labwired_core::plugin::ChipPlugin],
+) -> ExitCode {
     info!("Starting LabWired Simulator");
 
     let Some(firmware) = &cli.firmware else {
@@ -1007,7 +1017,10 @@ pub(crate) fn run_interactive(cli: Cli) -> ExitCode {
             return ExitCode::from(EXIT_CONFIG_ERROR);
         }
     };
-    let bus = match labwired_core::system::builder::build_system_bus(resolved_system.as_ref()) {
+    let bus = match labwired_core::system::builder::build_system_bus_with_plugins(
+        resolved_system.as_ref(),
+        plugins,
+    ) {
         Ok(bus) => bus,
         Err(e) => {
             emit_error(
@@ -1049,7 +1062,11 @@ pub(crate) fn run_interactive(cli: Cli) -> ExitCode {
         match labwired_config::SystemManifest::from_file(sys_path) {
             Ok(manifest) => {
                 let chip_dir = sys_path.parent().unwrap_or_else(|| Path::new("."));
-                match labwired_config::ChipDescriptor::resolve(&manifest.chip, chip_dir) {
+                match labwired_config::ChipDescriptor::resolve_with(
+                    &manifest.chip,
+                    chip_dir,
+                    &crate::plugin_chip_yaml(plugins),
+                ) {
                     Ok(c) => c.arch,
                     Err(e) => {
                         emit_error(
@@ -1127,7 +1144,11 @@ pub(crate) fn run_interactive(cli: Cli) -> ExitCode {
 /// fixture firmware).  UART bytes are streamed to stdout so the TIER1 protocol
 /// lines are visible to callers that pipe stdout.  Exits when the step limit
 /// is reached or the firmware halts.
-pub(crate) fn run_firmware_arm(args: &RunArgs, chip_yaml: &str) -> ExitCode {
+pub(crate) fn run_firmware_arm(
+    args: &RunArgs,
+    chip_yaml: &str,
+    plugins: &[&dyn labwired_core::plugin::ChipPlugin],
+) -> ExitCode {
     use labwired_config::{ChipDescriptor, SystemManifest};
     use labwired_core::bus::SystemBus;
     use labwired_core::system::cortex_m::configure_cortex_m;
@@ -1162,7 +1183,7 @@ pub(crate) fn run_firmware_arm(args: &RunArgs, chip_yaml: &str) -> ExitCode {
     manifest.chip = args.chip.to_string_lossy().into_owned();
 
     // Build the bus.
-    let mut bus = match SystemBus::from_config(&chip, &manifest) {
+    let mut bus = match SystemBus::from_config_with_plugins(&chip, &manifest, plugins) {
         Ok(b) => b,
         Err(e) => {
             eprintln!("error: cannot build bus from chip config: {e}");

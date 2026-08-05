@@ -8,9 +8,12 @@
 
 use crate::*;
 
-pub(crate) fn run_snapshot(args: SnapshotArgs) -> ExitCode {
+pub(crate) fn run_snapshot(
+    args: SnapshotArgs,
+    plugins: &[&dyn labwired_core::plugin::ChipPlugin],
+) -> ExitCode {
     match args.command {
-        SnapshotCommands::Capture(a) => run_snapshot_capture(a),
+        SnapshotCommands::Capture(a) => run_snapshot_capture(a, plugins),
     }
 }
 
@@ -23,7 +26,10 @@ pub(crate) fn run_snapshot(args: SnapshotArgs) -> ExitCode {
 /// same thunk setup, same IPI bridge cadence — so the captured state will
 /// resume bit-identically inside the browser. Thunk PCs are resolved from the
 /// ELF symbol table (no hand-curated per-firmware address list).
-pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
+pub(crate) fn run_snapshot_capture(
+    args: SnapshotCaptureArgs,
+    plugins: &[&dyn labwired_core::plugin::ChipPlugin],
+) -> ExitCode {
     use labwired_core::bus::SystemBus;
     use labwired_core::peripherals::components::{Ssd1680Tricolor290, Uc8151dTricolor290};
     use labwired_core::peripherals::esp32::spi::Esp32Spi;
@@ -73,7 +79,11 @@ pub(crate) fn run_snapshot_capture(args: SnapshotCaptureArgs) -> ExitCode {
                 let chip_dir = sys_path
                     .parent()
                     .unwrap_or_else(|| std::path::Path::new("."));
-                match labwired_config::ChipDescriptor::resolve(&manifest.chip, chip_dir) {
+                match labwired_config::ChipDescriptor::resolve_with(
+                    &manifest.chip,
+                    chip_dir,
+                    &crate::plugin_chip_yaml(plugins),
+                ) {
                     Ok(chip) => bus.attach_debug_schemas(
                         &chip,
                         &labwired_core::system::builder::anchor_chip_path(&manifest, chip_dir),

@@ -239,6 +239,19 @@ impl World {
         manifest: labwired_config::EnvironmentManifest,
         root_dir: &std::path::Path,
     ) -> anyhow::Result<Self> {
+        Self::from_manifest_with_plugins(manifest, root_dir, &[])
+    }
+
+    /// [`Self::from_manifest`] with out-of-tree chip plugins. A node whose
+    /// `chip:` spec does not resolve to a descriptor file is offered to the
+    /// plugins' embedded YAMLs (matched by the bare spec string) before the
+    /// build fails, and each node's bus offers its peripheral types to the
+    /// plugins before the in-tree factories.
+    pub fn from_manifest_with_plugins(
+        manifest: labwired_config::EnvironmentManifest,
+        root_dir: &std::path::Path,
+        plugins: &[&dyn crate::plugin::ChipPlugin],
+    ) -> anyhow::Result<Self> {
         use anyhow::Context;
 
         manifest
@@ -254,12 +267,26 @@ impl World {
                 .parent()
                 .unwrap_or_else(|| std::path::Path::new("."))
                 .join(&sysman.chip);
-            let chip = labwired_config::ChipDescriptor::from_file(&chip_path)
-                .with_context(|| format!("node '{}': chip {:?}", node.id, chip_path))?;
+            let chip = match labwired_config::ChipDescriptor::from_file(&chip_path) {
+                Ok(chip) => chip,
+                Err(file_err) => match plugins.iter().find_map(|p| p.chip_yaml(&sysman.chip)) {
+                    Some(yaml) => serde_yaml::from_str::<labwired_config::ChipDescriptor>(yaml)
+                        .with_context(|| {
+                            format!("node '{}': plugin chip '{}'", node.id, sysman.chip)
+                        })?,
+                    None => {
+                        return Err(file_err).with_context(|| {
+                            format!("node '{}': chip {:?}", node.id, chip_path)
+                        });
+                    }
+                },
+            };
             let fw_path = root_dir.join(&node.firmware);
             let firmware = crate::system::node::NodeFirmware::from_file(&fw_path)
                 .with_context(|| format!("node '{}': firmware {:?}", node.id, fw_path))?;
-            let mut machine = crate::system::node::build_node(&node.id, &chip, &sysman, firmware)?;
+            let mut machine = crate::system::node::build_node_with_plugins(
+                &node.id, &chip, &sysman, firmware, plugins,
+            )?;
             // Label each node's UART console with its id so the shared stdout
             // stays readable (line-buffered per node instead of byte-interleaved
             // across all nodes).

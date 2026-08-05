@@ -9,7 +9,10 @@
 use crate::artifacts::Snapshot;
 use crate::*;
 
-pub(crate) fn run_machine_load(args: LoadArgs) -> ExitCode {
+pub(crate) fn run_machine_load(
+    args: LoadArgs,
+    plugins: &[&dyn labwired_core::plugin::ChipPlugin],
+) -> ExitCode {
     info!("Loading machine from snapshot: {:?}", args.snapshot);
 
     let f = match std::fs::File::open(&args.snapshot) {
@@ -54,8 +57,10 @@ pub(crate) fn run_machine_load(args: LoadArgs) -> ExitCode {
             return ExitCode::from(EXIT_CONFIG_ERROR);
         }
     };
-    let mut bus =
-        match labwired_core::system::builder::build_system_bus(reconstructed_system.as_ref()) {
+    let mut bus = match labwired_core::system::builder::build_system_bus_with_plugins(
+        reconstructed_system.as_ref(),
+        plugins,
+    ) {
             Ok(bus) => bus,
             Err(e) => {
                 error!("Failed to reconstruct bus: {:#}", e);

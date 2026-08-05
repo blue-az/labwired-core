@@ -71,9 +71,22 @@ pub fn build_node(
     system: &SystemManifest,
     firmware: NodeFirmware,
 ) -> anyhow::Result<Box<dyn MachineTrait>> {
+    build_node_with_plugins(id, chip, system, firmware, &[])
+}
+
+/// [`build_node`] with out-of-tree chip plugins: each peripheral type is
+/// offered to `plugins` before the in-tree factories when the node's bus is
+/// built.
+pub fn build_node_with_plugins(
+    id: &str,
+    chip: &ChipDescriptor,
+    system: &SystemManifest,
+    firmware: NodeFirmware,
+    plugins: &[&dyn crate::plugin::ChipPlugin],
+) -> anyhow::Result<Box<dyn MachineTrait>> {
     match chip.arch {
-        Arch::Arm => build_cortex_m_node(id, chip, system, firmware),
-        Arch::RiscV => build_riscv_node(id, chip, system, firmware),
+        Arch::Arm => build_cortex_m_node(id, chip, system, firmware, plugins),
+        Arch::RiscV => build_riscv_node(id, chip, system, firmware, plugins),
         Arch::Xtensa => build_xtensa_node(id, chip, system, firmware),
         Arch::Unknown => anyhow::bail!(
             "node '{id}': chip '{}' does not declare a known architecture (`arch:` must be arm, riscv, or xtensa)",
@@ -93,6 +106,7 @@ fn build_cortex_m_node(
     chip: &ChipDescriptor,
     system: &SystemManifest,
     firmware: NodeFirmware,
+    plugins: &[&dyn crate::plugin::ChipPlugin],
 ) -> anyhow::Result<Box<dyn MachineTrait>> {
     if !is_cortex_m(chip) {
         anyhow::bail!(
@@ -112,7 +126,7 @@ fn build_cortex_m_node(
         parse_elf_image(&bytes).with_context(|| format!("node '{id}': parse firmware ELF"))?;
     validate_cortex_m_firmware(id, chip, &image)?;
 
-    let mut bus = crate::bus::SystemBus::from_config(chip, system)
+    let mut bus = crate::bus::SystemBus::from_config_with_plugins(chip, system, plugins)
         .with_context(|| format!("node '{id}': build bus"))?;
     let (cpu, _nvic) = crate::system::cortex_m::configure_cortex_m(&mut bus);
     let mut machine = Machine::new(cpu, bus);
@@ -130,8 +144,9 @@ fn build_riscv_node(
     chip: &ChipDescriptor,
     system: &SystemManifest,
     firmware: NodeFirmware,
+    plugins: &[&dyn crate::plugin::ChipPlugin],
 ) -> anyhow::Result<Box<dyn MachineTrait>> {
-    let mut bus = crate::bus::SystemBus::from_config(chip, system)
+    let mut bus = crate::bus::SystemBus::from_config_with_plugins(chip, system, plugins)
         .with_context(|| format!("node '{id}': build bus"))?;
 
     match firmware {

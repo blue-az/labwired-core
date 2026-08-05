@@ -38,6 +38,7 @@ pub(crate) struct EnvironmentRunOutcome {
 pub(crate) fn run_environment_test(
     args: &TestArgs,
     script: EnvTestScript,
+    plugins: &[&dyn labwired_core::plugin::ChipPlugin],
 ) -> EnvironmentRunOutcome {
     // Scope the thread-local coverage monitor to this world run. The result
     // path drains it regardless of whether an output directory was requested.
@@ -104,7 +105,7 @@ pub(crate) fn run_environment_test(
     }
 
     let root = environment_path.parent().unwrap_or_else(|| Path::new("."));
-    let mut world = match World::from_manifest(manifest, root) {
+    let mut world = match World::from_manifest_with_plugins(manifest, root, plugins) {
         Ok(world) => world,
         Err(error) => {
             return write_config_error(
