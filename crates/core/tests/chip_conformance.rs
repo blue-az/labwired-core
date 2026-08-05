@@ -134,6 +134,14 @@ const CHIPS: &[ChipConf] = &[
         behavior_gate: Some("firmware_survival::test_stm32f401_blinky_survival"),
     },
     ChipConf {
+        name: "stm32f405",
+        yaml: "configs/chips/stm32f405.yaml",
+        reset_oracle: None,
+        // Smoke-validated via the feather-f405 example (cli lane), not a
+        // firmware_survival case of its own yet.
+        behavior_gate: None,
+    },
+    ChipConf {
         name: "stm32f407",
         yaml: "configs/chips/stm32f407.yaml",
         reset_oracle: None,

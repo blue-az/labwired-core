@@ -99,3 +99,94 @@ fn manifest_digest_is_reproducible_and_input_sensitive() {
     let d3 = run_manifest_digest(&script2, &temp.join("run_2"));
     assert_ne!(d1, d3, "a changed input must change the digest");
 }
+
+/// Run the manifest flow and return the parsed JSON (not just the digest).
+fn run_manifest_json(script: &std::path::Path, out_dir: &std::path::Path) -> serde_json::Value {
+    let output = Command::new(labwired_bin())
+        .arg("test")
+        .arg("--script")
+        .arg(script)
+        .arg("--output-dir")
+        .arg(out_dir)
+        .arg("--run-manifest")
+        .arg("--no-uart-stdout")
+        .output()
+        .expect("failed to run labwired");
+    let manifest_path = out_dir.join("run-manifest.json");
+    assert!(
+        manifest_path.exists(),
+        "run-manifest.json not produced. exit {:?}\nstderr: {}",
+        output.status.code(),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    serde_json::from_str(&std::fs::read_to_string(&manifest_path).unwrap()).unwrap()
+}
+
+#[test]
+fn noise_enabled_run_declares_seeded_nondeterminism() {
+    let root = workspace_root();
+    let firmware = root.join("tests/fixtures/uart-ok-thumbv7m.elf");
+    let chip = root.join("configs/chips/stm32f401.yaml");
+    if !firmware.exists() || !chip.exists() {
+        eprintln!("skipping noise manifest test: fixtures absent");
+        return;
+    }
+
+    let temp = std::env::temp_dir().join("labwired-manifest-noise");
+    let _ = std::fs::remove_dir_all(&temp);
+    std::fs::create_dir_all(&temp).unwrap();
+
+    // A system wiring an MPU6050 with noise_sigma on the F401's modeled I2C1.
+    let system = temp.join("system-noise.yaml");
+    std::fs::write(
+        &system,
+        format!(
+            "name: noise-fixture\nchip: \"{}\"\nexternal_devices:\n  - id: imu\n    type: mpu6050\n    connection: i2c1\n    config:\n      noise_sigma: 0.02\n",
+            chip.canonicalize().unwrap().display()
+        ),
+    )
+    .unwrap();
+
+    let script = write_script(
+        &temp,
+        &firmware.canonicalize().unwrap().display().to_string(),
+        &system.display().to_string(),
+        1000,
+    );
+
+    let man_a = run_manifest_json(&script, &temp.join("run_0"));
+    let man_b = run_manifest_json(&script, &temp.join("run_1"));
+
+    assert_eq!(
+        man_a["nondeterminism"].as_str().unwrap(),
+        "seeded(sensor-noise)",
+        "noise-enabled run must declare seeded(sensor-noise)"
+    );
+    assert_eq!(
+        man_a["digest"].as_str().unwrap(),
+        man_b["digest"].as_str().unwrap(),
+        "seeded noise must still replay bit-identically"
+    );
+}
+
+#[test]
+fn noise_free_run_still_declares_none() {
+    let root = workspace_root();
+    let firmware = root.join("tests/fixtures/uart-ok-thumbv7m.elf");
+    let system = root.join("configs/systems/ci-fixture-uart1.yaml");
+    if !firmware.exists() || !system.exists() {
+        eprintln!("skipping noise-free manifest test: fixtures absent");
+        return;
+    }
+    let temp = std::env::temp_dir().join("labwired-manifest-noise-free");
+    let _ = std::fs::remove_dir_all(&temp);
+    std::fs::create_dir_all(&temp).unwrap();
+    let script = write_script(
+        &temp,
+        &firmware.canonicalize().unwrap().display().to_string(),
+        &system.canonicalize().unwrap().display().to_string(),
+        1000,
+    );
+    let man = run_manifest_json(&script, &temp.join("run_0"));
+    assert_eq!(man["nondeterminism"].as_str().unwrap(), "none");
+}

@@ -34,6 +34,7 @@ pub static KITS: &[&'static dyn PeripheralKit] = &[
     &components::microsd::MICROSD_KIT,
     &components::mcp2515::MCP2515_KIT,
     &components::mpu6050::MPU6050_KIT,
+    &components::mma8451q::MMA8451Q_KIT,
     &components::bme280::BME280_KIT,
     &components::aht20::AHT20_KIT,
     &components::bmp280::BMP280_KIT,
@@ -77,6 +78,7 @@ pub static KITS: &[&'static dyn PeripheralKit] = &[
     // was migrated here from a hand-written model; the model survives only as the
     // byte-parity oracle (components::veml7700, #[cfg(test)]).
     &components::declarative_i2c::SHT31_KIT,
+    &components::declarative_i2c::MCP9808_KIT,
     &components::declarative_i2c::BH1750_KIT,
     &components::declarative_i2c::VEML7700_KIT,
     // TMP102 (register-pointer + drift) and PCA9685 (byte register file + servo
@@ -94,6 +96,7 @@ pub static KITS: &[&'static dyn PeripheralKit] = &[
     // interpreted by the generic GenericSpiDevice (zero per-part Rust).
     &components::declarative_spi::ADXL345_KIT,
     &components::declarative_spi::MAX31855_KIT,
+    &components::apa102::APA102_KIT,
 ];
 
 /// Borrow the registry slice.
