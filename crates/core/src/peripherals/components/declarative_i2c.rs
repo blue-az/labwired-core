@@ -54,6 +54,7 @@ use labwired_config::{
 
 use super::declarative_regs::{encode_raw, observe, pack, register_read_bytes, unpack};
 use crate::peripherals::i2c::I2cDevice;
+use crate::peripherals::noise::ChannelNoise;
 use crate::sim_input::{InputChannel, SimInput, SimInputError};
 
 /// CRC-8 with an arbitrary polynomial + init, no final XOR. With
@@ -174,6 +175,15 @@ pub struct GenericI2cDevice {
     channels: &'static [InputChannel],
     /// system.yaml `external_devices` id, stamped at attach.
     component_id: Option<String>,
+
+    /// Seeded per-channel noise states, keyed by channel key, built from the
+    /// `noise_sigma` / `bias` / `thermal_tau_s` input keys. Empty ⇒ the read
+    /// path stays byte-identical to pre-noise behavior.
+    noise: HashMap<String, ChannelNoise>,
+    /// Noise-applied slot view cached for the duration of one register word in
+    /// auto-increment mode, so every byte of a word carries ONE observation.
+    /// `None` ⇒ resample on the next word (or on the next read phase).
+    observed: Option<HashMap<String, f64>>,
 }
 
 impl GenericI2cDevice {
@@ -269,7 +279,55 @@ impl GenericI2cDevice {
             observables: spec.observables.clone(),
             channels,
             component_id: None,
+            noise: descriptor
+                .metadata
+                .as_ref()
+                .map(|meta| {
+                    meta.inputs
+                        .iter()
+                        .filter(|i| {
+                            i.noise_sigma.is_some() || i.bias.is_some() || i.thermal_tau_s.is_some()
+                        })
+                        .map(|i| {
+                            (
+                                i.key.clone(),
+                                ChannelNoise::new(
+                                    0, // run seed: 0 is still fully deterministic
+                                    "", // re-keyed with the component id at attach
+                                    &i.key,
+                                    i.noise_sigma.unwrap_or(0.0),
+                                    i.bias.unwrap_or(0.0),
+                                    i.thermal_tau_s,
+                                ),
+                            )
+                        })
+                        .collect()
+                })
+                .unwrap_or_default(),
+            observed: None,
         })
+    }
+
+    /// The slot view a read observes: seeded noise applied to the channels that
+    /// declare it — one sample per channel per call, so a register word is a
+    /// single observation, matching how firmware experiences a noisy sensor.
+    /// Thermal lag uses the same accumulated µs source as `delay_us` gating;
+    /// buses without an honest µs source get noise+bias but no lag.
+    fn observed_slots(&mut self) -> HashMap<String, f64> {
+        if self.noise.is_empty() {
+            return self.slots.clone();
+        }
+        let now = self.time_source_seen.then_some(self.elapsed_us);
+        self.slots
+            .iter()
+            .map(|(k, &v)| {
+                let v = match self.noise.get_mut(k) {
+                    Some(n) if !n.is_noop() => n.sample(v, now),
+                    _ => v,
+                };
+                (k.clone(), v)
+            })
+            .collect()
     }
 
     /// Read a named observable channel in engineering units (e.g. the PCA9685
@@ -573,11 +631,11 @@ impl GenericI2cDevice {
     /// When `addr` is the register's LAST byte, also returns its name and START
     /// address — the two things a post-word side effect needs. A mid-word byte
     /// reports `None` so clears and updates fire once per word, not per byte.
-    fn byte_at(&self, addr: u8) -> (u8, Option<(String, u8)>) {
+    fn byte_at(&self, addr: u8, slots: &HashMap<String, f64>) -> (u8, Option<(String, u8)>) {
         let Some(reg) = self.register_covering(addr) else {
             return (self.reg_unmapped_byte, None);
         };
-        let raw = register_read_bytes(reg, &self.slots, &self.reg_values);
+        let raw = register_read_bytes(reg, slots, &self.reg_values);
         let overlay = self.ready_overlay(&reg.name);
         let bytes = if overlay == 0 {
             raw
@@ -611,10 +669,11 @@ impl GenericI2cDevice {
     }
 
     /// Build the response bytes for a dispatched command (before delay gating).
-    fn build_response(&self, cmd: &I2cCommand) -> Vec<u8> {
+    /// `slots` is the noise-applied observation view computed by the caller.
+    fn build_response(&self, cmd: &I2cCommand, slots: &HashMap<String, f64>) -> Vec<u8> {
         let mut out = Vec::new();
         for word in &cmd.response {
-            let raw = self.response_word_raw(word);
+            let raw = Self::response_word_raw(word, slots);
             let bytes = pack(raw, word.width, Endian::Be); // commands are BE on wire
             match &self.crc8 {
                 // CRC framing is per 16-bit word, exactly like the Sensirion
@@ -631,9 +690,9 @@ impl GenericI2cDevice {
         out
     }
 
-    fn response_word_raw(&self, word: &ResponseWord) -> u32 {
+    fn response_word_raw(word: &ResponseWord, slots: &HashMap<String, f64>) -> u32 {
         if let Some(src) = &word.source {
-            let value = self.slots.get(src).copied().unwrap_or(0.0);
+            let value = slots.get(src).copied().unwrap_or(0.0);
             encode_raw(value, word.encode.as_ref(), 1.0, word.width, false)
         } else {
             word.const_value.unwrap_or(0)
@@ -650,7 +709,10 @@ impl GenericI2cDevice {
             return;
         };
         let cmd = cmd.clone();
-        let resp = self.build_response(&cmd);
+        // One observation per dispatched command: the whole response frame
+        // (every word + CRC) is computed from a single noise-applied slot view.
+        let slots = self.observed_slots();
+        let resp = self.build_response(&cmd, &slots);
         match cmd.delay_us {
             Some(us) if us > 0 => {
                 self.pending = Some(resp);
@@ -673,6 +735,8 @@ impl I2cDevice for GenericI2cDevice {
         self.write_buf.clear();
         self.read_idx = 0;
         self.latched = false;
+        // A new read phase is a new observation in auto-increment mode.
+        self.observed = None;
         // Register-file mode: the first write after START selects the pointer,
         // exactly like the hand-written PCA9685 (which resets its write counter
         // on START only).
@@ -799,7 +863,15 @@ impl I2cDevice for GenericI2cDevice {
                 self.tick_indexed_tables();
             }
             let addr = self.pointer.unwrap_or(0);
-            let (byte, hit) = self.byte_at(addr);
+            // One observation per register word: the noise-applied slot view is
+            // sampled when a word starts and held until its last byte is out.
+            if self.observed.is_none() {
+                self.observed = Some(self.observed_slots());
+            }
+            let (byte, hit) = match self.observed.as_ref() {
+                Some(observed) => self.byte_at(addr, observed),
+                None => unreachable!("observed was just populated"),
+            };
             self.pointer = Some(addr.wrapping_add(1));
             // Clear only once the whole word has been delivered: clearing on the
             // first byte of a 2-byte result would drop the flag while the master
@@ -813,6 +885,8 @@ impl I2cDevice for GenericI2cDevice {
                 if !self.updates.is_empty() {
                     self.apply_read_complete_updates(start);
                 }
+                // Word complete: the next word is a new observation.
+                self.observed = None;
             }
             return byte;
         }
@@ -826,9 +900,10 @@ impl I2cDevice for GenericI2cDevice {
             if !self.indexed_tables.is_empty() {
                 self.tick_indexed_tables();
             }
+            let slots = self.observed_slots();
             let (bytes, name) = match self.pointer.and_then(|p| self.find_register(p)) {
                 Some(reg) => {
-                    let raw = register_read_bytes(reg, &self.slots, &self.reg_values);
+                    let raw = register_read_bytes(reg, &slots, &self.reg_values);
                     // Status bits are OR'd over whatever the register stores, so
                     // one register carries the firmware-written enable bits and
                     // the model-driven ready flags at once.
@@ -907,7 +982,11 @@ impl SimInput for GenericI2cDevice {
     }
 
     fn set_component_id(&mut self, id: String) {
-        self.component_id = Some(id);
+        self.component_id = Some(id.clone());
+        // Re-key the noise states so two identical devices on one bus diverge.
+        for (key, n) in self.noise.iter_mut() {
+            *n = ChannelNoise::new(0, &id, key, n.sigma(), n.bias(), n.tau_s());
+        }
     }
 }
 
@@ -1379,6 +1458,14 @@ pub static SHT31_KIT: LazyLock<DeclarativeI2cKit> = LazyLock::new(|| {
         labwired_config::embedded_device_yaml("sht31").expect("sht31 descriptor is embedded"),
     )
     .expect("sht31.yaml is a valid declarative i2c descriptor")
+});
+
+/// Microchip MCP9808 temperature sensor (declarative `mcp9808.yaml`).
+pub static MCP9808_KIT: LazyLock<DeclarativeI2cKit> = LazyLock::new(|| {
+    DeclarativeI2cKit::from_yaml(
+        labwired_config::embedded_device_yaml("mcp9808").expect("mcp9808 descriptor is embedded"),
+    )
+    .expect("mcp9808.yaml is a valid declarative i2c descriptor")
 });
 
 /// ROHM BH1750 ambient-light sensor (declarative `bh1750.yaml`).

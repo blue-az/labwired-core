@@ -1,0 +1,11 @@
+# LabWired - Feather-STM32F405 UART smoke test
+# Firmware: firmware-f401-demo (link-compatible reuse — see VALIDATION.md).
+schema_version: "1.0"
+inputs:
+  firmware: "../../target/thumbv7em-none-eabi/release/firmware-f401-demo"
+  system: "./system.yaml"
+limits:
+  max_steps: 64
+assertions:
+  - uart_contains: "OK"
+  - expected_stop_reason: max_steps

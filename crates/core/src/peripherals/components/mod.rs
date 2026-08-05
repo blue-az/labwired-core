@@ -7,6 +7,7 @@
 pub mod ads1115;
 pub mod adxl345;
 pub mod aht20;
+pub mod apa102;
 pub mod as5600;
 pub mod at24c256;
 pub mod atecc608a;
@@ -48,6 +49,7 @@ pub mod mcp2515;
 pub mod microsd;
 pub mod mlx90614;
 pub mod mlx90640;
+pub mod mma8451q;
 pub mod mpu6050;
 pub mod mq6;
 /// Shared fixture for the per-controller TCA9548A coverage tests. Each I²C
@@ -101,6 +103,7 @@ pub mod ws2812;
 
 pub use adxl345::Adxl345;
 pub use aht20::Aht20;
+pub use apa102::Apa102;
 pub use bg770a::QuectelBg770a;
 pub use bme280::Bme280;
 pub use bmi270::{Bmi270, BMI270_ADDR, BMI270_CHIP_ID};
@@ -125,6 +128,7 @@ pub use ldr::Ldr;
 pub use max30102::{Max30102, MAX30102_ADDR};
 pub use max7219::Max7219;
 pub use mlx90640::{Mlx90640, ThermalScene, MLX90640_ADDR};
+pub use mma8451q::Mma8451q;
 pub use mpu6050::Mpu6050;
 pub use neo6m::Neo6mGps;
 pub use ntc_thermistor::NtcThermistor;

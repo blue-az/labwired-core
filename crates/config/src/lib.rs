@@ -710,6 +710,7 @@ pub const BUILTIN_CHIP_NAMES: &[&str] = &[
     "stm32f103",
     "stm32f401",
     "stm32f401cdu6",
+    "stm32f405",
     "stm32f407",
     "stm32f411ceu6",
     "stm32g474re",
@@ -739,6 +740,7 @@ pub fn embedded_chip_yaml(name: &str) -> Option<&'static str> {
         "stm32f103" => include_str!("../../../configs/chips/stm32f103.yaml"),
         "stm32f401" => include_str!("../../../configs/chips/stm32f401.yaml"),
         "stm32f401cdu6" => include_str!("../../../configs/chips/stm32f401cdu6.yaml"),
+        "stm32f405" => include_str!("../../../configs/chips/stm32f405.yaml"),
         "stm32f407" => include_str!("../../../configs/chips/stm32f407.yaml"),
         "stm32f411ceu6" => include_str!("../../../configs/chips/stm32f411ceu6.yaml"),
         "stm32g474re" => include_str!("../../../configs/chips/stm32g474re.yaml"),
@@ -1215,6 +1217,16 @@ pub struct InputSpec {
     /// Value the slot holds until driven. Absent ⇒ 0.0.
     #[serde(default)]
     pub default: Option<f64>,
+    /// Gaussian noise sigma applied per read, in `unit` (seeded, replay-safe).
+    #[serde(default)]
+    pub noise_sigma: Option<f64>,
+    /// Constant offset applied to the channel value, in `unit`.
+    #[serde(default)]
+    pub bias: Option<f64>,
+    /// First-order thermal-lag time constant in seconds; requires a bus that
+    /// drives `advance_time_us` (degrades to no lag elsewhere).
+    #[serde(default)]
+    pub thermal_tau_s: Option<f64>,
 }
 
 /// The `behavior.i2c` section of a declarative `i2c_device` — a datasheet-shaped
@@ -2133,6 +2145,7 @@ pub fn embedded_device_yaml(device_type: &str) -> Option<&'static str> {
         "bh1750" => Some(include_str!("../../../configs/devices/bh1750.yaml")),
         "veml7700" => Some(include_str!("../../../configs/devices/veml7700.yaml")),
         "tmp102" => Some(include_str!("../../../configs/devices/tmp102.yaml")),
+        "mcp9808" => Some(include_str!("../../../configs/devices/mcp9808.yaml")),
         "pca9685" => Some(include_str!("../../../configs/devices/pca9685.yaml")),
         "vcnl4010" => Some(include_str!("../../../configs/devices/vcnl4010.yaml")),
         "vl53l0x" => Some(include_str!("../../../configs/devices/vl53l0x.yaml")),

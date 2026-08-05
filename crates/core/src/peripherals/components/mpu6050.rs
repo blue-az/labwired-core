@@ -35,6 +35,14 @@ pub struct Mpu6050 {
     /// system.yaml `external_devices` id, stamped at attach (see
     /// [`crate::sim_input::SimInput::component_id`]).
     component_id: Option<String>,
+
+    /// Optional seeded Gaussian noise on accel/gyro data reads (0 = off, the
+    /// default — the model stays byte-identical to pre-noise behavior).
+    #[serde(skip)]
+    noise_sigma: f64,
+    /// Per-channel noise states, re-keyed when the component id is stamped.
+    #[serde(skip)]
+    noise: Option<[crate::peripherals::noise::ChannelNoise; 6]>,
 }
 
 impl Default for Mpu6050 {
@@ -63,24 +71,75 @@ impl Mpu6050 {
             gyro_config: 0,
             register_address_written: false,
             component_id: None,
+            noise_sigma: 0.0,
+            noise: None,
         }
     }
 
-    fn read_register(&self, reg: u8) -> u8 {
-        match reg {
-            0x3B => (self.accel_x >> 8) as u8,
-            0x3C => (self.accel_x & 0xFF) as u8,
-            0x3D => (self.accel_y >> 8) as u8,
-            0x3E => (self.accel_y & 0xFF) as u8,
-            0x3F => (self.accel_z >> 8) as u8,
-            0x40 => (self.accel_z & 0xFF) as u8,
+    /// Enable seeded Gaussian noise on accel/gyro data reads. `sigma` is in
+    /// the channel's unit (g for accel, °/s for gyro). 0 = off.
+    pub fn with_noise_sigma(mut self, sigma: f64) -> Self {
+        self.noise_sigma = sigma;
+        self
+    }
 
-            0x43 => (self.gyro_x >> 8) as u8,
-            0x44 => (self.gyro_x & 0xFF) as u8,
-            0x45 => (self.gyro_y >> 8) as u8,
-            0x46 => (self.gyro_y & 0xFF) as u8,
-            0x47 => (self.gyro_z >> 8) as u8,
-            0x48 => (self.gyro_z & 0xFF) as u8,
+    /// (Re)build the per-channel noise states, keyed by the stamped component
+    /// id so two identical IMUs on one bus diverge.
+    fn rebuild_noise(&mut self) {
+        if self.noise_sigma <= 0.0 {
+            self.noise = None;
+            return;
+        }
+        let id = self.component_id.clone().unwrap_or_default();
+        self.noise = Some(["ax", "ay", "az", "gx", "gy", "gz"].map(|ch| {
+            crate::peripherals::noise::ChannelNoise::new(0, &id, ch, self.noise_sigma, 0.0, None)
+        }));
+    }
+
+    /// LSB per g for the configured accel full scale (AFS_SEL).
+    fn accel_lsb_per_g(&self) -> f64 {
+        let afs = ((self.accel_config >> 3) & 0x03) as u32;
+        (16384 >> afs) as f64
+    }
+
+    /// LSB per °/s for the configured gyro full scale (FS_SEL).
+    fn gyro_lsb_per_dps(&self) -> f64 {
+        let fs = ((self.gyro_config >> 3) & 0x03) as u32;
+        131.0 / (1 << fs) as f64
+    }
+
+    /// One accel/gyro count value as the firmware observes it: the stored
+    /// sample, or a seeded-noise observation of it when noise is enabled.
+    /// Channel index 0..=5 maps to register pairs 0x3B..=0x48.
+    fn observed_counts(&mut self, ch: usize) -> i16 {
+        let (raw, lsb_per_unit) = match ch {
+            0 => (self.accel_x, self.accel_lsb_per_g()),
+            1 => (self.accel_y, self.accel_lsb_per_g()),
+            2 => (self.accel_z, self.accel_lsb_per_g()),
+            3 => (self.gyro_x, self.gyro_lsb_per_dps()),
+            4 => (self.gyro_y, self.gyro_lsb_per_dps()),
+            _ => (self.gyro_z, self.gyro_lsb_per_dps()),
+        };
+        match self.noise.as_mut() {
+            Some(noise) => {
+                let units = raw as f64 / lsb_per_unit;
+                (noise[ch].sample(units, None) * lsb_per_unit).round() as i16
+            }
+            None => raw,
+        }
+    }
+
+    fn read_register(&mut self, reg: u8) -> u8 {
+        match reg {
+            0x3B..=0x48 => {
+                let ch = ((reg - 0x3B) / 2) as usize;
+                let raw = self.observed_counts(ch);
+                if reg % 2 == 1 {
+                    (raw >> 8) as u8
+                } else {
+                    (raw & 0xFF) as u8
+                }
+            }
 
             0x1B => self.gyro_config,
             0x1C => self.accel_config,
@@ -229,10 +288,10 @@ impl crate::sim_input::SimInput for Mpu6050 {
         self.require_channel(key, value)?;
         let afs = ((self.accel_config >> 3) & 0x03) as u32;
         let accel_fs = (2 << afs) as f64; // ±2/4/8/16 g
-        let accel_lsb_per_g = (16384 >> afs) as f64;
+        let accel_lsb_per_g = self.accel_lsb_per_g();
         let fs = ((self.gyro_config >> 3) & 0x03) as u32;
         let gyro_fs = (250 << fs) as f64; // ±250/500/1000/2000 °/s
-        let gyro_lsb_per_dps = 131.0 / (1 << fs) as f64;
+        let gyro_lsb_per_dps = self.gyro_lsb_per_dps();
         let accel = |v: f64| (v.clamp(-accel_fs, accel_fs) * accel_lsb_per_g).round() as i16;
         let gyro = |v: f64| (v.clamp(-gyro_fs, gyro_fs) * gyro_lsb_per_dps).round() as i16;
         match key {
@@ -253,6 +312,7 @@ impl crate::sim_input::SimInput for Mpu6050 {
 
     fn set_component_id(&mut self, id: String) {
         self.component_id = Some(id);
+        self.rebuild_noise();
     }
 }
 
@@ -274,11 +334,18 @@ static MPU6050_METADATA: KitMetadata = KitMetadata {
              host stimulus hooks into the WASM bridge for live updates.",
     transport: Transport::I2c,
     category: Category::I2c,
-    config_keys: &[ConfigKey {
-        name: "i2c_address",
-        ty: ConfigType::Int,
-        doc: "7-bit slave address. Defaults to 0x68; 0x69 selects the AD0=high variant.",
-    }],
+    config_keys: &[
+        ConfigKey {
+            name: "i2c_address",
+            ty: ConfigType::Int,
+            doc: "7-bit slave address. Defaults to 0x68; 0x69 selects the AD0=high variant.",
+        },
+        ConfigKey {
+            name: "noise_sigma",
+            ty: ConfigType::Float,
+            doc: "Optional Gaussian noise sigma in channel units (g accel, °/s gyro), seeded and replay-safe. 0/absent = exact reads.",
+        },
+    ],
     labs: &[LabRef {
         board_id: "mpu6050-sensor-lab",
         chip: "stm32f103",
@@ -293,7 +360,8 @@ impl PeripheralKit for Mpu6050Kit {
     }
     fn attach(&self, ctx: &mut AttachCtx<'_>) -> anyhow::Result<()> {
         let address = ctx.i2c_address_or(0x68)?;
-        ctx.attach_i2c_device(Box::new(Mpu6050::new(address)))?;
+        let sigma = ctx.config_f64("noise_sigma").unwrap_or(0.0);
+        ctx.attach_i2c_device(Box::new(Mpu6050::new(address).with_noise_sigma(sigma)))?;
         Ok(())
     }
 }
