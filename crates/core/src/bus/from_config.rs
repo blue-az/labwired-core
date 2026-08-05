@@ -190,7 +190,7 @@ impl SystemBus {
 
         let mut bus = Self {
             flash_thunks: std::collections::HashMap::new(),
-            flash: LinearMemory::new(flash_size as usize, chip.flash.base),
+            flash: LinearMemory::new_erased(flash_size as usize, chip.flash.base),
             ram: LinearMemory::new(ram_size as usize, chip.ram.base),
             extra_mem,
             peripherals: Vec::new(),
@@ -253,6 +253,7 @@ impl SystemBus {
             nordic_gpio_service: false,
             hcsr04_scheduling_disabled: false,
             flash_error_flags_idx: None,
+            nrf52_nvmc_idx: None,
             bus_trace: bus_trace::new_log(),
             logic_tap: crate::logic_capture::LogicTap::new(),
             pin_map: std::collections::HashMap::new(),
@@ -455,6 +456,18 @@ impl SystemBus {
                 bus.push_peripheral(p_cfg, controller)?;
                 for ext in &manifest.external_devices {
                     if ext.connection != p_cfg.id {
+                        continue;
+                    }
+                    // Types the universal pass (parts → kit registry →
+                    // declarative) claims attach THERE, not via the legacy
+                    // factory — otherwise a type living in both (aht20,
+                    // bme280, …) would resolve factory-first here and
+                    // kit-first on the Xtensa path: same manifest, different
+                    // model per chip family.
+                    if crate::peripherals::kit::registry::lookup(&ext.r#type).is_some()
+                        || super::declarative_device::lookup(&ext.r#type)?.is_some()
+                        || super::part_pack::lookup(manifest, &ext.r#type)?.is_some()
+                    {
                         continue;
                     }
                     // `build_i2c_tree`, not the bare factory: when `ext` is a
@@ -742,38 +755,16 @@ impl SystemBus {
             if attached_i2c_ext_ids.contains(ext.id.as_str()) {
                 continue;
             }
-            // Zeroth-pass: parts this manifest CARRIES (`parts:`), i.e. parts
-            // that are not built into the engine at all — a private catalog, a
-            // vendor library, a customer's own sensor. They resolve first
-            // because they are the most specific thing anyone said about this
-            // system; shadowing a built-in is rejected inside `lookup` rather
-            // than silently allowed here. See `super::part_pack`.
-            if let Some(pack) = super::part_pack::lookup(manifest, &ext.r#type)? {
-                if let Some(kit) = super::part_pack::kit_for(pack)? {
-                    let mut ctx = crate::peripherals::kit::AttachCtx::new(&mut bus, ext);
-                    kit.attach(&mut ctx)?;
-                } else {
-                    // Not bus-resident: the GPIO / pin-timing primitives, which
-                    // take the same path an embedded descriptor takes.
-                    bus.attach_declarative_device(ext, pack)?;
-                }
-                continue;
-            }
-            // First-pass: peripherals that have migrated to the unified
-            // `PeripheralKit` contract are dispatched through the registry,
-            // so each one ships its own `attach` next to its model instead
-            // of a hand-written arm here.
-            if let Some(kit) = crate::peripherals::kit::registry::lookup(&ext.r#type) {
-                let mut ctx = crate::peripherals::kit::AttachCtx::new(&mut bus, ext);
-                kit.attach(&mut ctx)?;
-                continue;
-            }
-            // Second-pass: the GPIO / pin-timing family migrated to declarative
-            // `configs/devices/*.yaml` descriptors. `attach_declarative_device`
-            // resolves the descriptor's pin bindings and instantiates the named
-            // primitive — no hand-written arm here.
-            if let Some(desc) = super::declarative_device::lookup(&ext.r#type)? {
-                bus.attach_declarative_device(ext, &desc)?;
+            // The canonical universal pass (parts → kit registry →
+            // declarative descriptors) — one shared implementation, see
+            // `bus::external_devices`. Anything it doesn't claim falls
+            // through to the hand-written arms below.
+            if matches!(
+                super::external_devices::attach_external_device_universal(
+                    &mut bus, manifest, ext
+                )?,
+                super::external_devices::UniversalResolution::Attached
+            ) {
                 continue;
             }
             match ext.r#type.as_str() {
@@ -1120,13 +1111,15 @@ impl SystemBus {
                 }
                 // ntc-thermistor dispatches through the PeripheralKit registry above.
                 _ => {
-                    tracing::warn!(
-                        "Unsupported external device '{}' type '{}' on connection '{}'; skipping",
-                        ext.id,
-                        ext.r#type,
-                        ext.connection
+                    // Nothing claims this device: hard error, same policy as
+                    // the Xtensa path. A green run with a silently missing
+                    // device proves nothing — the simulator's worst outcome.
+                    return Err(
+                        super::external_devices::unsupported_external_device_error(
+                            &format!("from_config (connection '{}')", ext.connection),
+                            ext,
+                        ),
                     );
-                    continue;
                 }
             }
         }

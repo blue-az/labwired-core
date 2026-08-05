@@ -26,6 +26,7 @@ mod construct;
 mod declarative_device;
 mod device_hooks;
 pub(crate) mod embedded_descriptors;
+pub(crate) mod external_devices;
 mod faults;
 mod from_config;
 mod mmio_activity;
@@ -512,6 +513,13 @@ pub struct SystemBus {
     /// before committing, and `peripherals[idx]` (the `Flash`) records the
     /// resulting NSSR error flags.
     flash_error_flags_idx: Option<usize>,
+    /// Index of an nRF52 NVMC peripheral, if this chip has one. Cached in
+    /// `rebuild_peripheral_ranges` (same contract as `flash_error_flags_idx`).
+    /// When `Some(idx)`, the flash-region write path consults it on every
+    /// store: dropped unless CONFIG.Wen is set, committed as `existing & new`
+    /// (bits only flip 1→0) when it is. `None` on every non-nRF52 bus, so
+    /// that path is unchanged everywhere else.
+    nrf52_nvmc_idx: Option<usize>,
     /// Universal bus-transaction trace (logic analyzer): a shared, ring-
     /// buffered log that `I2c`/`Spi` peripherals record into once wrapped via
     /// `set_bus_trace` + `attach` (see `crate::bus::bus_trace`). Always

@@ -40,6 +40,7 @@ members = [
     "crates/firmware-nrf52840-demo",
     "crates/firmware-nrf52840-isr-blinky",
     "crates/firmware-nrf52840-proximity",
+    "crates/firmware-nrf52840-secure-boot",
     "crates/firmware-nrf52840-timer-blinky",
     "crates/firmware-perf-spin",
     "crates/firmware-rp2040-demo",
@@ -120,6 +121,12 @@ bitflags = "2.4"
 human-size = "0.4"
 serde_json = "1.0"
 sha2 = "0.10"
+# Pure-Rust P-256 ECDSA for the ATECC608A secure-element model (digest
+# verify/sign). Pure Rust + no_std-friendly, so the wasm browser build is
+# unaffected — unlike `ring`, which would drag cc/getrandom into it.
+# default-features=false keeps `getrandom` (rand keygen) out of the tree:
+# wasm32-unknown-unknown cannot build getrandom without its "js" feature.
+p256 = { version = "0.13", default-features = false, features = ["ecdsa"] }
 cortex-m = "0.7"
 cortex-m-rt = "0.7"
 panic-halt = "0.2"
