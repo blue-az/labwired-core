@@ -59,10 +59,14 @@ pub struct CoverageSummary {
 pub struct RunManifest {
     pub manifest_schema_version: String,
     pub engine_version: String,
-    /// Explicit run seed. The interpreter has no surfaced RNG today; determinism
-    /// comes from the absence of nondeterminism, asserted by the reproducibility
-    /// test, so this is 0 with `nondeterminism: "none"`.
+    /// Explicit run seed. Seeded sensor noise derives per-channel PRNGs from
+    /// this seed plus the component id, so a noisy run still replays
+    /// bit-identically (asserted by the reproducibility test).
     pub seed: u64,
+    /// `"none"` — no modeled randomness anywhere in the run.
+    /// `"seeded(sensor-noise)"` — at least one attached device applies seeded
+    /// Gaussian noise/bias/thermal-lag on reads; the run is stochastic in
+    /// content but identical across replays of the same seed.
     pub nondeterminism: String,
     pub firmware: HashedFile,
     pub configs: Vec<HashedFile>,
@@ -94,6 +98,78 @@ pub fn sha256_hex(bytes: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(bytes);
     format!("{:x}", hasher.finalize())
+}
+
+/// Config keys that mark a device as noise-enabled, on either side of the
+/// kit divide: Rust kits take them in `config:`, declarative descriptors
+/// declare them on `metadata.inputs`.
+const NOISE_KEYS: [&str; 3] = ["noise_sigma", "bias", "thermal_tau_s"];
+
+/// True when the system manifest wires at least one noise-enabled device —
+/// either an `external_devices` entry carrying noise config keys (Rust kits),
+/// or a device whose embedded declarative descriptor declares noise inputs.
+/// Used to stamp `nondeterminism` honestly: seeded noise is reproducible,
+/// but it is not the absence of variation.
+pub fn any_noise_enabled(system_yaml: &str) -> bool {
+    #[derive(serde::Deserialize)]
+    struct Probe {
+        #[serde(default)]
+        external_devices: Vec<Device>,
+    }
+    #[derive(serde::Deserialize)]
+    struct Device {
+        r#type: String,
+        #[serde(default)]
+        config: std::collections::HashMap<String, serde_yaml::Value>,
+    }
+    let Ok(probe) = serde_yaml::from_str::<Probe>(system_yaml) else {
+        return false;
+    };
+    probe.external_devices.iter().any(|d| {
+        NOISE_KEYS.iter().any(|k| d.config.contains_key(*k))
+            || labwired_config::embedded_device_yaml(&d.r#type)
+                .and_then(|y| labwired_config::DeviceDescriptor::from_yaml(y).ok())
+                .and_then(|desc| desc.metadata)
+                .map(|m| {
+                    m.inputs.iter().any(|i| {
+                        i.noise_sigma.is_some() || i.bias.is_some() || i.thermal_tau_s.is_some()
+                    })
+                })
+                .unwrap_or(false)
+    })
+}
+
+#[cfg(test)]
+mod noise_tests {
+    #[test]
+    fn noise_free_system_is_none() {
+        let yaml = "name: x\nexternal_devices: []\n";
+        assert!(!super::any_noise_enabled(yaml));
+    }
+
+    #[test]
+    fn kit_config_noise_key_is_detected() {
+        let yaml = "name: x\nexternal_devices:\n  - id: imu\n    type: mpu6050\n    connection: i2c1\n    config:\n      noise_sigma: 0.02\n";
+        assert!(super::any_noise_enabled(yaml));
+    }
+
+    #[test]
+    fn declarative_descriptor_noise_is_detected() {
+        // mcp9808's embedded descriptor declares noise_sigma on its input.
+        let yaml = "name: x\nexternal_devices:\n  - id: temp\n    type: mcp9808\n    connection: i2c1\n";
+        assert!(super::any_noise_enabled(yaml));
+    }
+
+    #[test]
+    fn plain_device_is_not_flagged() {
+        let yaml = "name: x\nexternal_devices:\n  - id: imu\n    type: mpu6050\n    connection: i2c1\n";
+        assert!(!super::any_noise_enabled(yaml));
+    }
+
+    #[test]
+    fn malformed_yaml_is_not_flagged() {
+        assert!(!super::any_noise_enabled("not: [valid"));
+    }
 }
 
 /// SHA-256 of a serialisable value's canonical JSON. Used for the CPU-state
