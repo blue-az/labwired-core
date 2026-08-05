@@ -3494,7 +3494,6 @@ mod tests {
         t
     }
 
-    #[test]
     fn shutdown_details(max_cycles: u64) -> labwired_config::ShutdownLatencyDetails {
         labwired_config::ShutdownLatencyDetails {
             from_stimulus: labwired_config::StimulusTarget {
@@ -3705,8 +3704,7 @@ mod tests {
     }
 
     #[test]
-
-        fn evaluate_uds_tester_done_passes() {
+    fn evaluate_uds_tester_done_passes() {
         let testers = vec![make_tester("my-tester", CanUdsTesterState::Done, None)];
         let details = UdsTesterDetails {
             id: "my-tester".to_string(),

@@ -75,10 +75,11 @@ fn fixture(
         .unwrap()
         .parent()
         .unwrap();
-    let mut bus = labwired_core::system::builder::build_system_bus(Some(
+    let resolved = labwired_config::ResolvedSystem::from_manifest_file(
         &root.join("examples/nucleo-l476rg-bldc/system.yaml"),
-    ))
+    )
     .unwrap();
+    let mut bus = labwired_core::system::builder::build_system_bus(Some(&resolved)).unwrap();
     let uart = Arc::new(Mutex::new(Vec::new()));
     bus.attach_uart_tx_sink(uart.clone(), false);
     let (cpu, _) = configure_cortex_m(&mut bus);
@@ -128,18 +129,15 @@ fn l476_bldc_stall_runs_real_firmware_and_disables_real_inverter() {
     }
     assert!(
         contains(&uart, b"TARGET REACHED"),
-        "uart={}",
-        format!(
-            "{} snapshot={:?}",
-            String::from_utf8_lossy(&uart.lock().unwrap()),
-            (
-                machine.bus.motor_snapshots(),
-                machine.bus.current_cycle,
-                machine.bus.read_u32(0x4001_2c20).unwrap(),
-                machine.bus.read_u32(0x4001_2c34).unwrap(),
-                machine.bus.read_u32(0x4001_2c3c).unwrap(),
-                machine.bus.read_u32(0xe000_e010).unwrap()
-            )
+        "uart={} snapshot={:?}",
+        String::from_utf8_lossy(&uart.lock().unwrap()),
+        (
+            machine.bus.motor_snapshots(),
+            machine.bus.current_cycle,
+            machine.bus.read_u32(0x4001_2c20).unwrap(),
+            machine.bus.read_u32(0x4001_2c34).unwrap(),
+            machine.bus.read_u32(0x4001_2c3c).unwrap(),
+            machine.bus.read_u32(0xe000_e010).unwrap()
         )
     );
     let acquired = machine.bus.motor_snapshots().remove(0);
