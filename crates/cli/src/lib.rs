@@ -768,18 +768,31 @@ pub(crate) fn plugin_chip_yaml<'a>(
     move |name| plugins.iter().find_map(|p| p.chip_yaml(name))
 }
 
-/// The `labwired` binary with extra chip plugins linked in.
-/// Pass `&[]` for the stock open-catalog CLI.
-pub fn run_with_plugins(plugins: &[&dyn labwired_core::plugin::ChipPlugin]) -> ExitCode {
+/// Refuse plugins whose [`labwired_core::plugin::ChipPlugin::api_version`]
+/// does not match the core this CLI was built against.
+///
+/// Extracted so tests can exercise the gate without running the full CLI.
+pub fn check_plugin_versions(
+    plugins: &[&dyn labwired_core::plugin::ChipPlugin],
+) -> Result<(), String> {
     for p in plugins {
         if p.api_version() != labwired_core::plugin::PLUGIN_API_VERSION {
-            eprintln!(
+            return Err(format!(
                 "plugin API mismatch: plugin built against v{}, CLI core is v{}",
                 p.api_version(),
                 labwired_core::plugin::PLUGIN_API_VERSION
-            );
-            return ExitCode::FAILURE;
+            ));
         }
+    }
+    Ok(())
+}
+
+/// The `labwired` binary with extra chip plugins linked in.
+/// Pass `&[]` for the stock open-catalog CLI.
+pub fn run_with_plugins(plugins: &[&dyn labwired_core::plugin::ChipPlugin]) -> ExitCode {
+    if let Err(msg) = check_plugin_versions(plugins) {
+        eprintln!("{msg}");
+        return ExitCode::FAILURE;
     }
 
     let cli = Cli::parse();
