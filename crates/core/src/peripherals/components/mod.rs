@@ -7,6 +7,7 @@
 pub mod ads1115;
 pub mod adxl345;
 pub mod aht20;
+pub mod apa102;
 pub mod as5600;
 pub mod at24c256;
 pub mod bg770a;
@@ -100,6 +101,7 @@ pub mod ws2812;
 
 pub use adxl345::Adxl345;
 pub use aht20::Aht20;
+pub use apa102::Apa102;
 pub use bg770a::QuectelBg770a;
 pub use bme280::Bme280;
 pub use bmi270::{Bmi270, BMI270_ADDR, BMI270_CHIP_ID};

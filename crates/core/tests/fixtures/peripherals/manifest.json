@@ -1924,6 +1924,28 @@
           "max": 125.0
         }
       ]
+    },
+    {
+      "device_type": "apa102",
+      "label": "APA102 DotStar Strip",
+      "summary": "SPI-clocked addressable RGB LED strip (write-only sink).",
+      "detail": "APA102/DotStar, 32-bit frames with 5-bit global brightness. Latches on CS release. Power and daisy-chain delay not modelled.",
+      "transport": "spi",
+      "category": "spi",
+      "config_keys": [
+        {
+          "name": "cs_pin",
+          "ty": "str",
+          "doc": "Chip-select pin label the firmware drives (e.g. \"PA4\")."
+        },
+        {
+          "name": "num_pixels",
+          "ty": "int",
+          "doc": "Strip length in LEDs. Defaults to 8."
+        }
+      ],
+      "labs": [],
+      "inputs": []
     }
   ]
 }

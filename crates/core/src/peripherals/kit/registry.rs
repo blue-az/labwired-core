@@ -95,6 +95,7 @@ pub static KITS: &[&'static dyn PeripheralKit] = &[
     // interpreted by the generic GenericSpiDevice (zero per-part Rust).
     &components::declarative_spi::ADXL345_KIT,
     &components::declarative_spi::MAX31855_KIT,
+    &components::apa102::APA102_KIT,
 ];
 
 /// Borrow the registry slice.
