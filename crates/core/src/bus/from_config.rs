@@ -120,6 +120,18 @@ impl SystemBus {
     }
 
     pub fn from_config(chip: &ChipDescriptor, manifest: &SystemManifest) -> anyhow::Result<Self> {
+        Self::from_config_with_plugins(chip, manifest, &[])
+    }
+
+    /// [`Self::from_config`] with out-of-tree chip plugins. Each peripheral
+    /// type is offered to `plugins` first (in order): the first `Some(Ok)`
+    /// wins, `Some(Err)` aborts the build with that error, and `None` from
+    /// every plugin falls through to the in-tree factories below.
+    pub fn from_config_with_plugins(
+        chip: &ChipDescriptor,
+        manifest: &SystemManifest,
+        plugins: &[&dyn crate::plugin::ChipPlugin],
+    ) -> anyhow::Result<Self> {
         // Part-pack contract, enforced HERE rather than in the manifest loader:
         // `from_file` is the CLI's path, and the browser and hosted runners
         // parse with `from_yaml`. Validating at load time only would mean two
@@ -324,45 +336,63 @@ impl SystemBus {
                 );
             }
 
+            // Out-of-tree chip plugins get first claim on every peripheral
+            // type: `None` from all of them falls through to the in-tree
+            // factories, `Some(Err)` aborts the build (a plugin that recognises
+            // its own type but fails to build it must not be masked by the
+            // unknown-type stub fallback below).
+            let plugin_dev: Option<Box<dyn Peripheral>> = plugins
+                .iter()
+                .find_map(|plugin| {
+                    plugin.try_build_peripheral(
+                        &crate::plugin::PeripheralBuildCtx {
+                            canonical_type: &canonical_type,
+                            manifest,
+                            bus_trace: &bus.bus_trace,
+                            chip_map: crate::peripherals::chip_map::ChipMap::new(
+                                &merged_peripherals,
+                            ),
+                        },
+                        p_cfg,
+                    )
+                })
+                .transpose()?;
+
             // Per-family factories own their peripheral arms in their own modules,
             // so this central match stops growing (and shrinks as families migrate
             // out). Try them first; unmigrated families fall through to the match.
-            let family_dev =
-                crate::peripherals::esp32s3::factory::try_build(&canonical_type, p_cfg)
-                    .or_else(|| {
-                        crate::peripherals::esp32c3::factory::try_build(&canonical_type, p_cfg)
-                    })
-                    // ESP32-classic was missing from this chain. Its factory has
-                    // always existed with all 14 `esp32_*` types, but only the
-                    // Xtensa builder called it, so a plain `from_config` bus --
-                    // the path a system manifest takes -- could not construct an
-                    // ESP32 peripheral at all. Declaring `uart1` in esp32.yaml
-                    // therefore failed the build outright with "no register
-                    // layout modelled yet", when the model was sitting right
-                    // there. That guard was doing its job: refusing to map an
-                    // ESP32 UART onto an STM32 layout is exactly right, and the
-                    // fix it asks for ("add a dedicated model") was to call the
-                    // model that already existed.
-                    .or_else(|| {
-                        crate::peripherals::esp32::factory::try_build(&canonical_type, p_cfg)
-                    })
-                    .or_else(|| {
-                        crate::peripherals::nrf52::factory::try_build(
-                            &canonical_type,
-                            p_cfg,
-                            manifest,
-                            &bus.bus_trace,
-                            crate::peripherals::chip_map::ChipMap::new(&merged_peripherals),
-                        )
-                    })
-                    .or_else(|| {
-                        crate::peripherals::nrf54l::factory::try_build(
-                            &canonical_type,
-                            p_cfg,
-                            manifest,
-                            &bus.bus_trace,
-                        )
-                    });
+            let family_dev = plugin_dev
+                .or_else(|| crate::peripherals::esp32s3::factory::try_build(&canonical_type, p_cfg))
+                .or_else(|| crate::peripherals::esp32c3::factory::try_build(&canonical_type, p_cfg))
+                // ESP32-classic was missing from this chain. Its factory has
+                // always existed with all 14 `esp32_*` types, but only the
+                // Xtensa builder called it, so a plain `from_config` bus --
+                // the path a system manifest takes -- could not construct an
+                // ESP32 peripheral at all. Declaring `uart1` in esp32.yaml
+                // therefore failed the build outright with "no register
+                // layout modelled yet", when the model was sitting right
+                // there. That guard was doing its job: refusing to map an
+                // ESP32 UART onto an STM32 layout is exactly right, and the
+                // fix it asks for ("add a dedicated model") was to call the
+                // model that already existed.
+                .or_else(|| crate::peripherals::esp32::factory::try_build(&canonical_type, p_cfg))
+                .or_else(|| {
+                    crate::peripherals::nrf52::factory::try_build(
+                        &canonical_type,
+                        p_cfg,
+                        manifest,
+                        &bus.bus_trace,
+                        crate::peripherals::chip_map::ChipMap::new(&merged_peripherals),
+                    )
+                })
+                .or_else(|| {
+                    crate::peripherals::nrf54l::factory::try_build(
+                        &canonical_type,
+                        p_cfg,
+                        manifest,
+                        &bus.bus_trace,
+                    )
+                });
             if let Some(dev) = family_dev {
                 // The nRF52 serial-instance mux (SPIM0/TWIM0) attaches all
                 // external devices connected to the shared MMIO window itself,
@@ -732,11 +762,20 @@ impl SystemBus {
                     ))
                 }
                 _other => {
-                    tracing::debug!(
-                        "Mapping unknown peripheral type '{}' to Stub for id '{}'",
-                        p_cfg.r#type,
-                        p_cfg.id
-                    );
+                    if plugins.is_empty() {
+                        tracing::debug!(
+                            "Mapping unknown peripheral type '{}' to Stub for id '{}'",
+                            p_cfg.r#type,
+                            p_cfg.id
+                        );
+                    } else {
+                        tracing::debug!(
+                            "Mapping unknown peripheral type '{}' to Stub for id '{}' (not claimed by {} loaded plugin(s))",
+                            p_cfg.r#type,
+                            p_cfg.id,
+                            plugins.len()
+                        );
+                    }
                     Box::new(crate::peripherals::stub::StubPeripheral::new(0x00))
                 }
             };
