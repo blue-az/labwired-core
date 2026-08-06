@@ -840,159 +840,16 @@ impl SystemBus {
             ) {
                 continue;
             }
-            match ext.r#type.as_str() {
-                // ili9341, adxl345/mpu6050/bme280/oled-ssd1306, neo6m-gps,
-                // and bg770a-cellular dispatch through the PeripheralKit
-                // registry above — see `peripherals::kit`.
-                // iolink-master dispatches through the PeripheralKit registry above.
-                // max31855, sn74hc165, ssd1680_tricolor_290, uc8151d_tricolor_290,
-                // and pcd8544 dispatch through the PeripheralKit registry above.
-                // hc-sr04 / hcsr04 now dispatches through the declarative device
-                // path above (configs/devices/hc_sr04.yaml, `pulse_echo`
-                // primitive) — see super::declarative_device.
-                // dht22 / am2302 now dispatches through the declarative device
-                // path above (configs/devices/dht22.yaml, `one_wire` primitive) —
-                // see super::declarative_device.
-                // rotary-encoder / rotary_encoder now dispatches through the
-                // declarative device path above (configs/devices/rotary_encoder.yaml,
-                // `quadrature` primitive) — see super::declarative_device.
-                // keypad now dispatches through the declarative device path above
-                // (configs/devices/keypad.yaml, `matrix` primitive) — see
-                // super::declarative_device.
-                // neopixel / ws2812 → PeripheralKit registry (`WS2812_KIT`).
-                // servo / sg90 / mg996r → PeripheralKit registry (`SERVO_KIT`).
-                // a4988 / drv8825 / tmc2209 → `STEP_DIR_MOTOR_KIT`.
-                // l298n / tb6612 / l293d → `H_BRIDGE_MOTOR_KIT`.
-                // uln2003 / stepper-28byj48 → `UNIPOLAR_STEPPER_KIT`.
-                // ili9341-16bit / ili9341_16bit: PeripheralKit registry
-                // (`Ili9341ParallelKit`, Transport::GpioGroup) — see
-                // peripherals::kit and ili9341_parallel.rs.
-                "can-diagnostic-tester" | "uds-diagnostic-tester" => {
-                    if bus.find_peripheral_index_by_name(&ext.connection).is_none() {
-                        return Err(anyhow::anyhow!(
-                            "CAN diagnostic tester '{}' connection '{}' was not found",
-                            ext.id,
-                            ext.connection
-                        ));
-                    }
-                    let request_id = Self::yaml_u32(ext.config.get("request_id"), 0x7E0);
-                    let request_data =
-                        Self::yaml_bytes(ext.config.get("request_data"), &[0x03, 0x22, 0xF1, 0x90]);
-                    bus.can_diagnostic_testers.push(CanDiagnosticTester {
-                        id: ext.id.clone(),
-                        connection: ext.connection.clone(),
-                        request_id,
-                        request_data,
-                        sent: false,
-                    });
-                }
-                "uds-tester" => {
-                    // Stateful ISO-TP / UDS tester: a real second CAN node that
-                    // drives a multi-frame SecurityAccess handshake against the
-                    // named CAN peripheral (bxCAN or FDCAN) in normal mode.
-                    if bus.find_peripheral_index_by_name(&ext.connection).is_none() {
-                        return Err(anyhow::anyhow!(
-                            "UDS tester '{}' connection '{}' was not found",
-                            ext.id,
-                            ext.connection
-                        ));
-                    }
-                    let mut tester = CanUdsTester::new(ext.id.clone(), ext.connection.clone());
-                    tester.request_id = Self::yaml_u32(
-                        ext.config.get("request_id"),
-                        CanUdsTester::DEFAULT_REQUEST_ID,
-                    );
-                    tester.reply_id =
-                        Self::yaml_u32(ext.config.get("reply_id"), CanUdsTester::DEFAULT_REPLY_ID);
-                    tester.first_frame = Self::yaml_bytes(
-                        ext.config.get("first_frame"),
-                        &CanUdsTester::DEFAULT_FIRST_FRAME,
-                    );
-                    tester.consecutive_frame = Self::yaml_bytes(
-                        ext.config.get("consecutive_frame"),
-                        &CanUdsTester::DEFAULT_CONSECUTIVE_FRAME,
-                    );
-                    tester.script = Self::parse_script(ext.config.get("script"));
-                    // When no `script:` key is present, synthesize a single step
-                    // from the legacy first_frame / consecutive_frame fields.
-                    if !ext.config.contains_key("script") {
-                        let ff = &tester.first_frame;
-                        // FF: byte0 high nibble == 1; 12-bit length in (byte0 & 0x0F) << 8 | byte1
-                        let pdu_len = if ff.len() >= 2 {
-                            (((ff[0] & 0x0F) as usize) << 8) | (ff[1] as usize)
-                        } else {
-                            0
-                        };
-                        if ext.config.contains_key("first_frame") && (ff.len() < 2 || pdu_len == 0)
-                        {
-                            tracing::warn!(
-                                "[uds-tester] '{}': first_frame is too short or decodes pdu_len=0 \
-                                 — synthesized send will be empty",
-                                ext.id
-                            );
-                        }
-                        let ff_payload: &[u8] = if ff.len() >= 2 { &ff[2..] } else { &[] };
-                        let cf_payload: &[u8] = if !tester.consecutive_frame.is_empty() {
-                            &tester.consecutive_frame[1..]
-                        } else {
-                            &[]
-                        };
-                        let raw: Vec<u8> = ff_payload
-                            .iter()
-                            .chain(cf_payload.iter())
-                            .copied()
-                            .take(pdu_len)
-                            .collect();
-                        if raw.is_empty() && ext.config.contains_key("first_frame") {
-                            tracing::warn!(
-                                "[uds-tester] '{}': reassembled send payload is empty \
-                                 — check first_frame / consecutive_frame config",
-                                ext.id
-                            );
-                        }
-                        tester.script = vec![UdsStep {
-                            send: raw,
-                            expect: vec![Some(0x06), Some(0x67)],
-                            expect_nrc: None,
-                        }];
-                    }
-                    bus.can_uds_testers.push(tester);
-                }
-                "can-player" => {
-                    if bus.find_peripheral_index_by_name(&ext.connection).is_none() {
-                        return Err(anyhow::anyhow!(
-                            "can-player '{}' connection '{}' was not found",
-                            ext.id,
-                            ext.connection
-                        ));
-                    }
-                    let Some(data) = ext.config.get("data").and_then(|v| v.as_str()) else {
-                        return Err(anyhow::anyhow!(
-                            "can-player '{}': set 'path' (a candump .log file) or inline 'data'",
-                            ext.id
-                        ));
-                    };
-                    let tps = Self::yaml_u32(ext.config.get("ticks_per_second"), 1_000_000) as u64;
-                    let player = CanLogPlayer::from_candump(
-                        ext.id.clone(),
-                        ext.connection.clone(),
-                        data,
-                        tps,
-                    )
-                    .map_err(|e| anyhow::anyhow!(e))?;
-                    bus.can_log_players.push(player);
-                }
-                // ntc-thermistor dispatches through the PeripheralKit registry above.
-                _ => {
-                    // Nothing claims this device: hard error, same policy as
-                    // the Xtensa path. A green run with a silently missing
-                    // device proves nothing — the simulator's worst outcome.
-                    return Err(super::external_devices::unsupported_external_device_error(
-                        &format!("from_config (connection '{}')", ext.connection),
-                        ext,
-                    ));
-                }
-            }
+            // Residual product attach arms are gone — kits / declarative / parts
+            // claim every supported external above. History of migrations:
+            // ili9341, sensors, neo6m, bg770a, iolink-master, SPI displays,
+            // hc-sr04/dht22/rotary/keypad declarative, neopixel/servo/motors
+            // kits, CAN testers (`CAN_*_KIT`). Nothing left here but fail-loud.
+            // A green run with a silently missing device proves nothing.
+            return Err(super::external_devices::unsupported_external_device_error(
+                &format!("from_config (connection '{}')", ext.connection),
+                ext,
+            ));
         }
 
         bus.rebuild_peripheral_ranges();
