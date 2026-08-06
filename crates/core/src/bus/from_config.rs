@@ -897,6 +897,19 @@ impl SystemBus {
             Some(explicit) => explicit,
             None => bus.derive_walk_deletable(),
         };
+
+        // One attach API: attach_lab_air. CLI/single-board mints a private lab
+        // air here; browser multi-chip later rebinds the same API with a shared
+        // AirBus (deliberate replace, not a second fabric).
+        if bus.has_cellular_modem() {
+            let node = if manifest.name.is_empty() {
+                "lab"
+            } else {
+                manifest.name.as_str()
+            };
+            bus.attach_private_lab_air(node);
+        }
+
         Ok(bus)
     }
 

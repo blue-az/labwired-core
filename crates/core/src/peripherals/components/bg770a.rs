@@ -36,9 +36,27 @@
 //! AT+VZ Verizon extension. Those commands return `ERROR` so probing firmware
 //! sees a deterministic miss instead of a lie.
 
+use crate::network::SimMqttFabric;
+use crate::peripherals::rf_medium::{NodePosition, PathLossParams, RfMedium};
 use crate::peripherals::uart::UartStreamDevice;
 use std::any::Any;
 use std::collections::{BTreeMap, VecDeque};
+use std::sync::{Arc, Mutex};
+
+/// Synthetic cell-tower node id in the shared [`RfMedium`] (path-loss peer).
+const CELL_TOWER_NODE: &str = "cell";
+/// Assumed downlink TX power (dBm) used to map distance → RSSI when the medium
+/// has no per-frame TX. Co-located (range 0) → 0 dBm → CSQ 31.
+const CELL_TX_POWER_DBM: f64 = 0.0;
+
+/// Map path-loss RSSI (dBm) → AT+CSQ steps (3GPP 27.007: 0 = −113 dBm, 31 = −51 dBm).
+fn csq_from_dbm(dbm: f64) -> u8 {
+    if !dbm.is_finite() {
+        return 99;
+    }
+    let steps = ((dbm + 113.0) / 2.0).round() as i32;
+    steps.clamp(0, 31) as u8
+}
 
 /// Default identity for a real BG770A-GL on the bench.
 const ID_MANUFACTURER: &str = "Quectel";
@@ -140,6 +158,11 @@ struct MqttClient {
     /// TLS using SSL context `ssl_ctxid` (port 8883 typical).
     ssl_enabled: bool,
     ssl_ctxid: u8,
+    /// Broker host from last successful `AT+QMTOPEN`.
+    #[serde(skip)]
+    broker_host: String,
+    /// Broker port from last successful `AT+QMTOPEN`.
+    broker_port: u16,
 }
 
 /// Strip a leading `"<key>"` from `s`, then split the rest on commas. Returns
@@ -241,10 +264,25 @@ pub struct QuectelBg770a {
     /// "invalid"; real HW seems to allocate from 1.
     open_files: BTreeMap<u16, (String, usize, u8)>,
     next_file_handle: u16,
-    /// `+CSQ` last RSSI/BER. Defaults to 99,99 (no service); test code or the
-    /// `complete_network_attach` helper updates these.
+    /// Seed CSQ when no RfMedium is driving quality (or as fallback). Defaults
+    /// to 99,99 (no service). Prefer [`Self::effective_csq`] for AT replies.
     csq_rssi: u8,
     csq_ber: u8,
+    /// When set, forces CSQ steps and bypasses path-loss (scripted demos).
+    /// Cleared by the `range_m` SimInput so geometry wins again.
+    csq_override: Option<u8>,
+    /// Distance (m) from this UE to the synthetic cell tower in the shared
+    /// [`RfMedium`]. Drive with SimInput `range_m` — same physics as air path loss.
+    range_m: f64,
+    /// Shared medium slot with VirtualAirBus / lab AirBus (path loss + positions).
+    #[serde(skip)]
+    medium: Arc<Mutex<Option<RfMedium>>>,
+    /// RfMedium node id (defaults to external_devices id, else `"modem"`).
+    #[serde(skip)]
+    rf_node_id: Option<String>,
+    /// system.yaml `external_devices` id for SimInput discovery (`modem`, …).
+    #[serde(skip)]
+    component_id: Option<String>,
     /// QGPSCFG sub-key state. Real HW persists these across reboot; we keep
     /// just the values exposed by the bench-captured read forms.
     qgps_outport: String,
@@ -292,12 +330,15 @@ pub struct QuectelBg770a {
     cedrxs_mode: u8,
     /// Per-client "post-publish payload" mode: when in this mode, the modem
     /// is waiting for the firmware to send the QMTPUB payload (followed by
-    /// 0x1A / Ctrl-Z to terminate). Tracks `(client_id, msg_id)`.
+    /// 0x1A / Ctrl-Z to terminate). Tracks `(client_id, msg_id, topic)`.
     #[serde(skip)]
-    awaiting_qmtpub_payload: Option<(u8, u16)>,
+    awaiting_qmtpub_payload: Option<(u8, u16, String)>,
     /// Accumulator for QMTPUB payload bytes received while in payload mode.
     #[serde(skip)]
     qmtpub_payload_buf: Vec<u8>,
+    /// Simulated MQTT topic fabric (AirBus.cellular). Not a real broker.
+    #[serde(skip)]
+    mqtt_net: SimMqttFabric,
 
     /// Per-command response delay set by the current handler; cleared between
     /// commands. Drives the `ScheduledChunk` inserted after the line completes.
@@ -363,6 +404,11 @@ impl QuectelBg770a {
             next_file_handle: 1,
             csq_rssi: 99,
             csq_ber: 99,
+            csq_override: None,
+            range_m: 0.0,
+            medium: Arc::new(Mutex::new(None)),
+            rf_node_id: None,
+            component_id: None,
             qgps_outport: String::from("uartnmea"),
             qgps_outport_baud: 115200,
             qgps_autogps: 0,
@@ -385,6 +431,8 @@ impl QuectelBg770a {
             cedrxs_mode: 0,
             awaiting_qmtpub_payload: None,
             qmtpub_payload_buf: Vec::new(),
+            // Replaced by attach_lab_air / attach_private_lab_air (one AirBus path).
+            mqtt_net: SimMqttFabric::new(),
             current_delay_us: DELAY_DEFAULT_US,
             pending_cfun_resume_urcs: false,
             deferred_urcs: Vec::new(),
@@ -457,21 +505,152 @@ impl QuectelBg770a {
         self.schedule(URC_DELAY_QMTPUB_US, urc.into_bytes());
     }
 
-    /// Update the value reported by `AT+CSQ` (defaults to 99,99 = no service).
-    /// RSSI is 0..=31, BER is 0..=7; 99 means "unknown".
+    /// Update the seed / override reported by `AT+CSQ` (defaults to 99,99).
+    /// RSSI is 0..=31 (or 99), BER is 0..=7 (or 99). Sets a CSQ override so
+    /// scripted values win until `range_m` re-enables path-loss.
     pub fn set_signal(&mut self, rssi: u8, ber: u8) {
         self.csq_rssi = rssi;
         self.csq_ber = ber;
+        self.csq_override = Some(rssi);
+    }
+
+    /// Share the lab AirBus / VirtualAirBus medium slot so path-loss geometry
+    /// is the same story as nRF RADIO RSSI.
+    pub fn share_medium_slot(&mut self, slot: Arc<Mutex<Option<RfMedium>>>) {
+        self.medium = slot;
+        self.sync_geometry();
+    }
+
+    /// Label this UE in the medium (multi-node `node_id` or device id).
+    pub fn set_rf_node_id(&mut self, id: impl Into<String>) {
+        self.rf_node_id = Some(id.into());
+        self.sync_geometry();
+    }
+
+    /// Bind this modem to the lab AirBus MQTT fabric (shared across UEs).
+    pub fn set_mqtt_net(&mut self, bus: SimMqttFabric) {
+        self.mqtt_net = bus;
+    }
+
+    /// Lab AirBus fabric handle (publish log / fan-out). Not a wire broker.
+    pub fn mqtt_net(&self) -> &SimMqttFabric {
+        &self.mqtt_net
+    }
+
+    /// True when radio quality may carry MQTT.
+    ///
+    /// - CSQ override 99 → no
+    /// - [`RfMedium`] present → RSSI must be ≥ floor (same path-loss as CSQ)
+    /// - No medium yet (bare unit tests) → allow if PDP active (`qiact`) so
+    ///   AT-only tests still exercise QMT* without inventing geometry
+    pub fn rf_link_ok(&mut self) -> bool {
+        if let Some(o) = self.csq_override {
+            return o < 99;
+        }
+        self.sync_geometry();
+        if let Ok(slot) = self.medium.lock() {
+            if let Some(m) = slot.as_ref() {
+                let d = m.distance_m(CELL_TOWER_NODE, self.rf_node_key());
+                let dbm = m.rssi_dbm(CELL_TX_POWER_DBM, d);
+                return dbm >= m.params().rssi_floor_dbm;
+            }
+        }
+        self.qiact_cid1 == 1 || self.csq_rssi < 99
+    }
+
+    fn mqtt_endpoint_id(&self) -> String {
+        self.component_id
+            .clone()
+            .or_else(|| self.rf_node_id.clone())
+            .unwrap_or_else(|| "modem".into())
+    }
+
+    /// Drain fabric → modem `+QMTRECV` URCs (called from UART poll).
+    fn drain_mqtt_network(&mut self) {
+        let ep = self.mqtt_endpoint_id();
+        for d in self.mqtt_net.take_pending(&ep) {
+            self.inject_mqtt_recv(d.client_id, &d.topic, &d.payload);
+        }
+    }
+
+    fn rf_node_key(&self) -> &str {
+        self.rf_node_id
+            .as_deref()
+            .or(self.component_id.as_deref())
+            .unwrap_or("modem")
+    }
+
+    /// Ensure a local RfMedium exists when nothing has been shared yet so
+    /// single-board labs still get path-loss CSQ without an AirBus.
+    fn ensure_medium(&mut self) {
+        let Ok(mut slot) = self.medium.lock() else {
+            return;
+        };
+        if slot.is_none() {
+            *slot = Some(RfMedium::new(1).with_params(PathLossParams::default()));
+        }
+    }
+
+    /// Write cell + UE positions from `range_m` into the medium (no create).
+    fn sync_geometry(&mut self) {
+        let ue = self.rf_node_key().to_string();
+        let range = self.range_m.max(0.0);
+        if let Ok(mut slot) = self.medium.lock() {
+            if let Some(m) = slot.as_mut() {
+                m.set_node(CELL_TOWER_NODE, NodePosition { x: 0.0, y: 0.0 });
+                m.set_node(ue, NodePosition { x: range, y: 0.0 });
+            }
+        }
+    }
+
+    /// Place the UE `range_m` metres from the cell tower and clear CSQ override
+    /// so AT+CSQ follows path loss. Spins up a local medium if none is shared yet.
+    pub fn set_range_m(&mut self, range_m: f64) {
+        self.range_m = range_m.max(0.0);
+        self.csq_override = None;
+        self.ensure_medium();
+        self.sync_geometry();
+    }
+
+    /// CSQ (rssi_steps, ber) actually reported on AT+CSQ / AT+QCSQ.
+    ///
+    /// Priority: explicit override → path-loss from shared/local [`RfMedium`]
+    /// (only if a medium is present) → seed `csq_rssi`. Below the medium RSSI
+    /// floor → 99 (no service). Does **not** invent a medium just to answer CSQ.
+    pub fn effective_csq(&mut self) -> (u8, u8) {
+        if let Some(o) = self.csq_override {
+            return (o, self.csq_ber);
+        }
+        self.sync_geometry();
+        if let Ok(slot) = self.medium.lock() {
+            if let Some(m) = slot.as_ref() {
+                let d = m.distance_m(CELL_TOWER_NODE, self.rf_node_key());
+                let dbm = m.rssi_dbm(CELL_TX_POWER_DBM, d);
+                if dbm < m.params().rssi_floor_dbm {
+                    return (99, self.csq_ber);
+                }
+                return (csq_from_dbm(dbm), self.csq_ber);
+            }
+        }
+        (self.csq_rssi, self.csq_ber)
     }
 
     /// One-shot helper that flips the modem into a "registered home" state:
-    /// `+CGATT: 1`, `+CGACT: 1,1`, `+CEREG: 0,1`, `+CSQ: 28,99` (-57 dBm).
+    /// `+CGATT: 1`, `+CGACT: 1,1`, `+CEREG: 0,1`, co-located medium (strong CSQ).
     /// If `+CEREG=1` or `+CEREG=2` is in effect, schedules the `+CEREG: 1`
     /// URC the same way real hardware does on attach completion.
     pub fn complete_network_attach(&mut self) {
         self.cgatt = 1;
         self.cgact_cid1 = 1;
-        self.set_signal(28, 99);
+        // Quectel PDP context used by QMTOPEN / QIOPEN. auto_attach labs that
+        // skip AT+QIACT still need a live context or MQTT open returns result 3.
+        self.qiact_cid1 = 1;
+        // Co-located on the medium → path-loss CSQ (not a free-floating number).
+        self.csq_ber = 99;
+        self.csq_override = None;
+        self.ensure_medium();
+        self.set_range_m(0.0);
+        self.csq_rssi = self.effective_csq().0;
         self.set_registration(1);
     }
 
@@ -746,16 +925,18 @@ impl QuectelBg770a {
             return self.ok();
         }
         if upper == "AT+CSQ" {
-            self.emit(&format!("\r\n+CSQ: {},{}\r\n", self.csq_rssi, self.csq_ber));
+            let (rssi, ber) = self.effective_csq();
+            self.emit(&format!("\r\n+CSQ: {},{}\r\n", rssi, ber));
             return self.ok();
         }
         if upper == "AT+QCSQ" {
-            if self.csq_rssi >= 99 {
+            let (csq, _) = self.effective_csq();
+            if csq >= 99 {
                 self.emit("\r\n+QCSQ: \"NOSERVICE\"\r\n");
             } else {
                 // Derived RSRP/RSRQ values for the populated CSQ; -113 dBm
                 // baseline + 2 dB per CSQ step is the standard mapping.
-                let rssi_dbm = -113 + 2 * self.csq_rssi as i16;
+                let rssi_dbm = -113 + 2 * csq as i16;
                 let rsrp = rssi_dbm - 18; // approximate eMTC offset
                 self.emit(&format!(
                     "\r\n+QCSQ: \"eMTC\",{},{},{},{}\r\n",
@@ -1189,18 +1370,42 @@ impl QuectelBg770a {
         // QMTOPEN write — open MQTT network. Returns OK immediately, then
         // a `+QMTOPEN: <id>,<result>` URC. With no active PDP the result is 3
         // (PDP failed), matching real HW.
-        if let Some(arg) = upper.strip_prefix("AT+QMTOPEN=") {
-            let client_id = arg
-                .split(',')
+        // Form: AT+QMTOPEN=<id>,"host",port  (use original `line` for host quotes)
+        if upper.starts_with("AT+QMTOPEN=") {
+            let arg = line
+                .strip_prefix("AT+QMTOPEN=")
+                .or_else(|| {
+                    // line may be mixed-case; fall back to upper without host fidelity
+                    upper.strip_prefix("AT+QMTOPEN=")
+                })
+                .unwrap_or("");
+            let mut parts = arg.splitn(3, ',');
+            let client_id = parts.next().and_then(|s| s.trim().parse::<u8>().ok());
+            let host_raw = parts.next().unwrap_or("").trim();
+            let host = host_raw.trim_matches('"');
+            let port = parts
                 .next()
-                .and_then(|s| s.trim().parse::<u8>().ok());
+                .and_then(|s| s.trim().parse::<u16>().ok())
+                .unwrap_or(1883);
             return match client_id {
                 Some(id @ 0..=5) => {
                     self.current_delay_us = DELAY_QMTOPEN_US;
                     self.ok();
-                    let result: i8 = if self.qiact_cid1 == 1 { 0 } else { 3 };
+                    // Result codes (Quectel-shaped): 0 ok, 1 open fail, 3 PDP fail.
+                    // RF path-loss gates open: no service (CSQ 99) cannot open MQTT.
+                    let result: i8 = if self.qiact_cid1 != 1 {
+                        3
+                    } else if !self.rf_link_ok() {
+                        1
+                    } else {
+                        0
+                    };
                     if result == 0 {
                         self.mqtt[id as usize].state = MqttState::Initialized;
+                        self.mqtt[id as usize].broker_host = host.to_string();
+                        self.mqtt[id as usize].broker_port = port;
+                        self.mqtt_net
+                            .open(&self.mqtt_endpoint_id(), id, host, port);
                     }
                     let urc = format!("\r\n+QMTOPEN: {},{}\r\n", id, result);
                     self.deferred_urcs
@@ -1223,8 +1428,16 @@ impl QuectelBg770a {
                     }
                     self.current_delay_us = DELAY_QMTCONN_US;
                     self.ok();
-                    self.mqtt[id as usize].state = MqttState::Connected;
-                    let urc = format!("\r\n+QMTCONN: {},0,0\r\n", id);
+                    // +QMTCONN: <id>,<result>,<ret_code> — result 0 = accepted.
+                    let (result, ret) = if self.rf_link_ok() {
+                        self.mqtt[id as usize].state = MqttState::Connected;
+                        self.mqtt_net.connect(&self.mqtt_endpoint_id(), id);
+                        (0, 0)
+                    } else {
+                        // Stay Initialized; broker connect refused without RF.
+                        (1, 1)
+                    };
+                    let urc = format!("\r\n+QMTCONN: {},{},{}\r\n", id, result, ret);
                     self.deferred_urcs
                         .push((URC_DELAY_QMTCONN_US, urc.into_bytes()));
                 }
@@ -1234,32 +1447,76 @@ impl QuectelBg770a {
 
         // QMTPUB write — publish. Real HW: emits `> ` prompt, firmware sends
         // payload + 0x1A, modem emits OK + async `+QMTPUB: <id>,<msgid>,<r>`.
-        // We model the prompt mode here.
+        // Form: AT+QMTPUB=<id>,<msgId>,<qos>,<retain>,"topic"[,len]
         if let Some(arg) = line.strip_prefix("AT+QMTPUB=") {
-            let mut parts = arg.split(',');
-            let client_id = parts.next().and_then(|s| s.trim().parse::<u8>().ok());
-            let msg_id = parts.next().and_then(|s| s.trim().parse::<u16>().ok());
+            // Parse with awareness of quoted topic.
+            let mut client_id: Option<u8> = None;
+            let mut msg_id: Option<u16> = None;
+            let mut topic = String::from("topic");
+            let mut field = String::new();
+            let mut in_quote = false;
+            let mut fields: Vec<String> = Vec::new();
+            for ch in arg.chars() {
+                match ch {
+                    '"' => in_quote = !in_quote,
+                    ',' if !in_quote => {
+                        fields.push(std::mem::take(&mut field));
+                    }
+                    c => field.push(c),
+                }
+            }
+            if !field.is_empty() || arg.ends_with(',') {
+                fields.push(field);
+            }
+            if !fields.is_empty() {
+                client_id = fields[0].trim().parse().ok();
+            }
+            if fields.len() > 1 {
+                msg_id = fields[1].trim().parse().ok();
+            }
+            // fields: id, msgid, qos, retain, topic, [len]
+            if fields.len() > 4 {
+                topic = fields[4].trim().trim_matches('"').to_string();
+            }
             return match (client_id, msg_id) {
                 (Some(id @ 0..=5), Some(mid)) => {
                     if self.mqtt[id as usize].state != MqttState::Connected {
                         return self.error();
                     }
-                    // Enter payload-receive mode; emit "> " prompt.
                     self.emit("\r\n> ");
-                    self.awaiting_qmtpub_payload = Some((id, mid));
+                    self.awaiting_qmtpub_payload = Some((id, mid, topic));
+                    self.qmtpub_payload_buf.clear();
                 }
                 _ => self.error(),
             };
         }
 
-        // QMTSUB — subscribe. We acknowledge with a synthetic URC.
+        // QMTSUB — subscribe. Form: AT+QMTSUB=<id>,<msgId>,"topic",qos
         if let Some(arg) = line.strip_prefix("AT+QMTSUB=") {
-            let client_id = arg
-                .split(',')
-                .next()
-                .and_then(|s| s.trim().parse::<u8>().ok());
+            let mut in_quote = false;
+            let mut field = String::new();
+            let mut fields: Vec<String> = Vec::new();
+            for ch in arg.chars() {
+                match ch {
+                    '"' => in_quote = !in_quote,
+                    ',' if !in_quote => fields.push(std::mem::take(&mut field)),
+                    c => field.push(c),
+                }
+            }
+            if !field.is_empty() {
+                fields.push(field);
+            }
+            let client_id = fields.first().and_then(|s| s.trim().parse::<u8>().ok());
+            let topic = fields
+                .get(2)
+                .map(|s| s.trim().trim_matches('"').to_string())
+                .unwrap_or_default();
             return match client_id {
                 Some(id @ 0..=5) if self.mqtt[id as usize].state == MqttState::Connected => {
+                    if !topic.is_empty() {
+                        self.mqtt_net
+                            .subscribe(&self.mqtt_endpoint_id(), id, &topic);
+                    }
                     self.ok();
                     let urc = format!("\r\n+QMTSUB: {},1,0,0\r\n", id);
                     self.deferred_urcs
@@ -1276,6 +1533,7 @@ impl QuectelBg770a {
                 Some(id @ 0..=5) if self.mqtt[id as usize].state == MqttState::Connected => {
                     self.ok();
                     self.mqtt[id as usize].state = MqttState::Initialized;
+                    self.mqtt_net.disconnect(&self.mqtt_endpoint_id(), id);
                     let urc = format!("\r\n+QMTDISC: {},0\r\n", id);
                     self.deferred_urcs
                         .push((URC_DELAY_QMTDISC_US, urc.into_bytes()));
@@ -2343,6 +2601,8 @@ impl QuectelBg770a {
 
 impl UartStreamDevice for QuectelBg770a {
     fn poll(&mut self, elapsed_us: u32) -> Option<u8> {
+        // Pull any fabric deliveries into scheduled +QMTRECV URCs.
+        self.drain_mqtt_network();
         // Already-drainable bytes take priority.
         if let Some(b) = self.out_queue.pop_front() {
             return Some(b);
@@ -2474,15 +2734,23 @@ impl UartStreamDevice for QuectelBg770a {
         // QMTPUB payload mode: after `> ` prompt, every byte is payload until
         // 0x1A (Ctrl-Z, "submit") or 0x1B (Esc, "cancel"). No echo in this
         // mode — real HW falls silent until the terminator.
-        if let Some((id, msg_id)) = self.awaiting_qmtpub_payload {
+        if let Some((id, msg_id, topic)) = self.awaiting_qmtpub_payload.clone() {
             match byte {
                 0x1A => {
-                    // Submit: response is `\r\nOK\r\n` then async +QMTPUB.
+                    // Submit: RF must still be up; land on SimMqttFabric if so.
+                    let payload = std::mem::take(&mut self.qmtpub_payload_buf);
                     self.awaiting_qmtpub_payload = None;
-                    self.qmtpub_payload_buf.clear();
+                    let pub_result: i8 = if !self.rf_link_ok() {
+                        2 // packet send failed (no service / floor)
+                    } else {
+                        let ep = self.mqtt_endpoint_id();
+                        self.mqtt_net.publish(&ep, id, &topic, &payload);
+                        self.drain_mqtt_network();
+                        0
+                    };
                     let mut bytes = b"\r\nOK\r\n".to_vec();
                     bytes.extend_from_slice(
-                        format!("\r\n+QMTPUB: {},{},0\r\n", id, msg_id).as_bytes(),
+                        format!("\r\n+QMTPUB: {},{},{}\r\n", id, msg_id, pub_result).as_bytes(),
                     );
                     self.schedule(URC_DELAY_QMTPUB_US, bytes);
                 }
@@ -2536,6 +2804,73 @@ impl UartStreamDevice for QuectelBg770a {
     fn as_any_mut(&mut self) -> Option<&mut dyn Any> {
         Some(self)
     }
+
+    fn as_sim_input_mut(&mut self) -> Option<&mut dyn crate::sim_input::SimInput> {
+        Some(self)
+    }
+}
+
+/// Radio-quality channels. ONE table backs BOTH the `SimInput` impl and kit
+/// metadata. Prefer `range_m` (shared RfMedium path loss, same story as air);
+/// `rssi` is an optional CSQ override for scripts.
+pub const INPUT_CHANNELS: &[crate::sim_input::InputChannel] = &[
+    crate::sim_input::InputChannel {
+        key: "range_m",
+        label: "Range",
+        unit: "m",
+        // UE ↔ cell distance for path loss. 0 = co-located (strong CSQ).
+        min: 0.0,
+        max: 50_000.0,
+    },
+    crate::sim_input::InputChannel {
+        key: "rssi",
+        label: "RSSI override",
+        unit: "CSQ",
+        // Optional force of AT+CSQ steps; clears when range_m is driven.
+        min: 0.0,
+        max: 99.0,
+    },
+    crate::sim_input::InputChannel {
+        key: "ber",
+        label: "BER",
+        unit: "CSQ",
+        min: 0.0,
+        max: 99.0,
+    },
+];
+
+impl crate::sim_input::SimInput for QuectelBg770a {
+    fn input_channels(&self) -> &'static [crate::sim_input::InputChannel] {
+        INPUT_CHANNELS
+    }
+
+    fn set_input(&mut self, key: &str, value: f64) -> Result<(), crate::sim_input::SimInputError> {
+        self.require_channel(key, value)?;
+        match key {
+            "range_m" => self.set_range_m(value),
+            "rssi" => {
+                let v = value.round().clamp(0.0, 99.0) as u8;
+                self.set_signal(v, self.csq_ber);
+            }
+            "ber" => {
+                self.csq_ber = value.round().clamp(0.0, 99.0) as u8;
+            }
+            _ => unreachable!("require_channel validated the key"),
+        }
+        Ok(())
+    }
+
+    fn component_id(&self) -> Option<&str> {
+        self.component_id.as_deref()
+    }
+
+    fn set_component_id(&mut self, id: String) {
+        self.component_id = Some(id.clone());
+        if self.rf_node_id.is_none() {
+            self.rf_node_id = Some(id);
+        }
+        self.sync_geometry();
+    }
 }
 
 // ─── PeripheralKit registration ────────────────────────────────────────────
@@ -2548,13 +2883,15 @@ pub struct QuectelBg770aKit;
 pub static BG770A_KIT: QuectelBg770aKit = QuectelBg770aKit;
 
 static BG770A_METADATA: KitMetadata = KitMetadata {
-    inputs: &[],
+    inputs: INPUT_CHANNELS,
     device_type: "bg770a-cellular",
     label: "Quectel BG770A Cellular",
     summary: "LTE-M / NB-IoT cellular modem with the full Quectel AT command surface.",
     detail: "Byte-exact V.250 + Quectel +QI*/+QMT*/+QHTTP*/+QGPS*/+QSSL* state machines, \
              validated against real BG770A-GL hardware captures. Firmware sends AT commands, \
-             modem replies stream back over UART.",
+             modem replies stream back over UART. Radio quality (AT+CSQ / AT+QCSQ) uses the \
+             same RfMedium path-loss geometry as VirtualAirBus: drive `range_m` (metres to \
+             cell) or share the lab AirBus medium; optional `rssi` CSQ override for scripts.",
     transport: Transport::Uart,
     category: Category::Uart,
     config_keys: &[
@@ -2566,12 +2903,14 @@ static BG770A_METADATA: KitMetadata = KitMetadata {
         ConfigKey {
             name: "rssi",
             ty: ConfigType::Int,
-            doc: "Initial signal strength reported by AT+CSQ (0..99).",
+            doc: "Initial CSQ override (0..99). Prefer runtime `range_m` so quality tracks \
+                  path loss; this forces AT+CSQ until range_m is driven.",
         },
         ConfigKey {
             name: "ber",
             ty: ConfigType::Int,
-            doc: "Initial bit-error-rate reported by AT+CSQ (0..99, defaults to 99).",
+            doc: "Initial bit-error-rate reported by AT+CSQ (0..99, defaults to 99). Drive \
+                  it at runtime with the `ber` input channel.",
         },
         ConfigKey {
             name: "boot_urcs",
@@ -2584,12 +2923,20 @@ static BG770A_METADATA: KitMetadata = KitMetadata {
             doc: "If true, the modem reports itself already registered + attached at boot.",
         },
     ],
-    labs: &[LabRef {
-        board_id: "quectel-bg770a-lab",
-        chip: "stm32f103",
-        example_dir: "quectel-bg770a-lab",
-        demo_elf: "demo-quectel-bg770a-lab.elf",
-    }],
+    labs: &[
+        LabRef {
+            board_id: "quectel-bg770a-lab",
+            chip: "stm32f103",
+            example_dir: "quectel-bg770a-lab",
+            demo_elf: "demo-quectel-bg770a-lab.elf",
+        },
+        LabRef {
+            board_id: "h735-telematics-lab",
+            chip: "stm32h735",
+            example_dir: "h735-telematics-lab",
+            demo_elf: "demo-h735-telematics-lab.elf",
+        },
+    ],
 };
 
 impl PeripheralKit for QuectelBg770aKit {
@@ -2604,7 +2951,6 @@ impl PeripheralKit for QuectelBg770aKit {
         let ber = ctx.config_i64("ber");
         let auto_attach = matches!(ctx.config_bool("auto_attach"), Some(true));
 
-        let uart = ctx.uart()?;
         let mut modem = QuectelBg770a::new();
         if boot_urcs {
             modem = modem.with_boot_urcs();
@@ -2618,7 +2964,13 @@ impl PeripheralKit for QuectelBg770aKit {
         }
         if auto_attach {
             modem.complete_network_attach();
+        } else {
+            // Local medium so range_m / CSQ physics work without AirBus.
+            modem.ensure_medium();
+            modem.sync_geometry();
         }
+        crate::sim_input::SimInput::set_component_id(&mut modem, ctx.device_id().to_string());
+        let uart = ctx.uart()?;
         uart.attach_stream(Box::new(modem));
         Ok(())
     }
@@ -2939,6 +3291,68 @@ mod tests {
         assert!(
             tail.contains("+QMTPUB: 0,42,0"),
             "missing publish-result URC, got {tail:?}"
+        );
+        // Network side: payload lands on the cellular MQTT fabric.
+        assert!(
+            m.mqtt_net().has_publish_on("topic"),
+            "fabric should retain publish on topic"
+        );
+        assert_eq!(
+            m.mqtt_net().last_payload_on("topic").as_deref(),
+            Some(b"Hello, world!".as_slice())
+        );
+    }
+
+    #[test]
+    fn mqtt_fabric_loopback_delivers_qmtrecv() {
+        use crate::sim_input::SimInput;
+        let bus = crate::network::SimMqttFabric::new();
+        let mut m = QuectelBg770a::new();
+        m.set_mqtt_net(bus.clone());
+        m.set_component_id("ue1".into());
+        m.complete_network_attach(); // medium + co-located RF
+        for cmd in [
+            "AT+QMTOPEN=0,\"broker.labwired.local\",1883",
+            "AT+QMTCONN=0,\"cid\"",
+            "AT+QMTSUB=0,1,\"telematics/#\",0",
+        ] {
+            let _ = exchange(&mut m, cmd);
+        }
+        for b in b"AT+QMTPUB=0,1,0,0,\"telematics/location\"" {
+            m.on_tx_byte(*b);
+        }
+        m.on_tx_byte(b'\r');
+        while m.poll(1_000_000).is_some() {}
+        for b in br#"{"lat":1}"# {
+            m.on_tx_byte(*b);
+        }
+        m.on_tx_byte(0x1A);
+        let mut out = String::new();
+        while let Some(b) = m.poll(2_000_000) {
+            out.push(b as char);
+        }
+        assert!(out.contains("+QMTPUB: 0,1,0"), "got {out:?}");
+        assert!(
+            out.contains("+QMTRECV:") && out.contains("telematics/location"),
+            "loopback subscriber should get +QMTRECV, got {out:?}"
+        );
+        assert!(bus.has_publish_on("telematics/location"));
+    }
+
+    #[test]
+    fn mqtt_open_fails_when_rf_below_floor() {
+        use crate::sim_input::SimInput;
+        let mut m = QuectelBg770a::new();
+        m.complete_network_attach();
+        m.set_input("range_m", 50_000.0).unwrap(); // far → no service
+        let r = exchange(&mut m, "AT+QMTOPEN=0,\"broker\",1883");
+        assert!(
+            r.contains("+QMTOPEN: 0,1"),
+            "no RF must refuse open, got {r:?}"
+        );
+        assert!(
+            !m.mqtt_net().has_publish_on("x"),
+            "fabric must stay empty when open fails"
         );
     }
 
@@ -3306,14 +3720,72 @@ mod tests {
         let _ = exchange(&mut m, "AT+CEREG=2");
         m.complete_network_attach();
         let r = exchange(&mut m, "AT+CSQ");
-        assert!(r.contains("+CSQ: 28,99"), "got {r:?}");
+        // Co-located on RfMedium (0 dBm TX, 0 m) → CSQ 31, not a free-floating 28.
+        assert!(r.contains("+CSQ: 31,99"), "got {r:?}");
         assert!(exchange(&mut m, "AT+CEREG?").contains("+CEREG: 2,1"));
         assert!(exchange(&mut m, "AT+CGATT?").contains("+CGATT: 1"));
+        // Quectel PDP context is ready so MQTT/TCP open can succeed without AT+QIACT.
+        assert!(
+            exchange(&mut m, "AT+QIACT?").contains("+QIACT: 1,1,1,"),
+            "auto_attach should activate Quectel PDP context"
+        );
         // QCSQ should now have populated values, not NOSERVICE.
         let q = exchange(&mut m, "AT+QCSQ");
         assert!(
             q.contains("+QCSQ: \"eMTC\","),
             "expected eMTC entry, got {q:?}"
+        );
+    }
+
+    #[test]
+    fn sim_input_range_drives_csq_via_path_loss() {
+        use crate::sim_input::SimInput;
+        let mut m = QuectelBg770a::new();
+        m.complete_network_attach();
+        assert!(
+            exchange(&mut m, "AT+CSQ").contains("+CSQ: 31,"),
+            "co-located should be strongest CSQ"
+        );
+        // Far away: path loss drops RSSI → lower CSQ (or 99 below floor).
+        m.set_input("range_m", 5_000.0).expect("range");
+        let far = exchange(&mut m, "AT+CSQ");
+        assert!(
+            !far.contains("+CSQ: 31,"),
+            "5 km should not stay CSQ 31, got {far:?}"
+        );
+        // Override forces CSQ regardless of range.
+        m.set_input("rssi", 15.0).expect("rssi");
+        m.set_input("ber", 3.0).expect("ber");
+        let r = exchange(&mut m, "AT+CSQ");
+        assert!(r.contains("+CSQ: 15,3"), "got {r:?}");
+        // range_m clears override and physics resume.
+        m.set_input("range_m", 0.0).expect("range home");
+        assert!(
+            exchange(&mut m, "AT+CSQ").contains("+CSQ: 31,"),
+            "back home should be CSQ 31 again"
+        );
+    }
+
+    #[test]
+    fn shared_air_medium_slot_is_one_story() {
+        use crate::peripherals::nrf52::radio::VirtualAirBus;
+        use crate::peripherals::rf_medium::{PathLossParams, RfMedium};
+        use crate::sim_input::SimInput;
+        let air = VirtualAirBus::new();
+        air.attach_medium(RfMedium::new(7).with_params(PathLossParams::default()));
+        let mut m = QuectelBg770a::new();
+        m.share_medium_slot(air.medium_slot());
+        m.set_component_id("ue".into());
+        m.set_input("range_m", 0.0).unwrap();
+        assert_eq!(m.effective_csq().0, 31);
+        // Same medium Arc: range_m writes UE pose into the air bus medium.
+        m.set_input("range_m", 10_000.0).unwrap();
+        let csq = m.effective_csq().0;
+        // Weakened CSQ step or no-service (99) if below the floor — not CSQ 31.
+        assert_ne!(csq, 31, "10 km path loss should not stay max CSQ, got {csq}");
+        assert!(
+            air.medium_slot().lock().unwrap().is_some(),
+            "shared slot still holds the medium"
         );
     }
 

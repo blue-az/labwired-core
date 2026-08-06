@@ -11,7 +11,12 @@ pub mod candump;
 pub mod egress;
 pub mod mqtt;
 pub mod sim;
+pub mod sim_mqtt_fabric;
 pub mod virtual_uart_wire;
+pub use sim_mqtt_fabric::{
+    CellularDelivery, CellularMqttBus, CellularPublish, FabricDelivery, FabricPublish,
+    SimMqttFabric,
+};
 pub use virtual_uart_wire::{VirtualWireBus, VirtualWireEndpoint};
 
 /// Trait for virtual interconnects between machines.
