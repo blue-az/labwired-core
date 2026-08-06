@@ -312,7 +312,9 @@ impl WasmSimulator {
         // wasm-bindgen borrow guard would never drop and EVERY later call
         // would fail with "recursive use of an object". Never panic in an
         // accessor — answer neutrally instead.
-        let Some(machine) = self.machine.as_ref() else { return JsValue::NULL; };
+        let Some(machine) = self.machine.as_ref() else {
+            return JsValue::NULL;
+        };
         let mut states: Vec<serde_json::Value> = Vec::new();
 
         for binding in &self.board_io {
@@ -346,7 +348,9 @@ impl WasmSimulator {
         // wasm-bindgen borrow guard would never drop and EVERY later call
         // would fail with "recursive use of an object". Never panic in an
         // accessor — answer neutrally instead.
-        let Some(machine) = self.machine.as_ref() else { return JsValue::NULL; };
+        let Some(machine) = self.machine.as_ref() else {
+            return JsValue::NULL;
+        };
         let refs: Vec<Ref> = match serde_wasm_bindgen::from_value(refs) {
             Ok(r) => r,
             Err(_) => return JsValue::NULL,
@@ -407,7 +411,9 @@ impl WasmSimulator {
         // wasm-bindgen borrow guard would never drop and EVERY later call
         // would fail with "recursive use of an object". Never panic in an
         // accessor — answer neutrally instead.
-        let Some(machine) = self.machine.as_mut() else { return JsValue::NULL; };
+        let Some(machine) = self.machine.as_mut() else {
+            return JsValue::NULL;
+        };
         let resolved: Vec<Option<(usize, u8)>> = refs
             .iter()
             .map(|r| {
@@ -461,7 +467,9 @@ impl WasmSimulator {
         // wasm-bindgen borrow guard would never drop and EVERY later call
         // would fail with "recursive use of an object". Never panic in an
         // accessor — answer neutrally instead.
-        let Some(machine) = self.machine.as_mut() else { return JsValue::NULL; };
+        let Some(machine) = self.machine.as_mut() else {
+            return JsValue::NULL;
+        };
         let batch = machine.logic_read_edges(cursor as u64);
         let edges: Vec<serde_json::Value> = batch
             .edges
@@ -509,7 +517,9 @@ impl WasmSimulator {
         // wasm-bindgen borrow guard would never drop and EVERY later call
         // would fail with "recursive use of an object". Never panic in an
         // accessor — answer neutrally instead.
-        let Some(machine) = self.machine.as_ref() else { return JsValue::NULL; };
+        let Some(machine) = self.machine.as_ref() else {
+            return JsValue::NULL;
+        };
         let refs: Vec<Ref> = match serde_wasm_bindgen::from_value(refs) {
             Ok(r) => r,
             Err(_) => return JsValue::NULL,
@@ -560,7 +570,9 @@ impl WasmSimulator {
         // wasm-bindgen borrow guard would never drop and EVERY later call
         // would fail with "recursive use of an object". Never panic in an
         // accessor — answer neutrally instead.
-        let Some(machine) = self.machine.as_ref() else { return JsValue::NULL; };
+        let Some(machine) = self.machine.as_ref() else {
+            return JsValue::NULL;
+        };
         if let Some(idx) = machine.bus.find_peripheral_index_by_name(name) {
             let snapshot = machine.bus.peripherals[idx].dev.snapshot();
             serde_wasm_bindgen::to_value(&snapshot).unwrap_or(JsValue::NULL)
@@ -582,7 +594,9 @@ impl WasmSimulator {
         // wasm-bindgen borrow guard would never drop and EVERY later call
         // would fail with "recursive use of an object". Never panic in an
         // accessor — answer neutrally instead.
-        let Some(machine) = self.machine.as_ref() else { return JsValue::NULL; };
+        let Some(machine) = self.machine.as_ref() else {
+            return JsValue::NULL;
+        };
         let bus = &machine.bus;
         let mut states: Vec<serde_json::Value> = Vec::new();
 
@@ -628,7 +642,9 @@ impl WasmSimulator {
         // wasm-bindgen borrow guard would never drop and EVERY later call
         // would fail with "recursive use of an object". Never panic in an
         // accessor — answer neutrally instead.
-        let Some(machine) = self.machine.as_ref() else { return JsValue::NULL; };
+        let Some(machine) = self.machine.as_ref() else {
+            return JsValue::NULL;
+        };
         let mut states: Vec<serde_json::Value> = Vec::new();
 
         for binding in &self.board_io {
@@ -679,7 +695,9 @@ impl WasmSimulator {
         // wasm-bindgen borrow guard would never drop and EVERY later call
         // would fail with "recursive use of an object". Never panic in an
         // accessor — answer neutrally instead.
-        let Some(machine) = self.machine.as_ref() else { return JsValue::NULL; };
+        let Some(machine) = self.machine.as_ref() else {
+            return JsValue::NULL;
+        };
         let mut states: Vec<serde_json::Value> = Vec::new();
 
         for servo in &machine.bus.servos {
@@ -831,7 +849,9 @@ impl WasmSimulator {
         // wasm-bindgen borrow guard would never drop and EVERY later call
         // would fail with "recursive use of an object". Never panic in an
         // accessor — answer neutrally instead.
-        let Some(machine) = self.machine.as_ref() else { return Err(JsValue::from_str("simulator has no machine loaded")); };
+        let Some(machine) = self.machine.as_ref() else {
+            return Err(JsValue::from_str("simulator has no machine loaded"));
+        };
         machine
             .bus
             .tm1637
@@ -868,7 +888,9 @@ impl WasmSimulator {
         // wasm-bindgen borrow guard would never drop and EVERY later call
         // would fail with "recursive use of an object". Never panic in an
         // accessor — answer neutrally instead.
-        let Some(machine) = self.machine.as_ref() else { return Err(JsValue::from_str("simulator has no machine loaded")); };
+        let Some(machine) = self.machine.as_ref() else {
+            return Err(JsValue::from_str("simulator has no machine loaded"));
+        };
         machine
             .bus
             .seven_segment
@@ -949,7 +971,9 @@ impl WasmSimulator {
         // wasm-bindgen borrow guard would never drop and EVERY later call
         // would fail with "recursive use of an object". Never panic in an
         // accessor — answer neutrally instead.
-        let Some(machine) = self.machine.as_ref() else { return JsValue::NULL; };
+        let Some(machine) = self.machine.as_ref() else {
+            return JsValue::NULL;
+        };
         let mut states: Vec<serde_json::Value> = Vec::new();
 
         for binding in &self.board_io {
@@ -1010,7 +1034,9 @@ impl WasmSimulator {
         // wasm-bindgen borrow guard would never drop and EVERY later call
         // would fail with "recursive use of an object". Never panic in an
         // accessor — answer neutrally instead.
-        let Some(machine) = self.machine.as_ref() else { return JsValue::NULL; };
+        let Some(machine) = self.machine.as_ref() else {
+            return JsValue::NULL;
+        };
         let mut states: Vec<serde_json::Value> = Vec::new();
 
         for binding in &self.board_io {
@@ -1061,7 +1087,9 @@ impl WasmSimulator {
         // wasm-bindgen borrow guard would never drop and EVERY later call
         // would fail with "recursive use of an object". Never panic in an
         // accessor — answer neutrally instead.
-        let Some(machine) = self.machine.as_ref() else { return JsValue::NULL; };
+        let Some(machine) = self.machine.as_ref() else {
+            return JsValue::NULL;
+        };
         let list: Vec<serde_json::Value> = machine
             .bus
             .peripherals
@@ -1097,7 +1125,9 @@ impl WasmSimulator {
         // wasm-bindgen borrow guard would never drop and EVERY later call
         // would fail with "recursive use of an object". Never panic in an
         // accessor — answer neutrally instead.
-        let Some(machine) = self.machine.as_ref() else { return JsValue::NULL; };
+        let Some(machine) = self.machine.as_ref() else {
+            return JsValue::NULL;
+        };
         let opts = labwired_core::inspect::InspectOpts {
             include_bytes,
             peripheral: None,
@@ -1127,7 +1157,9 @@ impl WasmSimulator {
         // wasm-bindgen borrow guard would never drop and EVERY later call
         // would fail with "recursive use of an object". Never panic in an
         // accessor — answer neutrally instead.
-        let Some(machine) = self.machine.as_ref() else { return Vec::new().into_boxed_slice(); };
+        let Some(machine) = self.machine.as_ref() else {
+            return Vec::new().into_boxed_slice();
+        };
         machine
             .peek(addr as u64, len as usize)
             .to_lossy_bytes()
@@ -1144,7 +1176,9 @@ impl WasmSimulator {
         // wasm-bindgen borrow guard would never drop and EVERY later call
         // would fail with "recursive use of an object". Never panic in an
         // accessor — answer neutrally instead.
-        let Some(machine) = self.machine.as_ref() else { return JsValue::NULL; };
+        let Some(machine) = self.machine.as_ref() else {
+            return JsValue::NULL;
+        };
         for p in &machine.bus.peripherals {
             let Some(any) = p.dev.as_any() else {
                 continue;
