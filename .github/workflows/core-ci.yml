@@ -314,7 +314,11 @@ jobs:
       - name: Validation status — regen check + drift gate
         run: |
           python -m pip install --quiet pyyaml
+          # unittest discovery does not recurse into non-package directories,
+          # so each directory holding tests is named explicitly. A new one
+          # needs a line here or it runs nowhere.
           python3 -m unittest discover -s scripts -p 'test_*.py'
+          python3 -m unittest discover -s scripts/perf -p 'test_*.py'
           python3 scripts/generate_validation_status.py --check --drift
           python3 scripts/generate_firmware_exercise_matrix.py --check
 
@@ -513,7 +517,11 @@ jobs:
       - name: Validation status — regen check + drift gate
         run: |
           python -m pip install --quiet pyyaml
+          # unittest discovery does not recurse into non-package directories,
+          # so each directory holding tests is named explicitly. A new one
+          # needs a line here or it runs nowhere.
           python3 -m unittest discover -s scripts -p 'test_*.py'
+          python3 -m unittest discover -s scripts/perf -p 'test_*.py'
           python3 scripts/generate_validation_status.py --check --drift
           python3 scripts/generate_firmware_exercise_matrix.py --check
 
