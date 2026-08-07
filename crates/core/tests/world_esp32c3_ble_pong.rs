@@ -288,9 +288,12 @@ fn ball(status: &str) -> (i32, i32) {
 /// distinguish "the cadence is too slow" from "delivery is broken".
 ///
 /// Raising it is expensive (the run is the whole cost of this test), so the
-/// budget stays where the gate needs it and characterisation work sets
-/// `PONG_SOAK_CYCLES` instead. CI never sets that variable; the constant below
-/// is what gates a merge.
+/// budget stays where the gate needs it and the long window lives in its own
+/// lane instead: `esp32c3-ble-pong-soak` in `.github/workflows/core-nightly.yml`
+/// runs this same file with `PONG_SOAK_CYCLES=480000000`, ~30 republish
+/// periods. No gate that has to be fast ever sets the variable, so the constant
+/// below is still what gates a merge — do not raise it to buy coverage the
+/// nightly already has.
 const PONG_CYCLES: usize = 90_000_000;
 
 /// ONE two-node run, shared by both tests. The run is the expensive part and
@@ -300,8 +303,9 @@ const PONG_CYCLES: usize = 90_000_000;
 fn consoles() -> &'static (String, String) {
     static RUN: std::sync::OnceLock<(String, String)> = std::sync::OnceLock::new();
     RUN.get_or_init(|| {
-        // Soak override for CHARACTERISATION ONLY — see the note on
-        // PONG_CYCLES. Unset in CI, so the merge gate is always the constant.
+        // Soak override — see the note on PONG_CYCLES. Set ONLY by the nightly
+        // `esp32c3-ble-pong-soak` job and by hand during characterisation; every
+        // gate that has to be fast leaves it unset and runs the constant.
         // It exists because answering "does this advertising cadence stall the
         // twin's RW-BLE controller?" needs tens of republish periods, and
         // hand-editing the constant to find out is how the edited value gets
