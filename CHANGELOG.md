@@ -7,7 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`labwired run --batched`** drives ARM through
+  `Machine::advance(AdvanceRequest::run(..))` — the call the browser makes from
+  `Sim::step_batch` — instead of the one-instruction-per-call `Machine::step()`
+  loop. It is an assertion, not a hint: the run fails rather than falling back on
+  any chip family or option combination that cannot take the batched path
+  (Xtensa has no `Machine`-driven loop; RISC-V's per-instruction instrumentation
+  turns batching off), and it prints a `[batched] instructions=.. batches=..
+  steps_per_batch=..` line so a caller can prove which loop executed. The default
+  `labwired run` for ARM is unchanged.
+
 ### Fixed
+- **The per-board throughput gate was blind on the path users actually run.**
+  `scripts/perf/board_perf.py` drove ARM through `Machine::step()` while the
+  browser drives `Machine::advance` — so #830, worth 9-16x on the batched path,
+  measured +0.2-0.4% across all 22 ARM boards, and a regression in ARM batch
+  orchestration was invisible. The gate now measures every board in every
+  execution mode its CLI driver has (`step` and/or `batch`), derived from the
+  fixture rather than hand-listed, and refuses to record a `batch` number
+  without the CLI's proof-of-path line. Measured on the browser feature set:
+  stm32l476 1944.1 Ir/step stepped vs 203.6 batched (9.6x), nrf5340 3223.5 vs
+  205.2 (15.7x), rp2040 1166.6 vs 201.2 (5.8x). Three boards barely move,
+  correctly: stm32h563/stm32h735 model FLASH ops (`requires_cycle_accurate`)
+  and nrf54l15's bus reports `max_safe_tick_interval() == 1`, so their batches
+  are one instruction wide — on nrf54l15 the batched path is 1.5% *dearer* per
+  step than single-stepping, which is now visible rather than unmeasured.
+  `scripts/perf/baselines.json` is now `{board: {mode: Ir/step}}`.
+
+### Known issues
+- **The batched ARM path diverges from single-stepping on nrf52832, nrf52840
+  and rp2040.** All three report `TIER1 timer FAIL code=timer-not-advancing`
+  under `--batched`: firmware polling a free-running counter in a tight loop
+  sees it frozen, because inside a multi-instruction CPU batch the peripheral
+  read-side clock only resyncs at the batch boundary. This predates the flag —
+  the browser has run this path since #830 — and is now pinned by
+  `crates/cli/tests/arm_batched_path.rs`, which fails both when a new board
+  starts diverging and when a listed one stops.
+  `crates/core/tests/nrf52_timer_walk_differential.rs` does not catch it: it
+  widens the tick interval while holding the CPU quantum at 1.
 - **ESP32-C3 drift gate was watching the wrong files.** The C3's tier is a
   reset-state oracle asserted against the declarative descriptors in
   `configs/peripherals/esp32c3/`, and none of the 29 the chip yaml wires were in
