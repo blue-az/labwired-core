@@ -57,10 +57,29 @@ default = []
 # JIT-on vs JIT-off differential is byte-identical either way (both arms tick
 # peripherals identically), so the scheduler is not required for this path.
 jit-core = ["labwired-core/jit"]
-# Opt-in event scheduler + walk-delete / idle-FF infrastructure used by the
-# Arduino matrix speed path (`LABWIRED_MATRIX_SPEED=1`). Build:
+# Event scheduler + walk-delete / idle-FF infrastructure. Build:
 #   cargo build -p labwired-cli --release --features event-scheduler
-# Do NOT combine with `jit-core` for general CLI use (see note above).
+#
+# This feature is what makes CPU idle fast-forward EXIST: without it
+# `Machine::try_idle_fast_forward` is `#[cfg(not(feature = "event-scheduler"))]
+# { 0 }`, so `labwired test` interprets every instruction of every idle
+# FreeRTOS task and `idle_fast_forward_enabled` cannot do anything. On an
+# ESP32-C3 BLE bring-up that is 4x the interpreted instructions — measured, see
+# `apply_run_speed_opts` in `commands/test.rs`.
+#
+# ⚠️ It is nevertheless NOT enabled for the hosted builder image
+# (`services/labwired-builder/Dockerfile.builder`), and the reason is specific
+# and reproducible: with this feature on, ELEVEN ESP32-classic / ESP32-S3
+# tier-1 cells go from `pass` to `blocked` — the Xtensa fixtures HANG instead
+# of reporting. Reproduce on a pristine tree with
+#   cargo test --release -p labwired-cli --test tier1_matrix_ratchet \
+#     --features event-scheduler
+# (green without the flag). RISC-V/C3 is unaffected — no esp32c3 cell moves —
+# so the blocker is Xtensa scheduler coverage, not the accelerator. Turning
+# this on hosted requires fixing that first, or shipping a per-arch binary.
+#
+# Still NOT in `default`, and still not to be combined with `jit-core` for
+# general CLI use (see the note above).
 event-scheduler = ["labwired-core/event-scheduler"]
 # Swap the built-in fuzzing loop for the LibAFL engine (havoc/splice mutators,
 # map-feedback scheduler, crash objectives). Heavy dependency tree, so opt-in:
