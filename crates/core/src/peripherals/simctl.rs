@@ -167,10 +167,9 @@ impl Peripheral for SimCtl {
         match offset {
             // The FIRST exit code wins: once firmware has declared an outcome,
             // a later write cannot mask it before the advance loop drains it.
-            EXIT => {
-                if self.pending_exit.get().is_none() {
-                    self.pending_exit.set(Some(value));
-                }
+            // A second write falls through to `_` and is dropped.
+            EXIT if self.pending_exit.get().is_none() => {
+                self.pending_exit.set(Some(value));
             }
             SOUT => self.stdout.push((value & 0xFF) as u8),
             SERR => self.stderr.push((value & 0xFF) as u8),
