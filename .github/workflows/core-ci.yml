@@ -285,9 +285,10 @@ jobs:
     # steps should move to their own job, the way pr-scheduler-observable did.
     timeout-minutes: 10
     steps:
-      # Full history required: generate_validation_status.py uses
-      # `git log -1 --format=%cI -- <model>` for drift. Shallow checkout
-      # makes every path resolve to HEAD's date → false DRIFT failures.
+      # Full history is no longer needed for the drift gate — it hashes model
+      # CONTENT rather than reading commit dates (#834), so a shallow checkout
+      # would answer identically. Kept at 0 because other steps in this job
+      # (and scripts/ci/pin-integrity.sh) still walk history.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -313,6 +314,7 @@ jobs:
       - name: Validation status — regen check + drift gate
         run: |
           python -m pip install --quiet pyyaml
+          python3 -m unittest discover -s scripts -p 'test_*.py'
           python3 scripts/generate_validation_status.py --check --drift
           python3 scripts/generate_firmware_exercise_matrix.py --check
 
@@ -511,6 +513,7 @@ jobs:
       - name: Validation status — regen check + drift gate
         run: |
           python -m pip install --quiet pyyaml
+          python3 -m unittest discover -s scripts -p 'test_*.py'
           python3 scripts/generate_validation_status.py --check --drift
           python3 scripts/generate_firmware_exercise_matrix.py --check
 

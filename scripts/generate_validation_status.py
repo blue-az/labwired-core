@@ -20,10 +20,27 @@ Either gate flag also runs the drift-watch COVERAGE audit (see below).
 
 Drift
 -----
-For each board with `silicon.last_capture`, the newest git commit date across
-`models` is compared to the capture date. If newer, the board has drifted. A
-dated `drift_ack` (>= the newest model date) is an explicit human acknowledgement
-that keeps it green; any later model change re-breaks the gate.
+For each board with `silicon.last_capture`, a content digest over everything
+`models` watches is compared to `silicon.models_digest` — the digest recorded
+when that silicon capture was taken. Different digest means the board has
+drifted. A `drift_ack_digest` naming the current content is an explicit human
+acknowledgement that keeps it green; any later model change moves the digest and
+re-breaks the gate.
+
+DRIFT IS JUDGED ON CONTENT, NOT COMMIT DATES. It used to take the newest git
+committer date across `models` and compare it to the capture date, which made
+the gate depend on a timestamp no PR author can see or control: squash-merging
+rewrites every touched file's date to the merge commit's, so a PR could pass
+`pr-gate` with a covering ack and then red `main` on identical content, and
+every branch cut afterwards inherited the failure (#834). A squash timestamp is
+not evidence about whether a model changed; the bytes are. Digests survive
+squash, rebase and cherry-pick untouched, and the value CI computes is the value
+you can compute locally before you push:
+
+    python3 scripts/generate_validation_status.py --digests
+
+The same change takes the volatile dates out of the generated doc, which used to
+need a regen commit after every merge that touched a watched path.
 
 Drift-watch coverage
 --------------------
@@ -42,14 +59,15 @@ So we audit the watch list itself, mechanically:
 Coded (non-declarative) peripheral impls cannot be derived from the yaml and are
 still listed by hand; this audit closes the mechanical half of the hole.
 
-Needs PyYAML (pip install pyyaml) and a full-history checkout (fetch-depth: 0)
-so `git log -- <path>` resolves dates.
+Needs PyYAML (pip install pyyaml). A shallow checkout is fine — nothing here
+reads git history any more.
 """
 
 from __future__ import annotations
 
 import argparse
 import difflib
+import hashlib
 import posixpath
 import re
 import subprocess
@@ -77,12 +95,11 @@ TIER_BADGE = {
 
 
 def parse_iso(v: str) -> datetime:
-    """datetime.fromisoformat, but accepting the trailing 'Z' git emits for UTC.
+    """datetime.fromisoformat, but accepting a trailing 'Z' for UTC.
 
-    `git log --format=%cI` renders UTC as '...T00:11:20Z'. Only Python 3.11+
-    accepts that suffix, so on the macOS system interpreter (3.9) every local
-    run of this script died in newest_commit_date() while CI's 3.12 passed —
-    the regeneration command the error message itself tells you to run was
+    Only Python 3.11+ accepts that suffix, so on the macOS system interpreter
+    (3.9) every local run of this script died while CI's 3.12 passed — the
+    regeneration command the error message itself tells you to run was
     impossible to run on a stock Mac. Normalise instead of requiring 3.11.
     """
     return datetime.fromisoformat(v[:-1] + "+00:00" if v.endswith("Z") else v)
@@ -144,29 +161,50 @@ def audit_watch_lists(manifest: dict) -> int:
     return rc
 
 
-def newest_commit_date(paths: list[str]) -> date | None:
-    """Newest committer date (YYYY-MM-DD) across the given repo paths, or None."""
-    newest: date | None = None
-    for rel in paths:
+NO_MODELS_DIGEST = "-" * 16
+
+
+def watched_files(paths: list[str]) -> list[str]:
+    """Every tracked file under the given `models` entries, repo-relative, sorted.
+
+    The file LIST comes from the index (`git ls-files`) rather than a directory
+    walk, so an untracked scratch file dropped into a watched directory cannot
+    move a board's digest. The file CONTENT is read from the working tree, so a
+    local edit is visible to the gate before you commit it — which is the whole
+    point of a digest an author can reproduce.
+    """
+    if not paths:
+        return []
+    out = subprocess.run(
+        ["git", "ls-files", "-z", "--"] + paths,
+        cwd=CORE_ROOT,
+        capture_output=True,
+        text=True,
+    ).stdout
+    return sorted(p for p in out.split("\0") if p)
+
+
+def models_digest(paths: list[str]) -> str:
+    """Content digest over everything a board's `models` list watches.
+
+    Path and length are hashed alongside the bytes so that renaming a model, or
+    moving content between two watched files, changes the digest — a rename is
+    exactly the kind of edit that silently kept its old commit date before.
+    """
+    files = watched_files(paths)
+    if not files:
+        return NO_MODELS_DIGEST
+    h = hashlib.sha256()
+    for rel in files:
         target = CORE_ROOT / rel
         if not target.exists():
-            # A listed model path that no longer exists is itself a manifest bug;
-            # audit_watch_lists() turns this into a hard failure under the gates.
-            print(f"WARNING: manifest model path does not exist: {rel}", file=sys.stderr)
+            # Tracked but deleted in the working tree. Hash the absence rather
+            # than skipping it, so a deletion is drift instead of a no-op.
+            h.update(rel.encode() + b"\0deleted\0")
             continue
-        out = subprocess.run(
-            ["git", "log", "-1", "--format=%cI", "--", rel],
-            cwd=CORE_ROOT,
-            capture_output=True,
-            text=True,
-        )
-        iso = out.stdout.strip()
-        if not iso:
-            continue
-        d = parse_iso(iso).date()
-        if newest is None or d > newest:
-            newest = d
-    return newest
+        blob = target.read_bytes()
+        h.update(rel.encode() + b"\0" + str(len(blob)).encode() + b"\0" + blob)
+    return h.hexdigest()[:16]
 
 
 def as_date(v) -> date | None:
@@ -181,12 +219,18 @@ def evaluate(board: dict) -> dict:
     """Compute drift status for one board."""
     silicon = board.get("silicon")
     models = board.get("models", [])
-    newest = newest_commit_date(models)
+    current = models_digest(models)
     capture = as_date(silicon["last_capture"]) if silicon else None
+    captured_digest = silicon.get("models_digest") if silicon else None
     ack = as_date(board.get("drift_ack"))
+    ack_digest = board.get("drift_ack_digest")
 
-    drifted = bool(capture and newest and newest > capture)
-    acked = bool(ack and newest and ack >= newest)
+    # A board whose capture predates digests has no recorded baseline to compare
+    # against, so freshness cannot be PROVEN — treat it as drifted and let the
+    # ack carry it until the next live re-capture records a digest. Failing open
+    # ("assume fresh") is the one answer this gate must never give.
+    drifted = bool(silicon) and captured_digest != current
+    acked = bool(ack_digest) and ack_digest == current
     # A board with no silicon capture cannot "drift" — it never claimed silicon.
     failing = drifted and not acked
 
@@ -195,12 +239,15 @@ def evaluate(board: dict) -> dict:
     elif not drifted:
         status = "✅ fresh"
     elif acked:
-        status = f"⚠ drift acked {ack:%Y-%m-%d} (re-capture pending)"
+        when = f" {ack:%Y-%m-%d}" if ack else ""
+        status = f"⚠ drift acked{when} (re-capture pending)"
+    elif captured_digest is None:
+        status = "✖ DRIFT — capture recorded no models_digest; RE-CAPTURE"
     else:
-        status = f"✖ DRIFT — model {newest:%Y-%m-%d} > capture; RE-CAPTURE"
+        status = "✖ DRIFT — models changed since capture; RE-CAPTURE"
 
     return {
-        "newest_model": newest,
+        "digest": current,
         "capture": capture,
         "drifted": drifted,
         "failing": failing,
@@ -219,18 +266,24 @@ def render(manifest: dict) -> str:
     lines.append(
         "Machine-generated from `validation/manifest.yaml`. CI regenerates this on "
         "every run (`--check`) and fails if a peripheral model changed after a "
-        "board's last silicon capture without a dated `drift_ack` (`--drift`). "
-        "Tiers: 🟢 silicon · 🟡 manual-smoke · ⚪ structural."
+        "board's last silicon capture without a covering `drift_ack_digest` "
+        "(`--drift`). Tiers: 🟢 silicon · 🟡 manual-smoke · ⚪ structural."
     )
     lines.append("")
-    lines.append("| Board | Tier | Last silicon capture | Newest model | Status |")
-    lines.append("|-------|------|----------------------|--------------|--------|")
+    lines.append(
+        "The models column is a content digest over everything that board's "
+        "`models` list watches. It is derived from the bytes, not from commit "
+        "dates, so it does not move when a squash merge re-dates the files."
+    )
+    lines.append("")
+    lines.append("| Board | Tier | Last silicon capture | Models | Status |")
+    lines.append("|-------|------|----------------------|--------|--------|")
     for b in boards:
         ev = evaluate(b)
         tier = TIER_BADGE.get(b["tier"], b["tier"])
         cap = f"{ev['capture']:%Y-%m-%d}" if ev["capture"] else "—"
-        nm = f"{ev['newest_model']:%Y-%m-%d}" if ev["newest_model"] else "—"
-        lines.append(f"| `{b['id']}` | {tier} | {cap} | {nm} | {ev['status']} |")
+        digest = f"`{ev['digest']}`" if b.get("models") else "—"
+        lines.append(f"| `{b['id']}` | {tier} | {cap} | {digest} | {ev['status']} |")
     lines.append("")
 
     # Per-board detail
@@ -250,6 +303,9 @@ def render(manifest: dict) -> str:
             lines.append("- Silicon: none — not validated against real hardware.")
         for t in b.get("offline_tests", []):
             lines.append(f"  - offline (CI): {t}")
+        if b.get("models"):
+            watched = len(watched_files(b["models"]))
+            lines.append(f"- Models watched: {watched} file(s), digest `{ev['digest']}`")
         lines.append(f"- Drift status: **{ev['status']}**")
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
@@ -259,9 +315,21 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--check", action="store_true", help="fail if committed doc is stale")
     ap.add_argument("--drift", action="store_true", help="fail if any board drifted past its ack")
+    ap.add_argument(
+        "--digests",
+        action="store_true",
+        help="print each board's current models digest (paste into the manifest) and exit",
+    )
     args = ap.parse_args()
 
     manifest = yaml.safe_load(MANIFEST.read_text())
+
+    if args.digests:
+        for b in manifest["boards"]:
+            if b.get("models"):
+                print(f"{b['id']:<28} {models_digest(b['models'])}")
+        return 0
+
     rendered = render(manifest)
 
     rc = 0
@@ -273,10 +341,8 @@ def main() -> int:
     if args.check:
         existing = OUT_DOC.read_text() if OUT_DOC.exists() else ""
         if existing != rendered:
-            # Print the actual difference. This doc is rendered partly from git
-            # commit dates, so a checkout whose history differs from yours can
-            # fail this gate while it passes locally — and "is out of date" on
-            # its own gives a CI reader nothing to act on.
+            # Print the actual difference: "is out of date" on its own gives a
+            # CI reader nothing to act on.
             diff = "".join(
                 difflib.unified_diff(
                     existing.splitlines(keepends=True),
@@ -298,13 +364,22 @@ def main() -> int:
         print(f"wrote {OUT_DOC.relative_to(CORE_ROOT)}")
 
     if args.drift:
-        failing = [b["id"] for b in manifest["boards"] if evaluate(b)["failing"]]
+        failing = [b for b in manifest["boards"] if evaluate(b)["failing"]]
         if failing:
+            # Name the digest each board needs. It is the value the fix has to
+            # contain, it is stable under squash merge, and it is reproducible
+            # locally with --digests — so a CI reader can act without guessing.
+            detail = "\n  ".join(f"{b['id']}: {models_digest(b['models'])}" for b in failing)
             print(
-                "ERROR: silicon validation has DRIFTED (model changed after last capture, "
-                "no covering drift_ack):\n  " + "\n  ".join(failing) + "\n"
-                "       Re-run the live diff and bump silicon.last_capture, or set a dated "
-                "drift_ack in validation/manifest.yaml.",
+                "ERROR: silicon validation has DRIFTED (watched models differ from the "
+                "content captured against silicon, no covering drift_ack_digest):\n  "
+                + detail
+                + "\n"
+                "       Re-run the live diff and bump silicon.last_capture + "
+                "silicon.models_digest, or record the digest above as drift_ack_digest "
+                "(with a dated drift_ack) in validation/manifest.yaml.\n"
+                "       Reproduce locally: "
+                "python3 scripts/generate_validation_status.py --digests",
                 file=sys.stderr,
             )
             rc = 1
