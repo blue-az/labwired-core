@@ -597,7 +597,20 @@ pub trait Peripheral: std::fmt::Debug + Send {
     /// transitions. GPIOTE overrides to drive EVENTS_IN[i] when a channel
     /// is configured to watch a matching (port, pin) with a matching
     /// polarity. Default no-op.
-    fn observe_gpio_change(&mut self, _changes: &[(u8, u8, u8)]) {}
+    ///
+    /// Returns whether this peripheral LATCHED work from the edge that it now
+    /// needs a scheduler wake for. The bus harvests `take_scheduled_events`
+    /// only from the peripherals that say `true`: an edge is a cross-peripheral
+    /// activation the per-MMIO-write harvest choke never sees, but harvesting
+    /// from everybody re-arms a SECOND wake on models that already have one in
+    /// flight and cannot latch anything from a GPIO edge at all. A duplicate
+    /// wake at an earlier deadline drains an in-flight multi-cycle model on the
+    /// spot — that is how a `board_io` button on the nRF52840-DK collapsed
+    /// RADIO air time to the EasyDMA cycle. Default `false`: a model that does
+    /// not observe GPIO cannot have latched anything.
+    fn observe_gpio_change(&mut self, _changes: &[(u8, u8, u8)]) -> bool {
+        false
+    }
 
     /// GPIO capability: read the firmware-visible input level for `pin`.
     /// Non-GPIO peripherals return `None`.
