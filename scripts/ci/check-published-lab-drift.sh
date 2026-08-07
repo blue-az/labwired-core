@@ -50,7 +50,11 @@ command -v python3 >/dev/null 2>&1 || {
   exit 1
 }
 
-tmp="$(mktemp -t published-lab-drift)"
+# Portable across BSD (macOS) and GNU mktemp: BSD -t takes a PREFIX, GNU -t
+# wants a TEMPLATE with at least three X's and rejects one without them
+# ("too few X's in template"), which is exactly how this failed in CI while
+# passing locally. Give an explicit path template and skip -t entirely.
+tmp="$(mktemp "${TMPDIR:-/tmp}/published-lab-drift.XXXXXX")"
 trap 'rm -f "$tmp"' EXIT
 
 # The project is PUBLIC, so this needs no credentials. Keep it that way: a
