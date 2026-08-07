@@ -14,6 +14,7 @@ pub mod coverage;
 pub mod faults;
 pub mod manifest;
 pub mod pc_coverage_report;
+pub mod regex;
 pub mod test_support;
 pub mod tier1;
 
@@ -3491,56 +3492,21 @@ pub(crate) fn evaluate_uds_tester(
 
 // Minimal regex matcher supporting: '^' anchor, '$' anchor, '.' and '*' (Kleene star).
 // This is intentionally small to avoid introducing new deps; it does not implement full PCRE/Rust regex.
+/// Does `pattern` match anywhere in `text`?
+///
+/// Thin wrapper over [`crate::regex`], which replaced a `^ $ . *`-only matcher.
+/// The call sites want a plain `bool`, so a pattern that cannot be evaluated is
+/// logged and reported as "did not match" — which makes the assertion fail. A
+/// typo therefore fails the test loudly instead of being mistaken for a
+/// firmware bug that never printed the expected line.
 pub(crate) fn simple_regex_is_match(pattern: &str, text: &str) -> bool {
-    fn char_eq(pat: char, ch: char) -> bool {
-        pat == '.' || pat == ch
-    }
-
-    fn match_here(pat: &[char], text: &[char]) -> bool {
-        if pat.is_empty() {
-            return true;
-        }
-        if pat.len() >= 2 && pat[1] == '*' {
-            return match_star(pat[0], &pat[2..], text);
-        }
-        if pat[0] == '$' && pat.len() == 1 {
-            return text.is_empty();
-        }
-        if !text.is_empty() && char_eq(pat[0], text[0]) {
-            return match_here(&pat[1..], &text[1..]);
-        }
-        false
-    }
-
-    fn match_star(ch: char, pat: &[char], text: &[char]) -> bool {
-        let mut i = 0;
-        loop {
-            if match_here(pat, &text[i..]) {
-                return true;
-            }
-            if i >= text.len() {
-                return false;
-            }
-            if !char_eq(ch, text[i]) {
-                return false;
-            }
-            i += 1;
+    match crate::regex::is_match(pattern, text) {
+        Ok(hit) => hit,
+        Err(e) => {
+            error!("uart_regex `{pattern}`: {e}");
+            false
         }
     }
-
-    let pat_chars: Vec<char> = pattern.chars().collect();
-    let text_chars: Vec<char> = text.chars().collect();
-
-    if pat_chars.first().copied() == Some('^') {
-        return match_here(&pat_chars[1..], &text_chars);
-    }
-
-    for start in 0..=text_chars.len() {
-        if match_here(&pat_chars, &text_chars[start..]) {
-            return true;
-        }
-    }
-    false
 }
 
 #[cfg(test)]
