@@ -7,8 +7,8 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 
 | Board | Tier | Last silicon capture | Newest model | Status |
 |-------|------|----------------------|--------------|--------|
-| `nrf52840` | 🟢 silicon-verified | 2026-06-17 | 2026-08-06 | ⚠ drift acked 2026-08-08 (re-capture pending) |
-| `seeed-xiao-nrf52840-sense` | 🟢 silicon-verified | 2026-06-17 | 2026-08-06 | ⚠ drift acked 2026-08-08 (re-capture pending) |
+| `nrf52840` | 🟢 silicon-verified | 2026-06-17 | 2026-08-07 | ⚠ drift acked 2026-08-08 (re-capture pending) |
+| `seeed-xiao-nrf52840-sense` | 🟢 silicon-verified | 2026-06-17 | 2026-08-07 | ⚠ drift acked 2026-08-08 (re-capture pending) |
 | `stm32h563` | 🟢 silicon-verified | 2026-06-22 | 2026-08-07 | ⚠ drift acked 2026-08-07 (re-capture pending) |
 | `esp32c3` | 🟢 silicon-verified | 2026-06-17 | 2026-08-08 | ⚠ drift acked 2026-08-08 (re-capture pending) |
 | `nucleo-l476rg` | 🟢 silicon-verified | 2026-06-20 | 2026-08-07 | ⚠ drift acked 2026-08-07 (re-capture pending) |
