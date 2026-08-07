@@ -21,6 +21,15 @@
 //! 2. Idle FF does not bite until ~6M cycles into boot (0 skipped at 4M).
 //!    A browser HUD reading `idle FF 0` on a lab that has only advanced a few
 //!    million cycles is reporting health, not a bug.
+//!
+//! **Known confound in the tree these were taken on.** A concurrent session had
+//! an uncommitted `std::env::var("LABWIRED_TIMG_TRACE")` at the top of
+//! `esp32/timg.rs::sync_to`, which the C3 reaches via `RtcCalProfile`. That is
+//! one env lookup per bus tick — ~300k over a 96M-cycle pair run, so <5% of
+//! wall time. It does not move either conclusion, and it cannot move the 1.21×
+//! at all: both cap configs ran the same batch count (149,405 vs 150,041), so
+//! the overhead cancels in the ratio. Re-derive on a clean tree if the absolute
+//! cycles/s ever becomes load-bearing.
 #![cfg(all(feature = "event-scheduler", not(debug_assertions)))]
 
 use labwired_config::{ChipDescriptor, SystemManifest};
