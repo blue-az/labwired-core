@@ -1362,6 +1362,43 @@ pub struct Esp32c3Bt {
     /// Generation stamp for the in-flight scheduled comparator event. Bumped
     /// on every write that could re-arm, so an event scheduled under an older
     /// deadline dies on arrival instead of firing a stale interrupt.
+    ///
+    /// ## KNOWN COST — this block dominates scheduler time. Read before "fixing" it.
+    ///
+    /// `take_scheduled_events` runs on **every MMIO access** to this block, not
+    /// only after a write that moves a comparator, and it bumps `arm_seq`
+    /// unconditionally. A fresh token is a fresh `(peripheral, token, deadline)`
+    /// key, so the scheduler's dedup index can never collapse these, and since
+    /// there is no scheduler-side cancel by design each one stays live until it
+    /// fires and is rejected as stale. Measured on the two-node BLE Pong lab:
+    ///
+    /// ```text
+    /// LIVE_HWM [bt=436 systimer=4]     ceiling 8, live_event_ceiling_trips=1599
+    /// ```
+    ///
+    /// 436 simultaneously-live events from only ~3.3k arms. That inflates the
+    /// scheduler's `queued` dedup index — a linearly-scanned `Vec` chosen
+    /// *because* its measured high-water mark was 3 — to ~439 entries, and a
+    /// `sample` profile then puts `EventScheduler::{drain_due_into, schedule}`
+    /// at **4.7x the cost of the RISC-V interpreter**. Debug builds would panic
+    /// on the `debug_assert!` behind `live_event_ceiling_trips`.
+    ///
+    /// ## Why the obvious fixes do not work (three tried, all rejected by
+    /// `tests/world_esp32c3_ble_pong.rs`)
+    ///
+    /// 1. Arm only when the absolute CPU deadline changes — wrong, `anchor`
+    ///    equals the bus's `current_cycle` only on the write path.
+    /// 2. Arm only when the comparator target changes (anchor-independent,
+    ///    elapsed/CLKN domain) — still starves the peer: no host frame arrives.
+    /// 3. Emit every poll but reuse the token when the target is unchanged, so
+    ///    dedup collapses the duplicates — also starves the peer.
+    ///
+    /// 2 and 3 fail for the same reason, and it is the real finding:
+    /// **`on_event` is the only place `service_radio` runs, so the arm cadence
+    /// IS the radio cadence.** The controller is being driven by the duplicate
+    /// events. Any residency fix must first give the radio engine its own
+    /// explicit wake schedule; then, and only then, can the comparator arm be
+    /// made idempotent. Do not attempt one without the other.
     arm_seq: u32,
     /// Cycle at which the block was first written, i.e. when the controller
     /// un-gated it. CLKN counts from here, so a read before any BLE activity
@@ -3830,5 +3867,4 @@ mod tests {
             "and therefore sees none of the previous run's traffic",
         );
     }
-
 }
