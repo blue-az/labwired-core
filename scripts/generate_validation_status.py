@@ -293,6 +293,52 @@ def newest_commit_date(paths: list[str]) -> date | None:
     return newest
 
 
+def model_digest(paths: list[str]) -> str | None:
+    """A content hash over every file under `paths`, or None if none exist.
+
+    WHY CONTENT AND NOT A DATE
+      The drift gate asks "has the model changed since silicon was captured?".
+      That is a question about CONTENT, but `newest_commit_date` answers it with
+      a git timestamp — and a timestamp is metadata that history rewriting moves
+      while the content stands still.
+
+      Squash-merge is the case that bit us (#834). A PR acks drift on its branch
+      with the date of its own model commit; GitHub squashes, stamping the merge
+      time onto every file the PR touched; `newest` jumps past the ack and main
+      goes red on content that was reviewed and acked. The author could not have
+      written a covering date, because the date the model "changes" on main is
+      the merge date and that commit does not exist yet at review time.
+
+      A digest is the thing that IS knowable pre-merge and invariant across the
+      merge: squash, rebase and cherry-pick all preserve content. So an ack
+      carrying a digest keeps covering exactly the tree it was written for, and
+      stops covering the moment a byte of model source actually moves.
+
+    Where a board records one, this REPLACES the date comparison rather than
+    supplementing it — see evaluate(). That is strictly stronger on both axes:
+    it stops a same-content re-date from failing, and stops a same-day content
+    edit from passing.
+    """
+    import hashlib
+
+    h = hashlib.sha256()
+    found = False
+    for rel in sorted(paths):
+        target = CORE_ROOT / rel
+        if not target.exists():
+            continue
+        files = sorted(target.rglob("*")) if target.is_dir() else [target]
+        for f in files:
+            if not f.is_file():
+                continue
+            found = True
+            h.update(str(f.relative_to(CORE_ROOT)).encode())
+            h.update(b"\0")
+            h.update(f.read_bytes())
+            h.update(b"\0")
+    return h.hexdigest() if found else None
+
+
 def as_date(v) -> date | None:
     if v is None:
         return None
@@ -310,7 +356,30 @@ def evaluate(board: dict) -> dict:
     ack = as_date(board.get("drift_ack"))
 
     drifted = bool(capture and newest and newest > capture)
-    acked = bool(ack and newest and ack >= newest)
+    # How an ack covers a model.
+    #
+    #   With a `drift_ack_digest`: CONTENT decides, and only content. The ack
+    #   covers exactly the tree it was written against.
+    #   Without one: the legacy DATE rule, kept so an un-stamped ack still works.
+    #
+    # Digest-authoritative rather than date-OR-digest, because it is strictly
+    # stronger than the date rule on BOTH axes:
+    #
+    #   * a squash merge that re-dates a model without changing a byte no longer
+    #     reds main on a reviewed, acked tree (#834), and
+    #   * a model edit made on or before the ack date no longer slips through.
+    #     The date rule accepted any content as long as `ack >= newest`, so an
+    #     edit landing the same day an ack was written was silently covered.
+    #     That was a real hole and this closes it.
+    #
+    # The cost is that any genuine model change now re-fails until a human
+    # re-acks and re-stamps, which is exactly the manifest's stated intent:
+    # "any model change PAST the ack date re-fails the gate. No silent decay."
+    recorded = board.get("drift_ack_digest")
+    if ack and recorded:
+        acked = recorded == model_digest(models)
+    else:
+        acked = bool(ack and newest and ack >= newest)
     # A board with no silicon capture cannot "drift" — it never claimed silicon.
     failing = drifted and not acked
 
@@ -379,10 +448,77 @@ def render(manifest: dict) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+def write_ack_digests(manifest: dict) -> int:
+    """Stamp `drift_ack_digest` next to every existing `drift_ack`.
+
+    Deliberately only touches boards that ALREADY carry a human-written
+    `drift_ack`. Writing a digest is not an acknowledgement — the ack is the
+    human assertion, the digest only pins WHICH tree it was asserted about. A
+    board with no ack must stay un-acked; this must never be a way to bulk-
+    silence the gate.
+
+    Edits the YAML as text rather than round-tripping through the loader: the
+    manifest is a hand-maintained document whose comments carry the reasoning
+    for every ack, and PyYAML would drop all of them.
+    """
+    text = MANIFEST.read_text()
+    lines = text.split("\n")
+    stamped = 0
+
+    for board in manifest.get("boards", []):
+        if not board.get("drift_ack"):
+            continue
+        digest = model_digest(board.get("models", []))
+        if not digest:
+            continue
+        if board.get("drift_ack_digest") == digest:
+            continue
+
+        # Find this board's `drift_ack:` line: scan from its `- id:` header to
+        # the next one, so a shared date can't match the wrong board.
+        start = next(
+            (i for i, ln in enumerate(lines) if ln.strip() == f"- id: {board['id']}"),
+            None,
+        )
+        if start is None:
+            print(f"WARNING: no `- id: {board['id']}` line found", file=sys.stderr)
+            continue
+        end = next(
+            (i for i in range(start + 1, len(lines)) if lines[i].strip().startswith("- id: ")),
+            len(lines),
+        )
+        ack_i = next(
+            (i for i in range(start, end) if lines[i].strip().startswith("drift_ack:")),
+            None,
+        )
+        if ack_i is None:
+            continue
+
+        indent = lines[ack_i][: len(lines[ack_i]) - len(lines[ack_i].lstrip())]
+        digest_i = next(
+            (i for i in range(start, end) if lines[i].strip().startswith("drift_ack_digest:")),
+            None,
+        )
+        if digest_i is None:
+            lines.insert(ack_i + 1, f"{indent}drift_ack_digest: {digest}")
+        else:
+            lines[digest_i] = f"{indent}drift_ack_digest: {digest}"
+        stamped += 1
+
+    MANIFEST.write_text("\n".join(lines))
+    print(f"stamped {stamped} drift_ack_digest value(s)")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--check", action="store_true", help="fail if committed doc is stale")
     ap.add_argument("--drift", action="store_true", help="fail if any board drifted past its ack")
+    ap.add_argument(
+        "--write-ack-digests",
+        action="store_true",
+        help="stamp drift_ack_digest for every board that already carries a drift_ack",
+    )
     args = ap.parse_args()
 
     # Before anything reads the manifest or touches the doc: this exits(2) — an
@@ -391,6 +527,10 @@ def main() -> int:
     require_full_history()
 
     manifest = yaml.safe_load(MANIFEST.read_text())
+
+    if args.write_ack_digests:
+        return write_ack_digests(manifest)
+
     rendered = render(manifest)
 
     rc = 0

@@ -175,6 +175,7 @@ boards:
     # 2026-08-06: universal I2C kits + external_devices attach path; nRF UARTE RX test style only.
     # No register map / base / reset change on silicon-asserted set. Offline gates unchanged.
     drift_ack: 2026-08-06
+    drift_ack_digest: 7b4c2ef273b0142f500c42ba568d4d3224eed2a4ce82bb1a68cbd7e0304fb780
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -265,6 +266,7 @@ boards:
     # 2026-08-06: universal I2C kits + external_devices attach path; nRF UARTE RX test style only.
     # No register map / base / reset change on silicon-asserted set. Offline gates unchanged.
     drift_ack: 2026-08-06
+    drift_ack_digest: 7b4c2ef273b0142f500c42ba568d4d3224eed2a4ce82bb1a68cbd7e0304fb780
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -433,6 +435,7 @@ boards:
     # (labwired_wasm configured_arm_batch_matches_32_single_boundaries).
     # Live re-capture still owed; no hardware ran for this change.
     drift_ack: 2026-08-07
+    drift_ack_digest: 532cb804c900eb7c94e98d67d4d80289b0b6c0bf52bc95ee00b27a10c847feb5
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -964,6 +967,7 @@ boards:
     # Evidence: 2700 core lib tests green, 2816 with --features event-scheduler,
     # workspace clippy --all-targets -D warnings clean.
     drift_ack: 2026-08-07
+    drift_ack_digest: d02aad733e3f69f538345d89fd5722af87a8a9b4c5687497e835ff24acfe12ff
 
   - id: nucleo-l476rg
     doc: docs/boards/nucleo-l476rg.md
@@ -1108,6 +1112,7 @@ boards:
     # (labwired_wasm configured_arm_batch_matches_32_single_boundaries).
     # Live re-capture still owed; no hardware ran for this change.
     drift_ack: 2026-08-07
+    drift_ack_digest: 77dcbce95ceadf2c9ce4f211fbdb9ec40ecd956f690b94f70224683317ce9313
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1246,6 +1251,7 @@ boards:
     # (labwired_wasm configured_arm_batch_matches_32_single_boundaries).
     # Live re-capture still owed; no hardware ran for this change.
     drift_ack: 2026-08-07
+    drift_ack_digest: 366f46e530685ee47a0285e24038cc3cf694f318c71307cafed4f7a0d144497e
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1402,6 +1408,7 @@ boards:
     # (labwired_wasm configured_arm_batch_matches_32_single_boundaries).
     # Live re-capture still owed; no hardware ran for this change.
     drift_ack: 2026-08-07
+    drift_ack_digest: ddc726a356c4b1a7bf4fe05bc78a2b0d1fbf711061f1453d30085672337b33d8
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1551,6 +1558,7 @@ boards:
     # (labwired_wasm configured_arm_batch_matches_32_single_boundaries).
     # Live re-capture still owed; no hardware ran for this change.
     drift_ack: 2026-08-07
+    drift_ack_digest: fe2259daaa0567813ba35c1c80164611e307ab102e9616200e05c9967ad24e0b
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1794,6 +1802,7 @@ boards:
     # failed, 34 ignored; declarative_device_byte_parity 7/7 with every golden
     # literal unchanged. No S3 board attached; no live re-capture.
     drift_ack: 2026-08-07
+    drift_ack_digest: f52b807abebf3aadf5bdbbbbc38bbb16a33402aa0db82a041279f2e2fe1b1b52
     models:
       - crates/core/src/peripherals/esp32s3
       - crates/core/src/peripherals/esp_xtensa_common
@@ -1843,6 +1852,7 @@ boards:
     # RP2350 address map; RP2040 default path is unit-tested unchanged
     # (rp2350_clkrst_profile::rp2040_profile_is_unchanged).
     drift_ack: 2026-08-05
+    drift_ack_digest: c103296ae72395af02e314b115b6953260da3bf2a2d4ad2973d414764112bf4a
     models:
       - configs/chips/rp2040.yaml
       - crates/core/src/peripherals/rp2040
@@ -1897,6 +1907,7 @@ boards:
     # pass unchanged. No live re-capture this session; re-capturing IDR readback
     # and SPI RX behaviour is tracked.
     drift_ack: 2026-07-28
+    drift_ack_digest: 31d4ff030d4b4dc115dc3107bb5ce92e39f29714e4136bd7e8dc21d4dac703f9
     models:
       - configs/chips/stm32h735.yaml
       - crates/core/src/peripherals/rcc.rs
@@ -1931,6 +1942,7 @@ boards:
     # pass unchanged. No live re-capture this session; re-capturing IDR readback
     # and SPI RX behaviour is tracked.
     drift_ack: 2026-07-28
+    drift_ack_digest: 67266aab51433f8140d7aede63d4360265f1928f0fb5959d4512e035680e3b9d
     models:
       - configs/chips/stm32f411ceu6.yaml
       - crates/core/src/peripherals/rcc.rs
@@ -1976,6 +1988,7 @@ boards:
     # pass unchanged. No live re-capture this session; re-capturing IDR readback
     # and SPI RX behaviour is tracked.
     drift_ack: 2026-07-28
+    drift_ack_digest: a32755e5fe644f5286d8222b8823a267ab2cd03f6d735d1d3d08be934230c425
     models:
       - configs/chips/mkw41z4.yaml
       - crates/core/src/peripherals/i2c.rs
