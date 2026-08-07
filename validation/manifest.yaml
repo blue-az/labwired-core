@@ -174,7 +174,15 @@ boards:
     # nvmc tests green. Live re-capture owed for the RX drain timing.
     # 2026-08-06: universal I2C kits + external_devices attach path; nRF UARTE RX test style only.
     # No register map / base / reset change on silicon-asserted set. Offline gates unchanged.
-    drift_ack: 2026-08-06
+    # 2026-08-07: nRF52 GPIOTE `observe_gpio_change` now REPORTS whether it latched an
+    # edge (return type only — the channel/polarity matching logic is byte-identical),
+    # and the bus stopped seeding its GPIO edge baseline at zero, so a level the
+    # outside world already holds is no longer a phantom rising edge at cycle 1. No
+    # register map, base address, reset value or readback in the 2026-06-17 asserted
+    # set moves; the only observable delta is a GPIOTE EVENTS_IN that used to latch
+    # with no contact having moved. Offline gates unchanged. Live re-capture still
+    # owed for the RX drain timing.
+    drift_ack: 2026-08-07
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -264,7 +272,15 @@ boards:
     # nvmc tests green. Live re-capture owed for the RX drain timing.
     # 2026-08-06: universal I2C kits + external_devices attach path; nRF UARTE RX test style only.
     # No register map / base / reset change on silicon-asserted set. Offline gates unchanged.
-    drift_ack: 2026-08-06
+    # 2026-08-07: nRF52 GPIOTE `observe_gpio_change` now REPORTS whether it latched an
+    # edge (return type only — the channel/polarity matching logic is byte-identical),
+    # and the bus stopped seeding its GPIO edge baseline at zero, so a level the
+    # outside world already holds is no longer a phantom rising edge at cycle 1. No
+    # register map, base address, reset value or readback in the 2026-06-17 asserted
+    # set moves; the only observable delta is a GPIOTE EVENTS_IN that used to latch
+    # with no contact having moved. Offline gates unchanged. Live re-capture still
+    # owed for the RX drain timing.
+    drift_ack: 2026-08-07
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
