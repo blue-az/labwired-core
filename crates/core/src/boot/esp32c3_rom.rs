@@ -312,7 +312,7 @@ pub fn build_rom_boot_machine<C: crate::Cpu, F: FnOnce(crate::cpu::RiscV) -> C>(
     // Native leaves the sink `None` (the same console bytes reach stdout via
     // UART0; a second echo doubles every character); the browser widget passes
     // a sink so its Serial tab shows esp-hal / jtag-serial output.
-    let mut usb_serial = crate::peripherals::esp32s3::usb_serial_jtag::UsbSerialJtag::new();
+    let mut usb_serial = crate::peripherals::esp32s3::usb_serial_jtag::UsbSerialJtag::new_esp32c3();
     usb_serial.set_sink(opts.usb_serial_sink.clone(), false);
     bus.add_peripheral(
         "usb_serial_jtag",
