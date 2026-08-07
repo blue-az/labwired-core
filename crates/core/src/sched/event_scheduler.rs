@@ -147,6 +147,11 @@ pub struct SchedulerStats {
     /// fix is always the same shape: arm on the *transition* into the condition,
     /// not on every observation of it.
     pub arms_at_now_per_peripheral: Vec<u64>,
+    /// Per-peripheral high-water mark of simultaneously-live events — the
+    /// attribution behind the scalar [`Self::max_live_events_per_peripheral`]
+    /// and behind [`Self::live_event_ceiling_trips`]. Says WHICH peripheral is
+    /// leaking wakes, which the scalar cannot.
+    pub max_live_per_peripheral: Vec<u32>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -299,6 +304,7 @@ impl EventScheduler {
             if slot >= self.stats.arms_per_peripheral.len() {
                 self.stats.arms_per_peripheral.resize(slot + 1, 0);
                 self.stats.arms_at_now_per_peripheral.resize(slot + 1, 0);
+                self.stats.max_live_per_peripheral.resize(slot + 1, 0);
             }
             self.stats.arms_per_peripheral[slot] += 1;
             if clamped == self.now {
@@ -308,6 +314,9 @@ impl EventScheduler {
             let live = self.live_per_peripheral[slot];
             if live > self.stats.max_live_events_per_peripheral {
                 self.stats.max_live_events_per_peripheral = live;
+            }
+            if live > self.stats.max_live_per_peripheral[slot] {
+                self.stats.max_live_per_peripheral[slot] = live;
             }
             if live > MAX_LIVE_EVENTS_PER_PERIPHERAL {
                 self.stats.live_event_ceiling_trips += 1;

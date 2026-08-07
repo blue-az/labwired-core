@@ -201,6 +201,35 @@ fn probe(label: &str, idle_ff: bool, slice: u32, budget: u64) {
             total_arms as f64 / p.cpu_batches.max(1) as f64,
             top.join(" "),
         );
+        eprintln!(
+            "PROBE {label} node{name} HEAP max_queued={} max_live_per_periph={} \
+             ceiling_trips={} past_clamps={}",
+            stats.max_queued_events,
+            stats.max_live_events_per_peripheral,
+            stats.live_event_ceiling_trips,
+            stats.past_schedule_clamps,
+        );
+        let mut live: Vec<String> = stats
+            .max_live_per_peripheral
+            .iter()
+            .enumerate()
+            .filter(|(_, n)| **n > 1)
+            .map(|(idx, n)| {
+                let who = node
+                    .machine
+                    .bus
+                    .peripherals
+                    .get(idx)
+                    .map(|p| p.name.as_str())
+                    .unwrap_or("<oor>");
+                (*n, who)
+            })
+            .collect::<Vec<_>>()
+            .into_iter()
+            .map(|(n, who)| format!("{who}={n}"))
+            .collect();
+        live.sort();
+        eprintln!("PROBE {label} node{name} LIVE_HWM [{}]", live.join(" "));
     }
     let cps = (2.0 * budget as f64) / wall;
     eprintln!(
@@ -216,6 +245,21 @@ fn probe_ble_pong_idle_ff() {
     probe("ff_on_1M", true, 1_000_000, 60_000_000);
     probe("ff_off_1M", false, 1_000_000, 60_000_000);
     probe("ff_on_100k", true, 100_000, 60_000_000);
+}
+
+/// A long steady-state window to profile against. Boot is ~6M cycles of the
+/// 400M here, so >98% of samples land in the regime that actually matters.
+///
+/// Run under a sampling profiler:
+/// ```text
+/// cargo test --release -p labwired-core --features event-scheduler \
+///   --test esp32c3_ble_pong_perf_probe -- --ignored probe_ble_pong_profile &
+/// sample <pid> 20 -f /tmp/pong.sample
+/// ```
+#[test]
+#[ignore = "measurement probe, not a gate"]
+fn probe_ble_pong_profile() {
+    probe("profile", true, 1_000_000, 400_000_000);
 }
 
 /// Where in the boot does idle FF first bite? The browser HUD reads
