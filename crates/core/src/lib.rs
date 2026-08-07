@@ -33,6 +33,8 @@ pub mod signals;
 pub mod sim_input;
 pub mod snapshot;
 pub mod system;
+#[doc(hidden)]
+pub mod test_support;
 pub mod trace;
 pub mod vfi;
 pub mod world;
@@ -1207,6 +1209,18 @@ pub trait Bus {
     #[cfg(feature = "event-scheduler")]
     fn publish_cycle(&mut self, _cycle: u64) {}
 
+    /// This bus's `peripheral_tick_interval` — how many cycles one
+    /// tick-equivalent of peripheral work covers. A scheduler-driven model that
+    /// paces output over time (the shared `Uart` and its RX streams) reads it
+    /// to size its own service cadence, so it wakes once per interval and
+    /// replays that many tick-equivalents instead of demanding a wakeup every
+    /// cycle. Returning `1` (the default, and what a cycle-accurate bus
+    /// reports) reproduces the per-cycle cadence exactly.
+    #[cfg(feature = "event-scheduler")]
+    fn peripheral_tick_interval(&self) -> u32 {
+        1
+    }
+
     /// Plan 2: deliver a coherent 32-bit value to peripherals after the
     /// four byte writes that compose a write_u32 have been dispatched.
     /// Default: no-op for buses that don't route to peripherals.
@@ -1340,6 +1354,10 @@ pub enum StopReason {
     StepDone,
     MaxStepsReached,
     ManualStop,
+    /// The firmware ended its own run through the `simctl` device. Distinct
+    /// from [`Self::ManualStop`], which is a *host* decision: this one carries
+    /// the firmware's own exit code. See [`crate::peripherals::simctl`].
+    FirmwareExit(u32),
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -1421,6 +1439,11 @@ pub struct Machine<C: Cpu> {
     /// full peripheral list every cycle. `None` for configs with no FLASH
     /// peripheral on the bus (e.g. bare-bus unit tests).
     flash_index: Option<usize>,
+    /// Cached bus index of the `simctl` device, when the bus declares one.
+    /// Resolved once at construction so the advance loop's per-boundary drain
+    /// is a single `Option` test on every board that does **not** use it —
+    /// which is every board today. See [`crate::peripherals::simctl`].
+    simctl_index: Option<usize>,
     /// Cached bus index of the SCB peripheral (Cortex-M). Resolved once at
     /// construction; `step()` drains a pending SYSRESETREQ latch every cycle
     /// and, when set, reboots the CPU through the vector table via the
@@ -1713,6 +1736,12 @@ impl<C: Cpu> Machine<C> {
                 .and_then(|a| a.downcast_ref::<crate::peripherals::flash::Flash>())
                 .is_some()
         });
+        let simctl_index = bus.peripherals.iter().position(|p| {
+            p.dev
+                .as_any()
+                .and_then(|a| a.downcast_ref::<crate::peripherals::simctl::SimCtl>())
+                .is_some()
+        });
         let scb_index = bus.peripherals.iter().position(|p| {
             p.dev
                 .as_any()
@@ -1751,6 +1780,7 @@ impl<C: Cpu> Machine<C> {
             clocks: sched::ClockGraph::new(),
             rtc_cntl_index,
             flash_index,
+            simctl_index,
             scb_index,
             scheduler_bootstrapped: false,
             hcsr04_edge_scratch: Vec::new(),
@@ -2527,6 +2557,34 @@ impl<C: Cpu> Machine<C> {
             .and_then(|f| f.drain_pending_op())
     }
 
+    /// Take the exit code firmware wrote to the `simctl` device, if any.
+    ///
+    /// Returns `None` immediately on a bus with no `simctl` — the cached index
+    /// makes this a single `Option` test rather than a peripheral walk, so the
+    /// advance loop pays effectively nothing for a feature it is not using.
+    pub(crate) fn drain_simctl_exit_code(&self) -> Option<u32> {
+        let idx = self.simctl_index?;
+        self.bus
+            .peripherals
+            .get(idx)?
+            .dev
+            .as_any()
+            .and_then(|a| a.downcast_ref::<crate::peripherals::simctl::SimCtl>())
+            .and_then(|d| d.drain_exit_code())
+    }
+
+    /// Borrow the `simctl` device, if the bus declares one. Lets a harness read
+    /// the `SOUT`/`SERR` streams after a run ends.
+    pub fn simctl(&self) -> Option<&crate::peripherals::simctl::SimCtl> {
+        let idx = self.simctl_index?;
+        self.bus
+            .peripherals
+            .get(idx)?
+            .dev
+            .as_any()
+            .and_then(|a| a.downcast_ref::<crate::peripherals::simctl::SimCtl>())
+    }
+
     /// Borrow the H5 FLASH peripheral, if one is on the bus. Used by the
     /// read-while-write gate to query the swap state / bank mapping.
     fn flash_peripheral(&self) -> Option<&crate::peripherals::flash::Flash> {
@@ -2677,6 +2735,7 @@ impl<C: Cpu> DebugControl for Machine<C> {
             AdvanceStop::Breakpoint(pc) => StopReason::Breakpoint(pc),
             AdvanceStop::FuelLimit => StopReason::MaxStepsReached,
             AdvanceStop::CycleLimit | AdvanceStop::NoProgress => StopReason::StepDone,
+            AdvanceStop::FirmwareExit { code } => StopReason::FirmwareExit(code),
         })
     }
     fn step_single(&mut self) -> SimResult<StopReason> {
