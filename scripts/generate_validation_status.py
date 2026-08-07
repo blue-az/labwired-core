@@ -394,6 +394,7 @@ def evaluate(board: dict) -> dict:
 
     return {
         "newest_model": newest,
+        "digest": model_digest(models),
         "capture": capture,
         "drifted": drifted,
         "failing": failing,
@@ -416,14 +417,23 @@ def render(manifest: dict) -> str:
         "Tiers: 🟢 silicon · 🟡 manual-smoke · ⚪ structural."
     )
     lines.append("")
-    lines.append("| Board | Tier | Last silicon capture | Newest model | Status |")
-    lines.append("|-------|------|----------------------|--------------|--------|")
+    lines.append(
+        "The models column is a content digest over everything that board's "
+        "`models` list watches, NOT a commit date. Rendering the newest "
+        "committer date here meant every squash merge that touched a watched "
+        "path re-dated the column and made this committed file stale, so "
+        "`--check` demanded a regen commit that carried no information (#834, "
+        "and #798 before it). A digest moves only when the models actually do."
+    )
+    lines.append("")
+    lines.append("| Board | Tier | Last silicon capture | Models | Status |")
+    lines.append("|-------|------|----------------------|--------|--------|")
     for b in boards:
         ev = evaluate(b)
         tier = TIER_BADGE.get(b["tier"], b["tier"])
         cap = f"{ev['capture']:%Y-%m-%d}" if ev["capture"] else "—"
-        nm = f"{ev['newest_model']:%Y-%m-%d}" if ev["newest_model"] else "—"
-        lines.append(f"| `{b['id']}` | {tier} | {cap} | {nm} | {ev['status']} |")
+        dg = f"`{ev['digest'][:16]}`" if ev["digest"] else "—"
+        lines.append(f"| `{b['id']}` | {tier} | {cap} | {dg} | {ev['status']} |")
     lines.append("")
 
     # Per-board detail

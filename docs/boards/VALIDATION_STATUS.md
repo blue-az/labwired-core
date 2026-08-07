@@ -5,31 +5,33 @@
 
 Machine-generated from `validation/manifest.yaml`. CI regenerates this on every run (`--check`) and fails if a peripheral model changed after a board's last silicon capture without a dated `drift_ack` (`--drift`). Tiers: 🟢 silicon · 🟡 manual-smoke · ⚪ structural.
 
-| Board | Tier | Last silicon capture | Newest model | Status |
-|-------|------|----------------------|--------------|--------|
-| `nrf52840` | 🟢 silicon-verified | 2026-06-17 | 2026-08-06 | ⚠ drift acked 2026-08-08 (re-capture pending) |
-| `seeed-xiao-nrf52840-sense` | 🟢 silicon-verified | 2026-06-17 | 2026-08-06 | ⚠ drift acked 2026-08-08 (re-capture pending) |
-| `stm32h563` | 🟢 silicon-verified | 2026-06-22 | 2026-08-07 | ⚠ drift acked 2026-08-08 (re-capture pending) |
-| `esp32c3` | 🟢 silicon-verified | 2026-06-17 | 2026-08-07 | ⚠ drift acked 2026-08-07 (re-capture pending) |
-| `nucleo-l476rg` | 🟢 silicon-verified | 2026-06-20 | 2026-08-07 | ⚠ drift acked 2026-08-08 (re-capture pending) |
-| `nucleo-l073rz` | 🟢 silicon-verified | 2026-06-20 | 2026-08-07 | ⚠ drift acked 2026-08-08 (re-capture pending) |
-| `stm32f103` | 🟢 silicon-verified | 2026-06-20 | 2026-08-07 | ⚠ drift acked 2026-08-08 (re-capture pending) |
-| `stm32f407` | 🟢 silicon-smoke | 2026-06-20 | 2026-08-07 | ⚠ drift acked 2026-08-08 (re-capture pending) |
-| `esp32s3` | 🟢 silicon-verified | 2026-07-15 | 2026-08-07 | ⚠ drift acked 2026-08-07 (re-capture pending) |
-| `stm32f401` | 🟡 smoke-manual | — | 2026-08-03 | no silicon capture |
-| `stm32wba52` | 🟡 smoke-manual | — | 2026-08-03 | no silicon capture |
-| `nrf52832` | ⚪ structural | — | 2026-08-03 | no silicon capture |
-| `rp2040` | ⚪ structural | — | 2026-08-05 | no silicon capture |
-| `rp2350` | 🟡 smoke-manual | — | 2026-08-05 | no silicon capture |
-| `nrf5340` | 🔵 sim-validated (deep model, no HW diff) | — | 2026-08-07 | no silicon capture |
-| `stm32h735` | 🔵 sim-validated (deep model, no HW diff) | — | 2026-08-07 | no silicon capture |
-| `stm32f411ceu6` | 🔵 sim-validated (deep model, no HW diff) | — | 2026-08-07 | no silicon capture |
-| `esp32` | ⚪ structural | — | 2026-08-05 | no silicon capture |
-| `mkw41z4` | 🔵 sim-validated (deep model, no HW diff) | — | 2026-08-07 | no silicon capture |
-| `nrf54l15` | 🔵 sim-validated (deep model, no HW diff) | — | 2026-08-03 | no silicon capture |
-| `stm32g474re` | 🔵 sim-validated (deep model, no HW diff) | — | 2026-08-03 | no silicon capture |
-| `stm32wb55` | 🔵 sim-validated (deep model, no HW diff) | — | 2026-08-03 | no silicon capture |
-| `ci-fixture-riscv` | ⚪ structural | — | 2026-03-09 | no silicon capture |
+The models column is a content digest over everything that board's `models` list watches, NOT a commit date. Rendering the newest committer date here meant every squash merge that touched a watched path re-dated the column and made this committed file stale, so `--check` demanded a regen commit that carried no information (#834, and #798 before it). A digest moves only when the models actually do.
+
+| Board | Tier | Last silicon capture | Models | Status |
+|-------|------|----------------------|--------|--------|
+| `nrf52840` | 🟢 silicon-verified | 2026-06-17 | `8ea8122dea22fc64` | ⚠ drift acked 2026-08-08 (re-capture pending) |
+| `seeed-xiao-nrf52840-sense` | 🟢 silicon-verified | 2026-06-17 | `8ea8122dea22fc64` | ⚠ drift acked 2026-08-08 (re-capture pending) |
+| `stm32h563` | 🟢 silicon-verified | 2026-06-22 | `bec6988944d80986` | ⚠ drift acked 2026-08-08 (re-capture pending) |
+| `esp32c3` | 🟢 silicon-verified | 2026-06-17 | `d02aad733e3f69f5` | ⚠ drift acked 2026-08-07 (re-capture pending) |
+| `nucleo-l476rg` | 🟢 silicon-verified | 2026-06-20 | `266bc466735dd241` | ⚠ drift acked 2026-08-08 (re-capture pending) |
+| `nucleo-l073rz` | 🟢 silicon-verified | 2026-06-20 | `105c3038e66f7309` | ⚠ drift acked 2026-08-08 (re-capture pending) |
+| `stm32f103` | 🟢 silicon-verified | 2026-06-20 | `ba59367c8644427e` | ⚠ drift acked 2026-08-08 (re-capture pending) |
+| `stm32f407` | 🟢 silicon-smoke | 2026-06-20 | `55e991e05f47a258` | ⚠ drift acked 2026-08-08 (re-capture pending) |
+| `esp32s3` | 🟢 silicon-verified | 2026-07-15 | `f52b807abebf3aad` | ⚠ drift acked 2026-08-07 (re-capture pending) |
+| `stm32f401` | 🟡 smoke-manual | — | `a05f2c5a4fa09d07` | no silicon capture |
+| `stm32wba52` | 🟡 smoke-manual | — | `68d7f53b696f44f7` | no silicon capture |
+| `nrf52832` | ⚪ structural | — | `8eb946cd8fd728b5` | no silicon capture |
+| `rp2040` | ⚪ structural | — | `c103296ae72395af` | no silicon capture |
+| `rp2350` | 🟡 smoke-manual | — | `fa3b47246c7b0401` | no silicon capture |
+| `nrf5340` | 🔵 sim-validated (deep model, no HW diff) | — | `82a7e1a6de705e02` | no silicon capture |
+| `stm32h735` | 🔵 sim-validated (deep model, no HW diff) | — | `53fd2ce53e11a335` | no silicon capture |
+| `stm32f411ceu6` | 🔵 sim-validated (deep model, no HW diff) | — | `9c285292b9bd9476` | no silicon capture |
+| `esp32` | ⚪ structural | — | `072e70147b3b21a3` | no silicon capture |
+| `mkw41z4` | 🔵 sim-validated (deep model, no HW diff) | — | `c8bb472c66892eb3` | no silicon capture |
+| `nrf54l15` | 🔵 sim-validated (deep model, no HW diff) | — | `0e4b22a9cea24fc0` | no silicon capture |
+| `stm32g474re` | 🔵 sim-validated (deep model, no HW diff) | — | `e787c2451c1c922c` | no silicon capture |
+| `stm32wb55` | 🔵 sim-validated (deep model, no HW diff) | — | `dc1bbecb4ac5df54` | no silicon capture |
+| `ci-fixture-riscv` | ⚪ structural | — | `fec9881993837112` | no silicon capture |
 
 ## `nrf52840` — 🟢 silicon-verified
 
