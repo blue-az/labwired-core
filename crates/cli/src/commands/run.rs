@@ -502,12 +502,17 @@ pub(crate) fn run_firmware_esp32(args: &RunArgs) -> ExitCode {
     cpu.ps = labwired_core::cpu::xtensa_regs::Ps::from_raw(1 << 18);
 
     let limit = args.max_steps.unwrap_or(u64::MAX);
-    let observers: Vec<std::sync::Arc<dyn labwired_core::SimulationObserver>> = Vec::new();
-    let config = labwired_core::SimulationConfig::default();
     let mut steps = 0u64;
 
+    // Drive the authoritative `Machine` lifecycle, not a hand-rolled
+    // `cpu.step` + `bus.tick_peripherals_*` pair. See the note on
+    // `run_firmware`'s loop: the hand-rolled shape never published the bus
+    // cycle clock, which freezes every `uses_scheduler()` peripheral under
+    // `--features event-scheduler`.
+    let mut machine = labwired_core::Machine::new(cpu, bus);
+
     while steps < limit {
-        match cpu.step(&mut bus, &observers, &config) {
+        match machine.step() {
             Ok(()) => {}
             Err(SimulationError::BreakpointHit(_)) => break,
             Err(SimulationError::ExceptionRaised { cause, pc }) => {
@@ -517,19 +522,18 @@ pub(crate) fn run_firmware_esp32(args: &RunArgs) -> ExitCode {
             Err(e) => {
                 eprintln!(
                     "labwired-cli run (esp32): simulator error at pc=0x{:08x}: {e}",
-                    cpu.get_pc(),
+                    machine.cpu.get_pc(),
                 );
                 return ExitCode::from(EXIT_RUNTIME_ERROR);
             }
         }
-        bus.tick_peripherals_with_costs();
         steps += 1;
     }
     eprintln!(
         "labwired-cli run (esp32): reached --max-steps {limit}; pc=0x{:08x}",
-        cpu.get_pc(),
+        machine.cpu.get_pc(),
     );
-    export_bus_trace_if_requested(&args.bus_trace_out, &bus);
+    export_bus_trace_if_requested(&args.bus_trace_out, &machine.bus);
     ExitCode::from(EXIT_PASS)
 }
 
@@ -719,10 +723,30 @@ pub(crate) fn run_firmware(
         }
     }
 
-    // Run the step loop.
+    // Run the step loop through the authoritative `Machine` lifecycle.
+    //
+    // This loop used to be a hand-rolled `cpu.step()` + `cpu1.step()` +
+    // `bus.tick_peripherals_with_costs()` triple. That reproduces only the
+    // legacy-walk half of the lifecycle and silently drops the other half:
+    // it never publishes the bus cycle clock (`SystemBus::set_current_cycle`)
+    // and it has no event scheduler at all, because the scheduler heap lives
+    // on `Machine`. Under `--features event-scheduler` the per-cycle walk
+    // SKIPS every `uses_scheduler()` peripheral (`bus/tick.rs`, the
+    // `p.dev.uses_scheduler()` early-return in the walk), so those two
+    // mechanisms are the ONLY things that advance them — leaving TIMG frozen
+    // at cycle 0 and the UART TX FIFO undrained, which spins the S3 boot ROM
+    // forever inside `uart_tx_one_char_uart`. `Machine::step`'s own doc says
+    // frontends "must not reproduce the lifecycle with direct `Cpu::step`
+    // calls"; this is why.
+    //
+    // `Machine::step` is `advance(AdvanceRequest::single())`: one primary
+    // quantum, then the secondary, then one peripheral boundary — the same
+    // order and the same cadence the hand-rolled loop had.
     let limit = args.max_steps.unwrap_or(u64::MAX);
-    let observers: Vec<std::sync::Arc<dyn labwired_core::SimulationObserver>> = Vec::new();
-    let config = labwired_core::SimulationConfig::default();
+    let mut machine = match cpu1 {
+        Some(c1) => labwired_core::Machine::new(cpu, bus).with_secondary_cpu(c1),
+        None => labwired_core::Machine::new(cpu, bus),
+    };
     let mut steps = 0u64;
     // Ring buffer of recent PCs for post-mortem on exceptions.
     const RING_LEN: usize = 1024;
@@ -784,7 +808,7 @@ pub(crate) fn run_firmware(
                         $c.regs.windowstart()
                     );
                     for &m in &watch_mem {
-                        match bus.read_u32(m as u64) {
+                        match machine.bus.read_u32(m as u64) {
                             Ok(v) => eprintln!("    mem[0x{m:08x}] = 0x{v:08x}"),
                             Err(e) => eprintln!("    mem[0x{m:08x}] = <unmapped: {e}>"),
                         }
@@ -808,12 +832,19 @@ pub(crate) fn run_firmware(
     }
 
     while steps < limit {
-        let pc_before = cpu.get_pc();
+        let pc_before = machine.cpu.get_pc();
         pc_ring[ring_head] = pc_before;
         ring_head = (ring_head + 1) % RING_LEN;
 
         // Debug breakpoint (PRO_CPU): dump on first hit.
-        check_break!(cpu, pc_before, break_hit);
+        check_break!(machine.cpu, pc_before, break_hit);
+
+        // Debug breakpoint (APP_CPU): dump on first hit, before the machine
+        // steps it. `Machine::step` drives both cores inside one call, so the
+        // APP_CPU's pre-step PC has to be sampled here.
+        if let Some(pc1) = machine.cpu_secondary.as_ref().map(|c| c.get_pc()) {
+            check_break!(machine.cpu_secondary.as_ref().unwrap(), pc1, break_hit1);
+        }
 
         // Capture the APP_CPU entry when PRO_CPU programs it. The ROM also
         // points the APP_CPU at early DRAM stubs during its own bring-up; only
@@ -828,7 +859,7 @@ pub(crate) fn run_firmware(
                 .with(|s| s.take())
         {
             appcpu_started = true;
-            if let Some(c1) = cpu1.as_mut() {
+            if let Some(c1) = machine.cpu_secondary.as_mut() {
                 c1.halted = false;
             }
             eprintln!(
@@ -836,22 +867,22 @@ pub(crate) fn run_firmware(
             );
         }
 
-        match cpu.step(&mut bus, &observers, &config) {
+        match machine.step() {
             Ok(()) => {}
             Err(SimulationError::BreakpointHit(pc)) => {
                 eprintln!("labwired-cli run: BREAK at 0x{pc:08x}");
-                export_bus_trace_if_requested(&args.bus_trace_out, &bus);
+                export_bus_trace_if_requested(&args.bus_trace_out, &machine.bus);
                 return ExitCode::from(EXIT_PASS);
             }
             Err(SimulationError::ExceptionRaised { cause, pc }) => {
                 eprintln!("labwired-cli run: ExceptionRaised cause={cause} at 0x{pc:08x}");
                 eprintln!(
                     "labwired-cli run: PS=0x{:08x} (excm={} intlevel={}) WB={} WS=0x{:04x}",
-                    cpu.ps.as_raw(),
-                    cpu.ps.excm(),
-                    cpu.ps.intlevel(),
-                    cpu.regs.windowbase(),
-                    cpu.regs.windowstart(),
+                    machine.cpu.ps.as_raw(),
+                    machine.cpu.ps.excm(),
+                    machine.cpu.ps.intlevel(),
+                    machine.cpu.regs.windowbase(),
+                    machine.cpu.regs.windowstart(),
                 );
                 eprintln!("labwired-cli run: recent PCs (oldest first):");
                 for i in 0..RING_LEN {
@@ -865,16 +896,16 @@ pub(crate) fn run_firmware(
             Err(e) => {
                 eprintln!(
                     "labwired-cli run: simulator error at pc=0x{:08x}: {e}",
-                    cpu.get_pc(),
+                    machine.cpu.get_pc(),
                 );
                 eprintln!("labwired-cli run: a0..a15 at fault:");
                 for r in 0..16u8 {
-                    eprintln!("  a{:<2} = 0x{:08x}", r, cpu.regs.read_logical(r));
+                    eprintln!("  a{:<2} = 0x{:08x}", r, machine.cpu.regs.read_logical(r));
                 }
                 eprintln!(
                     "  WB=0x{:x} WS=0x{:04x}",
-                    cpu.regs.windowbase(),
-                    cpu.regs.windowstart(),
+                    machine.cpu.regs.windowbase(),
+                    machine.cpu.regs.windowstart(),
                 );
                 eprintln!("labwired-cli run: recent PCs (oldest first):");
                 for i in 0..RING_LEN {
@@ -890,38 +921,25 @@ pub(crate) fn run_firmware(
         // stores the assert/abort string ptr in a2 just before the trap. Helps
         // pinpoint firmware-level aborts during bring-up.
         if std::env::var("LABWIRED_CCDBG").is_ok() {
-            for c in [Some(&cpu), cpu1.as_ref()].into_iter().flatten() {
-                if c.get_pc() == 0x4037_e0a3 {
-                    let p = c.regs.read_logical(2);
-                    let mut s = String::new();
-                    for i in 0..160u32 {
-                        match bus.read_u8(p as u64 + i as u64) {
-                            Ok(0) | Err(_) => break,
-                            Ok(b) => s.push(b as char),
-                        }
+            // Collect the string pointers first: reading them back needs
+            // `&mut machine.bus`, so the core borrows have to be released.
+            let panic_args: Vec<u32> = [Some(&machine.cpu), machine.cpu_secondary.as_ref()]
+                .into_iter()
+                .flatten()
+                .filter(|c| c.get_pc() == 0x4037_e0a3)
+                .map(|c| c.regs.read_logical(2))
+                .collect();
+            for p in panic_args {
+                let mut s = String::new();
+                for i in 0..160u32 {
+                    match machine.bus.read_u8(p as u64 + i as u64) {
+                        Ok(0) | Err(_) => break,
+                        Ok(b) => s.push(b as char),
                     }
-                    eprintln!("CCDBG: panic \"{s}\" step={steps}");
                 }
+                eprintln!("CCDBG: panic \"{s}\" step={steps}");
             }
         }
-        // Step the APP_CPU round-robin (one instruction per PRO_CPU step).
-        // A halted APP_CPU returns immediately from step(). S32C1I is atomic
-        // within step(), so spinlocks between the cores behave correctly.
-        if let Some(c1) = cpu1.as_mut() {
-            // Debug breakpoint (APP_CPU): dump on first hit.
-            check_break!(c1, c1.get_pc(), break_hit1);
-            match c1.step(&mut bus, &observers, &config) {
-                Ok(()) | Err(SimulationError::BreakpointHit(_)) => {}
-                Err(e) => {
-                    eprintln!(
-                        "labwired-cli run: APP_CPU error at pc=0x{:08x}: {e}",
-                        c1.get_pc()
-                    );
-                    return ExitCode::from(EXIT_RUNTIME_ERROR);
-                }
-            }
-        }
-        bus.tick_peripherals_with_costs();
         steps += 1;
 
         // SMP bring-up tracer (gated). Prints both cores' PCs periodically and
@@ -929,10 +947,12 @@ pub(crate) fn run_firmware(
         // where setup()/loop()/Unity live) — the signal that the FreeRTOS SMP
         // scheduler finally dispatched the pinned loopTask.
         if smp_trace {
-            for (core, pc) in [
-                (0usize, cpu.get_pc()),
-                (1usize, cpu1.as_ref().map(|c| c.get_pc()).unwrap_or(0)),
-            ] {
+            let app_pc = machine
+                .cpu_secondary
+                .as_ref()
+                .map(|c| c.get_pc())
+                .unwrap_or(0);
+            for (core, pc) in [(0usize, machine.cpu.get_pc()), (1usize, app_pc)] {
                 for w in watch.iter_mut() {
                     if w.0 == pc && !w.2[core] {
                         w.2[core] = true;
@@ -942,23 +962,21 @@ pub(crate) fn run_firmware(
             }
             if steps.is_multiple_of(10_000_000) {
                 eprintln!(
-                    "SMP: step {steps:>11}  pro=0x{:08x}  app=0x{:08x}",
-                    cpu.get_pc(),
-                    cpu1.as_ref().map(|c| c.get_pc()).unwrap_or(0),
+                    "SMP: step {steps:>11}  pro=0x{:08x}  app=0x{app_pc:08x}",
+                    machine.cpu.get_pc(),
                 );
             }
             // Dense single-step trace window (env LABWIRED_DENSE_FROM / _LEN)
             // for following a context switch instruction-by-instruction.
             if steps >= dense_from && steps < dense_from + dense_len {
                 eprintln!(
-                    "D {steps} pro=0x{:08x} ps={:x} wb={} ws=0x{:04x} exc={} epc1=0x{:08x} | app=0x{:08x}",
-                    cpu.get_pc(),
-                    cpu.ps.as_raw(),
-                    cpu.regs.windowbase(),
-                    cpu.regs.windowstart(),
-                    cpu.sr.read(232),
-                    cpu.sr.read(177),
-                    cpu1.as_ref().map(|c| c.get_pc()).unwrap_or(0),
+                    "D {steps} pro=0x{:08x} ps={:x} wb={} ws=0x{:04x} exc={} epc1=0x{:08x} | app=0x{app_pc:08x}",
+                    machine.cpu.get_pc(),
+                    machine.cpu.ps.as_raw(),
+                    machine.cpu.regs.windowbase(),
+                    machine.cpu.regs.windowstart(),
+                    machine.cpu.sr.read(232),
+                    machine.cpu.sr.read(177),
                 );
             }
         }
@@ -972,7 +990,10 @@ pub(crate) fn run_firmware(
         if let Ok(base) = u32::from_str_radix(s.trim_start_matches("0x"), 16) {
             let mut words = [0u32; 10];
             for (i, w) in words.iter_mut().enumerate() {
-                *w = bus.read_u32(base as u64 + (i * 4) as u64).unwrap_or(0);
+                *w = machine
+                    .bus
+                    .read_u32(base as u64 + (i * 4) as u64)
+                    .unwrap_or(0);
             }
             eprint!("labwired-cli run: Unity@0x{base:08x}:");
             for w in &words {
@@ -985,15 +1006,16 @@ pub(crate) fn run_firmware(
             );
         }
     }
-    let cpu1_pc = cpu1
+    let cpu1_pc = machine
+        .cpu_secondary
         .as_ref()
         .map(|c| format!(" appcpu_pc=0x{:08x}", c.get_pc()))
         .unwrap_or_default();
     eprintln!(
         "labwired-cli run: reached --max-steps {limit}; pc=0x{:08x}{cpu1_pc}",
-        cpu.get_pc(),
+        machine.cpu.get_pc(),
     );
-    export_bus_trace_if_requested(&args.bus_trace_out, &bus);
+    export_bus_trace_if_requested(&args.bus_trace_out, &machine.bus);
     ExitCode::from(EXIT_PASS)
 }
 

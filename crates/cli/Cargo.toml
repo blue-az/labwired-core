@@ -67,16 +67,23 @@ jit-core = ["labwired-core/jit"]
 # ESP32-C3 BLE bring-up that is 4x the interpreted instructions — measured, see
 # `apply_run_speed_opts` in `commands/test.rs`.
 #
-# ⚠️ It is nevertheless NOT enabled for the hosted builder image
-# (`services/labwired-builder/Dockerfile.builder`), and the reason is specific
-# and reproducible: with this feature on, ELEVEN ESP32-classic / ESP32-S3
-# tier-1 cells go from `pass` to `blocked` — the Xtensa fixtures HANG instead
-# of reporting. Reproduce on a pristine tree with
+# ⚠️ HISTORY — the Xtensa blocker that used to gate this, and what it was.
+# Turning this feature on used to move ELEVEN ESP32-classic / ESP32-S3 tier-1
+# cells from `pass` to `blocked`, while no esp32c3 cell moved. It was NOT
+# missing Xtensa scheduler coverage. The two Xtensa `labwired run` paths in
+# `commands/run.rs` were hand-rolled `cpu.step()` +
+# `bus.tick_peripherals_with_costs()` loops that never published the bus cycle
+# clock and had no event scheduler at all (the heap is a `Machine` field). With
+# the feature on, the per-cycle walk SKIPS every `uses_scheduler()` peripheral,
+# so those were the only two mechanisms left — `esp32::timg` stayed frozen at
+# cycle 0 and the shared `EspUart` TX FIFO never drained, spinning the S3 boot
+# ROM inside `uart_tx_one_char_uart`. ARM and RISC-V `run`, and `labwired test`
+# for every arch, already went through `Machine`, which is exactly why only
+# Xtensa `run` moved. Both loops now drive `Machine`; the ratchet
 #   cargo test --release -p labwired-cli --test tier1_matrix_ratchet \
 #     --features event-scheduler
-# (green without the flag). RISC-V/C3 is unaffected — no esp32c3 cell moves —
-# so the blocker is Xtensa scheduler coverage, not the accelerator. Turning
-# this on hosted requires fixing that first, or shipping a per-arch binary.
+# is green, and `tests/lifecycle_single_source.rs` fails if a CLI run path ever
+# forks the lifecycle again.
 #
 # Still NOT in `default`, and still not to be combined with `jit-core` for
 # general CLI use (see the note above).
