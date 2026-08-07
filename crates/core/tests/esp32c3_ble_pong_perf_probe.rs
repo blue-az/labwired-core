@@ -4,32 +4,43 @@
 //! worth defending, gate it in `esp32c3_shipped_lab_batch_gate.rs` where the
 //! budget file lives.
 //!
-//! Derived 2026-08-07 (release, M-series, `--features event-scheduler`):
+//! Derived 2026-08-07/08 (release, M-series, `--features event-scheduler`).
+//! Output is DETERMINISTIC — three consecutive runs of one binary are
+//! byte-identical — so any figure that moves between runs means the TREE
+//! changed, not the simulator. See the warning at the bottom.
 //!
-//! | config                    | wall (2 nodes) | note                         |
-//! |---------------------------|----------------|------------------------------|
-//! | 60M cyc, FF on,  1M slice | 1.46 s         | ff_ratio 0.81                |
-//! | 60M cyc, FF off, 1M slice | 15.84 s        | **idle FF is worth 10.8x**   |
-//! | 96M cyc, FF on,  250k     | 3.46 s         | main-thread cap              |
-//! | 96M cyc, FF on,  16M      | 2.86 s         | worker cap — only **1.21x**  |
+//! | config                    | wall (2 nodes) | note                        |
+//! |---------------------------|----------------|-----------------------------|
+//! | 60M cyc, FF on,  1M slice | 1.46 s         | ff_ratio 0.81               |
+//! | 60M cyc, FF off, 1M slice | 15.84 s        | **idle FF is worth 10.8x**  |
+//! | 96M cyc, FF on,  250k     | ~2.95 s median | main-thread cap             |
+//! | 96M cyc, FF on,  16M      | ~3.18 s median | worker cap — **no faster**  |
 //!
-//! Two conclusions that contradict the obvious guesses:
+//! Three conclusions that contradict the obvious guesses:
 //!
 //! 1. The 64x gap between `HEAVY_MAIN_THREAD_MAX_BATCH` (250k) and
-//!    `HEAVY_WORKER_MAX_BATCH` (16M) buys 1.21x of engine throughput. The
-//!    worker matters for keeping the UI thread free, not for speed.
+//!    `HEAVY_WORKER_MAX_BATCH` (16M) is worth **nothing**. A first reading said
+//!    1.21x; measured interleaved over 4 rounds the 16M cap is marginally
+//!    SLOWER. The worker keeps the UI thread free; it does not make the engine
+//!    faster. Widening the mean batch 3.3x by other means also bought only
+//!    ~1.09x, so batch boundaries are simply not where the time goes.
 //! 2. Idle FF does not bite until ~6M cycles into boot (0 skipped at 4M).
 //!    A browser HUD reading `idle FF 0` on a lab that has only advanced a few
 //!    million cycles is reporting health, not a bug.
+//! 3. The scheduler, not the CPU, is the cost. A `sample` profile over
+//!    `probe_ble_pong_profile` put `EventScheduler::drain_due_into` (4014) and
+//!    `::schedule` (2384) against `RiscV::step` (1094) — 4.7x — because
+//!    `esp32c3::bt` leaks live events and blows out the dedup index. See the
+//!    `arm_seq` doc comment in `peripherals/esp32c3/bt.rs`.
 //!
-//! **Known confound in the tree these were taken on.** A concurrent session had
-//! an uncommitted `std::env::var("LABWIRED_TIMG_TRACE")` at the top of
-//! `esp32/timg.rs::sync_to`, which the C3 reaches via `RtcCalProfile`. That is
-//! one env lookup per bus tick — ~300k over a 96M-cycle pair run, so <5% of
-//! wall time. It does not move either conclusion, and it cannot move the 1.21×
-//! at all: both cap configs ran the same batch count (149,405 vs 150,041), so
-//! the overhead cancels in the ratio. Re-derive on a clean tree if the absolute
-//! cycles/s ever becomes load-bearing.
+//! ⚠️ **Never read these numbers off a tree another session is editing.** Three
+//! different `max_queued`/`serial_bytes` readings were recorded here before it
+//! became clear the cause was uncommitted edits landing and vanishing under the
+//! run, not simulator nondeterminism. The clean committed-branch values at 96M
+//! are `max_queued=792  bt=789  ceiling_trips=3310  serial_bytes=360
+//! mean_batch=99.23`; at 400M, `max_queued=4370  ceiling_trips=22462` (the leak
+//! grows with run length, so pick the regime deliberately). Verify with
+//! `git status` before quoting anything from this file.
 #![cfg(all(feature = "event-scheduler", not(debug_assertions)))]
 
 use labwired_config::{ChipDescriptor, SystemManifest};
@@ -269,7 +280,12 @@ fn probe_ble_pong_profile() {
 #[ignore = "measurement probe, not a gate"]
 fn probe_ble_pong_ff_onset() {
     for budget in [2_000_000u64, 4_000_000, 8_000_000, 16_000_000, 32_000_000] {
-        probe(&format!("onset_{}M", budget / 1_000_000), true, 250_000, budget);
+        probe(
+            &format!("onset_{}M", budget / 1_000_000),
+            true,
+            250_000,
+            budget,
+        );
     }
 }
 
