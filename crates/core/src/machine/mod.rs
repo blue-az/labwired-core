@@ -9,6 +9,7 @@ use std::num::NonZeroU32;
 mod advance;
 mod boundary;
 mod plan;
+pub mod quantum_trace;
 #[cfg(test)]
 pub(crate) use boundary::{CoreProgress, ExecutionMode};
 
