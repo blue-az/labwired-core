@@ -154,8 +154,10 @@ fn probe(label: &str, idle_ff: bool, slice: u32, budget: u64) {
 
     for (name, node) in [("A", &a), ("B", &b)] {
         // Batch-width attribution: who armed the wakes that ended the batches.
-        let arms = &node.machine.sched.stats().arms_per_peripheral;
-        let mut owners: Vec<(u64, &str)> = arms
+        let stats = node.machine.sched.stats();
+        let at_now = &stats.arms_at_now_per_peripheral;
+        let mut owners: Vec<(u64, u64, &str)> = stats
+            .arms_per_peripheral
             .iter()
             .enumerate()
             .filter(|(_, n)| **n > 0)
@@ -167,15 +169,15 @@ fn probe(label: &str, idle_ff: bool, slice: u32, budget: u64) {
                     .get(idx)
                     .map(|p| p.name.as_str())
                     .unwrap_or("<out-of-range>");
-                (*n, who)
+                (*n, at_now.get(idx).copied().unwrap_or(0), who)
             })
             .collect();
         owners.sort_unstable_by(|x, y| y.0.cmp(&x.0));
-        let total_arms: u64 = owners.iter().map(|(n, _)| n).sum();
+        let total_arms: u64 = owners.iter().map(|(n, _, _)| n).sum();
         let top: Vec<String> = owners
             .iter()
             .take(6)
-            .map(|(n, who)| format!("{who}={n}"))
+            .map(|(n, z, who)| format!("{who}={n}(at_now={z})"))
             .collect();
 
         let p = node.machine.step_profile();

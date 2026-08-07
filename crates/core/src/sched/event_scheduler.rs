@@ -133,6 +133,20 @@ pub struct SchedulerStats {
     /// segment transition was 12.6x end-to-end with byte-identical output.
     /// Read it beside `SystemBus::peripherals[idx].name`.
     pub arms_per_peripheral: Vec<u64>,
+    /// Subset of [`Self::arms_per_peripheral`] whose deadline equalled `now` at
+    /// arm time — a wake for the cycle already in progress.
+    ///
+    /// These are the arms that cannot be coalesced and cannot be deduped: each
+    /// one carries a different absolute deadline purely because `now` moved, so
+    /// the dedup index never sees a repeat, and each forces the CPU to break
+    /// its batch immediately. A peripheral that re-arms at `now` on every MMIO
+    /// poll while some condition holds (a pending level-triggered IRQ the CPU
+    /// has masked, say) pins batch width for the whole episode.
+    ///
+    /// A high ratio here against `arms_per_peripheral` is the signature. The
+    /// fix is always the same shape: arm on the *transition* into the condition,
+    /// not on every observation of it.
+    pub arms_at_now_per_peripheral: Vec<u64>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -284,8 +298,12 @@ impl EventScheduler {
             }
             if slot >= self.stats.arms_per_peripheral.len() {
                 self.stats.arms_per_peripheral.resize(slot + 1, 0);
+                self.stats.arms_at_now_per_peripheral.resize(slot + 1, 0);
             }
             self.stats.arms_per_peripheral[slot] += 1;
+            if clamped == self.now {
+                self.stats.arms_at_now_per_peripheral[slot] += 1;
+            }
             self.live_per_peripheral[slot] += 1;
             let live = self.live_per_peripheral[slot];
             if live > self.stats.max_live_events_per_peripheral {
