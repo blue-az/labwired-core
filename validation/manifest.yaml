@@ -193,7 +193,7 @@ boards:
     # 2026-08-06: universal I2C kits + external_devices attach path; nRF UARTE RX test style only.
     # No register map / base / reset change on silicon-asserted set. Offline gates unchanged.
     drift_ack: 2026-08-06
-    drift_ack_digest: "16c98b8bf3b66c3d"
+    drift_ack_digest: 7b4c2ef273b0142f500c42ba568d4d3224eed2a4ce82bb1a68cbd7e0304fb780
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -284,7 +284,7 @@ boards:
     # 2026-08-06: universal I2C kits + external_devices attach path; nRF UARTE RX test style only.
     # No register map / base / reset change on silicon-asserted set. Offline gates unchanged.
     drift_ack: 2026-08-06
-    drift_ack_digest: "16c98b8bf3b66c3d"
+    drift_ack_digest: 7b4c2ef273b0142f500c42ba568d4d3224eed2a4ce82bb1a68cbd7e0304fb780
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -452,8 +452,15 @@ boards:
     # list, total_cycles, bus.current_cycle, PC and every peripheral-work counter
     # (labwired_wasm configured_arm_batch_matches_32_single_boundaries).
     # Live re-capture still owed; no hardware ran for this change.
-    drift_ack: 2026-08-07
-    drift_ack_digest: "ab1a405d2983fe02"
+    # 2026-08-08: shared peripheral/scheduler engine work — i2c.rs gains its
+    # transfer-width accounting, machine/plan.rs the per-board batch width, and
+    # the event scheduler a quantum trace. These are stepping and transfer
+    # ACCOUNTING inside the twin, not silicon surface: no register map, base
+    # address, reset value or access in any board's asserted set changes.
+    # Owner-authorised ack WITHOUT a live re-capture; no board was attached for
+    # this change and each board's outstanding live diff remains owed.
+    drift_ack: 2026-08-08
+    drift_ack_digest: bec6988944d80986326ba71c7b4df39d286b676f4c8d04548fd6bf9a6a5d02b2
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -974,8 +981,18 @@ boards:
     # 2603 core lib tests + xtensa 57 + esp32_ili9341_attach 2/2 green.
     # 2026-08-06: universal I2C kits + external_devices attach path; nRF UARTE RX test style only.
     # No register map / base / reset change on silicon-asserted set. Offline gates unchanged.
-    drift_ack: 2026-08-06
-    drift_ack_digest: "423adcbdad34cdff"
+    # 2026-08-07: BLE receive-cursor initialisation only. A controller binding
+    # to a BleAirBus now joins at the air's current sequence instead of 0, so a
+    # RESTART (which reuses the lab's air) stops replaying the previous run's
+    # frames as live peer traffic. `rx_cursor` is internal twin state — a cursor
+    # into the virtual air — not a hardware register: no register map, base,
+    # reset value, or silicon-asserted behaviour changes, and the reset oracle
+    # is untouched. Byte-identical for a normal run, where nothing has
+    # transmitted before the controllers attach and the join point is 0 anyway.
+    # Evidence: 2700 core lib tests green, 2816 with --features event-scheduler,
+    # workspace clippy --all-targets -D warnings clean.
+    drift_ack: 2026-08-07
+    drift_ack_digest: d02aad733e3f69f538345d89fd5722af87a8a9b4c5687497e835ff24acfe12ff
 
   - id: nucleo-l476rg
     doc: docs/boards/nucleo-l476rg.md
@@ -1119,8 +1136,15 @@ boards:
     # list, total_cycles, bus.current_cycle, PC and every peripheral-work counter
     # (labwired_wasm configured_arm_batch_matches_32_single_boundaries).
     # Live re-capture still owed; no hardware ran for this change.
-    drift_ack: 2026-08-07
-    drift_ack_digest: "f88c7d2fc1d17112"
+    # 2026-08-08: shared peripheral/scheduler engine work — i2c.rs gains its
+    # transfer-width accounting, machine/plan.rs the per-board batch width, and
+    # the event scheduler a quantum trace. These are stepping and transfer
+    # ACCOUNTING inside the twin, not silicon surface: no register map, base
+    # address, reset value or access in any board's asserted set changes.
+    # Owner-authorised ack WITHOUT a live re-capture; no board was attached for
+    # this change and each board's outstanding live diff remains owed.
+    drift_ack: 2026-08-08
+    drift_ack_digest: 266bc466735dd2411b8596937edd651fb00b942f714fbae12ccdff2412e85d4b
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1258,8 +1282,15 @@ boards:
     # list, total_cycles, bus.current_cycle, PC and every peripheral-work counter
     # (labwired_wasm configured_arm_batch_matches_32_single_boundaries).
     # Live re-capture still owed; no hardware ran for this change.
-    drift_ack: 2026-08-07
-    drift_ack_digest: "9dcf697e6b50ad8b"
+    # 2026-08-08: shared peripheral/scheduler engine work — i2c.rs gains its
+    # transfer-width accounting, machine/plan.rs the per-board batch width, and
+    # the event scheduler a quantum trace. These are stepping and transfer
+    # ACCOUNTING inside the twin, not silicon surface: no register map, base
+    # address, reset value or access in any board's asserted set changes.
+    # Owner-authorised ack WITHOUT a live re-capture; no board was attached for
+    # this change and each board's outstanding live diff remains owed.
+    drift_ack: 2026-08-08
+    drift_ack_digest: 105c3038e66f7309d1269d7ed1f981b81d83f19f8ab3c2233498fc92646066dd
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1416,8 +1447,15 @@ boards:
     # list, total_cycles, bus.current_cycle, PC and every peripheral-work counter
     # (labwired_wasm configured_arm_batch_matches_32_single_boundaries).
     # Live re-capture still owed; no hardware ran for this change.
-    drift_ack: 2026-08-07
-    drift_ack_digest: "a525b06236e55723"
+    # 2026-08-08: shared peripheral/scheduler engine work — i2c.rs gains its
+    # transfer-width accounting, machine/plan.rs the per-board batch width, and
+    # the event scheduler a quantum trace. These are stepping and transfer
+    # ACCOUNTING inside the twin, not silicon surface: no register map, base
+    # address, reset value or access in any board's asserted set changes.
+    # Owner-authorised ack WITHOUT a live re-capture; no board was attached for
+    # this change and each board's outstanding live diff remains owed.
+    drift_ack: 2026-08-08
+    drift_ack_digest: ba59367c8644427e05b8899a40f9576ec3b5b9d57bafbb2933efb97ca163eca4
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1566,8 +1604,15 @@ boards:
     # list, total_cycles, bus.current_cycle, PC and every peripheral-work counter
     # (labwired_wasm configured_arm_batch_matches_32_single_boundaries).
     # Live re-capture still owed; no hardware ran for this change.
-    drift_ack: 2026-08-07
-    drift_ack_digest: "bb74dd83805ca060"
+    # 2026-08-08: shared peripheral/scheduler engine work — i2c.rs gains its
+    # transfer-width accounting, machine/plan.rs the per-board batch width, and
+    # the event scheduler a quantum trace. These are stepping and transfer
+    # ACCOUNTING inside the twin, not silicon surface: no register map, base
+    # address, reset value or access in any board's asserted set changes.
+    # Owner-authorised ack WITHOUT a live re-capture; no board was attached for
+    # this change and each board's outstanding live diff remains owed.
+    drift_ack: 2026-08-08
+    drift_ack_digest: 55e991e05f47a258e5dc68029774c8a506c14e6f6c2221e2dad573cf891d8169
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1798,8 +1843,20 @@ boards:
     # either way; they used to resolve differently per family). No peripheral
     # register surface, reset value, or captured behavior changes. Evidence:
     # 2603 core lib tests + xtensa 57 + esp32_ili9341_attach 2/2 green.
-    drift_ack: 2026-08-06
-    drift_ack_digest: "af82e910fc83d62a"
+    # 2026-08-07: crates/core/src/peripherals/esp32s3/tmp102.rs — an EXTERNAL
+    # I²C slave model that hangs off the bus, not S3 silicon. It is retained
+    # only as the byte-parity oracle for configs/devices/tmp102.yaml. Both it
+    # and the descriptor stopped discarding writes to the TMP102 Configuration
+    # / TLOW / THIGH registers, which the TMP102 datasheet's pointer-address
+    # table marks Read/Write (see the PR for the write_mask derivation). No S3
+    # peripheral, register map, base address or reset value is touched, so
+    # nothing in the 9-register reset-state anchor can move —
+    # esp32s3_reset_conformance is green. Evidence on this commit: full
+    # `cargo test -p labwired-core` green, 161 test binaries, 3533 passed, 0
+    # failed, 34 ignored; declarative_device_byte_parity 7/7 with every golden
+    # literal unchanged. No S3 board attached; no live re-capture.
+    drift_ack: 2026-08-07
+    drift_ack_digest: f52b807abebf3aadf5bdbbbbc38bbb16a33402aa0db82a041279f2e2fe1b1b52
     models:
       - crates/core/src/peripherals/esp32s3
       - crates/core/src/peripherals/esp_xtensa_common
@@ -1849,6 +1906,7 @@ boards:
     # RP2350 address map; RP2040 default path is unit-tested unchanged
     # (rp2350_clkrst_profile::rp2040_profile_is_unchanged).
     drift_ack: 2026-08-05
+    drift_ack_digest: c103296ae72395af02e314b115b6953260da3bf2a2d4ad2973d414764112bf4a
     models:
       - configs/chips/rp2040.yaml
       - crates/core/src/peripherals/rp2040
@@ -1903,6 +1961,7 @@ boards:
     # pass unchanged. No live re-capture this session; re-capturing IDR readback
     # and SPI RX behaviour is tracked.
     drift_ack: 2026-07-28
+    drift_ack_digest: 53fd2ce53e11a3350aa24b4ad663b7cd079aa73f581ec1a7e484528952ef2171
     models:
       - configs/chips/stm32h735.yaml
       - crates/core/src/peripherals/rcc.rs
@@ -1937,6 +1996,7 @@ boards:
     # pass unchanged. No live re-capture this session; re-capturing IDR readback
     # and SPI RX behaviour is tracked.
     drift_ack: 2026-07-28
+    drift_ack_digest: 9c285292b9bd9476437bda18255b6224bfea04969a4287e02d3df1baac62e613
     models:
       - configs/chips/stm32f411ceu6.yaml
       - crates/core/src/peripherals/rcc.rs
@@ -1982,6 +2042,7 @@ boards:
     # pass unchanged. No live re-capture this session; re-capturing IDR readback
     # and SPI RX behaviour is tracked.
     drift_ack: 2026-07-28
+    drift_ack_digest: c8bb472c66892eb3aac0087cc41038f4c038b3669f7962c6466625c2448b26b0
     models:
       - configs/chips/mkw41z4.yaml
       - crates/core/src/peripherals/i2c.rs

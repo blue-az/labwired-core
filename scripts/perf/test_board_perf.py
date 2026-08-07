@@ -1,143 +1,210 @@
-#!/usr/bin/env python3
 # LabWired - Firmware Simulation Platform
 # Copyright (C) 2026 Andrii Shylenko
 # SPDX-License-Identifier: MIT
-"""Tests for the per-board throughput gate's classification and coverage audit.
+"""Tests for the per-board perf gate's coverage planning.
 
-These cover the two ways #778 stayed open. The gate only ever failed on a
-measurement ABOVE its baseline, so the four boards that got ~2x faster in #798
-were re-baselined at values roughly 2x too high and kept passing with half the
-engine's cost available as free headroom. And `UNCOVERED` was a prose comment
-claiming nothing was silently skipped while eight chip descriptors appeared in
-neither list.
-
-Nothing here runs valgrind — the classification thresholds and the coverage
-audit are pure functions of the lists and the numbers.
-
-Run: python3 -m unittest discover -s scripts -p 'test_*.py'
+The measurement itself needs valgrind and a release CLI, so it is not unit
+tested here. What is tested is the property that actually failed in practice:
+that a chip in `configs/chips/` cannot end up outside the gate without anyone
+being told.
 """
 
-from __future__ import annotations
-
-import importlib.util
-import unittest
+import sys
 from pathlib import Path
 
-_SPEC = importlib.util.spec_from_file_location(
-    "board_perf", Path(__file__).resolve().parent / "board_perf.py"
-)
-bp = importlib.util.module_from_spec(_SPEC)
-_SPEC.loader.exec_module(bp)
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import board_perf as bp  # noqa: E402
 
 
-def classify(measured: float, base: float) -> str:
-    """The gate's verdict for one board, mirroring the loop in main()."""
-    delta = (measured - base) / base
-    if delta > bp.REGRESSION_TOLERANCE:
-        return "regression"
-    if delta < -bp.STALE_BASELINE_TOLERANCE:
-        return "stale"
-    return "ok"
+def _chip(flash: int, ram: int, arch: str = "arm") -> dict:
+    return {"arch": arch, "flash": {"base": flash}, "ram": {"base": ram}}
 
 
-class ClassificationTest(unittest.TestCase):
-    def test_regression_fails(self):
-        self.assertEqual(classify(1500.0, 1000.0), "regression")
-
-    def test_small_drift_passes_either_way(self):
-        self.assertEqual(classify(1010.0, 1000.0), "ok")
-        self.assertEqual(classify(990.0, 1000.0), "ok")
-
-    def test_small_win_does_not_nag(self):
-        """A 5% improvement is inside the stale window on purpose."""
-        self.assertEqual(classify(950.0, 1000.0), "ok")
-
-    def test_the_778_boards_are_flagged_stale(self):
-        """The four boards #798 left un-baselined, at their real measured cost."""
-        for board, base, measured in [
-            ("stm32h563", 3634.5, 1658.7),
-            ("stm32h735", 2729.5, 1430.5),
-            ("stm32l073", 3390.5, 1657.5),
-            ("stm32wba52", 2380.5, 1241.6),
-        ]:
-            with self.subTest(board=board):
-                self.assertEqual(
-                    classify(measured, base),
-                    "stale",
-                    f"{board} had ~50% of unprotected headroom and the gate said nothing",
-                )
-
-    def test_a_stale_baseline_hides_a_real_regression(self):
-        """Why stale baselines matter: the old h563 baseline absorbed a 2x regression."""
-        old_base, healthy = 3634.5, 1658.7
-        doubled = healthy * 2
-        self.assertEqual(
-            classify(doubled, old_base),
-            "ok",
-            "a board could double its per-step cost and still pass — that is the hole",
-        )
-        self.assertEqual(classify(doubled, healthy), "regression")
-
-    def test_thresholds_are_ordered(self):
-        self.assertLess(
-            bp.REGRESSION_TOLERANCE,
-            bp.STALE_BASELINE_TOLERANCE,
-            "a regression must fail sooner than a baseline is called stale",
-        )
+def test_stm32_map_is_covered():
+    covered, waived = bp.plan_coverage({"stm32f103": _chip(0x08000000, 0x20000000)})
+    assert covered == {"stm32f103": "stm32"}
+    assert waived == {}
 
 
-class CoverageAuditTest(unittest.TestCase):
-    def test_repo_is_fully_classified(self):
-        self.assertEqual(bp.audit_coverage(), [])
-
-    def test_every_chip_is_measured_or_explained(self):
-        chips = {p.stem for p in (bp.REPO_ROOT / "configs/chips").glob("*.yaml")}
-        self.assertTrue(chips, "no chip descriptors found — wrong REPO_ROOT?")
-        self.assertEqual(
-            chips - set(bp.BOARDS) - set(bp.UNCOVERED),
-            set(),
-            "a chip in neither list is silently unmeasured while the gate reads as covering it",
-        )
-
-    def test_lists_are_disjoint(self):
-        self.assertEqual(set(bp.BOARDS) & set(bp.UNCOVERED), set())
-
-    def test_every_uncovered_entry_has_a_reason(self):
-        for board, reason in bp.UNCOVERED.items():
-            with self.subTest(board=board):
-                self.assertTrue(reason.strip(), f"{board} is excused with no reason")
-
-    def test_every_measured_board_has_a_baseline(self):
-        """A board with no baseline can only ever pass."""
-        import json
-
-        baselines = json.loads(bp.BASELINE_PATH.read_text())
-        self.assertEqual(
-            set(bp.BOARDS) - set(baselines),
-            set(),
-            "measured board(s) with no baseline — run board_perf.py --update",
-        )
-
-    def test_audit_catches_an_unclassified_chip(self):
-        saved = bp.BOARDS[:]
-        try:
-            bp.BOARDS.remove("stm32l073")
-            errors = bp.audit_coverage()
-            self.assertTrue(errors)
-            self.assertIn("stm32l073", "\n".join(errors))
-        finally:
-            bp.BOARDS[:] = saved
-
-    def test_audit_catches_a_board_with_no_descriptor(self):
-        saved = bp.BOARDS[:]
-        try:
-            bp.BOARDS.append("stm32-does-not-exist")
-            errors = bp.audit_coverage()
-            self.assertTrue(errors)
-            self.assertIn("stm32-does-not-exist", "\n".join(errors))
-        finally:
-            bp.BOARDS[:] = saved
+def test_each_memory_map_has_its_own_fixture():
+    chips = {
+        "nrf52840": _chip(0x00000000, 0x20000000),
+        "mkw41z4": _chip(0x00000000, 0x1FFF8000),
+        "rp2040": _chip(0x10000000, 0x20000000),
+        "stm32l476": _chip(0x08000000, 0x20000000),
+    }
+    covered, _ = bp.plan_coverage(chips)
+    # Same flash base, different RAM base, must not share a fixture: the reset
+    # stack pointer comes from the linked RAM origin, so the wrong one faults
+    # before main() instead of measuring anything.
+    assert covered["nrf52840"] != covered["mkw41z4"]
+    assert len(set(covered.values())) == 4
 
 
-if __name__ == "__main__":
-    unittest.main()
+def test_same_flash_base_across_isas_does_not_collide():
+    """The C3 and the S3 both boot at 0x42000000 on different ISAs."""
+    covered, _ = bp.plan_coverage(
+        {
+            "esp32c3": _chip(0x42000000, 0x3FC80000, arch="riscv"),
+            "esp32s3": _chip(0x42000000, 0x3FC88000, arch="xtensa-lx7"),
+        }
+    )
+    assert covered["esp32c3"] != covered["esp32s3"]
+    assert bp.fixture_spec(covered["esp32c3"]).target.startswith("riscv32")
+    assert bp.fixture_spec(covered["esp32s3"]).target.startswith("xtensa")
+
+
+def test_every_fixture_declares_at_least_one_real_mode():
+    """A fixture with no modes is covered on paper and measured never."""
+    for _name, spec in bp.FIXTURES.values():
+        assert spec.modes, f"{spec.crate} declares no execution modes"
+        assert set(spec.modes) <= set(bp.ALL_MODES), spec.modes
+
+
+def test_only_optional_fixtures_may_be_skipped():
+    """A missing stock toolchain must fail, not degrade to a skip."""
+    for _name, spec in bp.FIXTURES.values():
+        if spec.toolchain is None:
+            assert not spec.optional, f"{spec.crate} is on a stock toolchain but optional"
+        else:
+            assert spec.optional, f"{spec.crate} needs {spec.toolchain} but is not optional"
+
+
+def test_unclassified_chip_is_an_error_not_a_silent_skip():
+    with pytest.raises(bp.CoverageError) as exc:
+        bp.plan_coverage({"newchip": _chip(0x60000000, 0x24000000)})
+    assert "newchip" in str(exc.value)
+    assert "0x60000000" in str(exc.value)
+
+
+def test_unknown_riscv_map_is_an_error_not_a_silent_skip():
+    """Matching is per (arch, flash, ram): a new RISC-V map is not covered."""
+    with pytest.raises(bp.CoverageError):
+        bp.plan_coverage({"someriscv": _chip(0x80000000, 0x80020000, arch="riscv")})
+
+
+def test_nothing_is_waived():
+    """Every chip in the tree has a fixture. A new waiver needs a reason here."""
+    _, waived = bp.plan_coverage(bp.discover_chips())
+    assert waived == {}, f"chips fell out of the gate: {waived}"
+
+
+def test_real_chip_tree_is_fully_classified():
+    """The check the CI step runs: no chip in the tree is unaccounted for."""
+    covered, waived = bp.plan_coverage(bp.discover_chips())
+    assert covered, "no chips covered — discovery is broken"
+    overlap = set(covered) & set(waived)
+    assert not overlap, f"chips both covered and waived: {overlap}"
+
+
+def test_every_covered_board_has_a_baseline():
+    """A covered board with no baseline is measured but gates nothing."""
+    import json
+
+    covered, _ = bp.plan_coverage(bp.discover_chips())
+    baselines = json.loads(bp.BASELINE_PATH.read_text())
+    # Boards on an optional toolchain are exempt: their first measurement can
+    # only come from a machine that has that toolchain, so the baseline lands
+    # after CI's first run rather than with the code. They are still measured
+    # and reported meanwhile — just as "(new)" rather than gated.
+    gated = {b for b, f in covered.items() if not bp.fixture_spec(f).optional}
+    missing = sorted(gated - set(baselines))
+    assert not missing, (
+        f"covered but unbaselined: {missing} — run "
+        "`python3 scripts/perf/board_perf.py --update`"
+    )
+
+
+def test_every_covered_mode_has_a_baseline():
+    """A board baselined in one mode still gates nothing in the other.
+
+    The gap this closes: ARM had a `step` baseline and no `batch` one, so the
+    batched orchestration the browser runs could regress freely while the gate
+    stayed green on the loop nobody runs.
+    """
+    import json
+
+    covered, _ = bp.plan_coverage(bp.discover_chips())
+    baselines = json.loads(bp.BASELINE_PATH.read_text())
+    missing = sorted(
+        f"{board}[{mode}]"
+        for board, fixture in covered.items()
+        if not bp.fixture_spec(fixture).optional
+        for mode in bp.modes_for(fixture)
+        if mode not in baselines.get(board, {})
+    )
+    assert not missing, (
+        f"covered but unbaselined: {missing} — run "
+        "`python3 scripts/perf/board_perf.py --update`"
+    )
+
+
+def test_no_baseline_for_a_mode_a_board_does_not_have():
+    """A leftover mode key reads as coverage the gate does not have."""
+    import json
+
+    covered, _ = bp.plan_coverage(bp.discover_chips())
+    baselines = json.loads(bp.BASELINE_PATH.read_text())
+    orphans = sorted(
+        f"{board}[{mode}]"
+        for board, by_mode in baselines.items()
+        if board in covered
+        for mode in by_mode
+        if mode not in bp.modes_for(covered[board])
+    )
+    assert not orphans, f"baselines for modes that are not measured: {orphans}"
+
+
+def test_baselines_are_per_mode_dicts():
+    """The schema is `{board: {mode: Ir/step}}`, not a bare number.
+
+    Guards the migration: a flat `{board: 1498.0}` entry left behind would be
+    read as "no baseline for either mode" by `baselines.get(board, {}).get(mode)`
+    and silently gate nothing.
+    """
+    import json
+
+    baselines = json.loads(bp.BASELINE_PATH.read_text())
+    for board, entry in baselines.items():
+        assert isinstance(entry, dict), f"{board}: expected {{mode: Ir/step}}, got {entry!r}"
+        assert entry, f"{board}: empty baseline entry"
+        for mode, value in entry.items():
+            assert mode in bp.ALL_MODES, f"{board}: unknown mode {mode!r}"
+            assert isinstance(value, (int, float)), f"{board}[{mode}]: {value!r}"
+
+
+def test_arm_boards_are_gated_on_the_path_the_browser_runs():
+    """Every Cortex-M board must be measured in `batch`, not only in `step`.
+
+    `Sim::step_batch` in crates/wasm calls `Machine::advance`; the CLI default
+    for ARM calls `Machine::step`. Measuring only the latter is what made #830's
+    9-16x batching win show up here as +0.2%.
+    """
+    covered, _ = bp.plan_coverage(bp.discover_chips())
+    arm = [b for b, f in covered.items() if bp.fixture_spec(f).target.startswith("thumb")]
+    assert arm, "no Cortex-M boards discovered — fixture matching is broken"
+    for board in arm:
+        assert bp.MODE_BATCH in bp.modes_for(covered[board]), board
+
+
+def test_a_mode_that_did_not_execute_is_an_error_not_a_number():
+    """`ModeNotTakenError` exists and is not silently swallowed as a result."""
+    assert issubclass(bp.ModeNotTakenError, Exception)
+    # The proof line the CLI prints under --batched, and which measure_once
+    # requires before it will believe a batched number.
+    proof = "[batched] instructions=200000 batches=391 steps_per_batch=511.51 tick_interval=512"
+    m = bp.BATCHED_RE.search(proof)
+    assert m and int(m.group(1)) == 200000 and float(m.group(3)) == 511.51
+
+
+def test_no_baseline_for_a_board_that_is_gone():
+    """A stale entry for a deleted chip makes coverage look wider than it is."""
+    import json
+
+    covered, _ = bp.plan_coverage(bp.discover_chips())
+    baselines = json.loads(bp.BASELINE_PATH.read_text())
+    orphans = sorted(set(baselines) - set(covered))
+    assert not orphans, f"baselines for chips no longer covered: {orphans}"

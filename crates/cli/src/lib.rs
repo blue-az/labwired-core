@@ -14,6 +14,7 @@ pub mod coverage;
 pub mod faults;
 pub mod manifest;
 pub mod pc_coverage_report;
+pub mod regex;
 pub mod test_support;
 pub mod tier1;
 
@@ -391,6 +392,26 @@ pub struct RunArgs {
     /// before when no `--flash-image` is given.
     #[arg(long = "flash-image", value_name = "PATH@HEX")]
     pub flash_image: Vec<String>,
+
+    /// Drive the run through the batched orchestration
+    /// (`Machine::advance(AdvanceRequest::run(..))`) that the browser front end
+    /// uses, instead of the one-instruction-per-call `Machine::step()` loop.
+    ///
+    /// This is an assertion, not a hint: the flag fails the run rather than
+    /// falling back, on any chip family or option combination that cannot take
+    /// the batched path. On ARM it selects the batched loop; on RISC-V the
+    /// batched loop is already the default and the flag only refuses the
+    /// per-instruction instrumentation (`--break-at`, the WiFi bridge, the DHCP
+    /// trace) that would silently turn it back into single-stepping; on Xtensa
+    /// there is no `Machine`-driven path at all, so it is rejected outright.
+    ///
+    /// Exists because the batched path is what users actually run in the
+    /// browser while the CLI default is not, which left engine changes to ARM
+    /// batch orchestration invisible to `scripts/perf/board_perf.py`. It also
+    /// prints a `[batched] ...` summary line to stderr on exit, so a caller can
+    /// prove which path executed rather than assume it.
+    #[arg(long = "batched")]
+    pub batched: bool,
 }
 
 #[derive(Parser, Debug)]
@@ -798,18 +819,22 @@ pub fn run_with_plugins(plugins: &[&dyn labwired_core::plugin::ChipPlugin]) -> E
 
     let cli = Cli::parse();
 
-    // Initialize tracing with appropriate level based on --trace flag
-    if cli.trace {
-        tracing_subscriber::fmt()
-            .with_writer(std::io::stderr)
-            .with_max_level(tracing::Level::DEBUG)
-            .init();
-    } else {
-        tracing_subscriber::fmt()
-            .with_writer(std::io::stderr)
-            .with_max_level(tracing::Level::INFO)
-            .init();
-    }
+    // RUST_LOG used to be silently ignored. `with_max_level` is a hard ceiling
+    // compiled into the binary — no environment variable can raise or lower it —
+    // so `RUST_LOG=error labwired test ...` still printed every INFO line and
+    // there was no way to quiet the runner at all.
+    //
+    // `EnvFilter` honours RUST_LOG (including per-module directives such as
+    // `RUST_LOG=warn,labwired_core=debug`) and falls back to the previous
+    // default when it is unset or unparseable, so behaviour with no RUST_LOG in
+    // the environment is unchanged: DEBUG under `--trace`, INFO otherwise.
+    let default_level = if cli.trace { "debug" } else { "info" };
+    let log_filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(default_level));
+    tracing_subscriber::fmt()
+        .with_writer(std::io::stderr)
+        .with_env_filter(log_filter)
+        .init();
 
     match cli.command {
         Some(Commands::Chips) => {
@@ -1325,6 +1350,12 @@ fn run_machine(args: MachineArgs, plugins: &[&dyn labwired_core::plugin::ChipPlu
     }
 }
 
+/// The ONE message a firmware exit produces, so `simctl` cannot read one way on
+/// `labwired run` and another under a test script.
+pub(crate) fn firmware_exit_message(code: u32) -> String {
+    format!("Firmware ended the run with exit code {code}")
+}
+
 struct LoopResult {
     stop_reason: StopReason,
     steps_executed: u64,
@@ -1352,9 +1383,25 @@ fn run_simulation_loop<C: labwired_core::Cpu>(
             steps_executed = step as u64;
             break;
         }
-        match machine.step() {
-            Ok(_) => {
+        // `advance` rather than `step`: `step` discards the AdvanceReport, and
+        // the report is the only place a firmware-authored verdict appears.
+        // `AdvanceRequest::single()` is exactly what `step` issues, so the
+        // stepping behaviour is unchanged — we simply stop throwing the result
+        // away.
+        match machine.advance(labwired_core::AdvanceRequest::single()) {
+            Ok(report) => {
                 steps_executed = (step + 1) as u64;
+                if let labwired_core::AdvanceStop::FirmwareExit { code } = report.stop {
+                    // The message names the exit code, which is all three
+                    // consumers of this LoopResult forward. The structured
+                    // `firmware_exit_code` lives on TestResult, the run-result
+                    // contract, and is set by the test loop below.
+                    let message = firmware_exit_message(code);
+                    info!("{} (step={})", message, step);
+                    stop_reason = StopReason::FirmwareExit;
+                    stop_message = Some(message);
+                    break;
+                }
                 if !cli.trace && step > 0 && step % 10000 == 0 {
                     info!(
                         "Progress: {} steps, current IPS: {:.2}",
@@ -1488,6 +1535,10 @@ pub(crate) fn build_stop_reason_details(
             }),
         ),
         StopReason::AssertionsPassed => (None, None),
+        // No limit triggered this one — the firmware chose to end the run. The
+        // exit code is reported separately as `firmware_exit_code`, not as a
+        // limit/observation pair.
+        StopReason::FirmwareExit => (None, None),
         StopReason::MemoryViolation
         | StopReason::DecodeError
         | StopReason::Halt
@@ -1534,6 +1585,8 @@ fn handle_load_error<C: labwired_core::Cpu>(
         metrics,
         StopReason::Halt,
         stop_reason_details,
+        // This is the pre-run bail-out path: no firmware verdict exists.
+        None,
         resolved_limits.clone(),
         vec![],
         firmware_bytes,
@@ -1593,6 +1646,9 @@ fn assertion_currently_passes(
         // the runner; accumulated text alone is deliberately insufficient.
         TestAssertion::ShutdownLatency(_) => false,
         TestAssertion::ExpectedStopReason(_) => true,
+        // Terminal, like ExpectedStopReason: decided by how the run ENDED, so
+        // it is not a runtime condition the early-stop logic can wait on.
+        TestAssertion::FirmwareExit(_) => true,
         TestAssertion::MemoryValue(a) => {
             let size = a.memory_value.size.unwrap_or(32);
             let result = match size {
@@ -1793,6 +1849,18 @@ fn map_sim_error_to_stop_reason(e: &labwired_core::SimulationError) -> StopReaso
 /// identical between the JIT-on and JIT-off arms.
 const JIT_RUN_CHUNK: u32 = 1_000_000;
 
+/// Fuel budget per `Machine::advance` call on an idle-fast-forward run whose
+/// stop conditions can all be checked at that granularity
+/// (`idle_ff_wide_observation` in `execute_test_loop`).
+///
+/// This is a FUEL budget, not a CPU batch width — the batch cap is passed
+/// separately and is unchanged. It bounds how far one idle skip may reach, so
+/// it has to comfortably exceed a FreeRTOS tick window: an ESP32-C3 at 160 MHz
+/// idles ~160k cycles per millisecond, so `vTaskDelay(200)` is ~32M cycles.
+/// Same value as [`JIT_RUN_CHUNK`], which already bounds this loop's
+/// observation granularity on the JIT-eligible path.
+const IDLE_FF_RUN_CHUNK: u32 = 1_000_000;
+
 #[allow(clippy::too_many_arguments)]
 fn execute_test_loop<C: labwired_core::Cpu>(
     args: &TestArgs,
@@ -1826,6 +1894,9 @@ fn execute_test_loop<C: labwired_core::Cpu>(
     let start = std::time::Instant::now();
     let mut stop_reason = StopReason::MaxSteps;
     let mut steps_executed: u64 = 0;
+    // Set only when the firmware ends its own run via `simctl`; read by the
+    // `firmware_exit` assertion below.
+    let mut firmware_exit_code: Option<u32> = None;
 
     let trace_observer = if args.trace {
         let obs = Arc::new(labwired_core::trace::TraceObserver::new(
@@ -1972,6 +2043,92 @@ fn execute_test_loop<C: labwired_core::Cpu>(
         assertions,
         max_steps,
     );
+
+    // ── Fuel budget vs CPU batch width ──────────────────────────────────────
+    // These are two different knobs that this loop used to collapse into one
+    // number, and the collapse silently disarmed idle fast-forward.
+    //
+    // `batch_cap` is how many instructions the CPU may retire per window. It
+    // stays `batch_size`, which is 1 whenever batch mode is off (the ESP32-C3
+    // rom-boot path turns batching off because a fixed-width batch freezes
+    // interrupt delivery and FreeRTOS never runs). That is a FIDELITY setting
+    // and is not touched here or below.
+    //
+    // The advance call's `fuel` is a different thing: how much this call may
+    // consume before returning to the checks at the top of this loop. And
+    // `Machine::try_idle_fast_forward` clamps its skip to the fuel remaining —
+    // so with fuel pinned to 1, an idle FreeRTOS window was fast-forwarded ONE
+    // cycle at a time. Measured on a hosted-shaped ESP32-C3 BLE rom-boot run,
+    // turning the flag on that way bought 3% of the steps and ran ~2x SLOWER in
+    // wall clock than not skipping at all, because every skipped cycle paid a
+    // full plan/commit round trip. A `vTaskDelay(200)` window is ~32M cycles;
+    // it wants to go in a few thousand skips, not 32M of them.
+    //
+    // The widened fuel below is applied ONLY on an iteration where the CPU is
+    // already parked waiting for an interrupt (`idle_fast_forward_budget` is
+    // `Some`). That is the tight guard: while the CPU is parked the advance
+    // call retires no instructions at all, so nothing this loop observes
+    // between calls — PC, retired-step counts, assertion settling — can move
+    // inside the widened window. On every instruction-retiring iteration the
+    // fuel is exactly what it was before this change, so a busy run is
+    // unchanged instruction for instruction.
+    //
+    // `idle_ff_wide_observation` is the standing half of the condition. It
+    // excludes the features this loop — not `advance` — implements per
+    // iteration and which a parked CPU does not exempt:
+    //   * `--breakpoint` / `--detect-stuck` re-read the PC between calls, and
+    //     a WFI spin is exactly a stuck PC,
+    //   * `--capture-app-entry` watches for the app-entry PC between calls,
+    //   * poll-mode logic capture and ShutdownLatency assertions need
+    //     cycle-accurate attribution of events inside the window.
+    // Time-triggered stimuli, UART injections and `max_cycles` are NOT in that
+    // list: the per-iteration clamp below already shortens `limit` to land
+    // exactly on the next threshold.
+    //
+    // With idle fast-forward off — including via `LABWIRED_IDLE_FAST_FORWARD=0`
+    // — this is `false` and the loop is byte-identical to before.
+    //
+    // ⚠️ A run with `after_cycles` stimuli or UART injections turns idle
+    // fast-forward OFF outright, not just the widened fuel. Those thresholds
+    // are compared against `metrics.get_cycles()`, which is accumulated by a
+    // per-STEP observer: an idle skip retires no instructions, so it advances
+    // the machine's device clock without advancing that counter. Under
+    // fast-forward the two clocks separate, and a stimulus whose threshold is
+    // expressed in cycles would land late in device time — or, if the run ends
+    // first, never fire at all while still reporting a pass. A run that says
+    // when its input arrives gets instruction-for-instruction timing; the
+    // acceleration is not worth silently moving someone's stimulus.
+    let has_time_triggered_inputs = stimuli
+        .iter()
+        .any(|s| matches!(s.trigger, labwired_config::FaultTrigger::AfterCycles { .. }))
+        || uart_injections
+            .iter()
+            .any(|u| matches!(u.trigger, labwired_config::FaultTrigger::AfterCycles { .. }));
+    if has_time_triggered_inputs && machine.config.idle_fast_forward_enabled {
+        machine.config.idle_fast_forward_enabled = false;
+        eprintln!(
+            "labwired-cli test: idle_ff disabled for this run — it declares \
+             after_cycles stimuli/uart injections, whose thresholds idle skips \
+             do not advance"
+        );
+    }
+
+    // The `event-scheduler` clause is load-bearing, not belt-and-braces. Without
+    // that feature `Machine::try_idle_fast_forward` is compiled to `0`, so there
+    // is no skip for the wider fuel to fund — but `idle_fast_forward_budget`
+    // still reports the parked CPU, and widening on that would hand `advance` a
+    // million instructions of WFI spin to retire in one call. The outer loop's
+    // per-iteration checks (`stop_when_assertions_pass` settling,
+    // `max_uart_bytes`, `wall_time_ms`) would then run a million steps apart in
+    // a DEFAULT build. Gated here, a build without the feature takes the
+    // `else` arm exactly as it does today.
+    let idle_ff_wide_observation = cfg!(feature = "event-scheduler")
+        && machine.config.idle_fast_forward_enabled
+        && args.breakpoint.is_empty()
+        && detect_stuck.is_none()
+        && args.capture_app_entry.is_none()
+        && !machine.logic_poll_active()
+        && !requires_fine_grained_observation(assertions);
 
     // Declarative input stimuli (schema_version 1.2). Applied via the generic
     // `Machine::set_input` path (see `labwired_core::sim_input`), so no per-type
@@ -2294,6 +2451,17 @@ fn execute_test_loop<C: labwired_core::Cpu>(
         let (mut limit, batch_cap) = if jit_eligible {
             let chunk = remaining.min(JIT_RUN_CHUNK);
             (u64::from(chunk), chunk)
+        } else if idle_ff_wide_observation
+            && machine
+                .cpu
+                .idle_fast_forward_budget(&machine.bus as &dyn labwired_core::Bus)
+                .is_some()
+        {
+            // CPU is parked on WFI right now: give the skip real fuel so the
+            // idle window goes in a few thousand skips instead of one cycle at
+            // a time. The CPU batch width is still `current_batch` — see the
+            // note beside `idle_ff_wide_observation`.
+            (u64::from(remaining.min(IDLE_FF_RUN_CHUNK)), current_batch)
         } else {
             (u64::from(to_execute), current_batch)
         };
@@ -2330,6 +2498,15 @@ fn execute_test_loop<C: labwired_core::Cpu>(
             Ok(report) => {
                 step += report.primary_steps;
                 steps_executed = step;
+                // A firmware-authored verdict ends the run immediately: the
+                // firmware has stated the result, so continuing would only let
+                // a later timeout overwrite it.
+                if let labwired_core::AdvanceStop::FirmwareExit { code } = report.stop {
+                    info!("{} (step={})", firmware_exit_message(code), step);
+                    stop_reason = StopReason::FirmwareExit;
+                    firmware_exit_code = Some(code);
+                    break;
+                }
                 if report.primary_steps == 0 && report.idle_cycles == 0 {
                     stop_reason = StopReason::Halt;
                     break;
@@ -2370,9 +2547,12 @@ fn execute_test_loop<C: labwired_core::Cpu>(
         }
 
         if resolved_limits.stop_when_assertions_pass {
-            let has_runtime_assertions = assertions
-                .iter()
-                .any(|a| !matches!(a, TestAssertion::ExpectedStopReason(_)));
+            let has_runtime_assertions = assertions.iter().any(|a| {
+                !matches!(
+                    a,
+                    TestAssertion::ExpectedStopReason(_) | TestAssertion::FirmwareExit(_)
+                )
+            });
             if has_runtime_assertions {
                 let uart_text = {
                     let bytes = uart_tx.lock().map(|g| g.clone()).unwrap_or_default();
@@ -2390,9 +2570,11 @@ fn execute_test_loop<C: labwired_core::Cpu>(
                     }
                 }
                 let all_pass = assertions.iter().enumerate().all(|(index, assertion)| {
-                    matches!(assertion, TestAssertion::ExpectedStopReason(_))
-                        || (matches!(assertion, TestAssertion::MotorSpeedReached(_))
-                            && assertion_latched[index])
+                    matches!(
+                        assertion,
+                        TestAssertion::ExpectedStopReason(_) | TestAssertion::FirmwareExit(_)
+                    ) || (matches!(assertion, TestAssertion::MotorSpeedReached(_))
+                        && assertion_latched[index])
                         || matches!(assertion, TestAssertion::ShutdownLatency(a)
                         if shutdown_latency_passes(
                             &a.shutdown_latency,
@@ -2451,6 +2633,19 @@ fn execute_test_loop<C: labwired_core::Cpu>(
         }
     }
 
+    // How much of this run's device time the CPU spent parked and skipped
+    // rather than interpreted. Printed whenever it is non-zero so a hosted run
+    // can be shown to have actually fast-forwarded — the failure mode this
+    // guards is a build or a run path where the flag is on and the skip is
+    // clamped to nothing, which is indistinguishable from working unless the
+    // number is visible. `steps_executed + skipped == machine.total_cycles`.
+    if machine.idle_fast_forward_cycles_skipped > 0 {
+        eprintln!(
+            "labwired-cli test: idle_ff skipped {} of {} device cycles ({} interpreted)",
+            machine.idle_fast_forward_cycles_skipped, machine.total_cycles, steps_executed
+        );
+    }
+
     let uart_text = {
         let bytes = uart_tx.lock().map(|g| g.clone()).unwrap_or_default();
         String::from_utf8_lossy(&bytes).to_string()
@@ -2479,6 +2674,11 @@ fn execute_test_loop<C: labwired_core::Cpu>(
                 &uart_milestone_cycles,
             ),
             TestAssertion::ExpectedStopReason(a) => a.expected_stop_reason == stop_reason,
+            // Passes only if the FIRMWARE ended the run with exactly this code.
+            // A timeout, halt or fault leaves `firmware_exit_code` None, so a
+            // run that never reached its own success path fails rather than
+            // passing by silence.
+            TestAssertion::FirmwareExit(a) => firmware_exit_code == Some(a.firmware_exit),
             TestAssertion::MemoryValue(a) => {
                 // `size` is the value width. Accept either bytes (1/2/4) or
                 // bits (8/16/32) — both name the same u8/u16/u32 reads — so a
@@ -2631,9 +2831,27 @@ fn execute_test_loop<C: labwired_core::Cpu>(
 
     // `rejected` dominates the other verdicts on purpose: a "fail" produced by a
     // run whose inputs were never delivered is not a trustworthy fail either.
+    // A firmware that declared its own failure fails the run, whether or not
+    // the script asserted anything. Without this a run with no assertions would
+    // report `status: "pass"` for firmware that explicitly said `EXIT 5` — the
+    // proved-nothing failure mode again, and the worse for being self-inflicted:
+    // the run has an unambiguous verdict from the firmware itself and would be
+    // ignoring it. `None` (a bare `STOP`, or any non-simctl stop) is not a
+    // failure claim and does not trigger this.
+    let firmware_declared_failure = firmware_exit_code.is_some_and(|code| code != 0);
+    if firmware_declared_failure {
+        error!(
+            "firmware ended the run with a non-zero exit code ({}); the run fails",
+            firmware_exit_code.unwrap_or_default()
+        );
+    }
+
     let status = if stimuli_rejected > 0 {
         "error"
-    } else if !all_passed || (stop_requires_assertion && !expected_stop_reason_matched) {
+    } else if firmware_declared_failure
+        || !all_passed
+        || (stop_requires_assertion && !expected_stop_reason_matched)
+    {
         "fail"
     } else if sim_error_happened && !expected_stop_reason_matched {
         "error"
@@ -2694,6 +2912,44 @@ fn execute_test_loop<C: labwired_core::Cpu>(
         None
     };
 
+    // ── THE VERDICT ──────────────────────────────────────────────────────────
+    //
+    // `labwired test` is the deterministic gate, and until now a PASSING run
+    // said nothing at all about what it had verified: failures went out through
+    // `error!`, passes were silent, and the only machine-readable answer lived
+    // in `result.json` / JUnit. A human running the gate in a terminal saw the
+    // firmware's own UART output and had to infer the verdict from `$?`.
+    //
+    // One line, on STDERR. That is deliberate and it is what makes this safe to
+    // print unconditionally: firmware UART echo and the `--json` agent payload
+    // both go to stdout, so a human-facing line on stderr can never corrupt a
+    // piped capture or a JSON parse. No new parameter threaded through this
+    // already twenty-argument signature to decide whether to speak.
+    {
+        let checked = assertion_results.len();
+        let passed = assertion_results.iter().filter(|a| a.passed).count();
+        let label = match status {
+            "pass" => "PASS",
+            "fail" => "FAIL",
+            _ => "ERROR",
+        };
+        // The SCRIPT, not the system manifest: nearly every board ships its
+        // manifest as `system.yaml`, so naming that would print the same
+        // uninformative "system" for every board in the repo. The script stem
+        // is what the caller actually typed and what a CI log needs to
+        // identify. Firmware stem is the fallback for a scriptless run.
+        let subject = args
+            .script
+            .file_stem()
+            .or_else(|| firmware_path.file_stem())
+            .map(|s| s.to_string_lossy().to_string())
+            .unwrap_or_else(|| "run".to_string());
+        eprintln!(
+            "{label}  {passed}/{checked} checks · {subject} · {steps_executed} steps · {:.2}s",
+            duration.as_secs_f64()
+        );
+    }
+
     write_outputs(
         args,
         status,
@@ -2701,6 +2957,7 @@ fn execute_test_loop<C: labwired_core::Cpu>(
         metrics,
         stop_reason.clone(),
         stop_reason_details,
+        firmware_exit_code,
         resolved_limits.clone(),
         assertion_results,
         firmware_bytes,
@@ -2739,6 +2996,8 @@ fn write_outputs<C: labwired_core::Cpu>(
     metrics: &labwired_core::metrics::PerformanceMetrics,
     stop_reason: StopReason,
     stop_reason_details: StopReasonDetails,
+    // Set only when the firmware ended its own run through `simctl`.
+    firmware_exit_code: Option<u32>,
     limits: TestLimits,
     assertions: Vec<AssertionResult>,
     firmware_bytes: &[u8],
@@ -2792,6 +3051,7 @@ fn write_outputs<C: labwired_core::Cpu>(
         instructions: metrics.get_instructions(),
         stop_reason,
         stop_reason_details: stop_reason_details.clone(),
+        firmware_exit_code,
         limits: limits.clone(),
         message,
         assertions,
@@ -3123,6 +3383,8 @@ pub(crate) fn write_config_error_outputs(
         instructions: 0,
         stop_reason,
         stop_reason_details: stop_reason_details.clone(),
+        // A config error never ran firmware, so there is no verdict.
+        firmware_exit_code: None,
         limits: resolved_limits.clone(),
         message: Some(message.clone()),
         assertions: vec![],
@@ -3443,6 +3705,7 @@ fn assertion_short_name(assertion: &TestAssertion) -> String {
         TestAssertion::ExpectedStopReason(a) => {
             format!("expected_stop_reason: {:?}", a.expected_stop_reason)
         }
+        TestAssertion::FirmwareExit(a) => format!("firmware_exit: {}", a.firmware_exit),
         TestAssertion::MemoryValue(a) => format!(
             "memory_value: @{:#x}={:#x}",
             a.memory_value.address, a.memory_value.expected_value
@@ -3491,56 +3754,21 @@ pub(crate) fn evaluate_uds_tester(
 
 // Minimal regex matcher supporting: '^' anchor, '$' anchor, '.' and '*' (Kleene star).
 // This is intentionally small to avoid introducing new deps; it does not implement full PCRE/Rust regex.
+/// Does `pattern` match anywhere in `text`?
+///
+/// Thin wrapper over [`crate::regex`], which replaced a `^ $ . *`-only matcher.
+/// The call sites want a plain `bool`, so a pattern that cannot be evaluated is
+/// logged and reported as "did not match" — which makes the assertion fail. A
+/// typo therefore fails the test loudly instead of being mistaken for a
+/// firmware bug that never printed the expected line.
 pub(crate) fn simple_regex_is_match(pattern: &str, text: &str) -> bool {
-    fn char_eq(pat: char, ch: char) -> bool {
-        pat == '.' || pat == ch
-    }
-
-    fn match_here(pat: &[char], text: &[char]) -> bool {
-        if pat.is_empty() {
-            return true;
-        }
-        if pat.len() >= 2 && pat[1] == '*' {
-            return match_star(pat[0], &pat[2..], text);
-        }
-        if pat[0] == '$' && pat.len() == 1 {
-            return text.is_empty();
-        }
-        if !text.is_empty() && char_eq(pat[0], text[0]) {
-            return match_here(&pat[1..], &text[1..]);
-        }
-        false
-    }
-
-    fn match_star(ch: char, pat: &[char], text: &[char]) -> bool {
-        let mut i = 0;
-        loop {
-            if match_here(pat, &text[i..]) {
-                return true;
-            }
-            if i >= text.len() {
-                return false;
-            }
-            if !char_eq(ch, text[i]) {
-                return false;
-            }
-            i += 1;
+    match crate::regex::is_match(pattern, text) {
+        Ok(hit) => hit,
+        Err(e) => {
+            error!("uart_regex `{pattern}`: {e}");
+            false
         }
     }
-
-    let pat_chars: Vec<char> = pattern.chars().collect();
-    let text_chars: Vec<char> = text.chars().collect();
-
-    if pat_chars.first().copied() == Some('^') {
-        return match_here(&pat_chars[1..], &text_chars);
-    }
-
-    for start in 0..=text_chars.len() {
-        if match_here(&pat_chars, &text_chars[start..]) {
-            return true;
-        }
-    }
-    false
 }
 
 #[cfg(test)]
@@ -3835,5 +4063,93 @@ mod tests {
 
         let json = serde_json::to_value(snapshot).expect("snapshot should serialize");
         assert_eq!(json["type"], "config_error");
+    }
+}
+
+#[cfg(test)]
+mod simctl_exit_tests {
+    use super::*;
+
+    #[test]
+    fn the_message_names_the_code() {
+        assert!(firmware_exit_message(42).contains("42"));
+    }
+
+    #[test]
+    fn the_stop_reason_serialises_as_snake_case_for_the_json_contract() {
+        let json = serde_json::to_string(&StopReason::FirmwareExit).unwrap();
+        assert_eq!(json, "\"firmware_exit\"");
+        let back: StopReason = serde_json::from_str("\"firmware_exit\"").unwrap();
+        assert_eq!(back, StopReason::FirmwareExit);
+    }
+
+    #[test]
+    fn the_assertion_parses_from_a_test_script() {
+        let assertion: labwired_config::TestAssertion =
+            serde_yaml::from_str("firmware_exit: 0").expect("firmware_exit should parse");
+        assert!(matches!(
+            assertion,
+            labwired_config::TestAssertion::FirmwareExit(ref a) if a.firmware_exit == 0
+        ));
+    }
+
+    #[test]
+    fn the_assertion_does_not_swallow_other_assertion_shapes() {
+        // TestAssertion is `untagged`, so a new arm can hijack neighbouring
+        // shapes if its fields are not distinctive. Prove it does not.
+        let uart: labwired_config::TestAssertion =
+            serde_yaml::from_str("uart_contains: \"PASS\"").unwrap();
+        assert!(matches!(
+            uart,
+            labwired_config::TestAssertion::UartContains(_)
+        ));
+        let stop: labwired_config::TestAssertion =
+            serde_yaml::from_str("expected_stop_reason: firmware_exit").unwrap();
+        assert!(matches!(
+            stop,
+            labwired_config::TestAssertion::ExpectedStopReason(_)
+        ));
+    }
+
+    /// The run-result JSON must stay readable by consumers written before this
+    /// field existed — and must not sprout the field on runs that never used
+    /// the device.
+    #[test]
+    fn a_pre_change_result_json_still_deserialises() {
+        let legacy = serde_json::json!({
+            "result_schema_version": "1.0",
+            "status": "pass",
+            "steps_executed": 10,
+            "cycles": 10,
+            "instructions": 10,
+            "stop_reason": "max_steps",
+            "stop_reason_details": {
+                "triggered_stop_condition": "max_steps",
+                "triggered_limit": null,
+                "observed": null
+            },
+            "limits": serde_json::to_value(TestLimits {
+                max_steps: 1,
+                max_cycles: None,
+                max_uart_bytes: None,
+                no_progress_steps: None,
+                wall_time_ms: None,
+                max_vcd_bytes: None,
+                stop_when_assertions_pass: false,
+                stop_when_assertions_pass_settle_steps: 0,
+                stop_when_assertions_pass_min_steps: 0,
+            })
+            .unwrap(),
+            "assertions": [],
+            "firmware_hash": "abc",
+            "config": {"firmware": "f.elf", "system": null, "script": "t.yaml"},
+        });
+        let parsed: Result<crate::artifacts::TestResult, _> = serde_json::from_value(legacy);
+        assert!(
+            parsed.is_ok(),
+            "adding firmware_exit_code broke the existing result contract: {:?}",
+            parsed.err()
+        );
+        assert_eq!(parsed.unwrap().firmware_exit_code, None);
     }
 }
