@@ -119,6 +119,20 @@ pub struct SchedulerStats {
     /// number the dedup index's data-structure choice is sized against — see
     /// the `queued` field.
     pub max_queued_events: u32,
+    /// Cumulative count of ACCEPTED `schedule()` calls per `peripheral_idx`,
+    /// densely indexed to match `SystemBus::peripherals`. Duplicates rejected
+    /// by the dedup index are not counted — this is arms that reached the heap,
+    /// which is exactly the population that can end a CPU batch.
+    ///
+    /// **This is the batch-width attribution counter.** Mean batch width is
+    /// `cpu_instructions / cpu_batches`; when it collapses, the cause is one
+    /// peripheral re-arming on a cadence far tighter than anything observable
+    /// requires, and this field names it without a profiler. The precedent is
+    /// `esp32c3::i2c`, which re-armed every module tick (CPU/4) and pinned the
+    /// whole OLED paint to ~4-instruction batches; widening it to the next
+    /// segment transition was 12.6x end-to-end with byte-identical output.
+    /// Read it beside `SystemBus::peripherals[idx].name`.
+    pub arms_per_peripheral: Vec<u64>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -268,6 +282,10 @@ impl EventScheduler {
             if slot >= self.live_per_peripheral.len() {
                 self.live_per_peripheral.resize(slot + 1, 0);
             }
+            if slot >= self.stats.arms_per_peripheral.len() {
+                self.stats.arms_per_peripheral.resize(slot + 1, 0);
+            }
+            self.stats.arms_per_peripheral[slot] += 1;
             self.live_per_peripheral[slot] += 1;
             let live = self.live_per_peripheral[slot];
             if live > self.stats.max_live_events_per_peripheral {

@@ -153,6 +153,31 @@ fn probe(label: &str, idle_ff: bool, slice: u32, budget: u64) {
     let wall = start.elapsed().as_secs_f64();
 
     for (name, node) in [("A", &a), ("B", &b)] {
+        // Batch-width attribution: who armed the wakes that ended the batches.
+        let arms = &node.machine.sched.stats().arms_per_peripheral;
+        let mut owners: Vec<(u64, &str)> = arms
+            .iter()
+            .enumerate()
+            .filter(|(_, n)| **n > 0)
+            .map(|(idx, n)| {
+                let who = node
+                    .machine
+                    .bus
+                    .peripherals
+                    .get(idx)
+                    .map(|p| p.name.as_str())
+                    .unwrap_or("<out-of-range>");
+                (*n, who)
+            })
+            .collect();
+        owners.sort_unstable_by(|x, y| y.0.cmp(&x.0));
+        let total_arms: u64 = owners.iter().map(|(n, _)| n).sum();
+        let top: Vec<String> = owners
+            .iter()
+            .take(6)
+            .map(|(n, who)| format!("{who}={n}"))
+            .collect();
+
         let p = node.machine.step_profile();
         let mean_batch = p.cpu_instructions as f64 / p.cpu_batches.max(1) as f64;
         let total = node.machine.total_cycles.max(1);
@@ -167,6 +192,12 @@ fn probe(label: &str, idle_ff: bool, slice: u32, budget: u64) {
             ff as f64 / total as f64,
             p.legacy_tick_entries,
             console.len(),
+        );
+        eprintln!(
+            "PROBE {label} node{name} ARMS total={total_arms} \
+             arms_per_batch={:.2} top=[{}]",
+            total_arms as f64 / p.cpu_batches.max(1) as f64,
+            top.join(" "),
         );
     }
     let cps = (2.0 * budget as f64) / wall;
