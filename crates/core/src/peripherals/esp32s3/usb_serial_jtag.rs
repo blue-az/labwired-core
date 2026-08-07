@@ -412,11 +412,11 @@ impl UsbSerialJtag {
 
     /// INT_RAW = latched bits OR the live level conditions.
     ///
-    /// `SERIAL_IN_EMPTY` is a level, not an event: it holds while the IN
-    /// endpoint is empty, which — given a host that drains instantly — is
-    /// always. Keeping it OUT of the sticky word is what makes a `W1C` of it
-    /// re-assert, and that re-assertion is the pump that moves every byte after
-    /// the first.
+    /// `SERIAL_IN_EMPTY` is a level, not an event: it holds exactly while the IN
+    /// endpoint is empty — i.e. while no committed packet is awaiting host
+    /// pickup. Keeping it OUT of the sticky word is what makes a `W1C` of it
+    /// re-assert once the endpoint drains, and that re-assertion is the pump
+    /// that moves every byte after the first.
     fn int_raw(&self) -> u32 {
         self.sync_sof();
         let mut v = self.int_raw_sticky.get();
