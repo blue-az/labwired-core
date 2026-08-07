@@ -453,7 +453,7 @@ boards:
     # (labwired_wasm configured_arm_batch_matches_32_single_boundaries).
     # Live re-capture still owed; no hardware ran for this change.
     drift_ack: 2026-08-07
-    drift_ack_digest: "913da8e453316cfb"
+    drift_ack_digest: "ab1a405d2983fe02"
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1120,7 +1120,7 @@ boards:
     # (labwired_wasm configured_arm_batch_matches_32_single_boundaries).
     # Live re-capture still owed; no hardware ran for this change.
     drift_ack: 2026-08-07
-    drift_ack_digest: "64588371c526b784"
+    drift_ack_digest: "f88c7d2fc1d17112"
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1259,13 +1259,14 @@ boards:
     # (labwired_wasm configured_arm_batch_matches_32_single_boundaries).
     # Live re-capture still owed; no hardware ran for this change.
     drift_ack: 2026-08-07
-    drift_ack_digest: "bfb9e48c8e29a15f"
+    drift_ack_digest: "9dcf697e6b50ad8b"
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
       - crates/core/src/peripherals/uart.rs
       - crates/core/src/peripherals/spi.rs
+      - crates/core/src/peripherals/i2c.rs
       - crates/core/src/peripherals/timer.rs
       - crates/core/src/peripherals/dma.rs
       - crates/core/src/peripherals/crc.rs
@@ -1416,7 +1417,7 @@ boards:
     # (labwired_wasm configured_arm_batch_matches_32_single_boundaries).
     # Live re-capture still owed; no hardware ran for this change.
     drift_ack: 2026-08-07
-    drift_ack_digest: "d7a7d0febe975d09"
+    drift_ack_digest: "a525b06236e55723"
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1566,7 +1567,7 @@ boards:
     # (labwired_wasm configured_arm_batch_matches_32_single_boundaries).
     # Live re-capture still owed; no hardware ran for this change.
     drift_ack: 2026-08-07
-    drift_ack_digest: "bcfdd51e8237c620"
+    drift_ack_digest: "bb74dd83805ca060"
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs

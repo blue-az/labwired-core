@@ -325,9 +325,14 @@ def main() -> int:
     manifest = yaml.safe_load(MANIFEST.read_text())
 
     if args.digests:
-        for b in manifest["boards"]:
-            if b.get("models"):
-                print(f"{b['id']:<28} {models_digest(b['models'])}")
+        try:
+            for b in manifest["boards"]:
+                if b.get("models"):
+                    print(f"{b['id']:<28} {models_digest(b['models'])}")
+        except BrokenPipeError:
+            # `--digests | head` / `| grep -m1` is the obvious way to use this;
+            # it should not end in a traceback.
+            sys.stdout = None
         return 0
 
     rendered = render(manifest)
