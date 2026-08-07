@@ -487,8 +487,8 @@ fn nrf52840_onboarding_real_firmware_toggles_led() {
     use crate::cpu::cortex_m::CortexM;
     use crate::Machine;
 
-    let elf_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../target/thumbv7em-none-eabi/release/firmware-nrf52840-timer-blinky");
+    let elf_path = crate::test_support::target_dir()
+        .join("thumbv7em-none-eabi/release/firmware-nrf52840-timer-blinky");
 
     if !elf_path.exists() {
         // Don't fail CI when the prebuilt artifact is missing — but be
@@ -570,8 +570,8 @@ fn nrf52840_onboarding_real_firmware_toggles_led() {
 fn nrf52840_onboarding_isr_firmware_toggles_led() {
     use crate::Machine;
 
-    let elf_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../target/thumbv7em-none-eabi/release/firmware-nrf52840-isr-blinky");
+    let elf_path = crate::test_support::target_dir()
+        .join("thumbv7em-none-eabi/release/firmware-nrf52840-isr-blinky");
 
     if !elf_path.exists() {
         println!(
@@ -678,10 +678,10 @@ fn nrf52840_ble_loopback_through_virtual_air() {
     use crate::peripherals::nrf52::radio;
     use crate::Machine;
 
-    let tx_elf = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../target/thumbv7em-none-eabi/release/firmware-nrf52840-ble-tx");
-    let rx_elf = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../target/thumbv7em-none-eabi/release/firmware-nrf52840-ble-rx");
+    let tx_elf = crate::test_support::target_dir()
+        .join("thumbv7em-none-eabi/release/firmware-nrf52840-ble-tx");
+    let rx_elf = crate::test_support::target_dir()
+        .join("thumbv7em-none-eabi/release/firmware-nrf52840-ble-rx");
 
     if !tx_elf.exists() || !rx_elf.exists() {
         println!(
@@ -829,7 +829,7 @@ fn nrf52840_ble_loopback_through_virtual_air() {
 fn nrf52840_arduino_blink_toggles_gpio() {
     use crate::Machine;
 
-    let elf_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/arduino-blink.elf");
+    let elf_path = crate::test_support::target_dir().join("arduino-blink.elf");
     if !elf_path.exists() {
         println!(
             "SKIPPED: build the Arduino sketch first:\n  \
