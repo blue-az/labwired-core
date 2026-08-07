@@ -15,6 +15,7 @@ The shallow case is tested against a REAL shallow clone rather than a stubbed
 belief about it — a stub would have happily agreed with the broken version too.
 """
 
+import datetime
 import subprocess
 import sys
 from pathlib import Path
@@ -136,3 +137,80 @@ def test_require_full_history_exits_with_the_fix(tmp_path, monkeypatch, capsys):
     err = capsys.readouterr().err
     assert "git fetch --unshallow" in err
     assert "fetch-depth: 0" in err
+
+
+# ── Drift acks are pinned to CONTENT, not to a timestamp (#834) ──────────────
+#
+# The date rule got both directions wrong. A squash merge stamps the merge time
+# onto every file a PR touched, so an ack written on the branch stopped covering
+# the very tree it was reviewed against and main went red on unchanged content.
+# In the other direction, `ack >= newest` accepted ANY content as long as the
+# ack was dated on or after the newest model commit, so an edit landing the same
+# day an ack was written slipped through.
+#
+# With a `drift_ack_digest` recorded, the verdict depends only on content. These
+# four cases are the whole contract.
+
+
+def _board_with_digest(tmp_path, monkeypatch, model_body: bytes):
+    """A one-board manifest whose ack is pinned to `model_body`'s digest."""
+    root = tmp_path / "repo"
+    (root / "models").mkdir(parents=True)
+    model = root / "models" / "periph.rs"
+    model.write_bytes(model_body)
+    monkeypatch.setattr(gvs, "CORE_ROOT", root)
+    return {
+        "id": "demo",
+        "silicon": {"last_capture": datetime.date(2026, 1, 1)},
+        "drift_ack": datetime.date(2026, 6, 1),
+        "models": ["models/periph.rs"],
+    }, model
+
+
+@pytest.mark.parametrize("redated", [False, True], ids=["dates-unchanged", "squash-redated"])
+@pytest.mark.parametrize("mutated", [False, True], ids=["content-same", "content-CHANGED"])
+def test_digest_ack_tracks_content_not_dates(tmp_path, monkeypatch, redated, mutated):
+    body = b"fn model() {}\n"
+    board, model = _board_with_digest(tmp_path, monkeypatch, body)
+    board["drift_ack_digest"] = gvs.model_digest(board["models"])
+
+    if mutated:
+        model.write_bytes(body + b"// a real change\n")
+    # A squash merge re-dates the file far past every ack without touching it.
+    monkeypatch.setattr(
+        gvs,
+        "newest_commit_date",
+        lambda paths: datetime.date(2099, 1, 1) if redated else datetime.date(2026, 5, 1),
+    )
+
+    failing = gvs.evaluate(board)["failing"]
+    assert failing is mutated, (
+        f"redated={redated} mutated={mutated}: a digest-pinned ack must fail iff the "
+        "model CONTENT moved — a re-date alone must not fail, and a same-day edit "
+        "must not pass"
+    )
+
+
+def test_ack_without_a_digest_keeps_the_legacy_date_rule(tmp_path, monkeypatch):
+    """Un-stamped acks must keep working, or adding the field breaks every board."""
+    board, _ = _board_with_digest(tmp_path, monkeypatch, b"fn model() {}\n")
+    assert "drift_ack_digest" not in board
+
+    monkeypatch.setattr(gvs, "newest_commit_date", lambda paths: datetime.date(2026, 5, 1))
+    assert gvs.evaluate(board)["failing"] is False, "ack (06-01) >= newest (05-01) still covers"
+
+    monkeypatch.setattr(gvs, "newest_commit_date", lambda paths: datetime.date(2026, 7, 1))
+    assert gvs.evaluate(board)["failing"] is True, "model newer than the ack still fails"
+
+
+def test_write_ack_digests_never_acks_an_unacked_board(tmp_path, monkeypatch):
+    """Stamping records WHICH tree was acked; it must never BE the ack."""
+    board, _ = _board_with_digest(tmp_path, monkeypatch, b"fn model() {}\n")
+    del board["drift_ack"]
+
+    manifest_path = tmp_path / "manifest.yaml"
+    manifest_path.write_text("boards:\n  - id: demo\n    models:\n      - models/periph.rs\n")
+    monkeypatch.setattr(gvs, "MANIFEST", manifest_path)
+
+    gvs.write_ack_digests({"boards": [board]})
+    assert "drift_ack_digest" not in manifest_path.read_text()
