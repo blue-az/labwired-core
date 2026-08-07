@@ -392,6 +392,26 @@ pub struct RunArgs {
     /// before when no `--flash-image` is given.
     #[arg(long = "flash-image", value_name = "PATH@HEX")]
     pub flash_image: Vec<String>,
+
+    /// Drive the run through the batched orchestration
+    /// (`Machine::advance(AdvanceRequest::run(..))`) that the browser front end
+    /// uses, instead of the one-instruction-per-call `Machine::step()` loop.
+    ///
+    /// This is an assertion, not a hint: the flag fails the run rather than
+    /// falling back, on any chip family or option combination that cannot take
+    /// the batched path. On ARM it selects the batched loop; on RISC-V the
+    /// batched loop is already the default and the flag only refuses the
+    /// per-instruction instrumentation (`--break-at`, the WiFi bridge, the DHCP
+    /// trace) that would silently turn it back into single-stepping; on Xtensa
+    /// there is no `Machine`-driven path at all, so it is rejected outright.
+    ///
+    /// Exists because the batched path is what users actually run in the
+    /// browser while the CLI default is not, which left engine changes to ARM
+    /// batch orchestration invisible to `scripts/perf/board_perf.py`. It also
+    /// prints a `[batched] ...` summary line to stderr on exit, so a caller can
+    /// prove which path executed rather than assume it.
+    #[arg(long = "batched")]
+    pub batched: bool,
 }
 
 #[derive(Parser, Debug)]
