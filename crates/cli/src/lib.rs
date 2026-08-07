@@ -819,18 +819,22 @@ pub fn run_with_plugins(plugins: &[&dyn labwired_core::plugin::ChipPlugin]) -> E
 
     let cli = Cli::parse();
 
-    // Initialize tracing with appropriate level based on --trace flag
-    if cli.trace {
-        tracing_subscriber::fmt()
-            .with_writer(std::io::stderr)
-            .with_max_level(tracing::Level::DEBUG)
-            .init();
-    } else {
-        tracing_subscriber::fmt()
-            .with_writer(std::io::stderr)
-            .with_max_level(tracing::Level::INFO)
-            .init();
-    }
+    // RUST_LOG used to be silently ignored. `with_max_level` is a hard ceiling
+    // compiled into the binary — no environment variable can raise or lower it —
+    // so `RUST_LOG=error labwired test ...` still printed every INFO line and
+    // there was no way to quiet the runner at all.
+    //
+    // `EnvFilter` honours RUST_LOG (including per-module directives such as
+    // `RUST_LOG=warn,labwired_core=debug`) and falls back to the previous
+    // default when it is unset or unparseable, so behaviour with no RUST_LOG in
+    // the environment is unchanged: DEBUG under `--trace`, INFO otherwise.
+    let default_level = if cli.trace { "debug" } else { "info" };
+    let log_filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(default_level));
+    tracing_subscriber::fmt()
+        .with_writer(std::io::stderr)
+        .with_env_filter(log_filter)
+        .init();
 
     match cli.command {
         Some(Commands::Chips) => {
@@ -1845,6 +1849,18 @@ fn map_sim_error_to_stop_reason(e: &labwired_core::SimulationError) -> StopReaso
 /// identical between the JIT-on and JIT-off arms.
 const JIT_RUN_CHUNK: u32 = 1_000_000;
 
+/// Fuel budget per `Machine::advance` call on an idle-fast-forward run whose
+/// stop conditions can all be checked at that granularity
+/// (`idle_ff_wide_observation` in `execute_test_loop`).
+///
+/// This is a FUEL budget, not a CPU batch width — the batch cap is passed
+/// separately and is unchanged. It bounds how far one idle skip may reach, so
+/// it has to comfortably exceed a FreeRTOS tick window: an ESP32-C3 at 160 MHz
+/// idles ~160k cycles per millisecond, so `vTaskDelay(200)` is ~32M cycles.
+/// Same value as [`JIT_RUN_CHUNK`], which already bounds this loop's
+/// observation granularity on the JIT-eligible path.
+const IDLE_FF_RUN_CHUNK: u32 = 1_000_000;
+
 #[allow(clippy::too_many_arguments)]
 fn execute_test_loop<C: labwired_core::Cpu>(
     args: &TestArgs,
@@ -2027,6 +2043,92 @@ fn execute_test_loop<C: labwired_core::Cpu>(
         assertions,
         max_steps,
     );
+
+    // ── Fuel budget vs CPU batch width ──────────────────────────────────────
+    // These are two different knobs that this loop used to collapse into one
+    // number, and the collapse silently disarmed idle fast-forward.
+    //
+    // `batch_cap` is how many instructions the CPU may retire per window. It
+    // stays `batch_size`, which is 1 whenever batch mode is off (the ESP32-C3
+    // rom-boot path turns batching off because a fixed-width batch freezes
+    // interrupt delivery and FreeRTOS never runs). That is a FIDELITY setting
+    // and is not touched here or below.
+    //
+    // The advance call's `fuel` is a different thing: how much this call may
+    // consume before returning to the checks at the top of this loop. And
+    // `Machine::try_idle_fast_forward` clamps its skip to the fuel remaining —
+    // so with fuel pinned to 1, an idle FreeRTOS window was fast-forwarded ONE
+    // cycle at a time. Measured on a hosted-shaped ESP32-C3 BLE rom-boot run,
+    // turning the flag on that way bought 3% of the steps and ran ~2x SLOWER in
+    // wall clock than not skipping at all, because every skipped cycle paid a
+    // full plan/commit round trip. A `vTaskDelay(200)` window is ~32M cycles;
+    // it wants to go in a few thousand skips, not 32M of them.
+    //
+    // The widened fuel below is applied ONLY on an iteration where the CPU is
+    // already parked waiting for an interrupt (`idle_fast_forward_budget` is
+    // `Some`). That is the tight guard: while the CPU is parked the advance
+    // call retires no instructions at all, so nothing this loop observes
+    // between calls — PC, retired-step counts, assertion settling — can move
+    // inside the widened window. On every instruction-retiring iteration the
+    // fuel is exactly what it was before this change, so a busy run is
+    // unchanged instruction for instruction.
+    //
+    // `idle_ff_wide_observation` is the standing half of the condition. It
+    // excludes the features this loop — not `advance` — implements per
+    // iteration and which a parked CPU does not exempt:
+    //   * `--breakpoint` / `--detect-stuck` re-read the PC between calls, and
+    //     a WFI spin is exactly a stuck PC,
+    //   * `--capture-app-entry` watches for the app-entry PC between calls,
+    //   * poll-mode logic capture and ShutdownLatency assertions need
+    //     cycle-accurate attribution of events inside the window.
+    // Time-triggered stimuli, UART injections and `max_cycles` are NOT in that
+    // list: the per-iteration clamp below already shortens `limit` to land
+    // exactly on the next threshold.
+    //
+    // With idle fast-forward off — including via `LABWIRED_IDLE_FAST_FORWARD=0`
+    // — this is `false` and the loop is byte-identical to before.
+    //
+    // ⚠️ A run with `after_cycles` stimuli or UART injections turns idle
+    // fast-forward OFF outright, not just the widened fuel. Those thresholds
+    // are compared against `metrics.get_cycles()`, which is accumulated by a
+    // per-STEP observer: an idle skip retires no instructions, so it advances
+    // the machine's device clock without advancing that counter. Under
+    // fast-forward the two clocks separate, and a stimulus whose threshold is
+    // expressed in cycles would land late in device time — or, if the run ends
+    // first, never fire at all while still reporting a pass. A run that says
+    // when its input arrives gets instruction-for-instruction timing; the
+    // acceleration is not worth silently moving someone's stimulus.
+    let has_time_triggered_inputs = stimuli
+        .iter()
+        .any(|s| matches!(s.trigger, labwired_config::FaultTrigger::AfterCycles { .. }))
+        || uart_injections
+            .iter()
+            .any(|u| matches!(u.trigger, labwired_config::FaultTrigger::AfterCycles { .. }));
+    if has_time_triggered_inputs && machine.config.idle_fast_forward_enabled {
+        machine.config.idle_fast_forward_enabled = false;
+        eprintln!(
+            "labwired-cli test: idle_ff disabled for this run — it declares \
+             after_cycles stimuli/uart injections, whose thresholds idle skips \
+             do not advance"
+        );
+    }
+
+    // The `event-scheduler` clause is load-bearing, not belt-and-braces. Without
+    // that feature `Machine::try_idle_fast_forward` is compiled to `0`, so there
+    // is no skip for the wider fuel to fund — but `idle_fast_forward_budget`
+    // still reports the parked CPU, and widening on that would hand `advance` a
+    // million instructions of WFI spin to retire in one call. The outer loop's
+    // per-iteration checks (`stop_when_assertions_pass` settling,
+    // `max_uart_bytes`, `wall_time_ms`) would then run a million steps apart in
+    // a DEFAULT build. Gated here, a build without the feature takes the
+    // `else` arm exactly as it does today.
+    let idle_ff_wide_observation = cfg!(feature = "event-scheduler")
+        && machine.config.idle_fast_forward_enabled
+        && args.breakpoint.is_empty()
+        && detect_stuck.is_none()
+        && args.capture_app_entry.is_none()
+        && !machine.logic_poll_active()
+        && !requires_fine_grained_observation(assertions);
 
     // Declarative input stimuli (schema_version 1.2). Applied via the generic
     // `Machine::set_input` path (see `labwired_core::sim_input`), so no per-type
@@ -2349,6 +2451,17 @@ fn execute_test_loop<C: labwired_core::Cpu>(
         let (mut limit, batch_cap) = if jit_eligible {
             let chunk = remaining.min(JIT_RUN_CHUNK);
             (u64::from(chunk), chunk)
+        } else if idle_ff_wide_observation
+            && machine
+                .cpu
+                .idle_fast_forward_budget(&machine.bus as &dyn labwired_core::Bus)
+                .is_some()
+        {
+            // CPU is parked on WFI right now: give the skip real fuel so the
+            // idle window goes in a few thousand skips instead of one cycle at
+            // a time. The CPU batch width is still `current_batch` — see the
+            // note beside `idle_ff_wide_observation`.
+            (u64::from(remaining.min(IDLE_FF_RUN_CHUNK)), current_batch)
         } else {
             (u64::from(to_execute), current_batch)
         };
@@ -2518,6 +2631,19 @@ fn execute_test_loop<C: labwired_core::Cpu>(
             ),
             None => eprintln!("[jit-stats] JIT engine never created (interpreter-only run)"),
         }
+    }
+
+    // How much of this run's device time the CPU spent parked and skipped
+    // rather than interpreted. Printed whenever it is non-zero so a hosted run
+    // can be shown to have actually fast-forwarded — the failure mode this
+    // guards is a build or a run path where the flag is on and the skip is
+    // clamped to nothing, which is indistinguishable from working unless the
+    // number is visible. `steps_executed + skipped == machine.total_cycles`.
+    if machine.idle_fast_forward_cycles_skipped > 0 {
+        eprintln!(
+            "labwired-cli test: idle_ff skipped {} of {} device cycles ({} interpreted)",
+            machine.idle_fast_forward_cycles_skipped, machine.total_cycles, steps_executed
+        );
     }
 
     let uart_text = {
@@ -2785,6 +2911,44 @@ fn execute_test_loop<C: labwired_core::Cpu>(
     } else {
         None
     };
+
+    // ── THE VERDICT ──────────────────────────────────────────────────────────
+    //
+    // `labwired test` is the deterministic gate, and until now a PASSING run
+    // said nothing at all about what it had verified: failures went out through
+    // `error!`, passes were silent, and the only machine-readable answer lived
+    // in `result.json` / JUnit. A human running the gate in a terminal saw the
+    // firmware's own UART output and had to infer the verdict from `$?`.
+    //
+    // One line, on STDERR. That is deliberate and it is what makes this safe to
+    // print unconditionally: firmware UART echo and the `--json` agent payload
+    // both go to stdout, so a human-facing line on stderr can never corrupt a
+    // piped capture or a JSON parse. No new parameter threaded through this
+    // already twenty-argument signature to decide whether to speak.
+    {
+        let checked = assertion_results.len();
+        let passed = assertion_results.iter().filter(|a| a.passed).count();
+        let label = match status {
+            "pass" => "PASS",
+            "fail" => "FAIL",
+            _ => "ERROR",
+        };
+        // The SCRIPT, not the system manifest: nearly every board ships its
+        // manifest as `system.yaml`, so naming that would print the same
+        // uninformative "system" for every board in the repo. The script stem
+        // is what the caller actually typed and what a CI log needs to
+        // identify. Firmware stem is the fallback for a scriptless run.
+        let subject = args
+            .script
+            .file_stem()
+            .or_else(|| firmware_path.file_stem())
+            .map(|s| s.to_string_lossy().to_string())
+            .unwrap_or_else(|| "run".to_string());
+        eprintln!(
+            "{label}  {passed}/{checked} checks · {subject} · {steps_executed} steps · {:.2}s",
+            duration.as_secs_f64()
+        );
+    }
 
     write_outputs(
         args,
