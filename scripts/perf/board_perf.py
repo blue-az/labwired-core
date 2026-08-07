@@ -7,7 +7,48 @@
 WHAT IT MEASURES
     Host instructions retired per simulated CPU step ("Ir/step"), for each
     board in the matrix, running the same fixture firmware
-    (`crates/firmware-perf-spin`, a bare ALU spin loop).
+    (`crates/firmware-perf-spin`, a bare ALU spin loop), in each EXECUTION MODE
+    that board's CLI driver has.
+
+WHY TWO MODES AND NOT ONE
+    "Ir/step" is only the number that transfers to users if it is measured on
+    the loop users run. There are two, and they are not the same loop:
+
+      step   `Machine::step()` — one instruction per call, the CLI default on
+             ARM and the only thing the Xtensa driver has.
+      batch  `Machine::advance(AdvanceRequest::run(..))` — the call the browser
+             makes from `Sim::step_batch` in `crates/wasm/src/lib.rs`, and the
+             CLI default on RISC-V.
+
+    This gate used to measure only `step` on ARM, and that made its own stated
+    rationale false there. #830 removed three clamps that had pinned the ARM CPU
+    quantum to one instruction, worth 9-16x native throughput on the batched
+    path — and all 22 ARM boards moved 0.2-0.4% through this gate, because the
+    gate never entered that path. A regression in ARM batch orchestration (a
+    fourth clamp of the kind #830 deleted) was invisible on the only path the
+    browser runs.
+
+    Which modes a board has is derived from its fixture's `Spin.modes`, not
+    hand-listed per board, for the same reason coverage is derived from the chip
+    descriptors: a hand-kept list stops covering whatever is added after it.
+    `batch` is measured by passing `--batched` to `labwired run`, which is an
+    assertion rather than a hint — the CLI fails the run instead of falling back
+    to single-stepping, and prints a `[batched] instructions=.. batches=..` line
+    this gate requires as proof of which loop executed.
+
+    The `batch` mode's absolute noise floor is the same as `step`'s (about
+    ±0.5 Ir/step run to run on the same binary), but it sits on a number ~10x
+    smaller, so its RELATIVE reproducibility is ~±0.5% rather than ~±0.03%
+    (measured: stm32l476 batch over four runs 203.6 / 203.8 / 204.3 / 204.6).
+    Still 6x inside the 3% tolerance, but a `batch` delta under 1% is noise and
+    should not be read as a finding.
+
+    Note that batching engaged is not the same as batching WIDE. A bus carrying
+    something non-relaxable (H5 embedded FLASH modelling its own ops, nRF54L15's
+    non-walk-deletable peripherals) reports `max_safe_tick_interval() == 1` or
+    `requires_cycle_accurate()`, so its batches are one instruction wide and its
+    `batch` number lands near its `step` number. That is a true property of the
+    board, reported as `steps_per_batch=1.00`, not a failure to measure.
 
 WHY Ir/step AND NOT WALL CLOCK
     Wall clock on a shared CI runner swings by tens of percent, which forces a
@@ -23,10 +64,14 @@ WHY Ir/step AND NOT WALL CLOCK
     Ir/step (3x the whole engine) and was invisible to every functional test.
 
 HOW THE FIXED COST IS REMOVED
-    Each board is run twice, at two different step counts, and the per-step
-    cost is the SLOPE between them. ELF loading, YAML parsing and simulator
-    construction are identical in both runs, so they cancel out and never
-    pollute the number.
+    Each board is run twice per mode, at two different step counts, and the
+    per-step cost is the SLOPE between them. ELF loading, YAML parsing and
+    simulator construction are identical in both runs, so they cancel out and
+    never pollute the number. The `[batched]` summary line is one `eprintln!`
+    on exit, identical in both runs, so it cancels too — and the gate checks
+    that both runs retired exactly the requested instruction count, because a
+    slope whose denominator is assumed rather than confirmed is not a
+    measurement.
 
 WHICH BOARDS ARE COVERED
     All of them — every chip descriptor in `configs/chips/`, across four
@@ -49,10 +94,17 @@ WHY A BASELINE THAT IS TOO HIGH ALSO FAILS
     told. Improvements have to be locked in with --update, same as accepted
     costs.
 
+BASELINE SCHEMA
+    `{board: {mode: Ir/step}}`. Nesting rather than flattening to `board.mode`
+    keys keeps "which boards are baselined" a plain `set(baselines)` question,
+    which is what the coverage tests ask, and makes a board gaining or losing a
+    mode a visible diff instead of a silent one.
+
 USAGE
     python3 scripts/perf/board_perf.py                 # check against baselines
     python3 scripts/perf/board_perf.py --update        # rewrite baselines
     python3 scripts/perf/board_perf.py --boards stm32f103,stm32l476
+    python3 scripts/perf/board_perf.py --modes batch   # one mode only
 """
 
 from __future__ import annotations
@@ -76,6 +128,23 @@ CHIP_DIR = REPO_ROOT / "configs/chips"
 
 FIXTURE_DIR = REPO_ROOT / "target/perf-fixtures"
 
+# The two execution loops `labwired run` can drive a Machine with. `step` is
+# `Machine::step()`, one instruction per call. `batch` is
+# `Machine::advance(AdvanceRequest::run(..))`, which is what the browser calls
+# and where the ARM batch-orchestration cost lives.
+MODE_STEP = "step"
+MODE_BATCH = "batch"
+ALL_MODES = (MODE_STEP, MODE_BATCH)
+
+# Marker the CLI prints on exit under `--batched`. Its absence means the run did
+# not take the batched loop, which must fail the measurement rather than be
+# recorded as one.
+BATCHED_RE = re.compile(
+    r"^\[batched\] instructions=(\d+) batches=(\d+) steps_per_batch=([\d.]+) "
+    r"tick_interval=(\d+)",
+    re.MULTILINE,
+)
+
 
 class Spin(NamedTuple):
     """How to build one flavour of the spin-loop fixture.
@@ -87,6 +156,11 @@ class Spin(NamedTuple):
 
     `optional` marks a fixture whose toolchain is not on a stock image: it may
     be skipped with a loud note rather than taking the whole gate down.
+
+    `modes` is the set of execution loops `labwired run` has for this ISA. It
+    lives here rather than in a per-board table because it is a property of the
+    CLI driver, one driver per ISA, and a per-board table would stop covering
+    boards added after it was last edited.
     """
 
     crate: str
@@ -98,14 +172,26 @@ class Spin(NamedTuple):
     # Xtensa placement comes from esp-hal's linkall.x per chip feature, not
     # from a memory.x this gate generates.
     env_origins: bool = True
+    modes: tuple[str, ...] = (MODE_STEP, MODE_BATCH)
 
 
 # The spin loop, one crate per ISA. Within an ISA the source is identical, so a
 # board's number tracks its own history exactly; across ISAs it does not, and
 # cannot — a different instruction mix per simulated step is not something
 # re-linking can normalise away. The gate is per-board-over-time either way.
-SPIN_CORTEX_M = Spin("firmware-perf-spin", "thumbv6m-none-eabi")
-SPIN_RISCV = Spin("firmware-perf-spin-riscv", "riscv32imc-unknown-none-elf")
+#
+# Modes: the Cortex-M driver has both loops (`step` is its default, `batch` is
+# behind `--batched`). The RISC-V driver already batches by default — #830's gap
+# is why esp32c3 was unaffected — so `batch` is the only loop it has that is not
+# an instrumentation mode. The Xtensa driver never builds a `Machine` at all; it
+# runs `cpu.step()` + `tick_peripherals_with_costs()` directly, so `step` is all
+# there is and `--batched` is rejected there rather than silently ignored.
+SPIN_CORTEX_M = Spin("firmware-perf-spin", "thumbv6m-none-eabi", modes=ALL_MODES)
+SPIN_RISCV = Spin(
+    "firmware-perf-spin-riscv",
+    "riscv32imc-unknown-none-elf",
+    modes=(MODE_BATCH,),
+)
 # Xtensa is not a rustup target: it needs the esp-rs LLVM fork, which espup
 # installs as the `esp` toolchain. CI installs it (core-nightly already does
 # this for the S3 fixtures); a developer's machine usually has not, so these
@@ -118,6 +204,7 @@ SPIN_XTENSA_ESP32 = Spin(
     directory="crates/firmware-perf-spin-xtensa",
     optional=True,
     env_origins=False,
+    modes=(MODE_STEP,),
 )
 SPIN_XTENSA_ESP32S3 = SPIN_XTENSA_ESP32._replace(
     target="xtensa-esp32s3-none-elf", features="esp32s3"
@@ -166,6 +253,15 @@ class CoverageError(RuntimeError):
     """A chip is neither measurable nor explicitly waived."""
 
 
+class ModeNotTakenError(RuntimeError):
+    """A run did not execute the loop it was asked to measure.
+
+    Raised rather than warned: a `batch` number produced by the single-step
+    loop would read as a passing gate over a path nobody measured, which is the
+    exact failure the two-mode split exists to remove.
+    """
+
+
 def discover_chips() -> dict[str, dict]:
     """Every modelled chip descriptor, by board id (the file stem)."""
     chips: dict[str, dict] = {}
@@ -186,12 +282,41 @@ def fixture_for(chip: dict) -> str | None:
     return entry[0] if entry else None
 
 
+def load_baselines() -> dict[str, dict[str, float]]:
+    """The baseline file, as `{board: {mode: Ir/step}}`.
+
+    The pre-mode schema was `{board: Ir/step}`. It is rejected rather than
+    coerced, because there is no correct coercion: the same bare number meant
+    the single-step loop on ARM and the batched loop on RISC-V. Guessing would
+    mislabel one of them and gate the wrong path.
+    """
+    if not BASELINE_PATH.exists():
+        return {}
+    raw = json.loads(BASELINE_PATH.read_text())
+    flat = sorted(b for b, v in raw.items() if not isinstance(v, dict))
+    if flat:
+        raise ValueError(
+            f"{BASELINE_PATH.name} uses the pre-mode schema for: {', '.join(flat)}\n"
+            "The schema is now {board: {mode: Ir/step}} — see this file's "
+            "BASELINE SCHEMA note. Re-measure with "
+            "`python3 scripts/perf/board_perf.py --update` from a known-good "
+            "commit rather than hand-converting: which loop the old number came "
+            "from is not recoverable from the number."
+        )
+    return raw
+
+
 def fixture_spec(name: str) -> Spin:
     """The build recipe behind a fixture name."""
     for fixture_name, spec in FIXTURES.values():
         if fixture_name == name:
             return spec
     raise KeyError(name)
+
+
+def modes_for(fixture: str) -> tuple[str, ...]:
+    """Which execution loops this fixture's ISA driver actually has."""
+    return fixture_spec(fixture).modes
 
 
 def fixture_origins(name: str) -> tuple[int, int]:
@@ -327,8 +452,23 @@ def build_fixtures(fixtures: set[str]) -> tuple[dict[str, Path], dict[str, str]]
     return built, skipped
 
 
-def measure_once(cli: Path, chip: Path, firmware: Path, steps: int) -> int:
+class Run(NamedTuple):
+    """One callgrind measurement and what the CLI said about it."""
+
+    irefs: int
+    # Instructions the simulator reports it actually retired, and how wide its
+    # CPU dispatch batches were. Only the batched loop reports these; on the
+    # single-step loop the width is 1 by construction.
+    instructions: int | None = None
+    steps_per_batch: float | None = None
+    tick_interval: int | None = None
+
+
+def measure_once(cli: Path, chip: Path, firmware: Path, steps: int, mode: str) -> Run:
     """Retired host instructions for a full run of `steps` simulated steps."""
+    # `--batched` is the only difference between the two modes: same binary,
+    # same fixture, same step count, so anything the slope shows is the loop.
+    extra = ["--batched"] if mode == MODE_BATCH else []
     with tempfile.TemporaryDirectory() as tmp:
         proc = subprocess.run(
             [
@@ -345,6 +485,7 @@ def measure_once(cli: Path, chip: Path, firmware: Path, steps: int) -> int:
                 str(firmware),
                 "--max-steps",
                 str(steps),
+                *extra,
             ],
             capture_output=True,
             text=True,
@@ -352,18 +493,54 @@ def measure_once(cli: Path, chip: Path, firmware: Path, steps: int) -> int:
     match = IREFS_RE.search(proc.stderr)
     if not match:
         raise RuntimeError(
-            f"callgrind produced no instruction count for {chip.name}:\n{proc.stderr[-2000:]}"
+            f"callgrind produced no instruction count for {chip.name} "
+            f"[{mode}]:\n{proc.stderr[-2000:]}"
         )
-    return int(match.group(1).replace(",", ""))
+    irefs = int(match.group(1).replace(",", ""))
+
+    if mode != MODE_BATCH:
+        return Run(irefs)
+
+    # The whole point of the `batch` mode is that it is a DIFFERENT loop. If the
+    # CLI did not print its proof-of-path line, we have a number for the loop we
+    # were trying not to measure, and reporting it would be worse than reporting
+    # nothing.
+    proof = BATCHED_RE.search(proc.stderr)
+    if not proof:
+        raise ModeNotTakenError(
+            f"{chip.stem}: asked for the batched loop but the CLI printed no "
+            f"'[batched] ...' line, so the run did not take it. Is the CLI "
+            f"older than `--batched`?\n{proc.stderr[-2000:]}"
+        )
+    instructions = int(proof.group(1))
+    if instructions != steps:
+        # The slope's denominator is (STEPS_HIGH - STEPS_LOW). That is only the
+        # simulated work done if each run retired exactly what it was asked for
+        # — a run that halted early, or that spent fuel on idle fast-forward
+        # rather than instructions, would silently inflate Ir/step.
+        raise ModeNotTakenError(
+            f"{chip.stem}: batched run was asked for {steps} steps but retired "
+            f"{instructions}; the slope denominator would be wrong"
+        )
+    return Run(irefs, instructions, float(proof.group(3)), int(proof.group(4)))
 
 
-def measure_board(cli: Path, board: str, firmware: Path) -> float:
+class Measurement(NamedTuple):
+    """A board's Ir/step in one mode, plus how it was executed."""
+
+    ir_per_step: float
+    steps_per_batch: float | None = None
+    tick_interval: int | None = None
+
+
+def measure_board(cli: Path, board: str, firmware: Path, mode: str) -> Measurement:
     chip = CHIP_DIR / f"{board}.yaml"
     if not chip.exists():
         raise FileNotFoundError(f"no chip descriptor for board '{board}': {chip}")
-    low = measure_once(cli, chip, firmware, STEPS_LOW)
-    high = measure_once(cli, chip, firmware, STEPS_HIGH)
-    return (high - low) / (STEPS_HIGH - STEPS_LOW)
+    low = measure_once(cli, chip, firmware, STEPS_LOW, mode)
+    high = measure_once(cli, chip, firmware, STEPS_HIGH, mode)
+    ir_per_step = (high.irefs - low.irefs) / (STEPS_HIGH - STEPS_LOW)
+    return Measurement(ir_per_step, high.steps_per_batch, high.tick_interval)
 
 
 def main() -> int:
@@ -398,7 +575,21 @@ def main() -> int:
         help="only verify every chip is covered or waived, then exit (no build, "
         "no valgrind) — cheap enough to run on every PR",
     )
+    parser.add_argument(
+        "--modes",
+        help="comma-separated subset of execution modes to measure "
+        f"({', '.join(ALL_MODES)}); default: every mode each board's driver has. "
+        "Halves the run while iterating; not for CI, which needs both",
+    )
     args = parser.parse_args()
+
+    modes_filter = set(args.modes.split(",")) if args.modes else None
+    if modes_filter and not modes_filter <= set(ALL_MODES):
+        print(
+            f"error: unknown mode(s): {', '.join(sorted(modes_filter - set(ALL_MODES)))}",
+            file=sys.stderr,
+        )
+        return 2
 
     if args.check_coverage:
         try:
@@ -406,9 +597,11 @@ def main() -> int:
         except CoverageError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 1
+        board_modes = sum(len(modes_for(f)) for f in covered.values())
         print(
             f"perf gate covers {len(covered)} chips across "
-            f"{len(set(covered.values()))} memory maps; {len(waived)} waived"
+            f"{len(set(covered.values()))} memory maps "
+            f"({board_modes} board-modes); {len(waived)} waived"
         )
         for board, reason in sorted(waived.items()):
             print(f"  waived: {board}: {reason}")
@@ -443,7 +636,11 @@ def main() -> int:
         return 2
 
     firmware, skipped_fixtures = build_fixtures({covered[b] for b in boards})
-    baselines = json.loads(BASELINE_PATH.read_text()) if BASELINE_PATH.exists() else {}
+    try:
+        baselines = load_baselines()
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
     # A board whose toolchain is missing is not measured, and must not be
     # silently dropped: it is reported below and, when it was asked for by
@@ -453,43 +650,76 @@ def main() -> int:
     }
     boards = [b for b in boards if b not in skipped_boards]
 
-    measured: dict[str, float] = {}
+    measured: dict[str, dict[str, float]] = {}
     regressions: list[dict] = []
     stale: list[dict] = []
-    print(f"{'board':<16} {'fixture':<9} {'Ir/step':>10} {'baseline':>10} {'delta':>9}")
-    print("-" * 59)
+    # A mode that could not be executed. Never dropped: it fails the run, in
+    # --update too, because re-baselining around an unmeasurable mode is how a
+    # gate quietly loses a path.
+    unmeasurable: list[str] = []
+    print(
+        f"{'board':<16} {'fixture':<9} {'mode':<6} {'Ir/step':>10} "
+        f"{'baseline':>10} {'delta':>9}  {'batch':>6}"
+    )
+    print("-" * 74)
     for board in boards:
         fixture = covered[board]
-        ir_per_step = measure_board(cli, board, firmware[fixture])
-        measured[board] = round(ir_per_step, 1)
-        base = baselines.get(board)
-        if base is None:
-            print(f"{board:<16} {fixture:<9} {ir_per_step:>10.1f} {'(new)':>10} {'':>9}")
-            continue
-        delta = (ir_per_step - base) / base
-        entry = {
-            "board": board,
-            "baseline": round(base, 1),
-            "measured": round(ir_per_step, 1),
-            "delta": round(delta, 4),
-        }
-        flag = ""
-        if delta > REGRESSION_TOLERANCE:
-            flag = "  REGRESSION"
-            regressions.append(entry)
-        elif delta < -STALE_TOLERANCE:
-            flag = "  STALE BASELINE"
-            stale.append(entry)
-        elif delta < -REGRESSION_TOLERANCE:
-            flag = "  (faster)"
-        print(
-            f"{board:<16} {fixture:<9} {ir_per_step:>10.1f} {base:>10.1f} "
-            f"{delta:>+8.1%}{flag}"
-        )
+        for mode in modes_for(fixture):
+            if modes_filter and mode not in modes_filter:
+                continue
+            try:
+                m = measure_board(cli, board, firmware[fixture], mode)
+            except ModeNotTakenError as exc:
+                print(f"{board:<16} {fixture:<9} {mode:<6} {'NOT TAKEN':>10}")
+                unmeasurable.append(str(exc))
+                continue
+            measured.setdefault(board, {})[mode] = round(m.ir_per_step, 1)
+            # `steps_per_batch` is not gated — it is a property of the bus, not
+            # of engine cost — but it is printed, because a batch mode sitting
+            # at 1.00 is the difference between "this board batches" and "this
+            # board has a non-relaxable peripheral".
+            width = (
+                f"{m.steps_per_batch:>6.1f}" if m.steps_per_batch is not None else " " * 6
+            )
+            base = baselines.get(board, {}).get(mode)
+            if base is None:
+                print(
+                    f"{board:<16} {fixture:<9} {mode:<6} {m.ir_per_step:>10.1f} "
+                    f"{'(new)':>10} {'':>9}  {width}"
+                )
+                continue
+            delta = (m.ir_per_step - base) / base
+            entry = {
+                "board": board,
+                "mode": mode,
+                "baseline": round(base, 1),
+                "measured": round(m.ir_per_step, 1),
+                "delta": round(delta, 4),
+            }
+            flag = ""
+            if delta > REGRESSION_TOLERANCE:
+                flag = "  REGRESSION"
+                regressions.append(entry)
+            elif delta < -STALE_TOLERANCE:
+                flag = "  STALE BASELINE"
+                stale.append(entry)
+            elif delta < -REGRESSION_TOLERANCE:
+                flag = "  (faster)"
+            print(
+                f"{board:<16} {fixture:<9} {mode:<6} {m.ir_per_step:>10.1f} "
+                f"{base:>10.1f} {delta:>+8.1%}  {width}{flag}"
+            )
 
     print()
     print(f"covered: {len(covered)} chips across {len(set(covered.values()))} memory maps")
-    print(f"measured this run: {len(measured)}")
+    print(
+        f"measured this run: {len(measured)} boards, "
+        f"{sum(len(v) for v in measured.values())} board-modes"
+    )
+    if unmeasurable:
+        print("MODES THAT DID NOT EXECUTE (measured nothing):")
+        for note in unmeasurable:
+            print(f"  {note.splitlines()[0]}")
     if skipped_boards:
         print("NOT measured this run (toolchain missing on this machine):")
         for board, reason in sorted(skipped_boards.items()):
@@ -505,7 +735,7 @@ def main() -> int:
     # failure mode this gate exists to not have.
     strict = bool(args.boards) or args.require_all
     named_and_skipped = strict and bool(skipped_boards)
-    ok = not regressions and not stale and not named_and_skipped
+    ok = not regressions and not stale and not named_and_skipped and not unmeasurable
     if args.status_json:
         Path(args.status_json).write_text(
             json.dumps(
@@ -513,8 +743,12 @@ def main() -> int:
                     "ok": ok,
                     "regressions": regressions,
                     "stale": stale,
-                    "covered": {b: covered[b] for b in boards},
+                    "covered": {
+                        b: {"fixture": covered[b], "modes": modes_for(covered[b])}
+                        for b in boards
+                    },
                     "skipped": skipped_boards,
+                    "unmeasurable": unmeasurable,
                     "waived": waived,
                     "measured": measured,
                 },
@@ -524,9 +758,29 @@ def main() -> int:
             + "\n"
         )
 
+    if unmeasurable:
+        print(
+            "\nthese modes did not execute, so nothing was measured for them:",
+            file=sys.stderr,
+        )
+        for note in unmeasurable:
+            print(f"  {note}", file=sys.stderr)
+        # Deliberately BEFORE --update: writing a baseline file while a mode is
+        # unmeasurable would bake the gap in and make the next run green.
+        return 1
+
     if args.update:
-        merged = {**baselines, **measured}
-        BASELINE_PATH.write_text(json.dumps(dict(sorted(merged.items())), indent=2) + "\n")
+        # Merge per board AND per mode, so `--boards x --modes batch` updates one
+        # number rather than deleting that board's other modes.
+        merged = {b: dict(v) for b, v in baselines.items()}
+        for board, by_mode in measured.items():
+            merged.setdefault(board, {}).update(by_mode)
+        BASELINE_PATH.write_text(
+            json.dumps(
+                {b: dict(sorted(m.items())) for b, m in sorted(merged.items())}, indent=2
+            )
+            + "\n"
+        )
         print(f"\nwrote {BASELINE_PATH.relative_to(REPO_ROOT)}")
         return 0
 
@@ -534,8 +788,8 @@ def main() -> int:
         print("\nsimulator throughput regressed:", file=sys.stderr)
         for entry in regressions:
             print(
-                f"  {entry['board']}: {entry['baseline']:.1f} -> {entry['measured']:.1f} "
-                f"Ir/step ({entry['delta']:+.1%})",
+                f"  {entry['board']} [{entry['mode']}]: {entry['baseline']:.1f} -> "
+                f"{entry['measured']:.1f} Ir/step ({entry['delta']:+.1%})",
                 file=sys.stderr,
             )
         print(
@@ -549,8 +803,8 @@ def main() -> int:
         print("\nbaselines are stale (measured far below them):", file=sys.stderr)
         for entry in stale:
             print(
-                f"  {entry['board']}: baseline {entry['baseline']:.1f} vs measured "
-                f"{entry['measured']:.1f} Ir/step ({entry['delta']:+.1%})",
+                f"  {entry['board']} [{entry['mode']}]: baseline {entry['baseline']:.1f} "
+                f"vs measured {entry['measured']:.1f} Ir/step ({entry['delta']:+.1%})",
                 file=sys.stderr,
             )
         print(
