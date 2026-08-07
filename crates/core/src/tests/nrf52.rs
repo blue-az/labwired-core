@@ -491,11 +491,10 @@ fn nrf52840_onboarding_real_firmware_toggles_led() {
         .join("thumbv7em-none-eabi/release/firmware-nrf52840-timer-blinky");
 
     if !elf_path.exists() {
-        // Don't fail CI when the prebuilt artifact is missing — but be
-        // loud so a missing ELF doesn't look like a passing test.
-        println!(
-            "SKIPPED: ELF not built at {}. Run\n  cargo build --release --target thumbv7em-none-eabi -p firmware-nrf52840-timer-blinky\nfirst.",
-            elf_path.display()
+        crate::test_support::skip_or_fail_missing_firmware(
+            "firmware-nrf52840-timer-blinky",
+            &format!("nRF52840 timer-blinky ELF ({})", elf_path.display()),
+            "cargo build --release --target thumbv7em-none-eabi -p firmware-nrf52840-timer-blinky",
         );
         return;
     }
@@ -574,9 +573,10 @@ fn nrf52840_onboarding_isr_firmware_toggles_led() {
         .join("thumbv7em-none-eabi/release/firmware-nrf52840-isr-blinky");
 
     if !elf_path.exists() {
-        println!(
-            "SKIPPED: ELF not built at {}. Run\n  cargo build --release --target thumbv7em-none-eabi -p firmware-nrf52840-isr-blinky\nfirst.",
-            elf_path.display()
+        crate::test_support::skip_or_fail_missing_firmware(
+            "firmware-nrf52840-isr-blinky",
+            &format!("nRF52840 isr-blinky ELF ({})", elf_path.display()),
+            "cargo build --release --target thumbv7em-none-eabi -p firmware-nrf52840-isr-blinky",
         );
         return;
     }
@@ -684,10 +684,11 @@ fn nrf52840_ble_loopback_through_virtual_air() {
         .join("thumbv7em-none-eabi/release/firmware-nrf52840-ble-rx");
 
     if !tx_elf.exists() || !rx_elf.exists() {
-        println!(
-            "SKIPPED: build firmwares first:\n  \
-             cargo build --release --target thumbv7em-none-eabi \
-             -p firmware-nrf52840-ble-tx -p firmware-nrf52840-ble-rx"
+        crate::test_support::skip_or_fail_missing_firmware(
+            "firmware-nrf52840-ble",
+            "nRF52840 BLE tx/rx ELFs",
+            "cargo build --release --target thumbv7em-none-eabi \
+             -p firmware-nrf52840-ble-tx -p firmware-nrf52840-ble-rx",
         );
         return;
     }

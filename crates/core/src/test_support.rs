@@ -85,6 +85,67 @@ fn workspace_default_target_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target")
 }
 
+/// Whether the lane has declared that the artifact named `key` must exist.
+///
+/// `LABWIRED_REQUIRE_FIRMWARE` is a comma-separated list of keys, or `all`.
+/// **Keyed rather than all-or-nothing on purpose**: a CI lane builds *some*
+/// firmwares, not all of them, so a blanket switch would fail that lane on
+/// artifacts it never intended to produce. A lane requires exactly what it
+/// builds, and adding a build and adding its key is one reviewable change.
+///
+/// `LABWIRED_REQUIRE_IOLINK_ELFS` is the original, narrower flag, still
+/// honoured for the `iolink` key so `core-iolink-station` keeps working.
+pub fn firmware_is_required(key: &str) -> bool {
+    if key == "iolink" && std::env::var_os("LABWIRED_REQUIRE_IOLINK_ELFS").is_some() {
+        return true;
+    }
+    match std::env::var("LABWIRED_REQUIRE_FIRMWARE") {
+        Ok(v) => required_by(&v, key),
+        Err(_) => false,
+    }
+}
+
+/// `all` requires everything; otherwise the key must appear in the list.
+fn required_by(setting: &str, key: &str) -> bool {
+    setting
+        .split(',')
+        .map(str::trim)
+        .any(|k| k == "all" || k == key)
+}
+
+/// Decide what a missing firmware artifact means. Returns `true` when the
+/// caller should skip; panics — failing the test — when firmware is required.
+///
+/// **Why not just fail always.** The fast workspace gate runs without an
+/// `arm-none-eabi` toolchain or an STM32CubeL4 pack, so demanding cross-built
+/// artifacts everywhere would make `cargo test` unrunnable for anyone without
+/// the full embedded toolchain. Default is therefore skip.
+///
+/// **Why not just skip always.** A lane that *does* build the firmware and
+/// then silently skips is reporting coverage it never had. When
+/// `LABWIRED_REQUIRE_FIRMWARE` is set, a missing artifact is a hard failure,
+/// so a broken cross-build cannot sail through as a green no-op.
+///
+/// This is the shared form of a helper that was copy-pasted into
+/// `world_multichip.rs` and `world_station_services.rs`; those two copies could
+/// drift apart and only one would have been updated.
+pub fn skip_or_fail_missing_firmware(key: &str, what: &str, build_hint: &str) -> bool {
+    decide_missing_firmware(firmware_is_required(key), what, build_hint)
+}
+
+/// The decision itself, with the env read hoisted out so both branches are
+/// testable without mutating process-wide state (which would race other tests).
+fn decide_missing_firmware(required: bool, what: &str, build_hint: &str) -> bool {
+    if required {
+        panic!(
+            "{what} missing while firmware is required (LABWIRED_REQUIRE_FIRMWARE set); \
+             build it: {build_hint}"
+        );
+    }
+    eprintln!("SKIP: {what} not built; build it: {build_hint}");
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -168,6 +229,76 @@ mod tests {
             PathBuf::from(DEFAULT),
         );
         assert_eq!(target_dir_from_exe_path(Path::new("/bare")), None);
+    }
+
+    /// The reason the flag is keyed. A lane builds *some* firmwares; requiring
+    /// the ones it builds must not require the ones it doesn't, or turning the
+    /// flag on would fail that lane on artifacts it never intended to produce.
+    #[test]
+    fn requiring_one_artifact_does_not_require_the_others() {
+        let lane = "firmware-ci-fixture,firmware-rp2040-pio-onboarding";
+        assert!(required_by(lane, "firmware-ci-fixture"));
+        assert!(required_by(lane, "firmware-rp2040-pio-onboarding"));
+        assert!(!required_by(lane, "firmware-nrf52840-ble"));
+        assert!(!required_by(lane, "dap-firmware"));
+    }
+
+    /// `all` is the blanket opt-in, and whitespace around list entries is
+    /// tolerated so a YAML-wrapped value doesn't silently match nothing.
+    #[test]
+    fn all_requires_everything_and_list_entries_are_trimmed() {
+        assert!(required_by("all", "anything-at-all"));
+        assert!(required_by(
+            " firmware-ci-fixture , dap-firmware ",
+            "dap-firmware"
+        ));
+        assert!(!required_by("", "firmware-ci-fixture"));
+    }
+
+    /// A key must match in full — a lane requiring `firmware-ci-fixture` must
+    /// not accidentally require `firmware-ci-fixture-v2`, or the flag would
+    /// spread to artifacts nobody opted into.
+    #[test]
+    fn keys_match_in_full_not_by_prefix() {
+        assert!(!required_by(
+            "firmware-ci-fixture",
+            "firmware-ci-fixture-v2"
+        ));
+        assert!(!required_by(
+            "firmware-ci-fixture-v2",
+            "firmware-ci-fixture"
+        ));
+    }
+
+    /// The default: a missing artifact skips, so the toolchain-less workspace
+    /// gate stays runnable for anyone without a cross-compiler.
+    #[test]
+    fn a_missing_artifact_skips_when_firmware_is_not_required() {
+        assert!(decide_missing_firmware(false, "an ELF", "cargo build"));
+    }
+
+    /// The point of the helper: in a lane that *builds* firmware, "missing"
+    /// must fail. A lane that builds the artifact and then skips is reporting
+    /// coverage it never had.
+    #[test]
+    #[should_panic(expected = "missing while firmware is required")]
+    fn a_missing_artifact_fails_when_firmware_is_required() {
+        decide_missing_firmware(true, "an ELF", "cargo build");
+    }
+
+    /// The panic has to name the artifact and how to build it — a bare
+    /// "assertion failed" would send whoever hits it back into the source.
+    #[test]
+    fn the_failure_names_the_artifact_and_the_build_command() {
+        let err = std::panic::catch_unwind(|| {
+            decide_missing_firmware(true, "nRF52840 BLE tx ELF", "cargo build -p ble-tx")
+        })
+        .expect_err("must panic when required");
+        let msg = err
+            .downcast_ref::<String>()
+            .expect("panic payload should be a String");
+        assert!(msg.contains("nRF52840 BLE tx ELF"), "got: {msg}");
+        assert!(msg.contains("cargo build -p ble-tx"), "got: {msg}");
     }
 
     /// The live wiring, not just the pure function: whatever cargo did to
