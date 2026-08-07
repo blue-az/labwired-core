@@ -23,11 +23,13 @@
 //! | Base | `0x6004_3000` (`DR_REG_USB_SERIAL_JTAG_BASE`, `esp32c3/include/soc/soc.h:68`) | `0x6003_8000` (`DR_REG_USB_DEVICE_BASE`, `esp32s3/include/soc/soc.h:87`) |
 //! | Matrix source | 26 | 96 |
 //!
-//! The base addresses and the interrupt-matrix source id **differ**, so both are
-//! constructor parameters and there is no default: [`UsbSerialJtag::new`] wires
-//! NO interrupt source at all, and a caller opts in per chip via
+//! The base address and the interrupt-matrix source id **differ**. The source id
+//! is a constructor choice with NO default: [`UsbSerialJtag::new`] wires no
+//! interrupt source at all, and a caller opts in per chip via
 //! [`UsbSerialJtag::new_esp32c3`] / [`UsbSerialJtag::new_esp32s3`]. An S3
-//! assumption therefore cannot reach C3 silicon by omission.
+//! assumption therefore cannot reach C3 silicon by omission. The base address is
+//! owned by the chip YAML and passed at registration; this model never holds a
+//! copy of it (see `tests::yaml_owned_base_contract`).
 //!
 //! The source ids are `ETS_USB_SERIAL_JTAG_INTR_SOURCE` evaluated in each chip's
 //! own `soc/periph_defs.h` (`periph_interrput_t`, unnumbered enumerators — they
@@ -147,6 +149,26 @@
 //!   cable is pulled; the twin has no unplug event, so SOF runs for as long as
 //!   the model exists. [`UsbSerialJtag::set_sof_enabled`] can stop it, which is
 //!   how the "unplugged board goes silent" negative control is written.
+//!
+//! # What is verified, and what is not
+//!
+//! **ESP32-C3 — verified end to end.** A real PlatformIO Arduino image for
+//! `board = esp32-c3-supermini`, built with CDC-on-boot, boots on the C3 mask
+//! ROM in this simulator and its `loop()` output reaches the
+//! `usb_serial_jtag` sink (`tests/esp32c3_usb_cdc_console.rs`). The register
+//! semantics above are additionally corroborated by measurements taken over SWD
+//! on a physically connected ESP32-C3: `PRE_BEGIN RAW=0x508`,
+//! `POST_BEGIN RAW=0x508 ENA=0x204`, `CONF0=0x4200`, and the paired
+//! `DATA_FREE`/`SERIAL_IN_EMPTY` back-pressure timing.
+//!
+//! **ESP32-S3 — NOT verified end to end. Do not read C3 evidence as S3
+//! evidence.** No S3 firmware was booted against this model and no S3 hardware
+//! was attached, so every S3 claim here is header-derived: the base address, the
+//! source id, and the fact that the register and bit layout matches the C3. Those
+//! derivations are mechanical and cross-checked (see above), but interrupt
+//! delivery for source 96 through the S3 Xtensa intmatrix has never been
+//! exercised by a running S3 image. Anyone relying on the S3 path should start by
+//! building that gate.
 
 use crate::cycle_clock::CycleClock;
 use crate::{Peripheral, PeripheralTickResult, SimResult};
@@ -186,10 +208,12 @@ const EP1_CONF_SERIAL_OUT_EP_DATA_AVAIL: u32 = 1 << 2;
 pub const ESP32C3_INTR_SOURCE_ID: u32 = 26;
 /// `ETS_USB_SERIAL_JTAG_INTR_SOURCE` on the ESP32-S3 (`esp32s3/soc/periph_defs.h`).
 pub const ESP32S3_INTR_SOURCE_ID: u32 = 96;
-/// `DR_REG_USB_SERIAL_JTAG_BASE` on the ESP32-C3.
-pub const ESP32C3_BASE: u64 = 0x6004_3000;
-/// `DR_REG_USB_DEVICE_BASE` on the ESP32-S3.
-pub const ESP32S3_BASE: u64 = 0x6003_8000;
+// NOTE: the per-chip BASE ADDRESSES are deliberately NOT constants here.
+// They differ between the chips (C3 0x60043000 vs S3 0x60038000) and they are
+// documented in the module docs above, but a base address is owned by the chip
+// YAML — a copy in Rust would be a second home for the same fact, and the two
+// disagreeing fails silently because a wrong address is still a valid address.
+// The registration sites pass the base; this model only ever sees offsets.
 
 const ESP32C3_CPU_CLOCK_HZ: u64 = 160_000_000;
 const ESP32S3_CPU_CLOCK_HZ: u64 = 240_000_000;
@@ -485,12 +509,12 @@ impl UsbSerialJtag {
 }
 
 impl Peripheral for UsbSerialJtag {
-    /// The model needs no per-cycle walk when it can export its level through
-    /// the scheduler path; without the `event-scheduler` feature there is no
-    /// such path, so an interrupt-wired instance falls back to the walk.
-    /// A bus that wired no source stays exactly as walk-free as before.
+    /// Same shape as the shared `EspUart` on this bus: the scheduler path owns
+    /// level export when it exists, and without it the walk does. An instance
+    /// with no matrix source asserts nothing either way, so this costs a
+    /// source-less bus nothing but a no-op poll.
     fn needs_legacy_walk(&self) -> bool {
-        self.irq_source.is_some() && !self.uses_scheduler()
+        !self.uses_scheduler()
     }
 
     /// Opting into the scheduler is what subscribes this model to the bus's
@@ -501,7 +525,7 @@ impl Peripheral for UsbSerialJtag {
     /// writes immediately re-derive the routed line, so the TX pump advances
     /// per write instead of per tick.
     fn uses_scheduler(&self) -> bool {
-        cfg!(feature = "event-scheduler") && self.irq_source.is_some() && self.clock.is_some()
+        cfg!(feature = "event-scheduler") && self.clock.is_some()
     }
 
     fn attach_cycle_clock(&mut self, clock: CycleClock) {
@@ -628,10 +652,7 @@ mod tests {
     fn per_chip_constants_are_distinct_and_pinned() {
         assert_eq!(ESP32C3_INTR_SOURCE_ID, 26);
         assert_eq!(ESP32S3_INTR_SOURCE_ID, 96);
-        assert_eq!(ESP32C3_BASE, 0x6004_3000);
-        assert_eq!(ESP32S3_BASE, 0x6003_8000);
         assert_ne!(ESP32C3_INTR_SOURCE_ID, ESP32S3_INTR_SOURCE_ID);
-        assert_ne!(ESP32C3_BASE, ESP32S3_BASE);
         assert_eq!(UsbSerialJtag::new_esp32c3().irq_source(), Some(26));
         assert_eq!(UsbSerialJtag::new_esp32s3().irq_source(), Some(96));
         // The un-chipped constructor must NOT silently pick a chip.
@@ -655,10 +676,13 @@ mod tests {
         let mut bus = SystemBus::new();
         let mut p = UsbSerialJtag::new();
         p.set_sink(Some(sink.clone()), false);
-        bus.add_peripheral("usb_jtag", ESP32S3_BASE, 0x100, None, Box::new(p));
+        // An arbitrary window: this asserts byte-lane decomposition, not a
+        // chip's address map (which the chip YAML owns).
+        const TEST_BASE: u64 = 0x1000_0000;
+        bus.add_peripheral("usb_jtag", TEST_BASE, 0x100, None, Box::new(p));
 
-        bus.write_u32(ESP32S3_BASE + OFF_EP1, 0x0000_0048).unwrap();
-        bus.write_u32(ESP32S3_BASE + OFF_EP1_CONF, EP1_CONF_WR_DONE)
+        bus.write_u32(TEST_BASE + OFF_EP1, 0x0000_0048).unwrap();
+        bus.write_u32(TEST_BASE + OFF_EP1_CONF, EP1_CONF_WR_DONE)
             .unwrap();
         assert_eq!(sink.lock().unwrap().as_slice(), b"H");
     }
@@ -836,7 +860,19 @@ mod tests {
         p.write_u32(OFF_INT_ENA, INTR_MASK).unwrap();
         assert_ne!(p.read_u32(OFF_INT_ST).unwrap(), 0);
         assert!(p.matrix_irq_sources().is_empty());
-        assert!(!p.needs_legacy_walk());
+        // ...and it stays empty on the walk path too, so a source-less instance
+        // cannot starve anything: it has nothing to deliver.
+        assert_eq!(p.tick_elapsed(1_000).explicit_irqs, None);
+
+        // With a clock (i.e. registered through `add_peripheral`) it rides the
+        // scheduler and asks for no walk, exactly as before this change.
+        #[cfg(feature = "event-scheduler")]
+        {
+            Peripheral::attach_cycle_clock(&mut p, CycleClock::default());
+            assert!(p.uses_scheduler());
+            assert!(!p.needs_legacy_walk());
+            assert!(p.matrix_irq_sources().is_empty());
+        }
     }
 
     /// With a source wired, an enabled+raised bit exports that chip's id.
