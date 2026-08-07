@@ -8,6 +8,7 @@
 pub mod boot;
 pub mod bus;
 pub mod config;
+pub mod console;
 pub mod cosim;
 pub mod coverage;
 pub mod cpu;
