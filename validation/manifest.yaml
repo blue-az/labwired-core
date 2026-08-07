@@ -174,8 +174,14 @@ boards:
     # nvmc tests green. Live re-capture owed for the RX drain timing.
     # 2026-08-06: universal I2C kits + external_devices attach path; nRF UARTE RX test style only.
     # No register map / base / reset change on silicon-asserted set. Offline gates unchanged.
-    drift_ack: 2026-08-06
-    drift_ack_digest: 7b4c2ef273b0142f500c42ba568d4d3224eed2a4ce82bb1a68cbd7e0304fb780
+    # 2026-08-07: RADIO air-time accounting — a packet's air time now ends at its
+    # computed deadline instead of at the first wake that happens to land inside
+    # it. Scheduling behaviour, not silicon surface: no register in the asserted
+    # 16/16 sweep changes address, reset value or access, and no base moves.
+    # Owner-authorised ack WITHOUT a live re-capture; the RADIO packet-timing
+    # live diff remains owed and is NOT evidenced by this entry.
+    drift_ack: 2026-08-08
+    drift_ack_digest: 8ea8122dea22fc64528fc41181d8e9b3d1e9b84a0d46cd499eec68a9d5f6213f
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -265,8 +271,14 @@ boards:
     # nvmc tests green. Live re-capture owed for the RX drain timing.
     # 2026-08-06: universal I2C kits + external_devices attach path; nRF UARTE RX test style only.
     # No register map / base / reset change on silicon-asserted set. Offline gates unchanged.
-    drift_ack: 2026-08-06
-    drift_ack_digest: 7b4c2ef273b0142f500c42ba568d4d3224eed2a4ce82bb1a68cbd7e0304fb780
+    # 2026-08-07: RADIO air-time accounting — a packet's air time now ends at its
+    # computed deadline instead of at the first wake that happens to land inside
+    # it. Scheduling behaviour, not silicon surface: no register in the asserted
+    # 16/16 sweep changes address, reset value or access, and no base moves.
+    # Owner-authorised ack WITHOUT a live re-capture; the RADIO packet-timing
+    # live diff remains owed and is NOT evidenced by this entry.
+    drift_ack: 2026-08-08
+    drift_ack_digest: 8ea8122dea22fc64528fc41181d8e9b3d1e9b84a0d46cd499eec68a9d5f6213f
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml

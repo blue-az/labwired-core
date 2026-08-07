@@ -5,6 +5,14 @@ on:
     # Nightly 02:00 UTC (was Sunday-only). Slow coverage / validation lives here.
     - cron: "0 2 * * *"
   workflow_dispatch:
+    inputs:
+      pong_soak_cycles:
+        description: >-
+          Cycles per node for the BLE Pong cadence soak. The default covers
+          ~30 advertising republish periods; raise it to characterise a
+          slower cadence, lower it to get a quick answer.
+        required: false
+        default: "480000000"
 
 permissions:
   contents: write
@@ -282,6 +290,86 @@ jobs:
         run: >
           cargo test --release -p labwired-cli --features event-scheduler
           --test e2e_esp32c3_ble_adv_republish -- --ignored --nocapture
+
+  # ── BLE Pong advertising-cadence soak ─────────────────────────────────────
+  #
+  # `crates/core/tests/world_esp32c3_ble_pong.rs` is release-gated and runs on
+  # push-to-main at `PONG_CYCLES` = 90M cycles per node. Roughly 45M of that is
+  # the C3 mask-ROM boot, so the sketch's `loop()` gets ~140 ms — about ONE
+  # advertising republish period at `PUBLISH_MS` 100. That window is why the
+  # 700 ms cadence regression was reported as "no host frame ever arrived"
+  # instead of being named: it did not fit in the window at all. A cadence that
+  # merely doubled or quadrupled would have fitted, and would have passed.
+  #
+  # This lane is the same test at `PONG_SOAK_CYCLES` = 480M, ~30 republish
+  # periods, which is the length the twin's RW-BLE controller has to survive
+  # for `stop() / setAdvertisementData() / start()` repetition to be under
+  # test at all. ~366 s of run on top of a release build, so it belongs here
+  # and NOT in the merge gate — the constant in the test file stays at 90M on
+  # purpose, because the gate's job is to be fast.
+  #
+  # Its own job rather than a step on `esp32c3-ble-e2e`: a soak that overruns
+  # must not take the three pinned-image BLE gates down with it.
+  esp32c3-ble-pong-soak:
+    name: ESP32-C3 BLE Pong Cadence Soak
+    runs-on: ubuntu-latest
+    # The run is ~6 min; the release build of labwired-core on a cold cache is
+    # the rest. Generous so a slow runner reports the SOAK's verdict rather
+    # than being measured by its own timeout.
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@1.95.0
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: core-nightly-esp32c3-ble
+          workspaces: |
+            . -> target
+
+      # Everything this needs is committed: the flash image
+      # (crates/core/tests/fixtures/esp32c3-ble-pong-flash.bin), the C3 mask ROM
+      # blobs, and configs/systems/esp32c3-ble-pong.yaml. No fetch step, and no
+      # network — unlike the pinned-image BLE gates above.
+      #
+      # `--release` and `--features event-scheduler` are BOTH load-bearing. The
+      # test file is `#![cfg(all(feature = "event-scheduler",
+      # not(debug_assertions)))]`; drop either and this compiles to an empty
+      # binary that reports "ok. 0 passed" — green while proving nothing. The
+      # step after this one is what makes that impossible to miss.
+      - name: BLE Pong two-node soak (~30 advertising republish periods)
+        env:
+          PONG_SOAK_CYCLES: ${{ inputs.pong_soak_cycles || '480000000' }}
+        run: >
+          cargo test --release -p labwired-core --features event-scheduler
+          --test world_esp32c3_ble_pong -- --nocapture
+          | tee "$RUNNER_TEMP/pong-soak.log"
+
+      # An empty test binary and a passing one both exit 0. Assert the two
+      # properties actually ran, so a cfg/feature slip is a red lane rather
+      # than a soak that silently stops soaking.
+      - name: Assert the soak was not vacuous
+        run: |
+          set -euo pipefail
+          log="$RUNNER_TEMP/pong-soak.log"
+          grep -q 'two_c3_nodes_in_one_lab_do_not_share_a_bluetooth_address' "$log" \
+            || { echo "::error::identity property did not run — release/feature gate slipped"; exit 1; }
+          grep -q 'two_c3_nodes_running_one_ble_pong_image_start_the_game' "$log" \
+            || { echo "::error::game-start property did not run — release/feature gate slipped"; exit 1; }
+
+      # The test eprintln!s both nodes' role, last status line and 8-line tail
+      # on PASS as well as on fail. At soak length that tail is the cadence
+      # evidence a human reads, so keep it even when the lane is green.
+      - name: Upload soak console
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: esp32c3-ble-pong-soak-log
+          path: ${{ runner.temp }}/pong-soak.log
+          if-no-files-found: warn
 
   tier1-fixture-drift:
     name: Tier-1 Fixture Drift Check
