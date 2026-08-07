@@ -183,7 +183,7 @@ boards:
     # with no contact having moved. Offline gates unchanged. Live re-capture still
     # owed for the RX drain timing.
     drift_ack: 2026-08-08
-    drift_ack_digest: 792fbfa3f4a6d14cebe16b3ab5a7212c8e1e101c661d57a256f40032e05f68e0
+    drift_ack_digest: 98fd8dd52acb4379174b84d4d37ca7e0263cb78d844d829417862b67a131d347
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -282,7 +282,7 @@ boards:
     # with no contact having moved. Offline gates unchanged. Live re-capture still
     # owed for the RX drain timing.
     drift_ack: 2026-08-08
-    drift_ack_digest: 792fbfa3f4a6d14cebe16b3ab5a7212c8e1e101c661d57a256f40032e05f68e0
+    drift_ack_digest: 98fd8dd52acb4379174b84d4d37ca7e0263cb78d844d829417862b67a131d347
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml

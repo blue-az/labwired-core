@@ -23,6 +23,9 @@
 //! 4. RADIO TXEN → START → END — walk@1≡sched@512 cycle identity.
 //! 5. RADIO Ble_1Mbit bit-time — END at model air cycles (±1) and length
 //!    scaling; other MODEs remain interim on the scoreboard.
+//! 6. RADIO air time vs a spurious wake — an MMIO write to the RADIO while a
+//!    packet is transmitting must not shorten it, and TASKS_DISABLE mid-flight
+//!    must abort it rather than let it complete.
 //!
 //! Requires `--features event-scheduler`.
 
@@ -400,6 +403,11 @@ const RADIO_PCNF0: u64 = RADIO + 0x514;
 const RADIO_PCNF1: u64 = RADIO + 0x518;
 const RADIO_BASE0: u64 = RADIO + 0x51C;
 const RADIO_PREFIX0: u64 = RADIO + 0x524;
+const RADIO_TASKS_DISABLE: u64 = RADIO + 0x010;
+const RADIO_EVENTS_DISABLED: u64 = RADIO + 0x110;
+const RADIO_STATE: u64 = RADIO + 0x550;
+const RADIO_STATE_DISABLED: u32 = 0;
+const RADIO_STATE_TXDISABLE: u32 = 12;
 // SHORTS bit 0 = READY_START (PS table 224).
 const SHORT_READY_START: u32 = 1 << 0;
 
@@ -484,6 +492,90 @@ fn radio_tx_end_walk1_vs_sched512_cycle_identity() {
         "both lanes must latch EVENTS_END"
     );
     assert_cycle_identity(at_a, at_b, "RADIO TX→END");
+}
+
+/// An MMIO write to the RADIO while a packet is on the air must not end the
+/// packet.
+///
+/// `SystemBus::collect_scheduled_events` runs `take_scheduled_events()` after
+/// every MMIO write to a `uses_scheduler()` peripheral, and that call is a
+/// QUERY of live state rather than a one-shot take — so a peripheral already
+/// mid-chain hands out a SECOND wake whose deadline differs from the one
+/// already in the heap. `Nrf52Radio::on_event` used to pin
+/// `tx_or_rx_cycles_remaining` to `Some(1)` between wakes, so whichever wake
+/// arrived first raised ADDRESS/PAYLOAD/END — and the rest of the packet's air
+/// time simply vanished.
+///
+/// The trigger here is the most ordinary line in a BLE driver: clearing the
+/// event you just serviced (`NRF_RADIO->EVENTS_READY = 0`) inside the READY
+/// handler, while the packet it started is still transmitting. Before the
+/// deadline fix that one store cut a 90-cycle BLE 1 Mbit packet to 6 cycles.
+///
+/// Distinct from the phantom-boot-edge path in core#829: this needs no GPIO
+/// activity at all, and survives that fix.
+#[test]
+fn radio_air_time_survives_an_mmio_write_mid_transmission() {
+    const PAYLOAD: u8 = 8;
+    const BUDGET: u64 = 256;
+    // Model: TXEN chain overhead + (LENGTH + 3 CRC) × 8 cycles.
+    let expected = RADIO_TX_CHAIN_OVERHEAD + ble_1mbit_air_cycles(PAYLOAD);
+    let buf = 0x2000_2000u64;
+
+    // Undisturbed reference on the same lane, so the assertion below is
+    // "the write changed nothing", not "the write landed near a constant".
+    let mut quiet = machine_at_interval(1);
+    arm_radio_tx_with_len(&mut quiet, buf, PAYLOAD);
+    let _ = quiet.bus.write_u32(RADIO_TASKS_START, 1);
+    let at_quiet = advance_until(&mut quiet, BUDGET, radio_end_done)
+        .expect("undisturbed lane must raise EVENTS_END");
+    assert!(
+        at_quiet.abs_diff(expected) <= 1,
+        "undisturbed reference is off model: END at {at_quiet}, expected {expected} (±1)"
+    );
+
+    // Same lane, but firmware touches the RADIO while the packet is on the air.
+    let mut m = machine_at_interval(1);
+    arm_radio_tx_with_len(&mut m, buf, PAYLOAD);
+    let _ = m.bus.write_u32(RADIO_TASKS_START, 1);
+    let mut at = None;
+    while m.total_cycles < BUDGET {
+        m.advance(AdvanceRequest::run(Some(1)).with_breakpoints(BreakpointPolicy::Ignore))
+            .expect("Machine::advance");
+        // Poll on every cycle of the 88-cycle air window for LENGTH=8
+        // ((8+3)×8). Repetition is the point twice over: a fix that survives
+        // only ONE spurious wake cannot pass, and each write harvests another
+        // wake, so a fix that stops ending the packet early but lets those
+        // wakes ACCUMULATE trips the scheduler's live-event ceiling
+        // (MAX_LIVE_EVENTS_PER_PERIPHERAL = 8, a debug_assert) long before
+        // cycle 88.
+        if m.total_cycles >= 4 {
+            m.bus
+                .write_u32(RADIO_EVENTS_READY, 0)
+                .expect("clearing EVENTS_READY is a legal MMIO write");
+        }
+        if radio_end_done(&m) {
+            at = Some(m.total_cycles);
+            break;
+        }
+    }
+    let at = at.expect("disturbed lane must still raise EVENTS_END");
+
+    assert_eq!(
+        at, at_quiet,
+        "an MMIO write to the RADIO erased packet air time: \
+         END at {at} with the write, {at_quiet} without (model {expected})"
+    );
+
+    // Surviving the poll must not mean hoarding a wake per poll. There is no
+    // scheduler-side cancel, so the only way to stay inside the ceiling is for
+    // the harvest to stop handing out wakes while a deadline is committed.
+    let stats = m.sched.stats();
+    assert_eq!(
+        stats.live_event_ceiling_trips, 0,
+        "polling the RADIO mid-packet leaked wakes: {} ceiling trips, \
+         max live per peripheral {}",
+        stats.live_event_ceiling_trips, stats.max_live_events_per_peripheral
+    );
 }
 
 /// Bit-time fidelity for **fixed MODE = Ble_1Mbit** only:
@@ -649,5 +741,69 @@ fn board_io_button_boot_level_is_not_a_gpio_edge() {
         0,
         "no contact moved: the boot level of a board_io button must not present \
          itself as a GPIO edge"
+/// TASKS_DISABLE mid-transmission aborts the packet: DISABLED promptly, and no
+/// EVENTS_END for a packet firmware cancelled.
+///
+/// Two separate things are asserted because two separate things were wrong.
+///
+/// 1. END must not fire. On silicon TASKS_DISABLE during TX ramps down and
+///    raises DISABLED; the packet never completes, so END never comes. Before
+///    this change EVENTS_END fired anyway — the abort left the bit-rate
+///    countdown armed and `tick()` ran it to completion regardless. This half
+///    is a pre-existing gap, reproducible with none of the air-time deadline
+///    machinery present.
+/// 2. DISABLED must not wait for the aborted packet's air time. Once
+///    `take_scheduled_events` stops handing out wakes while an air-time
+///    deadline is committed (it must — there is no scheduler-side cancel, and
+///    the copies pile up past the live-event ceiling), an abort that left that
+///    deadline armed would defer EVENTS_DISABLED all the way to the original
+///    air-end: cycle 89 instead of 11 for LENGTH=8.
+///
+/// Dropping the countdown on the abort path is what makes both true at once.
+#[test]
+fn radio_disable_mid_transmission_aborts_the_packet() {
+    const PAYLOAD: u8 = 8;
+    const DISABLE_AT: u64 = 10;
+    const BUDGET: u64 = 256;
+    let buf = 0x2000_2000u64;
+
+    let mut m = machine_at_interval(1);
+    arm_radio_tx_with_len(&mut m, buf, PAYLOAD);
+    let _ = m.bus.write_u32(RADIO_TASKS_START, 1);
+
+    let mut disabled_at = None;
+    while m.total_cycles < BUDGET {
+        m.advance(AdvanceRequest::run(Some(1)).with_breakpoints(BreakpointPolicy::Ignore))
+            .expect("Machine::advance");
+        if m.total_cycles == DISABLE_AT {
+            // Mid-air: the packet needs (8+3)*8 = 88 cycles and has had ~8.
+            m.bus
+                .write_u32(RADIO_TASKS_DISABLE, 1)
+                .expect("TASKS_DISABLE is a legal MMIO write");
+            assert_eq!(
+                m.bus.read_u32(RADIO_STATE).unwrap(),
+                RADIO_STATE_TXDISABLE,
+                "TASKS_DISABLE mid-TX must enter TXDISABLE"
+            );
+        }
+        if disabled_at.is_none() && m.bus.read_u32(RADIO_EVENTS_DISABLED).unwrap_or(0) != 0 {
+            disabled_at = Some(m.total_cycles);
+        }
+    }
+
+    let disabled_at = disabled_at.expect("EVENTS_DISABLED must fire after TASKS_DISABLE");
+    assert!(
+        disabled_at <= DISABLE_AT + 2,
+        "EVENTS_DISABLED deferred to the aborted packet's air time: fired at \
+         {disabled_at}, expected within 2 cycles of the TASKS_DISABLE at {DISABLE_AT}"
+    );
+    assert!(
+        !radio_end_done(&m),
+        "EVENTS_END fired for a packet firmware aborted with TASKS_DISABLE"
+    );
+    assert_eq!(
+        m.bus.read_u32(RADIO_STATE).unwrap(),
+        RADIO_STATE_DISABLED,
+        "radio must settle in DISABLED after the abort"
     );
 }
