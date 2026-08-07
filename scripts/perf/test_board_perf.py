@@ -57,6 +57,13 @@ def test_same_flash_base_across_isas_does_not_collide():
     assert bp.fixture_spec(covered["esp32s3"]).target.startswith("xtensa")
 
 
+def test_every_fixture_declares_at_least_one_real_mode():
+    """A fixture with no modes is covered on paper and measured never."""
+    for _name, spec in bp.FIXTURES.values():
+        assert spec.modes, f"{spec.crate} declares no execution modes"
+        assert set(spec.modes) <= set(bp.ALL_MODES), spec.modes
+
+
 def test_only_optional_fixtures_may_be_skipped():
     """A missing stock toolchain must fail, not degrade to a skip."""
     for _name, spec in bp.FIXTURES.values():
@@ -109,6 +116,88 @@ def test_every_covered_board_has_a_baseline():
         f"covered but unbaselined: {missing} — run "
         "`python3 scripts/perf/board_perf.py --update`"
     )
+
+
+def test_every_covered_mode_has_a_baseline():
+    """A board baselined in one mode still gates nothing in the other.
+
+    The gap this closes: ARM had a `step` baseline and no `batch` one, so the
+    batched orchestration the browser runs could regress freely while the gate
+    stayed green on the loop nobody runs.
+    """
+    import json
+
+    covered, _ = bp.plan_coverage(bp.discover_chips())
+    baselines = json.loads(bp.BASELINE_PATH.read_text())
+    missing = sorted(
+        f"{board}[{mode}]"
+        for board, fixture in covered.items()
+        if not bp.fixture_spec(fixture).optional
+        for mode in bp.modes_for(fixture)
+        if mode not in baselines.get(board, {})
+    )
+    assert not missing, (
+        f"covered but unbaselined: {missing} — run "
+        "`python3 scripts/perf/board_perf.py --update`"
+    )
+
+
+def test_no_baseline_for_a_mode_a_board_does_not_have():
+    """A leftover mode key reads as coverage the gate does not have."""
+    import json
+
+    covered, _ = bp.plan_coverage(bp.discover_chips())
+    baselines = json.loads(bp.BASELINE_PATH.read_text())
+    orphans = sorted(
+        f"{board}[{mode}]"
+        for board, by_mode in baselines.items()
+        if board in covered
+        for mode in by_mode
+        if mode not in bp.modes_for(covered[board])
+    )
+    assert not orphans, f"baselines for modes that are not measured: {orphans}"
+
+
+def test_baselines_are_per_mode_dicts():
+    """The schema is `{board: {mode: Ir/step}}`, not a bare number.
+
+    Guards the migration: a flat `{board: 1498.0}` entry left behind would be
+    read as "no baseline for either mode" by `baselines.get(board, {}).get(mode)`
+    and silently gate nothing.
+    """
+    import json
+
+    baselines = json.loads(bp.BASELINE_PATH.read_text())
+    for board, entry in baselines.items():
+        assert isinstance(entry, dict), f"{board}: expected {{mode: Ir/step}}, got {entry!r}"
+        assert entry, f"{board}: empty baseline entry"
+        for mode, value in entry.items():
+            assert mode in bp.ALL_MODES, f"{board}: unknown mode {mode!r}"
+            assert isinstance(value, (int, float)), f"{board}[{mode}]: {value!r}"
+
+
+def test_arm_boards_are_gated_on_the_path_the_browser_runs():
+    """Every Cortex-M board must be measured in `batch`, not only in `step`.
+
+    `Sim::step_batch` in crates/wasm calls `Machine::advance`; the CLI default
+    for ARM calls `Machine::step`. Measuring only the latter is what made #830's
+    9-16x batching win show up here as +0.2%.
+    """
+    covered, _ = bp.plan_coverage(bp.discover_chips())
+    arm = [b for b, f in covered.items() if bp.fixture_spec(f).target.startswith("thumb")]
+    assert arm, "no Cortex-M boards discovered — fixture matching is broken"
+    for board in arm:
+        assert bp.MODE_BATCH in bp.modes_for(covered[board]), board
+
+
+def test_a_mode_that_did_not_execute_is_an_error_not_a_number():
+    """`ModeNotTakenError` exists and is not silently swallowed as a result."""
+    assert issubclass(bp.ModeNotTakenError, Exception)
+    # The proof line the CLI prints under --batched, and which measure_once
+    # requires before it will believe a batched number.
+    proof = "[batched] instructions=200000 batches=391 steps_per_batch=511.51 tick_interval=512"
+    m = bp.BATCHED_RE.search(proof)
+    assert m and int(m.group(1)) == 200000 and float(m.group(3)) == 511.51
 
 
 def test_no_baseline_for_a_board_that_is_gone():

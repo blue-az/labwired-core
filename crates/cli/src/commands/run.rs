@@ -194,6 +194,19 @@ pub(crate) fn run_firmware_riscv(
         return run_firmware_riscv_batched(machine, &args, limit);
     }
 
+    // `--batched` is an assertion that the run took the batched path, and the
+    // instrumentation below deliberately does not. Failing here is the point:
+    // the alternative is a caller measuring the single-step interpreter while
+    // believing it measured the batched orchestration.
+    if args.batched {
+        eprintln!(
+            "error: --batched cannot be honoured together with per-instruction \
+             instrumentation (--break-at / LABWIRED_WIFI_BRIDGE / \
+             LABWIRED_DHCP_TRACE), which pins the CPU quantum to one instruction",
+        );
+        return ExitCode::from(EXIT_CONFIG_ERROR);
+    }
+
     // Find the behavioral wifi_mac model by type (the declarative chip-yaml
     // "wifi_mac" shares the name; routing uses ours via greatest-start-wins, but
     // name lookup would return the declarative one).
@@ -447,6 +460,17 @@ fn run_firmware_riscv_batched(
         }
     }
 
+    // Same proof-of-path line the ARM batched loop prints, and for the same
+    // reason: `--batched` on RISC-V is an assertion about which loop ran, so it
+    // has to leave evidence. Only under the flag, so no default run's stderr
+    // changes.
+    if args.batched {
+        print_batched_summary(
+            machine.step_profile(),
+            machine.config.peripheral_tick_interval,
+        );
+    }
+
     export_bus_trace_if_requested(&args.bus_trace_out, &machine.bus);
     ExitCode::from(EXIT_PASS)
 }
@@ -563,6 +587,21 @@ pub(crate) fn run_firmware(
     // (e.g. ESP32-C3) which cannot go through the Xtensa boot sequence.
     if chip_yaml.contains("arch: \"riscv\"") || chip_yaml.contains("arch: riscv") {
         return run_firmware_riscv(args, chip_yaml, plugins);
+    }
+
+    // Everything below here is Xtensa, which `labwired run` drives with a raw
+    // `cpu.step()` + `tick_peripherals_with_costs()` loop rather than through
+    // `Machine` — there is no batched orchestration to select. Refuse rather
+    // than accept the flag and run the unbatched loop anyway: a caller that
+    // asked for the batched path and was quietly given the other one would
+    // record a number for a path it never executed.
+    if args.batched {
+        eprintln!(
+            "error: --batched is not available for chip {:?}: the Xtensa path \
+             does not run through `Machine::advance`",
+            args.chip,
+        );
+        return ExitCode::from(EXIT_CONFIG_ERROR);
     }
 
     // Classic ESP32 (Xtensa LX6) fast-boot path.
@@ -1304,6 +1343,37 @@ pub(crate) fn run_firmware_arm(
 
     // Run the step loop.
     let limit = args.max_steps.unwrap_or(u64::MAX);
+
+    // Opt-in batched orchestration (--batched): the path the browser runs.
+    // Kept behind the flag so the default `labwired run` for ARM — TIER1
+    // fixtures, labs, every existing test — keeps the exact `machine.step()`
+    // loop, byte for byte.
+    //
+    // Both loops live in their own `#[inline(never)]` function, and this is not
+    // cosmetic: with the two inlined into one body, adding the batched arm cost
+    // the SINGLE-STEP loop ~12 Ir/step (+0.6% on stm32l476) with its source
+    // untouched — LLVM's register allocation over the merged function changed.
+    // Splitting them puts each loop back in a frame whose codegen does not
+    // depend on the other's existence, which is what "the default path is
+    // unaffected" has to mean for a gate that measures instructions.
+    if args.batched {
+        run_arm_batched_loop(&mut machine, limit);
+    } else {
+        run_arm_step_loop(&mut machine, limit);
+    }
+
+    // Flush stdout.
+    let _ = std::io::stdout().flush();
+    export_bus_trace_if_requested(&args.bus_trace_out, &machine.bus);
+    ExitCode::from(EXIT_PASS)
+}
+
+/// The ARM default: one simulated instruction per `Machine::step()` call.
+#[inline(never)]
+fn run_arm_step_loop(
+    machine: &mut labwired_core::Machine<labwired_core::cpu::CortexM>,
+    limit: u64,
+) {
     let dbg_trace: u64 = std::env::var("LABWIRED_ARM_TRACE")
         .ok()
         .and_then(|s| s.parse().ok())
@@ -1331,11 +1401,95 @@ pub(crate) fn run_firmware_arm(
             }
         }
     }
+}
 
-    // Flush stdout.
-    let _ = std::io::stdout().flush();
-    export_bus_trace_if_requested(&args.bus_trace_out, &machine.bus);
-    ExitCode::from(EXIT_PASS)
+/// One line of proof that the batched path ran, and how wide its batches were.
+///
+/// Printed only under `--batched`, so no default run's stderr changes. A caller
+/// that asks for the batched path and gets no `[batched]` line back knows the
+/// run did not take it — which is the difference between a measurement and a
+/// guess. `steps_per_batch` is the observable that separates "batched" from
+/// "batched in name only": at 1.00 the orchestration is issuing one instruction
+/// per CPU dispatch and the batch window bought nothing.
+fn print_batched_summary(profile: labwired_core::StepProfile, tick_interval: u32) {
+    let per_batch = if profile.cpu_batches == 0 {
+        0.0
+    } else {
+        profile.cpu_instructions as f64 / profile.cpu_batches as f64
+    };
+    eprintln!(
+        "[batched] instructions={} batches={} steps_per_batch={:.2} \
+         tick_interval={} peripheral_ticks={}",
+        profile.cpu_instructions,
+        profile.cpu_batches,
+        per_batch,
+        tick_interval,
+        profile.peripheral_ticks,
+    );
+}
+
+/// The ARM (Cortex-M) batched hot path: drive the run through
+/// `Machine::advance(AdvanceRequest::run(..))` — the exact call the browser
+/// makes from `Sim::step_batch` in `crates/wasm/src/lib.rs` — instead of the
+/// `machine.step()` loop, which pins the CPU quantum to one instruction.
+///
+/// Why this exists at all: the wasm front end and the CLI had diverged on ARM.
+/// Everything a user sees in the browser goes through `advance`, and #830
+/// removed three clamps that had pinned that path to a one-instruction quantum
+/// (9-16x native throughput on ARM boards) — yet the throughput gate drove ARM
+/// through `machine.step()` and moved by 0.2-0.4%, because it never entered the
+/// batched path. A regression in batch orchestration was invisible on the only
+/// path users run.
+///
+/// The tick interval comes from `bus.max_safe_tick_interval()`, not from a
+/// constant: that is the same source the browser reads through the wasm
+/// `recommended_tick_interval` getter before calling
+/// `set_peripheral_tick_interval`. A bus that reports 1 (anything non-relaxable
+/// on it) therefore batches at 1 here too, exactly as it would in the browser —
+/// which is a real property of that board, not a failure to engage, and the
+/// `[batched]` line reports it as `steps_per_batch=1.00` rather than hiding it.
+#[inline(never)]
+fn run_arm_batched_loop(
+    machine: &mut labwired_core::Machine<labwired_core::cpu::CortexM>,
+    limit: u64,
+) {
+    use labwired_core::{AdvanceRequest, AdvanceStop};
+
+    let interval = machine.bus.max_safe_tick_interval();
+    machine.config.peripheral_tick_interval = interval;
+    machine.bus.config.peripheral_tick_interval = interval;
+
+    // Chunk so an absent `--max-steps` (limit == u64::MAX) still bounds the fuel
+    // handed to any single `advance` call, mirroring the RISC-V batched loop.
+    // `advance` batches internally at the tick interval; the chunk only caps the
+    // total instruction budget.
+    const CHUNK: u64 = 4_000_000;
+    let mut ran: u64 = 0;
+    while ran < limit {
+        let fuel = CHUNK.min(limit - ran);
+        let before = machine.step_profile().cpu_instructions;
+        let stop = match machine.advance(AdvanceRequest::run(Some(fuel))) {
+            Ok(report) => Some(report.stop),
+            Err(e) => {
+                // Same contract as the single-step loop above: a simulation
+                // error ends the run without failing it, because the TIER1
+                // protocol may already be complete.
+                eprintln!("labwired run (arm, batched): simulation error: {e}");
+                None
+            }
+        };
+        let delta = machine.step_profile().cpu_instructions - before;
+        ran += delta;
+        match stop {
+            // No forward progress (halt/idle with nothing left to skip): stop
+            // rather than spin re-issuing empty batches up to `limit`.
+            Some(AdvanceStop::NoProgress) | None => break,
+            Some(_) if delta == 0 => break,
+            Some(_) => {}
+        }
+    }
+
+    print_batched_summary(machine.step_profile(), interval);
 }
 
 pub(crate) fn run_interactive_arm(
