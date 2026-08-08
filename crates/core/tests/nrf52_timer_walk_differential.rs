@@ -26,6 +26,12 @@
 //! 6. RADIO air time vs a spurious wake — an MMIO write to the RADIO while a
 //!    packet is transmitting must not shorten it, and TASKS_DISABLE mid-flight
 //!    must abort it rather than let it complete.
+//! 7. DWT CYCCNT polled from inside a CPU batch — the counter must advance per
+//!    retired instruction, not per batch (#842). Quantum 1 is the reference
+//!    lane and must stay byte-identical to quantum 512.
+//! 8. TIMER0 residency under a poll loop — repeatedly capturing a running timer
+//!    re-arms the same compare hundreds of times; those redundant wakes must
+//!    collapse via scheduler dedup instead of accumulating (#861).
 //!
 //! Requires `--features event-scheduler`.
 
@@ -253,6 +259,82 @@ fn timer0_compare_walk1_vs_sched512_cycle_identity() {
         "both lanes must latch EVENTS_COMPARE[0]"
     );
     assert_cycle_identity(at_a, at_b, "TIMER0 COMPARE[0]");
+}
+
+const TIMER_TASKS_CAPTURE1: u64 = TIMER0 + 0x044;
+const TIMER_CC1: u64 = TIMER0 + 0x544;
+
+/// Reading the nRF52 counter is *defined* as a write: there is no COUNTER
+/// register, so firmware strobes `TASKS_CAPTURE[i]` and then reads `CC[i]`.
+/// Every one of those writes drains `take_scheduled_events`, so a poll loop is
+/// the peripheral re-arming itself hundreds of times against a compare that has
+/// not moved.
+///
+/// The scheduler has no cancel API — an armed wake is always delivered — so the
+/// only way to stay inside `MAX_LIVE_EVENTS_PER_PERIPHERAL` is for a redundant
+/// re-arm to be recognised and collapsed by layer-1 dedup. Dedup keys on
+/// `(peripheral_idx, event_token, deadline)`, so that only works while the token
+/// holds steady across polls that do not move the compare.
+///
+/// Regression gate for #861: the timer used to bump `arm_seq` unconditionally,
+/// making the key unique on every poll. Dedup could never fire and each poll
+/// left another far-future wake resident. Reverting the fix trips the ceiling
+/// here (`peripheral N holds 9 live events (ceiling 8)`) within the first dozen
+/// polls, long before the 200 this gate performs.
+///
+/// The compare is deliberately far away (~16M cycles at PRESCALER=0) so nothing
+/// drains it: every wake armed during the loop is still resident at the end,
+/// which is exactly the condition the ceiling exists to catch.
+#[test]
+fn polling_a_running_timer_does_not_hoard_scheduler_wakes() {
+    const FAR_CC: u32 = 0x0100_0000;
+    const POLLS: usize = 200;
+
+    let mut m = machine_at_interval(1);
+    arm_timer0_compare(&mut m, FAR_CC);
+
+    let mut captures = Vec::with_capacity(POLLS);
+    for _ in 0..POLLS {
+        m.advance(AdvanceRequest::run(Some(4)).with_breakpoints(BreakpointPolicy::Ignore))
+            .expect("Machine::advance");
+        // The real firmware idiom: strobe CAPTURE, then read the channel back.
+        m.bus
+            .write_u32(TIMER_TASKS_CAPTURE1, 1)
+            .expect("TASKS_CAPTURE[1] is a legal MMIO write");
+        captures.push(m.bus.read_u32(TIMER_CC1).expect("CC[1] readback"));
+    }
+
+    let stats = m.sched.stats();
+    assert_eq!(
+        stats.live_event_ceiling_trips,
+        0,
+        "polling a running TIMER leaked wakes: {} ceiling trips, max live per \
+         peripheral {} (ceiling {})",
+        stats.live_event_ceiling_trips,
+        stats.max_live_events_per_peripheral,
+        labwired_core::sched::MAX_LIVE_EVENTS_PER_PERIPHERAL
+    );
+    assert!(
+        stats.max_live_events_per_peripheral
+            <= labwired_core::sched::MAX_LIVE_EVENTS_PER_PERIPHERAL,
+        "live-event high-water mark {} exceeded the ceiling {}",
+        stats.max_live_events_per_peripheral,
+        labwired_core::sched::MAX_LIVE_EVENTS_PER_PERIPHERAL
+    );
+
+    // Not hoarding must not mean not working: the captured counter has to keep
+    // moving, or this would pass just as well with the timer wedged.
+    assert!(
+        captures.last() > captures.first(),
+        "captured counter never advanced across {POLLS} polls ({:?} → {:?})",
+        captures.first(),
+        captures.last()
+    );
+    assert!(
+        !timer_compare_done(&m),
+        "the far compare must NOT have fired — otherwise the wakes drained and \
+         this gate proves nothing about residency"
+    );
 }
 
 // ── RTC0 COMPARE (EVTEN + INTEN path) ───────────────────────────────────────
