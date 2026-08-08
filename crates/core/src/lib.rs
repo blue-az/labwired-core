@@ -7,6 +7,7 @@
 
 pub mod boot;
 pub mod bus;
+pub mod census;
 pub mod config;
 pub mod console;
 pub mod cosim;
