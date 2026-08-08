@@ -2412,6 +2412,68 @@ fn execute_test_loop<C: labwired_core::Cpu>(
             })
         });
 
+    // ── stop_when_assertions_pass: per-step evaluation, made cheap ──────────
+    //
+    // The early-stop pins the CLI batch to one instruction (`batch_size`
+    // above), so the block at the bottom of this loop runs once per RETIRED
+    // GUEST INSTRUCTION. It used to copy the entire UART capture TWICE every
+    // time — `Vec::clone`, then `String::from_utf8_lossy(..).to_string()` —
+    // and re-scan the result for every assertion. MEASURED on the pinned C3
+    // Arduino-BLE image (`e2e_esp32c3_ble_arduino`), 20 M steps: 5.46 s user
+    // CPU with the scan, 2.16 s with the identical run and nothing to scan.
+    // 60 % of the run was re-reading a 235-byte buffer that only changes a few
+    // hundred times in 362 M steps, and `from_utf8_lossy(..).to_string()`
+    // alone was 37 % of process samples.
+    //
+    // The verdict is a pure function of (uart_text, machine state), so it is
+    // recomputed EXACTLY when one of those can have changed:
+    //
+    //   * `uart_text` changes only when the sink grows — a UART TX sink is
+    //     append-only (nothing in this file or the core UART models truncates
+    //     it; it is drained once, after the loop, to write `uart.log`), so its
+    //     length is an exact change detector;
+    //   * machine state changes every step, so any assertion that READS the
+    //     machine (`memory_value`, `uds_tester`) still forces a recompute
+    //     every step — those keep their old cost, which is the honest price of
+    //     asking a question about live machine state.
+    //
+    // When every runtime assertion is UART-only (what every `uart_contains` /
+    // `uart_regex` script is, including both BLE gates), an unchanged length
+    // means an unchanged verdict and the cached one is reused. The verdict is
+    // therefore identical on every step, so `assertions_first_passed_at`
+    // latches on the same step and the run stops at the same step count.
+    //
+    // The cache is DELIBERATELY conservative about which assertion kinds count
+    // as UART-only: `MotorSpeedReached` latches milestones and
+    // `ShutdownLatency` reads `stimulus_cycles`/`uart_milestone_cycles`, both
+    // of which move without the capture growing, so their presence disables
+    // the cache and restores the original every-step evaluation.
+    let has_runtime_assertions = assertions.iter().any(|a| {
+        !matches!(
+            a,
+            TestAssertion::ExpectedStopReason(_) | TestAssertion::FirmwareExit(_)
+        )
+    });
+    let assertions_are_uart_only = assertions
+        .iter()
+        .filter(|a| {
+            !matches!(
+                a,
+                TestAssertion::ExpectedStopReason(_) | TestAssertion::FirmwareExit(_)
+            )
+        })
+        .all(|a| {
+            matches!(
+                a,
+                TestAssertion::UartContains(_) | TestAssertion::UartRegex(_)
+            )
+        });
+    let mut cached_uart_text = String::new();
+    // `usize::MAX` (not 0) so the first iteration always counts as a change and
+    // evaluates, even when the capture is still empty.
+    let mut cached_uart_len = usize::MAX;
+    let mut cached_all_pass = false;
+
     let mut step = 0;
     while step < max_steps {
         // JIT-eligible path: mirror the machine's authoritative counters into
@@ -2640,22 +2702,38 @@ fn execute_test_loop<C: labwired_core::Cpu>(
             uart_milestone_cycles.observe(&uart_bytes, machine.total_cycles);
         }
 
-        if resolved_limits.stop_when_assertions_pass {
-            let has_runtime_assertions = assertions.iter().any(|a| {
-                !matches!(
-                    a,
-                    TestAssertion::ExpectedStopReason(_) | TestAssertion::FirmwareExit(_)
-                )
-            });
-            if has_runtime_assertions {
-                let uart_text = {
-                    let bytes = uart_tx.lock().map(|g| g.clone()).unwrap_or_default();
-                    String::from_utf8_lossy(&bytes).to_string()
-                };
+        if resolved_limits.stop_when_assertions_pass && has_runtime_assertions {
+            // Refresh the cached capture only when the sink actually grew.
+            // One uncontended lock + a length compare on the common step.
+            let uart_changed = match uart_tx.lock() {
+                Ok(g) => {
+                    if g.len() != cached_uart_len {
+                        cached_uart_len = g.len();
+                        cached_uart_text.clear();
+                        cached_uart_text.push_str(&String::from_utf8_lossy(&g[..]));
+                        true
+                    } else {
+                        false
+                    }
+                }
+                // Poisoned mutex: the old code read this as an empty
+                // capture (`unwrap_or_default`). Reproduce that, once.
+                Err(_) => {
+                    if cached_uart_len != 0 {
+                        cached_uart_len = 0;
+                        cached_uart_text.clear();
+                        true
+                    } else {
+                        false
+                    }
+                }
+            };
+            if uart_changed || !assertions_are_uart_only {
+                let uart_text = &cached_uart_text;
                 for (index, assertion) in assertions.iter().enumerate() {
                     let milestone_observed = match assertion {
                         TestAssertion::MotorSpeedReached(_) => {
-                            assertion_currently_passes(assertion, &uart_text, machine)
+                            assertion_currently_passes(assertion, uart_text, machine)
                         }
                         _ => false,
                     };
@@ -2663,7 +2741,7 @@ fn execute_test_loop<C: labwired_core::Cpu>(
                         assertion_latched[index] = true;
                     }
                 }
-                let all_pass = assertions.iter().enumerate().all(|(index, assertion)| {
+                cached_all_pass = assertions.iter().enumerate().all(|(index, assertion)| {
                     matches!(
                         assertion,
                         TestAssertion::ExpectedStopReason(_) | TestAssertion::FirmwareExit(_)
@@ -2675,30 +2753,31 @@ fn execute_test_loop<C: labwired_core::Cpu>(
                             &stimulus_cycles,
                             &uart_milestone_cycles,
                         ))
-                        || assertion_currently_passes(assertion, &uart_text, machine)
+                        || assertion_currently_passes(assertion, uart_text, machine)
                 });
-                if all_pass {
-                    // Latch the first all-pass step, but not before the absolute
-                    // minimum-steps floor: assertions that satisfy trivially early
-                    // (e.g. a token already present at reset) don't short-circuit
-                    // the run before real execution has happened.
-                    if assertions_first_passed_at.is_none()
-                        && step >= resolved_limits.stop_when_assertions_pass_min_steps
-                    {
-                        assertions_first_passed_at = Some(step);
-                    }
-                } else {
-                    // A regression means the pass was not durable — restart the
-                    // settling window from scratch.
-                    assertions_first_passed_at = None;
+            }
+            let all_pass = cached_all_pass;
+            if all_pass {
+                // Latch the first all-pass step, but not before the absolute
+                // minimum-steps floor: assertions that satisfy trivially early
+                // (e.g. a token already present at reset) don't short-circuit
+                // the run before real execution has happened.
+                if assertions_first_passed_at.is_none()
+                    && step >= resolved_limits.stop_when_assertions_pass_min_steps
+                {
+                    assertions_first_passed_at = Some(step);
                 }
-                if let Some(first) = assertions_first_passed_at {
-                    if step.saturating_sub(first)
-                        >= resolved_limits.stop_when_assertions_pass_settle_steps
-                    {
-                        stop_reason = StopReason::AssertionsPassed;
-                        break;
-                    }
+            } else {
+                // A regression means the pass was not durable — restart the
+                // settling window from scratch.
+                assertions_first_passed_at = None;
+            }
+            if let Some(first) = assertions_first_passed_at {
+                if step.saturating_sub(first)
+                    >= resolved_limits.stop_when_assertions_pass_settle_steps
+                {
+                    stop_reason = StopReason::AssertionsPassed;
+                    break;
                 }
             }
         }
