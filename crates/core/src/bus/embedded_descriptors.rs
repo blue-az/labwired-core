@@ -636,6 +636,9 @@ pub fn lookup(descriptor_path: &str) -> Option<&'static str> {
         "nrf54l15/global_wdt31_s.yaml" => Some(include_str!(
             "../../../../configs/peripherals/nrf54l15/global_wdt31_s.yaml"
         )),
+        "nrf54l15/icache_s.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf54l15/icache_s.yaml"
+        )),
         "rp2040/adc.yaml" => Some(include_str!(
             "../../../../configs/peripherals/rp2040/adc.yaml"
         )),
