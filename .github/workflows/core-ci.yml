@@ -685,20 +685,6 @@ jobs:
           --test firmware_survival
           --test e2e_stm32f407_i2c
 
-      # #832 models the USB_SERIAL_JTAG interrupt surface so CDC-on-boot builds
-      # print. Its own test file is `#![cfg(feature = "event-scheduler")]`, so
-      # without the feature it runs ZERO tests and reports green — the vacuous
-      # shape `scheduler_lane_coverage` exists to catch, and it did.
-      #
-      # Here rather than in `pr-scheduler-observable`: that lane is explicitly
-      # the sub-2s half, and this file boots C3 mask ROMs (measured >2min
-      # locally). Per-merge is the right cost for a gate that proves the
-      # console actually emits bytes.
-      - name: C3 USB CDC console (scheduler-gated, boots the mask ROM)
-        run: >
-          cargo test -p labwired-core --features event-scheduler
-          --test esp32c3_usb_cdc_console
-
       - name: Board-coverage ratchet (static naming scan)
         run: cargo test -p labwired-core --test board_coverage_ratchet -- --nocapture
 
@@ -743,11 +729,25 @@ jobs:
       - name: BLE Pong fixture drift (committed .ino ↔ LIVE published lab)
         run: scripts/ci/check-published-lab-drift.sh
 
+      # `esp32c3_usb_cdc_console` is here for COST, not because it is
+      # release-only: same reason as `world_esp32c3_ble_pong` above. It boots
+      # the C3 mask ROM, which is 335s in debug (measured) and seconds in
+      # release, and this step already has the release + event-scheduler build
+      # warm — a separate debug step would pay a whole second build to run the
+      # same assertions far slower.
+      #
+      # It has to run SOMEWHERE with the feature on: the file is
+      # `#![cfg(feature = "event-scheduler")]`, so a plain
+      # `cargo test --test esp32c3_usb_cdc_console` executes ZERO tests and
+      # reports green. #860's `scheduler_lane_coverage` caught that #832 shipped
+      # its own headline behaviour — CDC-on-boot builds actually printing — with
+      # no lane running the test that proves it.
       - name: Release-gated tests — cfg(not(debug_assertions))
         run: >
           cargo test --release -p labwired-core --features event-scheduler
           --lib --test event_scheduler --test release_only_cfg_ratchet
           --test world_esp32c3_ble_pong
+          --test esp32c3_usb_cdc_console
 
       # `esp32_classic_walk_differential` is BOTH arms here, and both arms are
       # covered pre-merge as well — do not read this step as their only lane.
