@@ -100,6 +100,12 @@ iolink-native = []
 # decodes per-pixel °C matching the injected thermal scene. Off by default and
 # never enabled by the browser crate so wasm builds need no C toolchain.
 mlx90640-decode-test = []
+# Batch-width diagnostics (#835): make `plan_cpu_window` record WHICH clause
+# bound the CPU quantum, so a board stuck at 1.00 steps/batch names its clamp
+# instead of being narrowed by elimination. Costs one thread-local counter
+# increment per batch plan, so it is opt-in and never in a shipped build.
+# Read it with `labwired_core::quantum_trace::snapshot()`.
+quantum-trace = []
 
 [[test]]
 name = "mlx90640_decode"

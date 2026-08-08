@@ -963,3 +963,11 @@ mod residency_invariant_tests {
         assert_eq!(s.stats().max_live_events_per_peripheral, 0);
     }
 }
+
+#[cfg(feature = "quantum-trace")]
+impl EventScheduler {
+    /// Every live event, unordered. Diagnostics only (`quantum-trace`).
+    pub fn pending_events(&self) -> Vec<ScheduledEvent> {
+        self.heap.iter().map(|Reverse(e)| e.clone()).collect()
+    }
+}
