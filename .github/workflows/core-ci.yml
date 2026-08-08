@@ -844,7 +844,16 @@ jobs:
       github.event_name == 'schedule' ||
       (github.event_name == 'push' && contains(github.event.head_commit.message, '[full-ci]'))
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # 45 was the budget for a job that never finished: `Run Workspace Tests`
+    # was cancelled at exactly 45:00 on every run, including the nightly, so
+    # the two steps after it never ran at all. With `opt-level = 1` the job
+    # completes in 44m32s — which cleared the old limit by 28 SECONDS while
+    # now doing strictly more work, since those two steps execute. That is a
+    # coin flip, not a margin. 75 leaves room for runner variance and a cold
+    # cache without hiding a real regression: if this job starts approaching
+    # 75 minutes, something has genuinely got slower and should be measured,
+    # not accommodated again.
+    timeout-minutes: 75
     steps:
       # fetch-depth: 0 — the Tier-1 baseline ratchet resolves its baseline from
       # `git merge-base HEAD origin/main`. On a shallow checkout that cannot be
