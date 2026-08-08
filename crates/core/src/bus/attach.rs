@@ -129,33 +129,32 @@ impl SystemBus {
     /// output latch. No-op unless IO_BANK0, SIO and a UART are all on the bus.
     ///
     /// The pad map is transcribed from the RP2040 SVD's `GPIOn_CTRL.FUNCSEL`
-    /// enumerations (`uart0_tx`, `uart1_rx`, …) rather than derived, because it
+    /// enumerations (`uart0_tx`, `uart1_tx`, …) rather than derived, because it
     /// is not derivable: GP0–GP7 alternate instance every four pads, but GP8/GP9
     /// are UART**1**, not UART0, and any parity rule silently mis-assigns them.
-    /// CTS/RTS pads carry no narrated waveform and are left out.
+    ///
+    /// TX ONLY. The SVD also names eight `uart*_rx` pads, and binding them was
+    /// tempting and wrong: nothing in the engine ever drives the RX line, so a
+    /// routed RX pad would report a confident constant idle-high — including
+    /// while an attached GPS or modem was actually sending. That is worse than
+    /// the SIO-latch fallback it would replace, because it looks authoritative.
+    /// RX joins the table when something drives it, not before. CTS/RTS carry no
+    /// narrated waveform either.
     pub(crate) fn wire_rp2040_uart_pads(&mut self) {
         use crate::peripherals::rp2040::io_bank0::{Rp2040IoBank0, GPIO_FUNC_UART};
         use crate::peripherals::rp2040::sio::Rp2040Sio;
-        use crate::peripherals::uart::{Uart, LINE_RX, LINE_TX};
+        use crate::peripherals::uart::{Uart, LINE_TX};
 
         /// `(pad, uart instance, line, function name)` — straight from the SVD.
         const PADS: &[(u8, usize, usize, &str)] = &[
             (0, 0, LINE_TX, "UART0_TX"),
-            (1, 0, LINE_RX, "UART0_RX"),
             (4, 1, LINE_TX, "UART1_TX"),
-            (5, 1, LINE_RX, "UART1_RX"),
             (8, 1, LINE_TX, "UART1_TX"),
-            (9, 1, LINE_RX, "UART1_RX"),
             (12, 0, LINE_TX, "UART0_TX"),
-            (13, 0, LINE_RX, "UART0_RX"),
             (16, 0, LINE_TX, "UART0_TX"),
-            (17, 0, LINE_RX, "UART0_RX"),
             (20, 1, LINE_TX, "UART1_TX"),
-            (21, 1, LINE_RX, "UART1_RX"),
             (24, 1, LINE_TX, "UART1_TX"),
-            (25, 1, LINE_RX, "UART1_RX"),
             (28, 0, LINE_TX, "UART0_TX"),
-            (29, 0, LINE_RX, "UART0_RX"),
         ];
 
         let Some(functions) = self
@@ -170,11 +169,28 @@ impl SystemBus {
         else {
             return;
         };
+        // Resolve SIO BEFORE touching a UART: `pad_lines_arc` CREATES the pad
+        // cell, and a UART that owns a cell no route reaches still buffers and
+        // narrates on every transmitted byte, into a wire nothing reads.
+        let Some(sio_idx) = self.find_peripheral_index_by_name("sio") else {
+            return;
+        };
+        if self.peripherals[sio_idx]
+            .dev
+            .as_any_mut()
+            .and_then(|a| a.downcast_mut::<Rp2040Sio>())
+            .is_none()
+        {
+            return;
+        }
 
         for (instance, name) in ["uart0", "uart1"].iter().enumerate() {
             let Some(idx) = self.find_peripheral_index_by_name(name) else {
                 continue;
             };
+            if !PADS.iter().any(|&(_, inst, _, _)| inst == instance) {
+                continue;
+            }
             let Some(lines) = self.peripherals[idx]
                 .dev
                 .as_any_mut()
@@ -182,9 +198,6 @@ impl SystemBus {
                 .map(Uart::pad_lines_arc)
             else {
                 continue;
-            };
-            let Some(sio_idx) = self.find_peripheral_index_by_name("sio") else {
-                return;
             };
             let Some(sio) = self.peripherals[sio_idx]
                 .dev
@@ -614,39 +627,52 @@ impl SystemBus {
         }
     }
 
-    /// Route each STM32 USART's TX/RX onto the GPIO pads that can carry them,
-    /// so a probe shows the serial waveform rather than the idle GPIO latch.
+    /// Route each STM32 USART's TX onto the GPIO pads that can carry it, so a
+    /// probe shows the serial waveform rather than the idle GPIO latch.
     ///
     /// Same mechanism as [`Self::wire_stm32_i2c_pads`] and
     /// [`Self::wire_stm32_spi_pads`] — one `add_pad_route` per (pad, AF), and
     /// the AF nibble decides which is live. Only the table differs.
+    ///
+    /// TX ONLY, for the reason given on [`Self::wire_rp2040_uart_pads`]: nothing
+    /// drives the RX line, so a routed RX pad would report an authoritative
+    /// idle-high straight through incoming traffic.
     pub(crate) fn wire_stm32_uart_pads(&mut self) {
         use crate::peripherals::gpio::{GpioPort, GpioRegisterLayout};
-        use crate::peripherals::uart::{Uart, LINE_RX, LINE_TX};
+        use crate::peripherals::uart::{Uart, LINE_TX};
 
-        // (instance, port, pin, AF, line, func). Read out of the STM32L476
-        // datasheet DS10198 Table 17 (AF0-AF7): USART1-3 sit on AF7 across the
-        // V2 families. Only TX and RX are routed — CK/CTS/RTS carry no narrated
-        // waveform.
+        // (instance, port, pin, AF, line, func). USART1-3 on AF7.
+        //
+        // This ONE table is applied to every chip whose GPIO carries the V2
+        // register layout — a dozen configs from the F4 through the H7 — so it
+        // may hold only pads that mean the SAME thing on all of them. That is a
+        // real constraint, not a cautious one: on the STM32H563 (DS14258) AF7
+        // on PC4 is USART3_**RX**, while on the L476 (DS10198 Table 17) it is
+        // USART3_TX, and PG9 is USART6_RX on the H5/H7 against USART1_TX on the
+        // L4. Carrying those rows here would publish a controller's TX waveform
+        // onto a pad the firmware correctly configured as somebody else's RX —
+        // the wrong direction on the wrong peripheral, silently.
+        //
+        // So PC4/PC5 and PG9/PG10 are deliberately ABSENT. Every row below was
+        // re-checked against DS10198 (L476), DS10086 (F401) and DS14258 (H563)
+        // and means the same thing on all three.
+        //
+        // ⚠️ KNOWN GAP, shared with the I²C and SPI tables above: "V2 GPIO
+        // registers" is not the same claim as "V2 alternate-function map". The
+        // STM32L0 (stm32l073.yaml) carries stm32v2 GPIO but puts USART1/2 on
+        // AF4, so these AF7 rows are wrong for it in both directions — the real
+        // pads never route, and AF7 on PA2 is a comparator output that would
+        // now carry USART2's waveform. Closing it needs a per-family AF map
+        // keyed on something finer than the register layout; until then an L0
+        // lab must not trust a serial probe.
         const V2: &[(u8, char, u8, u8, usize, &str)] = &[
             (1, 'a', 9, 7, LINE_TX, "USART1_TX"),
-            (1, 'a', 10, 7, LINE_RX, "USART1_RX"),
             (1, 'b', 6, 7, LINE_TX, "USART1_TX"),
-            (1, 'b', 7, 7, LINE_RX, "USART1_RX"),
-            (1, 'g', 9, 7, LINE_TX, "USART1_TX"),
-            (1, 'g', 10, 7, LINE_RX, "USART1_RX"),
             (2, 'a', 2, 7, LINE_TX, "USART2_TX"),
-            (2, 'a', 3, 7, LINE_RX, "USART2_RX"),
             (2, 'd', 5, 7, LINE_TX, "USART2_TX"),
-            (2, 'd', 6, 7, LINE_RX, "USART2_RX"),
             (3, 'b', 10, 7, LINE_TX, "USART3_TX"),
-            (3, 'b', 11, 7, LINE_RX, "USART3_RX"),
-            (3, 'c', 4, 7, LINE_TX, "USART3_TX"),
-            (3, 'c', 5, 7, LINE_RX, "USART3_RX"),
             (3, 'c', 10, 7, LINE_TX, "USART3_TX"),
-            (3, 'c', 11, 7, LINE_RX, "USART3_RX"),
             (3, 'd', 8, 7, LINE_TX, "USART3_TX"),
-            (3, 'd', 9, 7, LINE_RX, "USART3_RX"),
         ];
 
         for instance in 1u8..=3 {
@@ -659,6 +685,30 @@ impl SystemBus {
             else {
                 continue;
             };
+            // Find the V2 ports this instance actually has rows for BEFORE
+            // touching the UART: `pad_lines_arc` CREATES the pad cell, and a
+            // UART owning a cell no route reaches still buffers and narrates on
+            // every transmitted byte into a wire nothing reads. On an F1 chip —
+            // whose GPIO is skipped below — that was the whole machinery
+            // switched on for nothing.
+            let ports: Vec<char> = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+                .into_iter()
+                .filter(|&port| {
+                    if !V2
+                        .iter()
+                        .any(|&(inst, p, ..)| inst == instance && p == port)
+                    {
+                        return false;
+                    }
+                    self.find_peripheral_index_by_name(&format!("gpio{port}"))
+                        .and_then(|idx| self.peripherals[idx].dev.as_any())
+                        .and_then(|a| a.downcast_ref::<GpioPort>())
+                        .is_some_and(|g| g.register_layout() == GpioRegisterLayout::Stm32V2)
+                })
+                .collect();
+            if ports.is_empty() {
+                continue;
+            }
             let Some(lines) = self.peripherals[uart_idx]
                 .dev
                 .as_any_mut()
@@ -667,7 +717,7 @@ impl SystemBus {
             else {
                 continue;
             };
-            for port in ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] {
+            for port in ports {
                 let Some(gpio_idx) = self.find_peripheral_index_by_name(&format!("gpio{port}"))
                 else {
                     continue;
@@ -679,12 +729,6 @@ impl SystemBus {
                 else {
                     continue;
                 };
-                // The F1 selects alternate function through CRL/CRH rather than
-                // an AF nibble, so its pads are a different decode — as with
-                // I²C, only the V2 register model is routed here.
-                if gpio.register_layout() != GpioRegisterLayout::Stm32V2 {
-                    continue;
-                }
                 for &(inst, p, pin, af, line, func) in V2 {
                     if inst == instance && p == port {
                         gpio.add_pad_route(&lines, pin, Some(af), line, func);

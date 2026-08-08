@@ -6,6 +6,7 @@
 
 use super::pad_lines::PadLines;
 use super::uart_waveform::{UartFraming, UartNarrator};
+use super::wave_plan::NarrationFit;
 use crate::SimResult;
 use std::any::Any;
 use std::collections::VecDeque;
@@ -1134,21 +1135,70 @@ impl Uart {
     /// prescaler. The bit values and framing are unaffected either way.
     fn bit_time_cycles(&self) -> Option<u64> {
         let ticks = match self.layout {
-            // STM32 USART, both generations: BRR = f_ck / baud, so the divisor
-            // IS one bit period in peripheral clocks. OVER8 (CR1.OVER8, which
-            // shifts the low nibble) is not decoded — every board in the estate
-            // boots OVER16.
+            // STM32 USART. Under the default 16× oversampling, BRR = f_ck/baud
+            // outright, so the register IS one bit period in peripheral clocks.
+            //
+            // Under 8× (CR1.OVER8, bit 15) it is not: the hardware programs
+            // USARTDIV = 2 × f_ck/baud, stores USARTDIV[15:4] in BRR[15:4] and
+            // USARTDIV[3:0] >> 1 in BRR[2:0], and forces BRR[3] to zero. Taking
+            // the register at face value there reports a bit period twice the
+            // real one — a waveform at half the baud the firmware asked for,
+            // with nothing to flag it. So reconstruct USARTDIV and halve it.
+            //
+            // The F1 USART has no OVER8 bit at all (its CR1 ends at bit 13), so
+            // the test is inert there rather than wrong.
             UartRegisterLayout::Stm32F1 | UartRegisterLayout::Stm32V2 => {
-                u64::from(self.brr & 0xFFFF)
+                let brr = u64::from(self.brr & 0xFFFF);
+                if matches!(self.layout, UartRegisterLayout::Stm32V2) && self.cr1 & (1 << 15) != 0 {
+                    ((brr & 0xFFF0) | ((brr & 0x0007) << 1)) / 2
+                } else {
+                    brr
+                }
             }
             // PL011: baud = f_uartclk / (16 × (IBRD + FBRD/64)), so one bit is
             // 16 × (IBRD + FBRD/64) = (64 × IBRD + FBRD) / 4 clocks.
             UartRegisterLayout::Pl011 => {
-                (u64::from(self.ibrd & 0xFFFF) * 64 + u64::from(self.fbrd & 0x3F)) / 4
+                // IBRD == 0 is an invalid divisor: real PL011 silicon does not
+                // transmit at all, so neither does the trace. Reachable from any
+                // driver that writes FBRD before IBRD, where a naive formula
+                // would narrate at a rate no wire could carry.
+                if self.ibrd & 0xFFFF == 0 {
+                    0
+                } else {
+                    (u64::from(self.ibrd & 0xFFFF) * 64 + u64::from(self.fbrd & 0x3F)) / 4
+                }
             }
             _ => 0,
         };
         (ticks >= 2).then_some(ticks)
+    }
+
+    /// The baud-divisor registers, masked to their silicon widths.
+    ///
+    /// Shared by `read` and `peek` deliberately. They had drifted before: the
+    /// V2 BRR arm existed only in `read`, so a register view reported 0 for a
+    /// divisor an MMIO read returned correctly, and the divisor is now what
+    /// sets the trace's timebase — a debugger disagreeing with the wire about
+    /// the baud rate is the confusing kind of wrong.
+    fn baud_register_byte(&self, offset: u64) -> Option<u8> {
+        match self.layout {
+            // V2 USARTDIV at 0x0C, 16 bits.
+            UartRegisterLayout::Stm32V2 => {
+                let bo = offset.wrapping_sub(0x0C);
+                (bo < 4).then(|| (((self.brr & 0x0000_FFFF) >> (bo * 8)) & 0xFF) as u8)
+            }
+            // PL011 UARTIBRD@0x24 (16 bits) and UARTFBRD@0x28 (6 bits).
+            UartRegisterLayout::Pl011 => {
+                if (0x24..0x28).contains(&offset) {
+                    Some((((self.ibrd & 0xFFFF) >> ((offset - 0x24) * 8)) & 0xFF) as u8)
+                } else if (0x28..0x2C).contains(&offset) {
+                    Some((((self.fbrd & 0x3F) >> ((offset - 0x28) * 8)) & 0xFF) as u8)
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
     }
 
     /// Queue a transmitted character for narration. Buffered, not published —
@@ -1195,6 +1245,17 @@ impl Uart {
             self.wire_chars.clear();
             return;
         };
+        // The burst's OCCUPIED length, which is not its last edge: a character
+        // of all ones transitions once and occupies ten bit periods. Waiting on
+        // the span would flush before the wire had finished. Computed from the
+        // framing rather than by building the plan, so a deferred flush — every
+        // wakeup for the whole wire time of a burst — allocates nothing.
+        let now = clock.now();
+        let duration =
+            self.wire_chars.len() as u64 * UartFraming::default().frame_bits() * bit_time;
+        if !force && now < self.wave_cursor.saturating_add(duration) {
+            return;
+        }
         let mut narrator = UartNarrator::with_lines(
             LINE_TX,
             &[lines.level(LINE_TX), lines.level(LINE_RX)],
@@ -1203,14 +1264,17 @@ impl Uart {
         for &byte in &self.wire_chars {
             narrator.frame(byte, UartFraming::default());
         }
-        let now = clock.now();
-        // The burst's OCCUPIED length, which is not its last edge: a character
-        // of all ones transitions once and occupies ten bit periods. Waiting on
-        // the span would flush before the wire had finished.
-        if !force && now < self.wave_cursor.saturating_add(narrator.duration()) {
+        if let NarrationFit::LevelsOnly { .. } =
+            narrator.emit_between(&lines, self.wave_cursor, now)
+        {
+            // Not enough cycles exist to hold even one per transition, so
+            // nothing was drawn. Keep the characters and the cursor: `now` only
+            // grows, so a later wakeup will have the room. Clearing here would
+            // delete a message that was really transmitted and advance the
+            // cursor past cycles nothing ever painted — silent, unrecoverable
+            // data loss, and the reason this result is `#[must_use]`.
             return;
         }
-        let _ = narrator.emit_between(&lines, self.wave_cursor, now);
         self.wave_cursor = now;
         self.wire_chars.clear();
     }
@@ -1334,26 +1398,12 @@ impl crate::Peripheral for Uart {
                 return Ok(b);
             }
         }
-        // V2 (USARTv2: L4/F7/G0/H7…) BRR read-back. The USART exposes USARTDIV
-        // at 0x0C, and Zephyr's uart_stm32_set_baudrate writes it then reads it
-        // back to `__ASSERT(BRR >= 16)`. The divisor has no behavioural effect in
-        // this instruction-level model (byte timing is not simulated), but the
-        // register must read what firmware wrote or the assert panics at boot.
-        if matches!(self.layout, UartRegisterLayout::Stm32V2) {
-            let bo = offset.wrapping_sub(0x0C);
-            if bo < 4 {
-                return Ok((((self.brr & 0x0000_FFFF) >> (bo * 8)) & 0xFF) as u8);
-            }
-        }
-        // PL011 baud divisors, masked to their silicon widths (IBRD 16 bits,
-        // FBRD 6). See the write path for why they must read back.
-        if matches!(self.layout, UartRegisterLayout::Pl011) {
-            if (0x24..0x28).contains(&offset) {
-                return Ok((((self.ibrd & 0xFFFF) >> ((offset - 0x24) * 8)) & 0xFF) as u8);
-            }
-            if (0x28..0x2C).contains(&offset) {
-                return Ok((((self.fbrd & 0x3F) >> ((offset - 0x28) * 8)) & 0xFF) as u8);
-            }
+        // Baud divisors (V2 BRR, PL011 IBRD/FBRD) must read back what firmware
+        // wrote: Zephyr's uart_stm32_set_baudrate writes BRR then asserts
+        // `BRR >= 16`, and pico-sdk's uart_set_baudrate reads IBRD/FBRD back to
+        // report the baud it achieved.
+        if let Some(byte) = self.baud_register_byte(offset) {
+            return Ok(byte);
         }
         if offset == self.cr3_offset() {
             return Ok(self.cr3 as u8);
@@ -1572,6 +1622,9 @@ impl crate::Peripheral for Uart {
             if let Some(b) = self.f1_config_byte(offset) {
                 return Some(b);
             }
+        }
+        if let Some(byte) = self.baud_register_byte(offset) {
+            return Some(byte);
         }
         if offset == self.cr3_offset() {
             return Some(self.cr3 as u8);

@@ -187,9 +187,29 @@ impl PadRoutes {
         }
     }
 
-    /// Drop every push registration — the disarm path.
+    /// Drop the push registrations THIS routing table installed — the disarm
+    /// path.
+    ///
+    /// Only the ones it installed, which is the whole subtlety. A controller's
+    /// wire reaches pads on SEVERAL ports — an STM32 USART3 can come out on
+    /// PB10, PC10 or PD8 — so one [`PadLines`] cell is held by several
+    /// `PadRoutes`, one per port. `Machine::logic_watch` then offers every
+    /// peripheral its slice of the watch set, and a port with no watched pins
+    /// lands here. Clearing the cell wholesale at that point wipes the
+    /// registration a DIFFERENT port installed moments earlier, and since ports
+    /// are visited in bus-index order, watching PB10 and then reaching gpioc
+    /// silently disarmed the tap: the pad still read correctly, so the levels
+    /// looked right and the trace was simply empty.
+    ///
+    /// A cell this table never registered channels on is therefore left alone.
     pub fn clear_taps(&mut self) {
         for (idx, cell) in self.cells.iter().enumerate() {
+            if self.registered[idx]
+                .iter()
+                .all(|channels| channels.is_empty())
+            {
+                continue;
+            }
             cell.clear_tap();
             self.registered[idx] = vec![Vec::new(); cell.names().len()];
         }

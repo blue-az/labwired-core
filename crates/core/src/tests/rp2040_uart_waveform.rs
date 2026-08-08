@@ -29,6 +29,7 @@ mod rp2040_uart_waveform_tests {
     const IO_BANK0_BASE: u64 = 0x4001_4000;
     const SIO_BASE: u64 = 0xD000_0000;
     const UART0_BASE: u64 = 0x4003_4000;
+    const UART1_BASE: u64 = 0x4003_8000;
     const RAM_BASE: u64 = 0x2000_0000;
 
     /// PL011 (ARM DDI 0183G): data register, and the two baud divisors.
@@ -69,6 +70,9 @@ mod rp2040_uart_waveform_tests {
         // Keep the test's own stdout clean; the pad waveform is what is asserted.
         uart.set_sink(None, false);
         bus.add_peripheral("uart0", UART0_BASE, 0x1000, None, Box::new(uart));
+        let mut uart1 = Uart::new_with_layout(UartRegisterLayout::Pl011);
+        uart1.set_sink(None, false);
+        bus.add_peripheral("uart1", UART1_BASE, 0x1000, None, Box::new(uart1));
         bus.wire_rp2040_uart_pads();
 
         let mut machine = Machine::new(cpu, bus);
@@ -160,6 +164,69 @@ mod rp2040_uart_waveform_tests {
         bytes
     }
 
+    /// Every TX pad in the routing table, with the instance the SVD assigns.
+    /// Kept here rather than imported so a typo in the model's table is a
+    /// DISAGREEMENT between two hand-entered lists, not a shared mistake.
+    const TX_PADS: &[(u8, usize)] = &[
+        (0, 0),
+        (4, 1),
+        (8, 1),
+        (12, 0),
+        (16, 0),
+        (20, 1),
+        (24, 1),
+        (28, 0),
+    ];
+
+    #[test]
+    fn every_pad_in_the_table_carries_its_own_instance_and_no_other() {
+        // The whole justification for transcribing this table by hand is that
+        // it cannot be derived — GP8/GP9 are UART1 where the surrounding
+        // pattern says UART0. That claim was previously ungated: no test put
+        // uart1 on the bus at all, so flipping any instance column stayed green.
+        //
+        // Here uart0 alone transmits. Every uart0 pad must carry it and every
+        // uart1 pad must stay silent, which pins the instance column of all
+        // eight rows in both directions.
+        let mut machine = machine();
+        for &(pin, _) in TX_PADS {
+            machine
+                .bus
+                .write_u32(IO_BANK0_BASE + ctrl_offset(pin), GPIO_FUNC_UART)
+                .unwrap();
+        }
+        for base in [UART0_BASE, UART1_BASE] {
+            machine.bus.write_u32(base + UARTIBRD, IBRD).unwrap();
+            machine.bus.write_u32(base + UARTFBRD, FBRD).unwrap();
+        }
+
+        let sio_idx = machine.bus.find_peripheral_index_by_name("sio").unwrap();
+        let watch: Vec<Option<(usize, u8)>> = TX_PADS
+            .iter()
+            .map(|&(pin, _)| Some((sio_idx, pin)))
+            .collect();
+        let initial = machine.logic_watch(&watch);
+        assert!(
+            initial.iter().all(|&level| level == Some(true)),
+            "every routed TX pad idles at mark, not at the SIO latch: {initial:?}",
+        );
+
+        for _ in 0..20_000 {
+            machine.step().unwrap();
+        }
+        transmit(&mut machine, b"Hi");
+
+        let edges = machine.logic_read_edges(0).edges;
+        for (channel, &(pin, instance)) in TX_PADS.iter().enumerate() {
+            let saw = edges.iter().any(|e| e.ch == channel as u32);
+            assert_eq!(
+                saw,
+                instance == 0,
+                "GP{pin} belongs to uart{instance}; uart0 was the one transmitting",
+            );
+        }
+    }
+
     #[test]
     fn logic_capture_sees_a_decodable_uart_waveform() {
         let mut machine = machine();
@@ -228,14 +295,22 @@ mod rp2040_uart_waveform_tests {
             .unwrap();
 
         let sio_idx = machine.bus.find_peripheral_index_by_name("sio").unwrap();
-        machine.logic_watch(&[Some((sio_idx, NON_UART_PIN))]);
+        // Watch BOTH pads: the TX channel proves the machinery is live in this
+        // very fixture, so the control channel's silence means the table, not a
+        // broken setup. Without that, `is_empty` is satisfied by any failure.
+        machine.logic_watch(&[Some((sio_idx, TX_PIN)), Some((sio_idx, NON_UART_PIN))]);
         for _ in 0..20_000 {
             machine.step().unwrap();
         }
         transmit(&mut machine, b"Hi!\n");
 
+        let edges = machine.logic_read_edges(0).edges;
         assert!(
-            machine.logic_read_edges(0).edges.is_empty(),
+            edges.iter().any(|e| e.ch == 0),
+            "the routed TX pad must be carrying traffic, or this proves nothing",
+        );
+        assert!(
+            !edges.iter().any(|e| e.ch == 1),
             "the UART function on a non-TX pad must not show the serial line",
         );
     }

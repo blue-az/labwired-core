@@ -292,8 +292,12 @@ mod tests {
 
     #[test]
     fn a_run_too_young_for_any_timing_emits_levels_only() {
+        // The plan must END LOW, i.e. NOT at the idle level. Ending high would
+        // make `set_line` a no-op and the two assertions below would hold on a
+        // `PadLines` that was never touched — the whole level-application block
+        // could be deleted and this test would stay green.
         let mut plan = WavePlan::new(&[true], 1_000);
-        for i in 0..10u64 {
+        for i in 0..11u64 {
             plan.edge(0, i % 2 == 1, (i + 1) * 1_000);
         }
         let lines = wire();
@@ -306,13 +310,19 @@ mod tests {
         // transitions squeezed into three cycles would decode to bytes that
         // never crossed the wire.
         let events = tap.take_events();
-        assert!(
-            events.len() <= 1,
-            "at most the net level, never a fabricated waveform: {events:?}",
+        assert_eq!(
+            events.len(),
+            1,
+            "exactly the net level, never a fabricated waveform: {events:?}",
         );
-        // i = 9 is the last edge and drives HIGH, so that is where the wire
-        // must rest — pad reads stay correct even when the trace cannot exist.
-        assert!(lines.level(0), "the line still ends where the plan left it");
+        assert!(!events[0].value, "and it reports where the wire ended up");
+        // i = 10 is the last edge and drives LOW, so that is where the wire
+        // must rest — pad reads stay correct even when the trace cannot exist,
+        // and the level genuinely had to move to get there.
+        assert!(
+            !lines.level(0),
+            "the line still ends where the plan left it"
+        );
     }
 
     #[test]

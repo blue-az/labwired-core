@@ -60,6 +60,17 @@ pub struct UartFraming {
     pub stop_bits: u8,
 }
 
+impl UartFraming {
+    /// Bit periods one character occupies: start + data + optional parity +
+    /// stop. The ONE place this length is defined, so a pacing decision and the
+    /// plan it paces can never disagree.
+    pub fn frame_bits(&self) -> u64 {
+        1 + u64::from(self.data_bits.clamp(5, 8))
+            + u64::from(self.parity != Parity::None)
+            + u64::from(self.stop_bits.clamp(1, 2))
+    }
+}
+
 impl Default for UartFraming {
     fn default() -> Self {
         Self {
@@ -318,11 +329,15 @@ mod tests {
         wave.frame(0x55, UartFraming::default()); // alternating → an edge per bit
         let events = capture(wave, 100_000);
         let cycles: Vec<u64> = events.iter().map(|&(c, _)| c).collect();
+        // 0x55 alternates on every data bit, so consecutive transitions are
+        // exactly ONE bit period apart. Asserting only that the gap is a
+        // multiple of BIT would pass at half or double the programmed baud,
+        // which is the error this test exists to catch.
         for pair in cycles.windows(2) {
             assert_eq!(
-                (pair[1] - pair[0]) % BIT,
-                0,
-                "every transition sits on a bit boundary: {cycles:?}",
+                pair[1] - pair[0],
+                BIT,
+                "every bit lasts exactly one programmed period: {cycles:?}",
             );
         }
     }
@@ -410,18 +425,53 @@ mod tests {
         lines.install_tap(Some(tap.clone()), vec![vec![0]]);
         let fit = wave.emit_ending_at(&lines, 40);
         assert!(matches!(fit, NarrationFit::Compressed { .. }), "{fit:?}");
+        // The point is not that SOME trace survives — it is that the CHARACTER
+        // does. Compression packs to one cycle per transition, so the bit
+        // period is gone and no centre-sampling decoder can read it; what must
+        // be intact is the sequence of levels, because that is what carries the
+        // bits. Compare against the same frame emitted with room to breathe: a
+        // compression that dropped or reordered a transition shows up here.
+        let compressed: Vec<bool> = tap.take_events().iter().map(|e| e.value).collect();
         assert!(
-            !tap.take_events().is_empty(),
-            "a compressed frame still leaves a trace",
+            !compressed.is_empty(),
+            "a compressed frame still leaves a trace"
+        );
+
+        let mut roomy = UartNarrator::new(TX, 10_000);
+        roomy.frame(0x41, UartFraming::default());
+        let roomy_lines = PadLines::new(LINES, &[true]);
+        let roomy_tap = LogicTap::new();
+        roomy_lines.install_tap(Some(roomy_tap.clone()), vec![vec![0]]);
+        assert_eq!(
+            roomy.emit_ending_at(&roomy_lines, 1_000_000),
+            NarrationFit::Exact,
+        );
+        let exact: Vec<bool> = roomy_tap.take_events().iter().map(|e| e.value).collect();
+
+        assert_eq!(
+            compressed, exact,
+            "every transition survives compression, in order: the timebase is \
+             lost, the bits are not",
         );
     }
 
     #[test]
     fn publishing_without_an_armed_tap_still_moves_the_level() {
-        let mut wave = UartNarrator::new(TX, BIT);
-        wave.frame(0x00, UartFraming::default());
+        // A frame always ENDS at mark, which is also where the line idles — so
+        // asserting the level after a whole character proves nothing at all.
+        // Publish a truncated waveform that leaves the line LOW, which it can
+        // only be if the narration actually drove it.
         let lines = PadLines::new(LINES, &[true]);
-        let _ = wave.emit_ending_at(&lines, 10_000);
-        assert!(lines.level(TX), "the line rests at mark after a frame");
+        assert!(
+            lines.level(TX),
+            "idles at mark before anything is published"
+        );
+        let mut plan = WavePlan::new(&[true], BIT);
+        plan.edge(TX, false, BIT); // a start bit with no character after it
+        plan.emit_starting_at(&lines, 0);
+        assert!(
+            !lines.level(TX),
+            "the level moves with no tap armed: publication is not tap-gated",
+        );
     }
 }
