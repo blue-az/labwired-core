@@ -4120,7 +4120,10 @@ mod tests {
             DISPLAY_POLL_BATCH
         );
         // Unchanged: the same script shape without a display still polls per step.
-        assert_eq!(assertion_observation_batch_size(true, true, &uart, 50_000), 1);
+        assert_eq!(
+            assertion_observation_batch_size(true, true, &uart, 50_000),
+            1
+        );
         // Unchanged: no early stop => the ordinary 10k batch, display or not.
         assert_eq!(
             assertion_observation_batch_size(true, false, &display, 50_000),
@@ -4132,7 +4135,10 @@ mod tests {
             1
         );
         // A short run never batches past its own budget.
-        assert_eq!(assertion_observation_batch_size(true, true, &display, 500), 500);
+        assert_eq!(
+            assertion_observation_batch_size(true, true, &display, 500),
+            500
+        );
     }
 
     #[test]
