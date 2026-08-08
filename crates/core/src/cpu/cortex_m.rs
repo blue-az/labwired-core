@@ -732,12 +732,60 @@ impl Cpu for CortexM {
         // clone + flag check per batch when disarmed.
         let tap = bus.logic_tap().filter(|t| t.push_armed());
 
+        // Exact-cycle clock (issue #842) — the ARM counterpart of the
+        // `exact_clock` block in `RiscV::step_batch`, which ARM never got.
+        // Same contract, cheaper shape (see the accumulator note below).
+        //
+        // `bus.current_cycle` (and the `CycleClock` published in lock-step with
+        // it) is refreshed at machine boundaries, so for the whole of a batch it
+        // holds the BATCH-START cycle. Every model that advances lazily off it —
+        // nRF52 TIMER/RTC, RP2040 TIMER, SysTick, DWT — therefore reads FROZEN
+        // mid-batch, on both the read side (`&self` clock sync) and the write
+        // side (`sync_scheduler_peripheral`, which reads `current_cycle`).
+        // Firmware polling a free-running counter in a tight loop sees it stop
+        // dead for a whole quantum: `TIER1 timer FAIL code=timer-not-advancing`
+        // on nrf52832 / nrf52840 / rp2040.
+        //
+        // Advancing the cycle once per retired instruction makes those accesses
+        // cycle-EXACT — instruction `i` of the batch runs at `batch_start + i`,
+        // which is what interval 1 already gives, where the batch is one
+        // instruction and the boundary refresh does it. That is why this is a
+        // fidelity fix and not a heuristic: the poll exits on the same
+        // instruction at any tick interval.
+        //
+        // Only ARM was affected because only ARM lacked this: RISC-V has carried
+        // it since its own walk-free migration, which is why no RISC-V board is
+        // on the batched-path divergence list.
+        //
+        // `current_cycle` is its OWN accumulator: it already holds the
+        // batch-start cycle on entry, so advancing it in place AFTER each
+        // retired instruction spells the whole fix as one read-modify-write
+        // (`add [bus+off], reg`) and costs no loop-carried register.
+        //
+        // That shape is not incidental. Keeping the live cycle in a local and
+        // storing it (`live = batch_start; …; bus.current_cycle = live; live +=
+        // step`) needs two extra u64s alive across the `step_internal` call, so
+        // both spill to the stack every iteration — measured at +3.2% Ir/step on
+        // all four boards, over the 3% gate. This form measures clean.
+        //
+        // `live_step` is 0 at interval 1, making the update a no-op write that
+        // leaves `current_cycle` pinned to batch-start for the whole batch —
+        // exactly the pre-#842 behaviour, with no test-and-branch per
+        // instruction.
+        #[cfg(feature = "event-scheduler")]
+        let live_step = u64::from(config.peripheral_tick_interval > 1);
+
         if !config.batch_mode_enabled {
             for i in 0..max_count {
                 if let Some(tap) = &tap {
                     tap.bump_clock();
                 }
                 self.step(bus, observers, config)?;
+                // Advance AFTER the step: the instruction just retired ran at
+                // the cycle already published, and this readies the next one.
+                // See the `live_step` block above.
+                #[cfg(feature = "event-scheduler")]
+                bus.publish_cycle(bus.current_cycle() + live_step);
                 // A latched SYSRESETREQ ends the batch on the instruction that
                 // wrote AIRCR, so the machine boundary applies the reset before
                 // anything else retires (see `CortexM::sysreset_signal`).
@@ -788,6 +836,15 @@ impl Cpu for CortexM {
                     tap.bump_clock();
                 }
                 self.step_internal(sysbus, observers, config)?;
+                // The hot arm. Concrete `SystemBus`, so this is one in-place
+                // add on a field, not a virtual call — and deliberately NOT
+                // `set_current_cycle`, whose extra job is republishing the
+                // `CycleClock`. That republish is an atomic store and belongs
+                // on the per-MMIO path (`note_mmio_activity`), not here.
+                #[cfg(feature = "event-scheduler")]
+                {
+                    sysbus.current_cycle += live_step;
+                }
                 executed += 1;
                 // See the `!batch_mode_enabled` arm: a latched SYSRESETREQ ends
                 // the batch here so the reset lands on this exact boundary.
@@ -827,6 +884,9 @@ impl Cpu for CortexM {
                     tap.bump_clock();
                 }
                 self.step_internal(bus, observers, config)?;
+                // See the `live_step` block above.
+                #[cfg(feature = "event-scheduler")]
+                bus.publish_cycle(bus.current_cycle() + live_step);
                 executed += 1;
                 if self.sysreset_latched() {
                     break;

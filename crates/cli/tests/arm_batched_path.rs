@@ -149,23 +149,32 @@ fn default_run_is_untouched_by_the_flags_existence() {
     }
 }
 
-/// Boards whose TIER1 transcript is NOT the same on the batched path, with the
-/// symptom. This is recorded debt, not a tolerance: the browser runs the batched
-/// path, so on these three parts the browser is already showing a firmware
-/// result the single-step CLI does not.
+/// Boards whose TIER1 transcript is NOT the same on the batched path.
 ///
-/// Symptom on all three: `TIER1 timer FAIL code=timer-not-advancing`. The
-/// firmware polls a free-running counter (nRF52 TIMER, RP2040 TIMER) in a tight
-/// loop and sees it frozen, because inside a multi-instruction CPU batch the
-/// peripheral's read-side clock is only resynced at the batch boundary. The
-/// existing fidelity gate `crates/core/tests/nrf52_timer_walk_differential.rs`
-/// does not catch it: it holds `peripheral_tick_interval = 512` but observes
-/// "with single-cycle advance batches", so it varies the tick interval while
-/// keeping the CPU quantum at 1 — the opposite half of what #830 changed.
+/// EMPTY, and the emptiness is the point — every ARM board in `BOARDS` now
+/// produces byte-identical firmware output on both loops.
 ///
-/// This predates this file. It is surfaced here, not introduced here: the
-/// browser has run this path since #830 removed the clamps.
-const KNOWN_DIVERGENT: &[&str] = &["nrf52832", "nrf52840", "rp2040"];
+/// It held `nrf52832`, `nrf52840` and `rp2040`, all with the same symptom:
+/// `TIER1 timer FAIL code=timer-not-advancing`. Firmware polled a free-running
+/// counter (nRF52 TIMER, RP2040 TIMER) in a tight loop and saw it frozen,
+/// because `CortexM::step_batch` left `bus.current_cycle` — and the
+/// `CycleClock` published in lock-step with it — pinned to the BATCH-START
+/// cycle for the whole window, so every lazily-advanced peripheral read the
+/// same instant for `peripheral_tick_interval` instructions. Fixed in #842 by
+/// republishing the live cycle per retired instruction, which `RiscV::step_batch`
+/// had done all along; ARM simply never got that block, which is why no RISC-V
+/// board was ever on this list.
+///
+/// The unit-level twin now lives in
+/// `crates/core/tests/nrf52_timer_walk_differential.rs`
+/// (`timer0_capture_poll_advances_inside_batch_at_tick512`), which polls the
+/// counter from INSIDE a 512-instruction batch — the half that gate was
+/// missing when this list was written.
+///
+/// Keep the list and its two-directional check. This is the seam where a CPU
+/// batch loop and a lazily-advanced peripheral disagree about what time it is,
+/// and it has gone wrong once already.
+const KNOWN_DIVERGENT: &[&str] = &[];
 
 #[test]
 fn batching_does_not_change_what_the_firmware_does() {
