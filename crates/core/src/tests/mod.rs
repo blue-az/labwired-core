@@ -53,4 +53,6 @@ pub mod uart_stream_interval_differential;
 #[cfg(test)]
 pub mod walk_starvation_contract;
 #[cfg(test)]
+pub mod xtensa_memory_contract;
+#[cfg(test)]
 pub mod yaml_owned_base_contract;
