@@ -19,6 +19,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `labwired run` for ARM is unchanged.
 
 ### Fixed
+- **Two I²C parts powered up in a state silicon never powers up in.** Firmware
+  that relies on the documented power-on state worked in simulation and would
+  have failed on hardware — the exact class of bug this twin exists to catch.
+  - **VEML7700 booted RUNNING; silicon boots SHUT DOWN.** `ALS_CONF` (0x00) reset
+    was `0x0000`; the datasheet (Rev. 1.8 p7) says *"Command code 0 default value
+    is 01 = devices is shut down"*, bit 0 `ALS_SD`. Reset is now `0x0001`, and
+    the behaviour behind it is modelled too: `ALS` / `WHITE` are gated on
+    `ALS_SD` via a new declarative `zero_when` primitive, so a shut-down part
+    reports `0x0000` instead of a plausible light level. Known gaps (no ~2.5 ms
+    startup latency; mid-flight shutdown is an unspecified guess; `PSM`,
+    `ALS_WH`/`ALS_WL` and `ALS_INT` remain storage-only) are documented in
+    `configs/devices/veml7700.yaml`.
+  - **PCA9685 powered up all-zero.** Only MODE1 (`0x11`) had a reset value. Added
+    the rest from the datasheet (Rev. 4): MODE2 `0x04`, SUBADR1/2/3
+    `0xE2`/`0xE4`/`0xE8`, ALLCALLADR `0xE0`, all sixteen `LEDn_OFF_H` `0x10`
+    ("full OFF"), PRE_SCALE `0x1E`. These make the registers READ BACK like
+    silicon; none of the functions they select are implemented (no output drive,
+    no All-Call/subaddress bus response, no full-OFF gating, no PWM frequency) —
+    the gap list is in `configs/devices/pca9685.yaml`. `ALL_LED_ON_H` (0xFB) and
+    `ALL_LED_OFF_H` (0xFD) are deliberately left at `0x00`: the datasheet
+    contradicts itself (p25 Table 8 vs p13 Table 4) and we do not resolve that
+    for the vendor.
+  - Both hand-written byte-parity oracles moved with their descriptors, and the
+    power-on state is now asserted **absolutely against the datasheet on each
+    model independently** — parity alone would stay green if both sides carried
+    the same defect, which is exactly how these two survived.
 - **The per-board throughput gate was blind on the path users actually run.**
   `scripts/perf/board_perf.py` drove ARM through `Machine::step()` while the
   browser drives `Machine::advance` — so #830, worth 9-16x on the batched path,
@@ -61,6 +87,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `seeed-xiao-nrf52840-sense` now correctly read `✖ DRIFT` (model 2026-07-30 >
   capture 2026-06-17, past the 2026-07-27 ack) instead of claiming an ack that
   no longer covers them.
+
+### Added
+- **`zero_when` register power-gate** for the declarative device DSL: while any
+  masked bit of a named register is set, the gated register reads all-zero
+  instead of reporting its measurement. Shared by the I²C and SPI engines, with
+  validation that rejects a dangling reference, an empty mask, a self-gate, or a
+  gate bit firmware could never clear. The VEML7700's `ALS_SD` shutdown bit is
+  its first user.
 
 ## [0.21.0] - 2026-07-27
 

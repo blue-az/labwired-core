@@ -65,6 +65,27 @@ impl GenericSpiDevice {
                 spec.framing.command_bytes
             );
         }
+        // `zero_when` power-gates work here too (the read math is shared with
+        // the I²C engine), so a dangling reference must not silently no-op into
+        // "gate never fires". No shipping SPI descriptor uses one yet; this is
+        // the guard that keeps the first one from being wrong in silence.
+        for reg in &spec.registers {
+            if let Some(z) = &reg.zero_when {
+                if !spec.registers.iter().any(|r| r.name == z.register) {
+                    bail!(
+                        "register '{}' zero_when register '{}' is not a declared register",
+                        reg.name,
+                        z.register
+                    );
+                }
+                if z.mask == 0 {
+                    bail!(
+                        "register '{}' zero_when mask is 0 — the gate could never fire",
+                        reg.name
+                    );
+                }
+            }
+        }
         let mut slots = HashMap::new();
         if let Some(meta) = &descriptor.metadata {
             for input in &meta.inputs {
