@@ -409,10 +409,21 @@ const SURVIVAL_CASES: &[SurvivalCase] = &[
         system: "nrf52-dk",
         fixture: "nrf52832-demo.elf",
         valid_pc_ranges: &[(0x0000_0000, 0x0007_FFFF), (0x2000_0000, 0x2000_FFFF)],
-        // The nrf52832-demo.elf binary was compiled for nRF52840 (256KB RAM), but the
-        // nRF52832 chip config only has 64KB RAM. The initial SP (0x20040000) sits outside
-        // the 64KB boundary, making the stack unreliable. UART output is not asserted here.
-        expected_uart_output: b"",
+        // This fixture used to be a build of `crates/firmware-nrf52840-demo`
+        // (mangled symbols `_ZN22firmware_nrf52840_demo…`, banner
+        // `NRF52840_SMOKE_OK`), so its vector table carried the nRF52840
+        // initial SP of 0x20040000 — the top of 256 KB. Real nRF52832 silicon
+        // has 64 KB of RAM ending at 0x20010000, which is what
+        // configs/chips/nrf52832.yaml correctly models, so every push landed
+        // in unmapped space and was silently discarded. The case could not
+        // assert any UART output as a result.
+        //
+        // It is now built from `crates/firmware-nrf52832-demo` against a 64 KB
+        // memory.x, so the stack is real and the EasyDMA console banner comes
+        // out. The fixture was the wrong side, not the chip config: growing
+        // the model's RAM to fit a mis-targeted binary would have made the
+        // twin lie about the part.
+        expected_uart_output: b"NRF52832_SMOKE_OK\n",
     },
     SurvivalCase {
         name: "stm32h563_demo",
