@@ -132,6 +132,24 @@ const HARDCODED_BASE_ALLOWLIST: &[(&str, &str, &str)] = &[
          is no id to resolve. Needs the system base from ChipMap plus a named \
          offset; left alone rather than guessed at.",
     ),
+    // ── register field encodings that merely LOOK like bases ────────────────
+    (
+        "peripherals/esp32c3/pms.rs",
+        "IRAM0_STATUS_ADDR_BASE",
+        "NOT A PERIPHERAL BASE. `IRAM0_VIOLATE_STATUS_ADDR_OFFSET` from IDF's \
+         soc/esp32c3/memprot_defs.h: the PMS stores a violating address in \
+         CORE_0_IRAM0_PMS_MONITOR_2[28:5] relative to 0x4000_0000, and IDF's \
+         own `memprot_ll_iram0_get_monitor_status_fault_addr` adds it back. It \
+         is part of a register's field encoding, like a shift or a mask — no \
+         chip YAML declares it and there is nothing for ChipMap to resolve.",
+    ),
+    (
+        "peripherals/esp32c3/pms.rs",
+        "DRAM0_STATUS_ADDR_BASE",
+        "NOT A PERIPHERAL BASE. `DRAM0_VIOLATE_STATUS_ADDR_OFFSET`, the DRAM0 \
+         twin of the above (CORE_0_DRAM0_PMS_MONITOR_2[27:4] is stored relative \
+         to 0x3C00_0000). Same reasoning.",
+    ),
     // ── models naming their own base ────────────────────────────────────────
     (
         "peripherals/esp32c3/apb_saradc.rs",
