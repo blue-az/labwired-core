@@ -53,6 +53,8 @@ pub mod stm32_i2c_waveform;
 #[cfg(test)]
 pub mod stm32_spi_waveform;
 #[cfg(test)]
+pub mod stm32_uart_waveform;
+#[cfg(test)]
 pub mod test_cycles;
 #[cfg(test)]
 pub mod uart_stream_interval_differential;

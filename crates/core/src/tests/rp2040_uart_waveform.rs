@@ -38,7 +38,8 @@ mod rp2040_uart_waveform_tests {
 
     /// GP0 is UART0 TX on the RP2040, and the Pico's default serial pin.
     const TX_PIN: u8 = 0;
-    /// GP2 is not a UART pad at all — the control case.
+    /// GP2 is `uart0_cts` in the SVD — a UART function, but not one that
+    /// carries a narrated waveform. The control case.
     const NON_UART_PIN: u8 = 2;
     const CH_TX: u32 = 0;
 
@@ -214,11 +215,17 @@ mod rp2040_uart_waveform_tests {
     }
 
     #[test]
-    fn a_pad_left_as_plain_gpio_shows_no_serial_traffic() {
-        // FUNCSEL is the whole point: a pad the firmware never handed to the
-        // UART must keep reporting its own state.
+    fn a_pad_that_carries_no_tx_function_shows_no_serial_traffic() {
+        // This gates the TABLE, not FUNCSEL: GP2 is handed to the UART exactly
+        // like the real TX pad, and must still stay silent, because GP2 is
+        // uart0_CTS. Route a pad the SVD does not name TX or RX and this is
+        // what catches it.
         let mut machine = machine();
         configure(&mut machine, TX_PIN);
+        machine
+            .bus
+            .write_u32(IO_BANK0_BASE + ctrl_offset(NON_UART_PIN), GPIO_FUNC_UART)
+            .unwrap();
 
         let sio_idx = machine.bus.find_peripheral_index_by_name("sio").unwrap();
         machine.logic_watch(&[Some((sio_idx, NON_UART_PIN))]);
@@ -229,7 +236,7 @@ mod rp2040_uart_waveform_tests {
 
         assert!(
             machine.logic_read_edges(0).edges.is_empty(),
-            "a pad still owned by SIO must not show the serial line",
+            "the UART function on a non-TX pad must not show the serial line",
         );
     }
 

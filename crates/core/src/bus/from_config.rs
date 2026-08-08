@@ -883,6 +883,9 @@ impl SystemBus {
         // Same for each STM32 I²C controller's SCL/SDA, so that bus is
         // measurable too rather than reading as a flat line.
         bus.wire_stm32_i2c_pads();
+        // And each USART's TX/RX, so serial output is a waveform on the routed
+        // AF pad rather than the idle GPIO latch.
+        bus.wire_stm32_uart_pads();
         // Resolve declared per-peripheral RCC clock-gates now that every
         // peripheral (incl. the RCC, needed to map reg-name → offset) is on the
         // bus. Peripherals without a `clock:` field stay ungated.

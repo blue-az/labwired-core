@@ -614,6 +614,86 @@ impl SystemBus {
         }
     }
 
+    /// Route each STM32 USART's TX/RX onto the GPIO pads that can carry them,
+    /// so a probe shows the serial waveform rather than the idle GPIO latch.
+    ///
+    /// Same mechanism as [`Self::wire_stm32_i2c_pads`] and
+    /// [`Self::wire_stm32_spi_pads`] — one `add_pad_route` per (pad, AF), and
+    /// the AF nibble decides which is live. Only the table differs.
+    pub(crate) fn wire_stm32_uart_pads(&mut self) {
+        use crate::peripherals::gpio::{GpioPort, GpioRegisterLayout};
+        use crate::peripherals::uart::{Uart, LINE_RX, LINE_TX};
+
+        // (instance, port, pin, AF, line, func). Read out of the STM32L476
+        // datasheet DS10198 Table 17 (AF0-AF7): USART1-3 sit on AF7 across the
+        // V2 families. Only TX and RX are routed — CK/CTS/RTS carry no narrated
+        // waveform.
+        const V2: &[(u8, char, u8, u8, usize, &str)] = &[
+            (1, 'a', 9, 7, LINE_TX, "USART1_TX"),
+            (1, 'a', 10, 7, LINE_RX, "USART1_RX"),
+            (1, 'b', 6, 7, LINE_TX, "USART1_TX"),
+            (1, 'b', 7, 7, LINE_RX, "USART1_RX"),
+            (1, 'g', 9, 7, LINE_TX, "USART1_TX"),
+            (1, 'g', 10, 7, LINE_RX, "USART1_RX"),
+            (2, 'a', 2, 7, LINE_TX, "USART2_TX"),
+            (2, 'a', 3, 7, LINE_RX, "USART2_RX"),
+            (2, 'd', 5, 7, LINE_TX, "USART2_TX"),
+            (2, 'd', 6, 7, LINE_RX, "USART2_RX"),
+            (3, 'b', 10, 7, LINE_TX, "USART3_TX"),
+            (3, 'b', 11, 7, LINE_RX, "USART3_RX"),
+            (3, 'c', 4, 7, LINE_TX, "USART3_TX"),
+            (3, 'c', 5, 7, LINE_RX, "USART3_RX"),
+            (3, 'c', 10, 7, LINE_TX, "USART3_TX"),
+            (3, 'c', 11, 7, LINE_RX, "USART3_RX"),
+            (3, 'd', 8, 7, LINE_TX, "USART3_TX"),
+            (3, 'd', 9, 7, LINE_RX, "USART3_RX"),
+        ];
+
+        for instance in 1u8..=3 {
+            // Chip configs name these both ways — `uart2` on the L4/F1 configs,
+            // `usart2` on the G4. Looking up both is what stops a rename in one
+            // yaml silently un-routing that chip's serial pads.
+            let Some(uart_idx) = self
+                .find_peripheral_index_by_name(&format!("uart{instance}"))
+                .or_else(|| self.find_peripheral_index_by_name(&format!("usart{instance}")))
+            else {
+                continue;
+            };
+            let Some(lines) = self.peripherals[uart_idx]
+                .dev
+                .as_any_mut()
+                .and_then(|a| a.downcast_mut::<Uart>())
+                .map(Uart::pad_lines_arc)
+            else {
+                continue;
+            };
+            for port in ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] {
+                let Some(gpio_idx) = self.find_peripheral_index_by_name(&format!("gpio{port}"))
+                else {
+                    continue;
+                };
+                let Some(gpio) = self.peripherals[gpio_idx]
+                    .dev
+                    .as_any_mut()
+                    .and_then(|a| a.downcast_mut::<GpioPort>())
+                else {
+                    continue;
+                };
+                // The F1 selects alternate function through CRL/CRH rather than
+                // an AF nibble, so its pads are a different decode — as with
+                // I²C, only the V2 register model is routed here.
+                if gpio.register_layout() != GpioRegisterLayout::Stm32V2 {
+                    continue;
+                }
+                for &(inst, p, pin, af, line, func) in V2 {
+                    if inst == instance && p == port {
+                        gpio.add_pad_route(&lines, pin, Some(af), line, func);
+                    }
+                }
+            }
+        }
+    }
+
     /// The single funnel through which every SPI device reaches a controller —
     /// the SPI counterpart of [`Self::attach_i2c_slave`]. Wraps then dispatches.
     pub fn attach_spi_device(
