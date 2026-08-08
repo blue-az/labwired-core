@@ -85,47 +85,9 @@
 //! no trace) rather than inventing timing it cannot represent.
 
 use super::pad_lines::PadLines;
+use super::wave_plan::WavePlan;
 
-/// How well a narration fitted the cycles available to it.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum NarrationFit {
-    /// The whole waveform fitted at its programmed bit rate — measuring the
-    /// trace gives the frequency the controller's registers ask for.
-    Exact,
-    /// The run was younger than the waveform, so it was scaled to fit. Bit
-    /// values, frame boundaries and ACKs are intact and the trace decodes
-    /// correctly; the timebase is not the programmed one.
-    Compressed {
-        /// Cycles per SCL period the controller actually programmed.
-        programmed: u64,
-        /// Cycles the compressed waveform was squeezed into.
-        occupied: u64,
-    },
-    /// Fewer cycles had elapsed than the waveform has transitions, so no
-    /// timeline can hold it: the capture layer keeps one level per channel per
-    /// cycle, so packing would silently swallow transitions and decode to the
-    /// wrong bytes. Only the net levels are applied — pad reads stay correct
-    /// and the trace stays empty rather than wrong.
-    LevelsOnly {
-        /// Transitions the waveform contains.
-        transitions: u64,
-        /// Cycles that had actually elapsed to hold them.
-        available: u64,
-    },
-}
-
-/// `value * numerator / denominator` without overflowing on realistic spans.
-fn mul_div(value: u64, numerator: u64, denominator: u64) -> u64 {
-    ((value as u128 * numerator as u128) / denominator as u128) as u64
-}
-
-/// One planned transition, in cycles relative to the start of the plan.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct PlannedEdge {
-    at: u64,
-    line: usize,
-    level: bool,
-}
+pub use super::wave_plan::NarrationFit;
 
 /// A planned I²C waveform: the edge sequence a completed transaction implies.
 ///
@@ -138,14 +100,12 @@ struct PlannedEdge {
 pub struct I2cNarrator {
     scl_line: usize,
     sda_line: usize,
-    /// One SCL period in engine cycles.
-    bit_time: u64,
     /// Relative cursor: the instant SCL last went (or will go) low, i.e. where
     /// the next bit period begins.
     cursor: u64,
-    scl: bool,
-    sda: bool,
-    edges: Vec<PlannedEdge>,
+    /// Edge accumulation and cycle-axis anchoring, shared with every other
+    /// narrator (see [`crate::peripherals::wave_plan`]).
+    plan: WavePlan,
 }
 
 impl I2cNarrator {
@@ -153,14 +113,14 @@ impl I2cNarrator {
     /// them). `bit_time` is one SCL period in engine cycles; it is clamped to
     /// at least 2 so the low and high half-periods stay distinguishable.
     pub fn new(scl_line: usize, sda_line: usize, bit_time: u64) -> Self {
+        let mut idle = vec![true; scl_line.max(sda_line) + 1];
+        idle[scl_line] = true;
+        idle[sda_line] = true;
         Self {
             scl_line,
             sda_line,
-            bit_time: bit_time.max(2),
             cursor: 0,
-            scl: true,
-            sda: true,
-            edges: Vec::new(),
+            plan: WavePlan::new(&idle, bit_time),
         }
     }
 
@@ -168,20 +128,26 @@ impl I2cNarrator {
     /// rising (sampling) edge.
     #[inline]
     fn half(&self) -> u64 {
-        self.bit_time / 2
+        self.plan.bit_time() / 2
+    }
+
+    #[inline]
+    fn bit_time(&self) -> u64 {
+        self.plan.bit_time()
     }
 
     fn edge(&mut self, line: usize, level: bool, at: u64) {
-        let current = if line == self.scl_line {
-            &mut self.scl
-        } else {
-            &mut self.sda
-        };
-        if *current == level {
-            return;
-        }
-        *current = level;
-        self.edges.push(PlannedEdge { at, line, level });
+        self.plan.edge(line, level, at);
+    }
+
+    #[inline]
+    fn scl(&self) -> bool {
+        self.plan.level(self.scl_line)
+    }
+
+    #[inline]
+    fn sda(&self) -> bool {
+        self.plan.level(self.sda_line)
     }
 
     /// START condition: SDA falls while SCL is high, then SCL falls to open the
@@ -192,17 +158,17 @@ impl I2cNarrator {
     /// controller drives.
     pub fn start(&mut self) {
         let half = self.half();
-        if !self.sda {
+        if !self.sda() {
             // Repeated start: release SDA during the low phase, then clock high.
             self.edge(self.sda_line, true, self.cursor);
         }
-        if !self.scl {
+        if !self.scl() {
             self.edge(self.scl_line, true, self.cursor + half);
-            self.cursor += self.bit_time;
+            self.cursor += self.bit_time();
         }
         self.edge(self.sda_line, false, self.cursor);
         self.edge(self.scl_line, false, self.cursor + half);
-        self.cursor += self.bit_time;
+        self.cursor += self.bit_time();
     }
 
     /// One 9-bit frame: `byte` MSB-first, then the ACK slot (`acked` pulls SDA
@@ -224,8 +190,8 @@ impl I2cNarrator {
         let start = self.cursor;
         self.edge(self.sda_line, level, start);
         self.edge(self.scl_line, true, start + half);
-        self.edge(self.scl_line, false, start + self.bit_time);
-        self.cursor = start + self.bit_time;
+        self.edge(self.scl_line, false, start + self.bit_time());
+        self.cursor = start + self.bit_time();
     }
 
     /// STOP condition: SCL rises, then SDA rises while it is high, leaving the
@@ -235,18 +201,18 @@ impl I2cNarrator {
         // SDA must be low going into a STOP for the rising edge to be visible.
         self.edge(self.sda_line, false, self.cursor);
         self.edge(self.scl_line, true, self.cursor + half);
-        self.edge(self.sda_line, true, self.cursor + self.bit_time);
-        self.cursor += self.bit_time + half;
+        self.edge(self.sda_line, true, self.cursor + self.bit_time());
+        self.cursor += self.bit_time() + half;
     }
 
     /// Total span of the plan in engine cycles.
     pub fn span(&self) -> u64 {
-        self.edges.last().map_or(0, |edge| edge.at)
+        self.plan.span()
     }
 
     /// `true` when the plan contains no transitions at all.
     pub fn is_empty(&self) -> bool {
-        self.edges.is_empty()
+        self.plan.is_empty()
     }
 
     /// Publish the plan so its LAST edge lands on `end_cycle` — the anchoring a
@@ -269,97 +235,12 @@ impl I2cNarrator {
     /// silently believing a squashed timebase.
     #[must_use = "a compressed narration does not carry the programmed bit rate"]
     pub fn emit_ending_at(self, lines: &PadLines, end_cycle: u64) -> NarrationFit {
-        let span = self.span();
-        if span <= end_cycle {
-            let start = end_cycle - span;
-            self.emit_starting_at(lines, start);
-            NarrationFit::Exact
-        } else {
-            self.emit_compressed_into(lines, end_cycle)
-        }
-    }
-
-    /// Publish the plan scaled to end at `end_cycle` with nothing before cycle
-    /// 0 — the fallback when the run is younger than the waveform.
-    ///
-    /// Relative times are scaled linearly, so edge ORDER and the grouping of
-    /// simultaneous edges are preserved exactly; distinct instants are then
-    /// forced at least one cycle apart so no two transitions collapse onto the
-    /// same cycle and become invisible to a decoder. If even that does not fit
-    /// — fewer cycles have elapsed than the plan has distinct instants — no
-    /// timing can represent it, so only the final levels are applied
-    /// ([`NarrationFit::LevelsOnly`]): `read_gpio_pad` stays correct and the
-    /// trace stays empty rather than wrong.
-    fn emit_compressed_into(self, lines: &PadLines, end_cycle: u64) -> NarrationFit {
-        let span = self.span();
-        let instants = self.distinct_instants();
-        if span == 0 || end_cycle < instants {
-            // Below one cycle per transition there is no honest rendering: the
-            // capture layer keeps a single level per channel per cycle, so any
-            // packing collapses transitions and the trace would decode to bytes
-            // that never crossed the bus. Apply where each line ENDED and emit
-            // no trace — silence beats a confident wrong answer.
-            let mut final_level: Vec<Option<bool>> = vec![None; lines.names().len()];
-            for edge in &self.edges {
-                if let Some(slot) = final_level.get_mut(edge.line) {
-                    *slot = Some(edge.level);
-                }
-            }
-            for (line, level) in final_level.iter().enumerate() {
-                if let Some(level) = level {
-                    lines.set_line(line, *level);
-                }
-            }
-            return NarrationFit::LevelsOnly {
-                transitions: instants,
-                available: end_cycle,
-            };
-        }
-        // Scale into the window, keeping edge order, keeping simultaneous edges
-        // simultaneous, and keeping every transition of one line on its own
-        // cycle so none is swallowed.
-        let floor = end_cycle - instants;
-        let mut previous_at = None;
-        let mut previous_cycle = floor;
-        for edge in &self.edges {
-            let cycle = if previous_at == Some(edge.at) {
-                previous_cycle
-            } else {
-                let scaled = floor + mul_div(edge.at, instants, span);
-                let next = scaled.max(previous_cycle.saturating_add(1));
-                previous_at = Some(edge.at);
-                previous_cycle = next;
-                next
-            };
-            lines.set_line_at(edge.line, edge.level, cycle);
-        }
-        NarrationFit::Compressed {
-            programmed: self.bit_time,
-            occupied: end_cycle.saturating_sub(floor),
-        }
-    }
-
-    /// Number of distinct instants in the plan — the minimum number of cycles a
-    /// compressed narration needs so no two transitions share a cycle.
-    fn distinct_instants(&self) -> u64 {
-        let mut count = 0;
-        let mut previous = None;
-        for edge in &self.edges {
-            if previous != Some(edge.at) {
-                count += 1;
-                previous = Some(edge.at);
-            }
-        }
-        count
+        self.plan.emit_ending_at(lines, end_cycle)
     }
 
     /// Publish the plan with its first edge at `start_cycle`.
-    ///
-    /// Edges are emitted in ascending cycle order, as the push tap expects.
     pub fn emit_starting_at(self, lines: &PadLines, start_cycle: u64) {
-        for edge in &self.edges {
-            lines.set_line_at(edge.line, edge.level, start_cycle + edge.at);
-        }
+        self.plan.emit_starting_at(lines, start_cycle);
     }
 }
 

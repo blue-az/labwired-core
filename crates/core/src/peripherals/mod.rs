@@ -69,7 +69,9 @@ pub mod systick;
 pub mod timer;
 pub mod tsc;
 pub mod uart;
+pub mod uart_waveform;
 pub mod usb_otg;
+pub mod wave_plan;
 pub mod wwdg;
 
 /// Record one CAN/CAN-FD frame into the machine's ONE bus trace.
