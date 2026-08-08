@@ -374,6 +374,9 @@ impl Peripheral for Esp32c3Spi {
     /// level from [`Self::matrix_irq_sources`] instead; this reporter is a pure
     /// no-op on state, so a stray call is harmless.
     fn tick(&mut self) -> PeripheralTickResult {
+        for device in &mut self.attached_devices {
+            device.poll_external_bus();
+        }
         PeripheralTickResult {
             explicit_irqs: if self.int_st() != 0 {
                 Some(vec![self.source_id])

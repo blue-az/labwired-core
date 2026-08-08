@@ -182,7 +182,7 @@ impl<C: Cpu + 'static> MachineTrait for Machine<C> {
         tx: std::sync::mpsc::Sender<crate::network::CanFrame>,
         rx: std::sync::mpsc::Receiver<crate::network::CanFrame>,
     ) -> anyhow::Result<()> {
-        self.bus.attach_can_bus_by_id(can_id, tx, rx)
+        self.bus.attach_can_endpoint_by_id(can_id, tx, rx)
     }
 }
 
@@ -410,13 +410,20 @@ impl World {
                     });
                 }
                 "can_bus" => {
-                    let peripheral = ic
+                    let legacy_peripheral = ic
                         .config
                         .get("peripheral")
                         .and_then(|value| value.as_str())
                         .map(str::trim)
                         .filter(|value| !value.is_empty())
-                        .context("can_bus: missing nonblank config.peripheral")?;
+                        .map(str::to_owned);
+                    let endpoints = ic
+                        .config
+                        .get("endpoints")
+                        .and_then(|value| value.as_mapping());
+                    if legacy_peripheral.is_none() && endpoints.is_none() {
+                        anyhow::bail!("can_bus: missing nonblank config.peripheral");
+                    }
                     // A manifest's membership order must not alter the behavior
                     // of an otherwise identical topology. CanBus drains attached
                     // endpoints in this order, so use the same lexical ordering
@@ -432,14 +439,46 @@ impl World {
                         }
                     }
 
+                    if let Some(endpoints) = endpoints {
+                        for key in endpoints.keys() {
+                            let Some(key) = key.as_str() else {
+                                anyhow::bail!("can_bus: endpoint node ids must be strings");
+                            };
+                            if !node_ids.iter().any(|node| node == key) {
+                                anyhow::bail!(
+                                    "can_bus: endpoint map contains unknown node '{key}'"
+                                );
+                            }
+                        }
+                        if endpoints.len() != node_ids.len() {
+                            anyhow::bail!("can_bus: endpoint map must contain every member node");
+                        }
+                    }
+
                     let mut can_bus = crate::network::CanBus::new();
                     for node_id in &node_ids {
+                        let endpoint = if let Some(endpoints) = endpoints {
+                            endpoints
+                                .get(serde_yaml::Value::String(node_id.clone()))
+                                .and_then(|value| value.as_str())
+                                .map(str::trim)
+                                .filter(|value| !value.is_empty())
+                                .with_context(|| {
+                                    format!(
+                                        "can_bus: missing nonblank endpoint for node '{node_id}'"
+                                    )
+                                })?
+                        } else {
+                            legacy_peripheral
+                                .as_deref()
+                                .expect("CAN config source was validated above")
+                        };
                         let (tx, rx) = can_bus.attach();
                         world
                             .machines
                             .get_mut(node_id)
                             .expect("all can_bus nodes were validated above")
-                            .attach_can_bus(peripheral, tx, rx)
+                            .attach_can_bus(endpoint, tx, rx)
                             .with_context(|| format!("can_bus node '{node_id}'"))?;
                     }
                     world.add_interconnect(Box::new(can_bus));

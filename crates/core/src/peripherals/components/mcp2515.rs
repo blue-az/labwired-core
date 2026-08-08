@@ -11,6 +11,7 @@
 
 use crate::peripherals::spi::SpiDevice;
 use std::any::Any;
+use std::sync::mpsc::{Receiver, Sender};
 
 const INST_WRITE: u8 = 0x02;
 const INST_READ: u8 = 0x03;
@@ -30,6 +31,8 @@ pub struct Mcp2515 {
     addr: u8,
     bitmod_mask: u8,
     component_id: Option<String>,
+    bus_tx: Option<Sender<crate::network::CanFrame>>,
+    bus_rx: Option<Receiver<crate::network::CanFrame>>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -55,6 +58,8 @@ impl Mcp2515 {
             addr: 0,
             bitmod_mask: 0,
             component_id: None,
+            bus_tx: None,
+            bus_rx: None,
         }
     }
 
@@ -65,6 +70,22 @@ impl Mcp2515 {
 }
 
 impl SpiDevice for Mcp2515 {
+    fn component_id(&self) -> Option<&str> {
+        self.component_id.as_deref()
+    }
+
+    fn attach_can_bus(
+        &mut self,
+        tx: Sender<crate::network::CanFrame>,
+        rx: Receiver<crate::network::CanFrame>,
+    ) -> anyhow::Result<()> {
+        if self.bus_tx.is_some() || self.bus_rx.is_some() {
+            anyhow::bail!("MCP2515 is already attached to a CAN bus");
+        }
+        self.bus_tx = Some(tx);
+        self.bus_rx = Some(rx);
+        Ok(())
+    }
     fn cs_pin(&self) -> &str {
         &self.cs_pin
     }

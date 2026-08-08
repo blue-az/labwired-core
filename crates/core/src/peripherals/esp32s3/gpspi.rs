@@ -257,6 +257,10 @@ impl Esp32s3Spi {
         self.attached_devices.push(device);
     }
 
+    pub(crate) fn attached_devices_mut(&mut self) -> &mut [Box<dyn SpiDevice>] {
+        &mut self.attached_devices
+    }
+
     /// Number of attached devices (used by the system-wiring tests; test-only,
     /// so it is compiled out of non-test builds).
     #[cfg(test)]
@@ -489,6 +493,9 @@ impl Peripheral for Esp32s3Spi {
     }
 
     fn tick(&mut self) -> PeripheralTickResult {
+        for device in &mut self.attached_devices {
+            device.poll_external_bus();
+        }
         PeripheralTickResult {
             explicit_irqs: if self.int_st() != 0 {
                 Some(vec![self.source_id])

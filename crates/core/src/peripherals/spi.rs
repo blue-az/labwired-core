@@ -15,6 +15,7 @@
 use crate::{Bus, SimResult};
 use std::any::Any;
 use std::str::FromStr;
+use std::sync::mpsc::{Receiver, Sender};
 use std::sync::Arc;
 
 use crate::peripherals::pad_lines::PadLines;
@@ -27,6 +28,17 @@ use crate::peripherals::spi_waveform::{SpiFraming, SpiNarrator};
 /// correct for single-device labs (MAX31855 alone).  CS-aware routing is noted
 /// as a Phase 2 follow-up.
 pub trait SpiDevice: Send {
+    fn component_id(&self) -> Option<&str> {
+        None
+    }
+    fn attach_can_bus(
+        &mut self,
+        _tx: Sender<crate::network::CanFrame>,
+        _rx: Receiver<crate::network::CanFrame>,
+    ) -> anyhow::Result<()> {
+        anyhow::bail!("SPI device is not a CAN controller")
+    }
+    fn poll_external_bus(&mut self) {}
     /// Called when the CS line goes low (chip is selected).
     fn cs_select(&mut self) {}
     /// Called when the CS line goes high (chip is released — flush state).
@@ -1813,16 +1825,26 @@ impl crate::Peripheral for Spi {
     /// nRF52 SPIM EasyDMA needs bus access to read/write RAM buffers.
     fn needs_bus_tick(&self) -> bool {
         self.nrf52_pending_start
+            || self
+                .attached_devices
+                .iter()
+                .any(|device| device.component_id().is_some())
     }
 
     /// nRF52 SPIM EasyDMA transfer engine (bare-bus / bus_tick_indices path).
     fn tick_with_bus(&mut self, bus: &mut dyn Bus) {
+        for device in &mut self.attached_devices {
+            device.poll_external_bus();
+        }
         if self.nrf52_pending_start {
             self.do_nrf52_easydma(bus);
         }
     }
 
     fn tick(&mut self) -> crate::PeripheralTickResult {
+        for device in &mut self.attached_devices {
+            device.poll_external_bus();
+        }
         self.tick_elapsed(1)
     }
 

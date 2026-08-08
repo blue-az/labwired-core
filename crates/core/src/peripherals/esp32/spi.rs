@@ -578,6 +578,9 @@ impl Peripheral for Esp32Spi {
     }
 
     fn tick(&mut self) -> PeripheralTickResult {
+        for device in &mut self.attached_devices {
+            device.poll_external_bus();
+        }
         PeripheralTickResult::default()
     }
 
