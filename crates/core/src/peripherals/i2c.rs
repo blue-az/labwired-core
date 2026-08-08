@@ -181,6 +181,37 @@ enum I2cState {
     DataSending,
 }
 
+/// One element of a legacy-I²C transaction's narration, recorded as the phase
+/// model performs it and replayed onto the pads at STOP (see
+/// [`F1I2c::wire_flush`]).
+///
+/// The legacy controller is the one STM32 I²C generation where the SOFTWARE
+/// drives every bus condition explicitly — CR1.START, CR1.STOP, and a repeated
+/// START in between — so unlike the L4 model (which infers a single START/STOP
+/// pair around an AUTOEND transfer) this records the conditions the firmware
+/// actually asked for. A sensor read (`write register pointer, repeated START,
+/// read back`) therefore narrates as the two addressed frames it really is,
+/// not as one run-on transfer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum WireEvent {
+    /// A START condition. Emitted again mid-transaction for a repeated START,
+    /// which [`I2cNarrator::start`] renders as the SDA-release-then-fall the
+    /// controller drives.
+    Start,
+    /// One 9-bit frame: the byte on the wire and whether the ACK slot was
+    /// pulled low.
+    Frame(u8, bool),
+}
+
+/// Events one transaction may buffer before the narration is abandoned.
+///
+/// Firmware always terminates an I²C transfer with a STOP — that is what
+/// releases the bus — so this is reached only by firmware that has hung the
+/// controller mid-transfer and keeps writing DR. Bounding the buffer keeps a
+/// long-running sim from growing without limit; see [`F1I2c::wire_flush`] for
+/// why hitting it publishes NOTHING rather than a truncated waveform.
+const WIRE_EVENT_CAP: usize = 1024;
+
 // ── STM32F1 legacy I2C (registers + transaction state machine) ───────────────
 #[derive(serde::Serialize)]
 pub struct F1I2c {
@@ -238,6 +269,30 @@ pub struct F1I2c {
     /// returns fully idle. Same held-level self-pacing the Kinetis variant uses.
     #[serde(skip)]
     chain_live: bool,
+
+    /// Wire levels published to AF-routed SCL/SDA pads, so a logic analyzer
+    /// clipped to this bus measures a real waveform instead of a flat line.
+    /// Created lazily by [`Self::pad_lines_arc`] at bus wiring time; `None`
+    /// when no GPIO port routes this controller's pads. Mirrors [`L4I2c`].
+    #[serde(skip)]
+    lines: Option<std::sync::Arc<PadLines>>,
+    /// Conditions and frames of the transaction in flight, oldest first —
+    /// buffered so the whole transfer is narrated onto the pads as ONE
+    /// contiguous waveform at STOP. See [`Self::wire_flush`].
+    ///
+    /// ⚠️ `RefCell`, unlike [`L4I2c::wire_frames`]'s plain `Vec`, because a
+    /// legacy master-receive pulls its second and later bytes out of the slave
+    /// on the `&self` DR read path (see [`Self::read`], the `read_dr_consumed`
+    /// branch) — the same reason `rxne_consumed` and `read_dr_consumed` are
+    /// `Cell`s. A `&mut`-only recorder would silently drop every byte of a
+    /// multi-byte read after the first, which decodes as a SHORTER transfer
+    /// than the one that crossed the bus.
+    #[serde(skip)]
+    wire_events: RefCell<Vec<WireEvent>>,
+    /// Set when a transaction overran [`WIRE_EVENT_CAP`]. Sticky until the next
+    /// flush, which then publishes nothing.
+    #[serde(skip)]
+    wire_overflow: Cell<bool>,
 }
 
 impl Default for F1I2c {
@@ -268,11 +323,131 @@ impl Default for F1I2c {
             addr_cleared: Cell::new(false),
             clock: None,
             chain_live: false,
+            lines: None,
+            wire_events: RefCell::new(Vec::new()),
+            wire_overflow: Cell::new(false),
         }
     }
 }
 
 impl F1I2c {
+    /// The shared pad-line cell for this controller, created on first use.
+    /// Called at bus wiring time by `wire_stm32_i2c_pads`; an open-drain bus
+    /// with pull-ups idles high on both lines. Mirrors [`L4I2c::pad_lines_arc`].
+    pub(crate) fn pad_lines_arc(&mut self) -> std::sync::Arc<PadLines> {
+        self.lines
+            .get_or_insert_with(|| std::sync::Arc::new(PadLines::new(I2C_LINES, &[true, true])))
+            .clone()
+    }
+
+    /// Engine cycles in one SCL period, derived from CCR exactly as the legacy
+    /// silicon derives it (RM0008 §26.6.8 / RM0090 §27.6.8, `I2C_CCR`):
+    ///
+    /// * Standard mode (`F/S = 0`): `T_high = T_low = CCR × T_PCLK1`, so one
+    ///   period is `2 × CCR`.
+    /// * Fast mode, `DUTY = 0`: `T_low = 2 × CCR × T_PCLK1`,
+    ///   `T_high = CCR × T_PCLK1` → `3 × CCR`.
+    /// * Fast mode, `DUTY = 1` (16/9): `T_low = 16 × CCR × T_PCLK1`,
+    ///   `T_high = 9 × CCR × T_PCLK1` → `25 × CCR`.
+    ///
+    /// Those are APB1 (`PCLK1`) periods, used here as engine cycles — the same
+    /// identity the STM32 SPI bit engine already assumes for its own `2^BR`
+    /// half-period derivation (see the module header of
+    /// [`crate::peripherals::spi`]). It is exact at the RCC reset defaults
+    /// (`RCC_CFGR.PPRE1 = 0b0xx`, APB1 not divided) and off by the APB1
+    /// prescaler once firmware raises the core clock and divides APB1 — a
+    /// factor of 2 on a typical F401 clock tree, 4 on an F407. Only the
+    /// magnitude is load-bearing: the narrated frame CONTENTS are exact either
+    /// way, and this is documented as the known limit on the measured bit rate,
+    /// the same call [`L4I2c::address_phase_cycles`] makes with `CORE_PER_KCLK`.
+    ///
+    /// The floor of 2 keeps the low and high half-periods distinguishable when
+    /// firmware has not programmed CCR at all (its reset value is 0).
+    fn bit_time_cycles(&self) -> u64 {
+        let ccr = u64::from(self.ccr & 0x0FFF);
+        let fast = self.ccr & 0x8000 != 0;
+        let duty16_9 = self.ccr & 0x4000 != 0;
+        let period = match (fast, duty16_9) {
+            (false, _) => 2 * ccr,
+            (true, false) => 3 * ccr,
+            (true, true) => 25 * ccr,
+        };
+        period.max(2)
+    }
+
+    /// Record a bus condition or frame this transfer put on the wire. Buffered,
+    /// not published: see [`Self::wire_flush`]. No routed pads ⇒ nothing to
+    /// record, and the call costs one branch.
+    ///
+    /// `&self` so the `&self` DR read path can record too (see
+    /// [`Self::wire_events`]).
+    fn wire_record(&self, event: WireEvent) {
+        if self.lines.is_none() {
+            return;
+        }
+        let mut events = self.wire_events.borrow_mut();
+        if events.len() >= WIRE_EVENT_CAP {
+            self.wire_overflow.set(true);
+            return;
+        }
+        events.push(event);
+    }
+
+    /// Publish the completed transaction's waveform onto the routed pads.
+    ///
+    /// The phase model has already exchanged the bytes; this narrates the wire
+    /// activity they imply so the bus is measurable (see
+    /// [`crate::peripherals::i2c_waveform`] for what that does and does not
+    /// model).
+    ///
+    /// Called at STOP — the one point the legacy controller says the
+    /// transaction is over — so the whole transfer, repeated STARTs included,
+    /// is emitted as ONE contiguous run ending at the present cycle. That is
+    /// forced by the same timing model that forces it on [`L4I2c::wire_flush`]:
+    /// this controller charges no wire time for a data byte (`cycles_remaining`
+    /// is 0 or 1 on every legacy phase), so there is no room on the timeline to
+    /// place each frame where it "happened", and narrating frame by frame would
+    /// stamp later frames in the future, where the capture layer collapses them
+    /// onto one cycle — a spike where a transaction belongs.
+    ///
+    /// ⚠️ An overrun transaction (see [`WIRE_EVENT_CAP`]) publishes NOTHING.
+    /// The alternative is emitting the first 1024 frames as if they were the
+    /// whole transfer, which decodes cleanly to a byte sequence that never
+    /// crossed the bus as such — a confident wrong answer, which is worse than
+    /// a flat line.
+    fn wire_flush(&mut self) {
+        let mut events = std::mem::take(&mut *self.wire_events.borrow_mut());
+        let overflowed = self.wire_overflow.replace(false);
+        let Some(lines) = self.lines.clone() else {
+            return;
+        };
+        if events.is_empty() || overflowed {
+            return;
+        }
+        let mut wave = I2cNarrator::new(LINE_SCL, LINE_SDA, self.bit_time_cycles());
+        for event in events.drain(..) {
+            match event {
+                WireEvent::Start => wave.start(),
+                WireEvent::Frame(byte, acked) => wave.frame(byte, acked),
+            }
+        }
+        wave.stop();
+        let now = lines.tap_clock().unwrap_or(0);
+        // A transfer this early in a run has less history behind it than the
+        // waveform needs; the narrator compresses to fit rather than emitting a
+        // spike, and says so. Nothing here can act on that — the trace still
+        // decodes to the right bytes — so the verdict is deliberately dropped,
+        // exactly as `L4I2c::wire_flush` drops it.
+        let _fit = wave.emit_ending_at(&lines, now);
+    }
+
+    /// The byte the master ACKs a received frame with: CR1.ACK (bit 10) is what
+    /// firmware clears before the final byte of a read to tell the slave to stop
+    /// driving (RM0008 §26.6.1).
+    fn master_acks_reads(&self) -> bool {
+        self.cr1 & 0x0400 != 0
+    }
+
     /// True when the event scheduler owns this controller's transaction engine
     /// (feature on AND bus clock attached).
     #[inline]
@@ -393,6 +568,11 @@ impl F1I2c {
                     // always << firmware poll period here.
                     self.state = I2cState::StartPending;
                     self.cycles_remaining = 0;
+                    // Software asked for a (possibly repeated) START; the wire
+                    // gets one. Recorded here rather than in `tick` because
+                    // this is the only place the request is distinguishable
+                    // from the address phase that follows it.
+                    self.wire_record(WireEvent::Start);
                     let _ = self.tick();
                 }
                 if (value & 0x0200) != 0 {
@@ -403,6 +583,9 @@ impl F1I2c {
                         self.stop_requested = true;
                     } else {
                         self.cr1 &= !0x0200;
+                        // The transaction is over: everything it put on the bus
+                        // goes onto the pads now, terminated by the STOP.
+                        self.wire_flush();
                         // STOP clears master/busy/TRA (RM0008 SR2).
                         self.sr2 &= !0x0007;
                         // Drop the transmitter/bus-event flags so the level EV
@@ -457,6 +640,10 @@ impl F1I2c {
                         if !self.is_reading {
                             if let Some(idx) = self.current_target {
                                 self.attached_devices[idx].borrow_mut().write(self.dr as u8);
+                                // The byte goes out on the wire here, so the
+                                // wire says so. An addressed slave that took
+                                // the byte ACKed it.
+                                self.wire_record(WireEvent::Frame(self.dr as u8, true));
                             }
                         }
                         let _ = self.tick();
@@ -498,7 +685,13 @@ impl F1I2c {
                 return (self.dr & 0xFF) as u8;
             }
             if let Some(idx) = self.current_target {
-                return self.attached_devices[idx].borrow_mut().read();
+                let byte = self.attached_devices[idx].borrow_mut().read();
+                // A second (or later) byte of a master receive, pulled straight
+                // out of the slave on this read. It crossed the bus like any
+                // other frame and must appear on the wire, or a multi-byte read
+                // narrates one byte shorter than it really was.
+                self.wire_record(WireEvent::Frame(byte, self.master_acks_reads()));
+                return byte;
             }
         }
 
@@ -558,6 +751,18 @@ impl F1I2c {
                     I2cState::AddressPending => {
                         self.sr1 &= !0x0001; // Clear SB
 
+                        // The START condition, the seven address bits and the
+                        // ACK slot were real wire activity: record the frame
+                        // with the verdict this phase just resolved. A missing
+                        // slave NACKs, which is exactly what an analyzer should
+                        // show. `self.dr` still holds the address byte the DR
+                        // write latched (address | R/W), which is the byte the
+                        // controller clocked out.
+                        self.wire_record(WireEvent::Frame(
+                            self.dr as u8,
+                            self.current_target.is_some(),
+                        ));
+
                         // No slave at this address → NACK (SR1.AF), bus stays
                         // master+BUSY until firmware STOPs (matches F407 silicon).
                         if self.current_target.is_none() {
@@ -611,6 +816,11 @@ impl F1I2c {
                             if let Some(idx) = self.current_target {
                                 self.dr = self.attached_devices[idx].borrow_mut().read() as u32;
                                 self.read_dr_consumed.set(false);
+                                // The byte was clocked in off the wire here.
+                                self.wire_record(WireEvent::Frame(
+                                    self.dr as u8,
+                                    self.master_acks_reads(),
+                                ));
                             }
                             self.state = I2cState::Idle;
                         } else {
@@ -621,6 +831,12 @@ impl F1I2c {
                         if self.stop_requested {
                             self.stop_requested = false;
                             self.cr1 &= !0x0200;
+                            // Deferred STOP: same transaction boundary as the
+                            // synchronous path in `write_reg`, so the wire is
+                            // published here too. Missing this arm would leave
+                            // every HAL "NACK+STOP → poll RXNE → read DR"
+                            // receive silently unnarrated.
+                            self.wire_flush();
                             self.sr2 &= !0x0007; // MSL|BUSY|TRA
                                                  // Keep RXNE (0x40): a deferred STOP on a master
                                                  // receive tears the bus down only after the byte has
@@ -1554,8 +1770,27 @@ impl I2c {
     /// into that cell.
     pub(crate) fn pad_lines_arc(&mut self) -> Option<std::sync::Arc<PadLines>> {
         match self {
+            Self::Stm32F1(i) => Some(i.pad_lines_arc()),
             Self::Stm32L4(i) => Some(i.pad_lines_arc()),
-            _ => None,
+            Self::Kinetis(_) => None,
+        }
+    }
+
+    /// Which register generation this instance models.
+    ///
+    /// Read by `wire_stm32_i2c_pads` to pick the alternate-function table: the
+    /// legacy (F1/F2/F4) and modern (L4/F7/H5/G0) controllers do NOT share a
+    /// pinout, and the difference is not cosmetic. On the STM32L476 (DS10198
+    /// Table 17) PA7/AF4 is I2C3_SCL and PB4/AF4 is I2C3_SDA; on the STM32F401
+    /// (DS10086 Rev 5 Table 9, pages 45-47) AF4 on both of those pads is
+    /// UNASSIGNED — F401 puts I2C3 on PA8/AF4 (SCL) and PC9/AF4 (SDA), with
+    /// PB4's I2C3_SDA living on AF9 instead. One shared table would publish an
+    /// I²C waveform onto pads the silicon leaves empty.
+    pub(crate) fn register_layout(&self) -> I2cRegisterLayout {
+        match self {
+            Self::Stm32F1(_) => I2cRegisterLayout::Stm32F1,
+            Self::Stm32L4(_) => I2cRegisterLayout::Stm32L4,
+            Self::Kinetis(_) => I2cRegisterLayout::Kinetis,
         }
     }
 

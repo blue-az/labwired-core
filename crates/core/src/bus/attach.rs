@@ -727,15 +727,26 @@ impl SystemBus {
     /// The SPI counterpart is [`Self::wire_stm32_spi_pads`]; both install
     /// routes through the one `add_pad_route` mechanism, differing only in
     /// their AF table.
+    ///
+    /// ⚠️ TWO tables, keyed on the CONTROLLER's register generation, not on the
+    /// GPIO's. "V2 GPIO registers" is not the same claim as "V2
+    /// alternate-function map" — the gap the USART table below still carries
+    /// for the L0 — and on I²C the two families genuinely disagree: DS10198
+    /// Table 17 puts I2C3 on PA7/PB4 at AF4 on the L476, while DS10086 Rev 5
+    /// Table 9 (pages 45-47) leaves AF4 on both of those pads UNASSIGNED on the
+    /// F401 and puts I2C3 on PA8/PC9 instead. Routing one table to both would
+    /// publish a live I²C waveform onto a pad the F4 silicon does not connect.
     pub(crate) fn wire_stm32_i2c_pads(&mut self) {
         use crate::peripherals::gpio::{GpioPort, GpioRegisterLayout};
-        use crate::peripherals::i2c::{I2c, LINE_SCL, LINE_SDA};
+        use crate::peripherals::i2c::{I2c, I2cRegisterLayout, LINE_SCL, LINE_SDA};
 
-        // (i2c, port, pin, AF, line, func). L4: DS10198 Table 17 (I2C1-3 on
-        // AF4, and I2C4 on AF5 where fitted — not modelled here). F4: DS8626
-        // Table 9 gives the same AF4 assignment for I2C1-3, and the pins below
-        // are common to both, so one V2 table serves them.
-        const V2: &[(&str, char, u8, u8, usize, &str)] = &[
+        /// `(i2c, port, pin, AF, line, func)`.
+        type I2cPad = (&'static str, char, u8, u8, usize, &'static str);
+
+        // Modern controller (L4/F7/G0/H5/G4/WB), V2 GPIO — STM32L476 datasheet
+        // DS10198 Table 17: I2C1-3 on AF4 (I2C4 on AF5 where fitted, not
+        // modelled here).
+        const L4: &[I2cPad] = &[
             ("i2c1", 'b', 6, 4, LINE_SCL, "I2C1_SCL"),
             ("i2c1", 'b', 7, 4, LINE_SDA, "I2C1_SDA"),
             ("i2c1", 'b', 8, 4, LINE_SCL, "I2C1_SCL"),
@@ -752,11 +763,89 @@ impl SystemBus {
             ("i2c3", 'c', 1, 4, LINE_SDA, "I2C3_SDA"),
             ("i2c3", 'c', 9, 4, LINE_SDA, "I2C3_SDA"),
         ];
+        // Legacy controller (F1/F2/F4) on V2 GPIO, i.e. the F2/F4 parts — every
+        // row read off STM32F401xD/xE datasheet DS10086 Rev 5, Table 9
+        // "Alternate function mapping", column AF04 (`I2C1/I2C2/I2C3`):
+        // page 45 (port A), page 46 (port B), page 47 (port C).
+        //
+        // DELIBERATELY ABSENT, and each absence is a fact from those pages:
+        // * PB5/AF4 and PB12/AF4 are I2C1_SMBA and I2C2_SMBA — the SMBus alert
+        //   line, not a data line, and nothing narrates it.
+        // * PB3/AF4 and PB4/AF4 read `-`. Their I2C2_SDA / I2C3_SDA live on
+        //   AF9 (`I2C2/I2C3`), a column no controller table here carries;
+        //   adding them means adding AF9, not reusing AF4.
+        // * PB13/PB14/AF4 and PC0/PC1/AF4 read `-` on the F4 and are I²C on the
+        //   L4 — the exact rows that make the two tables non-mergeable.
+        // * No port-F rows: the F401 has no port F, and the F405/F407 port-F
+        //   assignment is not in this checkout's datasheet corpus, so it is
+        //   unverified rather than absent.
+        //
+        // ⚠️ VERIFIED ON THE F401 ONLY. This one table also serves the F405,
+        // F407 and F411 configs, whose datasheets (DS8626, DS8597, DS10314) are
+        // NOT in this checkout's corpus — `labwired_datasheet` holds stm32f401,
+        // stm32f103, stm32l476, stm32h563 and stm32h735 of the STM32s. Every
+        // row here is the F4-series-wide AF4 assignment and the F401 pages are
+        // the evidence for it; a row that turns out to differ on a larger part
+        // belongs in a second table, not in this one. Adding pads only the
+        // bigger parts have (PF0/PF1, PH4/PH5, PH7/PH8) requires reading those
+        // documents first — the failure mode is silent, and it is the one
+        // `wire_stm32_uart_pads` already carries for the L0.
+        const F4: &[I2cPad] = &[
+            ("i2c1", 'b', 6, 4, LINE_SCL, "I2C1_SCL"),
+            ("i2c1", 'b', 7, 4, LINE_SDA, "I2C1_SDA"),
+            ("i2c1", 'b', 8, 4, LINE_SCL, "I2C1_SCL"),
+            ("i2c1", 'b', 9, 4, LINE_SDA, "I2C1_SDA"),
+            ("i2c2", 'b', 10, 4, LINE_SCL, "I2C2_SCL"),
+            ("i2c2", 'b', 11, 4, LINE_SDA, "I2C2_SDA"),
+            ("i2c3", 'a', 8, 4, LINE_SCL, "I2C3_SCL"),
+            ("i2c3", 'c', 9, 4, LINE_SDA, "I2C3_SDA"),
+        ];
 
         for i2c_name in ["i2c1", "i2c2", "i2c3"] {
             let Some(i2c_idx) = self.find_peripheral_index_by_name(i2c_name) else {
                 continue;
             };
+            let Some(layout) = self.peripherals[i2c_idx]
+                .dev
+                .as_any()
+                .and_then(|a| a.downcast_ref::<I2c>())
+                .map(I2c::register_layout)
+            else {
+                continue;
+            };
+            let table = match layout {
+                I2cRegisterLayout::Stm32L4 => L4,
+                I2cRegisterLayout::Stm32F1 => F4,
+                // Kinetis I²C has its own controller and pad model.
+                I2cRegisterLayout::Kinetis => continue,
+            };
+            // ⚠️ Find the V2 ports this instance actually has rows for BEFORE
+            // touching the controller: `pad_lines_arc` CREATES the pad cell, and
+            // a controller owning a cell no route reaches still buffers and
+            // narrates every transaction into a wire nothing reads. The legacy
+            // table makes that reachable for the first time — the STM32F103
+            // carries the same legacy controller behind F1-layout GPIO ports,
+            // which are skipped below, so without this ordering the F103 would
+            // switch the whole narration machinery on for nothing. Same hazard
+            // `wire_stm32_uart_pads` documents.
+            let ports: Vec<char> = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+                .into_iter()
+                .filter(|&port| {
+                    if !table
+                        .iter()
+                        .any(|&(i2c, p, ..)| i2c == i2c_name && p == port)
+                    {
+                        return false;
+                    }
+                    self.find_peripheral_index_by_name(&format!("gpio{port}"))
+                        .and_then(|idx| self.peripherals[idx].dev.as_any())
+                        .and_then(|a| a.downcast_ref::<GpioPort>())
+                        .is_some_and(|g| g.register_layout() == GpioRegisterLayout::Stm32V2)
+                })
+                .collect();
+            if ports.is_empty() {
+                continue;
+            }
             let Some(lines) = self.peripherals[i2c_idx]
                 .dev
                 .as_any_mut()
@@ -765,7 +854,7 @@ impl SystemBus {
             else {
                 continue;
             };
-            for port in ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] {
+            for port in ports {
                 let Some(gpio_idx) = self.find_peripheral_index_by_name(&format!("gpio{port}"))
                 else {
                     continue;
@@ -777,13 +866,7 @@ impl SystemBus {
                 else {
                     continue;
                 };
-                // F1's I²C sits on a different controller model (F1I2c) and its
-                // pads are open-drain AF on the fixed mapping; only the V2
-                // register model is routed here.
-                if gpio.register_layout() != GpioRegisterLayout::Stm32V2 {
-                    continue;
-                }
-                for &(i2c, p, pin, af, line, func) in V2 {
+                for &(i2c, p, pin, af, line, func) in table {
                     if i2c == i2c_name && p == port {
                         gpio.add_pad_route(&lines, pin, Some(af), line, func);
                     }

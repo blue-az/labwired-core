@@ -22,11 +22,11 @@ Derived from live `SystemBus::from_config` builds — never hand-edited. Bind a 
 | rp2040 | ✓ | ✓ | ✓ |
 | rp2350 | — | — | — |
 | stm32f103 | — | ✓ | — |
-| stm32f401 | — | ✓ | ✓ |
-| stm32f401cdu6 | — | ✓ | ✓ |
-| stm32f405 | — | ✓ | ✓ |
-| stm32f407 | — | ✓ | ✓ |
-| stm32f411ceu6 | — | ✓ | ✓ |
+| stm32f401 | ✓ | ✓ | ✓ |
+| stm32f401cdu6 | ✓ | ✓ | ✓ |
+| stm32f405 | ✓ | ✓ | ✓ |
+| stm32f407 | ✓ | ✓ | ✓ |
+| stm32f411ceu6 | ✓ | ✓ | ✓ |
 | stm32f767 | ✓ | ✓ | ✓ |
 | stm32g474re | ✓ | ✓ | ✓ |
 | stm32h563 | ✓ | — | ✓ |

@@ -55,6 +55,8 @@ pub mod simctl_machine;
 #[cfg(test)]
 pub mod stm32_i2c_waveform;
 #[cfg(test)]
+pub mod stm32_legacy_i2c_waveform;
+#[cfg(test)]
 pub mod stm32_spi_waveform;
 #[cfg(test)]
 pub mod stm32_uart_waveform;
