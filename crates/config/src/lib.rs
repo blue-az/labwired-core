@@ -9,11 +9,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
-/// Canonical device config v1 — the single JSON shape the agent builds and both
-/// engines load directly (Phase 1: parse + structural validation; resolve() is
-/// a documented Phase 2 stub).
-pub mod canonical;
-
 fn deserialize_u64_lax<'de, D>(deserializer: D) -> Result<u64, D::Error>
 where
     D: serde::Deserializer<'de>,
@@ -1536,9 +1531,9 @@ pub struct DeviceDescriptor {
     /// its abstract pin roles bind to `config:` keys.
     pub behavior: DeviceBehavior,
     /// How the canvas compiler emits this device's `external_devices` (and any
-    /// auxiliary `board_io`) block. When present, BOTH engines (the Rust
-    /// `canonical.rs` emitter and the TypeScript `compile()` emitter) derive the
-    /// block from this single spec instead of a hand-mirrored pair.
+    /// auxiliary `board_io`) block. When present, the canvas compiler
+    /// (the TypeScript `compile()` emitter) derives the block from this single
+    /// spec instead of a hand-mirrored pair.
     #[serde(default)]
     pub emit: Option<DeviceEmit>,
     /// Display + runtime metadata. `metadata.inputs` is load-bearing: it defines
@@ -2670,10 +2665,10 @@ impl DeviceDescriptor {
 
     /// Look up and parse the embedded descriptor for a device `type:` string
     /// (accepts either spelling for the encoder). Returns `Ok(None)` for a type
-    /// with no declarative descriptor. This is the SINGLE embed point — both the
-    /// runtime attach path (`core`'s `bus/declarative_device.rs`) and the canvas
-    /// emitter (`canonical.rs`) resolve descriptors through here, so there is one
-    /// source of truth for the `configs/devices/*.yaml` set.
+    /// with no declarative descriptor. This is the SINGLE embed point — the
+    /// runtime attach path (`core`'s `bus/declarative_device.rs`) resolves
+    /// descriptors through here, so there is one source of truth for the
+    /// `configs/devices/*.yaml` set.
     pub fn embedded(device_type: &str) -> Result<Option<Self>> {
         match embedded_device_yaml(device_type) {
             Some(yaml) => Ok(Some(Self::from_yaml(yaml).with_context(|| {
