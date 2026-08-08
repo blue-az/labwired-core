@@ -21,11 +21,31 @@
 //!   instruction that did it, the faulting address, and read-vs-write.
 //!   (For contrast, `cpu/riscv.rs` propagates these with `?`.)
 //!
-//! * **(b) `Stub`** — the nine-stage peripheral factory chain in
-//!   `bus/from_config.rs` fell through to `StubPeripheral`, announced only at
-//!   `tracing::debug!`. Recorded with the manifest `type:` string that fell
-//!   through, because the histogram of those strings is what decides whether
-//!   the fix can be a hard error or needs a migration first.
+//! * **(b1) `StubFactoryFallthrough`** — the nine-stage peripheral factory
+//!   chain in `bus/from_config.rs` fell through to `StubPeripheral`, announced
+//!   only at `tracing::debug!`. Recorded with the manifest `type:` string that
+//!   fell through. This is a statistic about **the factory**: how often the
+//!   final `_other =>` arm was taken. It is *not* a statement about what the
+//!   machine runs — see (b2).
+//!
+//! * **(b2) `StubLivePostConstruction`** — the peripherals that are *still* a
+//!   `StubPeripheral` on a fully assembled machine, recorded with entry name
+//!   and base address. **This is the actionable number.**
+//!
+//!   (b1) alone is misleading, and was measured wrongly once because of it.
+//!   `from_config` is not the end of construction: `system::cortex_m::configure_cortex_m`
+//!   runs afterwards on every ARM path and *replaces* the entry matching
+//!   `name == "nvic" || base == 0xE000_E100` with a real [`crate::peripherals::nvic::Nvic`],
+//!   and likewise `"scb"` / `0xE000_ED00` with a real [`crate::peripherals::scb::Scb`]
+//!   (and DWT at `0xE000_1000`). A manifest carrying `type: nvic` therefore
+//!   trips (b1) at the factory and then has a real model installed over it
+//!   before a single instruction executes. The first published census read
+//!   those (b1) rows as live stubs and called them "not intentional"; they were
+//!   neither live nor stubs. The sweep runs at [`crate::Machine::new`] — the one
+//!   choke every runner passes through with a finished bus — and identifies a
+//!   stub by **`TypeId`**, via `Peripheral::as_any` + `dyn Any::is::<StubPeripheral>()`.
+//!   Never by name: the replacement pass rewrites `name`, which is exactly how
+//!   the first measurement went wrong.
 //!
 //! * **(c) `UndecodedReg`** — an MMIO offset a peripheral *does* claim but does
 //!   not decode: a `_ => {}` write arm discards the value, a `_ => 0` read arm
@@ -45,7 +65,15 @@
 //! * [`census_bus!`] expands to bare `$e` — the wrapped expression, untouched.
 //! * [`census_reg!`] expands to `()` — a unit statement, so `_ => { census!(); }`
 //!   is `_ => {}` and `_ => { census!(); 0 }` is `_ => 0`.
-//! * [`record_stub`] and [`dump_if_requested`] become empty `#[inline]` fns.
+//! * [`record_stub`], [`record_live_stubs`] and [`dump_if_requested`] become
+//!   empty `#[inline]` fns.
+//! * `StubPeripheral`'s `as_any` override — the only production-type change the
+//!   census needs — is itself `#[cfg(feature = "silent-census")]`, so with the
+//!   feature off the type is byte-for-byte what it was. With the feature on it
+//!   returns `Some(self)` where it used to return `None`; every existing
+//!   consumer of `Peripheral::as_any` immediately `downcast_ref`s to a concrete
+//!   type that a stub is not, so `Some(stub)` and `None` are indistinguishable
+//!   to all of them.
 //!
 //! With the feature off the macro arguments are *not evaluated at all*, so a
 //! recording site cannot introduce a side effect, a panic, or a borrow. With
@@ -152,8 +180,20 @@ mod enabled {
     pub struct Census {
         /// (a) Cortex-M memory errors created and then discarded.
         pub arm_drops: BTreeMap<ArmDropKey, u64>,
-        /// (b) Manifest `type:` strings that fell through to `StubPeripheral`.
+        /// (b1) Manifest `type:` strings that fell through to `StubPeripheral`
+        /// at the factory. A count of how often the `_other =>` arm was taken —
+        /// NOT a count of stubs the machine runs. See `live_stubs`.
         pub stub_types: BTreeMap<String, u64>,
+        /// (b2) Peripherals that are still a `StubPeripheral` on a fully
+        /// constructed machine, keyed by `(entry name, base address)`. This is
+        /// the number that means something: it is measured after every
+        /// post-factory replacement pass has run.
+        pub live_stubs: BTreeMap<(String, u64), u64>,
+        /// How many machines the (b2) sweep visited. Published so a reader can
+        /// tell "one machine with three stubs" from "three machines with one
+        /// each", and so a runner that builds a machine twice cannot inflate
+        /// the table without the inflation being visible.
+        pub machines_swept: u64,
         /// (c) Register offsets a peripheral claimed but did not decode, from
         /// the hand-written models whose decode is a `match` with a
         /// `_ => {}` / `_ => 0` arm. Keyed by `&'static str` so the hot arms
@@ -217,6 +257,41 @@ mod enabled {
         with(|c| *c.stub_types.entry(type_str.to_string()).or_insert(0) += 1);
     }
 
+    /// (b2) Sweep a fully constructed machine's bus and record every entry
+    /// whose device is *still* a [`crate::peripherals::stub::StubPeripheral`].
+    ///
+    /// Identity is decided by `TypeId` — `Peripheral::as_any()` followed by
+    /// `dyn Any::is::<StubPeripheral>()`. That is exact: it cannot false-positive
+    /// on some other model, and it cannot false-negative on a real stub, because
+    /// `as_any` on the concrete type returns `Some(self)` and `Any::is` compares
+    /// the concrete `TypeId`. Deliberately **not** a name test: the post-factory
+    /// replacement passes rewrite `PeripheralEntry::name` (see the module docs),
+    /// so a name is evidence of what the manifest asked for, never of what the
+    /// machine ended up holding.
+    ///
+    /// The name and base are still *reported*, because they are how a human
+    /// finds the entry again — they are output, not the predicate.
+    pub fn record_live_stubs(bus: &crate::bus::SystemBus) {
+        // Collect before taking the census lock: no lock is held across the
+        // peripheral walk, and the walk touches nothing mutable.
+        let found: Vec<(String, u64)> = bus
+            .peripherals
+            .iter()
+            .filter(|p| {
+                p.dev
+                    .as_any()
+                    .is_some_and(|a| a.is::<crate::peripherals::stub::StubPeripheral>())
+            })
+            .map(|p| (p.name.clone(), p.base))
+            .collect();
+        with(|c| {
+            c.machines_swept += 1;
+            for key in found {
+                *c.live_stubs.entry(key).or_insert(0) += 1;
+            }
+        });
+    }
+
     /// Serialise the census as JSON. Sorted throughout so two runs of the same
     /// firmware produce byte-identical reports.
     pub fn to_json() -> serde_json::Value {
@@ -237,6 +312,17 @@ mod enabled {
                 .stub_types
                 .iter()
                 .map(|(t, n)| serde_json::json!({ "type": t, "count": n }))
+                .collect();
+            let live_stubs: Vec<serde_json::Value> = c
+                .live_stubs
+                .iter()
+                .map(|((name, base), n)| {
+                    serde_json::json!({
+                        "name": name,
+                        "base": format!("{base:#010x}"),
+                        "count": n,
+                    })
+                })
                 .collect();
             let mut regs: Vec<serde_json::Value> = c
                 .undecoded_regs
@@ -271,10 +357,21 @@ mod enabled {
                     "total": sum(&arm),
                     "entries": arm,
                 },
-                "stub_fallthrough": {
+                // (b1) FACTORY-TIME: how often `from_config`'s `_other =>` arm
+                // was taken. Construction statistic only — a `type:` here may
+                // still have had a real model installed over it afterwards.
+                "stub_factory_fallthrough": {
                     "distinct": stubs.len(),
                     "total": sum(&stubs),
                     "entries": stubs,
+                },
+                // (b2) POST-CONSTRUCTION: what is still a StubPeripheral on the
+                // assembled machine. This is the actionable number.
+                "stub_live_post_construction": {
+                    "machines_swept": c.machines_swept,
+                    "distinct": live_stubs.len(),
+                    "total": sum(&live_stubs),
+                    "entries": live_stubs,
                 },
                 "undecoded_register_access": {
                     "distinct": regs.len(),
@@ -308,7 +405,7 @@ mod enabled {
 
 #[cfg(feature = "silent-census")]
 pub use enabled::{
-    dump_if_requested, record_arm_drop, record_stub, record_undecoded_reg,
+    dump_if_requested, record_arm_drop, record_live_stubs, record_stub, record_undecoded_reg,
     record_undecoded_reg_named, reset, to_json, Census,
 };
 
@@ -322,6 +419,12 @@ mod disabled {
     #[inline(always)]
     pub fn record_undecoded_reg_named(_periph: &str, _offset: u64, _kind: &'static str) {}
 
+    /// No-op: the census is not compiled in. Takes the bus by shared reference
+    /// and never touches it, so the single call site in `Machine::new` needs no
+    /// `cfg` attribute and cannot perturb construction.
+    #[inline(always)]
+    pub fn record_live_stubs(_bus: &crate::bus::SystemBus) {}
+
     /// No-op: the census is not compiled in. Present unconditionally so the
     /// single call site on the CLI's run path needs no `cfg` attribute.
     #[inline(always)]
@@ -329,7 +432,7 @@ mod disabled {
 }
 
 #[cfg(not(feature = "silent-census"))]
-pub use disabled::{dump_if_requested, record_stub, record_undecoded_reg_named};
+pub use disabled::{dump_if_requested, record_live_stubs, record_stub, record_undecoded_reg_named};
 
 #[cfg(all(test, feature = "silent-census"))]
 mod tests {
@@ -433,7 +536,47 @@ mod tests {
         record_stub("ssd1306");
         record_stub("mystery-part");
         let j = to_json();
-        assert_eq!(j["stub_fallthrough"]["total"], 3);
-        assert_eq!(j["stub_fallthrough"]["distinct"], 2);
+        assert_eq!(j["stub_factory_fallthrough"]["total"], 3);
+        assert_eq!(j["stub_factory_fallthrough"]["distinct"], 2);
+    }
+
+    /// (b2) must be decided by concrete type, not by the entry's name, and must
+    /// not be confused with (b1). A hand-built bus with one real model and one
+    /// stub — the stub deliberately *named* like a real peripheral and the real
+    /// model deliberately named like a stub — pins the discrimination.
+    #[test]
+    fn live_stub_sweep_keys_on_type_not_name() {
+        let _guard = serialized();
+        let mut bus = crate::bus::SystemBus::new();
+        // A real model wearing a stub-ish name: must NOT be counted.
+        bus.add_peripheral(
+            "totally_a_stub",
+            0x4000_0000,
+            0x400,
+            None,
+            Box::new(crate::peripherals::rcc::Rcc::new()),
+        );
+        // A stub wearing a real peripheral's name: must be counted.
+        bus.add_peripheral(
+            "nvic",
+            0xE000_E100,
+            0x400,
+            None,
+            Box::new(crate::peripherals::stub::StubPeripheral::new(0)),
+        );
+        record_live_stubs(&bus);
+
+        let j = to_json();
+        assert_eq!(
+            j["stub_live_post_construction"]["total"], 1,
+            "exactly one entry on this bus is a StubPeripheral"
+        );
+        assert_eq!(j["stub_live_post_construction"]["machines_swept"], 1);
+        let e = &j["stub_live_post_construction"]["entries"][0];
+        assert_eq!(e["name"], "nvic");
+        assert_eq!(e["base"], "0xe000e100");
+        // …and the factory counter is untouched: (b1) and (b2) are separate
+        // measurements and must never be read off one another.
+        assert_eq!(j["stub_factory_fallthrough"]["total"], 0);
     }
 }
