@@ -1231,6 +1231,88 @@ impl CortexM {
                     self.set_ge(ge);
                     pc_increment = 4;
                 }
+                Instruction::SimdAddSub16 {
+                    rd,
+                    rn,
+                    rm,
+                    op,
+                    sub,
+                } => {
+                    // Per-halfword parallel add/sub (ARMv7-M A7.7). Two lanes,
+                    // each 16 bits; the S/U variants set two APSR.GE bits per
+                    // lane, the saturating and halving variants set none.
+                    let n = self.read_reg(rn);
+                    let m = self.read_reg(rm);
+                    let mut result = 0u32;
+                    let mut ge = 0u32;
+                    let sets_ge = op == 0x0 || op == 0x4;
+                    for i in 0..2 {
+                        let nh = (n >> (i * 16)) & 0xFFFF;
+                        let mh = (m >> (i * 16)) & 0xFFFF;
+                        // Signed lane operands (for the S/Q/SH variants).
+                        let ns = nh as u16 as i16 as i32;
+                        let ms = mh as u16 as i16 as i32;
+                        let (half, ge_bit) = match op {
+                            // SADD16 / SSUB16: signed, wrapping. GE per lane is
+                            // "result was non-negative".
+                            0x0 => {
+                                let s = if sub { ns - ms } else { ns + ms };
+                                ((s as u32) & 0xFFFF, s >= 0)
+                            }
+                            // QADD16 / QSUB16: signed saturating to i16.
+                            0x1 => {
+                                let s = if sub { ns - ms } else { ns + ms };
+                                ((s.clamp(-32768, 32767) as u32) & 0xFFFF, false)
+                            }
+                            // SHADD16 / SHSUB16: signed halving — the sum is
+                            // 17-bit and the result is its bits [16:1], which an
+                            // arithmetic shift of the i32 gives directly.
+                            0x2 => {
+                                let s = if sub { ns - ms } else { ns + ms };
+                                (((s >> 1) as u32) & 0xFFFF, false)
+                            }
+                            // UADD16 / USUB16: unsigned, wrapping. GE is carry
+                            // out for the add and "no borrow" for the subtract.
+                            0x4 => {
+                                if sub {
+                                    ((nh.wrapping_sub(mh)) & 0xFFFF, nh >= mh)
+                                } else {
+                                    let s = nh + mh;
+                                    (s & 0xFFFF, s >= 0x1_0000)
+                                }
+                            }
+                            // UQADD16 / UQSUB16: unsigned saturating to u16.
+                            0x5 => {
+                                if sub {
+                                    (nh.saturating_sub(mh), false)
+                                } else {
+                                    ((nh + mh).min(0xFFFF), false)
+                                }
+                            }
+                            // UHADD16 / UHSUB16: unsigned halving — bits [16:1]
+                            // of the 17-bit intermediate, so the difference is
+                            // masked to 17 bits before the shift rather than
+                            // sign-extended across the whole word.
+                            _ => {
+                                let s = if sub {
+                                    ((nh as i32 - mh as i32) as u32) & 0x1_FFFF
+                                } else {
+                                    nh + mh
+                                };
+                                ((s >> 1) & 0xFFFF, false)
+                            }
+                        };
+                        result |= half << (i * 16);
+                        if ge_bit {
+                            ge |= 0b11 << (i * 2);
+                        }
+                    }
+                    self.write_reg(rd, result);
+                    if sets_ge {
+                        self.set_ge(ge);
+                    }
+                    pc_increment = 4;
+                }
                 Instruction::Sel { rd, rn, rm } => {
                     // SEL: pick each byte from Rn if its GE bit is set, else Rm.
                     let n = self.read_reg(rn);
@@ -3813,6 +3895,80 @@ mod tests {
         // lanes: 0x00-0x01=0xFF(borrow,GE0), 0x80-0x7F=0x01(GE1), 0x05-0x05=0(GE1), 0x10-0x08=0x08(GE1)
         assert_eq!(cpu.r1, 0x08_00_01_FF);
         assert_eq!(cpu.get_ge(), 0b1110);
+    }
+
+    // The exact instruction LLVM emits for `u16::saturating_add` on thumbv7em,
+    // driven with the operands the ILI9341 lab firmware actually had in flight.
+    //
+    // Undecoded, this was a 4-byte skip that left Rd holding a stale operand, so
+    // `x.saturating_add(w - 1)` silently evaluated to `w - 1`: the firmware asked
+    // an ILI9341 for a window ending at column `w-1` instead of `x+w-1` and
+    // painted one row of a fourteen-row band. Nothing faulted.
+    #[test]
+    fn test_uqadd16_is_a_real_saturating_add_not_a_skip() {
+        let mut cpu = CortexM::new();
+        let mut bus = MockBus::new();
+        cpu.pc = 0x1000;
+
+        // UQADD16 r0, r2, r0  (0xFA92 F050) — the encoding from the lab ELF.
+        // r2 = x = 48 (row origin), r0 = h - 1 = 13.
+        cpu.r2 = 48;
+        cpu.r0 = 13;
+        run_test_instr(&mut cpu, &mut bus, 0xFA92_F050, true);
+        assert_eq!(
+            cpu.r0, 61,
+            "the window's last row is origin + height - 1, not height - 1"
+        );
+
+        // Saturation is per lane and clamps at 0xFFFF; the upper halfword is an
+        // independent lane, never a carry target for the lower one.
+        cpu.pc = 0x1004;
+        cpu.r2 = 0x0001_FF00;
+        cpu.r0 = 0x0002_0200;
+        run_test_instr(&mut cpu, &mut bus, 0xFA92_F050, true);
+        assert_eq!(
+            cpu.r0, 0x0003_FFFF,
+            "low lane saturates at 0xFFFF without carrying into the high lane"
+        );
+    }
+
+    #[test]
+    fn test_parallel_halfword_add_sub_variants() {
+        let mut cpu = CortexM::new();
+        let mut bus = MockBus::new();
+        cpu.pc = 0x1000;
+
+        // UQSUB16 r0, r2, r1 (0xFAD2 F051): unsigned saturating, floors at 0.
+        cpu.r2 = 0x0005_0010;
+        cpu.r1 = 0x0009_0003;
+        run_test_instr(&mut cpu, &mut bus, 0xFAD2_F051, true);
+        assert_eq!(cpu.r0, 0x0000_000D, "5-9 floors at 0; 0x10-3 = 0x0D");
+
+        // UADD16 r0, r2, r1 (0xFA92 F041): wrapping, and GE carries per lane.
+        cpu.pc = 0x1004;
+        cpu.r2 = 0xFFFF_0001;
+        cpu.r1 = 0x0001_0002;
+        run_test_instr(&mut cpu, &mut bus, 0xFA92_F041, true);
+        assert_eq!(
+            cpu.r0, 0x0000_0003,
+            "upper lane wraps rather than saturating"
+        );
+        assert_eq!(cpu.get_ge(), 0b1100, "only the wrapping lane carried out");
+
+        // QADD16 r0, r2, r1 (0xFA92 F011): SIGNED saturation, clamps at i16::MAX.
+        cpu.pc = 0x1008;
+        cpu.r2 = 0x0000_7FFF;
+        cpu.r1 = 0x0000_0001;
+        run_test_instr(&mut cpu, &mut bus, 0xFA92_F011, true);
+        assert_eq!(cpu.r0, 0x0000_7FFF, "signed saturation stops at 0x7FFF");
+
+        // SSUB16 r0, r2, r1 (0xFAD2 F001): signed wrapping; GE = lane >= 0.
+        cpu.pc = 0x100C;
+        cpu.r2 = 0x0005_0001;
+        cpu.r1 = 0x0002_0004;
+        run_test_instr(&mut cpu, &mut bus, 0xFAD2_F001, true);
+        assert_eq!(cpu.r0, 0x0003_FFFD, "1-4 = -3 in the low lane");
+        assert_eq!(cpu.get_ge(), 0b1100, "only the non-negative lane sets GE");
     }
 
     #[test]

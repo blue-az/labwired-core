@@ -1672,7 +1672,85 @@ fn assertion_currently_passes(
         TestAssertion::UdsTester(a) => {
             evaluate_uds_tester(&machine.bus.can_uds_testers, &a.uds_tester).is_ok()
         }
+        TestAssertion::DisplayRegion(a) => {
+            evaluate_display_region(&machine.bus, &a.display_region).is_ok()
+        }
     }
+}
+
+/// Measure one `display_region` assertion against the live panel.
+///
+/// Reads the display through `SystemBus::display_artifact` — the same single
+/// door the browser renderer and `inspect` use — so the assertion sees exactly
+/// the pixels the product shows, for any panel on any transport, keyed only by
+/// its `external_devices:` id.
+///
+/// Every way of not-measuring is an `Err`, never a pass: no such device, a
+/// device with no display artifact, an artifact whose bytes were withheld, a
+/// format with no decoder. A panel that genuinely painted nothing is a
+/// measurement, and fails on `min_ink` like anything else.
+pub(crate) fn evaluate_display_region(
+    bus: &labwired_core::bus::SystemBus,
+    d: &labwired_config::DisplayRegionDetails,
+) -> Result<(), String> {
+    use labwired_core::inspect::{artifact_region_ink, InspectOpts, PixelRegion};
+
+    let artifact = bus
+        .display_artifact(
+            &d.id,
+            &InspectOpts {
+                include_bytes: true,
+                peripheral: None,
+            },
+        )
+        .ok_or_else(|| {
+            format!(
+                "display_region '{}': no display device with that id is attached to this machine \
+                 (check the `external_devices:` id in the system manifest)",
+                d.id
+            )
+        })?;
+
+    let bytes = artifact.bytes.as_deref().ok_or_else(|| {
+        format!(
+            "display_region '{}': the device published a '{}' artifact with no byte payload",
+            d.id, artifact.kind
+        )
+    })?;
+    let format = artifact
+        .meta
+        .get("format")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| format!("display_region '{}': artifact has no `meta.format`", d.id))?;
+    let panel_w = artifact.meta.get("w").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
+    let panel_h = artifact.meta.get("h").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
+
+    let region = PixelRegion {
+        x: d.x,
+        y: d.y,
+        w: d.w.unwrap_or_else(|| panel_w.saturating_sub(d.x)),
+        h: d.h.unwrap_or_else(|| panel_h.saturating_sub(d.y)),
+    };
+    let (ink, total) = artifact_region_ink(format, &artifact.meta, bytes, region)
+        .map_err(|e| format!("display_region '{}': {e}", d.id))?;
+
+    let fraction = ink as f64 / total as f64;
+    let max = d.max_ink.unwrap_or(1.0);
+    if fraction < d.min_ink || fraction > max {
+        return Err(format!(
+            "display_region '{}': region ({},{}) {}x{} is {:.1}% inked ({ink}/{total} pixels), \
+             outside the required {:.1}%..={:.1}%",
+            d.id,
+            region.x,
+            region.y,
+            region.w,
+            region.h,
+            fraction * 100.0,
+            d.min_ink * 100.0,
+            max * 100.0,
+        ));
+    }
+    Ok(())
 }
 
 fn requires_fine_grained_observation(assertions: &[TestAssertion]) -> bool {
@@ -1681,20 +1759,36 @@ fn requires_fine_grained_observation(assertions: &[TestAssertion]) -> bool {
         .any(|assertion| matches!(assertion, TestAssertion::ShutdownLatency(_)))
 }
 
+/// How often `stop_when_assertions_pass` may re-measure a display.
+///
+/// Every other assertion reads something already sitting in memory. A
+/// `display_region` unpacks the panel's whole framebuffer — 153,600 bytes for an
+/// ILI9341 — and counts pixels. At the step-granular poll rate that runs once
+/// per instruction, which turns a sub-second run into an unfinishable one. A
+/// screen does not need instruction-exact stop timing, so it is polled on the
+/// batch grid instead; the only cost is stopping up to this many steps after the
+/// paint, which `stop_when_assertions_pass_settle_steps` already tolerates.
+const DISPLAY_POLL_BATCH: u64 = 10_000;
+
 fn assertion_observation_batch_size(
     otherwise_batch_eligible: bool,
     stop_when_assertions_pass: bool,
     assertions: &[TestAssertion],
     max_steps: u64,
 ) -> u64 {
-    if otherwise_batch_eligible
-        && !stop_when_assertions_pass
-        && !requires_fine_grained_observation(assertions)
-    {
-        10_000.min(max_steps)
-    } else {
-        1
+    if !otherwise_batch_eligible || requires_fine_grained_observation(assertions) {
+        return 1;
     }
+    if !stop_when_assertions_pass {
+        return 10_000.min(max_steps);
+    }
+    if assertions
+        .iter()
+        .any(|a| matches!(a, TestAssertion::DisplayRegion(_)))
+    {
+        return DISPLAY_POLL_BATCH.min(max_steps);
+    }
+    1
 }
 
 fn assertion_compatible_jit_eligibility(
@@ -2734,6 +2828,18 @@ fn execute_test_loop<C: labwired_core::Cpu>(
                         false
                     }
                 }
+            }
+            // The measurement itself carries the diagnosis (which region, how
+            // much ink, what was required), so it is logged rather than
+            // reduced to a bare `false`.
+            TestAssertion::DisplayRegion(a) => {
+                match evaluate_display_region(&machine.bus, &a.display_region) {
+                    Ok(()) => true,
+                    Err(msg) => {
+                        error!("Assertion failed: {}", msg);
+                        false
+                    }
+                }
             } // MqttFabric is handled above via assertion_currently_passes.
         };
 
@@ -3723,6 +3829,20 @@ fn assertion_short_name(assertion: &TestAssertion) -> String {
                 a.uds_tester.id, a.uds_tester.result
             )
         }
+        TestAssertion::DisplayRegion(a) => {
+            let d = &a.display_region;
+            let dim = |v: Option<usize>| v.map(|n| n.to_string()).unwrap_or_else(|| "*".into());
+            format!(
+                "display_region: {} ({},{}) {}x{} ink {:.2}..={:.2}",
+                d.id,
+                d.x,
+                d.y,
+                dim(d.w),
+                dim(d.h),
+                d.min_ink,
+                d.max_ink.unwrap_or(1.0)
+            )
+        }
     };
 
     if s.len() <= MAX_LEN {
@@ -3967,6 +4087,52 @@ mod tests {
             vec![application(100, 1.0, 1)],
         )]);
         assert!(shutdown_latency_passes(&details, &stimuli, &uart));
+    }
+
+    /// A display is polled on the batch grid rather than per instruction, and
+    /// ONLY a display changes that: every script that existed before this
+    /// assertion must keep the batch width it had, or a latched observation
+    /// somewhere else silently moves.
+    #[test]
+    fn display_region_relaxes_the_poll_grid_without_touching_other_scripts() {
+        let display = [TestAssertion::DisplayRegion(
+            labwired_config::DisplayRegionAssertion {
+                display_region: labwired_config::DisplayRegionDetails {
+                    id: "tft".into(),
+                    x: 0,
+                    y: 0,
+                    w: None,
+                    h: None,
+                    min_ink: 1.0,
+                    max_ink: None,
+                },
+            },
+        )];
+        let uart = [TestAssertion::UartContains(
+            labwired_config::UartContainsAssertion {
+                uart_contains: "ready".into(),
+            },
+        )];
+
+        // The new branch: stop-when-assertions-pass + a display => batch grid.
+        assert_eq!(
+            assertion_observation_batch_size(true, true, &display, 50_000_000),
+            DISPLAY_POLL_BATCH
+        );
+        // Unchanged: the same script shape without a display still polls per step.
+        assert_eq!(assertion_observation_batch_size(true, true, &uart, 50_000), 1);
+        // Unchanged: no early stop => the ordinary 10k batch, display or not.
+        assert_eq!(
+            assertion_observation_batch_size(true, false, &display, 50_000),
+            10_000
+        );
+        // Unchanged: batching off wins over everything.
+        assert_eq!(
+            assertion_observation_batch_size(false, true, &display, 50_000),
+            1
+        );
+        // A short run never batches past its own budget.
+        assert_eq!(assertion_observation_batch_size(true, true, &display, 500), 500);
     }
 
     #[test]
