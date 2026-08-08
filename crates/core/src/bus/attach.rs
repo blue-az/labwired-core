@@ -340,6 +340,125 @@ impl SystemBus {
         }
     }
 
+    /// Bind the RP2040 SPI controllers' SCK/MOSI/CSn wires to the pads IO_BANK0
+    /// can route them to, so a probe on GP3 shows the shifted bytes rather than
+    /// the SIO output latch. No-op unless IO_BANK0, SIO and an SPI controller
+    /// are all on the bus.
+    ///
+    /// The pad map is transcribed from the RP2040 SVD's `GPIOn_CTRL.FUNCSEL`
+    /// enumerations (`spi0_sclk`, `spi1_tx`, `spi0_ss_n`, …) rather than derived,
+    /// because it is not derivable: the roles repeat every four pads
+    /// (rx, ss_n, sclk, tx) but the INSTANCE flips every eight — GP0–7 spi0,
+    /// GP8–15 spi1, GP16–23 spi0, GP24–29 spi1 — and any parity rule
+    /// mis-assigns half the board. The group is also truncated at the top: GP28
+    /// is `spi1_rx` and GP29 is `spi1_ss_n`, with no sclk/tx above GP27.
+    ///
+    /// SCK / MOSI / CSn ONLY. The SVD also names eight `spi*_rx` pads (GP0, 4,
+    /// 8, 12, 16, 20, 24, 28) and binding them was tempting and wrong: nothing
+    /// in the engine drives MISO — `Rp2040Spi` has no attached devices and
+    /// clocks in the idle level `0x00` — so a routed RX pad would report a
+    /// confident constant level, including while an attached flash or display
+    /// was supposedly answering. That is worse than the SIO-latch fallback it
+    /// would replace, because it looks authoritative. Same call as
+    /// [`Self::wire_rp2040_uart_pads`]'s TX-only rationale. RX joins the table
+    /// when something drives it, not before.
+    ///
+    /// CSn IS bound, because the SSP really does drive it whenever firmware
+    /// hands the pad over — arduino-pico's `SPIClassRP2040::begin(true)` calls
+    /// `gpio_set_function(_CS, GPIO_FUNC_SPI)`. Firmware that keeps chip select
+    /// on SIO (the default) simply never makes the route live, and the pad keeps
+    /// reading the GPIO latch, which is correct.
+    pub(crate) fn wire_rp2040_spi_pads(&mut self) {
+        use crate::peripherals::rp2040::io_bank0::{Rp2040IoBank0, GPIO_FUNC_SPI};
+        use crate::peripherals::rp2040::sio::Rp2040Sio;
+        use crate::peripherals::rp2040::spi::{Rp2040Spi, LINE_CSN, LINE_MOSI, LINE_SCK};
+
+        /// `(pad, spi instance, line, function name)` — straight from the SVD.
+        const PADS: &[(u8, usize, usize, &str)] = &[
+            (1, 0, LINE_CSN, "SPI0_CSn"),
+            (2, 0, LINE_SCK, "SPI0_SCK"),
+            (3, 0, LINE_MOSI, "SPI0_TX"),
+            (5, 0, LINE_CSN, "SPI0_CSn"),
+            (6, 0, LINE_SCK, "SPI0_SCK"),
+            (7, 0, LINE_MOSI, "SPI0_TX"),
+            (9, 1, LINE_CSN, "SPI1_CSn"),
+            (10, 1, LINE_SCK, "SPI1_SCK"),
+            (11, 1, LINE_MOSI, "SPI1_TX"),
+            (13, 1, LINE_CSN, "SPI1_CSn"),
+            (14, 1, LINE_SCK, "SPI1_SCK"),
+            (15, 1, LINE_MOSI, "SPI1_TX"),
+            (17, 0, LINE_CSN, "SPI0_CSn"),
+            (18, 0, LINE_SCK, "SPI0_SCK"),
+            (19, 0, LINE_MOSI, "SPI0_TX"),
+            (21, 0, LINE_CSN, "SPI0_CSn"),
+            (22, 0, LINE_SCK, "SPI0_SCK"),
+            (23, 0, LINE_MOSI, "SPI0_TX"),
+            (25, 1, LINE_CSN, "SPI1_CSn"),
+            (26, 1, LINE_SCK, "SPI1_SCK"),
+            (27, 1, LINE_MOSI, "SPI1_TX"),
+            (29, 1, LINE_CSN, "SPI1_CSn"),
+        ];
+
+        let Some(functions) = self
+            .peripherals
+            .iter()
+            .find_map(|p| {
+                p.dev
+                    .as_any()
+                    .and_then(|a| a.downcast_ref::<Rp2040IoBank0>())
+            })
+            .map(Rp2040IoBank0::pad_functions)
+        else {
+            return;
+        };
+        // ⚠️ Resolve SIO BEFORE touching an SPI: `pad_lines_arc` CREATES the pad
+        // cell, and a controller that owns a cell no route reaches still buffers
+        // every shifted word, arms a scheduler wakeup per burst, and narrates
+        // into a wire nothing reads. Same ordering hazard as
+        // `wire_rp2040_uart_pads`.
+        let Some(sio_idx) = self.find_peripheral_index_by_name("sio") else {
+            return;
+        };
+        if self.peripherals[sio_idx]
+            .dev
+            .as_any_mut()
+            .and_then(|a| a.downcast_mut::<Rp2040Sio>())
+            .is_none()
+        {
+            return;
+        }
+
+        for (instance, name) in ["spi0", "spi1"].iter().enumerate() {
+            let Some(idx) = self.find_peripheral_index_by_name(name) else {
+                continue;
+            };
+            if !PADS.iter().any(|&(_, inst, _, _)| inst == instance) {
+                continue;
+            }
+            let Some(lines) = self.peripherals[idx]
+                .dev
+                .as_any_mut()
+                .and_then(|a| a.downcast_mut::<Rp2040Spi>())
+                .map(Rp2040Spi::pad_lines_arc)
+            else {
+                continue;
+            };
+            let Some(sio) = self.peripherals[sio_idx]
+                .dev
+                .as_any_mut()
+                .and_then(|a| a.downcast_mut::<Rp2040Sio>())
+            else {
+                return;
+            };
+            for &(pin, pad_instance, line, func) in PADS {
+                if pad_instance != instance {
+                    continue;
+                }
+                sio.bind_pad_route(functions.clone(), &lines, pin, GPIO_FUNC_SPI, line, func);
+            }
+        }
+    }
+
     /// Share the ESP32-S3 I²C0 controller's live SCL/SDA levels with S3 GPIO,
     /// so pads whose output matrix routes `I2CEXT0_SCL`/`SDA` read the real
     /// waveform through `read_gpio_pad` (which is what the in-engine logic

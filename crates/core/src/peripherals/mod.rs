@@ -63,6 +63,7 @@ pub mod scb;
 pub mod sdmmc;
 pub mod simctl;
 pub mod spi;
+pub mod spi_waveform;
 pub mod stm32f4_dma;
 pub mod stub;
 pub mod systick;

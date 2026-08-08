@@ -43,6 +43,8 @@ pub mod rp2040_i2c_waveform;
 #[cfg(test)]
 pub mod rp2040_spi_carries_a_byte;
 #[cfg(test)]
+pub mod rp2040_spi_waveform;
+#[cfg(test)]
 pub mod rp2040_uart_waveform;
 #[cfg(test)]
 pub mod scb_reset;

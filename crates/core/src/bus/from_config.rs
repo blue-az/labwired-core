@@ -879,6 +879,10 @@ impl SystemBus {
         // Same for the RP2040 UARTs' TX/RX, so serial output is a waveform on
         // the routed pad and not just console text.
         bus.wire_rp2040_uart_pads();
+        // And the RP2040 SPI controllers' SCK/MOSI/CSn, so a probe on an SPI pad
+        // measures the shifted bytes rather than the SIO output latch. MISO is
+        // deliberately unrouted — nothing drives it.
+        bus.wire_rp2040_spi_pads();
         // STM32: share each classic/FIFO SPI bit engine's live SCK/MOSI/MISO
         // line levels with the STM32 GPIO ports so AF-routed pads carry the
         // real waveform. No-op for every other chip.
