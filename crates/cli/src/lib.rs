@@ -440,12 +440,6 @@ pub enum AssetCommands {
     /// List available chip descriptors.
     ListChips(asset_validation::ListChipsArgs),
 
-    /// Create a new peripheral asset from a PDF datasheet using AI.
-    Create(CreateArgs),
-
-    /// Verify an AI-generated peripheral model using a simulator loopback.
-    Verify(VerifyArgs),
-
     /// Validate an off-chip component IR spec (YAML).
     ValidateComponent(component_validation::ValidateComponentArgs),
 
@@ -487,48 +481,6 @@ pub struct CodegenArgs {
     /// Path to the output Rust file
     #[arg(short, long)]
     pub output: PathBuf,
-}
-
-#[derive(Parser, Debug)]
-pub struct CreateArgs {
-    /// Path to the input PDF datasheet
-    #[arg(short = 'd', long)]
-    pub pdf: PathBuf,
-
-    /// Comma-separated list of pages to analyze (e.g. "12,15,20")
-    #[arg(short, long)]
-    pub pages: String,
-
-    /// Name of the peripheral to extract (e.g. "USART1")
-    #[arg(short, long)]
-    pub name: String,
-
-    /// Path to the output YAML file
-    #[arg(short, long)]
-    pub output: PathBuf,
-
-    /// Path to the output Strict IR (JSON) file
-    #[arg(short, long)]
-    pub strict_ir: Option<PathBuf>,
-
-    /// Optional path to a python virtual environment
-    #[arg(long)]
-    pub venv: Option<PathBuf>,
-}
-
-#[derive(Parser, Debug)]
-pub struct VerifyArgs {
-    /// Path to the peripheral IR (JSON) to verify
-    #[arg(short, long)]
-    pub ir: PathBuf,
-
-    /// Optional peripheral ID (defaults to name in IR)
-    #[arg(short = 'n', long)]
-    pub id: Option<String>,
-
-    /// Optional path to a python virtual environment
-    #[arg(long)]
-    pub venv: Option<PathBuf>,
 }
 
 #[derive(Parser, Debug)]
@@ -1300,8 +1252,6 @@ fn run_asset(args: AssetArgs, plugins: &[&dyn labwired_core::plugin::ChipPlugin]
         AssetCommands::AddPeripheral(a) => commands::asset::run_asset_add_peripheral(a),
         AssetCommands::Validate(a) => asset_validation::run_validate(a, plugins),
         AssetCommands::ListChips(a) => asset_validation::run_list_chips(a),
-        AssetCommands::Create(a) => commands::asset::run_asset_create(a),
-        AssetCommands::Verify(a) => commands::asset::run_asset_verify(a),
         AssetCommands::ValidateComponent(a) => component_validation::run_validate_component(a),
         AssetCommands::IngestSvd(a) => commands::svd::run_ingest_svd(a),
     }
