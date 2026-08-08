@@ -679,12 +679,18 @@ impl WasmSimulator {
         // overrides the declarative stub.
         if faithful_c3_rom {
             use labwired_core::peripherals::esp32s3::usb_serial_jtag::UsbSerialJtag;
+            // `new_esp32c3()`, not `new()`: the latter leaves irq_source None, so
+            // the CDC interrupt never reaches the matrix and a CDC-on-boot build
+            // prints nothing. The sink is NOT attached here any more — the
+            // console-selection path below routes it via
+            // `attach_usb_serial_jtag_sink` so the tap follows the board's real
+            // USB socket instead of being hard-wired at construction.
             bus.add_peripheral(
                 "usb_serial_jtag",
                 0x6004_3000,
                 0x100,
                 None,
-                Box::new(UsbSerialJtag::new()),
+                Box::new(UsbSerialJtag::new_esp32c3()),
             );
             bus.refresh_peripheral_index();
             // Same reason as the `rtc_i2c_ana` addition above: re-derive

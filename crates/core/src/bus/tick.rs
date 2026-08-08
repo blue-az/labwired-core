@@ -532,12 +532,20 @@ impl SystemBus {
                     .map(|i| self.peripherals[i].base),
             ];
             let mut changes: Vec<(u8, u8, u8)> = Vec::new();
-            let mut current_in = self.last_gpio_in;
+            // First pass ADOPTS the live levels as the baseline (see
+            // `last_gpio_in`): nothing has transitioned yet, so `baseline` is
+            // `None` and no change is reported for any pin the outside world
+            // already holds.
+            let baseline = self.last_gpio_in;
+            let mut current_in = baseline.unwrap_or([0; 2]);
             for (port, base) in gpio_bases.iter().enumerate() {
                 let Some(base) = base else { continue };
                 // GPIO IN register is at offset 0x510 in the Nordic layout.
                 let cur = self.read_u32(*base + 0x510).unwrap_or(0);
-                let prev = self.last_gpio_in[port];
+                current_in[port] = cur;
+                let Some(prev) = baseline.map(|b| b[port]) else {
+                    continue;
+                };
                 let diff = cur ^ prev;
                 if diff != 0 {
                     for pin in 0..32u8 {
@@ -547,13 +555,9 @@ impl SystemBus {
                         }
                     }
                 }
-                current_in[port] = cur;
             }
-            self.last_gpio_in = current_in;
+            self.last_gpio_in = Some(current_in);
             if !changes.is_empty() {
-                for p in self.peripherals.iter_mut() {
-                    p.dev.observe_gpio_change(&changes);
-                }
                 // A GPIO edge can make a dynamic peripheral (e.g. GPIOTE)
                 // newly walk-active through `observe_gpio_change` — a
                 // CROSS-peripheral activation that the per-MMIO-write refresh
@@ -564,17 +568,33 @@ impl SystemBus {
                 // re-added and its input event would be lost). Guarded by an
                 // actual edge, so this is off the steady-state hot path.
                 for idx in 0..self.peripherals.len() {
+                    let latched = self.peripherals[idx].dev.observe_gpio_change(&changes);
                     if self.peripherals[idx].dev.legacy_tick_dynamic() {
                         self.refresh_legacy_tick_index(idx);
                     }
-                    // Walk-free: scheduler-driven peripherals (GPIOTE) that
-                    // latched pending work in `observe_gpio_change` need their
-                    // delay-0 drain events harvested here — the MMIO write
-                    // choke never sees a cross-peripheral edge.
+                    // Walk-free: a scheduler-driven peripheral (GPIOTE) that
+                    // latched pending work FROM THIS EDGE needs its delay-0
+                    // drain event harvested here — the MMIO write choke never
+                    // sees a cross-peripheral edge.
+                    //
+                    // Only the models that latched. Harvesting from every
+                    // scheduler-driven peripheral re-arms a duplicate wake on
+                    // models that already have one in flight and cannot latch
+                    // anything from a GPIO edge: `take_scheduled_events` is a
+                    // query of live state, not a one-shot take, so a second
+                    // harvest at a later cycle produces a second heap entry at
+                    // a DIFFERENT deadline, which the scheduler's byte-identical
+                    // dedup cannot collapse. For the RADIO that duplicate fires
+                    // inside the same drain as the EasyDMA event and runs
+                    // `tick()` while the air-time countdown is pinned at 1 —
+                    // raising ADDRESS/PAYLOAD/END immediately and erasing the
+                    // whole packet's transmission time.
                     #[cfg(feature = "event-scheduler")]
-                    if self.peripherals[idx].dev.uses_scheduler() {
+                    if latched && self.peripherals[idx].dev.uses_scheduler() {
                         self.collect_scheduled_events(idx);
                     }
+                    #[cfg(not(feature = "event-scheduler"))]
+                    let _ = latched;
                 }
             }
 
