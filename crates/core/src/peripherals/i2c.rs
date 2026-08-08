@@ -16,6 +16,8 @@
 // attached-device list exist on both because both families genuinely have
 // them. The chip-yaml `profile` selects the variant.
 
+use crate::peripherals::i2c_waveform::I2cNarrator;
+use crate::peripherals::pad_lines::PadLines;
 use crate::{CycleClock, SimResult};
 use std::cell::{Cell, RefCell};
 use std::str::FromStr;
@@ -167,6 +169,16 @@ enum I2cState {
     StartPending,
     AddressPending,
     DataPending,
+    /// A data byte is on the wire: it has been handed to the slave, and the
+    /// nine SCL bit-times it occupies are being charged before TC/STOPF land.
+    ///
+    /// Real silicon does not complete a byte instantly — the byte is clocked
+    /// out one bit at a time and TXE/TC only follow. Modelling that time is
+    /// what makes the data phase visible to an instrument: without it the
+    /// transfer's waveform is longer than the cycles the transfer was ever
+    /// charged, and the capture layer has nowhere to put it (see
+    /// [`L4I2c::wire_flush`]).
+    DataSending,
 }
 
 // ── STM32F1 legacy I2C (registers + transaction state machine) ───────────────
@@ -589,6 +601,10 @@ impl F1I2c {
                             self.state = I2cState::Idle;
                         }
                     }
+                    // Only the L4-generation controller charges data-phase wire
+                    // time; the F1 model completes a byte in its DataPending
+                    // arm below.
+                    I2cState::DataSending => {}
                     I2cState::DataPending => {
                         if self.is_reading {
                             self.sr1 |= 0x0040; // RXNE
@@ -678,6 +694,18 @@ pub struct L4I2c {
     /// Scheduler mode: `true` while the per-cycle engine event is live.
     #[serde(skip)]
     chain_live: bool,
+
+    /// Wire levels published to AF-routed SCL/SDA pads, so a logic analyzer
+    /// clipped to this bus measures a real waveform instead of a flat line.
+    /// Created lazily by [`Self::pad_lines_arc`] at bus wiring time; `None`
+    /// when no GPIO port routes this controller's pads.
+    #[serde(skip)]
+    lines: Option<std::sync::Arc<PadLines>>,
+    /// Frames of the transaction in flight, `(byte, acked)`, oldest first —
+    /// buffered so the whole transfer is narrated onto the pads as ONE
+    /// contiguous waveform when it completes. See [`Self::wire_flush`].
+    #[serde(skip)]
+    wire_frames: Vec<(u8, bool)>,
 }
 
 impl Default for L4I2c {
@@ -705,11 +733,90 @@ impl Default for L4I2c {
             tx_preloaded: false,
             clock: None,
             chain_live: false,
+            lines: None,
+            wire_frames: Vec::new(),
         }
     }
 }
 
+/// Line order for this controller's [`PadLines`]; the AF pad table routes
+/// SCL/SDA pads to these indices.
+pub(crate) const I2C_LINES: &[&str] = &["SCL", "SDA"];
+pub(crate) const LINE_SCL: usize = 0;
+pub(crate) const LINE_SDA: usize = 1;
+
 impl L4I2c {
+    /// The shared pad-line cell for this controller, created on first use.
+    /// Called at bus wiring time by `wire_stm32_i2c_pads`; an open-drain bus
+    /// with pull-ups idles high on both lines.
+    pub(crate) fn pad_lines_arc(&mut self) -> std::sync::Arc<PadLines> {
+        self.lines
+            .get_or_insert_with(|| std::sync::Arc::new(PadLines::new(I2C_LINES, &[true, true])))
+            .clone()
+    }
+
+    /// Engine cycles in one SCL period, from TIMINGR — exactly the derivation
+    /// [`Self::address_phase_cycles`] uses, of which it takes nine.
+    fn bit_time_cycles(&self) -> u64 {
+        u64::from(self.address_phase_cycles() / 9).max(2)
+    }
+
+    /// Record a frame this transfer put on the wire. Buffered, not published:
+    /// see [`Self::wire_flush`].
+    fn wire_push(&mut self, byte: u8, acked: bool) {
+        if self.lines.is_some() {
+            self.wire_frames.push((byte, acked));
+        }
+    }
+
+    /// Publish the completed transaction's waveform onto the routed pads.
+    ///
+    /// The phase model has already exchanged the bytes; this narrates the wire
+    /// activity they imply so the bus is measurable (see
+    /// [`crate::peripherals::i2c_waveform`] for what that does and does not
+    /// model). No routed pads → nothing to publish, and the call costs one
+    /// branch.
+    ///
+    /// The whole transfer is emitted at once, ending at the present cycle,
+    /// rather than frame by frame as each byte moves. That is forced by the
+    /// timing model and is the honest arrangement: this controller charges wire
+    /// time for the address phase only — a data byte crosses in zero modelled
+    /// cycles — so there is no room on the timeline to place each frame where
+    /// it "happened". Emitting the transaction as one contiguous run ending at
+    /// completion gives a waveform with the right shape, the right bit rate and
+    /// the right contents, positioned at the moment the transfer finished.
+    /// Narrating frame by frame instead would stamp later frames in the future,
+    /// where the capture layer collapses them onto a single cycle — a spike
+    /// where a transaction belongs.
+    fn wire_flush(&mut self) {
+        let Some(lines) = self.lines.clone() else {
+            self.wire_frames.clear();
+            return;
+        };
+        if self.wire_frames.is_empty() {
+            return;
+        }
+        let mut wave = I2cNarrator::new(LINE_SCL, LINE_SDA, self.bit_time_cycles());
+        wave.start();
+        for &(byte, acked) in &self.wire_frames {
+            wave.frame(byte, acked);
+        }
+        wave.stop();
+        self.wire_frames.clear();
+        let now = lines.tap_clock().unwrap_or(0);
+        // A transfer this early in a run has less history behind it than the
+        // waveform needs; the narrator compresses to fit rather than emitting a
+        // spike, and says so. Nothing here can act on that — the trace still
+        // decodes to the right bytes — so the verdict is deliberately dropped.
+        let _fit = wave.emit_ending_at(&lines, now);
+    }
+
+    /// The address byte on the wire for the armed transfer: SADD[7:1] shifted
+    /// up with the direction bit, exactly as the controller clocks it out.
+    fn address_byte(&self) -> u8 {
+        let addr = ((self.cr2 >> 1) & 0x7F) as u8;
+        (addr << 1) | u8::from(self.is_reading)
+    }
     /// True when the event scheduler owns this controller's engine.
     #[inline]
     fn scheduler_mode(&self) -> bool {
@@ -856,6 +963,7 @@ impl L4I2c {
                     // STOP (software, AUTOEND=0 path — Zephyr stm32 v2 poll):
                     // silicon sets STOPF and clears BUSY when the stop is done.
                     self.cr2 &= !(1 << 14); // STOP consumed
+                    self.wire_flush();
                     self.isr |= 1 << 5; // STOPF
                     self.isr &= !(1 << 15); // clear BUSY
                     if let Some(idx) = self.current_target {
@@ -894,22 +1002,15 @@ impl L4I2c {
                         self.attached_devices[idx]
                             .borrow_mut()
                             .write(self.txdr as u8);
+                        // The byte goes out on the wire here, so the wire says so.
+                        let byte = self.txdr as u8;
+                        self.wire_push(byte, true);
                     }
-                    self.isr |= 1 << 0; // TXE
-                    self.isr |= 1 << 6; // TC
-                    if self.autoend {
-                        self.isr |= 1 << 5; // STOPF
-                        self.isr &= !(1 << 15); // BUSY
-                        if let Some(i) = self.current_target {
-                            self.attached_devices[i].borrow_mut().stop();
-                        }
-                        self.current_target = None;
-                    }
-                    self.state = I2cState::Idle;
-                    self.nbytes = 0;
-                    self.first_tx_loaded = false;
-                    // Completion IRQ for Master_Transmit_IT (TCIE/STOPIE): the
-                    // next tick() re-checks the level flags set above.
+                    // The byte now occupies the bus for nine SCL bit-times;
+                    // TXE/TC/STOPF land when tick() drains that countdown.
+                    self.isr |= 1 << 0; // TXE — TXDR is free again immediately
+                    self.state = I2cState::DataSending;
+                    self.cycles_remaining = self.address_phase_cycles();
                 } else if self.state == I2cState::AddressPending {
                     // TXDR committed while the address phase is still on the wire
                     // (STM32Cube writes the first byte right after START, before
@@ -971,10 +1072,45 @@ impl L4I2c {
         if self.cycles_remaining != 0 {
             return self.irq_level();
         }
+        if self.state == I2cState::DataSending {
+            // The data byte has finished clocking out: TC (and, with AUTOEND,
+            // the STOP) land now, and the transaction's waveform goes onto the
+            // pads with its full wire time behind it.
+            self.isr |= 1 << 6; // TC
+            if self.autoend {
+                self.isr |= 1 << 5; // STOPF
+                self.isr &= !(1 << 15); // BUSY
+                if let Some(i) = self.current_target {
+                    self.attached_devices[i].borrow_mut().stop();
+                }
+                self.current_target = None;
+                self.wire_flush();
+            }
+            self.state = I2cState::Idle;
+            self.nbytes = 0;
+            self.first_tx_loaded = false;
+            if (self.cr1 & (1 << 6)) != 0 {
+                irq = true; // TCIE
+            }
+            if (self.cr1 & (1 << 5)) != 0 && (self.isr & (1 << 5)) != 0 {
+                irq = true; // STOPIE
+            }
+            return irq || self.irq_level();
+        }
         if self.state == I2cState::AddressPending {
             // The Start condition + address + ACK have now been driven on the
             // bus (the countdown elapsed) → hardware clears CR2.START.
             self.cr2 &= !(1 << 13);
+            // Those nine bit-times were real wire activity: publish them onto
+            // the routed pads so the bus is measurable. A missing slave NACKs,
+            // which is exactly what an analyzer should show.
+            let acked = self.current_target.is_some();
+            self.wire_push(self.address_byte(), acked);
+            if !acked {
+                // Nobody answered: the transaction is over, so the wire shows
+                // the address frame NACKed and a STOP.
+                self.wire_flush();
+            }
             match self.current_target {
                 None => {
                     // No slave ACKed the address → NACKF (matches L476 silicon:
@@ -1000,6 +1136,13 @@ impl L4I2c {
                     // Slave ACKed.
                     if self.is_reading && self.nbytes > 0 {
                         self.rxdr = self.attached_devices[idx].borrow_mut().read() as u32;
+                        // The master ACKs every byte but the last, which it
+                        // NACKs to tell the slave to stop driving.
+                        let more = self.nbytes > 1;
+                        self.wire_push(self.rxdr as u8, more);
+                        if self.autoend {
+                            self.wire_flush();
+                        }
                         self.isr |= 1 << 2; // RXNE
                         self.isr |= 1 << 6; // TC
                         if self.autoend {
@@ -1022,20 +1165,12 @@ impl L4I2c {
                         self.attached_devices[idx]
                             .borrow_mut()
                             .write(self.txdr as u8);
+                        self.wire_push(self.txdr as u8, true);
+                        // Same as the post-TXIS path: the byte takes nine SCL
+                        // bit-times before TC/STOPF land.
                         self.isr |= 1 << 0; // TXE
-                        self.isr |= 1 << 6; // TC
-                        if self.autoend {
-                            self.isr |= 1 << 5; // STOPF
-                            self.isr &= !(1 << 15);
-                            self.attached_devices[idx].borrow_mut().stop();
-                            self.current_target = None;
-                        }
-                        if (self.cr1 & (1 << 6)) != 0 {
-                            irq = true; // TCIE
-                        }
-                        self.state = I2cState::Idle;
-                        self.nbytes = 0;
-                        self.first_tx_loaded = false;
+                        self.state = I2cState::DataSending;
+                        self.cycles_remaining = self.address_phase_cycles();
                     } else if !self.is_reading && self.nbytes > 0 {
                         // Silicon order: address ACKed → TXIS requests first
                         // data byte. Stay in DataPending until TXDR is written
@@ -1359,6 +1494,19 @@ impl I2c {
     pub fn set_error_irq(&mut self, irq: u32) {
         if let Self::Stm32F1(i) = self {
             i.set_error_irq(irq);
+        }
+    }
+
+    /// The shared pad-line cell of a controller that publishes a wire, or
+    /// `None` for a family that has no wire model yet.
+    ///
+    /// This is the seam the GPIO pad routing binds to; a family gains a
+    /// measurable bus by returning `Some` here and narrating (or bit-banging)
+    /// into that cell.
+    pub(crate) fn pad_lines_arc(&mut self) -> Option<std::sync::Arc<PadLines>> {
+        match self {
+            Self::Stm32L4(i) => Some(i.pad_lines_arc()),
+            _ => None,
         }
     }
 
@@ -2048,9 +2196,15 @@ mod tests {
 
     /// Tick the engine past the address-phase wire-time window so the ACK/NACK
     /// verdict lands (TIMINGR left at reset → 144-cycle phase; 256 is safe margin).
+    /// Run the controller until an armed transfer has fully settled.
+    ///
+    /// A write transfer costs two phases of wire time — the address phase and
+    /// the data byte, each `address_phase_cycles()` (floor 64, 144 at the
+    /// TIMINGR reset value these bare tests use) — so the budget has to clear
+    /// both with room to spare.
     fn l4_settle(i2c: &mut I2c) {
         use crate::Peripheral;
-        for _ in 0..256 {
+        for _ in 0..1024 {
             i2c.tick();
         }
     }
@@ -2293,6 +2447,14 @@ mod tests {
 
         i2c.write(0x28, 0x00).unwrap(); // ISR writes TXDR after TXIS
         assert_eq!(writes.load(Ordering::SeqCst), 1, "byte sent on TXDR write");
+        // Completion is not instant: the byte occupies nine SCL bit-times
+        // before TC (and the AUTOEND STOP) land, exactly as on silicon.
+        assert_eq!(
+            i2c.peek(0x18).unwrap() & (1 << 6),
+            0,
+            "TC must wait for the byte to clock out"
+        );
+        l4_settle(&mut i2c);
         assert_ne!(i2c.peek(0x18).unwrap() & (1 << 6), 0, "TC after transfer");
         assert_ne!(i2c.peek(0x18).unwrap() & (1 << 5), 0, "STOPF via AUTOEND");
     }

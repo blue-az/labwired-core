@@ -15,8 +15,9 @@
 use crate::{Bus, SimResult};
 use std::any::Any;
 use std::str::FromStr;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+
+use crate::peripherals::pad_lines::PadLines;
 
 /// Trait implemented by simulated SPI devices (peripherals attached to an SPI bus).
 ///
@@ -188,111 +189,61 @@ pub enum SpiSignal {
     Miso,
 }
 
-/// Push-mode logic-capture registration for the SPI line cell: which watch
-/// channels observe pads currently AF-routed to SCK / MOSI / MISO. Maintained
-/// by the STM32 GPIO model (which owns the routing truth) via
-/// [`SpiLineLevels::install_tap`]; consulted by [`SpiLineLevels::set`] so the
-/// bit engine pushes an edge at the exact moment it drives a line transition
-/// (event-driven capture, same pattern as the C3 `I2cLineLevels`).
-#[derive(Debug, Default)]
-struct SpiLineTapState {
-    tap: Option<crate::logic_capture::LogicTap>,
-    sck_chs: Vec<u32>,
-    mosi_chs: Vec<u32>,
-    miso_chs: Vec<u32>,
-}
-
-/// Live SCK/MOSI/MISO levels of one STM32 SPI controller's wire. The
-/// controller bit engine is the only writer; the STM32 `GpioPort` reads it for
-/// pads whose MODER/AFR (or F1 CRL/CRH CNF) route this SPI's alternate
-/// function, so `read_gpio_pad` — and the in-engine logic analyzer sampling
-/// through it — observes the real waveform on the routed pads. With push-mode
-/// capture armed on a routed pad, [`set`](Self::set) additionally reports each
-/// line transition into the shared logic tap at drive time.
+/// Live SCK/MOSI/MISO levels of one STM32 SPI controller's wire.
+///
+/// A thin, named face over [`PadLines`], the ONE pad-publication mechanism
+/// (see `peripherals::pad_lines`). The controller bit engine is the only
+/// writer; the STM32 `GpioPort` reads it for pads whose MODER/AFR (or F1
+/// CRL/CRH CNF) route this SPI's alternate function, so `read_gpio_pad` — and
+/// the in-engine logic analyzer sampling through it — observes the real
+/// waveform on the routed pads. With push-mode capture armed on a routed pad,
+/// [`set`](Self::set) additionally reports each line transition into the
+/// shared logic tap at drive time.
 #[derive(Debug)]
 pub struct SpiLineLevels {
-    sck: AtomicBool,
-    mosi: AtomicBool,
-    miso: AtomicBool,
-    tap: std::sync::Mutex<SpiLineTapState>,
+    lines: std::sync::Arc<PadLines>,
 }
+
+/// Line order for [`SpiLineLevels`]. The accessors index [`PadLines`] by
+/// `SpiSignal as usize`, so this order IS the enum's discriminant order —
+/// pinned by `spi_line_order_matches_signal_discriminants`.
+const SPI_LINES: &[&str] = &["SCK", "MOSI", "MISO"];
 
 impl SpiLineLevels {
     fn new(sck_idle: bool) -> Self {
         Self {
-            sck: AtomicBool::new(sck_idle),
-            mosi: AtomicBool::new(false),
-            miso: AtomicBool::new(false),
-            tap: std::sync::Mutex::new(SpiLineTapState::default()),
+            // MOSI/MISO idle low; SCK idles at CPOL.
+            lines: std::sync::Arc::new(PadLines::new(SPI_LINES, &[sck_idle, false, false])),
         }
+    }
+
+    /// The underlying pad lines, for a GPIO port to route pads to.
+    ///
+    /// A port routes a pad to a `(PadLines, line)` pair and knows nothing about
+    /// which peripheral owns it — that is what lets one routing mechanism serve
+    /// SPI, I²C and whatever publishes pads next.
+    pub(crate) fn pad_lines(&self) -> &std::sync::Arc<PadLines> {
+        &self.lines
     }
 
     pub fn sck(&self) -> bool {
-        self.sck.load(Ordering::Relaxed)
+        self.lines.level(SpiSignal::Sck as usize)
     }
 
     pub fn mosi(&self) -> bool {
-        self.mosi.load(Ordering::Relaxed)
+        self.lines.level(SpiSignal::Mosi as usize)
     }
 
     pub fn miso(&self) -> bool {
-        self.miso.load(Ordering::Relaxed)
+        self.lines.level(SpiSignal::Miso as usize)
     }
 
     pub fn level(&self, signal: SpiSignal) -> bool {
-        match signal {
-            SpiSignal::Sck => self.sck(),
-            SpiSignal::Mosi => self.mosi(),
-            SpiSignal::Miso => self.miso(),
-        }
+        self.lines.level(signal as usize)
     }
 
     fn set(&self, sck: bool, mosi: bool, miso: bool) {
-        let old_sck = self.sck.swap(sck, Ordering::Relaxed);
-        let old_mosi = self.mosi.swap(mosi, Ordering::Relaxed);
-        let old_miso = self.miso.swap(miso, Ordering::Relaxed);
-        if old_sck == sck && old_mosi == mosi && old_miso == miso {
-            return;
-        }
-        // A line actually transitioned: report it to any watch channels whose
-        // pads the GPIO AF routing currently maps here. Lock taken only on
-        // transitions (segment-boundary rate, not per engine cycle).
-        let t = self.tap.lock().unwrap();
-        if let Some(tap) = &t.tap {
-            if old_sck != sck {
-                for &ch in &t.sck_chs {
-                    tap.push(ch, sck);
-                }
-            }
-            if old_mosi != mosi {
-                for &ch in &t.mosi_chs {
-                    tap.push(ch, mosi);
-                }
-            }
-            if old_miso != miso {
-                for &ch in &t.miso_chs {
-                    tap.push(ch, miso);
-                }
-            }
-        }
-    }
-
-    /// Install (or clear, with `tap = None`) the push-capture registration.
-    /// Called by the STM32 GPIO model at watch install time and whenever a
-    /// write changes the routing of a watched pad, so the channel lists always
-    /// mirror the live MODER/AFR state.
-    pub(crate) fn install_tap(
-        &self,
-        tap: Option<crate::logic_capture::LogicTap>,
-        sck_chs: Vec<u32>,
-        mosi_chs: Vec<u32>,
-        miso_chs: Vec<u32>,
-    ) {
-        let mut t = self.tap.lock().unwrap();
-        t.tap = tap;
-        t.sck_chs = sck_chs;
-        t.mosi_chs = mosi_chs;
-        t.miso_chs = miso_chs;
+        self.lines.set(&[sck, mosi, miso]);
     }
 }
 
@@ -1854,6 +1805,18 @@ impl Spi {
 
 #[cfg(test)]
 mod tests {
+    /// The named accessors index `PadLines` by `SpiSignal as usize`. Reordering
+    /// either the enum or `SPI_LINES` alone would silently publish MOSI's level
+    /// on the SCK lane — a waveform that looks plausible and is wrong.
+    #[test]
+    fn spi_line_order_matches_signal_discriminants() {
+        use super::{SpiSignal, SPI_LINES};
+        assert_eq!(SPI_LINES[SpiSignal::Sck as usize], "SCK");
+        assert_eq!(SPI_LINES[SpiSignal::Mosi as usize], "MOSI");
+        assert_eq!(SPI_LINES[SpiSignal::Miso as usize], "MISO");
+        assert_eq!(SPI_LINES.len(), 3);
+    }
+
     use super::{Spi, SpiDevice, SpiRegisterLayout};
     use crate::Peripheral;
 

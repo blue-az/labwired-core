@@ -868,10 +868,18 @@ impl SystemBus {
         // the C3 GPIO model so matrix-routed pads carry the real waveform.
         // No-op for every other chip.
         bus.wire_esp32c3_i2c_pads();
+        // Same for the S3's I²C0, whose pads reach GPIO through the S3 output
+        // matrix rather than an AF nibble.
+        bus.wire_esp32s3_i2c_pads();
+        // RP2040: bind I²C wires to the pads IO_BANK0's FUNCSEL can route them to.
+        bus.wire_rp2040_i2c_pads();
         // STM32: share each classic/FIFO SPI bit engine's live SCK/MOSI/MISO
         // line levels with the STM32 GPIO ports so AF-routed pads carry the
         // real waveform. No-op for every other chip.
         bus.wire_stm32_spi_pads();
+        // Same for each STM32 I²C controller's SCL/SDA, so that bus is
+        // measurable too rather than reading as a flat line.
+        bus.wire_stm32_i2c_pads();
         // Resolve declared per-peripheral RCC clock-gates now that every
         // peripheral (incl. the RCC, needed to map reg-name → offset) is on the
         // bus. Peripherals without a `clock:` field stay ungated.

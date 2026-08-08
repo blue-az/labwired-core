@@ -124,6 +124,128 @@ impl SystemBus {
         }
     }
 
+    /// Bind the RP2040 I²C controllers' wires to the pads IO_BANK0 can route
+    /// them to, so `read_gpio_pad` — and the logic analyzer through it — sees
+    /// the bus rather than the SIO output latch. No-op unless IO_BANK0, SIO and
+    /// an I²C controller are all on the bus.
+    ///
+    /// Pad assignment is the fixed RP2040 map (datasheet Table 2-19): with
+    /// `FUNCSEL = GPIO_FUNC_I2C`, an EVEN pad carries SDA and an odd pad SCL,
+    /// and the instance alternates every two pads — GP0/GP1 are I2C0, GP2/GP3
+    /// are I2C1, GP4/GP5 are I2C0 again, and so on. Nothing here is chosen by
+    /// us: which pads exist is the datasheet's, and which one is live at any
+    /// moment is FUNCSEL's.
+    pub(crate) fn wire_rp2040_i2c_pads(&mut self) {
+        use crate::peripherals::rp2040::i2c::{Rp2040I2c, LINE_SCL, LINE_SDA};
+        use crate::peripherals::rp2040::io_bank0::{Rp2040IoBank0, GPIO_FUNC_I2C, PAD_COUNT};
+        use crate::peripherals::rp2040::sio::Rp2040Sio;
+
+        let Some(functions) = self
+            .peripherals
+            .iter()
+            .find_map(|p| {
+                p.dev
+                    .as_any()
+                    .and_then(|a| a.downcast_ref::<Rp2040IoBank0>())
+            })
+            .map(Rp2040IoBank0::pad_functions)
+        else {
+            return;
+        };
+
+        for (instance, name) in ["i2c0", "i2c1"].iter().enumerate() {
+            let Some(idx) = self.find_peripheral_index_by_name(name) else {
+                continue;
+            };
+            let Some(lines) = self.peripherals[idx]
+                .dev
+                .as_any_mut()
+                .and_then(|a| a.downcast_mut::<Rp2040I2c>())
+                .map(Rp2040I2c::pad_lines_arc)
+            else {
+                continue;
+            };
+            let Some(sio_idx) = self.find_peripheral_index_by_name("sio") else {
+                return;
+            };
+            let Some(sio) = self.peripherals[sio_idx]
+                .dev
+                .as_any_mut()
+                .and_then(|a| a.downcast_mut::<Rp2040Sio>())
+            else {
+                return;
+            };
+            for pin in 0..PAD_COUNT {
+                if usize::from(pin / 2) % 2 != instance {
+                    continue;
+                }
+                let (line, func) = if pin % 2 == 0 {
+                    (
+                        LINE_SDA,
+                        if instance == 0 {
+                            "I2C0_SDA"
+                        } else {
+                            "I2C1_SDA"
+                        },
+                    )
+                } else {
+                    (
+                        LINE_SCL,
+                        if instance == 0 {
+                            "I2C0_SCL"
+                        } else {
+                            "I2C1_SCL"
+                        },
+                    )
+                };
+                sio.bind_pad_route(functions.clone(), &lines, pin, GPIO_FUNC_I2C, line, func);
+            }
+        }
+    }
+
+    /// Share the ESP32-S3 I²C0 controller's live SCL/SDA levels with S3 GPIO,
+    /// so pads whose output matrix routes `I2CEXT0_SCL`/`SDA` read the real
+    /// waveform through `read_gpio_pad` (which is what the in-engine logic
+    /// analyzer samples). No-op unless both S3 models are on the bus.
+    ///
+    /// The C3 counterpart is [`Self::wire_esp32c3_i2c_pads`]; unlike the C3
+    /// this direction is one-way, because the S3 I²C model resolves its slaves
+    /// by address rather than by physical pad route.
+    pub(crate) fn wire_esp32s3_i2c_pads(&mut self) {
+        use crate::peripherals::esp32s3::gpio::Esp32s3Gpio;
+        use crate::peripherals::esp32s3::i2c::Esp32s3I2c;
+
+        let i2c_idx = self.peripherals.iter().position(|p| {
+            p.dev
+                .as_any()
+                .map(|a| a.is::<Esp32s3I2c>())
+                .unwrap_or(false)
+        });
+        let gpio_idx = self.peripherals.iter().position(|p| {
+            p.dev
+                .as_any()
+                .map(|a| a.is::<Esp32s3Gpio>())
+                .unwrap_or(false)
+        });
+        let (Some(i2c_idx), Some(gpio_idx)) = (i2c_idx, gpio_idx) else {
+            return;
+        };
+        let lines = self.peripherals[i2c_idx]
+            .dev
+            .as_any_mut()
+            .and_then(|a| a.downcast_mut::<Esp32s3I2c>())
+            .map(|c| c.pad_lines_arc());
+        if let (Some(lines), Some(gpio)) = (
+            lines,
+            self.peripherals[gpio_idx]
+                .dev
+                .as_any_mut()
+                .and_then(|a| a.downcast_mut::<Esp32s3Gpio>()),
+        ) {
+            gpio.set_i2c_lines(lines);
+        }
+    }
+
     /// Wire C3 IO_MUX per-pad controls into C3 GPIO after both models have
     /// been constructed. The IO_MUX owns the shared register bank; GPIO reads
     /// `FUN_WPU` from it to model Arduino `INPUT_PULLUP`. No-op on any bus
@@ -313,18 +435,102 @@ impl SystemBus {
                         let table = if fifo { L4 } else { F4 };
                         for &(spi, p, pin, af, sig, func) in table {
                             if spi == spi_name && p == port {
-                                gpio.add_spi_pad_route(&lines, pin, Some(af), sig, func);
+                                gpio.add_pad_route(
+                                    lines.pad_lines(),
+                                    pin,
+                                    Some(af),
+                                    sig as usize,
+                                    func,
+                                );
                             }
                         }
                     }
                     GpioRegisterLayout::Stm32F1 => {
                         for &(spi, p, pin, sig, func) in F1 {
                             if spi == spi_name && p == port {
-                                gpio.add_spi_pad_route(&lines, pin, None, sig, func);
+                                gpio.add_pad_route(
+                                    lines.pad_lines(),
+                                    pin,
+                                    None,
+                                    sig as usize,
+                                    func,
+                                );
                             }
                         }
                     }
                     _ => {}
+                }
+            }
+        }
+    }
+
+    /// Route each STM32 I²C controller's SCL/SDA onto the GPIO pads that can
+    /// carry them, so `read_gpio_pad` — and the logic analyzer through it —
+    /// sees the wire this controller drives rather than the idle GPIO latch.
+    ///
+    /// The SPI counterpart is [`Self::wire_stm32_spi_pads`]; both install
+    /// routes through the one `add_pad_route` mechanism, differing only in
+    /// their AF table.
+    pub(crate) fn wire_stm32_i2c_pads(&mut self) {
+        use crate::peripherals::gpio::{GpioPort, GpioRegisterLayout};
+        use crate::peripherals::i2c::{I2c, LINE_SCL, LINE_SDA};
+
+        // (i2c, port, pin, AF, line, func). L4: DS10198 Table 17 (I2C1-3 on
+        // AF4, and I2C4 on AF5 where fitted — not modelled here). F4: DS8626
+        // Table 9 gives the same AF4 assignment for I2C1-3, and the pins below
+        // are common to both, so one V2 table serves them.
+        const V2: &[(&str, char, u8, u8, usize, &str)] = &[
+            ("i2c1", 'b', 6, 4, LINE_SCL, "I2C1_SCL"),
+            ("i2c1", 'b', 7, 4, LINE_SDA, "I2C1_SDA"),
+            ("i2c1", 'b', 8, 4, LINE_SCL, "I2C1_SCL"),
+            ("i2c1", 'b', 9, 4, LINE_SDA, "I2C1_SDA"),
+            ("i2c2", 'b', 10, 4, LINE_SCL, "I2C2_SCL"),
+            ("i2c2", 'b', 11, 4, LINE_SDA, "I2C2_SDA"),
+            ("i2c2", 'b', 13, 4, LINE_SCL, "I2C2_SCL"),
+            ("i2c2", 'b', 14, 4, LINE_SDA, "I2C2_SDA"),
+            ("i2c2", 'f', 0, 4, LINE_SDA, "I2C2_SDA"),
+            ("i2c2", 'f', 1, 4, LINE_SCL, "I2C2_SCL"),
+            ("i2c3", 'a', 7, 4, LINE_SCL, "I2C3_SCL"),
+            ("i2c3", 'b', 4, 4, LINE_SDA, "I2C3_SDA"),
+            ("i2c3", 'c', 0, 4, LINE_SCL, "I2C3_SCL"),
+            ("i2c3", 'c', 1, 4, LINE_SDA, "I2C3_SDA"),
+            ("i2c3", 'c', 9, 4, LINE_SDA, "I2C3_SDA"),
+        ];
+
+        for i2c_name in ["i2c1", "i2c2", "i2c3"] {
+            let Some(i2c_idx) = self.find_peripheral_index_by_name(i2c_name) else {
+                continue;
+            };
+            let Some(lines) = self.peripherals[i2c_idx]
+                .dev
+                .as_any_mut()
+                .and_then(|a| a.downcast_mut::<I2c>())
+                .and_then(|i2c| i2c.pad_lines_arc())
+            else {
+                continue;
+            };
+            for port in ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] {
+                let Some(gpio_idx) = self.find_peripheral_index_by_name(&format!("gpio{port}"))
+                else {
+                    continue;
+                };
+                let Some(gpio) = self.peripherals[gpio_idx]
+                    .dev
+                    .as_any_mut()
+                    .and_then(|a| a.downcast_mut::<GpioPort>())
+                else {
+                    continue;
+                };
+                // F1's I²C sits on a different controller model (F1I2c) and its
+                // pads are open-drain AF on the fixed mapping; only the V2
+                // register model is routed here.
+                if gpio.register_layout() != GpioRegisterLayout::Stm32V2 {
+                    continue;
+                }
+                for &(i2c, p, pin, af, line, func) in V2 {
+                    if i2c == i2c_name && p == port {
+                        gpio.add_pad_route(&lines, pin, Some(af), line, func);
+                    }
                 }
             }
         }
