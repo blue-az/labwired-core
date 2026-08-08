@@ -372,7 +372,8 @@ impl Peripheral for Nrf52Gpiote {
         }
     }
 
-    fn observe_gpio_change(&mut self, changes: &[(u8, u8, u8)]) {
+    fn observe_gpio_change(&mut self, changes: &[(u8, u8, u8)]) -> bool {
+        let latched_before = self.pending_in_events.len();
         for &(port, pin, new_level) in changes {
             for ch in 0..8usize {
                 let cfg = self.config[ch];
@@ -403,6 +404,9 @@ impl Peripheral for Nrf52Gpiote {
                 }
             }
         }
+        // Only a channel that actually matched an edge needs the bus to harvest
+        // a wake for it; an edge on a pin no channel watches is not work.
+        self.pending_in_events.len() != latched_before
     }
 }
 

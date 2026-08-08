@@ -192,14 +192,33 @@ boards:
     # nvmc tests green. Live re-capture owed for the RX drain timing.
     # 2026-08-06: universal I2C kits + external_devices attach path; nRF UARTE RX test style only.
     # No register map / base / reset change on silicon-asserted set. Offline gates unchanged.
+    # 2026-08-07: nRF52 GPIOTE `observe_gpio_change` now REPORTS whether it latched an
+    # edge (return type only — the channel/polarity matching logic is byte-identical),
+    # and the bus stopped seeding its GPIO edge baseline at zero, so a level the
+    # outside world already holds is no longer a phantom rising edge at cycle 1. No
+    # register map, base address, reset value or readback in the 2026-06-17 asserted
+    # set moves; the only observable delta is a GPIOTE EVENTS_IN that used to latch
+    # with no contact having moved. Offline gates unchanged. Live re-capture still
+    # owed for the RX drain timing.
     # 2026-08-07: RADIO air-time accounting — a packet's air time now ends at its
     # computed deadline instead of at the first wake that happens to land inside
     # it. Scheduling behaviour, not silicon surface: no register in the asserted
     # 16/16 sweep changes address, reset value or access, and no base moves.
     # Owner-authorised ack WITHOUT a live re-capture; the RADIO packet-timing
     # live diff remains owed and is NOT evidenced by this entry.
+    # 2026-08-08: TIMER scheduler re-arm dedup (#861). `take_scheduled_events`
+    # kept minting a fresh arming token on every drain, which runs after every
+    # MMIO write; since scheduler dedup keys on (peripheral, token, deadline),
+    # a poll loop left one far-future compare wake resident per poll until the
+    # live-event ceiling tripped. The token now holds steady when a re-arm
+    # targets the instant already in flight. Scheduler bookkeeping, not silicon
+    # surface: no register in the asserted 16/16 sweep changes address, reset
+    # value or access; counter width/BITMODE masking, prescaler division,
+    # CC compare matching, SHORTS and EVENTS_COMPARE latching are all untouched,
+    # and TIMER0's 16/0 sweep re-runs green. Acked WITHOUT a live re-capture —
+    # no TIMER live diff is evidenced by this entry.
     drift_ack: 2026-08-08
-    drift_ack_digest: 8ea8122dea22fc64528fc41181d8e9b3d1e9b84a0d46cd499eec68a9d5f6213f
+    drift_ack_digest: 6142ba057c56f787631dde73492b725ac7f4490d77933b37aeea5fb3b8ba6612
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -289,14 +308,26 @@ boards:
     # nvmc tests green. Live re-capture owed for the RX drain timing.
     # 2026-08-06: universal I2C kits + external_devices attach path; nRF UARTE RX test style only.
     # No register map / base / reset change on silicon-asserted set. Offline gates unchanged.
+    # 2026-08-07: nRF52 GPIOTE `observe_gpio_change` now REPORTS whether it latched an
+    # edge (return type only — the channel/polarity matching logic is byte-identical),
+    # and the bus stopped seeding its GPIO edge baseline at zero, so a level the
+    # outside world already holds is no longer a phantom rising edge at cycle 1. No
+    # register map, base address, reset value or readback in the 2026-06-17 asserted
+    # set moves; the only observable delta is a GPIOTE EVENTS_IN that used to latch
+    # with no contact having moved. Offline gates unchanged. Live re-capture still
+    # owed for the RX drain timing.
     # 2026-08-07: RADIO air-time accounting — a packet's air time now ends at its
     # computed deadline instead of at the first wake that happens to land inside
     # it. Scheduling behaviour, not silicon surface: no register in the asserted
     # 16/16 sweep changes address, reset value or access, and no base moves.
     # Owner-authorised ack WITHOUT a live re-capture; the RADIO packet-timing
     # live diff remains owed and is NOT evidenced by this entry.
+    # 2026-08-08: rides the nrf52840 TIMER scheduler re-arm dedup (#861); same
+    # silicon. Scheduler bookkeeping only — no register address, reset value or
+    # access in the asserted sweep changes. See the nrf52840 drift_ack note; no
+    # TIMER live re-capture is evidenced by this entry.
     drift_ack: 2026-08-08
-    drift_ack_digest: 8ea8122dea22fc64528fc41181d8e9b3d1e9b84a0d46cd499eec68a9d5f6213f
+    drift_ack_digest: 6142ba057c56f787631dde73492b725ac7f4490d77933b37aeea5fb3b8ba6612
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -1003,8 +1034,61 @@ boards:
     # transmitted before the controllers attach and the join point is 0 anyway.
     # Evidence: 2700 core lib tests green, 2816 with --features event-scheduler,
     # workspace clippy --all-targets -D warnings clean.
-    drift_ack: 2026-08-07
-    drift_ack_digest: d02aad733e3f69f538345d89fd5722af87a8a9b4c5687497e835ff24acfe12ff
+    # 2026-08-08: RWBLECNTL (+0x000) bits 25 and 24 are now consumed on
+    # write, like bit31 already was. They are the RW-BLE core's advertising and
+    # scanning ABORT REQUESTS. Every mask-ROM site that touches either only ever
+    # ORs it in — r_lld_adv_stop 0x40018A2C, r_lld_per_adv_stop 0x40023E48,
+    # r_lld_scan_end 0x40024634, r_lld_rpa_renew_evt_start_cbk 0x4001FF06 and
+    # 0x4001FF18 — and no ROM site reads either bit back, so nothing in software
+    # can clear them; every OpenOCD dump of the live advertising part reads
+    # +0x000 = 0x0010_070f with both clear. This CORRECTS a divergence rather
+    # than adding behaviour: latching them made the twin hand the firmware a
+    # control word silicon cannot produce (LABWIRED_BT_TRACE, two-node BLE Pong,
+    # both nodes at CLKN 37: 0x0210070f then 0x0310070f, where silicon's
+    # read-modify-write yields 0x0110070f). No register is added, no base or
+    # width changes, and +0x000 is not in the reset-oracle asserted set — the
+    # block reads all-zero at reset either way. The abort's EFFECT (ending the
+    # in-flight event) is still deliberately unmodelled; measured cost is 0-10
+    # CLKN ticks (0-3.1 ms) per stop, 7 stops per 0.89 s across two nodes at the
+    # published sketch's ~51 ms loop-bound cadence and ZERO at a 24 ms cadence
+    # (the stop phase-locks ahead of the next programmed event and takes the
+    # synchronous state-0 path). Neither cadence stalls: air frames sustained
+    # over 400M cycles, host elected, score 7:6 agreed on both nodes at 24 ms.
+    # Evidence: 2707 core lib tests green, two new bt.rs unit
+    # tests derived from the ROM read-modify-write sequences (both watched fail
+    # with the old mask), world_esp32c3_ble_pong 2/2 green, and the two-node air
+    # frame counts identical bucket-for-bucket before and after the change.
+    # 2026-08-08: BT radio wake cadence + idempotent comparator arm, and the
+    # scheduler's dedup index made hybrid (#867). `take_scheduled_events` ran
+    # after every MMIO write to this block and bumped `arm_seq` unconditionally,
+    # so every arm minted a fresh (peripheral, token, deadline) key the
+    # scheduler could not collapse and has no cancel for; each stayed live until
+    # it fired and was rejected as stale. LIVE_HWM bt=789 -> 6, max_queued
+    # 792 -> 9, live_event_ceiling_trips 3310 -> 0. Scheduler bookkeeping, not
+    # silicon surface: no register in the asserted reset-oracle set changes
+    # address, reset value or access, and configs/peripherals/esp32c3 — the
+    # descriptors that oracle actually asserts — is untouched by this change.
+    # Evidence: esp32c3_walk_differential 10/10 under --ignored, which is where
+    # the five walk-vs-scheduler byte-identity proofs (systimer, i2c0, uart0,
+    # spi2_apb_saradc, rtc-at-interval-1) and both framebuffer identity tests
+    # live; esp32c3_clamped_full_state_differential 3/3;
+    # world_esp32c3_ble_pong 2/2 with both nodes advancing off spawn; and the
+    # three shipped labs still batching at mean 109-126 against floors of 8/8/40.
+    # A live diff WAS run this date over USB-JTAG against two boards
+    # (9c:cc:01:d0:98:e0 and 9c:cc:01:d0:5b:78), and it is recorded here as
+    # supporting evidence only — it does NOT move silicon.last_capture. The
+    # static estate matched 1063/1136 words with every delta accounted for: 17
+    # per-chip efuse identity words (the committed baseline was captured on a
+    # third chip, 38:44:be:42:f5:58, so these must differ), 48 words of a
+    # clock-gated twai0 returning stale bus data, 8 live usb_device counters.
+    # The asserted set matched 85/89. The four stragglers are radio windows that
+    # were NOT observed cold — openocd `reset halt` is a software core reset and
+    # leaves the PHY powered by whatever sketch is running — so a real
+    # re-capture needs a physical power cycle. Nothing in the live diff lies on
+    # this change's surface: it is scheduler arming, and the descriptors the
+    # oracle asserts are untouched.
+    drift_ack: 2026-08-08
+    drift_ack_digest: 7bdbe76af3085800e79329118498d7d87dd7fe83de83541452ec2e9a0113b383
 
   - id: nucleo-l476rg
     doc: docs/boards/nucleo-l476rg.md
@@ -1867,8 +1951,14 @@ boards:
     # `cargo test -p labwired-core` green, 161 test binaries, 3533 passed, 0
     # failed, 34 ignored; declarative_device_byte_parity 7/7 with every golden
     # literal unchanged. No S3 board attached; no live re-capture.
-    drift_ack: 2026-08-07
-    drift_ack_digest: f52b807abebf3aadf5bdbbbbc38bbb16a33402aa0db82a041279f2e2fe1b1b52
+    # 2026-08-08: USB_SERIAL_JTAG gains its interrupt surface (INT_RAW/ST/ENA/CLR
+    # plus a matrix source id) so CDC-on-boot builds print. The peripheral's base
+    # (0x6004_3000) and window are unchanged and no register in the 9-register
+    # reset-state anchor moves — esp32s3_reset_conformance covers exactly that
+    # set. Owner-authorised ack WITHOUT a live re-capture; no S3 board was
+    # attached for this change and the USB CDC live diff remains owed.
+    drift_ack: 2026-08-08
+    drift_ack_digest: e61b64da1a9ee277ec7563b1e2e72289509536d803b09b5251fde3b84342d80d
     models:
       - crates/core/src/peripherals/esp32s3
       - crates/core/src/peripherals/esp_xtensa_common

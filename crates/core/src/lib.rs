@@ -279,11 +279,20 @@ pub trait Cpu: Send {
         // One Arc clone + flag check per batch when idle; a relaxed atomic
         // increment per instruction while armed.
         let tap = bus.logic_tap().filter(|t| t.push_armed());
+        // Issue #842: republish the live cycle per retired instruction so a
+        // lazily-advanced peripheral is not pinned to the batch-start cycle for
+        // the whole window. Same gate and same rationale as the hand-written
+        // `CortexM::step_batch` / `RiscV::step_batch` twins — see either.
+        #[cfg(feature = "event-scheduler")]
+        let live_step = u64::from(config.peripheral_tick_interval > 1);
         for i in 0..max_count {
             if let Some(tap) = &tap {
                 tap.bump_clock();
             }
             self.step(bus, observers, config)?;
+            // Advance after the step — see `CortexM::step_batch`.
+            #[cfg(feature = "event-scheduler")]
+            bus.publish_cycle(bus.current_cycle() + live_step);
             if config.idle_fast_forward_enabled && self.idle_fast_forward_budget(bus).is_some() {
                 return Ok(i + 1);
             }
@@ -600,7 +609,20 @@ pub trait Peripheral: std::fmt::Debug + Send {
     /// transitions. GPIOTE overrides to drive EVENTS_IN[i] when a channel
     /// is configured to watch a matching (port, pin) with a matching
     /// polarity. Default no-op.
-    fn observe_gpio_change(&mut self, _changes: &[(u8, u8, u8)]) {}
+    ///
+    /// Returns whether this peripheral LATCHED work from the edge that it now
+    /// needs a scheduler wake for. The bus harvests `take_scheduled_events`
+    /// only from the peripherals that say `true`: an edge is a cross-peripheral
+    /// activation the per-MMIO-write harvest choke never sees, but harvesting
+    /// from everybody re-arms a SECOND wake on models that already have one in
+    /// flight and cannot latch anything from a GPIO edge at all. A duplicate
+    /// wake at an earlier deadline drains an in-flight multi-cycle model on the
+    /// spot — that is how a `board_io` button on the nRF52840-DK collapsed
+    /// RADIO air time to the EasyDMA cycle. Default `false`: a model that does
+    /// not observe GPIO cannot have latched anything.
+    fn observe_gpio_change(&mut self, _changes: &[(u8, u8, u8)]) -> bool {
+        false
+    }
 
     /// GPIO capability: read the firmware-visible input level for `pin`.
     /// Non-GPIO peripherals return `None`.

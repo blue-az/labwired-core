@@ -26,6 +26,12 @@
 //! 6. RADIO air time vs a spurious wake — an MMIO write to the RADIO while a
 //!    packet is transmitting must not shorten it, and TASKS_DISABLE mid-flight
 //!    must abort it rather than let it complete.
+//! 7. DWT CYCCNT polled from inside a CPU batch — the counter must advance per
+//!    retired instruction, not per batch (#842). Quantum 1 is the reference
+//!    lane and must stay byte-identical to quantum 512.
+//! 8. TIMER0 residency under a poll loop — repeatedly capturing a running timer
+//!    re-arms the same compare hundreds of times; those redundant wakes must
+//!    collapse via scheduler dedup instead of accumulating (#861).
 //!
 //! Requires `--features event-scheduler`.
 
@@ -253,6 +259,82 @@ fn timer0_compare_walk1_vs_sched512_cycle_identity() {
         "both lanes must latch EVENTS_COMPARE[0]"
     );
     assert_cycle_identity(at_a, at_b, "TIMER0 COMPARE[0]");
+}
+
+const TIMER_TASKS_CAPTURE1: u64 = TIMER0 + 0x044;
+const TIMER_CC1: u64 = TIMER0 + 0x544;
+
+/// Reading the nRF52 counter is *defined* as a write: there is no COUNTER
+/// register, so firmware strobes `TASKS_CAPTURE[i]` and then reads `CC[i]`.
+/// Every one of those writes drains `take_scheduled_events`, so a poll loop is
+/// the peripheral re-arming itself hundreds of times against a compare that has
+/// not moved.
+///
+/// The scheduler has no cancel API — an armed wake is always delivered — so the
+/// only way to stay inside `MAX_LIVE_EVENTS_PER_PERIPHERAL` is for a redundant
+/// re-arm to be recognised and collapsed by layer-1 dedup. Dedup keys on
+/// `(peripheral_idx, event_token, deadline)`, so that only works while the token
+/// holds steady across polls that do not move the compare.
+///
+/// Regression gate for #861: the timer used to bump `arm_seq` unconditionally,
+/// making the key unique on every poll. Dedup could never fire and each poll
+/// left another far-future wake resident. Reverting the fix trips the ceiling
+/// here (`peripheral N holds 9 live events (ceiling 8)`) within the first dozen
+/// polls, long before the 200 this gate performs.
+///
+/// The compare is deliberately far away (~16M cycles at PRESCALER=0) so nothing
+/// drains it: every wake armed during the loop is still resident at the end,
+/// which is exactly the condition the ceiling exists to catch.
+#[test]
+fn polling_a_running_timer_does_not_hoard_scheduler_wakes() {
+    const FAR_CC: u32 = 0x0100_0000;
+    const POLLS: usize = 200;
+
+    let mut m = machine_at_interval(1);
+    arm_timer0_compare(&mut m, FAR_CC);
+
+    let mut captures = Vec::with_capacity(POLLS);
+    for _ in 0..POLLS {
+        m.advance(AdvanceRequest::run(Some(4)).with_breakpoints(BreakpointPolicy::Ignore))
+            .expect("Machine::advance");
+        // The real firmware idiom: strobe CAPTURE, then read the channel back.
+        m.bus
+            .write_u32(TIMER_TASKS_CAPTURE1, 1)
+            .expect("TASKS_CAPTURE[1] is a legal MMIO write");
+        captures.push(m.bus.read_u32(TIMER_CC1).expect("CC[1] readback"));
+    }
+
+    let stats = m.sched.stats();
+    assert_eq!(
+        stats.live_event_ceiling_trips,
+        0,
+        "polling a running TIMER leaked wakes: {} ceiling trips, max live per \
+         peripheral {} (ceiling {})",
+        stats.live_event_ceiling_trips,
+        stats.max_live_events_per_peripheral,
+        labwired_core::sched::MAX_LIVE_EVENTS_PER_PERIPHERAL
+    );
+    assert!(
+        stats.max_live_events_per_peripheral
+            <= labwired_core::sched::MAX_LIVE_EVENTS_PER_PERIPHERAL,
+        "live-event high-water mark {} exceeded the ceiling {}",
+        stats.max_live_events_per_peripheral,
+        labwired_core::sched::MAX_LIVE_EVENTS_PER_PERIPHERAL
+    );
+
+    // Not hoarding must not mean not working: the captured counter has to keep
+    // moving, or this would pass just as well with the timer wedged.
+    assert!(
+        captures.last() > captures.first(),
+        "captured counter never advanced across {POLLS} polls ({:?} → {:?})",
+        captures.first(),
+        captures.last()
+    );
+    assert!(
+        !timer_compare_done(&m),
+        "the far compare must NOT have fired — otherwise the wakes drained and \
+         this gate proves nothing about residency"
+    );
 }
 
 // ── RTC0 COMPARE (EVTEN + INTEN path) ───────────────────────────────────────
@@ -634,6 +716,116 @@ fn radio_ble_1mbit_bit_time_scales_with_length() {
     assert_cycle_identity(at_l2_i1, at_l2_i512, "RADIO Ble_1Mbit L2 bit-time");
 }
 
+// ── GPIO edges must not perturb an in-flight RADIO packet ───────────────────
+
+const GPIO0: u64 = 0x5000_0000;
+const GPIOTE: u64 = 0x4000_6000;
+const GPIOTE_EVENTS_IN0: u64 = GPIOTE + 0x100;
+const GPIOTE_CONFIG0: u64 = GPIOTE + 0x510;
+/// DK button0 pin (Zephyr nrf52840dk `button0`) — carries a `board_io` contact.
+const BUTTON0_PIN: u8 = 11;
+/// A plain gpio0 pin with no `board_io` binding, so the test owns its level and
+/// the edge it drives is unambiguously the one under test.
+const EDGE_PIN: u8 = 3;
+
+/// GPIOTE CONFIG[0] word: MODE=Event(1), PSEL=`pin`, PORT=0, POLARITY=Toggle(3).
+fn gpiote_event_toggle_on(pin: u8) -> u32 {
+    1 | ((pin as u32) << 8) | (3 << 16)
+}
+
+/// Physics, not implementation: a contact closing on a GPIO pin does not make a
+/// BLE packet leave the antenna sooner. EVENTS_END must still land at the
+/// Ble_1Mbit air time for the programmed LENGTH even when an external input
+/// edge arrives mid-transmission.
+///
+/// Regression gate for the per-edge scheduler harvest: a GPIO edge used to
+/// re-harvest a wake from EVERY scheduler-driven peripheral, so the RADIO —
+/// which cannot latch anything from a GPIO edge — got a second, earlier event
+/// that drained its air-time countdown on the spot and collapsed END to the
+/// DMA cycle.
+#[test]
+fn radio_air_time_survives_a_gpio_edge_mid_transmission() {
+    const L: u8 = 8;
+    const BUDGET: u64 = 256;
+    // Well inside the (8+3)*8 = 88-cycle air window, after the EasyDMA cycle.
+    const EDGE_AT: u64 = 10;
+    let buf = 0x2000_2000u64;
+
+    // Single-cycle loop so the edge lands at a known cycle. The loop always
+    // runs past EDGE_AT (it does not break on END) so the edge is driven even
+    // when a broken model has already collapsed END — otherwise a failure would
+    // report "no edge driven" instead of the air time it actually produced.
+    let mut edge_driven = false;
+    let mut m = machine_at_interval(1);
+    arm_radio_tx_with_len(&mut m, buf, L);
+    let _ = m.bus.write_u32(RADIO_TASKS_START, 1);
+    let mut at = None;
+    while m.total_cycles < BUDGET {
+        m.advance(AdvanceRequest::run(Some(1)).with_breakpoints(BreakpointPolicy::Ignore))
+            .expect("Machine::advance");
+        if m.total_cycles == EDGE_AT {
+            edge_driven = m.bus.drive_input_bit(GPIO0, EDGE_PIN, true);
+            assert!(
+                edge_driven,
+                "precondition: gpio0 must accept an externally driven input level"
+            );
+        }
+        if at.is_none() && radio_end_done(&m) {
+            at = Some(m.total_cycles);
+        }
+        if at.is_some() && m.total_cycles > EDGE_AT {
+            break;
+        }
+    }
+    assert!(
+        edge_driven,
+        "precondition: the GPIO edge must have been driven"
+    );
+    let at = at.expect("RADIO EVENTS_END must still fire");
+    let expected = RADIO_TX_CHAIN_OVERHEAD + ble_1mbit_air_cycles(L);
+    assert!(
+        at.abs_diff(expected) <= 1,
+        "a GPIO edge mid-TX must not shorten Ble_1Mbit air time: \
+         END at {at}, model expected {expected} (±1)"
+    );
+}
+
+/// The level a `board_io` contact settles to at attach is the level the pin was
+/// always at — nothing moved it, so it is not an edge. A GPIOTE channel watching
+/// that pin in Event/Toggle mode must therefore see EVENTS_IN[0] == 0 on the
+/// first tick, before anything has actually pressed the button.
+#[test]
+fn board_io_button_boot_level_is_not_a_gpio_edge() {
+    let mut m = machine_at_interval(1);
+    // Precondition: the DK system YAML really does declare a button on this pin,
+    // i.e. the boot level is externally driven (otherwise this proves nothing).
+    assert_eq!(
+        m.bus
+            .read_u32(GPIO0 + 0x510)
+            .map(|v| (v >> BUTTON0_PIN) & 1)
+            .unwrap_or(0),
+        1,
+        "precondition: board_io button0 must have settled its released (high) level"
+    );
+
+    m.bus
+        .write_u32(GPIOTE_CONFIG0, gpiote_event_toggle_on(BUTTON0_PIN))
+        .unwrap();
+    m.bus.write_u32(GPIOTE_EVENTS_IN0, 0).unwrap();
+
+    for _ in 0..4 {
+        m.advance(AdvanceRequest::run(Some(1)).with_breakpoints(BreakpointPolicy::Ignore))
+            .expect("Machine::advance");
+    }
+
+    assert_eq!(
+        m.bus.read_u32(GPIOTE_EVENTS_IN0).unwrap_or(u32::MAX),
+        0,
+        "no contact moved: the boot level of a board_io button must not present \
+         itself as a GPIO edge"
+    );
+}
+
 /// TASKS_DISABLE mid-transmission aborts the packet: DISABLED promptly, and no
 /// EVENTS_END for a packet firmware cancelled.
 ///
@@ -698,5 +890,203 @@ fn radio_disable_mid_transmission_aborts_the_packet() {
         m.bus.read_u32(RADIO_STATE).unwrap(),
         RADIO_STATE_DISABLED,
         "radio must settle in DISABLED after the abort"
+    );
+}
+
+// ── DWT CYCCNT polled from inside a CPU batch (issue #842) ───────────────────
+//
+// The surface the defect actually lives on is a firmware READ of a lazily
+// advanced counter issued from *inside* a CPU batch. Reading from the harness
+// after `advance()` returns cannot see it: the boundary drain has already
+// republished the clock, so the staleness exists only between batch start and
+// batch end. The poll has to ride the CPU.
+//
+// DWT CYCCNT is the cleanest such counter on a Cortex-M bus: it advances 1:1
+// with CPU cycles (so every poll of a healthy build reads a fresh value), it is
+// derived lazily from the published `CycleClock`, and reading it is a PURE read
+// — no MMIO write, therefore no scheduler re-arm. That last property is not
+// cosmetic. The obvious surface, nRF52 TIMER via TASKS_CAPTURE/CC, needs a
+// WRITE per poll, and `Nrf52Timer::take_scheduled_events` bumps `arm_seq` on
+// every write; a fresh token defeats the scheduler's layer-1 identical-wake
+// dedup, so far-future compare wakes pile up until the run trips the
+// `MAX_LIVE_EVENTS_PER_PERIPHERAL` ceiling. That is a real defect, it is
+// pre-existing (it reproduces with this fix reverted, and at quantum 1 where
+// nothing here applies), and it is filed separately — but it makes CAPTURE
+// unusable as a *measuring instrument* for this one, so the measurement uses a
+// surface that does not perturb what it measures.
+
+const DWT_CTRL: u64 = 0xE000_1000;
+const DWT_CYCCNT: u64 = 0xE000_1004;
+const DWT_CTRL_CYCCNTENA: u32 = 1 << 0;
+
+/// A CPU whose every retired instruction is one iteration of a firmware
+/// counter-poll loop: read CYCCNT, remember what it saw. Stands in for the
+/// busy-wait loop in `tests/fixtures/tier1/*.elf` without needing the ELF, and
+/// — unlike a harness-side read — samples where real firmware does: mid-batch.
+#[derive(Debug, Default)]
+struct PollingCpu {
+    pc: u32,
+    observed: Vec<u32>,
+}
+
+impl PollingCpu {
+    /// Longest run of consecutive polls that read the SAME counter value.
+    /// This is the number the bug moves: a counter that only refreshes at
+    /// batch boundaries reads frozen for a whole quantum of polls.
+    fn longest_frozen_run(&self) -> usize {
+        let mut longest = 1usize;
+        let mut run = 1usize;
+        for w in self.observed.windows(2) {
+            if w[0] == w[1] {
+                run += 1;
+                longest = longest.max(run);
+            } else {
+                run = 1;
+            }
+        }
+        longest
+    }
+}
+
+impl Cpu for PollingCpu {
+    fn reset(&mut self, _bus: &mut dyn Bus) -> SimResult<()> {
+        self.pc = 0;
+        self.observed.clear();
+        Ok(())
+    }
+
+    fn step(
+        &mut self,
+        bus: &mut dyn Bus,
+        _observers: &[Arc<dyn SimulationObserver>],
+        _config: &SimulationConfig,
+    ) -> SimResult<()> {
+        self.observed.push(bus.read_u32(DWT_CYCCNT)?);
+        self.pc = self.pc.wrapping_add(2);
+        Ok(())
+    }
+
+    fn set_pc(&mut self, val: u32) {
+        self.pc = val;
+    }
+    fn get_pc(&self) -> u32 {
+        self.pc
+    }
+    fn set_sp(&mut self, _val: u32) {}
+    fn set_exception_pending(&mut self, _exception_num: u32) {}
+    fn get_register(&self, _id: u8) -> u32 {
+        0
+    }
+    fn set_register(&mut self, _id: u8, _val: u32) {}
+    fn snapshot(&self) -> CpuSnapshot {
+        CpuSnapshot::Arm(ArmCpuSnapshot {
+            registers: vec![0; 16],
+            pc: self.pc,
+            xpsr: 0,
+            primask: false,
+            pending_exceptions: 0,
+            pending_exceptions_hi: Vec::new(),
+            vtor: 0,
+        })
+    }
+    fn apply_snapshot(&mut self, _snapshot: &CpuSnapshot) {}
+    fn get_register_names(&self) -> Vec<String> {
+        Vec::new()
+    }
+    fn index_of_register(&self, _name: &str) -> Option<u8> {
+        None
+    }
+}
+
+fn polling_machine_at_interval(interval: u32) -> Machine<PollingCpu> {
+    let bus = bus_nrf52840_walk_free();
+    let mut machine = Machine::new(PollingCpu::default(), bus);
+    machine.config.peripheral_tick_interval = interval;
+    machine.bus.config.peripheral_tick_interval = interval;
+    // The one write, before the run: arm CYCCNT. The poll loop itself is
+    // read-only (see the note above).
+    machine
+        .bus
+        .write_u32(DWT_CTRL, DWT_CTRL_CYCCNTENA)
+        .expect("arm DWT CYCCNT");
+    machine
+}
+
+fn run_poll(interval: u32, budget: u64) -> Machine<PollingCpu> {
+    let mut m = polling_machine_at_interval(interval);
+    m.advance(AdvanceRequest::run(Some(budget)).with_breakpoints(BreakpointPolicy::Ignore))
+        .expect("Machine::advance");
+    m
+}
+
+/// Issue #842: firmware polling a lazily-advanced counter must see it move
+/// even when the CPU retires a full 512-instruction batch between peripheral
+/// drains. CYCCNT advances once per CPU cycle, so a poll on every retired
+/// instruction reads a fresh value every time; a run the width of the quantum
+/// is the defect.
+#[test]
+fn cyccnt_poll_advances_inside_batch_at_tick512() {
+    const BUDGET: u64 = 4096;
+    let m = run_poll(RECOMMENDED_TICK_INTERVAL, BUDGET);
+
+    let polls = m.cpu.observed.len();
+    let frozen = m.cpu.longest_frozen_run();
+    let distinct = {
+        let mut v = m.cpu.observed.clone();
+        v.dedup();
+        v.len()
+    };
+    assert!(polls > 0, "CPU must have polled at least once");
+    assert!(
+        frozen <= 2,
+        "CYCCNT froze for {frozen} consecutive polls (of {polls}, {distinct} \
+         distinct values) — firmware sees a stopped counter for a whole CPU \
+         batch, because the CPU batch loop is not advancing the cycle the \
+         peripheral syncs against."
+    );
+}
+
+/// The strong form of the same claim: batching must not change what firmware
+/// observes AT ALL. Instruction `i` of a batch runs at `batch_start + i` on
+/// both lanes, so the two poll transcripts have to be equal element for
+/// element — not "close", not "within one tick". This is the gate that would
+/// catch a fix that merely un-freezes the counter while shifting it.
+#[test]
+fn cyccnt_poll_transcript_is_identical_walk1_vs_sched512() {
+    const BUDGET: u64 = 4096;
+
+    let lane_a = run_poll(1, BUDGET);
+    let lane_b = run_poll(RECOMMENDED_TICK_INTERVAL, BUDGET);
+
+    let (a, b) = (&lane_a.cpu.observed, &lane_b.cpu.observed);
+    assert_eq!(
+        a.len(),
+        b.len(),
+        "both lanes must retire the same number of polls"
+    );
+    if let Some(i) = a.iter().zip(b).position(|(x, y)| x != y) {
+        panic!(
+            "poll {i} of {}: quantum 1 read {}, quantum {} read {} — batching \
+             changed what the firmware sees",
+            a.len(),
+            a[i],
+            RECOMMENDED_TICK_INTERVAL,
+            b[i]
+        );
+    }
+}
+
+/// Companion identity gate: the same poll loop at quantum 1 must be exactly
+/// what it always was — every poll a fresh value. Guards against a "fix" that
+/// makes the two lanes agree by degrading the reference lane.
+#[test]
+fn cyccnt_poll_is_exact_at_quantum_1() {
+    const BUDGET: u64 = 512;
+    let m = run_poll(1, BUDGET);
+    let frozen = m.cpu.longest_frozen_run();
+    assert!(
+        frozen <= 2,
+        "quantum 1 must observe a fresh counter on essentially every poll; \
+         longest frozen run was {frozen}"
     );
 }

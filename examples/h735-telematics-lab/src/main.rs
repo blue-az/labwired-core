@@ -203,10 +203,14 @@ fn parse_dm_hemisphere(s: &str) -> Option<f32> {
 fn spi_enable() {
     // SPI1EN
     wr32(RCC_APB2ENR, rd32(RCC_APB2ENR) | (1 << 12));
-    // PA4 CS output
+    // PA4 CS output, PA3 D/C output
     let moder = rd32(GPIOA_BASE);
-    wr32(GPIOA_BASE, (moder & !(0x3 << 8)) | (0x1 << 8)); // PA4 MODER=01
+    wr32(
+        GPIOA_BASE,
+        (moder & !((0x3 << 8) | (0x3 << 6))) | (0x1 << 8) | (0x1 << 6),
+    ); // PA4, PA3 MODER=01
     wr32(GPIOA_BASE + 0x18, 1 << 4); // CS high
+    wr32(GPIOA_BASE + 0x28, 1 << 3); // D/C low (command)
                                      // SPI master, SSM, SSI, 8-bit default CFG1, endless TSIZE=0
     wr32(SPI1_BASE, H5_SSI); // CR1 SSI first
     wr32(SPI1_BASE + 0x0C, H5_MASTER | H5_SSM); // CFG2
@@ -237,22 +241,52 @@ fn cs_high() {
     wr32(GPIOA_BASE + 0x18, 1 << 4); // BSRR
 }
 
+/// D/C low — the next byte is a COMMAND.
+fn dc_command() {
+    wr32(GPIOA_BASE + 0x28, 1 << 3); // BRR
+}
+/// D/C high — the next bytes are parameters or pixel data.
+fn dc_data() {
+    wr32(GPIOA_BASE + 0x18, 1 << 3); // BSRR
+}
+
+// ── ILI9341 framing ────────────────────────────────────────────────────────
+//
+// These helpers used to frame command-vs-data by CHIP SELECT alone: drop CS,
+// send the command, send its parameters, raise CS. No ILI9341 works that way.
+// In 4-line serial mode the controller latches D/C with every byte (datasheet
+// §7.3.2); CS only gates the interface on and off. There is no "first byte
+// after CS is a command" rule to lean on — with D/C strapped low a real panel
+// reads EVERY byte as a command and shows nothing.
+//
+// The simulator's legacy no-D/C path approximated the CS idea well enough for
+// a single self-contained burst, but nothing closes a RAMWR pixel stream in
+// that scheme: once 0x2C opened one, every following CASET/PASET/RAMWR byte was
+// swallowed as pixel data, so the whole screen collapsed into the first
+// window's rectangle as high-frequency noise. That is not a modelling gap to
+// paper over — it is what the wire actually said.
+
 fn tft_cmd(cmd: u8) {
     cs_low();
+    dc_command();
     spi_write(cmd);
     cs_high();
 }
 
 fn tft_cmd1(cmd: u8, p0: u8) {
     cs_low();
+    dc_command();
     spi_write(cmd);
+    dc_data();
     spi_write(p0);
     cs_high();
 }
 
 fn tft_cmd4(cmd: u8, p0: u8, p1: u8, p2: u8, p3: u8) {
     cs_low();
+    dc_command();
     spi_write(cmd);
+    dc_data();
     spi_write(p0);
     spi_write(p1);
     spi_write(p2);
@@ -288,7 +322,9 @@ fn tft_fill_rect(x: u16, y: u16, w: u16, h: u16, color: u16) {
     let lo = color as u8;
     let n = (w as u32) * (h as u32);
     cs_low();
+    dc_command();
     spi_write(0x2C); // RAMWR
+    dc_data();
     for _ in 0..n {
         spi_write(hi);
         spi_write(lo);
