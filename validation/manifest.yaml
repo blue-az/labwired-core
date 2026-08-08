@@ -1837,8 +1837,14 @@ boards:
     # `cargo test -p labwired-core` green, 161 test binaries, 3533 passed, 0
     # failed, 34 ignored; declarative_device_byte_parity 7/7 with every golden
     # literal unchanged. No S3 board attached; no live re-capture.
-    drift_ack: 2026-08-07
-    drift_ack_digest: f52b807abebf3aadf5bdbbbbc38bbb16a33402aa0db82a041279f2e2fe1b1b52
+    # 2026-08-08: USB_SERIAL_JTAG gains its interrupt surface (INT_RAW/ST/ENA/CLR
+    # plus a matrix source id) so CDC-on-boot builds print. The peripheral's base
+    # (0x6004_3000) and window are unchanged and no register in the 9-register
+    # reset-state anchor moves — esp32s3_reset_conformance covers exactly that
+    # set. Owner-authorised ack WITHOUT a live re-capture; no S3 board was
+    # attached for this change and the USB CDC live diff remains owed.
+    drift_ack: 2026-08-08
+    drift_ack_digest: e3ce09c7e3193443224fbb56f5806af8f23c12f1ce80c5e797ddb2c57cb5cf84
     models:
       - crates/core/src/peripherals/esp32s3
       - crates/core/src/peripherals/esp_xtensa_common
