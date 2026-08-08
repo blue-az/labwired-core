@@ -7,21 +7,21 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 
 | Board | Tier | Last silicon capture | Newest model | Status |
 |-------|------|----------------------|--------------|--------|
-| `nrf52840` | 🟢 silicon-verified | 2026-06-17 | 2026-08-06 | ⚠ drift acked 2026-08-06 (re-capture pending) |
-| `seeed-xiao-nrf52840-sense` | 🟢 silicon-verified | 2026-06-17 | 2026-08-06 | ⚠ drift acked 2026-08-06 (re-capture pending) |
+| `nrf52840` | 🟢 silicon-verified | 2026-06-17 | 2026-08-08 | ⚠ drift acked 2026-08-08 (re-capture pending) |
+| `seeed-xiao-nrf52840-sense` | 🟢 silicon-verified | 2026-06-17 | 2026-08-08 | ⚠ drift acked 2026-08-08 (re-capture pending) |
 | `stm32h563` | 🟢 silicon-verified | 2026-06-22 | 2026-08-07 | ⚠ drift acked 2026-08-07 (re-capture pending) |
-| `esp32c3` | 🟢 silicon-verified | 2026-06-17 | 2026-08-07 | ⚠ drift acked 2026-08-07 (re-capture pending) |
+| `esp32c3` | 🟢 silicon-verified | 2026-06-17 | 2026-08-08 | ⚠ drift acked 2026-08-08 (re-capture pending) |
 | `nucleo-l476rg` | 🟢 silicon-verified | 2026-06-20 | 2026-08-07 | ⚠ drift acked 2026-08-07 (re-capture pending) |
 | `nucleo-l073rz` | 🟢 silicon-verified | 2026-06-20 | 2026-08-07 | ⚠ drift acked 2026-08-07 (re-capture pending) |
 | `stm32f103` | 🟢 silicon-verified | 2026-06-20 | 2026-08-07 | ⚠ drift acked 2026-08-07 (re-capture pending) |
 | `stm32f407` | 🟢 silicon-smoke | 2026-06-20 | 2026-08-07 | ⚠ drift acked 2026-08-07 (re-capture pending) |
-| `esp32s3` | 🟢 silicon-verified | 2026-07-15 | 2026-08-06 | ⚠ drift acked 2026-08-06 (re-capture pending) |
+| `esp32s3` | 🟢 silicon-verified | 2026-07-15 | 2026-08-07 | ⚠ drift acked 2026-08-07 (re-capture pending) |
 | `stm32f401` | 🟡 smoke-manual | — | 2026-08-03 | no silicon capture |
 | `stm32wba52` | 🟡 smoke-manual | — | 2026-08-03 | no silicon capture |
 | `nrf52832` | ⚪ structural | — | 2026-08-03 | no silicon capture |
 | `rp2040` | ⚪ structural | — | 2026-08-05 | no silicon capture |
 | `rp2350` | 🟡 smoke-manual | — | 2026-08-05 | no silicon capture |
-| `nrf5340` | 🔵 sim-validated (deep model, no HW diff) | — | 2026-08-07 | no silicon capture |
+| `nrf5340` | 🔵 sim-validated (deep model, no HW diff) | — | 2026-08-08 | no silicon capture |
 | `stm32h735` | 🔵 sim-validated (deep model, no HW diff) | — | 2026-08-07 | no silicon capture |
 | `stm32f411ceu6` | 🔵 sim-validated (deep model, no HW diff) | — | 2026-08-07 | no silicon capture |
 | `esp32` | ⚪ structural | — | 2026-08-05 | no silicon capture |
@@ -37,7 +37,7 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 - Silicon: **2026-06-17** on ST-LINK V2 (J37S7) — conformance 16/16; mmio 16/16; GPIO P0 22/0, P1 23/0; onboarding 22/22; POWER 10/0, SPIS 19/0, TWIS 20/0, RTC0 12/0, TIMER0 16/0; SPIM0/CCM/full-register clean
   - offline (CI): nrf52_conformance::conformance_sim (digest vs frozen 2026-06-09 capture)
   - offline (CI): nrf52_mmio_diff / nrf52_gpio_conformance (sim halves)
-- Drift status: **⚠ drift acked 2026-08-06 (re-capture pending)**
+- Drift status: **⚠ drift acked 2026-08-08 (re-capture pending)**
 
 ## `seeed-xiao-nrf52840-sense` — 🟢 silicon-verified
 
@@ -45,7 +45,7 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 - Note: Same silicon as nrf52840 (the bench board IS a Seeed XIAO nRF52840 Sense).
 - Silicon: **2026-06-17** on ST-LINK V2 (J37S7) — rides the nrf52840 full register sweep (16/16) re-confirmed 2026-06-17
   - offline (CI): nrf52.rs xiao_* (manifest build, GPIO task regs, SPIM0 EasyDMA)
-- Drift status: **⚠ drift acked 2026-08-06 (re-capture pending)**
+- Drift status: **⚠ drift acked 2026-08-08 (re-capture pending)**
 
 ## `stm32h563` — 🟢 silicon-verified
 
@@ -61,7 +61,7 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 - Note: Reset-state oracle, not behavioural. ~40 peripherals declared (NOT 6 as the prose doc says).
 - Silicon: **2026-06-17** on USB-JTAG (built-in, openocd-esp32) — re-verified live — reset oracle re-captured live 2026-06-17: 1123/1123 static registers match committed baseline (13 deltas all in per-chip efuse + live USB-device state, none in the asserted set); esp32c3_reset_values_match_silicon passes
   - offline (CI): esp32c3_reset_conformance::esp32c3_reset_values_match_silicon (79 regs; 366/423 overlap matched silicon)
-- Drift status: **⚠ drift acked 2026-08-07 (re-capture pending)**
+- Drift status: **⚠ drift acked 2026-08-08 (re-capture pending)**
 
 ## `nucleo-l476rg` — 🟢 silicon-verified
 
@@ -106,7 +106,7 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 - Silicon: **2026-07-15** on USB-JTAG built-in (ESP32-S3-Zero, USB 303a:1001, openocd-esp32, Tensilica tap 0x120034e5) — Live OpenOCD re-capture on 2026-07-15: connected ESP32-S3 rev 0.2 (MAC 9c:13:9e:f4:40:c0), both Xtensa JTAG taps examined, and reset-state windows captured for UART0, GPIO, I2C0, RMT, MCPWM0, TIMG0, SYSTIMER, GDMA, SYSTEM, and RTC_CNTL.
   - offline (CI): esp32s3_reset_conformance (9 reset regs vs live silicon, firmware-path bus)
   - offline (CI): e2e_i2c_tmp102 / e2e_hello_world / xtensa_exec / e2e_esp32_epaper (sim)
-- Drift status: **⚠ drift acked 2026-08-06 (re-capture pending)**
+- Drift status: **⚠ drift acked 2026-08-07 (re-capture pending)**
 
 ## `stm32f401` — 🟡 smoke-manual
 

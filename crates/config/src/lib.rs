@@ -1909,6 +1909,37 @@ pub struct PopcountSource {
     pub per_bit: u32,
 }
 
+/// A **power-gate**: while a bit is set in another register, this register
+/// stops reporting a measurement and reads all-zero.
+///
+/// This is the datasheet shape for a sensor that can be *shut down* while it
+/// stays addressable on the bus. The Vishay VEML7700 is the case that motivated
+/// it: command code 0 (`ALS_CONF`) powers up at `0x0001`, and bit 0 (`ALS_SD`)
+/// is documented as *"0 = ALS power on, 1 = ALS shut down"* — so a part that has
+/// never had that bit cleared has never run a conversion, and its `ALS` /
+/// `WHITE` result registers cannot hold light data. Without this gate the model
+/// would hand a shut-down sensor a plausible reading, and firmware that forgets
+/// to power the part on would pass in simulation and read zeros on silicon.
+///
+/// It is deliberately expressed as data over one shared behaviour rather than a
+/// per-device Rust branch: a second part adopts it by naming its own register
+/// and mask in YAML.
+///
+/// **Modelled scope, stated plainly.** The gate makes the register read zero
+/// while the bit is set. It does not model conversion restart latency after the
+/// bit is cleared (the datasheet's power-on settling time), and it says nothing
+/// about what silicon retains in the result register if firmware shuts a
+/// *running* part down mid-flight — the datasheet does not specify that, and
+/// this model returns zero there too. The power-on case, which is the one
+/// firmware actually trips over, is exact.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ZeroWhen {
+    /// Register holding the gating bit(s).
+    pub register: String,
+    /// Bits that, when ANY is set, force this register's read to zero.
+    pub mask: u32,
+}
+
 /// One **data-ready** rule: a write-triggered, time-gated status bit.
 ///
 /// This is the datasheet shape shared by every "start a conversion, poll a
@@ -2359,6 +2390,11 @@ pub struct RegisterSpec {
     /// than from storage or a measurement channel. See [`PopcountSource`].
     #[serde(default)]
     pub popcount: Option<PopcountSource>,
+    /// Power-gate: while any masked bit of the named register is set, a read of
+    /// THIS register returns an all-zero word instead of its measurement. See
+    /// [`ZeroWhen`] — the VEML7700 `ALS_SD` shutdown bit is the motivating case.
+    #[serde(default)]
+    pub zero_when: Option<ZeroWhen>,
 }
 
 /// One sourced bit-field within a composite register word (see
@@ -3016,6 +3052,13 @@ pub enum StopReason {
     DecodeError,
     Halt,
     Exception,
+    /// The **firmware** ended its own run by writing to the `simctl` device.
+    ///
+    /// Deliberately distinct from [`Self::Halt`]: a halt is the machine
+    /// stopping, this is the firmware reporting a result. The exit code travels
+    /// beside it in the run result's `firmware_exit_code`; a run that ends this
+    /// way passed only if that code is `0`.
+    FirmwareExit,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -3093,6 +3136,23 @@ pub struct ShutdownLatencyAssertion {
 #[serde(deny_unknown_fields)]
 pub struct StopReasonAssertion {
     pub expected_stop_reason: StopReason,
+}
+
+/// Assert the firmware ended its own run with a specific exit code.
+///
+/// ```yaml
+/// assertions:
+///   - firmware_exit: 0
+/// ```
+///
+/// This is the assertion the `simctl` device exists for. `uart_contains: "PASS"`
+/// proves some bytes reached a serial line; this proves the firmware reached
+/// its own success path and said so. A run that ends any other way — timeout,
+/// halt, fault — fails this assertion rather than passing by silence.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct FirmwareExitAssertion {
+    pub firmware_exit: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -3252,6 +3312,7 @@ pub enum TestAssertion {
     MotorState(MotorStateAssertion),
     ShutdownLatency(ShutdownLatencyAssertion),
     ExpectedStopReason(StopReasonAssertion),
+    FirmwareExit(FirmwareExitAssertion),
     MemoryValue(MemoryValueAssertion),
     UdsTester(UdsTesterAssertion),
     MqttFabric(MqttFabricAssertion),
@@ -5929,6 +5990,7 @@ metadata:
             page: None,
             self_clearing: None,
             popcount: None,
+            zero_when: None,
         };
     }
 }
