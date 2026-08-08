@@ -180,8 +180,19 @@ boards:
     # 16/16 sweep changes address, reset value or access, and no base moves.
     # Owner-authorised ack WITHOUT a live re-capture; the RADIO packet-timing
     # live diff remains owed and is NOT evidenced by this entry.
+    # 2026-08-08: TIMER scheduler re-arm dedup (#861). `take_scheduled_events`
+    # kept minting a fresh arming token on every drain, which runs after every
+    # MMIO write; since scheduler dedup keys on (peripheral, token, deadline),
+    # a poll loop left one far-future compare wake resident per poll until the
+    # live-event ceiling tripped. The token now holds steady when a re-arm
+    # targets the instant already in flight. Scheduler bookkeeping, not silicon
+    # surface: no register in the asserted 16/16 sweep changes address, reset
+    # value or access; counter width/BITMODE masking, prescaler division,
+    # CC compare matching, SHORTS and EVENTS_COMPARE latching are all untouched,
+    # and TIMER0's 16/0 sweep re-runs green. Acked WITHOUT a live re-capture —
+    # no TIMER live diff is evidenced by this entry.
     drift_ack: 2026-08-08
-    drift_ack_digest: 8ea8122dea22fc64528fc41181d8e9b3d1e9b84a0d46cd499eec68a9d5f6213f
+    drift_ack_digest: 79e76b4dc42241fa06f7a45a78ea0f47e05dd1239521598e1a2d2ee0dce787fc
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -277,8 +288,12 @@ boards:
     # 16/16 sweep changes address, reset value or access, and no base moves.
     # Owner-authorised ack WITHOUT a live re-capture; the RADIO packet-timing
     # live diff remains owed and is NOT evidenced by this entry.
+    # 2026-08-08: rides the nrf52840 TIMER scheduler re-arm dedup (#861); same
+    # silicon. Scheduler bookkeeping only — no register address, reset value or
+    # access in the asserted sweep changes. See the nrf52840 drift_ack note; no
+    # TIMER live re-capture is evidenced by this entry.
     drift_ack: 2026-08-08
-    drift_ack_digest: 8ea8122dea22fc64528fc41181d8e9b3d1e9b84a0d46cd499eec68a9d5f6213f
+    drift_ack_digest: 79e76b4dc42241fa06f7a45a78ea0f47e05dd1239521598e1a2d2ee0dce787fc
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
