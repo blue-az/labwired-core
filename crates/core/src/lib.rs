@@ -1127,6 +1127,24 @@ pub trait Peripheral: std::fmt::Debug + Send {
 }
 
 /// Trait representing the system bus
+/// Verdict from [`Bus::check_fetch_permission`] — whether an instruction fetch
+/// at a given PC is allowed by a memory-protection unit the bus models.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FetchPermission {
+    /// No protection unit objects (the default for every bus).
+    Allowed,
+    /// Blocked, and the unit raised an interrupt the firmware's own handler
+    /// will take. The core substitutes a NOP for the blocked fetch so the trap
+    /// is taken at the next instruction boundary — the same one-instruction
+    /// skid the ESP32-C3's asynchronous PMS fault has on silicon, which is why
+    /// IDF reads the violating address out of registers instead of `mepc`.
+    DeniedFaultRaised,
+    /// Blocked, but nothing can deliver the fault to the firmware. The core
+    /// stops with `MemoryViolation` rather than executing from a region the
+    /// hardware would not have fetched from.
+    DeniedUndeliverable,
+}
+
 pub trait Bus {
     fn read_u8(&self, addr: u64) -> SimResult<u8>;
     fn write_u8(&mut self, addr: u64, value: u8) -> SimResult<()>;
@@ -1138,6 +1156,18 @@ pub trait Bus {
     }
     fn as_any_mut(&mut self) -> Option<&mut dyn Any> {
         None
+    }
+
+    /// Is an instruction fetch at `pc` permitted by a memory-protection unit
+    /// the bus models? Called by the core only when its 256-byte fetch window
+    /// does not already cover `pc`, i.e. once per window refill. That is exact
+    /// rather than approximate: the window is 256-byte aligned and at most 256
+    /// bytes long, while ESP32-C3 PMS split lines are 512-byte aligned, so a
+    /// window can never straddle a permission boundary.
+    ///
+    /// Default `Allowed` — buses without a protection unit are unchanged.
+    fn check_fetch_permission(&mut self, _pc: u64) -> FetchPermission {
+        FetchPermission::Allowed
     }
 
     /// Clear a pending NVIC exception (called by CPU when taking an exception).
