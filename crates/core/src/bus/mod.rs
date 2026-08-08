@@ -297,11 +297,21 @@ pub struct SystemBus {
     /// runtime fired-observation). Empty in the common case.
     fault_unclocked: std::collections::HashMap<usize, std::sync::atomic::AtomicU64>,
     /// Last-known IN value of GPIO ports 0 and 1, used by the per-tick
-    /// edge-detection pass that drives GPIOTE EVENTS_IN. Both default to
-    /// 0 at construction; the first tick after a GPIO write will produce
-    /// edge events for any non-zero bits, which matches Nordic
-    /// hardware's "reset to zero, edge on first set" behavior.
-    last_gpio_in: [u32; 2],
+    /// edge-detection pass that drives GPIOTE EVENTS_IN.
+    ///
+    /// `None` until the first edge-detection pass, which ADOPTS the live IN
+    /// registers as the baseline and reports no changes. An edge is a
+    /// transition, and before the first observation there is nothing to have
+    /// transitioned from: a level the outside world already holds — a
+    /// `board_io` button settling its released level at attach, a sensor
+    /// driving a status line before the first cycle — was never a press. A
+    /// `[0; 2]` seed made every such pin present itself as a rising edge on the
+    /// very first tick, which both latched a GPIOTE EVENTS_IN nothing caused
+    /// and, through the per-edge scheduler harvest, perturbed unrelated
+    /// scheduler-driven models. `Option` rather than a companion flag so a
+    /// construction site cannot silently spell "not yet sampled" as "sampled
+    /// zero".
+    last_gpio_in: Option<[u32; 2]>,
     /// Phase 2B.2 (issue #192): the current CPU cycle count, mirrored from
     /// `Machine::total_cycles` once per step. Read by the MMIO write path to
     /// lazily sync scheduler-driven peripherals (`uses_scheduler() == true`)
