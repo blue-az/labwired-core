@@ -47,8 +47,15 @@
 //!   permissions and the per-DMA-master SRAM constraints are storage-only.
 //! * **The cache data array** (`..._CACHEDATAARRAY_PMS_0`) and the ROM
 //!   permission fields.
-//! * **Locks.** `..._PMS_CONSTRAIN_0` / `..._MONITOR_0` write-lock bits are
-//!   stored but do not make the guarded registers read-only.
+//!
+//! # Modelled, and load-bearing: the write locks
+//!
+//! `CONFIG_ESP_SYSTEM_MEMPROT_FEATURE_LOCK=y` is the default, and the image
+//! that faulted on silicon has it set. Once firmware writes a `..._CONSTRAIN_0`
+//! / `..._MONITOR_0` lock bit, the registers it guards become read-only until
+//! reset — protection genuinely CANNOT be turned off again. A model that let a
+//! later write disable the monitor would quietly restore the old blindness, so
+//! locked writes are rejected here rather than merely recorded.
 
 /// Permission bits, matching `SENSITIVE_CORE_X_IRAM0_PMS_CONSTRAIN_SRAM_WORLD_X_*`
 /// in `soc/memprot_defs.h`. DRAM0 uses only R and W (its 2-bit fields).
@@ -58,15 +65,21 @@ pub const PERM_X: u8 = 0x4;
 
 /// `SENSITIVE` register offsets that carry PMS state (base 0x600C_1000).
 pub mod reg {
+    pub const SPLIT_LINE_CONSTRAIN_0_LOCK: u64 = 0x090;
     pub const SPLIT_LINE_CONSTRAIN_1_MAIN_ID: u64 = 0x094;
     pub const SPLIT_LINE_CONSTRAIN_2_IRAM_0: u64 = 0x098;
     pub const SPLIT_LINE_CONSTRAIN_3_IRAM_1: u64 = 0x09C;
     pub const SPLIT_LINE_CONSTRAIN_4_DRAM_0: u64 = 0x0A0;
     pub const SPLIT_LINE_CONSTRAIN_5_DRAM_1: u64 = 0x0A4;
+    pub const IRAM0_PMS_CONSTRAIN_0_LOCK: u64 = 0x0A8;
+    pub const IRAM0_PMS_CONSTRAIN_1_WORLD1: u64 = 0x0AC;
     pub const IRAM0_PMS_CONSTRAIN_2_WORLD0: u64 = 0x0B0;
+    pub const IRAM0_PMS_MONITOR_0_LOCK: u64 = 0x0B4;
     pub const IRAM0_PMS_MONITOR_1: u64 = 0x0B8;
     pub const IRAM0_PMS_MONITOR_2: u64 = 0x0BC;
+    pub const DRAM0_PMS_CONSTRAIN_0_LOCK: u64 = 0x0C0;
     pub const DRAM0_PMS_CONSTRAIN_1: u64 = 0x0C4;
+    pub const DRAM0_PMS_MONITOR_0_LOCK: u64 = 0x0C8;
     pub const DRAM0_PMS_MONITOR_1: u64 = 0x0CC;
     pub const DRAM0_PMS_MONITOR_2: u64 = 0x0D0;
     pub const DRAM0_PMS_MONITOR_3: u64 = 0x0D4;
@@ -74,6 +87,10 @@ pub mod reg {
     /// Lowest and highest PMS-relevant offsets — a write outside this span
     /// cannot change the model, so the bus can skip the refresh.
     pub const PMS_SPAN: std::ops::RangeInclusive<u64> = 0x090..=0x0D4;
+    /// First offset in [`PMS_SPAN`] — the base of the register shadow.
+    pub const PMS_SPAN_BASE: u64 = 0x090;
+    /// Number of 32-bit words in [`PMS_SPAN`].
+    pub const PMS_SPAN_WORDS: usize = 18;
 }
 
 /// SRAM windows the IRAM0 / DRAM0 PMS areas cover, from `memprot_defs.h`
@@ -156,12 +173,38 @@ struct PortState {
 /// This is a *derived cache*, never a second source of truth: every field is
 /// recomputed from the `SENSITIVE` peripheral's own register storage by
 /// [`Esp32C3Pms::refresh`] whenever firmware writes into the PMS register span.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct Esp32C3Pms {
     iram0: PortState,
     dram0: PortState,
+    /// Last accepted value of every word in [`reg::PMS_SPAN`], so a write to a
+    /// register the firmware has already locked can be undone — silicon simply
+    /// ignores it.
+    shadow: [u32; reg::PMS_SPAN_WORDS],
     /// Total violations detected since reset (diagnostics / tests).
     pub violations: u64,
+}
+
+impl Default for Esp32C3Pms {
+    fn default() -> Self {
+        Self {
+            iram0: PortState::default(),
+            dram0: PortState::default(),
+            shadow: [0; reg::PMS_SPAN_WORDS],
+            violations: 0,
+        }
+    }
+}
+
+/// What a write into the PMS register span is allowed to do.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PmsWriteVerdict {
+    /// Ordinary configuration write — accept it and re-derive.
+    Accept,
+    /// The target register is locked (`..._CONSTRAIN_0` / `..._MONITOR_0` bit
+    /// 0 is set), or is a hardware-owned status register. Silicon ignores the
+    /// write; restore this value.
+    Reject(u32),
 }
 
 /// Decode a split-line configuration register into an absolute address.
@@ -186,7 +229,82 @@ impl Esp32C3Pms {
     ///
     /// Latched violations are preserved: they are cleared only by the
     /// firmware's `VIOLATE_CLR` pulse (see [`Self::apply_monitor_ctrl`]).
+    /// Decide what a firmware write to `offset` (already committed to the
+    /// register storage as `written`) is permitted to do.
+    ///
+    /// Lock bits are the reason this exists. `CONFIG_ESP_SYSTEM_MEMPROT_FEATURE_LOCK`
+    /// is on by default, so production firmware locks the split lines, the
+    /// permissions and the monitors during startup; after that the protection
+    /// cannot be relaxed. The lock registers are themselves set-only — writing
+    /// 0 back does not unlock.
+    pub fn write_verdict(&self, offset: u64, written: u32) -> PmsWriteVerdict {
+        let prev = self.shadow_of(offset);
+        // Hardware-owned status: the model is the only writer.
+        if matches!(
+            offset,
+            reg::IRAM0_PMS_MONITOR_2 | reg::DRAM0_PMS_MONITOR_2 | reg::DRAM0_PMS_MONITOR_3
+        ) {
+            return PmsWriteVerdict::Reject(prev);
+        }
+        let locked = match offset {
+            reg::SPLIT_LINE_CONSTRAIN_0_LOCK
+            | reg::SPLIT_LINE_CONSTRAIN_1_MAIN_ID
+            | reg::SPLIT_LINE_CONSTRAIN_2_IRAM_0
+            | reg::SPLIT_LINE_CONSTRAIN_3_IRAM_1
+            | reg::SPLIT_LINE_CONSTRAIN_4_DRAM_0
+            | reg::SPLIT_LINE_CONSTRAIN_5_DRAM_1 => {
+                self.shadow_of(reg::SPLIT_LINE_CONSTRAIN_0_LOCK) & 1 != 0
+            }
+            reg::IRAM0_PMS_CONSTRAIN_0_LOCK
+            | reg::IRAM0_PMS_CONSTRAIN_1_WORLD1
+            | reg::IRAM0_PMS_CONSTRAIN_2_WORLD0 => {
+                self.shadow_of(reg::IRAM0_PMS_CONSTRAIN_0_LOCK) & 1 != 0
+            }
+            reg::IRAM0_PMS_MONITOR_0_LOCK | reg::IRAM0_PMS_MONITOR_1 => {
+                self.shadow_of(reg::IRAM0_PMS_MONITOR_0_LOCK) & 1 != 0
+            }
+            reg::DRAM0_PMS_CONSTRAIN_0_LOCK | reg::DRAM0_PMS_CONSTRAIN_1 => {
+                self.shadow_of(reg::DRAM0_PMS_CONSTRAIN_0_LOCK) & 1 != 0
+            }
+            reg::DRAM0_PMS_MONITOR_0_LOCK | reg::DRAM0_PMS_MONITOR_1 => {
+                self.shadow_of(reg::DRAM0_PMS_MONITOR_0_LOCK) & 1 != 0
+            }
+            _ => false,
+        };
+        if locked && written != prev {
+            PmsWriteVerdict::Reject(prev)
+        } else {
+            PmsWriteVerdict::Accept
+        }
+    }
+
+    /// Record a hardware-side write (a latched status word) in the shadow, so
+    /// a later firmware write to that register is rejected back to the value
+    /// the hardware actually holds rather than a stale one.
+    pub fn set_shadow(&mut self, offset: u64, value: u32) {
+        if let Some(i) = offset
+            .checked_sub(reg::PMS_SPAN_BASE)
+            .map(|d| (d / 4) as usize)
+        {
+            if let Some(slot) = self.shadow.get_mut(i) {
+                *slot = value;
+            }
+        }
+    }
+
+    /// Last accepted value of the PMS word at `offset` (0 outside the span).
+    pub fn shadow_of(&self, offset: u64) -> u32 {
+        offset
+            .checked_sub(reg::PMS_SPAN_BASE)
+            .map(|d| (d / 4) as usize)
+            .and_then(|i| self.shadow.get(i).copied())
+            .unwrap_or(0)
+    }
+
     pub fn refresh(&mut self, read: impl Fn(u64) -> Option<u32>) {
+        for (i, slot) in self.shadow.iter_mut().enumerate() {
+            *slot = read(reg::PMS_SPAN_BASE + (i as u64) * 4).unwrap_or(0);
+        }
         let rd = |off: u64| read(off).unwrap_or(0);
 
         // ── IRAM0 ────────────────────────────────────────────────────────────
@@ -277,8 +395,16 @@ impl Esp32C3Pms {
             PmsOp::Store => PERM_W,
         };
         // The DRAM0 port has no fetch permission bit at all — the data bus
-        // simply cannot serve instructions. Model an attempted fetch there as
-        // a DRAM0 violation rather than silently permitting it.
+        // simply cannot serve instructions. On silicon a fetch from a DRAM0
+        // address never reaches the PMS: it is an *instruction access fault*
+        // (mcause 1), a different mechanism. Reporting it as a DRAM0 violation
+        // is therefore an APPROXIMATION, chosen because the alternative is to
+        // execute from the data bus silently — the exact blindness this model
+        // exists to remove. It is gated on the DRAM0 monitor being enabled and
+        // some area narrowed, so it can only fire on firmware that has itself
+        // turned memory protection on. The faithful case (a corrupted pointer
+        // into the IRAM VIEW of the data region, area 3) is handled above and
+        // really is a PMS violation.
         if op == PmsOp::Fetch && port == PmsPort::Dram0 {
             return Some(PmsViolation {
                 port,
@@ -342,10 +468,7 @@ impl Esp32C3Pms {
             }
             PmsPort::Dram0 => {
                 let Some(v) = self.dram0.latched else {
-                    return vec![
-                        (reg::DRAM0_PMS_MONITOR_2, 0),
-                        (reg::DRAM0_PMS_MONITOR_3, 0),
-                    ];
+                    return vec![(reg::DRAM0_PMS_MONITOR_2, 0), (reg::DRAM0_PMS_MONITOR_3, 0)];
                 };
                 // CORE_0_DRAM0_PMS_MONITOR_2: INTR[0], LOCK[1], WORLD[3:2],
                 // ADDR[27:4] (>> 2, relative to 0x3C00_0000).
@@ -403,7 +526,8 @@ impl PortState {
 /// `SOC_DIRAM_IRAM_LOW - SOC_DIRAM_DRAM_LOW` below the instruction view.
 #[inline]
 pub fn map_iram_to_dram(addr: u32) -> u32 {
-    addr.wrapping_sub(IRAM0_SRAM_LOW).wrapping_add(DRAM0_SRAM_LOW)
+    addr.wrapping_sub(IRAM0_SRAM_LOW)
+        .wrapping_add(DRAM0_SRAM_LOW)
 }
 
 /// Clamp three optional split lines into a non-decreasing boundary triple
@@ -477,10 +601,7 @@ mod tests {
     fn split_line_decode_matches_idf_helper() {
         // 0x4039_0000: segment 1 of the IRAM window, offset 0x1_0000.
         let regval = ((0x4039_0000u32 >> 9) & 0xFF) << 14 | 0x2 | (0x3 << 2) | (0x3 << 4);
-        assert_eq!(
-            decode_split_line(regval, IRAM0_SRAM_LOW),
-            Some(0x4039_0000)
-        );
+        assert_eq!(decode_split_line(regval, IRAM0_SRAM_LOW), Some(0x4039_0000));
         // Never configured (all categories 0) -> NULL, as in IDF.
         assert_eq!(decode_split_line(0, IRAM0_SRAM_LOW), None);
     }

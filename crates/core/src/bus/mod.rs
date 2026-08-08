@@ -476,6 +476,11 @@ pub struct SystemBus {
     /// the PMS register span) plus the latched violation status. `None` unless
     /// the bus carries a C3 `SENSITIVE` block.
     esp32c3_pms: Option<Box<crate::peripherals::esp32c3::pms::Esp32C3Pms>>,
+    /// Measurement hook (never set by the runtime): while true, the C3 PMS
+    /// accepts every register write, including ones a lock bit or a
+    /// hardware-owned status register would otherwise reject. See
+    /// [`SystemBus::set_pms_write_bypass`].
+    pms_write_bypass: bool,
     /// Hot-path gate: `true` only while the PMS could actually block something
     /// (some area narrowed AND its monitor enabled). Every store and every
     /// instruction-fetch window refill reads this one bool, so firmware that

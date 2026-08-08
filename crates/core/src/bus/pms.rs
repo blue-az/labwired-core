@@ -89,6 +89,19 @@ impl SystemBus {
         let Some(mut pms) = self.esp32c3_pms.take() else {
             return;
         };
+        // Write locks first. Production firmware runs with
+        // CONFIG_ESP_SYSTEM_MEMPROT_FEATURE_LOCK=y, so once startup has locked
+        // the split lines / permissions / monitors, silicon IGNORES every later
+        // write to them — protection cannot be turned back off. Undo the store
+        // instead of letting the twin quietly go blind again.
+        let written = self.read_cached_declarative_u32(idx, aligned).unwrap_or(0);
+        if let (false, crate::peripherals::esp32c3::pms::PmsWriteVerdict::Reject(restore)) =
+            (self.pms_write_bypass, pms.write_verdict(aligned, written))
+        {
+            self.poke_sensitive(idx, aligned, restore);
+            self.esp32c3_pms = Some(pms);
+            return;
+        }
         // MONITOR_1 carries VIOLATE_CLR / VIOLATE_EN and is the only register
         // whose write has an effect beyond reconfiguration.
         let mut cleared = None;
@@ -103,12 +116,14 @@ impl SystemBus {
                 }
             }
         }
-        self.refresh_pms_from_registers(&mut pms);
+        // Publish the cleared status BEFORE re-deriving, so the refresh folds
+        // the new status words into the shadow rather than leaving it stale.
         if let Some(port) = cleared {
             for (o, v) in pms.status_words(port) {
                 self.poke_sensitive(idx, o, v);
             }
         }
+        self.refresh_pms_from_registers(&mut pms);
         self.esp32c3_pms_armed = pms.armed();
         self.esp32c3_pms = Some(pms);
         if self.esp32c3_irq_routing {
@@ -180,6 +195,7 @@ impl SystemBus {
             if let Some(idx) = self.esp32c3_sensitive_idx {
                 for (o, v) in pms.status_words(violation.port) {
                     self.poke_sensitive(idx, o, v);
+                    pms.set_shadow(o, v);
                 }
             }
         }
@@ -223,9 +239,9 @@ impl SystemBus {
 
     fn poke_sensitive(&self, idx: usize, offset: u64, value: u32) {
         if let Some(generic) = self.peripherals.get(idx).and_then(|p| {
-            p.dev
-                .as_any()
-                .and_then(|a| a.downcast_ref::<crate::peripherals::declarative::GenericPeripheral>())
+            p.dev.as_any().and_then(|a| {
+                a.downcast_ref::<crate::peripherals::declarative::GenericPeripheral>()
+            })
         }) {
             generic.poke_u32_raw(offset, value);
         }

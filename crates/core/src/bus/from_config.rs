@@ -261,6 +261,7 @@ impl SystemBus {
             esp32c3_sched_asserted_sources: [0; 2],
             esp32c3_sensitive_idx: None,
             esp32c3_pms: None,
+            pms_write_bypass: false,
             esp32c3_pms_armed: false,
             esp32s3_irq_routing: false,
             esp32s3_intmatrix_idx: None,

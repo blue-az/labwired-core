@@ -55,12 +55,16 @@ const IRAM0_PMS_MONITOR_1: u64 = 0x0B8;
 const IRAM0_PMS_MONITOR_2: u64 = 0x0BC;
 const DRAM0_PMS_CONSTRAIN_1: u64 = 0x0C4;
 const DRAM0_PMS_MONITOR_1: u64 = 0x0CC;
+const DRAM0_PMS_MONITOR_2: u64 = 0x0D0;
+const DRAM0_PMS_MONITOR_3: u64 = 0x0D4;
 
 // ── INTERRUPT_CORE0 (0x600C_2000) ────────────────────────────────────────────
 const INTC: u64 = 0x600C_2000;
 /// `ETS_CORE0_IRAM0_PMS_INTR_SOURCE` (`CORE_0_IRAM0_PMS_MONITOR_VIOLATE_INTR_MAP`
 /// sits at INTC + 0xE0 = source 56 * 4 in the C3 descriptor).
 const IRAM0_PMS_SOURCE: u64 = 56;
+/// `ETS_CORE0_DRAM0_PMS_INTR_SOURCE` (INTC + 0xE4).
+const DRAM0_PMS_SOURCE: u64 = 57;
 /// `ETS_MEMPROT_ERR_INUM` — `soc/esp32c3/include/soc/soc.h`.
 const MEMPROT_INUM: u32 = 26;
 
@@ -69,17 +73,26 @@ const IRAM0_SRAM_LOW: u32 = 0x4038_0000;
 const DRAM0_SRAM_LOW: u32 = 0x3FC8_0000;
 const I_D_SRAM_SEGMENT_SIZE: u32 = 0x2_0000;
 
-/// Where the test pretends `_iram_text_end` is: 512-byte aligned and inside
-/// `[IRAM0_SRAM_LEVEL_1_LOW, IRAM0_SRAM_LEVEL_3_HIGH]`, exactly as
-/// `memprot_ll_set_iram0_split_line` requires.
-const IRAM_TEXT_END: u32 = 0x4039_0000;
+/// The REAL split address of the image that faulted on silicon, not an invented
+/// one. Derived from the app segments of the arduino-esp32 2.0.17 / IDF v4.4.7
+/// BLE Pong build (`elf_sha256 7c431e3d…`): IRAM text spans
+/// `0x4038_0000..0x4039_0A84`, `.data` starts at `0x3FC9_0C00`, and `gp`
+/// (= `.data + 0x800` per the RISC-V small-data model) independently confirms
+/// that base. `_iram_text_end` rounds up to the 512-byte memprot alignment
+/// (`CONFIG_ESP_SYSTEM_MEMPROT_MEM_ALIGN_SIZE`), giving `0x4039_0C00` ≡
+/// `0x3FC9_0C00` — and `MAP_IRAM_TO_DRAM` maps one onto the other exactly.
+const IRAM_TEXT_END: u32 = 0x4039_0C00;
+/// First byte of `.data` on that image. A store BELOW this is the real-world
+/// signature of the fault: an underflow off the bottom of the lowest DRAM
+/// object, or a gp-relative store with a negative offset.
+const DATA_START: u32 = 0x3FC9_0C00;
 /// Inside IRAM area 0 (R|X under the IDF default) — "instruction memory".
 const IRAM_TEXT_ADDR: u32 = 0x4038_1000;
 /// Where the test's own code lives; also IRAM area 0, so it stays executable.
 const CODE_ADDR: u32 = 0x4038_2000;
-/// Above the split line: IRAM area 3, permissions NONE under the IDF default.
-/// This is the IRAM view of the data region — "data memory" as the instruction
-/// bus sees it, and where a corrupted function pointer lands.
+/// At or above the split line: IRAM area 3, permissions NONE under the IDF
+/// default. This is the IRAM view of the data region — "data memory" as the
+/// instruction bus sees it, and where a corrupted function pointer lands.
 const IRAM_DATA_ADDR: u32 = 0x4039_4000;
 
 /// `MAP_IRAM_TO_DRAM`.
@@ -177,7 +190,10 @@ fn configure_memprot_like_idf(bus: &mut SystemBus) {
 /// `esp_mprot_set_intr_matrix`: route the IRAM0 PMS source to
 /// `ETS_MEMPROT_ERR_INUM`, give the line medium priority and enable it.
 fn route_pms_to_memprot_inum(bus: &mut SystemBus) {
+    // IDF routes BOTH PMS sources to the same INUM.
     bus.write_u32(INTC + IRAM0_PMS_SOURCE * 4, MEMPROT_INUM)
+        .unwrap();
+    bus.write_u32(INTC + DRAM0_PMS_SOURCE * 4, MEMPROT_INUM)
         .unwrap();
     bus.write_u32(INTC + 0x114 + u64::from(MEMPROT_INUM) * 4, 7)
         .unwrap();
@@ -223,7 +239,10 @@ fn cpu_at(pc: u32, mtvec_base: u32) -> labwired_core::cpu::riscv::RiscV {
     cpu
 }
 
-fn step(cpu: &mut labwired_core::cpu::riscv::RiscV, bus: &mut SystemBus) -> labwired_core::SimResult<()> {
+fn step(
+    cpu: &mut labwired_core::cpu::riscv::RiscV,
+    bus: &mut SystemBus,
+) -> labwired_core::SimResult<()> {
     let cfg = bus.config.clone();
     cpu.step(bus, &[], &cfg)
 }
@@ -241,7 +260,8 @@ fn store_into_write_protected_iram_is_blocked_and_reported() {
     let mut bus = bus_esp32c3();
     // Seed a known word while protection is still off, so "blocked" is proven
     // by the memory being UNCHANGED rather than by an absence of evidence.
-    bus.write_u32(u64::from(IRAM_TEXT_ADDR), 0xA5A5_A5A5).unwrap();
+    bus.write_u32(u64::from(IRAM_TEXT_ADDR), 0xA5A5_A5A5)
+        .unwrap();
     configure_memprot_like_idf(&mut bus);
     route_pms_to_memprot_inum(&mut bus);
 
@@ -288,6 +308,21 @@ fn store_into_write_protected_iram_is_blocked_and_reported() {
 }
 
 /// The CPU must take the trap, at the vector IDF wired to `_panic_handler`.
+///
+/// # On the two forms of `mcause`
+///
+/// A coredump from this fault shows `mcause = 0x0000_001A` — 26 with the
+/// interrupt bit CLEAR — and that is what `panic_arch.c` compares against
+/// `ETS_MEMPROT_ERR_INUM`. That value is not what the CSR holds. IDF's
+/// `_call_panic_handler` in `components/riscv/vectors.S` branches on the high
+/// bit (`li t0, 0x80000000; bgeu a1, t0, _call_panic_handler`) to tell an
+/// interrupt from an exception, and only THEN strips it (`not t0, t0;
+/// and a1, a1, t0`) before storing it in the exception frame.
+///
+/// So the CSR must carry `0x8000_001A` and the guest produces `0x1A` itself.
+/// Delivering 26 with the bit already clear would send IDF down the
+/// *exception* path and it would never classify the fault as memory
+/// protection. This assertion is on the CSR, deliberately.
 #[test]
 fn cpu_takes_memprot_interrupt_after_a_protected_store() {
     let mut bus = bus_esp32c3();
@@ -298,8 +333,10 @@ fn cpu_takes_memprot_interrupt_after_a_protected_store() {
     //   lui  x5, 0x40381        -> 0x403812B7
     //   sw   x6, 0(x5)          -> 0x0062A023
     bus.write_u32(u64::from(CODE_ADDR), 0x4038_12B7).unwrap();
-    bus.write_u32(u64::from(CODE_ADDR) + 4, 0x0062_A023).unwrap();
-    bus.write_u32(u64::from(IRAM_TEXT_ADDR), 0xA5A5_A5A5).unwrap();
+    bus.write_u32(u64::from(CODE_ADDR) + 4, 0x0062_A023)
+        .unwrap();
+    bus.write_u32(u64::from(IRAM_TEXT_ADDR), 0xA5A5_A5A5)
+        .unwrap();
 
     configure_memprot_like_idf(&mut bus);
     route_pms_to_memprot_inum(&mut bus);
@@ -311,7 +348,8 @@ fn cpu_takes_memprot_interrupt_after_a_protected_store() {
     step(&mut cpu, &mut bus).expect("the store must not stop the simulation");
 
     assert_eq!(
-        cpu.mcause, 0x8000_0000 | MEMPROT_INUM,
+        cpu.mcause,
+        0x8000_0000 | MEMPROT_INUM,
         "mcause must be an asynchronous interrupt on ETS_MEMPROT_ERR_INUM (26) — \
          what IDF's panic_arch.c turns into \"Memory protection fault\""
     );
@@ -452,6 +490,138 @@ fn no_enforcement_while_the_monitor_is_disabled() {
 
     bus.write_u32(u64::from(IRAM_TEXT_ADDR), 0xC0FF_EE00)
         .unwrap();
-    assert_eq!(bus.read_u32(u64::from(IRAM_TEXT_ADDR)).unwrap(), 0xC0FF_EE00);
+    assert_eq!(
+        bus.read_u32(u64::from(IRAM_TEXT_ADDR)).unwrap(),
+        0xC0FF_EE00
+    );
     assert_eq!(bus.esp32c3_pms_violations(), 0);
+}
+
+/// **The real-world signature.** `0x3FC9_0C00` is the first byte of `.data` on
+/// the image that panicked on silicon, and the PMS split line sits exactly
+/// there. A store that runs off the bottom of the lowest DRAM object — or a
+/// gp-relative store with an underflowed offset — lands in DRAM0 area 0, whose
+/// IDF permission is NONE, and faults on the DRAM0 port.
+///
+/// This is the case the coredump actually represents, so it is asserted against
+/// the derived address rather than a synthetic one.
+#[test]
+fn store_below_data_start_faults_on_the_dram0_port() {
+    let mut bus = bus_esp32c3();
+    let below = DATA_START - 4;
+    bus.write_u32(u64::from(below), 0xA5A5_A5A5).unwrap();
+    configure_memprot_like_idf(&mut bus);
+    route_pms_to_memprot_inum(&mut bus);
+
+    // Sanity: the split line derived from the real image maps I <-> D exactly.
+    assert_eq!(map_iram_to_dram(IRAM_TEXT_END), DATA_START);
+    // The first word OF `.data` is fine...
+    bus.write_u32(u64::from(DATA_START), 0x1111_1111).unwrap();
+    assert_eq!(bus.read_u32(u64::from(DATA_START)).unwrap(), 0x1111_1111);
+    assert_eq!(bus.esp32c3_pms_violations(), 0);
+
+    // ...one word below it is not.
+    bus.write_u32(u64::from(below), 0xDEAD_BEEF).unwrap();
+    assert_eq!(
+        bus.read_u32(u64::from(below)).unwrap(),
+        0xA5A5_A5A5,
+        "PERMITTED: a store one word below .data start ({below:#x}) landed. \
+         That underflow is exactly what panicked on silicon."
+    );
+    assert_eq!(bus.esp32c3_pms_violations(), 1);
+
+    let v = bus
+        .esp32c3_pms_latched(PmsPort::Dram0)
+        .expect("the DRAM0 port must latch it");
+    assert_eq!(v.addr, below);
+
+    // CORE_0_DRAM0_PMS_MONITOR_2 / _3, decoded as
+    // memprot_ll_dram0_get_monitor_status_* do.
+    let w2 = bus.read_u32(SENSITIVE + DRAM0_PMS_MONITOR_2).unwrap();
+    let w3 = bus.read_u32(SENSITIVE + DRAM0_PMS_MONITOR_3).unwrap();
+    assert_eq!(w2 & 0x1, 1, "DRAM0 VIOLATE_INTR must be latched");
+    assert_eq!((w2 >> 2) & 0x3, 1, "MEMP_HAL_WORLD_0");
+    let field = (w2 >> 4) & 0x00FF_FFFF;
+    assert_eq!(
+        (field << 2) + 0x3C00_0000,
+        below,
+        "esp_mprot_get_violate_addr(MEMPROT_TYPE_DRAM0_SRAM) must name the address"
+    );
+    assert_eq!(w3 & 0x1, 1, "the violating operation was a write");
+
+    assert_ne!(
+        bus.external_irq_lines() & (1 << MEMPROT_INUM),
+        0,
+        "UNDELIVERED: DRAM0 PMS source {DRAM0_PMS_SOURCE} never reached line {MEMPROT_INUM}"
+    );
+}
+
+/// `CONFIG_ESP_SYSTEM_MEMPROT_FEATURE_LOCK=y` is the default and is set on the
+/// image that faulted. Once firmware locks the PMS, protection CANNOT be
+/// relaxed: later writes to the split lines, the permissions and the monitor
+/// enables are ignored by silicon until reset.
+///
+/// A twin that let a stray (or malicious) write disable the monitor would
+/// silently go back to being blind, which is the exact failure this whole
+/// change exists to remove.
+#[test]
+fn locked_protection_cannot_be_turned_off() {
+    let mut bus = bus_esp32c3();
+    configure_memprot_like_idf(&mut bus);
+    route_pms_to_memprot_inum(&mut bus);
+
+    // esp_mprot_set_prot(..., lock_feature = true).
+    bus.write_u32(SENSITIVE + 0x090, 1).unwrap(); // split lines
+    bus.write_u32(SENSITIVE + 0x0A8, 1).unwrap(); // IRAM0 permissions
+    bus.write_u32(SENSITIVE + 0x0B4, 1).unwrap(); // IRAM0 monitor
+    bus.write_u32(SENSITIVE + 0x0C0, 1).unwrap(); // DRAM0 permissions
+    bus.write_u32(SENSITIVE + 0x0C8, 1).unwrap(); // DRAM0 monitor
+
+    // Everything an attacker (or a bug) would try, in order.
+    bus.write_u32(SENSITIVE + IRAM0_PMS_MONITOR_1, 0).unwrap(); // disable monitor
+    bus.write_u32(SENSITIVE + IRAM0_PMS_CONSTRAIN_2, 0x001C_7FFF)
+        .unwrap(); // re-open permissions
+    bus.write_u32(SENSITIVE + SPLIT_MAIN_I_D, 0).unwrap(); // erase the split
+    bus.write_u32(SENSITIVE + 0x0B4, 0).unwrap(); // un-lock the lock
+
+    assert_eq!(
+        bus.read_u32(SENSITIVE + IRAM0_PMS_MONITOR_1).unwrap() & 0x2,
+        0x2,
+        "the monitor-enable write must have been ignored"
+    );
+    assert_eq!(
+        bus.read_u32(SENSITIVE + 0x0B4).unwrap() & 1,
+        1,
+        "a lock bit is set-only; writing 0 must not clear it"
+    );
+    assert!(
+        bus.esp32c3_pms_armed(),
+        "DISARMED: locked memory protection was turned off"
+    );
+
+    // And it still fires.
+    bus.write_u32(u64::from(IRAM_TEXT_ADDR), 0xDEAD_BEEF)
+        .unwrap();
+    assert_eq!(bus.esp32c3_pms_violations(), 1);
+    assert_ne!(bus.external_irq_lines() & (1 << MEMPROT_INUM), 0);
+}
+
+/// Firmware must not be able to fake away a latched fault by writing the
+/// status register directly — the hardware owns it. (`VIOLATE_CLR` in
+/// `MONITOR_1` is the only way to clear it, covered above.)
+#[test]
+fn status_registers_are_hardware_owned() {
+    let mut bus = bus_esp32c3();
+    configure_memprot_like_idf(&mut bus);
+    route_pms_to_memprot_inum(&mut bus);
+    bus.write_u32(u64::from(IRAM_TEXT_ADDR), 0xDEAD_BEEF)
+        .unwrap();
+    assert_eq!(read_iram0_status(&bus).intr, 1);
+
+    bus.write_u32(SENSITIVE + IRAM0_PMS_MONITOR_2, 0).unwrap();
+
+    let st = read_iram0_status(&bus);
+    assert_eq!(st.intr, 1, "a direct write must not clear VIOLATE_INTR");
+    assert_eq!(st.addr, IRAM_TEXT_ADDR);
+    assert_ne!(bus.external_irq_lines() & (1 << MEMPROT_INUM), 0);
 }
