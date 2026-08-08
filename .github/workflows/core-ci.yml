@@ -26,6 +26,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      # fetch-depth: 0 — verify-release-runner-contract.sh reads the pinned
+      # action's source out of an OLD commit by sha (`git cat-file -e <sha>`,
+      # then `git show <sha>:<path>`). A bounded depth leaves that object
+      # unfetched. Unlike the history-derived gates elsewhere in this file that
+      # is not a silent wrongness: the script calls `fail` with "commit <sha> is
+      # available locally", so the job goes red with the actual reason. Keep the
+      # depth anyway — a red build nobody can explain is not much better.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -481,6 +488,22 @@ jobs:
       - name: Walk-deletion derivation (PR-fast structural arm)
         run: cargo test -p labwired-core --test esp32_classic_walk_differential
 
+      # The BLE Pong fixture is a COMMITTED copy of a published community lab,
+      # and `world_esp32c3_ble_pong` (release-only, push-to-main) is the only
+      # thing that boots it. Both checks are cheap enough to run here so a PR
+      # that touches the sketch is told BEFORE the merge, not after.
+      #
+      #   * the cargo test hashes the committed .ino/.bin pair, so neither can
+      #     move without the other;
+      #   * the drift script asks api.labwired.com whether the OWNER has since
+      #     edited the live project. Nothing in-tree can know that, and not
+      #     knowing it is how the fixture sat at the #828 build while the
+      #     published lab moved on and three gates stayed green.
+      - name: BLE Pong fixture provenance (committed .ino ↔ .bin)
+        run: cargo test -p labwired-core --test fixture_ble_pong_provenance
+      - name: BLE Pong fixture drift (committed .ino ↔ LIVE published lab)
+        run: scripts/ci/check-published-lab-drift.sh
+
   # ── Browser-configuration observable gate (PR; parallel with pr-gate) ──────
   #
   # THE LANE THAT DID NOT EXIST PRE-MERGE.
@@ -664,6 +687,15 @@ jobs:
       # minutes in debug. It is the only lane that runs two ESP32-C3 instances
       # against each other over the BLE air, which is where "both nodes have the
       # same address" hid.
+      # Run the drift check BEFORE the release-gated world test below, so a red
+      # lane says "the published lab moved" rather than leaving someone to infer
+      # it from a two-node BLE failure. `pr-gate` runs this too; keeping it here
+      # is what covers the case nobody's PR causes — the owner editing the live
+      # project between merges. On push-to-main and on the nightly cron this is
+      # the only lane that looks at production at all.
+      - name: BLE Pong fixture drift (committed .ino ↔ LIVE published lab)
+        run: scripts/ci/check-published-lab-drift.sh
+
       - name: Release-gated tests — cfg(not(debug_assertions))
         run: >
           cargo test --release -p labwired-core --features event-scheduler
