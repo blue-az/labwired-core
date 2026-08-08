@@ -1963,8 +1963,25 @@ boards:
     # reset-state anchor moves — esp32s3_reset_conformance covers exactly that
     # set. Owner-authorised ack WITHOUT a live re-capture; no S3 board was
     # attached for this change and the USB CDC live diff remains owed.
+    # 2026-08-08: crates/core/src/peripherals/esp32s3/flash_xip.rs — the XIP page
+    # mirror goes from ONE way to 8, fully associative. This is a CACHE CAPACITY
+    # change and nothing else. The mirror is a read-through cache of immutable
+    # flash bytes behind `ensure_page_mirror`; a lookup returns exactly the bytes
+    # a one-way mirror would have re-filled, so the bytes handed to the CPU are
+    # identical for every access sequence and only the NUMBER of 64 KiB fills
+    # differs. Invalidation drops every way, so a guest write through the window
+    # cannot leave a stale way serving pre-write bytes. No register, base
+    # address, window, reset value or MMU table format is touched, so nothing in
+    # the 9-register reset-state anchor can move. Evidence on this commit:
+    # esp32s3_walk_differential 2/2 green; the C3 side, which boots through this
+    # same model (boot/esp32c3_rom.rs), is byte-identical — esp32c3_walk_
+    # differential 10/10 and esp32c3_clamped_full_state_differential 3/3 with
+    # `--ignored`, the shipped-lab batch gate reproduces every mean_batch /
+    # lit_px / batches / interpreted counter exactly, and the CLI BLE gate
+    # reports the SAME steps=11707065 cycles=33346436 before and after. No S3
+    # board attached; no live re-capture.
     drift_ack: 2026-08-08
-    drift_ack_digest: e61b64da1a9ee277ec7563b1e2e72289509536d803b09b5251fde3b84342d80d
+    drift_ack_digest: aaf64e6784616c622545870c767ce33b44e68b2415ab410360445161f990007c
     models:
       - crates/core/src/peripherals/esp32s3
       - crates/core/src/peripherals/esp_xtensa_common
