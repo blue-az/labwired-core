@@ -42,7 +42,27 @@
 //! back `0x00`, so MISO is NOT one of the published lines and NOT routed to a
 //! pad), slave-side wait states, bus contention, or rise-time shape.
 //!
-//! ⚠️ FIDELITY: modeled, NOT HW-validated — the chip-select framing below
+//! Chip-select framing follows the RP2040 datasheet §4.4.3 ("Motorola SPI
+//! Format"), which states the two continuous-transfer rules explicitly and
+//! OPPOSITELY. Read it with `labwired_datasheet part=rp2040`; the pages below
+//! are pinned to the document's content hash, so they stay valid across vendor
+//! revisions:
+//!
+//! * `SPH = 0` (pages 510, 512) — "in the case of continuous back-to-back
+//!   transmissions, the SSPFSSOUT signal must be pulsed HIGH between each data
+//!   word transfer. This is because the slave select pin freezes the data in
+//!   its serial peripheral register and does not permit it to be altered if the
+//!   SPH bit is logic zero."
+//! * `SPH = 1` (pages 511, 512) — "For continuous back-to-back transfers, the
+//!   SSPFSSOUT pin is held LOW between successive data words and termination is
+//!   the same as that of the single word transfer."
+//!
+//! So the phase decides the framing, and getting it backwards is observable: a
+//! decoder that cuts frames on chip select would read one continuous SPH=1
+//! burst as N separate transfers, or N back-to-back SPH=0 words as one
+//! oversized frame. Both decode to bytes that never crossed the bus.
+//!
+//! ⚠️ FIDELITY: the chip-select framing below
 //! asserts CSn half a bit period before the first clock edge of each frame and
 //! releases it half a period after the last, pulsing high between frames. That
 //! is the Motorola SPI frame format the pico-sdk default (`spi_init` →
@@ -129,6 +149,12 @@ pub struct SpiNarrator {
     csn_line: Option<usize>,
     /// Relative cursor: where the next frame begins.
     cursor: u64,
+    /// Whether chip select is currently held low. Only ever true BETWEEN frames
+    /// under `SPH = 1`, which is the phase that holds it across a burst.
+    cs_held: bool,
+    /// Cycle the last frame's final bit ended, so the closing chip-select
+    /// release can be placed one clock period after it, as the datasheet says.
+    cs_release_at: u64,
     /// Edge accumulation and cycle-axis anchoring, shared with every other
     /// narrator (see [`crate::peripherals::wave_plan`]).
     plan: WavePlan,
@@ -153,6 +179,8 @@ impl SpiNarrator {
             mosi_line,
             csn_line,
             cursor: 0,
+            cs_held: false,
+            cs_release_at: 0,
             plan: WavePlan::new(idle, bit_time),
         }
     }
@@ -191,9 +219,13 @@ impl SpiNarrator {
         self.plan.edge(self.sck_line, framing.cpol, self.cursor);
 
         let mut t = self.cursor;
-        // Chip-select setup: assert half a period before the first clock edge.
+        // Chip-select setup. Under SPH=1 a continuous burst HOLDS it low, so
+        // asserting is a no-op on every frame after the first (re-asserting a
+        // level the line already holds records no edge). Under SPH=0 the
+        // previous frame released it, so this is a fresh assert each time.
         if let Some(cs) = self.csn_line {
             self.plan.edge(cs, false, t);
+            self.cs_held = true;
         }
         t += half;
 
@@ -218,10 +250,16 @@ impl SpiNarrator {
             t += bit;
         }
 
-        // Chip-select hold, then release. See the module comment for why this
-        // pulses per frame in both phases.
+        // Chip-select termination. The datasheet returns SSPFSSOUT to idle one
+        // SSPCLKOUT period after the last bit is captured, in BOTH phases —
+        // what differs is whether the next word in a burst gets a fresh pulse
+        // (SPH=0) or stays inside the same low window (SPH=1).
+        self.cs_release_at = t + half;
         if let Some(cs) = self.csn_line {
-            self.plan.edge(cs, true, t + half);
+            if !framing.cpha {
+                self.plan.edge(cs, true, self.cs_release_at);
+                self.cs_held = false;
+            }
         }
         // MOSI holds its last driven level, like a real pad.
         self.cursor += framing.frame_bits() * bit;
@@ -249,9 +287,24 @@ impl SpiNarrator {
         self.plan.bit_time()
     }
 
+    /// Release a chip select an `SPH = 1` burst has been holding low.
+    ///
+    /// Called by every publish path. Without it a held-low burst would end with
+    /// chip select still asserted, and the NEXT burst's assert would record no
+    /// edge at all — the two transfers would fuse into one frame on the trace.
+    fn close_burst(&mut self) {
+        if let Some(cs) = self.csn_line {
+            if self.cs_held {
+                self.plan.edge(cs, true, self.cs_release_at);
+                self.cs_held = false;
+            }
+        }
+    }
+
     /// Publish so the last edge lands on `end_cycle`. See [`NarrationFit`].
     #[must_use = "a compressed narration does not carry the programmed bit rate"]
-    pub fn emit_ending_at(self, lines: &PadLines, end_cycle: u64) -> NarrationFit {
+    pub fn emit_ending_at(mut self, lines: &PadLines, end_cycle: u64) -> NarrationFit {
+        self.close_burst();
         self.plan.emit_ending_at(lines, end_cycle)
     }
 
@@ -259,12 +312,19 @@ impl SpiNarrator {
     /// the cycle an earlier flush of this same wire already ran to. See
     /// [`WavePlan::emit_between`].
     #[must_use = "a compressed narration does not carry the programmed bit rate"]
-    pub fn emit_between(self, lines: &PadLines, not_before: u64, end_cycle: u64) -> NarrationFit {
+    pub fn emit_between(
+        mut self,
+        lines: &PadLines,
+        not_before: u64,
+        end_cycle: u64,
+    ) -> NarrationFit {
+        self.close_burst();
         self.plan.emit_between(lines, not_before, end_cycle)
     }
 
     /// Publish with the first edge at `start_cycle` (unit-test shape).
-    pub fn emit_starting_at(self, lines: &PadLines, start_cycle: u64) {
+    pub fn emit_starting_at(mut self, lines: &PadLines, start_cycle: u64) {
+        self.close_burst();
         self.plan.emit_starting_at(lines, start_cycle);
     }
 }
@@ -468,6 +528,54 @@ mod tests {
             vec![false, true, false, true],
             "one assert/release pair per frame: {cs_edges:?}",
         );
+    }
+
+    #[test]
+    fn continuous_transfers_frame_the_way_the_phase_says() {
+        // Straight out of the RP2040 datasheet §4.4.3, which states the two
+        // rules in opposite directions:
+        //
+        //   SPH=0 — "the SSPFSSOUT signal must be pulsed HIGH between each data
+        //            word transfer"
+        //   SPH=1 — "the SSPFSSOUT pin is held LOW between successive data
+        //            words"
+        //
+        // Three words, so "pulsed between each" and "held across" are visibly
+        // different: three assert/release pairs against exactly one.
+        for cpha in [false, true] {
+            let framing = SpiFraming {
+                cpol: false,
+                cpha,
+                bits: 8,
+            };
+            let idle = idle_for(framing);
+            let mut wave = SpiNarrator::with_lines(SCK, MOSI, Some(CSN), &idle, BIT);
+            for word in [0x11u16, 0x22, 0x33] {
+                wave.frame(word, framing);
+            }
+            let events = capture(wave, &idle, 0);
+            let cs: Vec<bool> = events
+                .iter()
+                .filter(|&&(_, ch, _)| ch as usize == CSN)
+                .map(|&(_, _, value)| value)
+                .collect();
+            if cpha {
+                assert_eq!(
+                    cs,
+                    vec![false, true],
+                    "SPH=1 holds chip select LOW across the whole burst",
+                );
+            } else {
+                assert_eq!(
+                    cs,
+                    vec![false, true, false, true, false, true],
+                    "SPH=0 pulses chip select HIGH between each word",
+                );
+            }
+            // Either way the words must survive — framing is not an excuse to
+            // lose data.
+            assert_eq!(decode(&events, framing), vec![0x11, 0x22, 0x33]);
+        }
     }
 
     #[test]
