@@ -685,6 +685,20 @@ jobs:
           --test firmware_survival
           --test e2e_stm32f407_i2c
 
+      # #832 models the USB_SERIAL_JTAG interrupt surface so CDC-on-boot builds
+      # print. Its own test file is `#![cfg(feature = "event-scheduler")]`, so
+      # without the feature it runs ZERO tests and reports green — the vacuous
+      # shape `scheduler_lane_coverage` exists to catch, and it did.
+      #
+      # Here rather than in `pr-scheduler-observable`: that lane is explicitly
+      # the sub-2s half, and this file boots C3 mask ROMs (measured >2min
+      # locally). Per-merge is the right cost for a gate that proves the
+      # console actually emits bytes.
+      - name: C3 USB CDC console (scheduler-gated, boots the mask ROM)
+        run: >
+          cargo test -p labwired-core --features event-scheduler
+          --test esp32c3_usb_cdc_console
+
       - name: Board-coverage ratchet (static naming scan)
         run: cargo test -p labwired-core --test board_coverage_ratchet -- --nocapture
 
