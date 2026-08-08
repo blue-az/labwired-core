@@ -1033,8 +1033,37 @@ boards:
     # tests derived from the ROM read-modify-write sequences (both watched fail
     # with the old mask), world_esp32c3_ble_pong 2/2 green, and the two-node air
     # frame counts identical bucket-for-bucket before and after the change.
+    # 2026-08-08: BT radio wake cadence + idempotent comparator arm, and the
+    # scheduler's dedup index made hybrid (#867). `take_scheduled_events` ran
+    # after every MMIO write to this block and bumped `arm_seq` unconditionally,
+    # so every arm minted a fresh (peripheral, token, deadline) key the
+    # scheduler could not collapse and has no cancel for; each stayed live until
+    # it fired and was rejected as stale. LIVE_HWM bt=789 -> 6, max_queued
+    # 792 -> 9, live_event_ceiling_trips 3310 -> 0. Scheduler bookkeeping, not
+    # silicon surface: no register in the asserted reset-oracle set changes
+    # address, reset value or access, and configs/peripherals/esp32c3 — the
+    # descriptors that oracle actually asserts — is untouched by this change.
+    # Evidence: esp32c3_walk_differential 10/10 under --ignored, which is where
+    # the five walk-vs-scheduler byte-identity proofs (systimer, i2c0, uart0,
+    # spi2_apb_saradc, rtc-at-interval-1) and both framebuffer identity tests
+    # live; esp32c3_clamped_full_state_differential 3/3;
+    # world_esp32c3_ble_pong 2/2 with both nodes advancing off spawn; and the
+    # three shipped labs still batching at mean 109-126 against floors of 8/8/40.
+    # A live diff WAS run this date over USB-JTAG against two boards
+    # (9c:cc:01:d0:98:e0 and 9c:cc:01:d0:5b:78), and it is recorded here as
+    # supporting evidence only — it does NOT move silicon.last_capture. The
+    # static estate matched 1063/1136 words with every delta accounted for: 17
+    # per-chip efuse identity words (the committed baseline was captured on a
+    # third chip, 38:44:be:42:f5:58, so these must differ), 48 words of a
+    # clock-gated twai0 returning stale bus data, 8 live usb_device counters.
+    # The asserted set matched 85/89. The four stragglers are radio windows that
+    # were NOT observed cold — openocd `reset halt` is a software core reset and
+    # leaves the PHY powered by whatever sketch is running — so a real
+    # re-capture needs a physical power cycle. Nothing in the live diff lies on
+    # this change's surface: it is scheduler arming, and the descriptors the
+    # oracle asserts are untouched.
     drift_ack: 2026-08-08
-    drift_ack_digest: a61fe8e5477da163d8b76d7e7895e00c84ce67d0299910733c2000134f7b4679
+    drift_ack_digest: 7bdbe76af3085800e79329118498d7d87dd7fe83de83541452ec2e9a0113b383
 
   - id: nucleo-l476rg
     doc: docs/boards/nucleo-l476rg.md
