@@ -39,6 +39,7 @@ pub mod rp2040_spi_carries_a_byte;
 #[cfg(test)]
 pub mod scb_reset;
 #[cfg(test)]
+pub mod scheduler_lane_coverage;
 pub mod simctl_machine;
 #[cfg(test)]
 pub mod stm32_spi_waveform;

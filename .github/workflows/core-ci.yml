@@ -576,6 +576,39 @@ jobs:
           cargo test -p labwired-core --features event-scheduler
           --test esp32_classic_walk_differential -- --nocapture
 
+      # SCHEDULER-ONLY FIDELITY LANES — the tests that no PR job could run.
+      #
+      # `crates/core/tests/` holds 22 integration files gated
+      # `#![cfg(feature = "event-scheduler")]`. A plain `cargo test --test X`
+      # on one of them silently runs ZERO tests and reports green, so the only
+      # way they execute is a lane that passes the feature — and until this
+      # step, seventeen of the twenty-two ran ONLY in the nightly/dispatch
+      # `core-full` job. That is not a hypothetical: core#823 added `board_io`
+      # to `configs/systems/nrf52840-dk.yaml`, the button's boot level
+      # presented itself as a GPIO edge, the per-edge scheduler harvest handed
+      # the RADIO a duplicate wake, and BLE 1 Mbit air time collapsed from 32
+      # cycles to 2 — a faithful twin that stopped simulating transmission
+      # time at all. Every required check was green, because the file that
+      # asserts that invariant had no pre-merge lane.
+      #
+      # The list is the sub-2s half of the uncovered set (measured; the whole
+      # step adds ~3s of test runtime to a job that already builds this exact
+      # crate + feature). The expensive remainder stays nightly, named and
+      # reasoned in `scheduler_lane_coverage`'s NIGHTLY_ONLY table — that
+      # ratchet is what keeps this list from silently rotting again: a new
+      # scheduler-gated test file must be added here or given a written reason.
+      - name: Scheduler-only fidelity lanes (walk≡scheduler timing gates)
+        run: >
+          cargo test -p labwired-core --features event-scheduler
+          --test nrf52_timer_walk_differential
+          --test nrf52_easydma_tick512_fidelity
+          --test nrf52840_timer_machine_gate
+          --test nrf54l15_grtc_walk_differential
+          --test rp2040_timer_machine_gate
+          --test rp2040_i2c_irq_delivery
+          --test stm32f103_dma_walk_differential
+          --test systick_walk_differential
+
   # ── Main-branch integrity (push to main) — fuller than PR, still no matrices ─
   integrity:
     name: core-integrity
@@ -717,6 +750,12 @@ jobs:
       # the browser's own feature set BEFORE THE MERGE — a push-to-main lane
       # reports that after the fact. See the comment on
       # `pr-scheduler-observable`.
+      # The nRF52 / nRF54 / RP2040 / SysTick / F103 entries below are the same
+      # set `pr-scheduler-observable` runs pre-merge, kept here as the
+      # push-to-main backstop for anything that reaches main outside the PR
+      # flow. Both lanes are held honest by the `scheduler_lane_coverage`
+      # ratchet; see the comment on that PR step for what shipped through the
+      # hole they close.
       - name: Feature gate — scheduler IRQ delivery (jit + event-scheduler)
         run: >
           cargo test -p labwired-core --features jit,event-scheduler
@@ -727,6 +766,14 @@ jobs:
           --test stm32_timer_walk_differential
           --test stm32_dma_walk_differential
           --test kw41z_walk_free_differential
+          --test nrf52_timer_walk_differential
+          --test nrf52_easydma_tick512_fidelity
+          --test nrf52840_timer_machine_gate
+          --test nrf54l15_grtc_walk_differential
+          --test rp2040_timer_machine_gate
+          --test rp2040_i2c_irq_delivery
+          --test stm32f103_dma_walk_differential
+          --test systick_walk_differential
           --lib
 
       # HARDWARE ORACLE UNDER THE SCHEDULER FEATURE — the configuration that

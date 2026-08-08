@@ -634,6 +634,113 @@ fn radio_ble_1mbit_bit_time_scales_with_length() {
     assert_cycle_identity(at_l2_i1, at_l2_i512, "RADIO Ble_1Mbit L2 bit-time");
 }
 
+// ── GPIO edges must not perturb an in-flight RADIO packet ───────────────────
+
+const GPIO0: u64 = 0x5000_0000;
+const GPIOTE: u64 = 0x4000_6000;
+const GPIOTE_EVENTS_IN0: u64 = GPIOTE + 0x100;
+const GPIOTE_CONFIG0: u64 = GPIOTE + 0x510;
+/// DK button0 pin (Zephyr nrf52840dk `button0`) — carries a `board_io` contact.
+const BUTTON0_PIN: u8 = 11;
+/// A plain gpio0 pin with no `board_io` binding, so the test owns its level and
+/// the edge it drives is unambiguously the one under test.
+const EDGE_PIN: u8 = 3;
+
+/// GPIOTE CONFIG[0] word: MODE=Event(1), PSEL=`pin`, PORT=0, POLARITY=Toggle(3).
+fn gpiote_event_toggle_on(pin: u8) -> u32 {
+    1 | ((pin as u32) << 8) | (3 << 16)
+}
+
+/// Physics, not implementation: a contact closing on a GPIO pin does not make a
+/// BLE packet leave the antenna sooner. EVENTS_END must still land at the
+/// Ble_1Mbit air time for the programmed LENGTH even when an external input
+/// edge arrives mid-transmission.
+///
+/// Regression gate for the per-edge scheduler harvest: a GPIO edge used to
+/// re-harvest a wake from EVERY scheduler-driven peripheral, so the RADIO —
+/// which cannot latch anything from a GPIO edge — got a second, earlier event
+/// that drained its air-time countdown on the spot and collapsed END to the
+/// DMA cycle.
+#[test]
+fn radio_air_time_survives_a_gpio_edge_mid_transmission() {
+    const L: u8 = 8;
+    const BUDGET: u64 = 256;
+    // Well inside the (8+3)*8 = 88-cycle air window, after the EasyDMA cycle.
+    const EDGE_AT: u64 = 10;
+    let buf = 0x2000_2000u64;
+
+    // Single-cycle loop so the edge lands at a known cycle. The loop always
+    // runs past EDGE_AT (it does not break on END) so the edge is driven even
+    // when a broken model has already collapsed END — otherwise a failure would
+    // report "no edge driven" instead of the air time it actually produced.
+    let mut edge_driven = false;
+    let mut m = machine_at_interval(1);
+    arm_radio_tx_with_len(&mut m, buf, L);
+    let _ = m.bus.write_u32(RADIO_TASKS_START, 1);
+    let mut at = None;
+    while m.total_cycles < BUDGET {
+        m.advance(AdvanceRequest::run(Some(1)).with_breakpoints(BreakpointPolicy::Ignore))
+            .expect("Machine::advance");
+        if m.total_cycles == EDGE_AT {
+            edge_driven = m.bus.drive_input_bit(GPIO0, EDGE_PIN, true);
+            assert!(
+                edge_driven,
+                "precondition: gpio0 must accept an externally driven input level"
+            );
+        }
+        if at.is_none() && radio_end_done(&m) {
+            at = Some(m.total_cycles);
+        }
+        if at.is_some() && m.total_cycles > EDGE_AT {
+            break;
+        }
+    }
+    assert!(
+        edge_driven,
+        "precondition: the GPIO edge must have been driven"
+    );
+    let at = at.expect("RADIO EVENTS_END must still fire");
+    let expected = RADIO_TX_CHAIN_OVERHEAD + ble_1mbit_air_cycles(L);
+    assert!(
+        at.abs_diff(expected) <= 1,
+        "a GPIO edge mid-TX must not shorten Ble_1Mbit air time: \
+         END at {at}, model expected {expected} (±1)"
+    );
+}
+
+/// The level a `board_io` contact settles to at attach is the level the pin was
+/// always at — nothing moved it, so it is not an edge. A GPIOTE channel watching
+/// that pin in Event/Toggle mode must therefore see EVENTS_IN[0] == 0 on the
+/// first tick, before anything has actually pressed the button.
+#[test]
+fn board_io_button_boot_level_is_not_a_gpio_edge() {
+    let mut m = machine_at_interval(1);
+    // Precondition: the DK system YAML really does declare a button on this pin,
+    // i.e. the boot level is externally driven (otherwise this proves nothing).
+    assert_eq!(
+        m.bus
+            .read_u32(GPIO0 + 0x510)
+            .map(|v| (v >> BUTTON0_PIN) & 1)
+            .unwrap_or(0),
+        1,
+        "precondition: board_io button0 must have settled its released (high) level"
+    );
+
+    m.bus
+        .write_u32(GPIOTE_CONFIG0, gpiote_event_toggle_on(BUTTON0_PIN))
+        .unwrap();
+    m.bus.write_u32(GPIOTE_EVENTS_IN0, 0).unwrap();
+
+    for _ in 0..4 {
+        m.advance(AdvanceRequest::run(Some(1)).with_breakpoints(BreakpointPolicy::Ignore))
+            .expect("Machine::advance");
+    }
+
+    assert_eq!(
+        m.bus.read_u32(GPIOTE_EVENTS_IN0).unwrap_or(u32::MAX),
+        0,
+        "no contact moved: the boot level of a board_io button must not present \
+         itself as a GPIO edge"
 /// TASKS_DISABLE mid-transmission aborts the packet: DISABLED promptly, and no
 /// EVENTS_END for a packet firmware cancelled.
 ///
