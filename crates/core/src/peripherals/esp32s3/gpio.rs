@@ -420,6 +420,14 @@ impl Esp32s3Gpio {
         }
     }
 
+    /// Every signal name bound to this port's pads, live or not — the
+    /// bus-visibility reporting seam. See
+    /// [`crate::peripherals::pad_routing::PadRoutes::bound_functions`] for why
+    /// this is the static question and `func()` is the live one.
+    pub(crate) fn bound_pad_functions(&self) -> Vec<&'static str> {
+        self.pad_routes.bound_functions()
+    }
+
     pub fn pads_for_output_signal(&self, signal_idx: u32) -> Vec<u8> {
         let want = signal_idx & OUT_SEL_MASK;
         (0..PAD_COUNT)

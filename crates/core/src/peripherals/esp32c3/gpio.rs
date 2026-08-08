@@ -169,6 +169,14 @@ impl Esp32c3Gpio {
         self.i2c_lines = Some(lines);
     }
 
+    /// Every signal name bound to this port's pads, live or not — the
+    /// bus-visibility reporting seam. See
+    /// [`crate::peripherals::pad_routing::PadRoutes::bound_functions`] for why
+    /// this is the static question and `func()` is the live one.
+    pub(crate) fn bound_pad_functions(&self) -> Vec<&'static str> {
+        self.pad_routes.bound_functions()
+    }
+
     /// The output-matrix signal `pin` currently carries — the selector the
     /// shared routing seam resolves bindings against.
     ///

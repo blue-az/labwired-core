@@ -141,6 +141,14 @@ impl Rp2040Sio {
             .bind(cell, pin, Some(function), line, func_name);
     }
 
+    /// Every signal name bound to this port's pads, live or not — the
+    /// bus-visibility reporting seam. See
+    /// [`crate::peripherals::pad_routing::PadRoutes::bound_functions`] for why
+    /// this is the static question and `func()` is the live one.
+    pub(crate) fn bound_pad_functions(&self) -> Vec<&'static str> {
+        self.pad_routes.bound_functions()
+    }
+
     fn pad_level(&self, pin: u8) -> Option<bool> {
         if pin >= 30 {
             return None;

@@ -667,6 +667,14 @@ impl GpioPort {
             .bind(cell, pin, af.map(u32::from), line, func);
     }
 
+    /// Every signal name bound to this port's pads, live or not — the
+    /// bus-visibility reporting seam. See
+    /// [`crate::peripherals::pad_routing::PadRoutes::bound_functions`] for why
+    /// this is the static question and `func()` is the live one.
+    pub(crate) fn bound_pad_functions(&self) -> Vec<&'static str> {
+        self.pad_routes.bound_functions()
+    }
+
     /// The alternate function `pin` currently selects, decoded from this
     /// family's own registers — the selector the shared routing seam resolves
     /// bindings against.

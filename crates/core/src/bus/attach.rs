@@ -903,6 +903,62 @@ impl SystemBus {
         }
     }
 
+    /// Every peripheral signal name that any pad on this bus is BOUND to carry,
+    /// deduplicated and sorted — `["I2C1_SCL", "I2C1_SDA", "USART2_TX", …]`.
+    ///
+    /// This is the ONE read-only window onto what the `wire_*_pads` functions
+    /// above actually achieved, and it exists for exactly one caller:
+    /// `crates/core/tests/bus_visibility.rs`, which builds every chip in
+    /// `configs/chips/` and derives the bus-visibility scoreboard from this
+    /// list. Nothing in the engine reads it.
+    ///
+    /// Why it lives here and not in the test: the routes are held privately by
+    /// five different GPIO-ish models (STM32 `GpioPort`, RP2040 `Sio`, and the
+    /// C3/S3/classic ESP32 GPIO ports), each reached by a different downcast.
+    /// Publishing five downcasts to make the scoreboard derivable would be a
+    /// far larger surface than publishing the one question it asks.
+    ///
+    /// ⚠️ The names are the DERIVED truth. A `wire_*_pads` function that
+    /// silently stops binding — a renamed peripheral in a chip yaml, a family
+    /// whose GPIO model changed, an early `return` on a missing model — empties
+    /// this list for that chip, and the scoreboard ratchet fails. Do not add a
+    /// fallback that synthesises names from anything other than live bindings:
+    /// that is precisely the guarantee being sold.
+    pub fn bound_pad_functions(&self) -> Vec<&'static str> {
+        use crate::peripherals::esp32::gpio::Esp32Gpio;
+        use crate::peripherals::esp32c3::gpio::Esp32c3Gpio;
+        use crate::peripherals::esp32s3::gpio::Esp32s3Gpio;
+        use crate::peripherals::gpio::GpioPort;
+        use crate::peripherals::rp2040::sio::Rp2040Sio;
+
+        let mut out: Vec<&'static str> = Vec::new();
+        for entry in &self.peripherals {
+            let Some(any) = entry.dev.as_any() else {
+                continue;
+            };
+            let funcs = if let Some(g) = any.downcast_ref::<GpioPort>() {
+                g.bound_pad_functions()
+            } else if let Some(g) = any.downcast_ref::<Rp2040Sio>() {
+                g.bound_pad_functions()
+            } else if let Some(g) = any.downcast_ref::<Esp32c3Gpio>() {
+                g.bound_pad_functions()
+            } else if let Some(g) = any.downcast_ref::<Esp32s3Gpio>() {
+                g.bound_pad_functions()
+            } else if let Some(g) = any.downcast_ref::<Esp32Gpio>() {
+                g.bound_pad_functions()
+            } else {
+                continue;
+            };
+            for f in funcs {
+                if !out.contains(&f) {
+                    out.push(f);
+                }
+            }
+        }
+        out.sort_unstable();
+        out
+    }
+
     /// The single funnel through which every SPI device reaches a controller —
     /// the SPI counterpart of [`Self::attach_i2c_slave`]. Wraps then dispatches.
     pub fn attach_spi_device(

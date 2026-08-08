@@ -280,4 +280,32 @@ mod esp32s3_i2c_waveform_tests {
             "the bytes must survive even with no history to lay the waveform in",
         );
     }
+    /// The bus a REAL S3 lab is built from must have its I²C pads routed.
+    ///
+    /// Every other test in this file hand-builds a bus and calls
+    /// `wire_esp32s3_i2c_pads` itself, which is exactly how this stayed green
+    /// while the feature was dark: `configure_xtensa_esp32s3` — the builder
+    /// every actual S3 lab goes through — never called it. A waveform gate that
+    /// constructs its own wiring proves the narration works, not that anything
+    /// ships it.
+    ///
+    /// So this one asserts on the PRODUCTION builder and nothing else. It reads
+    /// the bound routes through the same `bound_pad_functions` hook the
+    /// bus-visibility scoreboard uses, so the two can never disagree about
+    /// whether a chip can show its bus.
+    #[test]
+    fn the_production_s3_builder_routes_the_i2c_pads() {
+        let mut bus = crate::bus::SystemBus::new();
+        let _wiring = crate::system::xtensa::configure_xtensa_esp32s3(
+            &mut bus,
+            &crate::system::xtensa::Esp32s3Opts::default(),
+        );
+        let bound = bus.bound_pad_functions();
+        assert!(
+            bound.iter().any(|f| f.contains("I2CEXT0")),
+            "configure_xtensa_esp32s3 must bind I2C0's wire to the output \
+             matrix, or every S3 lab reads a flat line while the bus is busy; \
+             bound functions were {bound:?}",
+        );
+    }
 }

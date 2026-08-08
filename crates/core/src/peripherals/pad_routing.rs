@@ -88,6 +88,28 @@ impl PadRoutes {
         self.routes.is_empty()
     }
 
+    /// Every distinct signal name BOUND to this port, regardless of which one a
+    /// pad currently selects — `["I2C1_SCL", "I2C1_SDA", …]`, in binding order.
+    ///
+    /// Deliberately *not* [`Self::func`]: that answers "who drives pin N right
+    /// now", which depends on live register state and is therefore zero on a
+    /// freshly built bus. This answers the static question "what could ever be
+    /// seen here", which is what the bus-visibility scoreboard
+    /// (`crates/core/tests/bus_visibility.rs`) measures — a bus with no binding
+    /// can never reach a pad, so the logic analyzer can never show it, no matter
+    /// what the firmware does.
+    ///
+    /// Read-only and allocating; it is a reporting seam, not a hot path.
+    pub fn bound_functions(&self) -> Vec<&'static str> {
+        let mut out: Vec<&'static str> = Vec::new();
+        for route in &self.routes {
+            if !out.contains(&route.func) {
+                out.push(route.func);
+            }
+        }
+        out
+    }
+
     /// Bind `pin` to `line` of `cell`, live whenever the pad's selector reads
     /// `selector`. Call once per datasheet-allowed (pad, signal) pair.
     pub fn bind(
