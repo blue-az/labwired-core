@@ -362,6 +362,9 @@ mod tests {
 
     struct ExternalCanPoller(Arc<AtomicUsize>);
     impl SpiDevice for ExternalCanPoller {
+        fn needs_external_bus_poll(&self) -> bool {
+            true
+        }
         fn component_id(&self) -> Option<&str> {
             Some("external-can")
         }

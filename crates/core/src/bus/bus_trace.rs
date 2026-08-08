@@ -383,6 +383,9 @@ impl TracingSpiDevice {
 }
 
 impl SpiDevice for TracingSpiDevice {
+    fn needs_external_bus_poll(&self) -> bool {
+        self.inner.needs_external_bus_poll()
+    }
     fn component_id(&self) -> Option<&str> {
         self.inner.component_id()
     }

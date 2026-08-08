@@ -1683,6 +1683,8 @@ mod c3_level_peripheral_matrix_routing {
     use crate::Bus;
     use labwired_config::{ChipDescriptor, SystemManifest};
     use std::path::PathBuf;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
 
     const INTMATRIX: u64 = 0x600C_2000;
     const LINE: u32 = 7;
@@ -1692,6 +1694,46 @@ mod c3_level_peripheral_matrix_routing {
     const SPI_DMA_INT_ENA: u64 = 0x34;
     const SPI_DMA_INT_CLR: u64 = 0x38;
     const SPI_USR_BIT: u32 = 1 << 24;
+
+    struct ExternalCanPoller(Arc<AtomicUsize>);
+    impl crate::peripherals::spi::SpiDevice for ExternalCanPoller {
+        fn needs_external_bus_poll(&self) -> bool {
+            true
+        }
+        fn component_id(&self) -> Option<&str> {
+            Some("external-can")
+        }
+        fn poll_external_bus(&mut self) {
+            self.0.fetch_add(1, Ordering::SeqCst);
+        }
+        fn transfer(&mut self, _mosi: u8) -> u8 {
+            0
+        }
+        fn cs_pin(&self) -> &str {
+            "GPIO10"
+        }
+    }
+
+    #[test]
+    fn idle_nested_can_keeps_c3_spi_in_real_legacy_walk() {
+        let polls = Arc::new(AtomicUsize::new(0));
+        let mut bus = routed_bus(SPI2_INTR_SOURCE_ID);
+        bus.attach_spi_device("spi2", Box::new(ExternalCanPoller(polls.clone())))
+            .unwrap();
+        pin_to_walk(&mut bus, "spi2");
+        Bus::tick_peripherals(&mut bus);
+        assert_eq!(polls.load(Ordering::SeqCst), 1);
+
+        let mut ordinary = routed_bus(SPI2_INTR_SOURCE_ID);
+        pin_to_walk(&mut ordinary, "spi2");
+        assert!(
+            ordinary
+                .legacy_tick_entry_descriptors()
+                .iter()
+                .all(|(name, _, _)| name != "spi2"),
+            "ordinary idle C3 SPI stays outside the legacy walk"
+        );
+    }
 
     // apb_saradc register offsets + bits (private in apb_saradc.rs; mirrored).
     const SARADC_ONETIME_SAMPLE: u64 = 0x20;
@@ -1768,7 +1810,6 @@ mod c3_level_peripheral_matrix_routing {
         // Flipping uses_scheduler false changes walk-set membership; refresh it
         // so an already-armed peripheral joins the walk (the arm's own refresh
         // ran while it was still scheduler-driven and thus excluded).
-        bus.refresh_legacy_tick_index(i);
         // Re-derive walk-deletion: once every C3 timer/level model migrated off
         // the walk (the LEDC timer port emptied the last real pinner on this
         // no-wifi_mac devkit bus), `from_config` builds the bus walk-DELETED, so
@@ -1777,6 +1818,7 @@ mod c3_level_peripheral_matrix_routing {
         // no longer deletable; recompute the flag so the walk path this gate
         // exercises actually runs.
         bus.legacy_walk_disabled = bus.derive_walk_deletable();
+        bus.refresh_legacy_tick_index(i);
     }
 
     /// Shared body: arm `name` on a scheduler bus and a walk bus, tick each, and

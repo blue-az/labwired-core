@@ -70,6 +70,10 @@ impl Mcp2515 {
 }
 
 impl SpiDevice for Mcp2515 {
+    fn needs_external_bus_poll(&self) -> bool {
+        true
+    }
+
     fn component_id(&self) -> Option<&str> {
         self.component_id.as_deref()
     }

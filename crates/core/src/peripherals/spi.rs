@@ -28,6 +28,9 @@ use crate::peripherals::spi_waveform::{SpiFraming, SpiNarrator};
 /// correct for single-device labs (MAX31855 alone).  CS-aware routing is noted
 /// as a Phase 2 follow-up.
 pub trait SpiDevice: Send {
+    fn needs_external_bus_poll(&self) -> bool {
+        false
+    }
     fn component_id(&self) -> Option<&str> {
         None
     }
@@ -779,7 +782,7 @@ impl Spi {
     pub(crate) fn has_external_bus_device(&self) -> bool {
         self.attached_devices
             .iter()
-            .any(|device| device.component_id().is_some())
+            .any(|device| device.needs_external_bus_poll())
     }
 
     pub(crate) fn poll_external_bus_devices(&mut self) {

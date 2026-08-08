@@ -520,7 +520,7 @@ impl Peripheral for Esp32s3Spi {
         let has_external_can = self
             .attached_devices
             .iter()
-            .any(|device| device.component_id().is_some());
+            .any(|device| device.needs_external_bus_poll());
         if self.clock.is_some() && has_external_can && !self.external_can_poll_scheduled {
             self.external_can_poll_scheduled = true;
             vec![(0, EXTERNAL_CAN_POLL_EVENT)]
@@ -599,6 +599,9 @@ mod tests {
 
     struct ExternalCanPoller(Arc<AtomicUsize>);
     impl SpiDevice for ExternalCanPoller {
+        fn needs_external_bus_poll(&self) -> bool {
+            true
+        }
         fn component_id(&self) -> Option<&str> {
             Some("external-can")
         }
