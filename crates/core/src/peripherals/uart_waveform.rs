@@ -149,15 +149,38 @@ impl UartNarrator {
         self.plan.span()
     }
 
+    /// Cycles the framed characters OCCUPY, stop bits included.
+    ///
+    /// Not the same as [`span`](Self::span), which is the last *edge*: a
+    /// character whose top bits are all ones ends with no transition at all, so
+    /// `0xFF` in 8N1 spans one bit period while occupying ten. Anything pacing
+    /// one character against the next needs this, not the span.
+    pub fn duration(&self) -> u64 {
+        self.cursor
+    }
+
     /// `true` when nothing has been framed.
     pub fn is_empty(&self) -> bool {
         self.plan.is_empty()
+    }
+
+    /// One bit period in engine cycles.
+    pub fn bit_time(&self) -> u64 {
+        self.plan.bit_time()
     }
 
     /// Publish so the last edge lands on `end_cycle`. See [`NarrationFit`].
     #[must_use = "a compressed narration does not carry the programmed baud rate"]
     pub fn emit_ending_at(self, lines: &PadLines, end_cycle: u64) -> NarrationFit {
         self.plan.emit_ending_at(lines, end_cycle)
+    }
+
+    /// Publish ending at `end_cycle` without reaching back past `not_before` —
+    /// the cycle an earlier flush of this same line already ran to. See
+    /// [`WavePlan::emit_between`].
+    #[must_use = "a compressed narration does not carry the programmed baud rate"]
+    pub fn emit_between(self, lines: &PadLines, not_before: u64, end_cycle: u64) -> NarrationFit {
+        self.plan.emit_between(lines, not_before, end_cycle)
     }
 }
 

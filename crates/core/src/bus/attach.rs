@@ -124,6 +124,84 @@ impl SystemBus {
         }
     }
 
+    /// Bind the RP2040 UARTs' TX/RX wires to the pads IO_BANK0 can route them
+    /// to, so a probe on GP0 shows the serial waveform rather than the SIO
+    /// output latch. No-op unless IO_BANK0, SIO and a UART are all on the bus.
+    ///
+    /// The pad map is transcribed from the RP2040 SVD's `GPIOn_CTRL.FUNCSEL`
+    /// enumerations (`uart0_tx`, `uart1_rx`, …) rather than derived, because it
+    /// is not derivable: GP0–GP7 alternate instance every four pads, but GP8/GP9
+    /// are UART**1**, not UART0, and any parity rule silently mis-assigns them.
+    /// CTS/RTS pads carry no narrated waveform and are left out.
+    pub(crate) fn wire_rp2040_uart_pads(&mut self) {
+        use crate::peripherals::rp2040::io_bank0::{Rp2040IoBank0, GPIO_FUNC_UART};
+        use crate::peripherals::rp2040::sio::Rp2040Sio;
+        use crate::peripherals::uart::{Uart, LINE_RX, LINE_TX};
+
+        /// `(pad, uart instance, line, function name)` — straight from the SVD.
+        const PADS: &[(u8, usize, usize, &str)] = &[
+            (0, 0, LINE_TX, "UART0_TX"),
+            (1, 0, LINE_RX, "UART0_RX"),
+            (4, 1, LINE_TX, "UART1_TX"),
+            (5, 1, LINE_RX, "UART1_RX"),
+            (8, 1, LINE_TX, "UART1_TX"),
+            (9, 1, LINE_RX, "UART1_RX"),
+            (12, 0, LINE_TX, "UART0_TX"),
+            (13, 0, LINE_RX, "UART0_RX"),
+            (16, 0, LINE_TX, "UART0_TX"),
+            (17, 0, LINE_RX, "UART0_RX"),
+            (20, 1, LINE_TX, "UART1_TX"),
+            (21, 1, LINE_RX, "UART1_RX"),
+            (24, 1, LINE_TX, "UART1_TX"),
+            (25, 1, LINE_RX, "UART1_RX"),
+            (28, 0, LINE_TX, "UART0_TX"),
+            (29, 0, LINE_RX, "UART0_RX"),
+        ];
+
+        let Some(functions) = self
+            .peripherals
+            .iter()
+            .find_map(|p| {
+                p.dev
+                    .as_any()
+                    .and_then(|a| a.downcast_ref::<Rp2040IoBank0>())
+            })
+            .map(Rp2040IoBank0::pad_functions)
+        else {
+            return;
+        };
+
+        for (instance, name) in ["uart0", "uart1"].iter().enumerate() {
+            let Some(idx) = self.find_peripheral_index_by_name(name) else {
+                continue;
+            };
+            let Some(lines) = self.peripherals[idx]
+                .dev
+                .as_any_mut()
+                .and_then(|a| a.downcast_mut::<Uart>())
+                .map(Uart::pad_lines_arc)
+            else {
+                continue;
+            };
+            let Some(sio_idx) = self.find_peripheral_index_by_name("sio") else {
+                return;
+            };
+            let Some(sio) = self.peripherals[sio_idx]
+                .dev
+                .as_any_mut()
+                .and_then(|a| a.downcast_mut::<Rp2040Sio>())
+            else {
+                return;
+            };
+            for &(pin, pad_instance, line, func) in PADS {
+                if pad_instance != instance {
+                    continue;
+                }
+                sio.bind_pad_route(functions.clone(), &lines, pin, GPIO_FUNC_UART, line, func);
+            }
+        }
+    }
+
     /// Bind the RP2040 I²C controllers' wires to the pads IO_BANK0 can route
     /// them to, so `read_gpio_pad` — and the logic analyzer through it — sees
     /// the bus rather than the SIO output latch. No-op unless IO_BANK0, SIO and

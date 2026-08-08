@@ -131,12 +131,30 @@ impl WavePlan {
     /// when it is not. See [`NarrationFit`].
     #[must_use = "a compressed narration does not carry the programmed rate"]
     pub fn emit_ending_at(self, lines: &PadLines, end_cycle: u64) -> NarrationFit {
+        self.emit_between(lines, 0, end_cycle)
+    }
+
+    /// Publish ending at `end_cycle` while reaching no further back than
+    /// `not_before`.
+    ///
+    /// A bus that falls silent between transactions can reach back as far as it
+    /// likes, which is what [`emit_ending_at`] does. A line that narrates
+    /// repeatedly — a UART flushing one burst of characters after another —
+    /// cannot: reaching back over cycles an earlier flush already painted would
+    /// re-drive levels the capture layer has already recorded, inventing
+    /// transitions that never happened. Passing the previous flush's end as
+    /// `not_before` confines each narration to cycles no other narration owns.
+    ///
+    /// [`emit_ending_at`]: Self::emit_ending_at
+    #[must_use = "a compressed narration does not carry the programmed rate"]
+    pub fn emit_between(self, lines: &PadLines, not_before: u64, end_cycle: u64) -> NarrationFit {
         let span = self.span();
-        if span <= end_cycle {
+        let available = end_cycle.saturating_sub(not_before);
+        if span <= available {
             self.emit_starting_at(lines, end_cycle - span);
             NarrationFit::Exact
         } else {
-            self.emit_compressed_into(lines, end_cycle)
+            self.emit_compressed_into(lines, available, end_cycle)
         }
     }
 
@@ -148,11 +166,16 @@ impl WavePlan {
         }
     }
 
-    /// Scale the plan into the cycles that ARE available.
-    fn emit_compressed_into(self, lines: &PadLines, end_cycle: u64) -> NarrationFit {
+    /// Scale the plan into the `available` cycles ending at `end_cycle`.
+    fn emit_compressed_into(
+        self,
+        lines: &PadLines,
+        available: u64,
+        end_cycle: u64,
+    ) -> NarrationFit {
         let span = self.span();
         let instants = self.distinct_instants();
-        if span == 0 || end_cycle < instants {
+        if span == 0 || available < instants {
             // Below one cycle per transition there is no honest rendering: the
             // capture layer keeps a single level per channel per cycle, so any
             // packing collapses transitions and the trace would decode to bytes
@@ -171,7 +194,7 @@ impl WavePlan {
             }
             return NarrationFit::LevelsOnly {
                 transitions: instants,
-                available: end_cycle,
+                available,
             };
         }
         // Keep edge order, keep simultaneous edges simultaneous, and keep every
@@ -304,6 +327,40 @@ mod tests {
         let _ = plan.emit_ending_at(&lines, 100);
         let cycles: Vec<u64> = tap.take_events().iter().map(|e| e.cycle).collect();
         assert_eq!(cycles, vec![100, 100], "one instant, two channels");
+    }
+
+    #[test]
+    fn a_floor_stops_a_narration_repainting_cycles_an_earlier_one_owns() {
+        // The previous flush painted up to cycle 1000. This plan needs 100
+        // cycles but retires only 5 later, so reaching back its full span would
+        // re-drive levels already recorded there. The floor forces it to
+        // compress into the cycles it actually owns.
+        let mut plan = WavePlan::new(&[true], 50);
+        plan.edge(0, false, 50);
+        plan.edge(0, true, 100);
+        let lines = wire();
+        let tap = LogicTap::new();
+        lines.install_tap(Some(tap.clone()), vec![vec![0]]);
+        let fit = plan.emit_between(&lines, 1_000, 1_005);
+        assert!(matches!(fit, NarrationFit::Compressed { .. }), "{fit:?}");
+        let cycles: Vec<u64> = tap.take_events().iter().map(|e| e.cycle).collect();
+        assert!(
+            cycles.iter().all(|&c| c > 1_000),
+            "nothing reaches back into cycles the previous narration owns: {cycles:?}",
+        );
+    }
+
+    #[test]
+    fn a_floor_that_leaves_room_costs_no_fidelity() {
+        let mut plan = WavePlan::new(&[true], 50);
+        plan.edge(0, false, 50);
+        plan.edge(0, true, 100);
+        let lines = wire();
+        let tap = LogicTap::new();
+        lines.install_tap(Some(tap.clone()), vec![vec![0]]);
+        assert_eq!(plan.emit_between(&lines, 1_000, 2_000), NarrationFit::Exact);
+        let cycles: Vec<u64> = tap.take_events().iter().map(|e| e.cycle).collect();
+        assert_eq!(cycles, vec![1_950, 2_000]);
     }
 
     #[test]

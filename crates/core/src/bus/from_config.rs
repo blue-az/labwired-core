@@ -873,6 +873,9 @@ impl SystemBus {
         bus.wire_esp32s3_i2c_pads();
         // RP2040: bind I²C wires to the pads IO_BANK0's FUNCSEL can route them to.
         bus.wire_rp2040_i2c_pads();
+        // Same for the RP2040 UARTs' TX/RX, so serial output is a waveform on
+        // the routed pad and not just console text.
+        bus.wire_rp2040_uart_pads();
         // STM32: share each classic/FIFO SPI bit engine's live SCK/MOSI/MISO
         // line levels with the STM32 GPIO ports so AF-routed pads carry the
         // real waveform. No-op for every other chip.
