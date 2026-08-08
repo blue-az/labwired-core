@@ -141,6 +141,14 @@ ureq = { version = "2.12", features = ["json"] }
 
 [profile.dev]
 panic = "abort"
+# The simulator is an interpreter: its hot loop is thousands of tiny generic
+# calls (HashMap<u64,u32> register lookups, `Option`/iterator adapters, `Any`
+# downcasts) that cost nothing once inlined and cost a call each when not.
+# At opt-level 0 that makes debug ~13x slower than release, which is what
+# pushes `cargo test --workspace` past the CI timeout. opt-level = 1 turns on
+# inlining + mem2reg WITHOUT touching `debug-assertions` or `overflow-checks`,
+# so every `debug_assert!` and every std UB precondition check still runs.
+opt-level = 1
 
 [profile.release]
 panic = "abort"
