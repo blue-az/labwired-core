@@ -529,7 +529,7 @@ boards:
     doc: docs/boards/esp32c3.md
     chip: configs/chips/esp32c3.yaml
     tier: silicon-verified
-    note: "Reset-state oracle, not behavioural. ~40 peripherals declared (NOT 6 as the prose doc says). 2026-08-08: added a behavioural model of the PMS (permission control / memory protection) — peripherals/esp32c3/pms.rs plus the store and instruction-fetch checks in bus/ and cpu/riscv.rs. NO LIVE RE-CAPTURE BACKS THIS. The register map, offsets and reset values it reads come from the existing silicon-captured sensitive.yaml descriptor (unchanged by this work), and the behaviour is derived from ESP-IDF v5.3.1 sources (soc/esp32c3/memprot_defs.h, hal/esp32c3/memprot_ll.h, esp_hw_support/port/esp32c3/esp_memprot.c) plus the app-segment split address of the real image that faulted on a bench (IRAM 0x40390C00 = DRAM 0x3FC90C00). No PMS violation has been reproduced against live silicon under instrumentation, and the reset oracle does not exercise it: the model is inert at reset by construction (every ..._PMS_CONSTRAIN_* reset value grants full permissions), which is exactly why the reset capture cannot corroborate it."
+    note: "Reset-state oracle, not behavioural. ~40 peripherals declared (NOT 6 as the prose doc says)."
     offline_tests:
       - "esp32c3_reset_conformance::esp32c3_reset_values_match_silicon (79 regs; 366/423 overlap matched silicon)"
     silicon:
@@ -1087,8 +1087,40 @@ boards:
     # re-capture needs a physical power cycle. Nothing in the live diff lies on
     # this change's surface: it is scheduler arming, and the descriptors the
     # oracle asserts are untouched.
+    # 2026-08-08: BEHAVIOURAL model of the PMS (permission control / memory
+    # protection), which the twin did not model at all. New
+    # crates/core/src/peripherals/esp32c3/pms.rs (split-line decode, four areas
+    # per bus port, per-area permissions, latched violation status, write
+    # locks) plus store and instruction-fetch checks in crates/core/src/bus/
+    # and crates/core/src/cpu/riscv.rs. Closes a real divergence: a C3 running
+    # the published BLE Pong sketch panicked on a bench with "Memory protection
+    # fault" (mcause 26 = ETS_MEMPROT_ERR_INUM) while the same image ran clean
+    # in the twin, because SENSITIVE's permission registers were inert storage.
+    # NO LIVE RE-CAPTURE BACKS THIS, and no PMS violation has been reproduced
+    # against silicon under instrumentation. The register map, offsets and reset
+    # values come from the EXISTING silicon-captured sensitive.yaml descriptor,
+    # which this change does not touch; the behaviour is derived from ESP-IDF
+    # v5.3.1 (soc/esp32c3/memprot_defs.h, hal/esp32c3/memprot_ll.h,
+    # esp_hw_support/port/esp32c3/esp_memprot.c). No register is added, no base,
+    # width or reset value changes, and nothing in the reset-oracle asserted set
+    # moves - the model is INERT at reset by construction (every
+    # ..._PMS_CONSTRAIN_* reset value grants full permissions), which is
+    # precisely why a reset capture cannot corroborate it.
+    # Corroboration that is NOT self-referential: booting the frozen BLE Pong
+    # image through the mask ROM, IDF's own startup programs split line
+    # 0x40390C00 into all five split registers - the same address derived
+    # independently from that build's app segments (IRAM text ends 0x40390A84,
+    # .data starts 0x3FC90C00, gp = .data + 0x800) - sets IRAM areas R|X,R|X,
+    # R|X,NONE and DRAM areas NONE,R|W,R|W,R|W, sets all five lock bits, and
+    # routes matrix sources 56 and 57 to CPU line 26. That is asserted by
+    # tests/esp32c3_pms_shipped_firmware.rs.
+    # Evidence: 168 core suites / 3617 tests green; esp32c3_walk_differential
+    # 10/10 under --ignored; esp32c3_clamped_full_state_differential 3/3;
+    # world_esp32c3_ble_pong 2/2; the three shipped labs still batching at mean
+    # 109-126 against floors of 8/8/40; register-modeling coverage for esp32c3
+    # unchanged at 2545 with the baseline file untouched.
     drift_ack: 2026-08-08
-    drift_ack_digest: 1a6886f9d28bbe8d2320ca2be97789ce41943988cf3a87109489f69e517b9e08
+    drift_ack_digest: 3d2aa3c843b6c1d381e7b8b8a6f0eb48c4c6c0bf4292af4133f33bf6b8d35fca
 
   - id: nucleo-l476rg
     doc: docs/boards/nucleo-l476rg.md

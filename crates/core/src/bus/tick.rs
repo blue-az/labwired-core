@@ -778,14 +778,18 @@ impl SystemBus {
             }
         };
 
-        for word in 0..self.esp32c3_asserted_sources.len() {
-            // Union of walk-emitted level sources (rebuilt each tick) and
+        for (word, (&walk, (&sched, &pms))) in self
+            .esp32c3_asserted_sources
+            .iter()
+            .zip(self.esp32c3_sched_asserted_sources.iter().zip(&pms_sources))
+            .enumerate()
+        {
+            // Union of walk-emitted level sources (rebuilt each tick),
             // scheduler-driven peripheral level sources (re-derived from
-            // `matrix_irq_sources`), so a SYSTIMER migrated off the walk keeps
-            // its level-sensitive alarm IRQ routed.
-            let mut bits = self.esp32c3_asserted_sources[word]
-                | self.esp32c3_sched_asserted_sources[word]
-                | pms_sources[word];
+            // `matrix_irq_sources`, so a SYSTIMER migrated off the walk keeps
+            // its level-sensitive alarm IRQ routed), and latched PMS
+            // violations.
+            let mut bits = walk | sched | pms;
             while bits != 0 {
                 let bit = bits.trailing_zeros();
                 route_source(word as u32 * 64 + bit);

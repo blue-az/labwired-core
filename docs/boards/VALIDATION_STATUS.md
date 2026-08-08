@@ -12,7 +12,7 @@ The models column is a content digest over everything that board's `models` list
 | `nrf52840` | 🟢 silicon-verified | 2026-06-17 | `6142ba057c56f787` | ⚠ drift acked 2026-08-08 (re-capture pending) |
 | `seeed-xiao-nrf52840-sense` | 🟢 silicon-verified | 2026-06-17 | `6142ba057c56f787` | ⚠ drift acked 2026-08-08 (re-capture pending) |
 | `stm32h563` | 🟢 silicon-verified | 2026-06-22 | `bec6988944d80986` | ⚠ drift acked 2026-08-08 (re-capture pending) |
-| `esp32c3` | 🟢 silicon-verified | 2026-06-17 | `1a6886f9d28bbe8d` | ⚠ drift acked 2026-08-08 (re-capture pending) |
+| `esp32c3` | 🟢 silicon-verified | 2026-06-17 | `3d2aa3c843b6c1d3` | ⚠ drift acked 2026-08-08 (re-capture pending) |
 | `nucleo-l476rg` | 🟢 silicon-verified | 2026-06-20 | `266bc466735dd241` | ⚠ drift acked 2026-08-08 (re-capture pending) |
 | `nucleo-l073rz` | 🟢 silicon-verified | 2026-06-20 | `105c3038e66f7309` | ⚠ drift acked 2026-08-08 (re-capture pending) |
 | `stm32f103` | 🟢 silicon-verified | 2026-06-20 | `ba59367c8644427e` | ⚠ drift acked 2026-08-08 (re-capture pending) |
@@ -60,7 +60,7 @@ The models column is a content digest over everything that board's `models` list
 ## `esp32c3` — 🟢 silicon-verified
 
 - Doc: [`docs/boards/esp32c3.md`](esp32c3.md)  ·  Chip: `configs/chips/esp32c3.yaml`
-- Note: Reset-state oracle, not behavioural. ~40 peripherals declared (NOT 6 as the prose doc says). 2026-08-08: added a behavioural model of the PMS (permission control / memory protection) — peripherals/esp32c3/pms.rs plus the store and instruction-fetch checks in bus/ and cpu/riscv.rs. NO LIVE RE-CAPTURE BACKS THIS. The register map, offsets and reset values it reads come from the existing silicon-captured sensitive.yaml descriptor (unchanged by this work), and the behaviour is derived from ESP-IDF v5.3.1 sources (soc/esp32c3/memprot_defs.h, hal/esp32c3/memprot_ll.h, esp_hw_support/port/esp32c3/esp_memprot.c) plus the app-segment split address of the real image that faulted on a bench (IRAM 0x40390C00 = DRAM 0x3FC90C00). No PMS violation has been reproduced against live silicon under instrumentation, and the reset oracle does not exercise it: the model is inert at reset by construction (every ..._PMS_CONSTRAIN_* reset value grants full permissions), which is exactly why the reset capture cannot corroborate it.
+- Note: Reset-state oracle, not behavioural. ~40 peripherals declared (NOT 6 as the prose doc says).
 - Silicon: **2026-06-17** on USB-JTAG (built-in, openocd-esp32) — re-verified live — reset oracle re-captured live 2026-06-17: 1123/1123 static registers match committed baseline (13 deltas all in per-chip efuse + live USB-device state, none in the asserted set); esp32c3_reset_values_match_silicon passes
   - offline (CI): esp32c3_reset_conformance::esp32c3_reset_values_match_silicon (79 regs; 366/423 overlap matched silicon)
 - Drift status: **⚠ drift acked 2026-08-08 (re-capture pending)**
