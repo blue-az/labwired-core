@@ -1300,7 +1300,7 @@ const FINE_TICKS_PER_CLKN: u64 = 625;
 const CYCLES_PER_FINE_TICK: u64 = CYCLES_PER_CLKN_TICK / FINE_TICKS_PER_CLKN;
 
 /// Furthest ahead [`Peripheral::on_event`] will commit its self-chained wake
-/// before waking to re-evaluate. 8 CLKN ticks = 2.5 ms of guest time.
+/// before waking to re-evaluate. 16 CLKN ticks = 5 ms of guest time.
 ///
 /// ## Why a cap is needed at all
 ///
