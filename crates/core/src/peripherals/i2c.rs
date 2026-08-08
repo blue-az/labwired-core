@@ -823,6 +823,49 @@ impl L4I2c {
         cfg!(feature = "event-scheduler") && self.clock.is_some()
     }
 
+    /// Clearing CR1.PE puts the transaction engine and every status bit back to
+    /// their reset values, exactly as silicon does (RM0367 §26.7.1 / RM0351
+    /// §39.7.1: "When PE=0 ... internal state machines and status bits are put
+    /// back to their reset value"). ISR returns to 0x1 (TXE), so BUSY reads 0
+    /// while the peripheral is disabled.
+    ///
+    /// The model used to store CR1 and nothing else, which leaked a whole
+    /// transfer's worth of state through a disable. That is the standard HAL
+    /// recovery path — `HAL_I2C_Master_Transmit` NACKs an absent slave, and
+    /// with AUTOEND=0 nothing clears BUSY, so firmware toggles PE to reset the
+    /// block. On the NUCLEO-L073RZ demo (no I²C device on the board, so every
+    /// probe NACKs) that left BUSY latched for the rest of the run.
+    ///
+    /// The cost was not just a wrong register read. `active()` is true while
+    /// BUSY is set, so the scheduler chain (`on_event` → `reschedule_delay: 1`)
+    /// re-armed one cycle ahead forever, and `plan_cpu_window`'s scheduler
+    /// deadline clamp pinned the CPU quantum to a single instruction for the
+    /// life of the machine — the board ran at 1.00 steps/batch while its
+    /// siblings batched 512 (#835).
+    ///
+    /// CONFIG registers are deliberately untouched. The RM resets the state
+    /// machine and status bits; OAR1/OAR2/TIMINGR/TIMEOUTR/CR2 are control
+    /// state that survives a disable, and firmware re-arms CR2 before the next
+    /// START anyway. A stale CR2 cannot re-fire on its own — this model acts on
+    /// START only at the instant of the CR2 write.
+    fn disable_reset(&mut self) {
+        self.isr = 0x0000_0001; // TXE=1, BUSY clear — the reset value
+        self.icr = 0;
+        self.state = I2cState::Idle;
+        self.cycles_remaining = 0;
+        self.nbytes = 0;
+        self.first_tx_loaded = false;
+        self.is_reading = false;
+        self.autoend = false;
+        self.tx_preloaded = false;
+        if let Some(idx) = self.current_target.take() {
+            // Release the addressed slave: silicon drops SCL/SDA, so a device
+            // left mid-transfer must see the bus go away rather than stay
+            // selected into whatever the next transfer addresses.
+            self.attached_devices[idx].borrow_mut().stop();
+        }
+    }
+
     /// Engine ticks the START + address + ACK phase occupies the bus before
     /// CR2.START self-clears and the ACK/NACK verdict lands. Real silicon
     /// (RM0351 §37.7.5): after software sets START the controller drives the
@@ -908,7 +951,13 @@ impl L4I2c {
 
     fn write_reg(&mut self, offset: u64, value: u32) {
         match offset {
-            0x00 => self.cr1 = value & 0x00FF_E1FF,
+            0x00 => {
+                let was_enabled = (self.cr1 & 1) != 0;
+                self.cr1 = value & 0x00FF_E1FF;
+                if was_enabled && (self.cr1 & 1) == 0 {
+                    self.disable_reset();
+                }
+            }
             0x04 => {
                 // START (bit13) / STOP (bit14) self-clear in silicon — but only
                 // once the corresponding condition is actually generated on the
@@ -3219,5 +3268,105 @@ mod kinetis_scheduler {
             (5, Op::Write(0x04, 0x55)),                    // byte → IICIF
         ];
         assert_walk_identical(&script, 12, "kinetis IICIE-off no pend");
+    }
+}
+
+#[cfg(test)]
+mod l4_disable_tests {
+    use super::L4I2c;
+
+    // I2C v2 register map (RM0367 §26.7 / RM0351 §39.7).
+    const CR1: u64 = 0x00;
+    const CR2: u64 = 0x04;
+    const TIMINGR: u64 = 0x10;
+    const ISR: u64 = 0x18;
+
+    const PE: u32 = 1 << 0;
+    const BUSY: u32 = 1 << 15;
+    const START: u32 = 1 << 13;
+
+    /// CR2 arming a 1-byte write to an unattached slave, AUTOEND=0 — the shape
+    /// the NUCLEO-L073RZ demo issues, and the one the HAL recovers from by
+    /// toggling PE. Address 0x52 in SADD[7:1].
+    const ARM_WRITE: u32 = START | (0x52 << 1) | (1 << 16);
+
+    fn armed() -> L4I2c {
+        let mut i2c = L4I2c::default();
+        i2c.write_reg(TIMINGR, 0x0010_0000);
+        i2c.write_reg(CR1, PE);
+        i2c.write_reg(CR2, ARM_WRITE);
+        assert_eq!(
+            i2c.read_reg(ISR) & BUSY,
+            BUSY,
+            "precondition: arming a transfer latches BUSY"
+        );
+        i2c
+    }
+
+    /// RM0367 §26.7.1 / RM0351 §39.7.1: "When PE=0 ... internal state machines
+    /// and status bits are put back to their reset value." The model used to
+    /// store CR1 and leave everything else alone, so BUSY read 1 forever after
+    /// the HAL's standard NACK recovery (#835).
+    #[test]
+    fn clearing_pe_clears_busy() {
+        let mut i2c = armed();
+        i2c.write_reg(CR1, 0);
+        assert_eq!(
+            i2c.read_reg(ISR),
+            0x0000_0001,
+            "PE=0 must return ISR to its reset value (TXE set, BUSY clear)"
+        );
+    }
+
+    /// The throughput half of #835: while BUSY is latched, `active()` stays true
+    /// and the per-cycle engine chain re-arms at +1 forever, which pins the CPU
+    /// quantum to one instruction for the life of the machine.
+    #[test]
+    fn clearing_pe_makes_the_engine_idle() {
+        let mut i2c = armed();
+        assert!(i2c.active(), "precondition: an armed transfer is active");
+        i2c.write_reg(CR1, 0);
+        assert!(
+            !i2c.active(),
+            "a disabled peripheral must not keep the scheduler chain alive"
+        );
+    }
+
+    /// Re-enabling must start from a clean engine rather than resuming the
+    /// transfer that was abandoned.
+    #[test]
+    fn re_enabling_starts_clean() {
+        let mut i2c = armed();
+        i2c.write_reg(CR1, 0);
+        i2c.write_reg(CR1, PE);
+        assert_eq!(
+            i2c.read_reg(ISR) & BUSY,
+            0,
+            "re-enable must not restore BUSY"
+        );
+        assert!(!i2c.active());
+    }
+
+    /// A write that leaves PE set must not disturb a transfer in flight —
+    /// firmware sets interrupt-enable bits in CR1 mid-transfer all the time.
+    #[test]
+    fn setting_other_cr1_bits_does_not_reset_the_engine() {
+        let mut i2c = armed();
+        i2c.write_reg(CR1, PE | (1 << 1) | (1 << 2)); // TXIE | RXIE
+        assert_eq!(
+            i2c.read_reg(ISR) & BUSY,
+            BUSY,
+            "an in-flight transfer must survive an unrelated CR1 write"
+        );
+        assert!(i2c.active());
+    }
+
+    /// Writing CR1 while already disabled is a no-op, not a second reset.
+    #[test]
+    fn writing_cr1_while_disabled_is_inert() {
+        let mut i2c = L4I2c::default();
+        i2c.write_reg(CR1, 0);
+        assert_eq!(i2c.read_reg(ISR), 0x0000_0001);
+        assert!(!i2c.active());
     }
 }

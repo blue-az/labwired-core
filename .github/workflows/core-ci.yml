@@ -26,6 +26,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      # fetch-depth: 0 — verify-release-runner-contract.sh reads the pinned
+      # action's source out of an OLD commit by sha (`git cat-file -e <sha>`,
+      # then `git show <sha>:<path>`). A bounded depth leaves that object
+      # unfetched. Unlike the history-derived gates elsewhere in this file that
+      # is not a silent wrongness: the script calls `fail` with "commit <sha> is
+      # available locally", so the job goes red with the actual reason. Keep the
+      # depth anyway — a red build nobody can explain is not much better.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -236,6 +243,57 @@ jobs:
             echo "::notice title=fmt-autofix push skipped::${BRANCH} moved while this job was running, so the fixup was not pushed. The newer commit has its own fmt-autofix run."
           fi
 
+      # ── FALLBACK when the fixup CANNOT be pushed (fork PR / no PAT) ───────
+      #
+      # WHY THIS EXISTS. The green-skip above was meant to keep a job that has
+      # nothing to do from going red. What it actually did was report SUCCESS
+      # while formatting went unchecked, so unformatted code merged and
+      # `core-integrity` — which runs on push-to-main only — turned main red
+      # instead. On 2026-08-07 `CI_FMT_PAT` was unset and main was red on
+      # `Check Formatting` for seven consecutive pushes; every one of those PRs
+      # showed a green fmt-autofix.
+      #
+      # So the skip is now narrowed to what it always claimed to be: green when
+      # there is genuinely NOTHING TO DO. A PR whose tree is already formatted
+      # still passes with no PAT and no push. Only a PR that is actually
+      # unformatted, on a run that cannot fix it, goes red — and it says which
+      # files and what to type. That is a signal, not noise, so it cannot train
+      # anyone to ignore it.
+      #
+      # Configure `CI_FMT_PAT` (contents:write) and this path stops running at
+      # all: the push branch above handles it silently, as designed.
+      - name: Checkout for the read-only formatting check
+        if: steps.gate.outputs.ok != 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install Rust (pinned — must match pr-gate)
+        if: steps.gate.outputs.ok != 'true'
+        uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          components: rustfmt
+
+      - name: Verify formatting (cannot push the fixup)
+        if: steps.gate.outputs.ok != 'true'
+        run: |
+          set -euo pipefail
+          cargo fmt --version
+
+          if cargo fmt --all -- --check; then
+            echo "Already formatted — nothing to push, and nothing to fix."
+            echo "### Formatting: clean (checked, not applied)" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          echo "::error title=Unformatted code, and this run cannot fix it::This PR is not rustfmt-clean and the autofix could not be pushed (fork PR, or CI_FMT_PAT is unset). Run 'cargo fmt --all' with the pinned 1.95.0 toolchain and push. Merging as-is turns main red on core-integrity."
+          {
+            echo "### Formatting: FAILED"
+            echo
+            echo 'Run `cargo +1.95.0 fmt --all` and push. The autofix job could not do it for you on this run.'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+
   # ── PR merge gate (REQUIRED) — target wall clock under ~1 minute ───────────
   # focused clippy/tests only. No firmware builds, no feature-variant
   # recompiles, no coverage/onboarding/arduino matrices (those are nightly).
@@ -288,6 +346,9 @@ jobs:
       # Full history required: generate_validation_status.py uses
       # `git log -1 --format=%cI -- <model>` for drift. Shallow checkout
       # makes every path resolve to HEAD's date → false DRIFT failures.
+      # The generator now refuses to run at all on a truncated history rather
+      # than emitting wrong dates, so lowering this turns the whole job red with
+      # an explanation instead of quietly producing a bad document.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -315,6 +376,32 @@ jobs:
           python -m pip install --quiet pyyaml
           python3 scripts/generate_validation_status.py --check --drift
           python3 scripts/generate_firmware_exercise_matrix.py --check
+
+      # The perf gate measures whatever chip descriptors it can link a fixture
+      # against. Adding a chip on an unhandled memory map used to drop it out of
+      # the gate silently — this asserts, on the PR that adds it, that it is
+      # either covered or waived with a reason. Pure Python, seconds.
+      #
+      # The pytest run alongside it covers the same property from the other
+      # side (a stale baseline for a deleted chip, a fixture that shares a
+      # memory map it must not). scripts/ has carried unit tests for a while
+      # with nothing executing them — scripts/ci/test_board_matrix.py has never
+      # been run by any workflow — so this step names the files it runs rather
+      # than discovering them, and grows a line when a suite is added.
+      #
+      # ADDING A TEST FILE UNDER scripts/? Add it to the pytest line below or it
+      # will never run. test_generate_validation_status.py covers the
+      # incomplete-history guard, which is precisely a "this ran and told you
+      # nothing" bug; a test for it that nothing executes would be the same bug
+      # one level up. It needs pyyaml, installed by the step above.
+      - name: Perf gate — every chip covered or waived
+        run: |
+          python -m pip install --quiet pytest
+          python3 scripts/perf/board_perf.py --check-coverage
+          python3 -m pytest -q \
+            scripts/perf/test_board_perf.py \
+            scripts/ci/test_board_matrix.py \
+            scripts/test_generate_validation_status.py
 
       # Universal staleness gate. Regenerates EVERY committed artifact derived
       # from repo state and asserts the tree is clean. This catches the
@@ -401,6 +488,22 @@ jobs:
       - name: Walk-deletion derivation (PR-fast structural arm)
         run: cargo test -p labwired-core --test esp32_classic_walk_differential
 
+      # The BLE Pong fixture is a COMMITTED copy of a published community lab,
+      # and `world_esp32c3_ble_pong` (release-only, push-to-main) is the only
+      # thing that boots it. Both checks are cheap enough to run here so a PR
+      # that touches the sketch is told BEFORE the merge, not after.
+      #
+      #   * the cargo test hashes the committed .ino/.bin pair, so neither can
+      #     move without the other;
+      #   * the drift script asks api.labwired.com whether the OWNER has since
+      #     edited the live project. Nothing in-tree can know that, and not
+      #     knowing it is how the fixture sat at the #828 build while the
+      #     published lab moved on and three gates stayed green.
+      - name: BLE Pong fixture provenance (committed .ino ↔ .bin)
+        run: cargo test -p labwired-core --test fixture_ble_pong_provenance
+      - name: BLE Pong fixture drift (committed .ino ↔ LIVE published lab)
+        run: scripts/ci/check-published-lab-drift.sh
+
   # ── Browser-configuration observable gate (PR; parallel with pr-gate) ──────
   #
   # THE LANE THAT DID NOT EXIST PRE-MERGE.
@@ -472,6 +575,52 @@ jobs:
         run: >
           cargo test -p labwired-core --features event-scheduler
           --test esp32_classic_walk_differential -- --nocapture
+
+      # SCHEDULER-ONLY FIDELITY LANES — the tests that no PR job could run.
+      #
+      # `crates/core/tests/` holds 22 integration files gated
+      # `#![cfg(feature = "event-scheduler")]`. A plain `cargo test --test X`
+      # on one of them silently runs ZERO tests and reports green, so the only
+      # way they execute is a lane that passes the feature — and until this
+      # step, seventeen of the twenty-two ran ONLY in the nightly/dispatch
+      # `core-full` job. That is not a hypothetical: core#823 added `board_io`
+      # to `configs/systems/nrf52840-dk.yaml`, the button's boot level
+      # presented itself as a GPIO edge, the per-edge scheduler harvest handed
+      # the RADIO a duplicate wake, and BLE 1 Mbit air time collapsed from 32
+      # cycles to 2 — a faithful twin that stopped simulating transmission
+      # time at all. Every required check was green, because the file that
+      # asserts that invariant had no pre-merge lane.
+      #
+      # The list is the sub-2s half of the uncovered set (measured; the whole
+      # step adds ~3s of test runtime to a job that already builds this exact
+      # crate + feature). The expensive remainder stays nightly, named and
+      # reasoned in `scheduler_lane_coverage`'s NIGHTLY_ONLY table — that
+      # ratchet is what keeps this list from silently rotting again: a new
+      # scheduler-gated test file must be added here or given a written reason.
+      # `esp32c3_bt_event_residency_gate` is here and not in `core-integrity`
+      # BECAUSE OF THE FEATURE MATRIX, not because it is cheap (it is: 4.5s).
+      # The property it defends — `esp32c3::bt` stays inside
+      # MAX_LIVE_EVENTS_PER_PERIPHERAL — has an in-engine backstop, the
+      # `debug_assert!` behind `live_event_ceiling_trips`, and NEITHER standing
+      # lane can reach it: `cargo test -p labwired-core` runs debug but without
+      # `event-scheduler`, so no scheduler runs at all, and `core-integrity`'s
+      # scheduler lane is `--release`, which compiles `debug_assert!` out. Debug
+      # + `--features event-scheduler` is this job, and only this job. The fix
+      # that took `live_event_ceiling_trips` from 3310 to 0 merged with nothing
+      # asserting that number anywhere.
+      - name: Scheduler-only fidelity lanes (walk≡scheduler timing gates)
+        run: >
+          cargo test -p labwired-core --features event-scheduler
+          --test esp32c3_bt_event_residency_gate
+          --test nrf52_timer_walk_differential
+          --test nrf52_easydma_tick512_fidelity
+          --test nrf52840_timer_machine_gate
+          --test nrf54l15_grtc_walk_differential
+          --test rp2040_timer_machine_gate
+          --test rp2040_i2c_irq_delivery
+          --test stm32f103_dma_walk_differential
+          --test systick_walk_differential
+          --test board_batch_width
 
   # ── Main-branch integrity (push to main) — fuller than PR, still no matrices ─
   integrity:
@@ -584,11 +733,34 @@ jobs:
       # minutes in debug. It is the only lane that runs two ESP32-C3 instances
       # against each other over the BLE air, which is where "both nodes have the
       # same address" hid.
+      # Run the drift check BEFORE the release-gated world test below, so a red
+      # lane says "the published lab moved" rather than leaving someone to infer
+      # it from a two-node BLE failure. `pr-gate` runs this too; keeping it here
+      # is what covers the case nobody's PR causes — the owner editing the live
+      # project between merges. On push-to-main and on the nightly cron this is
+      # the only lane that looks at production at all.
+      - name: BLE Pong fixture drift (committed .ino ↔ LIVE published lab)
+        run: scripts/ci/check-published-lab-drift.sh
+
+      # `esp32c3_usb_cdc_console` is here for COST, not because it is
+      # release-only: same reason as `world_esp32c3_ble_pong` above. It boots
+      # the C3 mask ROM, which is 335s in debug (measured) and seconds in
+      # release, and this step already has the release + event-scheduler build
+      # warm — a separate debug step would pay a whole second build to run the
+      # same assertions far slower.
+      #
+      # It has to run SOMEWHERE with the feature on: the file is
+      # `#![cfg(feature = "event-scheduler")]`, so a plain
+      # `cargo test --test esp32c3_usb_cdc_console` executes ZERO tests and
+      # reports green. #860's `scheduler_lane_coverage` caught that #832 shipped
+      # its own headline behaviour — CDC-on-boot builds actually printing — with
+      # no lane running the test that proves it.
       - name: Release-gated tests — cfg(not(debug_assertions))
         run: >
           cargo test --release -p labwired-core --features event-scheduler
           --lib --test event_scheduler --test release_only_cfg_ratchet
           --test world_esp32c3_ble_pong
+          --test esp32c3_usb_cdc_console
 
       # `esp32_classic_walk_differential` is BOTH arms here, and both arms are
       # covered pre-merge as well — do not read this step as their only lane.
@@ -605,6 +777,12 @@ jobs:
       # the browser's own feature set BEFORE THE MERGE — a push-to-main lane
       # reports that after the fact. See the comment on
       # `pr-scheduler-observable`.
+      # The nRF52 / nRF54 / RP2040 / SysTick / F103 entries below are the same
+      # set `pr-scheduler-observable` runs pre-merge, kept here as the
+      # push-to-main backstop for anything that reaches main outside the PR
+      # flow. Both lanes are held honest by the `scheduler_lane_coverage`
+      # ratchet; see the comment on that PR step for what shipped through the
+      # hole they close.
       - name: Feature gate — scheduler IRQ delivery (jit + event-scheduler)
         run: >
           cargo test -p labwired-core --features jit,event-scheduler
@@ -615,6 +793,15 @@ jobs:
           --test stm32_timer_walk_differential
           --test stm32_dma_walk_differential
           --test kw41z_walk_free_differential
+          --test nrf52_timer_walk_differential
+          --test nrf52_easydma_tick512_fidelity
+          --test nrf52840_timer_machine_gate
+          --test nrf54l15_grtc_walk_differential
+          --test rp2040_timer_machine_gate
+          --test rp2040_i2c_irq_delivery
+          --test stm32f103_dma_walk_differential
+          --test systick_walk_differential
+          --test board_batch_width
           --lib
 
       # HARDWARE ORACLE UNDER THE SCHEDULER FEATURE — the configuration that
@@ -669,7 +856,16 @@ jobs:
       github.event_name == 'schedule' ||
       (github.event_name == 'push' && contains(github.event.head_commit.message, '[full-ci]'))
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # 45 was the budget for a job that never finished: `Run Workspace Tests`
+    # was cancelled at exactly 45:00 on every run, including the nightly, so
+    # the two steps after it never ran at all. With `opt-level = 1` the job
+    # completes in 44m32s — which cleared the old limit by 28 SECONDS while
+    # now doing strictly more work, since those two steps execute. That is a
+    # coin flip, not a margin. 75 leaves room for runner variance and a cold
+    # cache without hiding a real regression: if this job starts approaching
+    # 75 minutes, something has genuinely got slower and should be measured,
+    # not accommodated again.
+    timeout-minutes: 75
     steps:
       # fetch-depth: 0 — the Tier-1 baseline ratchet resolves its baseline from
       # `git merge-base HEAD origin/main`. On a shallow checkout that cannot be
@@ -719,6 +915,14 @@ jobs:
           cargo build -p firmware-ci-fixture --target thumbv7m-none-eabi
 
       - name: Run Workspace Tests
+        # This job builds the firmware above, so for those artifacts a missing
+        # ELF is a failure, not a skip. Tests that can't find their firmware
+        # otherwise `return` early and report `ok` — passing without testing
+        # anything, which is how a broken cross-build sails through a green
+        # gate. Only the keys built in the step above are listed: requiring an
+        # artifact this job never produces would fail it for the wrong reason.
+        env:
+          LABWIRED_REQUIRE_FIRMWARE: firmware-ci-fixture,firmware-rp2040-pio-onboarding
         run: cargo test --workspace
 
       - name: Feature tests — jit + event-scheduler
