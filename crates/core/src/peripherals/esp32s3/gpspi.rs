@@ -208,6 +208,7 @@ pub struct Esp32s3Spi {
 
     /// Bus-published cycle clock (walk-free level export).
     clock: Option<CycleClock>,
+    external_can_poll_scheduled: bool,
 }
 
 impl std::fmt::Debug for Esp32s3Spi {
@@ -245,6 +246,7 @@ impl Esp32s3Spi {
             attached_devices: Vec::new(),
 
             clock: None,
+            external_can_poll_scheduled: false,
         }
     }
 
@@ -513,6 +515,39 @@ impl Peripheral for Esp32s3Spi {
         cfg!(feature = "event-scheduler") && self.clock.is_some()
     }
 
+    fn take_scheduled_events(&mut self) -> Vec<(u64, u32)> {
+        const EXTERNAL_CAN_POLL_EVENT: u32 = u32::MAX;
+        let has_external_can = self
+            .attached_devices
+            .iter()
+            .any(|device| device.component_id().is_some());
+        if self.clock.is_some() && has_external_can && !self.external_can_poll_scheduled {
+            self.external_can_poll_scheduled = true;
+            vec![(0, EXTERNAL_CAN_POLL_EVENT)]
+        } else {
+            Vec::new()
+        }
+    }
+
+    fn on_event(
+        &mut self,
+        event_token: u32,
+        _sched: &mut crate::sched::EventScheduler,
+        _bus: &mut dyn crate::Bus,
+    ) -> crate::sched::EventResult {
+        const EXTERNAL_CAN_POLL_EVENT: u32 = u32::MAX;
+        if event_token != EXTERNAL_CAN_POLL_EVENT {
+            return crate::sched::EventResult::default();
+        }
+        for device in &mut self.attached_devices {
+            device.poll_external_bus();
+        }
+        crate::sched::EventResult {
+            reschedule_delay: Some(1),
+            ..crate::sched::EventResult::default()
+        }
+    }
+
     fn needs_legacy_walk(&self) -> bool {
         !self.uses_scheduler()
     }
@@ -559,6 +594,51 @@ impl Peripheral for Esp32s3Spi {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+
+    struct ExternalCanPoller(Arc<AtomicUsize>);
+    impl SpiDevice for ExternalCanPoller {
+        fn component_id(&self) -> Option<&str> {
+            Some("external-can")
+        }
+        fn poll_external_bus(&mut self) {
+            self.0.fetch_add(1, Ordering::SeqCst);
+        }
+        fn transfer(&mut self, _mosi: u8) -> u8 {
+            0
+        }
+        fn cs_pin(&self) -> &str {
+            "GPIO10"
+        }
+    }
+
+    #[test]
+    fn scheduler_arms_recurring_external_can_poll() {
+        let polls = Arc::new(AtomicUsize::new(0));
+        let mut spi = Esp32s3Spi::new(SPI2_SOURCE);
+        spi.push_device(Box::new(ExternalCanPoller(polls.clone())));
+        spi.attach_cycle_clock(crate::CycleClock::default());
+
+        let events = spi.take_scheduled_events();
+        assert_eq!(
+            events.len(),
+            1,
+            "scheduler mode must arm external CAN polling"
+        );
+        let mut scheduler = crate::sched::EventScheduler::new();
+        let mut bus = crate::bus::SystemBus::new();
+        let result = spi.on_event(events[0].1, &mut scheduler, &mut bus);
+        assert_eq!(polls.load(Ordering::SeqCst), 1);
+        assert_eq!(result.reschedule_delay, Some(1));
+
+        let legacy_polls = Arc::new(AtomicUsize::new(0));
+        let mut legacy = Esp32s3Spi::new(SPI2_SOURCE);
+        legacy.push_device(Box::new(ExternalCanPoller(legacy_polls.clone())));
+        assert!(legacy.take_scheduled_events().is_empty());
+        legacy.tick();
+        assert_eq!(legacy_polls.load(Ordering::SeqCst), 1);
+    }
 
     const SPI2_SOURCE: u32 = 21;
     const SPI3_SOURCE: u32 = 22;

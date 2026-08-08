@@ -776,6 +776,17 @@ impl core::fmt::Debug for Spi {
 }
 
 impl Spi {
+    pub(crate) fn has_external_bus_device(&self) -> bool {
+        self.attached_devices
+            .iter()
+            .any(|device| device.component_id().is_some())
+    }
+
+    pub(crate) fn poll_external_bus_devices(&mut self) {
+        for device in &mut self.attached_devices {
+            device.poll_external_bus();
+        }
+    }
     pub fn new() -> Self {
         Self::new_with_layout(SpiRegisterLayout::Stm32)
     }
@@ -1824,27 +1835,19 @@ impl crate::Peripheral for Spi {
 
     /// nRF52 SPIM EasyDMA needs bus access to read/write RAM buffers.
     fn needs_bus_tick(&self) -> bool {
-        self.nrf52_pending_start
-            || self
-                .attached_devices
-                .iter()
-                .any(|device| device.component_id().is_some())
+        self.nrf52_pending_start || self.has_external_bus_device()
     }
 
     /// nRF52 SPIM EasyDMA transfer engine (bare-bus / bus_tick_indices path).
     fn tick_with_bus(&mut self, bus: &mut dyn Bus) {
-        for device in &mut self.attached_devices {
-            device.poll_external_bus();
-        }
+        self.poll_external_bus_devices();
         if self.nrf52_pending_start {
             self.do_nrf52_easydma(bus);
         }
     }
 
     fn tick(&mut self) -> crate::PeripheralTickResult {
-        for device in &mut self.attached_devices {
-            device.poll_external_bus();
-        }
+        self.poll_external_bus_devices();
         self.tick_elapsed(1)
     }
 

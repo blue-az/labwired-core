@@ -227,25 +227,34 @@ impl Peripheral for Nrf52SerialInstance {
 
     fn tick(&mut self) -> PeripheralTickResult {
         match self.active() {
-            ENABLE_TWIM => self.twim.tick(),
+            ENABLE_TWIM => {
+                self.spim.poll_external_bus_devices();
+                self.twim.tick()
+            }
             ENABLE_SPIM => self.spim.tick(),
-            _ => PeripheralTickResult::default(),
+            _ => {
+                self.spim.poll_external_bus_devices();
+                PeripheralTickResult::default()
+            }
         }
     }
 
     fn needs_bus_tick(&self) -> bool {
         match self.active() {
-            ENABLE_TWIM => self.twim.needs_bus_tick(),
+            ENABLE_TWIM => self.twim.needs_bus_tick() || self.spim.has_external_bus_device(),
             ENABLE_SPIM => self.spim.needs_bus_tick(),
-            _ => false,
+            _ => self.spim.has_external_bus_device(),
         }
     }
 
     fn tick_with_bus(&mut self, bus: &mut dyn Bus) {
         match self.active() {
-            ENABLE_TWIM => self.twim.tick_with_bus(bus),
+            ENABLE_TWIM => {
+                self.spim.poll_external_bus_devices();
+                self.twim.tick_with_bus(bus);
+            }
             ENABLE_SPIM => self.spim.tick_with_bus(bus),
-            _ => {}
+            _ => self.spim.poll_external_bus_devices(),
         }
     }
 
@@ -348,6 +357,36 @@ mod tests {
     use super::*;
     use crate::{Bus, DmaRequest, SimulationConfig};
     use std::collections::HashMap;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+
+    struct ExternalCanPoller(Arc<AtomicUsize>);
+    impl SpiDevice for ExternalCanPoller {
+        fn component_id(&self) -> Option<&str> {
+            Some("external-can")
+        }
+        fn poll_external_bus(&mut self) {
+            self.0.fetch_add(1, Ordering::SeqCst);
+        }
+        fn transfer(&mut self, _mosi: u8) -> u8 {
+            0
+        }
+        fn cs_pin(&self) -> &str {
+            "P0.04"
+        }
+    }
+
+    #[test]
+    fn external_can_poll_is_independent_of_serial_mode() {
+        for mode in [0, ENABLE_TWIM] {
+            let polls = Arc::new(AtomicUsize::new(0));
+            let mut serial = Nrf52SerialInstance::new();
+            serial.attach_spi(Box::new(ExternalCanPoller(polls.clone())));
+            write32(&mut serial, OFF_ENABLE, mode);
+            serial.tick_with_bus(&mut FlatRam::new());
+            assert_eq!(polls.load(Ordering::SeqCst), 1, "mode {mode} polls once");
+        }
+    }
 
     // ── Minimal flat-RAM bus ──────────────────────────────────────────────────
 
