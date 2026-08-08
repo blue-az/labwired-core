@@ -755,6 +755,12 @@ impl SystemBus {
     /// CSR (FreeRTOS critical sections raise the threshold to mask).
     pub(crate) fn recompute_esp32c3_irq_lines(&mut self) {
         const FROM_CPU_SOURCE_BASE: u32 = 50;
+        // Latched PMS violations assert their matrix source
+        // (`ETS_CORE0_{I,D}RAM0_PMS_INTR_SOURCE`) until firmware pulses
+        // VIOLATE_CLR — the same level semantics as every other source here.
+        // Read before `cache` is borrowed so the two immutable borrows of
+        // `self` do not overlap the closure below.
+        let pms_sources = self.esp32c3_pms_sources();
         let Some(cache) = &self.esp32c3_irq_cache else {
             return;
         };
@@ -777,8 +783,9 @@ impl SystemBus {
             // scheduler-driven peripheral level sources (re-derived from
             // `matrix_irq_sources`), so a SYSTIMER migrated off the walk keeps
             // its level-sensitive alarm IRQ routed.
-            let mut bits =
-                self.esp32c3_asserted_sources[word] | self.esp32c3_sched_asserted_sources[word];
+            let mut bits = self.esp32c3_asserted_sources[word]
+                | self.esp32c3_sched_asserted_sources[word]
+                | pms_sources[word];
             while bits != 0 {
                 let bit = bits.trailing_zeros();
                 route_source(word as u32 * 64 + bit);

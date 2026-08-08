@@ -329,6 +329,10 @@ impl SystemBus {
             .iter()
             .position(|p| p.name == "interrupt_core0" && p.base == 0x600C_2000);
         self.rebuild_esp32c3_irq_cache();
+        // The C3 permission-control unit lives in the SENSITIVE block; its
+        // model is a derived cache of that block's registers, so it is rebuilt
+        // whenever the peripheral list changes.
+        self.rebuild_esp32c3_pms();
         self.esp32s3_intmatrix_idx = self.peripherals.iter().position(|p| {
             p.dev
                 .as_any()

@@ -33,6 +33,7 @@ mod mmio_activity;
 mod mmio_words;
 mod motors;
 pub(crate) mod part_pack;
+mod pms;
 mod policy;
 mod profiles;
 mod resident_device;
@@ -467,6 +468,20 @@ pub struct SystemBus {
     /// next re-derivation), so delivery matches the legacy walk cycle-for-cycle
     /// at a given tick interval.
     esp32c3_sched_asserted_sources: [u64; 2],
+    /// Index of the ESP32-C3 `SENSITIVE` peripheral (0x600C_1000), which owns
+    /// the permission-control (PMS) register file. `None` on every other bus.
+    esp32c3_sensitive_idx: Option<usize>,
+    /// ESP32-C3 permission-control unit. A *derived cache* of the `SENSITIVE`
+    /// register file (rebuilt by `sync_esp32c3_pms_write` on every write into
+    /// the PMS register span) plus the latched violation status. `None` unless
+    /// the bus carries a C3 `SENSITIVE` block.
+    esp32c3_pms: Option<Box<crate::peripherals::esp32c3::pms::Esp32C3Pms>>,
+    /// Hot-path gate: `true` only while the PMS could actually block something
+    /// (some area narrowed AND its monitor enabled). Every store and every
+    /// instruction-fetch window refill reads this one bool, so firmware that
+    /// never enables memory protection pays a single predictable branch and
+    /// behaves byte-identically to before the PMS model existed.
+    esp32c3_pms_armed: bool,
     /// ESP32-S3 interrupt routing is present only when the S3 interrupt matrix
     /// peripheral is registered. Cached separately from C3's RISC-V routing so
     /// each chip model owns its own interrupt abstraction.
