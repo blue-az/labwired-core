@@ -60,7 +60,8 @@ Machine-generated from `validation/manifest.yaml`. CI regenerates this on every 
 - Doc: [`docs/boards/esp32c3.md`](esp32c3.md)  ·  Chip: `configs/chips/esp32c3.yaml`
 - Note: Reset-state oracle, not behavioural. ~40 peripherals declared (NOT 6 as the prose doc says).
 - Silicon: **2026-06-17** on USB-JTAG (built-in, openocd-esp32) — re-verified live — reset oracle re-captured live 2026-06-17: 1123/1123 static registers match committed baseline (13 deltas all in per-chip efuse + live USB-device state, none in the asserted set); esp32c3_reset_values_match_silicon passes
-  - offline (CI): esp32c3_reset_conformance::esp32c3_reset_values_match_silicon (79 regs; 366/423 overlap matched silicon)
+  - offline (CI): esp32c3_reset_conformance::esp32c3_reset_values_match_silicon (87 regs; 366/423 overlap matched silicon)
+  - offline (CI): esp32c3_reset_conformance::esp32c3_free_running_counters_are_mapped (2 WiFi MAC counter windows; mapping only, no equality claim)
 - Drift status: **⚠ drift acked 2026-08-08 (re-capture pending)**
 
 ## `nucleo-l476rg` — 🟢 silicon-verified
