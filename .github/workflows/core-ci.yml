@@ -597,9 +597,21 @@ jobs:
       # reasoned in `scheduler_lane_coverage`'s NIGHTLY_ONLY table — that
       # ratchet is what keeps this list from silently rotting again: a new
       # scheduler-gated test file must be added here or given a written reason.
+      # `esp32c3_bt_event_residency_gate` is here and not in `core-integrity`
+      # BECAUSE OF THE FEATURE MATRIX, not because it is cheap (it is: 4.5s).
+      # The property it defends — `esp32c3::bt` stays inside
+      # MAX_LIVE_EVENTS_PER_PERIPHERAL — has an in-engine backstop, the
+      # `debug_assert!` behind `live_event_ceiling_trips`, and NEITHER standing
+      # lane can reach it: `cargo test -p labwired-core` runs debug but without
+      # `event-scheduler`, so no scheduler runs at all, and `core-integrity`'s
+      # scheduler lane is `--release`, which compiles `debug_assert!` out. Debug
+      # + `--features event-scheduler` is this job, and only this job. The fix
+      # that took `live_event_ceiling_trips` from 3310 to 0 merged with nothing
+      # asserting that number anywhere.
       - name: Scheduler-only fidelity lanes (walk≡scheduler timing gates)
         run: >
           cargo test -p labwired-core --features event-scheduler
+          --test esp32c3_bt_event_residency_gate
           --test nrf52_timer_walk_differential
           --test nrf52_easydma_tick512_fidelity
           --test nrf52840_timer_machine_gate
@@ -845,7 +857,16 @@ jobs:
       github.event_name == 'schedule' ||
       (github.event_name == 'push' && contains(github.event.head_commit.message, '[full-ci]'))
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # 45 was the budget for a job that never finished: `Run Workspace Tests`
+    # was cancelled at exactly 45:00 on every run, including the nightly, so
+    # the two steps after it never ran at all. With `opt-level = 1` the job
+    # completes in 44m32s — which cleared the old limit by 28 SECONDS while
+    # now doing strictly more work, since those two steps execute. That is a
+    # coin flip, not a margin. 75 leaves room for runner variance and a cold
+    # cache without hiding a real regression: if this job starts approaching
+    # 75 minutes, something has genuinely got slower and should be measured,
+    # not accommodated again.
+    timeout-minutes: 75
     steps:
       # fetch-depth: 0 — the Tier-1 baseline ratchet resolves its baseline from
       # `git merge-base HEAD origin/main`. On a shallow checkout that cannot be

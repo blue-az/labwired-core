@@ -17,7 +17,7 @@ The models column is a content digest over everything that board's `models` list
 | `nucleo-l073rz` | 🟢 silicon-verified | 2026-06-20 | `105c3038e66f7309` | ⚠ drift acked 2026-08-08 (re-capture pending) |
 | `stm32f103` | 🟢 silicon-verified | 2026-06-20 | `ba59367c8644427e` | ⚠ drift acked 2026-08-08 (re-capture pending) |
 | `stm32f407` | 🟢 silicon-smoke | 2026-06-20 | `55e991e05f47a258` | ⚠ drift acked 2026-08-08 (re-capture pending) |
-| `esp32s3` | 🟢 silicon-verified | 2026-07-15 | `e61b64da1a9ee277` | ⚠ drift acked 2026-08-08 (re-capture pending) |
+| `esp32s3` | 🟢 silicon-verified | 2026-07-15 | `aaf64e6784616c62` | ⚠ drift acked 2026-08-08 (re-capture pending) |
 | `stm32f401` | 🟡 smoke-manual | — | `a05f2c5a4fa09d07` | no silicon capture |
 | `stm32wba52` | 🟡 smoke-manual | — | `68d7f53b696f44f7` | no silicon capture |
 | `nrf52832` | ⚪ structural | — | `8eb946cd8fd728b5` | no silicon capture |
@@ -62,7 +62,8 @@ The models column is a content digest over everything that board's `models` list
 - Doc: [`docs/boards/esp32c3.md`](esp32c3.md)  ·  Chip: `configs/chips/esp32c3.yaml`
 - Note: Reset-state oracle, not behavioural. ~40 peripherals declared (NOT 6 as the prose doc says).
 - Silicon: **2026-06-17** on USB-JTAG (built-in, openocd-esp32) — re-verified live — reset oracle re-captured live 2026-06-17: 1123/1123 static registers match committed baseline (13 deltas all in per-chip efuse + live USB-device state, none in the asserted set); esp32c3_reset_values_match_silicon passes
-  - offline (CI): esp32c3_reset_conformance::esp32c3_reset_values_match_silicon (79 regs; 366/423 overlap matched silicon)
+  - offline (CI): esp32c3_reset_conformance::esp32c3_reset_values_match_silicon (87 regs; 366/423 overlap matched silicon)
+  - offline (CI): esp32c3_reset_conformance::esp32c3_free_running_counters_are_mapped (2 WiFi MAC counter windows; mapping only, no equality claim)
 - Drift status: **⚠ drift acked 2026-08-08 (re-capture pending)**
 
 ## `nucleo-l476rg` — 🟢 silicon-verified
