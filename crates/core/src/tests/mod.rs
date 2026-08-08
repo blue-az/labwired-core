@@ -24,6 +24,8 @@ pub mod logic_capture;
 pub mod logic_capture_differential;
 
 #[cfg(test)]
+pub mod esp32_i2c_waveform;
+#[cfg(test)]
 pub mod esp32s3_i2c_waveform;
 #[cfg(test)]
 pub mod machine_advance;

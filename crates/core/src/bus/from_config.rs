@@ -871,6 +871,9 @@ impl SystemBus {
         // Same for the S3's I²C0, whose pads reach GPIO through the S3 output
         // matrix rather than an AF nibble.
         bus.wire_esp32s3_i2c_pads();
+        // Same for classic ESP32 (LX6), whose matrix indices are 29/30 —
+        // neither the C3's 53/54 nor the S3's 89/90.
+        bus.wire_esp32_i2c_pads();
         // RP2040: bind I²C wires to the pads IO_BANK0's FUNCSEL can route them to.
         bus.wire_rp2040_i2c_pads();
         // Same for the RP2040 UARTs' TX/RX, so serial output is a waveform on

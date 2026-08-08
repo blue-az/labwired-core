@@ -124,6 +124,52 @@ impl SystemBus {
         }
     }
 
+    /// Share the classic-ESP32 (LX6) I²C0 controller's live SCL/SDA levels with
+    /// the classic GPIO port, so pads whose output matrix routes `I2CEXT0_SCL`
+    /// (signal 29) / `I2CEXT0_SDA` (signal 30) read the real waveform through
+    /// `read_gpio_pad` — which is what the in-engine logic analyzer samples.
+    ///
+    /// The S3 counterpart is [`Self::wire_esp32s3_i2c_pads`]; like it this is
+    /// one-way, because the classic I²C model resolves its slaves by address
+    /// rather than by physical pad route. Unlike it, `from_config` is not the
+    /// only caller: `configure_xtensa_esp32` registers the classic peripheral
+    /// bank in Rust and bypasses the chip YAML's peripheral list, so the classic
+    /// call site lives there too. Both are no-ops unless both models are present.
+    pub(crate) fn wire_esp32_i2c_pads(&mut self) {
+        use crate::peripherals::esp32::gpio::Esp32Gpio;
+        use crate::peripherals::esp32::i2c::Esp32I2c;
+
+        let i2c_idx = self
+            .peripherals
+            .iter()
+            .position(|p| p.dev.as_any().map(|a| a.is::<Esp32I2c>()).unwrap_or(false));
+        let gpio_idx = self
+            .peripherals
+            .iter()
+            .position(|p| p.dev.as_any().map(|a| a.is::<Esp32Gpio>()).unwrap_or(false));
+        // Resolve BOTH before touching either: `pad_lines_arc` CREATES the wire
+        // cell, and a controller owning a cell no GPIO port reaches would
+        // narrate every transaction into something nothing reads.
+        let (Some(i2c_idx), Some(gpio_idx)) = (i2c_idx, gpio_idx) else {
+            return;
+        };
+        let Some(lines) = self.peripherals[i2c_idx]
+            .dev
+            .as_any_mut()
+            .and_then(|a| a.downcast_mut::<Esp32I2c>())
+            .map(Esp32I2c::pad_lines_arc)
+        else {
+            return;
+        };
+        if let Some(gpio) = self.peripherals[gpio_idx]
+            .dev
+            .as_any_mut()
+            .and_then(|a| a.downcast_mut::<Esp32Gpio>())
+        {
+            gpio.set_i2c_lines(lines);
+        }
+    }
+
     /// Bind the RP2040 UARTs' TX/RX wires to the pads IO_BANK0 can route them
     /// to, so a probe on GP0 shows the serial waveform rather than the SIO
     /// output latch. No-op unless IO_BANK0, SIO and a UART are all on the bus.
