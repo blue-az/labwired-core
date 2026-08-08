@@ -620,6 +620,7 @@ jobs:
           --test rp2040_i2c_irq_delivery
           --test stm32f103_dma_walk_differential
           --test systick_walk_differential
+          --test board_batch_width
 
   # ── Main-branch integrity (push to main) — fuller than PR, still no matrices ─
   integrity:
@@ -800,6 +801,7 @@ jobs:
           --test rp2040_i2c_irq_delivery
           --test stm32f103_dma_walk_differential
           --test systick_walk_differential
+          --test board_batch_width
           --lib
 
       # HARDWARE ORACLE UNDER THE SCHEDULER FEATURE — the configuration that
