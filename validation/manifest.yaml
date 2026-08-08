@@ -182,8 +182,25 @@ boards:
     # set moves; the only observable delta is a GPIOTE EVENTS_IN that used to latch
     # with no contact having moved. Offline gates unchanged. Live re-capture still
     # owed for the RX drain timing.
+    # 2026-08-07: RADIO air-time accounting — a packet's air time now ends at its
+    # computed deadline instead of at the first wake that happens to land inside
+    # it. Scheduling behaviour, not silicon surface: no register in the asserted
+    # 16/16 sweep changes address, reset value or access, and no base moves.
+    # Owner-authorised ack WITHOUT a live re-capture; the RADIO packet-timing
+    # live diff remains owed and is NOT evidenced by this entry.
+    # 2026-08-08: TIMER scheduler re-arm dedup (#861). `take_scheduled_events`
+    # kept minting a fresh arming token on every drain, which runs after every
+    # MMIO write; since scheduler dedup keys on (peripheral, token, deadline),
+    # a poll loop left one far-future compare wake resident per poll until the
+    # live-event ceiling tripped. The token now holds steady when a re-arm
+    # targets the instant already in flight. Scheduler bookkeeping, not silicon
+    # surface: no register in the asserted 16/16 sweep changes address, reset
+    # value or access; counter width/BITMODE masking, prescaler division,
+    # CC compare matching, SHORTS and EVENTS_COMPARE latching are all untouched,
+    # and TIMER0's 16/0 sweep re-runs green. Acked WITHOUT a live re-capture —
+    # no TIMER live diff is evidenced by this entry.
     drift_ack: 2026-08-08
-    drift_ack_digest: 98fd8dd52acb4379174b84d4d37ca7e0263cb78d844d829417862b67a131d347
+    drift_ack_digest: 6142ba057c56f787631dde73492b725ac7f4490d77933b37aeea5fb3b8ba6612
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -281,8 +298,18 @@ boards:
     # set moves; the only observable delta is a GPIOTE EVENTS_IN that used to latch
     # with no contact having moved. Offline gates unchanged. Live re-capture still
     # owed for the RX drain timing.
+    # 2026-08-07: RADIO air-time accounting — a packet's air time now ends at its
+    # computed deadline instead of at the first wake that happens to land inside
+    # it. Scheduling behaviour, not silicon surface: no register in the asserted
+    # 16/16 sweep changes address, reset value or access, and no base moves.
+    # Owner-authorised ack WITHOUT a live re-capture; the RADIO packet-timing
+    # live diff remains owed and is NOT evidenced by this entry.
+    # 2026-08-08: rides the nrf52840 TIMER scheduler re-arm dedup (#861); same
+    # silicon. Scheduler bookkeeping only — no register address, reset value or
+    # access in the asserted sweep changes. See the nrf52840 drift_ack note; no
+    # TIMER live re-capture is evidenced by this entry.
     drift_ack: 2026-08-08
-    drift_ack_digest: 98fd8dd52acb4379174b84d4d37ca7e0263cb78d844d829417862b67a131d347
+    drift_ack_digest: 6142ba057c56f787631dde73492b725ac7f4490d77933b37aeea5fb3b8ba6612
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
