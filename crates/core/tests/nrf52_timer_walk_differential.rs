@@ -700,3 +700,201 @@ fn radio_disable_mid_transmission_aborts_the_packet() {
         "radio must settle in DISABLED after the abort"
     );
 }
+
+// ── DWT CYCCNT polled from inside a CPU batch (issue #842) ───────────────────
+//
+// The surface the defect actually lives on is a firmware READ of a lazily
+// advanced counter issued from *inside* a CPU batch. Reading from the harness
+// after `advance()` returns cannot see it: the boundary drain has already
+// republished the clock, so the staleness exists only between batch start and
+// batch end. The poll has to ride the CPU.
+//
+// DWT CYCCNT is the cleanest such counter on a Cortex-M bus: it advances 1:1
+// with CPU cycles (so every poll of a healthy build reads a fresh value), it is
+// derived lazily from the published `CycleClock`, and reading it is a PURE read
+// — no MMIO write, therefore no scheduler re-arm. That last property is not
+// cosmetic. The obvious surface, nRF52 TIMER via TASKS_CAPTURE/CC, needs a
+// WRITE per poll, and `Nrf52Timer::take_scheduled_events` bumps `arm_seq` on
+// every write; a fresh token defeats the scheduler's layer-1 identical-wake
+// dedup, so far-future compare wakes pile up until the run trips the
+// `MAX_LIVE_EVENTS_PER_PERIPHERAL` ceiling. That is a real defect, it is
+// pre-existing (it reproduces with this fix reverted, and at quantum 1 where
+// nothing here applies), and it is filed separately — but it makes CAPTURE
+// unusable as a *measuring instrument* for this one, so the measurement uses a
+// surface that does not perturb what it measures.
+
+const DWT_CTRL: u64 = 0xE000_1000;
+const DWT_CYCCNT: u64 = 0xE000_1004;
+const DWT_CTRL_CYCCNTENA: u32 = 1 << 0;
+
+/// A CPU whose every retired instruction is one iteration of a firmware
+/// counter-poll loop: read CYCCNT, remember what it saw. Stands in for the
+/// busy-wait loop in `tests/fixtures/tier1/*.elf` without needing the ELF, and
+/// — unlike a harness-side read — samples where real firmware does: mid-batch.
+#[derive(Debug, Default)]
+struct PollingCpu {
+    pc: u32,
+    observed: Vec<u32>,
+}
+
+impl PollingCpu {
+    /// Longest run of consecutive polls that read the SAME counter value.
+    /// This is the number the bug moves: a counter that only refreshes at
+    /// batch boundaries reads frozen for a whole quantum of polls.
+    fn longest_frozen_run(&self) -> usize {
+        let mut longest = 1usize;
+        let mut run = 1usize;
+        for w in self.observed.windows(2) {
+            if w[0] == w[1] {
+                run += 1;
+                longest = longest.max(run);
+            } else {
+                run = 1;
+            }
+        }
+        longest
+    }
+}
+
+impl Cpu for PollingCpu {
+    fn reset(&mut self, _bus: &mut dyn Bus) -> SimResult<()> {
+        self.pc = 0;
+        self.observed.clear();
+        Ok(())
+    }
+
+    fn step(
+        &mut self,
+        bus: &mut dyn Bus,
+        _observers: &[Arc<dyn SimulationObserver>],
+        _config: &SimulationConfig,
+    ) -> SimResult<()> {
+        self.observed.push(bus.read_u32(DWT_CYCCNT)?);
+        self.pc = self.pc.wrapping_add(2);
+        Ok(())
+    }
+
+    fn set_pc(&mut self, val: u32) {
+        self.pc = val;
+    }
+    fn get_pc(&self) -> u32 {
+        self.pc
+    }
+    fn set_sp(&mut self, _val: u32) {}
+    fn set_exception_pending(&mut self, _exception_num: u32) {}
+    fn get_register(&self, _id: u8) -> u32 {
+        0
+    }
+    fn set_register(&mut self, _id: u8, _val: u32) {}
+    fn snapshot(&self) -> CpuSnapshot {
+        CpuSnapshot::Arm(ArmCpuSnapshot {
+            registers: vec![0; 16],
+            pc: self.pc,
+            xpsr: 0,
+            primask: false,
+            pending_exceptions: 0,
+            pending_exceptions_hi: Vec::new(),
+            vtor: 0,
+        })
+    }
+    fn apply_snapshot(&mut self, _snapshot: &CpuSnapshot) {}
+    fn get_register_names(&self) -> Vec<String> {
+        Vec::new()
+    }
+    fn index_of_register(&self, _name: &str) -> Option<u8> {
+        None
+    }
+}
+
+fn polling_machine_at_interval(interval: u32) -> Machine<PollingCpu> {
+    let bus = bus_nrf52840_walk_free();
+    let mut machine = Machine::new(PollingCpu::default(), bus);
+    machine.config.peripheral_tick_interval = interval;
+    machine.bus.config.peripheral_tick_interval = interval;
+    // The one write, before the run: arm CYCCNT. The poll loop itself is
+    // read-only (see the note above).
+    machine
+        .bus
+        .write_u32(DWT_CTRL, DWT_CTRL_CYCCNTENA)
+        .expect("arm DWT CYCCNT");
+    machine
+}
+
+fn run_poll(interval: u32, budget: u64) -> Machine<PollingCpu> {
+    let mut m = polling_machine_at_interval(interval);
+    m.advance(AdvanceRequest::run(Some(budget)).with_breakpoints(BreakpointPolicy::Ignore))
+        .expect("Machine::advance");
+    m
+}
+
+/// Issue #842: firmware polling a lazily-advanced counter must see it move
+/// even when the CPU retires a full 512-instruction batch between peripheral
+/// drains. CYCCNT advances once per CPU cycle, so a poll on every retired
+/// instruction reads a fresh value every time; a run the width of the quantum
+/// is the defect.
+#[test]
+fn cyccnt_poll_advances_inside_batch_at_tick512() {
+    const BUDGET: u64 = 4096;
+    let m = run_poll(RECOMMENDED_TICK_INTERVAL, BUDGET);
+
+    let polls = m.cpu.observed.len();
+    let frozen = m.cpu.longest_frozen_run();
+    let distinct = {
+        let mut v = m.cpu.observed.clone();
+        v.dedup();
+        v.len()
+    };
+    assert!(polls > 0, "CPU must have polled at least once");
+    assert!(
+        frozen <= 2,
+        "CYCCNT froze for {frozen} consecutive polls (of {polls}, {distinct} \
+         distinct values) — firmware sees a stopped counter for a whole CPU \
+         batch, because the CPU batch loop is not advancing the cycle the \
+         peripheral syncs against."
+    );
+}
+
+/// The strong form of the same claim: batching must not change what firmware
+/// observes AT ALL. Instruction `i` of a batch runs at `batch_start + i` on
+/// both lanes, so the two poll transcripts have to be equal element for
+/// element — not "close", not "within one tick". This is the gate that would
+/// catch a fix that merely un-freezes the counter while shifting it.
+#[test]
+fn cyccnt_poll_transcript_is_identical_walk1_vs_sched512() {
+    const BUDGET: u64 = 4096;
+
+    let lane_a = run_poll(1, BUDGET);
+    let lane_b = run_poll(RECOMMENDED_TICK_INTERVAL, BUDGET);
+
+    let (a, b) = (&lane_a.cpu.observed, &lane_b.cpu.observed);
+    assert_eq!(
+        a.len(),
+        b.len(),
+        "both lanes must retire the same number of polls"
+    );
+    if let Some(i) = a.iter().zip(b).position(|(x, y)| x != y) {
+        panic!(
+            "poll {i} of {}: quantum 1 read {}, quantum {} read {} — batching \
+             changed what the firmware sees",
+            a.len(),
+            a[i],
+            RECOMMENDED_TICK_INTERVAL,
+            b[i]
+        );
+    }
+}
+
+/// Companion identity gate: the same poll loop at quantum 1 must be exactly
+/// what it always was — every poll a fresh value. Guards against a "fix" that
+/// makes the two lanes agree by degrading the reference lane.
+#[test]
+fn cyccnt_poll_is_exact_at_quantum_1() {
+    const BUDGET: u64 = 512;
+    let m = run_poll(1, BUDGET);
+    let frozen = m.cpu.longest_frozen_run();
+    assert!(
+        frozen <= 2,
+        "quantum 1 must observe a fresh counter on essentially every poll; \
+         longest frozen run was {frozen}"
+    );
+}

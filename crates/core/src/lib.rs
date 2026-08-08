@@ -279,11 +279,20 @@ pub trait Cpu: Send {
         // One Arc clone + flag check per batch when idle; a relaxed atomic
         // increment per instruction while armed.
         let tap = bus.logic_tap().filter(|t| t.push_armed());
+        // Issue #842: republish the live cycle per retired instruction so a
+        // lazily-advanced peripheral is not pinned to the batch-start cycle for
+        // the whole window. Same gate and same rationale as the hand-written
+        // `CortexM::step_batch` / `RiscV::step_batch` twins — see either.
+        #[cfg(feature = "event-scheduler")]
+        let live_step = u64::from(config.peripheral_tick_interval > 1);
         for i in 0..max_count {
             if let Some(tap) = &tap {
                 tap.bump_clock();
             }
             self.step(bus, observers, config)?;
+            // Advance after the step — see `CortexM::step_batch`.
+            #[cfg(feature = "event-scheduler")]
+            bus.publish_cycle(bus.current_cycle() + live_step);
             if config.idle_fast_forward_enabled && self.idle_fast_forward_budget(bus).is_some() {
                 return Ok(i + 1);
             }
