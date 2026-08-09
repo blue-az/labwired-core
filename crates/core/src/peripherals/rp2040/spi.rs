@@ -344,6 +344,14 @@ impl Rp2040Spi {
 }
 
 impl Peripheral for Rp2040Spi {
+    fn line_names(&self) -> &'static [&'static str] {
+        SPI_LINES
+    }
+
+    fn wire_lines(&self) -> Option<&PadLines> {
+        self.lines.as_deref()
+    }
+
     // ⚠️ `needs_legacy_walk()` is DELIBERATELY not overridden here, and the
     // default (`true`) is the honest answer even though the TRANSFER is
     // write-driven.

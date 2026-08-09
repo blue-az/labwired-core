@@ -43,6 +43,7 @@
 use labwired_config::{ChipDescriptor, SystemManifest};
 use labwired_core::bus::SystemBus;
 use labwired_core::cpu::cortex_m::CortexM;
+use labwired_core::logic_capture::LogicSource;
 use labwired_core::system::cortex_m::configure_cortex_m;
 use labwired_core::{Bus, Machine};
 use std::path::PathBuf;
@@ -179,7 +180,10 @@ fn tx_edges(
         .bus
         .find_peripheral_index_by_name(pad_peripheral)
         .unwrap_or_else(|| panic!("{pad_peripheral} on the lab bus"));
-    machine.logic_watch(&[Some((pad_idx, pin))]);
+    machine.logic_watch(&[Some(LogicSource::Pad {
+        peripheral: pad_idx,
+        pin,
+    })]);
 
     for &byte in bytes {
         if dr_is_u8 {
@@ -579,7 +583,10 @@ fn rp2040_demo_elf_puts_real_edges_on_gp0() {
         .bus
         .find_peripheral_index_by_name("sio")
         .expect("sio on the lab bus");
-    let initial = machine.logic_watch(&[Some((sio, GP0))]);
+    let initial = machine.logic_watch(&[Some(LogicSource::Pad {
+        peripheral: sio,
+        pin: GP0,
+    })]);
     assert_eq!(
         initial,
         vec![Some(true)],

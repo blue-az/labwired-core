@@ -200,6 +200,14 @@ impl Rp2040I2c {
 }
 
 impl Peripheral for Rp2040I2c {
+    fn line_names(&self) -> &'static [&'static str] {
+        I2C_LINES
+    }
+
+    fn wire_lines(&self) -> Option<&crate::peripherals::pad_lines::PadLines> {
+        self.lines.as_deref()
+    }
+
     /// Scheduler-driven, held-level: `I2C0_IRQ` rides an event chain, not the
     /// per-cycle walk.
     ///

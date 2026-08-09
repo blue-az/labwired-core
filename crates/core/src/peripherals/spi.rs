@@ -2028,6 +2028,14 @@ impl Spi {
 }
 
 impl crate::Peripheral for Spi {
+    fn line_names(&self) -> &'static [&'static str] {
+        SPI_LINES
+    }
+
+    fn wire_lines(&self) -> Option<&PadLines> {
+        self.lines.as_ref().map(|levels| &**levels.pad_lines())
+    }
+
     fn read(&self, offset: u64) -> SimResult<u8> {
         let reg_offset = offset & !3;
         let byte_offset = (offset % 4) as u32;
