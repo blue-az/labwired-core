@@ -538,8 +538,19 @@ boards:
     # the pre-existing adc unit suite (73 tests, both families) is green, as is
     # firmware_survival (51). No register, reset value or IRQ on this board can
     # move, so the silicon capture stands. No live re-capture.
+    # 2026-08-09: rides the nRF52 SPIM PSEL fix (live nRF52840 re-capture, same
+    # date). The touched file, peripherals/spi.rs, IS on this board's watch list,
+    # so the digest moved — but every edit in it is inside `Nrf52SpiRegs`, an
+    # nRF-only register struct. This board uses Stm32/Stm32Fifo/Stm32H5 layouts,
+    # which are separate structs with their own read/write matches; not one line
+    # they execute changed. Two registers were added to the nRF PSEL block
+    # (0x510 read routing, 0x514 psel_csn) — offsets this board's layouts never
+    # decode. Evidence on this commit: labwired-core --lib 2987 passed / 0
+    # failed, cargo fmt clean. Acked WITHOUT a live re-capture for this board:
+    # it was not attached. Its own live diff remains owed and is NOT evidenced
+    # by this entry.
     drift_ack: 2026-08-09
-    drift_ack_digest: 2930cca31ac9214edfa542b4ac7de8d109b4ff2bfb9c58b234857479371bbc99
+    drift_ack_digest: 1f8f936885ffa94265fe68e6195d8507c8195e7cd0ca0d07596dcadd6e9628bb
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1362,8 +1373,19 @@ boards:
     # the pre-existing adc unit suite (73 tests, both families) is green, as is
     # firmware_survival (51). No register, reset value or IRQ on this board can
     # move, so the silicon capture stands. No live re-capture.
+    # 2026-08-09: rides the nRF52 SPIM PSEL fix (live nRF52840 re-capture, same
+    # date). The touched file, peripherals/spi.rs, IS on this board's watch list,
+    # so the digest moved — but every edit in it is inside `Nrf52SpiRegs`, an
+    # nRF-only register struct. This board uses Stm32/Stm32Fifo/Stm32H5 layouts,
+    # which are separate structs with their own read/write matches; not one line
+    # they execute changed. Two registers were added to the nRF PSEL block
+    # (0x510 read routing, 0x514 psel_csn) — offsets this board's layouts never
+    # decode. Evidence on this commit: labwired-core --lib 2987 passed / 0
+    # failed, cargo fmt clean. Acked WITHOUT a live re-capture for this board:
+    # it was not attached. Its own live diff remains owed and is NOT evidenced
+    # by this entry.
     drift_ack: 2026-08-09
-    drift_ack_digest: 63952dbc5f80f8ad3e9dfe67df797c295e488a12d111f6a3bf38d8fcb44e7f69
+    drift_ack_digest: cdf7cf6950086f44787c0883e25da8f1ff9aca4fd695dc35684b4830f7bf06a4
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1389,9 +1411,9 @@ boards:
       - "stm32l0_mmio_diff::{l0_mmio_sim_only,l0_parity_sim_only}"
       - "firmware_survival L073 smoke case"
     silicon:
-      last_capture: 2026-06-20
-      probe: "ST-LINK V2.1 (NUCLEO-L073RZ over SWD)"
-      result: "Live re-capture after the v0.17.0 merge: l0_mmio_diff 20/20, 0 divergence (RCC/GPIO/SPI1/TIM2/TIM21, incl. the TIM2-16-bit fix). Supersedes the 2026-06-19 drift_ack."
+      last_capture: 2026-08-09
+      probe: "ST-LINK V2.1 (NUCLEO-L073RZ on-board, V2J28S17, serial 066CFF555054877567065340) over SWD; DBGMCU IDCODE read back 0x20086447"
+      result: "re-captured live 2026-08-09 with L073_STRICT=1: l0_mmio_diff 20/20, 0 divergence (RCC IOPENR/APB1ENR/APB2ENR/AHBENR/CFGR clock switch, GPIOA BSRR/BRR, SPI1 CR1/CR2, TIM2 ARR/PSC/CR1, TIM21 ARR, DBGMCU IDCODE). Clean on arrival — unlike the nRF re-capture the same day, this one found nothing to fix. Scope is UNCHANGED and still partial: RCC/GPIO/SPI1/TIM2/TIM21 only, not a full-chip sweep (see `note`); I2C/UART/ADC on this part remain outside the asserted set. Probe serial is recorded from this run on — the earlier entries named no serial, so whether this is the same physical NUCLEO as the 2026-06-20 capture cannot be established either way."
     # 2026-06-26: uart.rs generalised (status_width/status_idle/rx_present masks +
     # 20+ vendor layouts for the onboarding library). The L0 USART maps to the
     # Stm32V2 arm, byte-for-byte identical to the prior hardcoded behaviour
@@ -1508,8 +1530,11 @@ boards:
     # address, reset value or access in any board's asserted set changes.
     # Owner-authorised ack WITHOUT a live re-capture; no board was attached for
     # this change and each board's outstanding live diff remains owed.
-    drift_ack: 2026-08-09
-    drift_ack_digest: f3f016247871885430d46f3041d5abb17f5f28d683dc70fc8f0fd49a62b00049
+    #
+    # 2026-08-09 (later): the NUCLEO-L073RZ WAS attached and l0_mmio_diff re-ran
+    # live at 20/20 under L073_STRICT=1 (see silicon.result), so the diff this
+    # ack said was "owed" has been paid for THIS board. The ack is discharged.
+    # Note the other boards named in the ack above are not covered by that run.
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1684,8 +1709,19 @@ boards:
     # the pre-existing adc unit suite (73 tests, both families) is green, as is
     # firmware_survival (51). No register, reset value or IRQ on this board can
     # move, so the silicon capture stands. No live re-capture.
+    # 2026-08-09: rides the nRF52 SPIM PSEL fix (live nRF52840 re-capture, same
+    # date). The touched file, peripherals/spi.rs, IS on this board's watch list,
+    # so the digest moved — but every edit in it is inside `Nrf52SpiRegs`, an
+    # nRF-only register struct. This board uses Stm32/Stm32Fifo/Stm32H5 layouts,
+    # which are separate structs with their own read/write matches; not one line
+    # they execute changed. Two registers were added to the nRF PSEL block
+    # (0x510 read routing, 0x514 psel_csn) — offsets this board's layouts never
+    # decode. Evidence on this commit: labwired-core --lib 2987 passed / 0
+    # failed, cargo fmt clean. Acked WITHOUT a live re-capture for this board:
+    # it was not attached. Its own live diff remains owed and is NOT evidenced
+    # by this entry.
     drift_ack: 2026-08-09
-    drift_ack_digest: 5d56ace1b17144b04dd205f8f1ca6c80b345cb31694c06526b8af75e2a3cb017
+    drift_ack_digest: 8a772164873d30c1450adaa6d882e262fee4aa6e195843809e5783b8b4698d1c
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1841,8 +1877,19 @@ boards:
     # address, reset value or access in any board's asserted set changes.
     # Owner-authorised ack WITHOUT a live re-capture; no board was attached for
     # this change and each board's outstanding live diff remains owed.
+    # 2026-08-09: rides the nRF52 SPIM PSEL fix (live nRF52840 re-capture, same
+    # date). The touched file, peripherals/spi.rs, IS on this board's watch list,
+    # so the digest moved — but every edit in it is inside `Nrf52SpiRegs`, an
+    # nRF-only register struct. This board uses Stm32/Stm32Fifo/Stm32H5 layouts,
+    # which are separate structs with their own read/write matches; not one line
+    # they execute changed. Two registers were added to the nRF PSEL block
+    # (0x510 read routing, 0x514 psel_csn) — offsets this board's layouts never
+    # decode. Evidence on this commit: labwired-core --lib 2987 passed / 0
+    # failed, cargo fmt clean. Acked WITHOUT a live re-capture for this board:
+    # it was not attached. Its own live diff remains owed and is NOT evidenced
+    # by this entry.
     drift_ack: 2026-08-09
-    drift_ack_digest: c673f4e53a525ea187f0f397945b954d1d7ab43a9b0fdaeb5aedee2b45dcfec5
+    drift_ack_digest: 29920fb76cc97122c4b5a0dbd66ed502921e700b82a53b494c55da4fc107261b
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -2228,8 +2275,14 @@ boards:
     # or full-duplex RX events: labwired-hw-oracle (27/27) and chip_conformance
     # pass unchanged. No live re-capture this session; re-capturing IDR readback
     # and SPI RX behaviour is tracked.
+    # 2026-08-09: rides the nRF52 SPIM PSEL fix. peripherals/spi.rs is on this
+    # board's watch list so its digest moved, but every edit is inside
+    # `Nrf52SpiRegs` — an nRF-only struct this board's Stm32* layouts do not
+    # use. Recorded explicitly because `--write-ack-digests` re-stamps EVERY
+    # ack, which would otherwise have widened this one to cover a change
+    # nobody had written down.
     drift_ack: 2026-07-28
-    drift_ack_digest: 3a1dddcdea490054aa05a1e9e600d2004da94af89df446a1330af106a7b12db7
+    drift_ack_digest: 57ea32d0f8340e693ad40fe7e28bae92f48bf6751bee1c8445b6eeae11cc9722
     models:
       - configs/chips/stm32h735.yaml
       - crates/core/src/peripherals/rcc.rs
@@ -2263,8 +2316,14 @@ boards:
     # or full-duplex RX events: labwired-hw-oracle (27/27) and chip_conformance
     # pass unchanged. No live re-capture this session; re-capturing IDR readback
     # and SPI RX behaviour is tracked.
+    # 2026-08-09: rides the nRF52 SPIM PSEL fix. peripherals/spi.rs is on this
+    # board's watch list so its digest moved, but every edit is inside
+    # `Nrf52SpiRegs` — an nRF-only struct this board's Stm32* layouts do not
+    # use. Recorded explicitly because `--write-ack-digests` re-stamps EVERY
+    # ack, which would otherwise have widened this one to cover a change
+    # nobody had written down.
     drift_ack: 2026-07-28
-    drift_ack_digest: 51dff645de64cdb917f8ea4949b08270c35ed58622b677b221ef9eafe06d848e
+    drift_ack_digest: 1a551ee894671241bb0e1b593c0a4ad9a7539fb30c197876ef8ac3fd51a775b6
     models:
       - configs/chips/stm32f411ceu6.yaml
       - crates/core/src/peripherals/rcc.rs
