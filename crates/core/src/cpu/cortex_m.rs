@@ -125,7 +125,8 @@ pub struct CortexM {
     sleeping: bool,
     /// Local byte-exclusive reservation: address and value observed by LDREXB.
     /// Comparing the value at STREXB conservatively detects conflicting bus
-    /// writes without requiring every bus implementation to expose epochs.
+    /// writes without requiring every bus implementation to expose epochs;
+    /// an external write of the same byte value is therefore indistinguishable.
     exclusive_byte: Option<(u32, u8)>,
 }
 

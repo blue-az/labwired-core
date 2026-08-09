@@ -1842,7 +1842,9 @@ impl crate::Peripheral for Spi {
 
     /// nRF52 SPIM EasyDMA needs bus access to read/write RAM buffers.
     fn needs_bus_tick(&self) -> bool {
-        self.nrf52_pending_start || self.has_external_bus_device()
+        self.nrf52_pending_start
+            || self.has_external_bus_device()
+            || self.selected_devices.iter().any(|selected| *selected)
     }
 
     /// nRF52 SPIM EasyDMA transfer engine (bare-bus / bus_tick_indices path).
