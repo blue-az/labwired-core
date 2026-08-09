@@ -89,6 +89,15 @@ mod no_discarded_bus_access {
                 "let b0 = match bus.read_u8(a3 as u64) {",
                 "let b1 = match bus.read_u8((a3.wrapping_add(1)) as u64) {",
                 "|base: u32| -> Option<u32> { bus.read_u32((base.wrapping_add(core * 4)) as u64).ok() };",
+                // `raw_word_for_trace` is an OBSERVER: it re-reads the word at
+                // the PC purely so a trace line can show it. It is on no
+                // execution path and its value reaches no register. Turning a
+                // lost trace word into a fault would mean switching tracing on
+                // could change whether a run passes, which is the one thing an
+                // observer must never do — so here the default IS the honest
+                // answer, and it is why these two are allowed rather than fixed.
+                "bus.read_u16(addr).map(u32::from).unwrap_or(0)",
+                "bus.read_u32(addr).unwrap_or(0)",
             ],
         ),
     ];
@@ -147,6 +156,17 @@ mod no_discarded_bus_access {
         // single most important shape to catch: it is invisible to clippy,
         // because nothing is being discarded as far as the type system can see.
         if l.contains("if let Ok(") || l.contains("match bus.read_") {
+            return true;
+        }
+        // `bus.read_u32(..).unwrap_or(0)` — the Err is collapsed to a default
+        // and the caller cannot tell a real 0 from a refused access, which is
+        // precisely the fabricated fact every other arm here exists to catch.
+        //
+        // This arm was missing while the six above were present, so the one
+        // spelling that reads most like ordinary Rust was the one spelling the
+        // guard could not see. A regression reintroduced as `.unwrap_or(0)`
+        // would have passed a green gate.
+        if l.contains(".unwrap_or") {
             return true;
         }
         false
