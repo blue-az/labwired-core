@@ -4,7 +4,7 @@
 // This software is released under the MIT License.
 // See the LICENSE file in the project root for full license information.
 
-//! MCP2515 CAN controller SPI register shell — no CAN bus frames required.
+//! MCP2515 CAN controller with standard-ID classical CAN transport.
 //!
 //! Supports RESET, READ, WRITE, READ_STATUS, RX_STATUS, BIT_MODIFY for the
 //! register file used by common Arduino MCP_CAN libraries.
@@ -25,8 +25,8 @@ const REG_CANCTRL: u8 = 0x0F;
 const REG_CNF3: u8 = 0x28;
 const REG_CNF2: u8 = 0x29;
 const REG_CNF1: u8 = 0x2A;
+const REG_CANINTE: u8 = 0x2B;
 const REG_CANINTF: u8 = 0x2C;
-#[cfg(test)]
 const REG_EFLG: u8 = 0x2D;
 const REG_TXB0CTRL: u8 = 0x30;
 const REG_TXB0SIDH: u8 = 0x31;
@@ -42,13 +42,15 @@ const REG_TXB2SIDH: u8 = 0x51;
 const REG_TXB2D0: u8 = 0x56;
 const REG_RXB0SIDH: u8 = 0x61;
 const REG_RXB1SIDH: u8 = 0x71;
+const REG_RXB0CTRL: u8 = 0x60;
+const REG_RXB1CTRL: u8 = 0x70;
 
 const TXREQ: u8 = 0x08;
-#[cfg(test)]
 const CANINTF_RX0IF: u8 = 0x01;
-#[cfg(test)]
 const CANINTF_RX1IF: u8 = 0x02;
 const CANINTF_TX0IF: u8 = 0x04;
+const EFLG_RX1OVR: u8 = 0x80;
+const EFLG_RX0OVR: u8 = 0x40;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct TxBuffer {
@@ -121,6 +123,7 @@ pub struct Mcp2515 {
     component_id: Option<String>,
     bus_tx: Option<Sender<crate::network::CanFrame>>,
     bus_rx: Option<Receiver<crate::network::CanFrame>>,
+    irq_asserted: bool,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -151,6 +154,7 @@ impl Mcp2515 {
             component_id: None,
             bus_tx: None,
             bus_rx: None,
+            irq_asserted: false,
         }
     }
 
@@ -158,6 +162,16 @@ impl Mcp2515 {
         self.regs = [0; 128];
         self.regs[REG_CANCTRL as usize] = 0x87;
         self.regs[REG_CANSTAT as usize] = OpMode::Config.bits();
+        self.recompute_irq();
+    }
+
+    /// Internal active-low INT state. Physical GPIO routing is configured by a later wiring task.
+    pub fn irq_asserted(&self) -> bool {
+        self.irq_asserted
+    }
+
+    fn recompute_irq(&mut self) {
+        self.irq_asserted = self.regs[REG_CANINTF as usize] & self.regs[REG_CANINTE as usize] != 0;
     }
 
     fn timing_is_500k(&self) -> bool {
@@ -192,6 +206,9 @@ impl Mcp2515 {
             return;
         }
         self.regs[address as usize] = value;
+        if matches!(address, REG_CANINTE | REG_CANINTF | REG_EFLG) {
+            self.recompute_irq();
+        }
         if address != REG_CANCTRL {
             return;
         }
@@ -289,6 +306,138 @@ impl Mcp2515 {
         };
         full | frame_type | filter_hit
     }
+
+    fn current_mode(&self) -> OpMode {
+        OpMode::from_request(self.regs[REG_CANSTAT as usize]).unwrap_or(OpMode::Config)
+    }
+
+    fn standard_filter_match(&self, buffer: usize, id: u32) -> Option<u8> {
+        let ctrl = [REG_RXB0CTRL, REG_RXB1CTRL][buffer];
+        match (self.regs[ctrl as usize] >> 5) & 3 {
+            3 => return Some(0),
+            2 => return None,
+            _ => {}
+        }
+        let mask_base = [0x20u8, 0x24][buffer];
+        let mask = decode_standard_id([
+            self.regs[mask_base as usize],
+            self.regs[mask_base as usize + 1],
+            self.regs[mask_base as usize + 2],
+            self.regs[mask_base as usize + 3],
+        ])?;
+        let filter_bases: &[u8] = if buffer == 0 {
+            &[0x00, 0x04]
+        } else {
+            &[0x08, 0x10, 0x14, 0x18]
+        };
+        filter_bases.iter().enumerate().find_map(|(offset, base)| {
+            let filter = decode_standard_id([
+                self.regs[*base as usize],
+                self.regs[*base as usize + 1],
+                self.regs[*base as usize + 2],
+                self.regs[*base as usize + 3],
+            ])?;
+            ((id & mask) == (filter & mask))
+                .then_some((offset + if buffer == 0 { 0 } else { 2 }) as u8)
+        })
+    }
+
+    fn store_rx(&mut self, buffer: usize, filter_hit: u8, frame: &crate::network::CanFrame) {
+        let ctrl = [REG_RXB0CTRL, REG_RXB1CTRL][buffer];
+        let sidh = [REG_RXB0SIDH, REG_RXB1SIDH][buffer];
+        let encoded = encode_standard_id(frame.id).expect("accepted standard id");
+        if buffer == 0 {
+            // RXB0 has only FILHIT0; preserve BUKT in bit 2.
+            self.regs[ctrl as usize] = (self.regs[ctrl as usize] & !0x01) | (filter_hit & 0x01);
+        } else {
+            self.regs[ctrl as usize] = (self.regs[ctrl as usize] & !0x07) | (filter_hit & 0x07);
+        }
+        self.regs[sidh as usize..sidh as usize + 4].copy_from_slice(&encoded);
+        self.regs[sidh as usize + 4] = frame.data.len() as u8;
+        self.regs[sidh as usize + 5..sidh as usize + 13].fill(0);
+        self.regs[sidh as usize + 5..sidh as usize + 5 + frame.data.len()]
+            .copy_from_slice(&frame.data);
+        self.regs[REG_CANINTF as usize] |= [CANINTF_RX0IF, CANINTF_RX1IF][buffer];
+        self.recompute_irq();
+    }
+
+    fn receive_standard(&mut self, frame: crate::network::CanFrame) {
+        if frame.extended
+            || frame.fd
+            || frame.bitrate_switch
+            || frame.remote
+            || frame.id > 0x7ff
+            || frame.data.len() > 8
+        {
+            return;
+        }
+        let match0 = self.standard_filter_match(0, frame.id);
+        let match1 = self.standard_filter_match(1, frame.id);
+        let full0 = self.regs[REG_CANINTF as usize] & CANINTF_RX0IF != 0;
+        let full1 = self.regs[REG_CANINTF as usize] & CANINTF_RX1IF != 0;
+        if let Some(hit) = match0 {
+            if !full0 {
+                self.store_rx(0, hit, &frame);
+                return;
+            }
+            if self.regs[REG_RXB0CTRL as usize] & 0x04 != 0 {
+                if !full1 {
+                    self.store_rx(1, hit, &frame);
+                    return;
+                }
+                self.regs[REG_EFLG as usize] |= EFLG_RX0OVR | EFLG_RX1OVR;
+            } else {
+                self.regs[REG_EFLG as usize] |= EFLG_RX0OVR;
+            }
+        } else if let Some(hit) = match1 {
+            if !full1 {
+                self.store_rx(1, hit, &frame);
+                return;
+            }
+            self.regs[REG_EFLG as usize] |= EFLG_RX1OVR;
+        }
+        self.recompute_irq();
+    }
+
+    fn service_pending_tx(&mut self) {
+        let mode = self.current_mode();
+        if !matches!(mode, OpMode::Normal | OpMode::Loopback) {
+            return;
+        }
+        for index in 0..3 {
+            let tx = self.tx_buffer(index);
+            if !tx.pending || tx.dlc > 8 {
+                continue;
+            }
+            let sidh = [REG_TXB0SIDH, REG_TXB1SIDH, REG_TXB2SIDH][index];
+            if decode_standard_id([
+                self.regs[sidh as usize],
+                self.regs[sidh as usize + 1],
+                self.regs[sidh as usize + 2],
+                self.regs[sidh as usize + 3],
+            ])
+            .is_none()
+            {
+                continue;
+            }
+            let frame =
+                crate::network::CanFrame::classic(tx.id, tx.data[..tx.dlc as usize].to_vec());
+            let sent = if mode == OpMode::Loopback {
+                self.receive_standard(frame);
+                true
+            } else {
+                self.bus_tx
+                    .as_ref()
+                    .is_some_and(|sender| sender.send(frame).is_ok())
+            };
+            if sent {
+                let ctrl = [REG_TXB0CTRL, REG_TXB1CTRL, REG_TXB2CTRL][index];
+                self.regs[ctrl as usize] &= !TXREQ;
+                self.regs[REG_CANINTF as usize] |= CANINTF_TX0IF << index;
+                self.recompute_irq();
+            }
+        }
+    }
 }
 
 impl SpiDevice for Mcp2515 {
@@ -311,6 +460,18 @@ impl SpiDevice for Mcp2515 {
         self.bus_tx = Some(tx);
         self.bus_rx = Some(rx);
         Ok(())
+    }
+    fn poll_external_bus(&mut self) {
+        self.service_pending_tx();
+        let mut frames = Vec::new();
+        if let Some(rx) = &self.bus_rx {
+            while let Ok(frame) = rx.try_recv() {
+                frames.push(frame);
+            }
+        }
+        for frame in frames {
+            self.receive_standard(frame);
+        }
     }
     fn cs_pin(&self) -> &str {
         &self.cs_pin
@@ -456,9 +617,12 @@ static MCP2515_METADATA: KitMetadata = KitMetadata {
     inputs: &[],
     device_type: "mcp2515",
     label: "MCP2515 CAN",
-    summary: "SPI CAN controller register shell (no bus frames).",
-    detail: "Microchip MCP2515 RESET/READ/WRITE/BIT_MODIFY for CANCTRL/CANSTAT and \
-             friends. CAN wire protocol is not simulated in this thin shell.",
+    summary: "Functional SPI classical CAN controller for standard 11-bit data frames.",
+    detail: "Microchip MCP2515 SPI commands, modes, timing, three transmit buffers, two receive \
+             buffers, standard-ID masks/filters, rollover, overflow, interrupt flags, and shared \
+             classical CAN delivery. Limitations: 11-bit data frames only; extended identifiers, \
+             remote frames, CAN FD/bitrate switching, physical INT GPIO wiring, and nested-device \
+             trace contribution are not modeled.",
     transport: Transport::Spi,
     category: Category::Spi,
     config_keys: &[ConfigKey {
@@ -485,6 +649,7 @@ impl PeripheralKit for Mcp2515Kit {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::network::{CanBus, CanFrame, Interconnect};
 
     fn transaction(dev: &mut Mcp2515, bytes: &[u8]) -> Vec<u8> {
         dev.cs_select();
@@ -512,6 +677,176 @@ mod tests {
                 .chain(values.iter().copied())
                 .collect::<Vec<_>>(),
         );
+    }
+
+    fn configure_500k_normal(dev: &mut Mcp2515) {
+        write(dev, REG_CNF3, &[0x01, 0xBC, 0x00]);
+        write(dev, REG_CANCTRL, &[0x00]);
+    }
+
+    #[test]
+    fn rts_sends_standard_txb0_frame_through_shared_can_bus() {
+        let mut bus = CanBus::new();
+        let (mcp_tx, mcp_rx) = bus.attach();
+        let (_peer_tx, peer_rx) = bus.attach();
+        let mut dev = Mcp2515::new("PA4");
+        dev.attach_can_bus(mcp_tx, mcp_rx).unwrap();
+        configure_500k_normal(&mut dev);
+
+        transaction(
+            &mut dev,
+            &[0x40, 0xFB, 0xE0, 0, 0, 8, 0x02, 0x01, 0x0C, 0, 0, 0, 0, 0],
+        );
+        transaction(&mut dev, &[0x81]);
+        dev.poll_external_bus();
+        bus.tick().unwrap();
+
+        assert_eq!(
+            peer_rx.try_recv().unwrap(),
+            CanFrame::classic(0x7DF, vec![0x02, 0x01, 0x0C, 0, 0, 0, 0, 0])
+        );
+        assert_eq!(read(&mut dev, REG_TXB0CTRL, 1)[0] & TXREQ, 0);
+        assert_ne!(read(&mut dev, REG_CANINTF, 1)[0] & CANINTF_TX0IF, 0);
+    }
+
+    #[test]
+    fn standard_bus_response_populates_rxb0_and_drives_active_low_irq() {
+        let mut bus = CanBus::new();
+        let (mcp_tx, mcp_rx) = bus.attach();
+        let (peer_tx, _peer_rx) = bus.attach();
+        let mut dev = Mcp2515::new("PA4");
+        dev.attach_can_bus(mcp_tx, mcp_rx).unwrap();
+        write(&mut dev, REG_RXB0CTRL, &[0x60]); // receive any valid standard frame
+        write(&mut dev, REG_CANINTE, &[CANINTF_RX0IF]);
+
+        peer_tx
+            .send(CanFrame::classic(0x7E8, vec![3, 0x41, 0x0C, 0x12]))
+            .unwrap();
+        bus.tick().unwrap();
+        dev.poll_external_bus();
+
+        assert_eq!(
+            read(&mut dev, REG_RXB0SIDH, 9),
+            [0xFD, 0x00, 0, 0, 4, 3, 0x41, 0x0C, 0x12]
+        );
+        assert_eq!(read(&mut dev, REG_CANINTF, 1), [CANINTF_RX0IF]);
+        assert_eq!(transaction(&mut dev, &[INST_READ_STATUS, 0])[1] & 1, 1);
+        assert_eq!(transaction(&mut dev, &[INST_RX_STATUS, 0])[1] & 0xC0, 0x40);
+        assert!(dev.irq_asserted());
+
+        transaction(&mut dev, &[0x90, 0]); // READ RXB0 auto-clear on CS rise
+        assert!(!dev.irq_asserted());
+    }
+
+    fn inject(dev: &mut Mcp2515, frame: CanFrame) {
+        let (tx, rx) = std::sync::mpsc::channel();
+        tx.send(frame).unwrap();
+        // Use the supported external-bus receiver path without constructing a full world.
+        dev.bus_rx = Some(rx);
+        dev.poll_external_bus();
+    }
+
+    fn write_standard_id(dev: &mut Mcp2515, base: u8, id: u32) {
+        write(dev, base, &encode_standard_id(id).unwrap());
+    }
+
+    #[test]
+    fn standard_masks_filters_rollover_and_overflow_preserve_unread_frames() {
+        let mut dev = Mcp2515::new("PA4");
+        write_standard_id(&mut dev, 0x20, 0x7F0);
+        write_standard_id(&mut dev, 0x00, 0x7E0);
+        write_standard_id(&mut dev, 0x04, 0x7E0);
+        write(&mut dev, REG_RXB0CTRL, &[0x04]); // filtered + BUKT
+        write(&mut dev, REG_RXB1CTRL, &[0x40]); // reject direct standard RXB1 matches
+
+        inject(&mut dev, CanFrame::classic(0x123, vec![0xAA]));
+        assert_eq!(read(&mut dev, REG_CANINTF, 1), [0], "nonmatch is dropped");
+        inject(&mut dev, CanFrame::classic(0x7E8, vec![1]));
+        inject(&mut dev, CanFrame::classic(0x7E9, vec![2]));
+        assert_eq!(read(&mut dev, REG_CANINTF, 1)[0] & 3, 3, "BUKT fills RXB1");
+        assert_eq!(read(&mut dev, REG_RXB0SIDH + 5, 1), [1]);
+        assert_eq!(read(&mut dev, REG_RXB1SIDH + 5, 1), [2]);
+
+        inject(&mut dev, CanFrame::classic(0x7EA, vec![3]));
+        assert_eq!(
+            read(&mut dev, REG_EFLG, 1)[0] & (EFLG_RX0OVR | EFLG_RX1OVR),
+            EFLG_RX0OVR | EFLG_RX1OVR
+        );
+        assert_eq!(read(&mut dev, REG_RXB0SIDH + 5, 1), [1]);
+        assert_eq!(read(&mut dev, REG_RXB1SIDH + 5, 1), [2]);
+    }
+
+    #[test]
+    fn unsupported_or_unsendable_tx_stays_pending_without_success_flag() {
+        for (mode, header) in [
+            (0x80, [0x24, 0x60, 0, 0, 1, 0xAA]), // config mode
+            (0x60, [0x24, 0x60, 0, 0, 1, 0xAA]), // listen-only
+            (0x00, [0x24, 0x60, 0, 0, 1, 0xAA]), // absent bus channel
+            (0x00, [0x24, 0x68, 0, 0, 1, 0xAA]), // EXIDE
+            (0x00, [0x24, 0x60, 0, 0, 9, 0xAA]), // invalid DLC
+        ] {
+            let mut dev = Mcp2515::new("PA4");
+            write(&mut dev, REG_CNF3, &[0x01, 0xBC, 0x00]);
+            write(&mut dev, REG_CANCTRL, &[mode]);
+            transaction(
+                &mut dev,
+                &[0x40].into_iter().chain(header).collect::<Vec<_>>(),
+            );
+            transaction(&mut dev, &[0x81]);
+            dev.poll_external_bus();
+            assert_ne!(read(&mut dev, REG_TXB0CTRL, 1)[0] & TXREQ, 0);
+            assert_eq!(read(&mut dev, REG_CANINTF, 1)[0] & CANINTF_TX0IF, 0);
+        }
+    }
+
+    #[test]
+    fn loopback_uses_receive_filters_without_emitting_to_bus() {
+        let mut bus = CanBus::new();
+        let (mcp_tx, mcp_rx) = bus.attach();
+        let (_peer_tx, peer_rx) = bus.attach();
+        let mut dev = Mcp2515::new("PA4");
+        dev.attach_can_bus(mcp_tx, mcp_rx).unwrap();
+        configure_500k_normal(&mut dev);
+        write(&mut dev, REG_RXB0CTRL, &[0x60]);
+        write(&mut dev, REG_CANCTRL, &[0x40]);
+        transaction(&mut dev, &[0x40, 0x24, 0x60, 0, 0, 1, 0xAB]);
+        transaction(&mut dev, &[0x81]);
+        dev.poll_external_bus();
+        bus.tick().unwrap();
+        assert!(peer_rx.try_recv().is_err());
+        assert_eq!(read(&mut dev, REG_RXB0SIDH + 5, 1), [0xAB]);
+    }
+
+    #[test]
+    fn external_poll_drains_fifo_and_ignores_unsupported_frame_kinds() {
+        let mut dev = Mcp2515::new("PA4");
+        write_standard_id(&mut dev, 0x20, 0x7FF);
+        write_standard_id(&mut dev, 0x24, 0x7FF);
+        write_standard_id(&mut dev, 0x00, 0x101);
+        write_standard_id(&mut dev, 0x04, 0x101);
+        for base in [0x08, 0x10, 0x14, 0x18] {
+            write_standard_id(&mut dev, base, 0x102);
+        }
+        let (tx, rx) = std::sync::mpsc::channel();
+        dev.bus_rx = Some(rx);
+        let mut unsupported = CanFrame::classic(0x100, vec![0xEE]);
+        unsupported.fd = true;
+        tx.send(unsupported).unwrap();
+        tx.send(CanFrame::classic(0x101, vec![1])).unwrap();
+        tx.send(CanFrame::classic(0x102, vec![2])).unwrap();
+        dev.poll_external_bus();
+        assert_eq!(read(&mut dev, REG_RXB0SIDH + 5, 1), [1]);
+        assert_eq!(read(&mut dev, REG_RXB1SIDH + 5, 1), [2]);
+    }
+
+    #[test]
+    fn bit_modify_interrupt_clear_recomputes_irq() {
+        let mut dev = Mcp2515::new("PA4");
+        write(&mut dev, REG_CANINTE, &[CANINTF_TX0IF]);
+        write(&mut dev, REG_CANINTF, &[CANINTF_TX0IF]);
+        assert!(dev.irq_asserted());
+        transaction(&mut dev, &[INST_BITMOD, REG_CANINTF, CANINTF_TX0IF, 0]);
+        assert!(!dev.irq_asserted());
     }
 
     #[test]
