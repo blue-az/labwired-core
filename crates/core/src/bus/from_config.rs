@@ -887,6 +887,11 @@ impl SystemBus {
         // Same for classic ESP32 (LX6), whose matrix indices are 29/30 —
         // neither the C3's 53/54 nor the S3's 89/90.
         bus.wire_esp32_i2c_pads();
+        // …and the classic part's VSPI (SPI3) and UART TX. VSPI's 63/65/68
+        // happen to be the C3's FSPI numbers and are NOT SPI signals on the S3;
+        // the UART indices 14/17/198 are the classic part's alone.
+        bus.wire_esp32_spi_pads();
+        bus.wire_esp32_uart_pads();
         // RP2040: bind I²C wires to the pads IO_BANK0's FUNCSEL can route them to.
         bus.wire_rp2040_i2c_pads();
         // Same for the RP2040 UARTs' TX/RX, so serial output is a waveform on
