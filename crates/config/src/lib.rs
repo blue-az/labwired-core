@@ -967,16 +967,21 @@ fn validate_environment_interconnect_config(
                 index,
                 kind,
                 &interconnect.config,
-                &["peripheral"],
+                &["peripheral", "endpoints"],
             )?;
-            if interconnect
+            let has_peripheral = interconnect
                 .config
                 .get("peripheral")
                 .and_then(serde_yaml::Value::as_str)
                 .map(str::trim)
                 .filter(|value| !value.is_empty())
-                .is_none()
-            {
+                .is_some();
+            let has_endpoints = interconnect
+                .config
+                .get("endpoints")
+                .and_then(serde_yaml::Value::as_mapping)
+                .is_some();
+            if !has_peripheral && !has_endpoints {
                 anyhow::bail!("can_bus: missing nonblank config.peripheral");
             }
         }

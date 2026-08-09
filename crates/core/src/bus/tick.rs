@@ -1377,6 +1377,97 @@ mod forced_oracle_walk_tests {
 }
 
 #[cfg(test)]
+mod nrf_spim_gpio_cs_scheduling_tests {
+    use super::SystemBus;
+    use crate::peripherals::{
+        gpio::{GpioPort, GpioRegisterLayout},
+        spi::{Spi, SpiDevice, SpiRegisterLayout},
+    };
+    use crate::Bus;
+    use std::sync::{Arc, Mutex};
+
+    const GPIO0: u64 = 0x5000_0000;
+    const SPIM2: u64 = 0x4002_3000;
+
+    struct TransactionDevice(Arc<Mutex<Vec<&'static str>>>);
+
+    impl SpiDevice for TransactionDevice {
+        fn transfer(&mut self, _mosi: u8) -> u8 {
+            0
+        }
+
+        fn cs_pin(&self) -> &str {
+            "P0.12"
+        }
+
+        fn cs_select(&mut self) {
+            self.0.lock().unwrap().push("select");
+        }
+
+        fn cs_release(&mut self) {
+            self.0.lock().unwrap().push("release");
+        }
+    }
+
+    #[test]
+    fn system_bus_keeps_selected_spim_ticked_until_gpio_release() {
+        let events = Arc::new(Mutex::new(Vec::new()));
+        let mut bus = SystemBus::new();
+        bus.add_peripheral(
+            "gpio0",
+            GPIO0,
+            0x1000,
+            None,
+            Box::new(GpioPort::new_with_layout(GpioRegisterLayout::Nrf52)),
+        );
+        bus.add_peripheral(
+            "spim2",
+            SPIM2,
+            0x1000,
+            None,
+            Box::new(Spi::new_with_layout(SpiRegisterLayout::Nrf52Spim)),
+        );
+        bus.attach_spi_device("spim2", Box::new(TransactionDevice(events.clone())))
+            .unwrap();
+
+        Bus::write_u32(&mut bus, GPIO0 + 0x518, 1 << 12).unwrap(); // DIRSET
+        Bus::write_u32(&mut bus, GPIO0 + 0x508, 1 << 12).unwrap(); // OUTSET: idle high
+        Bus::write_u8(&mut bus, 0x2000_0200, 0xA5).unwrap();
+        Bus::write_u32(&mut bus, SPIM2 + 0x500, 7).unwrap();
+        Bus::write_u32(&mut bus, SPIM2 + 0x544, 0x2000_0200).unwrap();
+        Bus::write_u32(&mut bus, SPIM2 + 0x548, 1).unwrap();
+
+        Bus::write_u32(&mut bus, GPIO0 + 0x50C, 1 << 12).unwrap(); // OUTCLR
+        Bus::write_u32(&mut bus, SPIM2 + 0x010, 1).unwrap(); // TASKS_START
+        Bus::tick_peripherals(&mut bus);
+        assert_eq!(*events.lock().unwrap(), ["select"]);
+
+        Bus::write_u32(&mut bus, GPIO0 + 0x508, 1 << 12).unwrap(); // OUTSET
+        Bus::tick_peripherals(&mut bus);
+        assert_eq!(*events.lock().unwrap(), ["select", "release"]);
+        assert!(
+            bus.bus_tick_indices.is_empty(),
+            "released SPIM must self-remove"
+        );
+
+        // A new low edge before the next START begins a distinct transaction.
+        Bus::write_u32(&mut bus, GPIO0 + 0x50C, 1 << 12).unwrap();
+        Bus::write_u32(&mut bus, SPIM2 + 0x010, 1).unwrap();
+        Bus::tick_peripherals(&mut bus);
+        Bus::write_u32(&mut bus, GPIO0 + 0x508, 1 << 12).unwrap();
+        Bus::tick_peripherals(&mut bus);
+        assert_eq!(
+            *events.lock().unwrap(),
+            ["select", "release", "select", "release"]
+        );
+        assert!(
+            bus.bus_tick_indices.is_empty(),
+            "second release must self-remove"
+        );
+    }
+}
+
+#[cfg(test)]
 mod walk_free_campaign {
     //! Pins the walk-free STM32 campaign's *remaining surface* on the L476
     //! nokia5110-invaders bus as it is actually executed (`from_config` +
@@ -1693,6 +1784,9 @@ mod c3_level_peripheral_matrix_routing {
     use crate::Bus;
     use labwired_config::{ChipDescriptor, SystemManifest};
     use std::path::PathBuf;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::mpsc::{Receiver, Sender};
+    use std::sync::Arc;
 
     const INTMATRIX: u64 = 0x600C_2000;
     const LINE: u32 = 7;
@@ -1702,6 +1796,105 @@ mod c3_level_peripheral_matrix_routing {
     const SPI_DMA_INT_ENA: u64 = 0x34;
     const SPI_DMA_INT_CLR: u64 = 0x38;
     const SPI_USR_BIT: u32 = 1 << 24;
+
+    struct ExternalCanPoller {
+        polls: Arc<AtomicUsize>,
+        attached: bool,
+    }
+    impl crate::peripherals::spi::SpiDevice for ExternalCanPoller {
+        fn needs_external_bus_poll(&self) -> bool {
+            self.attached
+        }
+        fn component_id(&self) -> Option<&str> {
+            Some("external-can")
+        }
+        fn poll_external_bus(&mut self) {
+            self.polls.fetch_add(1, Ordering::SeqCst);
+        }
+        fn attach_can_bus(
+            &mut self,
+            _tx: Sender<crate::network::CanFrame>,
+            _rx: Receiver<crate::network::CanFrame>,
+        ) -> anyhow::Result<()> {
+            self.attached = true;
+            Ok(())
+        }
+        fn transfer(&mut self, _mosi: u8) -> u8 {
+            0
+        }
+        fn cs_pin(&self) -> &str {
+            "GPIO10"
+        }
+    }
+
+    #[test]
+    fn idle_nested_can_keeps_c3_spi_in_real_legacy_walk() {
+        let polls = Arc::new(AtomicUsize::new(0));
+        let mut bus = routed_bus(SPI2_INTR_SOURCE_ID);
+        bus.attach_spi_device(
+            "spi2",
+            Box::new(ExternalCanPoller {
+                polls: polls.clone(),
+                attached: false,
+            }),
+        )
+        .unwrap();
+        pin_to_walk(&mut bus, "spi2");
+        assert!(
+            bus.legacy_tick_entry_descriptors()
+                .iter()
+                .all(|(name, _, _)| name != "spi2"),
+            "unattached nested CAN must not keep SPI walk-active"
+        );
+
+        let (tx, _outbound) = std::sync::mpsc::channel();
+        let (_inbound, rx) = std::sync::mpsc::channel();
+        bus.attach_can_endpoint_by_id("external-can", tx, rx)
+            .unwrap();
+        assert!(
+            bus.legacy_tick_entry_descriptors()
+                .iter()
+                .any(|(name, _, _)| name == "spi2"),
+            "nested attach must refresh owning SPI walk eligibility"
+        );
+        Bus::tick_peripherals(&mut bus);
+        assert_eq!(polls.load(Ordering::SeqCst), 1);
+
+        let mut ordinary = routed_bus(SPI2_INTR_SOURCE_ID);
+        pin_to_walk(&mut ordinary, "spi2");
+        assert!(
+            ordinary
+                .legacy_tick_entry_descriptors()
+                .iter()
+                .all(|(name, _, _)| name != "spi2"),
+            "ordinary idle C3 SPI stays outside the legacy walk"
+        );
+    }
+
+    #[test]
+    fn nested_can_attach_arms_existing_c3_scheduler_controller() {
+        let mut bus = routed_bus(SPI2_INTR_SOURCE_ID);
+        bus.attach_spi_device(
+            "spi2",
+            Box::new(ExternalCanPoller {
+                polls: Arc::new(AtomicUsize::new(0)),
+                attached: false,
+            }),
+        )
+        .unwrap();
+        let before = bus.pending_schedule.len();
+
+        let (tx, _outbound) = std::sync::mpsc::channel();
+        let (_inbound, rx) = std::sync::mpsc::channel();
+        bus.attach_can_endpoint_by_id("external-can", tx, rx)
+            .unwrap();
+
+        assert_eq!(
+            bus.pending_schedule.len(),
+            before + 1,
+            "nested attach must arm the owning scheduler controller exactly once"
+        );
+    }
 
     // apb_saradc register offsets + bits (private in apb_saradc.rs; mirrored).
     const SARADC_ONETIME_SAMPLE: u64 = 0x20;
@@ -1778,7 +1971,6 @@ mod c3_level_peripheral_matrix_routing {
         // Flipping uses_scheduler false changes walk-set membership; refresh it
         // so an already-armed peripheral joins the walk (the arm's own refresh
         // ran while it was still scheduler-driven and thus excluded).
-        bus.refresh_legacy_tick_index(i);
         // Re-derive walk-deletion: once every C3 timer/level model migrated off
         // the walk (the LEDC timer port emptied the last real pinner on this
         // no-wifi_mac devkit bus), `from_config` builds the bus walk-DELETED, so
@@ -1787,6 +1979,7 @@ mod c3_level_peripheral_matrix_routing {
         // no longer deletable; recompute the flag so the walk path this gate
         // exercises actually runs.
         bus.legacy_walk_disabled = bus.derive_walk_deletable();
+        bus.refresh_legacy_tick_index(i);
     }
 
     /// Shared body: arm `name` on a scheduler bus and a walk bus, tick each, and

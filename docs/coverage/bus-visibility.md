@@ -10,7 +10,7 @@ Derived from live `SystemBus::from_config` builds — never hand-edited. Bind a 
 
 | Chip | I2C | SPI | UART |
 |------|-----|-----|------|
-| esp32 | ✓ | — | — |
+| esp32 | ✓ | ✓ | ✓ |
 | esp32c3 | ✓ | ✓ | ✓ |
 | esp32s3 | — | — | — |
 | esp32s3-zero | — | — | — |
