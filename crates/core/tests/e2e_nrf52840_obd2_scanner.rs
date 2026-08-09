@@ -90,6 +90,14 @@ fn real_scanner_and_ecu_firmware_complete_the_obd2_workflow() {
         90i16.to_le_bytes()
     );
     assert_eq!(read_bytes(&world, "scanner", vin, 17), b"LWOBD2SIM00000001");
+    let pre_clear_has_mode03 = world.interconnects[0]
+        .as_any_mut()
+        .unwrap()
+        .downcast_mut::<CanBus>()
+        .unwrap()
+        .trace_snapshot()
+        .iter()
+        .any(|frame| frame.id == 0x7DF && frame.data.get(1) == Some(&0x03));
 
     let cycles_before_clear = read_u32(&world, "scanner", cycles);
     world
@@ -98,14 +106,18 @@ fn real_scanner_and_ecu_firmware_complete_the_obd2_workflow() {
         .unwrap()
         .write_u8(clear_request, 1)
         .unwrap();
-    for _ in 0..4_000_000 {
-        world.step_all();
+    for step in 0..4_000_000 {
+        for (node, result) in world.step_all() {
+            if let Err(error) = result {
+                panic!("node {node} failed at post-clear world step {step}: {error:?}");
+            }
+        }
         if world.machines["scanner"].read_u8(clear_result).unwrap() == 2
             && world.machines["scanner"].read_u8(dtcs).unwrap() == 0
             && read_u32(&world, "ecu", ecu_dtcs) == 0
             && read_u32(&world, "scanner", cycles) > cycles_before_clear
             && read_u32(&world, "scanner", snapshot_seq) & 1 == 0
-            && &read_bytes(&world, "scanner", ble, 9)[..7] == [1, 0x01, 0xB8, 0x0B, 88, 130, 0]
+            && &read_bytes(&world, "scanner", ble, 9)[..7] == [1, 0x01, 0xB8, 0x0B, 88, 90, 0]
         {
             break;
         }
@@ -120,16 +132,21 @@ fn real_scanner_and_ecu_firmware_complete_the_obd2_workflow() {
     assert_eq!(read_u32(&world, "ecu", ecu_dtcs), 0);
     assert_eq!(
         &read_bytes(&world, "scanner", ble, 9)[..7],
-        &[1, 0x01, 0xB8, 0x0B, 88, 130, 0]
+        &[1, 0x01, 0xB8, 0x0B, 88, 90, 0]
     );
     assert!(read_u32(&world, "scanner", ble_tx) > 0);
 
-    let frames = world.interconnects[0]
+    let can_bus = world.interconnects[0]
         .as_any_mut()
         .unwrap()
         .downcast_mut::<CanBus>()
-        .unwrap()
-        .trace_snapshot();
+        .unwrap();
+    assert_eq!(
+        can_bus.trace_dropped(),
+        0,
+        "CAN evidence must not be truncated"
+    );
+    let frames = can_bus.trace_snapshot();
     assert!(frames.iter().any(|frame| frame.id == 0x7DF));
     assert!(frames.iter().any(|frame| frame.id == 0x7E8));
     let services: Vec<u8> = frames
@@ -141,10 +158,7 @@ fn real_scanner_and_ecu_firmware_complete_the_obd2_workflow() {
         .iter()
         .position(|service| *service == 0x04)
         .expect("Mode 04 request");
-    assert!(
-        services[..clear].contains(&0x03),
-        "Mode 03 must expose seeded DTCs"
-    );
+    assert!(pre_clear_has_mode03, "Mode 03 must expose seeded DTCs");
     assert!(
         services[clear + 1..].contains(&0x03),
         "Mode 03 must confirm the clear"

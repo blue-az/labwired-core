@@ -1157,6 +1157,10 @@ pub trait Bus {
     fn as_any_mut(&mut self) -> Option<&mut dyn Any> {
         None
     }
+    /// Resolve a configured GPIO label and read its output latch.
+    fn read_gpio_output_by_label(&self, _pin: &str) -> Option<bool> {
+        None
+    }
 
     /// Is an instruction fetch at `pc` permitted by a memory-protection unit
     /// the bus models? Called by the core only when its 256-byte fetch window

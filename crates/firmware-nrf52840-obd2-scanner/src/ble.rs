@@ -24,11 +24,11 @@ pub const WIRE_FLAGS: u16 = flags::CONNECTED
     | flags::CAN_CONFIG_ERROR
     | flags::DEVICE_ERROR;
 
-/// Layout: version, flags, RPM LE, speed, coolant+40, DTC count, generation LE16.
-/// Coolant values below -40 C encode as 0 and above 215 C encode as 255.
+/// Layout: version, flags, RPM LE, speed, decoded coolant Celsius, DTC count,
+/// generation LE16. Values outside the one-byte Celsius range clamp to 0..255.
 pub fn encode_manufacturer_payload(state: &ScannerState) -> [u8; PAYLOAD_LEN] {
     debug_assert_eq!(WIRE_FLAGS & !0xff, 0);
-    let coolant = state.coolant_c.saturating_add(40).clamp(0, 255) as u8;
+    let coolant = state.coolant_c.clamp(0, 255) as u8;
     let rpm = state.rpm.to_le_bytes();
     let generation = (state.generation as u16).to_le_bytes();
     [

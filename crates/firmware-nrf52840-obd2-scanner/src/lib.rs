@@ -281,14 +281,16 @@ mod tests {
         state.generation = 0x1234;
         assert_eq!(
             encode_manufacturer_payload(&state),
-            [1, 0b0000_0101, 0xb8, 0x0b, 88, 130, 2, 0x34, 0x12]
+            [1, 0b0000_0101, 0xb8, 0x0b, 88, 90, 2, 0x34, 0x12]
         );
     }
 
     #[test]
-    fn ble_coolant_is_signed_offset_and_clamped() {
+    fn ble_coolant_is_celsius_and_clamped() {
         let mut state = ScannerState::new();
-        state.coolant_c = -40;
+        state.coolant_c = 90;
+        assert_eq!(encode_manufacturer_payload(&state)[5], 90);
+        state.coolant_c = 0;
         assert_eq!(encode_manufacturer_payload(&state)[5], 0);
         state.coolant_c = -100;
         assert_eq!(encode_manufacturer_payload(&state)[5], 0);

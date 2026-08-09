@@ -31,8 +31,8 @@ subsequent Mode 03 confirms an empty DTC store. Mode 09 PID 02 returns VIN
 `LWOBD2SIM00000001` over ISO-TP.
 
 The nine-byte raw-radio telemetry payload is `version, status, rpm_le,
-speed_kph, coolant_plus_40, dtc_count, generation_le`. After clearing DTCs its
-first seven bytes are `01 01 b8 0b 58 82 00`.
+speed_kph, coolant_celsius, dtc_count, generation_le`. After clearing DTCs its
+first seven bytes are `01 01 b8 0b 58 5a 00`.
 
 ## Fidelity boundary
 
