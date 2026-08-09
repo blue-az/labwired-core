@@ -739,10 +739,22 @@ impl GpioPort {
     ///
     /// V2: `MODER` must select AF, and the answer is the `AFRL`/`AFRH` nibble.
     /// F1: the pad is an AF output when `MODE != 0` and `CNF >= 0b10`; the
-    /// mapping is fixed (no AFIO remap modelled) so the value carries no
-    /// information and any bound route matches. F1 MISO — an input-mode pad on
-    /// real silicon — is intentionally NOT routed, so a plain GPIO input on
-    /// that pin never silently reads the SPI wire.
+    /// mapping is fixed so the value carries no information and any bound route
+    /// matches. F1 MISO — an input-mode pad on real silicon — is intentionally
+    /// NOT routed, so a plain GPIO input on that pin never silently reads the
+    /// SPI wire.
+    ///
+    /// ⚠️ "Fixed" means AFIO REMAP IS NOT CONSULTED, which is a narrower claim
+    /// than "AFIO is not modelled". [`crate::peripherals::afio::Afio`] does
+    /// model `MAPR`: it stores bits [15:0] and reads them back, silicon-checked
+    /// on the bench F103. Nothing DECODES them. This function reads CRL/CRH and
+    /// nothing else, so a route bound to a remap-only pad would be live the
+    /// moment firmware made that pad any alternate-function output — including
+    /// for its own default function. That is why the F1 tables in
+    /// `SystemBus::wire_stm32_i2c_pads` and `wire_stm32_uart_pads` bind
+    /// DEFAULT-column pads only, and a remapped F103 bus is dark rather than
+    /// wrong. Closing that gap means feeding `MAPR` in here as a second
+    /// selector input.
     ///
     /// nRF52: the port HAS no such register — Nordic muxes at the peripheral,
     /// which names its pin in `PSEL.*`. The answer therefore comes from the
