@@ -478,17 +478,17 @@ impl SpiDevice for Mcp2515 {
     }
     fn poll_external_bus(&mut self) {
         self.service_pending_tx();
-        if !matches!(self.current_mode(), OpMode::Normal | OpMode::ListenOnly) {
-            return;
-        }
+        let receives_external = matches!(self.current_mode(), OpMode::Normal | OpMode::ListenOnly);
         let mut frames = Vec::new();
         if let Some(rx) = &self.bus_rx {
             while let Ok(frame) = rx.try_recv() {
                 frames.push(frame);
             }
         }
-        for frame in frames {
-            self.receive_standard(frame);
+        if receives_external {
+            for frame in frames {
+                self.receive_standard(frame);
+            }
         }
     }
     fn cs_pin(&self) -> &str {
@@ -854,7 +854,7 @@ mod tests {
     }
 
     #[test]
-    fn inactive_modes_preserve_external_frames_until_normal_mode() {
+    fn inactive_modes_discard_external_frames_as_time_advances() {
         for inactive_mode in [0x80, 0x20, 0x40] {
             let mut bus = CanBus::new();
             let (mcp_tx, mcp_rx) = bus.attach();
@@ -872,6 +872,13 @@ mod tests {
             dev.poll_external_bus();
             assert_eq!(read(&mut dev, REG_CANINTF, 1)[0] & CANINTF_RX0IF, 0);
             write(&mut dev, REG_CANCTRL, &[0x00]);
+            dev.poll_external_bus();
+            assert_eq!(read(&mut dev, REG_CANINTF, 1)[0] & CANINTF_RX0IF, 0);
+
+            peer_tx
+                .send(CanFrame::classic(0x321, vec![inactive_mode]))
+                .unwrap();
+            bus.tick().unwrap();
             dev.poll_external_bus();
             assert_eq!(read(&mut dev, REG_RXB0SIDH + 5, 1), [inactive_mode]);
             transaction(&mut dev, &[0x90]);
