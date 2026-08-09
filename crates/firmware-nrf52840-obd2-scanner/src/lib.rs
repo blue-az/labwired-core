@@ -20,8 +20,11 @@ mod tests {
     use super::*;
     use crate::{
         ble::encode_manufacturer_payload,
-        mcp2515::{MCP_500K_16MHZ_CNF, SPIM_EVENTS_END, SPIM_EVENTS_STOPPED},
-        ssd1306::{DisplayView, TWIM_EVENTS_ERROR, TWIM_EVENTS_STOPPED},
+        mcp2515::{
+            validate_frame, MCP_500K_16MHZ_CNF, SPIM_DMA_STATIC, SPIM_EVENTS_END,
+            SPIM_EVENTS_STOPPED,
+        },
+        ssd1306::{DisplayView, TWIM_DMA_STATIC, TWIM_EVENTS_ERROR, TWIM_EVENTS_STOPPED},
         state::{live, AcquisitionFailure},
     };
 
@@ -32,6 +35,84 @@ mod tests {
         assert_eq!(TWIM_EVENTS_STOPPED, 0x104);
         assert_eq!(TWIM_EVENTS_ERROR, 0x124);
         assert_eq!(MCP_500K_16MHZ_CNF, [0x00, 0xbc, 0x01]);
+        const {
+            assert!(SPIM_DMA_STATIC);
+            assert!(TWIM_DMA_STATIC);
+        }
+    }
+
+    #[test]
+    fn mcp_rejects_invalid_standard_frames_before_transfer() {
+        let mut frame = CanFrame {
+            id: 0x800,
+            len: 8,
+            data: [0; 8],
+        };
+        assert_eq!(validate_frame(&frame), Err(mcp2515::Error::InvalidFrame));
+        frame.id = 0x7ff;
+        frame.len = 9;
+        assert_eq!(validate_frame(&frame), Err(mcp2515::Error::InvalidFrame));
+    }
+
+    #[test]
+    fn failed_live_pid_stays_invalid_until_that_pid_recovers() {
+        let mut state = ScannerState::new();
+        state.record_rpm(3000);
+        state.record_speed(88);
+        state.record_coolant(90);
+        assert!(state.has_all(flags::CONNECTED));
+        state.invalidate_live(live::RPM, AcquisitionFailure::Timeout);
+        state.record_speed(89);
+        assert_eq!(state.live_valid, live::SPEED | live::COOLANT);
+        assert!(!state.has_any(flags::CONNECTED));
+        assert!(state.has_all(flags::STALE | flags::TIMEOUT));
+        state.record_rpm(3100);
+        assert!(state.has_all(flags::CONNECTED));
+        assert!(!state.has_any(flags::STALE | flags::TIMEOUT));
+    }
+
+    #[test]
+    fn missing_required_pid_never_connects_and_sets_error() {
+        let mut state = ScannerState::new();
+        // PID 0C only; speed and coolant are absent.
+        assert!(!state.accept_supported_pids(1 << (32 - 0x0c)));
+        state.record_rpm(3000);
+        assert_eq!(state.required_live, live::ALL);
+        assert!(!state.has_any(flags::CONNECTED));
+        assert!(state.has_all(flags::MALFORMED | flags::STALE));
+        assert_eq!(
+            encode_manufacturer_payload(&state)[1] & flags::CONNECTED as u8,
+            0
+        );
+    }
+
+    #[test]
+    fn display_status_priority_is_exact_and_never_truncated() {
+        let mut state = ScannerState::new();
+        state.status_flags = flags::STALE
+            | flags::TIMEOUT
+            | flags::MALFORMED
+            | flags::RX_OVERFLOW
+            | flags::CAN_CONFIG_ERROR;
+        assert_eq!(
+            DisplayView::from_state(&state).status.as_bytes(),
+            b"CAN ERR"
+        );
+        state.status_flags &= !flags::CAN_CONFIG_ERROR;
+        assert_eq!(
+            DisplayView::from_state(&state).status.as_bytes(),
+            b"TIMEOUT"
+        );
+    }
+
+    #[test]
+    fn successful_clear_dtcs_updates_next_snapshot() {
+        let mut state = ScannerState::new();
+        state.update_dtc_count(2);
+        state.clear_dtcs();
+        assert_eq!(state.dtc_count, 0);
+        assert!(!state.has_any(flags::DTC_PRESENT));
+        assert_eq!(encode_manufacturer_payload(&state)[6], 0);
     }
 
     #[test]
@@ -47,7 +128,7 @@ mod tests {
         assert_eq!(view.lines[0].as_bytes(), b"RPM 3000");
         assert_eq!(view.lines[1].as_bytes(), b"SPD -- km/h");
         assert_eq!(view.lines[2].as_bytes(), b"TEMP -- C");
-        assert_eq!(view.status.as_bytes(), b"INIT STALE");
+        assert_eq!(view.status.as_bytes(), b"STALE");
         assert_eq!(
             encode_manufacturer_payload(&state)[1] & flags::CONNECTED as u8,
             0
@@ -137,7 +218,7 @@ mod tests {
         state.status_flags |= flags::STALE | flags::TIMEOUT | flags::CAN_CONFIG_ERROR;
         state.status_flags &= !flags::CONNECTED;
         let view = DisplayView::from_state(&state);
-        assert_eq!(view.status.as_bytes(), b"STALE TIMEOUT CAN ERR");
+        assert_eq!(view.status.as_bytes(), b"CAN ERR");
     }
 
     #[test]

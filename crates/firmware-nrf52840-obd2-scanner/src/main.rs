@@ -51,8 +51,18 @@ pub static mut CLEAR_DTC_RESULT: u8 = 0;
 
 #[entry]
 fn main() -> ! {
-    let mut can = Mcp2515::new();
-    let mut oled = Ssd1306::new();
+    let mut can = match Mcp2515::take() {
+        Some(driver) => driver,
+        None => loop {
+            spin_loop();
+        },
+    };
+    let mut oled = match Ssd1306::take() {
+        Some(driver) => driver,
+        None => loop {
+            spin_loop();
+        },
+    };
     let mut radio = Radio::new();
     let mut state = ScannerState::new();
     if can.init().is_err() {
@@ -77,7 +87,10 @@ fn main() -> ! {
                 CLEAR_DTC_REQUEST = 0;
                 CLEAR_DTC_RESULT = 1;
                 CLEAR_DTC_RESULT = match transact(&mut can, clear_dtcs_request()) {
-                    Ok(frame) if decode_clear_dtcs(&frame).is_ok() => 2,
+                    Ok(frame) if decode_clear_dtcs(&frame).is_ok() => {
+                        state.clear_dtcs();
+                        2
+                    }
                     Ok(_) => {
                         state.apply_failure(AcquisitionFailure::Malformed);
                         3
@@ -94,8 +107,9 @@ fn main() -> ! {
             match transact(&mut can, mode01_request(0)) {
                 Ok(frame) => match decode_supported_pids(&frame) {
                     Ok(map) => {
-                        supported = Some(map);
-                        state.set_required_live(required_live_mask(map));
+                        if state.accept_supported_pids(map) {
+                            supported = Some(map);
+                        }
                     }
                     Err(_) => state.apply_failure(AcquisitionFailure::Malformed),
                 },
@@ -117,10 +131,10 @@ fn main() -> ! {
                         _ => decode_coolant(&frame).map(|v| state.record_coolant(v)),
                     };
                     if valid.is_err() {
-                        state.apply_failure(AcquisitionFailure::Malformed);
+                        state.invalidate_live(pid_live_mask(pid), AcquisitionFailure::Malformed);
                     }
                 }
-                Err(failure) => state.apply_failure(failure),
+                Err(failure) => state.invalidate_live(pid_live_mask(pid), failure),
             }
         }
 
@@ -275,21 +289,16 @@ fn driver_failure(error: CanError) -> AcquisitionFailure {
         CanError::Timeout | CanError::NoFrame => AcquisitionFailure::Timeout,
         CanError::Overflow => AcquisitionFailure::Overflow,
         CanError::Configuration => AcquisitionFailure::Configuration,
+        CanError::InvalidFrame => AcquisitionFailure::Malformed,
     }
 }
 
-fn required_live_mask(map: u32) -> u8 {
-    let mut mask = 0;
-    if map & (1 << (32 - 0x0c)) != 0 {
-        mask |= firmware_nrf52840_obd2_scanner::live::RPM;
+fn pid_live_mask(pid: u8) -> u8 {
+    match pid {
+        0x0c => firmware_nrf52840_obd2_scanner::live::RPM,
+        0x0d => firmware_nrf52840_obd2_scanner::live::SPEED,
+        _ => firmware_nrf52840_obd2_scanner::live::COOLANT,
     }
-    if map & (1 << (32 - 0x0d)) != 0 {
-        mask |= firmware_nrf52840_obd2_scanner::live::SPEED;
-    }
-    if map & (1 << (32 - 0x05)) != 0 {
-        mask |= firmware_nrf52840_obd2_scanner::live::COOLANT;
-    }
-    mask
 }
 
 fn publish(state: &ScannerState) {

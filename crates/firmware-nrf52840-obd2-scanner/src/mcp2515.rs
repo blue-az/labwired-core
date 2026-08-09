@@ -1,7 +1,11 @@
 //! MCP2515 over nRF52840 SPIM2 EasyDMA (16 MHz oscillator, 500 kbit/s CAN).
 
 use crate::CanFrame;
-use core::ptr::{read_volatile, write_volatile};
+use core::{
+    cell::UnsafeCell,
+    ptr::{read_volatile, write_volatile},
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 const SPIM: usize = 0x4002_3000;
 const GPIO: usize = 0x5000_0000;
@@ -14,6 +18,15 @@ const BIT_MODIFY: u8 = 0x05;
 pub const SPIM_EVENTS_STOPPED: usize = 0x104;
 pub const SPIM_EVENTS_END: usize = 0x118;
 pub const MCP_500K_16MHZ_CNF: [u8; 3] = [0x00, 0xbc, 0x01];
+pub const SPIM_DMA_STATIC: bool = true;
+const RESET_RECOVERY: u32 = 10_000;
+const CONFIG_POLLS: u32 = 64;
+
+struct DmaCell(UnsafeCell<[u8; 14]>);
+unsafe impl Sync for DmaCell {}
+static SPIM_TX: DmaCell = DmaCell(UnsafeCell::new([0; 14]));
+static SPIM_RX: DmaCell = DmaCell(UnsafeCell::new([0; 14]));
+static TAKEN: AtomicBool = AtomicBool::new(false);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Error {
@@ -21,26 +34,20 @@ pub enum Error {
     Configuration,
     Overflow,
     NoFrame,
+    InvalidFrame,
 }
 
 pub struct Mcp2515 {
-    tx: [u8; 14],
-    rx: [u8; 14],
     stuck: bool,
 }
 
-impl Default for Mcp2515 {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 impl Mcp2515 {
-    pub const fn new() -> Self {
-        Self {
-            tx: [0; 14],
-            rx: [0; 14],
-            stuck: false,
-        }
+    /// Claims the sole non-reentrant SPIM2/static-DMA-buffer instance.
+    pub fn take() -> Option<Self> {
+        TAKEN
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .ok()
+            .map(|_| Self { stuck: false })
     }
 
     pub fn init(&mut self) -> Result<(), Error> {
@@ -57,6 +64,22 @@ impl Mcp2515 {
             wr(SPIM, 0x500, 7);
         }
         self.command(&[RESET])?;
+        // MCP2515 oscillator/reset recovery, then bounded configuration-mode poll.
+        for _ in 0..RESET_RECOVERY {
+            unsafe {
+                let _ = rd(SPIM, 0x500);
+            }
+        }
+        let mut config_ready = false;
+        for _ in 0..CONFIG_POLLS {
+            if self.read(0x0e)? & 0xe0 == 0x80 {
+                config_ready = true;
+                break;
+            }
+        }
+        if !config_ready {
+            return Err(Error::Timeout);
+        }
         // Configuration mode, 500 kbps at 16 MHz: 16 TQ/bit.
         self.write(0x0f, 0x80)?;
         self.write(0x2a, MCP_500K_16MHZ_CNF[0])?;
@@ -89,7 +112,8 @@ impl Mcp2515 {
     }
 
     pub fn send(&mut self, frame: &CanFrame) -> Result<(), Error> {
-        let id = frame.id & 0x7ff;
+        validate_frame(frame)?;
+        let id = frame.id;
         let mut packet = [0u8; 14];
         packet[0] = 0x40;
         packet[1] = (id >> 3) as u8;
@@ -110,20 +134,22 @@ impl Mcp2515 {
             return Err(Error::NoFrame);
         };
         self.transfer(&[opcode, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])?;
-        let id = ((self.rx[1] as u16) << 3) | ((self.rx[2] as u16) >> 5);
-        let len = self.rx[5] & 0x0f;
+        let id = ((dma_rx(1) as u16) << 3) | ((dma_rx(2) as u16) >> 5);
+        let len = dma_rx(5) & 0x0f;
         if len > 8 {
             return Err(Error::Overflow);
         }
         let mut data = [0u8; 8];
-        data.copy_from_slice(&self.rx[6..14]);
+        for (index, byte) in data.iter_mut().enumerate() {
+            *byte = dma_rx(6 + index);
+        }
         self.bit_modify(0x2c, clear, 0)?;
         Ok(CanFrame { id, len, data })
     }
 
     pub fn read(&mut self, address: u8) -> Result<u8, Error> {
         self.transfer(&[READ, address, 0])?;
-        Ok(self.rx[2])
+        Ok(dma_rx(2))
     }
     pub fn write(&mut self, address: u8, value: u8) -> Result<(), Error> {
         self.command(&[WRITE, address, value])
@@ -138,19 +164,20 @@ impl Mcp2515 {
         self.transfer(tx)
     }
     fn transfer(&mut self, tx: &[u8]) -> Result<(), Error> {
-        if self.stuck || tx.len() > self.tx.len() {
+        if self.stuck || tx.len() > 14 {
             return Err(Error::Configuration);
         }
-        self.tx.fill(0);
-        self.rx.fill(0);
-        self.tx[..tx.len()].copy_from_slice(tx);
         unsafe {
+            for index in 0..14 {
+                (*SPIM_TX.0.get())[index] = if index < tx.len() { tx[index] } else { 0 };
+                (*SPIM_RX.0.get())[index] = 0;
+            }
             wr(GPIO, 0x50c, CS);
             wr(SPIM, SPIM_EVENTS_END, 0);
             wr(SPIM, SPIM_EVENTS_STOPPED, 0);
-            wr(SPIM, 0x544, self.tx.as_ptr() as u32);
+            wr(SPIM, 0x544, SPIM_TX.0.get() as *mut u8 as u32);
             wr(SPIM, 0x548, tx.len() as u32);
-            wr(SPIM, 0x534, self.rx.as_mut_ptr() as u32);
+            wr(SPIM, 0x534, SPIM_RX.0.get() as *mut u8 as u32);
             wr(SPIM, 0x538, tx.len() as u32);
             wr(SPIM, 0x010, 1);
             for _ in 0..WAIT_LIMIT {
@@ -172,6 +199,16 @@ impl Mcp2515 {
             Err(Error::Timeout)
         }
     }
+}
+pub fn validate_frame(frame: &CanFrame) -> Result<(), Error> {
+    if frame.id > 0x7ff || frame.len > 8 {
+        Err(Error::InvalidFrame)
+    } else {
+        Ok(())
+    }
+}
+fn dma_rx(index: usize) -> u8 {
+    unsafe { (*SPIM_RX.0.get())[index] }
 }
 unsafe fn wr(base: usize, offset: usize, value: u32) {
     write_volatile((base + offset) as *mut u32, value)

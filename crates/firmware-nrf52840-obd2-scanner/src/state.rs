@@ -109,6 +109,18 @@ impl ScannerState {
         self.refresh_if_complete();
     }
 
+    /// Accepts PID discovery only when all three demo metrics are supported.
+    pub fn accept_supported_pids(&mut self, bitmap: u32) -> bool {
+        self.required_live = live::ALL;
+        let required = (1 << (32 - 0x0c)) | (1 << (32 - 0x0d)) | (1 << (32 - 0x05));
+        if bitmap & required != required {
+            self.apply_failure(AcquisitionFailure::Malformed);
+            false
+        } else {
+            true
+        }
+    }
+
     pub fn record_rpm(&mut self, value: u16) {
         self.rpm = value;
         self.live_valid |= live::RPM;
@@ -125,6 +137,11 @@ impl ScannerState {
         self.coolant_c = value;
         self.live_valid |= live::COOLANT;
         self.refresh_if_complete();
+    }
+
+    pub fn invalidate_live(&mut self, mask: u8, failure: AcquisitionFailure) {
+        self.live_valid &= !(mask & live::ALL);
+        self.apply_failure(failure);
     }
 
     fn refresh_if_complete(&mut self) {
@@ -152,6 +169,10 @@ impl ScannerState {
         } else {
             self.status_flags |= flags::DTC_PRESENT;
         }
+    }
+
+    pub fn clear_dtcs(&mut self) {
+        self.update_dtc_count(0);
     }
 
     /// Stores a completed VIN and marks it valid.

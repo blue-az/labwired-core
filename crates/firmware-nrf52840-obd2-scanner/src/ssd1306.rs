@@ -1,11 +1,16 @@
 //! Allocation-free status view and nRF52840 TWIM0 SSD1306 driver.
 
 use crate::{flags, live, ScannerState};
-use core::ptr::{read_volatile, write_volatile};
+use core::{
+    cell::UnsafeCell,
+    ptr::{read_volatile, write_volatile},
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 pub const LINE_CAPACITY: usize = 21;
 pub const TWIM_EVENTS_STOPPED: usize = 0x104;
 pub const TWIM_EVENTS_ERROR: usize = 0x124;
+pub const TWIM_DMA_STATIC: bool = true;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct AsciiLine {
@@ -88,21 +93,18 @@ impl DisplayView {
         lines[3].text(b"DTC ");
         lines[3].number(state.dtc_count as i32);
         let mut status = AsciiLine::new();
-        if state.live_valid & state.required_live != state.required_live {
-            status.text(b"INIT");
-        }
-        for (bit, label) in [
-            (flags::STALE, b"STALE" as &[u8]),
-            (flags::TIMEOUT, b"TIMEOUT"),
-            (flags::CAN_CONFIG_ERROR, b"CAN ERR"),
-        ] {
-            if state.status_flags & bit != 0 {
-                if !status.as_bytes().is_empty() {
-                    status.push(b' ');
-                }
-                status.text(label);
-            }
-        }
+        let label: &[u8] = if state.status_flags & flags::CAN_CONFIG_ERROR != 0 {
+            b"CAN ERR"
+        } else if state.status_flags & flags::TIMEOUT != 0 {
+            b"TIMEOUT"
+        } else if state.status_flags & flags::STALE != 0 {
+            b"STALE"
+        } else if state.live_valid & state.required_live != state.required_live {
+            b"INIT"
+        } else {
+            b"OK"
+        };
+        status.text(label);
         Self { lines, status }
     }
 }
@@ -113,22 +115,24 @@ const ADDRESS: u32 = 0x3c;
 
 pub struct Ssd1306 {
     framebuffer: [u8; 1024],
-    tx: [u8; 17],
     stuck: bool,
 }
 
-impl Default for Ssd1306 {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+struct DmaCell(UnsafeCell<[u8; 17]>);
+unsafe impl Sync for DmaCell {}
+static TWIM_TX: DmaCell = DmaCell(UnsafeCell::new([0; 17]));
+static TAKEN: AtomicBool = AtomicBool::new(false);
+
 impl Ssd1306 {
-    pub const fn new() -> Self {
-        Self {
-            framebuffer: [0; 1024],
-            tx: [0; 17],
-            stuck: false,
-        }
+    /// Claims the sole non-reentrant TWIM0/static-DMA-buffer instance.
+    pub fn take() -> Option<Self> {
+        TAKEN
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .ok()
+            .map(|_| Self {
+                framebuffer: [0; 1024],
+                stuck: false,
+            })
     }
     pub fn init(&mut self) -> bool {
         unsafe {
@@ -158,8 +162,10 @@ impl Ssd1306 {
             return false;
         }
         for offset in (0..self.framebuffer.len()).step_by(16) {
-            self.tx[0] = 0x40;
-            self.tx[1..17].copy_from_slice(&self.framebuffer[offset..offset + 16]);
+            dma_tx_set(0, 0x40);
+            for index in 0..16 {
+                dma_tx_set(1 + index, self.framebuffer[offset + index]);
+            }
             if !self.write_tx(17) {
                 return false;
             }
@@ -167,8 +173,10 @@ impl Ssd1306 {
         true
     }
     fn command(&mut self, bytes: &[u8]) -> bool {
-        self.tx[0] = 0;
-        self.tx[1..1 + bytes.len()].copy_from_slice(bytes);
+        dma_tx_set(0, 0);
+        for (index, byte) in bytes.iter().enumerate() {
+            dma_tx_set(1 + index, *byte);
+        }
         self.write_tx(1 + bytes.len())
     }
     fn draw_line(&mut self, page: usize, bytes: &[u8]) {
@@ -186,7 +194,7 @@ impl Ssd1306 {
             wr(TWIM, TWIM_EVENTS_STOPPED, 0);
             wr(TWIM, TWIM_EVENTS_ERROR, 0);
             wr(TWIM, 0x14c, 0);
-            wr(TWIM, 0x544, self.tx.as_ptr() as u32);
+            wr(TWIM, 0x544, TWIM_TX.0.get() as *mut u8 as u32);
             wr(TWIM, 0x548, len as u32);
             wr(TWIM, 0x008, 1);
             for _ in 0..WAIT_LIMIT {
@@ -211,6 +219,11 @@ impl Ssd1306 {
         // DMA source is driver-owned and remains allocated; poison future use.
         self.stuck = true;
         false
+    }
+}
+fn dma_tx_set(index: usize, value: u8) {
+    unsafe {
+        (*TWIM_TX.0.get())[index] = value;
     }
 }
 
