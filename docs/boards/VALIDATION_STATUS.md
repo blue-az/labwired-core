@@ -12,7 +12,7 @@ The models column is a content digest over everything that board's `models` list
 | `nrf52840` | 🟢 silicon-verified | 2026-06-17 | `8875af363a791247` | ⚠ drift acked 2026-08-09 (re-capture pending) |
 | `seeed-xiao-nrf52840-sense` | 🟢 silicon-verified | 2026-06-17 | `8875af363a791247` | ⚠ drift acked 2026-08-09 (re-capture pending) |
 | `stm32h563` | 🟢 silicon-verified | 2026-06-22 | `73f1b40b62b56eed` | ⚠ drift acked 2026-08-09 (re-capture pending) |
-| `esp32c3` | 🟢 silicon-verified | 2026-06-17 | `c5064550f13aee20` | ⚠ drift acked 2026-08-09 (re-capture pending) |
+| `esp32c3` | 🟢 silicon-verified | 2026-08-09 | `c5064550f13aee20` | ✅ fresh |
 | `nucleo-l476rg` | 🟢 silicon-verified | 2026-06-20 | `d6a6dc51ae8604b5` | ⚠ drift acked 2026-08-09 (re-capture pending) |
 | `nucleo-l073rz` | 🟢 silicon-verified | 2026-06-20 | `a31e3c89d55f6f05` | ⚠ drift acked 2026-08-09 (re-capture pending) |
 | `stm32f103` | 🟢 silicon-verified | 2026-06-20 | `dae60c05ea1fff30` | ⚠ drift acked 2026-08-09 (re-capture pending) |
@@ -61,10 +61,10 @@ The models column is a content digest over everything that board's `models` list
 
 - Doc: [`docs/boards/esp32c3.md`](esp32c3.md)  ·  Chip: `configs/chips/esp32c3.yaml`
 - Note: Reset-state oracle, not behavioural. ~40 peripherals declared (NOT 6 as the prose doc says).
-- Silicon: **2026-06-17** on USB-JTAG (built-in, openocd-esp32) — re-verified live — reset oracle re-captured live 2026-06-17: 1123/1123 static registers match committed baseline (13 deltas all in per-chip efuse + live USB-device state, none in the asserted set); esp32c3_reset_values_match_silicon passes
+- Silicon: **2026-08-09** on USB-JTAG (built-in) + openocd-esp32 v0.12.0-esp32-20260703, board MAC 9c:cc:01:d0:98:e0 (QFN32 rev v0.4) — re-captured live 2026-08-09 on a SECOND physical C3 (MAC 9c:cc:01:d0:98:e0; the 2026-06-11 baseline came from 38:44:be:42:f5:58, same QFN32 rev v0.4) — cross-board corroboration, not a re-read of the same part. 1207 registers read in ONE state (21 estate windows + 43 control registers + the radio windows): 84/84 RESET_VALUES matched, 0 mismatched, and both FREE_RUNNING_COUNTERS windows mapped. Radio note: a JTAG `reset halt` on the C3 is a software CORE reset that does not cold-reset peripherals, so RADIO_FE/WIFI_MAC only read their cold baseline when no resident firmware has brought the PHY up — the board was temporarily flashed with crates/wasm/tests/fixtures/esp32c3-hello-world-flash.bin for the capture, then its original 4 MB image was restored and verified byte-identical (sha256 844abc88…8a910). Do NOT try to reach cold radio via RTC_CNTL SW_SYS_RST: it resets the USB-Serial-JTAG bridge too and drops the debug link mid-write (verified, LIBUSB_ERROR_IO). Artifacts: scripts/hw-oracle/captures/esp32c3/recapture-20260809T121824Z/.
   - offline (CI): esp32c3_reset_conformance::esp32c3_reset_values_match_silicon (87 regs; 366/423 overlap matched silicon)
   - offline (CI): esp32c3_reset_conformance::esp32c3_free_running_counters_are_mapped (2 WiFi MAC counter windows; mapping only, no equality claim)
-- Drift status: **⚠ drift acked 2026-08-09 (re-capture pending)**
+- Drift status: **✅ fresh**
 
 ## `nucleo-l476rg` — 🟢 silicon-verified
 

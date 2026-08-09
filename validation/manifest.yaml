@@ -558,9 +558,9 @@ boards:
       - "esp32c3_reset_conformance::esp32c3_reset_values_match_silicon (87 regs; 366/423 overlap matched silicon)"
       - "esp32c3_reset_conformance::esp32c3_free_running_counters_are_mapped (2 WiFi MAC counter windows; mapping only, no equality claim)"
     silicon:
-      last_capture: 2026-06-17
-      probe: "USB-JTAG (built-in, openocd-esp32) — re-verified live"
-      result: "reset oracle re-captured live 2026-06-17: 1123/1123 static registers match committed baseline (13 deltas all in per-chip efuse + live USB-device state, none in the asserted set); esp32c3_reset_values_match_silicon passes"
+      last_capture: 2026-08-09
+      probe: "USB-JTAG (built-in) + openocd-esp32 v0.12.0-esp32-20260703, board MAC 9c:cc:01:d0:98:e0 (QFN32 rev v0.4)"
+      result: "re-captured live 2026-08-09 on a SECOND physical C3 (MAC 9c:cc:01:d0:98:e0; the 2026-06-11 baseline came from 38:44:be:42:f5:58, same QFN32 rev v0.4) — cross-board corroboration, not a re-read of the same part. 1207 registers read in ONE state (21 estate windows + 43 control registers + the radio windows): 84/84 RESET_VALUES matched, 0 mismatched, and both FREE_RUNNING_COUNTERS windows mapped. Radio note: a JTAG `reset halt` on the C3 is a software CORE reset that does not cold-reset peripherals, so RADIO_FE/WIFI_MAC only read their cold baseline when no resident firmware has brought the PHY up — the board was temporarily flashed with crates/wasm/tests/fixtures/esp32c3-hello-world-flash.bin for the capture, then its original 4 MB image was restored and verified byte-identical (sha256 844abc88…8a910). Do NOT try to reach cold radio via RTC_CNTL SW_SYS_RST: it resets the USB-Serial-JTAG bridge too and drops the debug link mid-write (verified, LIBUSB_ERROR_IO). Artifacts: scripts/hw-oracle/captures/esp32c3/recapture-20260809T121824Z/."
     models:
       - crates/core/src/peripherals/esp32c3
       - crates/core/src/peripherals/esp_xtensa_common
@@ -1168,8 +1168,22 @@ boards:
     # txfifo_empty_is_level_below_threshold). That suite is green on this tree,
     # and so is the C3 ROM-boot end-to-end test, which actually drives the UART.
     # This ack rests on those, not on the reset oracle. No live re-capture.
-    drift_ack: 2026-08-09
-    drift_ack_digest: c5064550f13aee208e9849cde89c7bd6e84b552aad9dbcd9d84952b10fa9faf4
+    #
+    # 2026-08-09: the live re-capture the ack was standing in for HAS NOW RUN
+    # (see silicon.result above). The ack that stood here was discharged by it.
+    # Whether a NEW ack is needed depends on whether the pad-routing work that
+    # landed the same day touched a listed model after the capture — the
+    # generator decides that, not this comment. It reads FRESH.
+    #
+    # KNOWN LIMIT, stated rather than relied on: the pad-routing merge (#892)
+    # DID move this board's model digest (7a687f78 -> c5064550) on the same
+    # calendar day as the capture, and the gate compares DATES, not timestamps
+    # — so a model edit made hours after the capture still reads as "not
+    # newer". Two things make that acceptable rather than a hole: the capture
+    # corroborates the RESET_VALUES table against real silicon, and CI
+    # re-checks the MODEL against that table every run
+    # (esp32c3_reset_values_match_silicon). A pad-routing change that broke a
+    # reset value would go red there, not hide here.
 
   - id: nucleo-l476rg
     doc: docs/boards/nucleo-l476rg.md
