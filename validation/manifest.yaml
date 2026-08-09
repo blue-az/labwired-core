@@ -217,8 +217,13 @@ boards:
     # CC compare matching, SHORTS and EVENTS_COMPARE latching are all untouched,
     # and TIMER0's 16/0 sweep re-runs green. Acked WITHOUT a live re-capture —
     # no TIMER live diff is evidenced by this entry.
-    drift_ack: 2026-08-08
-    drift_ack_digest: 6142ba057c56f787631dde73492b725ac7f4490d77933b37aeea5fb3b8ba6612
+    # 2026-08-09 census ack: the silent-path census adds `census_reg!(..)` to the
+    # catch-all arms of peripheral read/write. With `default = []` the macro
+    # expands to `()`, so every default build compiles to exactly the code that
+    # was captured — the source digest moved, the model did not. Accepted by
+    # Andrii without a live re-capture; no new silicon diff is evidenced here.
+    drift_ack: 2026-08-09
+    drift_ack_digest: 41781131d62f70fae6b6dc1b1ec2976212c8eef4a245bff15194ebb3fabf2a55
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -326,8 +331,13 @@ boards:
     # silicon. Scheduler bookkeeping only — no register address, reset value or
     # access in the asserted sweep changes. See the nrf52840 drift_ack note; no
     # TIMER live re-capture is evidenced by this entry.
-    drift_ack: 2026-08-08
-    drift_ack_digest: 6142ba057c56f787631dde73492b725ac7f4490d77933b37aeea5fb3b8ba6612
+    # 2026-08-09 census ack: the silent-path census adds `census_reg!(..)` to the
+    # catch-all arms of peripheral read/write. With `default = []` the macro
+    # expands to `()`, so every default build compiles to exactly the code that
+    # was captured — the source digest moved, the model did not. Accepted by
+    # Andrii without a live re-capture; no new silicon diff is evidenced here.
+    drift_ack: 2026-08-09
+    drift_ack_digest: 41781131d62f70fae6b6dc1b1ec2976212c8eef4a245bff15194ebb3fabf2a55
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -502,8 +512,13 @@ boards:
     # address, reset value or access in any board's asserted set changes.
     # Owner-authorised ack WITHOUT a live re-capture; no board was attached for
     # this change and each board's outstanding live diff remains owed.
-    drift_ack: 2026-08-08
-    drift_ack_digest: bec6988944d80986326ba71c7b4df39d286b676f4c8d04548fd6bf9a6a5d02b2
+    # 2026-08-09 census ack: the silent-path census adds `census_reg!(..)` to the
+    # catch-all arms of peripheral read/write. With `default = []` the macro
+    # expands to `()`, so every default build compiles to exactly the code that
+    # was captured — the source digest moved, the model did not. Accepted by
+    # Andrii without a live re-capture; no new silicon diff is evidenced here.
+    drift_ack: 2026-08-09
+    drift_ack_digest: 389580e548065e8c7bc094d005189c85d9ec95fc86529e4485694c1796b620cc
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1149,8 +1164,13 @@ boards:
     # txfifo_empty_is_level_below_threshold). That suite is green on this tree,
     # and so is the C3 ROM-boot end-to-end test, which actually drives the UART.
     # This ack rests on those, not on the reset oracle. No live re-capture.
+    # 2026-08-09 census ack: the silent-path census adds `census_reg!(..)` to the
+    # catch-all arms of peripheral read/write. With `default = []` the macro
+    # expands to `()`, so every default build compiles to exactly the code that
+    # was captured — the source digest moved, the model did not. Accepted by
+    # Andrii without a live re-capture; no new silicon diff is evidenced here.
     drift_ack: 2026-08-09
-    drift_ack_digest: 7a687f785b9f9f85722fa2734bd117342b479fb0aa63385a30286ab18e5da23d
+    drift_ack_digest: c33d2f121f55dff75e81235dd1a180d472861c0be58934536e6e8fee00cce428
 
   - id: nucleo-l476rg
     doc: docs/boards/nucleo-l476rg.md
@@ -1301,8 +1321,13 @@ boards:
     # address, reset value or access in any board's asserted set changes.
     # Owner-authorised ack WITHOUT a live re-capture; no board was attached for
     # this change and each board's outstanding live diff remains owed.
-    drift_ack: 2026-08-08
-    drift_ack_digest: 266bc466735dd2411b8596937edd651fb00b942f714fbae12ccdff2412e85d4b
+    # 2026-08-09 census ack: the silent-path census adds `census_reg!(..)` to the
+    # catch-all arms of peripheral read/write. With `default = []` the macro
+    # expands to `()`, so every default build compiles to exactly the code that
+    # was captured — the source digest moved, the model did not. Accepted by
+    # Andrii without a live re-capture; no new silicon diff is evidenced here.
+    drift_ack: 2026-08-09
+    drift_ack_digest: 54e586aa64f5314f4555d3a6c2bf87ffd4b7f341a3c2c3da79e07b13ba0c24e8
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1447,8 +1472,13 @@ boards:
     # address, reset value or access in any board's asserted set changes.
     # Owner-authorised ack WITHOUT a live re-capture; no board was attached for
     # this change and each board's outstanding live diff remains owed.
-    drift_ack: 2026-08-08
-    drift_ack_digest: 105c3038e66f7309d1269d7ed1f981b81d83f19f8ab3c2233498fc92646066dd
+    # 2026-08-09 census ack: the silent-path census adds `census_reg!(..)` to the
+    # catch-all arms of peripheral read/write. With `default = []` the macro
+    # expands to `()`, so every default build compiles to exactly the code that
+    # was captured — the source digest moved, the model did not. Accepted by
+    # Andrii without a live re-capture; no new silicon diff is evidenced here.
+    drift_ack: 2026-08-09
+    drift_ack_digest: cc23f31ba19c80c2ff0f2a9f4f3e473e264a1a1d379a4d82f3472e7ce0d05d63
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1612,8 +1642,13 @@ boards:
     # address, reset value or access in any board's asserted set changes.
     # Owner-authorised ack WITHOUT a live re-capture; no board was attached for
     # this change and each board's outstanding live diff remains owed.
-    drift_ack: 2026-08-08
-    drift_ack_digest: ba59367c8644427e05b8899a40f9576ec3b5b9d57bafbb2933efb97ca163eca4
+    # 2026-08-09 census ack: the silent-path census adds `census_reg!(..)` to the
+    # catch-all arms of peripheral read/write. With `default = []` the macro
+    # expands to `()`, so every default build compiles to exactly the code that
+    # was captured — the source digest moved, the model did not. Accepted by
+    # Andrii without a live re-capture; no new silicon diff is evidenced here.
+    drift_ack: 2026-08-09
+    drift_ack_digest: 4d0396c5ee1a7685c22f3067d4757901f16d037ef1e45b421764f42435da9154
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1769,8 +1804,13 @@ boards:
     # address, reset value or access in any board's asserted set changes.
     # Owner-authorised ack WITHOUT a live re-capture; no board was attached for
     # this change and each board's outstanding live diff remains owed.
-    drift_ack: 2026-08-08
-    drift_ack_digest: 55e991e05f47a258e5dc68029774c8a506c14e6f6c2221e2dad573cf891d8169
+    # 2026-08-09 census ack: the silent-path census adds `census_reg!(..)` to the
+    # catch-all arms of peripheral read/write. With `default = []` the macro
+    # expands to `()`, so every default build compiles to exactly the code that
+    # was captured — the source digest moved, the model did not. Accepted by
+    # Andrii without a live re-capture; no new silicon diff is evidenced here.
+    drift_ack: 2026-08-09
+    drift_ack_digest: f58685205ab2d3c79e7b17973deadcc96d10e6de14cfb93db4bf5c3713201f5c
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -2047,8 +2087,13 @@ boards:
     # artifact check, and — importantly — the sabotage result showing the reset
     # oracles do NOT cover this file while `--lib esp_uart` does. No S3 board
     # attached; no live re-capture.
+    # 2026-08-09 census ack: the silent-path census adds `census_reg!(..)` to the
+    # catch-all arms of peripheral read/write. With `default = []` the macro
+    # expands to `()`, so every default build compiles to exactly the code that
+    # was captured — the source digest moved, the model did not. Accepted by
+    # Andrii without a live re-capture; no new silicon diff is evidenced here.
     drift_ack: 2026-08-09
-    drift_ack_digest: b469639d4a4e4dc70b08eb7afbf5236171b1e501f8255a90cf4bbf50f9465e9d
+    drift_ack_digest: 14ca0b0f94fff1d3c4224a8dde1439ed2ec1a2e2b8ea8583fa47e31c6250a715
     models:
       - crates/core/src/peripherals/esp32s3
       - crates/core/src/peripherals/esp_xtensa_common
