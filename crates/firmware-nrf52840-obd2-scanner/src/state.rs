@@ -14,6 +14,8 @@ pub mod flags {
     pub const RX_OVERFLOW: u16 = 1 << 5;
     /// CAN controller configuration failed.
     pub const CAN_CONFIG_ERROR: u16 = 1 << 6;
+    /// A non-CAN peripheral (OLED/RADIO) failed.
+    pub const DEVICE_ERROR: u16 = 1 << 7;
 }
 
 /// Validity bits for independently acquired live metrics.
@@ -30,6 +32,7 @@ pub enum AcquisitionFailure {
     Malformed,
     Overflow,
     Configuration,
+    Device,
 }
 
 /// Deterministic PID discovery/live polling schedule.
@@ -238,6 +241,13 @@ impl ScannerState {
             AcquisitionFailure::Malformed => self.status_flags |= flags::MALFORMED,
             AcquisitionFailure::Overflow => self.status_flags |= flags::RX_OVERFLOW,
             AcquisitionFailure::Configuration => self.status_flags |= flags::CAN_CONFIG_ERROR,
+            AcquisitionFailure::Device => self.status_flags |= flags::DEVICE_ERROR,
         }
     }
+}
+
+/// Returns the odd in-progress and following even committed seqlock values.
+pub const fn snapshot_sequence_pair(current_even: u32) -> (u32, u32) {
+    let odd = current_even.wrapping_add(1) | 1;
+    (odd, odd.wrapping_add(1))
 }

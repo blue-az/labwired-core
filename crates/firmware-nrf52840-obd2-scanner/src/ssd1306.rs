@@ -93,15 +93,28 @@ impl DisplayView {
         lines[3].text(b"DTC ");
         lines[3].number(state.dtc_count as i32);
         let mut status = AsciiLine::new();
+        if state.status_flags & flags::DEVICE_ERROR != 0 {
+            if state.status_flags & flags::TIMEOUT != 0
+                && state.status_flags & flags::CAN_CONFIG_ERROR != 0
+            {
+                status.text(b"STALE TO CAN DEV ERR");
+            } else {
+                status.text(b"DEV ERR");
+            }
+        }
         // Error composition is ordered and its maximum is exactly 21 bytes.
-        for (set, label) in [
-            (state.status_flags & flags::STALE != 0, b"STALE" as &[u8]),
-            (state.status_flags & flags::TIMEOUT != 0, b"TIMEOUT"),
-            (
-                state.status_flags & flags::CAN_CONFIG_ERROR != 0,
-                b"CAN ERR",
-            ),
-        ] {
+        for (set, label) in if status.as_bytes().is_empty() {
+            [
+                (state.status_flags & flags::STALE != 0, b"STALE" as &[u8]),
+                (state.status_flags & flags::TIMEOUT != 0, b"TIMEOUT"),
+                (
+                    state.status_flags & flags::CAN_CONFIG_ERROR != 0,
+                    b"CAN ERR",
+                ),
+            ]
+        } else {
+            [(false, b"" as &[u8]); 3]
+        } {
             if set {
                 if !status.as_bytes().is_empty() {
                     status.push(b' ');

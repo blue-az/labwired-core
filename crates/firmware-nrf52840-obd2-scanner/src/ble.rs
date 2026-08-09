@@ -21,7 +21,8 @@ pub const WIRE_FLAGS: u16 = flags::CONNECTED
     | flags::TIMEOUT
     | flags::MALFORMED
     | flags::RX_OVERFLOW
-    | flags::CAN_CONFIG_ERROR;
+    | flags::CAN_CONFIG_ERROR
+    | flags::DEVICE_ERROR;
 
 /// Layout: version, flags, RPM LE, speed, coolant+40, DTC count, generation LE16.
 /// Coolant values below -40 C encode as 0 and above 215 C encode as 255.

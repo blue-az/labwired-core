@@ -15,12 +15,15 @@ const RESET: u8 = 0xc0;
 const READ: u8 = 0x03;
 const WRITE: u8 = 0x02;
 const BIT_MODIFY: u8 = 0x05;
+pub const LOAD_TXB0: u8 = 0x40;
+pub const RTS_TXB0: u8 = 0x81;
 pub const SPIM_EVENTS_STOPPED: usize = 0x104;
 pub const SPIM_EVENTS_END: usize = 0x118;
 pub const MCP_500K_16MHZ_CNF: [u8; 3] = [0x00, 0xbc, 0x01];
 pub const SPIM_DMA_STATIC: bool = true;
 const RESET_RECOVERY: u32 = 10_000;
 const CONFIG_POLLS: u32 = 64;
+const TX_POLLS: u32 = 256;
 
 struct DmaCell(UnsafeCell<[u8; 14]>);
 unsafe impl Sync for DmaCell {}
@@ -35,6 +38,23 @@ pub enum Error {
     Overflow,
     NoFrame,
     InvalidFrame,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TxDecision {
+    Pending,
+    Complete,
+    Failed,
+}
+
+pub const fn tx_decision(txb0ctrl: u8, canintf: u8) -> TxDecision {
+    if txb0ctrl & 0x70 != 0 {
+        TxDecision::Failed
+    } else if txb0ctrl & 0x08 == 0 && canintf & 0x04 != 0 {
+        TxDecision::Complete
+    } else {
+        TxDecision::Pending
+    }
 }
 
 pub struct Mcp2515 {
@@ -113,15 +133,44 @@ impl Mcp2515 {
 
     pub fn send(&mut self, frame: &CanFrame) -> Result<(), Error> {
         validate_frame(frame)?;
+        let initial_control = match self.read(0x30) {
+            Ok(value) => value,
+            Err(error) => return self.abort_txb0(error),
+        };
+        if initial_control & 0x08 != 0 {
+            return self.abort_txb0(Error::Timeout);
+        }
+        self.bit_modify(0x2c, 0x04, 0)?;
         let id = frame.id;
         let mut packet = [0u8; 14];
-        packet[0] = 0x40;
+        packet[0] = LOAD_TXB0;
         packet[1] = (id >> 3) as u8;
         packet[2] = (id << 5) as u8;
         packet[5] = frame.len.min(8);
         packet[6..14].copy_from_slice(&frame.data);
         self.command(&packet)?;
-        self.command(&[0x81]) // RTS TX buffer 0
+        if let Err(error) = self.command(&[RTS_TXB0]) {
+            return self.abort_txb0(error);
+        }
+        for _ in 0..TX_POLLS {
+            let control = match self.read(0x30) {
+                Ok(value) => value,
+                Err(error) => return self.abort_txb0(error),
+            };
+            let interrupts = match self.interrupt_flags() {
+                Ok(value) => value,
+                Err(error) => return self.abort_txb0(error),
+            };
+            match tx_decision(control, interrupts) {
+                TxDecision::Complete => {
+                    self.bit_modify(0x2c, 0x04, 0)?;
+                    return Ok(());
+                }
+                TxDecision::Failed => return self.abort_txb0(Error::Configuration),
+                TxDecision::Pending => {}
+            }
+        }
+        self.abort_txb0(Error::Timeout)
     }
 
     pub fn receive(&mut self) -> Result<CanFrame, Error> {
@@ -134,17 +183,14 @@ impl Mcp2515 {
             return Err(Error::NoFrame);
         };
         self.transfer(&[opcode, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])?;
-        let id = ((dma_rx(1) as u16) << 3) | ((dma_rx(2) as u16) >> 5);
-        let len = dma_rx(5) & 0x0f;
-        if len > 8 {
-            return Err(Error::Overflow);
+        let mut registers = [0u8; 13];
+        for (index, byte) in registers.iter_mut().enumerate() {
+            *byte = dma_rx(1 + index);
         }
-        let mut data = [0u8; 8];
-        for (index, byte) in data.iter_mut().enumerate() {
-            *byte = dma_rx(6 + index);
-        }
+        // READ RX auto-clears RXnIF on CS release; explicit clear also supports models
+        // that implement only register semantics. It happens before DLC validation.
         self.bit_modify(0x2c, clear, 0)?;
-        Ok(CanFrame { id, len, data })
+        decode_rx_registers(&registers)
     }
 
     pub fn read(&mut self, address: u8) -> Result<u8, Error> {
@@ -162,6 +208,24 @@ impl Mcp2515 {
     }
     fn command(&mut self, tx: &[u8]) -> Result<(), Error> {
         self.transfer(tx)
+    }
+    fn abort_txb0(&mut self, result: Error) -> Result<(), Error> {
+        if self.bit_modify(0x30, 0x08, 0).is_err() {
+            self.stuck = true;
+            return Err(Error::Configuration);
+        }
+        for _ in 0..TX_POLLS {
+            match self.read(0x30) {
+                Ok(control) if control & 0x08 == 0 => return Err(result),
+                Ok(_) => {}
+                Err(_) => {
+                    self.stuck = true;
+                    return Err(Error::Configuration);
+                }
+            }
+        }
+        self.stuck = true;
+        Err(Error::Configuration)
     }
     fn transfer(&mut self, tx: &[u8]) -> Result<(), Error> {
         if self.stuck || tx.len() > 14 {
@@ -206,6 +270,16 @@ pub fn validate_frame(frame: &CanFrame) -> Result<(), Error> {
     } else {
         Ok(())
     }
+}
+pub fn decode_rx_registers(registers: &[u8; 13]) -> Result<CanFrame, Error> {
+    let len = registers[4] & 0x0f;
+    if len > 8 {
+        return Err(Error::InvalidFrame);
+    }
+    let id = ((registers[0] as u16) << 3) | ((registers[1] as u16) >> 5);
+    let mut data = [0; 8];
+    data.copy_from_slice(&registers[5..13]);
+    Ok(CanFrame { id, len, data })
 }
 fn dma_rx(index: usize) -> u8 {
     unsafe { (*SPIM_RX.0.get())[index] }

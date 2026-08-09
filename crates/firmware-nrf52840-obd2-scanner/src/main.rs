@@ -1,7 +1,10 @@
 #![no_std]
 #![no_main]
 
-use core::hint::spin_loop;
+use core::{
+    hint::spin_loop,
+    ptr::{addr_of, addr_of_mut, read_volatile, write_volatile},
+};
 use cortex_m_rt::entry;
 use panic_halt as _;
 
@@ -33,6 +36,9 @@ pub static mut SCANNER_DTC_COUNT: u8 = 0;
 pub static mut SCANNER_FLAGS: u16 = flags::STALE;
 #[no_mangle]
 pub static mut SCANNER_GENERATION: u32 = 0;
+/// Seqlock: external readers retry if odd or changed around the snapshot read.
+#[no_mangle]
+pub static mut SCANNER_SNAPSHOT_SEQ: u32 = 0;
 #[no_mangle]
 pub static mut VIN_BYTES: [u8; 17] = [0; 17];
 #[no_mangle]
@@ -75,10 +81,10 @@ fn main() -> ! {
         state.set_error(flags::CAN_CONFIG_ERROR);
     }
     if !oled.init() {
-        state.set_error(flags::CAN_CONFIG_ERROR);
+        state.apply_failure(AcquisitionFailure::Device);
     }
     if !radio.init() {
-        state.set_error(flags::CAN_CONFIG_ERROR);
+        state.apply_failure(AcquisitionFailure::Device);
     }
 
     // PID 00 is retried until discovery succeeds. Live/setup requests never precede it.
@@ -89,10 +95,10 @@ fn main() -> ! {
     loop {
         state.increment_age();
         unsafe {
-            if CLEAR_DTC_REQUEST != 0 {
-                CLEAR_DTC_REQUEST = 0;
-                CLEAR_DTC_RESULT = 1;
-                CLEAR_DTC_RESULT = match transact(&mut can, clear_dtcs_request()) {
+            if read_volatile(addr_of!(CLEAR_DTC_REQUEST)) != 0 {
+                write_volatile(addr_of_mut!(CLEAR_DTC_REQUEST), 0);
+                write_volatile(addr_of_mut!(CLEAR_DTC_RESULT), 1);
+                let result = match transact(&mut can, clear_dtcs_request()) {
                     Ok(frame) if decode_clear_dtcs(&frame).is_ok() => {
                         state.clear_dtcs();
                         2
@@ -106,6 +112,7 @@ fn main() -> ! {
                         3
                     }
                 };
+                write_volatile(addr_of_mut!(CLEAR_DTC_RESULT), result);
             }
         }
 
@@ -185,21 +192,25 @@ fn main() -> ! {
             },
             Err(error) => state.apply_failure(driver_failure(error)),
         }
-        publish(&state);
-        let payload = encode_manufacturer_payload(&state);
-        unsafe {
-            BLE_PAYLOAD = payload;
-        }
-        if radio.transmit(&payload) {
-            unsafe {
-                TX_DONE_COUNT = TX_DONE_COUNT.wrapping_add(1);
-            }
-        }
         let view = DisplayView::from_state(&state);
         oled.render(&view);
-        let _ = oled.update();
+        if !oled.update() {
+            state.apply_failure(AcquisitionFailure::Device);
+        }
+        let mut payload = encode_manufacturer_payload(&state);
+        if radio.transmit(&payload) {
+            unsafe {
+                let count = read_volatile(addr_of!(TX_DONE_COUNT));
+                write_volatile(addr_of_mut!(TX_DONE_COUNT), count.wrapping_add(1));
+            }
+        } else {
+            state.apply_failure(AcquisitionFailure::Device);
+            payload = encode_manufacturer_payload(&state);
+        }
+        publish(&state, &payload);
         unsafe {
-            CYCLE_COUNT = CYCLE_COUNT.wrapping_add(1);
+            let count = read_volatile(addr_of!(CYCLE_COUNT));
+            write_volatile(addr_of_mut!(CYCLE_COUNT), count.wrapping_add(1));
         }
         for _ in 0..POLL_DELAY {
             spin_loop();
@@ -316,16 +327,21 @@ fn pid_live_mask(pid: u8) -> u8 {
     }
 }
 
-fn publish(state: &ScannerState) {
+fn publish(state: &ScannerState, payload: &[u8; 9]) {
     unsafe {
-        SCANNER_RPM = state.rpm;
-        SCANNER_SPEED_KPH = state.speed_kph;
-        SCANNER_COOLANT_C = state.coolant_c;
-        SCANNER_LIVE_VALID = state.live_valid;
-        SCANNER_DTC_COUNT = state.dtc_count;
-        SCANNER_FLAGS = state.status_flags;
-        SCANNER_GENERATION = state.generation;
-        VIN_BYTES = state.vin;
-        VIN_VALID = state.vin_valid as u8;
+        let current = read_volatile(addr_of!(SCANNER_SNAPSHOT_SEQ)) & !1;
+        let (odd, even) = firmware_nrf52840_obd2_scanner::state::snapshot_sequence_pair(current);
+        write_volatile(addr_of_mut!(SCANNER_SNAPSHOT_SEQ), odd);
+        write_volatile(addr_of_mut!(SCANNER_RPM), state.rpm);
+        write_volatile(addr_of_mut!(SCANNER_SPEED_KPH), state.speed_kph);
+        write_volatile(addr_of_mut!(SCANNER_COOLANT_C), state.coolant_c);
+        write_volatile(addr_of_mut!(SCANNER_LIVE_VALID), state.live_valid);
+        write_volatile(addr_of_mut!(SCANNER_DTC_COUNT), state.dtc_count);
+        write_volatile(addr_of_mut!(SCANNER_FLAGS), state.status_flags);
+        write_volatile(addr_of_mut!(SCANNER_GENERATION), state.generation);
+        write_volatile(addr_of_mut!(VIN_BYTES), state.vin);
+        write_volatile(addr_of_mut!(VIN_VALID), state.vin_valid as u8);
+        write_volatile(addr_of_mut!(BLE_PAYLOAD), *payload);
+        write_volatile(addr_of_mut!(SCANNER_SNAPSHOT_SEQ), even);
     }
 }

@@ -21,12 +21,63 @@ mod tests {
     use crate::{
         ble::{encode_manufacturer_payload, Radio, RADIO_DMA_STATIC},
         mcp2515::{
-            validate_frame, MCP_500K_16MHZ_CNF, SPIM_DMA_STATIC, SPIM_EVENTS_END,
-            SPIM_EVENTS_STOPPED,
+            decode_rx_registers, tx_decision, validate_frame, TxDecision, LOAD_TXB0,
+            MCP_500K_16MHZ_CNF, RTS_TXB0, SPIM_DMA_STATIC, SPIM_EVENTS_END, SPIM_EVENTS_STOPPED,
         },
         ssd1306::{DisplayView, TWIM_DMA_STATIC, TWIM_EVENTS_ERROR, TWIM_EVENTS_STOPPED},
         state::{live, AcquisitionFailure, PollSchedule},
     };
+
+    #[test]
+    fn txb0_status_requires_real_completion_and_detects_errors() {
+        assert_eq!(LOAD_TXB0, 0x40);
+        assert_eq!(RTS_TXB0, 0x81);
+        assert_eq!(tx_decision(0x08, 0), TxDecision::Pending);
+        assert_eq!(tx_decision(0, 0x04), TxDecision::Complete);
+        for error in [0x10, 0x20, 0x40] {
+            assert_eq!(tx_decision(error, 0), TxDecision::Failed);
+        }
+        assert_eq!(tx_decision(0, 0), TxDecision::Pending);
+    }
+
+    #[test]
+    fn malformed_rx_dlc_is_typed_and_next_valid_decode_progresses() {
+        let mut registers = [0u8; 13];
+        registers[4] = 9;
+        assert_eq!(
+            decode_rx_registers(&registers),
+            Err(mcp2515::Error::InvalidFrame)
+        );
+        registers[4] = 8;
+        registers[5] = 0xaa;
+        assert_eq!(decode_rx_registers(&registers).unwrap().data[0], 0xaa);
+    }
+
+    #[test]
+    fn device_error_is_stable_eighth_wire_bit_and_displayed() {
+        let mut state = ScannerState::new();
+        state.apply_failure(AcquisitionFailure::Device);
+        assert_eq!(
+            encode_manufacturer_payload(&state)[1],
+            (flags::STALE | flags::DEVICE_ERROR) as u8
+        );
+        assert_eq!(
+            DisplayView::from_state(&state).status.as_bytes(),
+            b"DEV ERR"
+        );
+        state.status_flags |= flags::TIMEOUT | flags::CAN_CONFIG_ERROR;
+        assert_eq!(
+            DisplayView::from_state(&state).status.as_bytes(),
+            b"STALE TO CAN DEV ERR"
+        );
+    }
+
+    #[test]
+    fn snapshot_sequence_protocol_uses_odd_then_even() {
+        assert_eq!(state::snapshot_sequence_pair(0), (1, 2));
+        assert_eq!(state::snapshot_sequence_pair(2), (3, 4));
+        assert_eq!(state::snapshot_sequence_pair(u32::MAX - 1), (u32::MAX, 0));
+    }
 
     #[test]
     fn radio_is_singleton_with_static_packet_storage() {
