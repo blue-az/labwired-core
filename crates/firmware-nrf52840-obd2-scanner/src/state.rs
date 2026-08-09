@@ -32,6 +32,43 @@ pub enum AcquisitionFailure {
     Configuration,
 }
 
+/// Deterministic PID discovery/live polling schedule.
+pub struct PollSchedule {
+    discovered: bool,
+    live_slot: u8,
+}
+
+impl Default for PollSchedule {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl PollSchedule {
+    pub const fn new() -> Self {
+        Self {
+            discovered: false,
+            live_slot: 0,
+        }
+    }
+    pub const fn request_pid(&self) -> u8 {
+        if !self.discovered {
+            0
+        } else {
+            [0x0c, 0x0d, 0x05][self.live_slot as usize]
+        }
+    }
+    pub fn discovery_failed(&mut self) {}
+    pub fn discovery_succeeded(&mut self) {
+        self.discovered = true;
+        self.live_slot = 0;
+    }
+    pub fn live_attempted(&mut self) {
+        if self.discovered {
+            self.live_slot = (self.live_slot + 1) % 3;
+        }
+    }
+}
+
 /// Fixed-size, copyable scanner snapshot shared with later firmware tasks.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ScannerState {

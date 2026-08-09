@@ -13,20 +13,46 @@ pub use obd2::{
     decode_supported_pids, mode01_request, read_dtcs_request, vin_request, CanFrame, Dtc, DtcList,
     DtcSystem, Error, FLOW_CONTROL_ID, REQUEST_ID, RESPONSE_ID,
 };
-pub use state::{flags, live, AcquisitionFailure, ScannerState};
+pub use state::{flags, live, AcquisitionFailure, PollSchedule, ScannerState};
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{
-        ble::encode_manufacturer_payload,
+        ble::{encode_manufacturer_payload, Radio, RADIO_DMA_STATIC},
         mcp2515::{
             validate_frame, MCP_500K_16MHZ_CNF, SPIM_DMA_STATIC, SPIM_EVENTS_END,
             SPIM_EVENTS_STOPPED,
         },
         ssd1306::{DisplayView, TWIM_DMA_STATIC, TWIM_EVENTS_ERROR, TWIM_EVENTS_STOPPED},
-        state::{live, AcquisitionFailure},
+        state::{live, AcquisitionFailure, PollSchedule},
     };
+
+    #[test]
+    fn radio_is_singleton_with_static_packet_storage() {
+        const {
+            assert!(RADIO_DMA_STATIC);
+        }
+        let first = Radio::take();
+        assert!(first.is_some());
+        assert!(Radio::take().is_none());
+    }
+
+    #[test]
+    fn polling_stays_on_discovery_then_starts_at_rpm() {
+        let mut schedule = PollSchedule::new();
+        assert_eq!(schedule.request_pid(), 0x00);
+        schedule.discovery_failed();
+        assert_eq!(schedule.request_pid(), 0x00);
+        schedule.discovery_failed();
+        assert_eq!(schedule.request_pid(), 0x00);
+        schedule.discovery_succeeded();
+        assert_eq!(schedule.request_pid(), 0x0c);
+        schedule.live_attempted();
+        assert_eq!(schedule.request_pid(), 0x0d);
+        schedule.live_attempted();
+        assert_eq!(schedule.request_pid(), 0x05);
+    }
 
     #[test]
     fn reviewed_mmio_offsets_and_can_timing_are_exact() {
@@ -87,7 +113,7 @@ mod tests {
     }
 
     #[test]
-    fn display_status_priority_is_exact_and_never_truncated() {
+    fn display_combines_status_exactly_without_truncation() {
         let mut state = ScannerState::new();
         state.status_flags = flags::STALE
             | flags::TIMEOUT
@@ -96,12 +122,12 @@ mod tests {
             | flags::CAN_CONFIG_ERROR;
         assert_eq!(
             DisplayView::from_state(&state).status.as_bytes(),
-            b"CAN ERR"
+            b"STALE TIMEOUT CAN ERR"
         );
         state.status_flags &= !flags::CAN_CONFIG_ERROR;
         assert_eq!(
             DisplayView::from_state(&state).status.as_bytes(),
-            b"TIMEOUT"
+            b"STALE TIMEOUT"
         );
     }
 
@@ -218,7 +244,7 @@ mod tests {
         state.status_flags |= flags::STALE | flags::TIMEOUT | flags::CAN_CONFIG_ERROR;
         state.status_flags &= !flags::CONNECTED;
         let view = DisplayView::from_state(&state);
-        assert_eq!(view.status.as_bytes(), b"CAN ERR");
+        assert_eq!(view.status.as_bytes(), b"STALE TIMEOUT CAN ERR");
     }
 
     #[test]

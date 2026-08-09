@@ -3,12 +3,17 @@
 //! This uses the repository's Air Tracer contract: a BLE-1M-shaped raw packet,
 //! not a complete standards-compliant GAP advertising PDU.
 
-use core::ptr::{read_volatile, write_volatile};
+use core::{
+    cell::UnsafeCell,
+    ptr::{read_volatile, write_volatile},
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 use crate::{flags, ScannerState};
 
 pub const PAYLOAD_LEN: usize = 9;
 pub const VERSION: u8 = 1;
+pub const RADIO_DMA_STATIC: bool = true;
 /// All currently meaningful state flags have stable, identical on-wire bits.
 pub const WIRE_FLAGS: u16 = flags::CONNECTED
     | flags::STALE
@@ -43,20 +48,21 @@ const RADIO: usize = 0x4000_1000;
 const WAIT_LIMIT: u32 = 200_000;
 
 pub struct Radio {
-    packet: [u8; PAYLOAD_LEN + 2],
+    stuck: bool,
 }
 
-impl Default for Radio {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+struct PacketCell(UnsafeCell<[u8; PAYLOAD_LEN + 2]>);
+unsafe impl Sync for PacketCell {}
+static PACKET: PacketCell = PacketCell(UnsafeCell::new([0; PAYLOAD_LEN + 2]));
+static TAKEN: AtomicBool = AtomicBool::new(false);
 
 impl Radio {
-    pub const fn new() -> Self {
-        Self {
-            packet: [0; PAYLOAD_LEN + 2],
-        }
+    /// Claims the sole non-reentrant RADIO/static packet-buffer instance.
+    pub fn take() -> Option<Self> {
+        TAKEN
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .ok()
+            .map(|_| Self { stuck: false })
     }
 
     pub fn init(&mut self) -> bool {
@@ -66,8 +72,8 @@ impl Radio {
             if !wait_set(CLOCK, 0x100) {
                 return false;
             }
-            self.packet[0] = 0xab;
-            self.packet[1] = PAYLOAD_LEN as u8;
+            packet_set(0, 0xab);
+            packet_set(1, PAYLOAD_LEN as u8);
             wr(RADIO, 0x510, 3);
             wr(RADIO, 0x508, 42);
             wr(RADIO, 0x514, 8 | (1 << 8));
@@ -79,30 +85,53 @@ impl Radio {
             wr(RADIO, 0x538, 0x065b);
             wr(RADIO, 0x53c, 0x55_5555);
             wr(RADIO, 0x554, 42);
-            wr(RADIO, 0x504, self.packet.as_ptr() as u32);
+            wr(RADIO, 0x504, PACKET.0.get() as *mut u8 as u32);
         }
         true
     }
 
     pub fn transmit(&mut self, payload: &[u8; PAYLOAD_LEN]) -> bool {
-        self.packet[2..].copy_from_slice(payload);
+        if self.stuck {
+            return false;
+        }
+        for (index, byte) in payload.iter().enumerate() {
+            packet_set(2 + index, *byte);
+        }
         unsafe {
-            // Refresh pointer because this driver can be moved after init.
-            wr(RADIO, 0x504, self.packet.as_ptr() as u32);
+            wr(RADIO, 0x504, PACKET.0.get() as *mut u8 as u32);
             wr(RADIO, 0x100, 0);
             wr(RADIO, 0x000, 1);
             if !wait_set(RADIO, 0x100) {
-                return false;
+                return self.abort();
             }
             wr(RADIO, 0x10c, 0);
             wr(RADIO, 0x008, 1);
             if !wait_set(RADIO, 0x10c) {
-                return false;
+                return self.abort();
             }
             wr(RADIO, 0x110, 0);
             wr(RADIO, 0x010, 1);
-            wait_set(RADIO, 0x110)
+            if wait_set(RADIO, 0x110) {
+                true
+            } else {
+                self.stuck = true;
+                false
+            }
         }
+    }
+    unsafe fn abort(&mut self) -> bool {
+        wr(RADIO, 0x110, 0);
+        wr(RADIO, 0x010, 1);
+        if !wait_set(RADIO, 0x110) {
+            self.stuck = true;
+        }
+        false
+    }
+}
+
+fn packet_set(index: usize, value: u8) {
+    unsafe {
+        (*PACKET.0.get())[index] = value;
     }
 }
 

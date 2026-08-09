@@ -12,7 +12,8 @@ use firmware_nrf52840_obd2_scanner::{
     mcp2515::{Error as CanError, Mcp2515},
     mode01_request, read_dtcs_request,
     ssd1306::{DisplayView, Ssd1306},
-    vin_request, AcquisitionFailure, CanFrame, IsoTpEvent, ScannerState, VinReassembler,
+    vin_request, AcquisitionFailure, CanFrame, IsoTpEvent, PollSchedule, ScannerState,
+    VinReassembler,
 };
 
 const ECU_WAIT: u32 = 80_000;
@@ -63,7 +64,12 @@ fn main() -> ! {
             spin_loop();
         },
     };
-    let mut radio = Radio::new();
+    let mut radio = match Radio::take() {
+        Some(driver) => driver,
+        None => loop {
+            spin_loop();
+        },
+    };
     let mut state = ScannerState::new();
     if can.init().is_err() {
         state.set_error(flags::CAN_CONFIG_ERROR);
@@ -79,7 +85,7 @@ fn main() -> ! {
     let mut supported = None;
     let mut dtc_done = false;
     let mut vin_done = false;
-    let mut live_slot = 0u8;
+    let mut schedule = PollSchedule::new();
     loop {
         state.increment_age();
         unsafe {
@@ -104,21 +110,29 @@ fn main() -> ! {
         }
 
         if supported.is_none() {
-            match transact(&mut can, mode01_request(0)) {
+            match transact(&mut can, mode01_request(schedule.request_pid())) {
                 Ok(frame) => match decode_supported_pids(&frame) {
                     Ok(map) => {
                         if state.accept_supported_pids(map) {
                             supported = Some(map);
+                            schedule.discovery_succeeded();
+                        } else {
+                            schedule.discovery_failed();
                         }
                     }
-                    Err(_) => state.apply_failure(AcquisitionFailure::Malformed),
+                    Err(_) => {
+                        state.apply_failure(AcquisitionFailure::Malformed);
+                        schedule.discovery_failed();
+                    }
                 },
-                Err(failure) => state.apply_failure(failure),
+                Err(failure) => {
+                    state.apply_failure(failure);
+                    schedule.discovery_failed();
+                }
             }
         }
 
-        let pid = [0x0c, 0x0d, 0x05][live_slot as usize];
-        live_slot = (live_slot + 1) % 3;
+        let pid = schedule.request_pid();
         let supported_pid = supported
             .map(|map| map & (1 << (32 - pid)) != 0)
             .unwrap_or(false);
@@ -136,6 +150,7 @@ fn main() -> ! {
                 }
                 Err(failure) => state.invalidate_live(pid_live_mask(pid), failure),
             }
+            schedule.live_attempted();
         }
 
         if state.has_all(flags::CONNECTED) {
