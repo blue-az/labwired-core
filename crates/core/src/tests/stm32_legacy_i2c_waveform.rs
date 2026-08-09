@@ -292,7 +292,7 @@ mod stm32_legacy_i2c_waveform_tests {
                 .expect("gpiob registered by from_config");
             assert_eq!(
                 machine
-                    .logic_watch(&[Some((gpiob, 8))])
+                    .logic_watch(&[Some(LogicSource::pad(gpiob, 8))])
                     .first()
                     .is_some_and(Option::is_some),
                 pb8_has_wire,
