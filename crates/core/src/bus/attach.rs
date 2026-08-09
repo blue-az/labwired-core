@@ -170,6 +170,129 @@ impl SystemBus {
         }
     }
 
+    /// Bind the classic-ESP32 **VSPI** master's SCK/MOSI/CS wire to the pads its
+    /// output matrix can route them to, so a probe on GPIO18 shows the shifted
+    /// bytes rather than the GPIO output latch.
+    ///
+    /// # Why VSPI, and only VSPI
+    ///
+    /// Classic ESP32 has FOUR SPI controllers and three matrix signal groups
+    /// (ESP32 datasheet v5.3 §4.8.2 p36 and Appendix A p61): SPI0/SPI1 drive the
+    /// `SPI*` group and are the flash path, SPI2 drives `HSPI*`, SPI3 drives
+    /// `VSPI*`. Arduino's `SPI` object is VSPI on this part
+    /// (`libraries/SPI/src/SPI.cpp` :348 `SPIClass SPI(VSPI);`), which is what
+    /// every classic lab in this repo actually drives, and `spi3`
+    /// (`0x3FF6_5000`) is the instance this engine registers for it.
+    ///
+    /// The other instances are left on the latch fallback deliberately. SPI0/1
+    /// carry flash traffic on the bonded flash pins, which no board routes to a
+    /// probe, and binding them here would need the `SPI*` group's indices
+    /// (`SPICLK_OUT_IDX` = 0, …), not VSPI's — the same wire on three different
+    /// index sets. SPI2/HSPI is not registered on this bus at all. Both join
+    /// when something drives them, not before.
+    ///
+    /// Resolution is by NAME, and only by name. Three `Esp32Spi` instances sit
+    /// on a classic bus and they are indistinguishable by type, so "the first
+    /// one found" would bind VSPI's signals onto whichever flash controller
+    /// happened to be registered first — a wire published under a signal that
+    /// controller never drives. Both production builders spell the VSPI
+    /// instance `spi3` (`ESP32_PERIPHERALS` and `configs/chips/esp32.yaml`);
+    /// anything else is a no-op, deliberately.
+    ///
+    /// MISO (`VSPIQ`) is unbound; see [`crate::peripherals::esp_gpspi_wire`].
+    pub(crate) fn wire_esp32_spi_pads(&mut self) {
+        use crate::peripherals::esp32::gpio::Esp32Gpio;
+        use crate::peripherals::esp32::spi::Esp32Spi;
+
+        let gpio_idx = self
+            .peripherals
+            .iter()
+            .position(|p| p.dev.as_any().map(|a| a.is::<Esp32Gpio>()).unwrap_or(false));
+        let spi_idx = self.find_peripheral_index_by_name("spi3").filter(|&i| {
+            self.peripherals[i]
+                .dev
+                .as_any()
+                .map(|a| a.is::<Esp32Spi>())
+                .unwrap_or(false)
+        });
+        // ⚠️ Resolve BOTH before touching either: `pad_lines_arc` CREATES the
+        // wire cell, and a controller that owns a cell no route reaches still
+        // buffers every launched transaction, arms a wakeup per burst, and
+        // narrates into a wire nothing reads.
+        let (Some(spi_idx), Some(gpio_idx)) = (spi_idx, gpio_idx) else {
+            return;
+        };
+        let Some(lines) = self.peripherals[spi_idx]
+            .dev
+            .as_any_mut()
+            .and_then(|a| a.downcast_mut::<Esp32Spi>())
+            .map(Esp32Spi::pad_lines_arc)
+        else {
+            return;
+        };
+        if let Some(gpio) = self.peripherals[gpio_idx]
+            .dev
+            .as_any_mut()
+            .and_then(|a| a.downcast_mut::<Esp32Gpio>())
+        {
+            gpio.bind_spi_lines(&lines);
+        }
+    }
+
+    /// Bind each classic-ESP32 UART's TX wire to the pads its output matrix can
+    /// route it to, so serial output is a waveform on a remapped pad rather than
+    /// the idle GPIO latch. No-op unless classic GPIO and at least one
+    /// `Esp32Uart` are on the bus.
+    ///
+    /// ⚠️ The IO_MUX verdict is NOT the C3's or the S3's. On classic, ALL THREE
+    /// UARTs have an IO_MUX default pad — U0TXD on GPIO1 at function 0, U1TXD on
+    /// GPIO10 and U2TXD on GPIO17 at function 4 — so none of them is
+    /// matrix-visible on a stock default-pin `Serial.begin()`, and that is
+    /// correct: the pad genuinely is showing its GPIO state. Every route lights
+    /// the moment firmware remaps TX, which `uart_set_pin` does through
+    /// `gpio_matrix_out` for any non-default pin. See
+    /// `peripherals::esp32::gpio`'s `SIG_U0TXD` for the header citations.
+    ///
+    /// ⚠️ `configs/chips/esp32.yaml` declares `uart0` as the vendor-neutral
+    /// `uart` type (the STM32 register map) rather than `esp32_uart`, so a
+    /// `from_config` build of this chip binds UART1/UART2 only. The programmatic
+    /// `configure_xtensa_esp32` — the builder every real classic lab uses —
+    /// registers all three as `Esp32Uart` and binds all three.
+    ///
+    /// TX ONLY; see `Esp32Gpio::bind_uart_tx_lines`.
+    pub(crate) fn wire_esp32_uart_pads(&mut self) {
+        use crate::peripherals::esp32::gpio::Esp32Gpio;
+        use crate::peripherals::esp32::uart::Esp32Uart;
+
+        let Some(gpio_idx) = self
+            .peripherals
+            .iter()
+            .position(|p| p.dev.as_any().map(|a| a.is::<Esp32Gpio>()).unwrap_or(false))
+        else {
+            return;
+        };
+        for (instance, name) in ["uart0", "uart1", "uart2"].iter().enumerate() {
+            let Some(idx) = self.find_peripheral_index_by_name(name) else {
+                continue;
+            };
+            let Some(lines) = self.peripherals[idx]
+                .dev
+                .as_any_mut()
+                .and_then(|a| a.downcast_mut::<Esp32Uart>())
+                .map(Esp32Uart::pad_lines_arc)
+            else {
+                continue;
+            };
+            if let Some(gpio) = self.peripherals[gpio_idx]
+                .dev
+                .as_any_mut()
+                .and_then(|a| a.downcast_mut::<Esp32Gpio>())
+            {
+                gpio.bind_uart_tx_lines(instance, &lines);
+            }
+        }
+    }
+
     /// Bind the RP2040 UARTs' TX/RX wires to the pads IO_BANK0 can route them
     /// to, so a probe on GP0 shows the serial waveform rather than the SIO
     /// output latch. No-op unless IO_BANK0, SIO and a UART are all on the bus.
