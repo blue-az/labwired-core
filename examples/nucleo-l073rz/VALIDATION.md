@@ -108,8 +108,9 @@ and [`captures/simulator-uart-boot.txt`](captures/simulator-uart-boot.txt).
 
 The comprehensive demo exercises each important peripheral and prints one
 deterministic token. Both the real board (UART @9600) and the simulator
-(stdout) were captured and diffed — **10 of 12 lines match**; the remaining
-two cannot match a deterministic engine by design. Artifacts:
+(stdout) were captured and diffed — **11 of 12 lines match**; the remaining
+one cannot match a deterministic engine by design. (It was 10 of 12: the RNG
+row was closed by clock-gating, see below.) Artifacts:
 [`captures/silicon-peripherals.txt`](captures/silicon-peripherals.txt) and
 [`captures/simulator-peripherals.txt`](captures/simulator-peripherals.txt).
 
@@ -126,7 +127,12 @@ two cannot match a deterministic engine by design. Artifacts:
 | SPI1 | TXE set after enable | `TXE` | `TXE` | ✅ match (flag-level) |
 | I2C1 | NACK on absent device | `?` | `?` | ✅ agree — inconclusive without a slave (see below) |
 | ADC1 | VREFINT raw conversion | `~0x86` | `0x00` | ❌ analog — by design (see below) |
-| RNG | DR draw | `0` | `CAFEBABE` | ❌ non-deterministic — by design (see below) |
+| RNG | DR draw | `0` | `0` | ✅ match — **was `CAFEBABE`; see below** |
+
+> The committed captures under `captures/` are the ORIGINAL diff and are left
+> untouched as the historical record: `simulator-peripherals.txt` still shows the
+> `RNG=CAFEBABE` line this section now explains. The current engine prints
+> `RNG=00000000` for that firmware.
 
 ### RCC clock-switch — found and FIXED
 
@@ -144,17 +150,54 @@ yaml now uses `profile: "stm32l0"`. After the fix the sim reads `CLK=0x04`,
 matching silicon. The other STM32 boards (L476/F103/F401/H563/…) are unaffected
 — `firmware_survival` (25 passed) and `strict_onboarding` stay green.
 
-### The two remaining divergences (correct by design)
+### RNG — this was NOT a by-design divergence. It was a false pass. FIXED
+
+The row above originally read *"❌ non-deterministic — by design"*, with the
+parenthetical *"silicon read `0` because the demo doesn't complete the full
+HSI48/RNG analog bring-up; immaterial — it cannot equal the sim's deterministic
+value either way."*
+
+That conflated two different things. A TRNG's **value** can never match a
+deterministic engine — true. But silicon's `0` was not a random draw that came
+up zero; it was **no draw at all**. The demo asked for HSI48 at `0x4002_1098`,
+which is where CRRCR sits on the WB/G4/H5 families; on the L0 it is at `0x08`
+and the RCC register file ends at CSR `0x50`, so `0x98` is reserved space
+(`tests/fixtures/real_world/stm32l073.svd`). HSI48 never started, the RNG never
+got a kernel clock, `SR.DRDY` never asserted, and `DR` read `0`.
+
+The simulator answered `0xCAFEBABE` regardless, because `peripherals/rng.rs`
+derives `DRDY` from `CR.RNGEN` alone with no notion of a kernel clock. **A
+firmware bug that costs you the whole peripheral on real hardware produced a
+green run here** — the one outcome a hardware oracle may not produce.
+
+Fixed by teaching the bus's clock gate to require MORE THAN ONE live RCC bit,
+and declaring both of the RNG's clocks in `configs/chips/stm32l073.yaml`:
+
+```yaml
+clock:
+  - { reg: "ahbenr", bit: 20 }   # RCC_AHBENR.RNGEN — the bus clock
+  - { reg: "crrcr",  bit: 1  }   # RCC_CRRCR.HSI48RDY — the kernel clock, running
+```
+
+Both offsets and bit positions are from the vendored SVD. The gate is evaluated
+in exactly one place (`SystemBus::is_peripheral_clocked`) against the live RCC
+registers, so no peripheral model carries a clock check of its own. Regression
+test: `crates/core/tests/rcc_kernel_clock_gate.rs`.
+
+**Consequence for this demo, stated plainly:** the firmware constant is still
+wrong, so the simulator now does what the silicon did — the RNG stays dead and
+prints `RNG=00000000`. It also spends a second bounded 20,000-iteration poll
+waiting for a `DRDY` that never comes, which pushes the `BTN`/`LED` lines past
+the lab's `max_steps: 500000` budget. The lab's assertions (`DEV`, `CLK`, `CRC`,
+`DMA`, `expected_stop_reason`) are unaffected and still pass. Fixing the
+firmware constant is tracked separately.
+
+### The remaining divergence (correct by design)
 
 1. **ADC VREFINT (analog).** Silicon returns a real conversion (`~0x86`); the
    simulator's ADC returns a deterministic `0`. An analog reading cannot be
    reproduced byte-for-byte by a deterministic engine — validation here is
    "silicon converts and returns a plausible value; sim is deterministic."
-2. **RNG (non-deterministic).** The simulator returns a fixed `0xCAFEBABE` —
-   correct behaviour for a *deterministic* oracle. A real TRNG can never (and
-   should never) match it. (Silicon read `0` because the demo doesn't complete
-   the full HSI48/RNG analog bring-up; immaterial — it cannot equal the sim's
-   deterministic value either way.)
 
 ### Not validated without extra hardware
 

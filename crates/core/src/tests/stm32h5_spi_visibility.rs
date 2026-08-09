@@ -177,15 +177,19 @@ mod stm32h5_spi_visibility_tests {
             .bus
             .find_peripheral_index_by_name(case.spi)
             .unwrap_or_else(|| panic!("{}: no {}", case.chip, case.spi));
-        let Some(gate) = machine.bus.peripherals[idx].clock_gate else {
+        let Some(gate) = machine.bus.peripherals[idx].clock_gate.clone() else {
             return; // ungated in this chip's yaml — nothing to enable
         };
         let rcc = base_of(machine, "rcc");
-        let cur = machine.bus.read_u32(rcc + gate.reg_offset).unwrap();
-        machine
-            .bus
-            .write_u32(rcc + gate.reg_offset, cur | (1 << gate.bit))
-            .unwrap();
+        // Satisfy EVERY bit the gate requires, not just the first: a peripheral
+        // may need a bus-enable bit AND a kernel-clock ready bit.
+        for req in &gate.requires {
+            let cur = machine.bus.read_u32(rcc + req.reg_offset).unwrap();
+            machine
+                .bus
+                .write_u32(rcc + req.reg_offset, cur | (1 << req.bit))
+                .unwrap();
+        }
     }
 
     /// Put one pad in alternate-function mode with the given AF nibble.
