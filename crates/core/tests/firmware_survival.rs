@@ -90,9 +90,25 @@ const SURVIVAL_CASES: &[SurvivalCase] = &[
         system: "nucleo-f401re",
         fixture: "stm32f401-blinky.elf",
         valid_pc_ranges: &[(0x0800_0000, 0x0807_FFFF), (0x2000_0000, 0x2001_FFFF)],
-        // Keep this as a control-flow survival check. The current F401 board model
-        // does not yet produce deterministic UART bytes end-to-end.
-        expected_uart_output: b"",
+        // Same `blink_sketch.ino.cpp` as the F103 case above, built by the STM32
+        // Arduino core for nucleo_f401re — so the banner below is the *firmware's*
+        // string, cross-checked against the F103 sibling, not a transcript of
+        // whatever the simulator happened to print.
+        //
+        // This case used to assert `b""`, which asserted nothing: the empty-expected
+        // early return in `assert_uart_contains` skipped the check entirely, leaving
+        // only the PC-range test, so a wedged USART2 would still have passed. The
+        // comment justifying it ("does not yet produce deterministic UART bytes")
+        // was stale — the F401 model emits these 45 bytes deterministically, byte
+        // for byte, at every budget from 200k to 3.2M cycles.
+        //
+        // `LED ON` (from `loop()`, not `setup()`) is included deliberately: it
+        // proves the sketch reached its main loop, not just the banner in setup().
+        // The next line only arrives after the sketch's `delay()` elapses — at
+        // 100M cycles this prints ON/OFF/ON, while the 72 MHz F103 gets one more
+        // toggle in the same cycle count, which is exactly what a fixed
+        // millisecond delay predicts for the faster 84 MHz part.
+        expected_uart_output: b"LabWired Playground - Arduino Blink\r\nLED ON\r\n",
     },
     SurvivalCase {
         // Unmodified Zephyr 3.7 hello_world for nucleo_f401re. Drives the kernel
@@ -1091,10 +1107,17 @@ fn assert_pc_in_range(pc: u32, cycles: u32, ranges: &[(u32, u32)]) {
 }
 
 fn assert_uart_contains(uart_bytes: &[u8], expected: &[u8], name: &str) {
-    // Empty expected means "no assertion" — useful for boards with known limitations.
-    if expected.is_empty() {
-        return;
-    }
+    // An empty `expected` used to mean "no assertion" and silently returned here,
+    // which turned the whole case into a survival-only check: it could not tell a
+    // working chip from a wedged one, and passed as long as the sim did not crash.
+    // Every case now carries a real oracle, so an empty expected is a bug in the
+    // table, not an opt-out. Fail loudly rather than skipping the check.
+    assert!(
+        !expected.is_empty(),
+        "Board '{name}': expected_uart_output is empty, which asserts nothing. Give this \
+         case a real oracle (run the fixture and pin what it genuinely emits), or assert \
+         something else meaningful about it — do not leave it vacuous.",
+    );
     assert!(
         uart_bytes.windows(expected.len()).any(|w| w == expected),
         "Board '{}': UART output did not contain expected bytes.\n\
