@@ -49,7 +49,6 @@ const CANINTF_RX0IF: u8 = 0x01;
 #[cfg(test)]
 const CANINTF_RX1IF: u8 = 0x02;
 const CANINTF_TX0IF: u8 = 0x04;
-const CANINTF_MERRF: u8 = 0x80;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct TxBuffer {
@@ -167,9 +166,13 @@ impl Mcp2515 {
             return false;
         }
         let brp = u32::from(cnf1 & 0x3F) + 1;
+        let sjw = u32::from((cnf1 >> 6) & 0x03) + 1;
         let prop = u32::from(cnf2 & 0x07) + 1;
         let phase1 = u32::from((cnf2 >> 3) & 0x07) + 1;
         let phase2 = u32::from(cnf3 & 0x07) + 1;
+        if phase2 < 2 || sjw > phase2 {
+            return false;
+        }
         let tq = 1 + prop + phase1 + phase2;
         let bitrate = 16_000_000 / (2 * brp * tq);
         bitrate.abs_diff(500_000) <= 5_000
@@ -190,9 +193,6 @@ impl Mcp2515 {
         if let Some(mode) = accepted {
             self.regs[REG_CANSTAT as usize] =
                 (self.regs[REG_CANSTAT as usize] & 0x1F) | mode.bits();
-            self.regs[REG_CANINTF as usize] &= !CANINTF_MERRF;
-        } else {
-            self.regs[REG_CANINTF as usize] |= CANINTF_MERRF;
         }
     }
 
@@ -306,11 +306,6 @@ impl SpiDevice for Mcp2515 {
     }
 
     fn cs_release(&mut self) {
-        if (0x90..=0x97).contains(&self.inst) {
-            let buffer = (self.inst - 0x90) / 4;
-            let intf = self.regs[REG_CANINTF as usize] & !(1 << buffer);
-            self.write_register(REG_CANINTF, intf);
-        }
         self.phase = Phase::Instruction;
     }
 
@@ -550,11 +545,50 @@ mod tests {
     }
 
     #[test]
-    fn invalid_timing_rejects_active_mode_and_reports_configuration_error() {
+    fn absent_timing_rejects_active_mode_without_changing_interrupt_flags() {
         let mut dev = Mcp2515::new("PA4");
+        write(&mut dev, REG_CANINTF, &[CANINTF_TX0IF]);
         write(&mut dev, REG_CANCTRL, &[0x00]);
         assert_eq!(read(&mut dev, REG_CANSTAT, 1)[0] & 0xE0, 0x80);
-        assert_ne!(read(&mut dev, REG_CANINTF, 1)[0] & CANINTF_MERRF, 0);
+        assert_eq!(read(&mut dev, REG_CANCTRL, 1)[0] & 0xE0, 0x00);
+        assert_eq!(read(&mut dev, REG_CANINTF, 1), [CANINTF_TX0IF]);
+    }
+
+    #[test]
+    fn structurally_invalid_timing_rejects_active_mode() {
+        let mut dev = Mcp2515::new("PA4");
+        // 16 TQ / 500 kbit/s, but SJW=4 TQ exceeds PHSEG2=2 TQ.
+        write(&mut dev, REG_CNF3, &[0x01, 0xBC, 0xC0]);
+        write(&mut dev, REG_CANCTRL, &[0x40]);
+        assert_eq!(read(&mut dev, REG_CANSTAT, 1)[0] & 0xE0, 0x80);
+    }
+
+    #[test]
+    fn bitrate_mismatch_over_one_percent_rejects_active_mode() {
+        let mut dev = Mcp2515::new("PA4");
+        // Structurally valid 16 TQ timing, but BRP=1 computes to 250 kbit/s.
+        write(&mut dev, REG_CNF3, &[0x01, 0xBC, 0x01]);
+        write(&mut dev, REG_CANCTRL, &[0x60]);
+        assert_eq!(read(&mut dev, REG_CANSTAT, 1)[0] & 0xE0, 0x80);
+    }
+
+    #[test]
+    fn valid_16mhz_500k_timing_accepts_active_modes() {
+        let mut dev = Mcp2515::new("PA4");
+        write(&mut dev, REG_CNF3, &[0x01, 0xBC, 0x00]);
+        for mode in [0x00, 0x40, 0x60] {
+            write(&mut dev, REG_CANCTRL, &[mode]);
+            assert_eq!(read(&mut dev, REG_CANSTAT, 1)[0] & 0xE0, mode);
+        }
+    }
+
+    #[test]
+    fn config_and_sleep_are_allowed_without_timing() {
+        let mut dev = Mcp2515::new("PA4");
+        write(&mut dev, REG_CANCTRL, &[0x20]);
+        assert_eq!(read(&mut dev, REG_CANSTAT, 1)[0] & 0xE0, 0x20);
+        write(&mut dev, REG_CANCTRL, &[0x80]);
+        assert_eq!(read(&mut dev, REG_CANSTAT, 1)[0] & 0xE0, 0x80);
     }
 
     #[test]
@@ -588,7 +622,7 @@ mod tests {
     }
 
     #[test]
-    fn read_rx_buffer_variants_use_documented_header_and_data_offsets() {
+    fn read_rx_buffer_variants_preserve_flags_until_bit_modify() {
         let mut dev = Mcp2515::new("PA4");
         let header0 = [0x24, 0x60, 0, 0, 2, 0xDE, 0xAD];
         let header1 = [0x64, 0x20, 0, 0, 2, 0xBE, 0xEF];
@@ -609,9 +643,17 @@ mod tests {
 
         write(&mut dev, REG_CANINTF, &[CANINTF_RX0IF | CANINTF_RX1IF]);
         transaction(&mut dev, &[0x90, 0]);
-        assert_eq!(read(&mut dev, REG_CANINTF, 1), [CANINTF_RX1IF]);
+        assert_eq!(
+            read(&mut dev, REG_CANINTF, 1),
+            [CANINTF_RX0IF | CANINTF_RX1IF]
+        );
         transaction(&mut dev, &[0x94, 0]);
-        assert_eq!(read(&mut dev, REG_CANINTF, 1), [0]);
+        assert_eq!(
+            read(&mut dev, REG_CANINTF, 1),
+            [CANINTF_RX0IF | CANINTF_RX1IF]
+        );
+        transaction(&mut dev, &[INST_BITMOD, REG_CANINTF, CANINTF_RX0IF, 0]);
+        assert_eq!(read(&mut dev, REG_CANINTF, 1), [CANINTF_RX1IF]);
     }
 
     #[test]
