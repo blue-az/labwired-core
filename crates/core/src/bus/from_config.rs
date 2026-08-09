@@ -800,23 +800,53 @@ impl SystemBus {
                         desc,
                     ))
                 }
-                _other => {
-                    if plugins.is_empty() {
+                // No model, no descriptor, no plugin claimed it. This used to
+                // install a zero-filled stub for ANY type, which is the one
+                // outcome this product cannot ship: firmware talks to the
+                // address, reads back zeros, and the run reports success while
+                // having modelled nothing.
+                //
+                // So an unrecognised type now FAILS THE LOAD. The only
+                // exceptions are the types measured as already reaching this
+                // arm in the shipped configs, each with a written reason in
+                // `known_stubs.rs` — see that file for the rules and the exit.
+                other => match super::known_stubs::known_stub_reason(other) {
+                    Some(reason) => {
                         tracing::debug!(
-                            "Mapping unknown peripheral type '{}' to Stub for id '{}'",
+                            "peripheral '{}' (type '{}') resolves to a zero stub; \
+                             allowlisted: {}",
+                            p_cfg.id,
                             p_cfg.r#type,
-                            p_cfg.id
+                            reason
                         );
-                    } else {
-                        tracing::debug!(
-                            "Mapping unknown peripheral type '{}' to Stub for id '{}' (not claimed by {} loaded plugin(s))",
+                        Box::new(crate::peripherals::stub::StubPeripheral::new(0x00))
+                    }
+                    None => {
+                        return Err(anyhow::anyhow!(
+                            "unknown peripheral type '{}' for peripheral '{}' in chip '{}' \
+                             (chip file '{}'): this engine has no model for it, no plugin \
+                             claimed it{}, and it is not on the known-stub allowlist. \
+                             Refusing to answer it with a zero-filled stub — firmware would \
+                             read zeros from silicon that was never modelled and the run \
+                             would still report success. Fix it one of three ways: model the \
+                             peripheral, describe it with `type: declarative` and a \
+                             descriptor `path`, or — if answering zeros really is right — \
+                             declare `type: stub` in the chip YAML (or add '{}' to \
+                             KNOWN_STUBBED_PERIPHERAL_TYPES in \
+                             crates/core/src/bus/known_stubs.rs with a written reason).",
                             p_cfg.r#type,
                             p_cfg.id,
-                            plugins.len()
-                        );
+                            chip.name,
+                            manifest.chip,
+                            if plugins.is_empty() {
+                                String::new()
+                            } else {
+                                format!(" (of {} loaded plugin(s))", plugins.len())
+                            },
+                            other,
+                        ));
                     }
-                    Box::new(crate::peripherals::stub::StubPeripheral::new(0x00))
-                }
+                },
             };
 
             bus.push_peripheral(p_cfg, dev)?;
