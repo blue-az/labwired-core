@@ -14,6 +14,7 @@ mod jit_browser;
 #[cfg(test)]
 mod playground_repro;
 mod traces;
+mod world;
 // CortexM and XtensaLx7 are used via Box<dyn Cpu>; the concrete types are
 // only constructed inside the configure_* fns and immediately boxed.
 use labwired_core::decoder::arm::{decode_thumb_16, decode_thumb_32};

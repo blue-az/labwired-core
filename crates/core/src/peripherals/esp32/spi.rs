@@ -188,6 +188,7 @@ const CMD_CHIP_ERASE: u8 = 0xC7;
 // Flash status-register bits (SPI NOR standard).
 const STATUS_WIP: u16 = 1 << 0;
 const STATUS_WEL: u16 = 1 << 1;
+const EXTERNAL_CAN_POLL_EVENT: u32 = u32::MAX;
 
 /// JEDEC id returned for RDID: Winbond W25Q32-class (mfg 0xEF, type 0x40,
 /// capacity 0x16 = 4 MiB). Matches the post-BROM `g_rom_flashchip` seed and
@@ -237,6 +238,7 @@ pub struct Esp32Spi {
     /// every production `add_peripheral`/`push_peripheral` does; `None` on a
     /// hand-built bus, where there is no axis to place a waveform on.
     clock: Option<CycleClock>,
+    external_can_poll_scheduled: bool,
 }
 
 impl std::fmt::Debug for Esp32Spi {
@@ -721,6 +723,9 @@ impl Peripheral for Esp32Spi {
     /// this method did in full before the wire existed.
     fn tick(&mut self) -> PeripheralTickResult {
         self.wire_flush(false);
+        for device in &mut self.attached_devices {
+            device.poll_external_bus();
+        }
         PeripheralTickResult::default()
     }
 
@@ -740,15 +745,28 @@ impl Peripheral for Esp32Spi {
     /// transaction, so a 64-byte burst is one wakeup rather than 100 000 walk
     /// ticks. Mirrors `Esp32c3Spi`.
     fn take_scheduled_events(&mut self) -> Vec<(u64, u32)> {
-        if !self.uses_scheduler() || !self.wire.is_pending() || self.wire.scheduled {
+        if self.clock.is_none() {
             return Vec::new();
         }
-        let Some(now) = self.clock.as_ref().map(|c| c.now()) else {
-            return Vec::new();
-        };
-        self.wire.arm_seq = self.wire.arm_seq.wrapping_add(1);
-        self.wire.scheduled = true;
-        vec![(self.wire.ready_in(now), self.wire.arm_seq)]
+        let mut events = Vec::new();
+        if self.wire.is_pending() && !self.wire.scheduled {
+            let now = self.clock.as_ref().map_or(0, |clock| clock.now());
+            self.wire.arm_seq = self.wire.arm_seq.wrapping_add(1);
+            if self.wire.arm_seq == EXTERNAL_CAN_POLL_EVENT {
+                self.wire.arm_seq = 0;
+            }
+            self.wire.scheduled = true;
+            events.push((self.wire.ready_in(now), self.wire.arm_seq));
+        }
+        let has_external_bus = self
+            .attached_devices
+            .iter()
+            .any(|device| device.needs_external_bus_poll());
+        if has_external_bus && !self.external_can_poll_scheduled {
+            self.external_can_poll_scheduled = true;
+            events.push((0, EXTERNAL_CAN_POLL_EVENT));
+        }
+        events
     }
 
     fn on_event(
@@ -757,6 +775,15 @@ impl Peripheral for Esp32Spi {
         _sched: &mut crate::sched::EventScheduler,
         _bus: &mut dyn crate::Bus,
     ) -> crate::sched::EventResult {
+        if event_token == EXTERNAL_CAN_POLL_EVENT {
+            for device in &mut self.attached_devices {
+                device.poll_external_bus();
+            }
+            return crate::sched::EventResult {
+                reschedule_delay: Some(1),
+                ..Default::default()
+            };
+        }
         if event_token != self.wire.arm_seq {
             // Stale token from a superseded arm; the live chain owns publication.
             return crate::sched::EventResult::default();
