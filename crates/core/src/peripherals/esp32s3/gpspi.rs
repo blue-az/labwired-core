@@ -481,6 +481,14 @@ impl Esp32s3Spi {
 }
 
 impl Peripheral for Esp32s3Spi {
+    fn line_names(&self) -> &'static [&'static str] {
+        crate::peripherals::esp_gpspi_wire::SPI_LINES
+    }
+
+    fn wire_lines(&self) -> Option<&crate::peripherals::pad_lines::PadLines> {
+        self.wire.wire_lines()
+    }
+
     fn read(&self, offset: u64) -> SimResult<u8> {
         let word = self.read_u32(offset & !3)?;
         Ok(((word >> ((offset & 3) * 8)) & 0xFF) as u8)

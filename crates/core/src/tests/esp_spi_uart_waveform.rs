@@ -63,6 +63,7 @@
 
 #[cfg(test)]
 mod esp_spi_uart_waveform_tests {
+    use crate::logic_capture::LogicSource;
     use crate::cpu::CortexM;
     use crate::logic_capture::LogicEdge;
     use crate::peripherals::esp32c3::gpio::Esp32c3Gpio;
@@ -445,15 +446,15 @@ mod esp_spi_uart_waveform_tests {
     fn watch_spi(machine: &mut Machine<CortexM>) {
         let gpio = machine.bus.find_peripheral_index_by_name("gpio").unwrap();
         machine.logic_watch(&[
-            Some((gpio, MOSI_PIN)),
-            Some((gpio, SCK_PIN)),
-            Some((gpio, CS_PIN)),
+            Some(LogicSource::pad(gpio, MOSI_PIN)),
+            Some(LogicSource::pad(gpio, SCK_PIN)),
+            Some(LogicSource::pad(gpio, CS_PIN)),
         ]);
     }
 
     fn watch_tx(machine: &mut Machine<CortexM>) {
         let gpio = machine.bus.find_peripheral_index_by_name("gpio").unwrap();
-        machine.logic_watch(&[Some((gpio, TX_PIN))]);
+        machine.logic_watch(&[Some(LogicSource::pad(gpio, TX_PIN))]);
     }
 
     // ================= C3 =================
@@ -810,15 +811,15 @@ mod esp_spi_uart_waveform_tests {
     fn watch_classic_spi(machine: &mut Machine<CortexM>) {
         let gpio = machine.bus.find_peripheral_index_by_name("gpio").unwrap();
         machine.logic_watch(&[
-            Some((gpio, CL_MOSI_PIN)),
-            Some((gpio, CL_SCK_PIN)),
-            Some((gpio, CL_CS_PIN)),
+            Some(LogicSource::pad(gpio, CL_MOSI_PIN)),
+            Some(LogicSource::pad(gpio, CL_SCK_PIN)),
+            Some(LogicSource::pad(gpio, CL_CS_PIN)),
         ]);
     }
 
     fn watch_classic_tx(machine: &mut Machine<CortexM>) {
         let gpio = machine.bus.find_peripheral_index_by_name("gpio").unwrap();
-        machine.logic_watch(&[Some((gpio, CL_TX_PIN))]);
+        machine.logic_watch(&[Some(LogicSource::pad(gpio, CL_TX_PIN))]);
     }
 
     #[test]
