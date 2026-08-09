@@ -16,7 +16,9 @@ pub enum IsoTpEvent {
 /// application bytes: `[0x49, 0x02, 0x01]` followed by the 17-byte VIN. That FF
 /// carries the three-byte application header and the first three VIN bytes. CF1
 /// (sequence 1) carries the next seven VIN bytes and CF2 (sequence 2) carries the
-/// final seven. Both consecutive frames therefore have a CAN DLC of eight.
+/// final seven. Both consecutive frames therefore have a CAN DLC of eight. A
+/// Mode 09 negative response is accepted only as the unpadded single frame
+/// `[0x03, 0x7F, 0x09, NRC]` with DLC 4.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct VinReassembler {
     payload: [u8; VIN_PAYLOAD_LEN],
@@ -84,12 +86,9 @@ impl VinReassembler {
         if self.active {
             return Err(Error::UnexpectedFrame);
         }
-        if frame.data[0] != 3 {
-            return Err(if frame.data[1] == 0x7f {
-                Error::InvalidLength
-            } else {
-                Error::UnexpectedFrame
-            });
+        let declared = usize::from(frame.data[0] & 0x0f);
+        if frame.len != 4 || usize::from(frame.len) != declared + 1 || declared != 3 {
+            return Err(Error::InvalidLength);
         }
         if frame.data[1] != 0x7f {
             return Err(Error::UnexpectedFrame);

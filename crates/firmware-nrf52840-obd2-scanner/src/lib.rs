@@ -222,17 +222,24 @@ mod tests {
     #[test]
     fn vin_reassembly_handles_mode09_negative_single_frames() {
         let mut rx = VinReassembler::new();
+        let negative = CanFrame {
+            id: RESPONSE_ID,
+            len: 4,
+            data: [3, 0x7f, 9, 0x11, 0, 0, 0, 0],
+        };
         assert_eq!(
-            rx.push(&response([3, 0x7f, 9, 0x11, 0, 0, 0, 0])),
+            rx.push(&negative),
             Err(Error::NegativeResponse {
                 service: 9,
                 nrc: 0x11
             })
         );
-        assert_eq!(
-            rx.push(&response([3, 0x7f, 1, 0x11, 0, 0, 0, 0])),
-            Err(Error::UnsupportedService)
-        );
+        let wrong_service = CanFrame {
+            id: RESPONSE_ID,
+            len: 4,
+            data: [3, 0x7f, 1, 0x11, 0, 0, 0, 0],
+        };
+        assert_eq!(rx.push(&wrong_service), Err(Error::UnsupportedService));
         assert_eq!(
             rx.push(&response([2, 0x7f, 9, 0x11, 0, 0, 0, 0])),
             Err(Error::InvalidLength)
@@ -241,15 +248,25 @@ mod tests {
             rx.push(&response([4, 0x7f, 9, 0x11, 0, 0, 0, 0])),
             Err(Error::InvalidLength)
         );
+        for dlc in [1, 2, 3, 5] {
+            let truncated_or_padded = CanFrame {
+                id: RESPONSE_ID,
+                len: dlc,
+                data: [3, 0x7f, 9, 0x11, 0, 0, 0, 0],
+            };
+            assert_eq!(rx.push(&truncated_or_padded), Err(Error::InvalidLength));
+        }
     }
 
     #[test]
     fn vin_reassembly_rejects_duplicate_unexpected_and_bad_length_frames() {
         let mut rx = VinReassembler::new();
-        assert_eq!(
-            rx.push(&response([3, 0x49, 2, 1, 0, 0, 0, 0])),
-            Err(Error::UnexpectedFrame)
-        );
+        let positive_single_frame = CanFrame {
+            id: RESPONSE_ID,
+            len: 4,
+            data: [3, 0x49, 2, 1, 0, 0, 0, 0],
+        };
+        assert_eq!(rx.push(&positive_single_frame), Err(Error::UnexpectedFrame));
         assert_eq!(
             rx.push(&response([0x30, 0, 0, 0, 0, 0, 0, 0])),
             Err(Error::UnexpectedFrame)
