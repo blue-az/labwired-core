@@ -1282,6 +1282,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "firmware-nrf52840-obd2-scanner"
+version = "0.21.0"
+dependencies = [
+ "cortex-m",
+ "cortex-m-rt",
+ "panic-halt",
+]
+
+[[package]]
 name = "firmware-nrf52840-proximity"
 version = "0.1.0"
 dependencies = [

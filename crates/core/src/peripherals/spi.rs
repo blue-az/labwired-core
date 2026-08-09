@@ -15,6 +15,7 @@
 use crate::{Bus, SimResult};
 use std::any::Any;
 use std::str::FromStr;
+use std::sync::mpsc::{Receiver, Sender};
 use std::sync::Arc;
 
 use crate::peripherals::pad_lines::PadLines;
@@ -27,6 +28,20 @@ use crate::peripherals::spi_waveform::{NarrationFit, SpiFraming, SpiNarrator};
 /// correct for single-device labs (MAX31855 alone).  CS-aware routing is noted
 /// as a Phase 2 follow-up.
 pub trait SpiDevice: Send {
+    fn needs_external_bus_poll(&self) -> bool {
+        false
+    }
+    fn component_id(&self) -> Option<&str> {
+        None
+    }
+    fn attach_can_bus(
+        &mut self,
+        _tx: Sender<crate::network::CanFrame>,
+        _rx: Receiver<crate::network::CanFrame>,
+    ) -> anyhow::Result<()> {
+        anyhow::bail!("SPI device is not a CAN controller")
+    }
+    fn poll_external_bus(&mut self) {}
     /// Called when the CS line goes low (chip is selected).
     fn cs_select(&mut self) {}
     /// Called when the CS line goes high (chip is released — flush state).
@@ -327,7 +342,10 @@ impl Stm32SpiRegs {
             0x18 => self.txcrcr,
             0x1C => self.i2scfgr,
             0x20 => self.i2spr,
-            _ => 0,
+            _ => {
+                crate::census_reg!("spi:Stm32SpiRegs", offset, "read");
+                0
+            }
         }
     }
 }
@@ -468,7 +486,10 @@ impl Stm32H5SpiRegs {
             0x48 => self.rxcrc,
             0x4C => self.udrdr,
             0x50 => self.i2scfgr,
-            _ => 0,
+            _ => {
+                crate::census_reg!("spi:Stm32H5SpiRegs", offset, "read");
+                0
+            }
         }
     }
 }
@@ -579,7 +600,10 @@ impl Nrf52SpiRegs {
             0x54C => self.txd_amount,
             // ORC
             0x5C0 => self.orc & 0xFF,
-            _ => 0,
+            _ => {
+                crate::census_reg!("spi:Nrf52SpiRegs", offset, "read");
+                0
+            }
         }
     }
 
@@ -632,7 +656,9 @@ impl Nrf52SpiRegs {
             // ORC (only low 8 bits are meaningful)
             0x5C0 => self.orc = value & 0xFF,
 
-            _ => {}
+            _ => {
+                crate::census_reg!("spi:Nrf52SpiRegs", offset, "write");
+            }
         }
         false
     }
@@ -686,7 +712,10 @@ impl KinetisDspiRegs {
             0x2C => self.sr,
             0x30 => self.rser,
             0x38 => self.popr,
-            _ => 0,
+            _ => {
+                crate::census_reg!("spi:KinetisDspiRegs", offset, "read");
+                0
+            }
         }
     }
 }
@@ -883,6 +912,9 @@ pub struct Spi {
 
     #[serde(skip)]
     pub attached_devices: Vec<Box<dyn SpiDevice>>,
+    /// Last sampled active-low GPIO CS level for each attached device.
+    #[serde(skip)]
+    selected_devices: Vec<bool>,
 }
 
 impl core::fmt::Debug for Spi {
@@ -898,6 +930,17 @@ impl core::fmt::Debug for Spi {
 }
 
 impl Spi {
+    pub(crate) fn has_external_bus_device(&self) -> bool {
+        self.attached_devices
+            .iter()
+            .any(|device| device.needs_external_bus_poll())
+    }
+
+    pub(crate) fn poll_external_bus_devices(&mut self) {
+        for device in &mut self.attached_devices {
+            device.poll_external_bus();
+        }
+    }
     pub fn new() -> Self {
         Self::new_with_layout(SpiRegisterLayout::Stm32)
     }
@@ -955,6 +998,7 @@ impl Spi {
     /// universal bus trace).
     pub(crate) fn push_device(&mut self, device: Box<dyn SpiDevice>) {
         self.attached_devices.push(device);
+        self.selected_devices.push(false);
     }
 
     fn is_nrf(&self) -> bool {
@@ -1407,7 +1451,9 @@ impl Spi {
                     }
                 }
             }
-            _ => {}
+            _ => {
+                crate::census_reg!("spi:Spi", offset, "write");
+            }
         }
     }
 
@@ -1471,7 +1517,9 @@ impl Spi {
                     r.sr |= DSPI_SR_TCF | DSPI_SR_RFDF | DSPI_SR_TFFF;
                 }
             }
-            _ => {}
+            _ => {
+                crate::census_reg!("spi:Spi", offset, "write");
+            }
         }
     }
 
@@ -1661,7 +1709,9 @@ impl Spi {
             }
             // SR (0x14) is read-only (flags clear via IFCR); TXCRC/RXCRC
             // (0x44/0x48) are HW-computed and read-only.
-            _ => {}
+            _ => {
+                crate::census_reg!("spi:Spi", offset, "write");
+            }
         }
     }
 }
@@ -2270,16 +2320,21 @@ impl crate::Peripheral for Spi {
     /// nRF52 SPIM EasyDMA needs bus access to read/write RAM buffers.
     fn needs_bus_tick(&self) -> bool {
         self.nrf52_pending_start
+            || self.has_external_bus_device()
+            || self.selected_devices.iter().any(|selected| *selected)
     }
 
     /// nRF52 SPIM EasyDMA transfer engine (bare-bus / bus_tick_indices path).
     fn tick_with_bus(&mut self, bus: &mut dyn Bus) {
+        self.sync_nrf52_gpio_cs(bus);
+        self.poll_external_bus_devices();
         if self.nrf52_pending_start {
             self.do_nrf52_easydma(bus);
         }
     }
 
     fn tick(&mut self) -> crate::PeripheralTickResult {
+        self.poll_external_bus_devices();
         self.tick_elapsed(1)
     }
 
@@ -2385,6 +2440,24 @@ impl crate::Peripheral for Spi {
 }
 
 impl Spi {
+    fn sync_nrf52_gpio_cs(&mut self, bus: &dyn Bus) {
+        if !matches!(self.regs, SpiRegs::Nrf52(_)) {
+            return;
+        }
+        for (index, device) in self.attached_devices.iter_mut().enumerate() {
+            let pin = device.cs_pin();
+            if pin.is_empty() {
+                continue;
+            }
+            let selected = bus.read_gpio_output_by_label(pin) == Some(false);
+            match (self.selected_devices[index], selected) {
+                (false, true) => device.cs_select(),
+                (true, false) => device.cs_release(),
+                _ => {}
+            }
+            self.selected_devices[index] = selected;
+        }
+    }
     /// nRF52 SPIM EasyDMA engine shared by `tick_with_bus` and `on_event`.
     ///
     /// Reads TXD.MAXCNT bytes from RAM at TXD.PTR, clocks each through the
@@ -2449,7 +2522,10 @@ impl Spi {
             // no-device — mirrors MOSI back).
             let miso: u8 = if !self.attached_devices.is_empty() {
                 let mut resp: u8 = 0;
-                for dev in &mut self.attached_devices {
+                for (index, dev) in self.attached_devices.iter_mut().enumerate() {
+                    if !dev.cs_pin().is_empty() && !self.selected_devices[index] {
+                        continue;
+                    }
                     let r = dev.transfer(mosi);
                     if r != 0 {
                         resp = r;
@@ -2746,6 +2822,7 @@ mod tests {
     /// Minimal flat-RAM bus for unit tests — no peripherals, just byte array.
     struct FlatRamBus {
         mem: HashMap<u64, u8>,
+        gpio: HashMap<String, bool>,
         config: SimulationConfig,
     }
 
@@ -2753,6 +2830,7 @@ mod tests {
         fn new() -> Self {
             Self {
                 mem: HashMap::new(),
+                gpio: HashMap::new(),
                 config: SimulationConfig::default(),
             }
         }
@@ -2786,6 +2864,9 @@ mod tests {
         }
         fn config(&self) -> &SimulationConfig {
             &self.config
+        }
+        fn read_gpio_output_by_label(&self, pin: &str) -> Option<bool> {
+            self.gpio.get(pin).copied()
         }
     }
 
@@ -2932,6 +3013,92 @@ mod tests {
         assert_eq!(nrf_read_u32(&spi, 0x118), 1, "EVENTS_END");
         assert_eq!(nrf_read_u32(&spi, 0x54C), 3, "TXD.AMOUNT == 3");
         assert_eq!(nrf_read_u32(&spi, 0x53C), 3, "RXD.AMOUNT == 3");
+    }
+
+    #[test]
+    fn nrf52_spim_gpio_cs_selects_only_matching_device_and_spans_transfers() {
+        use std::sync::{Arc, Mutex};
+
+        struct TransactionSlave(&'static str, Arc<Mutex<Vec<String>>>);
+        impl SpiDevice for TransactionSlave {
+            fn transfer(&mut self, _mosi: u8) -> u8 {
+                0
+            }
+            fn cs_pin(&self) -> &str {
+                "P0.12"
+            }
+            fn cs_select(&mut self) {
+                self.1.lock().unwrap().push(format!("{}:select", self.0));
+            }
+            fn cs_release(&mut self) {
+                self.1.lock().unwrap().push(format!("{}:release", self.0));
+            }
+        }
+
+        let events = Arc::new(Mutex::new(Vec::<String>::new()));
+        let mut spi = Spi::new_with_layout(SpiRegisterLayout::Nrf52Spim);
+        spi.push_device(Box::new(TransactionSlave("a", events.clone())));
+        struct Other(TransactionSlave);
+        impl SpiDevice for Other {
+            fn transfer(&mut self, mosi: u8) -> u8 {
+                self.0.transfer(mosi)
+            }
+            fn cs_pin(&self) -> &str {
+                "P0.13"
+            }
+            fn cs_select(&mut self) {
+                self.0.cs_select()
+            }
+            fn cs_release(&mut self) {
+                self.0.cs_release()
+            }
+        }
+        spi.push_device(Box::new(Other(TransactionSlave("b", events.clone()))));
+        let mut bus = FlatRamBus::new();
+        bus.gpio.insert("P0.12".into(), false);
+        bus.gpio.insert("P0.13".into(), true);
+        bus.write_slice(0x2000_0200, &[0xC0]);
+        nrf_write_u32(&mut spi, 0x500, 7);
+        nrf_write_u32(&mut spi, 0x544, 0x2000_0200);
+        nrf_write_u32(&mut spi, 0x548, 1);
+        nrf_write_u32(&mut spi, 0x010, 1);
+        spi.tick_with_bus(&mut bus);
+        nrf_write_u32(&mut spi, 0x010, 1);
+        spi.tick_with_bus(&mut bus);
+        assert_eq!(*events.lock().unwrap(), ["a:select"]);
+        bus.gpio.insert("P0.12".into(), true);
+        spi.tick_with_bus(&mut bus);
+        assert_eq!(*events.lock().unwrap(), ["a:select", "a:release"]);
+    }
+
+    #[test]
+    fn nrf52_spim_start_and_zero_length_do_not_invent_cs_pulse() {
+        let events = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        struct Slave(std::sync::Arc<std::sync::Mutex<Vec<&'static str>>>);
+        impl SpiDevice for Slave {
+            fn transfer(&mut self, _mosi: u8) -> u8 {
+                0
+            }
+            fn cs_pin(&self) -> &str {
+                "P0.12"
+            }
+            fn cs_select(&mut self) {
+                self.0.lock().unwrap().push("select")
+            }
+            fn cs_release(&mut self) {
+                self.0.lock().unwrap().push("release")
+            }
+        }
+        let mut spi = Spi::new_with_layout(SpiRegisterLayout::Nrf52Spim);
+        spi.push_device(Box::new(Slave(events.clone())));
+        let mut bus = FlatRamBus::new();
+        bus.gpio.insert("P0.12".into(), true);
+        nrf_write_u32(&mut spi, 0x500, 7);
+        nrf_write_u32(&mut spi, 0x548, 0);
+        nrf_write_u32(&mut spi, 0x538, 0);
+        nrf_write_u32(&mut spi, 0x010, 1);
+        spi.tick_with_bus(&mut bus);
+        assert!(events.lock().unwrap().is_empty());
     }
 
     /// RXD.MAXCNT < TXD.MAXCNT: RXD fills up, remaining MISO bytes are discarded.

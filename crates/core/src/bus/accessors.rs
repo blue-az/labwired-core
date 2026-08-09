@@ -754,6 +754,17 @@ impl crate::Bus for SystemBus {
         Some(self)
     }
 
+    fn read_gpio_output_by_label(&self, pin: &str) -> Option<bool> {
+        let (addr, bit) = Self::resolve_pin_odr(self, pin)?;
+        let peripheral = self.peripherals.iter().find(|peripheral| {
+            addr >= peripheral.base && addr < peripheral.base + peripheral.size
+        })?;
+        if peripheral.dev.gpio_routing(bit)?.mode != crate::peripherals::gpio::GpioMode::Output {
+            return None;
+        }
+        peripheral.dev.read_gpio_output(bit)
+    }
+
     fn tick_peripherals(&mut self) -> Vec<u32> {
         let (interrupts, _costs) = self.tick_peripherals_fully();
         interrupts

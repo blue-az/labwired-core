@@ -357,7 +357,10 @@ impl Adc {
             0x3C => r.sqr4,
             0x40 => dr,
             0x308 => r.common_ccr,
-            _ => 0,
+            _ => {
+                crate::census_reg!("adc:Adc", reg, "read");
+                0
+            }
         }
     }
 
@@ -577,7 +580,9 @@ impl Adc {
             0x3C => r.sqr4 = value,
             0x40 => {} // DR read-only
             0x308 => r.common_ccr = value,
-            _ => {}
+            _ => {
+                crate::census_reg!("adc:Adc", reg, "write");
+            }
         }
     }
 }
@@ -596,7 +601,10 @@ impl Peripheral for Adc {
                 0x04..=0x07 => r.cr1,
                 0x08..=0x0B => r.cr2,
                 0x4C..=0x4F => self.dr,
-                _ => 0,
+                _ => {
+                    crate::census_reg!("adc:Adc", offset, "read");
+                    0
+                }
             },
             AdcRegs::Stm32L4(r) => Self::read_reg_l4(r, self.dr, offset & !3),
             AdcRegs::Stm32H7(r) => Self::read_reg_h7(r, self.dr, offset & !3),
@@ -638,7 +646,9 @@ impl Peripheral for Adc {
                         self.start_conversion();
                     }
                 }
-                _ => {}
+                _ => {
+                    crate::census_reg!("adc:Adc", offset, "write");
+                }
             },
             AdcRegs::Stm32L4(_) => {
                 let reg = offset & !3;
