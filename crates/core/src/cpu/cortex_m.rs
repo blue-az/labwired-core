@@ -6,7 +6,10 @@
 
 use crate::bus::SystemBus;
 use crate::decoder::arm::{decode_thumb_16, decode_thumb_32, Instruction};
-use crate::{Bus, Cpu, SimResult, SimulationConfig, SimulationObserver};
+use crate::peripherals::scb::{
+    ScbFaultState, CFSR_BFSR_BFARVALID, CFSR_BFSR_PRECISERR, HFSR_FORCED, SHCSR_BUSFAULTENA,
+};
+use crate::{Bus, Cpu, SimResult, SimulationConfig, SimulationError, SimulationObserver};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
 
@@ -111,6 +114,22 @@ pub struct CortexM {
     /// `None` on hand-built buses that never went through `configure_cortex_m`;
     /// those keep the legacy behaviour of their caller.
     pub sysreset_signal: Option<Arc<AtomicBool>>,
+    /// Shared with the SCB: the ARMv7-M fault register file (SHCSR/CFSR/HFSR/
+    /// BFAR) plus the master `enabled` switch for fault escalation.
+    ///
+    /// `None` on hand-built cores that never went through `configure_cortex_m`
+    /// — no SCB means no fault registers to report through, so those keep the
+    /// #880 abort contract unconditionally. See [`ScbFaultState`].
+    pub faults: Option<Arc<ScbFaultState>>,
+    /// Address of the data-side access that just raised
+    /// `SimulationError::MemoryViolation`, latched by [`CortexM::load`] /
+    /// [`CortexM::store`] so `step_internal` can tell a **data** fault (which
+    /// ARMv7-M turns into a precise BusFault) from an instruction-fetch fault,
+    /// an exception-entry stacking fault or a vector-table read fault — all of
+    /// which are different contracts and stay on the abort path.
+    ///
+    /// Only ever written on the error path, so a clean step costs nothing.
+    pending_data_fault: Option<u32>,
     pub decode_cache: Box<[Option<DecodeCacheEntry>; 4096]>,
     /// FPU single-precision register file (VFPv4 single — S0..S31).
     /// Each S register is the IEEE-754 binary32 bit pattern; reads via
@@ -161,6 +180,8 @@ impl Default for CortexM {
             shpr3: Arc::new(AtomicU32::new(0)),
             nvic_state: None,
             sysreset_signal: None,
+            faults: None,
+            pending_data_fault: None,
             decode_cache: Box::new([None; 4096]),
             fpu_s: [0u32; 32],
             sleeping: false,
@@ -214,6 +235,31 @@ impl CortexM {
     /// instruction that requests a system reset. See the field docs.
     pub fn set_shared_sysreset_signal(&mut self, signal: Arc<AtomicBool>) {
         self.sysreset_signal = Some(signal);
+    }
+
+    /// Wire the SCB's ARMv7-M fault register file so the core can report a
+    /// fault through CFSR/HFSR/BFAR and read SHCSR to decide whether BusFault is
+    /// enabled. See [`ScbFaultState`].
+    pub fn set_shared_faults(&mut self, faults: Arc<ScbFaultState>) {
+        self.faults = Some(faults);
+    }
+
+    /// Turn ARMv7-M fault escalation (and the SCB fault register surface) on or
+    /// off. **Default off.** This is the single switch for the whole feature:
+    /// the CPU and the SCB read the same `AtomicBool`, so they cannot disagree
+    /// about whether firmware can enable a handler the core will never pend.
+    ///
+    /// No-op on a core with no SCB wired (`faults == None`).
+    pub fn set_faults_enabled(&mut self, enabled: bool) {
+        if let Some(f) = &self.faults {
+            f.enabled.store(enabled, Ordering::Relaxed);
+        }
+    }
+
+    /// True when ARMv7-M fault escalation is modelled on this core.
+    #[inline(always)]
+    fn faults_enabled(&self) -> bool {
+        self.faults.as_ref().is_some_and(|f| f.is_enabled())
     }
 
     /// True once firmware has latched AIRCR.SYSRESETREQ and the machine has
@@ -819,12 +865,12 @@ impl Cpu for CortexM {
                 // between batches, wedging every batched IRQ-driven Cortex-M
                 // firmware (walk-free campaign B1 surfaced this — batching is
                 // pointless if an armed SysTick freezes the run loop).
-                if executed > 0 && self.pending_exceptions.iter().any(|&w| w != 0) && !self.primask
-                {
+                if executed > 0 && self.pending_exceptions.iter().any(|&w| w != 0) {
                     if let Some(exc) = self.highest_priority_pending() {
                         let exc_prio = self.exception_priority(exc);
                         let active_prio = self.exception_priority(self.active_exception);
-                        if exc_prio < active_prio
+                        if !self.masked_by_primask(exc)
+                            && exc_prio < active_prio
                             && !self.masked_by_basepri(exc_prio)
                             && !self.faultmask_blocks(exc)
                         {
@@ -867,12 +913,12 @@ impl Cpu for CortexM {
                 // Same early-out rule as the SystemBus arm above: break only
                 // after progress; at the batch top a takeable pending
                 // exception is dispatched by `step_internal`, never spun on.
-                if executed > 0 && self.pending_exceptions.iter().any(|&w| w != 0) && !self.primask
-                {
+                if executed > 0 && self.pending_exceptions.iter().any(|&w| w != 0) {
                     if let Some(exc) = self.highest_priority_pending() {
                         let exc_prio = self.exception_priority(exc);
                         let active_prio = self.exception_priority(self.active_exception);
-                        if exc_prio < active_prio
+                        if !self.masked_by_primask(exc)
+                            && exc_prio < active_prio
                             && !self.masked_by_basepri(exc_prio)
                             && !self.faultmask_blocks(exc)
                         {
@@ -948,16 +994,22 @@ impl CortexM {
     /// failed load left the destination register holding its previous value and
     /// the run continued green.
     ///
-    /// This deliberately does NOT raise a pending BusFault/HardFault
-    /// (ARMv7-M B1.5.14). Modelling ARM fault escalation is a separate change;
-    /// this one only makes the access contract explicit and consistent.
+    /// On top of that contract it **latches the faulting address** in
+    /// `pending_data_fault`, which is what lets `step_internal` tell a precise
+    /// *data-access* fault — the one ARMv7-M B1.5.14 turns into a BusFault —
+    /// apart from an instruction-fetch fault, an exception-entry stacking fault
+    /// or a vector-table read fault. Those are different architectural
+    /// contracts with different status bits, and they stay on the abort path;
+    /// see [`CortexM::bus_load`].
     #[inline(always)]
-    fn load<B: Bus + ?Sized>(&self, bus: &B, addr: u32, width: AccessWidth) -> SimResult<u32> {
-        Ok(match width {
-            AccessWidth::Byte => bus.read_u8(addr as u64)? as u32,
-            AccessWidth::Half => bus.read_u16(addr as u64)? as u32,
-            AccessWidth::Word => bus.read_u32(addr as u64)?,
-        })
+    fn load<B: Bus + ?Sized>(&mut self, bus: &B, addr: u32, width: AccessWidth) -> SimResult<u32> {
+        match Self::bus_load(bus, addr, width) {
+            Err(SimulationError::MemoryViolation(a)) => {
+                self.pending_data_fault = Some(a as u32);
+                Err(SimulationError::MemoryViolation(a))
+            }
+            other => other,
+        }
     }
 
     /// The ONE data-side store on this core. Counterpart to [`CortexM::load`];
@@ -965,7 +1017,47 @@ impl CortexM {
     /// bus.write_*` sites.
     #[inline(always)]
     fn store<B: Bus + ?Sized>(
-        &self,
+        &mut self,
+        bus: &mut B,
+        addr: u32,
+        width: AccessWidth,
+        value: u32,
+    ) -> SimResult<()> {
+        match Self::bus_store(bus, addr, width, value) {
+            Err(SimulationError::MemoryViolation(a)) => {
+                self.pending_data_fault = Some(a as u32);
+                Err(SimulationError::MemoryViolation(a))
+            }
+            other => other,
+        }
+    }
+
+    /// The raw bus load, **without** latching a data fault. Propagates `Err`
+    /// exactly like [`CortexM::load`] — it is not a discard — but the failure
+    /// will not be escalated into a BusFault.
+    ///
+    /// Used by the two accesses that are architecturally *not* precise
+    /// data-access faults:
+    ///   * exception-entry stacking, which on silicon raises
+    ///     `BFSR.STKERR` and can end in LOCKUP rather than a recoverable
+    ///     handler entry (ARMv7-M B1.5.15);
+    ///   * the vector-table read, which raises `HFSR.VECTTBL`.
+    ///
+    /// Both are separate contracts with their own blast radius; escalating them
+    /// here would also risk an unbounded re-entry loop, since the stack or the
+    /// vector table is exactly what is broken.
+    #[inline(always)]
+    fn bus_load<B: Bus + ?Sized>(bus: &B, addr: u32, width: AccessWidth) -> SimResult<u32> {
+        Ok(match width {
+            AccessWidth::Byte => bus.read_u8(addr as u64)? as u32,
+            AccessWidth::Half => bus.read_u16(addr as u64)? as u32,
+            AccessWidth::Word => bus.read_u32(addr as u64)?,
+        })
+    }
+
+    /// The raw bus store, without latching a data fault. See [`CortexM::bus_load`].
+    #[inline(always)]
+    fn bus_store<B: Bus + ?Sized>(
         bus: &mut B,
         addr: u32,
         width: AccessWidth,
@@ -978,8 +1070,141 @@ impl CortexM {
         }
     }
 
+    /// ARMv7-M **execution priority** (B1.5.4 "Execution priority and priority
+    /// boosting"): the priority of the currently executing code, which an
+    /// exception must beat (numerically smaller) to be taken.
+    ///
+    /// It is the minimum of the active exception's priority and the three
+    /// priority-boosting registers: `FAULTMASK` boosts to -1, `PRIMASK` to 0,
+    /// and a non-zero `BASEPRI` to its own value. Thread mode with nothing
+    /// boosting is 256, the "lower than anything configurable" baseline the rest
+    /// of this file already uses.
+    fn execution_priority(&self) -> i32 {
+        let mut prio = self.exception_priority(self.active_exception);
+        if self.faultmask {
+            prio = prio.min(-1);
+        }
+        if self.primask {
+            prio = prio.min(0);
+        }
+        if self.basepri != 0 {
+            prio = prio.min(self.basepri as i32);
+        }
+        prio
+    }
+
+    /// True when PRIMASK blocks taking `exc`.
+    ///
+    /// With fault modelling **off** this is exactly `self.primask` — the blanket
+    /// guard this core has always used, so nothing changes. With it **on**,
+    /// PRIMASK is modelled as what ARMv7-M B1.5.4 says it is: a boost of the
+    /// execution priority to 0, which by construction cannot mask NMI (-2) or
+    /// HardFault (-1). Without this, an escalated HardFault raised inside a
+    /// `__disable_irq()` critical section would pend and never dispatch, and the
+    /// core would re-execute the faulting instruction forever.
+    #[inline(always)]
+    fn masked_by_primask(&self, exc: u32) -> bool {
+        if !self.primask {
+            return false;
+        }
+        if !self.faults_enabled() {
+            return true;
+        }
+        self.exception_priority(exc) >= 0
+    }
+
+    /// ARMv7-M B1.5.14 escalation for a **precise data-access fault**.
+    ///
+    /// Records the fault in the status registers firmware actually reads, then
+    /// decides between BusFault and HardFault:
+    ///
+    /// * `CFSR.BFSR.PRECISERR` (B3.2.15) — the access was synchronous with the
+    ///   instruction, so the stacked PC is the faulting instruction.
+    /// * `CFSR.BFSR.BFARVALID` + `BFAR` (B3.2.15 / B3.2.17) — BFAR holds the
+    ///   address the access faulted on.
+    /// * `HFSR.FORCED` (B3.2.16) — set **only** when the fault escalates.
+    ///
+    /// The escalation rule (B1.5.14): *"a fault occurs and the handler for that
+    /// fault is not enabled"*, and *"an exception handler causes a fault for
+    /// which the priority is the same as or lower than the currently executing
+    /// exception"*. Both collapse to: pend BusFault(5) if `SHCSR.BUSFAULTENA` is
+    /// set **and** BusFault's priority beats the current execution priority;
+    /// otherwise pend HardFault(3) with `HFSR.FORCED`.
+    ///
+    /// Returns `false` when even HardFault cannot be taken. On silicon that is
+    /// LOCKUP (B1.5.15), which this model does not have; the caller then leaves
+    /// the original `Err` to stop the run, rather than pending an exception that
+    /// can never dispatch and spinning on the faulting instruction forever.
+    fn escalate_precise_data_fault(&mut self, addr: u32) -> bool {
+        let Some(faults) = self.faults.clone() else {
+            return false;
+        };
+        faults
+            .cfsr
+            .fetch_or(CFSR_BFSR_PRECISERR | CFSR_BFSR_BFARVALID, Ordering::Relaxed);
+        faults.bfar.store(addr, Ordering::Relaxed);
+
+        let busfault_enabled = faults.shcsr.load(Ordering::Relaxed) & SHCSR_BUSFAULTENA != 0;
+        let exec_prio = self.execution_priority();
+        let target = if busfault_enabled && self.exception_priority(5) < exec_prio {
+            5
+        } else {
+            // Escalated: the HardFault handler needs to know it is standing in
+            // for a configurable fault, and CFSR above tells it which one.
+            faults.hfsr.fetch_or(HFSR_FORCED, Ordering::Relaxed);
+            3
+        };
+        if self.exception_priority(target) >= exec_prio {
+            return false; // LOCKUP — see the doc comment.
+        }
+        if trace_exc_enabled() {
+            eprintln!(
+                "EXC fault addr=0x{:08X} -> exc={} pc=0x{:08X}",
+                addr, target, self.pc
+            );
+        }
+        self.set_exception_pending(target);
+        true
+    }
+
+    /// One instruction, with ARMv7-M fault escalation layered over
+    /// [`CortexM::step_execute`].
+    ///
+    /// A precise data-access fault leaves the PC on the faulting instruction and
+    /// returns `Ok(())`: the exception is pended here and *dispatched* by the
+    /// next `step_execute`, whose entry block stacks a frame whose return
+    /// address is the faulting instruction — which is what B1.5.6 requires for a
+    /// synchronous fault.
+    ///
+    /// With fault modelling off (the default) this is `step_execute` verbatim:
+    /// `pending_data_fault` is only ever written on the error path, and the
+    /// `Err` is returned unchanged.
     #[inline(always)]
     fn step_internal<B: Bus + ?Sized>(
+        &mut self,
+        bus: &mut B,
+        observers: &[Arc<dyn SimulationObserver>],
+        config: &SimulationConfig,
+    ) -> SimResult<()> {
+        match self.step_execute(bus, observers, config) {
+            Err(e) => {
+                // `take` unconditionally: the latch must not survive into the
+                // next step even when escalation is off.
+                match self.pending_data_fault.take() {
+                    Some(addr)
+                        if self.faults_enabled() && self.escalate_precise_data_fault(addr) =>
+                    {
+                        Ok(())
+                    }
+                    _ => Err(e),
+                }
+            }
+            ok => ok,
+        }
+    }
+
+    #[inline(always)]
+    fn step_execute<B: Bus + ?Sized>(
         &mut self,
         bus: &mut B,
         _observers: &[Arc<dyn SimulationObserver>],
@@ -996,7 +1221,10 @@ impl CortexM {
         // FreeRTOS PendSV-driven context switches behave correctly —
         // PendSV at priority 0xFF only runs when no other ISR is active.
         let exception_num = self.highest_priority_pending().unwrap_or(0);
-        if self.pending_exceptions.iter().any(|&w| w != 0) && !self.primask && exception_num != 0 {
+        if self.pending_exceptions.iter().any(|&w| w != 0)
+            && !self.masked_by_primask(exception_num)
+            && exception_num != 0
+        {
             let take_prio = self.exception_priority(exception_num);
             let active_prio = self.exception_priority(self.active_exception);
             let can_take = take_prio < active_prio
@@ -1045,14 +1273,18 @@ impl CortexM {
                     // does not fit in mapped memory the write must surface, not
                     // vanish. `exception_return`'s matching unstacking loads have
                     // always propagated with `?`; this makes entry symmetric.
-                    self.store(bus, frame_ptr, AccessWidth::Word, self.r0)?;
-                    self.store(bus, frame_ptr + 4, AccessWidth::Word, self.r1)?;
-                    self.store(bus, frame_ptr + 8, AccessWidth::Word, self.r2)?;
-                    self.store(bus, frame_ptr + 12, AccessWidth::Word, self.r3)?;
-                    self.store(bus, frame_ptr + 16, AccessWidth::Word, self.r12)?;
-                    self.store(bus, frame_ptr + 20, AccessWidth::Word, self.lr)?;
-                    self.store(bus, frame_ptr + 24, AccessWidth::Word, self.pc)?;
-                    self.store(bus, frame_ptr + 28, AccessWidth::Word, save_xpsr)?;
+                    // `bus_store`, not `store`: a stacking failure is
+                    // BFSR.STKERR / LOCKUP territory (B1.5.15), not a precise
+                    // data-access fault, and escalating it would re-enter this
+                    // same broken stack forever. See `CortexM::bus_load`.
+                    Self::bus_store(bus, frame_ptr, AccessWidth::Word, self.r0)?;
+                    Self::bus_store(bus, frame_ptr + 4, AccessWidth::Word, self.r1)?;
+                    Self::bus_store(bus, frame_ptr + 8, AccessWidth::Word, self.r2)?;
+                    Self::bus_store(bus, frame_ptr + 12, AccessWidth::Word, self.r3)?;
+                    Self::bus_store(bus, frame_ptr + 16, AccessWidth::Word, self.r12)?;
+                    Self::bus_store(bus, frame_ptr + 20, AccessWidth::Word, self.lr)?;
+                    Self::bus_store(bus, frame_ptr + 24, AccessWidth::Word, self.pc)?;
+                    Self::bus_store(bus, frame_ptr + 28, AccessWidth::Word, save_xpsr)?;
 
                     // Bank the preempted stack pointer into its bank (PSP or MSP)
                     // BEFORE entering Handler mode, then switch the live `sp` to MSP.
@@ -1092,7 +1324,9 @@ impl CortexM {
                             bus.read_u32(vector_addr as u64)
                         );
                     }
-                    let handler = self.load(bus, vector_addr, AccessWidth::Word)?;
+                    // `bus_load`: a failed vector-table read is HFSR.VECTTBL,
+                    // not a precise data-access fault. See `CortexM::bus_load`.
+                    let handler = Self::bus_load(bus, vector_addr, AccessWidth::Word)?;
                     self.pc = handler & !1;
                     tracing::debug!(
                         "EXC_ENTRY: exc={} handler={:#010x} frame={:#010x} stacked_lr={:#010x} stacked_pc={:#010x}",
