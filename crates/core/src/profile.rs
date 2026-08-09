@@ -381,7 +381,7 @@ impl Snapshot {
         for row in &mut rows {
             row.percent = 100.0 * row.ns as f64 / denom;
         }
-        rows.sort_by(|a, b| b.ns.cmp(&a.ns));
+        rows.sort_by_key(|row| std::cmp::Reverse(row.ns));
         Report {
             clock: self.clock,
             window_ns: self.window_ns,
