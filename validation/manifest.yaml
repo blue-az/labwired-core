@@ -217,8 +217,24 @@ boards:
     # CC compare matching, SHORTS and EVENTS_COMPARE latching are all untouched,
     # and TIMER0's 16/0 sweep re-runs green. Acked WITHOUT a live re-capture —
     # no TIMER live diff is evidenced by this entry.
+    # 2026-08-09: RNG byte production now stops while a byte sits unread in
+    # VALUE. BEHAVIOURAL, not additive — the diff is +21/-0 in nrf52/rng.rs and
+    # removes no line, but it changes WHEN bytes are produced: the model used to
+    # keep generating for every BYTE_PERIOD a batch covered, overwriting VALUE
+    # and handing firmware only the last one. Real silicon free-runs and a slow
+    # reader does miss bytes, so this is a deliberate divergence: on silicon the
+    # pacing is the chip's, in the sim it was the host's batching choice, and no
+    # firmware-visible sequence may depend on that. The byte SEQUENCE is
+    # unchanged (same xorshift32 chain from the same seed, one byte per byte
+    # read); only production timing moves.
+    #
+    # No register address, reset value, access or layout changes, and the
+    # asserted 2026-06-17 sweep does not cover RNG at all — it is
+    # conformance/mmio/GPIO/POWER/SPIS/TWIS/RTC0/TIMER0 plus SPIM0/CCM. Acked
+    # WITHOUT a live re-capture (no bench board); an RNG live diff is owed and is
+    # NOT evidenced by this entry.
     drift_ack: 2026-08-09
-    drift_ack_digest: 3c07de17c843f6e31ff5ef13d885059fdd3407ee6adb0583c51be0750f5caa87
+    drift_ack_digest: 8875af363a7912479611b4d043c2dfb79e29895b5e4557b0889610cf8de93535
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -326,8 +342,11 @@ boards:
     # silicon. Scheduler bookkeeping only — no register address, reset value or
     # access in the asserted sweep changes. See the nrf52840 drift_ack note; no
     # TIMER live re-capture is evidenced by this entry.
+    # 2026-08-09: rides the nrf52840 RNG production-timing change; same silicon.
+    # See the nrf52840 drift_ack note for why it is behavioural and what it does
+    # not touch. No RNG live re-capture is evidenced by this entry.
     drift_ack: 2026-08-09
-    drift_ack_digest: 3c07de17c843f6e31ff5ef13d885059fdd3407ee6adb0583c51be0750f5caa87
+    drift_ack_digest: 8875af363a7912479611b4d043c2dfb79e29895b5e4557b0889610cf8de93535
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
