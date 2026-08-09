@@ -112,6 +112,10 @@ fn decode_standard_id(bytes: [u8; 4]) -> Option<u32> {
     Some(((bytes[0] as u32) << 3) | ((bytes[1] as u32) >> 5))
 }
 
+fn acceptance_sid(bytes: [u8; 4]) -> u32 {
+    ((bytes[0] as u32) << 3) | ((bytes[1] as u32) >> 5)
+}
+
 pub struct Mcp2515 {
     cs_pin: String,
     regs: [u8; 128],
@@ -319,25 +323,29 @@ impl Mcp2515 {
             _ => {}
         }
         let mask_base = [0x20u8, 0x24][buffer];
-        let mask = decode_standard_id([
+        let mask_bytes = [
             self.regs[mask_base as usize],
             self.regs[mask_base as usize + 1],
             self.regs[mask_base as usize + 2],
             self.regs[mask_base as usize + 3],
-        ])?;
+        ];
+        let mask = acceptance_sid(mask_bytes);
+        let mide = mask_bytes[1] & 0x08 != 0;
         let filter_bases: &[u8] = if buffer == 0 {
             &[0x00, 0x04]
         } else {
             &[0x08, 0x10, 0x14, 0x18]
         };
         filter_bases.iter().enumerate().find_map(|(offset, base)| {
-            let filter = decode_standard_id([
+            let filter_bytes = [
                 self.regs[*base as usize],
                 self.regs[*base as usize + 1],
                 self.regs[*base as usize + 2],
                 self.regs[*base as usize + 3],
-            ])?;
-            ((id & mask) == (filter & mask))
+            ];
+            let ide_matches = !mide || filter_bytes[1] & 0x08 == 0;
+            let filter = acceptance_sid(filter_bytes);
+            (ide_matches && (id & mask) == (filter & mask))
                 .then_some((offset + if buffer == 0 { 0 } else { 2 }) as u8)
         })
     }
@@ -622,7 +630,8 @@ static MCP2515_METADATA: KitMetadata = KitMetadata {
              buffers, standard-ID masks/filters, rollover, overflow, interrupt flags, and shared \
              classical CAN delivery. Limitations: 11-bit data frames only; extended identifiers, \
              remote frames, CAN FD/bitrate switching, physical INT GPIO wiring, and nested-device \
-             trace contribution are not modeled.",
+             trace contribution are not modeled. Active modes currently validate only a 16 MHz \
+             oscillator at 500 kbit/s (within 1%); other oscillators and bitrates are not modeled.",
     transport: Transport::Spi,
     category: Category::Spi,
     config_keys: &[ConfigKey {
@@ -774,6 +783,36 @@ mod tests {
         );
         assert_eq!(read(&mut dev, REG_RXB0SIDH + 5, 1), [1]);
         assert_eq!(read(&mut dev, REG_RXB1SIDH + 5, 1), [2]);
+    }
+
+    #[test]
+    fn standard_acceptance_uses_sid_with_mide_and_ignores_eid_fields() {
+        let mut dev = Mcp2515::new("PA4");
+        write(&mut dev, 0x20, &[0xFF, 0xEB, 0xA5, 0x5A]); // SID mask + MIDE, EID ignored
+        write(&mut dev, 0x00, &[0xFD, 0x00, 0x12, 0x34]); // 0x7E8, EXIDE=0
+        write(&mut dev, 0x04, &[0xFD, 0x00, 0x56, 0x78]);
+        write(&mut dev, REG_RXB1CTRL, &[0x40]);
+
+        inject(&mut dev, CanFrame::classic(0x7E8, vec![0x41]));
+
+        assert_eq!(
+            read(&mut dev, REG_CANINTF, 1)[0] & CANINTF_RX0IF,
+            CANINTF_RX0IF
+        );
+        assert_eq!(read(&mut dev, REG_RXB0SIDH + 5, 1), [0x41]);
+    }
+
+    #[test]
+    fn standard_acceptance_rejects_exide_filter_when_mide_is_set() {
+        let mut dev = Mcp2515::new("PA4");
+        write(&mut dev, 0x20, &[0xFF, 0xEB, 0xA5, 0x5A]); // MIDE=1
+        write(&mut dev, 0x00, &[0xFD, 0x08, 0x12, 0x34]); // EXIDE=1
+        write(&mut dev, 0x04, &[0xFD, 0x08, 0x56, 0x78]);
+        write(&mut dev, REG_RXB1CTRL, &[0x40]);
+
+        inject(&mut dev, CanFrame::classic(0x7E8, vec![0x41]));
+
+        assert_eq!(read(&mut dev, REG_CANINTF, 1)[0] & CANINTF_RX0IF, 0);
     }
 
     #[test]
