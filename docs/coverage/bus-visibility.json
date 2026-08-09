@@ -7,7 +7,9 @@
   },
   {
     "buses": [
-      "I2C"
+      "I2C",
+      "SPI",
+      "UART"
     ],
     "name": "esp32c3"
   },
