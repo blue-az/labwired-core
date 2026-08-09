@@ -643,6 +643,12 @@ impl Cpu for CortexM {
         self.psp = 0;
 
         let vtor = self.vtor.load(Ordering::SeqCst) as u64;
+        // NOT wrapped in `census_bus!`, deliberately. These two are the only
+        // discards left in this file and they are named in ALLOWED_DISCARDS,
+        // which is keyed on the literal source line — wrapping them changes
+        // the text, so the shrink-only guard stops recognising its own two
+        // documented exceptions and the whole contract test goes red. The
+        // census is a measurement; it does not get to move a guard's goalposts.
         if let Ok(sp) = bus.read_u32(vtor) {
             self.sp = sp;
         }

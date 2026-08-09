@@ -342,7 +342,10 @@ impl Stm32SpiRegs {
             0x18 => self.txcrcr,
             0x1C => self.i2scfgr,
             0x20 => self.i2spr,
-            _ => 0,
+            _ => {
+                crate::census_reg!("spi:Stm32SpiRegs", offset, "read");
+                0
+            }
         }
     }
 }
@@ -483,7 +486,10 @@ impl Stm32H5SpiRegs {
             0x48 => self.rxcrc,
             0x4C => self.udrdr,
             0x50 => self.i2scfgr,
-            _ => 0,
+            _ => {
+                crate::census_reg!("spi:Stm32H5SpiRegs", offset, "read");
+                0
+            }
         }
     }
 }
@@ -594,7 +600,10 @@ impl Nrf52SpiRegs {
             0x54C => self.txd_amount,
             // ORC
             0x5C0 => self.orc & 0xFF,
-            _ => 0,
+            _ => {
+                crate::census_reg!("spi:Nrf52SpiRegs", offset, "read");
+                0
+            }
         }
     }
 
@@ -647,7 +656,9 @@ impl Nrf52SpiRegs {
             // ORC (only low 8 bits are meaningful)
             0x5C0 => self.orc = value & 0xFF,
 
-            _ => {}
+            _ => {
+                crate::census_reg!("spi:Nrf52SpiRegs", offset, "write");
+            }
         }
         false
     }
@@ -701,7 +712,10 @@ impl KinetisDspiRegs {
             0x2C => self.sr,
             0x30 => self.rser,
             0x38 => self.popr,
-            _ => 0,
+            _ => {
+                crate::census_reg!("spi:KinetisDspiRegs", offset, "read");
+                0
+            }
         }
     }
 }
@@ -1437,7 +1451,9 @@ impl Spi {
                     }
                 }
             }
-            _ => {}
+            _ => {
+                crate::census_reg!("spi:Spi", offset, "write");
+            }
         }
     }
 
@@ -1501,7 +1517,9 @@ impl Spi {
                     r.sr |= DSPI_SR_TCF | DSPI_SR_RFDF | DSPI_SR_TFFF;
                 }
             }
-            _ => {}
+            _ => {
+                crate::census_reg!("spi:Spi", offset, "write");
+            }
         }
     }
 
@@ -1691,7 +1709,9 @@ impl Spi {
             }
             // SR (0x14) is read-only (flags clear via IFCR); TXCRC/RXCRC
             // (0x44/0x48) are HW-computed and read-only.
-            _ => {}
+            _ => {
+                crate::census_reg!("spi:Spi", offset, "write");
+            }
         }
     }
 }
