@@ -8,3 +8,12 @@ license.workspace = true
 path = "src/lib.rs"
 
 [dependencies]
+cortex-m = "0.7"
+cortex-m-rt = "0.7"
+panic-halt = "0.2"
+
+[[bin]]
+name = "firmware-nrf52840-obd2-scanner"
+path = "src/main.rs"
+test = false
+bench = false

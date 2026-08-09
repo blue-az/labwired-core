@@ -1,7 +1,10 @@
 #![cfg_attr(not(test), no_std)]
 
+pub mod ble;
 pub mod isotp;
+pub mod mcp2515;
 pub mod obd2;
+pub mod ssd1306;
 pub mod state;
 
 pub use isotp::{IsoTpEvent, VinReassembler};
@@ -15,6 +18,82 @@ pub use state::{flags, ScannerState};
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{ble::encode_manufacturer_payload, ssd1306::DisplayView};
+
+    #[test]
+    fn ble_payload_has_versioned_exact_layout() {
+        let mut state = ScannerState::new();
+        state.rpm = 3000;
+        state.speed_kph = 88;
+        state.coolant_c = 90;
+        state.update_dtc_count(2);
+        state.mark_fresh();
+        state.generation = 0x1234;
+        assert_eq!(
+            encode_manufacturer_payload(&state),
+            [1, 0b0000_0101, 0xb8, 0x0b, 88, 130, 2, 0x34, 0x12]
+        );
+    }
+
+    #[test]
+    fn ble_coolant_is_signed_offset_and_clamped() {
+        let mut state = ScannerState::new();
+        state.coolant_c = -40;
+        assert_eq!(encode_manufacturer_payload(&state)[5], 0);
+        state.coolant_c = -100;
+        assert_eq!(encode_manufacturer_payload(&state)[5], 0);
+        state.coolant_c = 300;
+        assert_eq!(encode_manufacturer_payload(&state)[5], 255);
+    }
+
+    #[test]
+    fn ble_maps_all_status_bits_without_silent_truncation() {
+        let mut state = ScannerState::new();
+        state.status_flags = flags::CONNECTED
+            | flags::STALE
+            | flags::DTC_PRESENT
+            | flags::TIMEOUT
+            | flags::MALFORMED
+            | flags::RX_OVERFLOW
+            | flags::CAN_CONFIG_ERROR;
+        assert_eq!(encode_manufacturer_payload(&state)[1], 0x7f);
+    }
+
+    #[test]
+    fn display_view_formats_sample_without_allocation() {
+        let mut state = ScannerState::new();
+        state.rpm = 3000;
+        state.speed_kph = 88;
+        state.coolant_c = 90;
+        state.update_dtc_count(2);
+        let view = DisplayView::from_state(&state);
+        assert_eq!(view.lines[0].as_bytes(), b"RPM 3000");
+        assert_eq!(view.lines[1].as_bytes(), b"SPD 88 km/h");
+        assert_eq!(view.lines[2].as_bytes(), b"TEMP 90 C");
+        assert_eq!(view.lines[3].as_bytes(), b"DTC 2");
+    }
+
+    #[test]
+    fn display_view_reports_stale_timeout_and_can_error() {
+        let mut state = ScannerState::new();
+        state.status_flags |= flags::TIMEOUT | flags::CAN_CONFIG_ERROR;
+        let view = DisplayView::from_state(&state);
+        assert_eq!(view.status.as_bytes(), b"STALE TIMEOUT CAN ERR");
+    }
+
+    #[test]
+    fn display_view_handles_numeric_extremes_without_overflow() {
+        let mut state = ScannerState::new();
+        state.rpm = u16::MAX;
+        state.speed_kph = u8::MAX;
+        state.coolant_c = i16::MIN;
+        state.dtc_count = u8::MAX;
+        let view = DisplayView::from_state(&state);
+        assert_eq!(view.lines[0].as_bytes(), b"RPM 65535");
+        assert_eq!(view.lines[1].as_bytes(), b"SPD 255 km/h");
+        assert_eq!(view.lines[2].as_bytes(), b"TEMP -32768 C");
+        assert_eq!(view.lines[3].as_bytes(), b"DTC 255");
+    }
 
     fn response(data: [u8; 8]) -> CanFrame {
         CanFrame {
