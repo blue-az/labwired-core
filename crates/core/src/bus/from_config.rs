@@ -810,20 +810,28 @@ impl SystemBus {
                 // exceptions are the types measured as already reaching this
                 // arm in the shipped configs, each with a written reason in
                 // `known_stubs.rs` — see that file for the rules and the exit.
-                other => match super::known_stubs::known_stub_reason(other) {
-                    Some(reason) => {
-                        tracing::debug!(
-                            "peripheral '{}' (type '{}') resolves to a zero stub; \
+                other => {
+                    // Census (measurement only; a no-op unless `silent-census`
+                    // is compiled in) — recorded BEFORE the allowlist decides,
+                    // so it keeps counting exactly what it counted when this
+                    // arm stubbed unconditionally. The histogram is what makes
+                    // the allowlist shrinkable: it says which entries are
+                    // actually reached, not just which ones are declared.
+                    crate::census::record_stub(&p_cfg.r#type);
+                    match super::known_stubs::known_stub_reason(other) {
+                        Some(reason) => {
+                            tracing::debug!(
+                                "peripheral '{}' (type '{}') resolves to a zero stub; \
                              allowlisted: {}",
-                            p_cfg.id,
-                            p_cfg.r#type,
-                            reason
-                        );
-                        Box::new(crate::peripherals::stub::StubPeripheral::new(0x00))
-                    }
-                    None => {
-                        return Err(anyhow::anyhow!(
-                            "unknown peripheral type '{}' for peripheral '{}' in chip '{}' \
+                                p_cfg.id,
+                                p_cfg.r#type,
+                                reason
+                            );
+                            Box::new(crate::peripherals::stub::StubPeripheral::new(0x00))
+                        }
+                        None => {
+                            return Err(anyhow::anyhow!(
+                                "unknown peripheral type '{}' for peripheral '{}' in chip '{}' \
                              (chip file '{}'): this engine has no model for it, no plugin \
                              claimed it{}, and it is not on the known-stub allowlist. \
                              Refusing to answer it with a zero-filled stub — firmware would \
@@ -834,19 +842,20 @@ impl SystemBus {
                              declare `type: stub` in the chip YAML (or add '{}' to \
                              KNOWN_STUBBED_PERIPHERAL_TYPES in \
                              crates/core/src/bus/known_stubs.rs with a written reason).",
-                            p_cfg.r#type,
-                            p_cfg.id,
-                            chip.name,
-                            manifest.chip,
-                            if plugins.is_empty() {
-                                String::new()
-                            } else {
-                                format!(" (of {} loaded plugin(s))", plugins.len())
-                            },
-                            other,
-                        ));
+                                p_cfg.r#type,
+                                p_cfg.id,
+                                chip.name,
+                                manifest.chip,
+                                if plugins.is_empty() {
+                                    String::new()
+                                } else {
+                                    format!(" (of {} loaded plugin(s))", plugins.len())
+                                },
+                                other,
+                            ));
+                        }
                     }
-                },
+                }
             };
 
             bus.push_peripheral(p_cfg, dev)?;

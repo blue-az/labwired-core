@@ -591,7 +591,10 @@ impl Esp32Gpio {
             off if Self::out_sel_index(off).is_some() => {
                 self.out_sel[Self::out_sel_index(off).expect("guarded by the match")]
             }
-            _ => 0,
+            _ => {
+                crate::census_reg!("esp32.gpio:Esp32Gpio", word_off, "read");
+                0
+            }
         }
     }
 
@@ -647,7 +650,9 @@ impl Esp32Gpio {
                 let idx = Self::out_sel_index(off).expect("guarded by the match");
                 self.out_sel[idx] = value & FUNC_OUT_SEL_WMASK;
             }
-            _ => {}
+            _ => {
+                crate::census_reg!("esp32.gpio:Esp32Gpio", word_off, "write");
+            }
         }
     }
 }
