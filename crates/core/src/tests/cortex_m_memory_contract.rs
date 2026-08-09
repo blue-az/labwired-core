@@ -59,12 +59,15 @@ mod no_discarded_bus_access {
     /// `step_internal` — every data load and store, and exception stacking — now
     /// propagates.
     ///
-    /// **`xtensa_lx7.rs` — 7 sites**, of which
-    ///   * **4 are the same defect this change fixed in Cortex-M**: the windowed
-    ///     register-overflow spill (~L778-781) writes a0..a3 with
-    ///     `let _ = bus.write_u32`, so the spill silently vanishes if the spill
-    ///     area is unmapped. Real debt, on a different core with its own blast
-    ///     radius — counted here rather than left silent.
+    /// **`xtensa_lx7.rs` — 3 sites, all legitimate.** The list held 7 until the
+    /// windowed register-overflow spill was fixed:
+    ///   * ~~**4 were the same defect this change fixed in Cortex-M**: the
+    ///     windowed register-overflow spill (~L778-781) wrote a0..a3 with
+    ///     `let _ = bus.write_u32`, so the spill silently vanished if the spill
+    ///     area was unmapped.~~ Fixed: `write4` now returns `SimResult<()>` and
+    ///     `spill_call_preserve_to_stack` propagates to both of its callers
+    ///     (`dispatch_irq`, `xthal_window_spill_thunk`), which already returned
+    ///     `SimResult<()>`. Pinned by `tests/xtensa_memory_contract.rs`.
     ///   * **1 is legitimate**: `px_current_tcb` (~L1042) *probes* candidate BSS
     ///     addresses for a live FreeRTOS TCB pointer. An `Err` there means "not
     ///     this address", which is a real answer, not a fabricated one.
@@ -85,11 +88,16 @@ mod no_discarded_bus_access {
             &[
                 "let b0 = match bus.read_u8(a3 as u64) {",
                 "let b1 = match bus.read_u8((a3.wrapping_add(1)) as u64) {",
-                "let _ = bus.write_u32(b as u64, r0);",
-                "let _ = bus.write_u32(b as u64 + 4, r1);",
-                "let _ = bus.write_u32(b as u64 + 8, r2);",
-                "let _ = bus.write_u32(b as u64 + 12, r3);",
                 "|base: u32| -> Option<u32> { bus.read_u32((base.wrapping_add(core * 4)) as u64).ok() };",
+                // `raw_word_for_trace` is an OBSERVER: it re-reads the word at
+                // the PC purely so a trace line can show it. It is on no
+                // execution path and its value reaches no register. Turning a
+                // lost trace word into a fault would mean switching tracing on
+                // could change whether a run passes, which is the one thing an
+                // observer must never do — so here the default IS the honest
+                // answer, and it is why these two are allowed rather than fixed.
+                "bus.read_u16(addr).map(u32::from).unwrap_or(0)",
+                "bus.read_u32(addr).unwrap_or(0)",
             ],
         ),
     ];
@@ -148,6 +156,17 @@ mod no_discarded_bus_access {
         // single most important shape to catch: it is invisible to clippy,
         // because nothing is being discarded as far as the type system can see.
         if l.contains("if let Ok(") || l.contains("match bus.read_") {
+            return true;
+        }
+        // `bus.read_u32(..).unwrap_or(0)` — the Err is collapsed to a default
+        // and the caller cannot tell a real 0 from a refused access, which is
+        // precisely the fabricated fact every other arm here exists to catch.
+        //
+        // This arm was missing while the six above were present, so the one
+        // spelling that reads most like ordinary Rust was the one spelling the
+        // guard could not see. A regression reintroduced as `.unwrap_or(0)`
+        // would have passed a green gate.
+        if l.contains(".unwrap_or") {
             return true;
         }
         false

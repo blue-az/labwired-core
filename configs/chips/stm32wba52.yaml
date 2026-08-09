@@ -147,6 +147,10 @@ peripherals:
     config:
       debug_schema: "../peripherals/stm32wba52/spi1.yaml"
       profile: "stm32h5"
+      # AF pad map for the logic analyzer. The H5 "SPI v3" register file is
+      # shared by parts with DIFFERENT pinouts (H563/H735 put SPI1_SCK on PB3,
+      # the WBA52 puts SPI1_MISO there), so the profile cannot pick the table.
+      pad_map: "stm32wba"
     clock: { reg: "apb2enr", bit: 12 }
   # GPDMA1 (AHB1, 8-channel, RM0481/RM0493 fixed layout). RM0493 puts GPDMA1EN
   # on AHB1ENR (bit 0), which the stm32v2 RCC model does not surface, so the

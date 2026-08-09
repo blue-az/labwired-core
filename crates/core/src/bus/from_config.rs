@@ -872,9 +872,18 @@ impl SystemBus {
         // the C3 GPIO model so matrix-routed pads carry the real waveform.
         // No-op for every other chip.
         bus.wire_esp32c3_i2c_pads();
+        // And GP-SPI2's SCK/MOSI/CS plus each UART's TX, so those buses are
+        // measurable on the C3 too rather than reading as a flat line. MISO/RX
+        // are deliberately unbound — nothing drives them.
+        bus.wire_esp32c3_spi_pads();
+        bus.wire_esp32c3_uart_pads();
         // Same for the S3's I²C0, whose pads reach GPIO through the S3 output
         // matrix rather than an AF nibble.
         bus.wire_esp32s3_i2c_pads();
+        // …and the S3's GP-SPI2 / UART TX, whose matrix indices are 101/103/110
+        // and 12/15/18 — neither the C3's nor the classic part's.
+        bus.wire_esp32s3_spi_pads();
+        bus.wire_esp32s3_uart_pads();
         // Same for classic ESP32 (LX6), whose matrix indices are 29/30 —
         // neither the C3's 53/54 nor the S3's 89/90.
         bus.wire_esp32_i2c_pads();
