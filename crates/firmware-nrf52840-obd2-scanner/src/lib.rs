@@ -72,7 +72,10 @@ mod tests {
         );
         assert_eq!(
             decode_rpm(&response([3, 0x7f, 1, 0x12, 0, 0, 0, 0])),
-            Err(Error::NegativeResponse(0x12))
+            Err(Error::NegativeResponse {
+                service: 1,
+                nrc: 0x12
+            })
         );
         assert_eq!(
             decode_rpm(&CanFrame {
@@ -85,6 +88,22 @@ mod tests {
         assert_eq!(
             decode_rpm(&response([0x14, 0x41, 0x0c, 0, 0, 0, 0, 0])),
             Err(Error::Malformed)
+        );
+        assert_eq!(
+            decode_supported_pids(&response([7, 0x41, 0, 0x80, 0, 0, 1, 0])),
+            Err(Error::InvalidLength)
+        );
+        assert_eq!(
+            decode_rpm(&response([5, 0x41, 0x0c, 0x2e, 0xe0, 0, 0, 0])),
+            Err(Error::InvalidLength)
+        );
+        assert_eq!(
+            decode_speed(&response([4, 0x41, 0x0d, 88, 0, 0, 0, 0])),
+            Err(Error::InvalidLength)
+        );
+        assert_eq!(
+            decode_coolant(&response([4, 0x41, 5, 130, 0, 0, 0, 0])),
+            Err(Error::InvalidLength)
         );
     }
 
@@ -100,7 +119,10 @@ mod tests {
         );
         assert_eq!(
             decode_dtcs(&response([3, 0x7f, 3, 0x11, 0, 0, 0, 0])),
-            Err(Error::NegativeResponse(0x11))
+            Err(Error::NegativeResponse {
+                service: 3,
+                nrc: 0x11
+            })
         );
         assert_eq!(
             decode_clear_dtcs(&response([1, 0x43, 0, 0, 0, 0, 0, 0])),
@@ -139,6 +161,10 @@ mod tests {
             Err(Error::Oversize)
         );
         assert_eq!(
+            rx.push(&response([0x10, 19, 0x49, 2, 1, b'X', b'X', b'X'])),
+            Err(Error::Malformed)
+        );
+        assert_eq!(
             rx.push(&response([0x10, 20, 0x49, 2, 1, b'1', b'H', b'G'])),
             Ok(IsoTpEvent::FlowControl(CanFrame {
                 id: FLOW_CONTROL_ID,
@@ -168,15 +194,19 @@ mod tests {
     }
 
     #[test]
-    fn vin_reassembly_validates_header_and_recovers_cleanly() {
+    fn vin_reassembly_validates_first_frame_header_before_flow_control() {
         let mut rx = VinReassembler::new();
-        rx.push(&response([0x10, 20, 0x48, 2, 1, b'1', b'H', b'G']))
-            .unwrap();
-        rx.push(&response([0x21, b'B', b'H', b'4', b'1', b'J', b'X', b'M']))
-            .unwrap();
         assert_eq!(
-            rx.push(&response([0x22, b'N', b'1', b'0', b'9', b'1', b'8', b'6',])),
+            rx.push(&response([0x10, 20, 0x48, 2, 1, b'1', b'H', b'G'])),
             Err(Error::UnsupportedService)
+        );
+        assert_eq!(
+            rx.push(&response([0x10, 20, 0x49, 3, 1, b'1', b'H', b'G'])),
+            Err(Error::UnsupportedPid)
+        );
+        assert_eq!(
+            rx.push(&response([0x10, 20, 0x49, 2, 2, b'1', b'H', b'G'])),
+            Err(Error::Malformed)
         );
 
         rx.push(&response([0x10, 20, 0x49, 2, 1, b'1', b'H', b'G']))
@@ -187,6 +217,80 @@ mod tests {
             rx.push(&response([0x22, b'N', b'1', b'0', b'9', b'1', b'8', b'6',])),
             Ok(IsoTpEvent::Complete(*b"1HGBH41JXMN109186"))
         );
+    }
+
+    #[test]
+    fn vin_reassembly_handles_mode09_negative_single_frames() {
+        let mut rx = VinReassembler::new();
+        assert_eq!(
+            rx.push(&response([3, 0x7f, 9, 0x11, 0, 0, 0, 0])),
+            Err(Error::NegativeResponse {
+                service: 9,
+                nrc: 0x11
+            })
+        );
+        assert_eq!(
+            rx.push(&response([3, 0x7f, 1, 0x11, 0, 0, 0, 0])),
+            Err(Error::UnsupportedService)
+        );
+        assert_eq!(
+            rx.push(&response([2, 0x7f, 9, 0x11, 0, 0, 0, 0])),
+            Err(Error::InvalidLength)
+        );
+        assert_eq!(
+            rx.push(&response([4, 0x7f, 9, 0x11, 0, 0, 0, 0])),
+            Err(Error::InvalidLength)
+        );
+    }
+
+    #[test]
+    fn vin_reassembly_rejects_duplicate_unexpected_and_bad_length_frames() {
+        let mut rx = VinReassembler::new();
+        assert_eq!(
+            rx.push(&response([3, 0x49, 2, 1, 0, 0, 0, 0])),
+            Err(Error::UnexpectedFrame)
+        );
+        assert_eq!(
+            rx.push(&response([0x30, 0, 0, 0, 0, 0, 0, 0])),
+            Err(Error::UnexpectedFrame)
+        );
+
+        rx.push(&response([0x10, 20, 0x49, 2, 1, b'1', b'H', b'G']))
+            .unwrap();
+        rx.push(&response([0x21, b'B', b'H', b'4', b'1', b'J', b'X', b'M']))
+            .unwrap();
+        assert_eq!(
+            rx.push(&response([0x21, 0, 0, 0, 0, 0, 0, 0])),
+            Err(Error::Sequence)
+        );
+
+        rx.push(&response([0x10, 20, 0x49, 2, 1, b'1', b'H', b'G']))
+            .unwrap();
+        let mut short_cf = response([0x21, b'B', b'H', b'4', b'1', b'J', b'X', b'M']);
+        short_cf.len = 7;
+        assert_eq!(rx.push(&short_cf), Err(Error::InvalidLength));
+
+        rx.push(&response([0x10, 20, 0x49, 2, 1, b'1', b'H', b'G']))
+            .unwrap();
+        let mut overlong_cf = response([0x21, b'B', b'H', b'4', b'1', b'J', b'X', b'M']);
+        overlong_cf.len = 9;
+        assert_eq!(rx.push(&overlong_cf), Err(Error::InvalidLength));
+
+        rx.push(&response([0x10, 20, 0x49, 2, 1, b'1', b'H', b'G']))
+            .unwrap();
+        rx.push(&response([0x21, b'B', b'H', b'4', b'1', b'J', b'X', b'M']))
+            .unwrap();
+        let mut short_final = response([0x22, b'N', b'1', b'0', b'9', b'1', b'8', b'6']);
+        short_final.len = 7;
+        assert_eq!(rx.push(&short_final), Err(Error::InvalidLength));
+
+        rx.push(&response([0x10, 20, 0x49, 2, 1, b'1', b'H', b'G']))
+            .unwrap();
+        rx.push(&response([0x21, b'B', b'H', b'4', b'1', b'J', b'X', b'M']))
+            .unwrap();
+        let mut overlong_final = response([0x22, b'N', b'1', b'0', b'9', b'1', b'8', b'6']);
+        overlong_final.len = 9;
+        assert_eq!(rx.push(&overlong_final), Err(Error::InvalidLength));
     }
 
     #[test]

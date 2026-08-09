@@ -15,7 +15,7 @@ pub enum Error {
     WrongId,
     Malformed,
     ShortPayload,
-    NegativeResponse(u8),
+    NegativeResponse { service: u8, nrc: u8 },
     UnsupportedService,
     UnsupportedPid,
     Sequence,
@@ -69,7 +69,7 @@ fn positive_pid_payload(
     frame: &CanFrame,
     service: u8,
     pid: u8,
-    needed: usize,
+    expected: usize,
 ) -> Result<&[u8], Error> {
     let payload = single_frame_payload(frame)?;
     check_negative(payload, service)?;
@@ -82,8 +82,11 @@ fn positive_pid_payload(
     if payload[1] != pid {
         return Err(Error::UnsupportedPid);
     }
-    if payload.len() < needed {
+    if payload.len() < expected {
         return Err(Error::ShortPayload);
+    }
+    if payload.len() > expected {
+        return Err(Error::InvalidLength);
     }
     Ok(payload)
 }
@@ -96,7 +99,13 @@ fn check_negative(payload: &[u8], requested_service: u8) -> Result<(), Error> {
         if payload[1] != requested_service {
             return Err(Error::UnsupportedService);
         }
-        return Err(Error::NegativeResponse(payload[2]));
+        if payload.len() != 3 {
+            return Err(Error::InvalidLength);
+        }
+        return Err(Error::NegativeResponse {
+            service: payload[1],
+            nrc: payload[2],
+        });
     }
     Ok(())
 }

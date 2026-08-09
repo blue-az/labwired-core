@@ -9,6 +9,14 @@ pub enum IsoTpEvent {
     Complete([u8; 17]),
 }
 
+/// Heap-free receiver for the deterministic Mode 09 VIN wire format used by Task 6.
+///
+/// The ECU sends on CAN ID `0x7E8`; flow control is returned on physical ID `0x7E0`
+/// as `[0x30, 0, 0, 0, 0, 0, 0, 0]`. The First Frame PCI declares exactly 20
+/// application bytes: `[0x49, 0x02, 0x01]` followed by the 17-byte VIN. That FF
+/// carries the three-byte application header and the first three VIN bytes. CF1
+/// (sequence 1) carries the next seven VIN bytes and CF2 (sequence 2) carries the
+/// final seven. Both consecutive frames therefore have a CAN DLC of eight.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct VinReassembler {
     payload: [u8; VIN_PAYLOAD_LEN],
@@ -65,10 +73,34 @@ impl VinReassembler {
             return Err(Error::InvalidLength);
         }
         match frame.data[0] >> 4 {
+            0 => self.single_frame(frame),
             1 => self.first_frame(frame),
             2 => self.consecutive_frame(frame),
             _ => Err(Error::UnexpectedFrame),
         }
+    }
+
+    fn single_frame(&mut self, frame: &CanFrame) -> Result<IsoTpEvent, Error> {
+        if self.active {
+            return Err(Error::UnexpectedFrame);
+        }
+        if frame.data[0] != 3 {
+            return Err(if frame.data[1] == 0x7f {
+                Error::InvalidLength
+            } else {
+                Error::UnexpectedFrame
+            });
+        }
+        if frame.data[1] != 0x7f {
+            return Err(Error::UnexpectedFrame);
+        }
+        if frame.data[2] != 9 {
+            return Err(Error::UnsupportedService);
+        }
+        Err(Error::NegativeResponse {
+            service: 9,
+            nrc: frame.data[3],
+        })
     }
 
     fn first_frame(&mut self, frame: &CanFrame) -> Result<IsoTpEvent, Error> {
@@ -86,6 +118,15 @@ impl VinReassembler {
         if total != VIN_PAYLOAD_LEN {
             return Err(Error::Malformed);
         }
+        if frame.data[2] != 0x49 {
+            return Err(Error::UnsupportedService);
+        }
+        if frame.data[3] != 2 {
+            return Err(Error::UnsupportedPid);
+        }
+        if frame.data[4] != 1 {
+            return Err(Error::Malformed);
+        }
         self.payload[..6].copy_from_slice(&frame.data[2..8]);
         self.received = 6;
         self.next_sequence = 1;
@@ -100,6 +141,9 @@ impl VinReassembler {
     fn consecutive_frame(&mut self, frame: &CanFrame) -> Result<IsoTpEvent, Error> {
         if !self.active {
             return Err(Error::UnexpectedFrame);
+        }
+        if frame.len != 8 {
+            return Err(Error::InvalidLength);
         }
         if frame.data[0] & 0x0f != self.next_sequence {
             return Err(Error::Sequence);
@@ -117,9 +161,7 @@ impl VinReassembler {
             return Ok(IsoTpEvent::Pending);
         }
         if self.payload[..3] != [0x49, 0x02, 0x01] {
-            return Err(if self.payload[0] == 0x7f {
-                Error::NegativeResponse(self.payload[2])
-            } else if self.payload[0] != 0x49 {
+            return Err(if self.payload[0] != 0x49 {
                 Error::UnsupportedService
             } else if self.payload[1] != 2 {
                 Error::UnsupportedPid
