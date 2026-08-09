@@ -9,12 +9,12 @@ use cortex_m_rt::entry;
 use panic_halt as _;
 
 use firmware_nrf52840_obd2_scanner::{
-    ble::{encode_manufacturer_payload, Radio},
+    ble::Radio,
     clear_dtcs_request, decode_clear_dtcs, decode_coolant, decode_dtcs, decode_rpm, decode_speed,
-    decode_supported_pids, flags,
+    decode_supported_pids, finalize_cycle_outputs, flags,
     mcp2515::{Error as CanError, Mcp2515},
     mode01_request, read_dtcs_request,
-    ssd1306::{DisplayView, Ssd1306},
+    ssd1306::Ssd1306,
     vin_request, AcquisitionFailure, CanFrame, IsoTpEvent, PollSchedule, ScannerState,
     VinReassembler,
 };
@@ -192,22 +192,26 @@ fn main() -> ! {
             },
             Err(error) => state.apply_failure(driver_failure(error)),
         }
-        let view = DisplayView::from_state(&state);
-        oled.render(&view);
+        let mut outputs = finalize_cycle_outputs(&mut state, false);
+        oled.render(&outputs.display);
         if !oled.update() {
-            state.apply_failure(AcquisitionFailure::Device);
+            outputs = finalize_cycle_outputs(&mut state, true);
+            oled.render(&outputs.display);
+            let _ = oled.update();
         }
-        let mut payload = encode_manufacturer_payload(&state);
-        if radio.transmit(&payload) {
+        if radio.transmit(&outputs.ble_payload) {
             unsafe {
                 let count = read_volatile(addr_of!(TX_DONE_COUNT));
                 write_volatile(addr_of_mut!(TX_DONE_COUNT), count.wrapping_add(1));
             }
         } else {
-            state.apply_failure(AcquisitionFailure::Device);
-            payload = encode_manufacturer_payload(&state);
+            outputs = finalize_cycle_outputs(&mut state, true);
+            // The failed packet was not transmitted. Refresh OLED immediately
+            // from the same final state that will be exported.
+            oled.render(&outputs.display);
+            let _ = oled.update();
         }
-        publish(&state, &payload);
+        publish(&state, &outputs.ble_payload);
         unsafe {
             let count = read_volatile(addr_of!(CYCLE_COUNT));
             write_volatile(addr_of_mut!(CYCLE_COUNT), count.wrapping_add(1));

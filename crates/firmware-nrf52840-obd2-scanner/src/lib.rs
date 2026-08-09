@@ -15,6 +15,23 @@ pub use obd2::{
 };
 pub use state::{flags, live, AcquisitionFailure, PollSchedule, ScannerState};
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CycleOutputs {
+    pub ble_payload: [u8; ble::PAYLOAD_LEN],
+    pub display: ssd1306::DisplayView,
+}
+
+/// Applies the device result first, then derives both externally visible views.
+pub fn finalize_cycle_outputs(state: &mut ScannerState, device_failed: bool) -> CycleOutputs {
+    if device_failed {
+        state.apply_failure(AcquisitionFailure::Device);
+    }
+    CycleOutputs {
+        ble_payload: ble::encode_manufacturer_payload(state),
+        display: ssd1306::DisplayView::from_state(state),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -27,6 +44,26 @@ mod tests {
         ssd1306::{DisplayView, TWIM_DMA_STATIC, TWIM_EVENTS_ERROR, TWIM_EVENTS_STOPPED},
         state::{live, AcquisitionFailure, PollSchedule},
     };
+
+    #[test]
+    fn cycle_outputs_are_derived_from_final_device_result() {
+        let mut success = ScannerState::new();
+        let success_outputs = finalize_cycle_outputs(&mut success, false);
+        assert_eq!(
+            success_outputs.ble_payload[1] & flags::DEVICE_ERROR as u8,
+            0
+        );
+        assert_eq!(success_outputs.display.status.as_bytes(), b"STALE");
+
+        let mut failed = ScannerState::new();
+        let failed_outputs = finalize_cycle_outputs(&mut failed, true);
+        assert_eq!(
+            failed_outputs.ble_payload[1] & flags::DEVICE_ERROR as u8,
+            0x80
+        );
+        assert_eq!(failed_outputs.display.status.as_bytes(), b"DEV ERR");
+        assert_eq!(failed_outputs.ble_payload[1], failed.status_flags as u8);
+    }
 
     #[test]
     fn txb0_status_requires_real_completion_and_detects_errors() {
