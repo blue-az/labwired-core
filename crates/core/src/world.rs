@@ -106,6 +106,12 @@ pub trait MachineTrait: Send {
     fn bus_trace_snapshot(&self) -> Vec<crate::bus::BusTraceEvent> {
         Vec::new()
     }
+    fn get_pc(&self) -> u32 { 0 }
+    fn get_register(&self, _id: usize) -> u32 { 0 }
+    fn get_register_names(&self) -> Vec<String> { Vec::new() }
+    fn read_memory(&self, _addr: u32, _len: usize) -> SimResult<Vec<u8>> {
+        Err(crate::SimulationError::NotImplemented("memory inspection".into()))
+    }
     /// Attach one endpoint of a `CanBus` to a named FDCAN peripheral. The
     /// default keeps third-party mock machines source-compatible while making
     /// an unsupported topology error explicit.
@@ -211,6 +217,13 @@ impl<C: Cpu + 'static> MachineTrait for Machine<C> {
 
     fn bus_trace_snapshot(&self) -> Vec<crate::bus::BusTraceEvent> {
         self.bus.bus_trace_snapshot()
+    }
+
+    fn get_pc(&self) -> u32 { self.cpu.get_pc() }
+    fn get_register(&self, id: usize) -> u32 { self.cpu.get_register(id as u8) }
+    fn get_register_names(&self) -> Vec<String> { self.cpu.get_register_names() }
+    fn read_memory(&self, addr: u32, len: usize) -> SimResult<Vec<u8>> {
+        crate::DebugControl::read_memory(self, addr, len)
     }
 
     fn attach_can_bus(

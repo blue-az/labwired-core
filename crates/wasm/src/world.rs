@@ -77,6 +77,29 @@ impl WasmWorld {
         Ok(rounds)
     }
 
+    pub fn step_single(&mut self) -> Result<(), JsValue> {
+        self.step_batch(1).map(|_| ())
+    }
+
+    pub fn get_pc(&self, node_id: &str) -> Result<u32, JsValue> {
+        Ok(self.machine(node_id)?.get_pc())
+    }
+
+    pub fn get_register(&self, node_id: &str, id: u32) -> Result<u32, JsValue> {
+        Ok(self.machine(node_id)?.get_register(id as usize))
+    }
+
+    pub fn get_register_names(&self, node_id: &str) -> Result<JsValue, JsValue> {
+        serde_wasm_bindgen::to_value(&self.machine(node_id)?.get_register_names())
+            .map_err(|error| JsValue::from_str(&format!("node '{node_id}' registers: {error}")))
+    }
+
+    pub fn read_memory(&self, node_id: &str, address: u32, len: u32) -> Result<Vec<u8>, JsValue> {
+        self.machine(node_id)?
+            .read_memory(address, len as usize)
+            .map_err(|error| JsValue::from_str(&format!("node '{node_id}' memory read: {error:?}")))
+    }
+
     pub fn total_cycles(&self, node_id: &str) -> Result<u64, JsValue> {
         self.world
             .machines
@@ -171,5 +194,10 @@ impl WasmWorld {
             .lock()
             .map_err(|_| JsValue::from_str("world UART sink lock poisoned"))?;
         Ok(bytes.drain(..).collect())
+    }
+
+    fn machine(&self, node_id: &str) -> Result<&dyn labwired_core::world::MachineTrait, JsValue> {
+        self.world.machines.get(node_id).map(|machine| machine.as_ref())
+            .ok_or_else(|| JsValue::from_str(&format!("unknown world node '{node_id}'")))
     }
 }
