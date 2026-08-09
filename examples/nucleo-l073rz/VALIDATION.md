@@ -127,12 +127,11 @@ row was closed by clock-gating, see below.) Artifacts:
 | SPI1 | TXE set after enable | `TXE` | `TXE` | ✅ match (flag-level) |
 | I2C1 | NACK on absent device | `?` | `?` | ✅ agree — inconclusive without a slave (see below) |
 | ADC1 | VREFINT raw conversion | `~0x86` | `0x00` | ❌ analog — by design (see below) |
-| RNG | DR draw | `0` | `0` | ✅ match — **was `CAFEBABE`; see below** |
+| RNG | DR draw | `0` | `0` | ⚠️ see below — the `0` was a REAL BUG, and the capture predates its fix |
 
 > The committed captures under `captures/` are the ORIGINAL diff and are left
 > untouched as the historical record: `simulator-peripherals.txt` still shows the
-> `RNG=CAFEBABE` line this section now explains. The current engine prints
-> `RNG=00000000` for that firmware.
+> `RNG=CAFEBABE` line this section explains.
 
 ### RCC clock-switch — found and FIXED
 
@@ -198,6 +197,47 @@ firmware constant is tracked separately.
    simulator's ADC returns a deterministic `0`. An analog reading cannot be
    reproduced byte-for-byte by a deterministic engine — validation here is
    "silicon converts and returns a plausible value; sim is deterministic."
+2. **RNG (non-deterministic).** The simulator returns a fixed `0xCAFEBABE` —
+   correct behaviour for a *deterministic* oracle. A real TRNG can never (and
+   should never) match it.
+
+   **But the parenthetical that used to sit here was wrong, and it mattered.**
+   It read: *"Silicon read `0` because the demo doesn't complete the full
+   HSI48/RNG analog bring-up; immaterial — it cannot equal the sim's
+   deterministic value either way."*
+
+   Silicon read `0` because the demo wrote HSI48ON to **the wrong address**.
+   `crates/firmware-l073-demo/src/main.rs` had
+
+       const RCC_CRRCR: *mut u32 = 0x4002_1098 as *mut u32;
+
+   `0x98` is where CRRCR sits on the **WB/G4/H5/WBA** families. On the L0 it is
+   at **`0x08`** — a fact this very document states four paragraphs above, in
+   the clock-switch section. The RCC *model* was fixed to the L0 map; the
+   firmware constant was not. So HSI48 was never enabled, `HSI48RDY` never set,
+   the bounded `spin_until` burned its full 20,000 iterations and gave up, and
+   the RNG ran without its kernel clock. On silicon that means DRDY never
+   asserts and DR reads `0` — exactly what the capture recorded.
+
+   "Immaterial" conflated two different things. The VALUE cannot match, true.
+   But `0` here was not a non-deterministic value; it was **no value at all**,
+   from a peripheral that never ran. The live capture had recorded the symptom
+   of a real firmware bug and it was filed as expected divergence.
+
+   Fixed: the constant is now `0x4002_1008`. Measured effect — the census
+   counted **80,012 reads and 4 writes** of the undecoded `rcc 0x98` in a single
+   run before the fix, and **zero** after; UART output is byte-for-byte
+   identical, so no assertion moved.
+
+   **Known fidelity gap, stated rather than relied on:** the simulator did NOT
+   catch this, and still would not. `crates/core/src/peripherals/rng.rs` sets
+   `SR.DRDY` from `CR.RNGEN` alone — it has no notion of a kernel clock, so it
+   answers `0xCAFEBABE` whether or not HSI48 is on. Silicon and sim therefore
+   disagreed for a real reason and the table read it as an expected mismatch.
+   Gating DRDY on the RCC's live HSI48 state is remediation item **5.12** ("RCC
+   gates read the live register map"); it is deliberately not hacked in here,
+   because a one-off clock gate in one peripheral is the fork that item exists
+   to remove.
 
 ### Not validated without extra hardware
 
