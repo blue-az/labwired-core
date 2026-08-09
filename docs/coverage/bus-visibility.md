@@ -21,7 +21,7 @@ Derived from live `SystemBus::from_config` builds — never hand-edited. Bind a 
 | nrf54l15 | — | — | — |
 | rp2040 | ✓ | ✓ | ✓ |
 | rp2350 | — | — | — |
-| stm32f103 | — | ✓ | — |
+| stm32f103 | ✓ | ✓ | ✓ |
 | stm32f401 | ✓ | ✓ | ✓ |
 | stm32f401cdu6 | ✓ | ✓ | ✓ |
 | stm32f405 | ✓ | ✓ | ✓ |

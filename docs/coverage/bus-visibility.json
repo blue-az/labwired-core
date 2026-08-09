@@ -65,7 +65,9 @@
   },
   {
     "buses": [
-      "SPI"
+      "I2C",
+      "SPI",
+      "UART"
     ],
     "name": "stm32f103"
   },
