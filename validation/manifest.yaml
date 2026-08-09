@@ -1222,9 +1222,9 @@ boards:
       - "l476_mmio_diff::{l476_mmio_sim_only,l476_parity_sim_only}"
       - "firmware_survival L476 cases (UART byte stream)"
     silicon:
-      last_capture: 2026-06-20
+      last_capture: 2026-08-09
       probe: "STLINK-V2.1 (USB 0483:374b serial 0670FF…1747, NUCLEO-L476RG onboard)"
-      result: "Live re-capture after the v0.17.0 merge: l476_mmio_diff + l476_parity_diff pass (15 mmio + 104 parity), 0 divergence. Supersedes the 2026-06-19 drift_ack."
+      result: "re-captured live 2026-08-09 with L476_STRICT=1: l476_mmio_diff 15/15 and l476_parity_diff 104/104, 0 divergence — identical to the 2026-06-20 figures. Clean on arrival; nothing to fix. SAME physical board as that baseline, established by probe serial 0670FF535155878281121747 being recorded in both (the L073 entry could not make that claim, having no serial on file before today). Scope unchanged and still partial: the mmio+parity set, not a full-chip sweep."
     # 2026-06-26: uart.rs generalised — UartRegMap gained status_width/status_idle/
     # rx_present masks and 20+ vendor layouts for the onboarding library. The L4
     # USART maps to the Stm32V2 arm, which reproduces the prior hardcoded behaviour
@@ -1384,8 +1384,11 @@ boards:
     # failed, cargo fmt clean. Acked WITHOUT a live re-capture for this board:
     # it was not attached. Its own live diff remains owed and is NOT evidenced
     # by this entry.
-    drift_ack: 2026-08-09
-    drift_ack_digest: cdf7cf6950086f44787c0883e25da8f1ff9aca4fd695dc35684b4830f7bf06a4
+    #
+    # 2026-08-09 (later): the NUCLEO-L476RG was attached and l476_mmio_diff
+    # + l476_parity_diff re-ran live at 15/15 and 104/104. The spi.rs ack
+    # above is therefore moot for this board — it is superseded by an actual
+    # capture, not carried. Kept as history so the reasoning stays readable.
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs

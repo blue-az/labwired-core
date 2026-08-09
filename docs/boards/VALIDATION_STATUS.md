@@ -13,7 +13,7 @@ The models column is a content digest over everything that board's `models` list
 | `seeed-xiao-nrf52840-sense` | 🟢 silicon-verified | 2026-08-09 | `13777fb92a3842b0` | ✅ fresh |
 | `stm32h563` | 🟢 silicon-verified | 2026-06-22 | `1f8f936885ffa942` | ⚠ drift acked 2026-08-09 (re-capture pending) |
 | `esp32c3` | 🟢 silicon-verified | 2026-08-09 | `9b6261ec0b6fa40d` | ✅ fresh |
-| `nucleo-l476rg` | 🟢 silicon-verified | 2026-06-20 | `cdf7cf6950086f44` | ⚠ drift acked 2026-08-09 (re-capture pending) |
+| `nucleo-l476rg` | 🟢 silicon-verified | 2026-08-09 | `cdf7cf6950086f44` | ✅ fresh |
 | `nucleo-l073rz` | 🟢 silicon-verified | 2026-08-09 | `7ae82b7af160fad3` | ✅ fresh |
 | `stm32f103` | 🟢 silicon-verified | 2026-06-20 | `8a772164873d30c1` | ⚠ drift acked 2026-08-09 (re-capture pending) |
 | `stm32f407` | 🟢 silicon-smoke | 2026-06-20 | `29920fb76cc97122` | ⚠ drift acked 2026-08-09 (re-capture pending) |
@@ -70,10 +70,10 @@ The models column is a content digest over everything that board's `models` list
 
 - Doc: [`docs/boards/nucleo-l476rg.md`](nucleo-l476rg.md)  ·  Chip: `configs/chips/stm32l476.yaml`
 - Note: Register diff covers RCC/GPIO/SPI1/TIM2 (15 mmio cases + 104-pattern parity sweep), NOT a full-chip sweep — the prose doc's 'every peripheral exercised' is still an overstatement; this is the honest scope.
-- Silicon: **2026-06-20** on STLINK-V2.1 (USB 0483:374b serial 0670FF…1747, NUCLEO-L476RG onboard) — Live re-capture after the v0.17.0 merge: l476_mmio_diff + l476_parity_diff pass (15 mmio + 104 parity), 0 divergence. Supersedes the 2026-06-19 drift_ack.
+- Silicon: **2026-08-09** on STLINK-V2.1 (USB 0483:374b serial 0670FF…1747, NUCLEO-L476RG onboard) — re-captured live 2026-08-09 with L476_STRICT=1: l476_mmio_diff 15/15 and l476_parity_diff 104/104, 0 divergence — identical to the 2026-06-20 figures. Clean on arrival; nothing to fix. SAME physical board as that baseline, established by probe serial 0670FF535155878281121747 being recorded in both (the L073 entry could not make that claim, having no serial on file before today). Scope unchanged and still partial: the mmio+parity set, not a full-chip sweep.
   - offline (CI): l476_mmio_diff::{l476_mmio_sim_only,l476_parity_sim_only}
   - offline (CI): firmware_survival L476 cases (UART byte stream)
-- Drift status: **⚠ drift acked 2026-08-09 (re-capture pending)**
+- Drift status: **✅ fresh**
 
 ## `nucleo-l073rz` — 🟢 silicon-verified
 
