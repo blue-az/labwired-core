@@ -763,6 +763,15 @@ jobs:
       - name: Run Clippy
         run: cargo clippy --all-targets -- -D warnings
 
+      # Before the --lib run, not just before the fixture suites below. The
+      # playground secure-boot repro in crates/wasm builds
+      # firmware-nrf52840-secure-boot on demand for thumbv7em, and it is a
+      # #[cfg(test)] module in src/, so `--workspace --lib` runs it. With the
+      # target added ten lines further down, those three tests died on
+      # "secure-boot firmware build failed" and took main red.
+      - name: Install ARM target for firmware builds under test
+        run: rustup target add thumbv7em-none-eabi
+
       - name: Unit tests (no fixtures)
         run: cargo test --workspace --lib
 
