@@ -15,7 +15,7 @@ The models column is a content digest over everything that board's `models` list
 | `esp32c3` | 🟢 silicon-verified | 2026-08-09 | `9b6261ec0b6fa40d` | ✅ fresh |
 | `nucleo-l476rg` | 🟢 silicon-verified | 2026-08-09 | `cdf7cf6950086f44` | ✅ fresh |
 | `nucleo-l073rz` | 🟢 silicon-verified | 2026-08-09 | `7ae82b7af160fad3` | ✅ fresh |
-| `stm32f103` | 🟢 silicon-verified | 2026-06-20 | `8a772164873d30c1` | ⚠ drift acked 2026-08-09 (re-capture pending) |
+| `stm32f103` | 🟢 silicon-verified | 2026-08-09 | `8a772164873d30c1` | ✅ fresh |
 | `stm32f407` | 🟢 silicon-smoke | 2026-06-20 | `29920fb76cc97122` | ⚠ drift acked 2026-08-09 (re-capture pending) |
 | `esp32s3` | 🟢 silicon-verified | 2026-08-09 | `b66236aad88336c3` | ✅ fresh |
 | `stm32f401` | 🟡 smoke-manual | — | `a05f2c5a4fa09d07` | no silicon capture |
@@ -88,10 +88,10 @@ The models column is a content digest over everything that board's `models` list
 
 - Doc: [`docs/boards/stm32f103.md`](stm32f103.md)  ·  Chip: `configs/chips/stm32f103.yaml`
 - Note: Prose doc is STALE-PESSIMISTIC: lists SPI/TIM/ADC/CAN/RTC/IWDG/WWDG as 'not modeled' — all are modeled AND silicon-pinned.
-- Silicon: **2026-06-20** on ST-LINK V2.1 (USB 0483:374b), genuine STM32F103 — Live re-capture after the v0.17.0 bxcan/clock-gating merge: stm32f1_mmio_diff 102/102 (24 reset + 26 R/W + 52 sweep), 0 divergence, and f103_conformance digest matches silicon. Supersedes the 2026-06-19 drift_ack. (Earlier capture caught + fixed a classic SPI CR1 bug masking CRCNEXT bit 12 — 0xEFFF vs silicon 0xFFFF.)
+- Silicon: **2026-08-09** on ST-LINK V2.1 (V2J43S28, serial 066CFF534951775087071123, USB 0483:374b), genuine STM32F103 — chipid 0x410 STM32F1xx_MD, 128K flash / 20K SRAM — re-captured live 2026-08-09 with F103_STRICT=1: stm32f1_mmio_diff 102/102 (24 reset + 26 R/W + 52 sweep), 0 divergence, and f103_conformance reports no sim-vs-silicon gaps — identical to the 2026-06-20 figures. Clean on arrival; nothing to fix. f103_conformance needed firmware-f103-conformance built for thumbv7m-none-eabi first; without it the test panics in 0.00s, which reads like a failure but is a missing prerequisite. Probe serial recorded from this run on, so a future capture can tell whether it is the same physical board (the earlier entry named none). (Earlier capture caught + fixed a classic SPI CR1 bug masking CRCNEXT bit 12 — 0xEFFF vs silicon 0xFFFF.)
   - offline (CI): stm32f1_mmio_diff::{f1_reset_sim_only,f1_mmio_sim_only,f1_parity_sim_only,f1_sweep_sim_only}
   - offline (CI): f103_conformance::conformance_sim (digest)
-- Drift status: **⚠ drift acked 2026-08-09 (re-capture pending)**
+- Drift status: **✅ fresh**
 
 ## `stm32f407` — 🟢 silicon-smoke
 
