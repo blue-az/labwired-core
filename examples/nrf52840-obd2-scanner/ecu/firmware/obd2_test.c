@@ -60,10 +60,12 @@ int main(void)
     expect(&ecu, vin_req, vin_ff);
     obd2_frame_t response;
     assert(obd2_poll(&ecu, 11, &response) == OBD2_NO_FRAME);
-    const uint8_t bad_fc_bytes[8] = {0x31, 0, 0, 0, 0, 0, 0, 0};
-    obd2_frame_t bad_fc = req(0x7E0, bad_fc_bytes);
-    assert(obd2_process(&ecu, &bad_fc, 12, &response) == OBD2_MALFORMED);
+    const uint8_t wait_fc_bytes[8] = {0x31, 0, 0, 0, 0, 0, 0, 0};
+    obd2_frame_t wait_fc = req(0x7E0, wait_fc_bytes);
+    assert(obd2_process(&ecu, &wait_fc, 12, &response) == OBD2_NO_FRAME);
     assert(obd2_poll(&ecu, 12, &response) == OBD2_NO_FRAME);
+    assert(obd2_poll(&ecu, 1010, &response) == OBD2_NO_FRAME);
+    assert(ecu.vin_transfer_state == 0);
 
     expect(&ecu, vin_req, vin_ff);
     const uint8_t fc_bytes[8] = {0x30, 0, 0, 0, 0, 0, 0, 0};
@@ -75,6 +77,48 @@ int main(void)
     assert(obd2_poll(&ecu, 21, &response) == OBD2_FRAME_READY);
     assert(memcmp(response.data, cf2, 8) == 0);
     assert(obd2_poll(&ecu, 22, &response) == OBD2_NO_FRAME);
+
+    /* BS=1 permits CF1 only; a second CTS is required for CF2. */
+    expect(&ecu, vin_req, vin_ff);
+    const uint8_t bs1_bytes[8] = {0x30, 1, 0, 0, 0, 0, 0, 0};
+    obd2_frame_t bs1 = req(0x7E0, bs1_bytes);
+    assert(obd2_process(&ecu, &bs1, 30, &response) == OBD2_FRAME_READY);
+    assert(memcmp(response.data, cf1, 8) == 0);
+    assert(obd2_poll(&ecu, 31, &response) == OBD2_NO_FRAME);
+    assert(obd2_process(&ecu, &fc, 32, &response) == OBD2_FRAME_READY);
+    assert(memcmp(response.data, cf2, 8) == 0);
+
+    /* STmin gates CF1 and the interval from CF1 to CF2. */
+    expect(&ecu, vin_req, vin_ff);
+    const uint8_t stmin_bytes[8] = {0x30, 0, 5, 0, 0, 0, 0, 0};
+    obd2_frame_t stmin = req(0x7E0, stmin_bytes);
+    assert(obd2_process(&ecu, &stmin, 40, &response) == OBD2_NO_FRAME);
+    assert(obd2_poll(&ecu, 44, &response) == OBD2_NO_FRAME);
+    assert(obd2_poll(&ecu, 45, &response) == OBD2_FRAME_READY);
+    assert(memcmp(response.data, cf1, 8) == 0);
+    assert(obd2_poll(&ecu, 49, &response) == OBD2_NO_FRAME);
+    assert(obd2_poll(&ecu, 50, &response) == OBD2_FRAME_READY);
+    assert(memcmp(response.data, cf2, 8) == 0);
+
+    /* 100us STmin encodings round conservatively to one 1kHz timer tick. */
+    expect(&ecu, vin_req, vin_ff);
+    const uint8_t fine_stmin_bytes[8] = {0x30, 0, 0xF1, 0, 0, 0, 0, 0};
+    obd2_frame_t fine_stmin = req(0x7E0, fine_stmin_bytes);
+    assert(obd2_process(&ecu, &fine_stmin, 60, &response) == OBD2_NO_FRAME);
+    assert(obd2_poll(&ecu, 60, &response) == OBD2_NO_FRAME);
+    assert(obd2_poll(&ecu, 61, &response) == OBD2_FRAME_READY);
+
+    /* Reserved STmin and OVFLW terminate the transfer as malformed. */
+    expect(&ecu, vin_req, vin_ff);
+    const uint8_t reserved_bytes[8] = {0x30, 0, 0x80, 0, 0, 0, 0, 0};
+    obd2_frame_t reserved = req(0x7E0, reserved_bytes);
+    assert(obd2_process(&ecu, &reserved, 70, &response) == OBD2_MALFORMED);
+    assert(ecu.vin_transfer_state == 0);
+    expect(&ecu, vin_req, vin_ff);
+    const uint8_t overflow_bytes[8] = {0x32, 0, 0, 0, 0, 0, 0, 0};
+    obd2_frame_t overflow = req(0x7E0, overflow_bytes);
+    assert(obd2_process(&ecu, &overflow, 80, &response) == OBD2_MALFORMED);
+    assert(ecu.vin_transfer_state == 0);
 
     expect(&ecu, vin_req, vin_ff);
     assert(obd2_poll(&ecu, 1011, &response) == OBD2_NO_FRAME);

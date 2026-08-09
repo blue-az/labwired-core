@@ -16,7 +16,10 @@ typedef struct {
 typedef struct {
     uint8_t dtc_count;
     uint8_t vin_transfer_state;
+    uint8_t vin_block_remaining;
+    uint8_t vin_stmin_ms;
     uint32_t vin_started_ms;
+    uint32_t vin_next_tx_ms;
 } obd2_ecu_t;
 
 void obd2_init(obd2_ecu_t *ecu);

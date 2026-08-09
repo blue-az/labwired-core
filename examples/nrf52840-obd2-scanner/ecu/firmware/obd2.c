@@ -6,6 +6,10 @@
 #define FLOW_CONTROL_ID 0x7E0u
 #define RESPONSE_ID 0x7E8u
 #define VIN_TIMEOUT_MS 1000u
+#define VIN_WAIT_FC 1u
+#define VIN_CF1_PENDING 2u
+#define VIN_WAIT_NEXT_FC 3u
+#define VIN_CF2_PENDING 4u
 
 static void clear_frame(obd2_frame_t *frame)
 {
@@ -28,7 +32,10 @@ void obd2_init(obd2_ecu_t *ecu)
 {
     ecu->dtc_count = 2u;
     ecu->vin_transfer_state = 0u;
+    ecu->vin_block_remaining = 0u;
+    ecu->vin_stmin_ms = 0u;
     ecu->vin_started_ms = 0u;
+    ecu->vin_next_tx_ms = 0u;
 }
 
 bool obd2_vin_expired(uint32_t now_ms, uint32_t started_ms)
@@ -112,26 +119,85 @@ static int mode09(obd2_ecu_t *ecu, const obd2_frame_t *request, uint32_t now_ms,
     clear_frame(response);
     const uint8_t ff[8] = {0x10u, 0x14u, 0x49u, 0x02u, 0x01u, 'L', 'W', 'O'};
     for (uint8_t i = 0; i < 8u; ++i) response->data[i] = ff[i];
-    ecu->vin_transfer_state = 1u;
+    ecu->vin_transfer_state = VIN_WAIT_FC;
     ecu->vin_started_ms = now_ms;
     return OBD2_FRAME_READY;
+}
+
+static bool time_reached(uint32_t now_ms, uint32_t due_ms)
+{
+    return (uint16_t)(now_ms - due_ms) < 0x8000u;
+}
+
+static int emit_vin_cf(obd2_ecu_t *ecu, uint32_t now_ms,
+                       obd2_frame_t *response)
+{
+    clear_frame(response);
+    if (ecu->vin_transfer_state == VIN_CF1_PENDING) {
+        const uint8_t cf1[8] = {0x21u, 'B', 'D', '2', 'S', 'I', 'M', '0'};
+        for (uint8_t i = 0; i < 8u; ++i) response->data[i] = cf1[i];
+        if (ecu->vin_block_remaining == 1u) {
+            ecu->vin_block_remaining = 0u;
+            ecu->vin_transfer_state = VIN_WAIT_NEXT_FC;
+        } else {
+            if (ecu->vin_block_remaining > 1u) --ecu->vin_block_remaining;
+            ecu->vin_transfer_state = VIN_CF2_PENDING;
+            ecu->vin_next_tx_ms = now_ms + ecu->vin_stmin_ms;
+        }
+        return OBD2_FRAME_READY;
+    }
+    if (ecu->vin_transfer_state == VIN_CF2_PENDING) {
+        const uint8_t cf2[8] = {0x22u, '0', '0', '0', '0', '0', '0', '1'};
+        for (uint8_t i = 0; i < 8u; ++i) response->data[i] = cf2[i];
+        ecu->vin_transfer_state = 0u;
+        return OBD2_FRAME_READY;
+    }
+    return OBD2_NO_FRAME;
+}
+
+static int process_flow_control(obd2_ecu_t *ecu, const obd2_frame_t *request,
+                                uint32_t now_ms, obd2_frame_t *response)
+{
+    if (ecu->vin_transfer_state != VIN_WAIT_FC &&
+        ecu->vin_transfer_state != VIN_WAIT_NEXT_FC)
+        return OBD2_NO_FRAME;
+    if (request->dlc != 8u || (request->data[0] & 0xF0u) != 0x30u) {
+        ecu->vin_transfer_state = 0u;
+        return OBD2_MALFORMED;
+    }
+    uint8_t flow_status = request->data[0] & 0x0Fu;
+    if (flow_status == 1u) return OBD2_NO_FRAME; /* WAIT; overall timeout remains armed */
+    if (flow_status != 0u) {
+        ecu->vin_transfer_state = 0u; /* OVFLW and reserved flow status */
+        return OBD2_MALFORMED;
+    }
+    uint8_t encoded_stmin = request->data[2];
+    if (encoded_stmin <= 0x7Fu) {
+        ecu->vin_stmin_ms = encoded_stmin;
+    } else if (encoded_stmin >= 0xF1u && encoded_stmin <= 0xF9u) {
+        ecu->vin_stmin_ms = 1u; /* 100..900us rounded up to the 1kHz tick */
+    } else {
+        ecu->vin_transfer_state = 0u;
+        return OBD2_MALFORMED;
+    }
+    ecu->vin_block_remaining = request->data[1];
+    ecu->vin_transfer_state = (ecu->vin_transfer_state == VIN_WAIT_FC) ?
+                                  VIN_CF1_PENDING : VIN_CF2_PENDING;
+    ecu->vin_next_tx_ms = now_ms + ecu->vin_stmin_ms;
+    if (ecu->vin_stmin_ms == 0u) return emit_vin_cf(ecu, now_ms, response);
+    return OBD2_NO_FRAME;
 }
 
 int obd2_process(obd2_ecu_t *ecu, const obd2_frame_t *request,
                  uint32_t now_ms, obd2_frame_t *response)
 {
     if (request->id == FLOW_CONTROL_ID) {
-        if (ecu->vin_transfer_state != 1u) return OBD2_NO_FRAME;
-        if (request->dlc != 8u || request->data[0] != 0x30u ||
-            obd2_vin_expired(now_ms, ecu->vin_started_ms)) {
+        if (ecu->vin_transfer_state == 0u) return OBD2_NO_FRAME;
+        if (obd2_vin_expired(now_ms, ecu->vin_started_ms)) {
             ecu->vin_transfer_state = 0u;
             return OBD2_MALFORMED;
         }
-        clear_frame(response);
-        const uint8_t cf1[8] = {0x21u, 'B', 'D', '2', 'S', 'I', 'M', '0'};
-        for (uint8_t i = 0; i < 8u; ++i) response->data[i] = cf1[i];
-        ecu->vin_transfer_state = 2u;
-        return OBD2_FRAME_READY;
+        return process_flow_control(ecu, request, now_ms, response);
     }
     if (request->id != REQUEST_ID) return OBD2_NO_FRAME;
     if (request->dlc != 8u || request->data[0] == 0u ||
@@ -149,15 +215,14 @@ int obd2_process(obd2_ecu_t *ecu, const obd2_frame_t *request,
 
 int obd2_poll(obd2_ecu_t *ecu, uint32_t now_ms, obd2_frame_t *response)
 {
-    if (ecu->vin_transfer_state == 1u &&
+    if (ecu->vin_transfer_state != 0u &&
         obd2_vin_expired(now_ms, ecu->vin_started_ms)) {
         ecu->vin_transfer_state = 0u;
         return OBD2_NO_FRAME;
     }
-    if (ecu->vin_transfer_state != 2u) return OBD2_NO_FRAME;
-    clear_frame(response);
-    const uint8_t cf2[8] = {0x22u, '0', '0', '0', '0', '0', '0', '1'};
-    for (uint8_t i = 0; i < 8u; ++i) response->data[i] = cf2[i];
-    ecu->vin_transfer_state = 0u;
-    return OBD2_FRAME_READY;
+    if ((ecu->vin_transfer_state == VIN_CF1_PENDING ||
+         ecu->vin_transfer_state == VIN_CF2_PENDING) &&
+        time_reached(now_ms, ecu->vin_next_tx_ms))
+        return emit_vin_cf(ecu, now_ms, response);
+    return OBD2_NO_FRAME;
 }
