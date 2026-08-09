@@ -265,6 +265,10 @@ peripherals:
     config:
       debug_schema: "../peripherals/stm32h735/spi1.yaml"
       profile: "stm32h5"
+      # AF pad map for the logic analyzer. The H5 "SPI v3" register file is
+      # shared by parts with DIFFERENT pinouts (H563/H735 put SPI1_SCK on PB3,
+      # the WBA52 puts SPI1_MISO there), so the profile cannot pick the table.
+      pad_map: "stm32h5"
     # SPI1 clocked from RCC_APB2ENR.SPI1EN (bit 12).
     clock: { reg: "apb2enr", bit: 12 }
   - id: "spi2"
@@ -275,6 +279,10 @@ peripherals:
     config:
       debug_schema: "../peripherals/stm32h735/spi2.yaml"
       profile: "stm32h5"
+      # AF pad map for the logic analyzer. The H5 "SPI v3" register file is
+      # shared by parts with DIFFERENT pinouts (H563/H735 put SPI1_SCK on PB3,
+      # the WBA52 puts SPI1_MISO there), so the profile cannot pick the table.
+      pad_map: "stm32h5"
   - id: "spi3"
     type: "spi"
     base_address: 0x40003C00
@@ -283,6 +291,12 @@ peripherals:
     config:
       debug_schema: "../peripherals/stm32h735/spi3.yaml"
       profile: "stm32h5"
+      # Same table as spi1/spi2 above, which already carries SPI3 rows keyed on
+      # this part (PB3/PB4 on AF6, PB2/PB5 on AF7). Without this key an
+      # H5-layout SPI routes NOTHING onto the pads -- see
+      # `an_h5_spi_with_no_declared_pad_map_routes_nothing` -- so the controller
+      # would exist on the bus and stay invisible to the logic analyzer.
+      pad_map: "stm32h5"
     # SPI3 clocked from RCC_APB1LENR.SPI3EN (bit 15).
     clock: { reg: "apb1lenr", bit: 15 }
   # ---------------------------------------------------------------------------
