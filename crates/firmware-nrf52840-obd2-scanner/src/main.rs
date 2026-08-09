@@ -101,6 +101,9 @@ fn main() -> ! {
                 let result = match transact(&mut can, clear_dtcs_request()) {
                     Ok(frame) if decode_clear_dtcs(&frame).is_ok() => {
                         state.clear_dtcs();
+                        // Re-read Mode 03 through the ECU after Mode 04 rather
+                        // than treating the local clear as confirmation.
+                        dtc_done = false;
                         2
                     }
                     Ok(_) => {

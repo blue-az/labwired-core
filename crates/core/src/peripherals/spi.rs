@@ -1976,6 +1976,10 @@ impl Spi {
             Vec::new()
         };
 
+        for dev in &mut self.attached_devices {
+            dev.cs_select();
+        }
+
         for i in 0..n_clocks {
             // Read MOSI byte: TX buffer while available, else ORC.
             let mosi: u8 = if i < txd_maxcnt {
@@ -2016,6 +2020,10 @@ impl Spi {
                 let _ = bus.write_u8(rxd_ptr + i as u64, miso);
                 rxd_amount += 1;
             }
+        }
+
+        for dev in &mut self.attached_devices {
+            dev.cs_release();
         }
 
         // Update AMOUNT registers and fire completion events.
@@ -2481,6 +2489,40 @@ mod tests {
         assert_eq!(nrf_read_u32(&spi, 0x118), 1, "EVENTS_END");
         assert_eq!(nrf_read_u32(&spi, 0x54C), 3, "TXD.AMOUNT == 3");
         assert_eq!(nrf_read_u32(&spi, 0x53C), 3, "RXD.AMOUNT == 3");
+    }
+
+    #[test]
+    fn nrf52_spim_easydma_delimits_attached_device_transaction() {
+        use std::sync::{Arc, Mutex};
+
+        struct TransactionSlave(Arc<Mutex<Vec<&'static str>>>);
+        impl SpiDevice for TransactionSlave {
+            fn transfer(&mut self, _mosi: u8) -> u8 {
+                0
+            }
+            fn cs_pin(&self) -> &str {
+                "P0.12"
+            }
+            fn cs_select(&mut self) {
+                self.0.lock().unwrap().push("select");
+            }
+            fn cs_release(&mut self) {
+                self.0.lock().unwrap().push("release");
+            }
+        }
+
+        let events = Arc::new(Mutex::new(Vec::new()));
+        let mut spi = Spi::new_with_layout(SpiRegisterLayout::Nrf52Spim);
+        spi.push_device(Box::new(TransactionSlave(events.clone())));
+        let mut bus = FlatRamBus::new();
+        bus.write_slice(0x2000_0200, &[0xC0]);
+        nrf_write_u32(&mut spi, 0x500, 7);
+        nrf_write_u32(&mut spi, 0x544, 0x2000_0200);
+        nrf_write_u32(&mut spi, 0x548, 1);
+        nrf_write_u32(&mut spi, 0x010, 1);
+        spi.tick_with_bus(&mut bus);
+
+        assert_eq!(*events.lock().unwrap(), ["select", "release"]);
     }
 
     /// RXD.MAXCNT < TXD.MAXCNT: RXD fills up, remaining MISO bytes are discarded.

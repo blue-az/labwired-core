@@ -1770,6 +1770,50 @@ impl CortexM {
                             self.set_register(rd, 0);
                         }
                         pc_increment = 4;
+                    } else if (h1 & 0xFFF0) == 0xFA90 && (h2 & 0xF0F0) == 0xF010 {
+                        // ARMv7E-M QADD16: independently signed-saturating add
+                        // the two halfword lanes (Cortex-M4 DSP extension).
+                        let rn = (h1 & 0xF) as u8;
+                        let rd = ((h2 >> 8) & 0xF) as u8;
+                        let rm = (h2 & 0xF) as u8;
+                        let a = self.get_register(rn);
+                        let b = self.get_register(rm);
+                        let mut saturated = false;
+                        let lane = |shift: u32, saturated: &mut bool| -> u32 {
+                            let lhs = ((a >> shift) as u16) as i16 as i32;
+                            let rhs = ((b >> shift) as u16) as i16 as i32;
+                            let sum = lhs + rhs;
+                            let clamped = sum.clamp(i16::MIN as i32, i16::MAX as i32);
+                            *saturated |= clamped != sum;
+                            (clamped as i16 as u16 as u32) << shift
+                        };
+                        let value = lane(0, &mut saturated) | lane(16, &mut saturated);
+                        self.set_register(rd, value);
+                        if saturated {
+                            self.xpsr |= 1 << 27;
+                        }
+                        pc_increment = 4;
+                    } else if (h1 & 0xFFF0) == 0xF380 && (h2 & 0x00C0) == 0 {
+                        // ARMv7-M USAT without an optional shift.
+                        let rn = (h1 & 0xF) as u8;
+                        let rd = ((h2 >> 8) & 0xF) as u8;
+                        let sat = (h2 & 0x1F) as u32;
+                        let source = self.get_register(rn) as i32;
+                        let max = if sat == 32 {
+                            u32::MAX
+                        } else {
+                            (1u32 << sat) - 1
+                        };
+                        let value = if source < 0 {
+                            0
+                        } else {
+                            (source as u32).min(max)
+                        };
+                        if source < 0 || source as u32 > max {
+                            self.xpsr |= 1 << 27;
+                        }
+                        self.set_register(rd, value);
+                        pc_increment = 4;
                     } else if (h1 & 0xFFF0) == 0xE850 {
                         // LDREX
                         let rn = (h1 & 0xF) as u8;

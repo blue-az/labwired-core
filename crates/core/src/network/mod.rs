@@ -5,7 +5,10 @@
 // See the LICENSE file in the project root for full license information.
 
 use crate::SimResult;
-use std::sync::mpsc::{channel, Receiver, Sender};
+use std::{
+    collections::VecDeque,
+    sync::mpsc::{channel, Receiver, Sender},
+};
 
 pub mod candump;
 pub mod egress;
@@ -71,6 +74,7 @@ struct CanBusEndpoint {
 
 pub struct CanBus {
     endpoints: Vec<CanBusEndpoint>,
+    trace: VecDeque<CanFrame>,
 }
 
 impl Default for CanBus {
@@ -83,6 +87,7 @@ impl CanBus {
     pub fn new() -> Self {
         Self {
             endpoints: Vec::new(),
+            trace: VecDeque::new(),
         }
     }
 
@@ -95,6 +100,11 @@ impl CanBus {
         });
         (outbound_tx, inbound_rx)
     }
+
+    /// Frames accepted by this shared medium, in deterministic delivery order.
+    pub fn trace_snapshot(&self) -> Vec<CanFrame> {
+        self.trace.iter().cloned().collect()
+    }
 }
 
 impl Interconnect for CanBus {
@@ -104,6 +114,10 @@ impl Interconnect for CanBus {
         // preserving CAN's shared-medium fan-out to every *other* endpoint.
         for source_idx in 0..self.endpoints.len() {
             while let Ok(frame) = self.endpoints[source_idx].outbound.try_recv() {
+                if self.trace.len() == 4096 {
+                    self.trace.pop_front();
+                }
+                self.trace.push_back(frame.clone());
                 for (target_idx, target) in self.endpoints.iter().enumerate() {
                     if target_idx != source_idx {
                         let _ = target.inbound.send(frame.clone());
@@ -112,6 +126,10 @@ impl Interconnect for CanBus {
             }
         }
         Ok(())
+    }
+
+    fn as_any_mut(&mut self) -> Option<&mut dyn std::any::Any> {
+        Some(self)
     }
 }
 
