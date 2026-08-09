@@ -12,7 +12,7 @@ use firmware_nrf52840_obd2_scanner::{
     mcp2515::{Error as CanError, Mcp2515},
     mode01_request, read_dtcs_request,
     ssd1306::{DisplayView, Ssd1306},
-    vin_request, CanFrame, IsoTpEvent, ScannerState, VinReassembler,
+    vin_request, AcquisitionFailure, CanFrame, IsoTpEvent, ScannerState, VinReassembler,
 };
 
 const ECU_WAIT: u32 = 80_000;
@@ -24,6 +24,8 @@ pub static mut SCANNER_RPM: u16 = 0;
 pub static mut SCANNER_SPEED_KPH: u8 = 0;
 #[no_mangle]
 pub static mut SCANNER_COOLANT_C: i16 = 0;
+#[no_mangle]
+pub static mut SCANNER_LIVE_VALID: u8 = 0;
 #[no_mangle]
 pub static mut SCANNER_DTC_COUNT: u8 = 0;
 #[no_mangle]
@@ -63,10 +65,10 @@ fn main() -> ! {
         state.set_error(flags::CAN_CONFIG_ERROR);
     }
 
-    // PID 00 is always queried first. Only supported live PIDs are subsequently polled.
-    let supported =
-        transact(&mut can, mode01_request(0)).and_then(|f| decode_supported_pids(&f).ok());
-    let mut setup_done = false;
+    // PID 00 is retried until discovery succeeds. Live/setup requests never precede it.
+    let mut supported = None;
+    let mut dtc_done = false;
+    let mut vin_done = false;
     let mut live_slot = 0u8;
     loop {
         state.increment_age();
@@ -74,19 +76,31 @@ fn main() -> ! {
             if CLEAR_DTC_REQUEST != 0 {
                 CLEAR_DTC_REQUEST = 0;
                 CLEAR_DTC_RESULT = 1;
-                CLEAR_DTC_RESULT = match transact(&mut can, clear_dtcs_request())
-                    .and_then(|f| decode_clear_dtcs(&f).ok())
-                {
-                    Some(()) => 2,
-                    None => 3,
+                CLEAR_DTC_RESULT = match transact(&mut can, clear_dtcs_request()) {
+                    Ok(frame) if decode_clear_dtcs(&frame).is_ok() => 2,
+                    Ok(_) => {
+                        state.apply_failure(AcquisitionFailure::Malformed);
+                        3
+                    }
+                    Err(failure) => {
+                        state.apply_failure(failure);
+                        3
+                    }
                 };
             }
         }
 
-        if !setup_done && supported.is_some() {
-            retrieve_dtcs(&mut can, &mut state);
-            retrieve_vin(&mut can, &mut state);
-            setup_done = true;
+        if supported.is_none() {
+            match transact(&mut can, mode01_request(0)) {
+                Ok(frame) => match decode_supported_pids(&frame) {
+                    Ok(map) => {
+                        supported = Some(map);
+                        state.set_required_live(required_live_mask(map));
+                    }
+                    Err(_) => state.apply_failure(AcquisitionFailure::Malformed),
+                },
+                Err(failure) => state.apply_failure(failure),
+            }
         }
 
         let pid = [0x0c, 0x0d, 0x05][live_slot as usize];
@@ -96,30 +110,51 @@ fn main() -> ! {
             .unwrap_or(false);
         if supported_pid {
             match transact(&mut can, mode01_request(pid)) {
-                Some(frame) => {
+                Ok(frame) => {
                     let valid = match pid {
-                        0x0c => decode_rpm(&frame).map(|v| state.rpm = v),
-                        0x0d => decode_speed(&frame).map(|v| state.speed_kph = v),
-                        _ => decode_coolant(&frame).map(|v| state.coolant_c = v),
+                        0x0c => decode_rpm(&frame).map(|v| state.record_rpm(v)),
+                        0x0d => decode_speed(&frame).map(|v| state.record_speed(v)),
+                        _ => decode_coolant(&frame).map(|v| state.record_coolant(v)),
                     };
-                    if valid.is_ok() {
-                        state.mark_fresh();
-                    } else {
-                        state.set_error(flags::MALFORMED);
+                    if valid.is_err() {
+                        state.apply_failure(AcquisitionFailure::Malformed);
                     }
                 }
-                None => state.mark_timeout(),
+                Err(failure) => state.apply_failure(failure),
             }
-        } else if supported.is_none() {
-            state.mark_timeout();
         }
 
-        // Poll CANINTF even if physical IRQ is unwired; surface hardware overflow.
-        if (can.irq_asserted() || can.interrupt_flags().unwrap_or(0) != 0)
-            && can.read(0x1d).unwrap_or(0) & 0xc0 != 0
-        {
-            state.set_error(flags::RX_OVERFLOW);
-            let _ = can.clear_overflow();
+        if state.has_all(flags::CONNECTED) {
+            if !dtc_done {
+                match retrieve_dtcs(&mut can, &mut state) {
+                    SetupResult::Done => dtc_done = true,
+                    SetupResult::PermanentFailure => dtc_done = true,
+                    SetupResult::Retry => {}
+                }
+            }
+            if state.has_all(flags::CONNECTED) && !vin_done {
+                match retrieve_vin(&mut can, &mut state) {
+                    SetupResult::Done => vin_done = true,
+                    SetupResult::PermanentFailure => vin_done = true,
+                    SetupResult::Retry => {}
+                }
+            }
+        }
+
+        // Always sample IRQ and read CANINTF; labs need deterministic polling.
+        let _irq_asserted = can.irq_asserted();
+        match can.interrupt_flags() {
+            Ok(_interrupts) => match can.read(0x1d) {
+                Ok(eflg) if eflg & 0xc0 != 0 => {
+                    state.apply_failure(AcquisitionFailure::Overflow);
+                    if can.clear_overflow().is_err() {
+                        state.apply_failure(AcquisitionFailure::Configuration);
+                    }
+                }
+                Ok(_) => {}
+                Err(error) => state.apply_failure(driver_failure(error)),
+            },
+            Err(error) => state.apply_failure(driver_failure(error)),
         }
         publish(&state);
         let payload = encode_manufacturer_payload(&state);
@@ -143,57 +178,118 @@ fn main() -> ! {
     }
 }
 
-fn transact(can: &mut Mcp2515, request: CanFrame) -> Option<CanFrame> {
-    if can.send(&request).is_err() {
-        return None;
-    }
+fn transact(can: &mut Mcp2515, request: CanFrame) -> Result<CanFrame, AcquisitionFailure> {
+    can.send(&request).map_err(driver_failure)?;
     for _ in 0..ECU_WAIT {
         match can.receive() {
-            Ok(frame) => return Some(frame),
+            Ok(frame) => return Ok(frame),
             Err(CanError::NoFrame) => spin_loop(),
-            Err(_) => return None,
+            Err(error) => return Err(driver_failure(error)),
         }
     }
-    None
+    Err(AcquisitionFailure::Timeout)
 }
 
-fn retrieve_dtcs(can: &mut Mcp2515, state: &mut ScannerState) {
-    if let Some(frame) = transact(can, read_dtcs_request()) {
-        match decode_dtcs(&frame) {
-            Ok(dtcs) => state.update_dtc_count(dtcs.count),
-            Err(_) => state.set_error(flags::MALFORMED),
+enum SetupResult {
+    Done,
+    Retry,
+    PermanentFailure,
+}
+
+fn retrieve_dtcs(can: &mut Mcp2515, state: &mut ScannerState) -> SetupResult {
+    match transact(can, read_dtcs_request()) {
+        Ok(frame) => match decode_dtcs(&frame) {
+            Ok(dtcs) => {
+                state.update_dtc_count(dtcs.count);
+                SetupResult::Done
+            }
+            Err(_) => {
+                state.apply_failure(AcquisitionFailure::Malformed);
+                SetupResult::PermanentFailure
+            }
+        },
+        Err(failure) => {
+            state.apply_failure(failure);
+            retry_kind(failure)
         }
     }
 }
 
-fn retrieve_vin(can: &mut Mcp2515, state: &mut ScannerState) {
-    if can.send(&vin_request()).is_err() {
-        return;
+fn retrieve_vin(can: &mut Mcp2515, state: &mut ScannerState) -> SetupResult {
+    if let Err(error) = can.send(&vin_request()) {
+        let failure = driver_failure(error);
+        state.apply_failure(failure);
+        return retry_kind(failure);
     }
     let mut reassembler = VinReassembler::new();
     for _ in 0..ECU_WAIT {
         match can.receive() {
             Ok(frame) => match reassembler.push(&frame) {
                 Ok(IsoTpEvent::FlowControl(fc)) => {
-                    if can.send(&fc).is_err() {
-                        return;
+                    if let Err(error) = can.send(&fc) {
+                        let failure = driver_failure(error);
+                        state.apply_failure(failure);
+                        return retry_kind(failure);
                     }
                 }
                 Ok(IsoTpEvent::Complete(vin)) => {
                     state.set_vin(vin);
-                    return;
+                    return SetupResult::Done;
                 }
                 Ok(IsoTpEvent::Pending) => {}
                 Err(_) => {
-                    state.set_error(flags::MALFORMED);
-                    return;
+                    state.apply_failure(AcquisitionFailure::Malformed);
+                    return SetupResult::PermanentFailure;
                 }
             },
             Err(CanError::NoFrame) => spin_loop(),
-            Err(_) => return,
+            Err(error) => {
+                let failure = driver_failure(error);
+                state.apply_failure(failure);
+                return retry_kind(failure);
+            }
         }
     }
-    let _ = reassembler.timeout();
+    match reassembler.timeout() {
+        Ok(()) => {
+            state.apply_failure(AcquisitionFailure::Timeout);
+            SetupResult::Retry
+        }
+        Err(_) => {
+            state.apply_failure(AcquisitionFailure::Malformed);
+            SetupResult::PermanentFailure
+        }
+    }
+}
+
+fn retry_kind(failure: AcquisitionFailure) -> SetupResult {
+    if failure == AcquisitionFailure::Timeout {
+        SetupResult::Retry
+    } else {
+        SetupResult::PermanentFailure
+    }
+}
+
+fn driver_failure(error: CanError) -> AcquisitionFailure {
+    match error {
+        CanError::Timeout | CanError::NoFrame => AcquisitionFailure::Timeout,
+        CanError::Overflow => AcquisitionFailure::Overflow,
+        CanError::Configuration => AcquisitionFailure::Configuration,
+    }
+}
+
+fn required_live_mask(map: u32) -> u8 {
+    let mut mask = 0;
+    if map & (1 << (32 - 0x0c)) != 0 {
+        mask |= firmware_nrf52840_obd2_scanner::live::RPM;
+    }
+    if map & (1 << (32 - 0x0d)) != 0 {
+        mask |= firmware_nrf52840_obd2_scanner::live::SPEED;
+    }
+    if map & (1 << (32 - 0x05)) != 0 {
+        mask |= firmware_nrf52840_obd2_scanner::live::COOLANT;
+    }
+    mask
 }
 
 fn publish(state: &ScannerState) {
@@ -201,6 +297,7 @@ fn publish(state: &ScannerState) {
         SCANNER_RPM = state.rpm;
         SCANNER_SPEED_KPH = state.speed_kph;
         SCANNER_COOLANT_C = state.coolant_c;
+        SCANNER_LIVE_VALID = state.live_valid;
         SCANNER_DTC_COUNT = state.dtc_count;
         SCANNER_FLAGS = state.status_flags;
         SCANNER_GENERATION = state.generation;

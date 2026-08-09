@@ -13,21 +13,76 @@ pub use obd2::{
     decode_supported_pids, mode01_request, read_dtcs_request, vin_request, CanFrame, Dtc, DtcList,
     DtcSystem, Error, FLOW_CONTROL_ID, REQUEST_ID, RESPONSE_ID,
 };
-pub use state::{flags, ScannerState};
+pub use state::{flags, live, AcquisitionFailure, ScannerState};
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ble::encode_manufacturer_payload, ssd1306::DisplayView};
+    use crate::{
+        ble::encode_manufacturer_payload,
+        mcp2515::{MCP_500K_16MHZ_CNF, SPIM_EVENTS_END, SPIM_EVENTS_STOPPED},
+        ssd1306::{DisplayView, TWIM_EVENTS_ERROR, TWIM_EVENTS_STOPPED},
+        state::{live, AcquisitionFailure},
+    };
+
+    #[test]
+    fn reviewed_mmio_offsets_and_can_timing_are_exact() {
+        assert_eq!(SPIM_EVENTS_STOPPED, 0x104);
+        assert_eq!(SPIM_EVENTS_END, 0x118);
+        assert_eq!(TWIM_EVENTS_STOPPED, 0x104);
+        assert_eq!(TWIM_EVENTS_ERROR, 0x124);
+        assert_eq!(MCP_500K_16MHZ_CNF, [0x00, 0xbc, 0x01]);
+    }
+
+    #[test]
+    fn partial_live_samples_remain_initializing_and_invalid_fields_are_hidden() {
+        let mut state = ScannerState::new();
+        state.mark_fresh();
+        assert!(!state.has_any(flags::CONNECTED));
+        state.record_rpm(3000);
+        assert_eq!(state.live_valid, live::RPM);
+        assert!(!state.has_any(flags::CONNECTED));
+        assert!(state.has_any(flags::STALE));
+        let view = DisplayView::from_state(&state);
+        assert_eq!(view.lines[0].as_bytes(), b"RPM 3000");
+        assert_eq!(view.lines[1].as_bytes(), b"SPD -- km/h");
+        assert_eq!(view.lines[2].as_bytes(), b"TEMP -- C");
+        assert_eq!(view.status.as_bytes(), b"INIT STALE");
+        assert_eq!(
+            encode_manufacturer_payload(&state)[1] & flags::CONNECTED as u8,
+            0
+        );
+
+        state.record_speed(88);
+        assert!(!state.has_any(flags::CONNECTED));
+        state.record_coolant(90);
+        assert!(state.has_all(flags::CONNECTED));
+        assert!(!state.has_any(flags::STALE));
+        assert_eq!(state.live_valid, live::ALL);
+    }
+
+    #[test]
+    fn acquisition_failures_map_to_persistent_state_without_erasing_readings() {
+        let mut state = ScannerState::new();
+        state.record_rpm(3000);
+        state.apply_failure(AcquisitionFailure::Timeout);
+        assert_eq!(state.rpm, 3000);
+        assert!(state.has_all(flags::TIMEOUT | flags::STALE));
+        state.apply_failure(AcquisitionFailure::Malformed);
+        assert!(state.has_all(flags::MALFORMED | flags::STALE));
+        state.apply_failure(AcquisitionFailure::Overflow);
+        assert!(state.has_all(flags::RX_OVERFLOW | flags::STALE));
+        state.apply_failure(AcquisitionFailure::Configuration);
+        assert!(state.has_all(flags::CAN_CONFIG_ERROR | flags::STALE));
+    }
 
     #[test]
     fn ble_payload_has_versioned_exact_layout() {
         let mut state = ScannerState::new();
-        state.rpm = 3000;
-        state.speed_kph = 88;
-        state.coolant_c = 90;
+        state.record_rpm(3000);
+        state.record_speed(88);
+        state.record_coolant(90);
         state.update_dtc_count(2);
-        state.mark_fresh();
         state.generation = 0x1234;
         assert_eq!(
             encode_manufacturer_payload(&state),
@@ -62,9 +117,9 @@ mod tests {
     #[test]
     fn display_view_formats_sample_without_allocation() {
         let mut state = ScannerState::new();
-        state.rpm = 3000;
-        state.speed_kph = 88;
-        state.coolant_c = 90;
+        state.record_rpm(3000);
+        state.record_speed(88);
+        state.record_coolant(90);
         state.update_dtc_count(2);
         let view = DisplayView::from_state(&state);
         assert_eq!(view.lines[0].as_bytes(), b"RPM 3000");
@@ -76,7 +131,11 @@ mod tests {
     #[test]
     fn display_view_reports_stale_timeout_and_can_error() {
         let mut state = ScannerState::new();
-        state.status_flags |= flags::TIMEOUT | flags::CAN_CONFIG_ERROR;
+        state.record_rpm(0);
+        state.record_speed(0);
+        state.record_coolant(0);
+        state.status_flags |= flags::STALE | flags::TIMEOUT | flags::CAN_CONFIG_ERROR;
+        state.status_flags &= !flags::CONNECTED;
         let view = DisplayView::from_state(&state);
         assert_eq!(view.status.as_bytes(), b"STALE TIMEOUT CAN ERR");
     }
@@ -84,9 +143,9 @@ mod tests {
     #[test]
     fn display_view_handles_numeric_extremes_without_overflow() {
         let mut state = ScannerState::new();
-        state.rpm = u16::MAX;
-        state.speed_kph = u8::MAX;
-        state.coolant_c = i16::MIN;
+        state.record_rpm(u16::MAX);
+        state.record_speed(u8::MAX);
+        state.record_coolant(i16::MIN);
         state.dtc_count = u8::MAX;
         let view = DisplayView::from_state(&state);
         assert_eq!(view.lines[0].as_bytes(), b"RPM 65535");
@@ -402,7 +461,9 @@ mod tests {
         assert!(state.has_all(flags::TIMEOUT | flags::STALE));
         assert!(state.has_any(flags::TIMEOUT | flags::CONNECTED));
         assert!(!state.has_all(flags::TIMEOUT | flags::CONNECTED));
-        state.mark_fresh();
+        state.record_rpm(3000);
+        state.record_speed(88);
+        state.record_coolant(90);
         assert!(state.has_all(flags::CONNECTED));
         assert!(!state.has_any(flags::TIMEOUT | flags::STALE));
         assert_eq!(state.generation, 1);

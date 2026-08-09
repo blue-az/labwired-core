@@ -11,6 +11,9 @@ const RESET: u8 = 0xc0;
 const READ: u8 = 0x03;
 const WRITE: u8 = 0x02;
 const BIT_MODIFY: u8 = 0x05;
+pub const SPIM_EVENTS_STOPPED: usize = 0x104;
+pub const SPIM_EVENTS_END: usize = 0x118;
+pub const MCP_500K_16MHZ_CNF: [u8; 3] = [0x00, 0xbc, 0x01];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Error {
@@ -20,7 +23,11 @@ pub enum Error {
     NoFrame,
 }
 
-pub struct Mcp2515;
+pub struct Mcp2515 {
+    tx: [u8; 14],
+    rx: [u8; 14],
+    stuck: bool,
+}
 
 impl Default for Mcp2515 {
     fn default() -> Self {
@@ -29,7 +36,11 @@ impl Default for Mcp2515 {
 }
 impl Mcp2515 {
     pub const fn new() -> Self {
-        Self
+        Self {
+            tx: [0; 14],
+            rx: [0; 14],
+            stuck: false,
+        }
     }
 
     pub fn init(&mut self) -> Result<(), Error> {
@@ -46,11 +57,11 @@ impl Mcp2515 {
             wr(SPIM, 0x500, 7);
         }
         self.command(&[RESET])?;
-        // Configuration mode, 500 kbps at 16 MHz: BRP=0, 8 TQ/bit, SJW=1.
+        // Configuration mode, 500 kbps at 16 MHz: 16 TQ/bit.
         self.write(0x0f, 0x80)?;
-        self.write(0x2a, 0x00)?;
-        self.write(0x29, 0x90)?;
-        self.write(0x28, 0x02)?;
+        self.write(0x2a, MCP_500K_16MHZ_CNF[0])?;
+        self.write(0x29, MCP_500K_16MHZ_CNF[1])?;
+        self.write(0x28, MCP_500K_16MHZ_CNF[2])?;
         // Exact 11-bit mask with filters for the functional ECU response ID.
         self.write_standard_id(0x20, 0x7ff)?; // RXM0
         self.write_standard_id(0x24, 0x7ff)?; // RXM1
@@ -98,24 +109,21 @@ impl Mcp2515 {
         } else {
             return Err(Error::NoFrame);
         };
-        let tx = [opcode, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-        let mut rx = [0u8; 14];
-        self.transfer(&tx, &mut rx)?;
-        self.bit_modify(0x2c, clear, 0)?;
-        let id = ((rx[1] as u16) << 3) | ((rx[2] as u16) >> 5);
-        let len = rx[5] & 0x0f;
+        self.transfer(&[opcode, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])?;
+        let id = ((self.rx[1] as u16) << 3) | ((self.rx[2] as u16) >> 5);
+        let len = self.rx[5] & 0x0f;
         if len > 8 {
             return Err(Error::Overflow);
         }
         let mut data = [0u8; 8];
-        data.copy_from_slice(&rx[6..14]);
+        data.copy_from_slice(&self.rx[6..14]);
+        self.bit_modify(0x2c, clear, 0)?;
         Ok(CanFrame { id, len, data })
     }
 
     pub fn read(&mut self, address: u8) -> Result<u8, Error> {
-        let mut rx = [0; 3];
-        self.transfer(&[READ, address, 0], &mut rx)?;
-        Ok(rx[2])
+        self.transfer(&[READ, address, 0])?;
+        Ok(self.rx[2])
     }
     pub fn write(&mut self, address: u8, value: u8) -> Result<(), Error> {
         self.command(&[WRITE, address, value])
@@ -127,25 +135,39 @@ impl Mcp2515 {
         self.command(&[WRITE, address, (id >> 3) as u8, (id << 5) as u8, 0, 0])
     }
     fn command(&mut self, tx: &[u8]) -> Result<(), Error> {
-        let mut rx = [0u8; 14];
-        self.transfer(tx, &mut rx[..tx.len()])
+        self.transfer(tx)
     }
-    fn transfer(&mut self, tx: &[u8], rx: &mut [u8]) -> Result<(), Error> {
+    fn transfer(&mut self, tx: &[u8]) -> Result<(), Error> {
+        if self.stuck || tx.len() > self.tx.len() {
+            return Err(Error::Configuration);
+        }
+        self.tx.fill(0);
+        self.rx.fill(0);
+        self.tx[..tx.len()].copy_from_slice(tx);
         unsafe {
             wr(GPIO, 0x50c, CS);
-            wr(SPIM, 0x104, 0);
-            wr(SPIM, 0x544, tx.as_ptr() as u32);
+            wr(SPIM, SPIM_EVENTS_END, 0);
+            wr(SPIM, SPIM_EVENTS_STOPPED, 0);
+            wr(SPIM, 0x544, self.tx.as_ptr() as u32);
             wr(SPIM, 0x548, tx.len() as u32);
-            wr(SPIM, 0x534, rx.as_mut_ptr() as u32);
-            wr(SPIM, 0x538, rx.len() as u32);
+            wr(SPIM, 0x534, self.rx.as_mut_ptr() as u32);
+            wr(SPIM, 0x538, tx.len() as u32);
             wr(SPIM, 0x010, 1);
             for _ in 0..WAIT_LIMIT {
-                if rd(SPIM, 0x104) != 0 {
+                if rd(SPIM, SPIM_EVENTS_END) != 0 {
                     wr(GPIO, 0x508, CS);
                     return Ok(());
                 }
             }
             wr(SPIM, 0x014, 1);
+            for _ in 0..WAIT_LIMIT {
+                if rd(SPIM, SPIM_EVENTS_STOPPED) != 0 {
+                    wr(GPIO, 0x508, CS);
+                    return Err(Error::Timeout);
+                }
+            }
+            // Buffers remain driver-owned; poison future use if STOP never lands.
+            self.stuck = true;
             wr(GPIO, 0x508, CS);
             Err(Error::Timeout)
         }

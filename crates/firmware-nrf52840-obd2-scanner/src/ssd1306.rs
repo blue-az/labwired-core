@@ -1,9 +1,11 @@
 //! Allocation-free status view and nRF52840 TWIM0 SSD1306 driver.
 
-use crate::{flags, ScannerState};
+use crate::{flags, live, ScannerState};
 use core::ptr::{read_volatile, write_volatile};
 
 pub const LINE_CAPACITY: usize = 21;
+pub const TWIM_EVENTS_STOPPED: usize = 0x104;
+pub const TWIM_EVENTS_ERROR: usize = 0x124;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct AsciiLine {
@@ -64,16 +66,31 @@ impl DisplayView {
     pub fn from_state(state: &ScannerState) -> Self {
         let mut lines = [AsciiLine::new(); 4];
         lines[0].text(b"RPM ");
-        lines[0].number(state.rpm as i32);
+        if state.live_valid & live::RPM != 0 {
+            lines[0].number(state.rpm as i32);
+        } else {
+            lines[0].text(b"--");
+        }
         lines[1].text(b"SPD ");
-        lines[1].number(state.speed_kph as i32);
+        if state.live_valid & live::SPEED != 0 {
+            lines[1].number(state.speed_kph as i32);
+        } else {
+            lines[1].text(b"--");
+        }
         lines[1].text(b" km/h");
         lines[2].text(b"TEMP ");
-        lines[2].number(state.coolant_c as i32);
+        if state.live_valid & live::COOLANT != 0 {
+            lines[2].number(state.coolant_c as i32);
+        } else {
+            lines[2].text(b"--");
+        }
         lines[2].text(b" C");
         lines[3].text(b"DTC ");
         lines[3].number(state.dtc_count as i32);
         let mut status = AsciiLine::new();
+        if state.live_valid & state.required_live != state.required_live {
+            status.text(b"INIT");
+        }
         for (bit, label) in [
             (flags::STALE, b"STALE" as &[u8]),
             (flags::TIMEOUT, b"TIMEOUT"),
@@ -97,6 +114,7 @@ const ADDRESS: u32 = 0x3c;
 pub struct Ssd1306 {
     framebuffer: [u8; 1024],
     tx: [u8; 17],
+    stuck: bool,
 }
 
 impl Default for Ssd1306 {
@@ -109,6 +127,7 @@ impl Ssd1306 {
         Self {
             framebuffer: [0; 1024],
             tx: [0; 17],
+            stuck: false,
         }
     }
     pub fn init(&mut self) -> bool {
@@ -138,10 +157,10 @@ impl Ssd1306 {
         if !self.command(&[0x21, 0, 127, 0x22, 0, 7]) {
             return false;
         }
-        for chunk in self.framebuffer.chunks(16) {
+        for offset in (0..self.framebuffer.len()).step_by(16) {
             self.tx[0] = 0x40;
-            self.tx[1..17].copy_from_slice(chunk);
-            if !twim_write(&self.tx) {
+            self.tx[1..17].copy_from_slice(&self.framebuffer[offset..offset + 16]);
+            if !self.write_tx(17) {
                 return false;
             }
         }
@@ -150,7 +169,7 @@ impl Ssd1306 {
     fn command(&mut self, bytes: &[u8]) -> bool {
         self.tx[0] = 0;
         self.tx[1..1 + bytes.len()].copy_from_slice(bytes);
-        twim_write(&self.tx[..1 + bytes.len()])
+        self.write_tx(1 + bytes.len())
     }
     fn draw_line(&mut self, page: usize, bytes: &[u8]) {
         for (column, &ch) in bytes.iter().take(21).enumerate() {
@@ -158,6 +177,40 @@ impl Ssd1306 {
             let start = page * 128 + column * 6;
             self.framebuffer[start..start + 5].copy_from_slice(&glyph);
         }
+    }
+    fn write_tx(&mut self, len: usize) -> bool {
+        if self.stuck {
+            return false;
+        }
+        unsafe {
+            wr(TWIM, TWIM_EVENTS_STOPPED, 0);
+            wr(TWIM, TWIM_EVENTS_ERROR, 0);
+            wr(TWIM, 0x14c, 0);
+            wr(TWIM, 0x544, self.tx.as_ptr() as u32);
+            wr(TWIM, 0x548, len as u32);
+            wr(TWIM, 0x008, 1);
+            for _ in 0..WAIT_LIMIT {
+                if rd(TWIM, TWIM_EVENTS_ERROR) != 0 {
+                    return self.stop_after_failure();
+                }
+                if rd(TWIM, TWIM_EVENTS_STOPPED) != 0 {
+                    return true;
+                }
+            }
+            self.stop_after_failure()
+        }
+    }
+    unsafe fn stop_after_failure(&mut self) -> bool {
+        wr(TWIM, TWIM_EVENTS_STOPPED, 0);
+        wr(TWIM, 0x014, 1);
+        for _ in 0..WAIT_LIMIT {
+            if rd(TWIM, TWIM_EVENTS_STOPPED) != 0 {
+                return false;
+            }
+        }
+        // DMA source is driver-owned and remains allocated; poison future use.
+        self.stuck = true;
+        false
     }
 }
 
@@ -202,27 +255,6 @@ const DIGITS: [[u8; 5]; 10] = [
     [6, 73, 73, 41, 30],
 ];
 
-fn twim_write(bytes: &[u8]) -> bool {
-    unsafe {
-        wr(TWIM, 0x104, 0);
-        wr(TWIM, 0x124, 0);
-        wr(TWIM, 0x14c, 0);
-        wr(TWIM, 0x544, bytes.as_ptr() as u32);
-        wr(TWIM, 0x548, bytes.len() as u32);
-        wr(TWIM, 0x008, 1);
-        for _ in 0..WAIT_LIMIT {
-            if rd(TWIM, 0x124) != 0 {
-                wr(TWIM, 0x014, 1);
-                return false;
-            }
-            if rd(TWIM, 0x104) != 0 {
-                return true;
-            }
-        }
-        wr(TWIM, 0x014, 1);
-        false
-    }
-}
 unsafe fn wr(base: usize, offset: usize, value: u32) {
     write_volatile((base + offset) as *mut u32, value)
 }

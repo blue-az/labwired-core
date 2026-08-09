@@ -16,6 +16,22 @@ pub mod flags {
     pub const CAN_CONFIG_ERROR: u16 = 1 << 6;
 }
 
+/// Validity bits for independently acquired live metrics.
+pub mod live {
+    pub const RPM: u8 = 1 << 0;
+    pub const SPEED: u8 = 1 << 1;
+    pub const COOLANT: u8 = 1 << 2;
+    pub const ALL: u8 = RPM | SPEED | COOLANT;
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AcquisitionFailure {
+    Timeout,
+    Malformed,
+    Overflow,
+    Configuration,
+}
+
 /// Fixed-size, copyable scanner snapshot shared with later firmware tasks.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ScannerState {
@@ -25,6 +41,10 @@ pub struct ScannerState {
     pub speed_kph: u8,
     /// Last decoded coolant temperature.
     pub coolant_c: i16,
+    /// Independently acquired fields which contain real ECU samples.
+    pub live_valid: u8,
+    /// Supported live fields required before the snapshot is connected/fresh.
+    pub required_live: u8,
     /// Last decoded non-padding DTC count.
     pub dtc_count: u8,
     /// Bitmask composed from [`flags`].
@@ -52,6 +72,8 @@ impl ScannerState {
             rpm: 0,
             speed_kph: 0,
             coolant_c: 0,
+            live_valid: 0,
+            required_live: live::ALL,
             dtc_count: 0,
             status_flags: flags::STALE,
             generation: 0,
@@ -73,10 +95,42 @@ impl ScannerState {
 
     /// Marks a fresh connected sample, clearing `STALE`/`TIMEOUT` and resetting age.
     pub fn mark_fresh(&mut self) {
+        if self.required_live == 0 || self.live_valid & self.required_live != self.required_live {
+            return;
+        }
         self.status_flags |= flags::CONNECTED;
         self.status_flags &= !(flags::STALE | flags::TIMEOUT);
         self.sample_age = 0;
         self.generation = self.generation.wrapping_add(1);
+    }
+
+    pub fn set_required_live(&mut self, mask: u8) {
+        self.required_live = mask & live::ALL;
+        self.refresh_if_complete();
+    }
+
+    pub fn record_rpm(&mut self, value: u16) {
+        self.rpm = value;
+        self.live_valid |= live::RPM;
+        self.refresh_if_complete();
+    }
+
+    pub fn record_speed(&mut self, value: u8) {
+        self.speed_kph = value;
+        self.live_valid |= live::SPEED;
+        self.refresh_if_complete();
+    }
+
+    pub fn record_coolant(&mut self, value: i16) {
+        self.coolant_c = value;
+        self.live_valid |= live::COOLANT;
+        self.refresh_if_complete();
+    }
+
+    fn refresh_if_complete(&mut self) {
+        if self.required_live != 0 && self.live_valid & self.required_live == self.required_live {
+            self.mark_fresh();
+        }
     }
 
     /// Marks timeout/stale and disconnected while retaining readings, DTCs, and VIN.
@@ -116,5 +170,16 @@ impl ScannerState {
     pub fn set_error(&mut self, error_flag: u16) {
         self.status_flags |=
             error_flag & (flags::MALFORMED | flags::RX_OVERFLOW | flags::CAN_CONFIG_ERROR);
+    }
+
+    pub fn apply_failure(&mut self, failure: AcquisitionFailure) {
+        self.status_flags |= flags::STALE;
+        self.status_flags &= !flags::CONNECTED;
+        match failure {
+            AcquisitionFailure::Timeout => self.status_flags |= flags::TIMEOUT,
+            AcquisitionFailure::Malformed => self.status_flags |= flags::MALFORMED,
+            AcquisitionFailure::Overflow => self.status_flags |= flags::RX_OVERFLOW,
+            AcquisitionFailure::Configuration => self.status_flags |= flags::CAN_CONFIG_ERROR,
+        }
     }
 }
