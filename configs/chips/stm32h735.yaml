@@ -23,6 +23,9 @@
 #   - spi     profile stm32h5  ("SPI v2" CFG1/CFG2 — H7/H5 shared)
 #   - i2c     profile h5       ("I2C v2" TIMINGR/ISR — F7/H7/L4/H5 shared)
 #   - timer   generic          (TIMx CR1/PSC/ARR/CNT — architecture-stable)
+#   - adc     profile h7   (RM0468 §26.4 — REAL H7 block as of 2026-08-09, not
+#                            the L4 alias: PCSEL, LTR/HTR pairs, CALFACT2,
+#                            3-bit sparse RES, 16-bit DR, DEEPPWD bring-up)
 #   - fdcan   generic          (Bosch M_CAN — the licensed CAN FD core ST wraps
 #                               as "FDCAN"; same register map across vendors,
 #                               which is why ENDN reads Bosch's 0x87654321
@@ -44,14 +47,14 @@
 # Known omissions (H7 blocks whose IP diverges from the reused models; each
 # reads as an unmapped hole until modelled — documented, not hidden):
 #   - DMA: H7 uses DMA1/2 + BDMA + DMAMUX, NOT the H5 GPDMA1 — different model.
-#   - ADC: DELIBERATELY still absent. `adc` maps "h7" onto the Stm32L4 register
-#     layout, but the H7 ADC is 16-bit with PCSEL/oversampling and a different
-#     CFGR — wiring adc1/adc2 to the L4 layout would make the pin table's
-#     `adc1` claim TRUE while the model answered with the wrong register map,
-#     which is worse than the honest hole. Needs a real H7 ADC layout first.
-#     The LQFP-100 pin table advertises adc1 on PA0..PA7/PB0/PB1/PC0..PC5; that
-#     is the one remaining pin-table claim this chip does not honour.
 #   - RTC / OCTOSPI / Ethernet: not yet wired.
+#   - ADC3 (the 12-bit converter) is not declared; only the two 16-bit ADCs are.
+#     Note the two have DIFFERENT conversion timing per DS13312: 16-bit
+#     tCONV = tS + 0.5 + N/2, 12-bit tCONV = tS + 0.5 + N (Tables 84 / 87).
+#   - ADC12 common block (ADC12_CCR @ 0x4002_2300) is outside both instance
+#     windows and unmodelled, so dual/interleaved modes are not available.
+#   - ADC oversampling (CFGR2 OVSR/OVSS), injected conversions (JSQR/JDRn) and
+#     the analog watchdogs latch their registers but do not act.
 #   - FLASH bank-2 / program-error semantics use the H5 layout (only ACR latency
 #     is exercised); not H7-silicon-faithful.
 #
@@ -393,6 +396,36 @@ peripherals:
     config:
       debug_schema: "../peripherals/stm32h735/fdcan2.yaml"
     clock: { reg: "apb1henr", bit: 8 }
+  # ADC1/ADC2 — the 16-bit converters (DS13312: "2×16-bit ADC, up to 3.6 MSPS
+  # in 16-bit: up to 22 channels"). Added 2026-08-09 with a REAL H7 layout
+  # (peripherals/adc.rs `Stm32H7`), not the L4 alias `profile: "h7"` used to
+  # resolve to — that alias answered PCSEL/LTR/HTR/CALFACT2 as unmapped zeros
+  # and decoded CFGR.RES with the wrong field width AND the wrong encoding.
+  #
+  # ⚠ SIZE IS 256B, NOT THE USUAL 1KB. ADC2 sits 0x100 above ADC1, so a 1 KB
+  # window on ADC1 would cover ADC2's entire register page and shadow it. Each
+  # instance really is 0x100 wide on this part; the ADC12 common block
+  # (ADC12_CCR) lives at 0x4002_2300, outside both, and is NOT modelled — the
+  # `common_ccr` slot in the model is unreachable here by construction.
+  - id: "adc1"
+    type: "adc"
+    base_address: 0x40022000
+    size: "256B"
+    irq: 18  # ADC1_2 — shared by both instances
+    config:
+      debug_schema: "../peripherals/stm32h735/adc1.yaml"
+      profile: "h7"
+    # RCC_AHB1ENR.ADC12EN (bit 5) gates BOTH converters.
+    clock: { reg: "ahb1enr", bit: 5 }
+  - id: "adc2"
+    type: "adc"
+    base_address: 0x40022100
+    size: "256B"
+    irq: 18
+    config:
+      debug_schema: "../peripherals/stm32h735/adc2.yaml"
+      profile: "h7"
+    clock: { reg: "ahb1enr", bit: 5 }
   # SYSCFG (D2, APB4) — system config (EXTI source select, boost/compensation
   # cell the H7 HAL touches during rcc.freeze). Modeled as a stub (read/store).
   - id: "syscfg"

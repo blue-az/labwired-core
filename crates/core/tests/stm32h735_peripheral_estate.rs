@@ -53,6 +53,7 @@ use std::path::PathBuf;
 /// RCC @ 0x5802_4400 (RM0468 §8.7). The H7 enable block sits at 0xD4..0xF4 --
 /// nowhere near the F4/L4 0x30..0x44 the other STM32 models use.
 const RCC: u64 = 0x5802_4400;
+const RCC_AHB1ENR: u64 = RCC + 0xD8;
 const RCC_APB1LENR: u64 = RCC + 0xE8;
 const RCC_APB1HENR: u64 = RCC + 0xEC;
 const RCC_APB2ENR: u64 = RCC + 0xF0;
@@ -112,6 +113,13 @@ const NEW_INSTANCES: &[Instance] = &[
     // FDCAN -- both instances behind the SINGLE shared APB1HENR.FDCANEN bit.
     Instance { id: "fdcan1", base: 0x4000_A000, enr: RCC_APB1HENR, bit: 8, probe: (FDCAN_ENDN, 0x8765_4321), probe_name: "ENDN" },
     Instance { id: "fdcan2", base: 0x4000_A400, enr: RCC_APB1HENR, bit: 8, probe: (FDCAN_ENDN, 0x8765_4321), probe_name: "ENDN" },
+    // ADC1/ADC2 -- probed at HTR1, the analog-watchdog high threshold, which
+    // resets to the 26-bit all-ones 0x03FF_FFFF. Deliberately chosen: an L4
+    // layout answering at 0x24 returns TR2, which resets to 0, so this single
+    // value distinguishes a real H7 block from the alias that used to stand in
+    // for it. Both instances share RCC_AHB1ENR.ADC12EN.
+    Instance { id: "adc1",   base: 0x4002_2000, enr: RCC_AHB1ENR,  bit: 5,  probe: (0x24, 0x03FF_FFFF), probe_name: "HTR1" },
+    Instance { id: "adc2",   base: 0x4002_2100, enr: RCC_AHB1ENR,  bit: 5,  probe: (0x24, 0x03FF_FFFF), probe_name: "HTR1" },
 ];
 
 fn enable(m: &mut Machine<impl Cpu>, enr: u64, bit: u32) {

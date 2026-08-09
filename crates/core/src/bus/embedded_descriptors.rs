@@ -1458,6 +1458,12 @@ pub fn lookup(descriptor_path: &str) -> Option<&'static str> {
         "stm32h563/wwdg.yaml" => Some(include_str!(
             "../../../../configs/peripherals/stm32h563/wwdg.yaml"
         )),
+        "stm32h735/adc1.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/stm32h735/adc1.yaml"
+        )),
+        "stm32h735/adc2.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/stm32h735/adc2.yaml"
+        )),
         "stm32h735/crc.yaml" => Some(include_str!(
             "../../../../configs/peripherals/stm32h735/crc.yaml"
         )),
