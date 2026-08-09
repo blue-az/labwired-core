@@ -502,6 +502,222 @@ impl SystemBus {
         }
     }
 
+    /// Bind the ESP32-C3 GP-SPI2 (FSPI) controller's SCK/MOSI/CS wire to the
+    /// pads its output matrix can route them to, so a probe on GPIO6 shows the
+    /// shifted bytes rather than the GPIO output latch. No-op unless both C3
+    /// models are on the bus.
+    ///
+    /// Unlike the RP2040 there is no pad table to transcribe: the ESP32 GPIO
+    /// matrix can route ANY peripheral signal to ANY pad, so every pad is bound
+    /// to all three signals and `FUNCn_OUT_SEL_CFG` decides which one is live.
+    /// The signal indices are C3-specific — see `SIG_FSPICLK` and friends in
+    /// `peripherals::esp32c3::gpio`, cited to esp-idf `gpio_sig_map.h`.
+    ///
+    /// MISO is deliberately unbound; see [`crate::peripherals::esp_gpspi_wire`].
+    pub(crate) fn wire_esp32c3_spi_pads(&mut self) {
+        use crate::peripherals::esp32c3::gpio::Esp32c3Gpio;
+        use crate::peripherals::esp32c3::spi::Esp32c3Spi;
+
+        let spi_idx = self.peripherals.iter().position(|p| {
+            p.dev
+                .as_any()
+                .map(|a| a.is::<Esp32c3Spi>())
+                .unwrap_or(false)
+        });
+        let gpio_idx = self.peripherals.iter().position(|p| {
+            p.dev
+                .as_any()
+                .map(|a| a.is::<Esp32c3Gpio>())
+                .unwrap_or(false)
+        });
+        // ⚠️ Resolve BOTH before touching either: `pad_lines_arc` CREATES the
+        // wire cell, and a controller that owns a cell no route reaches still
+        // buffers every launched transaction, arms a wakeup per burst, and
+        // narrates into a wire nothing reads.
+        let (Some(spi_idx), Some(gpio_idx)) = (spi_idx, gpio_idx) else {
+            return;
+        };
+        let Some(lines) = self.peripherals[spi_idx]
+            .dev
+            .as_any_mut()
+            .and_then(|a| a.downcast_mut::<Esp32c3Spi>())
+            .map(Esp32c3Spi::pad_lines_arc)
+        else {
+            return;
+        };
+        if let Some(gpio) = self.peripherals[gpio_idx]
+            .dev
+            .as_any_mut()
+            .and_then(|a| a.downcast_mut::<Esp32c3Gpio>())
+        {
+            gpio.bind_spi_lines(&lines);
+        }
+    }
+
+    /// Bind each ESP32-C3 UART's TX wire to the pads its output matrix can route
+    /// it to, so serial output is a waveform on a remapped pad rather than the
+    /// idle GPIO latch. No-op unless C3 GPIO and at least one C3 UART are on the
+    /// bus.
+    ///
+    /// ⚠️ The stock `Serial` console is NOT visible through this, and that is
+    /// correct: `U0TXD`'s default pad (GPIO21) is driven through IO_MUX
+    /// function 0, bypassing the matrix entirely, so `FUNCn_OUT_SEL` never
+    /// names it and the pad genuinely is showing its GPIO state. The binding
+    /// goes live the moment firmware remaps TX to a non-IO_MUX pin — which is
+    /// what `uart_set_pin` does through `gpio_matrix_out` — and UART1 has no
+    /// IO_MUX route on this part at all, so it is matrix-only.
+    ///
+    /// TX ONLY; see `Esp32c3Gpio::bind_uart_tx_lines`.
+    pub(crate) fn wire_esp32c3_uart_pads(&mut self) {
+        use crate::peripherals::esp32c3::gpio::Esp32c3Gpio;
+        use crate::peripherals::esp_uart::EspUart;
+
+        let Some(gpio_idx) = self.peripherals.iter().position(|p| {
+            p.dev
+                .as_any()
+                .map(|a| a.is::<Esp32c3Gpio>())
+                .unwrap_or(false)
+        }) else {
+            return;
+        };
+        for (instance, name) in ["uart0", "uart1"].iter().enumerate() {
+            let Some(idx) = self.find_peripheral_index_by_name(name) else {
+                continue;
+            };
+            let Some(lines) = self.peripherals[idx]
+                .dev
+                .as_any_mut()
+                .and_then(|a| a.downcast_mut::<EspUart>())
+                .map(EspUart::pad_lines_arc)
+            else {
+                continue;
+            };
+            if let Some(gpio) = self.peripherals[gpio_idx]
+                .dev
+                .as_any_mut()
+                .and_then(|a| a.downcast_mut::<Esp32c3Gpio>())
+            {
+                gpio.bind_uart_tx_lines(instance, &lines);
+            }
+        }
+    }
+
+    /// The ESP32-S3 counterpart of [`Self::wire_esp32c3_spi_pads`]: bind SPI2
+    /// (and SPI3, when the bus carries it) to the S3 output matrix.
+    ///
+    /// ⚠️ The signal indices are NOT the C3's. `FSPICLK`/`FSPID`/`FSPICS0` are
+    /// 101/103/110 here against the C3's 63/65/68, and 63 on the S3 is not a SPI
+    /// signal at all — a borrowed constant would decode routed pads as plain and
+    /// plain pads as routed, silently, in both directions.
+    ///
+    /// Only SPI2 is bound. Both S3 GP-SPI instances are the same model type, so
+    /// the first one found is taken and SPI3 keeps the latch fallback; binding
+    /// both would need a per-instance signal set (`SPI3_CLK_OUT_IDX` and
+    /// friends) that no lab drives today.
+    pub(crate) fn wire_esp32s3_spi_pads(&mut self) {
+        use crate::peripherals::esp32s3::gpio::Esp32s3Gpio;
+        use crate::peripherals::esp32s3::gpspi::Esp32s3Spi;
+
+        let gpio_idx = self.peripherals.iter().position(|p| {
+            p.dev
+                .as_any()
+                .map(|a| a.is::<Esp32s3Gpio>())
+                .unwrap_or(false)
+        });
+        // Prefer the instance the chip calls SPI2 (`spi2_s3` on the programmatic
+        // builder, `spi2` from a yaml); fall back to the first GP-SPI on the bus
+        // so a hand-built test bus with one controller still wires.
+        let spi_idx = ["spi2_s3", "spi2"]
+            .iter()
+            .find_map(|n| self.find_peripheral_index_by_name(n))
+            .filter(|&i| {
+                self.peripherals[i]
+                    .dev
+                    .as_any()
+                    .map(|a| a.is::<Esp32s3Spi>())
+                    .unwrap_or(false)
+            })
+            .or_else(|| {
+                self.peripherals.iter().position(|p| {
+                    p.dev
+                        .as_any()
+                        .map(|a| a.is::<Esp32s3Spi>())
+                        .unwrap_or(false)
+                })
+            });
+        // ⚠️ Resolve BOTH first — `pad_lines_arc` CREATES the wire cell.
+        let (Some(spi_idx), Some(gpio_idx)) = (spi_idx, gpio_idx) else {
+            return;
+        };
+        let Some(lines) = self.peripherals[spi_idx]
+            .dev
+            .as_any_mut()
+            .and_then(|a| a.downcast_mut::<Esp32s3Spi>())
+            .map(Esp32s3Spi::pad_lines_arc)
+        else {
+            return;
+        };
+        if let Some(gpio) = self.peripherals[gpio_idx]
+            .dev
+            .as_any_mut()
+            .and_then(|a| a.downcast_mut::<Esp32s3Gpio>())
+        {
+            gpio.bind_spi_lines(&lines);
+        }
+    }
+
+    /// The ESP32-S3 counterpart of [`Self::wire_esp32c3_uart_pads`]. Same
+    /// IO_MUX caveat: `U0TXD`'s default pad is GPIO43 at IO_MUX function 0, so
+    /// the stock console route is not matrix-visible; UART2 has no IO_MUX pad at
+    /// all and is matrix-only.
+    ///
+    /// The instance names differ from the C3's because the programmatic builder
+    /// registers them as `uart0_s3`/`uart1_s3`/`uart2_s3`; a yaml-built bus
+    /// spells them without the suffix, and both are accepted.
+    pub(crate) fn wire_esp32s3_uart_pads(&mut self) {
+        use crate::peripherals::esp32s3::gpio::Esp32s3Gpio;
+        use crate::peripherals::esp_uart::EspUart;
+
+        let Some(gpio_idx) = self.peripherals.iter().position(|p| {
+            p.dev
+                .as_any()
+                .map(|a| a.is::<Esp32s3Gpio>())
+                .unwrap_or(false)
+        }) else {
+            return;
+        };
+        for (instance, names) in [
+            ["uart0_s3", "uart0"],
+            ["uart1_s3", "uart1"],
+            ["uart2_s3", "uart2"],
+        ]
+        .iter()
+        .enumerate()
+        {
+            let Some(idx) = names
+                .iter()
+                .find_map(|n| self.find_peripheral_index_by_name(n))
+            else {
+                continue;
+            };
+            let Some(lines) = self.peripherals[idx]
+                .dev
+                .as_any_mut()
+                .and_then(|a| a.downcast_mut::<EspUart>())
+                .map(EspUart::pad_lines_arc)
+            else {
+                continue;
+            };
+            if let Some(gpio) = self.peripherals[gpio_idx]
+                .dev
+                .as_any_mut()
+                .and_then(|a| a.downcast_mut::<Esp32s3Gpio>())
+            {
+                gpio.bind_uart_tx_lines(instance, &lines);
+            }
+        }
+    }
+
     /// Wire C3 IO_MUX per-pad controls into C3 GPIO after both models have
     /// been constructed. The IO_MUX owns the shared register bank; GPIO reads
     /// `FUN_WPU` from it to model Arduino `INPUT_PULLUP`. No-op on any bus
