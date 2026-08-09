@@ -986,6 +986,251 @@ impl SystemBus {
         }
     }
 
+    /// Bind every nRF52 bus controller's wire to every pad its `PSEL` can name,
+    /// so a probe shows the bus instead of the GPIO output latch.
+    ///
+    /// # Why this one looks nothing like the other four
+    ///
+    /// The other families mux at the PAD, so their wiring is a datasheet TABLE:
+    /// "PB6 at AF4 is I2C1_SCL". A pad not in the table can never carry that
+    /// signal, and [`PadRoutes`](crate::peripherals::pad_routing) matches a
+    /// bound route against the pad's own function register.
+    ///
+    /// Nordic has no such register and no such table. `PSEL.SCL` is five bits
+    /// of pin plus one of port: ANY pad can carry ANY signal, chosen at runtime
+    /// (nRF52840 PS v1.11 §6.31.7.19, p798). So the "table" here is the full
+    /// cross product — every pad × every signal — and which single route is
+    /// live at each instant comes from the shared claim table the peripherals
+    /// publish their `PSEL` into
+    /// ([`crate::peripherals::nrf52::pin_select`]). Same seam, opposite
+    /// direction, and re-pointing a `PSEL` mid-run follows immediately because
+    /// the answer is read live rather than baked in here.
+    ///
+    /// # Which chips this touches, and which it deliberately does not
+    ///
+    /// THREE independent gates, all structural rather than a chip-name list.
+    /// They overlap, and that overlap is measured, not assumed: a mutation that
+    /// deletes the `window_offset` gate alone SURVIVES the bus-visibility board
+    /// because the instance-address table below already excludes the nRF5340
+    /// (its UARTE0 is at 0x5000_8000, not 0x4000_2000). Deleting BOTH is what
+    /// the board catches. So the address table is the load-bearing exclusion
+    /// today and the `window_offset` check is the belt to its braces — which is
+    /// worth keeping, because a future nRF53 yaml that happened to map a
+    /// peripheral at an nRF52 address would otherwise be wired on a `PSEL`
+    /// encoding nothing in this repo has verified.
+    ///
+    /// * The GPIO port must carry the nRF52 register layout AND start its MMIO
+    ///   window at the block base (`window_offset == 0`). From the nRF5340 on,
+    ///   Nordic re-bases a port at `OUT` and the chip yaml says
+    ///   `reg_offset: 0x500` — see [`GpioPort::window_offset`]. That is the
+    ///   marker of the nRF53/nRF54 generation, whose `PSEL` field layout is NOT
+    ///   verified here: no nRF5340 datasheet is in this checkout's corpus
+    ///   (`labwired_datasheet` holds nrf52840 and nrf54l15 of the Nordics), so
+    ///   nrf5340.yaml is left unwired rather than routed on the assumption that
+    ///   a part with a different GPIO base kept the same pin-select encoding.
+    ///   Closing that gap needs the nRF5340 PS, not a sibling's.
+    /// * The controller must be one of the nRF52 models. The nRF54L15 carries
+    ///   dedicated `Nrf54lUarte` / `Nrf54lTwim` models (EasyDMA moved into a
+    ///   `DMA.{RX,TX}` cluster), so it falls out of every arm below without
+    ///   needing to be named.
+    ///
+    /// * The instance must sit at an address the PS instance tables name.
+    ///   Instance NAMES come from the base address, not the chip yaml's `id`:
+    ///   `TWIM0` is "the instance at 0x40003000" per PS §6.31.7, and calling it
+    ///   that regardless of whether a yaml spells the id `i2c0`, `twim0` or
+    ///   `arduino_i2c` is what stops a rename from silently relabelling a
+    ///   waveform. It is also what keeps a part with an nRF52 peripheral MODEL
+    ///   at a different address — the nRF5340's UARTE0 — out of the table.
+    ///
+    /// TX / SCL / SDA / SCK / MOSI ONLY. `PSEL.RXD`, `PSEL.MISO`, `PSEL.CTS`,
+    /// `PSEL.RTS` and `PSEL.CSN` are tracked registers that nothing in this
+    /// engine DRIVES, so a pad routed to one would report a confident constant
+    /// idle level straight through real traffic — worse than the GPIO-latch
+    /// fallback it replaced, because it looks authoritative. Same call as
+    /// [`Self::wire_rp2040_uart_pads`].
+    pub(crate) fn wire_nrf52_pads(&mut self) {
+        use crate::peripherals::gpio::{GpioPort, GpioRegisterLayout};
+        use crate::peripherals::nrf52::pin_select::NrfPinClaims;
+        use crate::peripherals::nrf52::serial_instance::Nrf52SerialInstance;
+        use crate::peripherals::nrf52::twim::{LINE_SCL, LINE_SDA};
+        use crate::peripherals::nrf52::uarte::{Nrf52Uarte, LINE_TXD};
+        use crate::peripherals::spi::{Spi, SpiSignal};
+        use std::sync::Arc;
+
+        /// UARTE instances by base address (PS v1.11 §6.34.9, p836).
+        const UARTE: &[(u64, &str)] = &[(0x4000_2000, "UARTE0_TX"), (0x4002_8000, "UARTE1_TX")];
+        /// TWIM instances by base address (PS v1.11 §6.31.7, p790).
+        const TWIM: &[(u64, &str, &str)] = &[
+            (0x4000_3000, "TWIM0_SCL", "TWIM0_SDA"),
+            (0x4000_4000, "TWIM1_SCL", "TWIM1_SDA"),
+        ];
+        /// SPIM instances by base address (PS v1.11 §6.25.6, p727). SPIM3
+        /// (0x4002_F000) is listed for completeness of the address decode; no
+        /// chip yaml in this checkout maps it.
+        const SPIM: &[(u64, &str, &str)] = &[
+            (0x4000_3000, "SPIM0_SCK", "SPIM0_MOSI"),
+            (0x4000_4000, "SPIM1_SCK", "SPIM1_MOSI"),
+            (0x4002_3000, "SPIM2_SCK", "SPIM2_MOSI"),
+            (0x4002_F000, "SPIM3_SCK", "SPIM3_MOSI"),
+        ];
+
+        // ⚠️ Resolve the GPIO ports FIRST and bail if there are none.
+        // `pad_lines_arc` CREATES the wire cell, and a controller that owns a
+        // cell no route reaches still buffers every byte of every transfer and
+        // narrates it into something nothing reads — the ordering hazard
+        // `wire_rp2040_uart_pads` documents, and the reason nothing below
+        // touches a controller until this vector is known non-empty.
+        let ports: Vec<(usize, u8)> = (0u8..2)
+            .filter_map(|port| {
+                let idx = self.find_peripheral_index_by_name(&format!("gpio{port}"))?;
+                let gpio = self.peripherals[idx]
+                    .dev
+                    .as_any()
+                    .and_then(|a| a.downcast_ref::<GpioPort>())?;
+                (gpio.register_layout() == GpioRegisterLayout::Nrf52 && gpio.window_offset() == 0)
+                    .then_some((idx, port))
+            })
+            .collect();
+        if ports.is_empty() {
+            return;
+        }
+
+        let claims = Arc::new(NrfPinClaims::new());
+        for &(idx, port) in &ports {
+            if let Some(gpio) = self.peripherals[idx]
+                .dev
+                .as_any_mut()
+                .and_then(|a| a.downcast_mut::<GpioPort>())
+            {
+                gpio.set_nrf_pin_claims(claims.clone(), port);
+            }
+        }
+
+        // Claim tokens are handed out from 0 and are unique per (instance,
+        // signal) across the whole chip. The SAME value is installed in the
+        // controller and bound into every port's routing table — that identity
+        // IS the routing, so it is minted in one place and never derived twice.
+        let mut next_token: u32 = 0;
+        // `(pad-line cell, [(claim token, line index, signal name)])` for every
+        // controller found, collected before any binding so the borrow of
+        // `self.peripherals` is over.
+        type Bindings = (
+            std::sync::Arc<crate::peripherals::pad_lines::PadLines>,
+            Vec<(u32, usize, &'static str)>,
+        );
+        let mut wired: Vec<Bindings> = Vec::new();
+
+        for entry_idx in 0..self.peripherals.len() {
+            let base = self.peripherals[entry_idx].base;
+            let Some(any) = self.peripherals[entry_idx].dev.as_any_mut() else {
+                continue;
+            };
+
+            if let Some(uarte) = any.downcast_mut::<Nrf52Uarte>() {
+                let Some(&(_, func)) = UARTE.iter().find(|&&(addr, _)| addr == base) else {
+                    // A UARTE at an address the PS instance table does not name
+                    // is not one this engine can label, and an unlabelled
+                    // binding would land on the bus-visibility board as an
+                    // unclassified name — a hard failure there, by design.
+                    continue;
+                };
+                let token = next_token;
+                next_token += 1;
+                let lines = uarte.pad_lines_arc();
+                uarte.install_pin_claims(&claims, token);
+                wired.push((lines, vec![(token, LINE_TXD, func)]));
+                continue;
+            }
+
+            if let Some(mux) = any.downcast_mut::<Nrf52SerialInstance>() {
+                // One MMIO window, two personalities, two independent wires:
+                // ENABLE picks which is driving, and each half claims its pads
+                // only while it is the selected one.
+                if let Some(&(_, scl, sda)) = TWIM.iter().find(|&&(addr, ..)| addr == base) {
+                    let (scl_token, sda_token) = (next_token, next_token + 1);
+                    next_token += 2;
+                    let lines = mux.twim_pad_lines_arc();
+                    mux.install_twim_pin_claims(&claims, scl_token, sda_token);
+                    wired.push((
+                        lines,
+                        vec![(scl_token, LINE_SCL, scl), (sda_token, LINE_SDA, sda)],
+                    ));
+                }
+                if let Some(&(_, sck, mosi)) = SPIM.iter().find(|&&(addr, ..)| addr == base) {
+                    let (sck_token, mosi_token) = (next_token, next_token + 1);
+                    next_token += 2;
+                    let lines = mux.spim_pad_lines_arc();
+                    mux.install_spim_pin_claims(&claims, sck_token, mosi_token);
+                    wired.push((
+                        lines,
+                        vec![
+                            (sck_token, SpiSignal::Sck as usize, sck),
+                            (mosi_token, SpiSignal::Mosi as usize, mosi),
+                        ],
+                    ));
+                }
+                continue;
+            }
+
+            if let Some(twim) = any.downcast_mut::<crate::peripherals::nrf52::twim::Nrf52Twim>() {
+                let Some(&(_, scl, sda)) = TWIM.iter().find(|&&(addr, ..)| addr == base) else {
+                    continue;
+                };
+                let (scl_token, sda_token) = (next_token, next_token + 1);
+                next_token += 2;
+                let lines = twim.pad_lines_arc();
+                twim.install_pin_claims(&claims, scl_token, sda_token);
+                wired.push((
+                    lines,
+                    vec![(scl_token, LINE_SCL, scl), (sda_token, LINE_SDA, sda)],
+                ));
+                continue;
+            }
+
+            if let Some(spi) = any.downcast_mut::<Spi>() {
+                if !spi.is_nrf_wire_layout() {
+                    continue;
+                }
+                let Some(&(_, sck, mosi)) = SPIM.iter().find(|&&(addr, ..)| addr == base) else {
+                    continue;
+                };
+                let (sck_token, mosi_token) = (next_token, next_token + 1);
+                next_token += 2;
+                let lines = spi.line_levels_arc().pad_lines().clone();
+                spi.install_nrf_pin_claims(&claims, sck_token, mosi_token);
+                wired.push((
+                    lines,
+                    vec![
+                        (sck_token, SpiSignal::Sck as usize, sck),
+                        (mosi_token, SpiSignal::Mosi as usize, mosi),
+                    ],
+                ));
+            }
+        }
+
+        // Every pad × every signal. `PSEL.PIN` is five bits wide on both ports,
+        // so 32 routes per port is the exact span the register can name — a
+        // port that physically bonds out fewer (P1 has 16 on the nRF52840) is
+        // simply never claimed above its pin count, and `read_gpio_pad` already
+        // refuses pins ≥ 32.
+        for &(gpio_idx, _) in &ports {
+            let Some(gpio) = self.peripherals[gpio_idx]
+                .dev
+                .as_any_mut()
+                .and_then(|a| a.downcast_mut::<GpioPort>())
+            else {
+                continue;
+            };
+            for (lines, signals) in &wired {
+                for &(token, line, func) in signals {
+                    for pin in 0..32u8 {
+                        gpio.add_pad_route_selector(lines, pin, Some(token), line, func);
+                    }
+                }
+            }
+        }
+    }
+
     /// Every peripheral signal name that any pad on this bus is BOUND to carry,
     /// deduplicated and sorted — `["I2C1_SCL", "I2C1_SDA", "USART2_TX", …]`.
     ///

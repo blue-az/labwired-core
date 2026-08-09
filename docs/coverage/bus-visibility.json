@@ -24,11 +24,19 @@
     "name": "mkw41z4"
   },
   {
-    "buses": [],
+    "buses": [
+      "I2C",
+      "SPI",
+      "UART"
+    ],
     "name": "nrf52832"
   },
   {
-    "buses": [],
+    "buses": [
+      "I2C",
+      "SPI",
+      "UART"
+    ],
     "name": "nrf52840"
   },
   {

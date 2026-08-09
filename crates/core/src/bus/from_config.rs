@@ -893,6 +893,12 @@ impl SystemBus {
         // And each USART's TX/RX, so serial output is a waveform on the routed
         // AF pad rather than the idle GPIO latch.
         bus.wire_stm32_uart_pads();
+        // nRF52: bind every TWIM/SPIM/UARTE wire to every pad its PSEL can
+        // name. Unlike the four above this is not a datasheet AF table — the
+        // pad has no function register on this family, so the peripherals
+        // publish which pin they claim and the port reads it. No-op for every
+        // other chip.
+        bus.wire_nrf52_pads();
         // Resolve declared per-peripheral RCC clock-gates now that every
         // peripheral (incl. the RCC, needed to map reg-name → offset) is on the
         // bus. Peripherals without a `clock:` field stay ungated.

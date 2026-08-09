@@ -88,8 +88,17 @@ impl BusKind {
 const STEMS: &[(&str, BusKind)] = &[
     ("I2CEXT", BusKind::I2c),
     ("I2C", BusKind::I2c),
+    // Nordic spells its instances after the IP block, not after the protocol:
+    // the I²C master is TWIM, the SPI master SPIM, the serial port UARTE. The
+    // names come from the nRF52840 PS instance tables (§6.31.7 p790, §6.25.6
+    // p727, §6.34.9 p836) and are what a user reading the trace sees in the
+    // datasheet, so they are kept rather than translated. `classify` compares
+    // whole stems, so `UARTE` cannot be shadowed by `UART`.
+    ("TWIM", BusKind::I2c),
+    ("SPIM", BusKind::Spi),
     ("SPI", BusKind::Spi),
     ("USART", BusKind::Uart),
+    ("UARTE", BusKind::Uart),
     ("UART", BusKind::Uart),
 ];
 
@@ -378,6 +387,19 @@ fn classifier_recognises_the_engine_naming_convention_and_nothing_else() {
     assert_eq!(classify("SPI1_CSn"), Some(BusKind::Spi));
     assert_eq!(classify("UART0_TX"), Some(BusKind::Uart));
     assert_eq!(classify("USART3_TX"), Some(BusKind::Uart));
+
+    // Nordic IP-block spellings. `UARTE` and `SPIM` are the ones that would be
+    // quietly absorbed by a `starts_with` classifier — `UARTE0_TX` starts with
+    // `UART` and `SPIM2_SCK` starts with `SPI` — so they are asserted
+    // explicitly, and the near-miss below proves it is the whole stem that
+    // matches, not a prefix.
+    assert_eq!(classify("TWIM0_SCL"), Some(BusKind::I2c));
+    assert_eq!(classify("TWIM1_SDA"), Some(BusKind::I2c));
+    assert_eq!(classify("SPIM2_SCK"), Some(BusKind::Spi));
+    assert_eq!(classify("SPIM0_MOSI"), Some(BusKind::Spi));
+    assert_eq!(classify("UARTE0_TX"), Some(BusKind::Uart));
+    assert_eq!(classify("UARTEX0_TX"), None, "near-miss on the Nordic stem");
+    assert_eq!(classify("TWIS0_SCL"), None, "the SLAVE IP is not wired");
 
     // ⚠️ The whole point: a near-miss must be REJECTED, not absorbed. A loose
     // `starts_with` would classify all three of these and hide a rename.

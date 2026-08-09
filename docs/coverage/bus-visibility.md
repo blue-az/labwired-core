@@ -15,8 +15,8 @@ Derived from live `SystemBus::from_config` builds — never hand-edited. Bind a 
 | esp32s3 | — | — | — |
 | esp32s3-zero | — | — | — |
 | mkw41z4 | — | — | — |
-| nrf52832 | — | — | — |
-| nrf52840 | — | — | — |
+| nrf52832 | ✓ | ✓ | ✓ |
+| nrf52840 | ✓ | ✓ | ✓ |
 | nrf5340 | — | — | — |
 | nrf54l15 | — | — | — |
 | rp2040 | ✓ | ✓ | ✓ |

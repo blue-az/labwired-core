@@ -539,6 +539,20 @@ pub struct GpioPort {
     /// the model how far in it starts is the only arrangement in which both
     /// ports are addressable at once.
     window_offset: u64,
+    /// nRF52 ONLY: the shared peripheral-side pin-claim table (see
+    /// [`crate::peripherals::nrf52::pin_select`]) and this port's `PSEL.PORT`
+    /// number.
+    ///
+    /// Every other family answers "who drives pad N" from its own registers, so
+    /// this is `None` on them and costs one branch. Nordic has no such register
+    /// — the peripherals name the pins — so the answer has to come from
+    /// somewhere the port can reach, and this is it. Installed once at bus
+    /// wiring time by `SystemBus::wire_nrf52_pads`; a port that never gets one
+    /// simply has no routes bound either, and behaves exactly as before.
+    nrf_claims: Option<(
+        std::sync::Arc<crate::peripherals::nrf52::pin_select::NrfPinClaims>,
+        u8,
+    )>,
 }
 
 impl Default for GpioPort {
@@ -554,6 +568,7 @@ impl GpioPort {
             tap: None,
             pad_routes: crate::peripherals::pad_routing::PadRoutes::new(),
             window_offset: 0,
+            nrf_claims: None,
         }
     }
 
@@ -638,6 +653,30 @@ impl GpioPort {
 
     /// Register layout of this port (used by the SPI pad-wiring helper to
     /// select the matching AF table).
+    /// How far into its register map this port's MMIO window starts. See
+    /// [`GpioPort::window_offset`].
+    ///
+    /// Read by `SystemBus::wire_nrf52_pads` as the structural marker of the
+    /// nRF53/nRF54 GPIO generation: those parts base a port at `OUT` and
+    /// declare `reg_offset: 0x500`, the nRF52 parts start at the block base and
+    /// declare nothing. The PSEL field layout this engine decodes is verified
+    /// on the nRF52840 only, so a port with an offset window is left unwired
+    /// rather than routed on an assumption.
+    pub(crate) fn window_offset(&self) -> u64 {
+        self.window_offset
+    }
+
+    /// Hand this port the shared nRF52 pin-claim table and tell it which
+    /// `PSEL.PORT` number it is. Config-build time only; see
+    /// [`GpioPort::nrf_claims`].
+    pub(crate) fn set_nrf_pin_claims(
+        &mut self,
+        claims: std::sync::Arc<crate::peripherals::nrf52::pin_select::NrfPinClaims>,
+        port: u8,
+    ) {
+        self.nrf_claims = Some((claims, port));
+    }
+
     pub(crate) fn register_layout(&self) -> GpioRegisterLayout {
         match &self.family {
             GpioFamily::Stm32F1(_) => GpioRegisterLayout::Stm32F1,
@@ -663,8 +702,27 @@ impl GpioPort {
         line: usize,
         func: &'static str,
     ) {
-        self.pad_routes
-            .bind(cell, pin, af.map(u32::from), line, func);
+        self.add_pad_route_selector(cell, pin, af.map(u32::from), line, func);
+    }
+
+    /// Install one pad route against a full-width selector.
+    ///
+    /// [`add_pad_route`](Self::add_pad_route) narrows to an AF NIBBLE because
+    /// that is all an STM32 pad can select. The nRF52 selector is not a
+    /// register field at all — it is a claim token minted by
+    /// `SystemBus::wire_nrf52_pads`, one per (peripheral instance, signal), so
+    /// it needs the whole `u32`. Both land in the same
+    /// [`PadRoutes`](crate::peripherals::pad_routing) binding; only the width
+    /// of the value differs.
+    pub(crate) fn add_pad_route_selector(
+        &mut self,
+        cell: &std::sync::Arc<crate::peripherals::pad_lines::PadLines>,
+        pin: u8,
+        selector: Option<u32>,
+        line: usize,
+        func: &'static str,
+    ) {
+        self.pad_routes.bind(cell, pin, selector, line, func);
     }
 
     /// Every signal name bound to this port's pads, live or not — the
@@ -685,8 +743,26 @@ impl GpioPort {
     /// information and any bound route matches. F1 MISO — an input-mode pad on
     /// real silicon — is intentionally NOT routed, so a plain GPIO input on
     /// that pin never silently reads the SPI wire.
-    fn selected_function(family: &GpioFamily, pin: u8) -> Option<u32> {
+    ///
+    /// nRF52: the port HAS no such register — Nordic muxes at the peripheral,
+    /// which names its pin in `PSEL.*`. The answer therefore comes from the
+    /// shared claim table the peripherals publish into
+    /// ([`crate::peripherals::nrf52::pin_select`]), and the "selector" is a
+    /// claim token rather than a decoded register field. Same shape, opposite
+    /// direction; [`PadRoutes`](crate::peripherals::pad_routing) cannot tell.
+    fn selected_function(
+        family: &GpioFamily,
+        nrf_claims: Option<&(
+            std::sync::Arc<crate::peripherals::nrf52::pin_select::NrfPinClaims>,
+            u8,
+        )>,
+        pin: u8,
+    ) -> Option<u32> {
         match family {
+            GpioFamily::Nrf52(_) => {
+                let (claims, port) = nrf_claims?;
+                claims.selector(*port, pin)
+            }
             GpioFamily::Stm32V2(g) => {
                 if (g.read_reg(0x00) >> (pin * 2)) & 0b11 != 0b10 {
                     return None;
@@ -716,10 +792,9 @@ impl GpioPort {
     /// peripheral publishes into; every other pad falls back to the family
     /// register truth.
     fn pad_level(&self, pin: u8) -> Option<bool> {
-        if let Some(level) = self
-            .pad_routes
-            .level(pin, |p| Self::selected_function(&self.family, p))
-        {
+        if let Some(level) = self.pad_routes.level(pin, |p| {
+            Self::selected_function(&self.family, self.nrf_claims.as_ref(), p)
+        }) {
             return Some(level);
         }
         self.family.pad_level(pin)
@@ -773,7 +848,7 @@ impl GpioPort {
         // mutably; split the borrow by moving the routes out for the call.
         let mut routes = std::mem::take(&mut self.pad_routes);
         routes.sync_taps(&t.tap, &t.watched, |pin| {
-            Self::selected_function(&self.family, pin)
+            Self::selected_function(&self.family, self.nrf_claims.as_ref(), pin)
         });
         self.pad_routes = routes;
         self.tap = Some(t);
@@ -888,11 +963,18 @@ impl crate::Peripheral for GpioPort {
                     _ => GpioMode::Analog,
                 }
             }
-            // nRF52 / Kinetis: a plain DIR register (nRF DIR @0x514, Kinetis PDDR
-            // @0x14) — bit set = output, clear = input. No AF concept at the GPIO
-            // port (peripheral routing is elsewhere), so func stays None.
+            // nRF52: a plain DIR register (@0x514) — bit set = output, clear =
+            // input — and no AF field anywhere at the port. The alternate
+            // function is nonetheless REAL here: a peripheral whose `PSEL.*`
+            // names this pad owns it, and the port's DIR/OUT are not what drives
+            // it. So the AF verdict comes from the claim table, exactly as
+            // `pad_level` reads its level from there. nRF52840 PS v1.11 §6.31.6
+            // (p790): while the peripheral is disabled "the pins will behave as
+            // regular GPIOs" — which is the `None` branch below.
             GpioFamily::Nrf52(g) => {
-                if (g.read_reg(0x514) & (1u32 << pin)) != 0 {
+                if Self::selected_function(&self.family, self.nrf_claims.as_ref(), pin).is_some() {
+                    GpioMode::Af
+                } else if (g.read_reg(0x514) & (1u32 << pin)) != 0 {
                     GpioMode::Output
                 } else {
                     GpioMode::Input
@@ -911,10 +993,9 @@ impl crate::Peripheral for GpioPort {
         // AFR nibble → "AF<n>" (no full AF→signal table; that is out of scope).
         // Everything else: None — null over a guess.
         let func = if mode == GpioMode::Af {
-            if let Some(func) = self
-                .pad_routes
-                .func(pin, |p| Self::selected_function(&self.family, p))
-            {
+            if let Some(func) = self.pad_routes.func(pin, |p| {
+                Self::selected_function(&self.family, self.nrf_claims.as_ref(), p)
+            }) {
                 Some(func.to_string())
             } else if let GpioFamily::Stm32V2(g) = &self.family {
                 let (afr_off, sh) = if pin < 8 {
