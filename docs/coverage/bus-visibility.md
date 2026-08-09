@@ -29,9 +29,9 @@ Derived from live `SystemBus::from_config` builds — never hand-edited. Bind a 
 | stm32f411ceu6 | ✓ | ✓ | ✓ |
 | stm32f767 | ✓ | ✓ | ✓ |
 | stm32g474re | ✓ | ✓ | ✓ |
-| stm32h563 | ✓ | — | ✓ |
-| stm32h735 | ✓ | — | ✓ |
+| stm32h563 | ✓ | ✓ | ✓ |
+| stm32h735 | ✓ | ✓ | ✓ |
 | stm32l073 | ✓ | ✓ | ✓ |
 | stm32l476 | ✓ | ✓ | ✓ |
 | stm32wb55 | ✓ | ✓ | ✓ |
-| stm32wba52 | ✓ | — | ✓ |
+| stm32wba52 | ✓ | ✓ | ✓ |
