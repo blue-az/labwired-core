@@ -17,9 +17,9 @@
 
 #[cfg(test)]
 mod logic_capture_differential_tests {
-    use crate::logic_capture::LogicSource;
     use crate::cpu::CortexM;
     use crate::logic_capture::LogicEdge;
+    use crate::logic_capture::LogicSource;
     use crate::peripherals::gpio::{GpioPort, GpioRegisterLayout};
     use crate::{Bus, DebugControl, Machine, Peripheral, SimResult};
 
@@ -72,7 +72,10 @@ mod logic_capture_differential_tests {
             .bus
             .find_peripheral_index_by_name("gpio_test")
             .unwrap();
-        let initial = machine.logic_watch(&[Some(LogicSource::pad(idx, 1)), Some(LogicSource::pad(idx, 0))]);
+        let initial = machine.logic_watch(&[
+            Some(LogicSource::pad(idx, 1)),
+            Some(LogicSource::pad(idx, 0)),
+        ]);
         assert_eq!(initial, vec![Some(false), Some(false)]);
         machine.reset_step_profile();
         machine.run(Some(steps)).unwrap();
@@ -224,7 +227,10 @@ mod logic_capture_differential_tests {
                 .bus
                 .find_peripheral_index_by_name("gpio_test")
                 .unwrap();
-            machine.logic_watch(&[Some(LogicSource::pad(idx, 3)), Some(LogicSource::pad(idx, 0))]);
+            machine.logic_watch(&[
+                Some(LogicSource::pad(idx, 3)),
+                Some(LogicSource::pad(idx, 0)),
+            ]);
             for slice in 0..6 {
                 let level = slice % 2 == 0;
                 assert!(machine.bus.peripherals[idx].dev.set_gpio_input(3, level));
@@ -338,7 +344,10 @@ mod logic_capture_differential_tests {
         let mut machine = c3_i2c_machine(tick_interval);
         machine.logic_force_poll_capture(force_poll);
         let gpio_idx = machine.bus.find_peripheral_index_by_name("gpio").unwrap();
-        let initial = machine.logic_watch(&[Some(LogicSource::pad(gpio_idx, SDA_PIN)), Some(LogicSource::pad(gpio_idx, SCL_PIN))]);
+        let initial = machine.logic_watch(&[
+            Some(LogicSource::pad(gpio_idx, SDA_PIN)),
+            Some(LogicSource::pad(gpio_idx, SCL_PIN)),
+        ]);
         assert_eq!(initial, vec![Some(true), Some(true)]);
 
         // Kick RSTART; WRITE 3 (addr, control, data); STOP.
@@ -447,8 +456,10 @@ mod logic_capture_differential_tests {
         let mut machine = stm32_spi_machine(tick_interval);
         machine.logic_force_poll_capture(force_poll);
         let gpioa_idx = machine.bus.find_peripheral_index_by_name("gpioa").unwrap();
-        let initial =
-            machine.logic_watch(&[Some(LogicSource::pad(gpioa_idx, MOSI_PIN)), Some(LogicSource::pad(gpioa_idx, SCK_PIN))]);
+        let initial = machine.logic_watch(&[
+            Some(LogicSource::pad(gpioa_idx, MOSI_PIN)),
+            Some(LogicSource::pad(gpioa_idx, SCK_PIN)),
+        ]);
         assert_eq!(initial, vec![Some(false), Some(false)]);
 
         // Three bytes back-to-back through the TX FIFO (3 × 8-bit fits the
@@ -543,7 +554,10 @@ mod logic_capture_differential_tests {
                 .bus
                 .find_peripheral_index_by_name("gpio_poll_only")
                 .unwrap();
-            machine.logic_watch(&[Some(LogicSource::pad(push_idx, 0)), Some(LogicSource::pad(poll_idx, 0))]);
+            machine.logic_watch(&[
+                Some(LogicSource::pad(push_idx, 0)),
+                Some(LogicSource::pad(poll_idx, 0)),
+            ]);
             machine.reset_step_profile();
             machine.run(Some(400)).unwrap();
             let profile = machine.step_profile();

@@ -20,8 +20,8 @@
 
 #[cfg(test)]
 mod rp2040_spi_waveform_tests {
-    use crate::logic_capture::LogicSource;
     use crate::logic_capture::LogicEdge;
+    use crate::logic_capture::LogicSource;
     use crate::peripherals::rp2040::io_bank0::{Rp2040IoBank0, GPIO_FUNC_SPI};
     use crate::peripherals::rp2040::sio::Rp2040Sio;
     use crate::peripherals::rp2040::spi::Rp2040Spi;
@@ -391,7 +391,10 @@ mod rp2040_spi_waveform_tests {
             // Watch the pad under test ALONGSIDE a pad known to carry spi0
             // (GP3, `spi0_tx`), so a spi1 pad's silence means the instance
             // column and not a fixture that produced no traffic at all.
-            machine.logic_watch(&[Some(LogicSource::pad(sio, pin)), Some(LogicSource::pad(sio, MOSI_PIN))]);
+            machine.logic_watch(&[
+                Some(LogicSource::pad(sio, pin)),
+                Some(LogicSource::pad(sio, MOSI_PIN)),
+            ]);
             for _ in 0..20_000 {
                 machine.step().unwrap();
             }
@@ -427,7 +430,10 @@ mod rp2040_spi_waveform_tests {
         // the machinery is live in this very fixture, so the control channel's
         // silence means the table, not a broken setup. Without that, `is_empty`
         // is satisfied by any failure at all.
-        machine.logic_watch(&[Some(LogicSource::pad(sio, MOSI_PIN)), Some(LogicSource::pad(sio, NON_DRIVEN_PIN))]);
+        machine.logic_watch(&[
+            Some(LogicSource::pad(sio, MOSI_PIN)),
+            Some(LogicSource::pad(sio, NON_DRIVEN_PIN)),
+        ]);
         for _ in 0..20_000 {
             machine.step().unwrap();
         }

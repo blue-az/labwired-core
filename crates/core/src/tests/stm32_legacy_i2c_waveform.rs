@@ -25,10 +25,10 @@
 
 #[cfg(test)]
 mod stm32_legacy_i2c_waveform_tests {
-    use crate::logic_capture::LogicSource;
     use crate::bus::SystemBus;
     use crate::cpu::CortexM;
     use crate::logic_capture::LogicEdge;
+    use crate::logic_capture::LogicSource;
     use crate::peripherals::i2c::I2cDevice;
     use crate::{Bus, Machine};
     use labwired_config::{ChipDescriptor, SystemManifest};
@@ -174,7 +174,10 @@ mod stm32_legacy_i2c_waveform_tests {
             .bus
             .find_peripheral_index_by_name("gpiob")
             .expect("gpiob registered by from_config");
-        machine.logic_watch(&[Some(LogicSource::pad(gpiob, SCL_PIN)), Some(LogicSource::pad(gpiob, SDA_PIN))]);
+        machine.logic_watch(&[
+            Some(LogicSource::pad(gpiob, SCL_PIN)),
+            Some(LogicSource::pad(gpiob, SDA_PIN)),
+        ]);
     }
 
     /// Spin the CPU until `flag` shows up in SR1, so the narration has real
@@ -305,7 +308,10 @@ mod stm32_legacy_i2c_waveform_tests {
             .find_peripheral_index_by_name("gpioa")
             .expect("gpioa registered by from_config");
         assert_eq!(
-            machine.logic_watch(&[Some(LogicSource::pad(gpioa, PA7)), Some(LogicSource::pad(gpioa, PA8))]),
+            machine.logic_watch(&[
+                Some(LogicSource::pad(gpioa, PA7)),
+                Some(LogicSource::pad(gpioa, PA8))
+            ]),
             // PA7: no wire. PA8: I2C3_SCL, an idle open-drain bus, so high.
             vec![None, Some(true)],
             "DS10086 Rev 5 Table 9 (page 45): AF04 on PA7 is unassigned and AF04 \

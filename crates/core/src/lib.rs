@@ -1723,7 +1723,10 @@ impl<C: Cpu> Machine<C> {
     /// [`PadLines::set_line_at`](crate::peripherals::pad_lines::PadLines::set_line_at)
     /// in one call, so a per-cycle poller would see only the LAST level of the
     /// burst and every intermediate edge would be lost.
-    pub fn logic_watch(&mut self, resolved: &[Option<logic_capture::LogicSource>]) -> Vec<Option<bool>> {
+    pub fn logic_watch(
+        &mut self,
+        resolved: &[Option<logic_capture::LogicSource>],
+    ) -> Vec<Option<bool>> {
         use logic_capture::LogicSource;
 
         // Group the PAD half of the watch set per owning peripheral as
@@ -1807,7 +1810,12 @@ impl<C: Cpu> Machine<C> {
                 .find(|(i, _)| *i == idx)
                 .map_or(NO_CHANNELS, |(_, channels)| channels.as_slice());
             let add = wire_now.get(&idx).map_or(NO_CHANNELS, Vec::as_slice);
-            if let Some(lines) = self.bus.peripherals.get(idx).and_then(|p| p.dev.wire_lines()) {
+            if let Some(lines) = self
+                .bus
+                .peripherals
+                .get(idx)
+                .and_then(|p| p.dev.wire_lines())
+            {
                 lines.merge_tap(Some(tap.clone()), remove, add);
             }
         }
@@ -1919,10 +1927,7 @@ impl<C: Cpu> Machine<C> {
     /// no fallback to the peripheral's wire: an unmuxed pad IS the GPIO latch,
     /// and a probe that quietly showed bus traffic on a pin no bus reaches
     /// would be lying about the exact thing it was clipped on to answer.
-    fn read_logic_source(
-        bus: &bus::SystemBus,
-        source: logic_capture::LogicSource,
-    ) -> Option<bool> {
+    fn read_logic_source(bus: &bus::SystemBus, source: logic_capture::LogicSource) -> Option<bool> {
         match source {
             logic_capture::LogicSource::Pad { peripheral, pin } => bus
                 .peripherals

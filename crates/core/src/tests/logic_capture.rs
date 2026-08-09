@@ -6,8 +6,8 @@
 
 #[cfg(test)]
 mod logic_capture_tests {
-    use crate::logic_capture::LogicSource;
     use crate::cpu::CortexM;
+    use crate::logic_capture::LogicSource;
     use crate::logic_capture::{LogicCapture, LogicEdge, LOGIC_RING_CAPACITY};
     use crate::peripherals::gpio::{GpioPort, GpioRegisterLayout};
     use crate::{Bus, Machine};

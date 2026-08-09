@@ -391,7 +391,10 @@ fn decode_uart_8n1(initial: bool, edges: &[(u64, bool)], bit_time: u64) -> Vec<u
 }
 
 /// Per-channel `(cycle, level)` transitions from one drained batch.
-fn channel_edges(batch: &labwired_core::logic_capture::LogicEdgeBatch, ch: u32) -> Vec<(u64, bool)> {
+fn channel_edges(
+    batch: &labwired_core::logic_capture::LogicEdgeBatch,
+    ch: u32,
+) -> Vec<(u64, bool)> {
     batch
         .edges
         .iter()
@@ -399,6 +402,10 @@ fn channel_edges(batch: &labwired_core::logic_capture::LogicEdgeBatch, ch: u32) 
         .map(|e| (e.cycle, e.value))
         .collect()
 }
+
+/// One capture watched two ways: `(wire transitions, pad transitions, the
+/// initial levels `logic_watch` reported for both channels)`.
+type Capture = (Vec<(u64, bool)>, Vec<(u64, bool)>, Vec<Option<bool>>);
 
 /// Arm channel 0 on `peripheral`'s named wire line and channel 1 on the PA2
 /// pad, transmit `bytes` through `uart_base`, and drain.
@@ -412,7 +419,7 @@ fn wire_and_pad_capture(
     line: &str,
     uart_base: u64,
     bytes: &[u8],
-) -> (Vec<(u64, bool)>, Vec<(u64, bool)>, Vec<Option<bool>>) {
+) -> Capture {
     let gpioa = machine
         .bus
         .find_peripheral_index_by_name("gpioa")
@@ -543,8 +550,7 @@ fn uart4_and_uart5_are_probeable_on_their_own_wire_with_no_pad_route() {
         firmware_rcc_init(&mut machine);
         firmware_all_ports_init(&mut machine);
 
-        let (wire, _, initial) =
-            wire_and_pad_capture(&mut machine, name, "TX", base, &ASYMMETRIC);
+        let (wire, _, initial) = wire_and_pad_capture(&mut machine, name, "TX", base, &ASYMMETRIC);
 
         assert_eq!(
             initial[0],
@@ -734,5 +740,49 @@ fn rx_stays_silent_when_nothing_is_driving_it() {
         machine.logic_read_edges(0).edges.is_empty(),
         "nothing drove RX, so RX must be flat — an invented level here is the \
          failure mode this criterion exists to forbid",
+    );
+}
+
+/// The two kinds coexist on ONE wire cell, and neither erases the other.
+///
+/// This is the hazard `PadLines::merge_tap` exists for, arriving from a new
+/// direction. A wire channel registers on the same cell a routed pad's
+/// `PadRoutes` registers on; installing rather than merging would wipe the
+/// pad's channels and leave it silently empty while the levels still read
+/// correctly — the exact failure mode that already cost this codebase a
+/// silently-empty SPI data channel on the STM32WBA52.
+///
+/// So: mux PA2 properly (the repaired firmware's own sequence), watch the PAD
+/// and the WIRE at once, and require both to carry the same characters.
+#[test]
+fn a_routed_pad_and_the_wire_behind_it_capture_the_same_traffic_at_once() {
+    let mut machine = lab_machine();
+    firmware_rcc_init(&mut machine);
+    firmware_all_ports_init(&mut machine);
+
+    let (wire, pad, initial) =
+        wire_and_pad_capture(&mut machine, "uart2", "TX", USART2_BASE, &ASYMMETRIC);
+
+    assert_eq!(
+        initial,
+        vec![Some(true), Some(true)],
+        "PA2 is muxed to AF7 now, so the pad reads the WIRE's idle mark rather \
+         than GPIOA's output latch",
+    );
+    assert_eq!(
+        decode_uart_8n1(true, &wire, u64::from(USARTDIV_COM2)),
+        ASYMMETRIC.to_vec(),
+        "the wire channel carries the characters",
+    );
+    assert_eq!(
+        decode_uart_8n1(true, &pad, u64::from(USARTDIV_COM2)),
+        ASYMMETRIC.to_vec(),
+        "and so does the pad channel — a wire probe must not disarm the pad \
+         probe watching the same signal",
+    );
+    assert_eq!(
+        wire, pad,
+        "one wire, one set of transitions: watched two ways in one capture, \
+         the two channels must be cycle-for-cycle identical",
     );
 }

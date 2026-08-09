@@ -980,8 +980,7 @@ impl Uart {
         // inert when nothing is buffered, which is every tick on a UART that
         // has no routed pads.
         self.wire_flush(
-            self.wire_chars.len() >= WIRE_BURST_CAP
-                || self.wire_rx_chars.len() >= WIRE_BURST_CAP,
+            self.wire_chars.len() >= WIRE_BURST_CAP || self.wire_rx_chars.len() >= WIRE_BURST_CAP,
         );
         let mut dma_signals = Vec::new();
         if self.dma_tx_pending {

@@ -345,7 +345,10 @@ fn a_twim_transfer_puts_a_decodable_i2c_waveform_on_the_pads_psel_selects() {
     configure_twim(&mut machine, u32::from(SCL), u32::from(SDA));
 
     let gpio = gpio0(&machine);
-    let initial = machine.logic_watch(&[Some(LogicSource::pad(gpio, SCL)), Some(LogicSource::pad(gpio, SDA))]);
+    let initial = machine.logic_watch(&[
+        Some(LogicSource::pad(gpio, SCL)),
+        Some(LogicSource::pad(gpio, SDA)),
+    ]);
     assert_eq!(
         initial,
         vec![Some(true), Some(true)],
@@ -405,7 +408,10 @@ fn scl_runs_at_the_rate_the_frequency_register_programs() {
         .unwrap();
     configure_twim(&mut machine, u32::from(SCL), u32::from(SDA));
     let gpio = gpio0(&machine);
-    machine.logic_watch(&[Some(LogicSource::pad(gpio, SCL)), Some(LogicSource::pad(gpio, SDA))]);
+    machine.logic_watch(&[
+        Some(LogicSource::pad(gpio, SCL)),
+        Some(LogicSource::pad(gpio, SDA)),
+    ]);
     run(&mut machine, 80_000);
 
     let bus = &mut machine.bus;
@@ -518,7 +524,10 @@ fn re_pointing_psel_at_runtime_moves_the_waveform_to_the_new_pad() {
         .unwrap(); // OUTCLR
 
     assert_eq!(
-        machine.logic_watch(&[Some(LogicSource::pad(gpio, FIRST)), Some(LogicSource::pad(gpio, SECOND))]),
+        machine.logic_watch(&[
+            Some(LogicSource::pad(gpio, FIRST)),
+            Some(LogicSource::pad(gpio, SECOND))
+        ]),
         vec![Some(true), Some(false)],
         "P0.{FIRST} carries SCL (idle high); P0.{SECOND} is still a GPIO (low)",
     );
@@ -531,7 +540,10 @@ fn re_pointing_psel_at_runtime_moves_the_waveform_to_the_new_pad() {
     bus.write_u32(SERIAL0 + OFF_ENABLE, ENABLE_TWIM).unwrap();
 
     assert_eq!(
-        machine.logic_watch(&[Some(LogicSource::pad(gpio, FIRST)), Some(LogicSource::pad(gpio, SECOND))]),
+        machine.logic_watch(&[
+            Some(LogicSource::pad(gpio, FIRST)),
+            Some(LogicSource::pad(gpio, SECOND))
+        ]),
         vec![Some(false), Some(true)],
         "the claim must FOLLOW PSEL: P0.{FIRST} is a plain GPIO again, and \
          P0.{SECOND} now reads the I²C wire",
@@ -671,7 +683,10 @@ fn a_spim_transfer_puts_a_decodable_spi_waveform_on_the_pads_psel_selects() {
 
     let gpio = gpio0(&machine);
     assert_eq!(
-        machine.logic_watch(&[Some(LogicSource::pad(gpio, SCK)), Some(LogicSource::pad(gpio, MOSI))]),
+        machine.logic_watch(&[
+            Some(LogicSource::pad(gpio, SCK)),
+            Some(LogicSource::pad(gpio, MOSI))
+        ]),
         vec![Some(false), Some(false)],
         "mode 0 rests SCK low (CPOL = ActiveHigh) and MOSI low",
     );
@@ -835,7 +850,10 @@ fn the_nrf52832_gets_the_same_i2c_waveform_through_its_single_port() {
 
     let gpio = gpio0(&machine);
     assert_eq!(
-        machine.logic_watch(&[Some(LogicSource::pad(gpio, SCL)), Some(LogicSource::pad(gpio, SDA))]),
+        machine.logic_watch(&[
+            Some(LogicSource::pad(gpio, SCL)),
+            Some(LogicSource::pad(gpio, SDA))
+        ]),
         vec![Some(true), Some(true)],
         "an idle open-drain I²C bus rests high on both pads PSEL selects",
     );

@@ -63,9 +63,9 @@
 
 #[cfg(test)]
 mod esp_spi_uart_waveform_tests {
-    use crate::logic_capture::LogicSource;
     use crate::cpu::CortexM;
     use crate::logic_capture::LogicEdge;
+    use crate::logic_capture::LogicSource;
     use crate::peripherals::esp32c3::gpio::Esp32c3Gpio;
     use crate::peripherals::esp32c3::spi::Esp32c3Spi;
     use crate::peripherals::esp32s3::gpio::Esp32s3Gpio;

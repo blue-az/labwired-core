@@ -24,9 +24,9 @@
 
 #[cfg(test)]
 mod stm32_uart_waveform_tests {
-    use crate::logic_capture::LogicSource;
     use crate::cpu::CortexM;
     use crate::logic_capture::LogicEdge;
+    use crate::logic_capture::LogicSource;
     use crate::peripherals::gpio::{GpioPort, GpioRegisterLayout};
     use crate::peripherals::uart::{Uart, UartRegisterLayout};
     use crate::{Bus, Machine};
@@ -326,7 +326,10 @@ mod stm32_uart_waveform_tests {
         // Watch BOTH pads: the TX channel proves the machinery is live in this
         // very fixture, so the control channel's silence means the table, not a
         // broken setup. Without that, `is_empty` is satisfied by any failure.
-        machine.logic_watch(&[Some(LogicSource::pad(gpio_idx, TX_PIN)), Some(LogicSource::pad(gpio_idx, NON_UART_PIN))]);
+        machine.logic_watch(&[
+            Some(LogicSource::pad(gpio_idx, TX_PIN)),
+            Some(LogicSource::pad(gpio_idx, NON_UART_PIN)),
+        ]);
         for _ in 0..20_000 {
             machine.step().unwrap();
         }
