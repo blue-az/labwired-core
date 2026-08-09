@@ -60,6 +60,20 @@ mod tests {
     const CFSR_BFARVALID: u32 = 1 << 15;
     /// `HFSR.FORCED`, bit 30 (B3.2.16).
     const HFSR_FORCED: u32 = 1 << 30;
+    /// `CFSR.BFSR.IMPRECISERR` — BFSR bit 2, i.e. CFSR bit 10 (B3.2.15). A
+    /// synchronous data-access fault is precise; this bit must stay clear, and
+    /// BFAR is architecturally meaningless when it is the one that is set.
+    const CFSR_IMPRECISERR: u32 = 1 << 10;
+    /// `CFSR.BFSR.STKERR` — BFSR bit 4, i.e. CFSR bit 12 (B3.2.15): the
+    /// exception-entry stacking fault. A different fault from PRECISERR.
+    const CFSR_STKERR: u32 = 1 << 12;
+    /// `CFSR.BFSR.UNSTKERR` — BFSR bit 3, i.e. CFSR bit 11 (B3.2.15): the
+    /// exception-return unstacking fault.
+    const CFSR_UNSTKERR: u32 = 1 << 11;
+    /// The exact CFSR a precise data-access fault must leave behind: PRECISERR
+    /// and BFARVALID, and nothing else — no MMFSR bits (the MPU is not
+    /// enforced), no UFSR bits, no IBUSERR/IMPRECISERR/STKERR/UNSTKERR.
+    const CFSR_PRECISE_DATA_FAULT: u32 = CFSR_PRECISERR | CFSR_BFARVALID;
 
     /// Covered by no memory region and no peripheral window on a default
     /// `SystemBus` (flash 0x0000_0000..0x0010_0000, RAM 0x2000_0000..0x2010_0000,
@@ -82,6 +96,10 @@ mod tests {
 
     /// `LDR r0, [r1, #0]` — T1 encoding, rn = r1, rt = r0.
     const LDR_R0_R1: u16 = 0x6808;
+    /// `STR r0, [r1, #0]` — T1 encoding, rn = r1, rt = r0.
+    const STR_R0_R1: u16 = 0x6008;
+    /// `BX lr` — the exception-return instruction when LR holds an EXC_RETURN.
+    const BX_LR: u16 = 0x4770;
     /// `B .` — an infinite self-loop, the classic default fault handler body.
     const B_SELF: u16 = 0xE7FE;
 
@@ -380,6 +398,47 @@ mod tests {
         }
     }
 
+    /// The one place where flag-off is **not** byte-identical by construction.
+    ///
+    /// Everything else about this feature is gated by a register surface the SCB
+    /// simply does not serve, or by an escalation path that is never entered.
+    /// `masked_by_primask` is different: it sits on the *shared* dispatch path
+    /// that every Cortex-M lab already runs through, and it changes PRIMASK from
+    /// this core's historical blanket "block everything" into ARMv7-M B1.5.4's
+    /// priority boost to 0 — which by construction cannot mask HardFault (-1) or
+    /// NMI (-2).
+    ///
+    /// With the flag **off** it must be exactly `self.primask` again. The
+    /// difference is only observable for an exception of negative priority, so
+    /// that is what this pins: HardFault pended under PRIMASK must NOT dispatch
+    /// with the flag off (blanket block), and MUST dispatch with it on
+    /// (`fault_inside_a_primask_critical_section_takes_hardfault` covers the
+    /// other side). Delete the `!faults_enabled()` early-out and this fails.
+    #[test]
+    fn primask_stays_a_blanket_block_with_the_flag_off() {
+        for (faults_enabled, expect_dispatch) in [(false, false), (true, true)] {
+            let mut machine = faulting_machine(faults_enabled);
+            machine.cpu.primask = true;
+            // Pend HardFault directly — priority -1, i.e. above PRIMASK's boost
+            // to 0. No memory fault is involved, so this isolates the dispatch
+            // rule from the escalation rule.
+            machine.cpu.set_exception_pending(3);
+
+            machine.step().expect("no memory access is involved here");
+
+            let dispatched = machine.cpu.get_pc() == HARDFAULT_HANDLER;
+            assert_eq!(
+                dispatched,
+                expect_dispatch,
+                "faults_enabled={faults_enabled}: PRIMASK must be a blanket block \
+                 with the flag OFF (historical behaviour, and what makes every \
+                 existing lab byte-identical) and a boost to priority 0 with it \
+                 ON (B1.5.4). pc = 0x{:08X}",
+                machine.cpu.get_pc()
+            );
+        }
+    }
+
     /// The path labs actually run on.
     ///
     /// Every guard above drives `Machine::step`, i.e. `advance(single())`, a
@@ -433,27 +492,42 @@ mod tests {
     /// silicon would never run it.
     #[test]
     fn enabled_busfault_still_escalates_when_priority_does_not_permit() {
-        let mut machine = faulting_machine(true);
-        machine.bus.write_u32(SHCSR, SHCSR_BUSFAULTENA).unwrap();
-        // SHPR1 (0xE000ED18) byte 1 = BusFault priority.
-        machine.bus.write_u32(0xE000_ED18, 0x20 << 8).unwrap();
-        machine.cpu.basepri = 0x10;
-        machine.cpu.set_register(1, UNMAPPED);
+        // B1.5.14 says "the same as or lower than", so BOTH the strictly-lower
+        // case and the EQUAL case must escalate. The equal case is the boundary:
+        // an implementation that compared `<=` instead of `<` would take a
+        // BusFault that cannot actually pre-empt, pend an exception it can never
+        // dispatch, and spin on the faulting instruction.
+        for (busfault_prio, basepri, case) in [
+            (0x20u32, 0x10u8, "lower priority than BASEPRI"),
+            (0x20u32, 0x20u8, "the SAME priority as BASEPRI"),
+        ] {
+            let mut machine = faulting_machine(true);
+            machine.bus.write_u32(SHCSR, SHCSR_BUSFAULTENA).unwrap();
+            // SHPR1 (0xE000ED18) byte 1 = BusFault priority.
+            machine
+                .bus
+                .write_u32(0xE000_ED18, busfault_prio << 8)
+                .unwrap();
+            machine.cpu.basepri = basepri;
+            machine.cpu.set_register(1, UNMAPPED);
 
-        run_alive(&mut machine, 2);
+            run_alive(&mut machine, 2);
 
-        assert_eq!(
-            machine.cpu.get_pc(),
-            HARDFAULT_HANDLER,
-            "BusFault at priority 0x20 cannot preempt BASEPRI 0x10, so B1.5.14 \
-             escalates it. pc = 0x{:08X}",
-            machine.cpu.get_pc()
-        );
-        assert_eq!(
-            machine.bus.read_u32(HFSR).unwrap() & HFSR_FORCED,
-            HFSR_FORCED,
-            "HFSR.FORCED marks the escalation"
-        );
+            assert_eq!(
+                machine.cpu.get_pc(),
+                HARDFAULT_HANDLER,
+                "BusFault at 0x{busfault_prio:02X} has {case} (0x{basepri:02X}), \
+                 so B1.5.14 escalates it. pc = 0x{:08X} — BUSFAULT_HANDLER means \
+                 the priority rule let it through, CODE means it pended an \
+                 exception it cannot deliver",
+                machine.cpu.get_pc()
+            );
+            assert_eq!(
+                machine.bus.read_u32(HFSR).unwrap() & HFSR_FORCED,
+                HFSR_FORCED,
+                "HFSR.FORCED marks the escalation ({case})"
+            );
+        }
     }
 
     /// `PRIMASK` boosts the execution priority to 0 (B1.5.4). A BusFault at any
@@ -535,6 +609,267 @@ mod tests {
             machine.bus.read_u32(CFSR).unwrap(),
             0,
             "CFSR is write-1-to-clear"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // THE STORE SIDE — `CortexM::store` latches too, not just `load`.
+    // -------------------------------------------------------------------------
+
+    /// Every guard above faults on an `LDR`. `CortexM::load` and
+    /// `CortexM::store` latch `pending_data_fault` independently, so a `store`
+    /// that propagated its `Err` without latching would keep the whole store
+    /// half of the instruction set on the abort path — every guard here would
+    /// still be green, and firmware writing to a bad address would still stop
+    /// the run instead of taking a BusFault.
+    ///
+    /// ARMv7-M does not distinguish read from write for PRECISERR (B3.2.15):
+    /// both are precise data-access faults and both set BFAR.
+    #[test]
+    fn a_faulting_store_escalates_exactly_like_a_faulting_load() {
+        let mut machine = faulting_machine(true);
+        // Replace the LDR at CODE with an STR to the same bad address.
+        machine
+            .bus
+            .write_u16(CODE as u64, STR_R0_R1)
+            .expect("CODE is mapped flash");
+        machine.bus.write_u32(SHCSR, SHCSR_BUSFAULTENA).unwrap();
+        machine.cpu.set_register(0, 0xDEAD_BEEF);
+        machine.cpu.set_register(1, UNMAPPED);
+
+        run_alive(&mut machine, 2);
+
+        assert_eq!(
+            machine.cpu.get_pc(),
+            BUSFAULT_HANDLER,
+            "a faulting STR must take BusFault just as a faulting LDR does. \
+             pc = 0x{:08X}",
+            machine.cpu.get_pc()
+        );
+        assert_eq!(
+            machine.bus.read_u32(CFSR).unwrap(),
+            CFSR_PRECISE_DATA_FAULT,
+            "a faulting store is a precise data-access fault: PRECISERR + \
+             BFARVALID, nothing else"
+        );
+        assert_eq!(
+            machine.bus.read_u32(BFAR).unwrap(),
+            UNMAPPED,
+            "BFAR must hold the address the store faulted on"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // THE EXACT STATUS WORD — not merely "the bit I expect is present".
+    // -------------------------------------------------------------------------
+
+    /// `cfsr & PRECISERR == PRECISERR` also passes for an implementation that
+    /// sets every BFSR bit it can think of. ARMv7-M B3.2.15 is specific: a
+    /// synchronous data-access fault sets **PRECISERR**, and BFARVALID because
+    /// BFAR is written. `IMPRECISERR` in particular is the *contradictory* bit —
+    /// it means the fault is asynchronous and BFAR is meaningless — and STKERR /
+    /// UNSTKERR name entirely different events.
+    ///
+    /// Likewise HFSR: on a non-escalated BusFault it must be *zero*, not merely
+    /// "FORCED clear", and on an escalated one exactly `FORCED` — not VECTTBL
+    /// (a vector-table read fault) and not DEBUGEVT.
+    #[test]
+    fn the_fault_status_words_are_exact_not_merely_supersets() {
+        // Non-escalated: BusFault enabled and takeable.
+        let mut taken = faulting_machine(true);
+        taken.bus.write_u32(SHCSR, SHCSR_BUSFAULTENA).unwrap();
+        taken.cpu.set_register(1, UNMAPPED);
+        run_alive(&mut taken, 2);
+        let cfsr = taken.bus.read_u32(CFSR).unwrap();
+        assert_eq!(
+            cfsr, CFSR_PRECISE_DATA_FAULT,
+            "CFSR must be exactly PRECISERR|BFARVALID (0x{CFSR_PRECISE_DATA_FAULT:08X}), \
+             got 0x{cfsr:08X}. IMPRECISERR set here would contradict BFARVALID; \
+             STKERR/UNSTKERR would name a fault that did not happen"
+        );
+        assert_eq!(
+            cfsr & CFSR_IMPRECISERR,
+            0,
+            "a synchronous data-access fault is PRECISE — IMPRECISERR would say \
+             BFAR is not trustworthy"
+        );
+        assert_eq!(
+            cfsr & (CFSR_STKERR | CFSR_UNSTKERR),
+            0,
+            "no stacking or unstacking happened"
+        );
+        assert_eq!(
+            taken.bus.read_u32(HFSR).unwrap(),
+            0,
+            "HFSR must be untouched when nothing escalated"
+        );
+
+        // Escalated: BusFault not enabled.
+        let mut escalated = faulting_machine(true);
+        escalated.cpu.set_register(1, UNMAPPED);
+        run_alive(&mut escalated, 2);
+        assert_eq!(
+            escalated.bus.read_u32(CFSR).unwrap(),
+            CFSR_PRECISE_DATA_FAULT,
+            "escalation must not change WHICH fault happened, only who handles it"
+        );
+        assert_eq!(
+            escalated.bus.read_u32(HFSR).unwrap(),
+            HFSR_FORCED,
+            "HFSR must be exactly FORCED — not VECTTBL (bit 1), which means the \
+             vector-table read itself faulted, and not DEBUGEVT (bit 31)"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // B1.5.6 — the stacked return address of a synchronous fault.
+    // -------------------------------------------------------------------------
+
+    /// ARMv7-M B1.5.6: for a **synchronous** fault the stacked PC is the address
+    /// of the instruction that caused it, so a handler that fixes the cause can
+    /// `BX LR` and have the access retried. (For an asynchronous exception it is
+    /// the *next* instruction.) This is the whole reason the escalation path
+    /// leaves the PC parked on the faulting instruction instead of advancing it.
+    ///
+    /// Nothing else in this file looks at the exception frame, so an
+    /// implementation that advanced the PC past the LDR before pending would
+    /// pass every other guard while silently stacking the wrong return address —
+    /// and firmware that retries would skip the access instead of repeating it.
+    #[test]
+    fn the_stacked_return_address_is_the_faulting_instruction() {
+        let mut machine = faulting_machine(true);
+        machine.bus.write_u32(SHCSR, SHCSR_BUSFAULTENA).unwrap();
+        machine.cpu.set_register(1, UNMAPPED);
+
+        run_alive(&mut machine, 2);
+        assert_eq!(machine.cpu.get_pc(), BUSFAULT_HANDLER);
+
+        // Entry stacks 8 words on the preempted stack: R0,R1,R2,R3,R12,LR,PC,xPSR.
+        let frame = STACK_TOP - 32;
+        assert_eq!(
+            machine.cpu.get_register(13),
+            frame,
+            "SP must have dropped by exactly one 8-word exception frame"
+        );
+        assert_eq!(
+            machine.bus.read_u32((frame + 24) as u64).unwrap(),
+            CODE,
+            "the stacked PC of a SYNCHRONOUS fault is the faulting instruction \
+             itself (B1.5.6), so `BX LR` retries the access. CODE+2 here would \
+             mean the fault silently skipped the access"
+        );
+        assert_eq!(
+            machine.bus.read_u32((frame + 4) as u64).unwrap(),
+            UNMAPPED,
+            "R1 (the address register) must be stacked as it was at the fault"
+        );
+        assert_eq!(
+            machine.bus.read_u32((frame + 28) as u64).unwrap() & 0x1FF,
+            0,
+            "the stacked xPSR.IPSR must record Thread mode — the fault was taken \
+             from thread context, not from another handler"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // THE NON-ESCALATED FAULTS — BFAR is only meaningful when BFARVALID is set,
+    // and only a PRECISE data access may set either.
+    // -------------------------------------------------------------------------
+
+    /// An **exception-entry stacking** fault is `BFSR.STKERR` (B3.2.15), not
+    /// PRECISERR, and on silicon it can end in LOCKUP (B1.5.15). It must not be
+    /// escalated: escalating it would re-enter the very stack that is broken,
+    /// forever. It must also not touch BFAR — a handler that read BFAR after a
+    /// stacking fault would be told the wrong address.
+    ///
+    /// This is what pins the `bus_store` (non-latching) choice at the stacking
+    /// sites. Route them back through `store` and this test fails.
+    #[test]
+    fn an_exception_entry_stacking_fault_is_not_escalated_and_leaves_bfar_alone() {
+        /// A second unmapped region, well away from `UNMAPPED`, so the two
+        /// faults are distinguishable by address.
+        const BAD_STACK: u32 = 0x9800_0000;
+
+        let mut machine = faulting_machine(true);
+        machine.bus.write_u32(SHCSR, SHCSR_BUSFAULTENA).unwrap();
+        machine.cpu.set_register(1, UNMAPPED);
+        machine.cpu.set_sp(BAD_STACK);
+
+        // Step 1: the LDR faults and BusFault is pended (this much must work,
+        // or the test would pass for the wrong reason).
+        machine
+            .step()
+            .expect("the data fault itself must be handled");
+        assert_eq!(
+            machine.bus.read_u32(BFAR).unwrap(),
+            UNMAPPED,
+            "precondition: the data fault recorded its address"
+        );
+
+        // Step 2: taking the exception stacks onto BAD_STACK and cannot.
+        let frame = BAD_STACK.wrapping_sub(32);
+        let step = machine.step();
+        assert!(
+            matches!(step, Err(SimulationError::MemoryViolation(a)) if a == frame as u64),
+            "a stacking fault is STKERR/LOCKUP territory, not a precise data \
+             fault: it must surface as an abort at the frame address \
+             0x{frame:08X}, never be escalated into another exception. got {step:?}"
+        );
+        assert_eq!(
+            machine.bus.read_u32(BFAR).unwrap(),
+            UNMAPPED,
+            "BFAR must still hold the DATA address. Overwriting it with the \
+             stack address would hand the handler the wrong fault"
+        );
+        assert_eq!(
+            machine.bus.read_u32(CFSR).unwrap(),
+            CFSR_PRECISE_DATA_FAULT,
+            "the stacking fault must not add PRECISERR/BFARVALID for itself"
+        );
+    }
+
+    /// The mirror case: an **exception-return unstacking** fault is
+    /// `BFSR.UNSTKERR` (B3.2.15). `exception_return` reads the frame straight
+    /// off the bus rather than through `CortexM::load`, so it does not latch —
+    /// this guard is what stops a later "unify all the accesses" refactor from
+    /// quietly turning an unstacking fault into a precise data fault with a
+    /// bogus BFAR.
+    #[test]
+    fn an_exception_return_unstacking_fault_is_not_escalated() {
+        let mut machine = faulting_machine(true);
+        machine.bus.write_u32(SHCSR, SHCSR_BUSFAULTENA).unwrap();
+        // The handler returns instead of spinning.
+        machine
+            .bus
+            .write_u16(BUSFAULT_HANDLER as u64, BX_LR)
+            .unwrap();
+        machine.cpu.set_register(1, UNMAPPED);
+
+        run_alive(&mut machine, 2);
+        assert_eq!(machine.cpu.get_pc(), BUSFAULT_HANDLER, "in the handler");
+        let cfsr_before = machine.bus.read_u32(CFSR).unwrap();
+        let bfar_before = machine.bus.read_u32(BFAR).unwrap();
+        assert_eq!(cfsr_before, CFSR_PRECISE_DATA_FAULT, "precondition");
+
+        // Move the stack out from under the frame, then return.
+        machine.cpu.set_sp(0x9800_0000);
+        let step = machine.step();
+
+        assert!(
+            matches!(step, Err(SimulationError::MemoryViolation(_))),
+            "an unstacking fault must surface as an abort, not be escalated into \
+             a fresh precise data fault. got {step:?}"
+        );
+        assert_eq!(
+            machine.bus.read_u32(CFSR).unwrap(),
+            cfsr_before,
+            "UNSTKERR is a different fault from PRECISERR — CFSR must not gain \
+             a second precise-data-fault report"
+        );
+        assert_eq!(
+            machine.bus.read_u32(BFAR).unwrap(),
+            bfar_before,
+            "BFAR must still name the original data address"
         );
     }
 }
