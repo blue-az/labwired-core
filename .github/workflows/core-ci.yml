@@ -482,6 +482,12 @@ jobs:
       - name: Clippy + build the browser layer (crates/wasm)
         run: cargo clippy -p labwired-wasm --all-targets -- -D warnings
 
+      # playground_repro drives the secure-boot lab through the same entry
+      # points simulator-bridge.ts uses, so it needs that lab's firmware. It
+      # builds the ELF itself (ensure_firmware_built) and needs the target to
+      # do it. ~10s once, cached with the rest of the toolchain.
+      - name: Add ARM target (secure-boot lab firmware for the browser repro)
+        run: rustup target add thumbv7em-none-eabi
       - name: Unit tests (browser layer)
         run: cargo test -p labwired-wasm --lib
 

@@ -9,8 +9,8 @@ The models column is a content digest over everything that board's `models` list
 
 | Board | Tier | Last silicon capture | Models | Status |
 |-------|------|----------------------|--------|--------|
-| `nrf52840` | 🟢 silicon-verified | 2026-06-17 | `6142ba057c56f787` | ⚠ drift acked 2026-08-08 (re-capture pending) |
-| `seeed-xiao-nrf52840-sense` | 🟢 silicon-verified | 2026-06-17 | `6142ba057c56f787` | ⚠ drift acked 2026-08-08 (re-capture pending) |
+| `nrf52840` | 🟢 silicon-verified | 2026-06-17 | `1069454e8c736b0e` | ⚠ drift acked 2026-08-09 (re-capture pending) |
+| `seeed-xiao-nrf52840-sense` | 🟢 silicon-verified | 2026-06-17 | `1069454e8c736b0e` | ⚠ drift acked 2026-08-09 (re-capture pending) |
 | `stm32h563` | 🟢 silicon-verified | 2026-06-22 | `bec6988944d80986` | ⚠ drift acked 2026-08-08 (re-capture pending) |
 | `esp32c3` | 🟢 silicon-verified | 2026-06-17 | `7a687f785b9f9f85` | ⚠ drift acked 2026-08-09 (re-capture pending) |
 | `nucleo-l476rg` | 🟢 silicon-verified | 2026-06-20 | `266bc466735dd241` | ⚠ drift acked 2026-08-08 (re-capture pending) |
@@ -23,7 +23,7 @@ The models column is a content digest over everything that board's `models` list
 | `nrf52832` | ⚪ structural | — | `8eb946cd8fd728b5` | no silicon capture |
 | `rp2040` | ⚪ structural | — | `c103296ae72395af` | no silicon capture |
 | `rp2350` | 🟡 smoke-manual | — | `fa3b47246c7b0401` | no silicon capture |
-| `nrf5340` | 🔵 sim-validated (deep model, no HW diff) | — | `5b2437d601e703b8` | no silicon capture |
+| `nrf5340` | 🔵 sim-validated (deep model, no HW diff) | — | `af066a5b3d56a73b` | no silicon capture |
 | `stm32h735` | 🔵 sim-validated (deep model, no HW diff) | — | `53fd2ce53e11a335` | no silicon capture |
 | `stm32f411ceu6` | 🔵 sim-validated (deep model, no HW diff) | — | `9c285292b9bd9476` | no silicon capture |
 | `esp32` | ⚪ structural | — | `072e70147b3b21a3` | no silicon capture |
@@ -39,7 +39,7 @@ The models column is a content digest over everything that board's `models` list
 - Silicon: **2026-06-17** on ST-LINK V2 (J37S7) — conformance 16/16; mmio 16/16; GPIO P0 22/0, P1 23/0; onboarding 22/22; POWER 10/0, SPIS 19/0, TWIS 20/0, RTC0 12/0, TIMER0 16/0; SPIM0/CCM/full-register clean
   - offline (CI): nrf52_conformance::conformance_sim (digest vs frozen 2026-06-09 capture)
   - offline (CI): nrf52_mmio_diff / nrf52_gpio_conformance (sim halves)
-- Drift status: **⚠ drift acked 2026-08-08 (re-capture pending)**
+- Drift status: **⚠ drift acked 2026-08-09 (re-capture pending)**
 
 ## `seeed-xiao-nrf52840-sense` — 🟢 silicon-verified
 
@@ -47,7 +47,7 @@ The models column is a content digest over everything that board's `models` list
 - Note: Same silicon as nrf52840 (the bench board IS a Seeed XIAO nRF52840 Sense).
 - Silicon: **2026-06-17** on ST-LINK V2 (J37S7) — rides the nrf52840 full register sweep (16/16) re-confirmed 2026-06-17
   - offline (CI): nrf52.rs xiao_* (manifest build, GPIO task regs, SPIM0 EasyDMA)
-- Drift status: **⚠ drift acked 2026-08-08 (re-capture pending)**
+- Drift status: **⚠ drift acked 2026-08-09 (re-capture pending)**
 
 ## `stm32h563` — 🟢 silicon-verified
 

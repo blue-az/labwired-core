@@ -11,6 +11,8 @@ mod inputs;
 mod inspect;
 mod install;
 mod jit_browser;
+#[cfg(test)]
+mod playground_repro;
 mod traces;
 // CortexM and XtensaLx7 are used via Box<dyn Cpu>; the concrete types are
 // only constructed inside the configure_* fns and immediately boxed.
