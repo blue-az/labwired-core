@@ -1,0 +1,135 @@
+use crate::obd2::{CanFrame, Error, FLOW_CONTROL_ID, RESPONSE_ID};
+
+const VIN_PAYLOAD_LEN: usize = 20;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum IsoTpEvent {
+    FlowControl(CanFrame),
+    Pending,
+    Complete([u8; 17]),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct VinReassembler {
+    payload: [u8; VIN_PAYLOAD_LEN],
+    received: u8,
+    next_sequence: u8,
+    active: bool,
+}
+
+impl Default for VinReassembler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl VinReassembler {
+    pub const fn new() -> Self {
+        Self {
+            payload: [0; VIN_PAYLOAD_LEN],
+            received: 0,
+            next_sequence: 1,
+            active: false,
+        }
+    }
+
+    pub fn reset(&mut self) {
+        *self = Self::new();
+    }
+
+    pub fn timeout(&mut self) -> Result<(), Error> {
+        if self.active {
+            self.reset();
+            Err(Error::Incomplete)
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn push(&mut self, frame: &CanFrame) -> Result<IsoTpEvent, Error> {
+        let result = self.push_inner(frame);
+        if result.is_err() {
+            self.reset();
+        }
+        result
+    }
+
+    fn push_inner(&mut self, frame: &CanFrame) -> Result<IsoTpEvent, Error> {
+        if frame.len > 8 {
+            return Err(Error::InvalidLength);
+        }
+        if frame.id != RESPONSE_ID {
+            return Err(Error::WrongId);
+        }
+        if frame.len == 0 {
+            return Err(Error::InvalidLength);
+        }
+        match frame.data[0] >> 4 {
+            1 => self.first_frame(frame),
+            2 => self.consecutive_frame(frame),
+            _ => Err(Error::UnexpectedFrame),
+        }
+    }
+
+    fn first_frame(&mut self, frame: &CanFrame) -> Result<IsoTpEvent, Error> {
+        if self.active {
+            return Err(Error::UnexpectedFrame);
+        }
+        if frame.len < 8 {
+            return Err(Error::ShortPayload);
+        }
+        let total = (usize::from(frame.data[0] & 0x0f) << 8) | usize::from(frame.data[1]);
+        if total > VIN_PAYLOAD_LEN {
+            return Err(Error::Oversize);
+        }
+        // Deterministic ECU format: 49 02 01, then exactly 17 VIN bytes.
+        if total != VIN_PAYLOAD_LEN {
+            return Err(Error::Malformed);
+        }
+        self.payload[..6].copy_from_slice(&frame.data[2..8]);
+        self.received = 6;
+        self.next_sequence = 1;
+        self.active = true;
+        Ok(IsoTpEvent::FlowControl(CanFrame {
+            id: FLOW_CONTROL_ID,
+            len: 8,
+            data: [0x30, 0, 0, 0, 0, 0, 0, 0],
+        }))
+    }
+
+    fn consecutive_frame(&mut self, frame: &CanFrame) -> Result<IsoTpEvent, Error> {
+        if !self.active {
+            return Err(Error::UnexpectedFrame);
+        }
+        if frame.data[0] & 0x0f != self.next_sequence {
+            return Err(Error::Sequence);
+        }
+        let remaining = VIN_PAYLOAD_LEN - usize::from(self.received);
+        let chunk = remaining.min(7);
+        if usize::from(frame.len) < chunk + 1 {
+            return Err(Error::ShortPayload);
+        }
+        let start = usize::from(self.received);
+        self.payload[start..start + chunk].copy_from_slice(&frame.data[1..1 + chunk]);
+        self.received += chunk as u8;
+        self.next_sequence = (self.next_sequence + 1) & 0x0f;
+        if usize::from(self.received) != VIN_PAYLOAD_LEN {
+            return Ok(IsoTpEvent::Pending);
+        }
+        if self.payload[..3] != [0x49, 0x02, 0x01] {
+            return Err(if self.payload[0] == 0x7f {
+                Error::NegativeResponse(self.payload[2])
+            } else if self.payload[0] != 0x49 {
+                Error::UnsupportedService
+            } else if self.payload[1] != 2 {
+                Error::UnsupportedPid
+            } else {
+                Error::Malformed
+            });
+        }
+        let mut vin = [0; 17];
+        vin.copy_from_slice(&self.payload[3..]);
+        self.reset();
+        Ok(IsoTpEvent::Complete(vin))
+    }
+}
