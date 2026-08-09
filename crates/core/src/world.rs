@@ -96,6 +96,16 @@ pub trait MachineTrait: Send {
     fn snapshot(&self) -> Option<crate::snapshot::MachineSnapshot> {
         None
     }
+    fn display_artifact(
+        &self,
+        _device_id: &str,
+        _include_bytes: bool,
+    ) -> Option<crate::inspect::Artifact> {
+        None
+    }
+    fn bus_trace_snapshot(&self) -> Vec<crate::bus::BusTraceEvent> {
+        Vec::new()
+    }
     /// Attach one endpoint of a `CanBus` to a named FDCAN peripheral. The
     /// default keeps third-party mock machines source-compatible while making
     /// an unsupported topology error explicit.
@@ -183,6 +193,24 @@ impl<C: Cpu + 'static> MachineTrait for Machine<C> {
 
     fn snapshot(&self) -> Option<crate::snapshot::MachineSnapshot> {
         Some(Machine::snapshot(self))
+    }
+
+    fn display_artifact(
+        &self,
+        device_id: &str,
+        include_bytes: bool,
+    ) -> Option<crate::inspect::Artifact> {
+        self.bus.display_artifact(
+            device_id,
+            &crate::inspect::InspectOpts {
+                include_bytes,
+                peripheral: None,
+            },
+        )
+    }
+
+    fn bus_trace_snapshot(&self) -> Vec<crate::bus::BusTraceEvent> {
+        self.bus.bus_trace_snapshot()
     }
 
     fn attach_can_bus(

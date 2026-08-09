@@ -67,14 +67,14 @@ impl WasmWorld {
         serde_wasm_bindgen::to_value(&ids).unwrap_or(JsValue::NULL)
     }
 
-    pub fn step_batch(&mut self, rounds: u32) -> Result<(), JsValue> {
+    pub fn step_batch(&mut self, rounds: u32) -> Result<u32, JsValue> {
         for _ in 0..rounds {
             for (id, result) in self.world.step_all() {
                 result
                     .map_err(|error| JsValue::from_str(&format!("node '{id}' step: {error:?}")))?;
             }
         }
-        Ok(())
+        Ok(rounds)
     }
 
     pub fn total_cycles(&self, node_id: &str) -> Result<u64, JsValue> {
@@ -106,6 +106,60 @@ impl WasmWorld {
             })?;
         serde_wasm_bindgen::to_value(&snapshot)
             .map_err(|error| JsValue::from_str(&format!("node '{node_id}' snapshot: {error}")))
+    }
+
+    pub fn get_ssd1306_framebuffer(
+        &self,
+        node_id: &str,
+        device_id: &str,
+    ) -> Result<Box<[u8]>, JsValue> {
+        let artifact = self
+            .world
+            .machines
+            .get(node_id)
+            .ok_or_else(|| JsValue::from_str(&format!("unknown world node '{node_id}'")))?
+            .display_artifact(device_id, true)
+            .ok_or_else(|| JsValue::from_str(&format!("node '{node_id}' has no display '{device_id}'")))?;
+        let format = artifact.meta.get("format").and_then(|value| value.as_str());
+        if format != Some(labwired_core::inspect::artifact_format::SSD1306_PAGE) {
+            return Err(JsValue::from_str(&format!(
+                "node '{node_id}' display '{device_id}' is not SSD1306"
+            )));
+        }
+        Ok(artifact
+            .bytes
+            .ok_or_else(|| JsValue::from_str("SSD1306 artifact omitted framebuffer bytes"))?
+            .into_boxed_slice())
+    }
+
+    pub fn bus_trace_snapshot(&self, node_id: &str) -> Result<JsValue, JsValue> {
+        let trace = self
+            .world
+            .machines
+            .get(node_id)
+            .ok_or_else(|| JsValue::from_str(&format!("unknown world node '{node_id}'")))?
+            .bus_trace_snapshot();
+        serde_wasm_bindgen::to_value(&trace)
+            .map_err(|error| JsValue::from_str(&format!("node '{node_id}' bus trace: {error}")))
+    }
+
+    pub fn fdcan_trace_snapshot(&self, node_id: &str) -> Result<JsValue, JsValue> {
+        let trace = self
+            .world
+            .machines
+            .get(node_id)
+            .ok_or_else(|| JsValue::from_str(&format!("unknown world node '{node_id}'")))?
+            .bus_trace_snapshot();
+        let frames = labwired_core::peripherals::can_trace_snapshot_all(&trace);
+        serde_wasm_bindgen::to_value(&frames)
+            .map_err(|error| JsValue::from_str(&format!("node '{node_id}' CAN trace: {error}")))
+    }
+
+    pub fn air_trace_snapshot(&self) -> JsValue {
+        serde_wasm_bindgen::to_value(
+            &labwired_core::peripherals::nrf52::radio::virtual_air_trace_snapshot(),
+        )
+        .unwrap_or(JsValue::NULL)
     }
 
     pub fn drain_uart_output(&self, node_id: &str) -> Result<Vec<u8>, JsValue> {
