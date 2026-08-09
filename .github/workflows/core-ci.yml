@@ -290,6 +290,8 @@ jobs:
           {
             echo "### Formatting: FAILED"
             echo
+            # shellcheck disable=SC2016  # backticks here are Markdown code
+            # spans for the step summary, not command substitution.
             echo 'Run `cargo +1.95.0 fmt --all` and push. The autofix job could not do it for you on this run.'
           } >> "$GITHUB_STEP_SUMMARY"
           exit 1
