@@ -141,6 +141,28 @@ impl Rp2040IoBank0 {
 }
 
 impl Peripheral for Rp2040IoBank0 {
+    /// Not in the per-cycle walk: this is a pure register bank. It overrides
+    /// neither `tick()` nor `tick_elapsed()`, so every visit ran the default
+    /// no-op and returned a default `PeripheralTickResult`. Skipping it removes
+    /// dispatch, never an effect — byte-identical by construction.
+    ///
+    /// ⚠️ This was MISSING when the model was added, and the cost was not local
+    /// to this file. `derive_walk_deletable` is `uses_scheduler() ||
+    /// !needs_legacy_walk()`, and it is all-or-nothing for the whole bus: one
+    /// model inheriting the conservative default `true` forces the per-cycle
+    /// walk back on for EVERY RP2040 lab, including the majority that never
+    /// route a pad. `rp2040_i2c_irq_delivery` caught it, but only under
+    /// `--features event-scheduler`, which is not in the default test run — so
+    /// it went unnoticed while the ordinary suite stayed green.
+    ///
+    /// Safe against the "sleeps and never wakes" trap for the same reason
+    /// `GpioPort` is: there is no tick and no state-dependent condition to
+    /// starve, and the bus re-arms `refresh_legacy_tick_index()` on every MMIO
+    /// write if this model ever grows one.
+    fn needs_legacy_walk(&self) -> bool {
+        false
+    }
+
     fn read(&self, offset: u64) -> SimResult<u8> {
         let word = self.read_u32(offset & !3);
         Ok(((word >> ((offset & 3) * 8)) & 0xFF) as u8)
