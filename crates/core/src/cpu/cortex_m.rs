@@ -2132,10 +2132,10 @@ impl CortexM {
                         // atomics such as AtomicBool::compare_exchange.
                         let rn = (h1 & 0xF) as u8;
                         let rt = ((h2 >> 12) & 0xF) as u8;
-                        if let Ok(value) = bus.read_u8(self.get_register(rn) as u64) {
-                            self.set_register(rt, u32::from(value));
-                            self.exclusive_byte = Some((self.get_register(rn), value));
-                        }
+                        let address = self.get_register(rn);
+                        let value = self.load(bus, address, AccessWidth::Byte)? as u8;
+                        self.set_register(rt, u32::from(value));
+                        self.exclusive_byte = Some((address, value));
                         pc_increment = 4;
                     } else if (h1 & 0xFFF0) == 0xE8C0 && (h2 & 0x0FF0) == 0x0F40 {
                         // ARMv7-M STREXB Rd, Rt, [Rn]. The single-threaded
@@ -2144,15 +2144,18 @@ impl CortexM {
                         let rt = ((h2 >> 12) & 0xF) as u8;
                         let rd = (h2 & 0xF) as u8;
                         let address = self.get_register(rn);
-                        let reservation_matches =
-                            self.exclusive_byte.take().is_some_and(|(reserved, value)| {
-                                reserved == address
-                                    && bus.read_u8(address as u64).ok() == Some(value)
-                            });
-                        let succeeds = reservation_matches
-                            && bus
-                                .write_u8(address as u64, self.get_register(rt) as u8)
-                                .is_ok();
+                        let reservation_matches = match self.exclusive_byte.take() {
+                            Some((reserved, value)) if reserved == address => {
+                                self.load(bus, address, AccessWidth::Byte)? as u8 == value
+                            }
+                            _ => false,
+                        };
+                        let succeeds = if reservation_matches {
+                            self.store(bus, address, AccessWidth::Byte, self.get_register(rt))?;
+                            true
+                        } else {
+                            false
+                        };
                         self.set_register(rd, if succeeds { 0 } else { 1 });
                         pc_increment = 4;
                     } else if (h1 & 0xFFF0) == 0xE8D0 && (h2 & 0x0F0F) == 0x0F0F {

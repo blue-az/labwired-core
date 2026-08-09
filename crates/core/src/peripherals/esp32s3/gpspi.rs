@@ -608,7 +608,7 @@ impl Peripheral for Esp32s3Spi {
     /// `uses_scheduler`/`needs_legacy_walk` are deliberately UNCHANGED above.
     fn take_scheduled_events(&mut self) -> Vec<(u64, u32)> {
         const EXTERNAL_CAN_POLL_EVENT: u32 = u32::MAX;
-        if !self.uses_scheduler() {
+        if self.clock.is_none() {
             return Vec::new();
         }
         let mut events = Vec::new();

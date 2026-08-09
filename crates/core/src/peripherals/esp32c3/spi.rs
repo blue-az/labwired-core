@@ -489,7 +489,7 @@ impl Peripheral for Esp32c3Spi {
     /// (`ready_in`), so a 64-byte burst costs ONE wakeup rather than 100 000.
     /// `uses_scheduler`/`needs_legacy_walk` are deliberately UNCHANGED above.
     fn take_scheduled_events(&mut self) -> Vec<(u64, u32)> {
-        if !self.uses_scheduler() {
+        if self.clock.is_none() {
             return Vec::new();
         }
         let mut events = Vec::new();

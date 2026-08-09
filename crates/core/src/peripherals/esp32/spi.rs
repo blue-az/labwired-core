@@ -40,7 +40,7 @@
 //! SSD1680 panel is attached on SPI3.
 
 use crate::peripherals::spi::SpiDevice;
-use crate::{Peripheral, PeripheralTickResult, SimResult};
+use crate::{CycleClock, Peripheral, PeripheralTickResult, SimResult};
 use std::sync::{Arc, Mutex};
 
 /// Read once per process — this sits on the SPI transfer path.
@@ -114,6 +114,7 @@ const CMD_CHIP_ERASE: u8 = 0xC7;
 // Flash status-register bits (SPI NOR standard).
 const STATUS_WIP: u16 = 1 << 0;
 const STATUS_WEL: u16 = 1 << 1;
+const EXTERNAL_CAN_POLL_EVENT: u32 = u32::MAX;
 
 /// JEDEC id returned for RDID: Winbond W25Q32-class (mfg 0xEF, type 0x40,
 /// capacity 0x16 = 4 MiB). Matches the post-BROM `g_rom_flashchip` seed and
@@ -151,6 +152,8 @@ pub struct Esp32Spi {
     record_enabled: bool,
     captured_bytes: Vec<u8>,
     transactions: u64,
+    clock: Option<CycleClock>,
+    external_can_poll_scheduled: bool,
 }
 
 impl std::fmt::Debug for Esp32Spi {
@@ -456,9 +459,8 @@ impl Esp32Spi {
 }
 
 impl Peripheral for Esp32Spi {
-    // Inert walk: SPI transactions run atomically at the launching CMD write (USR auto-clears there); tick() is an explicit no-op.
     fn needs_legacy_walk(&self) -> bool {
-        false
+        !self.uses_scheduler()
     }
 
     fn read(&self, offset: u64) -> SimResult<u8> {
@@ -582,6 +584,55 @@ impl Peripheral for Esp32Spi {
             device.poll_external_bus();
         }
         PeripheralTickResult::default()
+    }
+
+    fn legacy_tick_active(&self) -> bool {
+        self.attached_devices
+            .iter()
+            .any(|device| device.needs_external_bus_poll())
+    }
+
+    fn legacy_tick_dynamic(&self) -> bool {
+        true
+    }
+
+    fn uses_scheduler(&self) -> bool {
+        cfg!(feature = "event-scheduler") && self.clock.is_some()
+    }
+
+    fn take_scheduled_events(&mut self) -> Vec<(u64, u32)> {
+        let has_external_bus = self
+            .attached_devices
+            .iter()
+            .any(|device| device.needs_external_bus_poll());
+        if self.clock.is_some() && has_external_bus && !self.external_can_poll_scheduled {
+            self.external_can_poll_scheduled = true;
+            vec![(0, EXTERNAL_CAN_POLL_EVENT)]
+        } else {
+            Vec::new()
+        }
+    }
+
+    fn on_event(
+        &mut self,
+        event_token: u32,
+        _sched: &mut crate::sched::EventScheduler,
+        _bus: &mut dyn crate::Bus,
+    ) -> crate::sched::EventResult {
+        if event_token != EXTERNAL_CAN_POLL_EVENT {
+            return crate::sched::EventResult::default();
+        }
+        for device in &mut self.attached_devices {
+            device.poll_external_bus();
+        }
+        crate::sched::EventResult {
+            reschedule_delay: Some(1),
+            ..Default::default()
+        }
+    }
+
+    fn attach_cycle_clock(&mut self, clock: CycleClock) {
+        self.clock = Some(clock);
     }
 
     fn as_any(&self) -> Option<&dyn std::any::Any> {
