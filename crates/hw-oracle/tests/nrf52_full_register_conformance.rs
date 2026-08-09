@@ -35,6 +35,11 @@
 
 use labwired_config::{ChipDescriptor, SystemManifest};
 use labwired_core::bus::SystemBus;
+// The Bus trait supplies read_u32/write_u32. Until 2026-07-18 SystemBus also had
+// inherent shadows of these; that refactor removed them, and because this file
+// only builds under `--features hw-oracle-nrf52` (which CI never enables, having
+// no hardware) the breakage sat undetected until the next bench run.
+use labwired_core::Bus;
 use labwired_hw_oracle::openocd::OpenOcd;
 use std::path::PathBuf;
 use std::sync::Mutex;

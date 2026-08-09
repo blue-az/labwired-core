@@ -70,9 +70,9 @@ boards:
       - "nrf52_conformance::conformance_sim (digest vs frozen 2026-06-09 capture)"
       - "nrf52_mmio_diff / nrf52_gpio_conformance (sim halves)"
     silicon:
-      last_capture: 2026-06-17
-      probe: "ST-LINK V2 (J37S7)"
-      result: "conformance 16/16; mmio 16/16; GPIO P0 22/0, P1 23/0; onboarding 22/22; POWER 10/0, SPIS 19/0, TWIS 20/0, RTC0 12/0, TIMER0 16/0; SPIM0/CCM/full-register clean"
+      last_capture: 2026-08-09
+      probe: "ST-LINK V2 (V2J37S7, serial 48FF6B064884534929321087), openocd 0.12.0 hla_swd; nRF52840 FICR INFO.PART=0x00052840, DEVICEID 707dc298"
+      result: "re-captured live 2026-08-09 with NRF52_STRICT=1: ALL 11 hw-oracle suites pass — conformance, cpu_conformance, mmio 16/16, gpio, onboarding, power, spis_twis, timer_rtc, spim_easydma, full_register, ccm. NOT a second board: DEVICEID 707dc298 matches the 2026-06-09 baseline, so this is a re-read of the SAME part (unlike the C3/S3 re-captures, which were cross-board). The run was NOT clean on arrival and found three real defects, all fixed in this commit: (1) seven nrf52_* hw-oracle tests had not COMPILED since the 2026-07-18 bus consolidation removed the inherent SystemBus read_u32/write_u32 shadows — they build only under --features hw-oracle-nrf52, which CI never enables, so the 're-capture pending' ack pointed at a path that could not build; (2) mmio was 15/16, SPIM0 PSEL_MISO sim=0x0 vs hw=0x2E, because the serial-instance broadcast PSEL WRITES to both halves but dispatched READS to TWIM, which models only 0x508/0x50C; (3) SPIM PSEL.CSN (0x514) was missing from Nrf52SpiRegs entirely — corroborated present on silicon (wrote 0x2B, read 0x2B). Guarded going forward by a hardware-free unit test, serial_instance::psel_block_reads_back_while_disabled."
     # The UARTE model gained an EasyDMA TX path (STARTTX now reads the TXD buffer,
     # emits the bytes, and raises TXSTARTED/TXDRDY/ENDTX/TXSTOPPED) so an unmodified
     # nrfx console boots under the sim. Additive: the 2026-06-17 register sweep
@@ -233,8 +233,12 @@ boards:
     # conformance/mmio/GPIO/POWER/SPIS/TWIS/RTC0/TIMER0 plus SPIM0/CCM. Acked
     # WITHOUT a live re-capture (no bench board); an RNG live diff is owed and is
     # NOT evidenced by this entry.
-    drift_ack: 2026-08-09
-    drift_ack_digest: 8875af363a7912479611b4d043c2dfb79e29895b5e4557b0889610cf8de93535
+    #
+    # 2026-08-09: a bench board WAS attached and all 11 suites re-ran live (see
+    # silicon.result), so the ack is discharged. One caveat it raised survives
+    # the discharge: RNG is still not covered by any asserted sweep. That is a
+    # COVERAGE gap, not a drift gap — re-capturing cannot close it, only adding
+    # an RNG oracle can. Do not read "fresh" as "RNG is validated".
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -247,9 +251,9 @@ boards:
     offline_tests:
       - "nrf52.rs xiao_* (manifest build, GPIO task regs, SPIM0 EasyDMA)"
     silicon:
-      last_capture: 2026-06-17
-      probe: "ST-LINK V2 (J37S7)"
-      result: "rides the nrf52840 full register sweep (16/16) re-confirmed 2026-06-17"
+      last_capture: 2026-08-09
+      probe: "ST-LINK V2 (V2J37S7, serial 48FF6B064884534929321087) — the same physical XIAO the nrf52840 entry describes"
+      result: "rides the nrf52840 re-capture of 2026-08-09: all 11 hw-oracle suites pass under NRF52_STRICT=1, mmio 16/16. This is not an independent run — it is the SAME board and the SAME suites, which is exactly what `note` says this entry means. See the nrf52840 result for the three defects that run uncovered and fixed."
     # Rides the nrf52840 UARTE EasyDMA TX model change (same silicon); see the
     # nrf52840 drift_ack note. UARTE TX live diff tracked there.
     # 2026-06-27: rides the nrf52840 SAADC/PWM Tier-3 behavioral engines (same
@@ -345,8 +349,10 @@ boards:
     # 2026-08-09: rides the nrf52840 RNG production-timing change; same silicon.
     # See the nrf52840 drift_ack note for why it is behavioural and what it does
     # not touch. No RNG live re-capture is evidenced by this entry.
-    drift_ack: 2026-08-09
-    drift_ack_digest: 8875af363a7912479611b4d043c2dfb79e29895b5e4557b0889610cf8de93535
+    #
+    # 2026-08-09 (later): the board was attached and the nrf52840 suites re-ran
+    # live, so this ack is discharged with that one. RNG stays uncovered — a
+    # coverage gap no re-capture can close. See the nrf52840 entry.
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
