@@ -60,10 +60,11 @@ pub mod simctl_machine;
 pub mod stm32_i2c_waveform;
 #[cfg(test)]
 pub mod stm32_legacy_i2c_waveform;
-#[cfg(test)]
 pub mod stm32_spi_waveform;
 #[cfg(test)]
 pub mod stm32_uart_waveform;
+#[cfg(test)]
+pub mod stm32h5_spi_visibility;
 #[cfg(test)]
 pub mod test_cycles;
 #[cfg(test)]

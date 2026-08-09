@@ -607,7 +607,7 @@ impl SystemBus {
     ///   silicon and are intentionally not routed (see `GpioPort` docs).
     pub(crate) fn wire_stm32_spi_pads(&mut self) {
         use crate::peripherals::gpio::{GpioPort, GpioRegisterLayout};
-        use crate::peripherals::spi::{Spi, SpiSignal};
+        use crate::peripherals::spi::{Spi, SpiPadMap, SpiSignal};
         use SpiSignal::{Miso, Mosi, Sck};
 
         // (spi, port, pin, AF, signal, func) — V2 ports, L4 parts (DS10198
@@ -661,19 +661,94 @@ impl SystemBus {
             ("spi2", 'b', 15, Mosi, "SPI2_MOSI"),
         ];
 
+        // ── H5/H7 "SPI v3" parts ────────────────────────────────────────────
+        //
+        // A SEPARATE table, not extra rows on L4/F4, because these parts put
+        // SPI3_MOSI on AF7 where the L4 puts it on AF6 — and because the WBA
+        // table below contradicts this one outright.
+        //
+        // STM32H563 (DS14258 Rev 6, Table 15 "Alternate functions AF0 to AF7",
+        // page 106 port A, page 107 port B) and STM32H735 (DS13312 Rev 4,
+        // Table 9 "pin alternate functions", page 96 port A start, page 97
+        // ports A, pages 98-99 port B) were read independently and AGREE row
+        // for row on every entry below, which is why one table serves both.
+        //
+        // Ports C-H are deliberately ABSENT: those pages cover ports A and B,
+        // and a row for a port whose AF column was not read would be exactly
+        // the unverified pin table this split exists to prevent.
+        const H5: &[(&str, char, u8, u8, SpiSignal, &str)] = &[
+            ("spi1", 'a', 5, 5, Sck, "SPI1_SCK"),
+            ("spi1", 'a', 6, 5, Miso, "SPI1_MISO"),
+            ("spi1", 'a', 7, 5, Mosi, "SPI1_MOSI"),
+            ("spi1", 'b', 3, 5, Sck, "SPI1_SCK"),
+            ("spi1", 'b', 4, 5, Miso, "SPI1_MISO"),
+            ("spi1", 'b', 5, 5, Mosi, "SPI1_MOSI"),
+            ("spi2", 'a', 9, 5, Sck, "SPI2_SCK"),
+            ("spi2", 'a', 12, 5, Sck, "SPI2_SCK"),
+            ("spi2", 'b', 10, 5, Sck, "SPI2_SCK"),
+            ("spi2", 'b', 13, 5, Sck, "SPI2_SCK"),
+            ("spi2", 'b', 14, 5, Miso, "SPI2_MISO"),
+            ("spi2", 'b', 15, 5, Mosi, "SPI2_MOSI"),
+            // SPI3 sits on AF6 for SCK/MISO but AF7 for MOSI on BOTH parts —
+            // PB5/AF6 is I2C4_SMBA on the H563 and I2C4_SMBA on the H735, not
+            // SPI3_MOSI. Reading AF6 across the row would put a bus waveform on
+            // an SMBus alert pin.
+            ("spi3", 'b', 3, 6, Sck, "SPI3_SCK"),
+            ("spi3", 'b', 4, 6, Miso, "SPI3_MISO"),
+            ("spi3", 'b', 2, 7, Mosi, "SPI3_MOSI"),
+            ("spi3", 'b', 5, 7, Mosi, "SPI3_MOSI"),
+        ];
+        // ── STM32WBA parts ──────────────────────────────────────────────────
+        //
+        // STM32WBA52, DS14127 Rev 10, Table 25 "Alternate function AF0 to AF7",
+        // page 76 (port A) and page 77 (port B). The AF5 column header on both
+        // pages reads simply `SPI1`.
+        //
+        // ⚠️ THIS TABLE CONTRADICTS `H5` ABOVE AND THE TWO MUST NEVER MERGE:
+        // PB3/AF5 is SPI1_MISO here and SPI1_SCK there; PB4/AF5 is SPI1_SCK
+        // here and SPI1_MISO there. Both parts carry `profile: "stm32h5"`, so
+        // only the declared `pad_map` tells them apart.
+        //
+        // The WBA52 has ONE SPI, and its MOSI is on port A while SCK/MISO are
+        // on port B — not a typo.
+        const WBA: &[(&str, char, u8, u8, SpiSignal, &str)] = &[
+            ("spi1", 'b', 4, 5, Sck, "SPI1_SCK"),
+            ("spi1", 'b', 3, 5, Miso, "SPI1_MISO"),
+            ("spi1", 'a', 15, 5, Mosi, "SPI1_MOSI"),
+        ];
+
         for spi_name in ["spi1", "spi2", "spi3"] {
             let Some(spi_idx) = self.find_peripheral_index_by_name(spi_name) else {
                 continue;
             };
-            let Some((fifo, lines)) = self.peripherals[spi_idx]
+            // ⚠️ `publishes_stm32_pad_wire`, NOT `is_stm32_wire_layout`. The
+            // latter asks "does this have a BIT ENGINE", which the H5 does not
+            // and must not be claimed to — see the warning on that predicate
+            // about the `feat/spi-edge-sampling` branch, which reuses it to
+            // refuse edge-accurate slave sampling. Pad publication and bit-level
+            // sampling are different capabilities and this is the pad one.
+            let Some((fifo, h5, pad_map, lines)) = self.peripherals[spi_idx]
                 .dev
                 .as_any_mut()
                 .and_then(|a| a.downcast_mut::<Spi>())
-                .filter(|s| s.is_stm32_wire_layout())
-                .map(|s| (s.is_fifo_layout(), s.line_levels_arc()))
+                .filter(|s| s.publishes_stm32_pad_wire())
+                .map(|s| {
+                    (
+                        s.is_fifo_layout(),
+                        s.is_h5_wire_layout(),
+                        s.pad_map(),
+                        s.line_levels_arc(),
+                    )
+                })
             else {
                 continue;
             };
+            // An H5-layout controller whose chip yaml declared no `pad_map` is
+            // routed NOWHERE. Fail closed: guessing between two tables that
+            // disagree about SCK and MISO is worse than an honest gap.
+            if h5 && pad_map == SpiPadMap::None {
+                continue;
+            }
             for port in ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] {
                 let Some(gpio_idx) = self.find_peripheral_index_by_name(&format!("gpio{port}"))
                 else {
@@ -688,7 +763,12 @@ impl SystemBus {
                 };
                 match gpio.register_layout() {
                     GpioRegisterLayout::Stm32V2 => {
-                        let table = if fifo { L4 } else { F4 };
+                        let table = match (h5, pad_map) {
+                            (true, SpiPadMap::Stm32Wba) => WBA,
+                            (true, _) => H5,
+                            (false, _) if fifo => L4,
+                            (false, _) => F4,
+                        };
                         for &(spi, p, pin, af, sig, func) in table {
                             if spi == spi_name && p == port {
                                 gpio.add_pad_route(
