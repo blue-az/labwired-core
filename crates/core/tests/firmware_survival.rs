@@ -1098,11 +1098,11 @@ DONE\r\n",
     },
     SurvivalCase {
         // STM32 Arduino core on F4 (NUCLEO-F401RE). The existing
-        // `stm32f401_blinky` case is also an Arduino build but asserts *no*
-        // UART bytes (`expected_uart_output: b""`), so it cannot distinguish a
-        // working F401 from a wedged one. This case gives F401's Arduino
-        // startup a real end-of-startup assertion: F4 RCC (HSI -> PLL, PLLRDY,
-        // SWS) then USART2 TXE/TC.
+        // `stm32f401_blinky` case is also an Arduino build; it used to assert
+        // *no* UART bytes and so could not distinguish a working F401 from a
+        // wedged one, but it now pins the blink sketch's own banner. This case
+        // stays because it pins a different path end-to-end: F4 RCC (HSI ->
+        // PLL, PLLRDY, SWS) then USART2 TXE/TC, against the L0 matrix oracle.
         name: "stm32f401_arduino_serial",
         core: "cortex-m4",
         family: CpuFamily::CortexM,
