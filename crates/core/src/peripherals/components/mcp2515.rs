@@ -117,6 +117,7 @@ pub struct Mcp2515 {
     inst: u8,
     addr: u8,
     bitmod_mask: u8,
+    rx_read_buffer: Option<usize>,
     component_id: Option<String>,
     bus_tx: Option<Sender<crate::network::CanFrame>>,
     bus_rx: Option<Receiver<crate::network::CanFrame>>,
@@ -146,6 +147,7 @@ impl Mcp2515 {
             inst: 0,
             addr: 0,
             bitmod_mask: 0,
+            rx_read_buffer: None,
             component_id: None,
             bus_tx: None,
             bus_rx: None,
@@ -316,9 +318,14 @@ impl SpiDevice for Mcp2515 {
 
     fn cs_select(&mut self) {
         self.phase = Phase::Instruction;
+        self.rx_read_buffer = None;
     }
 
     fn cs_release(&mut self) {
+        if let Some(buffer) = self.rx_read_buffer.take() {
+            let intf = self.regs[REG_CANINTF as usize] & !(1 << buffer);
+            self.write_register(REG_CANINTF, intf);
+        }
         self.phase = Phase::Instruction;
     }
 
@@ -367,8 +374,9 @@ impl SpiDevice for Mcp2515 {
                         self.phase = Phase::Data;
                         0
                     }
-                    0x90..=0x97 => {
+                    0x90 | 0x92 | 0x94 | 0x96 => {
                         let index = ((mosi - 0x90) / 4) as usize;
+                        self.rx_read_buffer = Some(index);
                         self.addr =
                             [REG_RXB0SIDH, REG_RXB1SIDH][index] + if mosi & 2 != 0 { 5 } else { 0 };
                         self.phase = Phase::Data;
@@ -406,7 +414,7 @@ impl SpiDevice for Mcp2515 {
             }
             Phase::Data => {
                 let idx = self.addr as usize % self.regs.len();
-                let miso = if self.inst == INST_READ || (0x90..=0x97).contains(&self.inst) {
+                let miso = if self.inst == INST_READ || self.rx_read_buffer.is_some() {
                     self.regs[idx]
                 } else {
                     0
@@ -670,38 +678,43 @@ mod tests {
     }
 
     #[test]
-    fn read_rx_buffer_variants_preserve_flags_until_bit_modify() {
+    fn read_rx_buffer_variants_auto_clear_only_the_selected_rx_flag() {
         let mut dev = Mcp2515::new("PA4");
         let header0 = [0x24, 0x60, 0, 0, 2, 0xDE, 0xAD];
         let header1 = [0x64, 0x20, 0, 0, 2, 0xBE, 0xEF];
         write(&mut dev, REG_RXB0SIDH, &header0);
         write(&mut dev, REG_RXB1SIDH, &header1);
-        for command in [0x90, 0x91] {
-            assert_eq!(transaction(&mut dev, &[command, 0, 0])[1..], header0[..2]);
-        }
-        for command in [0x92, 0x93] {
-            assert_eq!(transaction(&mut dev, &[command, 0, 0])[1..], [0xDE, 0xAD]);
-        }
-        for command in [0x94, 0x95] {
-            assert_eq!(transaction(&mut dev, &[command, 0, 0])[1..], header1[..2]);
-        }
-        for command in [0x96, 0x97] {
-            assert_eq!(transaction(&mut dev, &[command, 0, 0])[1..], [0xBE, 0xEF]);
-        }
+        assert_eq!(transaction(&mut dev, &[0x90, 0, 0])[1..], header0[..2]);
+        assert_eq!(transaction(&mut dev, &[0x92, 0, 0])[1..], [0xDE, 0xAD]);
+        assert_eq!(transaction(&mut dev, &[0x94, 0, 0])[1..], header1[..2]);
+        assert_eq!(transaction(&mut dev, &[0x96, 0, 0])[1..], [0xBE, 0xEF]);
 
         write(&mut dev, REG_CANINTF, &[CANINTF_RX0IF | CANINTF_RX1IF]);
-        transaction(&mut dev, &[0x90, 0]);
-        assert_eq!(
-            read(&mut dev, REG_CANINTF, 1),
-            [CANINTF_RX0IF | CANINTF_RX1IF]
-        );
-        transaction(&mut dev, &[0x94, 0]);
-        assert_eq!(
-            read(&mut dev, REG_CANINTF, 1),
-            [CANINTF_RX0IF | CANINTF_RX1IF]
-        );
-        transaction(&mut dev, &[INST_BITMOD, REG_CANINTF, CANINTF_RX0IF, 0]);
+        transaction(&mut dev, &[0x90]);
         assert_eq!(read(&mut dev, REG_CANINTF, 1), [CANINTF_RX1IF]);
+        transaction(&mut dev, &[0x94, 0, 0, 0]);
+        assert_eq!(read(&mut dev, REG_CANINTF, 1), [0]);
+    }
+
+    #[test]
+    fn ordinary_read_and_odd_rx_opcodes_preserve_rx_flags() {
+        let mut dev = Mcp2515::new("PA4");
+        write(&mut dev, REG_RXB0SIDH, &[0x24, 0x60]);
+        write(&mut dev, REG_CANINTF, &[CANINTF_RX0IF | CANINTF_RX1IF]);
+
+        assert_eq!(read(&mut dev, REG_RXB0SIDH, 2), [0x24, 0x60]);
+        assert_eq!(
+            read(&mut dev, REG_CANINTF, 1),
+            [CANINTF_RX0IF | CANINTF_RX1IF]
+        );
+
+        for command in [0x91, 0x93, 0x95, 0x97] {
+            assert_eq!(transaction(&mut dev, &[command, 0xAA, 0xBB]), [0, 0, 0]);
+            assert_eq!(
+                read(&mut dev, REG_CANINTF, 1),
+                [CANINTF_RX0IF | CANINTF_RX1IF]
+            );
+        }
     }
 
     #[test]
