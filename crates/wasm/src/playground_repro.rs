@@ -172,9 +172,7 @@ mod playground_secure_boot_repro {
     ///
     /// so the AES boot challenge misses GOLDEN_CIPHERTEXT, boot 2 prints
     /// SECURE BOOT FAILED, and the lab never reaches boots 2 or 3 in the
-    /// Un-ignore when the RNG stops losing bytes under batching.
     #[test]
-    #[ignore = "nRF52 RNG drops bytes at peripheral_tick_interval > 1"]
     fn browser_tick_interval_reaches_boot_three() {
         let (uart, _) = run_playground_path(false, true);
         assert_all_three_boots(&uart, "auto-raised tick interval");
