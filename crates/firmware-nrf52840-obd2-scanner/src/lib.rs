@@ -128,6 +128,10 @@ mod tests {
             decode_clear_dtcs(&response([1, 0x43, 0, 0, 0, 0, 0, 0])),
             Err(Error::UnsupportedService)
         );
+
+        let hex_dtcs = decode_dtcs(&response([5, 0x43, 0x01, 0xaf, 0xca, 0xbc, 0, 0])).unwrap();
+        assert_eq!(hex_dtcs.dtcs[0].ascii(), *b"P01AF");
+        assert_eq!(hex_dtcs.dtcs[1].ascii(), *b"U0ABC");
     }
 
     #[test]
@@ -316,15 +320,17 @@ mod tests {
         state.rpm = 3000;
         state.mark_timeout();
         assert_eq!(state.rpm, 3000);
-        assert!(state.has(flags::TIMEOUT | flags::STALE));
+        assert!(state.has_all(flags::TIMEOUT | flags::STALE));
+        assert!(state.has_any(flags::TIMEOUT | flags::CONNECTED));
+        assert!(!state.has_all(flags::TIMEOUT | flags::CONNECTED));
         state.mark_fresh();
-        assert!(state.has(flags::CONNECTED));
-        assert!(!state.has(flags::TIMEOUT | flags::STALE));
+        assert!(state.has_all(flags::CONNECTED));
+        assert!(!state.has_any(flags::TIMEOUT | flags::STALE));
         assert_eq!(state.generation, 1);
         state.update_dtc_count(2);
-        assert!(state.has(flags::DTC_PRESENT));
+        assert!(state.has_all(flags::DTC_PRESENT));
         state.update_dtc_count(0);
-        assert!(!state.has(flags::DTC_PRESENT));
+        assert!(!state.has_any(flags::DTC_PRESENT));
         state.set_vin(*b"1HGBH41JXMN109186");
         assert!(state.vin_valid);
     }

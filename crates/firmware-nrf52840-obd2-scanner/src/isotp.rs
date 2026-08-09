@@ -2,10 +2,14 @@ use crate::obd2::{CanFrame, Error, FLOW_CONTROL_ID, RESPONSE_ID};
 
 const VIN_PAYLOAD_LEN: usize = 20;
 
+/// Result of accepting one ISO-TP frame.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum IsoTpEvent {
+    /// Caller must transmit this flow-control frame.
     FlowControl(CanFrame),
+    /// Transfer is valid but not complete.
     Pending,
+    /// Complete, exactly 17-byte VIN.
     Complete([u8; 17]),
 }
 
@@ -34,6 +38,7 @@ impl Default for VinReassembler {
 }
 
 impl VinReassembler {
+    /// Creates an idle receiver with zeroed storage.
     pub const fn new() -> Self {
         Self {
             payload: [0; VIN_PAYLOAD_LEN],
@@ -43,10 +48,12 @@ impl VinReassembler {
         }
     }
 
+    /// Abandons any transfer and zeroes all buffered bytes.
     pub fn reset(&mut self) {
         *self = Self::new();
     }
 
+    /// Ends an active transfer as [`Error::Incomplete`], resetting its storage.
     pub fn timeout(&mut self) -> Result<(), Error> {
         if self.active {
             self.reset();
@@ -56,6 +63,7 @@ impl VinReassembler {
         }
     }
 
+    /// Accepts one ECU response frame; every error resets and zeroes receiver state.
     pub fn push(&mut self, frame: &CanFrame) -> Result<IsoTpEvent, Error> {
         let result = self.push_inner(frame);
         if result.is_err() {
