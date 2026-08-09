@@ -162,14 +162,15 @@ impl Mcp2515 {
         let cnf1 = self.regs[REG_CNF1 as usize];
         let cnf2 = self.regs[REG_CNF2 as usize];
         let cnf3 = self.regs[REG_CNF3 as usize];
-        if cnf2 & 0x80 == 0 {
-            return false;
-        }
         let brp = u32::from(cnf1 & 0x3F) + 1;
         let sjw = u32::from((cnf1 >> 6) & 0x03) + 1;
         let prop = u32::from(cnf2 & 0x07) + 1;
         let phase1 = u32::from((cnf2 >> 3) & 0x07) + 1;
-        let phase2 = u32::from(cnf3 & 0x07) + 1;
+        let phase2 = if cnf2 & 0x80 != 0 {
+            u32::from(cnf3 & 0x07) + 1
+        } else {
+            phase1.max(2)
+        };
         if phase2 < 2 || sjw > phase2 || prop + phase1 < phase2 {
             return false;
         }
@@ -181,6 +182,11 @@ impl Mcp2515 {
     fn write_register(&mut self, address: u8, value: u8) {
         let address = address & 0x7F;
         if address == REG_CANSTAT {
+            return;
+        }
+        if (REG_CNF3..=REG_CNF1).contains(&address)
+            && self.regs[REG_CANSTAT as usize] & 0xE0 != OpMode::Config.bits()
+        {
             return;
         }
         self.regs[address as usize] = value;
@@ -267,12 +273,19 @@ impl Mcp2515 {
             return 0;
         };
         let filter_hit = self.regs[sidh as usize - 1] & 0x07;
-        let standard_remote = if self.regs[sidh as usize + 4] & 0x40 != 0 {
+        let sidl = self.regs[sidh as usize + 1];
+        let frame_type = if sidl & 0x08 != 0 {
+            0x10 | if self.regs[sidh as usize + 4] & 0x40 != 0 {
+                0x08
+            } else {
+                0
+            }
+        } else if sidl & 0x10 != 0 {
             0x08
         } else {
             0
         };
-        full | standard_remote | filter_hit
+        full | frame_type | filter_hit
     }
 }
 
@@ -335,10 +348,15 @@ impl SpiDevice for Mcp2515 {
                         self.phase = Phase::Status;
                         0
                     }
-                    0x81 | 0x82 | 0x84 => {
-                        let index = mosi.trailing_zeros() as usize;
-                        let ctrl = [REG_TXB0CTRL, REG_TXB1CTRL, REG_TXB2CTRL][index];
-                        self.write_register(ctrl, self.regs[ctrl as usize] | TXREQ);
+                    0x81..=0x87 => {
+                        for (index, ctrl) in [REG_TXB0CTRL, REG_TXB1CTRL, REG_TXB2CTRL]
+                            .into_iter()
+                            .enumerate()
+                        {
+                            if mosi & (1 << index) != 0 {
+                                self.write_register(ctrl, self.regs[ctrl as usize] | TXREQ);
+                            }
+                        }
                         self.phase = Phase::Ignore;
                         0
                     }
@@ -633,6 +651,25 @@ mod tests {
     }
 
     #[test]
+    fn combined_rts_opcodes_set_every_selected_txreq() {
+        for (command, expected) in [
+            (0x83, [true, true, false]),
+            (0x85, [true, false, true]),
+            (0x86, [false, true, true]),
+            (0x87, [true, true, true]),
+        ] {
+            let mut dev = Mcp2515::new("PA4");
+            transaction(&mut dev, &[command]);
+            for (ctrl, pending) in [REG_TXB0CTRL, REG_TXB1CTRL, REG_TXB2CTRL]
+                .into_iter()
+                .zip(expected)
+            {
+                assert_eq!(read(&mut dev, ctrl, 1)[0] & TXREQ != 0, pending);
+            }
+        }
+    }
+
+    #[test]
     fn read_rx_buffer_variants_preserve_flags_until_bit_modify() {
         let mut dev = Mcp2515::new("PA4");
         let header0 = [0x24, 0x60, 0, 0, 2, 0xDE, 0xAD];
@@ -679,8 +716,53 @@ mod tests {
         assert_eq!(transaction(&mut dev, &[INST_RX_STATUS, 0])[1] & 0xC0, 0xC0);
 
         write(&mut dev, 0x60, &[0x01]); // RXB0CTRL FILHIT0
-        write(&mut dev, 0x65, &[0x40]); // RXB0DLC RTR
+        write(&mut dev, 0x62, &[0x10]); // RXB0SIDL standard RTR/SRR
         assert_eq!(transaction(&mut dev, &[INST_RX_STATUS, 0])[1] & 0x0F, 0x09);
+    }
+
+    #[test]
+    fn rx_status_decodes_all_standard_and_extended_frame_types() {
+        for (sidl, dlc, expected_type) in [
+            (0x00, 0x00, 0x00), // standard data
+            (0x10, 0x00, 0x08), // standard remote (SRR/RTR in SIDL)
+            (0x08, 0x00, 0x10), // extended data
+            (0x08, 0x40, 0x18), // extended remote (RTR in DLC)
+        ] {
+            let mut dev = Mcp2515::new("PA4");
+            write(&mut dev, REG_RXB0SIDH, &[0x24, sidl, 0x12, 0x34, dlc]);
+            write(&mut dev, REG_CANINTF, &[CANINTF_RX0IF]);
+            assert_eq!(
+                transaction(&mut dev, &[INST_RX_STATUS, 0])[1] & 0x18,
+                expected_type
+            );
+        }
+    }
+
+    #[test]
+    fn btlmode_zero_derives_phase2_and_accepts_valid_500k_timing() {
+        let mut dev = Mcp2515::new("PA4");
+        // PROPSEG=5, PHSEG1=5, derived PHSEG2=max(PHSEG1, IPT)=5: 16 TQ.
+        // CNF3 requests PHSEG2=8, but BTLMODE=0 means that field is ignored.
+        write(&mut dev, REG_CNF3, &[0x07, 0x24, 0x00]);
+        write(&mut dev, REG_CANCTRL, &[0x00]);
+        assert_eq!(read(&mut dev, REG_CANSTAT, 1)[0] & 0xE0, 0x00);
+    }
+
+    #[test]
+    fn cnf_registers_are_writable_only_in_actual_configuration_mode() {
+        let mut dev = Mcp2515::new("PA4");
+        write(&mut dev, REG_CNF3, &[0x01, 0xBC, 0x00]);
+        write(&mut dev, REG_CANCTRL, &[0x00]);
+        assert_eq!(read(&mut dev, REG_CANSTAT, 1)[0] & 0xE0, 0x00);
+
+        write(&mut dev, REG_CNF3, &[0x07, 0xAA, 0x55]);
+        transaction(&mut dev, &[INST_BITMOD, REG_CNF2, 0xFF, 0x11]);
+        assert_eq!(read(&mut dev, REG_CNF3, 3), [0x01, 0xBC, 0x00]);
+
+        write(&mut dev, REG_CANCTRL, &[0x80]);
+        write(&mut dev, REG_CNF3, &[0x07]);
+        transaction(&mut dev, &[INST_BITMOD, REG_CNF2, 0xFF, 0x11]);
+        assert_eq!(read(&mut dev, REG_CNF3, 2), [0x07, 0x11]);
     }
 
     #[test]
