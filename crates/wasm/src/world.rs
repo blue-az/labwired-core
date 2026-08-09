@@ -142,7 +142,9 @@ impl WasmWorld {
             .get(node_id)
             .ok_or_else(|| JsValue::from_str(&format!("unknown world node '{node_id}'")))?
             .display_artifact(device_id, true)
-            .ok_or_else(|| JsValue::from_str(&format!("node '{node_id}' has no display '{device_id}'")))?;
+            .ok_or_else(|| {
+                JsValue::from_str(&format!("node '{node_id}' has no display '{device_id}'"))
+            })?;
         let format = artifact.meta.get("format").and_then(|value| value.as_str());
         if format != Some(labwired_core::inspect::artifact_format::SSD1306_PAGE) {
             return Err(JsValue::from_str(&format!(
@@ -197,7 +199,10 @@ impl WasmWorld {
     }
 
     fn machine(&self, node_id: &str) -> Result<&dyn labwired_core::world::MachineTrait, JsValue> {
-        self.world.machines.get(node_id).map(|machine| machine.as_ref())
+        self.world
+            .machines
+            .get(node_id)
+            .map(|machine| machine.as_ref())
             .ok_or_else(|| JsValue::from_str(&format!("unknown world node '{node_id}'")))
     }
 }
