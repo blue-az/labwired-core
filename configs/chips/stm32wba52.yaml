@@ -171,3 +171,20 @@ peripherals:
   # RCC_AHB4ENR.ADC4EN on the SmartRun (APB7/AHB4) domain, which the stm32v2
   # RCC model does not surface, so it cannot be honestly clock-gated — the adc
   # class is left `na` rather than shipped ungated.
+  # DBGMCU (RM0493 §75) @ 0xE0044000 — note the base, which is NOT the
+  # 0xE0042000 the Cortex-M3/M4 STM32s use. ST's own stm32wba52.svd puts it at
+  # 0xE0044000, and the Zephyr lab confirms it: with the ARMv8-M TT decode
+  # fixed, `stm32wba52-zephyr-hello.elf` faults on DBGMCU_CR at 0xE0044004,
+  # not 0xE0042004. Anything that maps a WBA DBGMCU at the M4 address is
+  # modelling the wrong chip.
+  #
+  # idcode: 0x00006492 is the DBGMCU_IDCODER reset value published in ST's SVD
+  # for this part (DEV_ID 0x492), so unlike the g474/wb55 entries this one is
+  # not a placeholder.
+  - id: "dbgmcu"
+    type: "dbgmcu"
+    base_address: 0xE0044000
+    size: "1KB"
+    config:
+      debug_schema: "../peripherals/stm32wba52/dbgmcu.yaml"
+      idcode: 0x00006492
