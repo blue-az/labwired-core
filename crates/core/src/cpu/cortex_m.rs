@@ -6,7 +6,10 @@
 
 use crate::bus::SystemBus;
 use crate::decoder::arm::{decode_thumb_16, decode_thumb_32, Instruction};
-use crate::{Bus, Cpu, SimResult, SimulationConfig, SimulationObserver};
+use crate::peripherals::scb::{
+    ScbFaultState, CFSR_BFSR_BFARVALID, CFSR_BFSR_PRECISERR, HFSR_FORCED, SHCSR_BUSFAULTENA,
+};
+use crate::{Bus, Cpu, SimResult, SimulationConfig, SimulationError, SimulationObserver};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
 
@@ -111,6 +114,22 @@ pub struct CortexM {
     /// `None` on hand-built buses that never went through `configure_cortex_m`;
     /// those keep the legacy behaviour of their caller.
     pub sysreset_signal: Option<Arc<AtomicBool>>,
+    /// Shared with the SCB: the ARMv7-M fault register file (SHCSR/CFSR/HFSR/
+    /// BFAR) plus the master `enabled` switch for fault escalation.
+    ///
+    /// `None` on hand-built cores that never went through `configure_cortex_m`
+    /// — no SCB means no fault registers to report through, so those keep the
+    /// #880 abort contract unconditionally. See [`ScbFaultState`].
+    pub faults: Option<Arc<ScbFaultState>>,
+    /// Address of the data-side access that just raised
+    /// `SimulationError::MemoryViolation`, latched by [`CortexM::load`] /
+    /// [`CortexM::store`] so `step_internal` can tell a **data** fault (which
+    /// ARMv7-M turns into a precise BusFault) from an instruction-fetch fault,
+    /// an exception-entry stacking fault or a vector-table read fault — all of
+    /// which are different contracts and stay on the abort path.
+    ///
+    /// Only ever written on the error path, so a clean step costs nothing.
+    pending_data_fault: Option<u32>,
     pub decode_cache: Box<[Option<DecodeCacheEntry>; 4096]>,
     /// FPU single-precision register file (VFPv4 single — S0..S31).
     /// Each S register is the IEEE-754 binary32 bit pattern; reads via
@@ -161,6 +180,8 @@ impl Default for CortexM {
             shpr3: Arc::new(AtomicU32::new(0)),
             nvic_state: None,
             sysreset_signal: None,
+            faults: None,
+            pending_data_fault: None,
             decode_cache: Box::new([None; 4096]),
             fpu_s: [0u32; 32],
             sleeping: false,
@@ -214,6 +235,31 @@ impl CortexM {
     /// instruction that requests a system reset. See the field docs.
     pub fn set_shared_sysreset_signal(&mut self, signal: Arc<AtomicBool>) {
         self.sysreset_signal = Some(signal);
+    }
+
+    /// Wire the SCB's ARMv7-M fault register file so the core can report a
+    /// fault through CFSR/HFSR/BFAR and read SHCSR to decide whether BusFault is
+    /// enabled. See [`ScbFaultState`].
+    pub fn set_shared_faults(&mut self, faults: Arc<ScbFaultState>) {
+        self.faults = Some(faults);
+    }
+
+    /// Turn ARMv7-M fault escalation (and the SCB fault register surface) on or
+    /// off. **Default off.** This is the single switch for the whole feature:
+    /// the CPU and the SCB read the same `AtomicBool`, so they cannot disagree
+    /// about whether firmware can enable a handler the core will never pend.
+    ///
+    /// No-op on a core with no SCB wired (`faults == None`).
+    pub fn set_faults_enabled(&mut self, enabled: bool) {
+        if let Some(f) = &self.faults {
+            f.enabled.store(enabled, Ordering::Relaxed);
+        }
+    }
+
+    /// True when ARMv7-M fault escalation is modelled on this core.
+    #[inline(always)]
+    fn faults_enabled(&self) -> bool {
+        self.faults.as_ref().is_some_and(|f| f.is_enabled())
     }
 
     /// True once firmware has latched AIRCR.SYSRESETREQ and the machine has
@@ -819,12 +865,12 @@ impl Cpu for CortexM {
                 // between batches, wedging every batched IRQ-driven Cortex-M
                 // firmware (walk-free campaign B1 surfaced this — batching is
                 // pointless if an armed SysTick freezes the run loop).
-                if executed > 0 && self.pending_exceptions.iter().any(|&w| w != 0) && !self.primask
-                {
+                if executed > 0 && self.pending_exceptions.iter().any(|&w| w != 0) {
                     if let Some(exc) = self.highest_priority_pending() {
                         let exc_prio = self.exception_priority(exc);
                         let active_prio = self.exception_priority(self.active_exception);
-                        if exc_prio < active_prio
+                        if !self.masked_by_primask(exc)
+                            && exc_prio < active_prio
                             && !self.masked_by_basepri(exc_prio)
                             && !self.faultmask_blocks(exc)
                         {
@@ -867,12 +913,12 @@ impl Cpu for CortexM {
                 // Same early-out rule as the SystemBus arm above: break only
                 // after progress; at the batch top a takeable pending
                 // exception is dispatched by `step_internal`, never spun on.
-                if executed > 0 && self.pending_exceptions.iter().any(|&w| w != 0) && !self.primask
-                {
+                if executed > 0 && self.pending_exceptions.iter().any(|&w| w != 0) {
                     if let Some(exc) = self.highest_priority_pending() {
                         let exc_prio = self.exception_priority(exc);
                         let active_prio = self.exception_priority(self.active_exception);
-                        if exc_prio < active_prio
+                        if !self.masked_by_primask(exc)
+                            && exc_prio < active_prio
                             && !self.masked_by_basepri(exc_prio)
                             && !self.faultmask_blocks(exc)
                         {
@@ -922,9 +968,243 @@ impl Cpu for CortexM {
     }
 }
 
+/// Width of a Cortex-M data-side memory access.
+///
+/// The third argument to [`CortexM::load`] / [`CortexM::store`], which are the
+/// only two doors through which this core touches the data bus.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum AccessWidth {
+    Byte,
+    Half,
+    Word,
+}
+
 impl CortexM {
+    /// The ONE data-side load on this core.
+    ///
+    /// `bus/accessors.rs` returns `Err(SimulationError::MemoryViolation(addr))`
+    /// for any address no memory region or peripheral window covers. This helper
+    /// propagates that `Err` to the caller, which propagates it out of
+    /// `step_internal` with `?` — the same contract `RiscV::step_internal` has
+    /// always had, and the reason the same firmware bug is fatal there.
+    ///
+    /// It exists so there is exactly one place where a Cortex-M load can decide
+    /// what a failed access means. Before it, 41 call sites decided
+    /// independently, and every one of them decided "pretend it worked": a
+    /// failed load left the destination register holding its previous value and
+    /// the run continued green.
+    ///
+    /// On top of that contract it **latches the faulting address** in
+    /// `pending_data_fault`, which is what lets `step_internal` tell a precise
+    /// *data-access* fault — the one ARMv7-M B1.5.14 turns into a BusFault —
+    /// apart from an instruction-fetch fault, an exception-entry stacking fault
+    /// or a vector-table read fault. Those are different architectural
+    /// contracts with different status bits, and they stay on the abort path;
+    /// see [`CortexM::bus_load`].
+    #[inline(always)]
+    fn load<B: Bus + ?Sized>(&mut self, bus: &B, addr: u32, width: AccessWidth) -> SimResult<u32> {
+        match Self::bus_load(bus, addr, width) {
+            Err(SimulationError::MemoryViolation(a)) => {
+                self.pending_data_fault = Some(a as u32);
+                Err(SimulationError::MemoryViolation(a))
+            }
+            other => other,
+        }
+    }
+
+    /// The ONE data-side store on this core. Counterpart to [`CortexM::load`];
+    /// see that doc for why. A failed store used to vanish at 25 `let _ =
+    /// bus.write_*` sites.
+    #[inline(always)]
+    fn store<B: Bus + ?Sized>(
+        &mut self,
+        bus: &mut B,
+        addr: u32,
+        width: AccessWidth,
+        value: u32,
+    ) -> SimResult<()> {
+        match Self::bus_store(bus, addr, width, value) {
+            Err(SimulationError::MemoryViolation(a)) => {
+                self.pending_data_fault = Some(a as u32);
+                Err(SimulationError::MemoryViolation(a))
+            }
+            other => other,
+        }
+    }
+
+    /// The raw bus load, **without** latching a data fault. Propagates `Err`
+    /// exactly like [`CortexM::load`] — it is not a discard — but the failure
+    /// will not be escalated into a BusFault.
+    ///
+    /// Used by the two accesses that are architecturally *not* precise
+    /// data-access faults:
+    ///   * exception-entry stacking, which on silicon raises
+    ///     `BFSR.STKERR` and can end in LOCKUP rather than a recoverable
+    ///     handler entry (ARMv7-M B1.5.15);
+    ///   * the vector-table read, which raises `HFSR.VECTTBL`.
+    ///
+    /// Both are separate contracts with their own blast radius; escalating them
+    /// here would also risk an unbounded re-entry loop, since the stack or the
+    /// vector table is exactly what is broken.
+    #[inline(always)]
+    fn bus_load<B: Bus + ?Sized>(bus: &B, addr: u32, width: AccessWidth) -> SimResult<u32> {
+        Ok(match width {
+            AccessWidth::Byte => bus.read_u8(addr as u64)? as u32,
+            AccessWidth::Half => bus.read_u16(addr as u64)? as u32,
+            AccessWidth::Word => bus.read_u32(addr as u64)?,
+        })
+    }
+
+    /// The raw bus store, without latching a data fault. See [`CortexM::bus_load`].
+    #[inline(always)]
+    fn bus_store<B: Bus + ?Sized>(
+        bus: &mut B,
+        addr: u32,
+        width: AccessWidth,
+        value: u32,
+    ) -> SimResult<()> {
+        match width {
+            AccessWidth::Byte => bus.write_u8(addr as u64, value as u8),
+            AccessWidth::Half => bus.write_u16(addr as u64, value as u16),
+            AccessWidth::Word => bus.write_u32(addr as u64, value),
+        }
+    }
+
+    /// ARMv7-M **execution priority** (B1.5.4 "Execution priority and priority
+    /// boosting"): the priority of the currently executing code, which an
+    /// exception must beat (numerically smaller) to be taken.
+    ///
+    /// It is the minimum of the active exception's priority and the three
+    /// priority-boosting registers: `FAULTMASK` boosts to -1, `PRIMASK` to 0,
+    /// and a non-zero `BASEPRI` to its own value. Thread mode with nothing
+    /// boosting is 256, the "lower than anything configurable" baseline the rest
+    /// of this file already uses.
+    fn execution_priority(&self) -> i32 {
+        let mut prio = self.exception_priority(self.active_exception);
+        if self.faultmask {
+            prio = prio.min(-1);
+        }
+        if self.primask {
+            prio = prio.min(0);
+        }
+        if self.basepri != 0 {
+            prio = prio.min(self.basepri as i32);
+        }
+        prio
+    }
+
+    /// True when PRIMASK blocks taking `exc`.
+    ///
+    /// With fault modelling **off** this is exactly `self.primask` — the blanket
+    /// guard this core has always used, so nothing changes. With it **on**,
+    /// PRIMASK is modelled as what ARMv7-M B1.5.4 says it is: a boost of the
+    /// execution priority to 0, which by construction cannot mask NMI (-2) or
+    /// HardFault (-1). Without this, an escalated HardFault raised inside a
+    /// `__disable_irq()` critical section would pend and never dispatch, and the
+    /// core would re-execute the faulting instruction forever.
+    #[inline(always)]
+    fn masked_by_primask(&self, exc: u32) -> bool {
+        if !self.primask {
+            return false;
+        }
+        if !self.faults_enabled() {
+            return true;
+        }
+        self.exception_priority(exc) >= 0
+    }
+
+    /// ARMv7-M B1.5.14 escalation for a **precise data-access fault**.
+    ///
+    /// Records the fault in the status registers firmware actually reads, then
+    /// decides between BusFault and HardFault:
+    ///
+    /// * `CFSR.BFSR.PRECISERR` (B3.2.15) — the access was synchronous with the
+    ///   instruction, so the stacked PC is the faulting instruction.
+    /// * `CFSR.BFSR.BFARVALID` + `BFAR` (B3.2.15 / B3.2.17) — BFAR holds the
+    ///   address the access faulted on.
+    /// * `HFSR.FORCED` (B3.2.16) — set **only** when the fault escalates.
+    ///
+    /// The escalation rule (B1.5.14): *"a fault occurs and the handler for that
+    /// fault is not enabled"*, and *"an exception handler causes a fault for
+    /// which the priority is the same as or lower than the currently executing
+    /// exception"*. Both collapse to: pend BusFault(5) if `SHCSR.BUSFAULTENA` is
+    /// set **and** BusFault's priority beats the current execution priority;
+    /// otherwise pend HardFault(3) with `HFSR.FORCED`.
+    ///
+    /// Returns `false` when even HardFault cannot be taken. On silicon that is
+    /// LOCKUP (B1.5.15), which this model does not have; the caller then leaves
+    /// the original `Err` to stop the run, rather than pending an exception that
+    /// can never dispatch and spinning on the faulting instruction forever.
+    fn escalate_precise_data_fault(&mut self, addr: u32) -> bool {
+        let Some(faults) = self.faults.clone() else {
+            return false;
+        };
+        faults
+            .cfsr
+            .fetch_or(CFSR_BFSR_PRECISERR | CFSR_BFSR_BFARVALID, Ordering::Relaxed);
+        faults.bfar.store(addr, Ordering::Relaxed);
+
+        let busfault_enabled = faults.shcsr.load(Ordering::Relaxed) & SHCSR_BUSFAULTENA != 0;
+        let exec_prio = self.execution_priority();
+        let target = if busfault_enabled && self.exception_priority(5) < exec_prio {
+            5
+        } else {
+            // Escalated: the HardFault handler needs to know it is standing in
+            // for a configurable fault, and CFSR above tells it which one.
+            faults.hfsr.fetch_or(HFSR_FORCED, Ordering::Relaxed);
+            3
+        };
+        if self.exception_priority(target) >= exec_prio {
+            return false; // LOCKUP — see the doc comment.
+        }
+        if trace_exc_enabled() {
+            eprintln!(
+                "EXC fault addr=0x{:08X} -> exc={} pc=0x{:08X}",
+                addr, target, self.pc
+            );
+        }
+        self.set_exception_pending(target);
+        true
+    }
+
+    /// One instruction, with ARMv7-M fault escalation layered over
+    /// [`CortexM::step_execute`].
+    ///
+    /// A precise data-access fault leaves the PC on the faulting instruction and
+    /// returns `Ok(())`: the exception is pended here and *dispatched* by the
+    /// next `step_execute`, whose entry block stacks a frame whose return
+    /// address is the faulting instruction — which is what B1.5.6 requires for a
+    /// synchronous fault.
+    ///
+    /// With fault modelling off (the default) this is `step_execute` verbatim:
+    /// `pending_data_fault` is only ever written on the error path, and the
+    /// `Err` is returned unchanged.
     #[inline(always)]
     fn step_internal<B: Bus + ?Sized>(
+        &mut self,
+        bus: &mut B,
+        observers: &[Arc<dyn SimulationObserver>],
+        config: &SimulationConfig,
+    ) -> SimResult<()> {
+        match self.step_execute(bus, observers, config) {
+            Err(e) => {
+                // `take` unconditionally: the latch must not survive into the
+                // next step even when escalation is off.
+                match self.pending_data_fault.take() {
+                    Some(addr)
+                        if self.faults_enabled() && self.escalate_precise_data_fault(addr) =>
+                    {
+                        Ok(())
+                    }
+                    _ => Err(e),
+                }
+            }
+            ok => ok,
+        }
+    }
+
+    #[inline(always)]
+    fn step_execute<B: Bus + ?Sized>(
         &mut self,
         bus: &mut B,
         _observers: &[Arc<dyn SimulationObserver>],
@@ -941,7 +1221,10 @@ impl CortexM {
         // FreeRTOS PendSV-driven context switches behave correctly —
         // PendSV at priority 0xFF only runs when no other ISR is active.
         let exception_num = self.highest_priority_pending().unwrap_or(0);
-        if self.pending_exceptions.iter().any(|&w| w != 0) && !self.primask && exception_num != 0 {
+        if self.pending_exceptions.iter().any(|&w| w != 0)
+            && !self.masked_by_primask(exception_num)
+            && exception_num != 0
+        {
             let take_prio = self.exception_priority(exception_num);
             let active_prio = self.exception_priority(self.active_exception);
             let can_take = take_prio < active_prio
@@ -986,14 +1269,22 @@ impl CortexM {
                     // Stack: R0, R1, R2, R3, R12, LR, PC, xPSR (with previous IPSR)
                     let stacked_lr = self.lr;
                     let stacked_pc = self.pc;
-                    let _ = bus.write_u32(frame_ptr as u64, self.r0);
-                    let _ = bus.write_u32((frame_ptr + 4) as u64, self.r1);
-                    let _ = bus.write_u32((frame_ptr + 8) as u64, self.r2);
-                    let _ = bus.write_u32((frame_ptr + 12) as u64, self.r3);
-                    let _ = bus.write_u32((frame_ptr + 16) as u64, self.r12);
-                    let _ = bus.write_u32((frame_ptr + 20) as u64, self.lr);
-                    let _ = bus.write_u32((frame_ptr + 24) as u64, self.pc);
-                    let _ = bus.write_u32((frame_ptr + 28) as u64, save_xpsr);
+                    // Stacking is a data-side store like any other: if the frame
+                    // does not fit in mapped memory the write must surface, not
+                    // vanish. `exception_return`'s matching unstacking loads have
+                    // always propagated with `?`; this makes entry symmetric.
+                    // `bus_store`, not `store`: a stacking failure is
+                    // BFSR.STKERR / LOCKUP territory (B1.5.15), not a precise
+                    // data-access fault, and escalating it would re-enter this
+                    // same broken stack forever. See `CortexM::bus_load`.
+                    Self::bus_store(bus, frame_ptr, AccessWidth::Word, self.r0)?;
+                    Self::bus_store(bus, frame_ptr + 4, AccessWidth::Word, self.r1)?;
+                    Self::bus_store(bus, frame_ptr + 8, AccessWidth::Word, self.r2)?;
+                    Self::bus_store(bus, frame_ptr + 12, AccessWidth::Word, self.r3)?;
+                    Self::bus_store(bus, frame_ptr + 16, AccessWidth::Word, self.r12)?;
+                    Self::bus_store(bus, frame_ptr + 20, AccessWidth::Word, self.lr)?;
+                    Self::bus_store(bus, frame_ptr + 24, AccessWidth::Word, self.pc)?;
+                    Self::bus_store(bus, frame_ptr + 28, AccessWidth::Word, save_xpsr)?;
 
                     // Bank the preempted stack pointer into its bank (PSP or MSP)
                     // BEFORE entering Handler mode, then switch the live `sp` to MSP.
@@ -1033,13 +1324,14 @@ impl CortexM {
                             bus.read_u32(vector_addr as u64)
                         );
                     }
-                    if let Ok(handler) = bus.read_u32(vector_addr as u64) {
-                        self.pc = handler & !1;
-                        tracing::debug!(
+                    // `bus_load`: a failed vector-table read is HFSR.VECTTBL,
+                    // not a precise data-access fault. See `CortexM::bus_load`.
+                    let handler = Self::bus_load(bus, vector_addr, AccessWidth::Word)?;
+                    self.pc = handler & !1;
+                    tracing::debug!(
                         "EXC_ENTRY: exc={} handler={:#010x} frame={:#010x} stacked_lr={:#010x} stacked_pc={:#010x}",
                         exception_num, self.pc, frame_ptr, stacked_lr, stacked_pc
                     );
-                    }
 
                     return Ok(());
                 } // end else (NVIC ISPR still set — take the exception)
@@ -1540,14 +1832,13 @@ impl CortexM {
                         self.read_reg(rn)
                     };
                     let addr = base.wrapping_add(imm12 as u32);
-                    if let Ok(val) = bus.read_u32(addr as u64) {
-                        if rt == 15 {
-                            // LDR PC, [...] is an interworking branch — must go through branch_to
-                            self.branch_to(val, bus)?;
-                            pc_increment = 0;
-                        } else {
-                            self.write_reg(rt, val);
-                        }
+                    let val = self.load(bus, addr, AccessWidth::Word)?;
+                    if rt == 15 {
+                        // LDR PC, [...] is an interworking branch — must go through branch_to
+                        self.branch_to(val, bus)?;
+                        pc_increment = 0;
+                    } else {
+                        self.write_reg(rt, val);
                     }
                     // pc_increment stays at 4 (set by decode) unless we took a branch above
                 }
@@ -1555,7 +1846,7 @@ impl CortexM {
                     let base = self.read_reg(rn);
                     let addr = base.wrapping_add(imm12 as u32);
                     let val = self.read_reg(rt);
-                    let _ = bus.write_u32(addr as u64, val);
+                    self.store(bus, addr, AccessWidth::Word, val)?;
                     pc_increment = 4;
                 }
                 Instruction::LdrImm32Idx {
@@ -1577,21 +1868,18 @@ impl CortexM {
                         base.wrapping_sub(offset)
                     };
                     let access_addr = if pre_index { offset_addr } else { base };
-                    if let Ok(val) = bus.read_u32(access_addr as u64) {
-                        // Commit writeback before branching so a load-to-PC
-                        // (function return) leaves Rn=SP correct.
-                        if writeback {
-                            self.write_reg(rn, offset_addr);
-                        }
-                        if rt == 15 {
-                            // LDR PC, [...] — interworking branch (function return).
-                            self.branch_to(val, bus)?;
-                            pc_increment = 0;
-                        } else {
-                            self.write_reg(rt, val);
-                            pc_increment = 4;
-                        }
+                    let val = self.load(bus, access_addr, AccessWidth::Word)?;
+                    // Commit writeback before branching so a load-to-PC
+                    // (function return) leaves Rn=SP correct.
+                    if writeback {
+                        self.write_reg(rn, offset_addr);
+                    }
+                    if rt == 15 {
+                        // LDR PC, [...] — interworking branch (function return).
+                        self.branch_to(val, bus)?;
+                        pc_increment = 0;
                     } else {
+                        self.write_reg(rt, val);
                         pc_increment = 4;
                     }
                 }
@@ -1612,7 +1900,7 @@ impl CortexM {
                     };
                     let access_addr = if pre_index { offset_addr } else { base };
                     let val = self.read_reg(rt);
-                    let _ = bus.write_u32(access_addr as u64, val);
+                    self.store(bus, access_addr, AccessWidth::Word, val)?;
                     if writeback {
                         self.write_reg(rn, offset_addr);
                     }
@@ -1637,12 +1925,10 @@ impl CortexM {
                         base.wrapping_sub(imm8 << 2)
                     };
                     let addr = if index { offset_addr } else { base };
-                    if let Ok(v1) = bus.read_u32(addr as u64) {
-                        self.write_reg(rt, v1);
-                    }
-                    if let Ok(v2) = bus.read_u32(addr.wrapping_add(4) as u64) {
-                        self.write_reg(rt2, v2);
-                    }
+                    let v1 = self.load(bus, addr, AccessWidth::Word)?;
+                    self.write_reg(rt, v1);
+                    let v2 = self.load(bus, addr.wrapping_add(4), AccessWidth::Word)?;
+                    self.write_reg(rt2, v2);
                     if writeback {
                         self.write_reg(rn, offset_addr);
                     }
@@ -1666,8 +1952,8 @@ impl CortexM {
                     let addr = if index { offset_addr } else { base };
                     let v1 = self.read_reg(rt);
                     let v2 = self.read_reg(rt2);
-                    let _ = bus.write_u32(addr as u64, v1);
-                    let _ = bus.write_u32(addr.wrapping_add(4) as u64, v2);
+                    self.store(bus, addr, AccessWidth::Word, v1)?;
+                    self.store(bus, addr.wrapping_add(4), AccessWidth::Word, v2)?;
                     if writeback {
                         self.write_reg(rn, offset_addr);
                     }
@@ -1686,11 +1972,10 @@ impl CortexM {
                     }
                     let index = self.read_reg(rm);
                     let addr = base.wrapping_add(index);
-                    if let Ok(byte) = bus.read_u8(addr as u64) {
-                        let offset = (byte as u32) << 1;
-                        self.pc = self.pc.wrapping_add(4).wrapping_add(offset);
-                        pc_increment = 0;
-                    }
+                    let byte = self.load(bus, addr, AccessWidth::Byte)?;
+                    let offset = byte << 1;
+                    self.pc = self.pc.wrapping_add(4).wrapping_add(offset);
+                    pc_increment = 0;
                 }
                 Instruction::Tbh { rn, rm } => {
                     let mut base = self.read_reg(rn);
@@ -1700,11 +1985,10 @@ impl CortexM {
                     }
                     let index = self.read_reg(rm);
                     let addr = base.wrapping_add(index << 1);
-                    if let Ok(halfword) = bus.read_u16(addr as u64) {
-                        let offset = (halfword as u32) << 1;
-                        self.pc = self.pc.wrapping_add(4).wrapping_add(offset);
-                        pc_increment = 0;
-                    }
+                    let halfword = self.load(bus, addr, AccessWidth::Half)?;
+                    let offset = halfword << 1;
+                    self.pc = self.pc.wrapping_add(4).wrapping_add(offset);
+                    pc_increment = 0;
                 }
                 Instruction::Unknown32(h1, h2) => {
                     // Manual fallback for complex bit patterns not yet in Instruction enum.
@@ -1776,9 +2060,8 @@ impl CortexM {
                         let rt = ((h2 >> 12) & 0xF) as u8;
                         let imm8 = (h2 & 0xFF) as u32;
                         let addr = self.get_register(rn).wrapping_add(imm8 * 4);
-                        if let Ok(val) = bus.read_u32(addr as u64) {
-                            self.set_register(rt, val);
-                        }
+                        let val = self.load(bus, addr, AccessWidth::Word)?;
+                        self.set_register(rt, val);
                         pc_increment = 4;
                     } else if (h1 & 0xFFF0) == 0xE840 {
                         // STREX
@@ -1788,7 +2071,7 @@ impl CortexM {
                         let imm8 = (h2 & 0xFF) as u32;
                         let addr = self.get_register(rn).wrapping_add(imm8 * 4);
                         let val = self.get_register(rt);
-                        let _ = bus.write_u32(addr as u64, val);
+                        self.store(bus, addr, AccessWidth::Word, val)?;
                         // Rd = 0 → success.
                         self.set_register(rd, 0);
                         pc_increment = 4;
@@ -1805,14 +2088,15 @@ impl CortexM {
                         // LDAEX/STLEX.
                         let rn = (h1 & 0xF) as u8;
                         let rt = ((h2 >> 12) & 0xF) as u8;
-                        let addr = self.get_register(rn) as u64;
-                        let loaded = match (h2 >> 4) & 0xF {
-                            0x8 | 0xC => bus.read_u8(addr).ok().map(|v| v as u32),
-                            0x9 | 0xD => bus.read_u16(addr).ok().map(|v| v as u32),
-                            0xA | 0xE => bus.read_u32(addr).ok(),
+                        let addr = self.get_register(rn);
+                        let width = match (h2 >> 4) & 0xF {
+                            0x8 | 0xC => Some(AccessWidth::Byte),
+                            0x9 | 0xD => Some(AccessWidth::Half),
+                            0xA | 0xE => Some(AccessWidth::Word),
                             _ => None,
                         };
-                        if let Some(val) = loaded {
+                        if let Some(width) = width {
+                            let val = self.load(bus, addr, width)?;
                             self.set_register(rt, val);
                         }
                         pc_increment = 4;
@@ -1823,20 +2107,17 @@ impl CortexM {
                         //   h1 = 0xE8C0 | Rn, h2 = Rt<<12 | 0xF<<8 | sz<<4 | Rd/0xF
                         let rn = (h1 & 0xF) as u8;
                         let rt = ((h2 >> 12) & 0xF) as u8;
-                        let addr = self.get_register(rn) as u64;
+                        let addr = self.get_register(rn);
                         let val = self.get_register(rt);
                         let sz = (h2 >> 4) & 0xF;
-                        match sz {
-                            0x8 | 0xC => {
-                                let _ = bus.write_u8(addr, val as u8);
-                            }
-                            0x9 | 0xD => {
-                                let _ = bus.write_u16(addr, val as u16);
-                            }
-                            0xA | 0xE => {
-                                let _ = bus.write_u32(addr, val);
-                            }
-                            _ => {}
+                        let width = match sz {
+                            0x8 | 0xC => Some(AccessWidth::Byte),
+                            0x9 | 0xD => Some(AccessWidth::Half),
+                            0xA | 0xE => Some(AccessWidth::Word),
+                            _ => None,
+                        };
+                        if let Some(width) = width {
+                            self.store(bus, addr, width, val)?;
                         }
                         if matches!(sz, 0xC..=0xE) {
                             let rd = (h2 & 0xF) as u8;
@@ -1911,51 +2192,48 @@ impl CortexM {
                             let mut branch_taken = false;
                             match op1 & 0x7 {
                                 0 => {
-                                    let val = (self.read_reg(rt) & 0xFF) as u8;
-                                    let _ = bus.write_u8(addr as u64, val);
+                                    let val = self.read_reg(rt) & 0xFF;
+                                    self.store(bus, addr, AccessWidth::Byte, val)?;
                                 }
                                 // Rt==15 = PLD/PLI preload hint — NOP (handled by `_`).
                                 1 if rt != 15 => {
-                                    if let Ok(v) = bus.read_u8(addr as u64) {
-                                        let out = if is_signed {
-                                            (v as i8) as i32 as u32
-                                        } else {
-                                            v as u32
-                                        };
-                                        self.write_reg(rt, out);
-                                    }
+                                    let v = self.load(bus, addr, AccessWidth::Byte)?;
+                                    let out = if is_signed {
+                                        (v as u8 as i8) as i32 as u32
+                                    } else {
+                                        v
+                                    };
+                                    self.write_reg(rt, out);
                                 }
                                 2 => {
-                                    let val = (self.read_reg(rt) & 0xFFFF) as u16;
-                                    let _ = bus.write_u16(addr as u64, val);
+                                    let val = self.read_reg(rt) & 0xFFFF;
+                                    self.store(bus, addr, AccessWidth::Half, val)?;
                                 }
                                 // Rt==15 = PLDW preload hint — NOP (handled by `_`).
                                 3 if rt != 15 => {
-                                    if let Ok(v) = bus.read_u16(addr as u64) {
-                                        let out = if is_signed {
-                                            (v as i16) as i32 as u32
-                                        } else {
-                                            v as u32
-                                        };
-                                        self.write_reg(rt, out);
-                                    }
+                                    let v = self.load(bus, addr, AccessWidth::Half)?;
+                                    let out = if is_signed {
+                                        (v as u16 as i16) as i32 as u32
+                                    } else {
+                                        v
+                                    };
+                                    self.write_reg(rt, out);
                                 }
                                 4 => {
                                     let val = self.read_reg(rt);
-                                    let _ = bus.write_u32(addr as u64, val);
+                                    self.store(bus, addr, AccessWidth::Word, val)?;
                                 }
                                 5 => {
-                                    if let Ok(v) = bus.read_u32(addr as u64) {
-                                        if rt == 15 {
-                                            if wb {
-                                                self.write_reg(rn, wb_val);
-                                                wb = false;
-                                            }
-                                            self.branch_to(v, bus)?;
-                                            branch_taken = true;
-                                        } else {
-                                            self.write_reg(rt, v);
+                                    let v = self.load(bus, addr, AccessWidth::Word)?;
+                                    if rt == 15 {
+                                        if wb {
+                                            self.write_reg(rn, wb_val);
+                                            wb = false;
                                         }
+                                        self.branch_to(v, bus)?;
+                                        branch_taken = true;
+                                    } else {
+                                        self.write_reg(rt, v);
                                     }
                                 }
                                 _ => {
@@ -1986,47 +2264,44 @@ impl CortexM {
                             let mut branch_taken = false;
                             match op1 & 0x7 {
                                 0 => {
-                                    let val = (self.read_reg(rt) & 0xFF) as u8;
-                                    let _ = bus.write_u8(addr as u64, val);
+                                    let val = self.read_reg(rt) & 0xFF;
+                                    self.store(bus, addr, AccessWidth::Byte, val)?;
                                 }
                                 // Rt==15 = PLD/PLI preload hint — NOP (handled by `_`).
                                 1 if rt != 15 => {
-                                    if let Ok(v) = bus.read_u8(addr as u64) {
-                                        let out = if is_signed {
-                                            (v as i8) as i32 as u32
-                                        } else {
-                                            v as u32
-                                        };
-                                        self.write_reg(rt, out);
-                                    }
+                                    let v = self.load(bus, addr, AccessWidth::Byte)?;
+                                    let out = if is_signed {
+                                        (v as u8 as i8) as i32 as u32
+                                    } else {
+                                        v
+                                    };
+                                    self.write_reg(rt, out);
                                 }
                                 2 => {
-                                    let val = (self.read_reg(rt) & 0xFFFF) as u16;
-                                    let _ = bus.write_u16(addr as u64, val);
+                                    let val = self.read_reg(rt) & 0xFFFF;
+                                    self.store(bus, addr, AccessWidth::Half, val)?;
                                 }
                                 // Rt==15 = PLDW preload hint — NOP (handled by `_`).
                                 3 if rt != 15 => {
-                                    if let Ok(v) = bus.read_u16(addr as u64) {
-                                        let out = if is_signed {
-                                            (v as i16) as i32 as u32
-                                        } else {
-                                            v as u32
-                                        };
-                                        self.write_reg(rt, out);
-                                    }
+                                    let v = self.load(bus, addr, AccessWidth::Half)?;
+                                    let out = if is_signed {
+                                        (v as u16 as i16) as i32 as u32
+                                    } else {
+                                        v
+                                    };
+                                    self.write_reg(rt, out);
                                 }
                                 4 => {
                                     let val = self.read_reg(rt);
-                                    let _ = bus.write_u32(addr as u64, val);
+                                    self.store(bus, addr, AccessWidth::Word, val)?;
                                 }
                                 5 => {
-                                    if let Ok(v) = bus.read_u32(addr as u64) {
-                                        if rt == 15 {
-                                            self.branch_to(v, bus)?;
-                                            branch_taken = true;
-                                        } else {
-                                            self.write_reg(rt, v);
-                                        }
+                                    let v = self.load(bus, addr, AccessWidth::Word)?;
+                                    if rt == 15 {
+                                        self.branch_to(v, bus)?;
+                                        branch_taken = true;
+                                    } else {
+                                        self.write_reg(rt, v);
                                     }
                                 }
                                 _ => {}
@@ -2504,71 +2779,45 @@ impl CortexM {
                 Instruction::LdrImm { rt, rn, imm } => {
                     let base = self.read_reg(rn);
                     let addr = base.wrapping_add(imm as u32);
-                    if let Ok(val) = bus.read_u32(addr as u64) {
-                        self.write_reg(rt, val);
-                        if val == 0x021d0000 {
-                            tracing::info!("LDR Literal/Imm SUSPICIOUS: R{} loaded with {:#x} from {:#x} (PC={:#x})", rt, val, addr, self.pc);
-                        }
-                    } else {
-                        tracing::error!(
-                            "Bus Read Fault at {:#x} (PC={:#x}, Opcode={:#04x})",
-                            addr,
-                            self.pc,
-                            opcode
-                        );
+                    let val = self.load(bus, addr, AccessWidth::Word)?;
+                    self.write_reg(rt, val);
+                    if val == 0x021d0000 {
+                        tracing::info!("LDR Literal/Imm SUSPICIOUS: R{} loaded with {:#x} from {:#x} (PC={:#x})", rt, val, addr, self.pc);
                     }
                 }
                 Instruction::StrImm { rt, rn, imm } => {
                     let base = self.read_reg(rn);
                     let addr = base.wrapping_add(imm as u32);
                     let val = self.read_reg(rt);
-                    if bus.write_u32(addr as u64, val).is_err() {
-                        tracing::error!(
-                            "Bus Write Fault at {:#x} (PC={:#x}, Opcode={:#04x})",
-                            addr,
-                            self.pc,
-                            opcode
-                        );
-                    }
+                    self.store(bus, addr, AccessWidth::Word, val)?;
                 }
                 Instruction::LdrReg { rt, rn, rm } => {
                     let addr = self.read_reg(rn).wrapping_add(self.read_reg(rm));
-                    if let Ok(val) = bus.read_u32(addr as u64) {
-                        self.write_reg(rt, val);
-                    } else {
-                        tracing::error!("Bus Read Fault (LDR reg) at {:#x}", addr);
-                    }
+                    let val = self.load(bus, addr, AccessWidth::Word)?;
+                    self.write_reg(rt, val);
                 }
                 Instruction::StrReg { rt, rn, rm } => {
                     let addr = self.read_reg(rn).wrapping_add(self.read_reg(rm));
                     let val = self.read_reg(rt);
-                    let _ = bus.write_u32(addr as u64, val);
+                    self.store(bus, addr, AccessWidth::Word, val)?;
                 }
 
                 Instruction::LdrLit { rt, imm } => {
                     let pc_val = (self.pc & !3) + 4;
                     let addr = pc_val.wrapping_add(imm as u32);
-                    if let Ok(val) = bus.read_u32(addr as u64) {
-                        self.write_reg(rt, val);
-                    } else {
-                        tracing::error!("Bus Read Fault (LdrLit) at {:#x}", addr);
-                    }
+                    let val = self.load(bus, addr, AccessWidth::Word)?;
+                    self.write_reg(rt, val);
                 }
 
                 Instruction::LdrSp { rt, imm } => {
                     let addr = self.sp.wrapping_add(imm as u32);
-                    if let Ok(val) = bus.read_u32(addr as u64) {
-                        self.write_reg(rt, val);
-                    } else {
-                        tracing::error!("Bus Read Fault (LdrSp) at {:#x}", addr);
-                    }
+                    let val = self.load(bus, addr, AccessWidth::Word)?;
+                    self.write_reg(rt, val);
                 }
                 Instruction::StrSp { rt, imm } => {
                     let addr = self.sp.wrapping_add(imm as u32);
                     let val = self.read_reg(rt);
-                    if bus.write_u32(addr as u64, val).is_err() {
-                        tracing::error!("Bus Write Fault (StrSp) at {:#x}", addr);
-                    }
+                    self.store(bus, addr, AccessWidth::Word, val)?;
                 }
                 Instruction::AddSpReg { rd, imm } => {
                     let res = self.sp.wrapping_add(imm as u32);
@@ -2597,90 +2846,58 @@ impl CortexM {
                 Instruction::LdrbImm { rt, rn, imm } => {
                     let base = self.read_reg(rn);
                     let addr = base.wrapping_add(imm as u32);
-                    if let Ok(val) = bus.read_u8(addr as u64) {
-                        self.write_reg(rt, val as u32);
-                    } else {
-                        tracing::error!(
-                            "Bus Read Fault (LDRB) at {:#x} (PC={:#x}, Opcode={:#04x})",
-                            addr,
-                            self.pc,
-                            opcode
-                        );
-                    }
+                    let val = self.load(bus, addr, AccessWidth::Byte)?;
+                    self.write_reg(rt, val);
                 }
                 Instruction::LdrbReg { rt, rn, rm } => {
                     let addr = self.read_reg(rn).wrapping_add(self.read_reg(rm));
-                    if let Ok(val) = bus.read_u8(addr as u64) {
-                        self.write_reg(rt, val as u32);
-                    } else {
-                        tracing::error!("Bus Read Fault (LDRB reg) at {:#x}", addr);
-                    }
+                    let val = self.load(bus, addr, AccessWidth::Byte)?;
+                    self.write_reg(rt, val);
                 }
                 Instruction::StrbReg { rt, rn, rm } => {
                     let addr = self.read_reg(rn).wrapping_add(self.read_reg(rm));
-                    let val = (self.read_reg(rt) & 0xFF) as u8;
-                    let _ = bus.write_u8(addr as u64, val);
+                    let val = self.read_reg(rt) & 0xFF;
+                    self.store(bus, addr, AccessWidth::Byte, val)?;
                 }
                 Instruction::LdrsbReg { rt, rn, rm } => {
                     let addr = self.read_reg(rn).wrapping_add(self.read_reg(rm));
-                    if let Ok(val) = bus.read_u8(addr as u64) {
-                        let res = (val as i8) as i32 as u32;
-                        self.write_reg(rt, res);
-                    } else {
-                        tracing::error!("Bus Read Fault (LDRSB reg) at {:#x}", addr);
-                    }
+                    let val = self.load(bus, addr, AccessWidth::Byte)?;
+                    let res = (val as u8 as i8) as i32 as u32;
+                    self.write_reg(rt, res);
                 }
                 Instruction::LdrhReg { rt, rn, rm } => {
                     let addr = self.read_reg(rn).wrapping_add(self.read_reg(rm));
-                    if let Ok(val) = bus.read_u16(addr as u64) {
-                        self.write_reg(rt, val as u32);
-                    } else {
-                        tracing::error!("Bus Read Fault (LDRH reg) at {:#x}", addr);
-                    }
+                    let val = self.load(bus, addr, AccessWidth::Half)?;
+                    self.write_reg(rt, val);
                 }
                 Instruction::StrhReg { rt, rn, rm } => {
                     let addr = self.read_reg(rn).wrapping_add(self.read_reg(rm));
-                    let val = (self.read_reg(rt) & 0xFFFF) as u16;
-                    let _ = bus.write_u16(addr as u64, val);
+                    let val = self.read_reg(rt) & 0xFFFF;
+                    self.store(bus, addr, AccessWidth::Half, val)?;
                 }
                 Instruction::LdrshReg { rt, rn, rm } => {
                     let addr = self.read_reg(rn).wrapping_add(self.read_reg(rm));
-                    if let Ok(val) = bus.read_u16(addr as u64) {
-                        let res = (val as i16) as i32 as u32;
-                        self.write_reg(rt, res);
-                    } else {
-                        tracing::error!("Bus Read Fault (LDRSH reg) at {:#x}", addr);
-                    }
+                    let val = self.load(bus, addr, AccessWidth::Half)?;
+                    let res = (val as u16 as i16) as i32 as u32;
+                    self.write_reg(rt, res);
                 }
                 Instruction::StrbImm { rt, rn, imm } => {
                     let base = self.read_reg(rn);
                     let addr = base.wrapping_add(imm as u32);
-                    let val = (self.read_reg(rt) & 0xFF) as u8;
-                    if bus.write_u8(addr as u64, val).is_err() {
-                        tracing::error!(
-                            "Bus Write Fault (STRB) at {:#x} (PC={:#x}, Opcode={:#04x})",
-                            addr,
-                            self.pc,
-                            opcode
-                        );
-                    }
+                    let val = self.read_reg(rt) & 0xFF;
+                    self.store(bus, addr, AccessWidth::Byte, val)?;
                 }
                 Instruction::LdrhImm { rt, rn, imm } => {
                     let base = self.read_reg(rn);
                     let addr = base.wrapping_add(imm as u32);
-                    if let Ok(val) = bus.read_u16(addr as u64) {
-                        self.write_reg(rt, val as u32);
-                    } else {
-                        tracing::error!("Bus Read Fault (LDRH) at {:#x}", addr);
-                    }
+                    let val = self.load(bus, addr, AccessWidth::Half)?;
+                    self.write_reg(rt, val);
                 }
                 Instruction::StrhImm { rt, rn, imm } => {
                     let base = self.read_reg(rn);
                     let addr = base.wrapping_add(imm as u32);
-                    let val = (self.read_reg(rt) & 0xFFFF) as u16;
-                    if bus.write_u16(addr as u64, val).is_err() {
-                        tracing::error!("Bus Write Fault (STRH) at {:#x}", addr);
-                    }
+                    let val = self.read_reg(rt) & 0xFFFF;
+                    self.store(bus, addr, AccessWidth::Half, val)?;
                 }
                 Instruction::Bkpt { imm8 } => {
                     // ARM semihosting uses `bkpt #0xAB` as the trap into
@@ -2723,9 +2940,7 @@ impl CortexM {
                     if m {
                         sp = sp.wrapping_sub(4);
                         let val = self.read_reg(14);
-                        if bus.write_u32(sp as u64, val).is_err() {
-                            tracing::error!("Stack Overflow (PUSH LR)");
-                        }
+                        self.store(bus, sp, AccessWidth::Word, val)?;
                     }
 
                     // Registers R7 down to R0
@@ -2733,9 +2948,7 @@ impl CortexM {
                         if (registers & (1 << i)) != 0 {
                             sp = sp.wrapping_sub(4);
                             let val = self.read_reg(i);
-                            if bus.write_u32(sp as u64, val).is_err() {
-                                tracing::error!("Stack Overflow (PUSH R{})", i);
-                            }
+                            self.store(bus, sp, AccessWidth::Word, val)?;
                         }
                     }
 
@@ -2747,9 +2960,8 @@ impl CortexM {
                     // Registers R0 up to R7
                     for i in 0..=7 {
                         if (registers & (1 << i)) != 0 {
-                            if let Ok(val) = bus.read_u32(sp as u64) {
-                                self.write_reg(i, val);
-                            }
+                            let val = self.load(bus, sp, AccessWidth::Word)?;
+                            self.write_reg(i, val);
                             sp = sp.wrapping_add(4);
                         }
                     }
@@ -2772,17 +2984,13 @@ impl CortexM {
                     // 2. If PC, read, add 4.
 
                     if p {
-                        if let Ok(val) = bus.read_u32(sp as u64) {
-                            // Commit SP before branching so EXC_RETURN unstacking reads the
-                            // hardware exception frame, not this function's software save area.
-                            sp = sp.wrapping_add(4);
-                            self.write_reg(13, sp);
-                            self.branch_to(val, bus)?;
-                            pc_increment = 0; // Branch taken
-                        } else {
-                            sp = sp.wrapping_add(4);
-                            self.write_reg(13, sp);
-                        }
+                        let val = self.load(bus, sp, AccessWidth::Word)?;
+                        // Commit SP before branching so EXC_RETURN unstacking reads the
+                        // hardware exception frame, not this function's software save area.
+                        sp = sp.wrapping_add(4);
+                        self.write_reg(13, sp);
+                        self.branch_to(val, bus)?;
+                        pc_increment = 0; // Branch taken
                     } else {
                         self.write_reg(13, sp);
                     }
@@ -2791,9 +2999,8 @@ impl CortexM {
                     let mut base = self.read_reg(rn);
                     for i in 0..=7 {
                         if (registers & (1 << i)) != 0 {
-                            if let Ok(val) = bus.read_u32(base as u64) {
-                                self.write_reg(i, val);
-                            }
+                            let val = self.load(bus, base, AccessWidth::Word)?;
+                            self.write_reg(i, val);
                             base = base.wrapping_add(4);
                         }
                     }
@@ -2814,9 +3021,7 @@ impl CortexM {
                     for i in 0..=7 {
                         if (registers & (1 << i)) != 0 {
                             let val = self.read_reg(i);
-                            if bus.write_u32(base as u64, val).is_err() {
-                                tracing::error!("Bus Write Fault (STM) at {:#x}", base);
-                            }
+                            self.store(bus, base, AccessWidth::Word, val)?;
                             base = base.wrapping_add(4);
                         }
                     }
@@ -2835,9 +3040,7 @@ impl CortexM {
                     for i in 0u8..=15 {
                         if (reg_list & (1 << i)) != 0 {
                             let val = self.read_reg(i);
-                            if bus.write_u32(addr as u64, val).is_err() {
-                                tracing::error!("Bus Write Fault (STMDB) at {:#x}", addr);
-                            }
+                            self.store(bus, addr, AccessWidth::Word, val)?;
                             addr = addr.wrapping_add(4);
                         }
                     }
@@ -2857,9 +3060,7 @@ impl CortexM {
                     for i in 0u8..=14 {
                         if (reg_list & (1 << i)) != 0 {
                             let val = self.read_reg(i);
-                            if bus.write_u32(addr as u64, val).is_err() {
-                                tracing::error!("Bus Write Fault (STMIA.W) at {:#x}", addr);
-                            }
+                            self.store(bus, addr, AccessWidth::Word, val)?;
                             addr = addr.wrapping_add(4);
                         }
                     }
@@ -2880,9 +3081,8 @@ impl CortexM {
                     let mut addr = start;
                     for i in 0u8..=14 {
                         if (reg_list & (1 << i)) != 0 {
-                            if let Ok(val) = bus.read_u32(addr as u64) {
-                                self.write_reg(i, val);
-                            }
+                            let val = self.load(bus, addr, AccessWidth::Word)?;
+                            self.write_reg(i, val);
                             addr = addr.wrapping_add(4);
                         }
                     }
@@ -2890,12 +3090,9 @@ impl CortexM {
                         self.write_reg(rn, start);
                     }
                     if (reg_list & (1 << 15)) != 0 {
-                        if let Ok(pc_val) = bus.read_u32(addr as u64) {
-                            self.branch_to(pc_val, bus)?;
-                            pc_increment = 0;
-                        } else {
-                            pc_increment = 4;
-                        }
+                        let pc_val = self.load(bus, addr, AccessWidth::Word)?;
+                        self.branch_to(pc_val, bus)?;
+                        pc_increment = 0;
                     } else {
                         pc_increment = 4;
                     }
@@ -2911,28 +3108,20 @@ impl CortexM {
                     // Load R0-R14 (skip PC; handle separately to commit SP first)
                     for i in 0u8..=14 {
                         if (reg_list & (1 << i)) != 0 {
-                            if let Ok(val) = bus.read_u32(addr as u64) {
-                                self.write_reg(i, val);
-                            }
+                            let val = self.load(bus, addr, AccessWidth::Word)?;
+                            self.write_reg(i, val);
                             addr = addr.wrapping_add(4);
                         }
                     }
                     // Handle PC (bit 15) — commit writeback before branching
                     if (reg_list & (1 << 15)) != 0 {
-                        if let Ok(pc_val) = bus.read_u32(addr as u64) {
-                            addr = addr.wrapping_add(4);
-                            if writeback {
-                                self.write_reg(rn, addr);
-                            }
-                            self.branch_to(pc_val, bus)?;
-                            pc_increment = 0;
-                        } else {
-                            addr = addr.wrapping_add(4);
-                            if writeback {
-                                self.write_reg(rn, addr);
-                            }
-                            pc_increment = 4;
+                        let pc_val = self.load(bus, addr, AccessWidth::Word)?;
+                        addr = addr.wrapping_add(4);
+                        if writeback {
+                            self.write_reg(rn, addr);
                         }
+                        self.branch_to(pc_val, bus)?;
+                        pc_increment = 0;
                     } else {
                         if writeback {
                             self.write_reg(rn, addr);
@@ -3158,11 +3347,8 @@ impl CortexM {
                     } else {
                         base.wrapping_sub(imm as u32)
                     };
-                    if let Ok(val) = bus.read_u32(addr as u64) {
-                        self.fpu_s[sd as usize] = val;
-                    } else {
-                        tracing::error!("Bus Read Fault (VLDR) at {:#x}", addr);
-                    }
+                    let val = self.load(bus, addr, AccessWidth::Word)?;
+                    self.fpu_s[sd as usize] = val;
                     pc_increment = 4;
                 }
                 Instruction::Vstr { sd, rn, imm, add } => {
@@ -3173,9 +3359,7 @@ impl CortexM {
                         base.wrapping_sub(imm as u32)
                     };
                     let val = self.fpu_s[sd as usize];
-                    if bus.write_u32(addr as u64, val).is_err() {
-                        tracing::error!("Bus Write Fault (VSTR) at {:#x}", addr);
-                    }
+                    self.store(bus, addr, AccessWidth::Word, val)?;
                     pc_increment = 4;
                 }
                 Instruction::VmulF32 { sd, sn, sm } => {
@@ -3304,9 +3488,7 @@ impl CortexM {
                         let idx = s_first as usize + i as usize;
                         let val = if idx < 32 { self.fpu_s[idx] } else { 0 };
                         let addr = start.wrapping_add(4 * i as u32);
-                        if bus.write_u32(addr as u64, val).is_err() {
-                            tracing::error!("Bus Write Fault (VSTM) at {:#x}", addr);
-                        }
+                        self.store(bus, addr, AccessWidth::Word, val)?;
                     }
                     if wback {
                         let nb = if add {
@@ -3331,13 +3513,9 @@ impl CortexM {
                     for i in 0..count {
                         let idx = s_first as usize + i as usize;
                         let addr = start.wrapping_add(4 * i as u32);
-                        match bus.read_u32(addr as u64) {
-                            Ok(v) => {
-                                if idx < 32 {
-                                    self.fpu_s[idx] = v;
-                                }
-                            }
-                            Err(_) => tracing::error!("Bus Read Fault (VLDM) at {:#x}", addr),
+                        let v = self.load(bus, addr, AccessWidth::Word)?;
+                        if idx < 32 {
+                            self.fpu_s[idx] = v;
                         }
                     }
                     if wback {
@@ -3359,16 +3537,9 @@ impl CortexM {
                         base.wrapping_sub(imm as u32)
                     };
                     for (w, off) in [(0usize, 0u32), (1, 4)] {
-                        match bus.read_u32(addr.wrapping_add(off) as u64) {
-                            Ok(v) => {
-                                if (dd as usize + w) < 32 {
-                                    self.fpu_s[dd as usize + w] = v;
-                                }
-                            }
-                            Err(_) => tracing::error!(
-                                "Bus Read Fault (VLDR.64) at {:#x}",
-                                addr.wrapping_add(off)
-                            ),
+                        let v = self.load(bus, addr.wrapping_add(off), AccessWidth::Word)?;
+                        if (dd as usize + w) < 32 {
+                            self.fpu_s[dd as usize + w] = v;
                         }
                     }
                     pc_increment = 4;
@@ -3386,12 +3557,7 @@ impl CortexM {
                         } else {
                             0
                         };
-                        if bus.write_u32(addr.wrapping_add(off) as u64, val).is_err() {
-                            tracing::error!(
-                                "Bus Write Fault (VSTR.64) at {:#x}",
-                                addr.wrapping_add(off)
-                            );
-                        }
+                        self.store(bus, addr.wrapping_add(off), AccessWidth::Word, val)?;
                     }
                     pc_increment = 4;
                 }
