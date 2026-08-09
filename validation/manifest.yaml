@@ -234,7 +234,7 @@ boards:
     # WITHOUT a live re-capture (no bench board); an RNG live diff is owed and is
     # NOT evidenced by this entry.
     drift_ack: 2026-08-09
-    drift_ack_digest: 1069454e8c736b0eec67e6865e16dfca371f905fab39d1a9aadf8ea2c0e4bbb5
+    drift_ack_digest: 8875af363a7912479611b4d043c2dfb79e29895b5e4557b0889610cf8de93535
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -346,7 +346,7 @@ boards:
     # See the nrf52840 drift_ack note for why it is behavioural and what it does
     # not touch. No RNG live re-capture is evidenced by this entry.
     drift_ack: 2026-08-09
-    drift_ack_digest: 1069454e8c736b0eec67e6865e16dfca371f905fab39d1a9aadf8ea2c0e4bbb5
+    drift_ack_digest: 8875af363a7912479611b4d043c2dfb79e29895b5e4557b0889610cf8de93535
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -533,7 +533,7 @@ boards:
     # firmware_survival (51). No register, reset value or IRQ on this board can
     # move, so the silicon capture stands. No live re-capture.
     drift_ack: 2026-08-09
-    drift_ack_digest: acab257e50146c29462c4c2494c77a9673be551738c98eecf372b7c667907a7b
+    drift_ack_digest: 7095c9b7e1955110789c858687c0ba43cdb3726009008ab5bd6d1ecf100b92a0
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -569,9 +569,9 @@ boards:
       - "esp32c3_reset_conformance::esp32c3_reset_values_match_silicon (87 regs; 366/423 overlap matched silicon)"
       - "esp32c3_reset_conformance::esp32c3_free_running_counters_are_mapped (2 WiFi MAC counter windows; mapping only, no equality claim)"
     silicon:
-      last_capture: 2026-06-17
-      probe: "USB-JTAG (built-in, openocd-esp32) — re-verified live"
-      result: "reset oracle re-captured live 2026-06-17: 1123/1123 static registers match committed baseline (13 deltas all in per-chip efuse + live USB-device state, none in the asserted set); esp32c3_reset_values_match_silicon passes"
+      last_capture: 2026-08-09
+      probe: "USB-JTAG (built-in) + openocd-esp32 v0.12.0-esp32-20260703, board MAC 9c:cc:01:d0:98:e0 (QFN32 rev v0.4)"
+      result: "re-captured live 2026-08-09 on a SECOND physical C3 (MAC 9c:cc:01:d0:98:e0; the 2026-06-11 baseline came from 38:44:be:42:f5:58, same QFN32 rev v0.4) — cross-board corroboration, not a re-read of the same part. 1207 registers read in ONE state (21 estate windows + 43 control registers + the radio windows): 84/84 RESET_VALUES matched, 0 mismatched, and both FREE_RUNNING_COUNTERS windows mapped. Radio note: a JTAG `reset halt` on the C3 is a software CORE reset that does not cold-reset peripherals, so RADIO_FE/WIFI_MAC only read their cold baseline when no resident firmware has brought the PHY up — the board was temporarily flashed with crates/wasm/tests/fixtures/esp32c3-hello-world-flash.bin for the capture, then its original 4 MB image was restored and verified byte-identical (sha256 844abc88…8a910). Do NOT try to reach cold radio via RTC_CNTL SW_SYS_RST: it resets the USB-Serial-JTAG bridge too and drops the debug link mid-write (verified, LIBUSB_ERROR_IO). Artifacts: scripts/hw-oracle/captures/esp32c3/recapture-20260809T121824Z/."
     models:
       - crates/core/src/peripherals/esp32c3
       - crates/core/src/peripherals/esp_xtensa_common
@@ -1179,8 +1179,22 @@ boards:
     # txfifo_empty_is_level_below_threshold). That suite is green on this tree,
     # and so is the C3 ROM-boot end-to-end test, which actually drives the UART.
     # This ack rests on those, not on the reset oracle. No live re-capture.
-    drift_ack: 2026-08-09
-    drift_ack_digest: 7a687f785b9f9f85722fa2734bd117342b479fb0aa63385a30286ab18e5da23d
+    #
+    # 2026-08-09: the live re-capture the ack was standing in for HAS NOW RUN
+    # (see silicon.result above). The ack that stood here was discharged by it.
+    # Whether a NEW ack is needed depends on whether the pad-routing work that
+    # landed the same day touched a listed model after the capture — the
+    # generator decides that, not this comment. It reads FRESH.
+    #
+    # KNOWN LIMIT, stated rather than relied on: the pad-routing merge (#892)
+    # DID move this board's model digest (7a687f78 -> c5064550) on the same
+    # calendar day as the capture, and the gate compares DATES, not timestamps
+    # — so a model edit made hours after the capture still reads as "not
+    # newer". Two things make that acceptable rather than a hole: the capture
+    # corroborates the RESET_VALUES table against real silicon, and CI
+    # re-checks the MODEL against that table every run
+    # (esp32c3_reset_values_match_silicon). A pad-routing change that broke a
+    # reset value would go red there, not hide here.
 
   - id: nucleo-l476rg
     doc: docs/boards/nucleo-l476rg.md
@@ -1343,7 +1357,7 @@ boards:
     # firmware_survival (51). No register, reset value or IRQ on this board can
     # move, so the silicon capture stands. No live re-capture.
     drift_ack: 2026-08-09
-    drift_ack_digest: e814423b7c347dca44defefebf41adb1a03c63e2f7a864e01b760087fe1d7b2e
+    drift_ack_digest: 1f6d8fa2a396b81872be9e9768d26de3166a98fd0bb370a55309767838acae9e
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1488,8 +1502,8 @@ boards:
     # address, reset value or access in any board's asserted set changes.
     # Owner-authorised ack WITHOUT a live re-capture; no board was attached for
     # this change and each board's outstanding live diff remains owed.
-    drift_ack: 2026-08-08
-    drift_ack_digest: 105c3038e66f7309d1269d7ed1f981b81d83f19f8ab3c2233498fc92646066dd
+    drift_ack: 2026-08-09
+    drift_ack_digest: a31e3c89d55f6f0554d0149c62569fee1424c4633083d8a4043562110f14ebed
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1665,7 +1679,7 @@ boards:
     # firmware_survival (51). No register, reset value or IRQ on this board can
     # move, so the silicon capture stands. No live re-capture.
     drift_ack: 2026-08-09
-    drift_ack_digest: f09708629da00b8347e489069b41937ce4d5a79d69d3ce50e7ad1a3f1b806b76
+    drift_ack_digest: 159344180c0e830256a397ad598f679be42fb518f2c324cc4a3e384f765d67ac
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1821,8 +1835,8 @@ boards:
     # address, reset value or access in any board's asserted set changes.
     # Owner-authorised ack WITHOUT a live re-capture; no board was attached for
     # this change and each board's outstanding live diff remains owed.
-    drift_ack: 2026-08-08
-    drift_ack_digest: 55e991e05f47a258e5dc68029774c8a506c14e6f6c2221e2dad573cf891d8169
+    drift_ack: 2026-08-09
+    drift_ack_digest: 3fb85d313f232481f2de6453d7de1c090bff78cbb983228e57e41f10a6d47260
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1844,9 +1858,9 @@ boards:
       - "esp32s3_reset_conformance (9 reset regs vs live silicon, firmware-path bus)"
       - "e2e_i2c_tmp102 / e2e_hello_world / xtensa_exec / e2e_esp32_epaper (sim)"
     silicon:
-      last_capture: 2026-07-15
-      probe: "USB-JTAG built-in (ESP32-S3-Zero, USB 303a:1001, openocd-esp32, Tensilica tap 0x120034e5)"
-      result: "Live OpenOCD re-capture on 2026-07-15: connected ESP32-S3 rev 0.2 (MAC 9c:13:9e:f4:40:c0), both Xtensa JTAG taps examined, and reset-state windows captured for UART0, GPIO, I2C0, RMT, MCPWM0, TIMG0, SYSTIMER, GDMA, SYSTEM, and RTC_CNTL."
+      last_capture: 2026-08-09
+      probe: "USB-JTAG built-in (USB 303a:1001, openocd-esp32 v0.12.0-esp32-20260703, both Tensilica taps 0x120034e5), board MAC 3c:0f:02:df:f3:c8 (QFN56 rev v0.2)"
+      result: "re-captured live 2026-08-09 on a SECOND physical S3 (MAC 3c:0f:02:df:f3:c8, QFN56 rev v0.2; the 2026-07-15 baseline came from an ESP32-S3-Zero, MAC 9c:13:9e:f4:40:c0, same rev) — cross-board corroboration, not a re-read of the same part. Both Xtensa taps (tap0+tap1) examined. 384 registers read across 10 windows (UART0, GPIO, I2C0, RMT, MCPWM0, TIMG0, SYSTIMER, GDMA, SYSTEM, RTC_CNTL): 9/9 RESET_VALUES matched, 0 mismatched. Scope is unchanged and still thin — this is a 9-register reset-state anchor, NOT a broad register or behavioural diff; see the KNOWN GAPS in `note`. Artifacts: scripts/hw-oracle/captures/esp32s3/recapture-20260809T130700Z/."
     # SPIMEM1 flash-command model fix: SPI_MEM_ADDR_REG is read right-justified
     # (was wrongly >>8) and the dual/quad fast-read opcodes (0x3B/0xBB/0x6B/0xEB)
     # are now decoded, so a 2nd-stage bootloader (MCUboot) reads slot0 and
@@ -2099,8 +2113,12 @@ boards:
     # artifact check, and — importantly — the sabotage result showing the reset
     # oracles do NOT cover this file while `--lib esp_uart` does. No S3 board
     # attached; no live re-capture.
-    drift_ack: 2026-08-09
-    drift_ack_digest: b469639d4a4e4dc70b08eb7afbf5236171b1e501f8255a90cf4bbf50f9465e9d
+    #
+    # 2026-08-09 (later the same day): an S3 WAS attached and the live
+    # re-capture ran — 9/9 on a second physical board, see silicon.result. The
+    # ack above said "no S3 board attached"; that is no longer true, so the ack
+    # is discharged rather than carried. Same rule as the C3: an ack is a
+    # promise to re-capture, and it ends when the capture happens.
     models:
       - crates/core/src/peripherals/esp32s3
       - crates/core/src/peripherals/esp_xtensa_common
@@ -2150,7 +2168,7 @@ boards:
     # RP2350 address map; RP2040 default path is unit-tested unchanged
     # (rp2350_clkrst_profile::rp2040_profile_is_unchanged).
     drift_ack: 2026-08-05
-    drift_ack_digest: c103296ae72395af02e314b115b6953260da3bf2a2d4ad2973d414764112bf4a
+    drift_ack_digest: 21cbe19eed460866d0629d7f29a9ccc051f11d23a1421acf7df7fecbb27b58e7
     models:
       - configs/chips/rp2040.yaml
       - crates/core/src/peripherals/rp2040
@@ -2205,7 +2223,7 @@ boards:
     # pass unchanged. No live re-capture this session; re-capturing IDR readback
     # and SPI RX behaviour is tracked.
     drift_ack: 2026-07-28
-    drift_ack_digest: 6c461d568db1f2449ee45cb268cdec1a48ff2a1cceeeb12c9d0058d99dcf43b5
+    drift_ack_digest: 18800766404763177f34eedf0557008e37ad768f67456076e398dbe319528371
     models:
       - configs/chips/stm32h735.yaml
       - crates/core/src/peripherals/rcc.rs
@@ -2240,7 +2258,7 @@ boards:
     # pass unchanged. No live re-capture this session; re-capturing IDR readback
     # and SPI RX behaviour is tracked.
     drift_ack: 2026-07-28
-    drift_ack_digest: 6f563dfec3794f2286a723b706844e90d8c251d66061f5d9f3e21f61325af76e
+    drift_ack_digest: cb4b2263e332dbf0788c7076d562cacc95d2053128a1a2b01a9a488cf0468ac3
     models:
       - configs/chips/stm32f411ceu6.yaml
       - crates/core/src/peripherals/rcc.rs
@@ -2286,7 +2304,7 @@ boards:
     # pass unchanged. No live re-capture this session; re-capturing IDR readback
     # and SPI RX behaviour is tracked.
     drift_ack: 2026-07-28
-    drift_ack_digest: c8bb472c66892eb3aac0087cc41038f4c038b3669f7962c6466625c2448b26b0
+    drift_ack_digest: 1ed82ce698a7099388fd9d42d44e629df0890d103822e93d101b4187480f9f06
     models:
       - configs/chips/mkw41z4.yaml
       - crates/core/src/peripherals/i2c.rs
