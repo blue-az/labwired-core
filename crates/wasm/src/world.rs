@@ -1,0 +1,121 @@
+//! Browser-safe multi-node World wrapper.
+
+use labwired_config::{ChipDescriptor, EnvironmentManifest, SystemManifest};
+use labwired_core::system::node::NodeFirmware;
+use labwired_core::world::{ResolvedWorldNode, World};
+use serde::Deserialize;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+use wasm_bindgen::prelude::*;
+
+#[derive(Deserialize)]
+struct ResolvedNodeInput {
+    id: String,
+    system_yaml: String,
+    chip_yaml: String,
+    firmware: Vec<u8>,
+}
+
+#[wasm_bindgen]
+pub struct WasmWorld {
+    world: World,
+    uart_sinks: HashMap<String, Arc<Mutex<Vec<u8>>>>,
+}
+
+#[wasm_bindgen]
+impl WasmWorld {
+    #[wasm_bindgen(js_name = new_from_resolved)]
+    pub fn new_from_resolved(environment_yaml: &str, nodes: JsValue) -> Result<WasmWorld, JsValue> {
+        let manifest: EnvironmentManifest = serde_yaml::from_str(environment_yaml)
+            .map_err(|error| JsValue::from_str(&format!("Environment YAML error: {error}")))?;
+        let inputs: Vec<ResolvedNodeInput> = serde_wasm_bindgen::from_value(nodes)
+            .map_err(|error| JsValue::from_str(&format!("Resolved nodes error: {error}")))?;
+        let resolved = inputs
+            .into_iter()
+            .map(|input| {
+                let system: SystemManifest = serde_yaml::from_str(&input.system_yaml)
+                    .map_err(|error| format!("node '{}': system YAML: {error}", input.id))?;
+                let chip: ChipDescriptor = serde_yaml::from_str(&input.chip_yaml)
+                    .map_err(|error| format!("node '{}': chip YAML: {error}", input.id))?;
+                Ok(ResolvedWorldNode {
+                    id: input.id,
+                    system,
+                    chip,
+                    firmware: NodeFirmware::from_bytes(input.firmware),
+                })
+            })
+            .collect::<Result<Vec<_>, String>>()
+            .map_err(|error| JsValue::from_str(&error))?;
+        let mut world = World::from_resolved(manifest, resolved)
+            .map_err(|error| JsValue::from_str(&format!("World construction error: {error:#}")))?;
+        let mut uart_sinks = HashMap::new();
+        for (id, machine) in &mut world.machines {
+            let sink = Arc::new(Mutex::new(Vec::new()));
+            machine
+                .attach_uart_tx_sink(sink.clone(), false)
+                .map_err(|error| {
+                    JsValue::from_str(&format!("node '{id}': UART sink: {error:#}"))
+                })?;
+            uart_sinks.insert(id.clone(), sink);
+        }
+        Ok(Self { world, uart_sinks })
+    }
+
+    pub fn node_ids(&self) -> JsValue {
+        let mut ids = self.world.machines.keys().cloned().collect::<Vec<_>>();
+        ids.sort();
+        serde_wasm_bindgen::to_value(&ids).unwrap_or(JsValue::NULL)
+    }
+
+    pub fn step_batch(&mut self, rounds: u32) -> Result<(), JsValue> {
+        for _ in 0..rounds {
+            for (id, result) in self.world.step_all() {
+                result
+                    .map_err(|error| JsValue::from_str(&format!("node '{id}' step: {error:?}")))?;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn total_cycles(&self, node_id: &str) -> Result<u64, JsValue> {
+        self.world
+            .machines
+            .get(node_id)
+            .map(|machine| machine.total_cycles())
+            .ok_or_else(|| JsValue::from_str(&format!("unknown world node '{node_id}'")))
+    }
+
+    pub fn read_u8(&self, node_id: &str, address: u32) -> Result<u8, JsValue> {
+        self.world
+            .machines
+            .get(node_id)
+            .ok_or_else(|| JsValue::from_str(&format!("unknown world node '{node_id}'")))?
+            .read_u8(address as u64)
+            .map_err(|error| JsValue::from_str(&format!("node '{node_id}' read: {error:?}")))
+    }
+
+    pub fn node_snapshot(&self, node_id: &str) -> Result<JsValue, JsValue> {
+        let snapshot = self
+            .world
+            .machines
+            .get(node_id)
+            .ok_or_else(|| JsValue::from_str(&format!("unknown world node '{node_id}'")))?
+            .snapshot()
+            .ok_or_else(|| {
+                JsValue::from_str(&format!("node '{node_id}' has no snapshot support"))
+            })?;
+        serde_wasm_bindgen::to_value(&snapshot)
+            .map_err(|error| JsValue::from_str(&format!("node '{node_id}' snapshot: {error}")))
+    }
+
+    pub fn drain_uart_output(&self, node_id: &str) -> Result<Vec<u8>, JsValue> {
+        let sink = self
+            .uart_sinks
+            .get(node_id)
+            .ok_or_else(|| JsValue::from_str(&format!("unknown world node '{node_id}'")))?;
+        let mut bytes = sink
+            .lock()
+            .map_err(|_| JsValue::from_str("world UART sink lock poisoned"))?;
+        Ok(bytes.drain(..).collect())
+    }
+}

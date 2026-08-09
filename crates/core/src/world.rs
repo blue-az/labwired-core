@@ -39,6 +39,15 @@ pub struct UartLink {
     pub node_b: String,
 }
 
+/// One environment node whose browser/host caller has already resolved every
+/// filesystem-backed artifact into parsed configuration and firmware bytes.
+pub struct ResolvedWorldNode {
+    pub id: String,
+    pub system: labwired_config::SystemManifest,
+    pub chip: labwired_config::ChipDescriptor,
+    pub firmware: crate::system::node::NodeFirmware,
+}
+
 /// Type-erased trait for machines to allow heterogeneous machines in the world.
 pub trait MachineTrait: Send {
     fn name(&self) -> &str;
@@ -287,12 +296,7 @@ impl World {
     ) -> anyhow::Result<Self> {
         use anyhow::Context;
 
-        manifest
-            .validate()
-            .context("invalid environment manifest")?;
-        let mut world = World::new(manifest.name.clone());
-        world.rf_medium = build_world_rf_medium(manifest.rf.as_ref());
-
+        let mut resolved = Vec::with_capacity(manifest.nodes.len());
         for node in &manifest.nodes {
             let sys_path = root_dir.join(&node.system);
             let sysman = labwired_config::SystemManifest::from_file(&sys_path)
@@ -317,14 +321,60 @@ impl World {
             let fw_path = root_dir.join(&node.firmware);
             let firmware = crate::system::node::NodeFirmware::from_file(&fw_path)
                 .with_context(|| format!("node '{}': firmware {:?}", node.id, fw_path))?;
+            resolved.push(ResolvedWorldNode {
+                id: node.id.clone(),
+                system: sysman,
+                chip,
+                firmware,
+            });
+        }
+        Self::from_resolved_with_plugins(manifest, resolved, plugins)
+    }
+
+    /// Build a world from artifacts already resolved by the caller. This is
+    /// the browser-safe counterpart to [`Self::from_manifest`]: it performs the
+    /// same manifest validation, node construction, and interconnect wiring but
+    /// never reads a path from the host filesystem.
+    pub fn from_resolved(
+        manifest: labwired_config::EnvironmentManifest,
+        nodes: Vec<ResolvedWorldNode>,
+    ) -> anyhow::Result<Self> {
+        Self::from_resolved_with_plugins(manifest, nodes, &[])
+    }
+
+    fn from_resolved_with_plugins(
+        manifest: labwired_config::EnvironmentManifest,
+        nodes: Vec<ResolvedWorldNode>,
+        plugins: &[&dyn crate::plugin::ChipPlugin],
+    ) -> anyhow::Result<Self> {
+        use anyhow::Context;
+
+        manifest
+            .validate()
+            .context("invalid environment manifest")?;
+        let expected: std::collections::HashSet<_> =
+            manifest.nodes.iter().map(|node| node.id.as_str()).collect();
+        let actual: std::collections::HashSet<_> =
+            nodes.iter().map(|node| node.id.as_str()).collect();
+        if expected != actual || nodes.len() != manifest.nodes.len() {
+            anyhow::bail!("resolved node ids must match environment manifest nodes exactly");
+        }
+
+        let mut world = World::new(manifest.name.clone());
+        world.rf_medium = build_world_rf_medium(manifest.rf.as_ref());
+        for node in nodes {
             let mut machine = crate::system::node::build_node_with_plugins(
-                &node.id, &chip, &sysman, firmware, plugins,
+                &node.id,
+                &node.chip,
+                &node.system,
+                node.firmware,
+                plugins,
             )?;
             // Label each node's UART console with its id so the shared stdout
             // stays readable (line-buffered per node instead of byte-interleaved
             // across all nodes).
             machine.set_stdout_prefix(&format!("[{}] ", node.id));
-            world.add_machine(node.id.clone(), machine);
+            world.add_machine(node.id, machine);
         }
 
         // One shared lab air for all nodes that carry cellular (and rebind nRF/BLE
