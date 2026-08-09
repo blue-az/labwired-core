@@ -170,7 +170,7 @@ impl Mcp2515 {
         let prop = u32::from(cnf2 & 0x07) + 1;
         let phase1 = u32::from((cnf2 >> 3) & 0x07) + 1;
         let phase2 = u32::from(cnf3 & 0x07) + 1;
-        if phase2 < 2 || sjw > phase2 {
+        if phase2 < 2 || sjw > phase2 || prop + phase1 < phase2 {
             return false;
         }
         let tq = 1 + prop + phase1 + phase2;
@@ -561,6 +561,17 @@ mod tests {
         write(&mut dev, REG_CNF3, &[0x01, 0xBC, 0xC0]);
         write(&mut dev, REG_CANCTRL, &[0x40]);
         assert_eq!(read(&mut dev, REG_CANSTAT, 1)[0] & 0xE0, 0x80);
+    }
+
+    #[test]
+    fn tseg1_shorter_than_phase2_rejects_active_mode_without_touching_interrupts() {
+        let mut dev = Mcp2515::new("PA4");
+        // Exact 16 TQ / 500 kbit/s, but PROPSEG(1) + PHSEG1(6) < PHSEG2(8).
+        write(&mut dev, REG_CNF3, &[0x07, 0xA8, 0x00]);
+        write(&mut dev, REG_CANINTF, &[CANINTF_TX0IF]);
+        write(&mut dev, REG_CANCTRL, &[0x40]);
+        assert_eq!(read(&mut dev, REG_CANSTAT, 1)[0] & 0xE0, 0x80);
+        assert_eq!(read(&mut dev, REG_CANINTF, 1), [CANINTF_TX0IF]);
     }
 
     #[test]
