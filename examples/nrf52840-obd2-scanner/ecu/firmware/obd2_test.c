@@ -21,6 +21,15 @@ static void expect(obd2_ecu_t *ecu, const uint8_t in[8], const uint8_t out[8])
 
 int main(void)
 {
+    assert(!obd2_vin_expired(UINT16_MAX - 500u, UINT16_MAX - 500u));
+    assert(!obd2_vin_expired(498u, UINT16_MAX - 500u));
+    assert(obd2_vin_expired(499u, UINT16_MAX - 500u));
+    assert(obd2_tx_status(0u) == OBD2_TX_PENDING);
+    assert(obd2_tx_status(1u << 0) == OBD2_TX_FAILED);
+    assert(obd2_tx_status(1u << 1) == OBD2_TX_OK);
+    assert(obd2_tx_status(1u << 2) == OBD2_TX_FAILED);
+    assert(obd2_tx_status(1u << 3) == OBD2_TX_FAILED);
+
     obd2_ecu_t ecu;
     obd2_init(&ecu);
 
