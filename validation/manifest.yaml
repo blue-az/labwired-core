@@ -547,8 +547,14 @@ boards:
     # expands to `()`, so every default build compiles to exactly the code that
     # was captured — the source digest moved, the model did not. Accepted by
     # Andrii without a live re-capture; no new silicon diff is evidenced here.
+    # 2026-08-09: rides the STM32 F1 pad-routing change (attach.rs) and a doc-only edit in gpio.rs.
+    # The I2C pad-table dispatch became a tuple match in which (Stm32F1, Stm32V2) and (Stm32L4,
+    # Stm32V2) reproduce the previous arms exactly, and no changed line carries an AF-nibble
+    # selector, so no V2 pad row moved. Only the new (Stm32F1, Stm32F1) arm is new behaviour, and
+    # this board does not take it. The source digest moved; this board's model did not. No live
+    # re-capture is evidenced here.
     drift_ack: 2026-08-09
-    drift_ack_digest: 18be0e0c48818340166b4e30ed757aec986d7808867c321c6e728dd4d6a6376e
+    drift_ack_digest: 337c43a97334788647b72c30e901233ac6015a32926a3361bbf4dc6ed18167fc
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1376,8 +1382,14 @@ boards:
     # expands to `()`, so every default build compiles to exactly the code that
     # was captured — the source digest moved, the model did not. Accepted by
     # Andrii without a live re-capture; no new silicon diff is evidenced here.
+    # 2026-08-09: rides the STM32 F1 pad-routing change (attach.rs) and a doc-only edit in gpio.rs.
+    # The I2C pad-table dispatch became a tuple match in which (Stm32F1, Stm32V2) and (Stm32L4,
+    # Stm32V2) reproduce the previous arms exactly, and no changed line carries an AF-nibble
+    # selector, so no V2 pad row moved. Only the new (Stm32F1, Stm32F1) arm is new behaviour, and
+    # this board does not take it. The source digest moved; this board's model did not. No live
+    # re-capture is evidenced here.
     drift_ack: 2026-08-09
-    drift_ack_digest: ce9c23a8dc97cce6dbe2ab1c7a8fcc8523a161cf6237baa0bbf9b2c07beb50ba
+    drift_ack_digest: a7454c231df74d182fc530756e6c71d27f7acee4335861d791dc9971d4404cf0
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1527,8 +1539,14 @@ boards:
     # expands to `()`, so every default build compiles to exactly the code that
     # was captured — the source digest moved, the model did not. Accepted by
     # Andrii without a live re-capture; no new silicon diff is evidenced here.
+    # 2026-08-09: rides the STM32 F1 pad-routing change (attach.rs) and a doc-only edit in gpio.rs.
+    # The I2C pad-table dispatch became a tuple match in which (Stm32F1, Stm32V2) and (Stm32L4,
+    # Stm32V2) reproduce the previous arms exactly, and no changed line carries an AF-nibble
+    # selector, so no V2 pad row moved. Only the new (Stm32F1, Stm32F1) arm is new behaviour, and
+    # this board does not take it. The source digest moved; this board's model did not. No live
+    # re-capture is evidenced here.
     drift_ack: 2026-08-09
-    drift_ack_digest: d90a5112ef34cfd260e69bd1e77b56054e3aab8b36cd68bfa66d07f4e479bd5e
+    drift_ack_digest: bb3ed3ad607dbcde79f08704f9a364fb31d45400e684137925876ea9d10aea4e
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1708,8 +1726,13 @@ boards:
     # expands to `()`, so every default build compiles to exactly the code that
     # was captured — the source digest moved, the model did not. Accepted by
     # Andrii without a live re-capture; no new silicon diff is evidenced here.
+    # 2026-08-09: F1 I2C and UART pads are now bound - I2C1 PB6/PB7, I2C2 PB10/PB11, USART1 PA9,
+    # USART2 PA2, all from the DS5319 Rev 20 Default column. Purely additive: these routes did not
+    # exist before, so nothing that was visible changed. Register behaviour, the CRL/CRH decode and
+    # the I2C/UART engines are untouched, so stm32f1_mmio_diff (102/102) and f103_conformance are
+    # unaffected. Re-capture is tracked, not evidenced here.
     drift_ack: 2026-08-09
-    drift_ack_digest: 95873c6c7b778f1521c51868edeb220514a7d2fdd4d4cb2ecf91c2bfb4d0bb61
+    drift_ack_digest: fd28ece61fad9df7726250391c03e8837421f037d83f1f16dbdba3c40531035c
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1870,8 +1893,14 @@ boards:
     # expands to `()`, so every default build compiles to exactly the code that
     # was captured — the source digest moved, the model did not. Accepted by
     # Andrii without a live re-capture; no new silicon diff is evidenced here.
+    # 2026-08-09: rides the STM32 F1 pad-routing change (attach.rs) and a doc-only edit in gpio.rs.
+    # The I2C pad-table dispatch became a tuple match in which (Stm32F1, Stm32V2) and (Stm32L4,
+    # Stm32V2) reproduce the previous arms exactly, and no changed line carries an AF-nibble
+    # selector, so no V2 pad row moved. Only the new (Stm32F1, Stm32F1) arm is new behaviour, and
+    # this board does not take it. The source digest moved; this board's model did not. No live
+    # re-capture is evidenced here.
     drift_ack: 2026-08-09
-    drift_ack_digest: 432755f2732aaf5943b8ec5ccf0d541154a6ed7f5d7b5a81e166bbe26510948e
+    drift_ack_digest: 0166270c3411f503f983b90fa98e2127e0371ca1a71af0b19288caefd147e930
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
