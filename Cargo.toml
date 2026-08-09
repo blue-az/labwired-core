@@ -40,6 +40,7 @@ members = [
     "crates/firmware-nrf52840-cpu-conformance",
     "crates/firmware-nrf52840-demo",
     "crates/firmware-nrf52840-isr-blinky",
+    "crates/firmware-nrf52840-obd2-scanner",
     "crates/firmware-nrf52840-proximity",
     "crates/firmware-nrf52840-secure-boot",
     "crates/firmware-nrf52840-timer-blinky",

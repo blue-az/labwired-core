@@ -142,6 +142,11 @@ pub struct CortexM {
     /// `step_internal`. Gates idle fast-forward; transient (not snapshotted),
     /// mirroring the RISC-V `waiting_for_interrupt` flag.
     sleeping: bool,
+    /// Local byte-exclusive reservation: address and value observed by LDREXB.
+    /// Comparing the value at STREXB conservatively detects conflicting bus
+    /// writes without requiring every bus implementation to expose epochs;
+    /// an external write of the same byte value is therefore indistinguishable.
+    exclusive_byte: Option<(u32, u8)>,
 }
 
 impl Default for CortexM {
@@ -185,6 +190,7 @@ impl Default for CortexM {
             decode_cache: Box::new([None; 4096]),
             fpu_s: [0u32; 32],
             sleeping: false,
+            exclusive_byte: None,
         }
     }
 }
@@ -627,6 +633,7 @@ impl Cpu for CortexM {
         self.pc = 0x0000_0000;
         self.sp = 0x2000_0000;
         self.pending_exceptions = [0; 4];
+        self.exclusive_byte = None;
         self.set_active_exception(0);
         self.decode_cache.fill(None);
 
@@ -1251,6 +1258,7 @@ impl CortexM {
                         !(1u64 << (exception_num % 64));
                     // Fall through to normal instruction execution.
                 } else {
+                    self.exclusive_byte = None;
                     self.pending_exceptions[(exception_num / 64) as usize] &=
                         !(1u64 << (exception_num % 64));
 
@@ -2060,6 +2068,50 @@ impl CortexM {
                             self.set_register(rd, 0);
                         }
                         pc_increment = 4;
+                    } else if (h1 & 0xFFF0) == 0xFA90 && (h2 & 0xF0F0) == 0xF010 {
+                        // ARMv7E-M QADD16: independently signed-saturating add
+                        // the two halfword lanes (Cortex-M4 DSP extension).
+                        let rn = (h1 & 0xF) as u8;
+                        let rd = ((h2 >> 8) & 0xF) as u8;
+                        let rm = (h2 & 0xF) as u8;
+                        let a = self.get_register(rn);
+                        let b = self.get_register(rm);
+                        let mut saturated = false;
+                        let lane = |shift: u32, saturated: &mut bool| -> u32 {
+                            let lhs = ((a >> shift) as u16) as i16 as i32;
+                            let rhs = ((b >> shift) as u16) as i16 as i32;
+                            let sum = lhs + rhs;
+                            let clamped = sum.clamp(i16::MIN as i32, i16::MAX as i32);
+                            *saturated |= clamped != sum;
+                            (clamped as i16 as u16 as u32) << shift
+                        };
+                        let value = lane(0, &mut saturated) | lane(16, &mut saturated);
+                        self.set_register(rd, value);
+                        if saturated {
+                            self.xpsr |= 1 << 27;
+                        }
+                        pc_increment = 4;
+                    } else if (h1 & 0xFFF0) == 0xF380 && (h2 & 0x00C0) == 0 {
+                        // ARMv7-M USAT without an optional shift.
+                        let rn = (h1 & 0xF) as u8;
+                        let rd = ((h2 >> 8) & 0xF) as u8;
+                        let sat = (h2 & 0x1F) as u32;
+                        let source = self.get_register(rn) as i32;
+                        let max = if sat == 32 {
+                            u32::MAX
+                        } else {
+                            (1u32 << sat) - 1
+                        };
+                        let value = if source < 0 {
+                            0
+                        } else {
+                            (source as u32).min(max)
+                        };
+                        if source < 0 || source as u32 > max {
+                            self.xpsr |= 1 << 27;
+                        }
+                        self.set_register(rd, value);
+                        pc_increment = 4;
                     } else if (h1 & 0xFFF0) == 0xE850 {
                         // LDREX
                         let rn = (h1 & 0xF) as u8;
@@ -2080,6 +2132,37 @@ impl CortexM {
                         self.store(bus, addr, AccessWidth::Word, val)?;
                         // Rd = 0 → success.
                         self.set_register(rd, 0);
+                        pc_increment = 4;
+                    } else if (h1 & 0xFFF0) == 0xE8D0 && (h2 & 0x0FFF) == 0x0F4F {
+                        // ARMv7-M LDREXB Rt, [Rn]. Rust uses this for byte
+                        // atomics such as AtomicBool::compare_exchange.
+                        let rn = (h1 & 0xF) as u8;
+                        let rt = ((h2 >> 12) & 0xF) as u8;
+                        let address = self.get_register(rn);
+                        let value = self.load(bus, address, AccessWidth::Byte)? as u8;
+                        self.set_register(rt, u32::from(value));
+                        self.exclusive_byte = Some((address, value));
+                        pc_increment = 4;
+                    } else if (h1 & 0xFFF0) == 0xE8C0 && (h2 & 0x0FF0) == 0x0F40 {
+                        // ARMv7-M STREXB Rd, Rt, [Rn]. The single-threaded
+                        // machine has no contender, so the monitor succeeds.
+                        let rn = (h1 & 0xF) as u8;
+                        let rt = ((h2 >> 12) & 0xF) as u8;
+                        let rd = (h2 & 0xF) as u8;
+                        let address = self.get_register(rn);
+                        let reservation_matches = match self.exclusive_byte.take() {
+                            Some((reserved, value)) if reserved == address => {
+                                self.load(bus, address, AccessWidth::Byte)? as u8 == value
+                            }
+                            _ => false,
+                        };
+                        let succeeds = if reservation_matches {
+                            self.store(bus, address, AccessWidth::Byte, self.get_register(rt))?;
+                            true
+                        } else {
+                            false
+                        };
+                        self.set_register(rd, if succeeds { 0 } else { 1 });
                         pc_increment = 4;
                     } else if (h1 & 0xFFF0) == 0xE8D0 && (h2 & 0x0F0F) == 0x0F0F {
                         // Load-acquire family (ARMv8-M mainline, also on the
@@ -3796,6 +3879,77 @@ mod tests {
             bus.write_u16(pc as u64, instr_bin as u16).unwrap();
         }
         cpu.step_internal(bus, &[], &bus.config.clone()).unwrap();
+    }
+
+    #[test]
+    fn armv7m_ldrexb_strexb_supports_atomic_bool_compare_exchange() {
+        let mut cpu = CortexM::new();
+        let mut bus = MockBus::new();
+        cpu.pc = 0x2000;
+        cpu.r0 = 0x3000;
+        cpu.r1 = 0xAA;
+        bus.write_u8(0x3000, 0).unwrap();
+
+        // LDREXB r1, [r0] and STREXB r2, r1, [r0], emitted by Rust's
+        // AtomicBool::compare_exchange on thumbv7em-none-eabi.
+        run_test_instr(&mut cpu, &mut bus, 0xE8D01F4F, true);
+        assert_eq!(cpu.r1, 0, "LDREXB loads exactly one byte");
+        cpu.r1 = 1;
+        run_test_instr(&mut cpu, &mut bus, 0xE8C01F42, true);
+        assert_eq!(bus.read_u8(0x3000).unwrap(), 1, "STREXB stores one byte");
+        assert_eq!(cpu.r2, 0, "uncontended exclusive store succeeds");
+    }
+
+    #[test]
+    fn armv7m_strexb_fails_without_matching_unchanged_reservation() {
+        for case in ["none", "address", "write"] {
+            let mut cpu = CortexM::new();
+            let mut bus = MockBus::new();
+            cpu.pc = 0x2000;
+            cpu.r0 = 0x3000;
+            cpu.r1 = 1;
+            bus.write_u8(0x3000, 0).unwrap();
+            if case != "none" {
+                run_test_instr(&mut cpu, &mut bus, 0xE8D03F4F, true); // ldrexb r3,[r0]
+            }
+            if case == "address" {
+                cpu.r0 = 0x3001;
+            } else if case == "write" {
+                bus.write_u8(0x3000, 7).unwrap();
+            }
+            run_test_instr(&mut cpu, &mut bus, 0xE8C01F42, true);
+            assert_eq!(cpu.r2, 1, "{case} invalidates exclusive store");
+        }
+    }
+
+    #[test]
+    fn exception_entry_clears_byte_exclusive_reservation() {
+        let mut cpu = CortexM::new();
+        let mut bus = MockBus::new();
+        cpu.pc = 0x1000;
+        cpu.sp = 0x8000;
+        cpu.exclusive_byte = Some((0x3000, 0));
+        bus.write_u16(0x1000, 0xBF00).unwrap();
+        bus.write_u32(16 * 4, 0x5001).unwrap();
+        cpu.set_exception_pending(16);
+        let cfg = bus.config.clone();
+        cpu.step_internal(&mut bus, &[], &cfg).unwrap();
+        assert_eq!(cpu.exclusive_byte, None);
+    }
+
+    #[test]
+    fn cortex_m4_qadd16_and_usat_encode_clamped_coolant_byte() {
+        let mut cpu = CortexM::new();
+        let mut bus = MockBus::new();
+        cpu.pc = 0x2000;
+        cpu.r0 = 40;
+        cpu.r1 = 90;
+
+        // Emitted for i16::saturating_add(40).clamp(0, 255) as u8.
+        run_test_instr(&mut cpu, &mut bus, 0xFA91F010, true); // qadd16 r0,r1,r0
+        assert_eq!(cpu.r0 & 0xffff, 130);
+        run_test_instr(&mut cpu, &mut bus, 0xF3800008, true); // usat r0,#8,r0
+        assert_eq!(cpu.r0, 130);
     }
 
     #[test]
