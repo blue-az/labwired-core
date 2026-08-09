@@ -209,6 +209,27 @@ impl Nrf52Rng {
         let mut left = cycles;
         let mut irq = false;
         while left > 0 && self.running {
+            // A byte is already sitting in VALUE that firmware has not taken
+            // yet. Stop here rather than grinding out bytes nobody can observe.
+            //
+            // This loop used to keep producing for as many BYTE_PERIODs as the
+            // batch covered, overwriting `value` each time and raising VALRDY
+            // once. At `peripheral_tick_interval` 1 a batch spans one period
+            // and one byte survives, which is why the CLI never saw it. At the
+            // interval the browser auto-applies from `recommended_tick_interval`
+            // a batch spans several and only the last byte of each reached
+            // firmware, so the stream depended on how the host chose to batch:
+            // the secure-boot lab's provisioned root key came out shifted four
+            // bytes and the lab never got past boot 2 in the playground.
+            //
+            // Real silicon free-runs and a slow reader does miss bytes, but
+            // there the pacing is the chip's. Here it would be the host's
+            // batching choice, and no firmware-visible sequence may depend on
+            // that. Gating on VALRDY makes it a function of reads alone: one
+            // byte per byte taken, whatever the batching.
+            if self.events_valrdy != 0 {
+                break;
+            }
             let need = (BYTE_PERIOD - self.accum) as u64;
             if left < need {
                 self.accum += left as u32;

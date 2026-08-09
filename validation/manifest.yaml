@@ -217,13 +217,29 @@ boards:
     # CC compare matching, SHORTS and EVENTS_COMPARE latching are all untouched,
     # and TIMER0's 16/0 sweep re-runs green. Acked WITHOUT a live re-capture —
     # no TIMER live diff is evidenced by this entry.
+    # 2026-08-09: RNG byte production now stops while a byte sits unread in
+    # VALUE. BEHAVIOURAL, not additive — the diff is +21/-0 in nrf52/rng.rs and
+    # removes no line, but it changes WHEN bytes are produced: the model used to
+    # keep generating for every BYTE_PERIOD a batch covered, overwriting VALUE
+    # and handing firmware only the last one. Real silicon free-runs and a slow
+    # reader does miss bytes, so this is a deliberate divergence: on silicon the
+    # pacing is the chip's, in the sim it was the host's batching choice, and no
+    # firmware-visible sequence may depend on that. The byte SEQUENCE is
+    # unchanged (same xorshift32 chain from the same seed, one byte per byte
+    # read); only production timing moves.
+    #
+    # No register address, reset value, access or layout changes, and the
+    # asserted 2026-06-17 sweep does not cover RNG at all — it is
+    # conformance/mmio/GPIO/POWER/SPIS/TWIS/RTC0/TIMER0 plus SPIM0/CCM. Acked
+    # WITHOUT a live re-capture (no bench board); an RNG live diff is owed and is
+    # NOT evidenced by this entry.
     # 2026-08-09 census ack: the silent-path census adds `census_reg!(..)` to the
     # catch-all arms of peripheral read/write. With `default = []` the macro
     # expands to `()`, so every default build compiles to exactly the code that
     # was captured — the source digest moved, the model did not. Accepted by
     # Andrii without a live re-capture; no new silicon diff is evidenced here.
     drift_ack: 2026-08-09
-    drift_ack_digest: 41781131d62f70fae6b6dc1b1ec2976212c8eef4a245bff15194ebb3fabf2a55
+    drift_ack_digest: e289ab9036bccd37f9caa0bc1cf2d7b3234d580e684c72eecbfa3c1f81b77a78
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -331,13 +347,16 @@ boards:
     # silicon. Scheduler bookkeeping only — no register address, reset value or
     # access in the asserted sweep changes. See the nrf52840 drift_ack note; no
     # TIMER live re-capture is evidenced by this entry.
+    # 2026-08-09: rides the nrf52840 RNG production-timing change; same silicon.
+    # See the nrf52840 drift_ack note for why it is behavioural and what it does
+    # not touch. No RNG live re-capture is evidenced by this entry.
     # 2026-08-09 census ack: the silent-path census adds `census_reg!(..)` to the
     # catch-all arms of peripheral read/write. With `default = []` the macro
     # expands to `()`, so every default build compiles to exactly the code that
     # was captured — the source digest moved, the model did not. Accepted by
     # Andrii without a live re-capture; no new silicon diff is evidenced here.
     drift_ack: 2026-08-09
-    drift_ack_digest: 41781131d62f70fae6b6dc1b1ec2976212c8eef4a245bff15194ebb3fabf2a55
+    drift_ack_digest: e289ab9036bccd37f9caa0bc1cf2d7b3234d580e684c72eecbfa3c1f81b77a78
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -512,13 +531,24 @@ boards:
     # address, reset value or access in any board's asserted set changes.
     # Owner-authorised ack WITHOUT a live re-capture; no board was attached for
     # this change and each board's outstanding live diff remains owed.
+    # 2026-08-09: peripherals/adc.rs gained a THIRD register layout, Stm32H7
+    # (RM0468), for the H735's 16-bit converters. ADDITIVE ONLY, and this board
+    # cannot reach it: the new code lives behind a new `AdcRegs::Stm32H7`
+    # variant, and `AdcRegisterLayout::from_str` moved only the "h7"/"stm32h7"
+    # spellings onto it. An audit of every chip yaml declaring `type: adc`
+    # shows NO shipped chip used that spelling -- they are `None` (F1 default)
+    # or `stm32l4` -- so no existing board changes layout. The F1 and L4
+    # read/write paths, resolution decoding and conversion engine are untouched;
+    # the pre-existing adc unit suite (73 tests, both families) is green, as is
+    # firmware_survival (51). No register, reset value or IRQ on this board can
+    # move, so the silicon capture stands. No live re-capture.
     # 2026-08-09 census ack: the silent-path census adds `census_reg!(..)` to the
     # catch-all arms of peripheral read/write. With `default = []` the macro
     # expands to `()`, so every default build compiles to exactly the code that
     # was captured — the source digest moved, the model did not. Accepted by
     # Andrii without a live re-capture; no new silicon diff is evidenced here.
     drift_ack: 2026-08-09
-    drift_ack_digest: 389580e548065e8c7bc094d005189c85d9ec95fc86529e4485694c1796b620cc
+    drift_ack_digest: b5deea1d72f6bf90aa98142de4eab539a8e5a47fe237c8a1eb88c4bdc49d757b
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -554,9 +584,9 @@ boards:
       - "esp32c3_reset_conformance::esp32c3_reset_values_match_silicon (87 regs; 366/423 overlap matched silicon)"
       - "esp32c3_reset_conformance::esp32c3_free_running_counters_are_mapped (2 WiFi MAC counter windows; mapping only, no equality claim)"
     silicon:
-      last_capture: 2026-06-17
-      probe: "USB-JTAG (built-in, openocd-esp32) — re-verified live"
-      result: "reset oracle re-captured live 2026-06-17: 1123/1123 static registers match committed baseline (13 deltas all in per-chip efuse + live USB-device state, none in the asserted set); esp32c3_reset_values_match_silicon passes"
+      last_capture: 2026-08-09
+      probe: "USB-JTAG (built-in) + openocd-esp32 v0.12.0-esp32-20260703, board MAC 9c:cc:01:d0:98:e0 (QFN32 rev v0.4)"
+      result: "re-captured live 2026-08-09 on a SECOND physical C3 (MAC 9c:cc:01:d0:98:e0; the 2026-06-11 baseline came from 38:44:be:42:f5:58, same QFN32 rev v0.4) — cross-board corroboration, not a re-read of the same part. 1207 registers read in ONE state (21 estate windows + 43 control registers + the radio windows): 84/84 RESET_VALUES matched, 0 mismatched, and both FREE_RUNNING_COUNTERS windows mapped. Radio note: a JTAG `reset halt` on the C3 is a software CORE reset that does not cold-reset peripherals, so RADIO_FE/WIFI_MAC only read their cold baseline when no resident firmware has brought the PHY up — the board was temporarily flashed with crates/wasm/tests/fixtures/esp32c3-hello-world-flash.bin for the capture, then its original 4 MB image was restored and verified byte-identical (sha256 844abc88…8a910). Do NOT try to reach cold radio via RTC_CNTL SW_SYS_RST: it resets the USB-Serial-JTAG bridge too and drops the debug link mid-write (verified, LIBUSB_ERROR_IO). Artifacts: scripts/hw-oracle/captures/esp32c3/recapture-20260809T121824Z/."
     models:
       - crates/core/src/peripherals/esp32c3
       - crates/core/src/peripherals/esp_xtensa_common
@@ -1164,13 +1194,22 @@ boards:
     # txfifo_empty_is_level_below_threshold). That suite is green on this tree,
     # and so is the C3 ROM-boot end-to-end test, which actually drives the UART.
     # This ack rests on those, not on the reset oracle. No live re-capture.
-    # 2026-08-09 census ack: the silent-path census adds `census_reg!(..)` to the
-    # catch-all arms of peripheral read/write. With `default = []` the macro
-    # expands to `()`, so every default build compiles to exactly the code that
-    # was captured — the source digest moved, the model did not. Accepted by
-    # Andrii without a live re-capture; no new silicon diff is evidenced here.
-    drift_ack: 2026-08-09
-    drift_ack_digest: c33d2f121f55dff75e81235dd1a180d472861c0be58934536e6e8fee00cce428
+    #
+    # 2026-08-09: the live re-capture the ack was standing in for HAS NOW RUN
+    # (see silicon.result above). The ack that stood here was discharged by it.
+    # Whether a NEW ack is needed depends on whether the pad-routing work that
+    # landed the same day touched a listed model after the capture — the
+    # generator decides that, not this comment. It reads FRESH.
+    #
+    # KNOWN LIMIT, stated rather than relied on: the pad-routing merge (#892)
+    # DID move this board's model digest (7a687f78 -> c5064550) on the same
+    # calendar day as the capture, and the gate compares DATES, not timestamps
+    # — so a model edit made hours after the capture still reads as "not
+    # newer". Two things make that acceptable rather than a hole: the capture
+    # corroborates the RESET_VALUES table against real silicon, and CI
+    # re-checks the MODEL against that table every run
+    # (esp32c3_reset_values_match_silicon). A pad-routing change that broke a
+    # reset value would go red there, not hide here.
 
   - id: nucleo-l476rg
     doc: docs/boards/nucleo-l476rg.md
@@ -1321,13 +1360,24 @@ boards:
     # address, reset value or access in any board's asserted set changes.
     # Owner-authorised ack WITHOUT a live re-capture; no board was attached for
     # this change and each board's outstanding live diff remains owed.
+    # 2026-08-09: peripherals/adc.rs gained a THIRD register layout, Stm32H7
+    # (RM0468), for the H735's 16-bit converters. ADDITIVE ONLY, and this board
+    # cannot reach it: the new code lives behind a new `AdcRegs::Stm32H7`
+    # variant, and `AdcRegisterLayout::from_str` moved only the "h7"/"stm32h7"
+    # spellings onto it. An audit of every chip yaml declaring `type: adc`
+    # shows NO shipped chip used that spelling -- they are `None` (F1 default)
+    # or `stm32l4` -- so no existing board changes layout. The F1 and L4
+    # read/write paths, resolution decoding and conversion engine are untouched;
+    # the pre-existing adc unit suite (73 tests, both families) is green, as is
+    # firmware_survival (51). No register, reset value or IRQ on this board can
+    # move, so the silicon capture stands. No live re-capture.
     # 2026-08-09 census ack: the silent-path census adds `census_reg!(..)` to the
     # catch-all arms of peripheral read/write. With `default = []` the macro
     # expands to `()`, so every default build compiles to exactly the code that
     # was captured — the source digest moved, the model did not. Accepted by
     # Andrii without a live re-capture; no new silicon diff is evidenced here.
     drift_ack: 2026-08-09
-    drift_ack_digest: 54e586aa64f5314f4555d3a6c2bf87ffd4b7f341a3c2c3da79e07b13ba0c24e8
+    drift_ack_digest: 6f0d1105fc019e33d2c8d221c9664be6f5f3d1bfbd814a51cdb14ec83f6b88cb
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1478,7 +1528,7 @@ boards:
     # was captured — the source digest moved, the model did not. Accepted by
     # Andrii without a live re-capture; no new silicon diff is evidenced here.
     drift_ack: 2026-08-09
-    drift_ack_digest: cc23f31ba19c80c2ff0f2a9f4f3e473e264a1a1d379a4d82f3472e7ce0d05d63
+    drift_ack_digest: a1bb490f5b98a8d35d90058ca5885b08bb07580bf255a0573f5743bcbf6d8541
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1642,13 +1692,24 @@ boards:
     # address, reset value or access in any board's asserted set changes.
     # Owner-authorised ack WITHOUT a live re-capture; no board was attached for
     # this change and each board's outstanding live diff remains owed.
+    # 2026-08-09: peripherals/adc.rs gained a THIRD register layout, Stm32H7
+    # (RM0468), for the H735's 16-bit converters. ADDITIVE ONLY, and this board
+    # cannot reach it: the new code lives behind a new `AdcRegs::Stm32H7`
+    # variant, and `AdcRegisterLayout::from_str` moved only the "h7"/"stm32h7"
+    # spellings onto it. An audit of every chip yaml declaring `type: adc`
+    # shows NO shipped chip used that spelling -- they are `None` (F1 default)
+    # or `stm32l4` -- so no existing board changes layout. The F1 and L4
+    # read/write paths, resolution decoding and conversion engine are untouched;
+    # the pre-existing adc unit suite (73 tests, both families) is green, as is
+    # firmware_survival (51). No register, reset value or IRQ on this board can
+    # move, so the silicon capture stands. No live re-capture.
     # 2026-08-09 census ack: the silent-path census adds `census_reg!(..)` to the
     # catch-all arms of peripheral read/write. With `default = []` the macro
     # expands to `()`, so every default build compiles to exactly the code that
     # was captured — the source digest moved, the model did not. Accepted by
     # Andrii without a live re-capture; no new silicon diff is evidenced here.
     drift_ack: 2026-08-09
-    drift_ack_digest: 4d0396c5ee1a7685c22f3067d4757901f16d037ef1e45b421764f42435da9154
+    drift_ack_digest: 40f18843db15949ed4d9d7e97df48541bb76b4f1184f2a57fd71ab7443e8a19f
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1810,7 +1871,7 @@ boards:
     # was captured — the source digest moved, the model did not. Accepted by
     # Andrii without a live re-capture; no new silicon diff is evidenced here.
     drift_ack: 2026-08-09
-    drift_ack_digest: f58685205ab2d3c79e7b17973deadcc96d10e6de14cfb93db4bf5c3713201f5c
+    drift_ack_digest: 2cab866ba50871012d6e2e6bfb2f29ec4c9b772da0c1dafd7e55973863e5978b
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1832,9 +1893,9 @@ boards:
       - "esp32s3_reset_conformance (9 reset regs vs live silicon, firmware-path bus)"
       - "e2e_i2c_tmp102 / e2e_hello_world / xtensa_exec / e2e_esp32_epaper (sim)"
     silicon:
-      last_capture: 2026-07-15
-      probe: "USB-JTAG built-in (ESP32-S3-Zero, USB 303a:1001, openocd-esp32, Tensilica tap 0x120034e5)"
-      result: "Live OpenOCD re-capture on 2026-07-15: connected ESP32-S3 rev 0.2 (MAC 9c:13:9e:f4:40:c0), both Xtensa JTAG taps examined, and reset-state windows captured for UART0, GPIO, I2C0, RMT, MCPWM0, TIMG0, SYSTIMER, GDMA, SYSTEM, and RTC_CNTL."
+      last_capture: 2026-08-09
+      probe: "USB-JTAG built-in (USB 303a:1001, openocd-esp32 v0.12.0-esp32-20260703, both Tensilica taps 0x120034e5), board MAC 3c:0f:02:df:f3:c8 (QFN56 rev v0.2)"
+      result: "re-captured live 2026-08-09 on a SECOND physical S3 (MAC 3c:0f:02:df:f3:c8, QFN56 rev v0.2; the 2026-07-15 baseline came from an ESP32-S3-Zero, MAC 9c:13:9e:f4:40:c0, same rev) — cross-board corroboration, not a re-read of the same part. Both Xtensa taps (tap0+tap1) examined. 384 registers read across 10 windows (UART0, GPIO, I2C0, RMT, MCPWM0, TIMG0, SYSTIMER, GDMA, SYSTEM, RTC_CNTL): 9/9 RESET_VALUES matched, 0 mismatched. Scope is unchanged and still thin — this is a 9-register reset-state anchor, NOT a broad register or behavioural diff; see the KNOWN GAPS in `note`. Artifacts: scripts/hw-oracle/captures/esp32s3/recapture-20260809T130700Z/."
     # SPIMEM1 flash-command model fix: SPI_MEM_ADDR_REG is read right-justified
     # (was wrongly >>8) and the dual/quad fast-read opcodes (0x3B/0xBB/0x6B/0xEB)
     # are now decoded, so a 2nd-stage bootloader (MCUboot) reads slot0 and
@@ -2087,13 +2148,12 @@ boards:
     # artifact check, and — importantly — the sabotage result showing the reset
     # oracles do NOT cover this file while `--lib esp_uart` does. No S3 board
     # attached; no live re-capture.
-    # 2026-08-09 census ack: the silent-path census adds `census_reg!(..)` to the
-    # catch-all arms of peripheral read/write. With `default = []` the macro
-    # expands to `()`, so every default build compiles to exactly the code that
-    # was captured — the source digest moved, the model did not. Accepted by
-    # Andrii without a live re-capture; no new silicon diff is evidenced here.
-    drift_ack: 2026-08-09
-    drift_ack_digest: 14ca0b0f94fff1d3c4224a8dde1439ed2ec1a2e2b8ea8583fa47e31c6250a715
+    #
+    # 2026-08-09 (later the same day): an S3 WAS attached and the live
+    # re-capture ran — 9/9 on a second physical board, see silicon.result. The
+    # ack above said "no S3 board attached"; that is no longer true, so the ack
+    # is discharged rather than carried. Same rule as the C3: an ack is a
+    # promise to re-capture, and it ends when the capture happens.
     models:
       - crates/core/src/peripherals/esp32s3
       - crates/core/src/peripherals/esp_xtensa_common
@@ -2143,7 +2203,7 @@ boards:
     # RP2350 address map; RP2040 default path is unit-tested unchanged
     # (rp2350_clkrst_profile::rp2040_profile_is_unchanged).
     drift_ack: 2026-08-05
-    drift_ack_digest: c103296ae72395af02e314b115b6953260da3bf2a2d4ad2973d414764112bf4a
+    drift_ack_digest: 21cbe19eed460866d0629d7f29a9ccc051f11d23a1421acf7df7fecbb27b58e7
     models:
       - configs/chips/rp2040.yaml
       - crates/core/src/peripherals/rp2040
@@ -2198,7 +2258,7 @@ boards:
     # pass unchanged. No live re-capture this session; re-capturing IDR readback
     # and SPI RX behaviour is tracked.
     drift_ack: 2026-07-28
-    drift_ack_digest: 53fd2ce53e11a3350aa24b4ad663b7cd079aa73f581ec1a7e484528952ef2171
+    drift_ack_digest: 3a1dddcdea490054aa05a1e9e600d2004da94af89df446a1330af106a7b12db7
     models:
       - configs/chips/stm32h735.yaml
       - crates/core/src/peripherals/rcc.rs
@@ -2233,7 +2293,7 @@ boards:
     # pass unchanged. No live re-capture this session; re-capturing IDR readback
     # and SPI RX behaviour is tracked.
     drift_ack: 2026-07-28
-    drift_ack_digest: 9c285292b9bd9476437bda18255b6224bfea04969a4287e02d3df1baac62e613
+    drift_ack_digest: 51dff645de64cdb917f8ea4949b08270c35ed58622b677b221ef9eafe06d848e
     models:
       - configs/chips/stm32f411ceu6.yaml
       - crates/core/src/peripherals/rcc.rs
@@ -2279,7 +2339,7 @@ boards:
     # pass unchanged. No live re-capture this session; re-capturing IDR readback
     # and SPI RX behaviour is tracked.
     drift_ack: 2026-07-28
-    drift_ack_digest: c8bb472c66892eb3aac0087cc41038f4c038b3669f7962c6466625c2448b26b0
+    drift_ack_digest: 1ed82ce698a7099388fd9d42d44e629df0890d103822e93d101b4187480f9f06
     models:
       - configs/chips/mkw41z4.yaml
       - crates/core/src/peripherals/i2c.rs

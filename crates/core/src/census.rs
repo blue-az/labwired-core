@@ -352,7 +352,24 @@ mod enabled {
                     .sum::<u64>()
             };
             serde_json::json!({
+                // (a) Cortex-M memory errors discarded instead of propagated.
+                //
+                // `instrumented_sites: 0` is load-bearing and must be read
+                // before `total`. This arm was written against 64 discard sites
+                // in `cpu/cortex_m.rs`; #897 propagated 62 of them with `?`, and
+                // the last two — the reset-vector SP/PC reads — are named in
+                // ALLOWED_DISCARDS, a shrink-only list keyed on the literal
+                // source line, so wrapping them would break the guard that
+                // protects them. Nothing is instrumented, so `total: 0` means
+                // NOT MEASURED, not MEASURED CLEAN. A consumer that reads a
+                // zero here as evidence of correctness is drawing a false
+                // verdict from an absent instrument.
+                //
+                // The category stays rather than being deleted: `census_bus!`
+                // and its value-transparency tests are what a future silent
+                // discard would be caught with, and re-arming it is one wrap.
                 "arm_dropped_memory_errors": {
+                    "instrumented_sites": 0,
                     "distinct": arm.len(),
                     "total": sum(&arm),
                     "entries": arm,

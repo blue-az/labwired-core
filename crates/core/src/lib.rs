@@ -28,6 +28,7 @@ pub mod pc_coverage;
 pub mod peripherals;
 pub mod physics;
 pub mod plugin;
+pub mod profile;
 pub mod runtime_snapshot;
 pub mod sched;
 pub mod signals;
@@ -1765,8 +1766,20 @@ impl<C: Cpu> Machine<C> {
         }
         let now = self.total_cycles;
         if self.logic_capture.push_active() {
-            let events = self.bus.logic_tap.take_events();
+            let mut events = self.bus.logic_tap.take_events();
             if !events.is_empty() {
+                // `ingest_push` groups ADJACENT equal-cycle runs, so it needs
+                // ascending stamps. A bit engine pushes in engine order and is
+                // already sorted; a transaction-level controller narrating a
+                // completed phase via `LogicTap::push_at` emits past-stamped
+                // edges that can land after a live push from another
+                // peripheral. Sort only when that actually happened — the
+                // check is one pass over a queue that is empty on almost every
+                // boundary, and a stable sort keeps same-cycle last-wins order
+                // (so an already-sorted queue ingests byte-identically).
+                if events.windows(2).any(|w| w[0].cycle > w[1].cycle) {
+                    events.sort_by_key(|event| event.cycle);
+                }
                 self.logic_capture.ingest_push(&events, boundary, now);
             }
             // Re-arm the provisional stamp at the NEXT boundary so pad writes
@@ -1937,6 +1950,22 @@ impl<C: Cpu> Machine<C> {
 
     pub fn step_profile(&self) -> StepProfile {
         self.step_profile
+    }
+
+    /// Wall-clock attribution for the open [`profile`] window, with peripheral
+    /// indices resolved to their bus names.
+    ///
+    /// [`StepProfile`] counts events; this measures the time they cost. The two
+    /// disagree sharply — on the BLE Pong lab `i2c0` owns 67 % of scheduler
+    /// arms but 18 % of wall time — so rank optimisation work by this one.
+    pub fn profile_report(&self) -> profile::Report {
+        let names: Vec<String> = self
+            .bus
+            .peripherals
+            .iter()
+            .map(|p| p.name.clone())
+            .collect();
+        profile::snapshot().report(&names)
     }
 
     fn record_peripheral_tick_profile(&mut self, cost_entries: usize) {
@@ -2380,6 +2409,22 @@ impl<C: Cpu> Machine<C> {
     /// drain.
     #[cfg(feature = "event-scheduler")]
     fn drain_scheduler_events(&mut self) {
+        // Measured INCLUSIVE of the peripheral handlers dispatched below;
+        // `profile::Snapshot::report` subtracts them so nothing is charged
+        // twice.
+        let span = crate::profile::span();
+        if span.is_some() {
+            // Stable and unique among live machines for as long as this one
+            // exists, which is all the report needs to tell "one chip" from
+            // "several merged".
+            crate::profile::set_machine(self as *const Self as u64);
+        }
+        self.drain_scheduler_events_inner();
+        crate::profile::record_sched(span);
+    }
+
+    #[cfg(feature = "event-scheduler")]
+    fn drain_scheduler_events_inner(&mut self) {
         // One-time bootstrap: give every scheduler-driven peripheral a chance
         // to schedule events that arise from *setup* rather than an MMIO write
         // (e.g. a UART with an RX stream attached before firmware advances, or
@@ -2471,7 +2516,13 @@ impl<C: Cpu> Machine<C> {
                 .take()
                 .expect("event_placeholder present between events");
             let mut dev = std::mem::replace(&mut self.bus.peripherals[idx].dev, stub);
+            // Attribute the handler to the peripheral that owns it. This is the
+            // measurement that told us `i2c0` is 18% of the BLE Pong lab while
+            // the `bt` model — the subsystem the slowdown was blamed on — is
+            // 1.6%. Event COUNTS say the opposite; see `profile`'s header.
+            let handler_span = crate::profile::span();
             let result = dev.on_event(ev.event_token, &mut self.sched, &mut self.bus);
+            crate::profile::record_peripheral(handler_span, idx);
             // Put the real peripheral back and reclaim the stub for reuse.
             let stub_back = std::mem::replace(&mut self.bus.peripherals[idx].dev, dev);
             self.event_placeholder = Some(stub_back);
