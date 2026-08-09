@@ -341,7 +341,22 @@ jobs:
     # 10 buys headroom on a shared runner without hiding a real slowdown: if
     # this job starts approaching 10 it has genuinely grown and the browser
     # steps should move to their own job, the way pr-scheduler-observable did.
-    timeout-minutes: 10
+    #
+    # ⚠️ IT HAS GROWN, AND THAT IS ALREADY TRUE WITHOUT THE FIRMWARE-SURVIVAL
+    # STEP ADDED BELOW. Three consecutive green runs on 2026-08-08 measured
+    # 8m20s, 9m09s and 9m11s against this 10-minute wall — 49-100s of headroom,
+    # i.e. the condition the paragraph above says to act on. The growth is in
+    # steps that predate this change: `Unit tests (default-members lib)` alone
+    # is 173-192s and `Generated artifacts — regenerate and assert no drift` is
+    # 107-117s. So 12, not because the new step is expensive (it is ~10s of
+    # local wall-clock; see its own note) but because shipping a gate into a
+    # job that is already at 92% of its timeout is how you get a red lane that
+    # means nothing — the same mis-read this comment's first paragraph is about.
+    #
+    # 12 is a stay of execution, not a fix. The lasting answer is still the one
+    # named above: move the browser layer (~100s) to its own job. Do that before
+    # bumping this number a third time.
+    timeout-minutes: 12
     steps:
       # Full history required: generate_validation_status.py uses
       # `git log -1 --format=%cI -- <model>` for drift. Shallow checkout
@@ -467,6 +482,12 @@ jobs:
       - name: Clippy + build the browser layer (crates/wasm)
         run: cargo clippy -p labwired-wasm --all-targets -- -D warnings
 
+      # playground_repro drives the secure-boot lab through the same entry
+      # points simulator-bridge.ts uses, so it needs that lab's firmware. It
+      # builds the ELF itself (ensure_firmware_built) and needs the target to
+      # do it. ~10s once, cached with the rest of the toolchain.
+      - name: Add ARM target (secure-boot lab firmware for the browser repro)
+        run: rustup target add thumbv7em-none-eabi
       - name: Unit tests (browser layer)
         run: cargo test -p labwired-wasm --lib
 
@@ -487,6 +508,71 @@ jobs:
       # class walks back through.
       - name: Walk-deletion derivation (PR-fast structural arm)
         run: cargo test -p labwired-core --test esp32_classic_walk_differential
+
+      # THE SHARED-MODEL NET THAT NEVER GATED A MERGE.
+      #
+      # `firmware_survival` boots ~50 committed ELFs — every Cortex-M and
+      # RISC-V chip this engine claims, across Zephyr, Arduino, CubeMX HAL and
+      # bare-metal toolchains — and asserts each one survives its boot and
+      # emits the UART trace real silicon does. It is the broadest regression
+      # net in the repo for a change to the shared CPU or bus models, and until
+      # now NOTHING ran it before a merge: it lives in `core-integrity`, which
+      # is `push`/`schedule`/`dispatch`-only and skipped on every pull request.
+      #
+      # #880 is what that cost. "propagate bus memory violations from every
+      # load and store" was green on all four checks its PR ran, merged, and
+      # faulted five chips at boot on main:
+      #
+      #   nrf52832  step 1     0x2003fffc   RAM top
+      #   nrf54l15  step 6460  0xe000e500   upper NVIC window
+      #   stm32g474 step 4302  0xe0042004   DBGMCU
+      #   stm32wb55 step 4214  0xe0042004   DBGMCU
+      #   stm32wba52 step 4003 0x20020000   RAM top
+      #
+      # The change was right in intent — those accesses had been silently
+      # swallowed — but the models do not decode those regions, so real
+      # firmware faulted. Reverted in #881. Every one of those five is a test
+      # in this file, and every one of them would have gone red on the PR if
+      # this step had existed. (Verified, not assumed: applying #880 to a clean
+      # tree reproduces exactly those five failures and nothing else.)
+      #
+      # The note on the equivalent step in `core-integrity` already made this
+      # argument once — the suite was pulled out of the nightly `core-full` job
+      # because "a shared-model rework could land on main silently". It was
+      # never carried the last step, to PRs. This is that step.
+      #
+      # ── WHY A STEP IN `pr-gate`, NOT A NEW JOB, AND NOT `paths:`-FILTERED ──
+      #
+      # A new required job filtered to `crates/core/src/cpu/**` would be worse
+      # than no gate at all. `main` requires exactly two contexts (`pr-gate`,
+      # `release-runner-contract`) with `enforce_admins` ON, and required
+      # contexts are resolved against the PR's HEAD SHA. A path-filtered job
+      # emits NO context on a PR that does not match the filter, so that PR's
+      # head would carry an unreported required check and could never be merged
+      # by anyone, the owner included — the identical deadlock the PAT note at
+      # the top of this file describes and that stranded #1207/#1208/#1195 in
+      # the superproject. `pr-gate` is already required and already reports on
+      # every PR, so a step inside it adds a GATE without adding a CONTEXT.
+      # That is the whole reason this is eleven lines of YAML and not a job.
+      #
+      # ── COST, MEASURED ──
+      #
+      # No toolchain, no target, no cross-build: the ~50 ELFs are committed
+      # under `tests/fixtures/` and read straight off disk, and every
+      # dev-dependency (labwired-loader, svd-ingestor, svd-parser) is already
+      # built by the `--test esp32_classic_walk_differential` step above, which
+      # costs 0-1s here for exactly that reason. Locally: 1.3s to compile and
+      # link the test binary, 6.5s to run it (9.7s pinned to 4 threads, which
+      # is the hosted runner's core count).
+      #
+      # It deliberately does NOT bring `--test e2e_stm32f407_i2c` along, which
+      # `core-integrity` runs beside it. That one cross-builds the AHT20/BMP280
+      # firmware from source and needs `rustup target add thumbv7em-none-eabi`
+      # — a toolchain install and a firmware build this lane needs for nothing
+      # else. #880 is the regression that escaped; this is the suite that
+      # catches it.
+      - name: Firmware survival (committed ELF fixtures, ~50 chips)
+        run: cargo test -p labwired-core --test firmware_survival
 
       # The BLE Pong fixture is a COMMITTED copy of a published community lab,
       # and `world_esp32c3_ble_pong` (release-only, push-to-main) is the only
@@ -676,6 +762,15 @@ jobs:
 
       - name: Run Clippy
         run: cargo clippy --all-targets -- -D warnings
+
+      # Before the --lib run, not just before the fixture suites below. The
+      # playground secure-boot repro in crates/wasm builds
+      # firmware-nrf52840-secure-boot on demand for thumbv7em, and it is a
+      # #[cfg(test)] module in src/, so `--workspace --lib` runs it. With the
+      # target added ten lines further down, those three tests died on
+      # "secure-boot firmware build failed" and took main red.
+      - name: Install ARM target for firmware builds under test
+        run: rustup target add thumbv7em-none-eabi
 
       - name: Unit tests (no fixtures)
         run: cargo test --workspace --lib

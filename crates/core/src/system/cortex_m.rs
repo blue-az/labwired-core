@@ -76,8 +76,40 @@ pub fn configure_cortex_m(bus: &mut SystemBus) -> (CortexM, Arc<NvicState>) {
         });
     }
 
-    // Ensure NVIC exists (shared pending/enabled state)
+    // Ensure NVIC exists (shared pending/enabled state).
+    //
+    // Window extent: the NVIC block of the System Control Space runs from
+    // NVIC_ISER0 at 0xE000_E100 to NVIC_IPR123 at 0xE000_E5EC — see the
+    // ARMv7-M ARM (DDI 0403E, B3.4.3 "NVIC register support in the SCS") and
+    // the ARMv8-M ARM (DDI 0553, B11.1), which give the same map: both
+    // architectures allow up to 496 external interrupts, so the byte-indexed
+    // priority array NVIC_IPR spans 0xE000_E400..=0xE000_E5EF.
+    //
+    // `size` was 0x400, which stopped at 0xE000_E4FF — i.e. it truncated the
+    // priority array at interrupt 255. That is not an ARMv7-M/ARMv8-M
+    // distinction (NVIC_ITNS, the genuinely v8-M-only register, sits at
+    // 0xE000_E380 and was always inside the window); it is simply a window
+    // one interrupt-priority page too short. Any part with more than 256
+    // interrupts hit it: Zephyr's `z_arm_interrupt_init` writes a default
+    // priority to every NVIC_IPR byte from 0 to CONFIG_NUM_IRQS, and on
+    // nRF54L15 (CONFIG_NUM_IRQS = 0x10F) the 257th store lands at
+    // 0xE000_E500, outside the window.
+    //
+    // This is not a read-as-zero widening: `Nvic` already backs the whole
+    // priority array with real storage (`NvicState::ipr`, 240 registers) and
+    // `NvicState::ipr_priority` feeds it straight into
+    // `CortexM::exception_priority`, so a priority written here is read back
+    // verbatim and actually orders pre-emption. The registers were modelled;
+    // only the bus window hid them.
+    //
+    // Known remaining gap (deliberately NOT papered over here): the
+    // set-enable / set-pending / active arrays are 8 registers each, so
+    // interrupts >= 256 can have a priority but cannot be enabled or pended.
+    // nRF54L15 declares IRQ 260 and 261. Fixing that means widening
+    // `NvicState` and the `idx < 8` guards in `bus/tick.rs`, `bus/accessors.rs`
+    // and `bus/construct.rs` — a separate change with its own blast radius.
     let nvic = Nvic::new(nvic_state.clone());
+    const NVIC_WINDOW_SIZE: u64 = 0x4F0;
     if let Some(p) = bus
         .peripherals
         .iter_mut()
@@ -85,14 +117,14 @@ pub fn configure_cortex_m(bus: &mut SystemBus) -> (CortexM, Arc<NvicState>) {
     {
         p.name = "nvic".to_string();
         p.base = 0xE000_E100;
-        p.size = 0x400;
+        p.size = NVIC_WINDOW_SIZE;
         p.irq = None;
         p.dev = Box::new(nvic);
     } else {
         bus.peripherals.push(PeripheralEntry {
             name: "nvic".to_string(),
             base: 0xE000_E100,
-            size: 0x400,
+            size: NVIC_WINDOW_SIZE,
             irq: None,
             dev: Box::new(nvic),
             ticks_remaining: 0,
