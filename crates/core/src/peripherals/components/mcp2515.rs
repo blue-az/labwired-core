@@ -71,7 +71,7 @@ impl Mcp2515 {
 
 impl SpiDevice for Mcp2515 {
     fn needs_external_bus_poll(&self) -> bool {
-        true
+        self.bus_rx.is_some()
     }
 
     fn component_id(&self) -> Option<&str> {
@@ -226,6 +226,16 @@ impl PeripheralKit for Mcp2515Kit {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn external_poll_demand_starts_only_after_can_attachment() {
+        let mut dev = Mcp2515::new("PA4");
+        assert!(!dev.needs_external_bus_poll());
+        let (tx, _outbound) = std::sync::mpsc::channel();
+        let (_inbound, rx) = std::sync::mpsc::channel();
+        dev.attach_can_bus(tx, rx).unwrap();
+        assert!(dev.needs_external_bus_poll());
+    }
 
     #[test]
     fn reset_and_read_canctrl() {

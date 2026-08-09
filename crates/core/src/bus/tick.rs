@@ -1684,6 +1684,7 @@ mod c3_level_peripheral_matrix_routing {
     use labwired_config::{ChipDescriptor, SystemManifest};
     use std::path::PathBuf;
     use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::mpsc::{Receiver, Sender};
     use std::sync::Arc;
 
     const INTMATRIX: u64 = 0x600C_2000;
@@ -1695,16 +1696,27 @@ mod c3_level_peripheral_matrix_routing {
     const SPI_DMA_INT_CLR: u64 = 0x38;
     const SPI_USR_BIT: u32 = 1 << 24;
 
-    struct ExternalCanPoller(Arc<AtomicUsize>);
+    struct ExternalCanPoller {
+        polls: Arc<AtomicUsize>,
+        attached: bool,
+    }
     impl crate::peripherals::spi::SpiDevice for ExternalCanPoller {
         fn needs_external_bus_poll(&self) -> bool {
-            true
+            self.attached
         }
         fn component_id(&self) -> Option<&str> {
             Some("external-can")
         }
         fn poll_external_bus(&mut self) {
-            self.0.fetch_add(1, Ordering::SeqCst);
+            self.polls.fetch_add(1, Ordering::SeqCst);
+        }
+        fn attach_can_bus(
+            &mut self,
+            _tx: Sender<crate::network::CanFrame>,
+            _rx: Receiver<crate::network::CanFrame>,
+        ) -> anyhow::Result<()> {
+            self.attached = true;
+            Ok(())
         }
         fn transfer(&mut self, _mosi: u8) -> u8 {
             0
@@ -1718,9 +1730,32 @@ mod c3_level_peripheral_matrix_routing {
     fn idle_nested_can_keeps_c3_spi_in_real_legacy_walk() {
         let polls = Arc::new(AtomicUsize::new(0));
         let mut bus = routed_bus(SPI2_INTR_SOURCE_ID);
-        bus.attach_spi_device("spi2", Box::new(ExternalCanPoller(polls.clone())))
-            .unwrap();
+        bus.attach_spi_device(
+            "spi2",
+            Box::new(ExternalCanPoller {
+                polls: polls.clone(),
+                attached: false,
+            }),
+        )
+        .unwrap();
         pin_to_walk(&mut bus, "spi2");
+        assert!(
+            bus.legacy_tick_entry_descriptors()
+                .iter()
+                .all(|(name, _, _)| name != "spi2"),
+            "unattached nested CAN must not keep SPI walk-active"
+        );
+
+        let (tx, _outbound) = std::sync::mpsc::channel();
+        let (_inbound, rx) = std::sync::mpsc::channel();
+        bus.attach_can_endpoint_by_id("external-can", tx, rx)
+            .unwrap();
+        assert!(
+            bus.legacy_tick_entry_descriptors()
+                .iter()
+                .any(|(name, _, _)| name == "spi2"),
+            "nested attach must refresh owning SPI walk eligibility"
+        );
         Bus::tick_peripherals(&mut bus);
         assert_eq!(polls.load(Ordering::SeqCst), 1);
 
@@ -1732,6 +1767,31 @@ mod c3_level_peripheral_matrix_routing {
                 .iter()
                 .all(|(name, _, _)| name != "spi2"),
             "ordinary idle C3 SPI stays outside the legacy walk"
+        );
+    }
+
+    #[test]
+    fn nested_can_attach_arms_existing_c3_scheduler_controller() {
+        let mut bus = routed_bus(SPI2_INTR_SOURCE_ID);
+        bus.attach_spi_device(
+            "spi2",
+            Box::new(ExternalCanPoller {
+                polls: Arc::new(AtomicUsize::new(0)),
+                attached: false,
+            }),
+        )
+        .unwrap();
+        let before = bus.pending_schedule.len();
+
+        let (tx, _outbound) = std::sync::mpsc::channel();
+        let (_inbound, rx) = std::sync::mpsc::channel();
+        bus.attach_can_endpoint_by_id("external-can", tx, rx)
+            .unwrap();
+
+        assert_eq!(
+            bus.pending_schedule.len(),
+            before + 1,
+            "nested attach must arm the owning scheduler controller exactly once"
         );
     }
 

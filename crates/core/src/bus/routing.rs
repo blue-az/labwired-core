@@ -867,6 +867,7 @@ impl SystemBus {
             anyhow::bail!("CAN endpoint id must not be blank");
         }
         let mut channels = Some((tx, rx));
+        let mut nested_owner = None;
         let named_peripheral = self.find_peripheral_index_by_name(can_id);
         if let Some(idx) = named_peripheral {
             let any = self.peripherals[idx]
@@ -883,7 +884,7 @@ impl SystemBus {
         }
         if channels.is_some() {
             let mut matched = false;
-            for peripheral in &mut self.peripherals {
+            for (peripheral_index, peripheral) in self.peripherals.iter_mut().enumerate() {
                 let Some(any) = peripheral.dev.as_any_mut() else {
                     continue;
                 };
@@ -915,6 +916,7 @@ impl SystemBus {
                             "SPI device '{can_id}' cannot attach as CAN endpoint: {error}"
                         )
                     })?;
+                    nested_owner = Some(peripheral_index);
                     break;
                 }
             }
@@ -933,6 +935,11 @@ impl SystemBus {
         // (feature-unified event-scheduler) receive zero frames.
         self.rebuild_peripheral_ranges();
         self.recompute_walk_deletable();
+        if let Some(owner) = nested_owner {
+            self.refresh_legacy_tick_index(owner);
+            #[cfg(feature = "event-scheduler")]
+            self.collect_scheduled_events(owner);
+        }
         Ok(())
     }
 
