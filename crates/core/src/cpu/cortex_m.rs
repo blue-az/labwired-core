@@ -1718,7 +1718,59 @@ impl CortexM {
                     // STREX, so we model the exclusive monitor as always
                     // succeeding. This matches the observable behavior of
                     // atomic ops on real hardware in the uncontended case.
-                    if (h1 & 0xFFF0) == 0xE850 {
+                    if (h1 & 0xFFF0) == 0xE840 && (h2 & 0xF03F) == 0xF000 {
+                        // TT / TTT / TTA / TTAT — ARMv8-M "Test Target"
+                        // (ARMv8-M ARM, DDI 0553, "TT, TTT, TTA, TTAT").
+                        // Encoding T1:
+                        //   h1 = 0xE84_ | Rn
+                        //   h2 = 0xF000 | (Rd << 8) | (A << 7) | (T << 6)
+                        //
+                        // This SHARES the 0xE84x prefix with STREX, and the
+                        // STREX arm below only matched on h1. TT sets the
+                        // STREX Rt field to 0b1111 (a PC destination, which is
+                        // UNPREDICTABLE for a real STREX), so every TT in the
+                        // corpus was being executed as
+                        // `STREX PC, Rd, [Rn, #0]` — a *store of the PC to the
+                        // address being probed*. TT never accesses memory on
+                        // real silicon; it only queries the MPU/SAU attributes
+                        // of an address. That phantom store is a silent
+                        // memory-corruption bug wherever the probed address is
+                        // mapped RAM, and it is what crashed the STM32WBA52
+                        // Zephyr lab at 0x2002_0000: Zephyr's
+                        // `arm_cmse_mpu_region_get` probes one-past-the-end of
+                        // a buffer, which TT is explicitly allowed to do
+                        // because it does not dereference it.
+                        //
+                        // Response value: this core models neither an MPU nor
+                        // the Security Extension (SAU/IDAU), and MPU_CTRL
+                        // writes land in an inert SCB latch that enforces
+                        // nothing — so the machine genuinely has no region
+                        // information to report. The architecturally defined
+                        // way to say that is MRVALID = 0 (and, with no
+                        // Security Extension, SREGION/SRVALID/S/IREGION/
+                        // IRVALID are RES0). A zero response is therefore the
+                        // honest answer, and it is the conservative one: a
+                        // caller reads it as "not known to be accessible"
+                        // rather than being handed a fabricated region number
+                        // or an unconditional permit. Zephyr's
+                        // `arm_cmse_mpu_region_get` maps it to -EINVAL, which
+                        // is exactly what it reports on hardware with the MPU
+                        // off.
+                        //
+                        // A and T select which security state / privilege
+                        // level is queried; without the Security Extension
+                        // TTA/TTAT are UNDEFINED, but answering them the same
+                        // conservative way is still strictly better than
+                        // falling through to a store.
+                        let rd = ((h2 >> 8) & 0xF) as u8;
+                        // Rd = SP or PC is UNPREDICTABLE for TT; do not let a
+                        // malformed encoding rewrite the stack or program
+                        // counter. The instruction is still consumed.
+                        if rd != 13 && rd != 15 {
+                            self.set_register(rd, 0);
+                        }
+                        pc_increment = 4;
+                    } else if (h1 & 0xFFF0) == 0xE850 {
                         // LDREX
                         let rn = (h1 & 0xF) as u8;
                         let rt = ((h2 >> 12) & 0xF) as u8;

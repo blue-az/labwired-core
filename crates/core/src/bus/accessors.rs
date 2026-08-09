@@ -121,6 +121,13 @@ impl crate::Bus for SystemBus {
     }
 
     fn write_u8(&mut self, addr: u64, value: u8) -> SimResult<()> {
+        // ESP32-C3 permission control (PMS): a store into a region the
+        // SENSITIVE PMS marks non-writable is blocked on silicon and raises
+        // ETS_CORE0_{I,D}RAM0_PMS_INTR_SOURCE. Inert (one bool test) unless
+        // firmware has actually narrowed a region.
+        if let Some(r) = self.esp32c3_pms_gate_store(addr) {
+            return r;
+        }
         let flash_alias_old = if self.flash.base_addr != 0 && addr < self.flash.data.len() as u64 {
             self.flash.read_u8(self.flash.base_addr + addr)
         } else {
@@ -291,6 +298,10 @@ impl crate::Bus for SystemBus {
             if let Some(idx) = self.find_peripheral_index(addr) {
                 let base = self.peripherals[idx].base;
                 self.sync_esp32c3_irq_cache_write(idx, addr - base);
+                // Same write choke, for the C3 permission-control unit: a
+                // write into the SENSITIVE PMS span re-derives the permission
+                // map (and honours a VIOLATE_CLR pulse).
+                self.sync_esp32c3_pms_write(idx, addr - base);
                 self.peripherals[idx].ticks_remaining = 0;
                 self.refresh_legacy_tick_index(idx);
                 self.refresh_bus_tick_index(idx);
@@ -472,6 +483,13 @@ impl crate::Bus for SystemBus {
     }
 
     fn write_u16(&mut self, addr: u64, value: u16) -> SimResult<()> {
+        // ESP32-C3 permission control (PMS): a store into a region the
+        // SENSITIVE PMS marks non-writable is blocked on silicon and raises
+        // ETS_CORE0_{I,D}RAM0_PMS_INTR_SOURCE. Inert (one bool test) unless
+        // firmware has actually narrowed a region.
+        if let Some(r) = self.esp32c3_pms_gate_store(addr) {
+            return r;
+        }
         let mut wrote = self.ram.write_u16(addr, value) || self.flash.write_u16(addr, value);
         if !wrote && self.flash.base_addr != 0 && addr + 1 < self.flash.data.len() as u64 {
             wrote = self.flash.write_u16(self.flash.base_addr + addr, value);
@@ -507,6 +525,10 @@ impl crate::Bus for SystemBus {
             if r.is_ok() {
                 let base = self.peripherals[idx].base;
                 self.sync_esp32c3_irq_cache_write(idx, addr - base);
+                // Same write choke, for the C3 permission-control unit: a
+                // write into the SENSITIVE PMS span re-derives the permission
+                // map (and honours a VIOLATE_CLR pulse).
+                self.sync_esp32c3_pms_write(idx, addr - base);
                 self.refresh_legacy_tick_index(idx);
                 self.refresh_bus_tick_index(idx);
             }
@@ -518,6 +540,13 @@ impl crate::Bus for SystemBus {
     }
 
     fn write_u32(&mut self, addr: u64, value: u32) -> SimResult<()> {
+        // ESP32-C3 permission control (PMS): a store into a region the
+        // SENSITIVE PMS marks non-writable is blocked on silicon and raises
+        // ETS_CORE0_{I,D}RAM0_PMS_INTR_SOURCE. Inert (one bool test) unless
+        // firmware has actually narrowed a region.
+        if let Some(r) = self.esp32c3_pms_gate_store(addr) {
+            return r;
+        }
         // RP2040 atomic register aliases: a write to a +0x1000/0x2000/0x3000
         // alias of a peripheral register is a read-modify-write (XOR/SET/CLR)
         // on the aligned base register. The base access recurses into the
@@ -597,6 +626,10 @@ impl crate::Bus for SystemBus {
             if r.is_ok() {
                 let base = self.peripherals[idx].base;
                 self.sync_esp32c3_irq_cache_write(idx, addr - base);
+                // Same write choke, for the C3 permission-control unit: a
+                // write into the SENSITIVE PMS span re-derives the permission
+                // map (and honours a VIOLATE_CLR pulse).
+                self.sync_esp32c3_pms_write(idx, addr - base);
                 self.refresh_legacy_tick_index(idx);
                 self.refresh_bus_tick_index(idx);
             }
@@ -638,6 +671,21 @@ impl crate::Bus for SystemBus {
         // because reads don't mutate.
         let slice = unsafe { std::slice::from_raw_parts(ptr, len) };
         Some((entry.base, entry.base.saturating_add(entry.size), slice))
+    }
+
+    fn check_fetch_permission(&mut self, pc: u64) -> crate::FetchPermission {
+        if !self.esp32c3_pms_armed {
+            return crate::FetchPermission::Allowed;
+        }
+        match self.esp32c3_pms_check_fetch(pc) {
+            crate::bus::pms::PmsOutcome::Allowed => crate::FetchPermission::Allowed,
+            crate::bus::pms::PmsOutcome::BlockedFaultRaised => {
+                crate::FetchPermission::DeniedFaultRaised
+            }
+            crate::bus::pms::PmsOutcome::BlockedUndeliverable => {
+                crate::FetchPermission::DeniedUndeliverable
+            }
+        }
     }
 
     fn execute_dma(&mut self, requests: &[crate::DmaRequest]) -> SimResult<()> {

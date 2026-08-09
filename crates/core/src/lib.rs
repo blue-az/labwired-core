@@ -1127,6 +1127,24 @@ pub trait Peripheral: std::fmt::Debug + Send {
 }
 
 /// Trait representing the system bus
+/// Verdict from [`Bus::check_fetch_permission`] — whether an instruction fetch
+/// at a given PC is allowed by a memory-protection unit the bus models.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FetchPermission {
+    /// No protection unit objects (the default for every bus).
+    Allowed,
+    /// Blocked, and the unit raised an interrupt the firmware's own handler
+    /// will take. The core substitutes a NOP for the blocked fetch so the trap
+    /// is taken at the next instruction boundary — the same one-instruction
+    /// skid the ESP32-C3's asynchronous PMS fault has on silicon, which is why
+    /// IDF reads the violating address out of registers instead of `mepc`.
+    DeniedFaultRaised,
+    /// Blocked, but nothing can deliver the fault to the firmware. The core
+    /// stops with `MemoryViolation` rather than executing from a region the
+    /// hardware would not have fetched from.
+    DeniedUndeliverable,
+}
+
 pub trait Bus {
     fn read_u8(&self, addr: u64) -> SimResult<u8>;
     fn write_u8(&mut self, addr: u64, value: u8) -> SimResult<()>;
@@ -1138,6 +1156,18 @@ pub trait Bus {
     }
     fn as_any_mut(&mut self) -> Option<&mut dyn Any> {
         None
+    }
+
+    /// Is an instruction fetch at `pc` permitted by a memory-protection unit
+    /// the bus models? Called by the core only when its 256-byte fetch window
+    /// does not already cover `pc`, i.e. once per window refill. That is exact
+    /// rather than approximate: the window is 256-byte aligned and at most 256
+    /// bytes long, while ESP32-C3 PMS split lines are 512-byte aligned, so a
+    /// window can never straddle a permission boundary.
+    ///
+    /// Default `Allowed` — buses without a protection unit are unchanged.
+    fn check_fetch_permission(&mut self, _pc: u64) -> FetchPermission {
+        FetchPermission::Allowed
     }
 
     /// Clear a pending NVIC exception (called by CPU when taking an exception).
@@ -1473,6 +1503,16 @@ pub struct Machine<C: Cpu> {
     /// the bus), so the per-cycle drain short-circuits without a peripheral
     /// walk or downcast.
     scb_index: Option<usize>,
+    /// Cached bus index of the nRF52 NVMC peripheral. Resolved once at
+    /// construction; the advance boundary drains a latched erase op every
+    /// instruction and used to walk the whole ~40-entry peripheral list,
+    /// paying a vtable call plus a `TypeId` compare per entry — on every chip,
+    /// including the ones where an nRF52 NVMC cannot exist. `None` for every
+    /// non-nRF52 target, so the drain short-circuits on one `Option` test.
+    /// Same fixed-set assumption as [`Self::scb_index`]: nothing removes or
+    /// reorders `bus.peripherals` after construction (appends are safe — they
+    /// never move an existing index).
+    nvmc_index: Option<usize>,
     /// Phase 2B.3b (issue #192): whether the one-time scheduler bootstrap has
     /// run. On the first `drain_scheduler_events`, peripherals with setup-time
     /// work (e.g. a UART with an RX stream attached before any MMIO write) get
@@ -1782,6 +1822,12 @@ impl<C: Cpu> Machine<C> {
                 .and_then(|a| a.downcast_ref::<crate::peripherals::scb::Scb>())
                 .is_some()
         });
+        let nvmc_index = bus.peripherals.iter().position(|p| {
+            p.dev
+                .as_any()
+                .and_then(|a| a.downcast_ref::<crate::peripherals::nrf52::nvmc::Nrf52Nvmc>())
+                .is_some()
+        });
         // Central I²C data-ready time drive (Option A): the authoritative µs
         // source is the first peripheral that reports one (ESP32 SYSTIMER); the
         // fan-out targets are the opted-in I²C controllers. Both are stable for
@@ -1816,6 +1862,7 @@ impl<C: Cpu> Machine<C> {
             flash_index,
             simctl_index,
             scb_index,
+            nvmc_index,
             scheduler_bootstrapped: false,
             hcsr04_edge_scratch: Vec::new(),
             tick_irq_scratch: Vec::new(),

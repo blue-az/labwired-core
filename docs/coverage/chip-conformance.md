@@ -7,7 +7,7 @@ Reg match = verifiable cold-reset registers reproduced. "Excluded" = registers a
 | Chip | Level | Estate | Peripherals | Reg match (verifiable) | Excluded | Behavior gate |
 |------|-------|--------|-------------|------------------------|----------|---------------|
 | esp32c3 | **L2** | ✓ | 40 | 380/402 (94%) | 190 | firmware_survival::test_esp32c3_demo_survival |
-| nrf54l15 | **L1** | ✓ | 28 | — | — | firmware_survival::test_nrf54l15_zephyr_survival |
+| nrf54l15 | **L1** | ✓ | 29 | — | — | firmware_survival::test_nrf54l15_zephyr_survival |
 | esp32 | **L0** | ✓ | 32 | — | — | — |
 | esp32s3 | **L0** | ✓ | 10 | — | — | — |
 | esp32s3-zero | **L0** | ✓ | 17 | — | — | — |
@@ -23,11 +23,11 @@ Reg match = verifiable cold-reset registers reproduced. "Excluded" = registers a
 | stm32f767 | **L0** | ✓ | 36 | — | — | — |
 | rp2350 | **L0** | ✓ | 23 | — | — | — |
 | stm32f407 | **L1** | ✓ | 32 | — | — | firmware_survival::test_nucleo_f407_smoke_survival |
-| stm32g474re | **L0** | ✓ | 20 | — | — | — |
+| stm32g474re | **L0** | ✓ | 21 | — | — | — |
 | stm32h563 | **L1** | ✓ | 37 | — | — | firmware_survival::test_stm32h563_demo_survival |
 | stm32h735 | **L1** | ✓ | 29 | — | — | tier1::stm32h735 |
 | stm32l073 | **L2** | ✓ | 42 | 55/55 (100%) | 5 | firmware_survival::test_nucleo_l073rz_smoke_survival |
 | stm32l476 | **L1** | ✓ | 58 | — | — | firmware_survival::test_nucleo_l476rg_demo_survival |
-| stm32wb55 | **L0** | ✓ | 20 | — | — | — |
-| stm32wba52 | **L0** | ✓ | 19 | — | — | — |
+| stm32wb55 | **L0** | ✓ | 21 | — | — | — |
+| stm32wba52 | **L0** | ✓ | 20 | — | — | — |
 | mkw41z4 | **L1** | ✓ | 20 | — | — | firmware_survival::test_kw41z_smoke_survival |

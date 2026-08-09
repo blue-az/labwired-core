@@ -636,6 +636,9 @@ pub fn lookup(descriptor_path: &str) -> Option<&'static str> {
         "nrf54l15/global_wdt31_s.yaml" => Some(include_str!(
             "../../../../configs/peripherals/nrf54l15/global_wdt31_s.yaml"
         )),
+        "nrf54l15/icache_s.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/nrf54l15/icache_s.yaml"
+        )),
         "rp2040/adc.yaml" => Some(include_str!(
             "../../../../configs/peripherals/rp2040/adc.yaml"
         )),
@@ -1293,6 +1296,9 @@ pub fn lookup(descriptor_path: &str) -> Option<&'static str> {
         "stm32g474re/adc1.yaml" => Some(include_str!(
             "../../../../configs/peripherals/stm32g474re/adc1.yaml"
         )),
+        "stm32g474re/dbgmcu.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/stm32g474re/dbgmcu.yaml"
+        )),
         "stm32g474re/dma1.yaml" => Some(include_str!(
             "../../../../configs/peripherals/stm32g474re/dma1.yaml"
         )),
@@ -1836,6 +1842,9 @@ pub fn lookup(descriptor_path: &str) -> Option<&'static str> {
         "stm32wb55/adc.yaml" => Some(include_str!(
             "../../../../configs/peripherals/stm32wb55/adc.yaml"
         )),
+        "stm32wb55/dbgmcu.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/stm32wb55/dbgmcu.yaml"
+        )),
         "stm32wb55/dma1.yaml" => Some(include_str!(
             "../../../../configs/peripherals/stm32wb55/dma1.yaml"
         )),
@@ -1886,6 +1895,9 @@ pub fn lookup(descriptor_path: &str) -> Option<&'static str> {
         )),
         "stm32wb55/usart1.yaml" => Some(include_str!(
             "../../../../configs/peripherals/stm32wb55/usart1.yaml"
+        )),
+        "stm32wba52/dbgmcu.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/stm32wba52/dbgmcu.yaml"
         )),
         "stm32wba52/flash.yaml" => Some(include_str!(
             "../../../../configs/peripherals/stm32wba52/flash.yaml"
