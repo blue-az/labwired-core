@@ -117,7 +117,7 @@ fn real_scanner_and_ecu_firmware_complete_the_obd2_workflow() {
             && read_u32(&world, "ecu", ecu_dtcs) == 0
             && read_u32(&world, "scanner", cycles) > cycles_before_clear
             && read_u32(&world, "scanner", snapshot_seq) & 1 == 0
-            && &read_bytes(&world, "scanner", ble, 9)[..7] == [1, 0x01, 0xB8, 0x0B, 88, 90, 0]
+            && read_bytes(&world, "scanner", ble, 9)[..7] == [1, 0x01, 0xB8, 0x0B, 88, 90, 0]
         {
             break;
         }
