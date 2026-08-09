@@ -49,6 +49,7 @@ const TXREQ: u8 = 0x08;
 const CANINTF_RX0IF: u8 = 0x01;
 const CANINTF_RX1IF: u8 = 0x02;
 const CANINTF_TX0IF: u8 = 0x04;
+const CANINTF_ERRIF: u8 = 0x20;
 const EFLG_RX1OVR: u8 = 0x80;
 const EFLG_RX0OVR: u8 = 0x40;
 
@@ -394,8 +395,10 @@ impl Mcp2515 {
                     return;
                 }
                 self.regs[REG_EFLG as usize] |= EFLG_RX0OVR | EFLG_RX1OVR;
+                self.regs[REG_CANINTF as usize] |= CANINTF_ERRIF;
             } else {
                 self.regs[REG_EFLG as usize] |= EFLG_RX0OVR;
+                self.regs[REG_CANINTF as usize] |= CANINTF_ERRIF;
             }
         } else if let Some(hit) = match1 {
             if !full1 {
@@ -403,6 +406,7 @@ impl Mcp2515 {
                 return;
             }
             self.regs[REG_EFLG as usize] |= EFLG_RX1OVR;
+            self.regs[REG_CANINTF as usize] |= CANINTF_ERRIF;
         }
         self.recompute_irq();
     }
@@ -418,6 +422,9 @@ impl Mcp2515 {
                 continue;
             }
             let sidh = [REG_TXB0SIDH, REG_TXB1SIDH, REG_TXB2SIDH][index];
+            if self.regs[sidh as usize + 4] & 0x40 != 0 {
+                continue;
+            }
             if decode_standard_id([
                 self.regs[sidh as usize],
                 self.regs[sidh as usize + 1],
@@ -471,6 +478,9 @@ impl SpiDevice for Mcp2515 {
     }
     fn poll_external_bus(&mut self) {
         self.service_pending_tx();
+        if !matches!(self.current_mode(), OpMode::Normal | OpMode::ListenOnly) {
+            return;
+        }
         let mut frames = Vec::new();
         if let Some(rx) = &self.bus_rx {
             while let Ok(frame) = rx.try_recv() {
@@ -725,6 +735,7 @@ mod tests {
         let (peer_tx, _peer_rx) = bus.attach();
         let mut dev = Mcp2515::new("PA4");
         dev.attach_can_bus(mcp_tx, mcp_rx).unwrap();
+        configure_500k_normal(&mut dev);
         write(&mut dev, REG_RXB0CTRL, &[0x60]); // receive any valid standard frame
         write(&mut dev, REG_CANINTE, &[CANINTF_RX0IF]);
 
@@ -748,6 +759,9 @@ mod tests {
     }
 
     fn inject(dev: &mut Mcp2515, frame: CanFrame) {
+        if !matches!(dev.current_mode(), OpMode::Normal | OpMode::ListenOnly) {
+            configure_500k_normal(dev);
+        }
         let (tx, rx) = std::sync::mpsc::channel();
         tx.send(frame).unwrap();
         // Use the supported external-bus receiver path without constructing a full world.
@@ -818,11 +832,12 @@ mod tests {
     #[test]
     fn unsupported_or_unsendable_tx_stays_pending_without_success_flag() {
         for (mode, header) in [
-            (0x80, [0x24, 0x60, 0, 0, 1, 0xAA]), // config mode
-            (0x60, [0x24, 0x60, 0, 0, 1, 0xAA]), // listen-only
-            (0x00, [0x24, 0x60, 0, 0, 1, 0xAA]), // absent bus channel
-            (0x00, [0x24, 0x68, 0, 0, 1, 0xAA]), // EXIDE
-            (0x00, [0x24, 0x60, 0, 0, 9, 0xAA]), // invalid DLC
+            (0x80, [0x24, 0x60, 0, 0, 1, 0xAA]),    // config mode
+            (0x60, [0x24, 0x60, 0, 0, 1, 0xAA]),    // listen-only
+            (0x00, [0x24, 0x60, 0, 0, 1, 0xAA]),    // absent bus channel
+            (0x00, [0x24, 0x68, 0, 0, 1, 0xAA]),    // EXIDE
+            (0x00, [0x24, 0x60, 0, 0, 9, 0xAA]),    // invalid DLC
+            (0x00, [0x24, 0x60, 0, 0, 0x41, 0xAA]), // unsupported RTR
         ] {
             let mut dev = Mcp2515::new("PA4");
             write(&mut dev, REG_CNF3, &[0x01, 0xBC, 0x00]);
@@ -836,6 +851,92 @@ mod tests {
             assert_ne!(read(&mut dev, REG_TXB0CTRL, 1)[0] & TXREQ, 0);
             assert_eq!(read(&mut dev, REG_CANINTF, 1)[0] & CANINTF_TX0IF, 0);
         }
+    }
+
+    #[test]
+    fn inactive_modes_preserve_external_frames_until_normal_mode() {
+        for inactive_mode in [0x80, 0x20, 0x40] {
+            let mut bus = CanBus::new();
+            let (mcp_tx, mcp_rx) = bus.attach();
+            let (peer_tx, _peer_rx) = bus.attach();
+            let mut dev = Mcp2515::new("PA4");
+            dev.attach_can_bus(mcp_tx, mcp_rx).unwrap();
+            write(&mut dev, REG_CNF3, &[0x01, 0xBC, 0x00]);
+            write(&mut dev, REG_RXB0CTRL, &[0x60]);
+            write(&mut dev, REG_CANCTRL, &[inactive_mode]);
+            peer_tx
+                .send(CanFrame::classic(0x321, vec![inactive_mode]))
+                .unwrap();
+            bus.tick().unwrap();
+
+            dev.poll_external_bus();
+            assert_eq!(read(&mut dev, REG_CANINTF, 1)[0] & CANINTF_RX0IF, 0);
+            write(&mut dev, REG_CANCTRL, &[0x00]);
+            dev.poll_external_bus();
+            assert_eq!(read(&mut dev, REG_RXB0SIDH + 5, 1), [inactive_mode]);
+            transaction(&mut dev, &[0x90]);
+            dev.poll_external_bus();
+            assert_eq!(read(&mut dev, REG_CANINTF, 1)[0] & CANINTF_RX0IF, 0);
+        }
+    }
+
+    #[test]
+    fn listen_only_receives_external_frames_but_never_transmits() {
+        let mut bus = CanBus::new();
+        let (mcp_tx, mcp_rx) = bus.attach();
+        let (peer_tx, peer_rx) = bus.attach();
+        let mut dev = Mcp2515::new("PA4");
+        dev.attach_can_bus(mcp_tx, mcp_rx).unwrap();
+        configure_500k_normal(&mut dev);
+        write(&mut dev, REG_RXB0CTRL, &[0x60]);
+        write(&mut dev, REG_CANCTRL, &[0x60]);
+        transaction(&mut dev, &[0x40, 0x24, 0x60, 0, 0, 1, 0xAA]);
+        transaction(&mut dev, &[0x81]);
+        peer_tx.send(CanFrame::classic(0x456, vec![0xBB])).unwrap();
+        bus.tick().unwrap();
+
+        dev.poll_external_bus();
+        bus.tick().unwrap();
+        assert_eq!(read(&mut dev, REG_RXB0SIDH + 5, 1), [0xBB]);
+        assert!(peer_rx.try_recv().is_err());
+        assert_ne!(read(&mut dev, REG_TXB0CTRL, 1)[0] & TXREQ, 0);
+    }
+
+    #[test]
+    fn remote_tx_is_retained_without_emitting_or_signaling_success() {
+        let mut bus = CanBus::new();
+        let (mcp_tx, mcp_rx) = bus.attach();
+        let (_peer_tx, peer_rx) = bus.attach();
+        let mut dev = Mcp2515::new("PA4");
+        dev.attach_can_bus(mcp_tx, mcp_rx).unwrap();
+        configure_500k_normal(&mut dev);
+        transaction(&mut dev, &[0x40, 0x24, 0x60, 0, 0, 0x41, 0xAA]);
+        transaction(&mut dev, &[0x81]);
+
+        dev.poll_external_bus();
+        bus.tick().unwrap();
+
+        assert!(peer_rx.try_recv().is_err());
+        assert_ne!(read(&mut dev, REG_TXB0CTRL, 1)[0] & TXREQ, 0);
+        assert_eq!(read(&mut dev, REG_CANINTF, 1)[0] & CANINTF_TX0IF, 0);
+    }
+
+    #[test]
+    fn overflow_sets_errif_and_enabled_error_irq_until_flag_clear() {
+        let mut dev = Mcp2515::new("PA4");
+        write(&mut dev, REG_RXB0CTRL, &[0x64]);
+        write(&mut dev, REG_RXB1CTRL, &[0x60]);
+        write(&mut dev, REG_CANINTE, &[0x20]);
+        inject(&mut dev, CanFrame::classic(0x100, vec![1]));
+        inject(&mut dev, CanFrame::classic(0x101, vec![2]));
+        inject(&mut dev, CanFrame::classic(0x102, vec![3]));
+
+        assert_eq!(read(&mut dev, REG_EFLG, 1)[0] & 0xC0, 0xC0);
+        assert_eq!(read(&mut dev, REG_CANINTF, 1)[0] & 0x20, 0x20);
+        assert!(dev.irq_asserted());
+        transaction(&mut dev, &[INST_BITMOD, REG_CANINTF, 0x20, 0]);
+        assert!(!dev.irq_asserted());
+        assert_eq!(read(&mut dev, REG_EFLG, 1)[0] & 0xC0, 0xC0);
     }
 
     #[test]
@@ -859,6 +960,7 @@ mod tests {
     #[test]
     fn external_poll_drains_fifo_and_ignores_unsupported_frame_kinds() {
         let mut dev = Mcp2515::new("PA4");
+        configure_500k_normal(&mut dev);
         write_standard_id(&mut dev, 0x20, 0x7FF);
         write_standard_id(&mut dev, 0x24, 0x7FF);
         write_standard_id(&mut dev, 0x00, 0x101);
