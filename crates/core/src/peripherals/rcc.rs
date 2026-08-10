@@ -356,7 +356,7 @@ impl RccModel for F4Rcc {
 /// six-offset block moves between families, so only it is a table.
 ///
 /// Keeping it a table rather than forking `V2Rcc` matters for more than
-/// tidiness: [`Rcc::enable_reg_offset`] — which resolves a peripheral's
+/// tidiness: [`Rcc::rcc_reg_offset`] — which resolves a peripheral's
 /// `clock: { reg }` gate — reads the SAME table the register decode does, so
 /// the gate and the decode cannot drift onto different offsets. That drift is
 /// exactly the defect this type is being fixed for.
@@ -1556,17 +1556,45 @@ impl Rcc {
         }
     }
 
-    /// Resolve a symbolic clock-enable register name (e.g. "apb1enr",
-    /// "apb2enr", "ahbenr", "ahb2enr") to its byte offset within THIS chip
-    /// family's RCC register map. Returns `None` for an unknown name on the
-    /// active family. The offsets deliberately differ between families
-    /// (F1 apb1enr@0x1C vs L4 apb1enr@0x58), which is exactly why this lives
-    /// on the family-aware model rather than in the bus.
+    /// Resolve a symbolic RCC register name to its byte offset within THIS chip
+    /// family's RCC register map. Returns `None` for a name the active family
+    /// does not have. The offsets deliberately differ between families
+    /// (F1 apb1enr@0x1C vs L4 apb1enr@0x58; L0 crrcr@0x08 vs WB crrcr@0x98),
+    /// which is exactly why this lives on the family-aware model rather than in
+    /// the bus.
     ///
-    /// Used by the bus to map a peripheral's `clock: { reg, bit }` declaration
-    /// onto the real RCC register it must read for the gate check.
-    pub fn enable_reg_offset(&self, reg: &str) -> Option<u64> {
+    /// Used by the bus to map a peripheral's `clock:` declaration onto the real
+    /// RCC registers it must read for the gate check
+    /// ([`crate::bus::SystemBus::is_peripheral_clocked`]).
+    ///
+    /// Two kinds of name resolve here, because silicon withholds a peripheral's
+    /// clock for two kinds of reason:
+    ///
+    /// * **peripheral-enable registers** — "ahbenr", "apb1enr", "apb2enr", … —
+    ///   the bus clock gate;
+    /// * **clock-source registers** — "cr", "crrcr", … — for a peripheral fed by
+    ///   its own kernel clock, whose *ready* bit says the source is actually
+    ///   running (the STM32L0 RNG is dead without HSI48 regardless of
+    ///   AHBENR.RNGEN).
+    ///
+    /// Source-register names are added per family only where the offset is
+    /// sourced from the vendor SVD vendored in `tests/fixtures/real_world/`; an
+    /// unsourced family returns `None`, which the bus turns into a loud config
+    /// error rather than a gate that silently never fires.
+    pub fn rcc_reg_offset(&self, reg: &str) -> Option<u64> {
         let r = reg.trim().to_ascii_lowercase();
+        // Clock-SOURCE registers, per family. Enable registers follow below.
+        match (self, r.as_str()) {
+            // L0: CR@0x00, CRRCR@0x08 (HSI48ON bit0 → HSI48RDY bit1).
+            // tests/fixtures/real_world/stm32l073.svd.
+            (Self::Stm32L0(_), "cr") => return Some(0x00),
+            (Self::Stm32L0(_), "crrcr") => return Some(0x08),
+            // V2 (WB/WBA/H5-shaped): CR@0x00, CRRCR@0x98 (HSI48ON bit0 →
+            // HSI48RDY bit1). tests/fixtures/real_world/stm32wb55.svd.
+            (Self::Stm32V2(_), "cr") => return Some(0x00),
+            (Self::Stm32V2(_), "crrcr") => return Some(0x98),
+            _ => {}
+        }
         match self {
             // F1: AHBENR@0x14, APB2ENR@0x18, APB1ENR@0x1C (RM0008 §7.3).
             Self::Stm32F1(_) => match r.as_str() {
@@ -1716,7 +1744,7 @@ impl crate::Peripheral for Rcc {
     }
 
     // Exposed so the bus can resolve a peripheral's symbolic clock-gate register
-    // name to a concrete offset via the family-aware `enable_reg_offset`.
+    // name to a concrete offset via the family-aware `rcc_reg_offset`.
     fn as_any(&self) -> Option<&dyn std::any::Any> {
         Some(self)
     }
@@ -1930,10 +1958,10 @@ mod tests {
 
         // The gate resolver and the register decode must agree, and both must
         // agree with the SVD.
-        assert_eq!(rcc.enable_reg_offset("ahb2enr"), Some(0x4C));
-        assert_eq!(rcc.enable_reg_offset("apb1enr"), Some(0x58));
-        assert_eq!(rcc.enable_reg_offset("apb1enr1"), Some(0x58));
-        assert_eq!(rcc.enable_reg_offset("apb2enr"), Some(0x60));
+        assert_eq!(rcc.rcc_reg_offset("ahb2enr"), Some(0x4C));
+        assert_eq!(rcc.rcc_reg_offset("apb1enr"), Some(0x58));
+        assert_eq!(rcc.rcc_reg_offset("apb1enr1"), Some(0x58));
+        assert_eq!(rcc.rcc_reg_offset("apb2enr"), Some(0x60));
 
         for (off, val) in [
             (0x4Cu64, 0x0002_00F0u32),
@@ -1969,35 +1997,31 @@ mod tests {
     #[test]
     fn test_rcc_v2_h5_placement_unchanged() {
         let rcc = Rcc::new_with_layout(RccRegisterLayout::Stm32V2);
-        assert_eq!(rcc.enable_reg_offset("ahb2enr"), Some(0x8C));
-        assert_eq!(rcc.enable_reg_offset("apb1enr"), Some(0x9C));
-        assert_eq!(rcc.enable_reg_offset("apb2enr"), Some(0xA4));
+        assert_eq!(rcc.rcc_reg_offset("ahb2enr"), Some(0x8C));
+        assert_eq!(rcc.rcc_reg_offset("apb1enr"), Some(0x9C));
+        assert_eq!(rcc.rcc_reg_offset("apb2enr"), Some(0xA4));
     }
 
     /// G4 (RM0440) puts the enable registers at the L4 offsets — APB1ENR1@0x58,
     /// AHB2ENR@0x4C, APB2ENR@0x60 — NOT the H5-style V2 slots (0x9C/0x8C/0xA4).
-    /// The clock-gate check resolves `clock: { reg }` through `enable_reg_offset`,
+    /// The clock-gate check resolves `clock: { reg }` through `rcc_reg_offset`,
     /// so a wrong offset here silently ungates every I2C1/TIM2 access.
     #[test]
     fn test_rcc_g4_offsets() {
         let rcc = Rcc::new_with_layout(RccRegisterLayout::Stm32G4);
         assert_eq!(
-            rcc.enable_reg_offset("apb1enr"),
+            rcc.rcc_reg_offset("apb1enr"),
             Some(0x58),
             "APB1ENR1 (I2C1EN/TIM2EN)"
         );
-        assert_eq!(rcc.enable_reg_offset("apb1enr1"), Some(0x58));
+        assert_eq!(rcc.rcc_reg_offset("apb1enr1"), Some(0x58));
+        assert_eq!(rcc.rcc_reg_offset("ahb2enr"), Some(0x4C), "AHB2ENR (ADC12)");
         assert_eq!(
-            rcc.enable_reg_offset("ahb2enr"),
-            Some(0x4C),
-            "AHB2ENR (ADC12)"
-        );
-        assert_eq!(
-            rcc.enable_reg_offset("apb2enr"),
+            rcc.rcc_reg_offset("apb2enr"),
             Some(0x60),
             "APB2ENR (TIM1/SPI1)"
         );
-        assert_eq!(rcc.enable_reg_offset("ahb1enr"), Some(0x48));
+        assert_eq!(rcc.rcc_reg_offset("ahb1enr"), Some(0x48));
 
         // The V2 (H5-style) slots must NOT be the enable registers on G4 — a
         // write there is inert storage, proving the two layouts stay apart.

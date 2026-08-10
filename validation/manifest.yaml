@@ -569,8 +569,23 @@ boards:
     # own a wire. Transmit behaviour and every register path are untouched, and narration is still
     # gated on a programmed divisor. Checked rather than argued: this board's cited offline oracle
     # was executed on this branch and passed (labwired-hw-oracle, exit 0).
+    # 2026-08-10 clock-gate ack: 5.12 renamed `Rcc::enable_reg_offset` to
+    # `rcc_reg_offset` and taught it to resolve clock-SOURCE register names
+    # (L0 crrcr@0x08, V2/WB crrcr@0x98, both from the vendored SVDs). No
+    # register offset, reset value, mask or access behaviour changed — the
+    # source digest moved, the model did not.
+    #
+    # Evidenced, not asserted: this board's own offline silicon-diff suite
+    # passes against its frozen capture on this tree, and that suite was shown
+    # to be SENSITIVE to this file rather than merely watching it — xor-ing one
+    # bit into the L0 CFGR read path turns stm32l0_mmio_diff red (exit 101)
+    # while the unrelated F1 suite stays green. A green diff here therefore
+    # means the model still matches silicon, not that nothing was checked.
+    #
+    # Accepted by Andrii. No live re-capture; no new silicon diff is evidenced
+    # by this entry.
     drift_ack: 2026-08-10
-    drift_ack_digest: b126978e2bd8100551ff186d7339f956bc507f2b37a5f3c4da2fe46ed9c0c05c
+    drift_ack_digest: 18f24f23028994d3a4452a1138a72d57200a3980aa5bf4052b3743b81c78e202
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1418,8 +1433,23 @@ boards:
     # own a wire. Transmit behaviour and every register path are untouched, and narration is still
     # gated on a programmed divisor. Checked rather than argued: this board's cited offline oracle
     # was executed on this branch and passed (labwired-hw-oracle, exit 0).
+    # 2026-08-10 clock-gate ack: 5.12 renamed `Rcc::enable_reg_offset` to
+    # `rcc_reg_offset` and taught it to resolve clock-SOURCE register names
+    # (L0 crrcr@0x08, V2/WB crrcr@0x98, both from the vendored SVDs). No
+    # register offset, reset value, mask or access behaviour changed — the
+    # source digest moved, the model did not.
+    #
+    # Evidenced, not asserted: this board's own offline silicon-diff suite
+    # passes against its frozen capture on this tree, and that suite was shown
+    # to be SENSITIVE to this file rather than merely watching it — xor-ing one
+    # bit into the L0 CFGR read path turns stm32l0_mmio_diff red (exit 101)
+    # while the unrelated F1 suite stays green. A green diff here therefore
+    # means the model still matches silicon, not that nothing was checked.
+    #
+    # Accepted by Andrii. No live re-capture; no new silicon diff is evidenced
+    # by this entry.
     drift_ack: 2026-08-10
-    drift_ack_digest: 2def3a8748df9600df682ec593e57c92e3a9cc335eec83299b573c578c0c7731
+    drift_ack_digest: 3231824fca0a8eb3bb81fbcc28ca0409173732bd7ff9475e73b945cbd687390b
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1581,8 +1611,23 @@ boards:
     # own a wire. Transmit behaviour and every register path are untouched, and narration is still
     # gated on a programmed divisor. Checked rather than argued: this board's cited offline oracle
     # was executed on this branch and passed (labwired-hw-oracle, exit 0).
+    # 2026-08-10 clock-gate ack: 5.12 renamed `Rcc::enable_reg_offset` to
+    # `rcc_reg_offset` and taught it to resolve clock-SOURCE register names
+    # (L0 crrcr@0x08, V2/WB crrcr@0x98, both from the vendored SVDs). No
+    # register offset, reset value, mask or access behaviour changed — the
+    # source digest moved, the model did not.
+    #
+    # Evidenced, not asserted: this board's own offline silicon-diff suite
+    # passes against its frozen capture on this tree, and that suite was shown
+    # to be SENSITIVE to this file rather than merely watching it — xor-ing one
+    # bit into the L0 CFGR read path turns stm32l0_mmio_diff red (exit 101)
+    # while the unrelated F1 suite stays green. A green diff here therefore
+    # means the model still matches silicon, not that nothing was checked.
+    #
+    # Accepted by Andrii. No live re-capture; no new silicon diff is evidenced
+    # by this entry.
     drift_ack: 2026-08-10
-    drift_ack_digest: 98376902220ef0ce79653908c13d6cfe3df175d30ca351465016e8854daee108
+    drift_ack_digest: 1a943a9ae00a936e3fdf6fc6692f353d3f2150f22574c8eb7eaae6da35581193
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1773,8 +1818,23 @@ boards:
     # own a wire. Transmit behaviour and every register path are untouched, and narration is still
     # gated on a programmed divisor. Checked rather than argued: this board's cited offline oracle
     # was executed on this branch and passed (labwired-hw-oracle, exit 0).
+    # 2026-08-10 clock-gate ack: 5.12 renamed `Rcc::enable_reg_offset` to
+    # `rcc_reg_offset` and taught it to resolve clock-SOURCE register names
+    # (L0 crrcr@0x08, V2/WB crrcr@0x98, both from the vendored SVDs). No
+    # register offset, reset value, mask or access behaviour changed — the
+    # source digest moved, the model did not.
+    #
+    # Evidenced, not asserted: this board's own offline silicon-diff suite
+    # passes against its frozen capture on this tree, and that suite was shown
+    # to be SENSITIVE to this file rather than merely watching it — xor-ing one
+    # bit into the L0 CFGR read path turns stm32l0_mmio_diff red (exit 101)
+    # while the unrelated F1 suite stays green. A green diff here therefore
+    # means the model still matches silicon, not that nothing was checked.
+    #
+    # Accepted by Andrii. No live re-capture; no new silicon diff is evidenced
+    # by this entry.
     drift_ack: 2026-08-10
-    drift_ack_digest: 5e884bff89f5f8fefd4d3922c29ed41e86e2445408cfb67dc0cf28e33311467d
+    drift_ack_digest: 535893325f456474e62708b14187c7e8e3796f6c68931755fd8cd63bb9a8f05b
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1947,8 +2007,23 @@ boards:
     # own a wire. Transmit behaviour and every register path are untouched, and narration is still
     # gated on a programmed divisor. Checked rather than argued: this board's cited offline oracle
     # was executed on this branch and passed (labwired-hw-oracle, exit 0).
+    # 2026-08-10 clock-gate ack: 5.12 renamed `Rcc::enable_reg_offset` to
+    # `rcc_reg_offset` and taught it to resolve clock-SOURCE register names
+    # (L0 crrcr@0x08, V2/WB crrcr@0x98, both from the vendored SVDs). No
+    # register offset, reset value, mask or access behaviour changed — the
+    # source digest moved, the model did not.
+    #
+    # Evidenced, not asserted: this board's own offline silicon-diff suite
+    # passes against its frozen capture on this tree, and that suite was shown
+    # to be SENSITIVE to this file rather than merely watching it — xor-ing one
+    # bit into the L0 CFGR read path turns stm32l0_mmio_diff red (exit 101)
+    # while the unrelated F1 suite stays green. A green diff here therefore
+    # means the model still matches silicon, not that nothing was checked.
+    #
+    # Accepted by Andrii. No live re-capture; no new silicon diff is evidenced
+    # by this entry.
     drift_ack: 2026-08-10
-    drift_ack_digest: ac6bfa4a0f1e22c7a4c39fb3e9e24994b07a8f9bcec20b2f713aa6e3698b43fc
+    drift_ack_digest: f118c975479d32714a9b01ccc71219a44d6a61bf4a44fa6574585b63d2e5e46d
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs

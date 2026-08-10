@@ -788,16 +788,19 @@ impl SystemBus {
         Ok(())
     }
 
-    /// Resolve every peripheral's optional `clock: { reg, bit }` declaration into
-    /// a concrete [`ResolvedClockGate`] (RCC register offset + bit). Run as a
-    /// post-pass by `from_config` after all peripherals — crucially the RCC —
-    /// are on the bus, so the symbolic `reg` name can be mapped to the active
-    /// chip family's RCC offset via [`Rcc::enable_reg_offset`] regardless of the
-    /// order peripherals appear in the config.
+    /// Resolve every peripheral's optional `clock:` declaration into a concrete
+    /// [`ResolvedClockGate`] — the list of live RCC (register offset, bit) pairs
+    /// that must all be set. Run as a post-pass by `from_config` after all
+    /// peripherals — crucially the RCC — are on the bus, so the symbolic `reg`
+    /// name can be mapped to the active chip family's RCC offset via
+    /// [`Rcc::rcc_reg_offset`] regardless of the order peripherals appear in the
+    /// config.
     ///
     /// A peripheral with no `clock` field is left ungated. A declared gate whose
     /// `reg` name the family doesn't recognise is a hard config error (a silent
-    /// "never gate" would mask a typo that lets unclocked firmware falsely pass).
+    /// "never gate" would mask a typo that lets unclocked firmware falsely pass),
+    /// and so is an empty list (a `clock: []` that gates nothing reads as a gate
+    /// but is a false pass waiting to happen).
     pub(crate) fn resolve_clock_gates(
         &mut self,
         peripherals: &[labwired_config::PeripheralConfig],
@@ -809,26 +812,39 @@ impl SystemBus {
                 .dev
                 .as_any()
                 .and_then(|a| a.downcast_ref::<crate::peripherals::rcc::Rcc>())
-                .and_then(|rcc| rcc.enable_reg_offset(reg))
+                .and_then(|rcc| rcc.rcc_reg_offset(reg))
         };
         for p_cfg in peripherals {
-            let Some(gate) = &p_cfg.clock else { continue };
+            let Some(gates) = &p_cfg.clock else { continue };
             let Some(idx) = self.find_peripheral_index_by_name(&p_cfg.id) else {
                 continue;
             };
-            let Some(reg_offset) = rcc_off(self, &gate.reg) else {
+            let declared = gates.as_slice();
+            if declared.is_empty() {
                 return Err(anyhow::anyhow!(
-                    "peripheral '{}' declares clock gate reg '{}' which the chip's \
-                     RCC model does not expose (no such enable register, or no RCC \
-                     peripheral is registered)",
-                    p_cfg.id,
-                    gate.reg
+                    "peripheral '{}' declares an empty clock gate; a gate that \
+                     requires nothing gates nothing — drop the `clock:` key or \
+                     list the RCC bits the peripheral really needs",
+                    p_cfg.id
                 ));
-            };
-            self.peripherals[idx].clock_gate = Some(ResolvedClockGate {
-                reg_offset,
-                bit: gate.bit,
-            });
+            }
+            let mut requires = Vec::with_capacity(declared.len());
+            for gate in declared {
+                let Some(reg_offset) = rcc_off(self, &gate.reg) else {
+                    return Err(anyhow::anyhow!(
+                        "peripheral '{}' declares clock gate reg '{}' which the chip's \
+                         RCC model does not expose (no such register on this family, \
+                         or no RCC peripheral is registered)",
+                        p_cfg.id,
+                        gate.reg
+                    ));
+                };
+                requires.push(RccClockBit {
+                    reg_offset,
+                    bit: gate.bit,
+                });
+            }
+            self.peripherals[idx].clock_gate = Some(ResolvedClockGate { requires });
         }
         Ok(())
     }
