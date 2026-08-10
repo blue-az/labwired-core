@@ -81,8 +81,11 @@ const OFF_PSEL_TXD: u64 = 0x50C;
 const OFF_PSEL_CTS: u64 = 0x510;
 const OFF_PSEL_RXD: u64 = 0x514;
 
-// BAUDRATE — reset value is BAUD_115200 = 0x01D7E000
+// BAUDRATE — silicon reset is Baud250000 = 0x0400_0000 (nRF52840 PS v1.11
+// §6.34.9.27 p847 for UARTE; same value on the legacy UART at p830).
 const OFF_BAUDRATE: u64 = 0x524;
+/// Silicon reset / documented `Baud250000` encoding.
+const BAUDRATE_RESET: u32 = 0x0400_0000;
 
 // RXD EasyDMA block
 const OFF_RXD_PTR: u64 = 0x534;
@@ -241,8 +244,8 @@ impl Nrf52Uarte {
             psel_txd: 0xFFFF_FFFF,
             psel_cts: 0xFFFF_FFFF,
             psel_rxd: 0xFFFF_FFFF,
-            // BAUDRATE reset: BAUD_115200
-            baudrate: 0x01D7_E000,
+            // BAUDRATE silicon reset: Baud250000 (PS v1.11 p847 / p830).
+            baudrate: BAUDRATE_RESET,
             // Default to console echo; capture sink attached on demand.
             echo_stdout: true,
             ..Self::default()
@@ -314,9 +317,9 @@ impl Nrf52Uarte {
     fn bit_time_cycles(&self) -> u64 {
         if self.baudrate == 0 {
             // A zero BAUDRATE transmits nothing on silicon. Nothing sane can be
-            // narrated from it; fall back to the reset rate rather than divide
-            // by zero or draw a waveform of zero-length bits.
-            return BIT_TIME_NUMERATOR / 0x01D7_E000;
+            // narrated from it; fall back to the silicon reset rate rather than
+            // divide by zero or draw a waveform of zero-length bits.
+            return BIT_TIME_NUMERATOR / u64::from(BAUDRATE_RESET);
         }
         (BIT_TIME_NUMERATOR / u64::from(self.baudrate)).max(2)
     }
@@ -990,9 +993,12 @@ mod tests {
         assert_eq!(u.read_u32(OFF_PSEL_RXD).unwrap(), 0xFFFF_FFFF);
     }
     #[test]
-    fn baudrate_reset_is_115200() {
+    fn baudrate_reset_is_baud250000() {
+        // nRF52840 PS v1.11 §6.34.9.27 p847 (UARTE) / p830 (UART): BAUDRATE
+        // resets to 0x0400_0000 (Baud250000), not 115200.
         let u = Nrf52Uarte::new();
-        assert_eq!(u.read_u32(OFF_BAUDRATE).unwrap(), 0x01D7_E000);
+        assert_eq!(u.read_u32(OFF_BAUDRATE).unwrap(), BAUDRATE_RESET);
+        assert_eq!(u.read_u32(OFF_BAUDRATE).unwrap(), 0x0400_0000);
     }
 
     #[test]

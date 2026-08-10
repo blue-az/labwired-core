@@ -266,12 +266,14 @@ impl crate::Bus for SystemBus {
                 self.sync_scheduler_peripheral(idx);
                 self.maybe_latch_dc(idx);
                 let c3_io_mux_capture = self.begin_esp32c3_io_mux_write(idx);
+                let rp_io_bank0_capture = self.begin_rp2040_io_bank0_write(idx);
                 let r = {
                     let p = &mut self.peripherals[idx];
                     p.dev.write(off, value)
                 };
                 if r.is_ok() {
                     self.finish_esp32c3_io_mux_write(c3_io_mux_capture);
+                    self.finish_rp2040_io_bank0_write(rp_io_bank0_capture);
                 }
                 self.maybe_arm_hcsr04(idx);
                 self.maybe_start_dht22(idx);
@@ -507,6 +509,7 @@ impl crate::Bus for SystemBus {
             self.sync_scheduler_peripheral(idx);
             self.maybe_latch_dc(idx);
             let c3_io_mux_capture = self.begin_esp32c3_io_mux_write(idx);
+            let rp_io_bank0_capture = self.begin_rp2040_io_bank0_write(idx);
             let r = {
                 let p = &mut self.peripherals[idx];
                 p.ticks_remaining = 0;
@@ -514,6 +517,7 @@ impl crate::Bus for SystemBus {
             };
             if r.is_ok() {
                 self.finish_esp32c3_io_mux_write(c3_io_mux_capture);
+                self.finish_rp2040_io_bank0_write(rp_io_bank0_capture);
             }
             self.maybe_arm_hcsr04(idx);
             self.maybe_start_dht22(idx);
@@ -608,6 +612,7 @@ impl crate::Bus for SystemBus {
             self.sync_scheduler_peripheral(idx);
             self.maybe_latch_dc(idx);
             let c3_io_mux_capture = self.begin_esp32c3_io_mux_write(idx);
+            let rp_io_bank0_capture = self.begin_rp2040_io_bank0_write(idx);
             let r = {
                 let p = &mut self.peripherals[idx];
                 p.ticks_remaining = 0;
@@ -615,6 +620,7 @@ impl crate::Bus for SystemBus {
             };
             if r.is_ok() {
                 self.finish_esp32c3_io_mux_write(c3_io_mux_capture);
+                self.finish_rp2040_io_bank0_write(rp_io_bank0_capture);
             }
             self.maybe_arm_hcsr04(idx);
             self.maybe_start_dht22(idx);

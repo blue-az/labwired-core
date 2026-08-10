@@ -548,17 +548,10 @@ fn rp2040_pico_lab_shows_uart_edges_on_gp0() {
 /// rebuilt: `RUSTFLAGS="-C link-arg=-Tlink.x" cargo build --release
 /// -p firmware-rp2040-demo --target thumbv6m-none-eabi`.
 ///
-/// ⚠️ ORDER MATTERS, and not for a reason this test invented. The probe is armed
-/// AFTER the firmware has muxed GP0, which is what the playground does —
-/// `watch_logic_signals` arms an analyzer on a sim that is already running.
-/// Arming it BEFORE binds the channel to the pad latch and it never rebinds:
-/// `Rp2040Sio::sync_pad_routes` runs only from `install_logic_tap` and from an
-/// SIO `GPIO_OUT`/`GPIO_OE` write, and this firmware touches neither after
-/// `uart0_init()`. Written the other way round this test failed with "0 edges"
-/// against firmware that was demonstrably transmitting (the console showed
-/// forty `RP2040_SMOKE_OK` lines). That is a real observability gap in the
-/// engine, recorded here rather than worked around silently; closing it is an
-/// engine change and out of this fix's scope.
+/// The probe is armed AFTER the firmware has muxed GP0 so this fixture stays
+/// independent of rebind timing. Arm-before-mux is covered by
+/// `probe_armed_before_funcsel_still_sees_uart_edges` in
+/// `rp2040_uart_waveform.rs` (IO_BANK0 FUNCSEL writes re-sync SIO pad routes).
 #[test]
 fn rp2040_demo_elf_puts_real_edges_on_gp0() {
     let mut machine = lab_machine("configs/systems/rp2040-pico.yaml");

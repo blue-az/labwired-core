@@ -928,6 +928,56 @@ impl SystemBus {
         }
     }
 
+    /// Bracket an RP2040 IO_BANK0 write with SIO push-capture re-sync.
+    ///
+    /// `GPIOn_CTRL.FUNCSEL` lives in IO_BANK0, not SIO. SIO owns the pad-route
+    /// table and the logic tap, and its local write hooks only fire on
+    /// `GPIO_OUT`/`GPIO_OE`. Without this bracket, a probe armed while FUNCSEL
+    /// is still NULL stays bound to the pad latch forever after firmware muxes
+    /// the pad to UART/SPI/I²C — the playground arms before firmware runs, so
+    /// that is the normal order. Mirrors [`Self::begin_esp32c3_io_mux_write`].
+    pub(crate) fn begin_rp2040_io_bank0_write(&mut self, io_bank0_idx: usize) -> Option<usize> {
+        use crate::peripherals::rp2040::io_bank0::Rp2040IoBank0;
+        use crate::peripherals::rp2040::sio::Rp2040Sio;
+
+        if !self.peripherals.get(io_bank0_idx).is_some_and(|p| {
+            p.dev
+                .as_any()
+                .map(|any| any.is::<Rp2040IoBank0>())
+                .unwrap_or(false)
+        }) {
+            return None;
+        }
+        let sio_idx = self.peripherals.iter().position(|p| {
+            p.dev
+                .as_any()
+                .map(|any| any.is::<Rp2040Sio>())
+                .unwrap_or(false)
+        })?;
+        self.peripherals[sio_idx]
+            .dev
+            .as_any_mut()
+            .and_then(|any| any.downcast_mut::<Rp2040Sio>())?
+            .tap_snapshot();
+        Some(sio_idx)
+    }
+
+    /// Complete a successful RP2040 IO_BANK0 write started by
+    /// [`Self::begin_rp2040_io_bank0_write`]: report any pad-level change and
+    /// re-register watched channels with the wires the new FUNCSEL selects.
+    pub(crate) fn finish_rp2040_io_bank0_write(&mut self, sio_idx: Option<usize>) {
+        let Some(sio_idx) = sio_idx else {
+            return;
+        };
+        if let Some(sio) = self.peripherals[sio_idx]
+            .dev
+            .as_any_mut()
+            .and_then(|any| any.downcast_mut::<crate::peripherals::rp2040::sio::Rp2040Sio>())
+        {
+            sio.tap_report();
+        }
+    }
+
     /// Wire the STM32 SPI bit engines' live SCK/MOSI/MISO levels into the
     /// STM32 GPIO ports, so pads whose MODER/AFR (V2) or CRL/CRH CNF (F1)
     /// route an SPI alternate function read the real waveform through
@@ -1391,14 +1441,8 @@ impl SystemBus {
         // re-checked against DS10198 (L476), DS10086 (F401) and DS14258 (H563)
         // and means the same thing on all three.
         //
-        // ⚠️ KNOWN GAP, shared with the I²C and SPI tables above: "V2 GPIO
-        // registers" is not the same claim as "V2 alternate-function map". The
-        // STM32L0 (stm32l073.yaml) carries stm32v2 GPIO but puts USART1/2 on
-        // AF4, so these AF7 rows are wrong for it in both directions — the real
-        // pads never route, and AF7 on PA2 is a comparator output that would
-        // now carry USART2's waveform. Closing it needs a per-family AF map
-        // keyed on something finer than the register layout; until then an L0
-        // lab must not trust a serial probe.
+        // V2 AF7 map for F4/L4/H5-class parts. STM32L0 is NOT this map: it
+        // carries V2 GPIO registers but puts USART on AF4 (see L0 table).
         const V2: &[(u8, char, u8, u8, usize, &str)] = &[
             (1, 'a', 9, 7, LINE_TX, "USART1_TX"),
             (1, 'b', 6, 7, LINE_TX, "USART1_TX"),
@@ -1408,6 +1452,19 @@ impl SystemBus {
             (3, 'c', 10, 7, LINE_TX, "USART3_TX"),
             (3, 'd', 8, 7, LINE_TX, "USART3_TX"),
         ];
+
+        // STM32L0 (stm32l073.yaml): V2 GPIO registers at IOPORT `0x5000_0000`,
+        // but USART alternate functions live on AF4, not AF7.
+        //
+        // Verified TX row (only — do not invent pads the datasheet was not
+        // read for):
+        //   PA2 = USART2_TX at AF4 — NUCLEO-L073RZ silicon AFRL=0x00004400
+        //   after bring-up (examples/nucleo-l073rz/VALIDATION.md); REQUIRED_DOCS
+        //   cites DS10685 "USART2 = AF4 on PA2/PA3". Hosted `labwired_datasheet`
+        //   was unavailable this session (session expired / corpus list has no
+        //   stm32l0 key in datasheet-sources.json), so further TX pads are
+        //   deliberately absent rather than guessed.
+        const L0: &[(u8, char, u8, u8, usize, &str)] = &[(2, 'a', 2, 4, LINE_TX, "USART2_TX")];
 
         // ── F1 GPIO (STM32F103) ─────────────────────────────────────────────
         //
@@ -1449,6 +1506,12 @@ impl SystemBus {
             (2, 'a', 2, LINE_TX, "USART2_TX"),
         ];
 
+        // L0 IOPORT base (RM0367 / stm32l073.yaml). F4/L4 GPIO lives at
+        // 0x4800_0000; matching the V2 register layout alone cannot pick AF4.
+        let is_stm32l0 = self
+            .find_peripheral_index_by_name("gpioa")
+            .is_some_and(|idx| self.peripherals[idx].base == 0x5000_0000);
+
         for instance in 1u8..=3 {
             // Chip configs name these both ways — `uart2` on the L4/F1 configs,
             // `usart2` on the G4. Looking up both is what stops a rename in one
@@ -1476,7 +1539,8 @@ impl SystemBus {
                 };
                 match gpio_layout {
                     GpioRegisterLayout::Stm32V2 => {
-                        for &(inst, p, pin, af, line, func) in V2 {
+                        let table = if is_stm32l0 { L0 } else { V2 };
+                        for &(inst, p, pin, af, line, func) in table {
                             if inst == instance && p == port {
                                 plan.push((port, pin, Some(af), line, func));
                             }
