@@ -157,6 +157,16 @@ pub struct Esp32Uart {
     /// nothing else does. Changing either is what wedged classic ESP32 in the
     /// browser once already — see the note in `configure_xtensa_esp32`.
     clock: Option<CycleClock>,
+    /// A HANDLE to the same TX/RX wire cell `UartCore::lines` owns — not a
+    /// second home for it.
+    ///
+    /// It exists because the cell lives behind the core's `Mutex` (the APB and
+    /// AHB windows are two doors onto one UART), and a
+    /// [`Peripheral::wire_lines`](crate::Peripheral::wire_lines) reference
+    /// cannot be handed out from inside a `MutexGuard`. Set in exactly one
+    /// place, [`Self::pad_lines_arc`], from the very `Arc` that call returns,
+    /// so the two can never point at different cells.
+    wire: Option<Arc<PadLines>>,
 }
 
 /// AHB-bus FIFO alias (`UART_FIFO_AHB_REG(i)`). Write-only TX push into the
@@ -212,6 +222,7 @@ impl Esp32Uart {
             echo_stdout,
             source_id,
             clock: None,
+            wire: None,
         }
     }
 
@@ -225,9 +236,13 @@ impl Esp32Uart {
     /// byte, into a wire nothing reads.
     pub(crate) fn pad_lines_arc(&mut self) -> Arc<PadLines> {
         let mut core = self.core.lock().unwrap();
-        core.lines
+        let lines = core
+            .lines
             .get_or_insert_with(|| Arc::new(PadLines::new(UART_LINES, &[true, true])))
-            .clone()
+            .clone();
+        drop(core);
+        self.wire = Some(lines.clone());
+        lines
     }
 
     /// AHB FIFO window paired with this APB UART (same FIFO/sink/state).
@@ -436,6 +451,14 @@ impl UartCore {
 }
 
 impl Peripheral for Esp32Uart {
+    fn line_names(&self) -> &'static [&'static str] {
+        UART_LINES
+    }
+
+    fn wire_lines(&self) -> Option<&PadLines> {
+        self.wire.as_deref()
+    }
+
     fn bus_trace_handle(&self) -> Option<crate::bus::bus_trace::BusTrace> {
         Some(self.core.lock().unwrap().trace.clone())
     }

@@ -688,6 +688,14 @@ impl Nrf52Twim {
 }
 
 impl Peripheral for Nrf52Twim {
+    fn line_names(&self) -> &'static [&'static str] {
+        TWIM_LINES
+    }
+
+    fn wire_lines(&self) -> Option<&PadLines> {
+        self.lines.as_deref()
+    }
+
     // Byte-granularity read/write are required to satisfy the Peripheral trait,
     // but nRF52 firmware always uses 32-bit STR/LDR for peripheral access.
     // We satisfy the trait minimally and rely on read_u32 / write_u32.

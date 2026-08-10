@@ -745,6 +745,14 @@ impl std::fmt::Debug for Esp32c3I2c {
 }
 
 impl Peripheral for Esp32c3I2c {
+    fn line_names(&self) -> &'static [&'static str] {
+        I2C_LINES
+    }
+
+    fn wire_lines(&self) -> Option<&PadLines> {
+        self.lines.as_ref().map(|levels| &**levels.pad_lines())
+    }
+
     fn read(&self, _offset: u64) -> SimResult<u8> {
         // Byte reads aren't used by esp-hal's I2C driver; route everything
         // through read_u32. Returning 0 for stray byte reads is harmless.

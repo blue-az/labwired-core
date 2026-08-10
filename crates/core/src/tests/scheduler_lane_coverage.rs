@@ -16,6 +16,14 @@
 //! lane that does not pass the feature therefore does not merely skip the file:
 //! it reports it GREEN.
 //!
+//! **That last sentence is now false, deliberately.** Every file in this set
+//! carries a `[[test]] required-features` block, so cargo SKIPS the target
+//! instead of faking a pass, and a bare `--test <name>` is a hard error. That
+//! contract is enforced across the whole workspace by
+//! `no_vacuous_test_targets.rs`. It closes the "reports GREEN" half. This file
+//! still owns the other half — **which lane actually runs it** — and that half
+//! has no mechanical fix.
+//!
 //! The only lane that ran all of them was `core-full`, which is
 //! schedule/dispatch/`[full-ci]` only — not push, not PR. So a fidelity
 //! regression could land on `main` with every required check green and stay

@@ -340,6 +340,14 @@ impl F1I2c {
             .clone()
     }
 
+    /// The wire this controller publishes, for a
+    /// [`LogicSource::Wire`](crate::logic_capture::LogicSource::Wire) channel.
+    /// `None` until a lab wires its pads, because that is when the cell is
+    /// created — the controller has nothing to show before then either.
+    pub(crate) fn wire_lines(&self) -> Option<&PadLines> {
+        self.lines.as_deref()
+    }
+
     /// Engine cycles in one SCL period, derived from CCR exactly as the legacy
     /// silicon derives it (RM0008 §26.6.8 / RM0090 §27.6.8, `I2C_CCR`):
     ///
@@ -974,6 +982,14 @@ impl L4I2c {
         self.lines
             .get_or_insert_with(|| std::sync::Arc::new(PadLines::new(I2C_LINES, &[true, true])))
             .clone()
+    }
+
+    /// The wire this controller publishes, for a
+    /// [`LogicSource::Wire`](crate::logic_capture::LogicSource::Wire) channel.
+    /// `None` until a lab wires its pads, because that is when the cell is
+    /// created — the controller has nothing to show before then either.
+    pub(crate) fn wire_lines(&self) -> Option<&PadLines> {
+        self.lines.as_deref()
     }
 
     /// Engine cycles in one SCL period, from TIMINGR — exactly the derivation
@@ -1887,6 +1903,23 @@ impl I2c {
 }
 
 impl crate::Peripheral for I2c {
+    fn line_names(&self) -> &'static [&'static str] {
+        match self {
+            // The Kinetis I2C model owns no narration cell, so it publishes no
+            // wire — an honest empty answer, not a guess at SCL/SDA.
+            Self::Stm32F1(_) | Self::Stm32L4(_) => I2C_LINES,
+            Self::Kinetis(_) => &[],
+        }
+    }
+
+    fn wire_lines(&self) -> Option<&PadLines> {
+        match self {
+            Self::Stm32F1(i) => i.wire_lines(),
+            Self::Stm32L4(i) => i.wire_lines(),
+            Self::Kinetis(_) => None,
+        }
+    }
+
     fn read(&self, offset: u64) -> SimResult<u8> {
         Ok(match self {
             Self::Stm32F1(i) => i.read(offset),
