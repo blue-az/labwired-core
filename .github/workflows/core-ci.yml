@@ -508,8 +508,16 @@ jobs:
       # the CLI and livelocked in the browser for as long as nobody ran a
       # browser-configuration lane. A gate nobody runs on PRs is a gate this
       # class walks back through.
+      #
+      # Run through `cargo-test-nonvacuous.sh`: under DEFAULT features this file
+      # is down to ONE test, and "one" and "zero" print the same colour. The
+      # wrapper asks the built binary how many tests it holds and fails on zero,
+      # so if a `#[cfg]` ever empties the structural arm this step says so
+      # instead of reporting `0 passed` as a pass.
       - name: Walk-deletion derivation (PR-fast structural arm)
-        run: cargo test -p labwired-core --test esp32_classic_walk_differential
+        run: >
+          scripts/ci/cargo-test-nonvacuous.sh
+          -p labwired-core --test esp32_classic_walk_differential
 
       # THE SHARED-MODEL NET THAT NEVER GATED A MERGE.
       #
@@ -668,7 +676,8 @@ jobs:
       # "was skipped" is the failure mode this job was added to remove.
       - name: Observable arm — classic-ESP32 serial reaches the sink (browser policy)
         run: >
-          cargo test -p labwired-core --features event-scheduler
+          scripts/ci/cargo-test-nonvacuous.sh
+          -p labwired-core --features event-scheduler
           --test esp32_classic_walk_differential -- --nocapture
 
       # SCHEDULER-ONLY FIDELITY LANES — the tests that no PR job could run.
@@ -703,9 +712,18 @@ jobs:
       # + `--features event-scheduler` is this job, and only this job. The fix
       # that took `live_event_ceiling_trips` from 3310 to 0 merged with nothing
       # asserting that number anywhere.
+      #
+      # `cargo-test-nonvacuous.sh`, not bare `cargo test`: every file below is
+      # `#![cfg(feature = "event-scheduler")]`, which is the exact shape that
+      # prints `test result: ok. 0 passed` and exits 0 when the feature is
+      # missing. The manifests now carry `required-features`, so cargo would
+      # refuse rather than fake it — the wrapper is the second lock, and it also
+      # catches the emptying this step could still suffer silently: a per-item
+      # `#[cfg]` or a deleted test leaving a binary with nothing in it.
       - name: Scheduler-only fidelity lanes (walk≡scheduler timing gates)
         run: >
-          cargo test -p labwired-core --features event-scheduler
+          scripts/ci/cargo-test-nonvacuous.sh
+          -p labwired-core --features event-scheduler
           --test esp32c3_bt_event_residency_gate
           --test nrf52_timer_walk_differential
           --test nrf52_easydma_tick512_fidelity
@@ -933,6 +951,32 @@ jobs:
         run: >
           cargo test -p labwired-hw-oracle
           --features labwired-core/event-scheduler
+
+      # HARDWARE-ONLY HARNESSES — COMPILED HERE, DELIBERATELY NOT RUN.
+      #
+      # `hw-oracle-nrf52` and `hw-oracle-stm32` gate ten integration files that
+      # drive a PHYSICAL nRF52840 / STM32F103 over ST-Link SWD (`OpenOcd`,
+      # `LABWIRED_STLINK_SERIAL`). No hosted runner has a board on it, so
+      # running them is not a throughput decision, it is impossible — that is
+      # the written reason this step is `--no-run`.
+      #
+      # Compiling them is NOT optional, and this is what it cost to learn:
+      # because no lane anywhere enabled either feature, rustc had never seen
+      # these files, and FIVE of them had rotted into a hard compile error —
+      # `no method named write_u32 found for &mut SystemBus`, a lost
+      # `use labwired_core::Bus`, in nrf52_mmio_diff, nrf52_gpio_conformance,
+      # nrf52_onboarding_diff, nrf52_power_conformance,
+      # nrf52_full_register_conformance and nrf52_timer_rtc_conformance. The
+      # bring-up harness for a whole chip family was unbuildable and nothing
+      # said so, exactly as `crates/core/tests/event_scheduler.rs` rotted behind
+      # `cfg(not(debug_assertions))` until the release lane above existed.
+      #
+      # The crate is small and its dependency graph is already warm from the
+      # step above, so this is seconds.
+      - name: Compile-only — hardware-oracle harnesses (nRF52 / STM32 over SWD)
+        run: >
+          cargo test -p labwired-hw-oracle
+          --features hw-oracle-nrf52,hw-oracle-stm32 --no-run
 
   # ── CI runner OCI smoke (NOT a PR required check) ──────────────────────────
   ci-runner-image:

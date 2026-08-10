@@ -35,6 +35,8 @@ pub mod esp_spi_uart_waveform;
 #[cfg(test)]
 pub mod machine_advance;
 #[cfg(test)]
+pub mod no_vacuous_test_targets;
+#[cfg(test)]
 pub mod nrf52;
 pub mod nrf52_nvmc;
 #[cfg(test)]
