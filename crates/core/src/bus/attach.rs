@@ -1506,12 +1506,6 @@ impl SystemBus {
             (2, 'a', 2, LINE_TX, "USART2_TX"),
         ];
 
-        // L0 IOPORT base (RM0367 / stm32l073.yaml). F4/L4 GPIO lives at
-        // 0x4800_0000; matching the V2 register layout alone cannot pick AF4.
-        let is_stm32l0 = self
-            .find_peripheral_index_by_name("gpioa")
-            .is_some_and(|idx| self.peripherals[idx].base == 0x5000_0000);
-
         for instance in 1u8..=3 {
             // Chip configs name these both ways — `uart2` on the L4/F1 configs,
             // `usart2` on the G4. Looking up both is what stops a rename in one
@@ -1529,9 +1523,13 @@ impl SystemBus {
             // must not reach `pad_lines_arc` at all.
             let mut plan: Vec<(char, u8, Option<u8>, usize, &'static str)> = Vec::new();
             for port in ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] {
-                let Some(gpio_layout) = self
-                    .find_peripheral_index_by_name(&format!("gpio{port}"))
-                    .and_then(|idx| self.peripherals[idx].dev.as_any())
+                let Some(gpio_idx) = self.find_peripheral_index_by_name(&format!("gpio{port}"))
+                else {
+                    continue;
+                };
+                let Some(gpio_layout) = self.peripherals[gpio_idx]
+                    .dev
+                    .as_any()
                     .and_then(|a| a.downcast_ref::<GpioPort>())
                     .map(GpioPort::register_layout)
                 else {
@@ -1539,7 +1537,17 @@ impl SystemBus {
                 };
                 match gpio_layout {
                     GpioRegisterLayout::Stm32V2 => {
-                        let table = if is_stm32l0 { L0 } else { V2 };
+                        // AF map is per GPIO *window*, not a chip-wide flag.
+                        // L0 IOPORT bank is 0x5000_xxxx (stm32l073.yaml);
+                        // F4/L4/H5 AHB2 GPIO is 0x4800_xxxx. Matching the V2
+                        // register layout alone would install AF7 on an L0 pad
+                        // and the AF4 firmware nibble would never resolve.
+                        let base = self.peripherals[gpio_idx].base;
+                        let table = if (0x5000_0000..0x5001_0000).contains(&base) {
+                            L0
+                        } else {
+                            V2
+                        };
                         for &(inst, p, pin, af, line, func) in table {
                             if inst == instance && p == port {
                                 plan.push((port, pin, Some(af), line, func));

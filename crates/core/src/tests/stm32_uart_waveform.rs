@@ -268,32 +268,50 @@ mod stm32_uart_waveform_tests {
         );
     }
 
-    /// STM32L0 puts USART2_TX on PA2 at **AF4**, not AF7. Detect L0 by the
-    /// IOPORT GPIO base `0x5000_0000` (stm32l073.yaml) and bind AF4; the
-    /// generic V2 table's AF7 rows leave the pad on the idle latch.
+    /// STM32L0 puts USART2_TX on PA2 at **AF4**, not AF7. `wire_stm32_uart_pads`
+    /// selects the AF table from each GPIO port's MMIO base: the L0 IOPORT bank
+    /// is `0x5000_xxxx` (stm32l073.yaml); F4/L4/H5 AHB2 GPIO is `0x4800_xxxx`.
+    /// An AF7-only V2 table leaves an L0 pad on the GPIO latch while USART TX
+    /// narrates on its wire.
     ///
-    /// `SystemBus::new` ships an F1-layout `gpioa` at `0x4001_0800`. A second
-    /// peripheral named `gpioa` is shadowed by name lookup — swap the default
-    /// device and rebase the window, same pattern as `stm32_spi_waveform`.
+    /// Built on [`SystemBus::empty`] so the default F1 `gpioa` at `0x4001_0800`
+    /// cannot shadow the L0 window by name (a second `gpioa` is invisible to
+    /// `find_peripheral_index_by_name` and to the wire planner).
     #[test]
     fn stm32l0_usart2_tx_on_pa2_af4_carries_a_decodable_waveform() {
+        use crate::memory::LinearMemory;
+
         const GPIOA_L0: u64 = 0x5000_0000;
         const USART2: u64 = 0x4000_4400;
         const PA2: u8 = 2;
         // Bit-asymmetric payload (not LSB-first palindromes like 0xA5/0x00).
         const PAYLOAD: &[u8] = b"Lw\x12\x34";
 
-        let mut bus = crate::bus::SystemBus::new();
+        let mut bus = crate::bus::SystemBus::empty();
+        bus.ram = LinearMemory::new(1024 * 1024, RAM_BASE);
         let (cpu, _nvic) = crate::system::cortex_m::configure_cortex_m(&mut bus);
-        let gpioa_idx = bus.find_peripheral_index_by_name("gpioa").unwrap();
-        bus.peripherals[gpioa_idx].base = GPIOA_L0;
-        bus.peripherals[gpioa_idx].size = 0x400;
-        bus.peripherals[gpioa_idx].dev =
-            Box::new(GpioPort::new_with_layout(GpioRegisterLayout::Stm32V2));
+        bus.add_peripheral(
+            "gpioa",
+            GPIOA_L0,
+            0x400,
+            None,
+            Box::new(GpioPort::new_with_layout(GpioRegisterLayout::Stm32V2)),
+        );
         let mut uart = Uart::new_with_layout(UartRegisterLayout::Stm32V2);
         uart.set_sink(None, false);
         bus.add_peripheral("uart2", USART2, 0x400, None, Box::new(uart));
         bus.wire_stm32_uart_pads();
+
+        assert_eq!(
+            bus.bound_pad_functions(),
+            vec!["USART2_TX"],
+            "L0 IOPORT base must install the AF4 USART2_TX route, not the AF7 V2 table",
+        );
+        assert_eq!(
+            bus.peripherals[bus.find_peripheral_index_by_name("gpioa").unwrap()].base,
+            GPIOA_L0,
+            "the only gpioa on this bus is the L0 window",
+        );
 
         let mut machine = Machine::new(cpu, bus);
         for i in 0..1022u64 {
@@ -316,6 +334,25 @@ mod stm32_uart_waveform_tests {
         machine.bus.write_u32(USART2 + BRR, USARTDIV).unwrap();
 
         let gpio_idx = machine.bus.find_peripheral_index_by_name("gpioa").unwrap();
+        // Pin down WHERE a failure is before arming: a wrong AF table shows up
+        // as a pad that never leaves the latch, which is indistinguishable from
+        // a MODER/AFRL write that landed on the wrong window.
+        assert_eq!(
+            machine.bus.read_u32(GPIOA_L0 + MODER).unwrap(),
+            0b10 << (PA2 * 2),
+            "MODER write must land on the L0 gpioa window",
+        );
+        assert_eq!(
+            machine.bus.read_u32(GPIOA_L0 + AFRL).unwrap(),
+            4 << (PA2 * 4),
+            "AFRL write must land on the L0 gpioa window",
+        );
+        assert_eq!(
+            machine.bus.peripherals[gpio_idx].dev.read_gpio_pad(PA2),
+            Some(true),
+            "AF4 route must already resolve the USART TX mark before arming",
+        );
+
         let initial = machine.logic_watch(&[Some(LogicSource::pad(gpio_idx, PA2))]);
         assert_eq!(
             initial,

@@ -457,3 +457,65 @@ fn the_same_named_wire_call_resolves_on_every_wired_family() {
         );
     }
 }
+
+/// The reason a frontend must ASK for the line vocabulary instead of encoding
+/// it: the vocabulary is not uniform and is not derivable from the protocol.
+///
+/// Chip select is the case that bites. Generic STM32 SPI publishes no select
+/// line at all, RP2040 spells it `CSn`, ESP GPSPI spells it `CS`. A probe menu
+/// that hardcodes `"CS"` therefore offers a lane that cannot resolve on two of
+/// those three, and the user sees an empty trace with no cause.
+///
+/// So `wire_surface()` is the single source of the vocabulary, and this test
+/// fails the moment a family's spelling moves out from under a caller.
+#[test]
+fn the_wire_surface_reports_each_familys_own_spelling_of_its_lines() {
+    for (chip, peripheral, expected) in [
+        ("esp32c3", "i2c0", &["SCL", "SDA"][..]),
+        ("rp2040", "i2c0", &["SCL", "SDA"][..]),
+        ("stm32l476", "uart5", &["TX", "RX"][..]),
+    ] {
+        let machine = machine_for(chip);
+        let surface = machine.wire_surface();
+        let found = surface
+            .iter()
+            .find(|(name, _)| *name == peripheral)
+            .unwrap_or_else(|| {
+                panic!(
+                    "{chip}: {peripheral} must appear in the wire surface; it holds {:?}",
+                    surface.iter().map(|(n, _)| *n).collect::<Vec<_>>(),
+                )
+            });
+        assert_eq!(
+            found.1, expected,
+            "{chip}: {peripheral} must publish its own spelling, not a guessed one",
+        );
+    }
+}
+
+/// Every peripheral the surface advertises must actually resolve by name.
+/// A menu built from this answer can then never offer a dead lane — which is
+/// the whole point of publishing it.
+#[test]
+fn every_line_the_wire_surface_advertises_resolves_by_name() {
+    for chip in ["esp32c3", "nrf52840", "rp2040", "stm32l476"] {
+        let machine = machine_for(chip);
+        let surface = machine.wire_surface();
+        assert!(
+            !surface.is_empty(),
+            "{chip}: a chip with wired buses must advertise at least one",
+        );
+        for (peripheral, lines) in surface {
+            assert!(
+                !lines.is_empty(),
+                "{chip}: {peripheral} is listed with no lines — it should not be listed",
+            );
+            for line in lines {
+                assert!(
+                    machine.resolve_wire_source(peripheral, line).is_ok(),
+                    "{chip}: {peripheral}.{line} is advertised but does not resolve",
+                );
+            }
+        }
+    }
+}
