@@ -37,6 +37,7 @@ mod stm32f1_bus_visibility_tests {
     use crate::bus::SystemBus;
     use crate::cpu::CortexM;
     use crate::logic_capture::LogicEdge;
+    use crate::logic_capture::LogicSource;
     use crate::peripherals::i2c::I2cDevice;
     use crate::peripherals::uart::Uart;
     use crate::{Bus, Machine};
@@ -260,7 +261,10 @@ mod stm32f1_bus_visibility_tests {
             .bus
             .find_peripheral_index_by_name("gpiob")
             .expect("gpiob registered by from_config");
-        machine.logic_watch(&[Some((gpiob, SCL_PIN)), Some((gpiob, SDA_PIN))]);
+        machine.logic_watch(&[
+            Some(LogicSource::pad(gpiob, SCL_PIN)),
+            Some(LogicSource::pad(gpiob, SDA_PIN)),
+        ]);
     }
 
     /// Spin the CPU until `flag` shows up in SR1, so the narration has real
@@ -415,9 +419,9 @@ mod stm32f1_bus_visibility_tests {
             .expect("gpiob registered by from_config");
         assert_eq!(
             machine.logic_watch(&[
-                Some((gpiob, SCL_PIN)),
-                Some((gpiob, SDA_PIN)),
-                Some((gpiob, REMAP_SCL_PIN)),
+                Some(LogicSource::pad(gpiob, SCL_PIN)),
+                Some(LogicSource::pad(gpiob, SDA_PIN)),
+                Some(LogicSource::pad(gpiob, REMAP_SCL_PIN)),
             ]),
             // PB6/PB7: an idle open-drain bus, so high. PB8: no wire at all.
             vec![Some(true), Some(true), None],
@@ -441,7 +445,10 @@ mod stm32f1_bus_visibility_tests {
             .find_peripheral_index_by_name("gpiob")
             .expect("gpiob registered by from_config");
         assert_eq!(
-            machine.logic_watch(&[Some((gpiob, SCL_PIN)), Some((gpiob, SDA_PIN))]),
+            machine.logic_watch(&[
+                Some(LogicSource::pad(gpiob, SCL_PIN)),
+                Some(LogicSource::pad(gpiob, SDA_PIN))
+            ]),
             // PB6 falls back to the ODR latch (reset 0); PB7 is still AF.
             vec![Some(false), Some(true)],
             "CNF < 0b10 is not an alternate function, so PB6 must read its own \
@@ -593,7 +600,7 @@ mod stm32f1_bus_visibility_tests {
             .bus
             .find_peripheral_index_by_name("gpioa")
             .expect("gpioa registered by from_config");
-        machine.logic_watch(&[Some((gpioa, TX_PIN))]);
+        machine.logic_watch(&[Some(LogicSource::pad(gpioa, TX_PIN))]);
 
         for &byte in SERIAL_TEXT {
             machine.bus.write_u8(USART1_BASE + USART_DR, byte).unwrap();

@@ -181,6 +181,14 @@ impl EspSpiWire {
         self.lines.is_some()
     }
 
+    /// The wire this controller publishes, for a
+    /// [`LogicSource::Wire`](crate::logic_capture::LogicSource::Wire) channel.
+    /// `None` until a lab routes pads, because that is when the cell is
+    /// created and until then nothing is narrated into it either.
+    pub fn wire_lines(&self) -> Option<&PadLines> {
+        self.lines.as_deref()
+    }
+
     /// `true` while a burst is held and unpublished.
     pub fn is_pending(&self) -> bool {
         !self.words.is_empty()

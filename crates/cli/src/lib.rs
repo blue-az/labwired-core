@@ -1992,13 +1992,13 @@ fn execute_test_loop<C: labwired_core::Cpu>(
         if refs.is_empty() {
             Vec::new()
         } else {
-            let resolved: Vec<Option<(usize, u8)>> = refs
+            let resolved: Vec<Option<labwired_core::logic_capture::LogicSource>> = refs
                 .iter()
                 .map(|(name, pin)| {
                     machine
                         .bus
                         .find_peripheral_index_by_name(name)
-                        .map(|idx| (idx, *pin))
+                        .map(|idx| labwired_core::logic_capture::LogicSource::pad(idx, *pin))
                 })
                 .collect();
             for ((name, _), r) in refs.iter().zip(resolved.iter()) {

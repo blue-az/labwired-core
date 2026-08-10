@@ -238,8 +238,13 @@ boards:
     # expands to `()`, so every default build compiles to exactly the code that
     # was captured — the source digest moved, the model did not. Accepted by
     # Andrii without a live re-capture; no new silicon diff is evidenced here.
-    drift_ack: 2026-08-09
-    drift_ack_digest: 69cffb98c3ca11d3da3482ca6bab7ec2b81f33f2d0aaf3ff6ae0d65f65431eda
+    # 2026-08-10: rides the logic-analyzer wire-channel contract. This board's models gained ONLY
+    # the two additive accessors line_names() and wire_lines(); the diff across
+    # crates/core/src/peripherals/{nrf52,esp32c3,esp32s3,rp2040} is +72 lines and ZERO deletions, so
+    # no existing code path was altered. The source digest moved; the model did not. No live
+    # re-capture is evidenced here.
+    drift_ack: 2026-08-10
+    drift_ack_digest: 876e2d970d0ea3c63da53e6f81fcb2f2479a7faff2fea02b639f7fb9b5fee7f6
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -355,8 +360,13 @@ boards:
     # expands to `()`, so every default build compiles to exactly the code that
     # was captured — the source digest moved, the model did not. Accepted by
     # Andrii without a live re-capture; no new silicon diff is evidenced here.
-    drift_ack: 2026-08-09
-    drift_ack_digest: 69cffb98c3ca11d3da3482ca6bab7ec2b81f33f2d0aaf3ff6ae0d65f65431eda
+    # 2026-08-10: rides the logic-analyzer wire-channel contract. This board's models gained ONLY
+    # the two additive accessors line_names() and wire_lines(); the diff across
+    # crates/core/src/peripherals/{nrf52,esp32c3,esp32s3,rp2040} is +72 lines and ZERO deletions, so
+    # no existing code path was altered. The source digest moved; the model did not. No live
+    # re-capture is evidenced here.
+    drift_ack: 2026-08-10
+    drift_ack_digest: 876e2d970d0ea3c63da53e6f81fcb2f2479a7faff2fea02b639f7fb9b5fee7f6
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -553,8 +563,14 @@ boards:
     # selector, so no V2 pad row moved. Only the new (Stm32F1, Stm32F1) arm is new behaviour, and
     # this board does not take it. The source digest moved; this board's model did not. No live
     # re-capture is evidenced here.
-    drift_ack: 2026-08-09
-    drift_ack_digest: 337c43a97334788647b72c30e901233ac6015a32926a3361bbf4dc6ed18167fc
+    # 2026-08-10: rides the logic-analyzer wire-channel contract. Beyond the additive accessors, the
+    # generic crates/core/src/peripherals/uart.rs restructured its narration flush (-23 lines) and
+    # now creates a UART's wire cell at construction rather than at pad-wiring time, so UART4/UART5
+    # own a wire. Transmit behaviour and every register path are untouched, and narration is still
+    # gated on a programmed divisor. Checked rather than argued: this board's cited offline oracle
+    # was executed on this branch and passed (labwired-hw-oracle, exit 0).
+    drift_ack: 2026-08-10
+    drift_ack_digest: b126978e2bd8100551ff186d7339f956bc507f2b37a5f3c4da2fe46ed9c0c05c
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -593,6 +609,14 @@ boards:
       last_capture: 2026-08-09
       probe: "USB-JTAG (built-in) + openocd-esp32 v0.12.0-esp32-20260703, board MAC 9c:cc:01:d0:98:e0 (QFN32 rev v0.4)"
       result: "re-captured live 2026-08-09 on a SECOND physical C3 (MAC 9c:cc:01:d0:98:e0; the 2026-06-11 baseline came from 38:44:be:42:f5:58, same QFN32 rev v0.4) — cross-board corroboration, not a re-read of the same part. 1207 registers read in ONE state (21 estate windows + 43 control registers + the radio windows): 84/84 RESET_VALUES matched, 0 mismatched, and both FREE_RUNNING_COUNTERS windows mapped. Radio note: a JTAG `reset halt` on the C3 is a software CORE reset that does not cold-reset peripherals, so RADIO_FE/WIFI_MAC only read their cold baseline when no resident firmware has brought the PHY up — the board was temporarily flashed with crates/wasm/tests/fixtures/esp32c3-hello-world-flash.bin for the capture, then its original 4 MB image was restored and verified byte-identical (sha256 844abc88…8a910). Do NOT try to reach cold radio via RTC_CNTL SW_SYS_RST: it resets the USB-Serial-JTAG bridge too and drops the debug link mid-write (verified, LIBUSB_ERROR_IO). Artifacts: scripts/hw-oracle/captures/esp32c3/recapture-20260809T121824Z/."
+    # 2026-08-10: rides the logic-analyzer wire-channel contract. This board's models gained ONLY
+    # the two additive accessors line_names() and wire_lines() — the diff across
+    # crates/core/src/peripherals/{esp32c3,esp32s3} is +32 lines and ZERO deletions, so no existing
+    # code path was altered. Checked rather than argued: esp32c3_reset_conformance (2 passed) and
+    # esp32s3_reset_conformance (1 passed) were executed on this branch. The source digest moved;
+    # the model did not.
+    drift_ack: 2026-08-10
+    drift_ack_digest: 078c92aa3ef810a70d957c90e4b31a8db82e534a62c68b496fe4b242c5e0b312
     models:
       - crates/core/src/peripherals/esp32c3
       - crates/core/src/peripherals/esp_xtensa_common
@@ -1388,8 +1412,14 @@ boards:
     # selector, so no V2 pad row moved. Only the new (Stm32F1, Stm32F1) arm is new behaviour, and
     # this board does not take it. The source digest moved; this board's model did not. No live
     # re-capture is evidenced here.
-    drift_ack: 2026-08-09
-    drift_ack_digest: a7454c231df74d182fc530756e6c71d27f7acee4335861d791dc9971d4404cf0
+    # 2026-08-10: rides the logic-analyzer wire-channel contract. Beyond the additive accessors, the
+    # generic crates/core/src/peripherals/uart.rs restructured its narration flush (-23 lines) and
+    # now creates a UART's wire cell at construction rather than at pad-wiring time, so UART4/UART5
+    # own a wire. Transmit behaviour and every register path are untouched, and narration is still
+    # gated on a programmed divisor. Checked rather than argued: this board's cited offline oracle
+    # was executed on this branch and passed (labwired-hw-oracle, exit 0).
+    drift_ack: 2026-08-10
+    drift_ack_digest: 2def3a8748df9600df682ec593e57c92e3a9cc335eec83299b573c578c0c7731
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1545,8 +1575,14 @@ boards:
     # selector, so no V2 pad row moved. Only the new (Stm32F1, Stm32F1) arm is new behaviour, and
     # this board does not take it. The source digest moved; this board's model did not. No live
     # re-capture is evidenced here.
-    drift_ack: 2026-08-09
-    drift_ack_digest: bb3ed3ad607dbcde79f08704f9a364fb31d45400e684137925876ea9d10aea4e
+    # 2026-08-10: rides the logic-analyzer wire-channel contract. Beyond the additive accessors, the
+    # generic crates/core/src/peripherals/uart.rs restructured its narration flush (-23 lines) and
+    # now creates a UART's wire cell at construction rather than at pad-wiring time, so UART4/UART5
+    # own a wire. Transmit behaviour and every register path are untouched, and narration is still
+    # gated on a programmed divisor. Checked rather than argued: this board's cited offline oracle
+    # was executed on this branch and passed (labwired-hw-oracle, exit 0).
+    drift_ack: 2026-08-10
+    drift_ack_digest: 98376902220ef0ce79653908c13d6cfe3df175d30ca351465016e8854daee108
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1731,8 +1767,14 @@ boards:
     # exist before, so nothing that was visible changed. Register behaviour, the CRL/CRH decode and
     # the I2C/UART engines are untouched, so stm32f1_mmio_diff (102/102) and f103_conformance are
     # unaffected. Re-capture is tracked, not evidenced here.
-    drift_ack: 2026-08-09
-    drift_ack_digest: fd28ece61fad9df7726250391c03e8837421f037d83f1f16dbdba3c40531035c
+    # 2026-08-10: rides the logic-analyzer wire-channel contract. Beyond the additive accessors, the
+    # generic crates/core/src/peripherals/uart.rs restructured its narration flush (-23 lines) and
+    # now creates a UART's wire cell at construction rather than at pad-wiring time, so UART4/UART5
+    # own a wire. Transmit behaviour and every register path are untouched, and narration is still
+    # gated on a programmed divisor. Checked rather than argued: this board's cited offline oracle
+    # was executed on this branch and passed (labwired-hw-oracle, exit 0).
+    drift_ack: 2026-08-10
+    drift_ack_digest: 5e884bff89f5f8fefd4d3922c29ed41e86e2445408cfb67dc0cf28e33311467d
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1899,8 +1941,14 @@ boards:
     # selector, so no V2 pad row moved. Only the new (Stm32F1, Stm32F1) arm is new behaviour, and
     # this board does not take it. The source digest moved; this board's model did not. No live
     # re-capture is evidenced here.
-    drift_ack: 2026-08-09
-    drift_ack_digest: 0166270c3411f503f983b90fa98e2127e0371ca1a71af0b19288caefd147e930
+    # 2026-08-10: rides the logic-analyzer wire-channel contract. Beyond the additive accessors, the
+    # generic crates/core/src/peripherals/uart.rs restructured its narration flush (-23 lines) and
+    # now creates a UART's wire cell at construction rather than at pad-wiring time, so UART4/UART5
+    # own a wire. Transmit behaviour and every register path are untouched, and narration is still
+    # gated on a programmed divisor. Checked rather than argued: this board's cited offline oracle
+    # was executed on this branch and passed (labwired-hw-oracle, exit 0).
+    drift_ack: 2026-08-10
+    drift_ack_digest: ac6bfa4a0f1e22c7a4c39fb3e9e24994b07a8f9bcec20b2f713aa6e3698b43fc
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -2183,6 +2231,14 @@ boards:
     # ack above said "no S3 board attached"; that is no longer true, so the ack
     # is discharged rather than carried. Same rule as the C3: an ack is a
     # promise to re-capture, and it ends when the capture happens.
+    # 2026-08-10: rides the logic-analyzer wire-channel contract. This board's models gained ONLY
+    # the two additive accessors line_names() and wire_lines() — the diff across
+    # crates/core/src/peripherals/{esp32c3,esp32s3} is +32 lines and ZERO deletions, so no existing
+    # code path was altered. Checked rather than argued: esp32c3_reset_conformance (2 passed) and
+    # esp32s3_reset_conformance (1 passed) were executed on this branch. The source digest moved;
+    # the model did not.
+    drift_ack: 2026-08-10
+    drift_ack_digest: 54de00d1da761d8c0a7d7cd729c2dfb0e820ee2b5c756f7ce5765d78bf7c2d00
     models:
       - crates/core/src/peripherals/esp32s3
       - crates/core/src/peripherals/esp_xtensa_common
