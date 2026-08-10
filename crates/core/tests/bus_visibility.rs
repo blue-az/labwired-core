@@ -336,16 +336,26 @@ fn enable_clock(machine: &mut Machine<CortexM>, peri_name: &str) {
     let Some(idx) = machine.bus.find_peripheral_index_by_name(peri_name) else {
         return;
     };
-    let Some(gate) = machine.bus.peripherals[idx].clock_gate else {
+    let Some(gate) = machine.bus.peripherals[idx].clock_gate.as_ref() else {
         return;
     };
     let Some(rcc_idx) = machine.bus.find_peripheral_index_by_name("rcc") else {
         return;
     };
     let rcc_base = machine.bus.peripherals[rcc_idx].base;
-    let addr = rcc_base + gate.reg_offset;
-    let cur = machine.bus.read_u32(addr).unwrap_or(0);
-    let _ = machine.bus.write_u32(addr, cur | (1u32 << gate.bit));
+    // A gate carries a LIST of bits since core#922 — a bus-enable bit and a
+    // kernel-clock-source ready bit are both just bits the RCC must have set,
+    // and the peripheral answers only when ALL of them are. Setting the first
+    // one would leave the peripheral mute and read as a coverage hole here.
+    //
+    // Collected before the writes: `gate` borrows `machine.bus`, which the
+    // writes below take mutably.
+    let required: Vec<(u64, u8)> = gate.requires.iter().map(|b| (b.reg_offset, b.bit)).collect();
+    for (reg_offset, bit) in required {
+        let addr = rcc_base + reg_offset;
+        let cur = machine.bus.read_u32(addr).unwrap_or(0);
+        let _ = machine.bus.write_u32(addr, cur | (1u32 << bit));
+    }
 }
 
 // ── Independent decoders ────────────────────────────────────────────────────
