@@ -539,6 +539,11 @@ struct Nrf52SpiRegs {
     psel_sck: u32,
     psel_mosi: u32,
     psel_miso: u32,
+    /// PSEL.CSN (0x514). Corroborated on live nRF52840 silicon 2026-08-09:
+    /// writing 0x2B to 0x40003514 reads 0x2B back, so the register is real and
+    /// storing. It was absent from this layout, so the serial-instance window
+    /// returned 0 for it.
+    psel_csn: u32,
     frequency: u32,
     config: u32,
 
@@ -589,6 +594,7 @@ impl Nrf52SpiRegs {
             0x508 => self.psel_sck,
             0x50C => self.psel_mosi,
             0x510 => self.psel_miso,
+            0x514 => self.psel_csn,
             0x524 => self.frequency,
             0x554 => self.config,
             // EasyDMA descriptors
@@ -640,6 +646,7 @@ impl Nrf52SpiRegs {
             0x508 => self.psel_sck = value,
             0x50C => self.psel_mosi = value,
             0x510 => self.psel_miso = value,
+            0x514 => self.psel_csn = value,
             0x524 => self.frequency = value,
             0x554 => self.config = value,
 

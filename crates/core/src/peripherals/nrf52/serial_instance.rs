@@ -188,7 +188,19 @@ impl Peripheral for Nrf52SerialInstance {
         match self.active() {
             ENABLE_TWIM => self.twim.read_u32(offset),
             ENABLE_SPIM => self.spim.read_u32(offset),
-            // ENABLE=0: pinctrl writes PSEL before ENABLE is set; shadow to TWIM.
+            // ENABLE=0: pinctrl writes PSEL before ENABLE is set; shadow to TWIM
+            // — EXCEPT across the PSEL block, which must mirror the write path
+            // below. Writes there go to BOTH halves, so both hold the same
+            // words; but TWIM only models 0x508/0x50C (SCL/SDA), so reading
+            // SPIM's MISO (0x510) or CSN (0x514) off the TWIM half returned 0
+            // while silicon — one register file, personality-selected — returns
+            // what was written. Read the SPIM half, which spans all four.
+            //
+            // Found by the live nRF52840 MMIO diff on 2026-08-09: PSEL.SCK and
+            // PSEL.MOSI matched, PSEL.MISO read sim=0x0 vs hw=0x2E. The write
+            // path had already been widened to the whole block; the read path
+            // was not given the same treatment.
+            _ if (OFF_PSEL_FIRST..=OFF_PSEL_LAST).contains(&offset) => self.spim.read_u32(offset),
             _ => self.twim.read_u32(offset),
         }
     }
@@ -643,5 +655,33 @@ mod tests {
             !s.needs_bus_tick(),
             "no pending bus tick on SPIM when no transfer started"
         );
+    }
+
+    /// Regression: the whole PSEL block must read back what was written while
+    /// the instance is DISABLED, not just the two words TWIM also models.
+    ///
+    /// nrfx and Zephyr pinctrl program PSEL before setting ENABLE. On silicon
+    /// there is one register file behind 0x508..=0x514, so every word reads
+    /// back regardless of personality. The model broadcast PSEL WRITES to both
+    /// halves but dispatched READS to TWIM, which models only SCL (0x508) and
+    /// SDA (0x50C) — so SPIM's MISO (0x510) and CSN (0x514) read 0.
+    ///
+    /// Caught on real hardware by nrf52_mmio_diff on 2026-08-09 (sim=0x0 vs
+    /// hw=0x2E), which only runs with a board attached. This asserts it on a
+    /// CI runner with no hardware.
+    #[test]
+    fn psel_block_reads_back_while_disabled() {
+        let mut s = Nrf52SerialInstance::new();
+        // ENABLE stays 0 — exactly the pinctrl ordering.
+        for (off, val) in [(0x508u64, 40u32), (0x50C, 41), (0x510, 46), (0x514, 43)] {
+            write32(&mut s, off, val);
+        }
+        for (off, val) in [(0x508u64, 40u32), (0x50C, 41), (0x510, 46), (0x514, 43)] {
+            assert_eq!(
+                read32(&s, off),
+                val,
+                "PSEL 0x{off:03X} must read back 0x{val:02X} while ENABLE=0"
+            );
+        }
     }
 }

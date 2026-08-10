@@ -70,9 +70,9 @@ boards:
       - "nrf52_conformance::conformance_sim (digest vs frozen 2026-06-09 capture)"
       - "nrf52_mmio_diff / nrf52_gpio_conformance (sim halves)"
     silicon:
-      last_capture: 2026-06-17
-      probe: "ST-LINK V2 (J37S7)"
-      result: "conformance 16/16; mmio 16/16; GPIO P0 22/0, P1 23/0; onboarding 22/22; POWER 10/0, SPIS 19/0, TWIS 20/0, RTC0 12/0, TIMER0 16/0; SPIM0/CCM/full-register clean"
+      last_capture: 2026-08-09
+      probe: "ST-LINK V2 (V2J37S7, serial 48FF6B064884534929321087), openocd 0.12.0 hla_swd; nRF52840 FICR INFO.PART=0x00052840, DEVICEID 707dc298"
+      result: "re-captured live 2026-08-09 with NRF52_STRICT=1: ALL 11 hw-oracle suites pass — conformance, cpu_conformance, mmio 16/16, gpio, onboarding, power, spis_twis, timer_rtc, spim_easydma, full_register, ccm. NOT a second board: DEVICEID 707dc298 matches the 2026-06-09 baseline, so this is a re-read of the SAME part (unlike the C3/S3 re-captures, which were cross-board). The run was NOT clean on arrival and found three real defects, all fixed in this commit: (1) seven nrf52_* hw-oracle tests had not COMPILED since the 2026-07-18 bus consolidation removed the inherent SystemBus read_u32/write_u32 shadows — they build only under --features hw-oracle-nrf52, which CI never enables, so the 're-capture pending' ack pointed at a path that could not build; (2) mmio was 15/16, SPIM0 PSEL_MISO sim=0x0 vs hw=0x2E, because the serial-instance broadcast PSEL WRITES to both halves but dispatched READS to TWIM, which models only 0x508/0x50C; (3) SPIM PSEL.CSN (0x514) was missing from Nrf52SpiRegs entirely — corroborated present on silicon (wrote 0x2B, read 0x2B). Guarded going forward by a hardware-free unit test, serial_instance::psel_block_reads_back_while_disabled."
     # The UARTE model gained an EasyDMA TX path (STARTTX now reads the TXD buffer,
     # emits the bytes, and raises TXSTARTED/TXDRDY/ENDTX/TXSTOPPED) so an unmodified
     # nrfx console boots under the sim. Additive: the 2026-06-17 register sweep
@@ -258,8 +258,18 @@ boards:
     # ours) is unaffected. A live UARTE re-capture is tracked with the UARTE TX
     # diff already noted above; whoever runs it should read BAUDRATE at reset
     # first, because that single register is the whole claim here.
+    #
+    # 2026-08-09: a bench board WAS attached and all 11 suites re-ran live (see
+    # silicon.result), so the ack is discharged. One caveat it raised survives
+    # the discharge: RNG is still not covered by any asserted sweep. That is a
+    # COVERAGE gap, not a drift gap — re-capturing cannot close it, only adding
+    # an RNG oracle can. Do not read "fresh" as "RNG is validated".
+    #
+    # Merged 2026-08-10: the discharge recorded above applies to the tree as it
+    # stood at that live capture. The acks below cover model changes that
+    # postdate it and are NOT evidenced by that capture.
     drift_ack: 2026-08-10
-    drift_ack_digest: d82c45b402241e86e9edf1fafa8459098cc3e2106ce20f75dad75609daa7082a
+    drift_ack_digest: c6872bbd0b1353e3bbe8d645989d1d309fa4f03b6d5c7db5654a72ae7f60f24c
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -272,9 +282,9 @@ boards:
     offline_tests:
       - "nrf52.rs xiao_* (manifest build, GPIO task regs, SPIM0 EasyDMA)"
     silicon:
-      last_capture: 2026-06-17
-      probe: "ST-LINK V2 (J37S7)"
-      result: "rides the nrf52840 full register sweep (16/16) re-confirmed 2026-06-17"
+      last_capture: 2026-08-09
+      probe: "ST-LINK V2 (V2J37S7, serial 48FF6B064884534929321087) — the same physical XIAO the nrf52840 entry describes"
+      result: "rides the nrf52840 re-capture of 2026-08-09: all 11 hw-oracle suites pass under NRF52_STRICT=1, mmio 16/16. This is not an independent run — it is the SAME board and the SAME suites, which is exactly what `note` says this entry means. See the nrf52840 result for the three defects that run uncovered and fixed."
     # Rides the nrf52840 UARTE EasyDMA TX model change (same silicon); see the
     # nrf52840 drift_ack note. UARTE TX live diff tracked there.
     # 2026-06-27: rides the nrf52840 SAADC/PWM Tier-3 behavioral engines (same
@@ -395,8 +405,16 @@ boards:
     # ours) is unaffected. A live UARTE re-capture is tracked with the UARTE TX
     # diff already noted above; whoever runs it should read BAUDRATE at reset
     # first, because that single register is the whole claim here.
+    #
+    # 2026-08-09 (later): the board was attached and the nrf52840 suites re-ran
+    # live, so this ack is discharged with that one. RNG stays uncovered — a
+    # coverage gap no re-capture can close. See the nrf52840 entry.
+    #
+    # Merged 2026-08-10: the discharge recorded above applies to the tree as it
+    # stood at that live capture. The acks below cover model changes that
+    # postdate it and are NOT evidenced by that capture.
     drift_ack: 2026-08-10
-    drift_ack_digest: d82c45b402241e86e9edf1fafa8459098cc3e2106ce20f75dad75609daa7082a
+    drift_ack_digest: c6872bbd0b1353e3bbe8d645989d1d309fa4f03b6d5c7db5654a72ae7f60f24c
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -406,12 +424,12 @@ boards:
     chip: configs/chips/stm32h563.yaml
     tier: silicon-verified
     offline_tests:
-      - "h563_conformance (5 tests vs frozen 2026-06-10..12 captures)"
+      - "h563_conformance (6 tests vs frozen 2026-06-10..12 captures)"
       - "h563_mmio_diff::{h563_mmio_sim_only,h563_parity_sim_only,h563_class_sim_only}"
     silicon:
-      last_capture: 2026-06-22
-      probe: "STLINK-V3 (USB 0483:374e, NUCLEO-H563ZI, dapdirect AP1 recipe)"
-      result: "FLASH program-behaviour live-diff run on the board 2026-06-22 (drives real program/erase over SWD): write buffer (NSSR.WBNE) accumulates a 16-byte quad-word, commits + sets EOP only on completion; a misaligned quad-word raises INCERR alone and commits nothing; program-over-not-erased is permitted and ANDs the bits (no PGSERR); flags clear via NSCCR (0x30), not by writing NSSR. The sim H5 flash error-flag + read-while-write fidelity gates were CORRECTED to match this capture (earlier datasheet model was wrong on all four points). Prior MMIO/reset diff (h563_mmio_diff + h563_parity_diff + h563_class_diff, 0 divergence) still holds."
+      last_capture: 2026-08-10
+      probe: "STLINK-V3 (V3J13, serial 002100174741500220383733, USB 0483:374e, NUCLEO-H563ZI on-board CN1/STLK, dapdirect AP1 recipe)"
+      result: "Re-captured live 2026-08-10 with H563_STRICT=1 on merge commit e1851d80 (a clean tree — see the caveat below): h563_mmio_diff 8/8, h563_parity_diff 48/48, h563_class_diff 65/65, 121 cases total, 0 divergence / 0 both_disagree / 0 sim_err. Clean on arrival; nothing to fix. Target answered SWD DPIDR 0x6ba02477, Cortex-M33 r0p4, target voltage 3.289 V. Probe serial is recorded from this run on — the 2026-06-22 entry named the USB PID but no serial, so whether this is the same physical NUCLEO as that capture cannot be established either way. SCOPE CAVEAT, read before treating this as a full re-validation: this run re-executed the MMIO/parity/class register diff ONLY. The FLASH program-behaviour live-diff described below (real program/erase driven over SWD) was NOT re-run on 2026-08-10; its findings are carried forward from 2026-06-22 and are older than this date stamp implies. TREE CAVEAT: an initial run of the same 121 cases also passed, but was executed while another session had an uncommitted merge of origin/main staged in this worktree, so it was not attributable to any commit; it was discarded and the run recorded here was repeated against a 0-dirty checkout of e1851d80. FLASH program-behaviour live-diff run on the board 2026-06-22 (drives real program/erase over SWD): write buffer (NSSR.WBNE) accumulates a 16-byte quad-word, commits + sets EOP only on completion; a misaligned quad-word raises INCERR alone and commits nothing; program-over-not-erased is permitted and ANDs the bits (no PGSERR); flags clear via NSCCR (0x30), not by writing NSSR. The sim H5 flash error-flag + read-while-write fidelity gates were CORRECTED to match this capture (earlier datasheet model was wrong on all four points). Prior MMIO/reset diff (h563_mmio_diff + h563_parity_diff + h563_class_diff, 0 divergence) still holds."
     # FLASH model extended for UDS OTA: NSCR sector-erase + OPTSR_PRG.SWAP_BANK/
     # OBL_LAUNCH (drained in Machine::step / batched run) + H563 sized in MiB,
     # plus opt-in program error-flag (WRPERR/PGSERR/INCERR) and read-while-write
@@ -614,8 +632,23 @@ boards:
     #
     # Accepted by Andrii. No live re-capture; no new silicon diff is evidenced
     # by this entry.
+    # 2026-08-09: rides the nRF52 SPIM PSEL fix (live nRF52840 re-capture, same
+    # date). The touched file, peripherals/spi.rs, IS on this board's watch list,
+    # so the digest moved — but every edit in it is inside `Nrf52SpiRegs`, an
+    # nRF-only register struct. This board uses Stm32/Stm32Fifo/Stm32H5 layouts,
+    # which are separate structs with their own read/write matches; not one line
+    # they execute changed. Two registers were added to the nRF PSEL block
+    # (0x510 read routing, 0x514 psel_csn) — offsets this board's layouts never
+    # decode. Evidence on this commit: labwired-core --lib 2987 passed / 0
+    # failed, cargo fmt clean. Acked WITHOUT a live re-capture for this board:
+    # it was not attached.
+    # DISCHARGED 2026-08-10: the board was attached later the same day and the
+    # live diff owed above was actually run — 121/121, 0 divergence. The ack no
+    # longer stands in for a missing capture; see silicon.last_capture. Note the
+    # scope caveat recorded there: the register diff was re-run, the FLASH
+    # program-behaviour live-diff was not.
     drift_ack: 2026-08-10
-    drift_ack_digest: 18f24f23028994d3a4452a1138a72d57200a3980aa5bf4052b3743b81c78e202
+    drift_ack_digest: 1a723b165e42c49b19f54091b7254eadd3c16ac53d1ed2f28b3565f40432ae06
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1295,9 +1328,9 @@ boards:
       - "l476_mmio_diff::{l476_mmio_sim_only,l476_parity_sim_only}"
       - "firmware_survival L476 cases (UART byte stream)"
     silicon:
-      last_capture: 2026-06-20
+      last_capture: 2026-08-09
       probe: "STLINK-V2.1 (USB 0483:374b serial 0670FF…1747, NUCLEO-L476RG onboard)"
-      result: "Live re-capture after the v0.17.0 merge: l476_mmio_diff + l476_parity_diff pass (15 mmio + 104 parity), 0 divergence. Supersedes the 2026-06-19 drift_ack."
+      result: "re-captured live 2026-08-09 with L476_STRICT=1: l476_mmio_diff 15/15 and l476_parity_diff 104/104, 0 divergence — identical to the 2026-06-20 figures. Clean on arrival; nothing to fix. SAME physical board as that baseline, established by probe serial 0670FF535155878281121747 being recorded in both (the L073 entry could not make that claim, having no serial on file before today). Scope unchanged and still partial: the mmio+parity set, not a full-chip sweep."
     # 2026-06-26: uart.rs generalised — UartRegMap gained status_width/status_idle/
     # rx_present masks and 20+ vendor layouts for the onboarding library. The L4
     # USART maps to the Stm32V2 arm, which reproduces the prior hardcoded behaviour
@@ -1478,8 +1511,28 @@ boards:
     #
     # Accepted by Andrii. No live re-capture; no new silicon diff is evidenced
     # by this entry.
+    # 2026-08-09: rides the nRF52 SPIM PSEL fix (live nRF52840 re-capture, same
+    # date). The touched file, peripherals/spi.rs, IS on this board's watch list,
+    # so the digest moved — but every edit in it is inside `Nrf52SpiRegs`, an
+    # nRF-only register struct. This board uses Stm32/Stm32Fifo/Stm32H5 layouts,
+    # which are separate structs with their own read/write matches; not one line
+    # they execute changed. Two registers were added to the nRF PSEL block
+    # (0x510 read routing, 0x514 psel_csn) — offsets this board's layouts never
+    # decode. Evidence on this commit: labwired-core --lib 2987 passed / 0
+    # failed, cargo fmt clean. Acked WITHOUT a live re-capture for this board:
+    # it was not attached. Its own live diff remains owed and is NOT evidenced
+    # by this entry.
+    #
+    # 2026-08-09 (later): the NUCLEO-L476RG was attached and l476_mmio_diff
+    # + l476_parity_diff re-ran live at 15/15 and 104/104. The spi.rs ack
+    # above is therefore moot for this board — it is superseded by an actual
+    # capture, not carried. Kept as history so the reasoning stays readable.
+    #
+    # Merged 2026-08-10: the discharge recorded above applies to the tree as it
+    # stood at that live capture. The acks below cover model changes that
+    # postdate it and are NOT evidenced by that capture.
     drift_ack: 2026-08-10
-    drift_ack_digest: 3231824fca0a8eb3bb81fbcc28ca0409173732bd7ff9475e73b945cbd687390b
+    drift_ack_digest: fe9aeec8dda6854ca6ba421e77bebbc1a10b5239429a8b3abc47303cac5e1f67
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1505,9 +1558,9 @@ boards:
       - "stm32l0_mmio_diff::{l0_mmio_sim_only,l0_parity_sim_only}"
       - "firmware_survival L073 smoke case"
     silicon:
-      last_capture: 2026-06-20
-      probe: "ST-LINK V2.1 (NUCLEO-L073RZ over SWD)"
-      result: "Live re-capture after the v0.17.0 merge: l0_mmio_diff 20/20, 0 divergence (RCC/GPIO/SPI1/TIM2/TIM21, incl. the TIM2-16-bit fix). Supersedes the 2026-06-19 drift_ack."
+      last_capture: 2026-08-09
+      probe: "ST-LINK V2.1 (NUCLEO-L073RZ on-board, V2J28S17, serial 066CFF555054877567065340) over SWD; DBGMCU IDCODE read back 0x20086447"
+      result: "re-captured live 2026-08-09 with L073_STRICT=1: l0_mmio_diff 20/20, 0 divergence (RCC IOPENR/APB1ENR/APB2ENR/AHBENR/CFGR clock switch, GPIOA BSRR/BRR, SPI1 CR1/CR2, TIM2 ARR/PSC/CR1, TIM21 ARR, DBGMCU IDCODE). Clean on arrival — unlike the nRF re-capture the same day, this one found nothing to fix. Scope is UNCHANGED and still partial: RCC/GPIO/SPI1/TIM2/TIM21 only, not a full-chip sweep (see `note`); I2C/UART/ADC on this part remain outside the asserted set. Probe serial is recorded from this run on — the earlier entries named no serial, so whether this is the same physical NUCLEO as the 2026-06-20 capture cannot be established either way."
     # 2026-06-26: uart.rs generalised (status_width/status_idle/rx_present masks +
     # 20+ vendor layouts for the onboarding library). The L0 USART maps to the
     # Stm32V2 arm, byte-for-byte identical to the prior hardcoded behaviour
@@ -1656,8 +1709,17 @@ boards:
     #
     # Accepted by Andrii. No live re-capture; no new silicon diff is evidenced
     # by this entry.
+    #
+    # 2026-08-09 (later): the NUCLEO-L073RZ WAS attached and l0_mmio_diff re-ran
+    # live at 20/20 under L073_STRICT=1 (see silicon.result), so the diff this
+    # ack said was "owed" has been paid for THIS board. The ack is discharged.
+    # Note the other boards named in the ack above are not covered by that run.
+    #
+    # Merged 2026-08-10: the discharge recorded above applies to the tree as it
+    # stood at that live capture. The acks below cover model changes that
+    # postdate it and are NOT evidenced by that capture.
     drift_ack: 2026-08-10
-    drift_ack_digest: 1a943a9ae00a936e3fdf6fc6692f353d3f2150f22574c8eb7eaae6da35581193
+    drift_ack_digest: 5c0c39f903efb56360220aa0c3b6c5a473e0f8176fee2211782f41c0f8552d41
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1679,9 +1741,9 @@ boards:
       - "stm32f1_mmio_diff::{f1_reset_sim_only,f1_mmio_sim_only,f1_parity_sim_only,f1_sweep_sim_only}"
       - "f103_conformance::conformance_sim (digest)"
     silicon:
-      last_capture: 2026-06-20
-      probe: "ST-LINK V2.1 (USB 0483:374b), genuine STM32F103"
-      result: "Live re-capture after the v0.17.0 bxcan/clock-gating merge: stm32f1_mmio_diff 102/102 (24 reset + 26 R/W + 52 sweep), 0 divergence, and f103_conformance digest matches silicon. Supersedes the 2026-06-19 drift_ack. (Earlier capture caught + fixed a classic SPI CR1 bug masking CRCNEXT bit 12 — 0xEFFF vs silicon 0xFFFF.)"
+      last_capture: 2026-08-09
+      probe: "ST-LINK V2.1 (V2J43S28, serial 066CFF534951775087071123, USB 0483:374b), genuine STM32F103 — chipid 0x410 STM32F1xx_MD, 128K flash / 20K SRAM"
+      result: "re-captured live 2026-08-09 with F103_STRICT=1: stm32f1_mmio_diff 102/102 (24 reset + 26 R/W + 52 sweep), 0 divergence, and f103_conformance reports no sim-vs-silicon gaps — identical to the 2026-06-20 figures. Clean on arrival; nothing to fix. f103_conformance needed firmware-f103-conformance built for thumbv7m-none-eabi first; without it the test panics in 0.00s, which reads like a failure but is a missing prerequisite. Probe serial recorded from this run on, so a future capture can tell whether it is the same physical board (the earlier entry named none). (Earlier capture caught + fixed a classic SPI CR1 bug masking CRCNEXT bit 12 — 0xEFFF vs silicon 0xFFFF.)"
     # 2026-06-26: uart.rs generalised (status_width/status_idle/rx_present masks +
     # 20+ vendor layouts for the onboarding library). The F1 USART maps to the
     # Stm32F1 arm, which reproduces the prior hardcoded behaviour byte-for-byte
@@ -1863,8 +1925,27 @@ boards:
     #
     # Accepted by Andrii. No live re-capture; no new silicon diff is evidenced
     # by this entry.
+    # 2026-08-09: rides the nRF52 SPIM PSEL fix (live nRF52840 re-capture, same
+    # date). The touched file, peripherals/spi.rs, IS on this board's watch list,
+    # so the digest moved — but every edit in it is inside `Nrf52SpiRegs`, an
+    # nRF-only register struct. This board uses Stm32/Stm32Fifo/Stm32H5 layouts,
+    # which are separate structs with their own read/write matches; not one line
+    # they execute changed. Two registers were added to the nRF PSEL block
+    # (0x510 read routing, 0x514 psel_csn) — offsets this board's layouts never
+    # decode. Evidence on this commit: labwired-core --lib 2987 passed / 0
+    # failed, cargo fmt clean. Acked WITHOUT a live re-capture for this board:
+    # it was not attached. Its own live diff remains owed and is NOT evidenced
+    # by this entry.
+    #
+    # 2026-08-09 (later): board attached, stm32f1_mmio_diff 102/102 and
+    # f103_conformance clean. The spi.rs ack above is superseded by this
+    # capture rather than carried; kept as history.
+    #
+    # Merged 2026-08-10: the discharge recorded above applies to the tree as it
+    # stood at that live capture. The acks below cover model changes that
+    # postdate it and are NOT evidenced by that capture.
     drift_ack: 2026-08-10
-    drift_ack_digest: 535893325f456474e62708b14187c7e8e3796f6c68931755fd8cd63bb9a8f05b
+    drift_ack_digest: bf4bc6823001078d05c619850a228c985c16420a53de4df0afbc44317fba2529
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -2052,8 +2133,19 @@ boards:
     #
     # Accepted by Andrii. No live re-capture; no new silicon diff is evidenced
     # by this entry.
+    # 2026-08-09: rides the nRF52 SPIM PSEL fix (live nRF52840 re-capture, same
+    # date). The touched file, peripherals/spi.rs, IS on this board's watch list,
+    # so the digest moved — but every edit in it is inside `Nrf52SpiRegs`, an
+    # nRF-only register struct. This board uses Stm32/Stm32Fifo/Stm32H5 layouts,
+    # which are separate structs with their own read/write matches; not one line
+    # they execute changed. Two registers were added to the nRF PSEL block
+    # (0x510 read routing, 0x514 psel_csn) — offsets this board's layouts never
+    # decode. Evidence on this commit: labwired-core --lib 2987 passed / 0
+    # failed, cargo fmt clean. Acked WITHOUT a live re-capture for this board:
+    # it was not attached. Its own live diff remains owed and is NOT evidenced
+    # by this entry.
     drift_ack: 2026-08-10
-    drift_ack_digest: f118c975479d32714a9b01ccc71219a44d6a61bf4a44fa6574585b63d2e5e46d
+    drift_ack_digest: 11ff9229d7ed39dc14174aba1c3cdf90761b36fa7f61e0a268f9100e58be6701
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -2462,8 +2554,14 @@ boards:
     # no register read/write path, reset value or layout is touched. The source
     # digest moved because a shared file's commit date moved; the model did not.
     # No live re-capture is evidenced here.
+    # 2026-08-09: rides the nRF52 SPIM PSEL fix. peripherals/spi.rs is on this
+    # board's watch list so its digest moved, but every edit is inside
+    # `Nrf52SpiRegs` — an nRF-only struct this board's Stm32* layouts do not
+    # use. Recorded explicitly because `--write-ack-digests` re-stamps EVERY
+    # ack, which would otherwise have widened this one to cover a change
+    # nobody had written down.
     drift_ack: 2026-07-28
-    drift_ack_digest: 798e747e5f87c400a832b2324e5037e6ab3919d238e2aeb78c4b4c7cfa8f83bf
+    drift_ack_digest: 304051ade8b9ff6fde81189ec89a4d25adb26ddb9b3764c586d4179575e3697a
     models:
       - configs/chips/stm32h735.yaml
       - crates/core/src/peripherals/rcc.rs
@@ -2505,8 +2603,14 @@ boards:
     # no register read/write path, reset value or layout is touched. The source
     # digest moved because a shared file's commit date moved; the model did not.
     # No live re-capture is evidenced here.
+    # 2026-08-09: rides the nRF52 SPIM PSEL fix. peripherals/spi.rs is on this
+    # board's watch list so its digest moved, but every edit is inside
+    # `Nrf52SpiRegs` — an nRF-only struct this board's Stm32* layouts do not
+    # use. Recorded explicitly because `--write-ack-digests` re-stamps EVERY
+    # ack, which would otherwise have widened this one to cover a change
+    # nobody had written down.
     drift_ack: 2026-07-28
-    drift_ack_digest: d08642cc2c9e115e6d659b49938ad45136e8526e55ce7437aa72477e0a304eec
+    drift_ack_digest: 0d7b1c221e916cebed6f697e7f40e05ae3e0ec340e2c7df93e19625e4a61da55
     models:
       - configs/chips/stm32f411ceu6.yaml
       - crates/core/src/peripherals/rcc.rs
