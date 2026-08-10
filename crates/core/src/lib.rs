@@ -1990,6 +1990,34 @@ impl<C: Cpu> Machine<C> {
             .find_peripheral_index_by_name(peripheral)
             .map_or(&[], |idx| self.bus.peripherals[idx].dev.line_names())
     }
+
+    /// Every peripheral on this bus that publishes wire lines, with the lines
+    /// it publishes — the whole probeable wire surface, in one answer.
+    ///
+    /// A frontend that builds a probe menu MUST read it from here. The line
+    /// vocabulary is not uniform and cannot be guessed from the protocol: the
+    /// generic STM32 SPI publishes `SCK/MOSI/MISO` with no chip-select line at
+    /// all, RP2040 SPI spells its select `CSn`, and the ESP GPSPI spells it
+    /// `CS`. A UI that hardcodes one spelling offers lanes that cannot resolve
+    /// on two families out of three.
+    pub fn wire_surface(&self) -> Vec<(&str, &'static [&'static str])> {
+        self.bus
+            .peripherals
+            .iter()
+            .filter_map(|p| {
+                let names = p.dev.line_names();
+                (!names.is_empty()).then_some((p.name.as_str(), names))
+            })
+            .collect()
+    }
+
+    /// The level a already-resolved channel source reads right now, without
+    /// arming capture. Same [`read_logic_source`](Self::read_logic_source)
+    /// body the watch path uses, so a live readout and a captured waveform can
+    /// never disagree about what a channel means.
+    pub fn read_logic_level(&self, source: logic_capture::LogicSource) -> Option<bool> {
+        Self::read_logic_source(&self.bus, source)
+    }
 }
 
 impl<C: Cpu> Machine<C> {
