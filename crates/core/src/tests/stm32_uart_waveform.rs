@@ -316,7 +316,7 @@ mod stm32_uart_waveform_tests {
         machine.bus.write_u32(USART2 + BRR, USARTDIV).unwrap();
 
         let gpio_idx = machine.bus.find_peripheral_index_by_name("gpioa").unwrap();
-        let initial = machine.logic_watch(&[Some((gpio_idx, PA2))]);
+        let initial = machine.logic_watch(&[Some(LogicSource::pad(gpio_idx, PA2))]);
         assert_eq!(
             initial,
             vec![Some(true)],

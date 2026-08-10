@@ -396,7 +396,7 @@ mod rp2040_uart_waveform_tests {
 
         // Arm first — pad is still NULL (reset FUNCSEL).
         let sio_idx = machine.bus.find_peripheral_index_by_name("sio").unwrap();
-        machine.logic_watch(&[Some((sio_idx, TX_PIN))]);
+        machine.logic_watch(&[Some(LogicSource::pad(sio_idx, TX_PIN))]);
 
         // Then firmware muxes GP0 to UART0 TX and programs baud.
         configure(&mut machine, TX_PIN);
