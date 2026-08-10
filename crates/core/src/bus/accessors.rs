@@ -266,12 +266,14 @@ impl crate::Bus for SystemBus {
                 self.sync_scheduler_peripheral(idx);
                 self.maybe_latch_dc(idx);
                 let c3_io_mux_capture = self.begin_esp32c3_io_mux_write(idx);
+                let rp_io_bank0_capture = self.begin_rp2040_io_bank0_write(idx);
                 let r = {
                     let p = &mut self.peripherals[idx];
                     p.dev.write(off, value)
                 };
                 if r.is_ok() {
                     self.finish_esp32c3_io_mux_write(c3_io_mux_capture);
+                    self.finish_rp2040_io_bank0_write(rp_io_bank0_capture);
                 }
                 self.maybe_arm_hcsr04(idx);
                 self.maybe_start_dht22(idx);
@@ -507,6 +509,7 @@ impl crate::Bus for SystemBus {
             self.sync_scheduler_peripheral(idx);
             self.maybe_latch_dc(idx);
             let c3_io_mux_capture = self.begin_esp32c3_io_mux_write(idx);
+            let rp_io_bank0_capture = self.begin_rp2040_io_bank0_write(idx);
             let r = {
                 let p = &mut self.peripherals[idx];
                 p.ticks_remaining = 0;
@@ -514,6 +517,7 @@ impl crate::Bus for SystemBus {
             };
             if r.is_ok() {
                 self.finish_esp32c3_io_mux_write(c3_io_mux_capture);
+                self.finish_rp2040_io_bank0_write(rp_io_bank0_capture);
             }
             self.maybe_arm_hcsr04(idx);
             self.maybe_start_dht22(idx);
@@ -608,6 +612,7 @@ impl crate::Bus for SystemBus {
             self.sync_scheduler_peripheral(idx);
             self.maybe_latch_dc(idx);
             let c3_io_mux_capture = self.begin_esp32c3_io_mux_write(idx);
+            let rp_io_bank0_capture = self.begin_rp2040_io_bank0_write(idx);
             let r = {
                 let p = &mut self.peripherals[idx];
                 p.ticks_remaining = 0;
@@ -615,6 +620,7 @@ impl crate::Bus for SystemBus {
             };
             if r.is_ok() {
                 self.finish_esp32c3_io_mux_write(c3_io_mux_capture);
+                self.finish_rp2040_io_bank0_write(rp_io_bank0_capture);
             }
             self.maybe_arm_hcsr04(idx);
             self.maybe_start_dht22(idx);
@@ -752,6 +758,17 @@ impl crate::Bus for SystemBus {
 
     fn as_any_mut(&mut self) -> Option<&mut dyn std::any::Any> {
         Some(self)
+    }
+
+    fn read_gpio_output_by_label(&self, pin: &str) -> Option<bool> {
+        let (addr, bit) = Self::resolve_pin_odr(self, pin)?;
+        let peripheral = self.peripherals.iter().find(|peripheral| {
+            addr >= peripheral.base && addr < peripheral.base + peripheral.size
+        })?;
+        if peripheral.dev.gpio_routing(bit)?.mode != crate::peripherals::gpio::GpioMode::Output {
+            return None;
+        }
+        peripheral.dev.read_gpio_output(bit)
     }
 
     fn tick_peripherals(&mut self) -> Vec<u32> {

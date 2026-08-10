@@ -78,21 +78,60 @@ pub struct NamedMemoryRange {
     pub image_env: Option<String>,
 }
 
-/// Optional RCC clock-gate declaration for a peripheral. When present, the bus
-/// models silicon clock-gating: a CPU access to the peripheral only takes effect
-/// while `bit` is set in the RCC peripheral's `reg` enable register. Peripherals
-/// without a `clock:` field are never gated (safe default — existing configs and
-/// firmware that don't enable a clock keep working unchanged).
+/// One RCC bit a peripheral's clock depends on.
 ///
-/// `reg` is the symbolic enable-register name (e.g. "apb1enr", "apb2enr",
-/// "ahbenr", "ahb2enr"); the bus maps it to the chip family's actual RCC offset
-/// at build time, so the same name resolves correctly on F1 vs L4.
+/// `reg` is a symbolic RCC register name — either a peripheral-enable register
+/// ("apb1enr", "apb2enr", "ahbenr", "ahb2enr", …) or a clock-source register
+/// ("cr", "crrcr", …). The bus maps it to the chip family's actual RCC offset at
+/// build time, so the same name resolves correctly on F1 vs L4 vs L0. A name the
+/// active family does not expose is a hard build error, never a silent
+/// "never gate".
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ClockGate {
-    /// Symbolic RCC enable-register name, e.g. "apb1enr" / "apb2enr" / "ahbenr".
+    /// Symbolic RCC register name, e.g. "apb1enr" / "apb2enr" / "ahbenr" / "crrcr".
     pub reg: String,
-    /// Enable-bit position within that register.
+    /// Bit position within that register that must be **set** for the
+    /// peripheral to be clocked.
     pub bit: u8,
+}
+
+/// A peripheral's `clock:` declaration: **every** listed RCC bit must be set for
+/// the peripheral to answer the CPU.
+///
+/// One key, one mechanism. Silicon can withhold a peripheral's clock for more
+/// than one reason — the bus-enable bit in an `xxxENR` register is the common
+/// one, but a peripheral with its own *kernel* clock (the STM32L0 RNG runs off
+/// HSI48) is equally dead when that source was never started. Both are "an RCC
+/// bit that must be set", so both are entries in this one list rather than a
+/// second config key and a second check somewhere else in the engine. See
+/// [`crate::PeripheralConfig::clock`].
+///
+/// Accepts either shape in yaml, so every config written against the original
+/// single-gate form keeps working verbatim:
+///
+/// ```yaml
+/// clock: { reg: "apb1enr", bit: 21 }              # one bit
+/// clock:                                          # several, all required
+///   - { reg: "ahbenr", bit: 20 }
+///   - { reg: "crrcr",  bit: 1  }
+/// ```
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(untagged)]
+pub enum ClockGates {
+    /// A single required bit — the original `clock: { reg, bit }` form.
+    One(ClockGate),
+    /// Several required bits, ANDed together.
+    All(Vec<ClockGate>),
+}
+
+impl ClockGates {
+    /// Every bit this declaration requires, in declaration order.
+    pub fn as_slice(&self) -> &[ClockGate] {
+        match self {
+            Self::One(gate) => std::slice::from_ref(gate),
+            Self::All(gates) => gates.as_slice(),
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -105,9 +144,12 @@ pub struct PeripheralConfig {
     pub size: Option<String>,
     #[serde(default)]
     pub irq: Option<u32>,
-    /// Optional RCC clock-gate. `None` → the peripheral is never gated.
+    /// Optional RCC clock-gate: the RCC bits that must ALL be set for this
+    /// peripheral to answer the CPU. `None` → the peripheral is never gated
+    /// (the safe default — existing configs and firmware that never enable a
+    /// clock keep working unchanged).
     #[serde(default)]
-    pub clock: Option<ClockGate>,
+    pub clock: Option<ClockGates>,
     #[serde(default)]
     pub config: HashMap<String, serde_yaml::Value>,
 }
@@ -967,16 +1009,21 @@ fn validate_environment_interconnect_config(
                 index,
                 kind,
                 &interconnect.config,
-                &["peripheral"],
+                &["peripheral", "endpoints"],
             )?;
-            if interconnect
+            let has_peripheral = interconnect
                 .config
                 .get("peripheral")
                 .and_then(serde_yaml::Value::as_str)
                 .map(str::trim)
                 .filter(|value| !value.is_empty())
-                .is_none()
-            {
+                .is_some();
+            let has_endpoints = interconnect
+                .config
+                .get("endpoints")
+                .and_then(serde_yaml::Value::as_mapping)
+                .is_some();
+            if !has_peripheral && !has_endpoints {
                 anyhow::bail!("can_bus: missing nonblank config.peripheral");
             }
         }

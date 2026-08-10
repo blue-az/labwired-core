@@ -64,6 +64,7 @@ pub const SPI2_SIZE: u64 = 0x1000;
 /// register at offset 76 = `4 * 19`, so the source index is 19 — NOT the S3's
 /// 21 (which is the Xtensa `ets_isr_source_t` ordinal).
 pub const SPI2_INTR_SOURCE_ID: u32 = 19;
+const EXTERNAL_CAN_POLL_EVENT: u32 = u32::MAX;
 
 const CMD: u64 = 0x00;
 const CTRL: u64 = 0x08;
@@ -166,6 +167,7 @@ pub struct Esp32c3Spi {
     /// see [`crate::peripherals::esp_gpspi_wire`], shared with the S3's copy of
     /// this same IP.
     wire: EspSpiWire,
+    external_can_poll_scheduled: bool,
 }
 
 impl std::fmt::Debug for Esp32c3Spi {
@@ -200,6 +202,7 @@ impl Esp32c3Spi {
             attached_devices: Vec::new(),
             clock: None,
             wire: EspSpiWire::default(),
+            external_can_poll_scheduled: false,
         }
     }
 
@@ -346,6 +349,14 @@ impl Esp32c3Spi {
 }
 
 impl Peripheral for Esp32c3Spi {
+    fn line_names(&self) -> &'static [&'static str] {
+        crate::peripherals::esp_gpspi_wire::SPI_LINES
+    }
+
+    fn wire_lines(&self) -> Option<&crate::peripherals::pad_lines::PadLines> {
+        self.wire.wire_lines()
+    }
+
     fn read(&self, offset: u64) -> SimResult<u8> {
         let word = self.read_u32(offset & !3)?;
         Ok(((word >> ((offset & 3) * 8)) & 0xFF) as u8)
@@ -430,6 +441,9 @@ impl Peripheral for Esp32c3Spi {
         // the feature this is where a held burst reaches the pads. Inert — one
         // `is_empty` — on every bus that never routed an SPI pad.
         self.wire_flush(false);
+        for device in &mut self.attached_devices {
+            device.poll_external_bus();
+        }
         PeripheralTickResult {
             explicit_irqs: if self.int_st() != 0 {
                 Some(vec![self.source_id])
@@ -446,7 +460,12 @@ impl Peripheral for Esp32c3Spi {
     /// carrying the burst that transaction launched. Without the second term the
     /// featureless build drops the flush entirely and the pads stay flat.
     fn legacy_tick_active(&self) -> bool {
-        self.int_st() != 0 || self.wire.is_pending()
+        self.int_st() != 0
+            || self.wire.is_pending()
+            || self
+                .attached_devices
+                .iter()
+                .any(|device| device.needs_external_bus_poll())
     }
 
     fn legacy_tick_dynamic(&self) -> bool {
@@ -478,15 +497,28 @@ impl Peripheral for Esp32c3Spi {
     /// (`ready_in`), so a 64-byte burst costs ONE wakeup rather than 100 000.
     /// `uses_scheduler`/`needs_legacy_walk` are deliberately UNCHANGED above.
     fn take_scheduled_events(&mut self) -> Vec<(u64, u32)> {
-        if !self.uses_scheduler() || !self.wire.is_pending() || self.wire.scheduled {
+        if self.clock.is_none() {
             return Vec::new();
         }
-        let Some(now) = self.clock.as_ref().map(|c| c.now()) else {
-            return Vec::new();
-        };
-        self.wire.arm_seq = self.wire.arm_seq.wrapping_add(1);
-        self.wire.scheduled = true;
-        vec![(self.wire.ready_in(now), self.wire.arm_seq)]
+        let mut events = Vec::new();
+        if self.wire.is_pending() && !self.wire.scheduled {
+            let now = self.clock.as_ref().map_or(0, |c| c.now());
+            self.wire.arm_seq = self.wire.arm_seq.wrapping_add(1);
+            if self.wire.arm_seq == EXTERNAL_CAN_POLL_EVENT {
+                self.wire.arm_seq = 0;
+            }
+            self.wire.scheduled = true;
+            events.push((self.wire.ready_in(now), self.wire.arm_seq));
+        }
+        let has_external_can = self
+            .attached_devices
+            .iter()
+            .any(|device| device.needs_external_bus_poll());
+        if self.clock.is_some() && has_external_can && !self.external_can_poll_scheduled {
+            self.external_can_poll_scheduled = true;
+            events.push((0, EXTERNAL_CAN_POLL_EVENT));
+        }
+        events
     }
 
     fn on_event(
@@ -495,6 +527,15 @@ impl Peripheral for Esp32c3Spi {
         _sched: &mut crate::sched::EventScheduler,
         _bus: &mut dyn crate::Bus,
     ) -> crate::sched::EventResult {
+        if event_token == EXTERNAL_CAN_POLL_EVENT {
+            for device in &mut self.attached_devices {
+                device.poll_external_bus();
+            }
+            return crate::sched::EventResult {
+                reschedule_delay: Some(1),
+                ..Default::default()
+            };
+        }
         if event_token != self.wire.arm_seq {
             // Stale token from a superseded arm; the live chain owns publication.
             return crate::sched::EventResult::default();
@@ -559,6 +600,54 @@ impl Peripheral for Esp32c3Spi {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+
+    struct ExternalCanPoller(Arc<AtomicUsize>);
+    impl SpiDevice for ExternalCanPoller {
+        fn needs_external_bus_poll(&self) -> bool {
+            true
+        }
+        fn component_id(&self) -> Option<&str> {
+            Some("external-can")
+        }
+        fn poll_external_bus(&mut self) {
+            self.0.fetch_add(1, Ordering::SeqCst);
+        }
+        fn transfer(&mut self, _mosi: u8) -> u8 {
+            0
+        }
+        fn cs_pin(&self) -> &str {
+            "GPIO10"
+        }
+    }
+
+    #[test]
+    fn scheduler_arms_recurring_external_can_poll() {
+        let polls = Arc::new(AtomicUsize::new(0));
+        let mut spi = Esp32c3Spi::new(SPI2_INTR_SOURCE_ID);
+        spi.push_device(Box::new(ExternalCanPoller(polls.clone())));
+        spi.attach_cycle_clock(crate::CycleClock::default());
+
+        let events = spi.take_scheduled_events();
+        assert_eq!(
+            events.len(),
+            1,
+            "scheduler mode must arm external CAN polling"
+        );
+        let mut scheduler = crate::sched::EventScheduler::new();
+        let mut bus = crate::bus::SystemBus::new();
+        let result = spi.on_event(events[0].1, &mut scheduler, &mut bus);
+        assert_eq!(polls.load(Ordering::SeqCst), 1);
+        assert_eq!(result.reschedule_delay, Some(1));
+
+        let legacy_polls = Arc::new(AtomicUsize::new(0));
+        let mut legacy = Esp32c3Spi::new(SPI2_INTR_SOURCE_ID);
+        legacy.push_device(Box::new(ExternalCanPoller(legacy_polls.clone())));
+        assert!(legacy.take_scheduled_events().is_empty());
+        legacy.tick();
+        assert_eq!(legacy_polls.load(Ordering::SeqCst), 1);
+    }
 
     #[test]
     fn spi2_interrupt_source_is_19_not_21() {

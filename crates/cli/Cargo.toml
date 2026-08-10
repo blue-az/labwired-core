@@ -44,6 +44,11 @@ ureq = { workspace = true }
 
 [features]
 default = []
+# Silent-path census — pass-through to labwired-core's `silent-census`.
+# Measurement only; see the note on that feature. Build the measuring binary
+# with `cargo build -p labwired-cli --features silent-census` and point
+# `LABWIRED_CENSUS_OUT` at a JSON path to get a report. Both are required.
+silent-census = ["labwired-core/silent-census"]
 # Phase 3.2 JIT pilot (issue #124) — pass-through to labwired-core's `jit`
 # feature. Build with `cargo build --release -p labwired-cli --features
 # jit-core` to enable the wasmtime-backed RV32IMC JIT.
@@ -92,3 +97,23 @@ event-scheduler = ["labwired-core/event-scheduler"]
 # map-feedback scheduler, crash objectives). Heavy dependency tree, so opt-in:
 # `cargo build --release -p labwired-cli --features fuzz-libafl`.
 fuzz-libafl = ["labwired-fuzz/libafl"]
+
+# ── ZERO-TEST TARGETS CANNOT REPORT GREEN ────────────────────────────────────
+# Every target below is an integration test whose ENTIRE body sits behind an
+# inner `#![cfg(feature = "...")]`. Built without the feature the file compiles
+# to an EMPTY libtest binary, which prints `test result: ok. 0 passed` and exits
+# 0 — indistinguishable, to CI and to a human, from a suite that ran and passed.
+# `required-features` makes cargo SKIP the target instead of reporting it green,
+# and makes an explicit `--test <name>` without the feature a hard error.
+# Adding a new `#![cfg(feature = ...)]` test file without a block here fails
+# `crates/core/src/tests/no_vacuous_test_targets.rs`.
+
+# #![cfg(feature = "event-scheduler")]
+[[test]]
+name = "e2e_esp32c3_ble_adv_republish"
+required-features = ["event-scheduler"]
+
+# #![cfg(feature = "event-scheduler")]
+[[test]]
+name = "e2e_esp32c3_ble_two_node"
+required-features = ["event-scheduler"]

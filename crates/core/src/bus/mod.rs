@@ -29,6 +29,7 @@ pub(crate) mod embedded_descriptors;
 pub(crate) mod external_devices;
 mod faults;
 mod from_config;
+pub mod known_stubs;
 mod mmio_activity;
 mod mmio_words;
 mod motors;
@@ -88,17 +89,31 @@ impl SystemBus {
     }
 }
 
-/// A peripheral's RCC clock-gate, resolved to a concrete RCC register offset +
-/// bit at bus-build time (the symbolic `reg` name from the yaml is mapped to the
-/// active chip family's offset via [`Rcc::enable_reg_offset`]). When present, a
-/// CPU access to the owning peripheral only takes effect while `bit` is set in
-/// the RCC enable register at `reg_offset` — modelling silicon clock-gating.
+/// One RCC bit a peripheral's clock depends on, resolved to a concrete register
+/// offset at bus-build time (the symbolic `reg` name from the yaml is mapped to
+/// the active chip family's offset via [`Rcc::rcc_reg_offset`]).
 #[derive(Debug, Clone, Copy)]
-pub struct ResolvedClockGate {
-    /// Byte offset of the RCC enable register within the rcc peripheral.
+pub struct RccClockBit {
+    /// Byte offset of the RCC register within the rcc peripheral.
     pub reg_offset: u64,
-    /// Enable-bit position within that register.
+    /// Bit position within that register that must be set.
     pub bit: u8,
+}
+
+/// A peripheral's RCC clock-gate: every bit in [`Self::requires`] must be set in
+/// the *live* RCC register map for a CPU access to the owning peripheral to take
+/// effect — modelling silicon clock-gating.
+///
+/// This is the ONE place the engine expresses "this model may only answer while
+/// the RCC says it is clocked", and [`SystemBus::is_peripheral_clocked`] is the
+/// ONE place it is evaluated. A peripheral model must never grow its own clock
+/// check: a bus-enable bit and a kernel-clock-source ready bit are both just
+/// entries in this list, so a new gating reason is a config line, not a second
+/// mechanism scattered into `peripherals/`.
+#[derive(Debug, Clone, Default)]
+pub struct ResolvedClockGate {
+    /// The bits that must ALL be set. Never empty when the gate is `Some`.
+    pub requires: Vec<RccClockBit>,
 }
 
 /// The `peripheral_tick_interval` recommended for a fully scheduler-driven
@@ -120,8 +135,8 @@ pub struct PeripheralEntry {
     pub ticks_remaining: u64,
     /// Optional RCC clock-gate (silicon clock-gating model). `None` (the common
     /// case) → the peripheral is never gated and accesses always pass through.
-    /// `Some` → accesses are dropped (writes ignored, reads return 0) while the
-    /// gate bit is clear in the RCC, exactly like an unclocked peripheral on
+    /// `Some` → accesses are dropped (writes ignored, reads return 0) while ANY
+    /// required bit is clear in the RCC, exactly like an unclocked peripheral on
     /// real silicon. Resolved from `PeripheralConfig::clock` in `from_config`.
     pub clock_gate: Option<ResolvedClockGate>,
 }

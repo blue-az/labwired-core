@@ -170,6 +170,129 @@ impl SystemBus {
         }
     }
 
+    /// Bind the classic-ESP32 **VSPI** master's SCK/MOSI/CS wire to the pads its
+    /// output matrix can route them to, so a probe on GPIO18 shows the shifted
+    /// bytes rather than the GPIO output latch.
+    ///
+    /// # Why VSPI, and only VSPI
+    ///
+    /// Classic ESP32 has FOUR SPI controllers and three matrix signal groups
+    /// (ESP32 datasheet v5.3 §4.8.2 p36 and Appendix A p61): SPI0/SPI1 drive the
+    /// `SPI*` group and are the flash path, SPI2 drives `HSPI*`, SPI3 drives
+    /// `VSPI*`. Arduino's `SPI` object is VSPI on this part
+    /// (`libraries/SPI/src/SPI.cpp` :348 `SPIClass SPI(VSPI);`), which is what
+    /// every classic lab in this repo actually drives, and `spi3`
+    /// (`0x3FF6_5000`) is the instance this engine registers for it.
+    ///
+    /// The other instances are left on the latch fallback deliberately. SPI0/1
+    /// carry flash traffic on the bonded flash pins, which no board routes to a
+    /// probe, and binding them here would need the `SPI*` group's indices
+    /// (`SPICLK_OUT_IDX` = 0, …), not VSPI's — the same wire on three different
+    /// index sets. SPI2/HSPI is not registered on this bus at all. Both join
+    /// when something drives them, not before.
+    ///
+    /// Resolution is by NAME, and only by name. Three `Esp32Spi` instances sit
+    /// on a classic bus and they are indistinguishable by type, so "the first
+    /// one found" would bind VSPI's signals onto whichever flash controller
+    /// happened to be registered first — a wire published under a signal that
+    /// controller never drives. Both production builders spell the VSPI
+    /// instance `spi3` (`ESP32_PERIPHERALS` and `configs/chips/esp32.yaml`);
+    /// anything else is a no-op, deliberately.
+    ///
+    /// MISO (`VSPIQ`) is unbound; see [`crate::peripherals::esp_gpspi_wire`].
+    pub(crate) fn wire_esp32_spi_pads(&mut self) {
+        use crate::peripherals::esp32::gpio::Esp32Gpio;
+        use crate::peripherals::esp32::spi::Esp32Spi;
+
+        let gpio_idx = self
+            .peripherals
+            .iter()
+            .position(|p| p.dev.as_any().map(|a| a.is::<Esp32Gpio>()).unwrap_or(false));
+        let spi_idx = self.find_peripheral_index_by_name("spi3").filter(|&i| {
+            self.peripherals[i]
+                .dev
+                .as_any()
+                .map(|a| a.is::<Esp32Spi>())
+                .unwrap_or(false)
+        });
+        // ⚠️ Resolve BOTH before touching either: `pad_lines_arc` CREATES the
+        // wire cell, and a controller that owns a cell no route reaches still
+        // buffers every launched transaction, arms a wakeup per burst, and
+        // narrates into a wire nothing reads.
+        let (Some(spi_idx), Some(gpio_idx)) = (spi_idx, gpio_idx) else {
+            return;
+        };
+        let Some(lines) = self.peripherals[spi_idx]
+            .dev
+            .as_any_mut()
+            .and_then(|a| a.downcast_mut::<Esp32Spi>())
+            .map(Esp32Spi::pad_lines_arc)
+        else {
+            return;
+        };
+        if let Some(gpio) = self.peripherals[gpio_idx]
+            .dev
+            .as_any_mut()
+            .and_then(|a| a.downcast_mut::<Esp32Gpio>())
+        {
+            gpio.bind_spi_lines(&lines);
+        }
+    }
+
+    /// Bind each classic-ESP32 UART's TX wire to the pads its output matrix can
+    /// route it to, so serial output is a waveform on a remapped pad rather than
+    /// the idle GPIO latch. No-op unless classic GPIO and at least one
+    /// `Esp32Uart` are on the bus.
+    ///
+    /// ⚠️ The IO_MUX verdict is NOT the C3's or the S3's. On classic, ALL THREE
+    /// UARTs have an IO_MUX default pad — U0TXD on GPIO1 at function 0, U1TXD on
+    /// GPIO10 and U2TXD on GPIO17 at function 4 — so none of them is
+    /// matrix-visible on a stock default-pin `Serial.begin()`, and that is
+    /// correct: the pad genuinely is showing its GPIO state. Every route lights
+    /// the moment firmware remaps TX, which `uart_set_pin` does through
+    /// `gpio_matrix_out` for any non-default pin. See
+    /// `peripherals::esp32::gpio`'s `SIG_U0TXD` for the header citations.
+    ///
+    /// ⚠️ `configs/chips/esp32.yaml` declares `uart0` as the vendor-neutral
+    /// `uart` type (the STM32 register map) rather than `esp32_uart`, so a
+    /// `from_config` build of this chip binds UART1/UART2 only. The programmatic
+    /// `configure_xtensa_esp32` — the builder every real classic lab uses —
+    /// registers all three as `Esp32Uart` and binds all three.
+    ///
+    /// TX ONLY; see `Esp32Gpio::bind_uart_tx_lines`.
+    pub(crate) fn wire_esp32_uart_pads(&mut self) {
+        use crate::peripherals::esp32::gpio::Esp32Gpio;
+        use crate::peripherals::esp32::uart::Esp32Uart;
+
+        let Some(gpio_idx) = self
+            .peripherals
+            .iter()
+            .position(|p| p.dev.as_any().map(|a| a.is::<Esp32Gpio>()).unwrap_or(false))
+        else {
+            return;
+        };
+        for (instance, name) in ["uart0", "uart1", "uart2"].iter().enumerate() {
+            let Some(idx) = self.find_peripheral_index_by_name(name) else {
+                continue;
+            };
+            let Some(lines) = self.peripherals[idx]
+                .dev
+                .as_any_mut()
+                .and_then(|a| a.downcast_mut::<Esp32Uart>())
+                .map(Esp32Uart::pad_lines_arc)
+            else {
+                continue;
+            };
+            if let Some(gpio) = self.peripherals[gpio_idx]
+                .dev
+                .as_any_mut()
+                .and_then(|a| a.downcast_mut::<Esp32Gpio>())
+            {
+                gpio.bind_uart_tx_lines(instance, &lines);
+            }
+        }
+    }
+
     /// Bind the RP2040 UARTs' TX/RX wires to the pads IO_BANK0 can route them
     /// to, so a probe on GP0 shows the serial waveform rather than the SIO
     /// output latch. No-op unless IO_BANK0, SIO and a UART are all on the bus.
@@ -805,6 +928,56 @@ impl SystemBus {
         }
     }
 
+    /// Bracket an RP2040 IO_BANK0 write with SIO push-capture re-sync.
+    ///
+    /// `GPIOn_CTRL.FUNCSEL` lives in IO_BANK0, not SIO. SIO owns the pad-route
+    /// table and the logic tap, and its local write hooks only fire on
+    /// `GPIO_OUT`/`GPIO_OE`. Without this bracket, a probe armed while FUNCSEL
+    /// is still NULL stays bound to the pad latch forever after firmware muxes
+    /// the pad to UART/SPI/I²C — the playground arms before firmware runs, so
+    /// that is the normal order. Mirrors [`Self::begin_esp32c3_io_mux_write`].
+    pub(crate) fn begin_rp2040_io_bank0_write(&mut self, io_bank0_idx: usize) -> Option<usize> {
+        use crate::peripherals::rp2040::io_bank0::Rp2040IoBank0;
+        use crate::peripherals::rp2040::sio::Rp2040Sio;
+
+        if !self.peripherals.get(io_bank0_idx).is_some_and(|p| {
+            p.dev
+                .as_any()
+                .map(|any| any.is::<Rp2040IoBank0>())
+                .unwrap_or(false)
+        }) {
+            return None;
+        }
+        let sio_idx = self.peripherals.iter().position(|p| {
+            p.dev
+                .as_any()
+                .map(|any| any.is::<Rp2040Sio>())
+                .unwrap_or(false)
+        })?;
+        self.peripherals[sio_idx]
+            .dev
+            .as_any_mut()
+            .and_then(|any| any.downcast_mut::<Rp2040Sio>())?
+            .tap_snapshot();
+        Some(sio_idx)
+    }
+
+    /// Complete a successful RP2040 IO_BANK0 write started by
+    /// [`Self::begin_rp2040_io_bank0_write`]: report any pad-level change and
+    /// re-register watched channels with the wires the new FUNCSEL selects.
+    pub(crate) fn finish_rp2040_io_bank0_write(&mut self, sio_idx: Option<usize>) {
+        let Some(sio_idx) = sio_idx else {
+            return;
+        };
+        if let Some(sio) = self.peripherals[sio_idx]
+            .dev
+            .as_any_mut()
+            .and_then(|any| any.downcast_mut::<crate::peripherals::rp2040::sio::Rp2040Sio>())
+        {
+            sio.tap_report();
+        }
+    }
+
     /// Wire the STM32 SPI bit engines' live SCK/MOSI/MISO levels into the
     /// STM32 GPIO ports, so pads whose MODER/AFR (V2) or CRL/CRH CNF (F1)
     /// route an SPI alternate function read the real waveform through
@@ -1024,14 +1197,21 @@ impl SystemBus {
     /// routes through the one `add_pad_route` mechanism, differing only in
     /// their AF table.
     ///
-    /// ⚠️ TWO tables, keyed on the CONTROLLER's register generation, not on the
-    /// GPIO's. "V2 GPIO registers" is not the same claim as "V2
-    /// alternate-function map" — the gap the USART table below still carries
-    /// for the L0 — and on I²C the two families genuinely disagree: DS10198
+    /// ⚠️ THREE tables, keyed on the PAIR (controller register generation, GPIO
+    /// register layout) — neither half alone. "V2 GPIO registers" is not the
+    /// same claim as "V2 alternate-function map" — the gap the USART table
+    /// below still carries for the L0 — and on I²C the two families genuinely
+    /// disagree: DS10198
     /// Table 17 puts I2C3 on PA7/PB4 at AF4 on the L476, while DS10086 Rev 5
     /// Table 9 (pages 45-47) leaves AF4 on both of those pads UNASSIGNED on the
     /// F401 and puts I2C3 on PA8/PC9 instead. Routing one table to both would
     /// publish a live I²C waveform onto a pad the F4 silicon does not connect.
+    ///
+    /// The third table is the STM32F103, which shares the F4's legacy
+    /// CONTROLLER (`I2cRegisterLayout::Stm32F1`) but has F1 GPIO ports with no
+    /// AF nibble at all, so the controller generation alone cannot pick a
+    /// table. See the `F1` constant for the datasheet pages and for the two
+    /// pad collisions it declines to route.
     pub(crate) fn wire_stm32_i2c_pads(&mut self) {
         use crate::peripherals::gpio::{GpioPort, GpioRegisterLayout};
         use crate::peripherals::i2c::{I2c, I2cRegisterLayout, LINE_SCL, LINE_SDA};
@@ -1097,6 +1277,47 @@ impl SystemBus {
             ("i2c3", 'c', 9, 4, LINE_SDA, "I2C3_SDA"),
         ];
 
+        // ── F1 GPIO (STM32F103) ─────────────────────────────────────────────
+        //
+        // `(i2c, port, pin, line, func)` — NO alternate-function column, and
+        // that absence is the whole difference. An F1 pad has no AF nibble: its
+        // CRL/CRH say "this pad is an alternate-function output" and the mapping
+        // is fixed, so these bind with `selector: None`, exactly as the F1 rows
+        // of `wire_stm32_spi_pads` do. See `GpioPort::selected_function`.
+        //
+        // Every row from STM32F103x8/xB datasheet DS5319 Rev 20, Table 5
+        // "Medium-density STM32F103xx pin definitions", **Default** column of
+        // the "Alternate functions" group:
+        //   page 32: PB6 = `I2C1_SCL(9)/TIM4_CH1(9)`, PB7 = `I2C1_SDA(9)/TIM4_CH2(9)`
+        //   page 30: PB10 = `I2C2_SCL/USART3_TX(9)`, PB11 = `I2C2_SDA/USART3_RX(9)`
+        //
+        // ⚠️ THE REMAP PADS ARE DELIBERATELY ABSENT. DS5319 page 33 puts
+        // `I2C1_SCL/CANRX` on PB8 and `I2C1_SDA/CANTX` on PB9, in the **Remap**
+        // column — live only while `AFIO_MAPR.I2C1_REMAP` is set. This engine
+        // STORES `MAPR` (`peripherals/afio.rs` keeps bits [15:0]) but NOTHING
+        // decodes it for pad routing: `selected_function` reads CRL/CRH and
+        // nothing else, and `PadRoutes` resolves against that alone. A row on
+        // PB8 would therefore be live the moment firmware made PB8 any
+        // alternate-function output — including the TIM4_CH3 that is its
+        // DEFAULT function — publishing an I²C waveform onto a timer pad.
+        // Fail closed: a remapped-I2C1 lab stays dark and this comment says so.
+        // Closing it means feeding AFIO's `MAPR` into the GPIO port as a second
+        // selector input, not adding two rows here.
+        //
+        // ⚠️ PB6/PB7 ARE ALSO USART1's REMAP PADS (page 32, Remap column:
+        // `USART1_TX` / `USART1_RX`), which is why `wire_stm32_uart_pads` binds
+        // USART1 on PA9 ONLY. Two `selector: None` routes on one pad are
+        // indistinguishable — `PadRoutes::active` returns whichever was bound
+        // first — so binding both would hand PB6 to whichever wiring function
+        // `from_config` happens to call first, silently.
+        type I2cPadF1 = (&'static str, char, u8, usize, &'static str);
+        const F1: &[I2cPadF1] = &[
+            ("i2c1", 'b', 6, LINE_SCL, "I2C1_SCL"),
+            ("i2c1", 'b', 7, LINE_SDA, "I2C1_SDA"),
+            ("i2c2", 'b', 10, LINE_SCL, "I2C2_SCL"),
+            ("i2c2", 'b', 11, LINE_SDA, "I2C2_SDA"),
+        ];
+
         for i2c_name in ["i2c1", "i2c2", "i2c3"] {
             let Some(i2c_idx) = self.find_peripheral_index_by_name(i2c_name) else {
                 continue;
@@ -1109,37 +1330,55 @@ impl SystemBus {
             else {
                 continue;
             };
-            let table = match layout {
-                I2cRegisterLayout::Stm32L4 => L4,
-                I2cRegisterLayout::Stm32F1 => F4,
-                // Kinetis I²C has its own controller and pad model.
-                I2cRegisterLayout::Kinetis => continue,
-            };
-            // ⚠️ Find the V2 ports this instance actually has rows for BEFORE
-            // touching the controller: `pad_lines_arc` CREATES the pad cell, and
-            // a controller owning a cell no route reaches still buffers and
-            // narrates every transaction into a wire nothing reads. The legacy
-            // table makes that reachable for the first time — the STM32F103
-            // carries the same legacy controller behind F1-layout GPIO ports,
-            // which are skipped below, so without this ordering the F103 would
-            // switch the whole narration machinery on for nothing. Same hazard
+            // Kinetis I²C has its own controller and pad model.
+            if layout == I2cRegisterLayout::Kinetis {
+                continue;
+            }
+            // ⚠️ Plan every binding BEFORE touching the controller:
+            // `pad_lines_arc` CREATES the pad cell, and a controller owning a
+            // cell no route reaches still buffers and narrates every
+            // transaction into a wire nothing reads. Same hazard
             // `wire_stm32_uart_pads` documents.
-            let ports: Vec<char> = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
-                .into_iter()
-                .filter(|&port| {
-                    if !table
-                        .iter()
-                        .any(|&(i2c, p, ..)| i2c == i2c_name && p == port)
-                    {
-                        return false;
+            //
+            // The table is chosen per PORT, from the pair (controller register
+            // generation, GPIO register layout) — never from the controller
+            // alone. The STM32F103 is why: it carries the SAME legacy
+            // CR1/CR2/DR controller as the F4 (`I2cRegisterLayout::Stm32F1`)
+            // behind F1-layout GPIO ports, whose pin map is a different
+            // document entirely. Keying on the controller alone would apply the
+            // F401's AF4 table to a chip that has no AF nibble at all.
+            let mut plan: Vec<(char, u8, Option<u8>, usize, &'static str)> = Vec::new();
+            for port in ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] {
+                let Some(gpio_layout) = self
+                    .find_peripheral_index_by_name(&format!("gpio{port}"))
+                    .and_then(|idx| self.peripherals[idx].dev.as_any())
+                    .and_then(|a| a.downcast_ref::<GpioPort>())
+                    .map(GpioPort::register_layout)
+                else {
+                    continue;
+                };
+                let v2_table = match (layout, gpio_layout) {
+                    (I2cRegisterLayout::Stm32L4, GpioRegisterLayout::Stm32V2) => L4,
+                    (I2cRegisterLayout::Stm32F1, GpioRegisterLayout::Stm32V2) => F4,
+                    (I2cRegisterLayout::Stm32F1, GpioRegisterLayout::Stm32F1) => {
+                        for &(i2c, p, pin, line, func) in F1 {
+                            if i2c == i2c_name && p == port {
+                                plan.push((port, pin, None, line, func));
+                            }
+                        }
+                        continue;
                     }
-                    self.find_peripheral_index_by_name(&format!("gpio{port}"))
-                        .and_then(|idx| self.peripherals[idx].dev.as_any())
-                        .and_then(|a| a.downcast_ref::<GpioPort>())
-                        .is_some_and(|g| g.register_layout() == GpioRegisterLayout::Stm32V2)
-                })
-                .collect();
-            if ports.is_empty() {
+                    // An L4-generation controller behind F1 GPIO exists in no
+                    // silicon and no yaml declares it; nothing is guessed.
+                    _ => continue,
+                };
+                for &(i2c, p, pin, af, line, func) in v2_table {
+                    if i2c == i2c_name && p == port {
+                        plan.push((port, pin, Some(af), line, func));
+                    }
+                }
+            }
+            if plan.is_empty() {
                 continue;
             }
             let Some(lines) = self.peripherals[i2c_idx]
@@ -1150,7 +1389,7 @@ impl SystemBus {
             else {
                 continue;
             };
-            for port in ports {
+            for (port, pin, af, line, func) in plan {
                 let Some(gpio_idx) = self.find_peripheral_index_by_name(&format!("gpio{port}"))
                 else {
                     continue;
@@ -1162,11 +1401,7 @@ impl SystemBus {
                 else {
                     continue;
                 };
-                for &(i2c, p, pin, af, line, func) in table {
-                    if i2c == i2c_name && p == port {
-                        gpio.add_pad_route(&lines, pin, Some(af), line, func);
-                    }
-                }
+                gpio.add_pad_route(&lines, pin, af, line, func);
             }
         }
     }
@@ -1177,6 +1412,11 @@ impl SystemBus {
     /// Same mechanism as [`Self::wire_stm32_i2c_pads`] and
     /// [`Self::wire_stm32_spi_pads`] — one `add_pad_route` per (pad, AF), and
     /// the AF nibble decides which is live. Only the table differs.
+    ///
+    /// TWO tables, chosen per port by GPIO register layout: `V2` for the AF-mux
+    /// parts, `F1` for the STM32F103, whose pads have no AF nibble. The `F1`
+    /// table binds USART1 and USART2 only — see the warning on that constant
+    /// for the PB10 pad that I²C wins.
     ///
     /// TX ONLY, for the reason given on [`Self::wire_rp2040_uart_pads`]: nothing
     /// drives the RX line, so a routed RX pad would report an authoritative
@@ -1201,14 +1441,8 @@ impl SystemBus {
         // re-checked against DS10198 (L476), DS10086 (F401) and DS14258 (H563)
         // and means the same thing on all three.
         //
-        // ⚠️ KNOWN GAP, shared with the I²C and SPI tables above: "V2 GPIO
-        // registers" is not the same claim as "V2 alternate-function map". The
-        // STM32L0 (stm32l073.yaml) carries stm32v2 GPIO but puts USART1/2 on
-        // AF4, so these AF7 rows are wrong for it in both directions — the real
-        // pads never route, and AF7 on PA2 is a comparator output that would
-        // now carry USART2's waveform. Closing it needs a per-family AF map
-        // keyed on something finer than the register layout; until then an L0
-        // lab must not trust a serial probe.
+        // V2 AF7 map for F4/L4/H5-class parts. STM32L0 is NOT this map: it
+        // carries V2 GPIO registers but puts USART on AF4 (see L0 table).
         const V2: &[(u8, char, u8, u8, usize, &str)] = &[
             (1, 'a', 9, 7, LINE_TX, "USART1_TX"),
             (1, 'b', 6, 7, LINE_TX, "USART1_TX"),
@@ -1218,6 +1452,65 @@ impl SystemBus {
             (3, 'c', 10, 7, LINE_TX, "USART3_TX"),
             (3, 'd', 8, 7, LINE_TX, "USART3_TX"),
         ];
+
+        // STM32L0 (stm32l073.yaml): V2 GPIO registers at IOPORT `0x5000_0000`,
+        // but USART alternate functions live on AF4, not AF7.
+        //
+        // Verified TX row (only — do not invent pads the datasheet was not
+        // read for):
+        //   PA2 = USART2_TX at AF4 — NUCLEO-L073RZ silicon AFRL=0x00004400
+        //   after bring-up (examples/nucleo-l073rz/VALIDATION.md); REQUIRED_DOCS
+        //   cites DS10685 "USART2 = AF4 on PA2/PA3". Hosted `labwired_datasheet`
+        //   was unavailable this session (session expired / corpus list has no
+        //   stm32l0 key in datasheet-sources.json), so further TX pads are
+        //   deliberately absent rather than guessed.
+        const L0: &[(u8, char, u8, u8, usize, &str)] = &[(2, 'a', 2, 4, LINE_TX, "USART2_TX")];
+
+        // ── F1 GPIO (STM32F103) ─────────────────────────────────────────────
+        //
+        // `(instance, port, pin, line, func)` — no AF column, because an F1 pad
+        // has no AF nibble; CRL/CRH say only "alternate-function output" and the
+        // mapping is fixed, so these bind with `selector: None`. Same shape as
+        // the F1 rows in `wire_stm32_i2c_pads` and `wire_stm32_spi_pads`.
+        //
+        // STM32F103x8/xB datasheet DS5319 Rev 20, Table 5, **Default** column:
+        //   page 31: PA9  = `USART1_TX(9)/TIM1_CH2(9)`
+        //   page 29: PA2  = `USART2_TX(9)/ADC12_IN2/TIM2_CH3(9)`
+        //
+        // ⚠️ USART3 IS DELIBERATELY UNBOUND, and this is the PB6/PB7-class
+        // collision made concrete. DS5319 page 30 lists PB10 as
+        // `I2C2_SCL/USART3_TX(9)` — BOTH in the Default column, one pad, two
+        // peripherals, no remap involved. Table 5 note (4) (page 33) says the
+        // silicon resolves it by convention, not by a mux: "If several
+        // peripherals share the same I/O pin, to avoid conflict between these
+        // alternate functions only one peripheral should be enabled at a time
+        // through the peripheral clock enable bit". This engine has no such
+        // discriminator at the pad — an F1 route matches on CRL/CRH alone, so
+        // two `selector: None` routes on PB10 are indistinguishable and
+        // `PadRoutes::active` silently returns whichever was bound first
+        // (`from_config` calls the I²C wiring before the UART wiring, so I²C
+        // would win by accident rather than by decision).
+        //
+        // I²C wins by DECISION instead: every bundled F103 sensor lab is an I²C
+        // lab, and a wrong waveform is worse than an absent one. USART3's other
+        // pads — PC10 (page 32) and PD8 (page 30) — are Remap-column entries
+        // needing `AFIO_MAPR.USART3_REMAP`, which nothing decodes (see the
+        // remap warning in `wire_stm32_i2c_pads`), so USART3 has no
+        // collision-free pad on this part and stays dark. An F103 lab that
+        // prints on USART3 must not trust a serial probe.
+        //
+        // USART1's Remap pads PB6/PB7 (page 32) are absent for the same reason
+        // and a sharper one: they are I2C1's DEFAULT SCL/SDA.
+        const F1: &[(u8, char, u8, usize, &str)] = &[
+            (1, 'a', 9, LINE_TX, "USART1_TX"),
+            (2, 'a', 2, LINE_TX, "USART2_TX"),
+        ];
+
+        // L0 IOPORT base (RM0367 / stm32l073.yaml). F4/L4 GPIO lives at
+        // 0x4800_0000; matching the V2 register layout alone cannot pick AF4.
+        let is_stm32l0 = self
+            .find_peripheral_index_by_name("gpioa")
+            .is_some_and(|idx| self.peripherals[idx].base == 0x5000_0000);
 
         for instance in 1u8..=3 {
             // Chip configs name these both ways — `uart2` on the L4/F1 configs,
@@ -1229,28 +1522,41 @@ impl SystemBus {
             else {
                 continue;
             };
-            // Find the V2 ports this instance actually has rows for BEFORE
-            // touching the UART: `pad_lines_arc` CREATES the pad cell, and a
-            // UART owning a cell no route reaches still buffers and narrates on
-            // every transmitted byte into a wire nothing reads. On an F1 chip —
-            // whose GPIO is skipped below — that was the whole machinery
-            // switched on for nothing.
-            let ports: Vec<char> = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
-                .into_iter()
-                .filter(|&port| {
-                    if !V2
-                        .iter()
-                        .any(|&(inst, p, ..)| inst == instance && p == port)
-                    {
-                        return false;
+            // Plan every binding BEFORE touching the UART: `pad_lines_arc`
+            // CREATES the pad cell, and a UART owning a cell no route reaches
+            // still buffers and narrates on every transmitted byte into a wire
+            // nothing reads. A chip with no row for this instance therefore
+            // must not reach `pad_lines_arc` at all.
+            let mut plan: Vec<(char, u8, Option<u8>, usize, &'static str)> = Vec::new();
+            for port in ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] {
+                let Some(gpio_layout) = self
+                    .find_peripheral_index_by_name(&format!("gpio{port}"))
+                    .and_then(|idx| self.peripherals[idx].dev.as_any())
+                    .and_then(|a| a.downcast_ref::<GpioPort>())
+                    .map(GpioPort::register_layout)
+                else {
+                    continue;
+                };
+                match gpio_layout {
+                    GpioRegisterLayout::Stm32V2 => {
+                        let table = if is_stm32l0 { L0 } else { V2 };
+                        for &(inst, p, pin, af, line, func) in table {
+                            if inst == instance && p == port {
+                                plan.push((port, pin, Some(af), line, func));
+                            }
+                        }
                     }
-                    self.find_peripheral_index_by_name(&format!("gpio{port}"))
-                        .and_then(|idx| self.peripherals[idx].dev.as_any())
-                        .and_then(|a| a.downcast_ref::<GpioPort>())
-                        .is_some_and(|g| g.register_layout() == GpioRegisterLayout::Stm32V2)
-                })
-                .collect();
-            if ports.is_empty() {
+                    GpioRegisterLayout::Stm32F1 => {
+                        for &(inst, p, pin, line, func) in F1 {
+                            if inst == instance && p == port {
+                                plan.push((port, pin, None, line, func));
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            if plan.is_empty() {
                 continue;
             }
             let Some(lines) = self.peripherals[uart_idx]
@@ -1261,7 +1567,7 @@ impl SystemBus {
             else {
                 continue;
             };
-            for port in ports {
+            for (port, pin, af, line, func) in plan {
                 let Some(gpio_idx) = self.find_peripheral_index_by_name(&format!("gpio{port}"))
                 else {
                     continue;
@@ -1273,11 +1579,7 @@ impl SystemBus {
                 else {
                     continue;
                 };
-                for &(inst, p, pin, af, line, func) in V2 {
-                    if inst == instance && p == port {
-                        gpio.add_pad_route(&lines, pin, Some(af), line, func);
-                    }
-                }
+                gpio.add_pad_route(&lines, pin, af, line, func);
             }
         }
     }

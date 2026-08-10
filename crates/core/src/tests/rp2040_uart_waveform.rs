@@ -21,6 +21,7 @@
 #[cfg(test)]
 mod rp2040_uart_waveform_tests {
     use crate::logic_capture::LogicEdge;
+    use crate::logic_capture::LogicSource;
     use crate::peripherals::rp2040::io_bank0::{Rp2040IoBank0, GPIO_FUNC_UART};
     use crate::peripherals::rp2040::sio::Rp2040Sio;
     use crate::peripherals::uart::{Uart, UartRegisterLayout};
@@ -201,9 +202,9 @@ mod rp2040_uart_waveform_tests {
         }
 
         let sio_idx = machine.bus.find_peripheral_index_by_name("sio").unwrap();
-        let watch: Vec<Option<(usize, u8)>> = TX_PADS
+        let watch: Vec<Option<LogicSource>> = TX_PADS
             .iter()
-            .map(|&(pin, _)| Some((sio_idx, pin)))
+            .map(|&(pin, _)| Some(LogicSource::pad(sio_idx, pin)))
             .collect();
         let initial = machine.logic_watch(&watch);
         assert!(
@@ -233,7 +234,7 @@ mod rp2040_uart_waveform_tests {
         configure(&mut machine, TX_PIN);
 
         let sio_idx = machine.bus.find_peripheral_index_by_name("sio").unwrap();
-        let initial = machine.logic_watch(&[Some((sio_idx, TX_PIN))]);
+        let initial = machine.logic_watch(&[Some(LogicSource::pad(sio_idx, TX_PIN))]);
         assert_eq!(
             initial,
             vec![Some(true)],
@@ -266,7 +267,7 @@ mod rp2040_uart_waveform_tests {
         let mut machine = machine();
         configure(&mut machine, TX_PIN);
         let sio_idx = machine.bus.find_peripheral_index_by_name("sio").unwrap();
-        machine.logic_watch(&[Some((sio_idx, TX_PIN))]);
+        machine.logic_watch(&[Some(LogicSource::pad(sio_idx, TX_PIN))]);
         for _ in 0..20_000 {
             machine.step().unwrap();
         }
@@ -298,7 +299,10 @@ mod rp2040_uart_waveform_tests {
         // Watch BOTH pads: the TX channel proves the machinery is live in this
         // very fixture, so the control channel's silence means the table, not a
         // broken setup. Without that, `is_empty` is satisfied by any failure.
-        machine.logic_watch(&[Some((sio_idx, TX_PIN)), Some((sio_idx, NON_UART_PIN))]);
+        machine.logic_watch(&[
+            Some(LogicSource::pad(sio_idx, TX_PIN)),
+            Some(LogicSource::pad(sio_idx, NON_UART_PIN)),
+        ]);
         for _ in 0..20_000 {
             machine.step().unwrap();
         }
@@ -320,7 +324,7 @@ mod rp2040_uart_waveform_tests {
         let mut machine = machine();
         configure(&mut machine, TX_PIN);
         let sio_idx = machine.bus.find_peripheral_index_by_name("sio").unwrap();
-        machine.logic_watch(&[Some((sio_idx, TX_PIN))]);
+        machine.logic_watch(&[Some(LogicSource::pad(sio_idx, TX_PIN))]);
         for _ in 0..20_000 {
             machine.step().unwrap();
         }
@@ -357,7 +361,7 @@ mod rp2040_uart_waveform_tests {
             .write_u32(IO_BANK0_BASE + ctrl_offset(TX_PIN), GPIO_FUNC_UART)
             .unwrap();
         let sio_idx = machine.bus.find_peripheral_index_by_name("sio").unwrap();
-        machine.logic_watch(&[Some((sio_idx, TX_PIN))]);
+        machine.logic_watch(&[Some(LogicSource::pad(sio_idx, TX_PIN))]);
         for _ in 0..20_000 {
             machine.step().unwrap();
         }
@@ -377,5 +381,41 @@ mod rp2040_uart_waveform_tests {
         configure(&mut machine, TX_PIN);
         assert_eq!(machine.bus.read_u32(UART0_BASE + UARTIBRD).unwrap(), IBRD);
         assert_eq!(machine.bus.read_u32(UART0_BASE + UARTFBRD).unwrap(), FBRD);
+    }
+
+    /// Playground order: arm the analyzer BEFORE firmware muxes the pad.
+    ///
+    /// `Rp2040Sio::sync_pad_routes` used to run only from `install_logic_tap`
+    /// and from SIO `GPIO_OUT`/`GPIO_OE` writes. Arming while FUNCSEL is still
+    /// NULL binds the channel to the pad latch; a later `GPIOn_CTRL` write that
+    /// hands the pad to UART never re-registered the channel with the UART
+    /// wire, so the probe stayed flat while the peripheral transmitted.
+    #[test]
+    fn probe_armed_before_funcsel_still_sees_uart_edges() {
+        let mut machine = machine();
+
+        // Arm first — pad is still NULL (reset FUNCSEL).
+        let sio_idx = machine.bus.find_peripheral_index_by_name("sio").unwrap();
+        machine.logic_watch(&[Some(LogicSource::pad(sio_idx, TX_PIN))]);
+
+        // Then firmware muxes GP0 to UART0 TX and programs baud.
+        configure(&mut machine, TX_PIN);
+
+        for _ in 0..20_000 {
+            machine.step().unwrap();
+        }
+        transmit(&mut machine, b"Hi!\n");
+
+        let edges = machine.logic_read_edges(0).edges;
+        assert!(
+            !edges.is_empty(),
+            "probe armed before FUNCSEL must rebind and capture UART edges on \
+             GP0; got 0 edges (still bound to the pad latch)"
+        );
+        assert_eq!(
+            decode(&edges, BIT_TIME),
+            b"Hi!\n".to_vec(),
+            "rebinding must follow the UART wire, not just invent any edges",
+        );
     }
 }

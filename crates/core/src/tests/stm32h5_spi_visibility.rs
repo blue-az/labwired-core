@@ -33,6 +33,7 @@
 mod stm32h5_spi_visibility_tests {
     use crate::cpu::CortexM;
     use crate::logic_capture::LogicEdge;
+    use crate::logic_capture::LogicSource;
     use crate::{Bus, Machine};
     use labwired_config::{ChipDescriptor, SystemManifest};
     use std::path::PathBuf;
@@ -177,15 +178,19 @@ mod stm32h5_spi_visibility_tests {
             .bus
             .find_peripheral_index_by_name(case.spi)
             .unwrap_or_else(|| panic!("{}: no {}", case.chip, case.spi));
-        let Some(gate) = machine.bus.peripherals[idx].clock_gate else {
+        let Some(gate) = machine.bus.peripherals[idx].clock_gate.clone() else {
             return; // ungated in this chip's yaml — nothing to enable
         };
         let rcc = base_of(machine, "rcc");
-        let cur = machine.bus.read_u32(rcc + gate.reg_offset).unwrap();
-        machine
-            .bus
-            .write_u32(rcc + gate.reg_offset, cur | (1 << gate.bit))
-            .unwrap();
+        // Satisfy EVERY bit the gate requires, not just the first: a peripheral
+        // may need a bus-enable bit AND a kernel-clock ready bit.
+        for req in &gate.requires {
+            let cur = machine.bus.read_u32(rcc + req.reg_offset).unwrap();
+            machine
+                .bus
+                .write_u32(rcc + req.reg_offset, cur | (1 << req.bit))
+                .unwrap();
+        }
     }
 
     /// Put one pad in alternate-function mode with the given AF nibble.
@@ -309,8 +314,10 @@ mod stm32h5_spi_visibility_tests {
             .bus
             .find_peripheral_index_by_name(case.mosi.0)
             .expect("mosi port");
-        let initial =
-            machine.logic_watch(&[Some((sck_idx, case.sck.1)), Some((mosi_idx, case.mosi.1))]);
+        let initial = machine.logic_watch(&[
+            Some(LogicSource::pad(sck_idx, case.sck.1)),
+            Some(LogicSource::pad(mosi_idx, case.mosi.1)),
+        ]);
         let idle_sck = initial[0].expect("SCK pad readable");
 
         let spi = base_of(&machine, case.spi);
@@ -473,7 +480,10 @@ mod stm32h5_spi_visibility_tests {
                 .bus
                 .find_peripheral_index_by_name(case.mosi.0)
                 .expect("mosi port");
-            machine.logic_watch(&[Some((sck_idx, case.sck.1)), Some((mosi_idx, case.mosi.1))]);
+            machine.logic_watch(&[
+                Some(LogicSource::pad(sck_idx, case.sck.1)),
+                Some(LogicSource::pad(mosi_idx, case.mosi.1)),
+            ]);
             let spi = base_of(&machine, case.spi);
             machine.bus.write_u32(spi + CR1, CR1_SSI).unwrap();
             machine

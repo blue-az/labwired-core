@@ -389,8 +389,15 @@ pub mod integration_tests {
         );
     }
 
+    /// A peripheral type nobody implemented FAILS the load; a type the chip
+    /// author explicitly declared as `stub` still builds.
+    ///
+    /// This test used to assert the opposite — that an unknown type "maps to
+    /// Stub" — which is exactly the behaviour that made a silently unmodelled
+    /// peripheral indistinguishable from a modelled one. It is inverted rather
+    /// than deleted so the old contract cannot quietly come back.
     #[test]
-    fn test_from_config_maps_unknown_peripherals_to_stub() {
+    fn test_from_config_rejects_unknown_types_and_keeps_explicit_stubs() {
         let chip = ChipDescriptor {
             schema_version: "1.0".to_string(),
             name: "test-chip".to_string(),
@@ -446,6 +453,21 @@ pub mod integration_tests {
             peripherals: Vec::new(),
         };
 
+        let Err(err) = crate::bus::SystemBus::from_config(&chip, &manifest) else {
+            panic!(
+                "type 'unknown' is not implemented anywhere; building a bus for it hands \
+                 the firmware a window of zeros and lets the run finish green"
+            );
+        };
+        let msg = format!("{err:#}");
+        assert!(msg.contains("unknown"), "must name the type: {msg}");
+        assert!(msg.contains("mystery"), "must name the peripheral: {msg}");
+        assert!(msg.contains("test-chip"), "must name the chip file: {msg}");
+
+        // The same descriptor with the omission DECLARED loads, and both
+        // peripherals land at their declared bases.
+        let mut chip = chip;
+        chip.peripherals[1].r#type = "stub".to_string();
         let bus = crate::bus::SystemBus::from_config(&chip, &manifest).unwrap();
         assert_eq!(bus.peripherals.len(), 2);
         assert_eq!(bus.peripherals[0].name, "uart1");

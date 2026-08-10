@@ -1,7 +1,8 @@
 [
   {
     "buses": [
-      "I2C"
+      "I2C",
+      "UART"
     ],
     "name": "esp32"
   },
@@ -63,7 +64,9 @@
   },
   {
     "buses": [
-      "SPI"
+      "I2C",
+      "SPI",
+      "UART"
     ],
     "name": "stm32f103"
   },

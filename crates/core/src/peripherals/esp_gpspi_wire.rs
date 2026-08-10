@@ -28,6 +28,20 @@
 //! Two copies of it would be two places to get MSB-order or the CS framing
 //! wrong, and only one of them would be under test.
 //!
+//! # The classic ESP32 shares the machinery and NOT the decode
+//!
+//! `peripherals::esp32::spi::Esp32Spi` (the LX6 part's SPI0/1/HSPI/VSPI) is also
+//! transaction-level and also holds an [`EspSpiWire`], because the buffering,
+//! the burst pacing and the CS framing are the same problem. Its REGISTERS are
+//! not: `SPI_CLOCK` is at 0x18 rather than 0x0C, `CLKDIV_PRE` is thirteen bits
+//! rather than four, `SPI_CK_OUT_EDGE` (CPHA) is `USER` bit **7** rather than
+//! bit 9, and there is no `SPI_MISC` at all — `SPI_CK_IDLE_EDGE` (CPOL) lives in
+//! `SPI_PIN` at 0x34. So the classic model keeps its own `bit_time_cycles` and
+//! `framing` and calls only [`EspSpiWire::push`] / [`EspSpiWire::flush`] /
+//! [`EspSpiWire::ready_in`] here. The free functions below are C3/S3 ONLY;
+//! calling them with a classic register would read three fields out of the wrong
+//! bits of the wrong words.
+//!
 //! # What the caller owes this type
 //!
 //! * Call [`EspSpiWire::pad_lines_arc`] once at bus wiring time, AFTER the GPIO
@@ -165,6 +179,14 @@ impl EspSpiWire {
     /// `true` once a lab has routed pads to this controller.
     pub fn is_bound(&self) -> bool {
         self.lines.is_some()
+    }
+
+    /// The wire this controller publishes, for a
+    /// [`LogicSource::Wire`](crate::logic_capture::LogicSource::Wire) channel.
+    /// `None` until a lab routes pads, because that is when the cell is
+    /// created and until then nothing is narrated into it either.
+    pub fn wire_lines(&self) -> Option<&PadLines> {
+        self.lines.as_deref()
     }
 
     /// `true` while a burst is held and unpublished.

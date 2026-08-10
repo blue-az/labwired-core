@@ -35,6 +35,8 @@ pub mod esp_spi_uart_waveform;
 #[cfg(test)]
 pub mod machine_advance;
 #[cfg(test)]
+pub mod no_vacuous_test_targets;
+#[cfg(test)]
 pub mod nrf52;
 pub mod nrf52_nvmc;
 #[cfg(test)]
@@ -64,6 +66,8 @@ pub mod stm32_legacy_i2c_waveform;
 pub mod stm32_spi_waveform;
 #[cfg(test)]
 pub mod stm32_uart_waveform;
+#[cfg(test)]
+pub mod stm32f1_bus_visibility;
 #[cfg(test)]
 pub mod stm32h5_spi_visibility;
 #[cfg(test)]

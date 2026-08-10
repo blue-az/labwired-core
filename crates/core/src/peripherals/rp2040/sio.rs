@@ -183,7 +183,12 @@ impl Rp2040Sio {
         self.tap = Some(t);
     }
 
-    fn tap_snapshot(&mut self) {
+    /// Snapshot watched pad levels before a write that may re-route them.
+    /// `pub(crate)` so the bus can bracket an IO_BANK0 `GPIOn_CTRL` write —
+    /// FUNCSEL lives in that block, not in SIO, and must still re-sync push
+    /// capture (see [`Self::tap_report`]).
+    #[inline]
+    pub(crate) fn tap_snapshot(&mut self) {
         let Some(mut t) = self.tap.take() else {
             return;
         };
@@ -193,7 +198,12 @@ impl Rp2040Sio {
         self.tap = Some(t);
     }
 
-    fn tap_report(&mut self) {
+    /// Report level changes since [`Self::tap_snapshot`] and re-register
+    /// watched pads with the wires that drive them. Called from SIO latch
+    /// writes and from the bus after an IO_BANK0 FUNCSEL change so a probe
+    /// armed before firmware muxes the pad follows the new source.
+    #[inline]
+    pub(crate) fn tap_report(&mut self) {
         let Some(t) = self.tap.take() else {
             return;
         };
@@ -320,7 +330,10 @@ impl Peripheral for Rp2040Sio {
                 let dirty = if self.div_dirty { 1u32 << 1 } else { 0 };
                 ready | dirty
             }
-            _ => 0,
+            _ => {
+                crate::census_reg!("rp2040.sio:Rp2040Sio", offset, "read");
+                0
+            }
         };
         Ok(val)
     }
@@ -365,7 +378,9 @@ impl Peripheral for Rp2040Sio {
                 self.div_dirty = true;
                 return Ok(());
             }
-            _ => {}
+            _ => {
+                crate::census_reg!("rp2040.sio:Rp2040Sio", offset, "write");
+            }
         }
         let v = value & GPIO_MASK;
         let mut_out = matches!(
@@ -391,7 +406,9 @@ impl Peripheral for Rp2040Sio {
             GPIO_OE_SET => self.gpio_oe |= v,
             GPIO_OE_CLR => self.gpio_oe &= !v,
             GPIO_OE_XOR => self.gpio_oe ^= v,
-            _ => {}
+            _ => {
+                crate::census_reg!("rp2040.sio:Rp2040Sio", offset, "write");
+            }
         }
         if mut_out {
             self.tap_report();

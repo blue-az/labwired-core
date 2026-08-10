@@ -800,22 +800,61 @@ impl SystemBus {
                         desc,
                     ))
                 }
-                _other => {
-                    if plugins.is_empty() {
-                        tracing::debug!(
-                            "Mapping unknown peripheral type '{}' to Stub for id '{}'",
-                            p_cfg.r#type,
-                            p_cfg.id
-                        );
-                    } else {
-                        tracing::debug!(
-                            "Mapping unknown peripheral type '{}' to Stub for id '{}' (not claimed by {} loaded plugin(s))",
-                            p_cfg.r#type,
-                            p_cfg.id,
-                            plugins.len()
-                        );
+                // No model, no descriptor, no plugin claimed it. This used to
+                // install a zero-filled stub for ANY type, which is the one
+                // outcome this product cannot ship: firmware talks to the
+                // address, reads back zeros, and the run reports success while
+                // having modelled nothing.
+                //
+                // So an unrecognised type now FAILS THE LOAD. The only
+                // exceptions are the types measured as already reaching this
+                // arm in the shipped configs, each with a written reason in
+                // `known_stubs.rs` — see that file for the rules and the exit.
+                other => {
+                    // Census (measurement only; a no-op unless `silent-census`
+                    // is compiled in) — recorded BEFORE the allowlist decides,
+                    // so it keeps counting exactly what it counted when this
+                    // arm stubbed unconditionally. The histogram is what makes
+                    // the allowlist shrinkable: it says which entries are
+                    // actually reached, not just which ones are declared.
+                    crate::census::record_stub(&p_cfg.r#type);
+                    match super::known_stubs::known_stub_reason(other) {
+                        Some(reason) => {
+                            tracing::debug!(
+                                "peripheral '{}' (type '{}') resolves to a zero stub; \
+                             allowlisted: {}",
+                                p_cfg.id,
+                                p_cfg.r#type,
+                                reason
+                            );
+                            Box::new(crate::peripherals::stub::StubPeripheral::new(0x00))
+                        }
+                        None => {
+                            return Err(anyhow::anyhow!(
+                                "unknown peripheral type '{}' for peripheral '{}' in chip '{}' \
+                             (chip file '{}'): this engine has no model for it, no plugin \
+                             claimed it{}, and it is not on the known-stub allowlist. \
+                             Refusing to answer it with a zero-filled stub — firmware would \
+                             read zeros from silicon that was never modelled and the run \
+                             would still report success. Fix it one of three ways: model the \
+                             peripheral, describe it with `type: declarative` and a \
+                             descriptor `path`, or — if answering zeros really is right — \
+                             declare `type: stub` in the chip YAML (or add '{}' to \
+                             KNOWN_STUBBED_PERIPHERAL_TYPES in \
+                             crates/core/src/bus/known_stubs.rs with a written reason).",
+                                p_cfg.r#type,
+                                p_cfg.id,
+                                chip.name,
+                                manifest.chip,
+                                if plugins.is_empty() {
+                                    String::new()
+                                } else {
+                                    format!(" (of {} loaded plugin(s))", plugins.len())
+                                },
+                                other,
+                            ));
+                        }
                     }
-                    Box::new(crate::peripherals::stub::StubPeripheral::new(0x00))
                 }
             };
 
@@ -887,6 +926,11 @@ impl SystemBus {
         // Same for classic ESP32 (LX6), whose matrix indices are 29/30 —
         // neither the C3's 53/54 nor the S3's 89/90.
         bus.wire_esp32_i2c_pads();
+        // …and the classic part's VSPI (SPI3) and UART TX. VSPI's 63/65/68
+        // happen to be the C3's FSPI numbers and are NOT SPI signals on the S3;
+        // the UART indices 14/17/198 are the classic part's alone.
+        bus.wire_esp32_spi_pads();
+        bus.wire_esp32_uart_pads();
         // RP2040: bind I²C wires to the pads IO_BANK0's FUNCSEL can route them to.
         bus.wire_rp2040_i2c_pads();
         // Same for the RP2040 UARTs' TX/RX, so serial output is a waveform on

@@ -852,6 +852,14 @@ impl crate::peripherals::uart::UartStreamHost for EspUart {
 }
 
 impl Peripheral for EspUart {
+    fn line_names(&self) -> &'static [&'static str] {
+        UART_LINES
+    }
+
+    fn wire_lines(&self) -> Option<&PadLines> {
+        self.lines.as_deref()
+    }
+
     fn bus_trace_handle(&self) -> Option<crate::bus::bus_trace::BusTrace> {
         Some(self.trace.clone())
     }

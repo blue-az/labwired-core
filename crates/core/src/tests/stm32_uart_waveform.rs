@@ -26,6 +26,7 @@
 mod stm32_uart_waveform_tests {
     use crate::cpu::CortexM;
     use crate::logic_capture::LogicEdge;
+    use crate::logic_capture::LogicSource;
     use crate::peripherals::gpio::{GpioPort, GpioRegisterLayout};
     use crate::peripherals::uart::{Uart, UartRegisterLayout};
     use crate::{Bus, Machine};
@@ -211,7 +212,7 @@ mod stm32_uart_waveform_tests {
 
             let idx = machine.bus.find_peripheral_index_by_name(port).unwrap();
             assert_eq!(
-                machine.logic_watch(&[Some((idx, pin))]),
+                machine.logic_watch(&[Some(LogicSource::pad(idx, pin))]),
                 vec![Some(true)],
                 "{port} pin {pin} must idle at mark, not at the GPIO latch",
             );
@@ -254,7 +255,7 @@ mod stm32_uart_waveform_tests {
              AFTER the one that does, or this reproduces nothing",
         );
 
-        machine.logic_watch(&[Some((gpiob_idx, TX_PIN))]);
+        machine.logic_watch(&[Some(LogicSource::pad(gpiob_idx, TX_PIN))]);
         for _ in 0..20_000 {
             machine.step().unwrap();
         }
@@ -267,13 +268,92 @@ mod stm32_uart_waveform_tests {
         );
     }
 
+    /// STM32L0 puts USART2_TX on PA2 at **AF4**, not AF7. Detect L0 by the
+    /// IOPORT GPIO base `0x5000_0000` (stm32l073.yaml) and bind AF4; the
+    /// generic V2 table's AF7 rows leave the pad on the idle latch.
+    ///
+    /// `SystemBus::new` ships an F1-layout `gpioa` at `0x4001_0800`. A second
+    /// peripheral named `gpioa` is shadowed by name lookup — swap the default
+    /// device and rebase the window, same pattern as `stm32_spi_waveform`.
+    #[test]
+    fn stm32l0_usart2_tx_on_pa2_af4_carries_a_decodable_waveform() {
+        const GPIOA_L0: u64 = 0x5000_0000;
+        const USART2: u64 = 0x4000_4400;
+        const PA2: u8 = 2;
+        // Bit-asymmetric payload (not LSB-first palindromes like 0xA5/0x00).
+        const PAYLOAD: &[u8] = b"Lw\x12\x34";
+
+        let mut bus = crate::bus::SystemBus::new();
+        let (cpu, _nvic) = crate::system::cortex_m::configure_cortex_m(&mut bus);
+        let gpioa_idx = bus.find_peripheral_index_by_name("gpioa").unwrap();
+        bus.peripherals[gpioa_idx].base = GPIOA_L0;
+        bus.peripherals[gpioa_idx].size = 0x400;
+        bus.peripherals[gpioa_idx].dev =
+            Box::new(GpioPort::new_with_layout(GpioRegisterLayout::Stm32V2));
+        let mut uart = Uart::new_with_layout(UartRegisterLayout::Stm32V2);
+        uart.set_sink(None, false);
+        bus.add_peripheral("uart2", USART2, 0x400, None, Box::new(uart));
+        bus.wire_stm32_uart_pads();
+
+        let mut machine = Machine::new(cpu, bus);
+        for i in 0..1022u64 {
+            let byte = if i % 2 == 0 { 0x00 } else { 0x20 };
+            machine.bus.write_u8(RAM_BASE + i, byte).unwrap();
+        }
+        machine.bus.write_u8(RAM_BASE + 1022, 0xFF).unwrap();
+        machine.bus.write_u8(RAM_BASE + 1023, 0xE5).unwrap();
+        machine.cpu.pc = RAM_BASE as u32;
+
+        // MODER AF mode + AFRL nibble 4 for PA2 (silicon AFRL after USART2 init).
+        machine
+            .bus
+            .write_u32(GPIOA_L0 + MODER, 0b10 << (PA2 * 2))
+            .unwrap();
+        machine
+            .bus
+            .write_u32(GPIOA_L0 + AFRL, 4 << (PA2 * 4))
+            .unwrap();
+        machine.bus.write_u32(USART2 + BRR, USARTDIV).unwrap();
+
+        let gpio_idx = machine.bus.find_peripheral_index_by_name("gpioa").unwrap();
+        let initial = machine.logic_watch(&[Some(LogicSource::pad(gpio_idx, PA2))]);
+        assert_eq!(
+            initial,
+            vec![Some(true)],
+            "idle USART TX rests at mark through the AF4 pad route",
+        );
+
+        for _ in 0..20_000 {
+            machine.step().unwrap();
+        }
+        for &byte in PAYLOAD {
+            machine.bus.write_u8(USART2 + TDR, byte).unwrap();
+        }
+        for _ in 0..PAYLOAD.len() as u64 * 10 * BIT_TIME + 16 {
+            machine.step().unwrap();
+        }
+
+        let edges = machine.logic_read_edges(0).edges;
+        assert!(
+            !edges.is_empty(),
+            "L0 USART2_TX on PA2/AF4 must put edges on the pad; AF7 binding \
+             leaves a flat latch while the peripheral transmits",
+        );
+        assert_eq!(
+            decode(&edges, BIT_TIME),
+            PAYLOAD.to_vec(),
+            "AF4 route must carry the firmware payload, not a false flat or \
+             wrong bit order",
+        );
+    }
+
     #[test]
     fn logic_capture_sees_a_decodable_stm32_uart_waveform() {
         let mut machine = machine();
         configure(&mut machine, TX_PIN);
 
         let gpio_idx = machine.bus.find_peripheral_index_by_name("gpiob").unwrap();
-        let initial = machine.logic_watch(&[Some((gpio_idx, TX_PIN))]);
+        let initial = machine.logic_watch(&[Some(LogicSource::pad(gpio_idx, TX_PIN))]);
         assert_eq!(
             initial,
             vec![Some(true)],
@@ -325,7 +405,10 @@ mod stm32_uart_waveform_tests {
         // Watch BOTH pads: the TX channel proves the machinery is live in this
         // very fixture, so the control channel's silence means the table, not a
         // broken setup. Without that, `is_empty` is satisfied by any failure.
-        machine.logic_watch(&[Some((gpio_idx, TX_PIN)), Some((gpio_idx, NON_UART_PIN))]);
+        machine.logic_watch(&[
+            Some(LogicSource::pad(gpio_idx, TX_PIN)),
+            Some(LogicSource::pad(gpio_idx, NON_UART_PIN)),
+        ]);
         for _ in 0..20_000 {
             machine.step().unwrap();
         }
@@ -347,7 +430,7 @@ mod stm32_uart_waveform_tests {
         let mut machine = machine();
         configure(&mut machine, TX_PIN);
         let gpio_idx = machine.bus.find_peripheral_index_by_name("gpiob").unwrap();
-        machine.logic_watch(&[Some((gpio_idx, TX_PIN))]);
+        machine.logic_watch(&[Some(LogicSource::pad(gpio_idx, TX_PIN))]);
         for _ in 0..20_000 {
             machine.step().unwrap();
         }
@@ -397,7 +480,7 @@ mod stm32_uart_waveform_tests {
         bus.write_u32(USART3_BASE + BRR, BRR_OVER8).unwrap();
 
         let gpio_idx = machine.bus.find_peripheral_index_by_name("gpiob").unwrap();
-        machine.logic_watch(&[Some((gpio_idx, TX_PIN))]);
+        machine.logic_watch(&[Some(LogicSource::pad(gpio_idx, TX_PIN))]);
         for _ in 0..20_000 {
             machine.step().unwrap();
         }
@@ -433,7 +516,7 @@ mod stm32_uart_waveform_tests {
             .unwrap();
 
         let gpio_idx = machine.bus.find_peripheral_index_by_name("gpiob").unwrap();
-        machine.logic_watch(&[Some((gpio_idx, TX_PIN))]);
+        machine.logic_watch(&[Some(LogicSource::pad(gpio_idx, TX_PIN))]);
         for _ in 0..20_000 {
             machine.step().unwrap();
         }
