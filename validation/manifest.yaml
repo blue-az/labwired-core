@@ -269,7 +269,7 @@ boards:
     # stood at that live capture. The acks below cover model changes that
     # postdate it and are NOT evidenced by that capture.
     drift_ack: 2026-08-10
-    drift_ack_digest: d82c45b402241e86e9edf1fafa8459098cc3e2106ce20f75dad75609daa7082a
+    drift_ack_digest: c6872bbd0b1353e3bbe8d645989d1d309fa4f03b6d5c7db5654a72ae7f60f24c
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -414,7 +414,7 @@ boards:
     # stood at that live capture. The acks below cover model changes that
     # postdate it and are NOT evidenced by that capture.
     drift_ack: 2026-08-10
-    drift_ack_digest: d82c45b402241e86e9edf1fafa8459098cc3e2106ce20f75dad75609daa7082a
+    drift_ack_digest: c6872bbd0b1353e3bbe8d645989d1d309fa4f03b6d5c7db5654a72ae7f60f24c
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -1532,7 +1532,7 @@ boards:
     # stood at that live capture. The acks below cover model changes that
     # postdate it and are NOT evidenced by that capture.
     drift_ack: 2026-08-10
-    drift_ack_digest: 3231824fca0a8eb3bb81fbcc28ca0409173732bd7ff9475e73b945cbd687390b
+    drift_ack_digest: fe9aeec8dda6854ca6ba421e77bebbc1a10b5239429a8b3abc47303cac5e1f67
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1719,7 +1719,7 @@ boards:
     # stood at that live capture. The acks below cover model changes that
     # postdate it and are NOT evidenced by that capture.
     drift_ack: 2026-08-10
-    drift_ack_digest: 1a943a9ae00a936e3fdf6fc6692f353d3f2150f22574c8eb7eaae6da35581193
+    drift_ack_digest: 5c0c39f903efb56360220aa0c3b6c5a473e0f8176fee2211782f41c0f8552d41
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1945,7 +1945,7 @@ boards:
     # stood at that live capture. The acks below cover model changes that
     # postdate it and are NOT evidenced by that capture.
     drift_ack: 2026-08-10
-    drift_ack_digest: 535893325f456474e62708b14187c7e8e3796f6c68931755fd8cd63bb9a8f05b
+    drift_ack_digest: bf4bc6823001078d05c619850a228c985c16420a53de4df0afbc44317fba2529
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -2561,7 +2561,7 @@ boards:
     # ack, which would otherwise have widened this one to cover a change
     # nobody had written down.
     drift_ack: 2026-07-28
-    drift_ack_digest: 798e747e5f87c400a832b2324e5037e6ab3919d238e2aeb78c4b4c7cfa8f83bf
+    drift_ack_digest: 304051ade8b9ff6fde81189ec89a4d25adb26ddb9b3764c586d4179575e3697a
     models:
       - configs/chips/stm32h735.yaml
       - crates/core/src/peripherals/rcc.rs
@@ -2610,7 +2610,7 @@ boards:
     # ack, which would otherwise have widened this one to cover a change
     # nobody had written down.
     drift_ack: 2026-07-28
-    drift_ack_digest: d08642cc2c9e115e6d659b49938ad45136e8526e55ce7437aa72477e0a304eec
+    drift_ack_digest: 0d7b1c221e916cebed6f697e7f40e05ae3e0ec340e2c7df93e19625e4a61da55
     models:
       - configs/chips/stm32f411ceu6.yaml
       - crates/core/src/peripherals/rcc.rs
