@@ -350,7 +350,11 @@ fn enable_clock(machine: &mut Machine<CortexM>, peri_name: &str) {
     //
     // Collected before the writes: `gate` borrows `machine.bus`, which the
     // writes below take mutably.
-    let required: Vec<(u64, u8)> = gate.requires.iter().map(|b| (b.reg_offset, b.bit)).collect();
+    let required: Vec<(u64, u8)> = gate
+        .requires
+        .iter()
+        .map(|b| (b.reg_offset, b.bit))
+        .collect();
     for (reg_offset, bit) in required {
         let addr = rcc_base + reg_offset;
         let cur = machine.bus.read_u32(addr).unwrap_or(0);
