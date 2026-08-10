@@ -17,6 +17,7 @@ pub mod pc_coverage_report;
 pub mod regex;
 pub mod test_support;
 pub mod tier1;
+pub mod verdict;
 
 mod api_client;
 mod artifacts;
@@ -1528,9 +1529,12 @@ fn handle_load_error<C: labwired_core::Cpu>(
         std::time::Duration::from_secs(0),
         0, // vcd_bytes
     );
+    // The pre-run bail-out. Even here the two views come from one verdict, so
+    // this path cannot drift the way the run path did.
+    let verdict = crate::verdict::Verdict::RuntimeError;
     write_outputs(
         args,
-        "error",
+        verdict,
         0,
         metrics,
         StopReason::Halt,
@@ -1553,7 +1557,7 @@ fn handle_load_error<C: labwired_core::Cpu>(
         // Load/reset failed before the run loop, so no stimulus was attempted.
         Vec::new(),
     );
-    ExitCode::from(EXIT_RUNTIME_ERROR)
+    verdict.exit_code()
 }
 
 fn assertion_currently_passes(
@@ -2981,18 +2985,34 @@ fn execute_test_loop<C: labwired_core::Cpu>(
         );
     }
 
-    let status = if stimuli_rejected > 0 {
-        "error"
-    } else if firmware_declared_failure
-        || !all_passed
-        || (stop_requires_assertion && !expected_stop_reason_matched)
-    {
-        "fail"
-    } else if sim_error_happened && !expected_stop_reason_matched {
-        "error"
-    } else {
-        "pass"
-    };
+    // Finalise runtime-observed fault outcomes (e.g. missing_clock fires only
+    // when the firmware actually accessed the unclocked peripheral) and enforce
+    // the require_fault_fired gate: a fault that never took effect makes the run
+    // invalid, not a firmware pass.
+    //
+    // This must happen BEFORE the verdict, not after it. It used to sit thirty
+    // lines below, which is precisely why `fault_gate_failed` could only reach
+    // the exit code and never the `status` — the artifact certified a pass for
+    // a run the exit code called invalid. See `crate::verdict`.
+    labwired_cli::faults::finalize_fault_evidence(&machine.bus, faults, &mut fault_evidence);
+    let fault_gate_failed = require_fault_fired && fault_evidence.iter().any(|e| !e.fired);
+    if fault_gate_failed {
+        let n = fault_evidence.iter().filter(|e| !e.fired).count();
+        error!("require_fault_fired: {n} fault(s) did not fire; run is invalid");
+    }
+
+    // THE verdict. One decision, from which both `status` and the exit code are
+    // read below — they cannot disagree because there is nothing left to
+    // disagree with. Do not reintroduce a second chain here.
+    let verdict = crate::verdict::RunFacts {
+        stimuli_rejected: stimuli_rejected > 0,
+        firmware_declared_failure,
+        assertions_failed: !all_passed,
+        fault_gate_failed,
+        unexpected_safety_stop: stop_requires_assertion && !expected_stop_reason_matched,
+        unrescued_runtime_error: sim_error_happened && !expected_stop_reason_matched,
+    }
+    .verdict();
 
     let duration = start.elapsed();
     let uart_bytes = uart_tx.lock().map(|g| g.len() as u64).unwrap_or(0);
@@ -3006,17 +3026,6 @@ fn execute_test_loop<C: labwired_core::Cpu>(
         duration,
         0, // vcd_bytes - will be updated below
     );
-    // Finalise runtime-observed fault outcomes (e.g. missing_clock fires only
-    // when the firmware actually accessed the unclocked peripheral) and enforce
-    // the require_fault_fired gate: a fault that never took effect makes the run
-    // invalid, not a firmware pass.
-    labwired_cli::faults::finalize_fault_evidence(&machine.bus, faults, &mut fault_evidence);
-    let fault_gate_failed = require_fault_fired && fault_evidence.iter().any(|e| !e.fired);
-    if fault_gate_failed {
-        let n = fault_evidence.iter().filter(|e| !e.fired).count();
-        error!("require_fault_fired: {n} fault(s) did not fire; run is invalid");
-    }
-
     // Final-state universal inspect block (summary mode: decoded registers +
     // artifact metadata, framebuffer bytes omitted/hashed). This is the
     // agent-facing oracle payload — after a run the caller sees the decoded
@@ -3063,11 +3072,7 @@ fn execute_test_loop<C: labwired_core::Cpu>(
     {
         let checked = assertion_results.len();
         let passed = assertion_results.iter().filter(|a| a.passed).count();
-        let label = match status {
-            "pass" => "PASS",
-            "fail" => "FAIL",
-            _ => "ERROR",
-        };
+        let label = verdict.banner_label();
         // The SCRIPT, not the system manifest: nearly every board ships its
         // manifest as `system.yaml`, so naming that would print the same
         // uninformative "system" for every board in the repo. The script stem
@@ -3087,7 +3092,7 @@ fn execute_test_loop<C: labwired_core::Cpu>(
 
     write_outputs(
         args,
-        status,
+        verdict,
         steps_executed,
         metrics,
         stop_reason.clone(),
@@ -3109,24 +3114,19 @@ fn execute_test_loop<C: labwired_core::Cpu>(
         stimulus_outcomes,
     );
 
-    if stimuli_rejected > 0 {
-        ExitCode::from(EXIT_CONFIG_ERROR)
-    } else if !all_passed
-        || fault_gate_failed
-        || (stop_requires_assertion && !expected_stop_reason_matched)
-    {
-        ExitCode::from(EXIT_ASSERT_FAIL)
-    } else if sim_error_happened && !expected_stop_reason_matched {
-        ExitCode::from(EXIT_RUNTIME_ERROR)
-    } else {
-        ExitCode::from(EXIT_PASS)
-    }
+    // The same `verdict` the artifact above was written from. Not a second
+    // chain — that is the whole point of `crate::verdict`.
+    verdict.exit_code()
 }
 
 #[allow(clippy::too_many_arguments, clippy::if_same_then_else)]
 fn write_outputs<C: labwired_core::Cpu>(
     args: &TestArgs,
-    status: &str,
+    // The run's ONE verdict, not a status string. Taking `&str` here meant a
+    // caller could invent a status that disagreed with the exit code it went on
+    // to return; that is the drift `crate::verdict` exists to make
+    // unrepresentable, so the artifact writer is handed the verdict itself.
+    verdict: crate::verdict::Verdict,
     steps_executed: u64,
     metrics: &labwired_core::metrics::PerformanceMetrics,
     stop_reason: StopReason,
@@ -3148,6 +3148,8 @@ fn write_outputs<C: labwired_core::Cpu>(
     logic_edges: Option<labwired_core::logic_capture::LogicEdgesResult>,
     stimuli: Vec<StimulusOutcome>,
 ) {
+    let status = verdict.status();
+
     let mut hasher = Sha256::new();
     hasher.update(firmware_bytes);
     let firmware_hash = format!("{:x}", hasher.finalize());
