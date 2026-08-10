@@ -243,8 +243,23 @@ boards:
     # crates/core/src/peripherals/{nrf52,esp32c3,esp32s3,rp2040} is +72 lines and ZERO deletions, so
     # no existing code path was altered. The source digest moved; the model did not. No live
     # re-capture is evidenced here.
+    # 2026-08-10 UARTE BAUDRATE reset correction. Unlike the acks above this is
+    # NOT digest-only churn: it changes a RESET VALUE the model answers with.
+    # UARTE BAUDRATE reset was 0x01D7_E000 (Baud115200); silicon resets it to
+    # 0x0400_0000 (Baud250000) per nRF52840 PS v1.11 §6.34.9.27 p847, and p830
+    # for the legacy UART. The old value was the engine's invention, so the
+    # register sweep in the 2026-06-17 capture recorded 115200 only because the
+    # model said so — a live re-read of BAUDRATE at reset is exactly what would
+    # settle it, and no bench board was available this session.
+    #
+    # Accepted because the datasheet is unambiguous and cited, the change is
+    # confined to the reset constant plus the zero-BAUDRATE fallback that
+    # already referenced it, and firmware that sets BAUDRATE before use (all of
+    # ours) is unaffected. A live UARTE re-capture is tracked with the UARTE TX
+    # diff already noted above; whoever runs it should read BAUDRATE at reset
+    # first, because that single register is the whole claim here.
     drift_ack: 2026-08-10
-    drift_ack_digest: 876e2d970d0ea3c63da53e6f81fcb2f2479a7faff2fea02b639f7fb9b5fee7f6
+    drift_ack_digest: d82c45b402241e86e9edf1fafa8459098cc3e2106ce20f75dad75609daa7082a
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -365,8 +380,23 @@ boards:
     # crates/core/src/peripherals/{nrf52,esp32c3,esp32s3,rp2040} is +72 lines and ZERO deletions, so
     # no existing code path was altered. The source digest moved; the model did not. No live
     # re-capture is evidenced here.
+    # 2026-08-10 UARTE BAUDRATE reset correction. Unlike the acks above this is
+    # NOT digest-only churn: it changes a RESET VALUE the model answers with.
+    # UARTE BAUDRATE reset was 0x01D7_E000 (Baud115200); silicon resets it to
+    # 0x0400_0000 (Baud250000) per nRF52840 PS v1.11 §6.34.9.27 p847, and p830
+    # for the legacy UART. The old value was the engine's invention, so the
+    # register sweep in the 2026-06-17 capture recorded 115200 only because the
+    # model said so — a live re-read of BAUDRATE at reset is exactly what would
+    # settle it, and no bench board was available this session.
+    #
+    # Accepted because the datasheet is unambiguous and cited, the change is
+    # confined to the reset constant plus the zero-BAUDRATE fallback that
+    # already referenced it, and firmware that sets BAUDRATE before use (all of
+    # ours) is unaffected. A live UARTE re-capture is tracked with the UARTE TX
+    # diff already noted above; whoever runs it should read BAUDRATE at reset
+    # first, because that single register is the whole claim here.
     drift_ack: 2026-08-10
-    drift_ack_digest: 876e2d970d0ea3c63da53e6f81fcb2f2479a7faff2fea02b639f7fb9b5fee7f6
+    drift_ack_digest: d82c45b402241e86e9edf1fafa8459098cc3e2106ce20f75dad75609daa7082a
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -2362,8 +2392,15 @@ boards:
     # 2026-08-05: shared clkrst model gained ClockResetProfile::Rp2350 for the
     # RP2350 address map; RP2040 default path is unit-tested unchanged
     # (rp2350_clkrst_profile::rp2040_profile_is_unchanged).
+    # 2026-08-10 RP2040 probe re-binding. This is the board the change is FOR:
+    # SIO's tap_snapshot/tap_report became pub(crate) and the bus now calls them
+    # around an IO_BANK0 GPIOn_CTRL write, because FUNCSEL lives in IO_BANK0 and
+    # not in SIO — so a probe armed before firmware muxes the pad kept watching
+    # the old source and drew a flat line. Observability only: no register
+    # read/write path, reset value or layout changed, and the frozen capture
+    # covers register values rather than probe binding. No live re-capture.
     drift_ack: 2026-08-05
-    drift_ack_digest: 21cbe19eed460866d0629d7f29a9ccc051f11d23a1421acf7df7fecbb27b58e7
+    drift_ack_digest: 464f96a5779c0b909939e03690fb7fca2e9e251eaf0597ce3fad88ce64e027d3
     models:
       - configs/chips/rp2040.yaml
       - crates/core/src/peripherals/rp2040
@@ -2417,8 +2454,16 @@ boards:
     # or full-duplex RX events: labwired-hw-oracle (27/27) and chip_conformance
     # pass unchanged. No live re-capture this session; re-capturing IDR readback
     # and SPI RX behaviour is tracked.
+    # 2026-08-10 RP2040 probe re-binding (shared bus files). accessors.rs now
+    # brackets an IO_BANK0 GPIOn_CTRL write with the SIO tap snapshot/report
+    # pair so a probe armed before firmware muxes a pad follows the new source.
+    # For THIS board the bracket is inert: begin_rp2040_io_bank0_write() type-
+    # checks the peripheral against Rp2040IoBank0 and returns None otherwise, so
+    # no register read/write path, reset value or layout is touched. The source
+    # digest moved because a shared file's commit date moved; the model did not.
+    # No live re-capture is evidenced here.
     drift_ack: 2026-07-28
-    drift_ack_digest: 744f5d8f034e70465a6231e19acf2f02bb897c1854a488e23aa7ae5489ffd408
+    drift_ack_digest: 798e747e5f87c400a832b2324e5037e6ab3919d238e2aeb78c4b4c7cfa8f83bf
     models:
       - configs/chips/stm32h735.yaml
       - crates/core/src/peripherals/rcc.rs
@@ -2452,8 +2497,16 @@ boards:
     # or full-duplex RX events: labwired-hw-oracle (27/27) and chip_conformance
     # pass unchanged. No live re-capture this session; re-capturing IDR readback
     # and SPI RX behaviour is tracked.
+    # 2026-08-10 RP2040 probe re-binding (shared bus files). accessors.rs now
+    # brackets an IO_BANK0 GPIOn_CTRL write with the SIO tap snapshot/report
+    # pair so a probe armed before firmware muxes a pad follows the new source.
+    # For THIS board the bracket is inert: begin_rp2040_io_bank0_write() type-
+    # checks the peripheral against Rp2040IoBank0 and returns None otherwise, so
+    # no register read/write path, reset value or layout is touched. The source
+    # digest moved because a shared file's commit date moved; the model did not.
+    # No live re-capture is evidenced here.
     drift_ack: 2026-07-28
-    drift_ack_digest: e130cab10d69cfc650c7d34b62c05cdd1d09cd6791129354b54baebf5053605f
+    drift_ack_digest: d08642cc2c9e115e6d659b49938ad45136e8526e55ce7437aa72477e0a304eec
     models:
       - configs/chips/stm32f411ceu6.yaml
       - crates/core/src/peripherals/rcc.rs
@@ -2498,8 +2551,16 @@ boards:
     # or full-duplex RX events: labwired-hw-oracle (27/27) and chip_conformance
     # pass unchanged. No live re-capture this session; re-capturing IDR readback
     # and SPI RX behaviour is tracked.
+    # 2026-08-10 RP2040 probe re-binding (shared bus files). accessors.rs now
+    # brackets an IO_BANK0 GPIOn_CTRL write with the SIO tap snapshot/report
+    # pair so a probe armed before firmware muxes a pad follows the new source.
+    # For THIS board the bracket is inert: begin_rp2040_io_bank0_write() type-
+    # checks the peripheral against Rp2040IoBank0 and returns None otherwise, so
+    # no register read/write path, reset value or layout is touched. The source
+    # digest moved because a shared file's commit date moved; the model did not.
+    # No live re-capture is evidenced here.
     drift_ack: 2026-07-28
-    drift_ack_digest: 1ed82ce698a7099388fd9d42d44e629df0890d103822e93d101b4187480f9f06
+    drift_ack_digest: 2b15565f0ffebc59310b713de72047218b6e9dfbd132b3761ab5c095e87b8f75
     models:
       - configs/chips/mkw41z4.yaml
       - crates/core/src/peripherals/i2c.rs

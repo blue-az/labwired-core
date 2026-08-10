@@ -9,8 +9,8 @@ The models column is a content digest over everything that board's `models` list
 
 | Board | Tier | Last silicon capture | Models | Status |
 |-------|------|----------------------|--------|--------|
-| `nrf52840` | 🟢 silicon-verified | 2026-06-17 | `876e2d970d0ea3c6` | ⚠ drift acked 2026-08-10 (re-capture pending) |
-| `seeed-xiao-nrf52840-sense` | 🟢 silicon-verified | 2026-06-17 | `876e2d970d0ea3c6` | ⚠ drift acked 2026-08-10 (re-capture pending) |
+| `nrf52840` | 🟢 silicon-verified | 2026-06-17 | `d82c45b402241e86` | ⚠ drift acked 2026-08-10 (re-capture pending) |
+| `seeed-xiao-nrf52840-sense` | 🟢 silicon-verified | 2026-06-17 | `d82c45b402241e86` | ⚠ drift acked 2026-08-10 (re-capture pending) |
 | `stm32h563` | 🟢 silicon-verified | 2026-06-22 | `18f24f23028994d3` | ⚠ drift acked 2026-08-10 (re-capture pending) |
 | `esp32c3` | 🟢 silicon-verified | 2026-08-09 | `078c92aa3ef810a7` | ⚠ drift acked 2026-08-10 (re-capture pending) |
 | `nucleo-l476rg` | 🟢 silicon-verified | 2026-06-20 | `3231824fca0a8eb3` | ⚠ drift acked 2026-08-10 (re-capture pending) |
@@ -21,9 +21,9 @@ The models column is a content digest over everything that board's `models` list
 | `stm32f401` | 🟡 smoke-manual | — | `a05f2c5a4fa09d07` | no silicon capture |
 | `stm32wba52` | 🟡 smoke-manual | — | `d74a307a4a4e6116` | no silicon capture |
 | `nrf52832` | ⚪ structural | — | `8eb946cd8fd728b5` | no silicon capture |
-| `rp2040` | ⚪ structural | — | `34ad9d56c8d41148` | no silicon capture |
-| `rp2350` | 🟡 smoke-manual | — | `5ad365cd50bb3430` | no silicon capture |
-| `nrf5340` | 🔵 sim-validated (deep model, no HW diff) | — | `614786f67837612d` | no silicon capture |
+| `rp2040` | ⚪ structural | — | `464f96a5779c0b90` | no silicon capture |
+| `rp2350` | 🟡 smoke-manual | — | `503c1a26a6a58e50` | no silicon capture |
+| `nrf5340` | 🔵 sim-validated (deep model, no HW diff) | — | `447a64e45deab205` | no silicon capture |
 | `stm32h735` | 🔵 sim-validated (deep model, no HW diff) | — | `798e747e5f87c400` | no silicon capture |
 | `stm32f411ceu6` | 🔵 sim-validated (deep model, no HW diff) | — | `d08642cc2c9e115e` | no silicon capture |
 | `esp32` | ⚪ structural | — | `d1ab42bd6cb0bed6` | no silicon capture |
