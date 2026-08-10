@@ -43,9 +43,16 @@
 //! ## Why an allowlist and not a deletion
 //!
 //! The 29 entries below are not hypothetical debt — they are thunks the
-//! browser installs today. Deleting them changes what a lab renders, and this
-//! repo has exactly **zero** test files under `crates/wasm/tests/`, so nothing
-//! here can tell you whether a lab still paints afterwards. The earlier attempt
+//! browser installs today. Deleting them changes what a lab renders, and
+//! nothing in this repo runs in a browser to tell you whether a lab still
+//! paints afterwards.
+//!
+//! (An earlier version of this comment said `crates/wasm/tests/` held **zero**
+//! test files. That was wrong: it holds `motor_states.rs`, and the crate has
+//! 32 more host-side tests behind `cfg(all(test, not(target_arch = "wasm32")))`.
+//! They compile the browser crate natively, which is real coverage — it is just
+//! not a browser, so the conclusion stands on the corrected fact rather than
+//! the overstated one.) The earlier attempt
 //! at this fix deleted all of them at once with no lab run and no gate; that is
 //! the mistake this file exists to avoid repeating. Closing an entry means
 //! running the lab that exercises it, not arguing that it looks safe.
