@@ -157,6 +157,7 @@ impl Dht22 {
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn new_with_frame(
         id: String,
         data_odr_addr: u64,
