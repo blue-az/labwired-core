@@ -59,6 +59,8 @@ pub enum Arch {
     Arm,
     RiscV,
     XtensaLx7,
+    /// AVR8 (ATmega328P-class).
+    Avr,
     Unknown,
 }
 
