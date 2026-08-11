@@ -1028,7 +1028,10 @@ mod tests {
             true
         };
 
-        assert!(expect(&mut bus, &mut now, true, 100), "wait sensor pull low");
+        assert!(
+            expect(&mut bus, &mut now, true, 100),
+            "wait sensor pull low"
+        );
         assert!(expect(&mut bus, &mut now, false, 100), "wait response high");
         assert!(expect(&mut bus, &mut now, true, 100), "wait first bit low");
 

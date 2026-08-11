@@ -258,8 +258,9 @@ impl SystemBus {
                                 .is_some()
                                 || a.downcast_ref::<crate::peripherals::esp32::gpio::Esp32Gpio>()
                                     .is_some()
-                                || a.downcast_ref::<crate::peripherals::esp32s3::gpio::Esp32s3Gpio>()
-                                    .is_some()
+                                || a.downcast_ref::<crate::peripherals::esp32s3::gpio::Esp32s3Gpio>(
+                                )
+                                .is_some()
                         })
                         .unwrap_or(false)
                 });
