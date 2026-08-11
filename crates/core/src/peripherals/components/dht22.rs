@@ -792,7 +792,7 @@ mod tests {
 
         // Pin as push-pull output so BSRR/ODR are the host driver the write-hook
         // samples (input-mode BSRR leaves MODER floating and ODR unread).
-        bus.write_u32(GPIOA + 0x00, 0b01 << (bit * 2)).unwrap();
+        bus.write_u32(GPIOA, 0b01 << (bit * 2)).unwrap();
 
         // Idle: the first service tick drives the pull-up level high.
         bus.set_current_cycle(0);
@@ -810,7 +810,7 @@ mod tests {
         // samples the sensor (output mode reads back ODR on STM32).
         bus.set_current_cycle(1_200);
         bus.write_u32(GPIOA + 0x18, 1 << bit).unwrap();
-        bus.write_u32(GPIOA + 0x00, 0).unwrap(); // MODER input
+        bus.write_u32(GPIOA, 0).unwrap(); // MODER input
         bus.service_gpio_devices();
         assert_eq!(pad(&bus), 1, "pull-up gap before the sensor answers");
         assert!(
