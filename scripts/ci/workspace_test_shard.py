@@ -105,6 +105,7 @@ def workspace_metadata():
         check=True,
         capture_output=True,
         text=True,
+        errors="replace",
     )
     meta = json.loads(out.stdout)
     by_id = {}
@@ -127,6 +128,7 @@ def build_workspace_tests():
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
+        errors="replace",
         check=False,
     )
     if proc.returncode != 0:
@@ -167,7 +169,15 @@ def enumerate_built_targets():
         if pkg is None:
             continue
         t = msg["target"]
-        kind = "test" if "test" in t["kind"] else "lib"
+        # Unittest binaries: a package's lib AND each of its bins gets one
+        # (several bins can share the package's name, so package+target does
+        # not dedupe them — that is correct, cargo test runs them all).
+        if "test" in t["kind"]:
+            kind = "test"
+        elif "bin" in t["kind"]:
+            kind = "bin"
+        else:
+            kind = "lib"
         out.append(
             {
                 "package": pkg["name"],
@@ -175,6 +185,7 @@ def enumerate_built_targets():
                 "kind": kind,
                 "exe": msg["executable"],
                 "cwd": pkg["manifest_dir"],
+                "src_path": t.get("src_path"),
             }
         )
     out.sort(key=lambda e: (e["package"], e["target"], e["kind"]))
@@ -192,10 +203,15 @@ def enumerate_targets_approx():
     for pkg in meta["packages"]:
         name = pkg["name"]
         for t in pkg["targets"]:
-            if "test" in t["kind"] and not t.get("required-features"):
+            if "test" in t["kind"]:
                 targets.append(
                     {"package": name, "target": t["name"], "kind": "test",
-                     "exe": None, "cwd": str(Path(pkg["manifest_path"]).parent)}
+                     "exe": None, "cwd": str(Path(pkg["manifest_path"]).parent),
+                     "src_path": t.get("src_path"),
+                     # Gated targets are enumerated (so exclusion entries can be
+                     # validated against them) but not assigned to shards: the
+                     # approximation cannot model feature unification.
+                     "gated": bool(t.get("required-features"))}
                 )
         src = Path(pkg["manifest_path"]).parent / "src"
         if src.is_dir() and any(
@@ -203,7 +219,8 @@ def enumerate_targets_approx():
         ):
             targets.append(
                 {"package": name, "target": name, "kind": "lib",
-                 "exe": None, "cwd": str(Path(pkg["manifest_path"]).parent)}
+                 "exe": None, "cwd": str(Path(pkg["manifest_path"]).parent),
+                 "src_path": None, "gated": False}
             )
     targets.sort(key=lambda e: (e["package"], e["target"], e["kind"]))
     return targets
@@ -211,14 +228,18 @@ def enumerate_targets_approx():
 
 def classify(cfg, targets):
     """Validate the config against the enumerated target set. Returns
-    (runnable, problems)."""
+    (runnable, problems): every exclusion and known_red entry must name a real
+    target, or the lists rot into excuses."""
     have = {(t["package"], t["target"]) for t in targets if t["kind"] == "test"}
     excluded = {(e["package"], e["target"]) for e in cfg["cross_build_excluded"]}
+    excluded |= {
+        (e["package"], e["target"]) for e in cfg.get("nightly_only_excluded", [])
+    }
     known = {(e["package"], e["target"]) for e in cfg["known_red"]}
     problems = []
     for p, t in sorted(excluded - have):
         problems.append(
-            f"cross_build_excluded entry {p}/{t} names no built test target "
+            f"exclusion entry {p}/{t} names no built test target "
             "(renamed? deleted? feature-gated now?). Remove or fix the entry."
         )
     for p, t in sorted(known - have):
@@ -226,7 +247,10 @@ def classify(cfg, targets):
             f"known_red entry for {p}/{t} names no built test target. If the "
             "test moved or was fixed and deleted, shrink the allow-list."
         )
-    runnable = [t for t in targets if (t["package"], t["target"]) not in excluded]
+    runnable = [
+        t for t in targets
+        if not t.get("gated") and (t["package"], t["target"]) not in excluded
+    ]
     return runnable, problems
 
 
@@ -241,9 +265,27 @@ def shard_slice(runnable, shard, shard_count):
 def count_tests(exe):
     listing = subprocess.run(
         [exe, "--list", "--format", "terse"],
-        capture_output=True, text=True, check=False,
+        capture_output=True, text=True, errors="replace", check=False,
     )
     return sum(1 for l in listing.stdout.splitlines() if l.rstrip().endswith(": test"))
+
+
+def is_release_only(src_path):
+    """True when the integration file's inner `#![cfg(...)]` ALSO carries
+    `not(debug_assertions)` — release-only by construction, so a debug build
+    legitimately compiles it to an empty binary (the RELEASE_ONLY category in
+    crates/core/src/tests/no_vacuous_test_targets.rs). `required-features`
+    covers the feature half of that gate and cannot cover the other half."""
+    if not src_path:
+        return False
+    try:
+        src = Path(src_path).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return False
+    return any(
+        line.strip().startswith("#![cfg(") and "not(debug_assertions)" in line
+        for line in src.splitlines()
+    )
 
 
 def parse_run(output):
@@ -273,6 +315,9 @@ def run_one(entry, listed):
         cwd=entry["cwd"],
         capture_output=True,
         text=True,
+        # Test binaries are not guaranteed to print UTF-8 (stress/ratchet
+        # suites dump raw bytes); a decode crash is not a test verdict.
+        errors="replace",
         # The suite is allowed to fail; the caller classifies the failures.
         check=False,
     )
@@ -318,7 +363,8 @@ def cmd_plan(args):
         f"{len(targets)} targets (APPROXIMATE — pre-build metadata; the real "
         f"run also picks up targets whose required-features feature "
         f"unification enables, e.g. event-scheduler); "
-        f"{len(cfg['cross_build_excluded'])} cross-build-excluded; "
+        f"{len(cfg['cross_build_excluded'])} cross-build-excluded, "
+        f"{len(cfg.get('nightly_only_excluded', []))} nightly-only-excluded; "
         f"{len(runnable)} in the PR shards across {shard_count} shard(s)"
     )
     for k in range(1, shard_count + 1):
@@ -380,13 +426,17 @@ def cmd_run(args):
     new_red = []
     known_hits = []
     for i, entry in enumerate(slice_, 1):
-        label = f"{entry['package']}::{'--lib' if entry['kind'] == 'lib' else entry['target']}"
+        label = (
+            f"{entry['package']}::{entry['target']}"
+            if entry["kind"] == "test"
+            else f"{entry['package']}::{entry['target']} ({entry['kind']} unittests)"
+        )
         print(f"[{i}/{len(slice_)}] {label}", flush=True)
         listed = count_tests(entry["exe"])
-        if listed == 0 and entry["kind"] == "lib":
+        if listed == 0 and entry["kind"] in ("lib", "bin"):
             r = {
                 "package": entry["package"], "target": entry["target"],
-                "kind": "lib", "status": "empty", "listed": 0, "exit_code": 0,
+                "kind": entry["kind"], "status": "empty", "listed": 0, "exit_code": 0,
                 "passed": 0, "failed": 0, "ignored": 0, "filtered": 0,
                 "duration_s": 0.0, "result_lines": 0,
                 "failed_tests": [], "skips": [],
@@ -394,6 +444,20 @@ def cmd_run(args):
             }
             results.append(r)
             print("    empty: no unit tests in this binary", flush=True)
+            continue
+        if listed == 0 and is_release_only(entry.get("src_path")):
+            r = {
+                "package": entry["package"], "target": entry["target"],
+                "kind": entry["kind"], "status": "release-only", "listed": 0,
+                "exit_code": 0, "passed": 0, "failed": 0, "ignored": 0,
+                "filtered": 0, "duration_s": 0.0, "result_lines": 0,
+                "failed_tests": [], "skips": [],
+                "log": "empty IN DEBUG by construction: the file's inner cfg "
+                       "carries not(debug_assertions); it runs in the "
+                       "core-integrity --release lane, not here.",
+            }
+            results.append(r)
+            print("    release-only: empty in debug by construction", flush=True)
             continue
         if listed == 0:
             r = {

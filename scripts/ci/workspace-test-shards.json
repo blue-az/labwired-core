@@ -49,6 +49,20 @@
       "reason": "Panics when the firmware-ci-fixture debug ELF is missing; core-full builds it in the 'Build test firmware fixture' step." }
   ],
 
+  "_nightly_only_about": "Targets the repo has ALREADY decided are nightly-only for measured debug cost — scheduler_lane_coverage.rs's NIGHTLY_ONLY table, which runs them in core-full. The unified workspace build enables event-scheduler (via crates/wasm), so without this list the PR shards would drag them back onto every PR at the exact debug cost that table documented. Excluding them here keeps the existing decision: they run in core-full, nightly, and this file names where.",
+  "nightly_only_excluded": [
+    { "package": "labwired-core", "target": "stm32f401_walk_differential",
+      "reason": "9.6s measured debug runtime; the four STM32 walk differentials are ~55s together. Runs in core-full (NIGHTLY_ONLY in scheduler_lane_coverage.rs)." },
+    { "package": "labwired-core", "target": "stm32h563_walk_differential",
+      "reason": "12.9s measured debug runtime; see stm32f401_walk_differential." },
+    { "package": "labwired-core", "target": "stm32l073_walk_differential",
+      "reason": "14.3s measured debug runtime; see stm32f401_walk_differential." },
+    { "package": "labwired-core", "target": "stm32l476_walk_differential",
+      "reason": "18.6s measured debug runtime; see stm32f401_walk_differential." },
+    { "package": "labwired-core", "target": "nrf54l15_idle_ff_speedup",
+      "reason": "43.6s measured debug runtime — the wall clock IS the assertion and cannot be shortened. Runs in core-full." }
+  ],
+
   "_known_red_about": "Tests that are RED ON MAIN TODAY for a known, tracked reason. A shard that sees one of these fail reports it as known, not new. An entry whose test PASSES is stale and FAILS the aggregate job — shrink this list in the PR that fixes the test. Exact (package, target, test-name) triples, one GitHub issue per entry: no patterns, so an unrelated failure in the same file can never hide behind an entry. Wave 0.1's suite-baseline.json never landed, so this list was measured directly (see the PR that introduced it).",
   "known_red": [
     { "package": "labwired-cli", "target": "environment_runner",

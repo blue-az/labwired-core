@@ -97,6 +97,8 @@ def aggregate(reports_dir, cfg):
             totals["skips"] += len(t.get("skips", []))
             if t["status"] == "empty":
                 totals["empty"] = totals.get("empty", 0) + 1
+            if t["status"] == "release-only":
+                totals["release_only"] = totals.get("release_only", 0) + 1
             slowest.append(
                 (t.get("duration_s", 0.0), t["package"], t["target"], t["status"])
             )
@@ -166,6 +168,8 @@ def main():
         f"- ignored: {totals['ignored']}",
         f"- lib pseudo-targets with no unit tests (heuristic overmatch, not vacuous): "
         f"{totals.get('empty', 0)}",
+        f"- release-only targets (empty in debug by construction; run in the "
+        f"core-integrity --release lane): {totals.get('release_only', 0)}",
         f"- skip notices printed: {totals['skips']} "
         "(a skip is not a pass; the cross-build suites are excluded from PR shards "
         "and run in core-full instead)",
