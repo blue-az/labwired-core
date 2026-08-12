@@ -499,9 +499,10 @@ impl Avr {
                 // PORTB (0x23..0x25): mirror to high bus window so --watch-gpio
                 // portb:N works (flash@0 swallows low-address bus writes).
                 if (0x0023..=0x0025).contains(&addr) {
-                    let _ = bus.write_u8(0x0001_0000 + addr as u64, value);
+                    // High-window mirror is best-effort (must not fail IN/OUT).
+                    let _mirror = bus.write_u8(0x0001_0000 + addr as u64, value);
                 } else {
-                    let _ = bus.write_u8(addr as u64, value);
+                    let _mirror = bus.write_u8(addr as u64, value);
                 }
                 Ok(())
             }
