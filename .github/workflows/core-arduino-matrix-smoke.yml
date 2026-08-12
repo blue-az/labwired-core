@@ -105,7 +105,7 @@ jobs:
           OUT="${{ github.workspace }}/validation/arduino-matrix/out-ci/${{ matrix.board }}"
           python3 validation/arduino-matrix/run_matrix.py \
             --boards "${{ matrix.board }}" \
-            --sketches L0_serial_boot,L1_serial_loop,L2_blink_serial,L3_i2c_sensor,L4_spi_sensor \
+            --sketches L0_serial_boot,L1_serial_loop,L2_blink_serial,L3_i2c_sensor,L4_spi_sensor,L5_adc,L6_pwm,L7_timer,L8_can \
             --out "$OUT"
 
       - name: Upload board artifacts
@@ -140,8 +140,8 @@ jobs:
           import sys
           from pathlib import Path
 
-          # 16 boards × 5 sketches (L0–L4); skips count as cells
-          EXPECTED = 16 * 5
+          # 16 boards × 9 sketches (L0–L8); skips count as cells
+          EXPECTED = 16 * 9
           root = Path("validation/arduino-matrix/out-ci")
           results = list(root.rglob("results.json"))
           if not results:

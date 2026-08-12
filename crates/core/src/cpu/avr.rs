@@ -108,6 +108,11 @@ pub struct Avr {
     twi_slave: Option<usize>,
     /// I²C slaves (e.g. matrix INA219) attached for L3.
     pub i2c_slaves: Vec<Box<dyn I2cDevice>>,
+    /// ADC (ADMUX/ADCSRA/ADCL/ADCH) — matrix L5 analogRead.
+    pub admux: u8,
+    pub adcsra: u8,
+    pub adcl: u8,
+    pub adch: u8,
 }
 
 impl std::fmt::Debug for Avr {
@@ -201,6 +206,10 @@ impl Avr {
             twi_phase: TwiPhase::Idle,
             twi_slave: None,
             i2c_slaves: Vec::new(),
+            admux: 0,
+            adcsra: 0,
+            adcl: 0,
+            adch: 0,
         }
     }
 
@@ -324,6 +333,11 @@ impl Avr {
             0x00BA => Ok(self.twar),
             0x00BB => Ok(self.twdr),
             0x00BC => Ok(self.twcr),
+            // ADC: ADCL/ADCH/ADCSRA/ADMUX (data space)
+            0x0078 => Ok(self.adcl),
+            0x0079 => Ok(self.adch),
+            0x007A => Ok(self.adcsra),
+            0x007C => Ok(self.admux),
             0x0020..=0x00FF => Ok(self.io[(addr - 0x20) as usize]),
             a if (SRAM_START..=RAMEND).contains(&a) => Ok(self.sram[(a - SRAM_START) as usize]),
             _ => Err(SimulationError::MemoryViolation(addr as u64)),
@@ -452,6 +466,32 @@ impl Avr {
             }
             0x00BC => {
                 self.twi_write_cr(value);
+                Ok(())
+            }
+            0x0078 => {
+                self.adcl = value;
+                Ok(())
+            }
+            0x0079 => {
+                self.adch = value;
+                Ok(())
+            }
+            0x007A => {
+                // ADSC (bit 6): write 1 starts a conversion; complete immediately
+                // with mid-scale 512 (~Vcc/2) so analogRead() never hangs.
+                const ADSC: u8 = 1 << 6;
+                const ADIF: u8 = 1 << 4;
+                const ADEN: u8 = 1 << 7;
+                self.adcsra = value;
+                if value & ADEN != 0 && value & ADSC != 0 {
+                    self.adcl = 0x00;
+                    self.adch = 0x02; // 512
+                    self.adcsra = (value & !ADSC) | ADIF;
+                }
+                Ok(())
+            }
+            0x007C => {
+                self.admux = value;
                 Ok(())
             }
             0x0020..=0x00FF => {

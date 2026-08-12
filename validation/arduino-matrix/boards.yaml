@@ -19,6 +19,9 @@ boards:
     led_min_edges: 2
     family: esp32
     notes: "Arduino-ESP32 FreeRTOS — real models only (no thunks)"
+    sketches_skip: [L8_can]
+    sketches_skip_reason:
+      L8_can: "No on-chip CAN model (TWAI not in matrix L8 yet)"
 
   - id: esp32c3
     chip: esp32c3
@@ -32,6 +35,9 @@ boards:
     led_min_edges: 2
     family: esp32
     notes: "Arduino-ESP32-C3 RISC-V"
+    sketches_skip: [L8_can]
+    sketches_skip_reason:
+      L8_can: "No on-chip CAN model"
 
   - id: esp32s3
     chip: esp32s3
@@ -44,6 +50,10 @@ boards:
     min_rmt_tx: 1
     family: esp32
     notes: "Arduino-ESP32-S3 — spi2/spi3 Esp32s3Spi models for matrix L4"
+    sketches_skip: [L5_adc, L8_can]
+    sketches_skip_reason:
+      L5_adc: "No SAR ADC model in esp32s3 chip yaml / programmatic bank yet"
+      L8_can: "No on-chip CAN model"
 
   - id: nrf52832
     chip: nrf52832
@@ -55,6 +65,9 @@ boards:
     led_watch: "gpio0:17"
     led_min_edges: 2
     family: nrf
+    sketches_skip: [L8_can]
+    sketches_skip_reason:
+      L8_can: "No on-chip CAN model"
 
   - id: nrf52840
     chip: nrf52840
@@ -65,6 +78,9 @@ boards:
     led_watch: "gpio0:17"
     led_min_edges: 2
     family: nrf
+    sketches_skip: [L8_can]
+    sketches_skip_reason:
+      L8_can: "No on-chip CAN model"
 
   - id: rp2040
     chip: rp2040
@@ -77,6 +93,9 @@ boards:
     led_min_edges: 2
     family: rp2040
     notes: "Needs platform raspberrypi (pio pkg install -g -p raspberrypi if missing); SPI slave attach for L4"
+    sketches_skip: [L8_can]
+    sketches_skip_reason:
+      L8_can: "No on-chip CAN model"
 
   - id: stm32f103
     chip: stm32f103
@@ -97,6 +116,9 @@ boards:
     led_watch: "gpioa:5"
     led_min_edges: 2
     family: stm32
+    sketches_skip: [L8_can]
+    sketches_skip_reason:
+      L8_can: "No bxCAN/FDCAN in chip yaml"
 
   - id: stm32f407
     chip: stm32f407
@@ -107,6 +129,9 @@ boards:
     led_watch: "gpiod:12"
     led_min_edges: 2
     family: stm32
+    sketches_skip: [L8_can]
+    sketches_skip_reason:
+      L8_can: "No bxCAN in chip yaml"
 
   - id: stm32g474re
     chip: stm32g474re
@@ -117,6 +142,10 @@ boards:
     led_watch: "gpioa:5"
     led_min_edges: 2
     family: stm32
+    sketches_skip: [L6_pwm, L8_can]
+    sketches_skip_reason:
+      L6_pwm: "analogWrite on LED_BUILTIN hits unmapped TIM/AF (memory_violation); digital L2 ok"
+      L8_can: "No FDCAN in chip yaml for matrix L8"
 
   - id: stm32h563
     chip: stm32h563
@@ -127,6 +156,10 @@ boards:
     led_watch: "gpiob:0"
     led_min_edges: 2
     family: stm32
+    sketches_skip: [L5_adc, L8_can]
+    sketches_skip_reason:
+      L5_adc: "H5 ADC deep-power-down / Arduino analogRead path hangs under sim"
+      L8_can: "FDCAN loopback sequence not yet green under Arduino (bxCAN F103/L476 are)"
 
   - id: stm32l073
     chip: stm32l073
@@ -137,6 +170,9 @@ boards:
     led_watch: "gpioa:5"
     led_min_edges: 2
     family: stm32
+    sketches_skip: [L8_can]
+    sketches_skip_reason:
+      L8_can: "No CAN peripheral on L0 series"
 
   - id: stm32l476
     chip: stm32l476
@@ -147,6 +183,7 @@ boards:
     led_watch: "gpioa:5"
     led_min_edges: 2
     family: stm32
+    # L8_can: bxCAN1 loopback
 
   - id: stm32wb55
     chip: stm32wb55
@@ -157,6 +194,9 @@ boards:
     led_watch: "gpiob:5"
     led_min_edges: 2
     family: stm32
+    sketches_skip: [L8_can]
+    sketches_skip_reason:
+      L8_can: "No CAN model in matrix path"
 
   - id: stm32wba52
     chip: stm32wba52
@@ -168,6 +208,10 @@ boards:
     led_watch: "gpiob:4"
     led_min_edges: 2
     family: stm32
+    sketches_skip: [L5_adc, L8_can]
+    sketches_skip_reason:
+      L5_adc: "No ADC model in stm32wba52 chip yaml yet"
+      L8_can: "No CAN model in matrix path"
 
   - id: atmega328p
     chip: atmega328p
@@ -178,7 +222,10 @@ boards:
     led_watch: "portb:5"
     led_min_edges: 2
     family: avr
-    notes: "Classic Arduino Nano — full L0–L4 (USART+PORT+Timer0+TWI+SPI); not silicon-parity"
+    notes: "Classic Arduino Nano — L0–L7 twin; L8 no CAN"
+    sketches_skip: [L8_can]
+    sketches_skip_reason:
+      L8_can: "ATmega328P has no CAN controller"
 
 
 sketches:
@@ -206,4 +253,24 @@ sketches:
     dir: sketches/L4_spi_sensor
     marker: "LW_L4_OK"
     description: "SPI + MAX31855@CS — peripheral kit path (UART marker after transfer)"
+
+  - id: L5_adc
+    dir: sketches/L5_adc
+    marker: "LW_L5_OK"
+    description: "analogRead() — ADC conversion completes (in-range count)"
+
+  - id: L6_pwm
+    dir: sketches/L6_pwm
+    marker: "LW_L6_OK"
+    description: "analogWrite() — PWM / timer duty path accepts a write"
+
+  - id: L7_timer
+    dir: sketches/L7_timer
+    marker: "LW_L7_OK"
+    description: "micros() advances over delay — free-running time base"
+
+  - id: L8_can
+    dir: sketches/L8_can
+    marker: "LW_L8_OK"
+    description: "On-chip CAN loopback (bxCAN/FDCAN registers) — no portable Arduino CAN API"
 

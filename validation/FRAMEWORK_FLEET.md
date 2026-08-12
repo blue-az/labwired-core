@@ -15,6 +15,10 @@ This is the product bar beyond unit tests and UART-only CI fixtures.
 | **L2** | `L2_blink_serial` | `L2_blink` | GPIO / LED + serial (+ optional logic edges) |
 | **L3** | `L3_i2c_sensor` | `L3_i2c_sensor` | **I2C kit** on Wire / Zephyr `i2c` (INA219 @ 0x40) |
 | **L4** | `L4_spi_sensor` | *(Zephyr planned)* | **SPI kit** on SPI / Zephyr `spi` (MAX31855 thermocouple) |
+| **L5** | `L5_adc` | *(planned)* | **ADC** via `analogRead` |
+| **L6** | `L6_pwm` | *(planned)* | **PWM** via `analogWrite` |
+| **L7** | `L7_timer` | *(via L1 sleep)* | **Time base** — `micros()` advances (SysTick/RTC/TIM) |
+| **L8** | `L8_can` | *(labs)* | **CAN loopback** (bxCAN/FDCAN registers; not portable Arduino API) |
 
 ## Chip coverage (record of intent)
 
