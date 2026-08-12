@@ -1901,11 +1901,36 @@ impl SystemBus {
         dev: Box<dyn crate::peripherals::spi::SpiDevice>,
     ) -> anyhow::Result<()> {
         let wrapped = bus_trace::wrap_spi(controller, &self.bus_trace, dev);
-        let idx = self
-            .find_peripheral_index_by_name(controller)
-            .ok_or_else(|| anyhow::anyhow!("attach_spi_device: no peripheral '{controller}'"))?;
+        // S3 programmatic bank uses spi2_s3/spi3_s3; chip yaml / matrix may say spi2/spi3.
+        let candidates: &[&str] = match controller {
+            "spi2" => &["spi2", "spi2_s3"],
+            "spi3" => &["spi3", "spi3_s3"],
+            "spi2_s3" => &["spi2_s3", "spi2"],
+            "spi3_s3" => &["spi3_s3", "spi3"],
+            other => {
+                // Single name — resolve below.
+                let idx = self.find_peripheral_index_by_name(other).ok_or_else(|| {
+                    anyhow::anyhow!("attach_spi_device: no peripheral '{other}'")
+                })?;
+                return self.attach_spi_device_at(idx, wrapped);
+            }
+        };
+        for name in candidates {
+            if let Some(idx) = self.find_peripheral_index_by_name(name) {
+                return self.attach_spi_device_at(idx, wrapped);
+            }
+        }
+        anyhow::bail!("attach_spi_device: no peripheral '{controller}' (tried {candidates:?})")
+    }
+
+    fn attach_spi_device_at(
+        &mut self,
+        idx: usize,
+        wrapped: Box<dyn crate::peripherals::spi::SpiDevice>,
+    ) -> anyhow::Result<()> {
+        let name = self.peripherals[idx].name.clone();
         let any = self.peripherals[idx].dev.as_any_mut().ok_or_else(|| {
-            anyhow::anyhow!("attach_spi_device: '{controller}' is not downcastable")
+            anyhow::anyhow!("attach_spi_device: '{name}' is not downcastable")
         })?;
         if let Some(c) = any.downcast_mut::<crate::peripherals::spi::Spi>() {
             c.push_device(wrapped);
@@ -1926,7 +1951,7 @@ impl SystemBus {
         {
             c.push_device(wrapped);
         } else {
-            anyhow::bail!("attach_spi_device: '{controller}' is not a SPI controller");
+            anyhow::bail!("attach_spi_device: '{name}' is not a SPI controller");
         }
         Ok(())
     }
@@ -1962,13 +1987,25 @@ impl SystemBus {
         if let Some(c) = any.downcast_mut::<crate::peripherals::rp2040::spi::Rp2040Spi>() {
             return std::mem::take(&mut c.attached_devices);
         }
-        if let Some(c) =
-            any.downcast_mut::<crate::peripherals::nrf52::serial_instance::Nrf52SerialInstance>()
-        {
-            // nRF serial instance keeps SPI slaves behind attach_spi; no public
-            // take API — leave empty for non-AVR paths that need it later.
-            let _ = c;
+        Vec::new()
+    }
+
+    /// Take every I²C slave off a controller (by peripheral id).
+    ///
+    /// AVR parks kits on bus `i2c` during `from_config`, then moves them onto
+    /// the CPU TWI model (TWCR/TWDR) — same pattern as [`Self::take_spi_devices`].
+    pub fn take_i2c_slaves(
+        &mut self,
+        controller: &str,
+    ) -> Vec<Box<dyn crate::peripherals::i2c::I2cDevice>> {
+        let Some(idx) = self.find_peripheral_index_by_name(controller) else {
             return Vec::new();
+        };
+        let Some(any) = self.peripherals[idx].dev.as_any_mut() else {
+            return Vec::new();
+        };
+        if let Some(c) = any.downcast_mut::<crate::peripherals::i2c::I2c>() {
+            return c.take_slaves();
         }
         Vec::new()
     }

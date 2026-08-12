@@ -39,6 +39,8 @@ boards:
     pio: { platform: espressif32, board: esp32-s3-devkitc-1, framework: arduino }
     max_steps: 50000000
     budget_reason: "Dual-core S3 boot ~1.1M; L3 Wire headroom"
+    # RGB LED_BUILTIN → RMT TX (min_rmt_tx). Programmatic bank id is rmt_s3,
+    # not rmt — use the TX_START count oracle, not --watch-gpio.
     min_rmt_tx: 1
     family: esp32
     notes: "Arduino-ESP32-S3 — spi2/spi3 Esp32s3Spi models for matrix L4"
@@ -172,13 +174,11 @@ boards:
     system: systems/atmega328p.yaml
     pio: { platform: atmelavr, board: nanoatmega328, framework: arduino }
     max_steps: 500000
-    budget_reason: "AVR sim-smoke: L0~14k L2~40k steps measured; keep headroom for millis"
+    budget_reason: "AVR: L0~14k L2~40k L3/L4 TWI/SPI headroom for millis + Wire/SPI"
+    led_watch: "portb:5"
+    led_min_edges: 2
     family: avr
-    sketches_skip: [L1_serial_loop, L3_i2c_sensor]
-    sketches_skip_reason:
-      L1_serial_loop: "CI matrix gate is L0+L2+L3+L4; L1 optional and not required for AVR onboarding"
-      L3_i2c_sensor: "No TWI/I2C peripheral model on ATmega328P twin yet (USART+PORT+Timer0 sim-smoke)"
-    notes: "Classic Arduino Nano — golden UART/GPIO + SPI (SPDR) L4; not silicon-parity"
+    notes: "Classic Arduino Nano — full L0–L4 (USART+PORT+Timer0+TWI+SPI); not silicon-parity"
 
 
 sketches:

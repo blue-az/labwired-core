@@ -4,7 +4,8 @@
 map, clocks, dual-core, FPU, etc.). Do not add Arduino/ESP “quirk” harnesses,
 flash-patched stubs, or forge SMP handshakes as the product path.
 
-Full matrix: 15 chips × 3 sketches. Scoreboard:
+Full matrix: **16 boards × 5 sketches (L0–L4) = 80 cells**, all green as of
+2026-08-12. Scoreboard:
 [`docs/coverage/arduino-scoreboard.md`](../../docs/coverage/arduino-scoreboard.md)
 
 ## Green (Arduino L0–L2 on plain `labwired test`)
@@ -31,7 +32,9 @@ Full matrix: 15 chips × 3 sketches. Scoreboard:
 
 | Chip | Symptom | Honest next model work |
 |------|---------|-------------------------|
-| _(none)_ | All 15 chips × L0–L2 green on plain `labwired test` (2026-07-23) | — |
+| STM32 classic SPI | L4 second frame often `0x00019016` (default `0x01901600` >> 8) | Flush residual RX / soft-CS so MISO is byte-exact without lag accept |
+| AVR | Not silicon-parity (sim-smoke twin) | Optional deeper Timer/ADC parity beyond matrix needs |
+| _(fleet)_ | Arduino L0–L4 all 16 boards green (2026-08-12) | Zephyr L4 + ESP Zephyr paths |
 
 ~~**STM32WBA52**~~ was a PIO board gap; closed via in-tree `pio-boards/nucleo_wba52cg.json` + stm32duino WBA series patch + PWR `SVMSR` ACTVOSRDY.
 

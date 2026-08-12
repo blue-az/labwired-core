@@ -471,11 +471,16 @@ impl WasmSimulator {
             .map_err(|e| JsValue::from_str(&format!("Loader Error: {}", e)))?;
         let mut cpu = labwired_core::cpu::Avr::new();
         cpu.load_program_image(&program_image);
-        // SPI kits park on bus `spi` during from_config; SPDR clocks them
-        // from the CPU model (same as build_avr_node / CLI).
+        // SPI/I2C kits park on bus controllers; SPDR/TWCR clock them from
+        // the CPU model (same as build_avr_node / CLI).
         for name in ["spi", "spi0", "spi1"] {
             for dev in bus.take_spi_devices(name) {
                 cpu.push_spi_device(dev);
+            }
+        }
+        for name in ["i2c", "i2c0", "twi"] {
+            for dev in bus.take_i2c_slaves(name) {
+                cpu.push_i2c_slave(dev);
             }
         }
         let boxed: Box<dyn Cpu> = Box::new(cpu);

@@ -112,11 +112,16 @@ fn build_avr_node(
         .with_context(|| format!("node '{id}': build bus"))?;
     let mut cpu = crate::cpu::Avr::new();
     cpu.load_program_image(&image);
-    // SPI kits attach to the bus parking controller (`spi`); the AVR
-    // interpreter owns transfers via SPDR, so move slaves onto the CPU.
+    // SPI/I2C kits park on bus controllers; the AVR interpreter owns
+    // transfers via SPDR / TWCR, so move slaves onto the CPU.
     for name in ["spi", "spi0", "spi1"] {
         for dev in bus.take_spi_devices(name) {
             cpu.push_spi_device(dev);
+        }
+    }
+    for name in ["i2c", "i2c0", "twi"] {
+        for dev in bus.take_i2c_slaves(name) {
+            cpu.push_i2c_slave(dev);
         }
     }
     let machine = Machine::new(cpu, bus);

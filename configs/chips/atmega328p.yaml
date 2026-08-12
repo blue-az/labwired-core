@@ -17,3 +17,16 @@ peripherals:
     type: "spi"
     base_address: 0x00010000
     size: "16"
+  # Parking I2C controller for kit attach; TWI lives on the CPU (TWCR/TWDR).
+  - id: "i2c"
+    type: "i2c"
+    base_address: 0x00010010
+    size: "16"
+  # PORTB mirror for --watch-gpio portb:5 (LED_BUILTIN = PB5).
+  # Real PINB/DDRB/PORTB live at 0x23..0x25 in the CPU IO map; bus flash@0
+  # would swallow low MMIO writes, so the Avr interpreter mirrors PORTB
+  # updates to this high window (base + 0/1/2 = PIN/DDR/PORT).
+  - id: "portb"
+    type: "avr_gpio"
+    base_address: 0x00010023
+    size: "3"

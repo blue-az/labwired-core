@@ -8,8 +8,8 @@ external_devices:
     route: { sda: "GPIO8", scl: "GPIO9" }
     config:
       i2c_address: 0x40
-  # S3 programmatic bank names the GP-SPI controllers spi2_s3 / spi3_s3
-  # (see ESP32S3_PERIPHERALS), not the chip-yaml stubs spi2/spi3.
+  # GP-SPI2: programmatic bank id is spi2_s3; attach accepts either name via
+  # alias in attach_spi_device (prefer spi2_s3).
   - id: "max31855"
     type: "max31855"
     connection: "spi2_s3"

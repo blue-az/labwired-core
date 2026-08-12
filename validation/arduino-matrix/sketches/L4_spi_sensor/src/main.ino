@@ -59,27 +59,14 @@ void setup() {
   SPI.begin();
   delay(1);
 
-  // First transaction absorbs residual RX / soft-CS desync; second is clean.
+  // First transaction absorbs residual RX / soft-CS framing; second is clean.
   (void)readMax31855();
   uint32_t frame = readMax31855();
 
-  // Accept the default frame, a one-byte residual shift (STM32 DR junk
-  // leading 0x00), or any fault-free in-range thermocouple word.
-  auto frame_ok = [](uint32_t f) -> bool {
-    if (f == 0) {
-      return false;
-    }
-    bool fault = (f & (1u << 16)) != 0;
-    int16_t tc_raw = (int16_t)((f >> 18) & 0x3FFF);
-    if (tc_raw & 0x2000) {
-      tc_raw |= (int16_t)0xC000;
-    }
-    if (f == 0x01901600u) {
-      return true;
-    }
-    return !fault && tc_raw > -200 && tc_raw < 2000;
-  };
-  if (frame_ok(frame) || frame_ok(frame << 8) || frame_ok(frame >> 8)) {
+  // Default kit frame: tc=25.0°C, internal=22.0°C, fault=0 → 0x01901600.
+  // STM32 classic-SPI still leaves a one-byte residual (0x00019016 = frame>>8);
+  // accept only that known lag, not arbitrary temperatures or shifts.
+  if (frame == 0x01901600u || frame == 0x00019016u) {
     logLine("LW_L4_OK");
     return;
   }
