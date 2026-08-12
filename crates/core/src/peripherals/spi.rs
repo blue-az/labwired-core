@@ -14,6 +14,7 @@
 
 use crate::{Bus, SimResult};
 use std::any::Any;
+use std::cell::Cell;
 use std::str::FromStr;
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::Arc;
@@ -829,6 +830,14 @@ pub struct Spi {
     /// Bytes sitting in the modelled RX FIFO (FIFO layout only).
     rx_fifo_level: u8,
 
+    /// Classic/FIFO STM32 RXNE is **clear-on-DR-read** (RM0008 / RM0351).
+    /// `Peripheral::read` is `&self`, so the flag lives in a `Cell` and SR
+    /// reads merge it into bit 0. Without this, RXNE stayed set after the first
+    /// frame and Arduino `SPI.transfer()` re-read a stale DR (matrix L4 saw
+    /// `0x00019016` = default MAX31855 frame shifted by one residual byte).
+    #[serde(skip)]
+    stm32_rxne: Cell<bool>,
+
     // STM32 bit-engine state (classic/FIFO layout only; the other register
     // families keep their own transfer semantics).
     /// The frame currently clocking on the wire, if any.
@@ -1429,6 +1438,8 @@ impl Spi {
                 // SR is mostly read-only; allow clearing OVR if modelled.
                 if let SpiRegs::Stm32(r) = &mut self.regs {
                     r.sr = value & 0xFFBF;
+                    // Keep clear-on-read RXNE cell in sync with any software clear.
+                    self.stm32_rxne.set(r.sr & 0x0001 != 0);
                 }
             }
             0x10 => {
@@ -1912,12 +1923,10 @@ impl Spi {
         let mosi = value & mask;
         let miso = if !self.attached_devices.is_empty() {
             let mosi_byte = (mosi & 0xFF) as u8;
+            // Last device wins; 0x00 is a valid MISO byte (MAX31855 LSB).
             let mut miso_byte = 0u8;
             for dev in &mut self.attached_devices {
-                let resp = dev.transfer(mosi_byte);
-                if resp != 0 {
-                    miso_byte = resp;
-                }
+                miso_byte = dev.transfer(mosi_byte);
             }
             miso_byte as u16
         } else if self.loopback {
@@ -1992,6 +2001,7 @@ impl Spi {
             if !rx_fifo {
                 // Classic F1/F4 port: no FIFO, RXNE on every frame.
                 r.sr |= 0x0001;
+                self.stm32_rxne.set(true);
             } else {
                 // FIFO port: RXNE follows CR2.FRXTH (bit 12). FRXTH=1 → the
                 // threshold is 8 bit, so one frame asserts it; FRXTH=0 (reset)
@@ -2010,6 +2020,7 @@ impl Spi {
                     let frxth = r.cr2 & (1 << 12) != 0;
                     if frxth || *level >= 2 {
                         r.sr |= 0x0001;
+                        self.stm32_rxne.set(true);
                     }
                 }
             }
@@ -2064,7 +2075,23 @@ impl crate::Peripheral for Spi {
             // Widen u16→u32 before the shift: byte accesses at offsets 2/3 read
             // the upper byte of the next halfword; `(u16 as u32) >> 16` is 0
             // without an overflow panic under the CI release profile.
-            SpiRegs::Stm32(r) => r.read_reg(reg_offset) as u32,
+            SpiRegs::Stm32(r) => {
+                // DR read: clear-on-read RXNE (silicon). Must happen on every
+                // access size that drains RX, including the byte path HAL uses.
+                if reg_offset == 0x0C {
+                    self.stm32_rxne.set(false);
+                }
+                let mut v = r.read_reg(reg_offset) as u32;
+                if reg_offset == 0x08 {
+                    // SR: expose live RXNE from the Cell (authoritative after DR).
+                    if self.stm32_rxne.get() {
+                        v |= 0x0001;
+                    } else {
+                        v &= !0x0001;
+                    }
+                }
+                v
+            }
         };
         Ok(((reg_val >> (byte_offset * 8)) & 0xFF) as u8)
     }
@@ -2883,9 +2910,51 @@ mod tests {
         );
         run_engine(&mut spi);
         assert_eq!(spi.read(0x0C).unwrap(), 0x51, "first frame's answer");
+        assert_eq!(
+            spi.read(0x08).unwrap() & 0x01,
+            0,
+            "RXNE must clear on DR read"
+        );
         spi.write(0x0C, 0x02).unwrap();
         run_engine(&mut spi);
         assert_eq!(spi.read(0x0C).unwrap(), 0x52, "second frame's answer");
+    }
+
+    /// Arduino SPI.transfer() polls RXNE after each DR write. If RXNE is not
+    /// clear-on-read, the next poll exits immediately and re-reads a stale DR
+    /// — the MAX31855 matrix residual (`0x00019016`).
+    #[test]
+    fn rxne_clears_so_multi_byte_transfer_stays_in_sync() {
+        struct Seq {
+            i: u8,
+            bytes: [u8; 4],
+        }
+        impl SpiDevice for Seq {
+            fn transfer(&mut self, _mosi: u8) -> u8 {
+                let b = self.bytes[self.i as usize % 4];
+                self.i = self.i.wrapping_add(1);
+                b
+            }
+            fn cs_pin(&self) -> &str {
+                ""
+            }
+        }
+        let mut spi = Spi::new();
+        spi.push_device(Box::new(Seq {
+            i: 0,
+            bytes: [0x01, 0x90, 0x16, 0x00],
+        }));
+        spi.write(0x00, 0x40).unwrap(); // SPE, BR=0 (fast)
+        let mut frame = 0u32;
+        for _ in 0..4 {
+            spi.write(0x0C, 0x00).unwrap();
+            run_engine(&mut spi);
+            assert_ne!(spi.read(0x08).unwrap() & 0x01, 0, "RXNE after frame");
+            let b = spi.read(0x0C).unwrap();
+            assert_eq!(spi.read(0x08).unwrap() & 0x01, 0, "RXNE cleared by DR");
+            frame = (frame << 8) | u32::from(b);
+        }
+        assert_eq!(frame, 0x0190_1600);
     }
 
     // ── nRF52 SPIM EasyDMA unit tests ─────────────────────────────────────────

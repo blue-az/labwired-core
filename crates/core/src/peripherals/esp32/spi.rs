@@ -461,7 +461,8 @@ impl Esp32Spi {
                     }
                 }
                 if miso_en {
-                    self.fifo[wi] = (self.fifo[wi] & !(0xFFu32 << shift)) | ((miso as u32) << shift);
+                    self.fifo[wi] =
+                        (self.fifo[wi] & !(0xFFu32 << shift)) | ((miso as u32) << shift);
                 }
             }
         } else {

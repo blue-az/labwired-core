@@ -647,8 +647,8 @@ boards:
     # longer stands in for a missing capture; see silicon.last_capture. Note the
     # scope caveat recorded there: the register diff was re-run, the FLASH
     # program-behaviour live-diff was not.
-    drift_ack: 2026-08-10
-    drift_ack_digest: 1a723b165e42c49b19f54091b7254eadd3c16ac53d1ed2f28b3565f40432ae06
+    drift_ack: 2026-08-12
+    drift_ack_digest: 4d1e63879c7efd57efeaf7200b81e9091e57581d0372331551a13bf54c7d0939
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1531,8 +1531,8 @@ boards:
     # Merged 2026-08-10: the discharge recorded above applies to the tree as it
     # stood at that live capture. The acks below cover model changes that
     # postdate it and are NOT evidenced by that capture.
-    drift_ack: 2026-08-10
-    drift_ack_digest: fe9aeec8dda6854ca6ba421e77bebbc1a10b5239429a8b3abc47303cac5e1f67
+    drift_ack: 2026-08-12
+    drift_ack_digest: af55771191b57ce0cb47001f1dfedcea6d63a7ff6824cd5dc3f896df7d30e2c9
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1718,8 +1718,8 @@ boards:
     # Merged 2026-08-10: the discharge recorded above applies to the tree as it
     # stood at that live capture. The acks below cover model changes that
     # postdate it and are NOT evidenced by that capture.
-    drift_ack: 2026-08-10
-    drift_ack_digest: 5c0c39f903efb56360220aa0c3b6c5a473e0f8176fee2211782f41c0f8552d41
+    drift_ack: 2026-08-12
+    drift_ack_digest: d3732ea28d6d644a6dca37540c18b7ea91365865399645207337dc9649a7c052
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1944,8 +1944,8 @@ boards:
     # Merged 2026-08-10: the discharge recorded above applies to the tree as it
     # stood at that live capture. The acks below cover model changes that
     # postdate it and are NOT evidenced by that capture.
-    drift_ack: 2026-08-10
-    drift_ack_digest: bf4bc6823001078d05c619850a228c985c16420a53de4df0afbc44317fba2529
+    drift_ack: 2026-08-12
+    drift_ack_digest: a4f8424f52412801b14b7f0ee5db6191c827c7b3df6bb867ad8ee0f3db1dc016
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -2144,8 +2144,8 @@ boards:
     # failed, cargo fmt clean. Acked WITHOUT a live re-capture for this board:
     # it was not attached. Its own live diff remains owed and is NOT evidenced
     # by this entry.
-    drift_ack: 2026-08-10
-    drift_ack_digest: 11ff9229d7ed39dc14174aba1c3cdf90761b36fa7f61e0a268f9100e58be6701
+    drift_ack: 2026-08-12
+    drift_ack_digest: 03b9ef8e9dc5a1b9769b17be41f2088a2e2bf4e3d8fffa3dde2f369e221c4da1
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -2434,7 +2434,7 @@ boards:
     # code path was altered. Checked rather than argued: esp32c3_reset_conformance (2 passed) and
     # esp32s3_reset_conformance (1 passed) were executed on this branch. The source digest moved;
     # the model did not.
-    drift_ack: 2026-08-10
+    drift_ack: 2026-08-12
     # 2026-08-10: GP-SPI2 CPU W-buffer transactions now deliver MOSI bytes to
     # attached devices and return their MISO bytes; display D/C observes the S3
     # GPIO output; GPIO labels resolve against the S3 register bank. This is an
@@ -2442,7 +2442,7 @@ boards:
     # The anchored nine reset registers and their reset values are unchanged.
     # Owner-approved drift acknowledgement without a new live register capture;
     # focused evidence: 3 production ILI9341 path tests and 20 GP-SPI tests.
-    drift_ack_digest: 2db52b8c59a9b1ce54f55d190a3c6ea193f269420bcabe5184016ecafd71c17d
+    drift_ack_digest: 41f6c0e48a6f4b6e16da0f723e7a881cc9dd7a49213cb91707e69bc3ff265079
     models:
       - crates/core/src/peripherals/esp32s3
       - crates/core/src/peripherals/esp_xtensa_common
@@ -2499,7 +2499,7 @@ boards:
     # read/write path, reset value or layout changed, and the frozen capture
     # covers register values rather than probe binding. No live re-capture.
     drift_ack: 2026-08-05
-    drift_ack_digest: 464f96a5779c0b909939e03690fb7fca2e9e251eaf0597ce3fad88ce64e027d3
+    drift_ack_digest: a2946321f7d4d52a8b5d1289669ede46a45dd8719f30a3e609906683b9a0c1db
     models:
       - configs/chips/rp2040.yaml
       - crates/core/src/peripherals/rp2040
@@ -2568,7 +2568,7 @@ boards:
     # ack, which would otherwise have widened this one to cover a change
     # nobody had written down.
     drift_ack: 2026-07-28
-    drift_ack_digest: 304051ade8b9ff6fde81189ec89a4d25adb26ddb9b3764c586d4179575e3697a
+    drift_ack_digest: baa5708e1cba42100625b9b78c07cd2abc33df056a7e8cf1c85991da0641cdba
     models:
       - configs/chips/stm32h735.yaml
       - crates/core/src/peripherals/rcc.rs
@@ -2617,7 +2617,7 @@ boards:
     # ack, which would otherwise have widened this one to cover a change
     # nobody had written down.
     drift_ack: 2026-07-28
-    drift_ack_digest: 0d7b1c221e916cebed6f697e7f40e05ae3e0ec340e2c7df93e19625e4a61da55
+    drift_ack_digest: 7fddd1f954af6cee1466f79cc464a369ade46db5f3c79ef798737b77ddba9d72
     models:
       - configs/chips/stm32f411ceu6.yaml
       - crates/core/src/peripherals/rcc.rs
@@ -2671,7 +2671,7 @@ boards:
     # digest moved because a shared file's commit date moved; the model did not.
     # No live re-capture is evidenced here.
     drift_ack: 2026-07-28
-    drift_ack_digest: 2b15565f0ffebc59310b713de72047218b6e9dfbd132b3761ab5c095e87b8f75
+    drift_ack_digest: ad92e71cff972f905a0aff6fdfea54217c3991b873d8fad228f8251b7c3f7723
     models:
       - configs/chips/mkw41z4.yaml
       - crates/core/src/peripherals/i2c.rs

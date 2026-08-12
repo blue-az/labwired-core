@@ -62,7 +62,13 @@ pub fn try_build(canonical_type: &str, p_cfg: &PeripheralConfig) -> Option<Box<d
             let irq = p_cfg
                 .irq
                 .map(|i| i as u32)
-                .or_else(|| p_cfg.config.get("irq").and_then(|v| v.as_u64()).map(|n| n as u32))
+                .or_else(|| {
+                    p_cfg
+                        .config
+                        .get("irq")
+                        .and_then(|v| v.as_u64())
+                        .map(|n| n as u32)
+                })
                 .unwrap_or(21);
             Box::new(gpspi::Esp32s3Spi::new(src(irq)))
         }

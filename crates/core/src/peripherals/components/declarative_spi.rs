@@ -224,8 +224,8 @@ impl SpiDevice for GenericSpiDevice {
         // word has been fully clocked out (or never started) so a CS-high
         // dummy flush does not permanently desync multi-byte reads.
         if self.framing.command_bytes == 0 {
-            let need_start = self.is_read.is_none()
-                || (self.latched && self.read_idx >= self.read_buf.len());
+            let need_start =
+                self.is_read.is_none() || (self.latched && self.read_idx >= self.read_buf.len());
             if need_start {
                 self.cs_select();
             }

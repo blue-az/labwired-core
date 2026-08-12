@@ -32,7 +32,7 @@ Full matrix: **16 boards × 5 sketches (L0–L4) = 80 cells**, all green as of
 
 | Chip | Symptom | Honest next model work |
 |------|---------|-------------------------|
-| STM32 classic SPI | L4 second frame often `0x00019016` (default `0x01901600` >> 8) | Flush residual RX / soft-CS so MISO is byte-exact without lag accept |
+| STM32 classic SPI | ~~L4 residual `0x00019016`~~ | **Fixed** — RXNE clear-on-DR-read (`stm32_rxne` Cell); exact `0x01901600` |
 | AVR | Not silicon-parity (sim-smoke twin) | Optional deeper Timer/ADC parity beyond matrix needs |
 | _(fleet)_ | Arduino L0–L4 all 16 boards green (2026-08-12) | Zephyr L4 + ESP Zephyr paths |
 

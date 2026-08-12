@@ -59,14 +59,12 @@ void setup() {
   SPI.begin();
   delay(1);
 
-  // First transaction absorbs residual RX / soft-CS framing; second is clean.
-  (void)readMax31855();
+  // One clean CS-framed read (classic STM32 RXNE is clear-on-DR-read in the
+  // model, so a second absorb pass is no longer required).
   uint32_t frame = readMax31855();
 
-  // Default kit frame: tc=25.0°C, internal=22.0°C, fault=0 → 0x01901600.
-  // STM32 classic-SPI still leaves a one-byte residual (0x00019016 = frame>>8);
-  // accept only that known lag, not arbitrary temperatures or shifts.
-  if (frame == 0x01901600u || frame == 0x00019016u) {
+  // Exact default kit frame: tc=25.0°C, internal=22.0°C, fault=0 → 0x01901600.
+  if (frame == 0x01901600u) {
     logLine("LW_L4_OK");
     return;
   }

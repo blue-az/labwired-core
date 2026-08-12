@@ -526,9 +526,7 @@ impl Avr {
     }
 
     fn find_i2c_slave(&self, addr7: u8) -> Option<usize> {
-        self.i2c_slaves
-            .iter()
-            .position(|s| s.address() == addr7)
+        self.i2c_slaves.iter().position(|s| s.address() == addr7)
     }
 
     /// Write TWCR: writing 1 to TWINT clears it and starts the next TWI step
@@ -625,12 +623,8 @@ impl Avr {
             TwiPhase::Mr => {
                 if let Some(idx) = self.twi_slave {
                     self.twdr = self.i2c_slaves[idx].read();
-                    self.twsr = (self.twsr & 0x03)
-                        | if ack {
-                            TW_MR_DATA_ACK
-                        } else {
-                            TW_MR_DATA_NACK
-                        };
+                    self.twsr =
+                        (self.twsr & 0x03) | if ack { TW_MR_DATA_ACK } else { TW_MR_DATA_NACK };
                 } else {
                     self.twdr = 0xFF;
                     self.twsr = (self.twsr & 0x03) | TW_MR_DATA_NACK;

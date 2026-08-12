@@ -1909,9 +1909,9 @@ impl SystemBus {
             "spi3_s3" => &["spi3_s3", "spi3"],
             other => {
                 // Single name — resolve below.
-                let idx = self.find_peripheral_index_by_name(other).ok_or_else(|| {
-                    anyhow::anyhow!("attach_spi_device: no peripheral '{other}'")
-                })?;
+                let idx = self
+                    .find_peripheral_index_by_name(other)
+                    .ok_or_else(|| anyhow::anyhow!("attach_spi_device: no peripheral '{other}'"))?;
                 return self.attach_spi_device_at(idx, wrapped);
             }
         };
@@ -1929,9 +1929,10 @@ impl SystemBus {
         wrapped: Box<dyn crate::peripherals::spi::SpiDevice>,
     ) -> anyhow::Result<()> {
         let name = self.peripherals[idx].name.clone();
-        let any = self.peripherals[idx].dev.as_any_mut().ok_or_else(|| {
-            anyhow::anyhow!("attach_spi_device: '{name}' is not downcastable")
-        })?;
+        let any = self.peripherals[idx]
+            .dev
+            .as_any_mut()
+            .ok_or_else(|| anyhow::anyhow!("attach_spi_device: '{name}' is not downcastable"))?;
         if let Some(c) = any.downcast_mut::<crate::peripherals::spi::Spi>() {
             c.push_device(wrapped);
         } else if let Some(c) = any.downcast_mut::<crate::peripherals::esp32c3::spi::Esp32c3Spi>() {
@@ -1946,9 +1947,7 @@ impl SystemBus {
         {
             // The SPIM half of the shared SPIM0/TWIM0 window.
             c.attach_spi(wrapped);
-        } else if let Some(c) =
-            any.downcast_mut::<crate::peripherals::rp2040::spi::Rp2040Spi>()
-        {
+        } else if let Some(c) = any.downcast_mut::<crate::peripherals::rp2040::spi::Rp2040Spi>() {
             c.push_device(wrapped);
         } else {
             anyhow::bail!("attach_spi_device: '{name}' is not a SPI controller");
