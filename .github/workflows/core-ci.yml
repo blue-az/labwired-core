@@ -799,9 +799,21 @@ jobs:
       matrix:
         shard: [1, 2, 3]
     steps:
-      # Shallow checkout is fine: the shard script reads `cargo metadata` and
-      # the classification JSON, nothing history-derived.
+      # Full history, on purpose — the same reason as `full:`: the Tier-1
+      # baseline ratchet (labwired-cli lib) and bus_proof_matrix
+      # (labwired-core lib) resolve their baseline from
+      # `git merge-base HEAD origin/main`, and on a shallow checkout they
+      # FAIL LOUDLY rather than guess. The first shard run proved it: four
+      # "new red" that were really this line missing.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # actions/checkout fetches the checked-out ref only, so the
+      # origin/main remote-tracking ref the ratchets merge-base against may
+      # not exist yet. Same step as `full:`.
+      - name: Fetch merge-base ref for the baseline ratchets
+        run: git fetch --no-tags --prune origin +refs/heads/main:refs/remotes/origin/main
 
       # rustfmt + clippy are NOT used by this job — they are installed so
       # rust-cache's key (which folds in components) matches core-integrity's
@@ -810,6 +822,14 @@ jobs:
         uses: dtolnay/rust-toolchain@1.95.0
         with:
           components: rustfmt, clippy
+
+      # The labwired-wasm LIB unittests include the secure-boot playground
+      # repro, which builds firmware-nrf52840-secure-boot for thumbv7em at
+      # test time (ensure_firmware_built). pr-gate installs the same target
+      # for the same tests. It is a lib unittest, not a [[test]] target, so
+      # it cannot go in cross_build_excluded — the target must simply exist.
+      - name: Add ARM target (wasm secure-boot repro firmware)
+        run: rustup target add thumbv7em-none-eabi
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2

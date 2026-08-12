@@ -145,6 +145,37 @@ def test_classification_rejects_known_red_without_a_target():
     assert any("ghost" in p for p in problems)
 
 
+# ── cargo test's runtime environment, reproduced ─────────────────────────────
+
+def test_test_env_sets_manifest_dir_and_bin_exes(tmp_path):
+    exe = tmp_path / "debug" / "deps" / "cli_integration-abc"
+    exe.parent.mkdir(parents=True)
+    exe.touch()
+    entry = {
+        "package": "labwired-cli", "package_id": "pkg-cli",
+        "target": "cli_integration", "kind": "test",
+        "exe": str(exe), "cwd": "/w/crates/cli",
+    }
+    env = shard.test_env(entry, {"pkg-cli": [("labwired", "/w/target/debug/labwired")]})
+    assert env["CARGO_MANIFEST_DIR"] == "/w/crates/cli"
+    assert env["CARGO_BIN_EXE_labwired"] == "/w/target/debug/labwired"
+    # tmpdir's parent resolves to the target dir — test_support's contract.
+    assert Path(env["CARGO_TARGET_TMPDIR"]).parent == tmp_path
+    assert Path(env["CARGO_TARGET_TMPDIR"]).is_dir()
+
+
+def test_test_env_mangles_dashed_bin_names(tmp_path):
+    exe = tmp_path / "debug" / "deps" / "t-1"
+    exe.parent.mkdir(parents=True)
+    exe.touch()
+    entry = {"package": "p", "package_id": "p1", "target": "t", "kind": "test",
+             "exe": str(exe), "cwd": "/w/p"}
+    env = shard.test_env(entry, {"p1": [("my-tool", "/b/my-tool")],
+                                 "other": [("nope", "/b/nope")]})
+    assert env["CARGO_BIN_EXE_my_tool"] == "/b/my-tool"
+    assert "CARGO_BIN_EXE_nope" not in env  # only same-package bins
+
+
 # ── aggregation verdict ──────────────────────────────────────────────────────
 
 def _write_report(root, k, targets, new_red=None, known_red_seen=None, hard=None):

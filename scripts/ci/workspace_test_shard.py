@@ -69,6 +69,7 @@
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -139,6 +140,7 @@ def build_workspace_tests():
             f"red, full stop. Output tail:\n{tail}"
         )
     artifacts = []
+    bin_exes = {}
     for line in proc.stdout.splitlines():
         line = line.strip()
         if not line.startswith("{"):
@@ -149,22 +151,29 @@ def build_workspace_tests():
             continue
         if msg.get("reason") != "compiler-artifact":
             continue
-        if not msg.get("profile", {}).get("test"):
-            continue
         if not msg.get("executable"):
             continue
-        artifacts.append(msg)
-    return artifacts
+        if msg.get("profile", {}).get("test"):
+            artifacts.append(msg)
+        elif "bin" in msg.get("target", {}).get("kind", []):
+            # The plain (non-test-profile) binaries, for CARGO_BIN_EXE_* —
+            # cargo sets one of these per same-package bin when it launches
+            # an integration test.
+            bin_exes.setdefault(msg["package_id"], []).append(
+                (msg["target"]["name"], msg["executable"])
+            )
+    return artifacts, bin_exes
 
 
 def enumerate_built_targets():
-    """(package, target, kind, exe, cwd) for every test binary the unified
-    workspace build produced. kind is 'test' for integration binaries and
-    'lib' for unittest binaries (lib AND bin targets — both hold #[cfg(test)]
-    unit tests)."""
+    """(targets, bin_exes): one entry per test binary the unified workspace
+    build produced. kind is 'test' for integration binaries and 'lib'/'bin'
+    for unittest binaries (both hold #[cfg(test)] unit tests). bin_exes maps
+    package_id -> [(bin name, executable)] for the CARGO_BIN_EXE_* env."""
     _, by_id = workspace_metadata()
     out = []
-    for msg in build_workspace_tests():
+    artifacts, bin_exes = build_workspace_tests()
+    for msg in artifacts:
         pkg = by_id.get(msg["package_id"])
         if pkg is None:
             continue
@@ -181,6 +190,7 @@ def enumerate_built_targets():
         out.append(
             {
                 "package": pkg["name"],
+                "package_id": msg["package_id"],
                 "target": t["name"],
                 "kind": kind,
                 "exe": msg["executable"],
@@ -189,7 +199,33 @@ def enumerate_built_targets():
             }
         )
     out.sort(key=lambda e: (e["package"], e["target"], e["kind"]))
-    return out
+    return out, bin_exes
+
+
+def test_env(entry, bin_exes):
+    """The environment cargo test would have given this binary. Running the
+    executables directly is only faithful if these match:
+
+    - CARGO_MANIFEST_DIR — the package root; tests read fixtures and configs
+      relative to it at RUN time (cli_integration.rs unwraps it).
+    - CARGO_BIN_EXE_<name> — one per bin of the SAME package, pointing at the
+      plain (non-test-profile) binary cargo just built.
+    - CARGO_TARGET_TMPDIR — <target>/tmp; test_support::target_dir() resolves
+      the build tree from its parent, and some suites write scratch files
+      there.
+    """
+    env = {
+        "CARGO_MANIFEST_DIR": entry["cwd"],
+    }
+    deps = Path(entry["exe"]).parent
+    if deps.name == "deps":
+        target = deps.parent.parent
+        tmp = target / "tmp"
+        tmp.mkdir(parents=True, exist_ok=True)
+        env["CARGO_TARGET_TMPDIR"] = str(tmp)
+    for name, exe in bin_exes.get(entry["package_id"], []):
+        env[f"CARGO_BIN_EXE_{name.replace('-', '_')}"] = exe
+    return env
 
 
 def enumerate_targets_approx():
@@ -309,10 +345,11 @@ def parse_run(output):
     }
 
 
-def run_one(entry, listed):
+def run_one(entry, listed, extra_env):
     proc = subprocess.run(
         [entry["exe"]],
         cwd=entry["cwd"],
+        env={**os.environ, **extra_env},
         capture_output=True,
         text=True,
         # Test binaries are not guaranteed to print UTF-8 (stress/ratchet
@@ -386,7 +423,7 @@ def cmd_run(args):
     cfg = load_config()
     shard_count = cfg["shard_count"]
     try:
-        targets = enumerate_built_targets()
+        targets, bin_exes = enumerate_built_targets()
     except RuntimeError as e:
         print(str(e), file=sys.stderr)
         # No report could exist that explains this as a test outcome; write a
@@ -473,7 +510,7 @@ def cmd_run(args):
             hard_errors.append(r)
             print("    VACUOUS: integration binary lists 0 tests", flush=True)
             continue
-        r = run_one(entry, listed)
+        r = run_one(entry, listed, test_env(entry, bin_exes))
         results.append(r)
         print(
             f"    {r['status']}: {r['passed']} passed, {r['failed']} failed, "
