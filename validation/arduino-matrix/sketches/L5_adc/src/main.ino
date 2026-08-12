@@ -36,15 +36,16 @@ void setup() {
 
   // Discard first sample (some cores warm the S&H / channel mux).
   (void)analogRead(LW_ADC_PIN);
-  int v = analogRead(LW_ADC_PIN);
+  int v0 = analogRead(LW_ADC_PIN);
+  int v1 = analogRead(LW_ADC_PIN);
 
-  // 10-bit (AVR classic) through 12-bit (STM32/nRF/ESP) full-scale.
-  if (v >= 0 && v <= 4095) {
+  // 10-bit (AVR) through 12-bit full-scale; two samples must both complete.
+  if (v0 >= 0 && v0 <= 4095 && v1 >= 0 && v1 <= 4095) {
     logLine("LW_L5_OK");
     return;
   }
-  char buf[40];
-  snprintf(buf, sizeof(buf), "LW_L5_FAIL v=%d", v);
+  char buf[48];
+  snprintf(buf, sizeof(buf), "LW_L5_FAIL v0=%d v1=%d", v0, v1);
   logLine(buf);
 }
 

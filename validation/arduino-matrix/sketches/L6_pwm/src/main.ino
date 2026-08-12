@@ -6,7 +6,11 @@
 #include <Arduino.h>
 
 #ifndef LW_PWM_PIN
-#  if defined(LED_BUILTIN)
+  // Nucleo-G474RE LED is PA5, which is also DAC1_OUT2 — analogWrite prefers
+  // DAC and the twin has no DAC window → memory_violation. Use TIM2_CH1 PA0.
+#  if defined(ARDUINO_NUCLEO_G474RE) || defined(ARDUINO_NUCLEO_G474RE_P)
+#    define LW_PWM_PIN PA0
+#  elif defined(LED_BUILTIN)
 #    define LW_PWM_PIN LED_BUILTIN
 #  elif defined(ARDUINO_ARCH_ESP32)
 #    define LW_PWM_PIN 2

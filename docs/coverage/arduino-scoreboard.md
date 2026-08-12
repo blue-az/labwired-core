@@ -1,6 +1,6 @@
 # Arduino × LabWired board matrix
 
-_Generated 2026-08-12 18:53:17 +0200 by `validation/arduino-matrix/run_matrix.py`._
+_Generated 2026-08-12 19:10:12 +0200 by `validation/arduino-matrix/run_matrix.py`._
 
 Legend: ✅ pass · 🔧 compile/build fail · 📦 toolchain missing · 🔴 boot/sim fail · 🟠 oracle miss · 🟣 unmodeled · ⏱️ timeout
 
@@ -15,8 +15,8 @@ Legend: ✅ pass · 🔧 compile/build fail · 📦 toolchain missing · 🔴 bo
 | `stm32f103` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |  |
 | `stm32f401` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | L8_can:skipped |
 | `stm32f407` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | L8_can:skipped |
-| `stm32g474re` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ | ⏭️ | L6_pwm:skipped; L8_can:skipped |
-| `stm32h563` | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ | ✅ | ⏭️ | L5_adc:skipped; L8_can:skipped |
+| `stm32g474re` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | L8_can:skipped |
+| `stm32h563` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |  |
 | `stm32l073` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | L8_can:skipped |
 | `stm32l476` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |  |
 | `stm32wb55` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | L8_can:skipped |
@@ -26,8 +26,8 @@ Legend: ✅ pass · 🔧 compile/build fail · 📦 toolchain missing · 🔴 bo
 ## Summary
 
 - Cells: **144**
-- `pass`: 126
-- `skipped`: 18
+- `pass`: 129
+- `skipped`: 15
 
 ## Failures (detail)
 
@@ -58,17 +58,8 @@ No bxCAN/FDCAN in chip yaml
 ### `stm32f407` × `L8_can` → **skipped**
 No bxCAN in chip yaml
 
-### `stm32g474re` × `L6_pwm` → **skipped**
-analogWrite on LED_BUILTIN hits unmapped TIM/AF (memory_violation); digital L2 ok
-
 ### `stm32g474re` × `L8_can` → **skipped**
 No FDCAN in chip yaml for matrix L8
-
-### `stm32h563` × `L5_adc` → **skipped**
-H5 ADC deep-power-down / Arduino analogRead path hangs under sim
-
-### `stm32h563` × `L8_can` → **skipped**
-FDCAN loopback sequence not yet green under Arduino (bxCAN F103/L476 are)
 
 ### `stm32l073` × `L8_can` → **skipped**
 No CAN peripheral on L0 series

@@ -1,8 +1,6 @@
 // LabWired Arduino matrix L8 — on-chip CAN loopback (register-level).
-//
-// Stock Arduino has no portable CAN API. This sketch pokes bxCAN / FDCAN
-// registers using the same sequences as engine unit tests. Avoid CMSIS names
-// (CAN1, CAN_BASE, FDCAN1, RCC_BASE, …) — they are macros/types in STM headers.
+// Matches engine unit-test sequences (bxCAN BTR.LBKM / FDCAN TEST.LBCK).
+// Avoid CMSIS names (CAN1, CAN_BASE, FDCAN1, RCC_BASE) — they are macros.
 
 #include <Arduino.h>
 #include <stdint.h>
@@ -30,24 +28,26 @@ static inline uint32_t mmio_r(uint32_t addr) {
   return *(volatile uint32_t *)(uintptr_t)addr;
 }
 
-// Prefer the most specific board first; use #elif chain so only one path.
-
 #if defined(ARDUINO_NUCLEO_H563ZI) || defined(STM32H563xx) || defined(STM32H563ZITx)
-// H5 FDCAN1
+// H5 FDCAN1 — exact enter_loopback from crates/core/src/peripherals/fdcan.rs
 static bool lw_can_probe() {
   const uint32_t fd = 0x4000A400u;
   const uint32_t rcc = 0x44020C00u;
-  mmio_w(rcc + 0xE8, mmio_r(rcc + 0xE8) | (1u << 9));
-  mmio_w(fd + 0x18, 0x3u);
-  mmio_w(fd + 0x18, mmio_r(fd + 0x18) | (1u << 7));
-  mmio_w(fd + 0x10, (1u << 4));
-  mmio_w(fd + 0x1C, 0x06000A03u);
-  mmio_w(fd + 0x18, (1u << 7));
-  mmio_w(fd + 0x800 + 0x278, (0x123u << 18));
-  mmio_w(fd + 0x800 + 0x27C, (1u << 16));
+  // H5 RCC APB1HENR @ +0xA0, FDCAN1EN bit 9 (RM0481 / chip yaml clock gate)
+  mmio_w(rcc + 0xA0, mmio_r(rcc + 0xA0) | (1u << 9));
+
+  mmio_w(fd + 0x18, 0x3u);   // CCCR INIT|CCE
+  mmio_w(fd + 0x18, 0xA3u);  // + TEST | MON
+  mmio_w(fd + 0x10, 1u << 4); // TEST.LBCK
+  // TX element 0 @ SRAMCAN+0x278: std ID 0x123, DLC 1
+  mmio_w(fd + 0x800 + 0x278, 0x123u << 18);
+  mmio_w(fd + 0x800 + 0x27C, 1u << 16);
   mmio_w(fd + 0x800 + 0x280, 0xA5u);
-  mmio_w(fd + 0x0CC, 1u);
-  for (int i = 0; i < 10000; i++) {
+  mmio_w(fd + 0x18, 0xA2u); // leave INIT, keep TEST|MON (CCE clears)
+  mmio_w(fd + 0x0CC, 1u);   // TXBAR buffer 0
+
+  // TX completes on a later peripheral tick — spin.
+  for (int i = 0; i < 100000; i++) {
     if ((mmio_r(fd + 0x90) & 0x7Fu) != 0) {
       uint32_t w0 = mmio_r(fd + 0x800 + 0xB0);
       uint32_t w2 = mmio_r(fd + 0x800 + 0xB0 + 8);
@@ -59,7 +59,6 @@ static bool lw_can_probe() {
 #define LW_HAS_CAN 1
 
 #elif defined(ARDUINO_NUCLEO_L476RG) || defined(STM32L476xx)
-// L4 bxCAN1
 static bool lw_can_probe() {
   const uint32_t can = 0x40006400u;
   const uint32_t rcc = 0x40021000u;
@@ -92,7 +91,6 @@ static bool lw_can_probe() {
 
 #elif defined(STM32F1xx) || defined(ARDUINO_BLUEPILL_F103C8) || defined(ARDUINO_GENERIC_F103C8TX) || \
     defined(ARDUINO_BLUEPILL_F103CB) || defined(STM32F103xB) || defined(STM32F103xE)
-// F1 bxCAN1
 static bool lw_can_probe() {
   const uint32_t can = 0x40006400u;
   const uint32_t rcc = 0x40021000u;

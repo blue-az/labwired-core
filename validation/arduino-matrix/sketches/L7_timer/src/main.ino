@@ -26,21 +26,29 @@ void setup() {
   logBegin();
   logLine("LW_L7_BOOT");
 
+  // Three samples: require strict advance across a real delay and monotonicity
+  // after a short busy spin (covers SysTick/RTC/TIMG free-running path).
   unsigned long t0 = micros();
   delay(2);
   unsigned long t1 = micros();
+  volatile uint32_t spin = 0;
+  for (uint32_t i = 0; i < 2000u; i++) {
+    spin += i;
+  }
+  (void)spin;
   unsigned long t2 = micros();
+  delay(1);
+  unsigned long t3 = micros();
 
-  // Monotonic free-running counter with a real 2 ms wait behind it.
-  bool advanced = (t1 > t0) && ((t1 - t0) >= 1000UL);
-  bool mono = (t2 >= t1);
+  bool advanced = (t1 > t0) && ((t1 - t0) >= 1000UL) && (t3 > t1);
+  bool mono = (t2 >= t1) && (t3 >= t2);
 
   if (advanced && mono) {
     logLine("LW_L7_OK");
     return;
   }
-  char buf[56];
-  snprintf(buf, sizeof(buf), "LW_L7_FAIL t0=%lu t1=%lu t2=%lu", t0, t1, t2);
+  char buf[72];
+  snprintf(buf, sizeof(buf), "LW_L7_FAIL t0=%lu t1=%lu t2=%lu t3=%lu", t0, t1, t2, t3);
   logLine(buf);
 }
 

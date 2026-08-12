@@ -142,10 +142,10 @@ boards:
     led_watch: "gpioa:5"
     led_min_edges: 2
     family: stm32
-    sketches_skip: [L6_pwm, L8_can]
+    sketches_skip: [L8_can]
     sketches_skip_reason:
-      L6_pwm: "analogWrite on LED_BUILTIN hits unmapped TIM/AF (memory_violation); digital L2 ok"
       L8_can: "No FDCAN in chip yaml for matrix L8"
+    # L6 uses PA0 (TIM2) — not PA5 LED (DAC1_OUT2) — see L6 sketch
 
   - id: stm32h563
     chip: stm32h563
@@ -156,11 +156,7 @@ boards:
     led_watch: "gpiob:0"
     led_min_edges: 2
     family: stm32
-    sketches_skip: [L5_adc, L8_can]
-    sketches_skip_reason:
-      L5_adc: "H5 ADC deep-power-down / Arduino analogRead path hangs under sim"
-      L8_can: "FDCAN loopback sequence not yet green under Arduino (bxCAN F103/L476 are)"
-
+    # L5: adc profile stm32h7; L8: FDCAN enter_loopback sequence
   - id: stm32l073
     chip: stm32l073
     system: systems/stm32l073.yaml
