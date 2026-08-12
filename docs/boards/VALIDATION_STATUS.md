@@ -11,7 +11,7 @@ The models column is a content digest over everything that board's `models` list
 |-------|------|----------------------|--------|--------|
 | `nrf52840` | 🟢 silicon-verified | 2026-08-09 | `c6872bbd0b1353e3` | ⚠ drift acked 2026-08-10 (re-capture pending) |
 | `seeed-xiao-nrf52840-sense` | 🟢 silicon-verified | 2026-08-09 | `c6872bbd0b1353e3` | ⚠ drift acked 2026-08-10 (re-capture pending) |
-| `stm32h563` | 🟢 silicon-verified | 2026-08-10 | `4d1e63879c7efd57` | ⚠ drift acked 2026-08-12 (re-capture pending) |
+| `stm32h563` | 🟢 silicon-verified | 2026-08-10 | `228d86c6d73d8e07` | ⚠ drift acked 2026-08-12 (re-capture pending) |
 | `esp32c3` | 🟢 silicon-verified | 2026-08-09 | `078c92aa3ef810a7` | ⚠ drift acked 2026-08-10 (re-capture pending) |
 | `nucleo-l476rg` | 🟢 silicon-verified | 2026-08-09 | `af55771191b57ce0` | ⚠ drift acked 2026-08-12 (re-capture pending) |
 | `nucleo-l073rz` | 🟢 silicon-verified | 2026-08-09 | `d3732ea28d6d644a` | ⚠ drift acked 2026-08-12 (re-capture pending) |
