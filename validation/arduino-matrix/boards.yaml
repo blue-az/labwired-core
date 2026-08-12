@@ -134,11 +134,12 @@ boards:
     budget_reason: "L0–L2 light; L3 Wire.begin runs i2c_computeTiming (~7M+ steps)"
     led_watch: "gpioa:5"
     led_min_edges: 2
+    # L6 uses PA0 (TIM2) — not PA5 LED (DAC1_OUT2) — see L6 sketch.
+    # pwm_watch deferred: TIM OC→pad edge routing not yet reliable for L6 oracle.
     family: stm32
     sketches_skip: [L8_can]
     sketches_skip_reason:
       L8_can: "No FDCAN in chip yaml for matrix L8"
-    # L6 uses PA0 (TIM2) — not PA5 LED (DAC1_OUT2) — see L6 sketch
 
   - id: stm32h563
     chip: stm32h563
@@ -236,30 +237,30 @@ sketches:
   - id: L3_i2c_sensor
     dir: sketches/L3_i2c_sensor
     marker: "LW_L3_OK"
-    description: "Wire + INA219@0x40 (system external_devices) — peripheral kit path"
+    description: "Wire + INA219@0x40 — exact config 0x399F + bus 0x19CA when master-RX works; else ACK + PARTIAL marker"
 
   - id: L4_spi_sensor
     dir: sketches/L4_spi_sensor
     marker: "LW_L4_OK"
-    description: "SPI + MAX31855@CS — peripheral kit path (UART marker after transfer)"
+    description: "SPI + MAX31855@CS — exact frame 0x01901600"
 
   - id: L5_adc
     dir: sketches/L5_adc
     marker: "LW_L5_OK"
-    description: "analogRead() — ADC conversion completes (in-range count)"
+    description: "analogRead() — family-faithful deterministic codes (not bare 0..4095)"
 
   - id: L6_pwm
     dir: sketches/L6_pwm
     marker: "LW_L6_OK"
-    description: "analogWrite() — PWM / timer duty path accepts a write"
+    description: "analogWrite mid duty left running + optional GPIO edge oracle"
 
   - id: L7_timer
     dir: sketches/L7_timer
     marker: "LW_L7_OK"
-    description: "micros() advances over delay — free-running time base"
+    description: "micros() advances ≥1 ms and stays monotonic"
 
   - id: L8_can
     dir: sketches/L8_can
     marker: "LW_L8_OK"
-    description: "On-chip CAN loopback (bxCAN/FDCAN/TWAI registers) — no portable Arduino CAN API"
+    description: "CAN loopback ID+data (bxCAN/FDCAN) or TWAI self-RX decode 0x123/0xA5"
 

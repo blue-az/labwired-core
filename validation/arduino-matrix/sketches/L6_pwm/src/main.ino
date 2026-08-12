@@ -1,13 +1,14 @@
 // LabWired Arduino matrix L6 — PWM via stock analogWrite().
 //
-// Proves: Arduino PWM / timer-compare path accepts a duty write without
-// hanging (LEDC / TIM OC / nRF PWM / RP2040 slice — whatever the core uses).
+// Stronger than "didn't hang": leave a mid duty running long enough for the
+// matrix runner's optional --watch-gpio / RMT oracle to observe edges, then
+// print OK while the timer/LEDC is still active (not after duty 0).
 
 #include <Arduino.h>
 
 #ifndef LW_PWM_PIN
-  // Nucleo-G474RE LED is PA5, which is also DAC1_OUT2 — analogWrite prefers
-  // DAC and the twin has no DAC window → memory_violation. Use TIM2_CH1 PA0.
+  // Nucleo-G474RE LED is PA5 = DAC1_OUT2 — analogWrite prefers DAC and the
+  // twin has no DAC window → memory_violation. Use TIM2_CH1 PA0.
 #  if defined(ARDUINO_NUCLEO_G474RE) || defined(ARDUINO_NUCLEO_G474RE_P)
 #    define LW_PWM_PIN PA0
 #  elif defined(LED_BUILTIN)
@@ -42,13 +43,19 @@ void setup() {
   logLine("LW_L6_BOOT");
 
   pinMode(LW_PWM_PIN, OUTPUT);
-  // Mid duty then off — exercises timer OCR / LEDC duty latch.
+  // Mid duty — leave running so logic-edge / RMT oracles can fire.
   analogWrite(LW_PWM_PIN, 128);
-  delay(1);
-  analogWrite(LW_PWM_PIN, 0);
-  delay(1);
+  // Enough wall time for timer PWM edges under typical matrix step budgets.
+  for (int i = 0; i < 30; i++) {
+    delay(1);
+  }
 
   logLine("LW_L6_OK");
+  // Intentionally do not analogWrite(0) before the marker — host may still be
+  // sampling edges for a few settle steps after uart_contains matches.
 }
 
-void loop() {}
+void loop() {
+  // Keep PWM alive if the sim continues past the marker settle window.
+  delay(1);
+}

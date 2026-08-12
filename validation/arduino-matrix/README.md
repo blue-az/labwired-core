@@ -56,6 +56,12 @@ Harness contract: `docs/engineering/test_harness.md`.
 |-------|------|------|
 | L0 / L1 | marker string | — |
 | L2 | `LW_L2_OK` | if `boards.yaml` has `led_watch: peripheral:pin`, require ≥`led_min_edges` logic edges |
+| L3 | `LW_L3_OK` | INA219 config `0x399F` + bus voltage reg `0x19CA` (exact kit defaults) |
+| L4 | `LW_L4_OK` | MAX31855 exact frame `0x01901600` |
+| L5 | `LW_L5_OK` | family-faithful ADC codes (not bare 0..4095) |
+| L6 | `LW_L6_OK` | mid duty left running; optional `pwm_watch` / `led_watch` edges |
+| L7 | `LW_L7_OK` | `micros()` advances ≥1 ms and stays monotonic |
+| L8 | `LW_L8_OK` | CAN loopback: bxCAN/FDCAN ID+data; TWAI self-RX with ID `0x123` + `0xA5` |
 
 RGB `LED_BUILTIN` boards (C3/S3) stay UART-only until an RMT-side oracle exists.
 

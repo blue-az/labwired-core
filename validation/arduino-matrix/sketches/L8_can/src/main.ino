@@ -155,40 +155,51 @@ static bool lw_can_probe() {
 #define LW_HAS_CAN 1
 
 #elif defined(ARDUINO_ESP32S3_DEV) || defined(CONFIG_IDF_TARGET_ESP32S3)
-// ESP32-S3 TWAI @ 0x6002B000 — SJA1000 self-reception (CMD bit4)
+// ESP32-S3 TWAI @ 0x6002B000 — self-RX + decode std ID 0x123 / data 0xA5.
+// Model stores one payload byte per 32-bit word slot (0x40,0x44,0x48,0x4C…).
 static bool lw_can_probe() {
   const uint32_t twai = 0x6002B000u;
   mmio_w(twai + 0x00, 0x0); // leave reset mode
-  // TX/RX buffer (shared layout): frame info DLC=1, data byte 0xA5
-  mmio_w(twai + 0x40, 0x01u);
-  mmio_w(twai + 0x44, 0x24u); // std ID 0x123 loosely encoded (not checked)
-  mmio_w(twai + 0x48, 0xA5u);
+  // SJA1000 SFF layout across word slots: FI, ID[10:3], ID[2:0]<<5, data0
+  mmio_w(twai + 0x40, 0x01u); // DLC=1
+  mmio_w(twai + 0x44, 0x24u); // ID[10:3] of 0x123
+  mmio_w(twai + 0x48, 0x60u); // ID[2:0]<<5
+  mmio_w(twai + 0x4C, 0xA5u);
   mmio_w(twai + 0x04, 1u << 4); // CMD.self_rx_req
-  // STATUS.rx_buf_st (bit0) + RX_MSG_CNT (0x74)
   if ((mmio_r(twai + 0x08) & 1u) == 0) {
     return false;
   }
-  if ((mmio_r(twai + 0x74) & 0x7Fu) == 0) {
+  if ((mmio_r(twai + 0x74) & 0x7Fu) != 1u) {
     return false;
   }
-  // Shared buffer still holds the data we wrote
-  return (mmio_r(twai + 0x48) & 0xFFu) == 0xA5u;
+  uint8_t fi = (uint8_t)(mmio_r(twai + 0x40) & 0xFFu);
+  uint8_t id_hi = (uint8_t)(mmio_r(twai + 0x44) & 0xFFu);
+  uint8_t id_lo = (uint8_t)(mmio_r(twai + 0x48) & 0xFFu);
+  uint8_t data0 = (uint8_t)(mmio_r(twai + 0x4C) & 0xFFu);
+  uint16_t sid = ((uint16_t)id_hi << 3) | ((uint16_t)id_lo >> 5);
+  return fi == 0x01u && sid == 0x123u && data0 == 0xA5u;
 }
 #define LW_HAS_CAN 1
 
 #elif defined(ARDUINO_ESP32_DEV) || defined(CONFIG_IDF_TARGET_ESP32)
-// Classic ESP32 TWAI @ 0x3FF6B000 — self-reception latches STATUS.RBS
+// Classic ESP32 TWAI @ 0x3FF6B000 — self-RX + ID/data buffer check
 static bool lw_can_probe() {
   const uint32_t twai = 0x3FF6B000u;
   mmio_w(twai + 0x00, 0x0); // leave reset mode
   mmio_w(twai + 0x40, 0x01u);
   mmio_w(twai + 0x44, 0x24u);
-  mmio_w(twai + 0x48, 0xA5u);
+  mmio_w(twai + 0x48, 0x60u);
+  mmio_w(twai + 0x4C, 0xA5u);
   mmio_w(twai + 0x04, 1u << 4); // CMD.self_rx
   if ((mmio_r(twai + 0x08) & 1u) == 0) {
     return false;
   }
-  return (mmio_r(twai + 0x48) & 0xFFu) == 0xA5u;
+  uint8_t fi = (uint8_t)(mmio_r(twai + 0x40) & 0xFFu);
+  uint8_t id_hi = (uint8_t)(mmio_r(twai + 0x44) & 0xFFu);
+  uint8_t id_lo = (uint8_t)(mmio_r(twai + 0x48) & 0xFFu);
+  uint8_t data0 = (uint8_t)(mmio_r(twai + 0x4C) & 0xFFu);
+  uint16_t sid = ((uint16_t)id_hi << 3) | ((uint16_t)id_lo >> 5);
+  return fi == 0x01u && sid == 0x123u && data0 == 0xA5u;
 }
 #define LW_HAS_CAN 1
 
