@@ -1921,9 +1921,55 @@ impl SystemBus {
         {
             // The SPIM half of the shared SPIM0/TWIM0 window.
             c.attach_spi(wrapped);
+        } else if let Some(c) =
+            any.downcast_mut::<crate::peripherals::rp2040::spi::Rp2040Spi>()
+        {
+            c.push_device(wrapped);
         } else {
             anyhow::bail!("attach_spi_device: '{controller}' is not a SPI controller");
         }
         Ok(())
+    }
+
+    /// Take every slave off a SPI controller (by peripheral id).
+    ///
+    /// Used by the AVR path: kits attach onto a bus parking `spi` peripheral
+    /// during `from_config`, then the interpreter owns the devices because
+    /// hardware SPI lives in the CPU data-space model (SPCR/SPSR/SPDR), not
+    /// as bus MMIO.
+    pub fn take_spi_devices(
+        &mut self,
+        controller: &str,
+    ) -> Vec<Box<dyn crate::peripherals::spi::SpiDevice>> {
+        let Some(idx) = self.find_peripheral_index_by_name(controller) else {
+            return Vec::new();
+        };
+        let Some(any) = self.peripherals[idx].dev.as_any_mut() else {
+            return Vec::new();
+        };
+        if let Some(c) = any.downcast_mut::<crate::peripherals::spi::Spi>() {
+            return std::mem::take(&mut c.attached_devices);
+        }
+        if let Some(c) = any.downcast_mut::<crate::peripherals::esp32c3::spi::Esp32c3Spi>() {
+            return std::mem::take(&mut c.attached_devices);
+        }
+        if let Some(c) = any.downcast_mut::<crate::peripherals::esp32::spi::Esp32Spi>() {
+            return std::mem::take(&mut c.attached_devices);
+        }
+        if let Some(c) = any.downcast_mut::<crate::peripherals::esp32s3::gpspi::Esp32s3Spi>() {
+            return std::mem::take(&mut c.attached_devices);
+        }
+        if let Some(c) = any.downcast_mut::<crate::peripherals::rp2040::spi::Rp2040Spi>() {
+            return std::mem::take(&mut c.attached_devices);
+        }
+        if let Some(c) =
+            any.downcast_mut::<crate::peripherals::nrf52::serial_instance::Nrf52SerialInstance>()
+        {
+            // nRF serial instance keeps SPI slaves behind attach_spi; no public
+            // take API — leave empty for non-AVR paths that need it later.
+            let _ = c;
+            return Vec::new();
+        }
+        Vec::new()
     }
 }

@@ -108,10 +108,17 @@ fn build_avr_node(
     };
     let image =
         parse_elf_image(&bytes).with_context(|| format!("node '{id}': parse firmware ELF"))?;
-    let bus = crate::bus::SystemBus::from_config_with_plugins(chip, system, plugins)
+    let mut bus = crate::bus::SystemBus::from_config_with_plugins(chip, system, plugins)
         .with_context(|| format!("node '{id}': build bus"))?;
     let mut cpu = crate::cpu::Avr::new();
     cpu.load_program_image(&image);
+    // SPI kits attach to the bus parking controller (`spi`); the AVR
+    // interpreter owns transfers via SPDR, so move slaves onto the CPU.
+    for name in ["spi", "spi0", "spi1"] {
+        for dev in bus.take_spi_devices(name) {
+            cpu.push_spi_device(dev);
+        }
+    }
     let machine = Machine::new(cpu, bus);
     Ok(Box::new(machine))
 }

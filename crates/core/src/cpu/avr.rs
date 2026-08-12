@@ -9,6 +9,7 @@
 //! Public PC is a **byte** address (ELF/DWARF). Fetch uses word index
 //! `pc_byte / 2`. Data space is separate from program flash.
 
+use crate::peripherals::spi::SpiDevice;
 use crate::snapshot::{AvrCpuSnapshot, CpuSnapshot};
 use crate::{Bus, Cpu, SimResult, SimulationConfig, SimulationError, SimulationObserver};
 use std::sync::{Arc, Mutex};
@@ -48,7 +49,6 @@ pub fn classify_avr_vma(vma: u64) -> (AvrLoadSpace, u64) {
     }
 }
 
-#[derive(Debug, Clone)]
 pub struct Avr {
     pub r: [u8; 32],
     pub pc: u32,
@@ -74,6 +74,31 @@ pub struct Avr {
     pub ucsr0b: u8,
     pub ucsr0c: u8,
     pub ubrr0: u16,
+    /// SPI control / status / data (ATmega328P data-space 0x4C..0x4E).
+    pub spcr: u8,
+    pub spsr: u8,
+    pub spdr: u8,
+    /// SPI slaves (e.g. matrix MAX31855) attached for L4.
+    ///
+    /// Not `Clone`/`Debug`: trait objects. Kits land here after
+    /// [`crate::bus::SystemBus::take_spi_devices`] moves them off the bus
+    /// parking SPI controller (AVR has no MMIO SPI model).
+    pub spi_devices: Vec<Box<dyn SpiDevice>>,
+}
+
+impl std::fmt::Debug for Avr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Avr")
+            .field("pc", &self.pc)
+            .field("sp", &self.sp)
+            .field("sreg", &self.sreg)
+            .field("cycles", &self.cycles)
+            .field("spcr", &self.spcr)
+            .field("spsr", &self.spsr)
+            .field("spdr", &self.spdr)
+            .field("spi_devices", &self.spi_devices.len())
+            .finish_non_exhaustive()
+    }
 }
 
 pub const VEC_TIMER0_OVF: u32 = 17; // datasheet 1-based; @0x40 = __vector_16
@@ -110,10 +135,9 @@ impl Avr {
             t0_prescale_acc: 0,
             serial_tx: Vec::new(),
             serial_sink: None,
-            ucsr0a: UCSRA_UDRE,
-            ucsr0b: 0,
-            ucsr0c: 0,
-            ubrr0: 0,
+            ucsr0a: UCSRA_UDRE, ucsr0b: 0, ucsr0c: 0, ubrr0: 0,
+            spcr: 0, spsr: 0, spdr: 0,
+            spi_devices: Vec::new(),
         }
     }
 
@@ -227,6 +251,10 @@ impl Avr {
             0x00C4 => Ok((self.ubrr0 & 0xFF) as u8),
             0x00C5 => Ok((self.ubrr0 >> 8) as u8),
             0x00C6 => Ok(0),
+            // SPI: SPCR/SPSR/SPDR (ATmega328P data space)
+            0x004C => Ok(self.spcr),
+            0x004D => Ok(self.spsr),
+            0x004E => Ok(self.spdr),
             0x0020..=0x00FF => Ok(self.io[(addr - 0x20) as usize]),
             a if (SRAM_START..=RAMEND).contains(&a) => Ok(self.sram[(a - SRAM_START) as usize]),
             _ => Err(SimulationError::MemoryViolation(addr as u64)),
@@ -313,6 +341,29 @@ impl Avr {
                 bus.write_u8(addr as u64, value)?;
                 Ok(())
             }
+            0x004C => {
+                self.spcr = value;
+                Ok(())
+            }
+            0x004D => {
+                // Writing 1 to SPIF/WCOL clears them (AVR: write 1 then access SPDR).
+                self.spsr &= !value;
+                Ok(())
+            }
+            0x004E => {
+                // SPI data: master clocks one byte through attached slaves.
+                let mosi = value;
+                let mut miso = 0u8;
+                for dev in &mut self.spi_devices {
+                    let resp = dev.transfer(mosi);
+                    if resp != 0 {
+                        miso = resp;
+                    }
+                }
+                self.spdr = miso;
+                self.spsr |= 1 << 7; // SPIF
+                Ok(())
+            }
             0x0020..=0x00FF => {
                 self.io[(addr - 0x20) as usize] = value;
                 bus.write_u8(addr as u64, value)?;
@@ -368,6 +419,10 @@ impl Avr {
 
     pub fn set_serial_sink(&mut self, sink: Arc<Mutex<Vec<u8>>>) {
         self.serial_sink = Some(sink);
+    }
+
+    pub fn push_spi_device(&mut self, device: Box<dyn SpiDevice>) {
+        self.spi_devices.push(device);
     }
 
     /// Load a ProgramImage: low addresses → flash; data-space addresses → SRAM.
@@ -1490,6 +1545,10 @@ impl Cpu for Avr {
         self.ucsr0b = 0;
         self.ucsr0c = 0;
         self.ubrr0 = 0;
+        self.spcr = 0;
+        self.spsr = 0;
+        self.spdr = 0;
+        // Keep attached SPI slaves across reset (same wiring as real board).
         Ok(())
     }
 

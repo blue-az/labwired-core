@@ -1,6 +1,13 @@
-# Arduino matrix system — ATmega328P Nano. L0/L2 UART+GPIO only.
-# L3 I2C skipped: no TWI model yet (sim-smoke USART/PORT/Timer0 only).
+# Arduino matrix system — ATmega328P Nano.
+# L0/L2 UART+GPIO; L4 SPI via CPU SPDR + parking bus `spi` + MAX31855 kit.
+# L3 I2C skipped: no TWI model yet.
 name: "arduino-matrix-atmega328p"
 chip: "../../../configs/chips/atmega328p.yaml"
-external_devices: []
+external_devices:
+  # Matrix L4_spi_sensor: MAX31855 on hardware SPI (CPU model; CS = Arduino SS/D10).
+  - id: "max31855"
+    type: "max31855"
+    connection: "spi"
+    config:
+      cs_pin: "D10"
 board_io: []

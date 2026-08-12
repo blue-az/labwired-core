@@ -19,9 +19,6 @@ boards:
     led_min_edges: 2
     family: esp32
     notes: "Arduino-ESP32 FreeRTOS — real models only (no thunks)"
-    sketches_skip: [L4_spi_sensor]
-    sketches_skip_reason:
-      L4_spi_sensor: "Classic ESP SPI master path incomplete under Arduino (STM32 L4 green)"
 
   - id: esp32c3
     chip: esp32c3
@@ -44,10 +41,7 @@ boards:
     budget_reason: "Dual-core S3 boot ~1.1M; L3 Wire headroom"
     min_rmt_tx: 1
     family: esp32
-    notes: "Arduino-ESP32-S3"
-    sketches_skip: [L4_spi_sensor]
-    sketches_skip_reason:
-      L4_spi_sensor: "esp32s3 chip yaml has no SPI controller model yet"
+    notes: "Arduino-ESP32-S3 — spi2/spi3 Esp32s3Spi models for matrix L4"
 
   - id: nrf52832
     chip: nrf52832
@@ -80,10 +74,7 @@ boards:
     led_watch: "sio:25"
     led_min_edges: 2
     family: rp2040
-    notes: "Needs platform raspberrypi (pio pkg install -g -p raspberrypi if missing)"
-    sketches_skip: [L4_spi_sensor]
-    sketches_skip_reason:
-      L4_spi_sensor: "RP2040 SPI master not yet proven for L4 MAX31855 under Arduino mbed"
+    notes: "Needs platform raspberrypi (pio pkg install -g -p raspberrypi if missing); SPI slave attach for L4"
 
   - id: stm32f103
     chip: stm32f103
@@ -183,12 +174,11 @@ boards:
     max_steps: 500000
     budget_reason: "AVR sim-smoke: L0~14k L2~40k steps measured; keep headroom for millis"
     family: avr
-    sketches_skip: [L1_serial_loop, L3_i2c_sensor, L4_spi_sensor]
+    sketches_skip: [L1_serial_loop, L3_i2c_sensor]
     sketches_skip_reason:
       L1_serial_loop: "CI matrix gate is L0+L2+L3+L4; L1 optional and not required for AVR onboarding"
       L3_i2c_sensor: "No TWI/I2C peripheral model on ATmega328P twin yet (USART+PORT+Timer0 sim-smoke)"
-      L4_spi_sensor: "No SPI twin model on ATmega328P (USART+PORT+Timer0 sim-smoke only)"
-    notes: "Classic Arduino Nano — golden UART/GPIO path; not silicon-parity"
+    notes: "Classic Arduino Nano — golden UART/GPIO + SPI (SPDR) L4; not silicon-parity"
 
 
 sketches:

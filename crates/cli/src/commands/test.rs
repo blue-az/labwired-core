@@ -1870,6 +1870,13 @@ pub(crate) fn run_test(
             cpu.load_program_image(&program);
             // USART TX is on the CPU, not a bus UART peripheral.
             cpu.set_serial_sink(uart_tx.clone());
+            // SPI kits park on bus `spi` during from_config; SPDR clocks them
+            // from the CPU model (same as build_avr_node).
+            for name in ["spi", "spi0", "spi1"] {
+                for dev in bus.take_spi_devices(name) {
+                    cpu.push_spi_device(dev);
+                }
+            }
             let machine = labwired_core::Machine::new(cpu, bus);
             run_machine!(machine)
         }

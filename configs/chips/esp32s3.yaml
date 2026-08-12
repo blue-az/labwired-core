@@ -80,3 +80,16 @@ peripherals:
     size: "4KB"
     config:
       debug_schema: "../peripherals/esp32s3/rmt.yaml"
+
+  # GP-SPI2 / FSPI — Arduino SPI / IDF spi_master (Esp32s3Spi model).
+  - id: "spi2"
+    type: "esp32s3_spi"
+    base_address: 0x60024000
+    size: "4KB"
+    irq: 21
+  - id: "spi3"
+    type: "esp32s3_spi"
+    base_address: 0x60025000
+    size: "4KB"
+    irq: 22
+
