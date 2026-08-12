@@ -462,6 +462,11 @@ jobs:
       - name: Unit tests (default-members lib)
         run: cargo test --lib
 
+      # AVR sim-smoke golden — cheap (~ms), no PlatformIO. Pins Arduino Nano
+      # UART+D13 behavior on every PR so the twin cannot regress silently.
+      - name: AVR Nano golden survival
+        run: cargo test -p labwired-core --test avr_nano_golden_survival -- --nocapture
+
       # THE BROWSER LAYER. `crates/wasm` is a cdylib and is NOT a default-member
       # (see `default-members` in the root Cargo.toml), so every step above
       # resolves to a set that excludes it: `cargo clippy --all-targets` does not

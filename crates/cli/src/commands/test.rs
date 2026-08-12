@@ -1862,6 +1862,17 @@ pub(crate) fn run_test(
             let cpu = labwired_core::system::xtensa::configure_xtensa(&mut bus);
             setup_and_run!(cpu)
         }
+        labwired_core::Arch::Avr => {
+            // AVR is Harvard: code lives in the CPU flash image, not bus.flash.
+            // Machine::load_firmware only walks bus memory maps, so seed the
+            // interpreter with load_program_image (same as build_avr_node).
+            let mut cpu = labwired_core::cpu::Avr::new();
+            cpu.load_program_image(&program);
+            // USART TX is on the CPU, not a bus UART peripheral.
+            cpu.set_serial_sink(uart_tx.clone());
+            let machine = labwired_core::Machine::new(cpu, bus);
+            run_machine!(machine)
+        }
         _ => {
             let msg = format!("Unsupported architecture: {:?}", program.arch);
             error!("{}", msg);

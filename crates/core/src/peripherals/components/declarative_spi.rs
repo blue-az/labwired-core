@@ -219,6 +219,12 @@ impl SpiDevice for GenericSpiDevice {
     }
 
     fn transfer(&mut self, mosi: u8) -> u8 {
+        // Soft-CS / matrix path: if CS↓ was never observed, still enter the
+        // read-only data phase on first clock so MAX31855-style parts work
+        // when the SPI master uses software CS the model does not wire up.
+        if self.framing.command_bytes == 0 && self.is_read.is_none() {
+            self.cs_select();
+        }
         // Command phase.
         if self.framing.command_bytes > 0 && self.cmd_consumed < self.framing.command_bytes {
             self.cmd_consumed += 1;

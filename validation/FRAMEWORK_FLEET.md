@@ -14,20 +14,20 @@ This is the product bar beyond unit tests and UART-only CI fixtures.
 | **L1** | `L1_serial_loop` | `L1_sleep` | Loop / `k_msleep` scheduling |
 | **L2** | `L2_blink_serial` | `L2_blink` | GPIO / LED + serial (+ optional logic edges) |
 | **L3** | `L3_i2c_sensor` | `L3_i2c_sensor` | **I2C kit** on Wire / Zephyr `i2c` (INA219 @ 0x40) |
-| **L4** | *(planned)* | *(planned)* | SPI / multi-device kits (MAX31855, display, …) |
+| **L4** | `L4_spi_sensor` | *(planned)* | **SPI kit** on SPI / Zephyr `spi` (MAX31855 thermocouple) |
 
 ## Chip coverage (record of intent)
 
 | Chip | Arduino matrix | Zephyr matrix | L3 I2C kit | Notes |
 |------|----------------|---------------|------------|-------|
-| esp32 | ✅ | ❌ no ESP Zephyr path yet | pilot skip (NACK) | FreeRTOS dual-core |
-| esp32c3 | ✅ | ❌ | ✅ Arduino | RISC-V FreeRTOS |
-| esp32s3 | ✅ | ❌ | pilot skip (NACK) | Dual-core |
-| nrf52832 | ✅ | ✅ | ✅ Arduino; Zephyr system+i2c0 | TWIM overlay for Zephyr L3 |
-| nrf52840 | ✅ | ✅ | ✅ both | Zephyr L3 green (TWIM overlay) |
+| esp32 | ✅ | ❌ no ESP Zephyr path yet | pilot skip (NACK) | L4 SPI skip (SPI master hang); FreeRTOS dual-core |
+| esp32c3 | ✅ | ❌ | ✅ Arduino | L4 SPI skip (frame/hang); RISC-V FreeRTOS |
+| esp32s3 | ✅ | ❌ | pilot skip (NACK) | L4 SPI skip (no SPI model); Dual-core |
+| nrf52832 | ✅ | ✅ | ✅ Arduino; Zephyr system+i2c0 | L4 SPI skip (hang); TWIM overlay Zephyr L3 |
+| nrf52840 | ✅ | ✅ | ✅ both | L4 SPI skip (hang); Zephyr L3 green |
 | nrf5340 | ❌ | ✅ | ❌ no I2C model | Add Arduino when PIO path exists |
 | nrf54l15 | ❌ | ❌ | — | Chip model present; frameworks TBD |
-| rp2040 | ✅ | ✅ | ✅ Arduino; Zephyr L3 skip | DW transfer EAGAIN under Zephyr |
+| rp2040 | ✅ | ✅ | ✅ Arduino; Zephyr L3 skip | L4 SPI skip (local/CI boot env); DW Zephyr L3 |
 | stm32f103 | ✅ | ✅ | ✅ both | F1 Wire + Zephyr poll green |
 | stm32f401 | ✅ | ✅ | ✅ both | |
 | stm32f407 | ✅ | ❌ | ✅ Arduino | Add Zephyr `nucleo_f407zg` if west board ok |
@@ -38,6 +38,7 @@ This is the product bar beyond unit tests and UART-only CI fixtures.
 | stm32l476 | ✅ | ✅ | L3 skip L4-class | |
 | stm32wb55 | ✅ | ✅ | L3 skip L4-class | |
 | stm32wba52 | ✅ | ✅ | L3 skip L4-class | Custom PIO board JSON |
+| atmega328p | ✅ L0+L2 (L3/L4 skip) | ❌ | — no TWI/SPI | Classic Nano sim-smoke; UART+GPIO only |
 | mkw41z4 | ❌ | ✅ | Zephyr system ready | Zephyr only today |
 
 Legend: ✅ in `validation/*-matrix/boards.yaml` · ❌ not yet · — blocked
@@ -74,7 +75,7 @@ python3 validation/framework_fleet_report.py
 
 | Job | Scope |
 |-----|--------|
-| `arduino-matrix-gate` | All Arduino boards × L0+L2+L3 (skipped cells ok) |
+| `arduino-matrix-gate` | All Arduino boards × L0+L2+L3+L4 (skipped cells ok) |
 | Onboarding / coverage-matrix | Bare-metal UART fixtures (not framework stock) |
 | Zephyr matrix | **Not yet in CI** (needs west image) — run locally |
 
@@ -84,5 +85,5 @@ python3 validation/framework_fleet_report.py
 2. **Zephyr L3** sample + systems (this change); prove F1/nRF/RP first.
 3. Fix STM32 L4-class `Wire.begin` / Zephyr I2C master hang (RCC timing).
 4. Fix ESP classic/S3 Arduino Wire NACK path.
-5. SPI L4 kits (MAX31855, display) on Arduino + Zephyr.
+5. SPI L4 MAX31855 landed on Arduino matrix (skip where SPI unmodelled); expand green cells + Zephyr L4.
 6. ESP Zephyr when survival path exists; Zephyr matrix in CI west container.

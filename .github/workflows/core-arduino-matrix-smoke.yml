@@ -1,6 +1,6 @@
 name: Core Arduino Matrix Smoke
 
-# Stock Arduino on every boards.yaml MCU: L0 + L2 + L3_i2c_sensor (INA219 kit).
+# Stock Arduino on every boards.yaml MCU: L0 + L2 + L3_i2c + L4_spi kits.
 # Required status: `arduino-matrix-gate` (branch protection).
 # See validation/FRAMEWORK_FLEET.md.
 
@@ -49,6 +49,7 @@ jobs:
           - stm32l476
           - stm32wb55
           - stm32wba52
+          - atmega328p
 
     steps:
       - uses: actions/checkout@v4
@@ -88,10 +89,11 @@ jobs:
           python -m pip install --quiet 'platformio>=6.1' pyyaml
           # Warm platforms used by the thin matrix (platforms pull frameworks).
           case "${{ matrix.board }}" in
-            stm32*)   pio pkg install -g -p ststm32 ;;
-            nrf*)     pio pkg install -g -p nordicnrf52 ;;
-            rp2040)   pio pkg install -g -p raspberrypi ;;
-            esp32*)   pio pkg install -g -p espressif32 ;;
+            stm32*)      pio pkg install -g -p ststm32 ;;
+            nrf*)        pio pkg install -g -p nordicnrf52 ;;
+            rp2040)      pio pkg install -g -p raspberrypi ;;
+            esp32*)      pio pkg install -g -p espressif32 ;;
+            atmega328p)  pio pkg install -g -p atmelavr ;;
           esac
 
       - name: Arduino matrix (L0 + L2 + L3 I2C kit)
@@ -103,7 +105,7 @@ jobs:
           OUT="${{ github.workspace }}/validation/arduino-matrix/out-ci/${{ matrix.board }}"
           python3 validation/arduino-matrix/run_matrix.py \
             --boards "${{ matrix.board }}" \
-            --sketches L0_serial_boot,L2_blink_serial,L3_i2c_sensor \
+            --sketches L0_serial_boot,L2_blink_serial,L3_i2c_sensor,L4_spi_sensor \
             --out "$OUT"
 
       - name: Upload board artifacts
@@ -138,8 +140,8 @@ jobs:
           import sys
           from pathlib import Path
 
-          # 15 boards × 3 sketches (L0, L2, L3)
-          EXPECTED = 15 * 3
+          # 16 boards × 4 sketches (L0, L2, L3, L4); skips count as cells
+          EXPECTED = 16 * 4
           root = Path("validation/arduino-matrix/out-ci")
           results = list(root.rglob("results.json"))
           if not results:

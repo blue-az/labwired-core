@@ -19,6 +19,9 @@ boards:
     led_min_edges: 2
     family: esp32
     notes: "Arduino-ESP32 FreeRTOS — real models only (no thunks)"
+    sketches_skip: [L4_spi_sensor]
+    sketches_skip_reason:
+      L4_spi_sensor: "Arduino SPI.transfer hangs or SPI master incomplete on this family under sim (STM32 L4 green; tracked for ESP/nRF/RP)"
 
   - id: esp32c3
     chip: esp32c3
@@ -32,6 +35,9 @@ boards:
     led_min_edges: 2
     family: esp32
     notes: "Arduino-ESP32-C3 RISC-V"
+    sketches_skip: [L4_spi_sensor]
+    sketches_skip_reason:
+      L4_spi_sensor: "Arduino SPI.transfer hangs or SPI master incomplete on this family under sim (STM32 L4 green; tracked for ESP/nRF/RP)"
 
   - id: esp32s3
     chip: esp32s3
@@ -42,6 +48,9 @@ boards:
     min_rmt_tx: 1
     family: esp32
     notes: "Arduino-ESP32-S3"
+    sketches_skip: [L4_spi_sensor]
+    sketches_skip_reason:
+      L4_spi_sensor: "esp32s3 chip yaml has no SPI controller model yet (I2C L3 still exercised)"
 
   - id: nrf52832
     chip: nrf52832
@@ -53,6 +62,9 @@ boards:
     led_watch: "gpio0:17"
     led_min_edges: 2
     family: nrf
+    sketches_skip: [L4_spi_sensor]
+    sketches_skip_reason:
+      L4_spi_sensor: "Arduino SPI.transfer hangs or SPI master incomplete on this family under sim (STM32 L4 green; tracked for ESP/nRF/RP)"
 
   - id: nrf52840
     chip: nrf52840
@@ -63,6 +75,9 @@ boards:
     led_watch: "gpio0:17"
     led_min_edges: 2
     family: nrf
+    sketches_skip: [L4_spi_sensor]
+    sketches_skip_reason:
+      L4_spi_sensor: "Arduino SPI.transfer hangs or SPI master incomplete on this family under sim (STM32 L4 green; tracked for ESP/nRF/RP)"
 
   - id: rp2040
     chip: rp2040
@@ -75,6 +90,9 @@ boards:
     led_min_edges: 2
     family: rp2040
     notes: "Needs platform raspberrypi (pio pkg install -g -p raspberrypi if missing)"
+    sketches_skip: [L4_spi_sensor]
+    sketches_skip_reason:
+      L4_spi_sensor: "Arduino SPI.transfer hangs or SPI master incomplete on this family under sim (STM32 L4 green; tracked for ESP/nRF/RP)"
 
   - id: stm32f103
     chip: stm32f103
@@ -167,6 +185,21 @@ boards:
     led_min_edges: 2
     family: stm32
 
+  - id: atmega328p
+    chip: atmega328p
+    system: systems/atmega328p.yaml
+    pio: { platform: atmelavr, board: nanoatmega328, framework: arduino }
+    max_steps: 500000
+    budget_reason: "AVR sim-smoke: L0~14k L2~40k steps measured; keep headroom for millis"
+    family: avr
+    sketches_skip: [L1_serial_loop, L3_i2c_sensor, L4_spi_sensor]
+    sketches_skip_reason:
+      L1_serial_loop: "CI matrix gate is L0+L2+L3+L4; L1 optional and not required for AVR onboarding"
+      L3_i2c_sensor: "No TWI/I2C peripheral model on ATmega328P twin yet (USART+PORT+Timer0 sim-smoke)"
+      L4_spi_sensor: "No SPI twin model on ATmega328P (USART+PORT+Timer0 sim-smoke only)"
+    notes: "Classic Arduino Nano — golden UART/GPIO path; not silicon-parity"
+
+
 sketches:
   - id: L0_serial_boot
     dir: sketches/L0_serial_boot
@@ -187,3 +220,9 @@ sketches:
     dir: sketches/L3_i2c_sensor
     marker: "LW_L3_OK"
     description: "Wire + INA219@0x40 (system external_devices) — peripheral kit path"
+
+  - id: L4_spi_sensor
+    dir: sketches/L4_spi_sensor
+    marker: "LW_L4_OK"
+    description: "SPI + MAX31855@CS — peripheral kit path (UART marker after transfer)"
+
