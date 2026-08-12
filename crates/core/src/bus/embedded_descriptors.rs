@@ -1008,6 +1008,9 @@ pub fn lookup(descriptor_path: &str) -> Option<&'static str> {
         "stm32f407/adc1.yaml" => Some(include_str!(
             "../../../../configs/peripherals/stm32f407/adc1.yaml"
         )),
+        "stm32f407/can1.yaml" => Some(include_str!(
+            "../../../../configs/peripherals/stm32f407/can1.yaml"
+        )),
         "stm32f407/dbg.yaml" => Some(include_str!(
             "../../../../configs/peripherals/stm32f407/dbg.yaml"
         )),
