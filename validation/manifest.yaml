@@ -2445,10 +2445,11 @@ boards:
     # The anchored nine reset registers and their reset values are unchanged.
     # Owner-approved drift acknowledgement without a new live register capture;
     # focused evidence: 3 production ILI9341 path tests and 20 GP-SPI tests.
+    # 2026-08-12: clippy-only factory SPI irq cast cleanup (no behaviour change).
     # 2026-08-12: chip yaml documents sar_adc_s3 + twai already registered by
     # configure_xtensa_esp32s3 (ESP32S3_PERIPHERALS). Address-map honesty only —
     # 9-reg reset-state silicon anchor unchanged. Arduino matrix L5/L8 green.
-    drift_ack_digest: ff33a5bffd550e0b8afdfadcbd6bb297a744c852717973a715e65fc3a2c1c3ba
+    drift_ack_digest: c051999aafa70f5aaf36268e7a1409d4a32d60b6f837da669806000810410d91
     models:
       - crates/core/src/peripherals/esp32s3
       - crates/core/src/peripherals/esp_xtensa_common
@@ -2505,7 +2506,7 @@ boards:
     # read/write path, reset value or layout changed, and the frozen capture
     # covers register values rather than probe binding. No live re-capture.
     drift_ack: 2026-08-05
-    drift_ack_digest: a2946321f7d4d52a8b5d1289669ede46a45dd8719f30a3e609906683b9a0c1db
+    drift_ack_digest: c98c64a25b3ddd7596e41312215db1ac5c1f2549cdad88b205c2388b38cdaae6
     models:
       - configs/chips/rp2040.yaml
       - crates/core/src/peripherals/rp2040
