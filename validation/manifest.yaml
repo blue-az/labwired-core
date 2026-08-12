@@ -2145,8 +2145,11 @@ boards:
     # it was not attached. Its own live diff remains owed and is NOT evidenced
     # by this entry.
     drift_ack: 2026-08-12
-    drift_ack_digest: 03b9ef8e9dc5a1b9769b17be41f2088a2e2bf4e3d8fffa3dde2f369e221c4da1
+    drift_ack_digest: cde0eedf5c1f5a83e2c2c2e962769d554fbed94b765e49a3b2bd26a4fd9e94e7
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
+    # 2026-08-12: chip yaml adds bxcan1 (type bxcan @ 0x40006400, APB1ENR bit 25) for
+    # Arduino matrix L8 loopback. Existing BxCan model; no register-map change to
+    # the silicon-pinned SPI/I2C/UART/GPIO set. Matrix L8 green; no live re-capture.
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
@@ -2442,7 +2445,10 @@ boards:
     # The anchored nine reset registers and their reset values are unchanged.
     # Owner-approved drift acknowledgement without a new live register capture;
     # focused evidence: 3 production ILI9341 path tests and 20 GP-SPI tests.
-    drift_ack_digest: 41f6c0e48a6f4b6e16da0f723e7a881cc9dd7a49213cb91707e69bc3ff265079
+    # 2026-08-12: chip yaml documents sar_adc_s3 + twai already registered by
+    # configure_xtensa_esp32s3 (ESP32S3_PERIPHERALS). Address-map honesty only —
+    # 9-reg reset-state silicon anchor unchanged. Arduino matrix L5/L8 green.
+    drift_ack_digest: ff33a5bffd550e0b8afdfadcbd6bb297a744c852717973a715e65fc3a2c1c3ba
     models:
       - crates/core/src/peripherals/esp32s3
       - crates/core/src/peripherals/esp_xtensa_common

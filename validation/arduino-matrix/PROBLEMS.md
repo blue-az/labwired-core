@@ -35,10 +35,12 @@ Full matrix: **16 boards × 5 sketches (L0–L4) = 80 cells**, all green as of
 | STM32 classic SPI | ~~L4 residual~~ | **Fixed** — RXNE clear-on-DR-read; exact `0x01901600` |
 | H563 ADC / FDCAN | ~~L5 hang / L8 fail~~ | **Fixed** — ADC profile `stm32h7`; FDCAN enter_loopback + APB1HENR@0xA0 |
 | G474 PWM | ~~PA5 DAC fault~~ | **Fixed** — L6 uses PA0 (TIM2), not LED/DAC |
-| ESP32-S3 / WBA ADC | L5 skip | Wire SAR/ADC models for Arduino `analogRead` |
-| CAN (most boards) | L8 skip | No on-chip CAN (or TWAI/FDCAN not in matrix yet); F103/L476/H563 green |
+| ESP32-S3 ADC | ~~L5 skip~~ | **Fixed** — `sar_adc_s3` programmatic model + chip yaml; `analogRead` green |
+| WBA ADC | L5 skip | ADC4 undeclared (SmartRun AHB4 clock domain not in stm32v2 RCC) |
+| CAN (no-controller chips) | L8 skip | Honest: nRF/RP2040/AVR/L0/F401/G474/WB/WBA/C3 (C3 TWAI declarative-only) |
+| CAN green | L8 pass | F103, F407, L476, H563 FDCAN, ESP32 classic TWAI, ESP32-S3 TWAI |
 | AVR | Sim-smoke twin | Optional deeper Timer/ADC parity beyond matrix needs |
-| _(fleet)_ | Arduino **L0–L8** 144 cells, 129 pass + 15 skip (2026-08-12) | Zephyr L4+; ESP TWAI L8 |
+| _(fleet)_ | Arduino **L0–L8** 144 cells, **133 pass + 11 skip** (2026-08-12) | Zephyr L4+; C3 TWAI model; WBA ADC |
 
 ~~**STM32WBA52**~~ was a PIO board gap; closed via in-tree `pio-boards/nucleo_wba52cg.json` + stm32duino WBA series patch + PWR `SVMSR` ACTVOSRDY.
 

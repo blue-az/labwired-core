@@ -16,7 +16,7 @@ what fails compile, and what hits unmodeled paths.
 | `L5_adc` | `LW_L5_OK` | `analogRead()` — ADC conversion completes |
 | `L6_pwm` | `LW_L6_OK` | `analogWrite()` — PWM duty path |
 | `L7_timer` | `LW_L7_OK` | `micros()` advances over `delay` |
-| `L8_can` | `LW_L8_OK` | On-chip CAN loopback (bxCAN/FDCAN; skipped where no model) |
+| `L8_can` | `LW_L8_OK` | On-chip CAN loopback (bxCAN/FDCAN/TWAI; skipped where no model) |
 
 CI gate (`arduino-matrix-gate`): **all boards × L0–L8** (16×9; skips count). Live scoreboard:
 [`docs/coverage/arduino-scoreboard.md`](../../docs/coverage/arduino-scoreboard.md).

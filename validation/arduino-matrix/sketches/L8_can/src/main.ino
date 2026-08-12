@@ -121,6 +121,77 @@ static bool lw_can_probe() {
 }
 #define LW_HAS_CAN 1
 
+#elif defined(STM32F407xx) || defined(STM32F40_41xxx) || defined(ARDUINO_DISCO_F407VG) || \
+    defined(ARDUINO_BLACK_F407VE) || defined(ARDUINO_BLACK_F407VG) || defined(ARDUINO_DIYMORE_F407VGT)
+// F4 bxCAN1 @ 0x40006400; RCC APB1ENR @ 0x40023800+0x40, CAN1EN bit 25 (RM0090)
+static bool lw_can_probe() {
+  const uint32_t can = 0x40006400u;
+  const uint32_t rcc = 0x40023800u;
+  mmio_w(rcc + 0x40, mmio_r(rcc + 0x40) | (1u << 25));
+  mmio_w(can + 0x00, 0x1);
+  mmio_w(can + 0x1C, 0x405C0009u | (1u << 30)); // BTR + LBKM
+  mmio_w(can + 0x200, 0x2A1C0E01u);
+  mmio_w(can + 0x204, 0);
+  mmio_w(can + 0x20C, 1);
+  mmio_w(can + 0x214, 0);
+  mmio_w(can + 0x240, 0);
+  mmio_w(can + 0x244, 0);
+  mmio_w(can + 0x21C, 1);
+  mmio_w(can + 0x200, 0x2A1C0E00u);
+  mmio_w(can + 0x00, 0);
+  mmio_w(can + 0x184, (1u << 16) | 1u);
+  mmio_w(can + 0x188, 0xA5u);
+  mmio_w(can + 0x180, (0x123u << 21) | 1u);
+  for (int i = 0; i < 10000; i++) {
+    if ((mmio_r(can + 0x0C) & 0x3u) != 0) {
+      uint32_t rir = mmio_r(can + 0x1B0);
+      uint32_t rdl = mmio_r(can + 0x1B8);
+      mmio_w(can + 0x0C, (1u << 5));
+      return ((rir >> 21) & 0x7FFu) == 0x123u && (rdl & 0xFFu) == 0xA5u;
+    }
+  }
+  return false;
+}
+#define LW_HAS_CAN 1
+
+#elif defined(ARDUINO_ESP32S3_DEV) || defined(CONFIG_IDF_TARGET_ESP32S3)
+// ESP32-S3 TWAI @ 0x6002B000 — SJA1000 self-reception (CMD bit4)
+static bool lw_can_probe() {
+  const uint32_t twai = 0x6002B000u;
+  mmio_w(twai + 0x00, 0x0); // leave reset mode
+  // TX/RX buffer (shared layout): frame info DLC=1, data byte 0xA5
+  mmio_w(twai + 0x40, 0x01u);
+  mmio_w(twai + 0x44, 0x24u); // std ID 0x123 loosely encoded (not checked)
+  mmio_w(twai + 0x48, 0xA5u);
+  mmio_w(twai + 0x04, 1u << 4); // CMD.self_rx_req
+  // STATUS.rx_buf_st (bit0) + RX_MSG_CNT (0x74)
+  if ((mmio_r(twai + 0x08) & 1u) == 0) {
+    return false;
+  }
+  if ((mmio_r(twai + 0x74) & 0x7Fu) == 0) {
+    return false;
+  }
+  // Shared buffer still holds the data we wrote
+  return (mmio_r(twai + 0x48) & 0xFFu) == 0xA5u;
+}
+#define LW_HAS_CAN 1
+
+#elif defined(ARDUINO_ESP32_DEV) || defined(CONFIG_IDF_TARGET_ESP32)
+// Classic ESP32 TWAI @ 0x3FF6B000 — self-reception latches STATUS.RBS
+static bool lw_can_probe() {
+  const uint32_t twai = 0x3FF6B000u;
+  mmio_w(twai + 0x00, 0x0); // leave reset mode
+  mmio_w(twai + 0x40, 0x01u);
+  mmio_w(twai + 0x44, 0x24u);
+  mmio_w(twai + 0x48, 0xA5u);
+  mmio_w(twai + 0x04, 1u << 4); // CMD.self_rx
+  if ((mmio_r(twai + 0x08) & 1u) == 0) {
+    return false;
+  }
+  return (mmio_r(twai + 0x48) & 0xFFu) == 0xA5u;
+}
+#define LW_HAS_CAN 1
+
 #else
 static bool lw_can_probe() { return false; }
 #define LW_HAS_CAN 0

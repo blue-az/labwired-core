@@ -18,10 +18,8 @@ boards:
     led_watch: "gpio:2"
     led_min_edges: 2
     family: esp32
-    notes: "Arduino-ESP32 FreeRTOS — real models only (no thunks)"
-    sketches_skip: [L8_can]
-    sketches_skip_reason:
-      L8_can: "No on-chip CAN model (TWAI not in matrix L8 yet)"
+    notes: "Arduino-ESP32 FreeRTOS — real models only (no thunks); L8 TWAI self-RX"
+    # L8_can: classic TWAI @ 0x3FF6B000 self-reception (esp32_twai model)
 
   - id: esp32c3
     chip: esp32c3
@@ -37,7 +35,7 @@ boards:
     notes: "Arduino-ESP32-C3 RISC-V"
     sketches_skip: [L8_can]
     sketches_skip_reason:
-      L8_can: "No on-chip CAN model"
+      L8_can: "TWAI0 declarative-only (no self-RX model for matrix L8)"
 
   - id: esp32s3
     chip: esp32s3
@@ -49,11 +47,8 @@ boards:
     # not rmt — use the TX_START count oracle, not --watch-gpio.
     min_rmt_tx: 1
     family: esp32
-    notes: "Arduino-ESP32-S3 — spi2/spi3 Esp32s3Spi models for matrix L4"
-    sketches_skip: [L5_adc, L8_can]
-    sketches_skip_reason:
-      L5_adc: "No SAR ADC model in esp32s3 chip yaml / programmatic bank yet"
-      L8_can: "No on-chip CAN model"
+    notes: "Arduino-ESP32-S3 — SPI L4, SAR ADC L5, TWAI L8 via programmatic bank"
+    # L5: sar_adc_s3 @ 0x60040000 (esp32s3_sar_adc); L8: twai @ 0x6002B000
 
   - id: nrf52832
     chip: nrf52832
@@ -129,9 +124,7 @@ boards:
     led_watch: "gpiod:12"
     led_min_edges: 2
     family: stm32
-    sketches_skip: [L8_can]
-    sketches_skip_reason:
-      L8_can: "No bxCAN in chip yaml"
+    # L8_can: bxCAN1 loopback (chip yaml + RM0090 APB1ENR bit 25)
 
   - id: stm32g474re
     chip: stm32g474re
@@ -268,5 +261,5 @@ sketches:
   - id: L8_can
     dir: sketches/L8_can
     marker: "LW_L8_OK"
-    description: "On-chip CAN loopback (bxCAN/FDCAN registers) — no portable Arduino CAN API"
+    description: "On-chip CAN loopback (bxCAN/FDCAN/TWAI registers) — no portable Arduino CAN API"
 

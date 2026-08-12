@@ -93,3 +93,16 @@ peripherals:
     size: "4KB"
     irq: 22
 
+  # APB SARADC + TWAI — registered programmatically by configure_xtensa_esp32s3
+  # (ESP32S3_PERIPHERALS). Declared here so chip map / matrix docs stay honest.
+  - id: "sar_adc_s3"
+    type: "esp32s3_sar_adc"
+    base_address: 0x60040000
+    size: "4KB"
+    irq: 64
+  - id: "twai"
+    type: "esp32s3_twai"
+    base_address: 0x6002B000
+    size: "4KB"
+    irq: 37
+
