@@ -28,6 +28,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      # actions/checkout does not always leave origin/main as a remote-tracking
+      # ref name the tier1 baseline tests resolve. Make that ref explicit so the
+      # weekly llvm-cov lane can establish a baseline and actually measure %.
+      - name: Ensure origin/main exists for tier1 baseline tests
+        run: |
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          git rev-parse --verify origin/main
+          test "$(git rev-parse --is-shallow-repository)" = "false"
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@1.95.0
 

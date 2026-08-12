@@ -3,7 +3,9 @@ chip: ../chips/atmega328p.yaml
 clock:
   cpu_hz: 16000000
 board_io:
-  - id: led
-    type: led
-    pin: "PB5"
+  - id: "status_led"
+    kind: "led"
+    peripheral: "portb"
+    pin: 5          # PB5 / Arduino D13 LED_BUILTIN
+    signal: "output"
     active_high: true

@@ -1862,6 +1862,29 @@ pub(crate) fn run_test(
             let cpu = labwired_core::system::xtensa::configure_xtensa(&mut bus);
             setup_and_run!(cpu)
         }
+        labwired_core::Arch::Avr => {
+            // AVR is Harvard: code lives in the CPU flash image, not bus.flash.
+            // Machine::load_firmware only walks bus memory maps, so seed the
+            // interpreter with load_program_image (same as build_avr_node).
+            let mut cpu = labwired_core::cpu::Avr::new();
+            cpu.load_program_image(&program);
+            // USART TX is on the CPU, not a bus UART peripheral.
+            cpu.set_serial_sink(uart_tx.clone());
+            // SPI/I2C kits park on bus controllers; SPDR/TWCR clock them from
+            // the CPU model (same as build_avr_node).
+            for name in ["spi", "spi0", "spi1"] {
+                for dev in bus.take_spi_devices(name) {
+                    cpu.push_spi_device(dev);
+                }
+            }
+            for name in ["i2c", "i2c0", "twi"] {
+                for dev in bus.take_i2c_slaves(name) {
+                    cpu.push_i2c_slave(dev);
+                }
+            }
+            let machine = labwired_core::Machine::new(cpu, bus);
+            run_machine!(machine)
+        }
         _ => {
             let msg = format!("Unsupported architecture: {:?}", program.arch);
             error!("{}", msg);

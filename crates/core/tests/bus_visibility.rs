@@ -191,6 +191,20 @@ const EXCLUSIONS: &[(&str, BusKind, &str)] = &[
         BusKind::Uart,
         "rp2350 from_config bus not yet edge-gated (no line cells)",
     ),
+    // AVR matrix twin: chip yaml uses generic type:i2c/spi (STM32-shaped
+    // engines). Those models publish line_names for the logic analyzer but
+    // never attach a PadLines cell on the AVR from_config path, so wire_lines()
+    // is None. Edge gating needs AVR-native TWI/SPI wire cells first.
+    (
+        "atmega328p",
+        BusKind::I2c,
+        "AVR from_config I2C is generic type:i2c without PadLines cell",
+    ),
+    (
+        "atmega328p",
+        BusKind::Spi,
+        "AVR from_config SPI is generic type:spi without PadLines cell",
+    ),
 ];
 
 fn is_excluded(chip: &str, kind: BusKind) -> Option<&'static str> {

@@ -14,6 +14,7 @@
 
 use crate::{Bus, SimResult};
 use std::any::Any;
+use std::cell::Cell;
 use std::str::FromStr;
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::Arc;
@@ -530,6 +531,10 @@ struct Nrf52SpiRegs {
     events_endrx: u32,
     events_end: u32,
     events_endtx: u32,
+    /// Legacy SPI (NRF_SPI_Type) EVENTS_READY @ 0x108 — TXD byte done / RXD ready.
+    events_ready: u32,
+    /// Legacy SPI RXD @ 0x518 (last byte clocked in).
+    legacy_rxd: u32,
 
     // INTEN — bit-field enabling each event's IRQ
     inten: u32,
@@ -562,6 +567,9 @@ struct Nrf52SpiRegs {
 /// `ENABLE` value that selects the SPIM personality on the shared
 /// SPIM/SPIS/SPI/TWIM/TWI/TWIS window (nRF52840 PS v1.11 §6.25.6.17, p733).
 const NRF52_ENABLE_SPIM: u32 = 7;
+/// Nordic legacy SPI (NRF_SPI_Type) ENABLE value — Arduino SPI library uses this,
+/// not SPIM EasyDMA. PS: SPI_ENABLE_ENABLE_Enabled = 1.
+const NRF52_ENABLE_SPI: u32 = 1;
 /// `CONFIG` fields (nRF52840 PS v1.11 §6.25.6.22, p737).
 const NRF52_CONFIG_ORDER_LSB: u32 = 1 << 0;
 const NRF52_CONFIG_CPHA: u32 = 1 << 1;
@@ -584,6 +592,7 @@ impl Nrf52SpiRegs {
             0x010 | 0x014 => 0,
             // EVENTS
             0x104 => self.events_stopped,
+            0x108 => self.events_ready, // legacy SPI EVENTS_READY
             0x110 => self.events_endrx,
             0x118 => self.events_end,
             0x120 => self.events_endtx,
@@ -595,6 +604,8 @@ impl Nrf52SpiRegs {
             0x50C => self.psel_mosi,
             0x510 => self.psel_miso,
             0x514 => self.psel_csn,
+            0x518 => self.legacy_rxd, // legacy SPI RXD
+            0x51C => 0,               // legacy SPI TXD (write-only on silicon)
             0x524 => self.frequency,
             0x554 => self.config,
             // EasyDMA descriptors
@@ -630,6 +641,7 @@ impl Nrf52SpiRegs {
 
             // EVENTS — SW write of 1 ignored; SW write of 0 clears
             0x104 if value == 0 => self.events_stopped = 0,
+            0x108 if value == 0 => self.events_ready = 0,
             0x110 if value == 0 => self.events_endrx = 0,
             0x118 if value == 0 => self.events_end = 0,
             0x120 if value == 0 => self.events_endtx = 0,
@@ -817,6 +829,14 @@ pub struct Spi {
     rx_fifo: bool,
     /// Bytes sitting in the modelled RX FIFO (FIFO layout only).
     rx_fifo_level: u8,
+
+    /// Classic/FIFO STM32 RXNE is **clear-on-DR-read** (RM0008 / RM0351).
+    /// `Peripheral::read` is `&self`, so the flag lives in a `Cell` and SR
+    /// reads merge it into bit 0. Without this, RXNE stayed set after the first
+    /// frame and Arduino `SPI.transfer()` re-read a stale DR (matrix L4 saw
+    /// `0x00019016` = default MAX31855 frame shifted by one residual byte).
+    #[serde(skip)]
+    stm32_rxne: Cell<bool>,
 
     // STM32 bit-engine state (classic/FIFO layout only; the other register
     // families keep their own transfer semantics).
@@ -1418,6 +1438,8 @@ impl Spi {
                 // SR is mostly read-only; allow clearing OVR if modelled.
                 if let SpiRegs::Stm32(r) = &mut self.regs {
                     r.sr = value & 0xFFBF;
+                    // Keep clear-on-read RXNE cell in sync with any software clear.
+                    self.stm32_rxne.set(r.sr & 0x0001 != 0);
                 }
             }
             0x10 => {
@@ -1901,12 +1923,10 @@ impl Spi {
         let mosi = value & mask;
         let miso = if !self.attached_devices.is_empty() {
             let mosi_byte = (mosi & 0xFF) as u8;
+            // Last device wins; 0x00 is a valid MISO byte (MAX31855 LSB).
             let mut miso_byte = 0u8;
             for dev in &mut self.attached_devices {
-                let resp = dev.transfer(mosi_byte);
-                if resp != 0 {
-                    miso_byte = resp;
-                }
+                miso_byte = dev.transfer(mosi_byte);
             }
             miso_byte as u16
         } else if self.loopback {
@@ -1981,6 +2001,7 @@ impl Spi {
             if !rx_fifo {
                 // Classic F1/F4 port: no FIFO, RXNE on every frame.
                 r.sr |= 0x0001;
+                self.stm32_rxne.set(true);
             } else {
                 // FIFO port: RXNE follows CR2.FRXTH (bit 12). FRXTH=1 → the
                 // threshold is 8 bit, so one frame asserts it; FRXTH=0 (reset)
@@ -1999,6 +2020,7 @@ impl Spi {
                     let frxth = r.cr2 & (1 << 12) != 0;
                     if frxth || *level >= 2 {
                         r.sr |= 0x0001;
+                        self.stm32_rxne.set(true);
                     }
                 }
             }
@@ -2053,7 +2075,23 @@ impl crate::Peripheral for Spi {
             // Widen u16→u32 before the shift: byte accesses at offsets 2/3 read
             // the upper byte of the next halfword; `(u16 as u32) >> 16` is 0
             // without an overflow panic under the CI release profile.
-            SpiRegs::Stm32(r) => r.read_reg(reg_offset) as u32,
+            SpiRegs::Stm32(r) => {
+                // DR read: clear-on-read RXNE (silicon). Must happen on every
+                // access size that drains RX, including the byte path HAL uses.
+                if reg_offset == 0x0C {
+                    self.stm32_rxne.set(false);
+                }
+                let mut v = r.read_reg(reg_offset) as u32;
+                if reg_offset == 0x08 {
+                    // SR: expose live RXNE from the Cell (authoritative after DR).
+                    if self.stm32_rxne.get() {
+                        v |= 0x0001;
+                    } else {
+                        v &= !0x0001;
+                    }
+                }
+                v
+            }
         };
         Ok(((reg_val >> (byte_offset * 8)) & 0xFF) as u8)
     }
@@ -2063,6 +2101,18 @@ impl crate::Peripheral for Spi {
         let byte_offset = (offset % 4) as u32;
 
         if let SpiRegs::Nrf52(_) = &self.regs {
+            // Legacy SPI (Arduino SPI.cpp): write TXD @ 0x51C with ENABLE=1
+            // clocks one byte immediately and raises EVENTS_READY.
+            if reg_offset == 0x51C && byte_offset == 0 {
+                let enable = match &self.regs {
+                    SpiRegs::Nrf52(r) => r.enable & 0xF,
+                    _ => 0,
+                };
+                if enable == NRF52_ENABLE_SPI {
+                    self.nrf52_legacy_spi_txd(value);
+                    return Ok(());
+                }
+            }
             let cur = match &self.regs {
                 SpiRegs::Nrf52(r) => r.read_reg(reg_offset),
                 _ => 0,
@@ -2137,6 +2187,17 @@ impl crate::Peripheral for Spi {
     fn write_u32(&mut self, offset: u64, value: u32) -> SimResult<()> {
         if let SpiRegs::Nrf52(_) = &self.regs {
             let reg_offset = offset & !3;
+            // Legacy SPI TXD: same immediate-byte path as the u8 write arm.
+            if reg_offset == 0x51C {
+                let enable = match &self.regs {
+                    SpiRegs::Nrf52(r) => r.enable & 0xF,
+                    _ => 0,
+                };
+                if enable == NRF52_ENABLE_SPI {
+                    self.nrf52_legacy_spi_txd(value as u8);
+                    return Ok(());
+                }
+            }
             let start_triggered = if let SpiRegs::Nrf52(r) = &mut self.regs {
                 r.write_reg(reg_offset, value)
             } else {
@@ -2473,6 +2534,31 @@ impl Spi {
             self.selected_devices[index] = selected;
         }
     }
+    /// Nordic **legacy SPI** (Arduino `SPI.transfer`): write `TXD` with
+    /// `ENABLE=1` clocks one byte through attached devices, latches MISO into
+    /// `RXD`, and raises `EVENTS_READY` so firmware's busy-wait exits.
+    ///
+    /// This is a different register file from SPIM EasyDMA (`ENABLE=7`). The
+    /// Arduino nRF5 SPI library uses the legacy peripheral; without this path
+    /// `while (!EVENTS_READY)` hangs forever under sim.
+    fn nrf52_legacy_spi_txd(&mut self, mosi: u8) {
+        let mut miso = 0u8;
+        if !self.attached_devices.is_empty() {
+            for dev in &mut self.attached_devices {
+                let resp = dev.transfer(mosi);
+                if resp != 0 {
+                    miso = resp;
+                }
+            }
+        } else if self.loopback {
+            miso = mosi;
+        }
+        if let SpiRegs::Nrf52(r) = &mut self.regs {
+            r.legacy_rxd = u32::from(miso);
+            r.events_ready = 1;
+        }
+    }
+
     /// nRF52 SPIM EasyDMA engine shared by `tick_with_bus` and `on_event`.
     ///
     /// Reads TXD.MAXCNT bytes from RAM at TXD.PTR, clocks each through the
@@ -2824,9 +2910,51 @@ mod tests {
         );
         run_engine(&mut spi);
         assert_eq!(spi.read(0x0C).unwrap(), 0x51, "first frame's answer");
+        assert_eq!(
+            spi.read(0x08).unwrap() & 0x01,
+            0,
+            "RXNE must clear on DR read"
+        );
         spi.write(0x0C, 0x02).unwrap();
         run_engine(&mut spi);
         assert_eq!(spi.read(0x0C).unwrap(), 0x52, "second frame's answer");
+    }
+
+    /// Arduino SPI.transfer() polls RXNE after each DR write. If RXNE is not
+    /// clear-on-read, the next poll exits immediately and re-reads a stale DR
+    /// — the MAX31855 matrix residual (`0x00019016`).
+    #[test]
+    fn rxne_clears_so_multi_byte_transfer_stays_in_sync() {
+        struct Seq {
+            i: u8,
+            bytes: [u8; 4],
+        }
+        impl SpiDevice for Seq {
+            fn transfer(&mut self, _mosi: u8) -> u8 {
+                let b = self.bytes[self.i as usize % 4];
+                self.i = self.i.wrapping_add(1);
+                b
+            }
+            fn cs_pin(&self) -> &str {
+                ""
+            }
+        }
+        let mut spi = Spi::new();
+        spi.push_device(Box::new(Seq {
+            i: 0,
+            bytes: [0x01, 0x90, 0x16, 0x00],
+        }));
+        spi.write(0x00, 0x40).unwrap(); // SPE, BR=0 (fast)
+        let mut frame = 0u32;
+        for _ in 0..4 {
+            spi.write(0x0C, 0x00).unwrap();
+            run_engine(&mut spi);
+            assert_ne!(spi.read(0x08).unwrap() & 0x01, 0, "RXNE after frame");
+            let b = spi.read(0x0C).unwrap();
+            assert_eq!(spi.read(0x08).unwrap() & 0x01, 0, "RXNE cleared by DR");
+            frame = (frame << 8) | u32::from(b);
+        }
+        assert_eq!(frame, 0x0190_1600);
     }
 
     // ── nRF52 SPIM EasyDMA unit tests ─────────────────────────────────────────
@@ -3290,6 +3418,29 @@ mod tests {
         let mut spi = Spi::new_with_layout(SpiRegisterLayout::Nrf52Spim);
         nrf_write_u32(&mut spi, 0x010, 1); // TASKS_START
         assert_eq!(nrf_read_u32(&spi, 0x010), 0, "TASKS_START reads as 0");
+    }
+
+    /// Arduino nRF SPI library: ENABLE=1 + TXD write must raise EVENTS_READY
+    /// and put device MISO into RXD (legacy SPI, not SPIM EasyDMA).
+    #[test]
+    fn nrf52_legacy_spi_txd_raises_ready_and_returns_miso() {
+        let mut spi = Spi::new_with_layout(SpiRegisterLayout::Nrf52Spim);
+        struct Echo;
+        impl SpiDevice for Echo {
+            fn transfer(&mut self, mosi: u8) -> u8 {
+                mosi ^ 0xFF
+            }
+            fn cs_pin(&self) -> &str {
+                "P0.22"
+            }
+        }
+        spi.push_device(Box::new(Echo));
+        nrf_write_u32(&mut spi, 0x500, 1); // ENABLE = SPI (legacy)
+        nrf_write_u32(&mut spi, 0x51C, 0xA5); // TXD
+        assert_eq!(nrf_read_u32(&spi, 0x108), 1, "EVENTS_READY");
+        assert_eq!(nrf_read_u32(&spi, 0x518) & 0xFF, 0x5A, "RXD = mosi^0xFF");
+        nrf_write_u32(&mut spi, 0x108, 0); // clear READY
+        assert_eq!(nrf_read_u32(&spi, 0x108), 0);
     }
 
     /// Second TASKS_START after a completed transfer re-arms the engine.

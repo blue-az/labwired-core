@@ -39,6 +39,7 @@ pub const MODEL_TYPES: &[&str] = &[
     // Generic core types (built here or by `from_config` descriptor loaders).
     "uart",
     "gpio",
+    "avr_gpio",
     "rcc",
     "systick",
     "timer",
@@ -356,6 +357,7 @@ pub fn try_build(
                 )
             }
         }
+        "avr_gpio" => Box::new(crate::peripherals::avr_gpio::AvrGpioPort::new()),
         "spi" | "stm32spi" => {
             let layout: crate::peripherals::spi::SpiRegisterLayout = if p_cfg.r#type.contains("nrf")
             {

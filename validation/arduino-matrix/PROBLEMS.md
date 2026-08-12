@@ -4,7 +4,8 @@
 map, clocks, dual-core, FPU, etc.). Do not add Arduino/ESP “quirk” harnesses,
 flash-patched stubs, or forge SMP handshakes as the product path.
 
-Full matrix: 15 chips × 3 sketches. Scoreboard:
+Full matrix: **16 boards × 9 sketches (L0–L8) = 144 cells** — report as
+**pass / skip / fail**, never pass+skip as one “green” total. Scoreboard:
 [`docs/coverage/arduino-scoreboard.md`](../../docs/coverage/arduino-scoreboard.md)
 
 ## Green (Arduino L0–L2 on plain `labwired test`)
@@ -31,7 +32,20 @@ Full matrix: 15 chips × 3 sketches. Scoreboard:
 
 | Chip | Symptom | Honest next model work |
 |------|---------|-------------------------|
-| _(none)_ | All 15 chips × L0–L2 green on plain `labwired test` (2026-07-23) | — |
+| STM32 classic SPI | ~~L4 residual~~ | **Fixed** — RXNE clear-on-DR-read; exact `0x01901600` |
+| H563 ADC / FDCAN | ~~L5 hang / L8 fail~~ | **Fixed** — ADC profile `stm32h7`; FDCAN enter_loopback + APB1HENR@0xA0 |
+| G474 PWM | ~~PA5 DAC fault~~ | **Fixed** — L6 uses PA0 (TIM2), not LED/DAC |
+| ESP32-S3 ADC | ~~L5 skip~~ | **Fixed** — `sar_adc_s3` programmatic model + chip yaml; `analogRead` green |
+| WBA ADC | L5 skip | ADC4 undeclared (SmartRun AHB4 clock domain not in stm32v2 RCC) |
+| CAN (no-controller chips) | L8 skip | Honest: nRF/RP2040/AVR/L0/F401/G474/WB/WBA/C3 (C3 TWAI declarative-only) |
+| CAN green | L8 pass | F103, F407, L476, H563 FDCAN, ESP32 classic TWAI, ESP32-S3 TWAI |
+| AVR | Sim-smoke twin | Optional deeper Timer/ADC parity beyond matrix needs |
+| Oracle depth | ~~ACK-only L3 / weak L5–L6 / TWAI STATUS cosplay~~ | **Hardened 2026-08-12** — L3 exact INA219 regs (where RX works); L5 deterministic pairs; L6 mid duty left on; L8 TWAI ID+data |
+| L3 STM32 master-RX | Partial on some cores | INA219 `start()` + RP2040 I2C START/STOP; F407 may still take ACK-only path |
+| L5 fixed-source | Many HAL paths still return 0 or DR+1 | Prefer Arduino→ADC model wiring for 3.0/3.3 → 3723; current oracle requires deterministic pairs |
+| L6 PWM edges | Not gated fleet-wide | TIM/LEDC→pad routing incomplete; `pwm_watch` opt-in only |
+| _(fleet)_ | Arduino **L0–L8** **133 pass / 11 skip / 0 fail** | Zephyr L4+; C3 TWAI model; WBA ADC |
+
 
 ~~**STM32WBA52**~~ was a PIO board gap; closed via in-tree `pio-boards/nucleo_wba52cg.json` + stm32duino WBA series patch + PWR `SVMSR` ACTVOSRDY.
 
